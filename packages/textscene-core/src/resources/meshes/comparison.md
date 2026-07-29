@@ -6,104 +6,81 @@ renders_as: one merged THREE.BufferGeometry with a draw group per surface
 
 # ArrayMesh
 
-A baked mesh: Godot stores each surface's geometry as base64 `PackedByteArray` blobs
-whose layout is described entirely by the surface's uint64 `format` bitfield. The
-decoder recovers the same arrays Godot's own `ArrayMesh.surface_get_arrays()` returns,
-and every surface merges into ONE `BufferGeometry` with a draw group each, so
-MeshInstance3D can give each surface its own material.
+A baked mesh. Each surface's geometry is a set of base64 `PackedByteArray` blobs whose
+layout the surface's uint64 `format` bitfield describes. Decoding recovers what Godot's
+`surface_get_arrays()` returns; all surfaces merge into one `BufferGeometry`, one draw
+group each, so MeshInstance3D can give every surface its own material.
 
-## The buffer layout
+## Buffer layout
 
-`vertex_data` holds TWO concatenated regions, not one interleaved record: all the
-positions, then all the normal/tangent frames. `attribute_data` is a third, this one
-interleaved, ordered COLOR then UV1 then UV2. Bytes per vertex:
+`vertex_data` = positions, then normal/tangent frames — two concatenated regions, not
+interleaved. `attribute_data` is interleaved: COLOR, UV1, UV2. Bytes per vertex:
 
 | | uncompressed | `ARRAY_FLAG_COMPRESS_ATTRIBUTES` (bit 29) |
 | --- | --- | --- |
-| position | 3×float32 (12 B) | 3×uint16 + the frame angle (8 B) |
+| position | 3×float32 (12 B) | 3×uint16 + frame angle (8 B) |
 | normal + tangent | two octahedral uint16 pairs (8 B) | one axis-angle frame (4 B) |
 | UV1, UV2 | 2×float32 each (8 B) | 2×uint16 each (4 B) |
 | colour | RGBA8 (4 B) | RGBA8 (4 B) |
-| index | uint16, or uint32 above 65535 vertices | same |
+| index | uint16, uint32 above 65535 vertices | same |
 
-Godot writes both layouts into the same file: a mesh's `[resource]` surfaces may be
-compressed while its `shadow_mesh` sub-resource is not, and one `_surfaces` array can
-hold uncompressed and compressed surfaces side by side.
+Both layouts occur in one file, and in one `_surfaces` array.
 
 ## Compressed attributes
 
-Three encodings, all verified against Godot 4.6.3's own decompressed arrays:
+Verified against Godot 4.6.3's decompressed arrays.
 
-- **Position** is a uint16 per axis spanning the surface's own declared `aabb`:
-  `p = u16 / 65535 × aabb.size + aabb.position`. The aabb is the scale, not just
-  metadata, so a compressed surface without one cannot be read at all.
-- **The tangent frame** is an axis-angle rotation, and the normal is not stored. The
-  octahedral uint16 pair in the normal region is the rotation AXIS; the ANGLE is the
-  4th uint16 of the 8-byte position record — the slot a position-only surface leaves
-  zeroed — in half-turns. Normal and tangent are then two rows of that rotation
-  matrix (Godot's `axis_angle_to_tbn`). Reading the pair as if it were a normal, the
-  way the uncompressed layout allows, yields a direction unrelated to the surface.
-- **UV** is a uint16 per axis over the unit range. When the surface declares a
-  non-zero `uv_scale`, Godot normalised UVs that left the unit range into the uint16
-  range and kept the divisor there, so the stored value is re-expanded around 0.5:
-  `uv = (u16 / 65535 − 0.5) × uv_scale`.
+| | encoding |
+| --- | --- |
+| position | `u16 / 65535 × aabb.size + aabb.position` — the surface `aabb` IS the scale, so a compressed surface without one is unreadable |
+| normal, tangent | no normal is stored: the octahedral pair is a rotation AXIS, the ANGLE is the position record's 4th uint16 in half-turns, taken as an absolute value; both are rows of that rotation (`axis_angle_to_tbn`) |
+| UV | `u16 / 65535`, or `(u16 / 65535 − 0.5) × uv_scale` when `uv_scale` is non-zero |
 
-Only bits below 32 can be tested with a JavaScript `&`, which coerces to int32. Bit 29
-survives because every format Godot writes keeps its low 32 bits under 2^31, but
-`ARRAY_FLAG_FORMAT_VERSION_2` (bit 35) is unreachable that way — so bit 29 alone
-selects the layout, and the version flag is never consulted.
+Bit 29 alone selects the layout. `ARRAY_FLAG_FORMAT_VERSION_2` (bit 35) is never
+consulted: a JavaScript `&` coerces to int32 and cannot reach it.
+
+## Where the mesh lives
+
+Three references, all rendered:
+
+| reference | resolution |
+| --- | --- |
+| `ExtResource` → `.tres` | fetched and decoded through the resource pipeline |
+| `[sub_resource]` of a `.tres` | addressed `<file>::<id>` (a `shadow_mesh`, a MeshLibrary item mesh) |
+| `[sub_resource]` of the previewed `.tscn` | decoded synchronously off the parsed scene — no file to fetch |
 
 ## Surface materials
 
-A surface names its material either way Godot writes it, and both come back as one
-resource-path string, so the renderer attaches them the same way:
-
-- `"material": ExtResource("id")` — a shared material file, resolved through the
-  file's own `[ext_resource]` table.
-- `"material": SubResource("id")` — a material the mesh carries itself, which Godot
-  writes whenever a mesh is not referencing shared materials (every Truck Town
-  vehicle). It is addressed as `<this file>::<id>`, Godot's own notation for a
-  resource inside a resource file, and the material pipeline fetches the owning
-  file and builds that `[sub_resource]` body. The scene-level resolver cannot help
-  here — it searches the previewed `.tscn`'s sub-resources, and these live in a
-  different document.
-
-That sub-resource's own texture `ExtResource`s resolve against the **owning
-`.tres`'s** table, never the scene's: the ids are declared in the file that
-declares the material. The address is also what the ArrayMesh itself can be
-requested under, so a `[sub_resource type="ArrayMesh"]` (a `shadow_mesh`, or a
-MeshLibrary's embedded item mesh) reads its own `_surfaces` rather than silently
-falling through to the file's.
+| reference | resolution |
+| --- | --- |
+| `ExtResource` | the declaring document's `[ext_resource]` table |
+| `SubResource` of a `.tres` | addressed `<file>::<id>`; its own texture `ExtResource`s resolve against that **`.tres`'s** table, not the scene's |
+| `SubResource` of a `.tscn` | not addressable by any path — the surface takes the neutral default |
 
 ## Unreadable surfaces
 
-A surface whose `vertex_data` is shorter than its format requires, whose compressed
-form declares no `aabb`, or whose positions decode to anything non-finite is dropped
-with a `[ArrayMesh]` warning, and the mesh's remaining surfaces still render. This is
-not tidiness: surfaces merge into one geometry, so a single NaN position poisons the
-whole mesh's bounding sphere, and a NaN bounding sphere also defeats the camera fit —
-the scene becomes unframeable, not merely misdrawn.
+Dropped with a `[ArrayMesh]` warning; the mesh's other surfaces still render. Triggers:
+`vertex_data` shorter than the format requires, a compressed surface with no `aabb`,
+`index_data` shorter than `index_count`, any non-finite position. Surfaces merge into
+one geometry, so one NaN would poison the whole mesh's bounding sphere — and with it the
+camera fit, making the scene unframeable rather than merely misdrawn.
 
-Dropping happens in the decoder rather than the geometry builder so that one list
-stays the source of both the draw groups and the per-surface material paths; they are
-built by different code and would otherwise drift apart by exactly the dropped
-surface.
+Dropping happens in the decoder, not the geometry builder, so one list is the source of
+both the draw groups and the per-surface material paths.
 
-An `attribute_data` record that is not the width the format implies costs that
-surface its UVs but not the surface: the positions are still exact.
+A mesh with NO readable surface fails outright, rather than caching an empty geometry as
+a success and rendering invisibly. An `attribute_data` record narrower than the format
+implies costs that surface its UVs only; a wider one is an unmodelled CUSTOM channel and
+reads fine.
 
 ## Known limitations
 
-- **Only surface 0's material loads its textures on a mesh built from scene
-  SubResources.** This is the pre-existing `SecondarySurfaceMaterial` limitation and
-  is unrelated to an EXTERNAL ArrayMesh, whose every surface gets a full
-  `ExternalMaterialSlot` (textures included) because each is its own component.
-- **Blend shapes, LODs and skins are ignored.** `lods` and blend-shape data are
-  parsed past; a skinned mesh renders in its rest pose.
-- **A compressed surface with NORMAL but no TANGENT is unverified.** No mesh in the
-  corpus is in that state, so the plain-octahedral reading it presumably uses is
-  implemented by symmetry with the uncompressed layout rather than measured.
-- **A dropped surface shifts the draw-group numbering below it.** Group N always
-  means `surfaces[N]`, which is what the material paths index, so materials follow
-  correctly today. It would matter if `surface_material_override/<n>` — which names
-  Godot's ORIGINAL surface index — were ever wired to ArrayMesh groups.
+- **Only surface 0's material loads textures on a mesh built from scene SubResources**
+  (pre-existing `SecondarySurfaceMaterial` limit). External ArrayMeshes are unaffected —
+  each surface is its own `ExternalMaterialSlot`.
+- **Blend shapes, LODs and skins are ignored**; a skinned mesh renders in its rest pose.
+- **A compressed surface with NORMAL but no TANGENT is unverified** — absent from the
+  corpus, so the plain-octahedral reading is implemented by symmetry, not measured.
+- **A dropped surface renumbers the draw groups below it.** Group N means `surfaces[N]`,
+  which is what the material paths index, so materials follow. It would matter if
+  `surface_material_override/<n>`, which names Godot's ORIGINAL index, were wired here.

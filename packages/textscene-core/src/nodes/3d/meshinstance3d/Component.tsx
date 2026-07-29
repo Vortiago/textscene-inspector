@@ -38,6 +38,9 @@ import { MeshGeometry } from './meshGeometry';
 import { resolveEmission } from '../../../resources/materials/standardmaterial3d/emission';
 import { parseStandardMaterial3DScalars } from '../../../r3f/materials/standardMaterialScalars';
 import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
+import { warn } from '../../../logger';
+import { decodeSceneArrayMesh } from '../../../resources/meshes/arrayMeshDecode';
+import { buildArrayMeshGeometry } from '../../../resources/meshes/arrayMeshGeometry';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
@@ -81,6 +84,11 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     [properties.mesh, externalResources]
   );
   const arrayMeshResult = useResource<ArrayMeshResource>(arrayMeshPath ?? '', 'ArrayMesh');
+
+  // A `[sub_resource type="ArrayMesh"]` of the SCENE: baked surfaces inlined in
+  // the `.tscn`, so there is no file to fetch and nothing for the resource
+  // pipeline to do — it decodes synchronously from the parsed scene.
+  const sceneArrayMesh = useSceneArrayMeshGeometry(meshResource, externalResources);
 
   // Parity-audit fix: when multiple `surface_material_override/N`
   // slots are populated (e.g. a GLB or multi-surface mesh), build an
@@ -398,6 +406,38 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     );
   }
 
+  // A scene's own `[sub_resource type="ArrayMesh"]`. Rendered exactly like an
+  // external one — merged geometry, one material slot per draw group — the only
+  // difference being that its bytes came from the `.tscn` instead of a `.tres`.
+  if (meshResource?.type === 'ArrayMesh') {
+    if (!sceneArrayMesh) {
+      // Unreadable surfaces: the placeholder, not silence. `buildPrimitiveMeshGeometry`
+      // has no ArrayMesh case, so falling through would draw nothing at all.
+      return (
+        <MeshShell {...shellProps}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshBasicMaterial color={0xff00ff} wireframe />
+        </MeshShell>
+      );
+    }
+    const surfacePaths =
+      sceneArrayMesh.materialPaths.length > 0 ? sceneArrayMesh.materialPaths : [null];
+    const multiSurface = surfacePaths.length > 1;
+    return (
+      <MeshShell {...shellProps}>
+        <primitive object={sceneArrayMesh.geometry} attach="geometry" />
+        {surfacePaths.map((path, i) => (
+          <ExternalMaterialSlot
+            key={`surf-${i}`}
+            path={path}
+            attach={multiSurface ? `material-${i}` : 'material'}
+            shadowSide={shadowFlags.shadowSide}
+          />
+        ))}
+      </MeshShell>
+    );
+  }
+
   // Primitive SubResource geometry (declarative <MeshGeometry>).
   const geometryElement = <MeshGeometry resource={meshResource!} />;
 
@@ -620,6 +660,41 @@ function resolveProceduralTextures(
     if (texture) out[slot] = texture;
   }
   return out;
+}
+
+/**
+ * Build the geometry for an ArrayMesh the SCENE declares as its own
+ * `[sub_resource]`. Null for any other mesh type, and null when the surfaces
+ * cannot be read — the caller shows its placeholder rather than nothing, because
+ * an invisible node with no diagnostic is how this case went unnoticed.
+ *
+ * The geometry's lifetime is owned here: r3f disposes geometry it created from a
+ * declarative element, but not an object handed to `<primitive>`.
+ */
+function useSceneArrayMeshGeometry(
+  resource: TscnInternalResource | undefined,
+  externalResources: readonly TscnExternalResource[]
+): ArrayMeshResource | null {
+  const built = useMemo(() => {
+    if (resource?.type !== 'ArrayMesh') return null;
+    try {
+      const mesh = decodeSceneArrayMesh(resource, externalResources);
+      if (mesh.surfaces.length === 0) return null;
+      return {
+        geometry: buildArrayMeshGeometry(mesh),
+        materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
+      };
+    } catch (error) {
+      warn(
+        `[MeshInstance3D] scene ArrayMesh "${resource.id}" could not be decoded: ` +
+          `${error instanceof Error ? error.message : String(error)}`
+      );
+      return null;
+    }
+  }, [resource, externalResources]);
+
+  useEffect(() => () => built?.geometry.dispose(), [built]);
+  return built;
 }
 
 function resolveMeshSubResource(

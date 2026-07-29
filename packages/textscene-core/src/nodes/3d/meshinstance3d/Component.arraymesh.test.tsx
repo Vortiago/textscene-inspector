@@ -55,6 +55,37 @@ _surfaces = [{
 blend_shape_mode = 0
 `;
 
+/**
+ * The `_surfaces` value of an ArrayMesh a `.tscn` declares inline — the wall
+ * quad's bytes, minus the file wrapper. `trailer_truck.tscn` writes its trailer
+ * body exactly this way, which is why the trailer rendered as nothing.
+ */
+const INLINE_SURFACES = `[{
+"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
+"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
+"format": 34359742487,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"name": "inline",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
+}]`;
+
+function inlineMeshNode(subResourceId: string): TscnNode {
+  return {
+    name: 'Trailer',
+    type: 'MeshInstance3D',
+    children: [],
+    properties: {
+      name: 'Trailer',
+      mesh: `SubResource("${subResourceId}")`,
+      surfaceMaterialOverrides: new Map(),
+    } as MeshInstance3DProperties,
+  };
+}
+
 class NoopProvider implements ResourceProvider {
   async loadResource(): Promise<string | ArrayBuffer | null> {
     return null;
@@ -172,6 +203,59 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
       .findAllByType('MeshBasicMaterial')
       .filter((m) => (m.instance as THREE.MeshBasicMaterial).wireframe);
     expect(wireframes).toHaveLength(0);
+  });
+
+  it('renders an ArrayMesh the SCENE declares as its own sub_resource', async () => {
+    // A scene can inline baked surfaces instead of pointing at a `.tres`. There is
+    // no file to fetch, so nothing asks the resource pipeline — and because
+    // `resolveMeshSubResource` DOES find the sub-resource, the unresolved-mesh
+    // placeholder never fired either, so the node drew nothing with no diagnostic.
+    const loader = makeLoader();
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider
+          internalResources={[
+            { id: 'ArrayMesh_inline', type: 'ArrayMesh', data: { _surfaces: INLINE_SURFACES } },
+          ]}
+          externalResources={[]}
+        >
+          <MeshInstance3D node={inlineMeshNode('ArrayMesh_inline')} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    const geo = firstMeshGeometry(renderer);
+    expect(geo!.getAttribute('position').count).toBe(4);
+    expect(geo!.getIndex()!.count).toBe(6);
+    geo!.computeBoundingSphere();
+    expect(Number.isFinite(geo!.boundingSphere!.radius)).toBe(true);
+    const noWireframe = renderer.scene
+      .findAllByType('MeshBasicMaterial')
+      .filter((m) => (m.instance as THREE.MeshBasicMaterial).wireframe);
+    expect(noWireframe).toHaveLength(0);
+  });
+
+  it('shows the placeholder when a scene ArrayMesh sub_resource carries no surfaces', async () => {
+    // `buildPrimitiveMeshGeometry` has no ArrayMesh case, so falling through would
+    // draw nothing and say nothing — how the missing trailer went unnoticed.
+    const loader = makeLoader();
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider
+          internalResources={[{ id: 'ArrayMesh_empty', type: 'ArrayMesh', data: {} }]}
+          externalResources={[]}
+        >
+          <MeshInstance3D node={inlineMeshNode('ArrayMesh_empty')} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    const wireframes = renderer.scene
+      .findAllByType('MeshBasicMaterial')
+      .filter((m) => (m.instance as THREE.MeshBasicMaterial).wireframe);
+    expect(wireframes.length).toBeGreaterThan(0);
   });
 
   it('shows the magenta wireframe placeholder when the ArrayMesh is unavailable', async () => {

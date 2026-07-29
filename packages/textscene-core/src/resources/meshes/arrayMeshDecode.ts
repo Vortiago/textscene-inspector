@@ -27,6 +27,7 @@
 
 import { warn } from '../../logger.js';
 import { parseTresFile, type ParsedTresFile } from '../../parser/tresParser.js';
+import type { TscnExternalResource, TscnInternalResource } from '../../parser/types.js';
 import { findSubResource, parseResourceReference } from '../SubResourceResolver.js';
 import { parseSubResourcePath, resolveRefToResourcePath } from '../subResourcePath.js';
 
@@ -506,7 +507,48 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
   }
 
   const extById = new Map(parsed.extResources.map((r) => [r.id, r.path]));
+  return decodeSurfaces(surfacesRaw, selfPath, (block) =>
+    readMaterialPath(block, parsed, extById, filePath)
+  );
+}
 
+/**
+ * Decode an ArrayMesh declared as a `[sub_resource]` of a SCENE rather than of a
+ * `.tres` — the third kind of reference, and the one no path can address: its
+ * surface bytes are inline in the `.tscn`, so there is no file to fetch.
+ *
+ * Its `_surfaces` is the same dict format, so only the material lookup differs.
+ * A surface's `ExtResource` material resolves against the SCENE's table; a
+ * `SubResource` one names a material of the scene, which no resource path can
+ * reach, so those surfaces take the neutral default — the same limitation a
+ * mesh's own sub-resource materials had before they became addressable.
+ */
+export function decodeSceneArrayMesh(
+  resource: TscnInternalResource,
+  externalResources: readonly TscnExternalResource[]
+): ArrayMeshData {
+  const surfacesRaw = resource.data['_surfaces'];
+  if (typeof surfacesRaw !== 'string') {
+    throw new Error(`ArrayMesh sub-resource "${resource.id}" carries no surfaces`);
+  }
+  const extById = new Map(externalResources.map((r) => [r.id, r.path]));
+  return decodeSurfaces(surfacesRaw, `SubResource("${resource.id}")`, (block) => {
+    const match = /"material"\s*:\s*([^,\n}]+)/.exec(block);
+    const ref = match && parseResourceReference(match[1]!.trim());
+    return ref?.type === 'ExtResource' ? extById.get(ref.id) : undefined;
+  });
+}
+
+/**
+ * The shared surface loop. `label` names the mesh in diagnostics and errors;
+ * `resolveMaterial` is the one thing that differs between a mesh read out of a
+ * `.tres` and one inlined in a scene.
+ */
+function decodeSurfaces(
+  surfacesRaw: string,
+  label: string,
+  resolveMaterial: (block: string) => string | undefined
+): ArrayMeshData {
   const surfaces: ArrayMeshSurface[] = [];
   let declared = 0;
   for (const [surfaceIndex, block] of [...iterateSurfaceBlocks(surfacesRaw)].entries()) {
@@ -560,7 +602,7 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
       uvs,
       normals,
       indices,
-      materialPath: readMaterialPath(block, parsed, extById, filePath),
+      materialPath: resolveMaterial(block),
     });
   }
 
@@ -569,7 +611,7 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
   // success — otherwise the node renders invisibly with no placeholder and the
   // user gets no signal at all.
   if (declared > 0 && surfaces.length === 0) {
-    throw new Error(`ArrayMesh ${selfPath}: none of its ${declared} surface(s) could be decoded`);
+    throw new Error(`ArrayMesh ${label}: none of its ${declared} surface(s) could be decoded`);
   }
   return { surfaces };
 }
