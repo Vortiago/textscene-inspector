@@ -204,6 +204,30 @@ export function createFakeResourceLoader(): FakeResourceLoader {
         metadata,
       });
     },
+    // The pending-resource activity the real loader tracks for `CameraFit`.
+    // Mirrored rather than stubbed to no-ops: every mounted `useResource`
+    // registers here, so a fake that silently dropped the count would let a
+    // leak through unnoticed.
+    pendingCount: 0,
+    pendingListeners: new Set<() => void>(),
+    beginPending(): () => void {
+      this.pendingCount += 1;
+      for (const l of this.pendingListeners) l();
+      let released = false;
+      return () => {
+        if (released) return;
+        released = true;
+        this.pendingCount -= 1;
+        for (const l of this.pendingListeners) l();
+      };
+    },
+    get pendingResourceCount(): number {
+      return this.pendingCount;
+    },
+    subscribePending(listener: () => void): () => void {
+      this.pendingListeners.add(listener);
+      return () => this.pendingListeners.delete(listener);
+    },
   };
 
   return {

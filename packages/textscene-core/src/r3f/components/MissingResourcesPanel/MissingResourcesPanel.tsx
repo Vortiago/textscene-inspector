@@ -10,21 +10,31 @@
  * The component is host-agnostic: it only knows about paths. The host
  * supplies `onUpload(path, file)` and `onRemove(path)` callbacks, which
  * in the web app wrap `provider.addUploadedFile` + `loader.provideFile`.
+ *
+ * A MISSING row may name a resource INSIDE a `.tres` (a **Sub-resource path**),
+ * because that is the identity a failed load is reported under — so what the
+ * user picks against it is the OWNING file, and that is what the host is handed.
+ * An UPLOADED row is already a file (`markUploaded` keys that set by file), so
+ * the remove side needs no such translation. Either way no host learns the
+ * grammar.
  */
 import { type ChangeEvent } from 'react';
 import { useMissingResources } from '../../contexts/MissingResourcesContext.js';
+import { resourceFilePath } from '../../../resources/subResourcePath.js';
 import styles from './MissingResourcesPanel.module.css';
 
 export interface MissingResourcesPanelProps {
   /**
    * Called when the user picks a file for a specific missing-row path.
    * The host wires the file into its resource provider and asks the
-   * loader to re-resolve dependents.
+   * loader to re-resolve dependents. Always a real file path, never a
+   * **Sub-resource path** — a host keys its provider by file.
    */
   onUpload: (path: string, file: File) => void;
   /**
    * Called when the user clicks "Remove" on an uploaded row. The host
-   * deletes the file from its provider's cache.
+   * deletes the file from its provider's cache. Necessarily the same path
+   * `onUpload` was given, or the removal would miss the bytes it stored.
    */
   onRemove: (path: string) => void;
 }
@@ -101,10 +111,18 @@ interface MissingRowProps {
 }
 
 function MissingRow({ path, onUpload }: MissingRowProps) {
+  // What a picked file actually REPLACES. For a row naming a resource inside a
+  // `.tres` these differ, and the row has to say so: it identifies a material,
+  // but the only thing a provider can be keyed by is the mesh file that carries
+  // it. A user who read the row as "pick this material" and got their material
+  // installed as the mesh's bytes would watch the mesh vanish.
+  const filePath = resourceFilePath(path);
+  const replacesOtherFile = filePath !== path;
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    onUpload(path, file);
+    onUpload(filePath, file);
     // Reset the input so picking the same filename again would re-fire.
     e.target.value = '';
   };
@@ -119,7 +137,10 @@ function MissingRow({ path, onUpload }: MissingRowProps) {
         <div className={`${styles.icon} ${styles.missing}`} aria-hidden="true">
           ⚠
         </div>
-        <div className={styles.path} title={path}>
+        <div
+          className={styles.path}
+          title={replacesOtherFile ? `${path} — inside ${filePath}` : path}
+        >
           {path}
         </div>
       </div>
@@ -128,7 +149,11 @@ function MissingRow({ path, onUpload }: MissingRowProps) {
           type="file"
           className={styles.upload}
           onChange={handleChange}
+          // Named by the ROW, so two sub-resource rows of one file stay
+          // distinguishable to assistive tech and to label queries; the title
+          // carries which file a pick actually replaces.
           aria-label={`Upload file for ${path}`}
+          title={replacesOtherFile ? `Replaces ${filePath}, which carries it` : undefined}
         />
       </div>
     </div>

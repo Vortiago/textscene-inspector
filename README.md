@@ -42,7 +42,9 @@ Beyond the node set:
   textures.
 - **External resources.** PackedScene instancing, textures, materials, and GLB
   meshes flow through a typed event bus that recovers when a file arrives after
-  the scene that references it.
+  the scene that references it. A resource a `.tres` declares inside itself —
+  a mesh's own surface materials, a MeshLibrary's embedded meshes — is addressed
+  the same way, by Godot's `res://file.tres::SubId` path.
 - **Animation.** AnimationPlayer (transform tracks via `THREE.AnimationMixer`,
   plus value tracks like sprite frames and Decal modulate/size), AnimationTree
   blend trees and state machines, GLB-embedded clips, and AnimatedSprite2D

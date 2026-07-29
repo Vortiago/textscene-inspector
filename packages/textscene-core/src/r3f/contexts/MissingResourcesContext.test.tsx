@@ -85,6 +85,45 @@ describe('MissingResourcesContext', () => {
     expect(result.current.uploadedPaths.size).toBe(0);
   });
 
+  it('records an upload against the owning FILE, so one file is one row', () => {
+    // The user picks one file. A `.tres` backing three surface materials heals
+    // three identities, so `markUploaded` fires three times — but they name one
+    // file, and three "✓ uploaded" rows with three Remove buttons for a single
+    // pick would be a lie about what happened.
+    const { result } = renderHook(() => useMissingResources(), { wrapper: wrap });
+    act(() => {
+      result.current.markUploaded('res://m.tres::StandardMaterial3D_a');
+      result.current.markUploaded('res://m.tres::StandardMaterial3D_b');
+      result.current.markUploaded('res://m.tres');
+    });
+
+    expect(Array.from(result.current.uploadedPaths)).toEqual(['res://m.tres']);
+  });
+
+  it('clears the reported IDENTITY from missing, not just its file', () => {
+    // `missingPaths` is keyed by what a consumer asked for, so healing an
+    // address must retire that address — clearing only the file would leave the
+    // row up forever.
+    const { result } = renderHook(() => useMissingResources(), { wrapper: wrap });
+    act(() => result.current.report('res://m.tres::StandardMaterial3D_a'));
+    act(() => result.current.markUploaded('res://m.tres::StandardMaterial3D_a'));
+
+    expect(result.current.missingPaths.size).toBe(0);
+    expect(Array.from(result.current.uploadedPaths)).toEqual(['res://m.tres']);
+  });
+
+  it('removeUploaded leaves other files alone', () => {
+    const { result } = renderHook(() => useMissingResources(), { wrapper: wrap });
+    act(() => {
+      result.current.markUploaded('res://m.tres::StandardMaterial3D_x');
+      result.current.markUploaded('res://other.tres::StandardMaterial3D_x');
+    });
+
+    act(() => result.current.removeUploaded('res://m.tres'));
+
+    expect(Array.from(result.current.uploadedPaths)).toEqual(['res://other.tres']);
+  });
+
   it('state survives a provider re-render', () => {
     const { result, rerender } = renderHook(() => useMissingResources(), {
       wrapper: wrap,

@@ -25,6 +25,7 @@ import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import {
   createResourcePipeline,
+  resourceFilePath,
   ResourceLoaderProvider,
   TscnPreviewShell,
   useMissingResources,
@@ -259,7 +260,11 @@ export function R3FApp() {
   // the current set without re-rendering R3FApp on each missing-path change.
   const missingPathsRef = useRef<ReadonlySet<string>>(new Set());
   const handleMissingPathsChange = useCallback((paths: ReadonlySet<string>) => {
-    missingPathsRef.current = paths;
+    // A missing path may be a resource INSIDE a `.tres`, and the matcher below
+    // keys on basename — an address's basename still carries its `::id`, so no
+    // droppable file could ever match it and the right file would be discarded
+    // with a misleading error. What the user can drop is the owning file.
+    missingPathsRef.current = new Set([...paths].map(resourceFilePath));
   }, []);
 
   // Lint the buffer continuously, debounced at the same cadence as

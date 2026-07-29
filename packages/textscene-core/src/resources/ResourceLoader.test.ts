@@ -102,6 +102,23 @@ describe('ResourceLoader (loader-level gaps)', () => {
       expect(loader.getCached<TscnScene>('scene', SCENE_PATH)).toBe(scene);
     });
 
+    it('treats a sub-resource path as its owning file', () => {
+      // Bytes only ever belong to a file, and a caller holding a **Sub-resource
+      // path** (a missing-resources row, say) is telling us about the file that
+      // owns it. Routing the address instead would miss the metadata, fan out to
+      // the wrong processors, and skip the file-level clear that announces
+      // `invalidated` to every address inside that file.
+      const matSpy = vi.spyOn(loader.materials, 'request');
+      const resSpy = vi.spyOn(loader.resources, 'request');
+      const fileCacheSpy = vi.spyOn(fileEventBus, 'clearCache');
+
+      loader.provideFile('res://meshes/wheel.tres::StandardMaterial3D_x');
+
+      expect(fileCacheSpy).toHaveBeenCalledWith('res://meshes/wheel.tres');
+      expect(matSpy).toHaveBeenCalledWith('res://meshes/wheel.tres');
+      expect(resSpy).toHaveBeenCalledWith('res://meshes/wheel.tres');
+    });
+
     it('fans out to texture + material processors when the path has no registered metadata', () => {
       const texSpy = vi.spyOn(loader.textures, 'request');
       const matSpy = vi.spyOn(loader.materials, 'request');
@@ -286,6 +303,48 @@ describe('ResourceLoader (loader-level gaps)', () => {
       loader.clear();
       expect(loader.metadata.getAll()).toHaveLength(0);
       expect(loader.scenes.isCached(SCENE_PATH)).toBe(false);
+    });
+  });
+  // The signal CameraFit uses to know loading has actually finished. A timer
+  // can only guess, and guessed wrong for a scene whose meshes are large
+  // external .tres files: the fit framed whatever had decoded by then.
+  describe('pending-resource activity', () => {
+    it('starts settled', () => {
+      expect(loader.pendingResourceCount).toBe(0);
+    });
+
+    it('counts concurrent waiters and only reaches zero when the last releases', () => {
+      const releaseA = loader.beginPending();
+      const releaseB = loader.beginPending();
+      expect(loader.pendingResourceCount).toBe(2);
+      releaseA();
+      expect(loader.pendingResourceCount).toBe(1);
+      releaseB();
+      expect(loader.pendingResourceCount).toBe(0);
+    });
+
+    it('ignores a double release, so one consumer cannot drive the count negative', () => {
+      const release = loader.beginPending();
+      release();
+      release();
+      expect(loader.pendingResourceCount).toBe(0);
+    });
+
+    it('notifies subscribers on begin and on release', () => {
+      const seen: number[] = [];
+      const unsubscribe = loader.subscribePending(() => seen.push(loader.pendingResourceCount));
+      const release = loader.beginPending();
+      release();
+      unsubscribe();
+      expect(seen).toEqual([1, 0]);
+    });
+
+    it('stops notifying after unsubscribe', () => {
+      let calls = 0;
+      const unsubscribe = loader.subscribePending(() => { calls += 1; });
+      unsubscribe();
+      loader.beginPending()();
+      expect(calls).toBe(0);
     });
   });
 });

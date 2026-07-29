@@ -85,3 +85,6 @@ export { FileEventBus } from './resources/FileEventBus';
 export type { FileData, FileLoadedHandler, FileFailedHandler } from './resources/FileEventBus';
 export { createResourcePipeline } from './resources/createResourcePipeline';
 export type { ResourcePipeline } from './resources/createResourcePipeline';
+// A host that reads reported resource identities (a drop matcher keying on
+// basename, say) needs the file half, which core cannot normalise on its behalf.
+export { resourceFilePath } from './resources/subResourcePath';

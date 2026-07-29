@@ -268,6 +268,31 @@ do the async I/O underneath — see the note below.)
    CLAUDE.md). Components branch on `status` and render placeholders for missing
    resources — the subtree never suspends.
 
+**A resource path is not always a file path.** A `.tres` can declare the resources it
+uses as its own `[sub_resource]` blocks — a mesh's per-surface materials, a
+MeshLibrary's embedded item meshes — and those are addressed with Godot's own
+`res://file.tres::SubId` notation (**Sub-resource path**, ADR-0029). The layers above
+split on that: the **whole address is the resource identity** (processor cache key,
+in-flight key, what `useResource` pins and subscribes to), while layer 3 normalises it
+to its `filePath` before touching layer 2. So the `FileEventBus`, the
+`ResourceProvider`s and the hot-reload watcher only ever see real files — a
+sub-resource's bytes *are* its owning file's bytes — and one arrival settles every
+address waiting on that file. `shouldProcess` is asked about the file, so extension
+checks read unchanged.
+
+That containment holds **downward**. Coming back up it needs help: a failed load is
+reported under the address, so a missing-resources row can carry one, and the panel
+hands its host the `filePath` for both upload and remove (ADR-0022) while `provideFile`
+normalises whatever it is given. Because the normalisation sits in
+`createResourceProcessor`, every processor type gains the fetch/cache/dedupe
+**plumbing** — but not the semantics: a `process()` that ignored its path would hand
+back the whole file's resource under the address, so `addressesSubResources` is opt-in
+and the factory refuses an address without it. Only the material and ArrayMesh
+processors declare it today. So the third kind of reference is invisible to any
+**consumer** holding a path string, while a **producer** minting addresses for a new
+resource type must honour the id in its own `process()`. The
+`resources/subResourcePath.ts` grammar is the only place `::` is written.
+
 **Late arrival — why it's events, not a one-shot promise.** When a load fails the
 hook flips to `missing` and reports the path to `MissingResourcesContext`, which
 lists it in the Inspector's **Resources** tab. **The hook keeps its subscription

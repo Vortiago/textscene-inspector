@@ -215,3 +215,79 @@ describe('createMaterialFromContent', () => {
     ).rejects.toThrow('Invalid .tres file');
   });
 });
+
+/**
+ * A material declared as a `[sub_resource]` of a mesh's own `.tres` — the third
+ * kind of reference. The file's `[gd_resource type=…]` is then an ArrayMesh, so
+ * the switch has to follow the SUB-RESOURCE's type, and the sub-resource's own
+ * texture ExtResources resolve against that file's ext_resource table.
+ */
+describe('createMaterialFromContent for a sub-resource', () => {
+  /** Shaped like scenes/demos/3d/truck_town/vehicles/meshes/wheel.tres. */
+  const MESH_TRES = [
+    '[gd_resource type="ArrayMesh" format=4 uid="uid://bqrwin8ccgptt"]',
+    '',
+    '[ext_resource type="Texture2D" path="res://vehicles/tire_albedo.png" id="1_tex"]',
+    '',
+    '[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_shvqh"]',
+    'resource_name = "tire"',
+    'albedo_color = Color(1, 0, 0, 1)',
+    'roughness = 0.8',
+    '',
+    '[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_020iw"]',
+    'resource_name = "chrome"',
+    'metallic = 1.0',
+    'roughness = 0.35',
+    '',
+    '[resource]',
+    'resource_name = "meshes_wheel"',
+    '_surfaces = []',
+    '',
+  ].join('\n');
+
+  it('builds the named sub-resource rather than the file’s own [resource] body', async () => {
+    const material = (await createMaterialFromContent(
+      MESH_TRES,
+      undefined,
+      'StandardMaterial3D_shvqh'
+    )) as THREE.MeshStandardMaterial;
+
+    expect(material.color.getHex()).toBe(0xff0000);
+    expect(material.roughness).toBe(0.8);
+  });
+
+  it('tells two sub-resources of the same file apart', async () => {
+    const chrome = (await createMaterialFromContent(
+      MESH_TRES,
+      undefined,
+      'StandardMaterial3D_020iw'
+    )) as THREE.MeshStandardMaterial;
+
+    expect(chrome.metalness).toBe(1);
+    expect(chrome.roughness).toBe(0.35);
+  });
+
+  it('resolves its texture ExtResources against the owning file’s table', async () => {
+    const texture = new THREE.Texture();
+    const loadTexture = vi.fn().mockResolvedValue(texture);
+    const textured = MESH_TRES.replace(
+      'roughness = 0.8',
+      'roughness = 0.8\nalbedo_texture = ExtResource("1_tex")'
+    );
+
+    const material = (await createMaterialFromContent(
+      textured,
+      loadTexture,
+      'StandardMaterial3D_shvqh'
+    )) as THREE.MeshStandardMaterial;
+
+    expect(loadTexture).toHaveBeenCalledWith('res://vehicles/tire_albedo.png');
+    expect(material.map).toBe(texture);
+  });
+
+  it('rejects an id the file does not declare', async () => {
+    await expect(
+      createMaterialFromContent(MESH_TRES, undefined, 'StandardMaterial3D_absent')
+    ).rejects.toThrow('Sub-resource "StandardMaterial3D_absent" is not declared');
+  });
+});

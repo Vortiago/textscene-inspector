@@ -36,7 +36,7 @@ import { applyLoopOverride } from '../../../r3f/animation/loopOverride';
 import { useAnimationDriverMount } from '../../../r3f/animation/useAnimationDriverMount';
 import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
 import { resolveAnimations, type GodotAnimation } from './animationResolver';
-import { buildClip, loopSettingsFor } from './clipBuilder';
+import { buildClip, loopSettingsFor, resolveTrackBinding } from './clipBuilder';
 import {
   sampleSteppedValue,
   sampleInterpolatedValue,
@@ -253,12 +253,16 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
 }
 
 /**
- * Resolve a track's target node against the animation root. A `.` targetPath
- * (Godot `NodePath(".")`) is the root itself — `getObjectByName(".")` would miss
- * it (no child is named `.`), so map it to the root directly.
+ * Resolve a track's target node against the animation root — the object the
+ * mixer will drive, so the Euler reorder and the base-transform snapshot land on
+ * it. Goes through the same `resolveTrackBinding` the track names come from, so
+ * the two cannot disagree about which object a path means.
  */
 export function resolveTrackTarget(root: Object3D, targetPath: string): Object3D | undefined {
-  return targetPath === '.' ? root : root.getObjectByName(targetPath);
+  const binding = resolveTrackBinding(targetPath);
+  if (binding.kind === 'root') return root;
+  if (binding.kind === 'unbindable') return undefined;
+  return root.getObjectByName(binding.name);
 }
 
 /**

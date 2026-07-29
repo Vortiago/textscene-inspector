@@ -25,6 +25,23 @@ _surfaces = [{
 blend_shape_mode = 0
 `;
 
+/** The wall quad, then a surface carrying half the `vertex_data` it declares. */
+const GOOD_THEN_UNREADABLE_TRES = WALL_TRES.replace(
+  '}]\nblend_shape_mode = 0',
+  `}, {
+"aabb": AABB(-1, -1, 1, 2, 2, 0),
+"format": 4097,
+"index_count": 3,
+"index_data": PackedByteArray("AAABAAIA"),
+"name": "truncated",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/")
+}]
+blend_shape_mode = 0`
+);
+
 function mockFileBus() {
   const handlers = {
     loaded: new Set<(p: string, d: FileData) => void>(),
@@ -63,6 +80,29 @@ describe('createArrayMeshProcessor', () => {
     expect(resource.geometry.getAttribute('position').count).toBe(4);
     expect(resource.materialPaths).toEqual([null]); // wall surface has no material here
     expect(processor.getCached('res://wall.tres')).toBe(resource); // identity caching
+  });
+
+  it('keeps materialPaths aligned with the draw groups when a surface is dropped', async () => {
+    // materialPaths is built from the decoded surfaces while each group's
+    // materialIndex comes from the builder's own loop, so the two only agree as
+    // long as one list is the source of both — the decoder's.
+    const file = mockFileBus();
+    const eventBus = new ResourceEventBus();
+    const processor = createArrayMeshProcessor(file.bus, eventBus);
+
+    const loaded = eventBus.once<ArrayMeshResource>(
+      'arraymesh',
+      'loaded',
+      'res://mixed.tres',
+      1000
+    );
+    processor.request('res://mixed.tres');
+    file.emitLoaded('res://mixed.tres', GOOD_THEN_UNREADABLE_TRES);
+
+    const resource = await loaded;
+    expect(resource.geometry.groups).toHaveLength(1);
+    expect(resource.materialPaths).toHaveLength(1);
+    expect(resource.geometry.groups[0]!.materialIndex).toBe(0);
   });
 
   it('ignores binary data (only decodes text .tres)', () => {

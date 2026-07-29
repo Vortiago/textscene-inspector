@@ -109,6 +109,55 @@ describe('<MissingResourcesPanel>', () => {
     expect(onRemove).toHaveBeenCalledWith('res://textures/shared.png');
   });
 
+  it('hands the host the OWNING FILE when a row names a resource inside a .tres', async () => {
+    // A failed load is reported under its whole **Sub-resource path**, so a row
+    // can carry `file::id` — but a host keys its provider by file, and what the
+    // user picked IS the file. Passing the address through would store the bytes
+    // under a key nothing ever asks for.
+    const onUpload = vi.fn();
+    render(
+      <MissingResourcesProvider>
+        <ReportMissingOnMount path="res://meshes/wheel.tres::ORMMaterial3D_x" />
+        <MissingResourcesPanel onUpload={onUpload} onRemove={vi.fn()} />
+      </MissingResourcesProvider>
+    );
+
+    const panel = await screen.findByTestId('missing-resources-panel');
+    const input = panel.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['bytes'], 'wheel.tres', { type: 'text/plain' });
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    expect(onUpload).toHaveBeenCalledWith('res://meshes/wheel.tres', file);
+  });
+
+  it('shows one uploaded row per FILE and removes under that same key', async () => {
+    // An upload against an address row is recorded against the owning file, so
+    // the row the user sees — and removes — is the file. The pair has to agree on
+    // that key or the removal misses the bytes the upload stored, silently
+    // leaving it in place and breaking the "Remove → row reappears" round-trip.
+    const onRemove = vi.fn();
+    render(
+      <MissingResourcesProvider>
+        <MarkUploadedOnMount path="res://meshes/wheel.tres::ORMMaterial3D_x" />
+        <MissingResourcesPanel onUpload={vi.fn()} onRemove={onRemove} />
+      </MissingResourcesProvider>
+    );
+
+    const panel = await screen.findByTestId('missing-resources-panel');
+    const uploadedRows = panel.querySelectorAll('[data-state="uploaded"]');
+    expect(uploadedRows).toHaveLength(1);
+    expect(uploadedRows[0]!.getAttribute('data-path')).toBe('res://meshes/wheel.tres');
+
+    await act(async () => {
+      fireEvent.click(uploadedRows[0]!.querySelector('button') as HTMLButtonElement);
+    });
+
+    expect(onRemove).toHaveBeenCalledWith('res://meshes/wheel.tres');
+    expect(screen.queryByTestId('missing-resources-panel')).toBeNull();
+  });
+
   it('uploading a missing path moves it from missing to uploaded set', async () => {
     function MissingThenUpload({ path }: { path: string }) {
       const { report, markUploaded } = useMissingResources();

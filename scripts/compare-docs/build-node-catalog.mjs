@@ -222,6 +222,7 @@ const RESOURCE_CLASSES = [
   { name: 'Environment', chain: ['Resource'] },
   { name: 'Sky', chain: ['Resource'] },
   { name: 'Texture2D', chain: ['Texture', 'Resource'] },
+  { name: 'ArrayMesh', chain: ['Mesh', 'Resource'] },
 ];
 
 /**

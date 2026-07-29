@@ -42,6 +42,7 @@ import { createSceneProcessor } from './processors/createSceneProcessor';
 import { createTresResourceProcessor } from './processors/createTresResourceProcessor';
 import { createArrayMeshProcessor, type ArrayMeshResource } from './processors/createArrayMeshProcessor';
 import { runClearCachesSequence } from './clearCachesSequence';
+import { resourceFilePath } from './subResourcePath';
 import type { ParsedTresFile } from '../parser/tresParser';
 import type { ResourceProcessor } from './createResourceProcessor';
 import * as logger from '../logger';
@@ -87,6 +88,45 @@ export class ResourceLoader {
   private onResourceNeeded: ResourceNeededCallback | null = null;
 
   private _fileEventBus: FileEventBus | null;
+
+  /**
+   * How many mounted `useResource` consumers are still waiting. Lives here
+   * rather than in a context of its own so no host has to mount another
+   * provider — every consumer already reaches the loader.
+   *
+   * The point is a signal for "loading has actually finished", which a timer
+   * can only guess at: a scene whose meshes are big external `.tres` files
+   * settles long after one whose geometry is inline.
+   */
+  private pendingResources = 0;
+  private readonly pendingListeners = new Set<() => void>();
+
+  /** Called by `useResource` while a consumer is pending; returns the release. */
+  beginPending(): () => void {
+    this.pendingResources += 1;
+    this.notifyPending();
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.pendingResources -= 1;
+      this.notifyPending();
+    };
+  }
+
+  get pendingResourceCount(): number {
+    return this.pendingResources;
+  }
+
+  /** Subscribe to pending-count changes; returns the unsubscribe. */
+  subscribePending(listener: () => void): () => void {
+    this.pendingListeners.add(listener);
+    return () => this.pendingListeners.delete(listener);
+  }
+
+  private notifyPending(): void {
+    for (const listener of this.pendingListeners) listener();
+  }
 
   constructor(fileEventBus?: FileEventBus) {
     this._fileEventBus = fileEventBus || null;
@@ -297,7 +337,15 @@ export class ResourceLoader {
    * dispatch is robust to paths that were referenced but never registered
    * as ExtResource.
    */
-  provideFile(path: string): void {
+  provideFile(rawPath: string): void {
+    // Bytes only ever belong to a FILE, so normalise before anything keys off
+    // this: clearing the file is what announces `invalidated` to every address
+    // inside it, while routing an address would miss the metadata and fan out to
+    // the wrong processors. `MissingResourcesPanel` already hands its host a
+    // file, so no in-repo caller needs this — it is the public-API backstop for
+    // an out-of-tree host that passes a row's identity straight through, not a
+    // second opinion about where that boundary lives.
+    const path = resourceFilePath(rawPath);
     this._fileEventBus?.clearCache(path);
     this.clearCache(path);
 
