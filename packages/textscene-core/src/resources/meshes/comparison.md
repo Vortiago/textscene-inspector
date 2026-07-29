@@ -78,6 +78,16 @@ reads fine.
 - **Only surface 0's material loads textures on a mesh built from scene SubResources**
   (pre-existing `SecondarySurfaceMaterial` limit). External ArrayMeshes are unaffected —
   each surface is its own `ExternalMaterialSlot`.
+- **A scene SubResource surface material renders its scalars, not its textures.** Its
+  albedo, metallic and roughness apply; a texture slot on it does not load. No corpus
+  scene uses one.
+- **`material_override` / `surface_material_override/N` do not reach an ArrayMesh.**
+  Both ArrayMesh paths render one slot per draw group from the surface's own material,
+  so a node-level override is dropped where Godot would apply it. Pre-existing for an
+  external `.tres`; the inline path inherits it.
+- **A `.tres` whose every surface is undecodable fails the whole resource**, which puts
+  its path in the missing-resources panel even though the file is present. The
+  placeholder is right; the panel row overstates the cause.
 - **Blend shapes, LODs and skins are ignored**; a skinned mesh renders in its rest pose.
 - **A compressed surface with NORMAL but no TANGENT is unverified** — absent from the
   corpus, so the plain-octahedral reading is implemented by symmetry, not measured.

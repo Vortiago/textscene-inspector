@@ -236,6 +236,44 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     expect(noWireframe).toHaveLength(0);
   });
 
+  it("applies the scene's own sub_resource material to an inline mesh surface", async () => {
+    // The scene's materials are in `internalResources`, which this component
+    // already holds — but no resource PATH can address them, so a surface naming
+    // one used to fall through to the neutral default and draw flat white. Every
+    // corpus scene that inlines a mesh names its materials this way.
+    const loader = makeLoader();
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider
+          internalResources={[
+            {
+              id: 'ArrayMesh_inline',
+              type: 'ArrayMesh',
+              data: { _surfaces: INLINE_SURFACES.replace('"name": "inline",', '"material": SubResource("Mat_blue"),\n"name": "inline",') },
+            },
+            {
+              id: 'Mat_blue',
+              type: 'StandardMaterial3D',
+              data: { albedo_color: 'Color(0.0387471, 0, 0.256548, 1)', roughness: '0.6' },
+            },
+          ]}
+          externalResources={[]}
+        >
+          <MeshInstance3D node={inlineMeshNode('ArrayMesh_inline')} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    const materials = renderer.scene.findAllByType('MeshStandardMaterial');
+    const colours = materials.map((m) =>
+      (m.instance as THREE.MeshStandardMaterial).color.getHex()
+    );
+    // The material's albedo, not ExternalMaterialSlot's 0xffffff default.
+    expect(colours).not.toContain(0xffffff);
+    expect(colours.some((c) => c !== 0xffffff)).toBe(true);
+  });
+
   it('shows the placeholder when a scene ArrayMesh sub_resource carries no surfaces', async () => {
     // `buildPrimitiveMeshGeometry` has no ArrayMesh case, so falling through would
     // draw nothing and say nothing — how the missing trailer went unnoticed.

@@ -29,7 +29,16 @@ const SKIP_BUILD_VALUES = new Set(['1', 'true', 'yes']);
  */
 const BUNDLED_SOURCE_DIRS = ['packages/textscene-core/src', 'apps/textscene-web/src'];
 
-/** Newest mtime under `dir`, and which file carries it. */
+/**
+ * Only files that can actually end up in the bundle count. Tests, comparison
+ * sheets and fixtures live inside `src/` but vite never sees them, so treating
+ * them as staleness would make the guard cry wolf after a test-only edit — and a
+ * guard that fires on work it cannot be measuring is one people learn to bypass.
+ */
+const BUNDLED_FILE = /\.(ts|tsx|js|jsx|css|json)$/;
+const NOT_BUNDLED = /\.(test|spec|contract)\.[jt]sx?$/;
+
+/** Newest mtime of a bundle-reachable file under `dir`, and which file carries it. */
 function newestMtime(dir) {
   let newest = 0;
   let newestFile = '';
@@ -46,6 +55,7 @@ function newestMtime(dir) {
         walk(p);
         continue;
       }
+      if (!BUNDLED_FILE.test(e.name) || NOT_BUNDLED.test(e.name)) continue;
       const m = statSync(p).mtimeMs;
       if (m > newest) {
         newest = m;

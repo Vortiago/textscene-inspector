@@ -149,7 +149,10 @@ function MissingRow({ path, onUpload }: MissingRowProps) {
           type="file"
           className={styles.upload}
           onChange={handleChange}
-          aria-label={`Upload ${filePath}`}
+          // Named by the ROW, so two sub-resource rows of one file stay
+          // distinguishable to assistive tech and to label queries; the title
+          // carries which file a pick actually replaces.
+          aria-label={`Upload file for ${path}`}
           title={replacesOtherFile ? `Replaces ${filePath}, which carries it` : undefined}
         />
       </div>

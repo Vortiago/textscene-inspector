@@ -20,6 +20,7 @@
  * round-trips untouched.
  */
 
+import { warn } from '../logger.js';
 import type { TscnInternalResource } from '../parser/types.js';
 import { findSubResource, parseResourceReference } from './SubResourceResolver.js';
 
@@ -83,7 +84,16 @@ export function resolveRefToResourcePath(
   const parsed = parseResourceReference(ref);
   if (!parsed) return null;
   if (parsed.type === 'ExtResource') return extPathById.get(parsed.id) ?? null;
-  if (gate && !gate.accepts(findSubResource(gate.declared, parsed.id))) return null;
+  if (gate) {
+    const sub = findSubResource(gate.declared, parsed.id);
+    // A reference to an id the document does not declare is a broken file, not a
+    // type we decline to address — say so, or a hand-edited or half-merged `.tres`
+    // silently renders a default and nothing anywhere names the dangling id.
+    if (!sub && gate.declared.length > 0) {
+      warn(`[SubResource] "${parsed.id}" is referenced but not declared — ignoring it`);
+    }
+    if (!gate.accepts(sub)) return null;
+  }
   return subResourcePath(selfPath, parsed.id);
 }
 

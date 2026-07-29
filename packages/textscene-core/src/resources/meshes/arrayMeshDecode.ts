@@ -29,7 +29,7 @@ import { warn } from '../../logger.js';
 import { parseTresFile, type ParsedTresFile } from '../../parser/tresParser.js';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types.js';
 import { BUILDABLE_MATERIAL_TYPES } from '../materials/buildableMaterialTypes.js';
-import { findSubResource } from '../SubResourceResolver.js';
+import { findSubResource, parseResourceReference } from '../SubResourceResolver.js';
 import {
   parseSubResourcePath,
   REJECT_SUB_RESOURCES,
@@ -121,6 +121,14 @@ export interface ArrayMeshSurface {
   indices: Uint16Array | Uint32Array;
   /** Resolved `res://` path of the surface's material, if it has one. */
   materialPath?: string;
+  /**
+   * For a mesh inlined in a SCENE: the id of the scene's own `[sub_resource]`
+   * material this surface names. No resource path can address a scene's
+   * sub-resources, so the renderer resolves this against the scene resources it
+   * already holds. Never set for a mesh read out of a `.tres`, whose own
+   * sub-resource materials ARE addressable.
+   */
+  materialSubResourceId?: string;
 }
 
 export interface ArrayMeshData {
@@ -431,7 +439,7 @@ function decodeIndices(
 function readMaterialPath(
   block: string,
   parsed: ParsedTresFile,
-  extById: Map<string, string>,
+  extById: ReadonlyMap<string, string>,
   selfPath: string
 ): string | undefined {
   return (
@@ -496,18 +504,25 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
   const { filePath, subResourceId } = parseSubResourcePath(selfPath);
   const surfacesRaw = readSurfacesRaw(parsed, filePath, subResourceId);
   if (!surfacesRaw) {
-    // An ADDRESS names one specific sub-resource, so failing to find a mesh there
-    // is an error: it fails like a missing file and the consumer gets its
-    // placeholder. A bare file path is different — a `.tres` with no `_surfaces`
-    // may be a legitimately empty mesh, or not a mesh at all (a MeshLibrary), and
-    // neither deserves a placeholder for a file that is exactly as written.
-    if (subResourceId !== undefined) {
-      throw new Error(`ArrayMesh ${selfPath} names no readable mesh sub-resource`);
+    // Godot writes `_surfaces` only for a mesh that HAS surfaces, so its absence
+    // is ambiguous — and the answer is the resource's TYPE, not the address form.
+    // An ArrayMesh without surfaces is a legitimately empty mesh and draws
+    // nothing, exactly as Godot does. Anything else is not a mesh at all
+    // (a BoxMesh `.tres`, a MeshLibrary) and must fail rather than cache an empty
+    // geometry as a success, which renders an invisible node with no diagnostic.
+    const addressed =
+      subResourceId === undefined
+        ? parsed.resourceType
+        : findSubResource(parsed.subResources, subResourceId)?.type;
+    if (addressed !== 'ArrayMesh') {
+      throw new Error(
+        `${selfPath} is a ${addressed ?? 'missing resource'}, not an ArrayMesh`
+      );
     }
     return { surfaces: [] };
   }
 
-  const extById = new Map(parsed.extResources.map((r) => [r.id, r.path]));
+  const extById = extResourcePathsById(parsed.extResources);
   return decodeSurfaces(surfacesRaw, selfPath, (block) =>
     readMaterialPath(block, parsed, extById, filePath)
   );
@@ -520,31 +535,45 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
  *
  * Its `_surfaces` is the same dict format, so only the material lookup differs.
  * A surface's `ExtResource` material resolves against the SCENE's table; a
- * `SubResource` one names a material of the scene, which no resource path can
- * reach, so those surfaces take the neutral default — the same limitation a
- * mesh's own sub-resource materials had before they became addressable.
+ * `SubResource` one names a material of the scene, which no resource PATH can
+ * reach — so it comes back as an id for the renderer to resolve against the
+ * scene's own resources, which it already holds.
  */
 export function decodeSceneArrayMesh(
   resource: TscnInternalResource,
   externalResources: readonly TscnExternalResource[]
 ): ArrayMeshData {
   const surfacesRaw = resource.data['_surfaces'];
-  if (typeof surfacesRaw !== 'string') {
-    throw new Error(`ArrayMesh sub-resource "${resource.id}" carries no surfaces`);
+  // An ArrayMesh with no surfaces is legitimately empty and draws nothing.
+  if (typeof surfacesRaw !== 'string') return { surfaces: [] };
+
+  const extById = extResourcePathsById(externalResources);
+  const mesh = decodeSurfaces(surfacesRaw, `SubResource("${resource.id}")`, (block) =>
+    resolveRefToResourcePath(readMaterialRef(block), extById, '', REJECT_SUB_RESOURCES) ??
+    undefined
+  );
+  // Carry the scene-local id alongside, since no path can express it.
+  for (const [i, block] of [...iterateSurfaceBlocks(surfacesRaw)].entries()) {
+    const surface = mesh.surfaces[i];
+    if (!surface || surface.materialPath) continue;
+    const ref = parseResourceReference(readMaterialRef(block) ?? '');
+    if (ref?.type === 'SubResource') surface.materialSubResourceId = ref.id;
   }
-  const extById = new Map(externalResources.map((r) => [r.id, r.path]));
-  return decodeSurfaces(surfacesRaw, `SubResource("${resource.id}")`, (block) => {
-    // A scene's own materials are addressable by no resource path, so only the
-    // ExtResource form resolves; the rest take the neutral default.
-    return (
-      resolveRefToResourcePath(
-        readMaterialRef(block),
-        extById,
-        '',
-        REJECT_SUB_RESOURCES
-      ) ?? undefined
-    );
-  });
+  return mesh;
+}
+
+/**
+ * First-wins id → path, matching `Array.find` over the same list.
+ * `SceneResourcesContext` orders its resources own-scene-first precisely so a
+ * duplicate id resolves to the nearer scene; a plain `new Map` is last-wins and
+ * would silently hand back the PARENT's resource instead.
+ */
+function extResourcePathsById(
+  resources: readonly TscnExternalResource[]
+): ReadonlyMap<string, string> {
+  const byId = new Map<string, string>();
+  for (const r of resources) if (!byId.has(r.id)) byId.set(r.id, r.path);
+  return byId;
 }
 
 /**

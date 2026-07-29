@@ -88,7 +88,11 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // A `[sub_resource type="ArrayMesh"]` of the SCENE: baked surfaces inlined in
   // the `.tscn`, so there is no file to fetch and nothing for the resource
   // pipeline to do — it decodes synchronously from the parsed scene.
-  const sceneArrayMesh = useSceneArrayMeshGeometry(meshResource, externalResources);
+  const sceneArrayMesh = useSceneArrayMeshGeometry(
+    meshResource,
+    internalResources,
+    externalResources
+  );
 
   // Parity-audit fix: when multiple `surface_material_override/N`
   // slots are populated (e.g. a GLB or multi-surface mesh), build an
@@ -388,7 +392,11 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     return (
       <MeshShell {...shellProps}>
         {sceneArrayMesh ? (
-          <ArrayMeshSurfaces mesh={sceneArrayMesh} shadowSide={shadowFlags.shadowSide} />
+          <ArrayMeshSurfaces
+            mesh={sceneArrayMesh.resource}
+            sceneMaterials={sceneArrayMesh.sceneMaterials}
+            shadowSide={shadowFlags.shadowSide}
+          />
         ) : (
           UNRESOLVED_MESH
         )}
@@ -644,23 +652,42 @@ const UNRESOLVED_MESH = (
 function ArrayMeshSurfaces({
   mesh,
   shadowSide,
+  sceneMaterials,
 }: {
   mesh: ArrayMeshResource;
   shadowSide: THREE.Side | undefined;
+  /**
+   * For a mesh inlined in the scene: its own `[sub_resource]` materials, by id.
+   * Those cannot be addressed by a resource path, so they arrive already resolved
+   * rather than through the pipeline.
+   */
+  sceneMaterials?: readonly (TscnInternalResource | undefined)[];
 }) {
   const surfacePaths = mesh.materialPaths.length > 0 ? mesh.materialPaths : [null];
   const multiSurface = surfacePaths.length > 1;
   return (
     <>
       <primitive object={mesh.geometry} attach="geometry" />
-      {surfacePaths.map((path, i) => (
-        <ExternalMaterialSlot
-          key={`surf-${i}`}
-          path={path}
-          attach={multiSurface ? `material-${i}` : 'material'}
-          shadowSide={shadowSide}
-        />
-      ))}
+      {surfacePaths.map((path, i) => {
+        const attach = multiSurface ? `material-${i}` : 'material';
+        const scene = sceneMaterials?.[i];
+        // A scene-local material is already in hand; only a PATH needs the pipeline.
+        return scene ? (
+          <StandardMaterialSlot
+            key={`surf-${i}`}
+            scalars={parseStandardMaterial3DScalars(scene.data as Record<string, string>)}
+            attach={attach}
+            shadowSide={shadowSide}
+          />
+        ) : (
+          <ExternalMaterialSlot
+            key={`surf-${i}`}
+            path={path}
+            attach={attach}
+            shadowSide={shadowSide}
+          />
+        );
+      })}
     </>
   );
 }
@@ -676,16 +703,34 @@ function ArrayMeshSurfaces({
  */
 function useSceneArrayMeshGeometry(
   resource: TscnInternalResource | undefined,
+  internalResources: readonly TscnInternalResource[],
   externalResources: readonly TscnExternalResource[]
-): ArrayMeshResource | null {
+): SceneArrayMesh | null {
+  // Keyed on the surface BYTES, not on object identity. Every keystroke in the
+  // source pane re-parses the scene and hands down fresh arrays and a fresh
+  // resource object, so identity deps would re-decode and re-upload the whole
+  // inline mesh on the render thread per character — and unlike the `.tres` path
+  // there is no processor cache to absorb it.
+  const surfacesRaw = resource?.type === 'ArrayMesh' ? resource.data['_surfaces'] : undefined;
+  const key = typeof surfacesRaw === 'string' ? surfacesRaw : null;
+
   const built = useMemo(() => {
-    if (resource?.type !== 'ArrayMesh') return null;
+    if (resource?.type !== 'ArrayMesh' || key === null) return null;
     try {
       const mesh = decodeSceneArrayMesh(resource, externalResources);
       if (mesh.surfaces.length === 0) return null;
       return {
-        geometry: buildArrayMeshGeometry(mesh),
-        materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
+        resource: {
+          geometry: buildArrayMeshGeometry(mesh),
+          materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
+        },
+        // Resolved here rather than in the decoder: only the renderer holds the
+        // scene's resources, and a scene's materials are reachable by no path.
+        sceneMaterials: mesh.surfaces.map((s) =>
+          s.materialSubResourceId === undefined
+            ? undefined
+            : findSubResource(internalResources, s.materialSubResourceId)
+        ),
       };
     } catch (error) {
       warn(
@@ -694,10 +739,18 @@ function useSceneArrayMeshGeometry(
       );
       return null;
     }
-  }, [resource, externalResources]);
+    // `key` stands in for `resource`/`externalResources`: same bytes, same mesh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 
-  useEffect(() => () => built?.geometry.dispose(), [built]);
+  useEffect(() => () => built?.resource.geometry.dispose(), [built]);
   return built;
+}
+
+interface SceneArrayMesh {
+  resource: ArrayMeshResource;
+  /** Per surface, the scene's own material sub-resource, when it names one. */
+  sceneMaterials: readonly (TscnInternalResource | undefined)[];
 }
 
 function resolveMeshSubResource(
