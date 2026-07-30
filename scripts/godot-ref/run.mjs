@@ -140,6 +140,7 @@ export function parseArgs(argv) {
     emitBounds: false,
     frame: false,
     sceneCamera: false,
+    sceneCameraPath: null,
     // 2D or 3D is a property of the SCENE, not of the invocation, so the
     // engine itself decides by default (`_is_canvas_scene`) — a JS copy of
     // Godot's class hierarchy would be one more pair of constants to keep in
@@ -174,6 +175,12 @@ export function parseArgs(argv) {
         break;
       case '--scene-camera':
         args.sceneCamera = true;
+        // Optional node path: a scene may hold several Camera3Ds and "the first
+        // one in tree order" is not a choice anyone made. Naming it is how both
+        // harnesses provably look through the SAME camera.
+        if (argv[i + 1] && !String(argv[i + 1]).startsWith('--')) {
+          args.sceneCameraPath = argv[++i];
+        }
         break;
       case '--mode': {
         const mode = String(argv[++i]).toLowerCase();
@@ -336,6 +343,7 @@ function bootstrapScript({
   lookAt,
   frame,
   sceneCamera,
+  sceneCameraPath,
   mode,
   out,
   boundsOut,
@@ -352,11 +360,17 @@ const BOUNDS_OUT := ${gdString(boundsOut ?? '')}
 const MODE_OUT := ${gdString(modeOut)}
 const MODE := "${mode}"
 const SCENE_CAMERA := ${sceneCamera ? 'true' : 'false'}
+const SCENE_CAMERA_PATH := ${gdString(sceneCameraPath ?? '')}
 const FOV := ${fov}
 const CANVAS_2D_SIZE := Vector2i(${CANVAS_2D_CAPTURE.width}, ${CANVAS_2D_CAPTURE.height})
 const CLEAR_2D := ${gdColor(CANVAS_2D_CAPTURE.clearColor)}
 
 func _ready() -> void:
+	# Before anything is instantiated: pausing deactivates the physics servers,
+	# so no body is ever stepped and no state callback ever fires. Set here, not
+	# after add_child(), because entering the tree is itself enough to schedule
+	# the first step. See _freeze_game_logic() for why this is the catch-all.
+	get_tree().paused = true
 	var target: Node = load(SCENE_PATH).instantiate()
 	var two_d := MODE == "2d" or (MODE == "auto" and _is_canvas_scene(target))
 	# Written before the render, so a run that dies mid-frame still says which
@@ -417,27 +431,31 @@ func _disable_2d_cameras(node: Node) -> void:
 		_disable_2d_cameras(child)
 
 # The reference must show the AUTHORED pose, not a running game. _settle() steps
-# six process frames, which would let RigidBody physics FALL and autoplay /
+# six process frames, which would let physics FALL a body and autoplay /
 # AnimationTree clips ADVANCE past their rest pose. The Node3DEditor preview our
-# previewer mirrors never runs game logic, so we freeze it before settling: a
-# RigidBody stays where it was authored, animation stays at frame zero. Called
-# after the subtree is in the tree (autoplay has queued but not yet sampled) so
-# stop() cancels it before the first frame. GPUParticles are left alone — their
-# preprocessed burst is the authored look, not running game logic.
+# previewer mirrors never runs game logic, so we stop it before settling.
+#
+# The catch-all is SceneTree.paused, set before the scene is ever instantiated:
+# SceneTree::set_pause() calls PhysicsServer3D/2D::set_active(false), so the
+# servers never step and never fire a state callback. That covers every physics
+# node at once — including ones that move something OTHER than themselves, which
+# a per-type freeze cannot. VehicleBody3D is the case that proved it: freezing
+# the body left it in place, but VehicleBody3D::_body_state_changed() still ran
+# and repositioned its VehicleWheel3D children to
+# hardPoint + wheelDirection * suspensionLength, dropping every wheel by the
+# suspension rest length. Pausing removes the callback that did it.
+#
+# The per-type calls below remain for the non-physics drivers pause does not
+# reach — an AnimationPlayer's queued autoplay, an AnimationTree's graph — and
+# for SoftBody3D, whose integration the pause covers but whose disabled
+# process_mode also pins it if a future Godot changes that. GPUParticles are
+# left alone: their preprocessed burst is the authored look, not running logic.
 func _freeze_game_logic(node: Node) -> void:
-	if node is RigidBody3D:
-		(node as RigidBody3D).freeze = true
-	if node is RigidBody2D:
-		(node as RigidBody2D).freeze = true
 	if node is AnimationPlayer:
 		(node as AnimationPlayer).stop()
 	if node is AnimationTree:
 		(node as AnimationTree).active = false
 	if node is SoftBody3D:
-		# SoftBody3D has no freeze property; its cloth/mesh is integrated by the
-		# physics server every process frame and sags away from the authored rest
-		# mesh the previewer shows. Disabling the node stops that integration,
-		# holding it at rest (the freeze equivalent for a soft body).
 		(node as SoftBody3D).process_mode = Node.PROCESS_MODE_DISABLED
 	for child in node.get_children():
 		_freeze_game_logic(child)
@@ -539,6 +557,13 @@ ${
         sceneCamera
           ? `	var existing := _find_camera(target)
 	if existing != null:
+		# Claim the viewport explicitly. A scene can hold several Camera3Ds — the
+		# town carries a PreviewCamera plus one inside every instanced vehicle —
+		# and which of them ends up current otherwise depends on tree order and
+		# on whatever the running game did, which is exactly the ambient state
+		# this harness pauses away. Without this the capture silently framed a
+		# different camera once physics stopped.
+		existing.make_current()
 ${
   fovExplicit
     ? `		existing.fov = FOV
@@ -568,6 +593,18 @@ ${
 }
 
 func _find_camera(node: Node) -> Camera3D:
+	if SCENE_CAMERA_PATH != "":
+		# The previewer addresses nodes from the scene ROOT inclusive
+		# ("TownScene/PreviewCamera"); from the root node itself that first
+		# segment is the node we are already standing on, so try both spellings
+		# rather than making the caller know which side it is talking to.
+		var named := node.get_node_or_null(NodePath(SCENE_CAMERA_PATH)) as Camera3D
+		if named == null:
+			var slash := SCENE_CAMERA_PATH.find("/")
+			if slash != -1:
+				named = node.get_node_or_null(NodePath(SCENE_CAMERA_PATH.substr(slash + 1))) as Camera3D
+		if named != null:
+			return named
 	if node is Camera3D:
 		return node
 	for child in node.get_children():
@@ -651,6 +688,7 @@ export async function renderReference({
   lookAt = null,
   frame = false,
   sceneCamera = false,
+  sceneCameraPath = null,
   mode = 'auto',
   boundsOut = null,
   fov = EDITOR_FOV,
@@ -667,7 +705,7 @@ export async function renderReference({
   const work = await mkdtemp(join(tmpdir(), 'godot-ref-'));
   try {
     return await renderInto(work, { root, scenePath, out, width, height, previews, camera,
-      lookAt, frame, sceneCamera, mode, boundsOut, fov, fovExplicit });
+      lookAt, frame, sceneCamera, sceneCameraPath, mode, boundsOut, fov, fovExplicit });
   } finally {
     // Each run copies the whole res:// root, and `keepWork` is the only reason
     // to hold one afterwards. On a tmpfs /tmp these accumulate in RAM: 236 of
@@ -681,7 +719,7 @@ export async function renderReference({
 async function renderInto(
   work,
   {
-    root, scenePath, out, width, height, previews, camera, lookAt, frame, sceneCamera,
+    root, scenePath, out, width, height, previews, camera, lookAt, frame, sceneCamera, sceneCameraPath,
     mode, boundsOut, fov, fovExplicit,
   }
 ) {
@@ -705,6 +743,7 @@ async function renderInto(
       lookAt,
       frame,
       sceneCamera,
+      sceneCameraPath,
       mode,
       fovExplicit,
       out: resolve(out),
