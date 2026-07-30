@@ -31,17 +31,15 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutFn, MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { CenterContainerProperties } from './types';
+import { SIZE_FILL, fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
 
 // Control::SizeFlags (control.h:78-85) — read here only to confirm
 // `fit_child_in_rect`'s branch is a no-op (see module doc); the flags never
 // change this container's actual result.
-const SIZE_FILL = 1;
-const SIZE_SHRINK_CENTER = 4;
-const SIZE_SHRINK_END = 8;
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 
 function props(n: SolveNode): CenterContainerProperties {
@@ -49,30 +47,8 @@ function props(n: SolveNode): CenterContainerProperties {
 }
 
 /** See `margincontainer/nativeSolver.ts`'s identical helper for the caveat about ancestor visibility. */
-function isSortable(child: SolveNode): boolean {
-  return props(child).visible !== false;
-}
 
 /** `Container::fit_child_in_rect` (`container.cpp:95-128`), RTL omitted (see module doc). */
-function fitChildInRect(rect: Rect2, minSize: Vec2, hFlags: number, vFlags: number): Rect2 {
-  let { x, y, w, h } = rect;
-
-  if ((hFlags & SIZE_FILL) === 0) {
-    const fullW = w;
-    w = minSize.x;
-    if ((hFlags & SIZE_SHRINK_END) !== 0) x += fullW - minSize.x;
-    else if ((hFlags & SIZE_SHRINK_CENTER) !== 0) x += Math.floor((fullW - minSize.x) / 2);
-  }
-
-  if ((vFlags & SIZE_FILL) === 0) {
-    const fullH = h;
-    h = minSize.y;
-    if ((vFlags & SIZE_SHRINK_END) !== 0) y += fullH - minSize.y;
-    else if ((vFlags & SIZE_SHRINK_CENTER) !== 0) y += Math.floor((fullH - minSize.y) / 2);
-  }
-
-  return { x, y, w, h };
-}
 
 /**
  * `CenterContainer::get_minimum_size` (`center_container.cpp:33-48`):
@@ -85,7 +61,7 @@ export const centerContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   let maxW = 0;
   let maxH = 0;
   for (const child of n.children) {
-    if (!isSortable(child)) continue;
+    if (!isSortableControl(child)) continue;
     const s = ctx.combinedMinimumSize(child);
     if (s.x > maxW) maxW = s.x;
     if (s.y > maxH) maxH = s.y;
@@ -111,7 +87,7 @@ export const centerContainerLayout: ContainerLayoutFn = (n, children, contentRec
 
   const out = new Map<string, Rect2>();
   for (const { node: child, minSize } of children) {
-    if (!isSortable(child)) continue;
+    if (!isSortableControl(child)) continue;
     const ofsX = useTopLeft ? Math.floor(-minSize.x * 0.5) : Math.floor((contentRect.w - minSize.x) / 2);
     const ofsY = useTopLeft ? Math.floor(-minSize.y * 0.5) : Math.floor((contentRect.h - minSize.y) / 2);
 

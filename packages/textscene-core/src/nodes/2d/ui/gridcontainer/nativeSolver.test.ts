@@ -16,6 +16,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { gridContainerMinimumSize, gridContainerLayout } from './nativeSolver';
+import { solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
@@ -49,6 +50,28 @@ function ctx(): SolveContext {
     measureText: null,
     combinedMinimumSize: (n) => (n.node.properties as ControlProperties).customMinimumSize ?? { x: 0, y: 0 },
   };
+}
+
+
+/**
+ * Solves `grid` and its children through the real solver core, so a test can
+ * assert behaviour the core owns (`Control::set_rect`'s minimum re-floor and its
+ * grow-direction shift) rather than a slice-local copy of it. The grid is given
+ * explicit offsets so its own rect is exactly `rect`.
+ */
+function solveViaGrid(gridNode: SolveNode, rect: { x: number; y: number; w: number; h: number }) {
+  const props = gridNode.node.properties as GridContainerProperties;
+  (gridNode.node as { properties: unknown }).properties = {
+    ...props,
+    offsetLeft: rect.x,
+    offsetTop: rect.y,
+    offsetRight: rect.x + rect.w,
+    offsetBottom: rect.y + rect.h,
+  };
+  // The slice self-registers on import, so nothing to wire here — and clearing
+  // the registry would undo that.
+  const solved = solveControlTree([gridNode], { x: 0, y: 0, w: 1152, h: 648 }, ctx());
+  return new Map([...solved].map(([path, s]) => [path, s.rect]));
 }
 
 function childEntries(children: SolveNode[]): { node: SolveNode; minSize: { x: number; y: number } }[] {
@@ -272,11 +295,14 @@ describe('gridContainerLayout', () => {
         { columns: 1, themeOverrideConstants: { h_separation: 0, v_separation: 0 } },
         children
       );
-      const contentRect = { x: 0, y: 0, w: 50, h: 50 };
-      const rects = gridContainerLayout(n, childEntries(children), contentRect, ctx());
+      // Through `solveControlTree`, not `gridContainerLayout` alone: the floor
+      // is `Control::set_rect`'s, so the solver core applies it to whatever any
+      // container returns. Asserting it here would otherwise pass against a
+      // second copy of the rule living in this slice.
+      const solved = solveViaGrid(n, { x: 0, y: 0, w: 50, h: 50 });
 
-      expect(rects.get('R0')).toEqual({ x: 0, y: 0, w: 10.7, h: 5 });
-      expect(rects.get('R1')).toEqual({ x: 0, y: 5, w: 10.2, h: 5 });
+      expect(solved.get('R0')).toEqual({ x: 0, y: 0, w: 10.7, h: 5 });
+      expect(solved.get('R1')).toEqual({ x: 0, y: 5, w: 10.2, h: 5 });
     }
   );
 
@@ -289,8 +315,7 @@ describe('gridContainerLayout', () => {
       { columns: 1, themeOverrideConstants: { h_separation: 0, v_separation: 0 } },
       children
     );
-    const contentRect = { x: 0, y: 0, w: 50, h: 50 };
-    const rects = gridContainerLayout(n, childEntries(children), contentRect, ctx());
+    const rects = solveViaGrid(n, { x: 0, y: 0, w: 50, h: 50 });
 
     // Cell width truncates to 10; shortfall = 10.7-10 = 0.7.
     // BEGIN: pos.x += (10 - 10.7) = -0.7. BOTH: pos.x += 0.5*(10-10.7) = -0.35.

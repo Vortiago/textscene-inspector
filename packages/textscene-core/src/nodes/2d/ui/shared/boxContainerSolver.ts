@@ -41,21 +41,17 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
 import type { BoxContainerProperties } from './boxContainer';
-
-/** `Control::SizeFlags` (`control.h:79-85`). */
-const SIZE_FILL = 1;
-const SIZE_EXPAND = 2;
-const SIZE_SHRINK_CENTER = 4;
-const SIZE_SHRINK_END = 8;
+import {
+  fitChildInRect,
+  hasFlag,
+  SIZE_EXPAND,
+  SIZE_FILL,
+} from './fitChildInRect';
 
 /** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`); a type whose own parser overrides the flag (e.g. Label's `v_size_flags`) has already baked that override into its parsed properties by the time this module reads them. */
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 /** `Control::stretch_ratio` default (`control.h:231`). */
 const DEFAULT_STRETCH_RATIO = 1;
-
-function hasFlag(flags: number, flag: number): boolean {
-  return (flags & flag) !== 0;
-}
 
 /** One child's inputs to the box solve — its combined minimum size plus the three `Control` fields `_resort`/`fit_child_in_rect` read. */
 export interface BoxChildInput {
@@ -65,39 +61,6 @@ export interface BoxChildInput {
   stretchRatio: number;
 }
 
-/**
- * `Container::fit_child_in_rect` (`container.cpp:95-121`). Applied to BOTH
- * axes independently, regardless of which axis is this box's main one —
- * `rect`'s own w/h (not the possibly-already-shrunk `w`/`h` locals) are what
- * the offset math reads, matching the C++ reading `p_rect.size` rather than
- * the mutated `r.size`.
- */
-function fitChildInRect(rect: Rect2, minSize: Vec2, hFlags: number, vFlags: number, rtl: boolean): Rect2 {
-  let { x, y, w, h } = rect;
-
-  if (!hasFlag(hFlags, SIZE_FILL)) {
-    w = minSize.x;
-    if (hasFlag(hFlags, SIZE_SHRINK_END)) {
-      x += rtl ? 0 : rect.w - minSize.x;
-    } else if (hasFlag(hFlags, SIZE_SHRINK_CENTER)) {
-      x += Math.floor((rect.w - minSize.x) / 2);
-    } else {
-      x += rtl ? rect.w - minSize.x : 0;
-    }
-  }
-
-  if (!hasFlag(vFlags, SIZE_FILL)) {
-    h = minSize.y;
-    if (hasFlag(vFlags, SIZE_SHRINK_END)) {
-      y += rect.h - minSize.y;
-    } else if (hasFlag(vFlags, SIZE_SHRINK_CENTER)) {
-      y += Math.floor((rect.h - minSize.y) / 2);
-    }
-    // SHRINK_BEGIN (no bit set): no vertical offset, matching the C++'s empty branch.
-  }
-
-  return { x, y, w, h };
-}
 
 interface MinSizeCache {
   minSize: number;

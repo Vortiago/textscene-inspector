@@ -212,7 +212,13 @@ describe('<ControlCanvasWalker>', () => {
   });
 
   it('bands every Control under a CanvasLayer by its layer property, reaching arbitrarily nested descendants', async () => {
-    controlComponentRegistry.register({ typeName: 'CanvasLayer', Component: () => null, Native: StubCanvasLayerNative });
+    controlComponentRegistry.register({
+      typeName: 'CanvasLayer',
+      Component: () => null,
+      Native: StubCanvasLayerNative,
+      // The walker places children as siblings unless the registration opts in.
+      wrapsChildren: true,
+    });
     const grandchild = solveNode('Layer/Child/Grandchild', 'TestType', { anchorsPreset: 15 });
     const child = solveNode('Layer/Child', 'TestType', { anchorsPreset: 15 }, [grandchild]);
     const layer = solveNode('Layer', 'CanvasLayer', { layer: 5 }, [child]);
@@ -227,7 +233,13 @@ describe('<ControlCanvasWalker>', () => {
   });
 
   it('gives a negative-layer CanvasLayer a band below the world default, still reaching its Control', async () => {
-    controlComponentRegistry.register({ typeName: 'CanvasLayer', Component: () => null, Native: StubCanvasLayerNative });
+    controlComponentRegistry.register({
+      typeName: 'CanvasLayer',
+      Component: () => null,
+      Native: StubCanvasLayerNative,
+      // The walker places children as siblings unless the registration opts in.
+      wrapsChildren: true,
+    });
     const child = solveNode('Layer/Child', 'TestType', { anchorsPreset: 15 });
     const layer = solveNode('Layer', 'CanvasLayer', { layer: -1 }, [child]);
 

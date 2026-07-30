@@ -40,11 +40,8 @@ import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { ContainerLayoutFn, MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import { fitChildInRect, SIZE_FILL } from '../shared/fitChildInRect';
 
-/** `Control::SizeFlags` (`scene/gui/control.h:78-85`). */
-const SIZE_FILL = 1;
-const SIZE_SHRINK_CENTER = 4;
-const SIZE_SHRINK_END = 8;
 
 function controlProps(n: SolveNode): ControlProperties {
   return n.node.properties as ControlProperties;
@@ -86,33 +83,14 @@ export const panelContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
  * rect `panelContainerLayout` already computed — this function only decides
  * how one child sits inside it.
  */
-function fitChildInRect(child: SolveNode, minSize: Vec2, rect: Rect2): Rect2 {
+function fitChild(child: SolveNode, minSize: Vec2, rect: Rect2): Rect2 {
   const props = controlProps(child);
-  const hFlags = props.sizeFlagsHorizontal ?? SIZE_FILL;
-  const vFlags = props.sizeFlagsVertical ?? SIZE_FILL;
-
-  let { x, y, w, h } = rect;
-
-  if ((hFlags & SIZE_FILL) === 0) {
-    w = minSize.x;
-    if ((hFlags & SIZE_SHRINK_END) !== 0) {
-      x += rect.w - minSize.x;
-    } else if ((hFlags & SIZE_SHRINK_CENTER) !== 0) {
-      x += Math.floor((rect.w - minSize.x) / 2);
-    }
-    // SHRINK_BEGIN (no bit set): x unchanged.
-  }
-
-  if ((vFlags & SIZE_FILL) === 0) {
-    h = minSize.y;
-    if ((vFlags & SIZE_SHRINK_END) !== 0) {
-      y += rect.h - minSize.y;
-    } else if ((vFlags & SIZE_SHRINK_CENTER) !== 0) {
-      y += Math.floor((rect.h - minSize.y) / 2);
-    }
-  }
-
-  return { x, y, w, h };
+  return fitChildInRect(
+    rect,
+    minSize,
+    props.sizeFlagsHorizontal ?? SIZE_FILL,
+    props.sizeFlagsVertical ?? SIZE_FILL
+  );
 }
 
 /**
@@ -137,7 +115,7 @@ export const panelContainerLayout: ContainerLayoutFn = (n, children, rect, ctx) 
 
   const out = new Map<string, Rect2>();
   for (const { node: child, minSize } of children) {
-    out.set(child.path, fitChildInRect(child, minSize, contentRect));
+    out.set(child.path, fitChild(child, minSize, contentRect));
   }
   return out;
 };

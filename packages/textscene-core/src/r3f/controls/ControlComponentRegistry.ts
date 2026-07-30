@@ -78,6 +78,21 @@ export interface ControlComponentRegistration {
    * `Component` field is deleted and this one renamed into it.
    */
   Native?: NativeControlComponent;
+  /**
+   * Whether this type's native painter receives its Control children as React
+   * children instead of the walker rendering them as siblings.
+   *
+   * Data on the registration rather than a `node.type` comparison in the walker:
+   * the walker is generic infrastructure, and `NodeComponentRegistry` already
+   * establishes this pattern for exactly this kind of question (`canvasItem`,
+   * `container`, `csgShape`). A second wrapping type would otherwise add a
+   * second hardcoded branch, and the two could drift on which types wrap.
+   *
+   * Only a type that establishes a new ambient scope for its subtree needs it —
+   * `CanvasLayer`, which publishes a draw-order band and a fresh modulate scope
+   * its descendants inherit.
+   */
+  wrapsChildren?: boolean;
 }
 
 class ControlComponentRegistryImpl {
@@ -85,11 +100,15 @@ class ControlComponentRegistryImpl {
   private readonly nativeRegistry = createTypeRegistry<NativeControlComponent>(
     'ControlComponentRegistry.native'
   );
+  private readonly childWrappingTypes = new Set<string>();
 
   register(registration: ControlComponentRegistration): void {
     this.registry.register(registration.typeName, registration.Component);
     if (registration.Native) {
       this.nativeRegistry.register(registration.typeName, registration.Native);
+    }
+    if (registration.wrapsChildren) {
+      this.childWrappingTypes.add(registration.typeName);
     }
   }
 
@@ -100,6 +119,11 @@ class ControlComponentRegistryImpl {
   /** The registered native (WebGL canvas) painter, or undefined until a slice ships one. */
   getNative(typeName: string): NativeControlComponent | undefined {
     return this.nativeRegistry.get(typeName);
+  }
+
+  /** Whether this type's native painter takes its children rather than the walker placing them. */
+  wrapsChildren(typeName: string): boolean {
+    return this.childWrappingTypes.has(typeName);
   }
 
   has(typeName: string): boolean {
@@ -113,6 +137,7 @@ class ControlComponentRegistryImpl {
   clear(): void {
     this.registry.clear();
     this.nativeRegistry.clear();
+    this.childWrappingTypes.clear();
   }
 }
 

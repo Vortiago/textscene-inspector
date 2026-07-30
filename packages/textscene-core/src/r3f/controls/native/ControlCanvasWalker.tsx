@@ -96,8 +96,9 @@ function ControlNodeGroup({ solveNode, solved, hiddenNodePaths, isFreeParent }: 
 
   // `useCanvasLayerIndex` reads whichever CanvasLayer band is ambient at this
   // position — `WORLD_CANVAS_LAYER` (0) with none, or the value a `CanvasLayer`
-  // ancestor's own `Native` painter published (see the `isCanvasLayer` branch
-  // below, mirroring `NodeDispatcher.tsx`'s identical `CanvasLayer` handling).
+  // ancestor's own `Native` painter published — see the `wrapsChildren` branch
+  // below, which the registration declares rather than the walker testing a
+  // type name.
   // `paintIndex` is the solver's own pre-order counter (`controlRectSolver.ts`),
   // so `renderOrder` is deterministic across the whole tree by construction —
   // see `controlDrawOrder.ts` for why this replaces a z offset entirely.
@@ -135,8 +136,8 @@ function ControlNodeGroup({ solveNode, solved, hiddenNodePaths, isFreeParent }: 
   // own doc comment). This hardcoded type check mirrors `NodeDispatcher.tsx`'s
   // identical `node.type === 'CanvasLayer'` branch — the same convention, not
   // a second one.
-  const isCanvasLayer = solveNode.node.type === 'CanvasLayer';
-  const content = isCanvasLayer ? (
+  const wrapsChildren = controlComponentRegistry.wrapsChildren(solveNode.node.type);
+  const content = wrapsChildren ? (
     <Painter solveNode={solveNode} rect={rect} renderOrder={renderOrder}>
       {childElements}
     </Painter>

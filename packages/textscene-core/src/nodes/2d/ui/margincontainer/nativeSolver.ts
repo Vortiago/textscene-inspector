@@ -25,14 +25,12 @@
  */
 
 import type { ControlProperties } from '../control/types';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutFn, MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
+import { SIZE_FILL, fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
 
 // Control::SizeFlags (control.h:78-85) — the bits `fit_child_in_rect` tests.
-const SIZE_FILL = 1;
-const SIZE_SHRINK_CENTER = 4;
-const SIZE_SHRINK_END = 8;
 
 /** `Control`'s own default for an unset `size_flags_horizontal`/`_vertical` (control.h:230-231). */
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
@@ -44,21 +42,6 @@ function props(n: SolveNode): ControlProperties {
   return n.node.properties as ControlProperties;
 }
 
-/**
- * `as_sortable_control`'s visibility gate (`container.h:43-50`). Both call
- * sites this module ports use it — `get_minimum_size` passes the explicit
- * `SortableVisibilityMode::VISIBLE` (own flag only, `margin_container.cpp:39`);
- * `_notification`'s sort loop uses the default `VISIBLE_IN_TREE` (own flag
- * AND every ancestor's, `margin_container.cpp:100`, `container.h:50`).
- * Ancestor visibility isn't tracked anywhere in this solver (`SolveNode` has
- * no parent pointer), so both are approximated here by the child's OWN
- * `visible` flag — the two Godot modes can only differ when an ancestor
- * further up is hidden, which the walker already handles separately by not
- * drawing the hidden subtree at all.
- */
-function isSortable(child: SolveNode): boolean {
-  return props(child).visible !== false;
-}
 
 function marginsOf(n: SolveNode): { left: number; top: number; right: number; bottom: number } {
   const c = props(n).themeOverrideConstants ?? {};
@@ -70,31 +53,6 @@ function marginsOf(n: SolveNode): { left: number; top: number; right: number; bo
   };
 }
 
-/**
- * `Container::fit_child_in_rect` (`container.cpp:95-128`), RTL omitted (see
- * module doc). Runs on both axes unconditionally — the caller decides what
- * rect and flags to hand it, never which axis to skip.
- */
-function fitChildInRect(rect: Rect2, minSize: Vec2, hFlags: number, vFlags: number): Rect2 {
-  let { x, y, w, h } = rect;
-
-  if ((hFlags & SIZE_FILL) === 0) {
-    const fullW = w;
-    w = minSize.x;
-    if ((hFlags & SIZE_SHRINK_END) !== 0) x += fullW - minSize.x;
-    else if ((hFlags & SIZE_SHRINK_CENTER) !== 0) x += Math.floor((fullW - minSize.x) / 2);
-    // else SIZE_SHRINK_BEGIN (0): x unchanged.
-  }
-
-  if ((vFlags & SIZE_FILL) === 0) {
-    const fullH = h;
-    h = minSize.y;
-    if ((vFlags & SIZE_SHRINK_END) !== 0) y += fullH - minSize.y;
-    else if ((vFlags & SIZE_SHRINK_CENTER) !== 0) y += Math.floor((fullH - minSize.y) / 2);
-  }
-
-  return { x, y, w, h };
-}
 
 /**
  * `MarginContainer::get_minimum_size` (`margin_container.cpp:35-57`): the
@@ -106,7 +64,7 @@ export const marginContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   let maxW = 0;
   let maxH = 0;
   for (const child of n.children) {
-    if (!isSortable(child)) continue;
+    if (!isSortableControl(child)) continue;
     const s = ctx.combinedMinimumSize(child);
     if (s.x > maxW) maxW = s.x;
     if (s.y > maxH) maxH = s.y;
@@ -137,7 +95,7 @@ export const marginContainerLayout: ContainerLayoutFn = (n, children, contentRec
 
   const out = new Map<string, Rect2>();
   for (const { node: child, minSize } of children) {
-    if (!isSortable(child)) continue;
+    if (!isSortableControl(child)) continue;
     const cp = props(child);
     const hFlags = cp.sizeFlagsHorizontal ?? DEFAULT_SIZE_FLAGS;
     const vFlags = cp.sizeFlagsVertical ?? DEFAULT_SIZE_FLAGS;

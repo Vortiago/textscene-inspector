@@ -41,7 +41,7 @@
 
 import type { ControlProperties } from '../control/types';
 import type { GridContainerProperties } from './types';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import {
@@ -49,24 +49,14 @@ import {
   type ContainerLayoutFn,
   type MinimumSizeFn,
 } from '../../../../r3f/controls/native/solverRegistry';
+import { SIZE_EXPAND, SIZE_FILL, fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
 
 /** `Control::SizeFlags` (`control.h:79-85`). */
-const SIZE_FILL = 1;
-const SIZE_EXPAND = 2;
-const SIZE_SHRINK_CENTER = 4;
-const SIZE_SHRINK_END = 8;
 
 /** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`); a type whose own parser overrides the flag (e.g. Label's `v_size_flags`) has already baked that override into its parsed properties by the time this module reads them. */
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 
-/** `Control::GrowDirection` (`control.h:59-62`); `GROW_DIRECTION_END` (1) is the default and needs no explicit branch below. */
-const GROW_DIRECTION_BEGIN = 0;
-const GROW_DIRECTION_BOTH = 2;
-const DEFAULT_GROW_DIRECTION = 1;
 
-function hasFlag(flags: number, bit: number): boolean {
-  return (flags & bit) !== 0;
-}
 
 function props(n: SolveNode): ControlProperties {
   return n.node.properties as ControlProperties;
@@ -80,23 +70,6 @@ function vFlagsOf(n: SolveNode): number {
   return props(n).sizeFlagsVertical ?? DEFAULT_SIZE_FLAGS;
 }
 
-/**
- * `Container::as_sortable_control`'s visibility gate (`container.cpp:143-154`,
- * `container.h:43-50`). `get_minimum_size` passes the explicit
- * `SortableVisibilityMode::VISIBLE` (own flag only, `grid_container.cpp:282`);
- * `_notification`'s sort loop uses the default `VISIBLE_IN_TREE` (own flag AND
- * every ancestor's, `grid_container.cpp:47`). Ancestor visibility isn't
- * tracked anywhere in this solver (`SolveNode` has no parent pointer), so both
- * collapse to the child's OWN `visible` flag here — the two Godot modes can
- * only differ when an ancestor further up is hidden, which the walker already
- * handles separately by not drawing the hidden subtree at all.
- * `is_set_as_top_level()`'s exclusion has no modelled equivalent (no
- * `top_level` property is parsed anywhere in this codebase) and is not
- * reproduced.
- */
-function isSortable(n: SolveNode): boolean {
-  return props(n).visible !== false;
-}
 
 function columnsOf(n: SolveNode): number {
   return Math.max(1, (n.node.properties as GridContainerProperties).columns ?? 1);
@@ -128,7 +101,7 @@ export const gridContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   let validIndex = 0;
 
   for (const child of n.children) {
-    if (!isSortable(child)) continue;
+    if (!isSortableControl(child)) continue;
     const row = Math.floor(validIndex / columns);
     const col = validIndex % columns;
     validIndex++;
@@ -157,67 +130,7 @@ controlSolverRegistry.registerMinimumSize('GridContainer', gridContainerMinimumS
 
 // --- fit_child_in_rect + the universal minimum-size floor ---------------------
 
-/**
- * `Container::fit_child_in_rect` (`container.cpp:95-128`), non-RTL branch. A
- * child WITHOUT `SIZE_FILL` on an axis is shrunk to its own minimum on that
- * axis and positioned within the cell by `SIZE_SHRINK_END`/`SIZE_SHRINK_CENTER`
- * (default, absent both, is `SIZE_SHRINK_BEGIN` — flush with the cell's own
- * origin). `minSize` here is the FULL float `get_combined_minimum_size()` —
- * this function never truncates the way this module's own column/row
- * bookkeeping does. The shrink offset reads the cell's ORIGINAL w/h (`cell`,
- * not the local `w`/`h`, which this same block may already have overwritten
- * with `minSize`), matching the C++ reading `p_rect.size` rather than the
- * mutated `r.size`.
- */
-function fitChildInRect(cell: Rect2, minSize: Vec2, h: number, v: number): Rect2 {
-  let x = cell.x;
-  let y = cell.y;
-  let w = cell.w;
-  let height = cell.h;
 
-  if (!hasFlag(h, SIZE_FILL)) {
-    w = minSize.x;
-    if (hasFlag(h, SIZE_SHRINK_END)) x += cell.w - minSize.x;
-    else if (hasFlag(h, SIZE_SHRINK_CENTER)) x += Math.floor((cell.w - minSize.x) / 2);
-    // else SIZE_SHRINK_BEGIN (no bit set): x unchanged.
-  }
-
-  if (!hasFlag(v, SIZE_FILL)) {
-    height = minSize.y;
-    if (hasFlag(v, SIZE_SHRINK_END)) y += cell.h - minSize.y;
-    else if (hasFlag(v, SIZE_SHRINK_CENTER)) y += Math.floor((cell.h - minSize.y) / 2);
-  }
-
-  return { x, y, w, h: height };
-}
-
-/**
- * `Control::_size_changed`'s minimum-size floor (`control.cpp:1773-1797`) —
- * see the module doc comment for why a container child needs this on top of
- * `fit_child_in_rect`. Ported independently here rather than imported: it is
- * a general `Control` behaviour, not something `grid_container.cpp` or
- * `container.cpp` themselves implement, and `native/controlRectSolver.ts`
- * (which already has its own copy for the free/anchored path) is out of this
- * packet's scope to modify or export from. RTL's position mirror
- * (`control.cpp:1785-1787`) is out of scope, matching every other anchor/grow
- * computation in this codebase.
- */
-function applyMinimumSizeFloor(rect: Rect2, minSize: Vec2, growH: number, growV: number): Rect2 {
-  let { x, y, w, h } = rect;
-
-  if (minSize.x > w) {
-    if (growH === GROW_DIRECTION_BEGIN) x += w - minSize.x;
-    else if (growH === GROW_DIRECTION_BOTH) x += 0.5 * (w - minSize.x);
-    w = minSize.x;
-  }
-  if (minSize.y > h) {
-    if (growV === GROW_DIRECTION_BEGIN) y += h - minSize.y;
-    else if (growV === GROW_DIRECTION_BOTH) y += 0.5 * (h - minSize.y);
-    h = minSize.y;
-  }
-
-  return { x, y, w, h };
-}
 
 /**
  * Evicts the expanded index (column or row) with the largest own minimum
@@ -283,7 +196,7 @@ export const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect,
   const hSep = separationOf(n, 'h_separation', ctx.theme);
   const vSep = separationOf(n, 'v_separation', ctx.theme);
 
-  const sortable = children.filter(({ node }) => isSortable(node));
+  const sortable = children.filter(({ node }) => isSortableControl(node));
   const validCount = sortable.length;
 
   const colMinW = new Map<number, number>();
@@ -360,14 +273,10 @@ export const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect,
     if (rowExpanded.has(row) && row < rowRemainingPixelIndex) h += 1;
 
     const cell: Rect2 = { x: colOfs, y: rowOfs, w, h };
-    const fitted = fitChildInRect(cell, minSize, hFlagsOf(child), vFlagsOf(child));
-    const floored = applyMinimumSizeFloor(
-      fitted,
-      minSize,
-      props(child).growHorizontal ?? DEFAULT_GROW_DIRECTION,
-      props(child).growVertical ?? DEFAULT_GROW_DIRECTION
-    );
-    rects.set(child.path, floored);
+    // No local minimum re-floor: the solver core applies `Control::set_rect`'s
+    // floor (grow direction included) to every rect a container returns, so
+    // doing it here too would be a second copy of the same rule to keep in sync.
+    rects.set(child.path, fitChildInRect(cell, minSize, hFlagsOf(child), vFlagsOf(child)));
 
     colOfs += w + hSep;
   });
