@@ -423,6 +423,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite3d Region Oversized",
+    "file": "unit-sprite3d-region-oversized.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite3d",
     "file": "unit-sprite3d.tscn",
     "category": "Other"
@@ -815,6 +820,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite2d Canvastexture",
     "file": "unit-sprite2d-canvastexture.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Region Oversized",
+    "file": "unit-sprite2d-region-oversized.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

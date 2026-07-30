@@ -14,7 +14,9 @@
  *   - UV math: region_rect + hframes/vframes composition lives in the
  *     shared `r3f/spriteFrame` module (one home for Sprite2D +
  *     Sprite3D). flip_h/flip_v stay here — 3D mirrors via UV negation
- *     where 2D mirrors via mesh scale.
+ *     where 2D mirrors via mesh scale — as does the wrap mode: a
+ *     region overrunning its texture TILES here, where the 2D canvas
+ *     clamps to the edge texel.
  *
  * Material:
  *   - `meshBasicMaterial` (sprites are unlit in Godot)
@@ -82,7 +84,9 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // (already cropped) UV window by negating the repeat and shifting the
   // offset to the opposite edge.
   const displayedTexture = useMemo(() => {
-    const cloned = composeFrameTexture(texResult.value, properties);
+    // 'repeat': Sprite3D's material keeps StandardMaterial3D's texture-repeat
+    // default, so an oversized region_rect tiles here where the 2D canvas clamps.
+    const cloned = composeFrameTexture(texResult.value, properties, 'repeat');
     if (!cloned) return undefined;
     if (properties.flip_h) {
       cloned.offset.x += cloned.repeat.x;

@@ -167,7 +167,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   // (and unmount) so playback doesn't leak one GPU texture per keyframe.
   const frameProps = useMemo(() => regionFrameProps(frameTex.region), [frameTex]);
   const displayedTexture = useMemo(
-    () => composeFrameTexture(texResult.value, frameProps),
+    () => composeFrameTexture(texResult.value, frameProps, 'clamp'),
     [texResult.value, frameProps]
   );
   useEffect(() => () => displayedTexture?.dispose(), [displayedTexture]);

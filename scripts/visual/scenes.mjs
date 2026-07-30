@@ -372,6 +372,15 @@ export const GOLDEN_SCENES = [
   // --- Sprite2D/Sprite3D + 3D physics-body roundout ---
   { name: 'sprite2d', file: 'unit-sprite2d.tscn' },
   { name: 'sprite3d', file: 'unit-sprite3d.tscn' },
+  // A region_rect bigger than its texture. Godot clips neither the region nor
+  // the quad, so the overrun is decided by the sampler — and the two families
+  // disagree: the 2D canvas clamps to the edge texel (one "F" plus a blue
+  // smear), Sprite3D's material repeats (a 3x2 grid of "F"s). Both measured
+  // against Godot 4.6.3; the 2D side matches it pixel-for-pixel. They are a
+  // PAIR: pinning one alone would let the shared UV compositor be "fixed" into
+  // agreeing with the wrong one.
+  { name: 'sprite2d-region-oversized', file: 'unit-sprite2d-region-oversized.tscn' },
+  { name: 'sprite3d-region-oversized', file: 'unit-sprite3d-region-oversized.tscn' },
   // Transform-only bodies (ADR-0005/ADR-0008): reuse the Node3D component, so
   // the baseline's real content is the child mesh — pins that these render
   // the actual box/capsule geometry, not a gray fallback placeholder.

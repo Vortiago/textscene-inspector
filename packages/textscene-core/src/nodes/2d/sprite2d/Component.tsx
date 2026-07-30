@@ -15,7 +15,9 @@
  *
  * The region/frames UV + size math lives in the shared `r3f/spriteFrame` module
  * (one home for Sprite2D + Sprite3D). Flip handling stays here because it
- * legitimately differs: 2D mirrors via mesh scale, 3D via UV negation.
+ * legitimately differs: 2D mirrors via mesh scale, 3D via UV negation. So does
+ * the wrap mode: the 2D canvas clamps a region that overruns its texture where
+ * Sprite3D tiles it.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -65,7 +67,10 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   const composedTexture = useMemo(() => {
     const frameProps =
       animatedFrame !== null ? { ...props, frame: animatedFrame, frame_coords: undefined } : props;
-    return composeFrameTexture(texResult.value, frameProps);
+    // 'clamp': the 2D canvas samples with texture-repeat DISABLED, so a
+    // region_rect overrunning the texture stretches its edge texels rather
+    // than tiling.
+    return composeFrameTexture(texResult.value, frameProps, 'clamp');
   }, [texResult.value, props, animatedFrame]);
   // composeFrameTexture clones the texture per frame; dispose the prior clone
   // when the frame advances (and on unmount) so playback doesn't leak GPU

@@ -13,9 +13,44 @@
  *   - flip_h/flip_v: Sprite2D mirrors via mesh scale, Sprite3D via UV negation.
  *   - World sizing: Sprite2D uses pixels directly (1 px = 1 unit); Sprite3D
  *     multiplies the frame pixel size by `pixel_size`.
+ *   - The sampler wrap mode — see `SpriteWrapMode`.
  */
 
 import * as THREE from 'three';
+
+/**
+ * What shows where a frame's UVs fall outside the texture.
+ *
+ * This only ever matters for a `region_rect` bigger than its texture. Godot
+ * does NOT clip such a region: `Sprite2D::_get_rects` takes `base_rect =
+ * region_rect` verbatim, and `Texture2D::get_rect_region` is a pass-through
+ * (`r_src_rect = p_src_rect`), so the quad keeps the full region size and the
+ * UVs simply run past 1.0. Only the sampler decides what is drawn there — and
+ * the two sprite families sample through different ones:
+ *
+ *   'clamp'  — the 2D canvas. `Viewport::default_canvas_item_texture_repeat`
+ *              defaults to `DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_DISABLED`
+ *              (scene/main/viewport.h), which the renderer maps to
+ *              `sampler_state.repeat_u = RD::SAMPLER_REPEAT_MODE_CLAMP_TO_EDGE`
+ *              (renderer_rd/storage_rd/material_storage.cpp). The overrun shows
+ *              the edge texel column stretched — transparent when that column
+ *              is transparent, which is why an oversized background region
+ *              reads as "the texture, then nothing".
+ *   'repeat' — Sprite3D. `SpriteBase3D` draws through
+ *              `StandardMaterial3D::get_material_for_2d`, which never clears
+ *              `FLAG_USE_TEXTURE_REPEAT`; its default is `true`
+ *              (scene/resources/material.cpp), emitting `repeat_enable`. The
+ *              overrun tiles.
+ *
+ * Required rather than defaulted on purpose: a default is exactly the silent
+ * hand-syncing this module exists to prevent.
+ */
+export type SpriteWrapMode = 'clamp' | 'repeat';
+
+const WRAP: Record<SpriteWrapMode, THREE.Wrapping> = {
+  clamp: THREE.ClampToEdgeWrapping,
+  repeat: THREE.RepeatWrapping,
+};
 
 export interface SpriteFrameProps {
   region_enabled: boolean;
@@ -37,13 +72,14 @@ export interface SpriteFrameProps {
  */
 export function composeFrameTexture(
   texture: THREE.Texture | undefined,
-  props: SpriteFrameProps
+  props: SpriteFrameProps,
+  wrap: SpriteWrapMode
 ): THREE.Texture | undefined {
   if (!texture) return undefined;
 
   const cloned = texture.clone();
-  cloned.wrapS = THREE.RepeatWrapping;
-  cloned.wrapT = THREE.RepeatWrapping;
+  cloned.wrapS = WRAP[wrap];
+  cloned.wrapT = WRAP[wrap];
 
   if (props.region_enabled && props.region_rect) {
     applyRegionRect(cloned, props.region_rect);

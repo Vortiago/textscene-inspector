@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3]
+
+; ONE VARIABLE: a `region_rect` larger than its texture on a Sprite3D — the 3D
+; half of the same overrun `unit-sprite2d-region-oversized.tscn` pins, and it
+; resolves the OPPOSITE way.
+;
+; Neither sprite family clips the region (`base_rect = region_rect`;
+; `Texture2D::get_rect_region` is a pass-through), so both quads keep the full
+; region size and both sets of UVs run past 1.0. Only the sampler differs:
+; Sprite3D draws through `StandardMaterial3D::get_material_for_2d`, which never
+; clears `FLAG_USE_TEXTURE_REPEAT` (default `true`, scene/resources/material.cpp)
+; and so emits `repeat_enable`. The overrun TILES here where the 2D canvas
+; clamps. Measured against Godot 4.6.3: 0.007%, at the harness's antialiasing
+; floor — this side was already correct, and clamping it "for consistency" with
+; the 2D fix would BE the regression.
+;
+; The texture is 96x96 and the region 288x192, so this reads as a 3x2 grid of "F"
+; markers. Its 2D twin, same texture and same region, reads as ONE "F" plus a
+; blue smear — the pair is the point, and asserting either alone would let the
+; shared UV compositor be "fixed" into agreeing with the wrong one.
+;
+; Invisible elsewhere: `unit-sprite3d.tscn` enables no region, and every other
+; region in the corpus stays inside its image where the wrap mode cannot show.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[node name="Scene" type="Node3D"]
+
+[node name="OversizedRegion" type="Sprite3D" parent="."]
+texture = ExtResource("1_marker")
+pixel_size = 0.01
+region_enabled = true
+region_rect = Rect2(0, 0, 288, 192)
