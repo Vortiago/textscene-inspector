@@ -35,6 +35,8 @@ import '../nodes/physics/3d/collisionshape3d/index.js';
 // Non-visual nodes — transform-only groups, no own geometry (ADR-0008).
 import '../nodes/physics/3d/characterbody3d/index.js';
 import '../nodes/physics/3d/rigidbody3d/index.js';
+import '../nodes/physics/3d/vehiclebody3d/index.js';
+import '../nodes/physics/3d/vehiclewheel3d/index.js';
 import '../nodes/3d/skeleton3d/index.js';
 import '../nodes/3d/particles/gpuparticles3d/index.js';
 import '../nodes/3d/marker3d/index.js';

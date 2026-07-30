@@ -9,8 +9,11 @@
  * with its type), not by cluttering the viewport.
  *
  * The node's Node3D transform is applied when present so children land in the
- * right place; for a genuinely-unknown type the lenient parser falls back to
- * the base `Node` parse (no transform), so children sit at the parent origin.
+ * right place. That includes genuinely-unknown types: the lenient parser falls
+ * back to the base `Node` parse, which parses `transform` too (nodes/node/parser.ts),
+ * so an unregistered 3D node still positions its children correctly. What it does
+ * NOT carry is `visible` — a hidden unregistered node keeps drawing, which is one
+ * reason to register a type even when it renders transform-only.
  * 2D-typed nodes carry no Node3D transform and render as a plain group so a
  * flat 2D scene's framing isn't disturbed.
  *
