@@ -15,9 +15,9 @@ catalog:
   typescript: ^6.0.3
   vitest: ^4.1
   rimraf: ^6.1.3
-  '@vscode/test-electron': ^3.0.0
+  '@vscode/test-electron': ^3.1.0
   '@vitest/ui': ^4.1
-  '@types/node': ^26.1.1
+  '@types/node': ^26.1.2
   vite: ^8.1.5
   esbuild: ^0.28.1
   happy-dom: ^20.11.1
@@ -49,7 +49,7 @@ catalog:
   # three-mesh-bvh is a DIRECT dependency so pnpm satisfies the peer with this
   # version rather than resolving to drei's nested 0.8.3.
   three-bvh-csg: ^0.0.18
-  three-mesh-bvh: ^0.9.7
+  three-mesh-bvh: ^0.9.13
 
   # React Testing Library (WI-R3F-4) — DOM-level UI tests under jsdom
   '@testing-library/react': ^16.3.0
