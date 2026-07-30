@@ -13,7 +13,7 @@
  * Options:
  *   --base <node3d|node2d|node|control>  base slice to extend (default: node3d)
  *   --intent <draws|transform-only|pending>   REQUIRED — what the viewport does
- *   --chain <ParentType>         REQUIRED — Godot parent class, for NODE_BASE_TYPES
+ *   --chain <ParentType>         REQUIRED — Godot parent class, checked against ClassDB
  *   --linter                     generate strict validators + linter wiring
  *   --dry-run                    print the plan without writing anything
  *
@@ -30,9 +30,11 @@
  *                   NO component (GenericNodeFallback handles it), status
  *                   `unimplemented`.
  *
- * `--chain` is required because a type missing from NODE_BASE_TYPES silently
- * receives ZERO inherited validation — no error, no warning, the linter just
- * goes quiet on it. Name the Godot parent even when it is plain `Node`.
+ * `--chain` no longer writes anything: NODE_BASE_TYPES is derived from the node
+ * catalog, so a real Godot type already has its base. It is still required as a
+ * spelling check — a name Godot does not know gets no base, and a type with no
+ * base receives ZERO inherited validation with no error and no warning. Name
+ * the Godot parent even when it is plain `Node`.
  *
  * Examples:
  *   pnpm new:node RayCast3D physics/3d --intent transform-only --chain Node3D --linter
@@ -246,56 +248,34 @@ function parseArgs(argv) {
 }
 
 /**
- * Add the type to `linter/nodeBaseTypes.ts` so the validator base-walk reaches it.
+ * Check `--chain` against Godot's own answer in the node catalog.
  *
- * Not optional and not inferable: a type absent from that table terminates the
- * walk immediately, so `findValidator` returns null, `StrictTscnParser` skips the
- * property, and the type escapes EVERY inherited check while its siblings are
- * validated normally. Nothing fails and nothing warns — the linter just goes
- * quiet, which is why `--chain` is required and `baseChainCompleteness.test.ts`
- * asserts the result.
- *
- * A parent that already owns a `*_LEAVES` array gets an array entry, preserving
- * the existing grouping; anything else (`SpinBox` → `Range`) becomes an explicit
- * entry in the object literal, since it belongs to no array.
+ * `NODE_BASE_TYPES` is derived from that catalog, so nothing needs writing —
+ * the entry for a real Godot type is already there. What `--chain` still buys
+ * is the one failure the derivation cannot catch: a type name that is not a
+ * Godot type at all. A misspelled `Raycast3D` gets no catalog entry, so it gets
+ * no base, so the validator walk terminates instantly and the slice is silently
+ * unvalidated. Naming the expected parent turns that into an error here rather
+ * than a quiet gap discovered waves later.
  */
-const LEAF_ARRAYS = {
-  Light3D: 'LIGHT3D_LEAVES',
-  VisualInstance3D: 'VISUALINSTANCE3D_LEAVES',
-  Node3D: 'NODE3D_LEAVES',
-  Node2D: 'NODE2D_LEAVES',
-  Control: 'CONTROL_LEAVES',
-};
-
-function wireBaseType(typeName, parent) {
-  const filePath = join(CORE_SRC, 'linter/nodeBaseTypes.ts');
-  const src = readFileSync(filePath, 'utf8');
-  if (new RegExp(`(^|\\s)'${typeName}',`, 'm').test(src) || new RegExp(`^\\s*${typeName}:`, 'm').test(src)) {
-    return { filePath, action: 'already wired' };
+function checkChain(typeName, parent) {
+  const catalog = JSON.parse(readFileSync(join(REPO_ROOT, 'scripts/compare-docs/node-catalog.json'), 'utf8'));
+  const entry = catalog.nodes.find((n) => n.name === typeName);
+  if (!entry) {
+    fail(
+      `${typeName} is not in scripts/compare-docs/node-catalog.json, so NODE_BASE_TYPES ` +
+        `has no base for it and every inherited validator would silently skip the type. ` +
+        `Check the spelling, or add it to UNCATALOGUED in linter/nodeBaseTypes.ts with a reason.`
+    );
   }
-
-  const arrayName = LEAF_ARRAYS[parent];
-  if (arrayName) {
-    // Append to the array's final entry, before its `] as const;`.
-    const re = new RegExp(`(const ${arrayName} = \\[[\\s\\S]*?)(\\n\\] as const;)`);
-    if (!re.test(src)) fail(`could not find ${arrayName} in ${filePath}`);
-    return {
-      filePath,
-      action: `${typeName} → ${arrayName}`,
-      content: src.replace(re, `$1\n  '${typeName}',$2`),
-    };
+  const actual = entry.chain?.[0];
+  if (actual !== parent) {
+    fail(
+      `--chain ${parent} disagrees with Godot: ${typeName} derives from ${actual}. ` +
+        `The base-walk uses the catalog, so pass --chain ${actual}.`
+    );
   }
-
-  // Explicit entry: insert before the object literal's closing `});`.
-  const marker = '\n});';
-  const at = src.lastIndexOf(marker);
-  if (at === -1) fail(`could not find the NODE_BASE_TYPES object literal in ${filePath}`);
-  const entry = `\n  ${typeName}: '${parent}',`;
-  return {
-    filePath,
-    action: `${typeName}: '${parent}'`,
-    content: src.slice(0, at) + entry + src.slice(at),
-  };
+  return `${typeName} → ${parent} (derived, already in linter/nodeBaseTypes.generated.ts)`;
 }
 
 /** Marker3D → marker-3d, AudioStreamPlayer2D → audio-stream-player-2d */
@@ -729,7 +709,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
     );
   }
 
-  wirings.push(wireBaseType(typeName, chain));
+  const chainNote = checkChain(typeName, chain);
 
   // The comparison sheet is slice content (SHEET-STANDARD.md). `image:` ships
   // commented out: a declared-but-uncaptured basename fails build-gallery (and
@@ -812,6 +792,7 @@ the property and the value the lenient parser falls back to.
   for (const name of files.keys()) console.log(`  create  ${sliceRel}/${name}`);
   console.log(`  create  scenes/fixtures/${fixtureName}`);
   for (const w of wirings) console.log(`  wire    ${w.filePath.slice(REPO_ROOT.length + 1)} (${w.action})`);
+  console.log(`  chain   ${chainNote}`);
 
   if (dryRun) {
     console.log('[new-node-slice] dry run — nothing written.');

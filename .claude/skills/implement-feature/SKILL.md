@@ -16,7 +16,8 @@ explicitly N/A-because-X — never silently skipped.
 - **Node type** (`[node type="X"]`) → **self-registering** via three barrels. Scaffold it:
   `pnpm new:node <Type> <category> --intent <draws|transform-only|pending> --chain <ParentType>
   [--base node3d|node2d|node|control] [--linter]` (`scripts/new-node-slice.mjs`) generates the slice
-  + a fixture, wires the barrels, and adds the `NODE_BASE_TYPES` entry. `--intent draws` is the
+  + a fixture and wires the barrels; `NODE_BASE_TYPES` is derived from the node catalog, and
+  `--chain` is checked against it. `--intent draws` is the
   shape for a node you are about to render. It does NOT do: semantic `linter.ts`, docs, goldens, or
   the material/mesh shape.
 - **Material / mesh / resource** (`[sub_resource type="X"]`, or a StandardMaterial3D property) →

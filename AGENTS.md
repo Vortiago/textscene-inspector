@@ -50,14 +50,16 @@ co-located `*.test.ts(x)` · three entry points:
 
 Scaffold: `pnpm new:node <TypeName> <category-dir> --intent <draws|transform-only|pending>
 --chain <ParentType> [--base node3d|node2d|node|control] [--linter]` (creates the
-`unit-*.tscn` fixture, the aggregation imports, and the `NODE_BASE_TYPES` entry).
+`unit-*.tscn` fixture and the aggregation imports).
 
 `--intent` settles the slice shape, the render registration and the sheet status
 together, because `sheets.test.mjs` asserts they agree: `draws` = own
 types/parser/Component and `unreviewed`; `transform-only` = ADR-0008, reuses the base,
 registers `renderIntent: 'transform-only'`, `linter-only`; `pending` = parsed but not
-drawn, registers NO component, `unimplemented`. `--chain` names the Godot parent —
-mandatory because a type absent from `NODE_BASE_TYPES` silently receives zero
+drawn, registers NO component, `unimplemented`. `--chain` names the Godot parent and is
+checked against ClassDB: `NODE_BASE_TYPES` is derived from the node catalog's ancestry
+(`pnpm nodes:base-types` → `linter/nodeBaseTypes.generated.ts`), so nothing is written
+by hand, but a type name Godot does not know gets no base and silently receives zero
 inherited validation. Conformance tests (barrelCompleteness, reactFree, ruleCoverage,
 baseChainCompleteness) fail on a mis-wired slice.
 

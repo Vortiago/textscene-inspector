@@ -7,8 +7,9 @@
  *   - `--intent` must settle the render registration and the sheet status
  *     TOGETHER, because `sheets.test.mjs` asserts they agree and a mismatch
  *     fails the wave rather than the slice.
- *   - `--chain` must be mandatory. A type missing from `NODE_BASE_TYPES`
- *     silently receives zero inherited validation — no error, no warning.
+ *   - `--chain` must be mandatory and must agree with ClassDB. `NODE_BASE_TYPES`
+ *     is derived from the catalog, so a type name Godot does not know receives
+ *     zero inherited validation — no error, no warning.
  *   - a `pending` slice must wire NO render barrel, since the absence of a
  *     component is exactly what keeps the "Not implemented" badge honest.
  *
@@ -58,15 +59,17 @@ const INVOCATIONS = {
     'RayCast3D', 'physics/3d', '--intent', 'transform-only', '--chain', 'Node3D', '--linter',
   ],
   transformOnly2D: [
-    'Probe2D', '2d', '--base', 'node2d', '--intent', 'transform-only', '--chain', 'Node2D',
+    'RayCast2D', '2d', '--base', 'node2d', '--intent', 'transform-only', '--chain', 'Node2D',
   ],
   pending: [
     'ProgressBar', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'Range', '--linter',
   ],
-  draws: ['Widget3D', '3d', '--intent', 'draws', '--chain', 'Node3D'],
+  draws: ['ShapeCast3D', '3d', '--intent', 'draws', '--chain', 'Node3D'],
   controlPending: [
-    'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'BaseButton',
+    'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'Button',
   ],
+  unknownType: ['Widget3D', '3d', '--intent', 'pending', '--chain', 'Node3D'],
+  wrongChain: ['ShapeCast3D', '3d', '--intent', 'pending', '--chain', 'Node2D'],
 };
 
 const keys = Object.keys(INVOCATIONS);
@@ -96,6 +99,19 @@ describe('new-node-slice argument contract', () => {
     expect(results.selfChain.out).toMatch(/must be the PARENT class/);
   });
 
+  it('refuses a type name Godot does not know', () => {
+    // The base table is derived from the catalog, so an invented or misspelled
+    // type gets no entry and no inherited validator — silently. `Widget3D` is
+    // the shape of that mistake: plausible, and absent from ClassDB.
+    expect(results.unknownType.ok).toBe(false);
+    expect(results.unknownType.out).toMatch(/Widget3D is not in .*node-catalog\.json/);
+  });
+
+  it('refuses a --chain Godot disagrees with, naming the real parent', () => {
+    expect(results.wrongChain.ok).toBe(false);
+    expect(results.wrongChain.out).toMatch(/ShapeCast3D derives from Node3D/);
+  });
+
   it('rejects the removed --transform-only flag instead of silently ignoring it', () => {
     expect(results.removedFlag.ok).toBe(false);
     expect(results.removedFlag.out).toMatch(/--transform-only is gone/);
@@ -117,7 +133,7 @@ describe('new-node-slice intent shapes', () => {
     expect(ok).toBe(true);
     expect(out).toMatch(/create {2}nodes\/physics\/3d\/raycast3d\/index\.r3f\.ts/);
     expect(out).toMatch(/wire.*r3f\/nodes\/index\.ts/);
-    expect(out).toMatch(/wire.*nodeBaseTypes\.ts \(RayCast3D → NODE3D_LEAVES\)/);
+    expect(out).toMatch(/chain {3}RayCast3D → Node3D \(derived/);
     // No own parser/types/Component: property knowledge lives in linterParser.
     expect(out).not.toMatch(/create {2}nodes\/physics\/3d\/raycast3d\/parser\.ts/);
     expect(out).not.toMatch(/create {2}nodes\/physics\/3d\/raycast3d\/Component\.tsx/);
@@ -128,17 +144,16 @@ describe('new-node-slice intent shapes', () => {
     expect(ok).toBe(true);
     expect(out).not.toMatch(/index\.r3f\.ts/);
     expect(out).not.toMatch(/wire.*r3f\/nodes\/index\.ts/);
-    // A parent owning no *_LEAVES array becomes an explicit object entry.
-    expect(out).toMatch(/wire.*nodeBaseTypes\.ts \(ProgressBar: 'Range'\)/);
+    expect(out).toMatch(/chain {3}ProgressBar → Range \(derived/);
     expect(out).toMatch(/wire.*linter\/index\.ts/);
   });
 
   it('gives a draws slice its own parser, types and Component', () => {
     const { ok, out } = results.draws;
     expect(ok).toBe(true);
-    expect(out).toMatch(/create {2}nodes\/3d\/widget3d\/parser\.ts/);
-    expect(out).toMatch(/create {2}nodes\/3d\/widget3d\/types\.ts/);
-    expect(out).toMatch(/create {2}nodes\/3d\/widget3d\/Component\.tsx/);
+    expect(out).toMatch(/create {2}nodes\/3d\/shapecast3d\/parser\.ts/);
+    expect(out).toMatch(/create {2}nodes\/3d\/shapecast3d\/types\.ts/);
+    expect(out).toMatch(/create {2}nodes\/3d\/shapecast3d\/Component\.tsx/);
   });
 
   it('accepts control as a base for a pending slice', () => {
