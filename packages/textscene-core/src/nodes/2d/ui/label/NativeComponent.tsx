@@ -28,12 +28,9 @@
  * (one or many) with a single implementation, and re-applies whenever
  * `renderOrder` changes without touching `TextRun.tsx`.
  */
-import { useLayoutEffect, useMemo, useRef } from 'react';
-import * as THREE from 'three';
+import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
-import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
-import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { AutowrapMode, shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
@@ -57,10 +54,8 @@ function soloLineLayout(placement: LabelLinePlacement, linePitchPx: number): Tex
   return { lines: [placement.line], linePitchPx, widthPx: placement.line.widthPx, heightPx: linePitchPx };
 }
 
-export function LabelNative({ solveNode, rect, renderOrder }: NativeControlComponentProps) {
+export function LabelNative({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = solveNode.node.properties as LabelProperties;
-  const { themeScale } = useProjectSettings();
-  const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
   const textTheme = useMemo(() => labelTextTheme(props, { theme }), [props, theme]);
 
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
@@ -97,15 +92,8 @@ export function LabelNative({ solveNode, rect, renderOrder }: NativeControlCompo
     [layout, rect.w, rect.h, props.horizontalAlignment, props.verticalAlignment, textTheme.fontSizePx]
   );
 
-  const groupRef = useRef<THREE.Group>(null);
-  useLayoutEffect(() => {
-    groupRef.current?.traverse((obj) => {
-      if (obj !== groupRef.current) obj.renderOrder = renderOrder;
-    });
-  });
-
   return (
-    <group ref={groupRef}>
+    <>
       {placements.map((placement, index) => (
         <group key={index} position={[placement.x, -placement.y, 0]}>
           <TextRun
@@ -113,9 +101,10 @@ export function LabelNative({ solveNode, rect, renderOrder }: NativeControlCompo
             fontSizePx={textTheme.fontSizePx}
             tint={tintColor}
             clippingPlanes={clippingPlanes}
+            renderOrder={renderOrder}
           />
         </group>
       ))}
-    </group>
+    </>
   );
 }

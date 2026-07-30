@@ -8,6 +8,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { GridContainerNative } from './NativeComponent';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
 function gridSolveNode(): SolveNode {
   const node: TscnNode = {
@@ -22,7 +23,7 @@ function gridSolveNode(): SolveNode {
 describe('<GridContainerNative>', () => {
   it('renders no scene objects — a container draws nothing of its own', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GridContainerNative solveNode={gridSolveNode()} rect={{ x: 0, y: 0, w: 100, h: 40 }} renderOrder={0} />
+      <GridContainerNative {...painterEnv()} solveNode={gridSolveNode()} rect={{ x: 0, y: 0, w: 100, h: 40 }} renderOrder={0} />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });

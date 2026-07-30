@@ -8,6 +8,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CenterContainerNative } from './NativeComponent';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
 function solveNode(): SolveNode {
   const node: TscnNode = { name: 'C', type: 'CenterContainer', children: [], properties: { name: 'C' } };
@@ -17,7 +18,7 @@ function solveNode(): SolveNode {
 describe('<CenterContainerNative>', () => {
   it('renders nothing — CenterContainer has no chrome of its own', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <CenterContainerNative solveNode={solveNode()} rect={{ x: 0, y: 0, w: 100, h: 50 }} />
+      <CenterContainerNative {...painterEnv()} solveNode={solveNode()} rect={{ x: 0, y: 0, w: 100, h: 50 }} />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });

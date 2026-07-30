@@ -17,6 +17,7 @@ import { controlComponentRegistry, type ControlComponent } from '../../../../r3f
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
 import { LabelNative } from './NativeComponent';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -34,7 +35,7 @@ function expectedLinear(r: number, g: number, b: number): THREE.Color {
 
 async function render(properties: Record<string, unknown>, rect: Rect2 = { x: 0, y: 0, w: 200, h: 200 }) {
   return ReactThreeTestRenderer.create(
-    <LabelNative solveNode={solveNode('L', properties)} rect={rect} renderOrder={5} />
+    <LabelNative {...painterEnv()} solveNode={solveNode('L', properties)} rect={rect} renderOrder={5} />
   );
 }
 
@@ -50,6 +51,8 @@ describe('<LabelNative> (isolated painter contract)', () => {
   });
 
   it('forwards renderOrder to every line mesh, not just the first', async () => {
+    // Asserted on the meshes: `<TextRun>` takes `renderOrder` directly, so no
+    // wrapping group or imperative traverse is involved in getting it there.
     const renderer = await render({ text: 'A\nB\nC' });
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     expect(meshes).toHaveLength(3);
@@ -64,7 +67,7 @@ describe('<LabelNative> (isolated painter contract)', () => {
     });
     const renderer = await ReactThreeTestRenderer.create(
       <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }}>
-        <LabelNative solveNode={node} rect={{ x: 0, y: 0, w: 200, h: 200 }} renderOrder={0} />
+        <LabelNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 200, h: 200 }} renderOrder={0} />
       </Modulate2DContext.Provider>
     );
     const mat = renderer.scene.findByType('Mesh').instance.material as THREE.ShaderMaterial;

@@ -22,6 +22,7 @@ import {
 } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { ColorRectNative } from './NativeComponent';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -47,7 +48,7 @@ describe('<ColorRectNative> (isolated painter contract)', () => {
   it('draws exactly one quad sized to the solved rect', async () => {
     const node = solveNode('Root', 'ColorRect', { color: 'Color(1, 0, 0, 1)' });
     const renderer = await ReactThreeTestRenderer.create(
-      <ColorRectNative solveNode={node} rect={{ x: 0, y: 0, w: 64, h: 32 }} />
+      <ColorRectNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 64, h: 32 }} />
     );
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(1);
@@ -59,7 +60,7 @@ describe('<ColorRectNative> (isolated painter contract)', () => {
   it('defaults to opaque white when color is absent (Godot default Color(1,1,1,1))', async () => {
     const node = solveNode('Root', 'ColorRect', {});
     const renderer = await ReactThreeTestRenderer.create(
-      <ColorRectNative solveNode={node} rect={{ x: 0, y: 0, w: 10, h: 10 }} />
+      <ColorRectNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 10, h: 10 }} />
     );
     const mesh = renderer.scene.findByType('Mesh');
     const material = mesh.instance.material as THREE.MeshBasicMaterial;
@@ -77,7 +78,7 @@ describe('<ColorRectNative> (isolated painter contract)', () => {
     });
     const renderer = await ReactThreeTestRenderer.create(
       <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }}>
-        <ColorRectNative solveNode={node} rect={{ x: 0, y: 0, w: 10, h: 10 }} />
+        <ColorRectNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 10, h: 10 }} />
       </Modulate2DContext.Provider>
     );
     const mesh = renderer.scene.findByType('Mesh');
@@ -95,7 +96,7 @@ describe('<ColorRectNative> (isolated painter contract)', () => {
   it('is transparent and non-depth-writing, spreading the shared clip planes hook (edge: empty list)', async () => {
     const node = solveNode('Root', 'ColorRect', { color: 'Color(1, 1, 1, 1)' });
     const renderer = await ReactThreeTestRenderer.create(
-      <ColorRectNative solveNode={node} rect={{ x: 0, y: 0, w: 10, h: 10 }} />
+      <ColorRectNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 10, h: 10 }} />
     );
     const mesh = renderer.scene.findByType('Mesh');
     const material = mesh.instance.material as THREE.MeshBasicMaterial;

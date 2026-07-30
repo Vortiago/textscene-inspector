@@ -40,11 +40,9 @@ import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { resolveTexture2DPath } from '../../../../resources/SubResourceResolver';
 import { useResource } from '../../../../resources/useResource';
-import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
@@ -68,10 +66,8 @@ interface IconImageLike {
   height?: number;
 }
 
-export function ButtonNative({ solveNode, rect, renderOrder }: NativeControlComponentProps) {
+export function ButtonNative({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = solveNode.node.properties as ButtonProperties;
-  const { themeScale } = useProjectSettings();
-  const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
   const state = resolveButtonDrawState(props.disabled);
 
   const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, state);
@@ -166,8 +162,13 @@ export function ButtonNative({ solveNode, rect, renderOrder }: NativeControlComp
         </group>
       )}
       {content.text && layout && (
-        <group renderOrder={renderOrder} position={[content.text.offset.x, -content.text.offset.y, 0]}>
-          <TextRun layout={layout} fontSizePx={fontSizePx} tint={tintedFontColor} />
+        <group position={[content.text.offset.x, -content.text.offset.y, 0]}>
+          <TextRun
+            layout={layout}
+            fontSizePx={fontSizePx}
+            tint={tintedFontColor}
+            renderOrder={renderOrder}
+          />
         </group>
       )}
     </>

@@ -8,6 +8,8 @@ import type React from 'react';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../parser/types';
 import { createTypeRegistry } from '../../core/createTypeRegistry';
+import type { NativeTheme } from './native/nativeTheme';
+import type { TextMeasurer } from './native/solverRegistry';
 import type { Rect2 } from './native/rect';
 import type { SolveNode } from './native/solveTree';
 
@@ -40,6 +42,31 @@ export interface NativeControlComponentProps {
   solveNode: SolveNode;
   /** This Control's solved rect, LOCAL space (position already applied by the walker). */
   rect: Rect2;
+  /**
+   * The default theme at the active project's `gui/theme/default_theme_scale`.
+   *
+   * Supplied rather than resolved per painter: the walker already holds it (the
+   * solve needs it too), so five painters were each re-reading project settings
+   * and re-deriving the same object. Handing it down also means a painter and
+   * the solver that sized it can never see different theme metrics.
+   */
+  theme: NativeTheme;
+  /**
+   * Text measurement, or `null` before the metrics are available. The same
+   * measurer the solve used, so a painter's own layout of a string agrees with
+   * the minimum size that string produced.
+   */
+  measureText: TextMeasurer | null;
+  /**
+   * The SOLVED rects of this Control's direct children, keyed by node path.
+   *
+   * Chrome whose position depends on where the children ended up — a split
+   * container's grabber, a scroll container's bars — otherwise has to recompute
+   * layout the solver already did, from whatever subset of the inputs a painter
+   * can reach. That recomputation can disagree with the solver, which is a
+   * silent divergence rather than a visible bug.
+   */
+  childRects: ReadonlyMap<string, Rect2>;
   /**
    * This Control's draw-order key — `bandBase(canvasLayer) + paintIndex`
    * (`native/controlDrawOrder.ts`) — for the painter's own mesh(es). Every 2D
@@ -88,9 +115,10 @@ export interface ControlComponentRegistration {
    * `container`, `csgShape`). A second wrapping type would otherwise add a
    * second hardcoded branch, and the two could drift on which types wrap.
    *
-   * Only a type that establishes a new ambient scope for its subtree needs it —
-   * `CanvasLayer`, which publishes a draw-order band and a fresh modulate scope
-   * its descendants inherit.
+   * Only a type that establishes a new ambient scope for its subtree needs it.
+   * Two do: `CanvasLayer` publishes a draw-order band and a fresh modulate scope,
+   * and `ScrollContainer` publishes clip planes — different scopes, same
+   * structural requirement, which is why this is one flag rather than two.
    */
   wrapsChildren?: boolean;
 }

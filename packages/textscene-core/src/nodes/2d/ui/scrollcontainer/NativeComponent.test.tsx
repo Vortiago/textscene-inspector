@@ -24,6 +24,7 @@ import { ControlClipProvider, useControlClipPlanes } from '../../../../r3f/contr
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import type { ScrollContainerProperties } from './types';
 import { ScrollContainerNative } from './NativeComponent';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
 function leaf(name: string, props: Partial<ScrollContainerProperties> = {}): SolveNode {
   return {
@@ -70,7 +71,7 @@ describe('<ScrollContainerNative> — no scrollbar when content fits', () => {
   it('draws no mesh and still renders children when neither axis overflows', async () => {
     const child = leaf('Scroll/Child', { customMinimumSize: { x: 100, y: 100 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <ScrollContainerNative solveNode={scrollNode({}, [child])} rect={NO_OVERFLOW_RECT} renderOrder={5}>
+      <ScrollContainerNative {...painterEnv()} solveNode={scrollNode({}, [child])} rect={NO_OVERFLOW_RECT} renderOrder={5}>
         <group name="probe-child" />
       </ScrollContainerNative>
     );
@@ -85,7 +86,7 @@ describe('<ScrollContainerNative> — vertical scrollbar geometry (real-fixture 
   async function mountFixtureScrollbar() {
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 399, y: 800 } });
     return ReactThreeTestRenderer.create(
-      <ScrollContainerNative solveNode={scrollNode({}, [content])} rect={FIXTURE_RECT} renderOrder={10} />
+      <ScrollContainerNative {...painterEnv()} solveNode={scrollNode({}, [content])} rect={FIXTURE_RECT} renderOrder={10} />
     );
   }
 
@@ -131,7 +132,7 @@ describe('<ScrollContainerNative> — vertical scrollbar geometry (real-fixture 
   it('offsets the grabber toward the bottom when scrolled (scroll_vertical authored)', async () => {
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 0, y: 800 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <ScrollContainerNative
+      <ScrollContainerNative {...painterEnv()}
         solveNode={scrollNode({ scrollVertical: 200 }, [content])}
         rect={{ x: 0, y: 0, w: 300, h: 200 }}
         renderOrder={0}
@@ -150,7 +151,7 @@ describe('<ScrollContainerNative> — tint', () => {
   it('composes self_modulate onto the track fill, in sRGB, with a single linear conversion', async () => {
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 399, y: 800 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <ScrollContainerNative
+      <ScrollContainerNative {...painterEnv()}
         solveNode={scrollNode({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, [content])}
         rect={FIXTURE_RECT}
         renderOrder={0}
@@ -175,7 +176,7 @@ describe('<ScrollContainerNative> — tint', () => {
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 0, y: 800 } });
     const renderer = await ReactThreeTestRenderer.create(
       <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>
-        <ScrollContainerNative
+        <ScrollContainerNative {...painterEnv()}
           solveNode={scrollNode({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, [content])}
           rect={{ x: 0, y: 0, w: 300, h: 200 }}
           renderOrder={0}
@@ -195,7 +196,7 @@ describe('<ScrollContainerNative> — clip planes', () => {
   it("pushes exactly 4 world-space planes matching this node's own full rect", async () => {
     let captured: readonly THREE.Plane[] = [];
     await ReactThreeTestRenderer.create(
-      <ScrollContainerNative solveNode={scrollNode({}, [])} rect={{ x: 0, y: 0, w: 300, h: 200 }} renderOrder={0}>
+      <ScrollContainerNative {...painterEnv()} solveNode={scrollNode({}, [])} rect={{ x: 0, y: 0, w: 300, h: 200 }} renderOrder={0}>
         <ClipProbe onPlanes={(p) => (captured = p)} />
       </ScrollContainerNative>
     );
@@ -213,7 +214,7 @@ describe('<ScrollContainerNative> — clip planes', () => {
     const inheritedPlane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);
     await ReactThreeTestRenderer.create(
       <ControlClipProvider value={[inheritedPlane]}>
-        <ScrollContainerNative solveNode={scrollNode({}, [])} rect={{ x: 0, y: 0, w: 300, h: 200 }} renderOrder={0}>
+        <ScrollContainerNative {...painterEnv()} solveNode={scrollNode({}, [])} rect={{ x: 0, y: 0, w: 300, h: 200 }} renderOrder={0}>
           <ClipProbe onPlanes={(p) => (captured = p)} />
         </ScrollContainerNative>
       </ControlClipProvider>
@@ -234,9 +235,9 @@ describe('<ScrollContainerNative> — clip planes', () => {
     // other three sides are enforced by the INNER's tighter rect.
     let captured: readonly THREE.Plane[] = [];
     await ReactThreeTestRenderer.create(
-      <ScrollContainerNative solveNode={scrollNode({}, [])} rect={{ x: 0, y: 0, w: 400, h: 300 }} renderOrder={0}>
+      <ScrollContainerNative {...painterEnv()} solveNode={scrollNode({}, [])} rect={{ x: 0, y: 0, w: 400, h: 300 }} renderOrder={0}>
         <group position={[350, -40, 0]}>
-          <ScrollContainerNative solveNode={scrollNode({}, [])} rect={{ x: 0, y: 0, w: 100, h: 80 }} renderOrder={1}>
+          <ScrollContainerNative {...painterEnv()} solveNode={scrollNode({}, [])} rect={{ x: 0, y: 0, w: 100, h: 80 }} renderOrder={1}>
             <ClipProbe onPlanes={(p) => (captured = p)} />
           </ScrollContainerNative>
         </group>

@@ -27,6 +27,7 @@ import {
   type ControlComponent,
 } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ControlNative } from './NativeComponent';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -63,7 +64,7 @@ describe('<ControlNative> (isolated painter contract)', () => {
   it('draws no mesh or line geometry of its own', async () => {
     const node = solveNode('Root', 'Control', {});
     const renderer = await ReactThreeTestRenderer.create(
-      <ControlNative solveNode={node} rect={{ x: 0, y: 0, w: 80, h: 40 }} />
+      <ControlNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 80, h: 40 }} />
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
@@ -76,7 +77,7 @@ describe('<ControlNative> (isolated painter contract)', () => {
       pivotOffset: { x: 10, y: 5 },
     });
     const renderer = await ReactThreeTestRenderer.create(
-      <ControlNative solveNode={node} rect={{ x: 0, y: 0, w: 80, h: 40 }} />
+      <ControlNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 80, h: 40 }} />
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });

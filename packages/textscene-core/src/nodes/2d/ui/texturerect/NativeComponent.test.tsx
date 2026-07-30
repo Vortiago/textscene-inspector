@@ -25,6 +25,7 @@ import { createFakeResourceLoader } from '../../../../resources/testing/createFa
 import { parseTextureRect } from './parser';
 import { TextureRectNative } from './NativeComponent';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -66,10 +67,10 @@ async function renderIsolated(raw: Record<string, string> = {}, rect: Rect2, opt
       <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
         {options.modulateContext ? (
           <Modulate2DContext.Provider value={options.modulateContext}>
-            <TextureRectNative solveNode={solveNode(node)} rect={rect} />
+            <TextureRectNative {...painterEnv()} solveNode={solveNode(node)} rect={rect} />
           </Modulate2DContext.Provider>
         ) : (
-          <TextureRectNative solveNode={solveNode(node)} rect={rect} />
+          <TextureRectNative {...painterEnv()} solveNode={solveNode(node)} rect={rect} />
         )}
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
@@ -92,7 +93,7 @@ describe('<TextureRectNative> (isolated painter contract)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
-          <TextureRectNative solveNode={solveNode(node)} rect={{ x: 0, y: 0, w: 300, h: 100 }} />
+          <TextureRectNative {...painterEnv()} solveNode={solveNode(node)} rect={{ x: 0, y: 0, w: 300, h: 100 }} />
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );

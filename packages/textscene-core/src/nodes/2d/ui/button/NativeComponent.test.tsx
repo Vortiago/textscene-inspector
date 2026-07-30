@@ -23,6 +23,7 @@ import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { ControlProperties } from '../control/types';
 import { ButtonNative } from './NativeComponent';
 import { buttonMinimumSize } from './nativeSolver';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
@@ -97,7 +98,7 @@ describe('<ButtonNative> (isolated painter contract)', () => {
   it('draws the resolved theme_override_styles/normal chrome, not the default fill, when one is present', async () => {
     const override = styleBox({ bgColor: { r: 0.9, g: 0.1, b: 0.1, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative solveNode={solveNode({}, { normal: override })} rect={RECT} renderOrder={5} />
+      <ButtonNative {...painterEnv()} solveNode={solveNode({}, { normal: override })} rect={RECT} renderOrder={5} />
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
@@ -107,7 +108,7 @@ describe('<ButtonNative> (isolated painter contract)', () => {
 
   it('falls back to the default-theme button.normal StyleBox when no override resolves', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative solveNode={solveNode({}, {})} rect={RECT} renderOrder={0} />
+      <ButtonNative {...painterEnv()} solveNode={solveNode({}, {})} rect={RECT} renderOrder={0} />
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
@@ -118,7 +119,7 @@ describe('<ButtonNative> (isolated painter contract)', () => {
 
   it('switches to the default-theme button.disabled StyleBox once disabled=true', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative solveNode={solveNode({ disabled: true }, {})} rect={RECT} renderOrder={0} />
+      <ButtonNative {...painterEnv()} solveNode={solveNode({ disabled: true }, {})} rect={RECT} renderOrder={0} />
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
@@ -128,7 +129,7 @@ describe('<ButtonNative> (isolated painter contract)', () => {
 
   it('flat=true draws NO chrome mesh at all, but still draws the text', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative solveNode={solveNode({ flat: true, text: 'Hi' })} rect={RECT} renderOrder={0} />
+      <ButtonNative {...painterEnv()} solveNode={solveNode({ flat: true, text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
     expect(findChromeMesh(renderer.scene)).toBeUndefined();
     expect(findTextMesh(renderer.scene)).toBeDefined();
@@ -136,14 +137,14 @@ describe('<ButtonNative> (isolated painter contract)', () => {
 
   it('draws NO text mesh when text is absent/empty', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative solveNode={solveNode({})} rect={RECT} renderOrder={0} />
+      <ButtonNative {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
     );
     expect(findTextMesh(renderer.scene)).toBeUndefined();
   });
 
   it("uses control_font_color (0.875 sRGB) for the NORMAL label, tinted the object's own colour, not an approximation", async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+      <ButtonNative {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
     const mesh = findTextMesh(renderer.scene)!;
     const material = mesh.material as THREE.ShaderMaterial;
@@ -156,7 +157,7 @@ describe('<ButtonNative> (isolated painter contract)', () => {
       'not the DOM overlay\'s 0.6-opacity approximation this packet\'s comparison.md documents closing',
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
-        <ButtonNative solveNode={solveNode({ text: 'Hi', disabled: true })} rect={RECT} renderOrder={0} />
+        <ButtonNative {...painterEnv()} solveNode={solveNode({ text: 'Hi', disabled: true })} rect={RECT} renderOrder={0} />
       );
       const mesh = findTextMesh(renderer.scene)!;
       const material = mesh.material as THREE.ShaderMaterial;
@@ -172,7 +173,7 @@ describe('<ButtonNative> (isolated painter contract)', () => {
       const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
       const renderer = await ReactThreeTestRenderer.create(
         <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>
-          <ButtonNative
+          <ButtonNative {...painterEnv()}
             solveNode={solveNode({ text: 'Hi', selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, { normal: flat })}
             rect={RECT}
             renderOrder={0}
@@ -192,23 +193,15 @@ describe('<ButtonNative> (isolated painter contract)', () => {
     }
   );
 
-  it('forwards renderOrder to the chrome mesh directly, and to the text mesh via its wrapping group', async () => {
+  it('forwards renderOrder to the chrome mesh and to the text mesh', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={7} />
+      <ButtonNative {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={7} />
     );
     expect(findChromeMesh(renderer.scene)!.renderOrder).toBe(7);
-    // `<TextRun>` accepts no `renderOrder` prop of its own (out of this
-    // packet's ownership, `native/text/**`) — this painter instead wraps it
-    // in a `<group renderOrder={renderOrder}>`, which three.js's
-    // `projectObject` propagates to every descendant mesh's paint-order
-    // comparison at render time (verified on the GROUP, since that
-    // propagation is a render-time computation, not a copy back onto the
-    // mesh's own `renderOrder` property).
-    const textGroup = renderer.scene
-      .findAllByType('Group')
-      .map((g) => g.instance as { renderOrder: number })
-      .find((g) => g.renderOrder === 7);
-    expect(textGroup).toBeDefined();
+    // `<TextRun>` takes `renderOrder` itself now, so every mesh carries it —
+    // no reliance on a group-order cascade an intermediate group could reset.
+    const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
+    for (const mesh of meshes) expect(mesh.renderOrder).toBe(7);
   });
 });
 
@@ -227,7 +220,7 @@ describe('<ButtonNative> — icon (ControlQuad), via ResourceLoader/SceneResourc
     return ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider externalResources={[{ id: '1', type: 'Texture2D', path: ICON_PATH }]}>
-          <ButtonNative
+          <ButtonNative {...painterEnv()}
             solveNode={solveNode({ icon: 'ExtResource("1")', ...properties })}
             rect={RECT}
             renderOrder={0}
@@ -239,7 +232,7 @@ describe('<ButtonNative> — icon (ControlQuad), via ResourceLoader/SceneResourc
 
   it('draws no icon quad at all when the node has no icon reference', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+      <ButtonNative {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
     expect(findIconMesh(renderer.scene)).toBeUndefined();
   });
@@ -270,7 +263,7 @@ describe('<ButtonNative> — icon (ControlQuad), via ResourceLoader/SceneResourc
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider externalResources={[{ id: '1', type: 'Texture2D', path: ICON_PATH }]}>
-          <ButtonNative solveNode={solveNode({ icon: 'ExtResource("1")' })} rect={RECT} renderOrder={9} />
+          <ButtonNative {...painterEnv()} solveNode={solveNode({ icon: 'ExtResource("1")' })} rect={RECT} renderOrder={9} />
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );

@@ -16,6 +16,7 @@ import { CanvasLayerNative } from './NativeComponent';
 import { parseCanvasLayer } from './parser';
 import { useCanvasLayerIndex } from '../../../../r3f/lighting2d/canvasItemPlacement';
 import { CanvasModulateContext, useCanvasModulate } from '../../../../r3f/canvasModulate';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
 const ZERO_RECT = { x: 0, y: 0, w: 0, h: 0 };
 
@@ -40,7 +41,7 @@ function LayerProbe({ testId }: { testId: string }) {
 
 async function renderLayer(raw: Record<string, string> = {}, rawChildren: TscnNode[] = [], testId = 'a') {
   return ReactThreeTestRenderer.create(
-    <CanvasLayerNative solveNode={layerSolveNode(raw, rawChildren)} rect={ZERO_RECT} renderOrder={0}>
+    <CanvasLayerNative {...painterEnv()} solveNode={layerSolveNode(raw, rawChildren)} rect={ZERO_RECT} renderOrder={0}>
       <LayerProbe testId={testId} />
     </CanvasLayerNative>
   );
@@ -63,7 +64,7 @@ describe('<CanvasLayerNative>', () => {
     const ownChild = canvasModulateChild({ r: 0.2, g: 0.4, b: 0.6, a: 1 });
     const renderer = await ReactThreeTestRenderer.create(
       <CanvasModulateContext.Provider value={{ r: 0.9, g: 0.9, b: 0.9, a: 1 }}>
-        <CanvasLayerNative solveNode={layerSolveNode({}, [ownChild])} rect={ZERO_RECT} renderOrder={0}>
+        <CanvasLayerNative {...painterEnv()} solveNode={layerSolveNode({}, [ownChild])} rect={ZERO_RECT} renderOrder={0}>
           <LayerProbe testId="tint" />
         </CanvasLayerNative>
       </CanvasModulateContext.Provider>

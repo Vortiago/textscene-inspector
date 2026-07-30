@@ -70,6 +70,8 @@ export function ControlCanvasWalker({ tree, generation, viewport, theme, measure
           solved={solved}
           hiddenNodePaths={hiddenNodePaths}
           isFreeParent
+          theme={theme}
+          measureText={measurer}
         />
       ))}
     </>
@@ -82,9 +84,18 @@ interface ControlNodeGroupProps {
   hiddenNodePaths: ReadonlySet<string>;
   /** Whether THIS node's parent imposes no container layout — see module doc. */
   isFreeParent: boolean;
+  theme: NativeTheme;
+  measureText: TextMeasurer | null;
 }
 
-function ControlNodeGroup({ solveNode, solved, hiddenNodePaths, isFreeParent }: ControlNodeGroupProps) {
+function ControlNodeGroup({
+  solveNode,
+  solved,
+  hiddenNodePaths,
+  isFreeParent,
+  theme,
+  measureText,
+}: ControlNodeGroupProps) {
   const props = solveNode.node.properties as ControlProperties;
   const tint = useControlTint(props.modulate, props.selfModulate);
   const isVisible = !hiddenNodePaths.has(solveNode.path) && props.visible !== false;
@@ -124,8 +135,19 @@ function ControlNodeGroup({ solveNode, solved, hiddenNodePaths, isFreeParent }: 
       solved={solved}
       hiddenNodePaths={hiddenNodePaths}
       isFreeParent={childIsFreeParent}
+      theme={theme}
+      measureText={measureText}
     />
   ));
+
+  // Only this node's DIRECT children, so a painter cannot reach across the tree.
+  const childRects = useMemo(() => {
+    const out = new Map<string, Rect2>();
+    for (const child of solveNode.children) {
+      out.set(child.path, solved.get(child.path)?.rect ?? ZERO_RECT);
+    }
+    return out;
+  }, [solveNode.children, solved]);
 
   // A `CanvasLayer` is not chrome, it is a passthrough canvas boundary — its
   // `Native` painter (`canvaslayer/NativeComponent.tsx`) needs to WRAP its
@@ -133,17 +155,30 @@ function ControlNodeGroup({ solveNode, solved, hiddenNodePaths, isFreeParent }: 
   // only works if they are its React children rather than its siblings. Every
   // other registered painter draws fixed chrome unrelated to its descendants'
   // own React subtree, so it keeps the sibling shape (`NativeControlComponentProps`'s
-  // own doc comment). This hardcoded type check mirrors `NodeDispatcher.tsx`'s
-  // identical `node.type === 'CanvasLayer'` branch — the same convention, not
-  // a second one.
+  // own doc comment). The registration declares this rather than the walker
+  // testing a type name, so a second such type adds no branch here.
   const wrapsChildren = controlComponentRegistry.wrapsChildren(solveNode.node.type);
   const content = wrapsChildren ? (
-    <Painter solveNode={solveNode} rect={rect} renderOrder={renderOrder}>
+    <Painter
+      solveNode={solveNode}
+      rect={rect}
+      renderOrder={renderOrder}
+      theme={theme}
+      measureText={measureText}
+      childRects={childRects}
+    >
       {childElements}
     </Painter>
   ) : (
     <>
-      <Painter solveNode={solveNode} rect={rect} renderOrder={renderOrder} />
+      <Painter
+        solveNode={solveNode}
+        rect={rect}
+        renderOrder={renderOrder}
+        theme={theme}
+        measureText={measureText}
+        childRects={childRects}
+      />
       {childElements}
     </>
   );

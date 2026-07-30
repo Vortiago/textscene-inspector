@@ -19,7 +19,7 @@
  * left open here: closing it is Label's job (the component that owns
  * vertical alignment), not this engine's.
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { OPEN_SANS_ATLAS_INFO, OPEN_SANS_ATLAS_PNG_DATA_URL } from './openSansAtlas';
 import { createMsdfMaterial } from './msdfMaterial';
@@ -140,6 +140,14 @@ export interface TextRunProps {
   skew?: number;
   /** Synthesized-bold embolden, forwarded to the material. 0 (default) is the baked stroke weight. */
   distanceBias?: number;
+  /**
+   * Paint order for this run's mesh. A first-class prop rather than something a
+   * caller arranges around it: consumers previously reached for either a
+   * wrapping `<group renderOrder>` (relying on three's group-order cascade,
+   * which an intermediate unset group silently resets) or an imperative
+   * `traverse` — two different workarounds for one missing prop.
+   */
+  renderOrder?: number;
   /** Per-mesh clip planes (`controlClipping.tsx`'s hook) — forwarded to the material, per-material state. */
   clippingPlanes?: readonly THREE.Plane[];
 }
@@ -151,6 +159,7 @@ export function TextRun({
   skew = 0,
   distanceBias = 0,
   clippingPlanes,
+  renderOrder = 0,
 }: TextRunProps) {
   const geometry = useMemo(() => {
     const { positions, uvs, indices } = buildGlyphQuadArrays(layout, fontSizePx, skew);
@@ -173,5 +182,12 @@ export function TextRun({
     });
   }, [tint.r, tint.g, tint.b, tint.a, distanceBias, clippingPlanes]);
 
-  return <mesh geometry={geometry} material={material} />;
+  // R3F does not dispose a geometry/material passed as a PROP (only ones it
+  // created from JSX args), so both leak on every rebuild without this. Cheap
+  // before anything rendered through TextRun; now one Label mounts a run per
+  // line and re-shapes on every rect or font change.
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => () => material.dispose(), [material]);
+
+  return <mesh geometry={geometry} material={material} renderOrder={renderOrder} />;
 }

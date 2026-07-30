@@ -43,31 +43,18 @@ import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcon
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
-import { hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from '../shared/fitChildInRect';
+import { isSortableControl } from '../shared/fitChildInRect';
 import {
+  axisChildFromCustomMinimumSize,
   computeSplitDraggerPosition,
   isSplitGrabberVisible,
   resolveSplitSeparation,
   splitGrabberIconRect,
-  type SplitAxisChild,
 } from '../shared/splitContainerSolver';
 import type { SplitContainerProperties } from '../shared/splitContainer';
-import type { ControlProperties } from '../control/types';
 
 /** `hsplitter.svg`'s own authored size (`native/themeIcons.ts`) — 8px along the split axis, 48px across it. */
 const ICON_SIZE = { x: 8, y: 48 };
-
-const DEFAULT_SIZE_FLAGS = SIZE_FILL;
-const DEFAULT_STRETCH_RATIO = 1;
-
-/** A sortable child's split-axis inputs, read from its OWN `custom_minimum_size` — see this module's doc for why that (not the full combined minimum) is what a Native painter can reach. */
-function axisChildFromCustomMinimumSize(node: SolveNode, vertical: boolean): SplitAxisChild {
-  const props = node.node.properties as ControlProperties;
-  const minSize = (vertical ? props.customMinimumSize?.y : props.customMinimumSize?.x) ?? 0;
-  const flags = (vertical ? props.sizeFlagsVertical : props.sizeFlagsHorizontal) ?? DEFAULT_SIZE_FLAGS;
-  const stretchRatio = props.sizeFlagsStretchRatio ?? DEFAULT_STRETCH_RATIO;
-  return { minSize, expands: hasFlag(flags, SIZE_EXPAND) && stretchRatio > 0, stretchRatio };
-}
 
 /**
  * A stable `THREE.Texture` handle for a vendored `data:` SVG icon —

@@ -387,3 +387,12 @@ export function splitGrabberIconRect(
     h: iconSize.y,
   };
 }
+
+/** A sortable child's split-axis inputs, read from its OWN `custom_minimum_size` — see this module's doc for why that (not the full combined minimum) is what a Native painter can reach. */
+export function axisChildFromCustomMinimumSize(node: SolveNode, vertical: boolean): SplitAxisChild {
+  const props = node.node.properties as ControlProperties;
+  const minSize = (vertical ? props.customMinimumSize?.y : props.customMinimumSize?.x) ?? 0;
+  const flags = (vertical ? props.sizeFlagsVertical : props.sizeFlagsHorizontal) ?? DEFAULT_SIZE_FLAGS;
+  const stretchRatio = props.sizeFlagsStretchRatio ?? DEFAULT_STRETCH_RATIO;
+  return { minSize, expands: hasFlag(flags, SIZE_EXPAND) && stretchRatio > 0, stretchRatio };
+}

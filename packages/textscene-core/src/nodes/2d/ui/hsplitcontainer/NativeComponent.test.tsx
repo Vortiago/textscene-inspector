@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { HSplitContainerNative } from './NativeComponent';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
 function solveNode(
   name: string,
@@ -46,7 +47,7 @@ describe('<HSplitContainerNative>', () => {
   it('renders nothing under the default theme (autohide=true, no hover/drag a static render ever has)', async () => {
     const node = split({}, bothExpandChildren());
     const renderer = await ReactThreeTestRenderer.create(
-      <HSplitContainerNative solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <HSplitContainerNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });
@@ -57,7 +58,7 @@ describe('<HSplitContainerNative>', () => {
       [solveNode('Only', 'ColorRect', {})]
     );
     const renderer = await ReactThreeTestRenderer.create(
-      <HSplitContainerNative solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <HSplitContainerNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });
@@ -65,7 +66,7 @@ describe('<HSplitContainerNative>', () => {
   it('renders nothing while collapsed, even with autohide overridden', async () => {
     const node = split({ themeOverrideConstants: { autohide: 0 }, collapsed: true }, bothExpandChildren());
     const renderer = await ReactThreeTestRenderer.create(
-      <HSplitContainerNative solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <HSplitContainerNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });
@@ -76,7 +77,7 @@ describe('<HSplitContainerNative>', () => {
       bothExpandChildren()
     );
     const renderer = await ReactThreeTestRenderer.create(
-      <HSplitContainerNative solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <HSplitContainerNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });
@@ -84,7 +85,7 @@ describe('<HSplitContainerNative>', () => {
   it('draws exactly one textured quad, at the grabber band centred on the computed split offset, once autohide is overridden', async () => {
     const node = split({ themeOverrideConstants: { autohide: 0 } }, bothExpandChildren());
     const renderer = await ReactThreeTestRenderer.create(
-      <HSplitContainerNative solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={5} />
+      <HSplitContainerNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={5} />
     );
 
     const meshes = renderer.scene.findAllByType('Mesh');
@@ -110,7 +111,7 @@ describe('<HSplitContainerNative>', () => {
       bothExpandChildren()
     );
     const renderer = await ReactThreeTestRenderer.create(
-      <HSplitContainerNative solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <HSplitContainerNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
     );
     // draggerPos = 194 + 60 = 254; icon centres at 254 + (12-8)/2 = 256.
     const group = renderer.scene.findByType('Group');
@@ -123,7 +124,7 @@ describe('<HSplitContainerNative>', () => {
       ...bothExpandChildren(),
     ]);
     const renderer = await ReactThreeTestRenderer.create(
-      <HSplitContainerNative solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <HSplitContainerNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
   });

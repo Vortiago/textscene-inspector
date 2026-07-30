@@ -66,8 +66,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
-import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { createSolveContext } from '../../../../r3f/controls/native/controlRectSolver';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import {
@@ -76,8 +74,8 @@ import {
   useControlClipPlanes,
   withAdditionalClipPlanes,
 } from '../../../../r3f/controls/native/controlClipping';
-import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { multiplyModulate, useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { StyleBoxQuad, tintStyleBox } from '../../../../r3f/controls/native/StyleBoxQuad';
+import { useCanvasItemTint, WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { ControlProperties } from '../control/types';
 import { scrollContainerScrollBars, type ScrollBarPlacement } from './nativeSolver';
@@ -101,15 +99,6 @@ function sameFloats(a: Float64Array, b: Float64Array): boolean {
   return true;
 }
 
-/** Multiplies a StyleBox's two base colours by the tint, in sRGB — same recipe as `PanelChrome.tsx`. */
-function tintStyleBox(styleBox: StyleBoxFlatData, tint: RGBA): StyleBoxFlatData {
-  if (tint.r === 1 && tint.g === 1 && tint.b === 1 && tint.a === 1) return styleBox;
-  return {
-    ...styleBox,
-    bgColor: multiplyModulate(styleBox.bgColor, tint),
-    borderColor: multiplyModulate(styleBox.borderColor, tint),
-  };
-}
 
 interface ScrollBarChromeProps {
   bar: ScrollBarPlacement;
@@ -165,10 +154,8 @@ function ScrollBarChrome({ bar, track, grabber, renderOrder }: ScrollBarChromePr
   );
 }
 
-export function ScrollContainerNative({ solveNode, rect, renderOrder, children }: NativeControlComponentProps) {
+export function ScrollContainerNative({ solveNode, rect, renderOrder, theme, children }: NativeControlComponentProps) {
   const props = solveNode.node.properties as ControlProperties;
-  const { themeScale } = useProjectSettings();
-  const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
   // A FRESH SolveContext, built from the exact same theme/measurer the real
   // solve uses — not a second, narrower approximation of one.
   const solveCtx = useMemo(() => createSolveContext(theme, measureText), [theme]);

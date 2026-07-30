@@ -19,6 +19,7 @@ import { controlComponentRegistry, type ControlComponent } from '../../../../r3f
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import type { ControlProperties } from '../control/types';
 import { PanelNative } from './NativeComponent';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
@@ -59,7 +60,7 @@ describe('<PanelNative> (isolated painter contract)', () => {
   it('draws the resolved theme_override_styles/panel override, not the default fill, when one is present', async () => {
     const override = styleBox({ bgColor: { r: 0.9, g: 0.1, b: 0.1, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <PanelNative solveNode={solveNode({}, { panel: override })} rect={RECT} />
+      <PanelNative {...painterEnv()} solveNode={solveNode({}, { panel: override })} rect={RECT} />
     );
     const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
@@ -69,7 +70,7 @@ describe('<PanelNative> (isolated painter contract)', () => {
 
   it('falls back to the default-theme panel struct when no override resolves', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <PanelNative solveNode={solveNode({}, {})} rect={RECT} />
+      <PanelNative {...painterEnv()} solveNode={solveNode({}, {})} rect={RECT} />
     );
     const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
@@ -83,7 +84,7 @@ describe('<PanelNative> (isolated painter contract)', () => {
   it('composes self_modulate onto the panel fill, in sRGB, with a single linear conversion', async () => {
     const flat = styleBox({ bgColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <PanelNative
+      <PanelNative {...painterEnv()}
         solveNode={solveNode({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, { panel: flat })}
         rect={RECT}
       />
@@ -104,7 +105,7 @@ describe('<PanelNative> (isolated painter contract)', () => {
     const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
       <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>
-        <PanelNative
+        <PanelNative {...painterEnv()}
           solveNode={solveNode({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, { panel: flat })}
           rect={RECT}
         />
