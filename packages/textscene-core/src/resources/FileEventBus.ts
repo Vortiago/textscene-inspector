@@ -158,13 +158,18 @@ export class FileEventBus {
    * Shares the cache with `request()` so a path is fetched once however it is reached,
    * but deliberately fires neither handler set: no consumer subscribes to a sidecar, and
    * waking every handler for one risks a re-entrant load.
+   *
+   * `type` reaches the provider's own logging, which names what it was fetching. Passing
+   * it is not cosmetic: hosts log the miss, and an unnamed one reads as
+   * "Failed to fetch undefined" on every scene that has no such file — which is most of
+   * them, since these paths are found by convention rather than declared.
    */
-  async tryLoad(path: string): Promise<FileData | null> {
+  async tryLoad(path: string, type = 'OptionalFile'): Promise<FileData | null> {
     const cached = this.cache.get(path);
     if (cached !== undefined) return cached;
 
     try {
-      const data = await this.provider.loadResource(path);
+      const data = await this.provider.loadResource(path, type);
       if (data === null) return null;
       this.cache.set(path, data);
       return data;

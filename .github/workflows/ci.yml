@@ -85,7 +85,7 @@ jobs:
           path: apps/textscene-linter/dist/cli.js
 
   visual-regression:
-    name: Visual Regression (goldens + 2D overlay)
+    name: Visual Regression (goldens + 2D overlay + raster)
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -135,6 +135,19 @@ jobs:
           for _ in $(seq 60); do curl -sf http://localhost:4173 >/dev/null && break; sleep 1; done
           pnpm verify:2d
 
+      # The DERIVED raster of that overlay — the canvas a ViewportTexture
+      # samples — needs a real browser for the same reason (ADR-0003's
+      # 2026-07-29 amendment). Self-contained on its own port rather than
+      # reusing the server above, so a failure here is unambiguously the
+      # rasteriser's; the module is injected from core's dist, which this job
+      # downloads no artifact for.
+      - name: Verify Control-subtree rasteriser
+        run: |
+          pnpm --filter @textscene/core build
+          pnpm --filter @textscene/web-previewer preview --port 4174 --strictPort &
+          for _ in $(seq 60); do curl -sf http://localhost:4174 >/dev/null && break; sleep 1; done
+          SHOWCASE_URL=http://localhost:4174 pnpm verify:raster
+
       - name: Upload diff artifacts
         if: failure()
         uses: actions/upload-artifact@v7
@@ -146,7 +159,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: verify-2d
+          name: verify-2d-and-raster
           path: scripts/showcase/output/
           if-no-files-found: ignore
 

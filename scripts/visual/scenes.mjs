@@ -445,6 +445,16 @@ export const GOLDEN_SCENES = [
   // path that skipped the negation — so the navmesh used to sit ABOVE the
   // region origin instead of below it.
   { name: 'navigation-region-2d', file: 'unit-navigation-region-2d.tscn', maxDiffPct: 0.5 },
+  // A ParallaxBackground is a CanvasLayer: its subtree hangs off the VIEWPORT,
+  // so the blue bar stays at the canvas origin while the red reference bar under
+  // the same displaced parent moves with it. Every other 2D golden composes
+  // transforms the ordinary way and would still match if that chain were
+  // re-attached.
+  { name: 'parallax-background', file: 'unit-parallax-background.tscn', maxDiffPct: 0.5 },
+  // `motion_mirroring` draws the layer a SECOND time, 200 px right — the only
+  // repeated canvas subtree in the corpus, and the only property of a
+  // ParallaxLayer a camera-less still frame can show at all.
+  { name: 'parallax-layer', file: 'unit-parallax-layer.tscn', maxDiffPct: 0.5 },
   // NOTE: AreaLight3D deliberately has no golden — its fixture is light-only
   // (no lit geometry), so the frame is blank. Add one once the fixture gains a
   // lit surface to show the emitter's effect.
@@ -472,6 +482,15 @@ export const GOLDEN_SCENES = [
   // --- Sprite2D/Sprite3D + 3D physics-body roundout ---
   { name: 'sprite2d', file: 'unit-sprite2d.tscn' },
   { name: 'sprite3d', file: 'unit-sprite3d.tscn' },
+  // A region_rect bigger than its texture. Godot clips neither the region nor
+  // the quad, so the overrun is decided by the sampler — and the two families
+  // disagree: the 2D canvas clamps to the edge texel (one "F" plus a blue
+  // smear), Sprite3D's material repeats (a 3x2 grid of "F"s). Both measured
+  // against Godot 4.6.3; the 2D side matches it pixel-for-pixel. They are a
+  // PAIR: pinning one alone would let the shared UV compositor be "fixed" into
+  // agreeing with the wrong one.
+  { name: 'sprite2d-region-oversized', file: 'unit-sprite2d-region-oversized.tscn' },
+  { name: 'sprite3d-region-oversized', file: 'unit-sprite3d-region-oversized.tscn' },
   // Transform-only bodies (ADR-0005/ADR-0008): reuse the Node3D component, so
   // the baseline's real content is the child mesh — pins that these render
   // the actual box/capsule geometry, not a gray fallback placeholder.
@@ -512,4 +531,15 @@ export const GOLDEN_SCENES = [
   // driven to the relay's upper-right. Verified against real Godot 4.6.3.
   { name: 'remote-transform-3d', file: 'unit-remote-transform-3d.tscn' },
   { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', maxDiffPct: 0.5 },
+
+  // --- ViewportTexture: content sampled THROUGH a SubViewport target ---
+  // The only golden that consumes a render target, so it alone pins the
+  // through-target colour pipeline: the offscreen pass must tonemap like
+  // Godot's viewport pass (shared environment in force inside the target,
+  // applied again on the consuming quad — curve squared), and the target's
+  // linear storage must survive the consumer re-tagging it sRGB. Both
+  // regressions are invisible in every other scene, where all content renders
+  // in the main pass exactly once. Probe-verified against Godot 4.6.3 to
+  // within 1% linear per sample.
+  { name: 'sub-viewport-texture', file: 'unit-sub-viewport-texture.tscn' },
 ];

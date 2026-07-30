@@ -15,7 +15,9 @@
  *
  * The region/frames UV + size math lives in the shared `r3f/spriteFrame` module
  * (one home for Sprite2D + Sprite3D). Flip handling stays here because it
- * legitimately differs: 2D mirrors via mesh scale, 3D via UV negation.
+ * legitimately differs: 2D mirrors via mesh scale, 3D via UV negation. So does
+ * the wrap mode: the 2D canvas clamps a region that overruns its texture where
+ * Sprite3D tiles it.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -29,6 +31,10 @@ import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { resolveTexture2DPath } from '../../../resources/SubResourceResolver';
+import {
+  isViewportTextureRef,
+  useViewportTextureSlot,
+} from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { Sprite2DProperties } from './types';
@@ -42,31 +48,53 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // numeric tuple (ADR-0017) — `frame` is a 1-tuple.
   const animatedFrame = useAnimatedValue('frame', (v) => v[0] ?? null);
 
+  // `texture = SubResource(ViewportTexture)` names a `<SubViewport>` rather
+  // than a file — the live target a sub-viewport published, which is the whole
+  // of Godot's "3D in 2D" demo. It bypasses the loader AND the frame compositor
+  // below: a viewport target owns its GPU texture, so cloning per frame and
+  // disposing the clone would tear down the publisher's own render target.
+  const isViewportSlot = isViewportTextureRef(props.texture, internalResources);
+  const viewportTexture = useViewportTextureSlot(props.texture, internalResources);
+
   const texturePath = useMemo(
-    () => resolveTexture2DPath(props.texture, externalResources, internalResources),
-    [props.texture, externalResources, internalResources]
+    () =>
+      isViewportSlot
+        ? null
+        : resolveTexture2DPath(props.texture, externalResources, internalResources),
+    [isViewportSlot, props.texture, externalResources, internalResources]
   );
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
 
   // A driven `frame` overrides the authored `frame` AND any authored
   // `frame_coords` (in Godot the two are the same value), so the animation wins.
-  const displayedTexture = useMemo(() => {
+  const composedTexture = useMemo(() => {
     const frameProps =
       animatedFrame !== null ? { ...props, frame: animatedFrame, frame_coords: undefined } : props;
-    return composeFrameTexture(texResult.value, frameProps);
+    // 'clamp': the 2D canvas samples with texture-repeat DISABLED, so a
+    // region_rect overrunning the texture stretches its edge texels rather
+    // than tiling.
+    return composeFrameTexture(texResult.value, frameProps, 'clamp');
   }, [texResult.value, props, animatedFrame]);
   // composeFrameTexture clones the texture per frame; dispose the prior clone
   // when the frame advances (and on unmount) so playback doesn't leak GPU
   // textures (~one per keyframe otherwise).
-  useEffect(() => () => displayedTexture?.dispose(), [displayedTexture]);
-  // Quad size in pixels (1 px = 1 world unit in the 2D canvas).
+  useEffect(() => () => composedTexture?.dispose(), [composedTexture]);
+
+  const displayedTexture = viewportTexture ?? composedTexture;
+  // Quad size in pixels (1 px = 1 world unit in the 2D canvas). A render
+  // target reports its rect through the same `image` shape a loaded texture
+  // uses, so the sizing path is shared.
   const { width, height } = useMemo(
-    () => frameSizePx(texResult.value, props),
-    [texResult.value, props]
+    () => frameSizePx(viewportTexture ?? texResult.value, props),
+    [viewportTexture, texResult.value, props]
   );
 
-  // Placeholder when no texture is referenced or it failed to load.
-  const showPlaceholder = !texturePath || texResult.status === 'unavailable';
+  // Placeholder when no texture is referenced or it failed to load. A
+  // ViewportTexture that has not published yet is NOT missing — the sub-viewport
+  // is there and simply has not rendered, so the sprite draws nothing until it
+  // does rather than flashing a placeholder.
+  const showPlaceholder =
+    !isViewportSlot && (!texturePath || texResult.status === 'unavailable');
 
   return (
     <CanvasItem2D

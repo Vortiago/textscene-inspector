@@ -73,6 +73,7 @@ const NODE2D_LEAVES = [
   'CanvasModulate',
   'LightOccluder2D',
   'PointLight2D',
+  'ParallaxLayer',
   'CPUParticles2D',
 ] as const;
 
@@ -87,6 +88,12 @@ const CONTROL_LEAVES = [
   'Button',
   'CheckBox',
   'OptionButton',
+  'LineEdit',
+  // Range → Slider → H/VSlider in Godot, but neither intermediate is
+  // authorable and neither carries a validator of its own, so the leaves link
+  // straight to Control for the inherited anchor/offset/layout rules.
+  'HSlider',
+  'VSlider',
   'ColorRect',
   'TextureRect',
   'Panel',
@@ -97,6 +104,10 @@ const CONTROL_LEAVES = [
   'GridContainer',
   'HBoxContainer',
   'VBoxContainer',
+  // Displays its SubViewport children's targets (ADR-0030). Needs the Control
+  // chain like any other: without it every anchor/offset/layout validator
+  // silently skips this type while erroring on every sibling Control.
+  'SubViewportContainer',
 ] as const;
 
 export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
@@ -106,11 +117,19 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   ...Object.fromEntries(CONTROL_LEAVES.map((t) => [t, 'Control'])),
   // Abstract/non-authorable intermediate classes.
   Light3D: 'Node3D',
+  // SubViewport < Viewport < Node. `Viewport` is not modelled as its own link
+  // because SubViewport is the only authorable subclass we support (`Window` is
+  // not), so its Viewport-level properties are validated on the leaf itself.
+  SubViewport: 'Node',
   // Base classes and non-spatial nodes collapse to the terminal Node.
   Node3D: 'Node',
   Node2D: 'Node',
   Control: 'Node',
   CanvasLayer: 'Node',
+  // A CanvasLayer, not a CanvasItem: `GDCLASS(ParallaxBackground, CanvasLayer)`.
+  // Chaining it here is what gives it CanvasLayer's `layer`/`visible` rules
+  // rather than Node2D's transform ones.
+  ParallaxBackground: 'CanvasLayer',
   WorldEnvironment: 'Node',
   AnimationPlayer: 'Node',
   AnimationTree: 'Node',

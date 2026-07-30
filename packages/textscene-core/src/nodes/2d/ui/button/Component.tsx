@@ -15,28 +15,30 @@ import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
 import { resolveStyleBoxCss } from '../../../../r3f/controls/resolveStyleBox';
 import { imageToDataUrl } from '../../../../r3f/controls/imageToDataUrl';
-import {
-  DEFAULT_CONTENT_MARGIN,
-  DEFAULT_CORNER_RADIUS,
-  DEFAULT_FONT_COLOR,
-  DEFAULT_FONT_SIZE,
-  STYLE_NORMAL_FILL,
-} from '../../../../r3f/controls/godotDefaultTheme';
+import { DEFAULT_FONT_COLOR, STYLE_NORMAL_FILL } from '../../../../r3f/controls/godotDefaultTheme';
+import { useGodotTheme } from '../../../../r3f/controls/useGodotTheme';
+import type { ScaledGodotTheme } from '../../../../r3f/controls/godotDefaultTheme';
 import { resolveTexture2DPath } from '../../../../resources/SubResourceResolver';
 import { useResource } from '../../../../resources/useResource';
 import type { ButtonProperties } from './types';
 
-// Godot's button "normal" StyleBoxFlat: dark translucent fill, 4px content
-// margins, 3px corners — from the default theme, so an un-styled Button matches
-// the engine rather than a hand-picked slate. A `theme_override_styles/normal`
-// StyleBox replaces this entirely (styleBoxCss below wins).
-const DEFAULTS: CSSProperties = {
-  padding: `${DEFAULT_CONTENT_MARGIN}px`,
-  borderRadius: `${DEFAULT_CORNER_RADIUS}px`,
-  backgroundColor: STYLE_NORMAL_FILL,
-  fontSize: `${DEFAULT_FONT_SIZE}px`,
-  color: DEFAULT_FONT_COLOR,
-};
+/**
+ * Godot's button "normal" StyleBoxFlat: dark translucent fill, 4px content
+ * margins, 3px corners at scale 1 — from the default theme, so an un-styled
+ * Button matches the engine rather than a hand-picked slate. A
+ * `theme_override_styles/normal` StyleBox replaces this entirely (styleBoxCss
+ * below wins). Metrics come from the theme so they follow a project's
+ * `gui/theme/default_theme_scale`; the colours have none.
+ */
+function buttonDefaults(theme: ScaledGodotTheme): CSSProperties {
+  return {
+    padding: `${theme.contentMargin}px`,
+    borderRadius: `${theme.cornerRadius}px`,
+    backgroundColor: STYLE_NORMAL_FILL,
+    fontSize: `${theme.fontSize}px`,
+    color: DEFAULT_FONT_COLOR,
+  };
+}
 
 // Godot Button.alignment (HorizontalAlignment): 0 LEFT, 1 CENTER, 2 RIGHT.
 const JUSTIFY = ['flex-start', 'center', 'flex-end'] as const;
@@ -46,6 +48,7 @@ export function Button({ node, children }: ControlComponentProps) {
   const props = node.properties as ButtonProperties;
   const parentKind = useControlParent();
   const { internalResources } = useSceneResources();
+  const theme = useGodotTheme();
 
   const styleBoxCss = resolveStyleBoxCss(props.themeOverrideStyles?.normal, internalResources);
   const useDefaults = !props.flat && Object.keys(styleBoxCss).length === 0;
@@ -62,7 +65,7 @@ export function Button({ node, children }: ControlComponentProps) {
       cursor: props.disabled ? 'default' : 'pointer',
       textAlign: TEXT_ALIGN[alignment] ?? 'center',
     },
-    useDefaults ? DEFAULTS : {},
+    useDefaults ? buttonDefaults(theme) : {},
     styleBoxCss,
     textThemeStyle(props, { sizeKey: 'font_size', colorKey: 'font_color' })
   );
@@ -71,16 +74,22 @@ export function Button({ node, children }: ControlComponentProps) {
 
   return (
     <div data-control-type="Button" data-node-name={node.name} style={style}>
-      <ButtonIcon icon={props.icon} name={node.name} expand={props.expandIcon === true} />
+      <ButtonIcon
+        icon={props.icon}
+        name={node.name}
+        expand={props.expandIcon === true}
+        gap={theme.separation}
+      />
       {props.text ?? ''}
       {children}
     </div>
   );
 }
 
-/** Gap between an icon and the label, matching the theme's `h_separation`. */
-const ICON_TEXT_GAP = 4;
-/** Icon box when `expand_icon` is off — Godot draws it at its natural size. */
+/**
+ * Icon box when `expand_icon` is off — Godot draws it at its natural size, so
+ * this is the asset's own size and does NOT follow the theme scale.
+ */
 const ICON_SIZE = 16;
 
 /**
@@ -93,10 +102,13 @@ function ButtonIcon({
   icon,
   name,
   expand,
+  gap,
 }: {
   icon: string | undefined;
   name: string;
   expand: boolean;
+  /** The theme's `h_separation` for Button — `Math::round(4 * scale)`. */
+  gap: number;
 }) {
   const { externalResources, internalResources } = useSceneResources();
   const path = resolveTexture2DPath(icon, externalResources, internalResources);
@@ -107,7 +119,7 @@ function ButtonIcon({
 
   const style: CSSProperties = {
     flex: '0 0 auto',
-    marginRight: `${ICON_TEXT_GAP}px`,
+    marginRight: `${gap}px`,
     objectFit: 'contain',
     // `expand_icon` scales the icon to the button while keeping its aspect;
     // otherwise Godot draws it at its own size.

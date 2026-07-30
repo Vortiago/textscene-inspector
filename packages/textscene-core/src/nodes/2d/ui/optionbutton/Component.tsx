@@ -12,35 +12,39 @@ import { useControlParent } from '../../../../r3f/controls/ControlParentContext'
 import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
 import {
-  DEFAULT_CORNER_RADIUS,
   DEFAULT_FONT_COLOR,
-  DEFAULT_FONT_SIZE,
-  OPTION_BUTTON_CONTENT_MARGIN_X,
-  OPTION_BUTTON_CONTENT_MARGIN_Y,
   STYLE_NORMAL_FILL,
+  type ScaledGodotTheme,
 } from '../../../../r3f/controls/godotDefaultTheme';
+import { useGodotTheme } from '../../../../r3f/controls/useGodotTheme';
 import type { OptionButtonProperties } from './types';
 
-// Godot's OptionButton wears the button "normal" StyleBoxFlat (dark, translucent)
-// with 8/4 content margins — sourced from the default theme so it blends over
-// the overlay backdrop the way the engine does.
-const DROPDOWN_DEFAULTS: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  padding: `${OPTION_BUTTON_CONTENT_MARGIN_Y}px ${OPTION_BUTTON_CONTENT_MARGIN_X}px`,
-  borderRadius: `${DEFAULT_CORNER_RADIUS}px`,
-  backgroundColor: STYLE_NORMAL_FILL,
-  fontSize: `${DEFAULT_FONT_SIZE}px`,
-  color: DEFAULT_FONT_COLOR,
-};
+/**
+ * Godot's OptionButton wears the button "normal" StyleBoxFlat (dark,
+ * translucent) with 8/4 content margins at scale 1 — sourced from the default
+ * theme so it blends over the overlay backdrop the way the engine does, and
+ * scaled with it so a project's `gui/theme/default_theme_scale` carries.
+ */
+function dropdownDefaults(theme: ScaledGodotTheme): CSSProperties {
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: `${theme.optionButtonMarginY}px ${theme.optionButtonMarginX}px`,
+    borderRadius: `${theme.cornerRadius}px`,
+    backgroundColor: STYLE_NORMAL_FILL,
+    fontSize: `${theme.fontSize}px`,
+    color: DEFAULT_FONT_COLOR,
+  };
+}
 
 export function OptionButton({ node, children }: ControlComponentProps) {
   const props = node.properties as OptionButtonProperties;
   const parentKind = useControlParent();
+  const theme = useGodotTheme();
   const style: CSSProperties = controlStyle(
     props,
     parentKind,
-    DROPDOWN_DEFAULTS,
+    dropdownDefaults(theme),
     { textAlign: 'left', cursor: props.disabled ? 'default' : 'pointer' },
     textThemeStyle(props, { sizeKey: 'font_size', colorKey: 'font_color' })
   );

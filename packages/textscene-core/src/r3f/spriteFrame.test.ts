@@ -22,31 +22,32 @@ function baseProps(overrides: Partial<SpriteFrameProps> = {}): SpriteFrameProps 
 
 describe('composeFrameTexture', () => {
   it('returns undefined when no texture is loaded', () => {
-    expect(composeFrameTexture(undefined, baseProps())).toBeUndefined();
+    expect(composeFrameTexture(undefined, baseProps(), 'clamp')).toBeUndefined();
   });
 
   it('clones the texture (never mutates the shared cache entry)', () => {
     const source = makeTexture();
-    const result = composeFrameTexture(source, baseProps({ hframes: 4 }));
+    const result = composeFrameTexture(source, baseProps({ hframes: 4 }), 'clamp');
     expect(result).not.toBe(source);
     expect(source.repeat.x).toBe(1); // source untouched
     expect(result?.repeat.x).toBeCloseTo(0.25);
   });
 
   it('leaves UVs at identity for a plain full-image sprite', () => {
-    const result = composeFrameTexture(makeTexture(), baseProps())!;
+    const result = composeFrameTexture(makeTexture(), baseProps(), 'clamp')!;
     expect(result.repeat.x).toBe(1);
     expect(result.repeat.y).toBe(1);
     expect(result.offset.x).toBe(0);
     expect(result.offset.y).toBe(0);
-    expect(result.wrapS).toBe(THREE.RepeatWrapping);
-    expect(result.wrapT).toBe(THREE.RepeatWrapping);
+    expect(result.wrapS).toBe(THREE.ClampToEdgeWrapping);
+    expect(result.wrapT).toBe(THREE.ClampToEdgeWrapping);
   });
 
   it('windows UVs to a region_rect (image-Y top-left → UV-Y bottom-left)', () => {
     const result = composeFrameTexture(
       makeTexture(100, 80),
-      baseProps({ region_enabled: true, region_rect: { x: 10, y: 20, width: 50, height: 40 } })
+      baseProps({ region_enabled: true, region_rect: { x: 10, y: 20, width: 50, height: 40 } }),
+      'clamp'
     )!;
     expect(result.repeat.x).toBeCloseTo(0.5);
     expect(result.repeat.y).toBeCloseTo(0.5);
@@ -59,7 +60,8 @@ describe('composeFrameTexture', () => {
     const texture = new THREE.Texture(); // no image
     const result = composeFrameTexture(
       texture,
-      baseProps({ region_enabled: true, region_rect: { x: 10, y: 20, width: 50, height: 40 } })
+      baseProps({ region_enabled: true, region_rect: { x: 10, y: 20, width: 50, height: 40 } }),
+      'clamp'
     )!;
     expect(result.repeat.x).toBe(1);
     expect(result.offset.x).toBe(0);
@@ -69,7 +71,8 @@ describe('composeFrameTexture', () => {
     // 4×2 grid, frame 5 → col 1, row 1 (bottom row in UV space).
     const result = composeFrameTexture(
       makeTexture(),
-      baseProps({ hframes: 4, vframes: 2, frame: 5 })
+      baseProps({ hframes: 4, vframes: 2, frame: 5 }),
+      'clamp'
     )!;
     expect(result.repeat.x).toBeCloseTo(0.25);
     expect(result.repeat.y).toBeCloseTo(0.5);
@@ -80,7 +83,8 @@ describe('composeFrameTexture', () => {
   it('lets frame_coords override the linear frame index', () => {
     const result = composeFrameTexture(
       makeTexture(),
-      baseProps({ hframes: 4, vframes: 2, frame: 5, frame_coords: { x: 3, y: 0 } })
+      baseProps({ hframes: 4, vframes: 2, frame: 5, frame_coords: { x: 3, y: 0 } }),
+      'clamp'
     )!;
     expect(result.offset.x).toBeCloseTo(0.75);
     expect(result.offset.y).toBeCloseTo(0.5); // row 0 = top half
@@ -96,7 +100,8 @@ describe('composeFrameTexture', () => {
         hframes: 5,
         vframes: 1,
         frame: 2,
-      })
+      }),
+      'clamp'
     )!;
     // repeat = region repeat / grid: (1.0/5, 0.5/1)
     expect(result.repeat.x).toBeCloseTo(0.2);
@@ -105,6 +110,52 @@ describe('composeFrameTexture', () => {
     expect(result.offset.x).toBeCloseTo(0.4);
     // region offset.y (0.5) + region repeat (0.5) − (row+1) × 0.5 = 0.5
     expect(result.offset.y).toBeCloseTo(0.5);
+  });
+});
+
+describe('composeFrameTexture — region_rect larger than its texture', () => {
+  /**
+   * Godot does not clip an oversized region. `Sprite2D::_get_rects` takes the
+   * region verbatim —
+   *
+   *     if (region_enabled) { ... base_rect = region_rect; }
+   *     Size2 frame_size = base_rect.size / Size2(hframes, vframes);
+   *     r_src_rect.size = frame_size;
+   *
+   * — and `Texture2D::get_rect_region` is a pass-through (`r_src_rect =
+   * p_src_rect`, scene/resources/texture.cpp), so the src rect keeps running
+   * past the image. The UV window therefore exceeds 1.0 and stays there; what
+   * fills the overrun is decided by the sampler alone, which is what
+   * `SpriteWrapMode` selects. Nothing about the WINDOW changes.
+   */
+  const oversized = () =>
+    baseProps({ region_enabled: true, region_rect: { x: 0, y: 0, width: 200, height: 40 } });
+
+  it('keeps the UV window at the full region — no clipping to the image', () => {
+    // 100×80 image, 200-wide region → repeat.x = 2.0, deliberately > 1.
+    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'clamp')!;
+    expect(result.repeat.x).toBeCloseTo(2);
+    expect(result.repeat.y).toBeCloseTo(0.5);
+    expect(result.offset.x).toBeCloseTo(0);
+    expect(result.offset.y).toBeCloseTo(0.5);
+  });
+
+  it("clamps the overrun on the 2D canvas (Viewport's texture repeat is DISABLED)", () => {
+    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'clamp')!;
+    expect(result.wrapS).toBe(THREE.ClampToEdgeWrapping);
+    expect(result.wrapT).toBe(THREE.ClampToEdgeWrapping);
+  });
+
+  it('tiles the overrun for Sprite3D (StandardMaterial3D keeps FLAG_USE_TEXTURE_REPEAT)', () => {
+    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'repeat')!;
+    expect(result.wrapS).toBe(THREE.RepeatWrapping);
+    expect(result.wrapT).toBe(THREE.RepeatWrapping);
+  });
+
+  it('keeps the quad at the full region size (Godot sizes dst_rect from base_rect)', () => {
+    // `get_rect()` uses `s = region_rect.size` — the sprite does NOT shrink to
+    // the part of the region the texture actually covers.
+    expect(frameSizePx(makeTexture(100, 80), oversized())).toEqual({ width: 200, height: 40 });
   });
 });
 

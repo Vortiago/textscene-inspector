@@ -21,11 +21,8 @@ import { node2dWorldPosition } from '../../node2dWorldTransform.js';
 import { camera2DView } from '../../../nodes/2d/camera2d/cameraView.js';
 import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
 import type { TscnNode } from '../../../parser/types.js';
-import { CANVAS_2D_WIDTH, CANVAS_2D_HEIGHT } from '../Canvas2DStage/viewport2d.js';
+import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import styles from './TscnPreviewShell.module.css';
-
-/** Godot's default 2D project viewport — shared with the Canvas2DStage frame. */
-const VIEWPORT_2D = { x: CANVAS_2D_WIDTH, y: CANVAS_2D_HEIGHT };
 
 /** Stable predicate so `useLiveSceneNodes`' memo doesn't recompute each render. */
 const isCameraNode = (n: TscnNode): boolean => n.type === 'Camera3D' || n.type === 'Camera2D';
@@ -35,6 +32,7 @@ export function CamerasPanel() {
   const cam = useOptionalCameraControl();
   const { setMode } = useViewportMode();
   const loader = useResourceLoader();
+  const { viewportSize } = useProjectSettings();
 
   // From the LIVE scene tree, so cameras inside instanced sub-scenes appear.
   const cameras = useLiveSceneNodes(isCameraNode);
@@ -52,7 +50,11 @@ export function CamerasPanel() {
     const lt = liveTreeContext(sceneGraph, loader);
     if (!lt) return;
     const worldPosition = node2dWorldPosition(lt.roots, lt.ctx, path) ?? { x: 0, y: 0 };
-    cam?.requestFrame2D(camera2DView(properties, worldPosition, VIEWPORT_2D));
+    // The project's own viewport rect — the same frame `<Canvas2DStage>`
+    // draws, so "look through" lands the camera where the stage shows it.
+    cam?.requestFrame2D(
+      camera2DView(properties, worldPosition, { x: viewportSize.width, y: viewportSize.height })
+    );
     setMode('2D');
   }
 

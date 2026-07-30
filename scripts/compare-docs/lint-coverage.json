@@ -1527,7 +1527,120 @@
       ]
     },
     "HSlider": {
-      "validators": [],
+      "validators": [
+        {
+          "property": "anchor_bottom",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_left",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_right",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_top",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchors_preset",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "custom_minimum_size",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "grow_horizontal",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "grow_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "layout_mode",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "modulate",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_bottom",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_left",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_right",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_top",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "pivot_offset",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "pivot_offset_ratio",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "rotation",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "scale",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "self_modulate",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_horizontal",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_stretch_ratio",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_colors/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_constants/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_font_sizes/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_fonts/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_styles/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "visible",
+          "declaredOn": "Control"
+        }
+      ],
       "rules": [
         {
           "name": "binary-resource-reference",
@@ -1728,7 +1841,120 @@
       ]
     },
     "LineEdit": {
-      "validators": [],
+      "validators": [
+        {
+          "property": "anchor_bottom",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_left",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_right",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_top",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchors_preset",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "custom_minimum_size",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "grow_horizontal",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "grow_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "layout_mode",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "modulate",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_bottom",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_left",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_right",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_top",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "pivot_offset",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "pivot_offset_ratio",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "rotation",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "scale",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "self_modulate",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_horizontal",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_stretch_ratio",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_colors/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_constants/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_font_sizes/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_fonts/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_styles/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "visible",
+          "declaredOn": "Control"
+        }
+      ],
       "rules": [
         {
           "name": "binary-resource-reference",
@@ -2267,7 +2493,64 @@
       ]
     },
     "ParallaxBackground": {
-      "validators": [],
+      "validators": [
+        {
+          "property": "follow_viewport_enabled",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "follow_viewport_scale",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "layer",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "offset",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "rotation",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "scale",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "scroll_base_offset",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "scroll_base_scale",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "scroll_ignore_camera_zoom",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "scroll_limit_begin",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "scroll_limit_end",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "scroll_offset",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "transform",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "visible",
+          "declaredOn": "ParallaxBackground"
+        }
+      ],
       "rules": [
         {
           "name": "binary-resource-reference",
@@ -2284,7 +2567,92 @@
       ]
     },
     "ParallaxLayer": {
-      "validators": [],
+      "validators": [
+        {
+          "property": "motion_mirroring",
+          "declaredOn": "ParallaxLayer"
+        },
+        {
+          "property": "motion_offset",
+          "declaredOn": "ParallaxLayer"
+        },
+        {
+          "property": "motion_scale",
+          "declaredOn": "ParallaxLayer"
+        },
+        {
+          "property": "global_position",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "global_rotation",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "global_rotation_degrees",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "global_scale",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "global_skew",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "global_transform",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "light_mask",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "material",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "position",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "rotation",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "rotation_degrees",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "scale",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "skew",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "transform",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "use_parent_material",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "y_sort_enabled",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "z_as_relative",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "z_index",
+          "declaredOn": "Node2D"
+        }
+      ],
       "rules": [
         {
           "name": "binary-resource-reference",
@@ -2294,6 +2662,18 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-parallaxlayer-parent",
+          "description": "Warns when a ParallaxLayer is not a direct child of a ParallaxBackground, where Godot never applies its motion properties",
+          "universal": false,
+          "viaMatcher": false,
+          "emits": [
+            {
+              "ruleName": "parallaxlayer-outside-parallaxbackground",
               "severity": "warning"
             }
           ]
@@ -3529,7 +3909,64 @@
       ]
     },
     "SubViewport": {
-      "validators": [],
+      "validators": [
+        {
+          "property": "audio_listener_enable_2d",
+          "declaredOn": "SubViewport"
+        },
+        {
+          "property": "canvas_item_default_texture_filter",
+          "declaredOn": "SubViewport"
+        },
+        {
+          "property": "disable_3d",
+          "declaredOn": "SubViewport"
+        },
+        {
+          "property": "gui_embed_subwindows",
+          "declaredOn": "SubViewport"
+        },
+        {
+          "property": "handle_input_locally",
+          "declaredOn": "SubViewport"
+        },
+        {
+          "property": "msaa_3d",
+          "declaredOn": "SubViewport"
+        },
+        {
+          "property": "own_world_3d",
+          "declaredOn": "SubViewport"
+        },
+        {
+          "property": "render_target_clear_mode",
+          "declaredOn": "SubViewport"
+        },
+        {
+          "property": "render_target_update_mode",
+          "declaredOn": "SubViewport"
+        },
+        {
+          "property": "size",
+          "declaredOn": "SubViewport"
+        },
+        {
+          "property": "size_2d_override",
+          "declaredOn": "SubViewport"
+        },
+        {
+          "property": "size_2d_override_stretch",
+          "declaredOn": "SubViewport"
+        },
+        {
+          "property": "transparent_bg",
+          "declaredOn": "SubViewport"
+        },
+        {
+          "property": "use_debanding",
+          "declaredOn": "SubViewport"
+        }
+      ],
       "rules": [
         {
           "name": "binary-resource-reference",
@@ -3542,11 +3979,144 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-subviewport-properties",
+          "description": "Flags SubViewport configurations that parse cleanly but cannot produce a visible render target",
+          "universal": false,
+          "viaMatcher": false,
+          "emits": [
+            {
+              "ruleName": "subviewport-empty-size",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
     "SubViewportContainer": {
-      "validators": [],
+      "validators": [
+        {
+          "property": "stretch",
+          "declaredOn": "SubViewportContainer"
+        },
+        {
+          "property": "stretch_shrink",
+          "declaredOn": "SubViewportContainer"
+        },
+        {
+          "property": "anchor_bottom",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_left",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_right",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_top",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchors_preset",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "custom_minimum_size",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "grow_horizontal",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "grow_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "layout_mode",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "modulate",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_bottom",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_left",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_right",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_top",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "pivot_offset",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "pivot_offset_ratio",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "rotation",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "scale",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "self_modulate",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_horizontal",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_stretch_ratio",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_colors/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_constants/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_font_sizes/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_fonts/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_styles/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "visible",
+          "declaredOn": "Control"
+        }
+      ],
       "rules": [
         {
           "name": "binary-resource-reference",
@@ -3556,6 +4126,18 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-subviewportcontainer-children",
+          "description": "Flags a SubViewportContainer with no SubViewport child, which renders an empty surface",
+          "universal": false,
+          "viaMatcher": false,
+          "emits": [
+            {
+              "ruleName": "subviewportcontainer-no-viewport",
               "severity": "warning"
             }
           ]
@@ -3999,7 +4581,120 @@
       ]
     },
     "VSlider": {
-      "validators": [],
+      "validators": [
+        {
+          "property": "anchor_bottom",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_left",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_right",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_top",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchors_preset",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "custom_minimum_size",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "grow_horizontal",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "grow_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "layout_mode",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "modulate",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_bottom",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_left",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_right",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_top",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "pivot_offset",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "pivot_offset_ratio",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "rotation",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "scale",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "self_modulate",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_horizontal",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_stretch_ratio",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_colors/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_constants/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_font_sizes/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_fonts/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_styles/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "visible",
+          "declaredOn": "Control"
+        }
+      ],
       "rules": [
         {
           "name": "binary-resource-reference",

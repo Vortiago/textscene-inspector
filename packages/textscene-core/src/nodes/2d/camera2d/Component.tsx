@@ -1,14 +1,21 @@
 /**
  * <Camera2D> — a Node2D that defines the 2D view. Renders no geometry; it
  * positions its children via the 2D transform and tags its group with
- * `userData.camera2d` (world position + zoom/offset/anchor) so the 2D-mode
- * orthographic camera can frame the view on it. (V1 framing is fit-to-content;
- * the tag lets a later step honor the Camera2D's own framing.)
+ * `userData.camera2d`, the camera's whole parsed framing surface, so a consumer
+ * holding the Object3D can frame a view on it without re-reading the scene.
+ *
+ * The tag carries no position: the group IS the camera, so a consumer reads the
+ * position off its world matrix (`getWorldPosition`), which resolves an
+ * instanced sub-scene's transform for free.
+ *
+ * A sub-viewport's 2D pass is the consumer (`selectViewportCamera2D`); the main
+ * 2D stage still frames fit-to-content (ADR-0006).
  */
 
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node2dGroupProps, node2dGroupSpread, Z_INDEX_STEP } from '../../../r3f/node2dTransform';
+import type { Camera2DTag } from './cameraView';
 import type { Camera2DProperties } from './types';
 
 export function Camera2D({ node, children }: NodeComponentProps) {
@@ -27,9 +34,14 @@ export function Camera2D({ node, children }: NodeComponentProps) {
         camera2d: {
           zoom: props.zoom,
           offset: props.offset,
-          anchorMode: props.anchor_mode,
+          anchor_mode: props.anchor_mode,
+          limitLeft: props.limitLeft,
+          limitTop: props.limitTop,
+          limitRight: props.limitRight,
+          limitBottom: props.limitBottom,
+          limitEnabled: props.limitEnabled,
           enabled: props.enabled,
-        },
+        } satisfies Camera2DTag,
       }}
     >
       {children}

@@ -21,7 +21,7 @@ catalog:
   vite: ^8.1.5
   esbuild: ^0.28.1
   happy-dom: ^20.11.1
-  jsdom: ^29
+  jsdom: ^30
 
   # CLI dependencies
   commander: ^15.0.0

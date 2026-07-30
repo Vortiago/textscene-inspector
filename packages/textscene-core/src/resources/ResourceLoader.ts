@@ -178,6 +178,16 @@ export class ResourceLoader {
     this.setupFailureCallbacks();
   }
 
+  /**
+   * The byte layer, for callers that read a file found by CONVENTION rather
+   * than declared by a scene — `project.godot`, an `.import` sidecar — via
+   * `tryLoad`, whose miss is an ordinary answer instead of a **Missing
+   * resource**. Everything a scene names goes through a processor instead.
+   */
+  get fileEventBus(): FileEventBus | null {
+    return this._fileEventBus;
+  }
+
   private setupFailureCallbacks(): void {
     const labels: Record<ResourceType, string> = {
       texture: 'Material using texture',
