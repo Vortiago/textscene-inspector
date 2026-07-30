@@ -30,6 +30,7 @@ import '../../nodes/2d/ui/richtextlabel/index.r3f';
 import '../../nodes/2d/ui/canvaslayer/index.r3f';
 
 export { ControlOverlay } from './ControlOverlay';
+export { ControlCanvasLayer } from './native/ControlCanvasLayer';
 export { ControlDispatcher } from './ControlDispatcher';
 export { controlComponentRegistry } from './ControlComponentRegistry';
 export type { ControlComponentProps } from './ControlComponentRegistry';

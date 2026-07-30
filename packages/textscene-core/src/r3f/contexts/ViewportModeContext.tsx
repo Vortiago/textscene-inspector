@@ -15,6 +15,11 @@
  *   would invalidate that work. A user who turns it on gets it persisted
  *   (host-layered, like the mode itself) — only a FRESH session with no
  *   persisted preference sees it off.
+ * - `useNativeControls` — mounts a native (WebGL) Control layer inside the 2D
+ *   canvas instead of the DOM `<ControlOverlay>` (#368). Development-only:
+ *   OFF by default, no toolbar/menu/settings entry anywhere — Godot has no
+ *   rendering-path concept, so the preview must not expose one either. Flip
+ *   it via `tsi.native2dUi` in localStorage or `initialUseNativeControls`.
  *
  * The context has a safe default (3D, collisions off, labels on, grid off)
  * so components that read it render correctly even when no provider is
@@ -50,6 +55,15 @@ export const SHOW_GRID_STORAGE_KEY = 'tsi.showGrid';
  * so nothing is culled.
  */
 export const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
+/**
+ * Whether the 2D viewport mounts a native (WebGL) Control layer inside
+ * `World2DCanvas` instead of the DOM `<ControlOverlay>` (#368). Development-only:
+ * OFF by default with no UI to flip it — Godot has no rendering-path concept, so
+ * exposing one in the toolbar would misrepresent the preview as having a choice
+ * a real Godot scene never makes. Flipped only via this key in localStorage, or
+ * `initialUseNativeControls` in tests/harnesses.
+ */
+export const USE_NATIVE_CONTROLS_STORAGE_KEY = 'tsi.native2dUi';
 
 export interface ViewportModeValue {
   mode: ViewportMode;
@@ -74,6 +88,12 @@ export interface ViewportModeValue {
   /** Frame the scene to the viewport on load, instead of Godot's fixed orbit. */
   frameOnOpen: boolean;
   setFrameOnOpen: (frame: boolean) => void;
+  /**
+   * Mount the native (WebGL) Control layer in the 2D canvas instead of the DOM
+   * overlay (#368, development-only — see `USE_NATIVE_CONTROLS_STORAGE_KEY`).
+   */
+  useNativeControls: boolean;
+  setUseNativeControls: (use: boolean) => void;
 }
 
 const DEFAULT_VALUE: ViewportModeValue = {
@@ -93,6 +113,8 @@ const DEFAULT_VALUE: ViewportModeValue = {
   setShowPreviewEnvironment: () => {},
   frameOnOpen: false,
   setFrameOnOpen: () => {},
+  useNativeControls: false,
+  setUseNativeControls: () => {},
 };
 
 const ViewportModeContext = createContext<ViewportModeValue>(DEFAULT_VALUE);
@@ -108,6 +130,7 @@ export interface ViewportModeProviderProps {
   initialShowPreviewSun?: boolean;
   initialShowPreviewEnvironment?: boolean;
   initialFrameOnOpen?: boolean;
+  initialUseNativeControls?: boolean;
 }
 
 export function ViewportModeProvider({
@@ -120,6 +143,7 @@ export function ViewportModeProvider({
   initialShowPreviewSun = true,
   initialShowPreviewEnvironment = true,
   initialFrameOnOpen = false,
+  initialUseNativeControls = false,
 }: ViewportModeProviderProps) {
   const [mode, setMode] = useState<ViewportMode>(initialMode);
   const [showCollisions, setShowCollisions] = useState(initialShowCollisions);
@@ -131,6 +155,7 @@ export function ViewportModeProvider({
     initialShowPreviewEnvironment
   );
   const [frameOnOpen, setFrameOnOpen] = useState(initialFrameOnOpen);
+  const [useNativeControls, setUseNativeControls] = useState(initialUseNativeControls);
   const value = useMemo<ViewportModeValue>(
     () => ({
       mode,
@@ -149,6 +174,8 @@ export function ViewportModeProvider({
       setShowPreviewEnvironment,
       frameOnOpen,
       setFrameOnOpen,
+      useNativeControls,
+      setUseNativeControls,
     }),
     [
       mode,
@@ -159,6 +186,7 @@ export function ViewportModeProvider({
       showPreviewSun,
       showPreviewEnvironment,
       frameOnOpen,
+      useNativeControls,
     ]
   );
   return <ViewportModeContext.Provider value={value}>{children}</ViewportModeContext.Provider>;

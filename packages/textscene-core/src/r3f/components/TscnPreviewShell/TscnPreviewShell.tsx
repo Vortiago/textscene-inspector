@@ -23,6 +23,7 @@ import {
   FRAME_ON_OPEN_STORAGE_KEY,
   SHOW_GRID_STORAGE_KEY,
   VIEWPORT_MODE_STORAGE_KEY,
+  USE_NATIVE_CONTROLS_STORAGE_KEY,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
 import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
@@ -218,6 +219,7 @@ export function TscnPreviewShell({
     mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, '3D', isViewportMode),
     showGrid: readPersisted(SHOW_GRID_STORAGE_KEY, false, isBoolean),
     frameOnOpen: readPersisted(FRAME_ON_OPEN_STORAGE_KEY, false, isBoolean),
+    useNativeControls: readPersisted(USE_NATIVE_CONTROLS_STORAGE_KEY, false, isBoolean),
   }));
 
   // Flattens what was an 8-level hand-nested provider pyramid into one
@@ -246,6 +248,7 @@ export function TscnPreviewShell({
         initialMode={initialViewportMode ?? initialViewport.mode}
         initialShowGrid={initialViewport.showGrid}
         initialFrameOnOpen={initialViewport.frameOnOpen}
+        initialUseNativeControls={initialViewport.useNativeControls}
       >
         {children}
       </ViewportModeProvider>

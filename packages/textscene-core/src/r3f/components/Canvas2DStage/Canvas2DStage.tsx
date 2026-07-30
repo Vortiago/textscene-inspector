@@ -8,6 +8,11 @@
  *   3. the `<ControlOverlay>` (DOM Control layout) on top.
  * The overlay still does the real Control layout; the stage owns the chrome
  * (bounds, zoom %, scroll-to-zoom, drag-to-pan).
+ *
+ * The dev-only `useNativeControls` flag (#368, `ViewportModeContext`) swaps
+ * step 3 for a native layer mounted INSIDE `<World2DCanvas>` instead — the
+ * `.overlayFrame` div (and its capture-contract testid) stays either way, but
+ * `<ControlOverlay>` itself only mounts while the flag is off.
  */
 import {
   lazy,
@@ -24,6 +29,7 @@ import type {
   TscnInternalResource,
 } from '../../../parser/types.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
+import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { readPersisted } from '../../hooks/usePersistedState.js';
 import {
   clampWheelNotches,
@@ -97,6 +103,10 @@ export function Canvas2DStage({
   const stageRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View2D>({ pan: { x: 0, y: 0 }, zoom: 1 });
   const { pan, zoom } = view;
+  // Development-only mount seam (#368): OFF by default and mirrored down to
+  // `World2DCanvas` instead of rendering the DOM `<ControlOverlay>` below.
+  // No toolbar/menu surface flips it — see `ViewportModeContext`'s doc.
+  const { useNativeControls } = useViewportMode();
   // `display/window/size/viewport_*`, or Godot's 1152x648 for a scene with no
   // project around it. This rect is what a root Control resolves its anchors
   // to, so 23 of the corpus's 81 projects were being composed against the
@@ -378,6 +388,7 @@ export function Canvas2DStage({
         externalResources={externalResources}
         pan={pan}
         zoom={zoom}
+        nativeControls={useNativeControls}
       />
 
       {/* The Godot project-viewport rectangle in the DOM: the Control overlay's
@@ -397,19 +408,21 @@ export function Canvas2DStage({
         // can hardcode (`projectViewportSize`).
         data-viewport-size={`${canvasWidth}x${canvasHeight}`}
       >
-        <Suspense
-          fallback={
-            <div className={styles.loading} aria-busy="true">
-              Loading 2D overlay…
-            </div>
-          }
-        >
-          <ControlOverlay
-            nodes={nodes}
-            internalResources={internalResources}
-            externalResources={externalResources}
-          />
-        </Suspense>
+        {!useNativeControls && (
+          <Suspense
+            fallback={
+              <div className={styles.loading} aria-busy="true">
+                Loading 2D overlay…
+              </div>
+            }
+          >
+            <ControlOverlay
+              nodes={nodes}
+              internalResources={internalResources}
+              externalResources={externalResources}
+            />
+          </Suspense>
+        )}
       </div>
 
       <div className={styles.zoomHud} role="group" aria-label="Canvas zoom" data-testid="canvas-2d-zoom">
