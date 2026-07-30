@@ -11,7 +11,7 @@
  * exercise the scene part without a DOM `<Canvas>` host (the TscnSceneContents
  * pattern).
  *
- * `nativeControls` (#368, dev-only `useNativeControls` flag) mounts a native
+ * `nativeControls` (the dev-only `useNativeControls` flag) mounts a native
  * Control layer as a sibling right after `<NodeDispatcher>`. `Canvas2DStage`
  * decides whether that or the DOM overlay is active — never both — this
  * canvas only obeys the prop it is handed.
@@ -32,7 +32,7 @@ import { world2DCameraPose } from './world2DCamera.js';
 import { CanvasLighting2DProvider } from '../../lighting2d/CanvasLighting2D.js';
 import { canvasModulateColor } from '../../canvasModulate.js';
 
-// The native Control layer (#368) is lazy-loaded through the SAME barrel as
+// The native Control layer is lazy-loaded through the SAME barrel as
 // the DOM `<ControlOverlay>` (see the lazy() in `Canvas2DStage.tsx`) — the
 // barrel's side-effect imports are what register every Control type, so a
 // direct import of the component file would silently unregister them all.
@@ -52,7 +52,7 @@ export interface World2DCanvasProps {
   /**
    * Mount the native (WebGL) Control layer as a sibling of `<NodeDispatcher>`
    * instead of leaving Control drawing to the DOM `<ControlOverlay>`
-   * (`Canvas2DStage`, dev-only `useNativeControls` flag, #368). This packet's
+   * (`Canvas2DStage`, dev-only `useNativeControls` flag). For now this
    * layer is a placeholder that draws nothing — the flag only exercises the
    * mount seam.
    */

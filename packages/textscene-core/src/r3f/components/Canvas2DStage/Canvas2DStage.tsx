@@ -9,7 +9,7 @@
  * The overlay still does the real Control layout; the stage owns the chrome
  * (bounds, zoom %, scroll-to-zoom, drag-to-pan).
  *
- * The dev-only `useNativeControls` flag (#368, `ViewportModeContext`) swaps
+ * The dev-only `useNativeControls` flag (see `ViewportModeContext`) swaps
  * step 3 for a native layer mounted INSIDE `<World2DCanvas>` instead — the
  * `.overlayFrame` div (and its capture-contract testid) stays either way, but
  * `<ControlOverlay>` itself only mounts while the flag is off.
@@ -103,7 +103,7 @@ export function Canvas2DStage({
   const stageRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View2D>({ pan: { x: 0, y: 0 }, zoom: 1 });
   const { pan, zoom } = view;
-  // Development-only mount seam (#368): OFF by default and mirrored down to
+  // Development-only mount seam: OFF by default and mirrored down to
   // `World2DCanvas` instead of rendering the DOM `<ControlOverlay>` below.
   // No toolbar/menu surface flips it — see `ViewportModeContext`'s doc.
   const { useNativeControls } = useViewportMode();

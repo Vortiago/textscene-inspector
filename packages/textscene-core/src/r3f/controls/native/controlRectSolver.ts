@@ -1,5 +1,5 @@
 /**
- * The Control rect solve — #368's "spine". Pure TS port of Godot 4.6.3's
+ * The Control rect solve. Pure TS port of Godot 4.6.3's
  * `Control` layout math (`scene/gui/control.cpp`): Phase 1 walks the tree
  * bottom-up for combined minimum sizes, Phase 2 walks it top-down assigning
  * rects, free/anchored Controls resolving against their parent's rect (the

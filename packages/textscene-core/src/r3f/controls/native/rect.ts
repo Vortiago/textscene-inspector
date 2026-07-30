@@ -1,5 +1,5 @@
 /**
- * Plain 2D geometry for the native Control rect solve (#368's "spine"). Godot
+ * Plain 2D geometry for the native Control rect solve. Godot
  * pixels throughout, +Y down — the same convention the 2D world canvas
  * already uses (`World2DCanvas.tsx`), so a solved `Rect2` needs no axis flip
  * until a component converts it to a three.js position (`[rect.x, -rect.y,

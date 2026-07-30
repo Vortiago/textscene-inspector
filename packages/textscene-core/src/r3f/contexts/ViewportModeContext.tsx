@@ -16,7 +16,7 @@
  *   (host-layered, like the mode itself) — only a FRESH session with no
  *   persisted preference sees it off.
  * - `useNativeControls` — mounts a native (WebGL) Control layer inside the 2D
- *   canvas instead of the DOM `<ControlOverlay>` (#368). Development-only:
+ *   canvas instead of the DOM `<ControlOverlay>`. Development-only:
  *   OFF by default, no toolbar/menu/settings entry anywhere — Godot has no
  *   rendering-path concept, so the preview must not expose one either. Flip
  *   it via `tsi.native2dUi` in localStorage or `initialUseNativeControls`.
@@ -57,7 +57,7 @@ export const SHOW_GRID_STORAGE_KEY = 'tsi.showGrid';
 export const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
 /**
  * Whether the 2D viewport mounts a native (WebGL) Control layer inside
- * `World2DCanvas` instead of the DOM `<ControlOverlay>` (#368). Development-only:
+ * `World2DCanvas` instead of the DOM `<ControlOverlay>`. Development-only:
  * OFF by default with no UI to flip it — Godot has no rendering-path concept, so
  * exposing one in the toolbar would misrepresent the preview as having a choice
  * a real Godot scene never makes. Flipped only via this key in localStorage, or
@@ -90,7 +90,7 @@ export interface ViewportModeValue {
   setFrameOnOpen: (frame: boolean) => void;
   /**
    * Mount the native (WebGL) Control layer in the 2D canvas instead of the DOM
-   * overlay (#368, development-only — see `USE_NATIVE_CONTROLS_STORAGE_KEY`).
+   * overlay (development-only — see `USE_NATIVE_CONTROLS_STORAGE_KEY`).
    */
   useNativeControls: boolean;
   setUseNativeControls: (use: boolean) => void;
