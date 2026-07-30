@@ -23,8 +23,8 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 // Side-effect import: registers all 23 Control slices' DOM + native painters.
 import { controlComponentRegistry } from '../index';
-import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnNode } from '../../../parser/types';
+import { parseWithChild } from '../testing/probeScene';
 import { joinPath } from '../../../utils/nodePath';
 import { nativeTheme } from './nativeTheme';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
@@ -36,12 +36,7 @@ const THEME = nativeTheme(1);
 const PROBE_GROUP_NAME = 'Control:__probe__';
 
 /** `type` as root, carrying one plain `Control` child named `__probe__`. */
-function parseWithProbeChild(type: string): TscnNode {
-  const scene = new TscnParser().parse(
-    `[gd_scene format=3]\n\n[node name="Probe" type="${type}"]\n\n[node name="__probe__" type="Control" parent="."]\n`
-  );
-  return scene.nodes[0];
-}
+const parseWithProbeChild = (type: string): TscnNode => parseWithChild(type, 'Control', '__probe__');
 
 function toSolveNode(node: TscnNode, path: string): SolveNode {
   return {

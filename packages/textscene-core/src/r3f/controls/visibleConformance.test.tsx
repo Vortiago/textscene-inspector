@@ -18,15 +18,7 @@ import { render } from '@testing-library/react';
 import './index';
 import { controlComponentRegistry } from './ControlComponentRegistry';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
-import { TscnParser } from '../../parser/TscnParser';
-import type { TscnNode } from '../../parser/types';
-
-function parseHiddenNode(type: string): TscnNode {
-  const scene = new TscnParser().parse(
-    `[gd_scene format=3]\n\n[node name="Probe" type="${type}"]\nvisible = false\n`
-  );
-  return scene.nodes[0];
-}
+import { parseHiddenNode } from './testing/probeScene';
 
 describe('Control visibility conformance', () => {
   it('renders display:none for every registered Control type when visible = false', () => {

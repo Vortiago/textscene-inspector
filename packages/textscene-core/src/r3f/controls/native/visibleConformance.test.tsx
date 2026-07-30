@@ -19,8 +19,8 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 // Side-effect import: registers all 23 Control slices' DOM + native painters.
 import { controlComponentRegistry } from '../index';
-import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnNode } from '../../../parser/types';
+import { parseHiddenNode } from '../testing/probeScene';
 import { nativeTheme } from './nativeTheme';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import type { Rect2 } from './rect';
@@ -28,13 +28,6 @@ import type { SolveNode } from './solveTree';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
-
-function parseHiddenNode(type: string): TscnNode {
-  const scene = new TscnParser().parse(
-    `[gd_scene format=3]\n\n[node name="Probe" type="${type}"]\nvisible = false\n`
-  );
-  return scene.nodes[0];
-}
 
 function bareSolveNode(node: TscnNode): SolveNode {
   return { path: node.name, node, children: [], styleBoxes: {}, textureSize: null };

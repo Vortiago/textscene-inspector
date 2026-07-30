@@ -16,16 +16,7 @@ import { render } from '@testing-library/react';
 import './index';
 import { controlComponentRegistry } from './ControlComponentRegistry';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
-import { TscnParser } from '../../parser/TscnParser';
-import type { TscnNode } from '../../parser/types';
-
-/** A node of `type` carrying only what its own parser produces by default. */
-function parseBareNode(type: string): TscnNode {
-  const scene = new TscnParser().parse(
-    `[gd_scene format=3]\n\n[node name="Probe" type="${type}"]\n`
-  );
-  return scene.nodes[0];
-}
+import { parseBareNode } from './testing/probeScene';
 
 describe('Control component subtree conformance', () => {
   it('renders the dispatched children for every registered Control type', () => {

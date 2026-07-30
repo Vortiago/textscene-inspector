@@ -5,26 +5,25 @@
  * native alike — a hand-built stub registry would prove nothing about what
  * ships).
  *
- * Three independent completeness checks:
+ * Two independent completeness checks:
  *
  * 1. Native painter coverage — every registered Control type carries a
  *    `Native` painter. A missing one falls back to `<ControlFallback>`'s
  *    outline (`ControlCanvasWalker.tsx`) instead of failing loudly, so this
  *    is the one place a lost painter would otherwise regress silently.
- * 2. `TWO_D_UI_TYPES` (`has2DUIContent.ts`) mirrors the registry exactly, in
- *    BOTH directions (mirrors `has2DUIContent.driftguard.test.ts`).
- * 3. Solver-registry completeness: every real Container-family type has a
- *    `containerLayout` (and no other type does), and every registered type
- *    produces a rect from the real solve — through `solveControlTree`
- *    itself, not a re-derivation of what "produces a rect" means.
+ * 2. Solver-registry completeness: exactly the Container-family types have a
+ *    `containerLayout`, and every registered type produces a rect from the
+ *    real solve — through `solveControlTree` itself, not a re-derivation of
+ *    what "produces a rect" means.
+ *
+ * `TWO_D_UI_TYPES` mirroring the registry is NOT re-checked here:
+ * `has2DUIContent.driftguard.test.ts` exists for exactly that and owns it.
  */
 import { describe, expect, it } from 'vitest';
 // Side-effect import: registers all 23 Control slices' DOM + native painters,
 // and every slice's solver functions (`nativeSolver.ts`/`index.r3f.ts`).
 import { controlComponentRegistry } from '../index';
-import { TWO_D_UI_TYPES } from '../has2DUIContent';
-import { TscnParser } from '../../../parser/TscnParser';
-import type { TscnNode } from '../../../parser/types';
+import { parseBareNode } from '../testing/probeScene';
 import { controlSolverRegistry } from './solverRegistry';
 import { createSolveContext, solveControlTree } from './controlRectSolver';
 import { nativeTheme } from './nativeTheme';
@@ -60,14 +59,6 @@ const CONTAINER_TYPES = new Set([
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
 
-/** A node of `type` carrying only what its own parser produces by default. */
-function parseBareNode(type: string): TscnNode {
-  const scene = new TscnParser().parse(
-    `[gd_scene format=3]\n\n[node name="Probe" type="${type}"]\n`
-  );
-  return scene.nodes[0];
-}
-
 function bareSolveNode(type: string): SolveNode {
   const node = parseBareNode(type);
   return { path: node.name, node, children: [], styleBoxes: {}, textureSize: null };
@@ -97,23 +88,10 @@ describe('Native Control registry coverage', () => {
     ).toEqual([]);
   });
 
-  it('TWO_D_UI_TYPES exactly mirrors the registered Control component types', () => {
-    const registered = new Set(controlComponentRegistry.getAllTypeNames());
-
-    expect(new Set(TWO_D_UI_TYPES)).toEqual(registered);
-  });
 });
 
 describe('Control solver-registry completeness', () => {
-  it('every real Container-family type has a registered containerLayout', () => {
-    const missing = [...CONTAINER_TYPES].filter(
-      (type) => controlSolverRegistry.containerLayout(type) === undefined
-    );
-
-    expect(missing).toEqual([]);
-  });
-
-  it('no type outside the Container family has a registered containerLayout', () => {
+  it('exactly the Container-family types have a registered containerLayout', () => {
     const registeredWithLayout = controlComponentRegistry
       .getAllTypeNames()
       .filter((type) => controlSolverRegistry.containerLayout(type) !== undefined);
