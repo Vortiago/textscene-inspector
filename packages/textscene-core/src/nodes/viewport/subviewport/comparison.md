@@ -219,24 +219,15 @@ lifetime; a redraw flips `needsUpdate`.
 ## Linting
 
 <!-- lint:begin SubViewport -->
-Strict parsing format-checks these `SubViewport` properties. Every validator failure is an **error**.
+Strict parsing format-checks these `SubViewport` properties, plus 9 inherited from Viewport. Every validator failure is an **error**.
 
 | Property |
 | --- |
-| `audio_listener_enable_2d` |
-| `canvas_item_default_texture_filter` |
-| `disable_3d` |
-| `gui_embed_subwindows` |
-| `handle_input_locally` |
-| `msaa_3d` |
-| `own_world_3d` |
 | `render_target_clear_mode` |
 | `render_target_update_mode` |
 | `size` |
 | `size_2d_override` |
 | `size_2d_override_stretch` |
-| `transparent_bg` |
-| `use_debanding` |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

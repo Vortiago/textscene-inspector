@@ -6,15 +6,17 @@
  * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
  * re-declaring an inherited key shadows it and duplicates the rule.
  *
- * Window extends Viewport (not modelled in this repo's base-type table — Window
- * chains straight to Node), so Viewport-level members are never Window's own.
- * `auto_translate` is skipped: window.cpp's ADD_PROPERTY flags it
- * PROPERTY_USAGE_NONE, so it is never serialised into a .tscn.
+ * Window extends Viewport, whose members are registered once in
+ * `../../viewport/shared/linterParser.ts` and reach this type through the
+ * base-walk — so they are never Window's own. `auto_translate` is skipped:
+ * window.cpp's ADD_PROPERTY flags it PROPERTY_USAGE_NONE, so it is never
+ * serialised into a .tscn.
  *
  * Window is a base class for AcceptDialog/ConfirmationDialog/Popup/PopupMenu/
  * PopupPanel/FileDialog, which chain here rather than re-declaring these.
  */
 
+import '../../viewport/shared/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 import { THEME_OVERRIDE_VALIDATORS } from '../../../linter/validators/themeOverrides.js';

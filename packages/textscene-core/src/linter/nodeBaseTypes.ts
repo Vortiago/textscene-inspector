@@ -143,11 +143,12 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   // render `layers` every light also carries.
   Light3D: 'VisualInstance3D',
   VisualInstance3D: 'Node3D',
-  // SubViewport < Viewport < Node. `Viewport` is not modelled as its own link
-  // because SubViewport is the only authorable subclass we support (`Window` is
-  // not), so its Viewport-level properties are validated on the leaf itself.
-  SubViewport: 'Node',
-  // Base classes and non-spatial nodes collapse to the terminal Node.
+  // SubViewport and Window are Godot's two instantiable Viewports. `Viewport`
+  // itself is not instantiable, so like Light3D it carries validators without
+  // owning a slice — see nodes/viewport/shared/linterParser.ts.
+  Viewport: 'Node',
+  SubViewport: 'Viewport',
+  Window: 'Viewport',
   Node3D: 'Node',
   Node2D: 'Node',
   Control: 'Node',
@@ -162,5 +163,4 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   AudioStreamPlayer: 'Node',
   Timer: 'Node',
   NavigationAgent3D: 'Node',
-  Window: 'Node',
 });

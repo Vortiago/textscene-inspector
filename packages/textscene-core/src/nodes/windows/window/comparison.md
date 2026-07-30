@@ -69,7 +69,7 @@ compare against Godot.
 ## Linting
 
 <!-- lint:begin Window -->
-Strict parsing format-checks these `Window` properties. Every validator failure is an **error**.
+Strict parsing format-checks these `Window` properties, plus 9 inherited from Viewport. Every validator failure is an **error**.
 
 | Property |
 | --- |
