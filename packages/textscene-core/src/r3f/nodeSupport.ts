@@ -54,7 +54,12 @@ export function isRenderableNodeType(type: string): boolean {
 export function rendersOwnVisual(type: string): 'draws' | 'transform-only' | 'not-implemented' {
   // Synthetic GLB types render through the GLB path, not a registration.
   if (type.startsWith('GLB') || INTERNAL_DISPLAY_NODE_TYPES.has(type)) return 'draws';
+  // A declared intent wins over the Control fallback below: a Control-family
+  // type that registers `transform-only` must be able to say so, or its sheet
+  // would be held to `linter-only` by sheets.test.mjs while the badge insisted
+  // it draws — a contradiction no test could see.
+  if (nodeComponentRegistry.isTransformOnly(type)) return 'transform-only';
+  // Control types answer from the mirrored set, not the registry: see above.
   if (TWO_D_UI_TYPES.has(type)) return 'draws';
-  if (nodeComponentRegistry.get(type) === undefined) return 'not-implemented';
-  return nodeComponentRegistry.isTransformOnly(type) ? 'transform-only' : 'draws';
+  return nodeComponentRegistry.get(type) === undefined ? 'not-implemented' : 'draws';
 }

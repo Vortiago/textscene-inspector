@@ -315,4 +315,41 @@ describe('float-tuple validators accept the renderer float grammar (#190 drift f
       expect(check('PackedVector2Array(0, 1,)')).not.toBeNull();
     });
   });
+  describe('quotedString / stringName grammar', () => {
+    const quoted = (value: string) => v.quotedString('title')('title', value, 1);
+    const name = (value: string) => v.stringName('bone_name')('bone_name', value, 1);
+
+    it('accepts a plain quoted literal on both', () => {
+      expect(quoted('"Head"')).toBeNull();
+      expect(name('"Head"')).toBeNull();
+    });
+
+    it('accepts the &-prefixed StringName form Godot actually saves', () => {
+      expect(name('&"Head"')).toBeNull();
+      // A StringName is not a plain string; quotedString must still reject it.
+      expect(quoted('&"Head"')).not.toBeNull();
+    });
+
+    it('honours an escaped quote inside the value', () => {
+      expect(quoted('"a\\"b"')).toBeNull();
+      expect(name('"a\\"b"')).toBeNull();
+    });
+
+    it('rejects two literals glued together', () => {
+      // The previous grammar checked only the first and last character, so this
+      // read as one string.
+      expect(quoted('"Head" junk "Tail"')).not.toBeNull();
+      expect(name('"Head" junk "Tail"')).not.toBeNull();
+    });
+
+    it('rejects an unterminated literal', () => {
+      expect(quoted('"unterminated')).not.toBeNull();
+      expect(name('&"unterminated')).not.toBeNull();
+    });
+
+    it('accepts the empty string', () => {
+      expect(quoted('""')).toBeNull();
+      expect(name('&""')).toBeNull();
+    });
+  });
 });

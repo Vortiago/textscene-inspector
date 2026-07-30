@@ -1,10 +1,10 @@
 ---
 type: GPUParticles3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-gpuparticles3d.tscn
 image: unit-gpuparticles3d
-renders_as: a transform-only group
+renders_as: nothing yet — Godot draws a particle cloud, the previewer does not
 ---
 
 # GPUParticles3D

@@ -31,7 +31,6 @@ import '../../nodes/physics/3d/collisionshape3d/index.r3f';
 import '../../nodes/physics/3d/characterbody3d/index.r3f';
 import '../../nodes/physics/3d/rigidbody3d/index.r3f';
 import '../../nodes/3d/skeleton3d/index.r3f';
-import '../../nodes/3d/particles/gpuparticles3d/index.r3f';
 import '../../nodes/paths/path3d/index.r3f';
 import '../../nodes/paths/pathfollow3d/index.r3f';
 import '../../nodes/audio/audiostreamplayer/index.r3f';

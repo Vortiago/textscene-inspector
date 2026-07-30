@@ -38,7 +38,18 @@ function checkWindow(context: RuleContext): Diagnostic[] {
   const minSize = parseVector2i(rawProps.min_size);
   if (!maxSize || !minSize) return diagnostics;
 
-  // Vector2i(0, 0) means "no maximum" — never a violation.
+  // scene/main/window.cpp:473, Window::_validate_limit_size():
+  //   bool max_size_valid = (max_size.x > 0 || max_size.y > 0) &&
+  //       max_size.x >= min_size.x && max_size.y >= min_size.y;
+  //   max_size_used = max_size_valid ? max_size : RS::…->get_maximum_viewport_size();
+  //
+  // Both halves matter, and the second is why this warns per component rather
+  // than only when BOTH are undersized: a single failing axis makes the whole
+  // max_size invalid, and Godot then discards it for the rendering server's
+  // maximum — so `max_size = Vector2i(0, 1080)` under `min_size = Vector2i(400, 300)`
+  // is not "unbounded width, capped height", it is no maximum at all.
+  // Negative components cannot reach here: `_clamp_limit_size` (:461) floors
+  // them at 0, which is why `!== 0` and Godot's `> 0` agree.
   const maxSizeSet = maxSize.x !== 0 || maxSize.y !== 0;
   if (maxSizeSet && (maxSize.x < minSize.x || maxSize.y < minSize.y)) {
     diagnostics.push({

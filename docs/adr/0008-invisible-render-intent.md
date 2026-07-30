@@ -1,10 +1,26 @@
 # Non-visual nodes render as invisible transform-only groups; no viewport placeholder
 
-- Status: Accepted (2026-06-02); **partially amended by ADR-0018 (2026-06-24) and by the
-  Label3D parity amendment (2026-07-22)**.
+- Status: Accepted (2026-06-02); **partially amended by ADR-0018 (2026-06-24), by the
+  Label3D parity amendment (2026-07-22), and by the render-intent split (2026-07-30)**.
 - Generalizes ADR-0005 (physics bodies as transform-only groups).
 - Related: ADR-0006 (viewport-mode seam; `showCollisions` toggle).
 - Supersedes the WI-R3F-7 "visible gray-box placeholder" behaviour of `GenericNodeFallback`.
+
+> **Amendment (render-intent split, 2026-07-30):** This ADR describes the render
+> MECHANISM — an invisible group that positions its children — and applied it to two
+> groups at once: nodes that draw nothing by nature, and nodes nobody had implemented.
+> Broad node coverage made that conflation visible, so intent is now recorded separately
+> from mechanism: `NodeComponentRegistration.renderIntent: 'transform-only'` means
+> finished-and-invisible (sheet status `linter-only`), while no registration at all means
+> not-implemented (sheet status `unimplemented`). Both still render as an invisible
+> transform-only group — `GenericNodeFallback` applies the Node3D transform — so nothing
+> about the mechanism changes.
+>
+> The list below moves `GPUParticles3D` to the second group: Godot rasterises a particle
+> cloud at runtime (`unit-gpuparticles3d-godot.png`) and the previewer draws nothing, so
+> it is a gap, not a node that draws nothing by nature. The physics bodies, `Skeleton3D`,
+> `Path3D`/`PathFollow3D` and the rest stay in the first — their runtime output really is
+> empty, and what an editor draws for them is ADR-0018's business, not this one's.
 
 > **Amendment (Label3D parity, 2026-07-22):** Point 4's "**off by default**" is superseded.
 > `showLabels` now defaults **ON** (context default + provider `initialShowLabels`), because Godot
