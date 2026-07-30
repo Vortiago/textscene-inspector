@@ -142,6 +142,7 @@ const NODE2D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and t
  */
 const BASES = {
   node3d: {
+    workspaceFlag: '',
     dir: 'base/node3d',
     parser: 'parseNode3D',
     component: 'Node3D',
@@ -154,10 +155,14 @@ const BASES = {
     parser: 'parseNode2D',
     component: 'Node2D',
     propsType: 'Node2DProperties',
+    // Node2D world content renders in the 2D canvas only; without this the
+    // workspace dispatcher puts it in the 3D viewport (canvasItemRegistry.guard).
+    workspaceFlag: 'canvasItem: true,',
     parserTestCases: NODE2D_PARSER_TEST_CASES,
     hasLinterParser: true,
   },
   control: {
+    workspaceFlag: '',
     dir: '2d/ui/control',
     parser: 'parseControl',
     component: 'Control',
@@ -173,6 +178,9 @@ const BASES = {
     parser: 'parseNode',
     component: 'Node',
     propsType: 'NodeProperties',
+    // Neither 2D nor 3D: passes through both workspaces so its children render
+    // wherever they belong.
+    workspaceFlag: 'container: true,',
     parserTestCases: NODE3D_PARSER_TEST_CASES,
     // `nodes/node/` registers no validators, so there is nothing to import.
     hasLinterParser: false,
@@ -379,6 +387,7 @@ import { ${base.component} } from '${toBase}/Component';
 nodeComponentRegistry.register({
   typeName: '${typeName}',
   Component: ${base.component},
+  ${base.workspaceFlag}
   renderIntent: 'transform-only',
 });
 `

@@ -57,6 +57,9 @@ const INVOCATIONS = {
   transformOnly: [
     'RayCast3D', 'physics/3d', '--intent', 'transform-only', '--chain', 'Node3D', '--linter',
   ],
+  transformOnly2D: [
+    'Probe2D', '2d', '--base', 'node2d', '--intent', 'transform-only', '--chain', 'Node2D',
+  ],
   pending: [
     'ProgressBar', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'Range', '--linter',
   ],
@@ -141,6 +144,14 @@ describe('new-node-slice intent shapes', () => {
   it('accepts control as a base for a pending slice', () => {
     expect(results.controlPending.ok).toBe(true);
     expect(results.controlPending.out).toMatch(/base: control, intent: pending/);
+  });
+
+  it('marks a node2d slice canvasItem, so it lands in the 2D workspace', () => {
+    // `canvasItemRegistry.guard.test.ts` requires every 2D-suffixed type to be
+    // a canvasItem; without the flag the dispatcher renders it in the 3D
+    // viewport instead, and the guard catches it only after the slice is built.
+    expect(results.transformOnly2D.ok).toBe(true);
+    expect(results.transformOnly2D.out).toMatch(/base: node2d, intent: transform-only/);
   });
 
   it('writes nothing on a dry run', () => {

@@ -52,7 +52,7 @@ Strict parsing format-checks these `GeometryInstance3D` properties, plus 1 inher
 | Property | Accepts |
 | --- | --- |
 | `cast_shadow` | enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY) |
-| `custom_aabb` | AABB(12 floats) |
+| `custom_aabb` | AABB(x, y, z, w, h, d) |
 | `extra_cull_margin` | float 0-16384 |
 | `gi_lightmap_texel_scale` | float >= 0.01 |
 | `gi_mode` | enum 0-2 (DISABLED/STATIC/DYNAMIC) |

@@ -1,0 +1,62 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="CodeHighlighter" id="CodeHighlighter_1"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyTextEdit" type="TextEdit" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 108.0
+offset_bottom = 40.0
+text = "Hello, World!"
+placeholder_text = "Type here…"
+editable = true
+context_menu_enabled = true
+emoji_menu_enabled = true
+backspace_deletes_composite_character_enabled = false
+shortcut_keys_enabled = true
+selecting_enabled = true
+deselect_on_focus_loss_enabled = true
+drag_and_drop_selection_enabled = true
+middle_mouse_paste_enabled = true
+empty_selection_clipboard_enabled = true
+wrap_mode = 1
+autowrap_mode = 2
+indent_wrapped_lines = true
+tab_input_mode = true
+virtual_keyboard_enabled = true
+virtual_keyboard_show_on_focus = true
+scroll_smooth = true
+scroll_v_scroll_speed = 80.0
+scroll_past_end_of_file = false
+scroll_vertical = 0.0
+scroll_horizontal = 0
+scroll_fit_content_height = false
+scroll_fit_content_width = false
+minimap_draw = true
+minimap_width = 80
+caret_type = 1
+caret_blink = true
+caret_blink_interval = 0.65
+caret_draw_when_editable_disabled = false
+caret_move_on_right_click = true
+caret_mid_grapheme = false
+caret_multiple = true
+use_default_word_separators = true
+use_custom_word_separators = false
+custom_word_separators = ".,;:!?"
+syntax_highlighter = SubResource("CodeHighlighter_1")
+highlight_all_occurrences = true
+highlight_current_line = true
+draw_control_chars = false
+draw_tabs = true
+draw_spaces = true
+text_direction = 0
+language = "en"
+structured_text_bidi_override = 0
+structured_text_bidi_override_options = []

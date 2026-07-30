@@ -488,8 +488,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Popup",
+    "file": "unit-popup.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Preview Lighting",
     "file": "unit-preview-lighting.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Range",
+    "file": "unit-range.tscn",
     "category": "Other"
   },
   {
@@ -603,6 +613,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Text Edit",
+    "file": "unit-text-edit.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Timer",
     "file": "unit-timer.tscn",
     "category": "Other"
@@ -620,6 +635,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Uv Scale",
     "file": "unit-uv-scale.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Visible On Screen Notifier 2d",
+    "file": "unit-visible-on-screen-notifier-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Visible On Screen Notifier 3d",
+    "file": "unit-visible-on-screen-notifier-3d.tscn",
     "category": "Other"
   },
   {

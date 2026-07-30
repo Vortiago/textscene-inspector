@@ -328,7 +328,7 @@ export const v = {
   aabb(name: string): PropertyValidator {
     return accepts(
       floatTupleValidator(name, 'AABB', 6, 'AABB with 6 numbers like AABB(0, 0, 0, 1, 1, 1)', formatCode(name)),
-      'AABB(12 floats)'
+      'AABB(x, y, z, w, h, d)'
     );
   },
 

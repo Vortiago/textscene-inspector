@@ -119,6 +119,7 @@ reproduced:
 - [XRNode3D](../../packages/textscene-core/src/nodes/3d/xr/xrnode3d/comparison.md) — a transform-only group (an XR-tracked transform)
 - [BoneConstraint3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneconstraint3d/comparison.md) — a transform-only group (the base for bone constraints)
 - [GeometryInstance3D](../../packages/textscene-core/src/nodes/3d/geometryinstance3d/comparison.md) — a transform-only group (the shadow/LOD/GI base for 3D visuals)
+- [VisibleOnScreenNotifier3D](../../packages/textscene-core/src/nodes/3d/visibleonscreennotifier3d/comparison.md) — a transform-only group (signals when its AABB enters view)
 
 ## 2D
 
@@ -157,6 +158,9 @@ reproduced:
 - [VBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/vboxcontainer/comparison.md) — a CSS flex-column `<div>`
 - [BaseButton](../../packages/textscene-core/src/nodes/2d/ui/basebutton/comparison.md) — nothing yet; the base every button inherits from
 - [Container](../../packages/textscene-core/src/nodes/2d/ui/container/comparison.md) — nothing yet; the base every layout container inherits from
+- [Range](../../packages/textscene-core/src/nodes/2d/ui/range/comparison.md) — nothing yet; the min/max/step base every slider and bar inherits
+- [TextEdit](../../packages/textscene-core/src/nodes/2d/ui/textedit/comparison.md) — nothing yet; the multi-line text base CodeEdit inherits
+- [VisibleOnScreenNotifier2D](../../packages/textscene-core/src/nodes/2d/visibleonscreennotifier2d/comparison.md) — a transform-only group (signals when its rect enters view)
 
 ## Other
 
@@ -164,3 +168,4 @@ reproduced:
 - [Timer](../../packages/textscene-core/src/nodes/timers/timer/comparison.md) — nothing (a countdown timer node)
 - [Window](../../packages/textscene-core/src/nodes/windows/window/comparison.md) — nothing yet; parsed and validated but not drawn
 - [AcceptDialog](../../packages/textscene-core/src/nodes/windows/acceptdialog/comparison.md) — nothing yet; a dialog Window with an OK button
+- [Popup](../../packages/textscene-core/src/nodes/windows/popup/comparison.md) — nothing yet; a borderless Window that closes on focus loss

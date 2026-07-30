@@ -46,6 +46,16 @@ describe('validator `accepts` metadata', () => {
     expect(castShadow?.accepts).toBe('enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY)');
   });
 
+  it('describes a tuple type with its real arity', () => {
+    // `v.aabb` said "AABB(12 floats)" — copy-pasted from transform3d — while the
+    // factory behind it demands 6. The Accepts column is the only place a
+    // reader learns the shape, so a wrong one is worse than none.
+    const aabb = validatorRegistry.findValidator('GeometryInstance3D', 'custom_aabb');
+    expect(aabb?.accepts).toBe('AABB(x, y, z, w, h, d)');
+    expect(aabb!('custom_aabb', 'AABB(0, 0, 0, 1, 1, 1)', 1)).toBeNull();
+    expect(aabb!('custom_aabb', 'AABB(0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3)', 1)).not.toBeNull();
+  });
+
   it('describes a layer mask as a mask, not as a 4-billion integer range', () => {
     const layers = validatorRegistry.findValidator('VisualInstance3D', 'layers');
     expect(layers?.accepts).toBe('32-bit layer mask (layers 1-32)');

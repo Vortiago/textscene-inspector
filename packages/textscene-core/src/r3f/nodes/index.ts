@@ -70,6 +70,7 @@ import '../../nodes/2d/pointlight2d/index.r3f';
 import '../../nodes/2d/parallaxlayer/index.r3f';
 import '../../nodes/2d/parallaxbackground/index.r3f';
 import '../../nodes/2d/cpuparticles2d/index.r3f';
+import '../../nodes/2d/visibleonscreennotifier2d/index.r3f';
 import '../../nodes/timers/timer/index.r3f';
 import '../../nodes/viewport/subviewport/index.r3f';
 import '../../nodes/3d/skeleton/skeletonmodifier3d/index.r3f';
@@ -78,5 +79,6 @@ import '../../nodes/3d/skeleton/boneconstraint3d/index.r3f';
 import '../../nodes/3d/visualinstance3d/index.r3f';
 import '../../nodes/3d/xr/xrnode3d/index.r3f';
 import '../../nodes/3d/geometryinstance3d/index.r3f';
+import '../../nodes/3d/visibleonscreennotifier3d/index.r3f';
 
 export { GenericNodeFallback } from '../internal/generic-node-fallback/index';

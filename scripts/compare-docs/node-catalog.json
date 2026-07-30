@@ -2291,7 +2291,7 @@
       "name": "Popup",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Window",
         "Viewport",
@@ -2350,7 +2350,7 @@
       "name": "Range",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -2958,7 +2958,7 @@
       "name": "TextEdit",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -3204,7 +3204,7 @@
       "name": "VisibleOnScreenNotifier2D",
       "category": "2D",
       "group": "Visibility",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -3218,7 +3218,7 @@
       "name": "VisibleOnScreenNotifier3D",
       "category": "3D",
       "group": "Visibility",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",

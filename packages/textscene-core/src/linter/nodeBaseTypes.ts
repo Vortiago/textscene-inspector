@@ -46,6 +46,7 @@ const GEOMETRYINSTANCE3D_LEAVES = [
  */
 const VISUALINSTANCE3D_LEAVES = [
   'Decal',
+  'VisibleOnScreenNotifier3D',
 ] as const;
 
 /** Base for every spatial (3D) node — Node3D carries the transform/visible set. */
@@ -95,6 +96,20 @@ const NODE2D_LEAVES = [
   'PointLight2D',
   'ParallaxLayer',
   'CPUParticles2D',
+  'VisibleOnScreenNotifier2D',
+] as const;
+
+/**
+ * Range-derived nodes — they inherit min/max/step/page/value from `Range`, then
+ * the anchor/offset/theme set from `Control`.
+ *
+ * Godot puts `Slider` between the two sliders and `Range`; `Slider` is not
+ * instantiable and registers nothing, so the chain flattens past it.
+ * `baseChainCompleteness.test.ts` fails the day that stops being true.
+ */
+const RANGE_LEAVES = [
+  'HSlider',
+  'VSlider',
 ] as const;
 
 /**
@@ -120,11 +135,6 @@ const CONTROL_LEAVES = [
   'Label',
   'RichTextLabel',
   'LineEdit',
-  // Range → Slider → H/VSlider in Godot, but neither intermediate is
-  // authorable and neither carries a validator of its own, so the leaves link
-  // straight to Control for the inherited anchor/offset/layout rules.
-  'HSlider',
-  'VSlider',
   'ColorRect',
   'TextureRect',
   'Panel',
@@ -147,6 +157,8 @@ const CONTROL_LEAVES = [
   'VSplitContainer',
   'BaseButton',
   'Container',
+  'Range',
+  'TextEdit',
 ] as const;
 
 export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
@@ -155,6 +167,7 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   ...Object.fromEntries(VISUALINSTANCE3D_LEAVES.map((t) => [t, 'VisualInstance3D'])),
   ...Object.fromEntries(NODE3D_LEAVES.map((t) => [t, 'Node3D'])),
   ...Object.fromEntries(NODE2D_LEAVES.map((t) => [t, 'Node2D'])),
+  ...Object.fromEntries(RANGE_LEAVES.map((t) => [t, 'Range'])),
   ...Object.fromEntries(BASEBUTTON_LEAVES.map((t) => [t, 'BaseButton'])),
   ...Object.fromEntries(CONTROL_LEAVES.map((t) => [t, 'Control'])),
   // Abstract/non-authorable intermediate classes.
@@ -163,6 +176,8 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   Light3D: 'VisualInstance3D',
   GeometryInstance3D: 'VisualInstance3D',
   BaseButton: 'Control',
+  Range: 'Control',
+  TextEdit: 'Control',
   VisualInstance3D: 'Node3D',
   // SubViewport and Window are Godot's two instantiable Viewports. `Viewport`
   // itself is not instantiable, so like Light3D it carries validators without
@@ -186,4 +201,5 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   NavigationAgent3D: 'Node',
   AcceptDialog: 'Window',
   BoneConstraint3D: 'SkeletonModifier3D',
+  Popup: 'Window',
 });
