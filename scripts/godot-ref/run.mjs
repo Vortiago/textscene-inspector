@@ -336,7 +336,7 @@ const gdString = (s) =>
  * The bootstrap scene's script. Instantiates the target scene, picks the 2D or
  * 3D path for it, and writes one settled frame.
  */
-function bootstrapScript({
+export function bootstrapScript({
   scenePath,
   previews,
   camera,
@@ -370,7 +370,14 @@ func _ready() -> void:
 	# so no body is ever stepped and no state callback ever fires. Set here, not
 	# after add_child(), because entering the tree is itself enough to schedule
 	# the first step. See _freeze_game_logic() for why this is the catch-all.
-	get_tree().paused = true
+	#
+	# Gated on PREVIEWS, which is what selects between the harness's two jobs:
+	# the default mirrors the Node3D EDITOR, which never runs game logic, so the
+	# authored pose is the whole point. --no-previews asks for true RUNTIME
+	# semantics, and a runtime that never steps physics is not a runtime — a
+	# body is supposed to fall there.
+	if PREVIEWS:
+		get_tree().paused = true
 	var target: Node = load(SCENE_PATH).instantiate()
 	var two_d := MODE == "2d" or (MODE == "auto" and _is_canvas_scene(target))
 	# Written before the render, so a run that dies mid-frame still says which

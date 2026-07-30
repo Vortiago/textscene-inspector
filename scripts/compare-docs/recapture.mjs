@@ -16,6 +16,8 @@
  * on both sides when present.
  */
 import { chromium } from 'playwright';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import {
   existsSync,
   mkdirSync,
@@ -25,7 +27,7 @@ import {
   readFileSync,
   writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { renderReference } from '../godot-ref/run.mjs';
 import {
@@ -41,6 +43,7 @@ import {
   waitForServer,
   CANVAS_2D_CAPTURE,
 } from '../visual/previewServer.mjs';
+import { COMPLEX_SCENES } from './capture-complex.mjs';
 import {
   IMAGES_DIR as IMAGES,
   REPO_ROOT,
@@ -188,13 +191,15 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   let targets = collectTargets();
   if (args.only) targets = targets.filter((t) => t.image.includes(args.only));
+  const { own, delegated } = partitionTargets(targets);
   if (!targets.length) throw new Error(args.only ? `No sheet image matches --only ${args.only}` : 'No sheet images found');
-  console.log(`Re-rendering ${targets.length} comparison image(s)…`);
+  console.log(`Re-rendering ${own.length} comparison image(s)…`);
 
-  const godot = args.godot ? await captureGodot(targets) : { modes: new Map(), failures: [] };
-  const oursFailures = args.ours ? await captureOurs(targets, godot.modes) : [];
+  const godot = args.godot ? await captureGodot(own) : { modes: new Map(), failures: [] };
+  const oursFailures = args.ours ? await captureOurs(own, godot.modes) : [];
+  const delegatedFailures = await runComplex(delegated, args);
 
-  const failures = [...godot.failures, ...oursFailures];
+  const failures = [...godot.failures, ...oursFailures, ...delegatedFailures];
   console.log(`\n[recapture] images in ${IMAGES}`);
   if (failures.length) {
     console.warn(`\n${failures.length} failure(s):`);
@@ -203,7 +208,50 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+/**
+ * Split sheet images into the ones this script renders and the ones
+ * capture-complex.mjs owns.
+ *
+ * Both scripts write `<image>-godot.png` into the same directory, and a complex
+ * scene needs per-scene settings (`frame`, `sceneCamera`, a named `oursCamera`,
+ * a forced 2D/3D mode) that live in COMPLEX_SCENES and that a sheet's
+ * frontmatter cannot express. Rendering one here with this script's defaults
+ * produces a WRONG frame that silently overwrites the right one — the town
+ * captured from the editor orbit ends up under the terrain — and nothing fails,
+ * because a picture is a picture. So ownership is decided by the slug, in one
+ * place, and the owned ones are handed to their owner rather than guessed at.
+ */
+export function partitionTargets(targets) {
+  const complexSlugs = new Set(COMPLEX_SCENES.map((c) => c.slug));
+  return {
+    own: targets.filter((t) => !complexSlugs.has(t.image)),
+    delegated: targets.filter((t) => complexSlugs.has(t.image)),
+  };
+}
+
+/** Hand the complex slugs to capture-complex.mjs, so one command still refreshes everything. */
+async function runComplex(delegated, args) {
+  if (!delegated.length) return [];
+  const sides = [args.godot ? '--godot' : null, args.ours ? '--ours' : null].filter(Boolean);
+  if (!sides.length) return [];
+  console.log(`\n[recapture] ${delegated.length} image(s) owned by capture-complex.mjs — delegating`);
+  const failures = [];
+  for (const t of delegated) {
+    const r = spawnSync(
+      process.execPath,
+      [fileURLToPath(new URL('./capture-complex.mjs', import.meta.url)), ...sides, '--only', t.image],
+      { stdio: 'inherit' }
+    );
+    if (r.status !== 0) failures.push({ image: t.image, error: 'capture-complex.mjs failed' });
+  }
+  return failures;
+}
+
+// Guarded: this module exports partitionTargets for the ownership test, and an
+// unguarded main() would start rendering the moment anything imported it.
+if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
