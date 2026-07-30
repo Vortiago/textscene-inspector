@@ -77,8 +77,8 @@ reproduced:
 
 ## 3D
 
-- [AnimationPlayer](../../packages/textscene-core/src/nodes/animation/animationplayer/comparison.md) — nothing itself; it drives other nodes' properties over time
-- [AnimationTree](../../packages/textscene-core/src/nodes/animation/animationtree/comparison.md) — an empty group (a non-visual driver)
+- [AnimationPlayer](../../packages/textscene-core/src/nodes/animation/animationplayer/comparison.md) — no geometry of its own; a working driver of other nodes' properties
+- [AnimationTree](../../packages/textscene-core/src/nodes/animation/animationtree/comparison.md) — no geometry of its own; a working blend-tree driver
 - [Area3D](../../packages/textscene-core/src/nodes/physics/3d/area3d/comparison.md) — an invisible transform-only group
 - [AreaLight3D](../../packages/textscene-core/src/nodes/3d/lights/arealight3d/comparison.md) — a THREE.RectAreaLight
 - [AudioStreamPlayer3D](../../packages/textscene-core/src/nodes/audio/audiostreamplayer3d/comparison.md) — a selection-gated speaker gizmo

@@ -1,19 +1,24 @@
 ---
 type: AnimationPlayer
 category: 3D
-status: linter-only
+status: limitation
 fixture: unit-animation-player.tscn
 image: unit-animation-player
-renders_as: no visual of its own; an invisible driver of other nodes' properties
+renders_as: no geometry of its own; a working driver of other nodes' properties
 ---
 
 # AnimationPlayer
 
-Godot's keyframe animation driver. It has no geometry — it animates other
-nodes' properties over time. In a still capture there is nothing to draw for
-the player itself, so both sides show the scene at its authored rest pose: the
-`Mesh` box unrotated at its resting height. The motion of the `spin` clip is
-documented separately as a GIF, not in this frame.
+Godot's keyframe animation driver. It has no geometry of its own, but the
+previewer really plays its clips, so the comparison above is the animated pair
+(`unit-animation-player.gif`): both sides step through one loop of the `spin`
+clip and the box turns in each. The still frames beside it are the authored
+rest pose — the capture harness stops every player before taking a still, so a
+frozen frame is evidence of nothing either way.
+
+Transform tracks run through a `THREE.AnimationMixer` rooted at `root_node`
+(ADR-0011); value tracks reach non-transform properties like `Sprite2D:frame`
+and `modulate` through a separate push registry (ADR-0016, ADR-0017).
 
 ## Properties exercised
 
@@ -23,12 +28,23 @@ documented separately as a GIF, not in this frame.
 | `speed_scale` | `1.0` | normal playback rate |
 | `playback_active` | `true` | player marked active |
 | `libraries/` | `bob`, `spin` | two clips are available to the transport |
-| clip `spin` | rotation Y `0 → 2π`, `length 2.0`, `loop` | turns the box once per loop (not shown in this still) |
-| clip `bob` | position Y `0.5 → 1.0 → 0.5`, `length 1.0`, `loop` | bobs the box up and down (not shown in this still) |
+| clip `spin` | rotation Y `0 → 2π`, `length 2.0`, `loop` | turns the box once per loop — the motion the GIF compares |
+| clip `bob` | position Y `0.5 → 1.0 → 0.5`, `length 1.0`, `loop` | bobs the box up and down |
 
 ## Divergences
 
-None visible in this fixture.
+The `spin` loop matches across the compared frames — the box turns in step on
+both sides, with no drift accumulating over the loop. What this fixture does
+not exercise is where the real gaps are, so they are listed rather than shown:
+
+- **Track types.** Only transform and value tracks play. `bezier`, `method`,
+  `audio` and nested `animation` tracks are parsed and ignored (ADR-0011).
+- **Interpolation.** Cubic interpolation (`interp = 2`) and per-keyframe
+  `transition` easing are approximated as linear (ADR-0017), so an eased clip
+  reaches the same poses on a slightly different curve.
+- **Track binding is by name.** A track path is resolved against node names, so
+  two same-named siblings under the animation root are ambiguous; a track that
+  resolves above the root is dropped with a warning (ADR-0011).
 
 ## Linting
 

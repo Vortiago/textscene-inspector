@@ -292,14 +292,20 @@ describe('comparison sheets', () => {
       expect(bad).toEqual([]);
     });
 
-    it('gives every transform-only registration the `linter-only` status', () => {
-      // The reverse direction: a slice that declares it draws nothing must say so
-      // on its sheet, or the gallery shows it as an unassessed gap forever.
+    it('never calls a transform-only registration `unimplemented`', () => {
+      // The reverse direction, deliberately narrow. Requiring `linter-only` here
+      // was too strong: `renderIntent: 'transform-only'` is a claim about the
+      // node's OWN geometry, while the sheet status is a claim about what there
+      // is to compare against Godot — and a driver has no geometry yet a very
+      // visible effect. AnimationPlayer is the case that proved it: its gallery
+      // entry is a GIF of two synchronised spinning cubes, sitting under a badge
+      // that said "draws nothing, complete". RemoteTransform3D is the same shape.
+      //
+      // What stays forbidden is the contradiction: a node cannot be registered,
+      // deliberate and invisible AND be an unimplemented gap.
       const bad = sliceSheets
-        .filter((s) => s.transformOnly && s.meta.status !== 'linter-only')
-        .map(
-          (s) => `${s.label}: registers transform-only but its status is ${s.meta.status ?? 'unset'}`
-        );
+        .filter((s) => s.transformOnly && s.meta.status === 'unimplemented')
+        .map((s) => `${s.label}: registers transform-only but claims to be unimplemented`);
       expect(bad).toEqual([]);
     });
 

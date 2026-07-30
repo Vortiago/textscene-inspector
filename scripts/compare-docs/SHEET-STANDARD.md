@@ -155,7 +155,7 @@ and a header/section badge. A node's badge **rolls up to its worst section**.
 | `done` | Faithful to Godot, verified by eye. Green. **Never the default — earn it.** |
 | `limitation` | Renders, but with a known divergence (a three.js constraint). Orange. |
 | `unimplemented` | Should render, and does not yet. Red. |
-| `linter-only` | Draws nothing at runtime, by nature — parsed and validated, and complete. Blue. |
+| `linter-only` | Draws nothing **itself** and has no downstream effect to compare either — parsed, validated, complete. Blue. |
 | `unreviewed` | Not yet assessed against Godot. Grey. **The default.** |
 
 `done` is the strong claim: reserve it for a feature you have looked at and found
@@ -166,9 +166,16 @@ matches. An unassessed sheet stays `unreviewed`; a whole-scene showcase with gap
 is no render to assess, so red would be wrong and grey would imply someone still has
 to look. It is **checked, not trusted** — the sheet must be backed by a
 `renderIntent: 'transform-only'` registration in the slice's `index.r3f.ts`, and
-`sheets.test.mjs` asserts that in both directions. Judge by RUNTIME output only: an
-editor-only or selection-gated gizmo (ADR-0018) does not make a node visual, and a
-node that should draw but does not yet is `unimplemented`, never this.
+`sheets.test.mjs` asserts that. Judge by RUNTIME output only: an editor-only or
+selection-gated gizmo (ADR-0018) does not make a node visual, and a node that should
+draw but does not yet is `unimplemented`, never this.
+
+**"Draws nothing" is not the same as "nothing to compare."** A driver — an
+AnimationPlayer, an AnimationTree, a RemoteTransform3D — has no geometry of its own
+yet moves something you can watch, so it belongs on the normal `done`/`limitation`
+scale and its sheet should compare that effect. The registry flag stays
+`transform-only` (it is a claim about the node's own geometry); only the status
+differs. Reserve `linter-only` for a node whose runtime effect is genuinely nil.
 
 ## Rules
 

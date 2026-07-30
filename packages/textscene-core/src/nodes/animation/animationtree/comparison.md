@@ -1,32 +1,51 @@
 ---
 type: AnimationTree
 category: 3D
-status: linter-only
+status: limitation
 fixture: unit-animationtree-blend.tscn
 image: unit-animationtree-blend
-renders_as: an empty group (a non-visual driver)
+renders_as: no geometry of its own; a working blend-tree driver
 ---
 
 # AnimationTree
 
-AnimationTree is a non-visual node — it drives another node's clips through a
-blend tree but draws no geometry of its own. The previewer mounts it as an empty
-group, so the only thing on screen is the `Mesh` box at its authored transform.
-A static preview never ticks the tree, and the reference harness deactivates it,
-so both images show the same authored rest pose: an upright, axis-aligned box.
+AnimationTree drives another node's clips through a blend tree and draws no
+geometry of its own. The previewer really evaluates it: selecting the node and
+playing runs the blend program, so two clips from the `AnimationPlayer` it
+points at are mixed and applied at once (ADR-0019).
+
+The images here are stills and show only the authored rest pose — the reference
+harness sets `active = false` before every capture, so a frozen frame says
+nothing about playback either way. Unlike AnimationPlayer, no animated capture
+exists yet to compare frame by frame: `capture-animation.mjs` can only drive an
+`AnimationPlayer`, so the blending below is verified by unit tests and by hand,
+not by a Godot-vs-ours GIF.
 
 ## Properties exercised
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `tree_root` | `AnimationNodeBlendTree` | the blend program (spin + bob); reshapes the Mesh only during playback |
-| `anim_player` | `NodePath("../AnimationPlayer")` | the driver whose clips it blends; no static effect |
-| `active` | `true` | tree may process, but a static preview never runs it; no visual |
-| `parameters/blend/blend_amount` | `0.5` | 50/50 spin+bob mix, applied only while playing |
+| `tree_root` | `AnimationNodeBlendTree` | the blend program: spin and bob, mixed and applied together during playback |
+| `anim_player` | `NodePath("../AnimationPlayer")` | the driver whose clips it blends |
+| `active` | `true` | the tree processes; the still capture deactivates it |
+| `parameters/blend/blend_amount` | `0.5` | 50/50 spin+bob mix, applied while playing |
 
 ## Divergences
 
-None visible in this fixture.
+Nothing visible in this still — it is a rest pose by construction. The known
+gaps are in the blend program rather than the frame, so they are listed:
+
+- **Blend weights are per clip, not per bone.** `AnimationNodeBlend2`'s filter
+  set is not applied, so a tree that blends one clip into a subset of bones
+  affects the whole skeleton here (ADR-0019).
+- **`AnimationNodeTransition` always takes input 0.** Selecting another input
+  is a runtime state change the previewer does not model.
+- **State machines do not travel.** A `StateMachine` root evaluates its current
+  state; `travel()` and transition timing are not simulated.
+
+An animated capture would settle the rest: `capture-animation.mjs` currently
+hardcodes `AnimationPlayer` as the driver, so it cannot select an
+`AnimationTree` or set `active = true` on one.
 
 ## Linting
 
