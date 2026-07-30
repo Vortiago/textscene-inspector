@@ -33,34 +33,9 @@
  * sRGB) and multiplies it into both colours itself, letting `StyleBoxQuad`
  * supply the one sRGB→linear conversion `useControlTint.ts` requires.
  */
-import { useMemo } from 'react';
-import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
-import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { PanelChrome } from '../../../../r3f/controls/native/PanelChrome';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useCanvasItemTint, WHITE_MODULATE, multiplyModulate, type RGBA } from '../../../../r3f/canvasItemModulate';
-import type { ControlProperties } from '../control/types';
 
-/** Multiplies a StyleBox's two base colours by the same composed tint (still raw sRGB). */
-function tintedStyleBox(styleBox: StyleBoxFlatData, tint: RGBA): StyleBoxFlatData {
-  if (tint.r === 1 && tint.g === 1 && tint.b === 1 && tint.a === 1) return styleBox;
-  return {
-    ...styleBox,
-    bgColor: multiplyModulate(styleBox.bgColor, tint),
-    borderColor: multiplyModulate(styleBox.borderColor, tint),
-  };
-}
-
-export function PanelNative({ solveNode, rect }: NativeControlComponentProps) {
-  const props = solveNode.node.properties as ControlProperties;
-  const { themeScale } = useProjectSettings();
-  const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
-  const baseStyleBox = solveNode.styleBoxes.panel ?? theme.widgets.panel;
-
-  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
-  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
-  const styleBox = useMemo(() => tintedStyleBox(baseStyleBox, tint.own), [baseStyleBox, tint.own]);
-
-  return <StyleBoxQuad styleBox={styleBox} rect={rect} />;
+export function PanelNative({ solveNode, rect, renderOrder }: NativeControlComponentProps) {
+  return <PanelChrome solveNode={solveNode} rect={rect} renderOrder={renderOrder} />;
 }

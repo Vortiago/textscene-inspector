@@ -52,7 +52,7 @@ interface ImageLike {
   height?: number;
 }
 
-export function TextureRectNative({ solveNode, rect }: NativeControlComponentProps) {
+export function TextureRectNative({ solveNode, rect, renderOrder }: NativeControlComponentProps) {
   const props = solveNode.node.properties as TextureRectProperties;
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
@@ -117,6 +117,7 @@ export function TextureRectNative({ solveNode, rect }: NativeControlComponentPro
   return (
     <group position={[draw.offset.x, -draw.offset.y, 0]}>
       <ControlQuad
+        renderOrder={renderOrder}
         width={draw.size.x}
         height={draw.size.y}
         color={tint.color}

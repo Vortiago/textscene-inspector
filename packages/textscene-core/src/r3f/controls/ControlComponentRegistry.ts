@@ -51,7 +51,7 @@ export interface NativeControlComponentProps {
    * without a value: `ControlCanvasWalker` — the only real caller — always
    * supplies one.
    */
-  renderOrder?: number;
+  renderOrder: number;
   /**
    * Rendered ONLY for a passthrough host that draws no chrome of its own but
    * must still wrap its descendants in fresh context — `CanvasLayer`'s native

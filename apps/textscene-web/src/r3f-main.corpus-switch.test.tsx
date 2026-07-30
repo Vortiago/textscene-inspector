@@ -181,6 +181,12 @@ text = "caption"
     // scene opens in is persisted state a sibling test can leave behind — pin
     // it so this asserts the theme scale, not whichever mode ran last.
     globalThis.localStorage.setItem('tsi.viewportMode', '2D');
+    // This asserts the theme scale through the DOM overlay's rendered font-size,
+    // so it needs that renderer specifically — the native canvas path is the
+    // default now, and its Label pixels are invisible to happy-dom either way.
+    // The subject here is project-settings re-reading, not which renderer draws;
+    // this pin retires with the overlay.
+    globalThis.localStorage.setItem('tsi.native2dUi', 'false');
     render(<R3FApp />);
     await waitForScene('ScaledRoot');
 

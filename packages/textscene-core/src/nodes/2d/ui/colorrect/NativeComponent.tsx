@@ -24,12 +24,20 @@ import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/ca
 import { parseColor } from '../../../../utils/colorParser';
 import type { ColorRectProperties } from './types';
 
-export function ColorRectNative({ solveNode, rect }: NativeControlComponentProps) {
+export function ColorRectNative({ solveNode, rect, renderOrder }: NativeControlComponentProps) {
   const props = solveNode.node.properties as ColorRectProperties;
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
   const fill = useMemo(() => parseColor(props.color), [props.color]);
 
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate }, fill);
 
-  return <ControlQuad width={rect.w} height={rect.h} color={tint.color} opacity={tint.opacity} />;
+  return (
+    <ControlQuad
+      width={rect.w}
+      height={rect.h}
+      color={tint.color}
+      opacity={tint.opacity}
+      renderOrder={renderOrder}
+    />
+  );
 }

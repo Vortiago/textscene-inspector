@@ -25,23 +25,39 @@ import { sRGBToLinearRGB } from '../../../utils/colorSpace';
 import { styleBoxFlatGeometry } from './styleBoxFlatGeometry';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rect2 } from './rect';
+import { useControlClipPlanes } from './controlClipping';
 
 export interface StyleBoxQuadProps {
   styleBox: StyleBoxFlatData;
   rect: Rect2;
+  /**
+   * Paint order within the 2D transparent bucket. Load-bearing rather than
+   * cosmetic: nothing here writes depth, so three's transparent sort — which
+   * reads `renderOrder` before camera distance — is the *only* thing deciding
+   * which Control covers which. A quad that drops it paints in traversal order
+   * and silently ignores both `z_index` and `CanvasLayer.layer`.
+   */
+  renderOrder: number;
 }
 
-export function StyleBoxQuad({ styleBox, rect }: StyleBoxQuadProps) {
+export function StyleBoxQuad({ styleBox, rect, renderOrder }: StyleBoxQuadProps) {
   const geometry = useMemo(() => buildGeometry(styleBox, rect), [styleBox, rect]);
   // R3F won't auto-dispose a geometry passed via `attach`; release on rebuild.
   useEffect(() => () => geometry?.dispose(), [geometry]);
+  const clippingPlanes = useControlClipPlanes();
 
   if (!geometry) return null;
 
   return (
-    <mesh>
+    <mesh renderOrder={renderOrder}>
       <primitive object={geometry} attach="geometry" />
-      <meshBasicMaterial vertexColors transparent depthWrite={false} side={THREE.DoubleSide} />
+      <meshBasicMaterial
+        vertexColors
+        transparent
+        depthWrite={false}
+        side={THREE.DoubleSide}
+        clippingPlanes={clippingPlanes as THREE.Plane[]}
+      />
     </mesh>
   );
 }

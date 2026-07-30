@@ -102,12 +102,17 @@ export function Canvas2DStage({
   const stageRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View2D>({ pan: { x: 0, y: 0 }, zoom: 1 });
   const { pan, zoom } = view;
-  // Development-only mount seam, read once at mount like `fitOnOpen` below:
+  // The 2D Control renderer. Defaults to the native canvas path: the DOM
+  // overlay is being retired, and leaving it as the default made it impossible
+  // to tell from a fixture which renderer produced what. Set this key to
+  // `false` in localStorage to get the old overlay back while it still exists.
+  //
+  // Read once at mount like `fitOnOpen` below:
   // no UI flips it, so there is nothing to react to mid-session, and it stays
   // off the viewport-mode seam where every other flag is a user preference
   // with a toolbar affordance.
   const [nativeControls] = useState(() =>
-    readPersisted(NATIVE_CONTROLS_STORAGE_KEY, false, isBoolean)
+    readPersisted(NATIVE_CONTROLS_STORAGE_KEY, true, isBoolean)
   );
   // `display/window/size/viewport_*`, or Godot's 1152x648 for a scene with no
   // project around it. This rect is what a root Control resolves its anchors

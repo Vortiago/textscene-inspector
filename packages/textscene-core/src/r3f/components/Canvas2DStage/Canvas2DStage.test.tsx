@@ -69,6 +69,9 @@ function sizeEveryElement(width: number, height: number) {
 afterEach(() => {
   vi.restoreAllMocks();
   window.localStorage.removeItem(FIT_ON_OPEN_2D_STORAGE_KEY);
+  // Both keys are read once at mount, so a leaked value silently changes which
+  // renderer the NEXT test gets.
+  window.localStorage.removeItem(NATIVE_CONTROLS_STORAGE_KEY);
 });
 
 function makeNode(name: string): TscnNode {
@@ -132,7 +135,8 @@ describe('<Canvas2DStage>', () => {
     expect(zoomLabel()).toBe('100%');
   });
 
-  it('mounts the lazy ControlOverlay with the passed nodes', async () => {
+  it('mounts the lazy ControlOverlay with the passed nodes when the overlay is opted into', async () => {
+    window.localStorage.setItem(NATIVE_CONTROLS_STORAGE_KEY, 'false');
     renderStage([makeNode('A'), makeNode('B')]);
     const overlay = await screen.findByTestId('overlay-stub');
     expect(overlay.getAttribute('data-node-count')).toBe('2');
@@ -380,7 +384,8 @@ describe('<Canvas2DStage>', () => {
     expect(frame.style.transform).toBe('translate(0px, 0px) scale(1)');
   });
 
-  it('native controls off (the default): renders <ControlOverlay> inside the capture frame, World2DCanvas gets nativeControls=false', async () => {
+  it('native controls off (opt-in): renders <ControlOverlay> inside the capture frame, World2DCanvas gets nativeControls=false', async () => {
+    window.localStorage.setItem(NATIVE_CONTROLS_STORAGE_KEY, 'false');
     renderStage([makeNode('A')]);
     const overlay = await screen.findByTestId('overlay-stub');
     const captureFrame = screen.getByTestId('canvas-2d-capture-frame');
@@ -390,10 +395,9 @@ describe('<Canvas2DStage>', () => {
     );
   });
 
-  it('native controls on: omits <ControlOverlay>, keeps the capture frame, and passes nativeControls=true to World2DCanvas', () => {
-    // Seeded the way the flag is actually flipped — a persisted value read once
-    // at mount, which is also how the capture harnesses set it before load.
-    window.localStorage.setItem(NATIVE_CONTROLS_STORAGE_KEY, 'true');
+  it('native controls on (the default): omits <ControlOverlay>, keeps the capture frame, and passes nativeControls=true to World2DCanvas', () => {
+    // No seeding: native is the default now. The overlay is what needs opting
+    // into, which is what the two tests above do.
     render(
       <Canvas2DStage nodes={[makeNode('A')]} internalResources={[]} externalResources={[]} />
     );

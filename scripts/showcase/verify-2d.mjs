@@ -410,6 +410,11 @@ const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, d
 // which is invisible while the only assertions are "> 0".
 // (`FIT_ON_OPEN_2D_STORAGE_KEY` in r3f/components/Canvas2DStage/viewport2d.ts.)
 await ctx.addInitScript(() => window.localStorage.setItem('tsi.fitOnOpen2D', 'false'));
+// This harness asserts on the DOM Control overlay, which is no longer the
+// default renderer — the native canvas path is. Pin the old renderer on so this
+// gate keeps testing the thing it was written for, for as long as that thing
+// exists. It retires with the overlay itself.
+await ctx.addInitScript(() => window.localStorage.setItem('tsi.native2dUi', 'false'));
 
 const results = [];
 for (const [name, file, expect = {}] of TARGETS) {

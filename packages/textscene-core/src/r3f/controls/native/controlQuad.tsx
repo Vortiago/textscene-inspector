@@ -24,12 +24,27 @@ export interface ControlQuadProps {
   color: THREE.Color;
   opacity: number;
   map?: THREE.Texture | null;
+  /**
+   * Paint order within the 2D transparent bucket. Load-bearing rather than
+   * cosmetic: nothing here writes depth, so three's transparent sort — which
+   * reads `renderOrder` before camera distance — is the *only* thing deciding
+   * which Control covers which. A quad that drops it paints in traversal order
+   * and silently ignores both `z_index` and `CanvasLayer.layer`.
+   */
+  renderOrder: number;
 }
 
-export function ControlQuad({ width, height, color, opacity, map = null }: ControlQuadProps) {
+export function ControlQuad({
+  width,
+  height,
+  color,
+  opacity,
+  map = null,
+  renderOrder,
+}: ControlQuadProps) {
   const clippingPlanes = useControlClipPlanes();
   return (
-    <mesh position={[width / 2, -(height / 2), 0]}>
+    <mesh position={[width / 2, -(height / 2), 0]} renderOrder={renderOrder}>
       <planeGeometry args={[width, height]} />
       <meshBasicMaterial
         map={map}
