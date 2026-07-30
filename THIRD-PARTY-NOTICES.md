@@ -42,10 +42,16 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/centercontainer/nativeSolver.ts` | `scene/gui/center_container.cpp` (`CenterContainer::get_minimum_size`, `CenterContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/fitChildInRect.ts` | `scene/gui/container.cpp` (`Container::fit_child_in_rect`) and `scene/gui/control.h` (the `SizeFlags` bitmask, `Container::as_sortable_control`'s visibility test) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/boxContainerSolver.ts` | `scene/gui/box_container.cpp` (`BoxContainer::_resort`, `BoxContainer::get_minimum_size`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
+| `packages/textscene-core/src/nodes/2d/ui/shared/splitContainerSolver.ts` | `scene/gui/split_container.cpp` (`SplitContainer::_update_default_dragger_positions`, `_update_dragger_positions`, `_get_valid_range`, `_get_separation`, `_resort`, `get_minimum_size`, `SplitContainerDragger::_notification`'s `NOTIFICATION_DRAW` icon-draw condition) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
 | `packages/textscene-core/src/nodes/2d/ui/gridcontainer/nativeSolver.ts` | `scene/gui/grid_container.cpp` (`GridContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN` handler, `GridContainer::get_minimum_size`), `scene/gui/container.cpp` (`Container::fit_child_in_rect`, `Container::as_sortable_control`) and `scene/gui/control.cpp` (`Control::set_rect`/`Control::_size_changed`'s minimum-size floor, which every `fit_child_in_rect` call re-triggers) |
 | `packages/textscene-core/src/nodes/2d/ui/panelcontainer/nativeSolver.ts` | `scene/gui/panel_container.cpp` (`PanelContainer::get_minimum_size`, `PanelContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN` content-rect inset) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
+| `packages/textscene-core/src/nodes/2d/ui/scrollcontainer/nativeSolver.ts` | `scene/gui/scroll_container.cpp` (`ScrollContainer::get_minimum_size`, `_update_scrollbars`, `_update_scrollbar_position`, `_reposition_children`), `scene/gui/scroll_bar.cpp` (`ScrollBar::get_minimum_size`, `get_grabber_size`, `get_area_size`, `get_grabber_offset`, `NOTIFICATION_DRAW`'s grabber-rect math) and `scene/gui/range.cpp` (`Range::get_as_ratio`, `Range::set_page`'s own CLAMP) |
 | `packages/textscene-core/src/nodes/2d/ui/texturerect/nativeSolver.ts` | `scene/gui/texture_rect.cpp` (`TextureRect::get_minimum_size`'s `expand_mode` contribution, `TextureRect::_notification`'s `NOTIFICATION_DRAW` `stretch_mode` draw-rect math) and `scene/main/canvas_item.h` (`TextureFilter`/`TextureRepeat`) |
+| `packages/textscene-core/src/nodes/2d/ui/label/nativeSolver.ts` | `scene/gui/label.cpp` (`Label::get_minimum_size`, backed by `_update_visible`'s per-line height sum and `get_line_height`'s empty-text fallback; `Label::get_layout_data`'s `vbegin`/`vsep` vertical-alignment math and `_get_line_rect`'s per-line horizontal offset) |
+| `packages/textscene-core/src/nodes/2d/ui/button/nativeSolver.ts` | `scene/gui/button.cpp` (`Button::get_minimum_size_for_text_and_icon`) and `scene/theme/default_theme.cpp` (Button's `font_color`/`font_disabled_color`/`icon_normal_color`/`icon_disabled_color` theme defaults) |
+| `packages/textscene-core/src/r3f/controls/native/buttonBase.ts` | `scene/gui/button.cpp` (`Button::_notification`'s `NOTIFICATION_DRAW` icon/text content-layout math and `Button::_fit_icon_size`) |
 | `packages/textscene-core/src/r3f/controls/native/styleBoxFlatGeometry.ts` | `scene/resources/style_box_flat.cpp` (`StyleBoxFlat::draw`, `draw_rounded_rectangle`, `adapt_values`, `set_inner_corner_radius`, `set_corner_scale`; the non-anti-aliased branch) |
+| `packages/textscene-core/src/r3f/controls/native/text/textOrigin.ts` | `scene/gui/label.cpp` (`Label::_notification`'s `ofs.y += asc` baseline anchoring) and the TextServer paragraph convention `Button::_notification`'s `text_buf->draw` shares |
 | `packages/textscene-core/src/r3f/controls/native/text/textLayout.ts` | `scene/gui/label.cpp` (`Label::_shape`'s autowrap flag mapping) and `servers/text/text_server.cpp` (`TextServer::shaped_text_get_line_breaks`'s width accumulation, safe-break bookkeeping and edge-space trimming) |
 | `packages/textscene-core/src/resources/curve/sample.ts` | `scene/resources/curve.cpp` (`Curve::sample`, `Curve::sample_local_nocheck`, `Curve::get_index`) and `core/math/math_funcs.h` (`Math::bezier_interpolate`) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/godotRng.ts` | `core/math/random_pcg.h` (`RandomPCG::seed`, `RandomPCG::randf`), `thirdparty/misc/pcg.cpp` (`pcg32_random_r`, `pcg32_srandom_r` — see the PCG note below) and `scene/2d/cpu_particles_2d.cpp` (`idhash`, `rand_from_seed`) |
@@ -62,11 +68,11 @@ the point of use, for example `nodes/physics/shared/debugColor.ts`,
 
 ### Vendored theme icons
 
-The native (WebGL) Control renderer's CheckBox and OptionButton painters need the same
-indicator glyphs Godot's editor bakes into its built-in dark theme. Rather than redraw
-approximations, `packages/textscene-core/src/r3f/controls/native/themeIcons.ts` embeds
-unmodified copies of the actual SVG files, base64-encoded as `data:` URLs, from Godot
-4.6.3's `scene/theme/icons/`:
+The native (WebGL) Control renderer's CheckBox, OptionButton and SplitContainer-family
+painters need the same indicator glyphs Godot's editor bakes into its built-in dark
+theme. Rather than redraw approximations, `packages/textscene-core/src/r3f/controls/native/themeIcons.ts`
+embeds unmodified copies of the actual SVG files, base64-encoded as `data:` URLs, from
+Godot 4.6.3's `scene/theme/icons/`:
 
 | File | Godot theme key (`scene/theme/default_theme.cpp`) |
 |---|---|
@@ -79,6 +85,8 @@ unmodified copies of the actual SVG files, base64-encoded as `data:` URLs, from 
 | `scene/theme/icons/radio_unchecked.svg` | `CheckBox` / `"radio_unchecked"` |
 | `scene/theme/icons/radio_unchecked_disabled.svg` | `CheckBox` / `"radio_unchecked_disabled"` |
 | `scene/theme/icons/option_button_arrow.svg` | `OptionButton` / `"arrow"` |
+| `scene/theme/icons/hsplitter.svg` | `HSplitContainer` / `"grabber"`, `SplitContainer` / `"h_grabber"` |
+| `scene/theme/icons/vsplitter.svg` | `VSplitContainer` / `"grabber"`, `SplitContainer` / `"v_grabber"` |
 
 Each theme key is simply its SVG filename without extension (`default_theme_icons_builders.py`).
 Licensed under the same Godot Engine MIT licence below.

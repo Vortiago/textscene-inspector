@@ -19,6 +19,11 @@
  *      set_icon("radio_unchecked_disabled","CheckBox", icons["radio_unchecked_disabled"])
  *  - OptionButton (`default_theme.cpp:235`):
  *      set_icon("arrow", "OptionButton", icons["option_button_arrow"])
+ *  - SplitContainer family (`default_theme.cpp:1244-1247`):
+ *      set_icon("h_grabber", "SplitContainer", icons["hsplitter"])
+ *      set_icon("v_grabber", "SplitContainer", icons["vsplitter"])
+ *      set_icon("grabber",   "HSplitContainer", icons["hsplitter"])
+ *      set_icon("grabber",   "VSplitContainer", icons["vsplitter"])
  *
  * The bytes embedded below are unmodified copies of those SVG files from
  * Godot 4.6.3's `scene/theme/icons/`. Licence: Godot Engine, MIT — see
@@ -98,4 +103,23 @@ export interface OptionButtonIcons {
 
 export const OPTION_BUTTON_ICONS: OptionButtonIcons = {
   arrow: svgDataUrl(OPTION_BUTTON_ARROW_B64),
+};
+
+/** `scene/theme/icons/hsplitter.svg` (8×48) — HSplitContainer's grabber. */
+const HSPLITTER_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjQ4Ij48cGF0aCBmaWxsPSJncmF5IiBmaWxsLW9wYWNpdHk9Ii42NSIgZD0iTTMuMTUgNHY0MGgxLjdWNHoiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/vsplitter.svg` (48×8) — VSplitContainer's grabber. */
+const VSPLITTER_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI4Ij48cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImdyYXkiIHN0cm9rZS1vcGFjaXR5PSIuNjUiIHN0cm9rZS13aWR0aD0iMS43IiBkPSJNNCA0aDQwIi8+PC9zdmc+Cg==';
+
+/** SplitContainer family's single grabber icon, per axis — `default_theme.cpp:1244-1247`. */
+export interface SplitContainerIcons {
+  hsplitter: string;
+  vsplitter: string;
+}
+
+export const SPLIT_CONTAINER_ICONS: SplitContainerIcons = {
+  hsplitter: svgDataUrl(HSPLITTER_B64),
+  vsplitter: svgDataUrl(VSPLITTER_B64),
 };

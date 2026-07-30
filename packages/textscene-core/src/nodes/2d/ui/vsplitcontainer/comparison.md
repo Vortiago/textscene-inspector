@@ -52,3 +52,11 @@ Identical to HSplitContainer's, and for the same reason: the three properties
 it adds are plain scalars that Godot clamps or ignores at layout time rather
 than at load, so strict and lenient parsing have nothing to disagree about. A
 malformed value leaves the property undefined and the Godot default applies.
+
+## Native (WebGL canvas) painter
+
+The same `shared/splitContainerSolver.ts` port at `vertical = true`;
+`NativeComponent.tsx` reads `size_flags_vertical`/`custom_minimum_size.y` and
+draws the `vsplitter` icon (48px across the split axis, 8px along it — the
+transpose of `hsplitter`'s 8×48). See HSplitContainer's comparison sheet for
+the divergences and limitations, identical here.

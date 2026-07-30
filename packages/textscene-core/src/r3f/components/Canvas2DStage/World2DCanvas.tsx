@@ -116,7 +116,12 @@ export function World2DCanvas(props: World2DCanvasProps) {
     <Canvas
       orthographic
       camera={{ position: [0, 0, 1000], near: 0.1, far: 4000 }}
-      gl={{ alpha: true }}
+      // `localClippingEnabled` — ScrollContainer's native clip planes
+      // (`r3f/controls/native/controlClipping.tsx`) are per-material state
+      // three otherwise silently ignores: a spike verified stencil was never
+      // viable here (this canvas requests no stencil buffer at all), so
+      // planes are the only mechanism, and this flag is what turns them on.
+      gl={{ alpha: true, localClippingEnabled: true }}
       // Godot never tone-maps a canvas: the RD renderer runs
       // `_render_buffers_post_process_and_tonemap` on the 3D buffers and
       // composites canvas items into the viewport AFTER it, so authored 2D

@@ -224,6 +224,37 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     expect(result.current.tree[0]?.textureSize).toEqual({ x: 320, y: 160 });
   });
 
+  it("populates a top-level Button's own textureSize from its `icon` property (Button has no `texture` field at all)", () => {
+    // Button's minimum-size solver (`nodes/2d/ui/button/nativeSolver.ts`)
+    // needs the icon's own natural size the same way TextureRect needs its
+    // texture's — `resolveTextureSize` reads whichever of `texture`/`icon` a
+    // node actually carries, since the two node types never carry both.
+    const loader = createFakeResourceLoader();
+    const iconPath = 'res://icon.png';
+    loader.textures.seed(iconPath, { image: { width: 24, height: 24 } } as unknown as THREE.Texture);
+
+    const nodes = [node('IconButton', 'Button', { properties: { name: 'IconButton', icon: 'ExtResource("1")' } })];
+    const externalResources = [{ id: '1', path: iconPath, type: 'Texture2D' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree).toHaveLength(1);
+    expect(result.current.tree[0]?.textureSize).toEqual({ x: 24, y: 24 });
+  });
+
+  it('leaves textureSize null for a Button with no icon at all (no `texture`/`icon` property to resolve)', () => {
+    const loader = createFakeResourceLoader();
+    const nodes = [node('PlainButton', 'Button', { properties: { name: 'PlainButton', text: 'Click Me' } })];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.textureSize).toBeNull();
+  });
+
   it("generation bumps when a TextureRect's not-yet-cached texture resolves, and the tree picks up its size", async () => {
     const loader = createFakeResourceLoader();
     const texturePath = 'res://portrait.png';

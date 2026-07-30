@@ -21,16 +21,10 @@
  */
 
 import { useMemo } from 'react';
-import {
-  useCanvasItemTint,
-  multiplyModulate,
-  WHITE_MODULATE,
-  type RGBA,
-} from '../../canvasItemModulate';
+import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../canvasItemModulate';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
-import { StyleBoxQuad } from './StyleBoxQuad';
+import { StyleBoxQuad, tintStyleBox } from './StyleBoxQuad';
 import { nativeTheme } from './nativeTheme';
-import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { SolveNode } from './solveTree';
 import type { Rect2 } from './rect';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
@@ -54,12 +48,3 @@ export function PanelChrome({ solveNode, rect, renderOrder }: PanelChromeProps) 
   return <StyleBoxQuad styleBox={styleBox} rect={rect} renderOrder={renderOrder} />;
 }
 
-/** Multiplies a StyleBox's two base colours by the same composed tint, in sRGB. */
-function tintStyleBox(styleBox: StyleBoxFlatData, tint: RGBA): StyleBoxFlatData {
-  if (tint.r === 1 && tint.g === 1 && tint.b === 1 && tint.a === 1) return styleBox;
-  return {
-    ...styleBox,
-    bgColor: multiplyModulate(styleBox.bgColor, tint),
-    borderColor: multiplyModulate(styleBox.borderColor, tint),
-  };
-}

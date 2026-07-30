@@ -13,6 +13,7 @@ import type { TscnNode } from '../../../parser/types';
 import { SceneResourcesProvider } from '../../SceneResourcesContext';
 import { ControlCanvasLayer } from './ControlCanvasLayer';
 import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
+import { controlSolverRegistry } from './solverRegistry';
 import { useCanvasModulate } from '../../canvasModulate';
 
 // A stand-in `Native` painter that surfaces the ambient CanvasModulate scope
@@ -21,6 +22,12 @@ const ModulateProbeNative: NativeControlComponent = () => {
   const modulate = useCanvasModulate();
   return <group name={`modulate:r=${modulate.r}`} />;
 };
+
+// A stand-in `Native` painter that surfaces its own solved rect WIDTH as a
+// named group — used to prove a REAL text measurer (not `null`) reaches the
+// solver through this mount point (a text-consuming MinimumSizeFn like
+// Button's/Label's would otherwise always floor to zero).
+const RectProbeNative: NativeControlComponent = ({ rect }) => <group name={`rect:w=${rect.w}`} />;
 
 const projectSettingsMock = vi.hoisted(() => ({
   viewportSize: { width: 1152, height: 648 },
@@ -132,5 +139,36 @@ describe('<ControlCanvasLayer>', () => {
       </SceneResourcesProvider>
     );
     expect(namedGroup(renderer.scene, 'Control:Root')).not.toBeNull();
+  });
+
+  it('wires a REAL text measurer into the solver, not null — a text-driven MinimumSizeFn floors to actual measured width', async () => {
+    // A leaf with no anchors/offsets at all floors its rect to its minimum
+    // size (`controlRectSolver.ts`'s `floorAtMinimumSize`) — so this type's
+    // registered `MinimumSizeFn` result becomes the rendered rect's WIDTH
+    // directly, letting this test observe whether `ctx.measureText` behaved
+    // like a real measurer (non-zero) or the `null` this mount point used to
+    // hardcode (always zero, regardless of text).
+    controlComponentRegistry.register({
+      typeName: 'Control',
+      Component: () => null,
+      Native: RectProbeNative,
+    });
+    controlSolverRegistry.registerMinimumSize('Control', (n, ctx) => {
+      const text = (n.node.properties as { text?: string }).text ?? '';
+      if (!ctx.measureText) return { x: 0, y: 0 };
+      return ctx.measureText(text, 16);
+    });
+
+    const root = node('Probe', 'Control', { text: 'AB' });
+    const renderer = await ReactThreeTestRenderer.create(<ControlCanvasLayer nodes={[root]} />);
+
+    const group = renderer.scene
+      .findAllByType('Group')
+      .map((g) => g.instance as { name: string })
+      .find((g) => g.name.startsWith('rect:w='));
+    const width = Number(group?.name.split('=')[1]);
+    expect(width).toBeGreaterThan(0);
+
+    controlSolverRegistry.clear();
   });
 });

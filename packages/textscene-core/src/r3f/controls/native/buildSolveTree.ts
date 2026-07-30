@@ -110,7 +110,13 @@ function buildForest(
   const textureCache = loader ? { getCached: (p: string) => loader.textures.getCached(p) } : NO_TEXTURE_CACHE;
 
   function resolveTextureSize(node: TscnNode, ext: readonly TscnExternalResource[]): Vec2 | null {
-    const ref = (node.properties as Record<string, unknown>).texture;
+    // Whichever single Texture2D-valued property this node's own type
+    // carries — TextureRect's `texture`, Button's (and its `Button`-family
+    // subclasses') `icon`. The two never coexist on one node type, so
+    // checking both generically here needs no per-type branch and leaves
+    // TextureRect's own resolution untouched.
+    const props = node.properties as Record<string, unknown>;
+    const ref = props.texture ?? props.icon;
     if (typeof ref !== 'string' || ref === '') return null;
     const path = resolveExtResourcePath(ref, ext);
     if (!path) return null;

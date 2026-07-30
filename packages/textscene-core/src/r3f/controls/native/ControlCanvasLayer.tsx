@@ -34,6 +34,7 @@ import { nativeTheme } from './nativeTheme';
 import type { Rect2 } from './rect';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import { canvasModulateColor, CanvasModulateContext } from '../../canvasModulate';
+import { measureText } from './text/measurer';
 
 export interface ControlCanvasLayerProps {
   nodes: readonly TscnNode[];
@@ -75,7 +76,7 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
         generation={generation}
         viewport={viewport}
         theme={theme}
-        measurer={null}
+        measurer={measureText}
       />
     </CanvasModulateContext.Provider>
   );

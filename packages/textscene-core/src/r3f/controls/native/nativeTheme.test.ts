@@ -139,5 +139,15 @@ describe('nativeTheme', () => {
       expect(theme.widgets.button.normal.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
       expect(theme.widgets.scrollBar.grabber.bgColor).toEqual({ r: 1, g: 1, b: 1, a: 0.4 });
     });
+
+    it('SplitContainer: separation 12, grabber extent 8, autohide true — default_theme.cpp:1258-1266', () => {
+      const theme = nativeTheme(1);
+      expect(theme.widgets.splitContainer).toEqual({ separation: 12, grabberExtent: 8, autohide: true });
+    });
+
+    it('scales SplitContainer separation and grabber extent at scale 2, but never autohide', () => {
+      const theme = nativeTheme(2);
+      expect(theme.widgets.splitContainer).toEqual({ separation: 24, grabberExtent: 16, autohide: true });
+    });
   });
 });

@@ -4,4 +4,7 @@ export interface ScrollContainerProperties extends ControlProperties {
   /** Godot ScrollMode (0 DISABLED, 1 AUTO, 2 SHOW_ALWAYS, 3 SHOW_NEVER, 4 RESERVE). */
   horizontalScrollMode?: number;
   verticalScrollMode?: number;
+  /** `ScrollContainer.scroll_horizontal`/`scroll_vertical` — the authored content offset, in px. */
+  scrollHorizontal?: number;
+  scrollVertical?: number;
 }

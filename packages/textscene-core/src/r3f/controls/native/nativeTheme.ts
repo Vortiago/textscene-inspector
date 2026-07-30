@@ -107,6 +107,27 @@ export interface NativeThemeWidgets {
     /** `style_scrollbar_grabber`, `default_theme.cpp:545` — identical for HScrollBar and VScrollBar. */
     grabber: StyleBoxFlatData;
   };
+  /**
+   * SplitContainer/HSplitContainer/VSplitContainer's own theme entries
+   * (`default_theme.cpp:1258-1266`) — no `StyleBoxFlatData` here at all: the
+   * grabber is drawn from an ICON (`native/themeIcons.ts`'s
+   * `SPLIT_CONTAINER_ICONS`, `hsplitter.svg`/`vsplitter.svg`), and
+   * `split_bar_background` (`:1275-1277`) is an EMPTY stylebox that draws
+   * nothing, so there is no fill to model. `minimum_grab_thickness`
+   * (`:1261-1263`) is deliberately NOT reproduced here — it only enlarges the
+   * INVISIBLE mouse drag hitbox (`SplitContainer::_resort`'s
+   * `dragging_area_controls[i]->set_rect`, `split_container.cpp:764-778`),
+   * never the separation band or the icon's own placement, and dragging is
+   * this packet's explicit non-goal.
+   */
+  splitContainer: {
+    /** `separation` (`default_theme.cpp:1258-1260`) — floored by the grabber icon's own extent at the call site (`shared/splitContainerSolver.ts`'s `separationOf`, mirroring `SplitContainer::_get_separation`, `split_container.cpp:305-316`). */
+    separation: number;
+    /** The grabber icon's extent along the split axis (`hsplitter.svg`/`vsplitter.svg`'s short dimension, both 8×1 at scale 1 — see `native/themeIcons.ts`). Icons scale with the theme like every other metric here (`generate_icon` rasterises through the same scale). */
+    grabberExtent: number;
+    /** `autohide` (`default_theme.cpp:1264-1266`) — a THEME CONSTANT (0/1), not a stylebox. Default true hides the grabber icon absent a hover/drag state; see `shared/splitContainerSolver.ts`'s `isSplitGrabberVisible` for what that means for a static previewer. NOT scaled — it is a boolean flag, not a length. */
+    autohide: boolean;
+  };
 }
 
 export interface NativeTheme extends ScaledGodotTheme {
@@ -116,6 +137,15 @@ export interface NativeTheme extends ScaledGodotTheme {
 
 /** ScrollBar's own corner radius (`default_theme.cpp:543-545` pass `10`, not `default_corner_radius`). */
 const SCROLL_BAR_CORNER_RADIUS = 10;
+
+/** SplitContainer/HSplitContainer/VSplitContainer's own `separation` (`default_theme.cpp:1258-1260` pass `12`, not `default_theme.cpp`'s BoxContainer `separation` of `4`). */
+const SPLIT_CONTAINER_SEPARATION = 12;
+
+/** `hsplitter.svg`/`vsplitter.svg`'s own short dimension (`scene/theme/icons/`) — both authored at 8px along the split axis, 48px across it. */
+const SPLIT_CONTAINER_GRABBER_EXTENT = 8;
+
+/** `autohide` (`default_theme.cpp:1264-1266`) — a plain boolean theme constant, not scaled. */
+const SPLIT_CONTAINER_AUTOHIDE = true;
 
 /** `NativeTheme` at a project's `gui/theme/default_theme_scale`. */
 export function nativeTheme(scale: number): NativeTheme {
@@ -153,6 +183,11 @@ export function nativeTheme(scale: number): NativeTheme {
           scrollBarCornerRadius
         ),
         grabber: flatStyleBox(STYLE_FILL.progress, buttonMargin, scrollBarCornerRadius),
+      },
+      splitContainer: {
+        separation: Math.round(SPLIT_CONTAINER_SEPARATION * scale),
+        grabberExtent: Math.round(SPLIT_CONTAINER_GRABBER_EXTENT * scale),
+        autohide: SPLIT_CONTAINER_AUTOHIDE,
       },
     },
   };

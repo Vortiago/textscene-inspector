@@ -26,6 +26,7 @@ import { styleBoxFlatGeometry } from './styleBoxFlatGeometry';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rect2 } from './rect';
 import { useControlClipPlanes } from './controlClipping';
+import { multiplyModulate, type RGBA } from '../../canvasItemModulate';
 
 export interface StyleBoxQuadProps {
   styleBox: StyleBoxFlatData;
@@ -41,7 +42,19 @@ export interface StyleBoxQuadProps {
 }
 
 export function StyleBoxQuad({ styleBox, rect, renderOrder }: StyleBoxQuadProps) {
-  const geometry = useMemo(() => buildGeometry(styleBox, rect), [styleBox, rect]);
+  // Godot space → three space, once, here.
+  //
+  // `styleBoxFlatGeometry` is a faithful transcription of `StyleBoxFlat::draw`,
+  // so it emits ABSOLUTE Godot coordinates: `rect.x`/`rect.y` are added onto
+  // every vertex and +Y points down. But the walker has already translated this
+  // painter's group to `[rect.x, -rect.y, 0]`, so passing the rect through
+  // unchanged offsets the box a second time and mirrors it vertically.
+  //
+  // Only the size reaches the geometry, and the y flip is applied by a wrapping
+  // group. Every Panel until now happened to be drawn at rect (0,0), where both
+  // errors vanish — which is also why no test caught it.
+  const size = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
+  const geometry = useMemo(() => buildGeometry(styleBox, size), [styleBox, size]);
   // R3F won't auto-dispose a geometry passed via `attach`; release on rebuild.
   useEffect(() => () => geometry?.dispose(), [geometry]);
   const clippingPlanes = useControlClipPlanes();
@@ -49,16 +62,18 @@ export function StyleBoxQuad({ styleBox, rect, renderOrder }: StyleBoxQuadProps)
   if (!geometry) return null;
 
   return (
-    <mesh renderOrder={renderOrder}>
-      <primitive object={geometry} attach="geometry" />
-      <meshBasicMaterial
-        vertexColors
-        transparent
-        depthWrite={false}
-        side={THREE.DoubleSide}
-        clippingPlanes={clippingPlanes as THREE.Plane[]}
-      />
-    </mesh>
+    <group scale={[1, -1, 1]}>
+      <mesh renderOrder={renderOrder}>
+        <primitive object={geometry} attach="geometry" />
+        <meshBasicMaterial
+          vertexColors
+          transparent
+          depthWrite={false}
+          side={THREE.DoubleSide}
+          clippingPlanes={clippingPlanes as THREE.Plane[]}
+        />
+      </mesh>
+    </group>
   );
 }
 
@@ -84,4 +99,23 @@ function linearizeColors(rgba: readonly number[]): Float32Array {
     out[i + 3] = rgba[i + 3]!;
   }
   return out;
+}
+
+/**
+ * Multiplies a composed tint into a StyleBox's TWO base colours, in raw sRGB.
+ *
+ * Shared rather than per-consumer: `styleBoxFlatGeometry` performs the single
+ * sRGB→linear conversion downstream, so multiplying after that point would
+ * double-convert — and that ordering is invisible at tint 1 and wrong
+ * everywhere else. Lives here, beside the component that draws the result,
+ * because `styleBoxFlat.ts` sits inside the solver's framework-free closure and
+ * cannot import the modulate helpers.
+ */
+export function tintStyleBox(styleBox: StyleBoxFlatData, tint: RGBA): StyleBoxFlatData {
+  if (tint.r === 1 && tint.g === 1 && tint.b === 1 && tint.a === 1) return styleBox;
+  return {
+    ...styleBox,
+    bgColor: multiplyModulate(styleBox.bgColor, tint),
+    borderColor: multiplyModulate(styleBox.borderColor, tint),
+  };
 }

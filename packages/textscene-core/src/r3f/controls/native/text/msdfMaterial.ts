@@ -15,6 +15,22 @@
  * reference: three.js clip planes are per-material state, and a later
  * mutation of the caller's array (say, a ScrollContainer resizing) must not
  * reach back into a material already built from an earlier snapshot of it.
+ *
+ * No `#extension GL_OES_standard_derivatives` pragma: a plain `ShaderMaterial`
+ * (this is one — `isRawShaderMaterial` is never set) is ALWAYS promoted to
+ * `#version 300 es` by three's own `WebGLProgram` (`RawShaderMaterial` is the
+ * only opt-out), so `fwidth`/`textureSize` are core ESSL3 built-ins needing no
+ * extension at all — and the directive would be actively wrong to keep: three
+ * prepends real function bodies (`sRGBTransferOETF` et al., for
+ * `outputColorSpace` handling) before this template's own source, so an
+ * `#extension` line here no longer sits before every non-preprocessor token
+ * once assembled, which ESSL3 hard-rejects ("extension directive must occur
+ * before any non-preprocessor tokens"). Confirmed by rendering a real WebGL2
+ * context (Chromium/SwiftShader): with the pragma present the fragment shader
+ * fails to compile and every glyph mesh draws nothing, silently, in every
+ * consumer of this file — caught only once a real browser (not the
+ * `@react-three/test-renderer` mock GL this module's own unit tests run
+ * under) attempted the first real render.
  */
 import * as THREE from 'three';
 
@@ -27,7 +43,6 @@ void main() {
 `;
 
 const FRAGMENT = /* glsl */ `
-#extension GL_OES_standard_derivatives : enable
 uniform sampler2D uMap;
 uniform vec3 uColor;
 uniform float uOpacity;

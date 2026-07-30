@@ -15,5 +15,7 @@ export function parseScrollContainer(
   const result: ScrollContainerProperties = { ...parseControl(heading, properties) };
   result.horizontalScrollMode = parseOptionalInt(properties.horizontal_scroll_mode);
   result.verticalScrollMode = parseOptionalInt(properties.vertical_scroll_mode);
+  result.scrollHorizontal = parseOptionalInt(properties.scroll_horizontal);
+  result.scrollVertical = parseOptionalInt(properties.scroll_vertical);
   return result;
 }

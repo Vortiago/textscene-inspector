@@ -1,8 +1,18 @@
-/** HSplitContainer registration — 2D-overlay DOM component. */
+/**
+ * HSplitContainer registration — 2D-overlay DOM component, plus the native
+ * (WebGL canvas) rect solve + painter. `./nativeSolver` registers the
+ * container-layout/minimum-size functions as a side effect of import.
+ */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { HSplitContainer } from './Component';
+import { HSplitContainerNative } from './NativeComponent';
+import './nativeSolver';
 
-controlComponentRegistry.register({ typeName: 'HSplitContainer', Component: HSplitContainer });
+controlComponentRegistry.register({
+  typeName: 'HSplitContainer',
+  Component: HSplitContainer,
+  Native: HSplitContainerNative,
+});
 
 export { HSplitContainer };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHECK_BOX_ICONS, OPTION_BUTTON_ICONS } from './themeIcons';
+import { CHECK_BOX_ICONS, OPTION_BUTTON_ICONS, SPLIT_CONTAINER_ICONS } from './themeIcons';
 
 const DATA_URL_PREFIX = 'data:image/svg+xml;base64,';
 
@@ -56,5 +56,27 @@ describe('OPTION_BUTTON_ICONS', () => {
     const { width, height } = svgSize(svg);
     expect(width).toBe(12);
     expect(height).toBe(12);
+  });
+});
+
+describe('SPLIT_CONTAINER_ICONS', () => {
+  it('hsplitter is 8x48 — default_theme.cpp:1244,1247 (HSplitContainer/SplitContainer h_grabber)', () => {
+    const svg = decodeSvg(SPLIT_CONTAINER_ICONS.hsplitter);
+    expect(svg).toContain('<svg');
+    const { width, height } = svgSize(svg);
+    expect(width).toBe(8);
+    expect(height).toBe(48);
+  });
+
+  it('vsplitter is 48x8 — default_theme.cpp:1245-1246 (VSplitContainer/SplitContainer v_grabber)', () => {
+    const svg = decodeSvg(SPLIT_CONTAINER_ICONS.vsplitter);
+    expect(svg).toContain('<svg');
+    const { width, height } = svgSize(svg);
+    expect(width).toBe(48);
+    expect(height).toBe(8);
+  });
+
+  it('the two icons are distinct data: URLs', () => {
+    expect(SPLIT_CONTAINER_ICONS.hsplitter).not.toBe(SPLIT_CONTAINER_ICONS.vsplitter);
   });
 });
