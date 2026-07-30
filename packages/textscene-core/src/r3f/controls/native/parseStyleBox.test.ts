@@ -1,0 +1,117 @@
+/**
+ * `parseStyleBox` — the SubResource reference chain (`parseResourceReference`
+ * + `findSubResource`, the same funnel `resolveStyleBoxCss` uses) resolved to
+ * a typed `StyleBoxFlatData` instead of CSS. Defaults are transcribed from
+ * `scene/resources/style_box_flat.h`/`.cpp` and `style_box.cpp::get_margin`
+ * (Godot 4.6.3) — see `native/styleBoxFlat.ts` for the field-by-field citation.
+ */
+import { describe, expect, it } from 'vitest';
+import { parseStyleBox } from './parseStyleBox';
+import type { TscnInternalResource } from '../../../parser/types';
+
+const resources: TscnInternalResource[] = [
+  {
+    id: 'StyleBoxFlat_full',
+    type: 'StyleBoxFlat',
+    data: {
+      bg_color: 'Color(1, 0, 0, 1)',
+      border_color: 'Color(0, 1, 0, 1)',
+      border_width_left: '2',
+      border_width_top: '3',
+      border_width_right: '4',
+      border_width_bottom: '5',
+      corner_radius_top_left: '6',
+      corner_radius_top_right: '7',
+      corner_radius_bottom_right: '8',
+      corner_radius_bottom_left: '9',
+      expand_margin_left: '1',
+      expand_margin_top: '2',
+      expand_margin_right: '3',
+      expand_margin_bottom: '4',
+      content_margin_left: '10',
+      content_margin_top: '11',
+      content_margin_right: '12',
+      content_margin_bottom: '13',
+      draw_center: 'false',
+      border_blend: 'true',
+    },
+  },
+  { id: 'StyleBoxFlat_empty', type: 'StyleBoxFlat', data: {} },
+  {
+    id: 'StyleBoxFlat_border_only',
+    type: 'StyleBoxFlat',
+    data: { border_width_left: '3', border_width_top: '3', border_width_right: '3', border_width_bottom: '3' },
+  },
+  { id: 'StyleBoxEmpty_x', type: 'StyleBoxEmpty', data: {} },
+  { id: 'StandardMaterial3D_m', type: 'StandardMaterial3D', data: {} },
+];
+
+describe('parseStyleBox', () => {
+  it('resolves every field of a fully-specified StyleBoxFlat SubResource', () => {
+    const box = parseStyleBox('SubResource("StyleBoxFlat_full")', resources);
+    expect(box).toEqual({
+      bgColor: { r: 1, g: 0, b: 0, a: 1 },
+      borderColor: { r: 0, g: 1, b: 0, a: 1 },
+      borderWidth: { left: 2, top: 3, right: 4, bottom: 5 },
+      cornerRadius: { topLeft: 6, topRight: 7, bottomRight: 8, bottomLeft: 9 },
+      expandMargin: { left: 1, top: 2, right: 3, bottom: 4 },
+      contentMargin: { left: 10, top: 11, right: 12, bottom: 13 },
+      drawCenter: false,
+      borderBlend: true,
+    });
+  });
+
+  it('falls back to Godot documented defaults for every absent key', () => {
+    // style_box_flat.h: bg_color default Color(0.6,0.6,0.6) [a defaults to 1],
+    // border_color default Color(0.8,0.8,0.8) [a defaults to 1]; border_width/
+    // corner_radius/expand_margin default 0 per side; draw_center default
+    // true; blend_border (border_blend) default false.
+    const box = parseStyleBox('SubResource("StyleBoxFlat_empty")', resources);
+    expect(box).toEqual({
+      bgColor: { r: 0.6, g: 0.6, b: 0.6, a: 1 },
+      borderColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 },
+      borderWidth: { left: 0, top: 0, right: 0, bottom: 0 },
+      cornerRadius: { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 },
+      expandMargin: { left: 0, top: 0, right: 0, bottom: 0 },
+      contentMargin: { left: 0, top: 0, right: 0, bottom: 0 },
+      drawCenter: true,
+      borderBlend: false,
+    });
+  });
+
+  it('falls back content_margin to the matching border_width when content_margin is absent (the -1 sentinel)', () => {
+    // style_box.cpp::get_margin: content_margin[side] < 0 (default -1) reads
+    // through get_style_margin(side), which StyleBoxFlat overrides to return
+    // border_width[side] (style_box_flat.cpp::get_style_margin).
+    const box = parseStyleBox('SubResource("StyleBoxFlat_border_only")', resources);
+    expect(box?.contentMargin).toEqual({ left: 3, top: 3, right: 3, bottom: 3 });
+  });
+
+  it('degrades to null for an absent (undefined) ref rather than throwing', () => {
+    expect(parseStyleBox(undefined, resources)).toBeNull();
+  });
+
+  it('degrades to null for a ref that is not a resource reference at all', () => {
+    expect(parseStyleBox('not-a-ref', resources)).toBeNull();
+  });
+
+  it('degrades to null for an ExtResource ref (only SubResources resolve)', () => {
+    expect(parseStyleBox('ExtResource("1_abc")', resources)).toBeNull();
+  });
+
+  it('degrades to null for an unknown SubResource id', () => {
+    expect(parseStyleBox('SubResource("StyleBoxFlat_nope")', resources)).toBeNull();
+  });
+
+  it('degrades to null when the id resolves to a non-StyleBoxFlat SubResource', () => {
+    expect(parseStyleBox('SubResource("StandardMaterial3D_m")', resources)).toBeNull();
+  });
+
+  it('degrades to null for StyleBoxEmpty (no fill/border data to read)', () => {
+    expect(parseStyleBox('SubResource("StyleBoxEmpty_x")', resources)).toBeNull();
+  });
+
+  it('degrades to null when the resource list is empty', () => {
+    expect(parseStyleBox('SubResource("StyleBoxFlat_full")', [])).toBeNull();
+  });
+});

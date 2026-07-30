@@ -52,7 +52,7 @@ would draw the plain grabber too.
 ## Linting
 
 <!-- lint:begin HSlider -->
-Strict parsing format-checks the inherited set (28 inherited from Control); `HSlider` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (33 inherited from Control); `HSlider` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -1565,6 +1565,10 @@
           "declaredOn": "Control"
         },
         {
+          "property": "light_mask",
+          "declaredOn": "Control"
+        },
+        {
           "property": "modulate",
           "declaredOn": "Control"
         },
@@ -1605,6 +1609,10 @@
           "declaredOn": "Control"
         },
         {
+          "property": "show_behind_parent",
+          "declaredOn": "Control"
+        },
+        {
           "property": "size_flags_horizontal",
           "declaredOn": "Control"
         },
@@ -1614,6 +1622,14 @@
         },
         {
           "property": "size_flags_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "texture_filter",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "texture_repeat",
           "declaredOn": "Control"
         },
         {
@@ -1638,6 +1654,10 @@
         },
         {
           "property": "visible",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "z_index",
           "declaredOn": "Control"
         }
       ],
@@ -1879,6 +1899,10 @@
           "declaredOn": "Control"
         },
         {
+          "property": "light_mask",
+          "declaredOn": "Control"
+        },
+        {
           "property": "modulate",
           "declaredOn": "Control"
         },
@@ -1919,6 +1943,10 @@
           "declaredOn": "Control"
         },
         {
+          "property": "show_behind_parent",
+          "declaredOn": "Control"
+        },
+        {
           "property": "size_flags_horizontal",
           "declaredOn": "Control"
         },
@@ -1928,6 +1956,14 @@
         },
         {
           "property": "size_flags_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "texture_filter",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "texture_repeat",
           "declaredOn": "Control"
         },
         {
@@ -1952,6 +1988,10 @@
         },
         {
           "property": "visible",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "z_index",
           "declaredOn": "Control"
         }
       ],
@@ -4041,6 +4081,10 @@
           "declaredOn": "Control"
         },
         {
+          "property": "light_mask",
+          "declaredOn": "Control"
+        },
+        {
           "property": "modulate",
           "declaredOn": "Control"
         },
@@ -4081,6 +4125,10 @@
           "declaredOn": "Control"
         },
         {
+          "property": "show_behind_parent",
+          "declaredOn": "Control"
+        },
+        {
           "property": "size_flags_horizontal",
           "declaredOn": "Control"
         },
@@ -4090,6 +4138,14 @@
         },
         {
           "property": "size_flags_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "texture_filter",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "texture_repeat",
           "declaredOn": "Control"
         },
         {
@@ -4114,6 +4170,10 @@
         },
         {
           "property": "visible",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "z_index",
           "declaredOn": "Control"
         }
       ],
@@ -4619,6 +4679,10 @@
           "declaredOn": "Control"
         },
         {
+          "property": "light_mask",
+          "declaredOn": "Control"
+        },
+        {
           "property": "modulate",
           "declaredOn": "Control"
         },
@@ -4659,6 +4723,10 @@
           "declaredOn": "Control"
         },
         {
+          "property": "show_behind_parent",
+          "declaredOn": "Control"
+        },
+        {
           "property": "size_flags_horizontal",
           "declaredOn": "Control"
         },
@@ -4668,6 +4736,14 @@
         },
         {
           "property": "size_flags_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "texture_filter",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "texture_repeat",
           "declaredOn": "Control"
         },
         {
@@ -4692,6 +4768,10 @@
         },
         {
           "property": "visible",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "z_index",
           "declaredOn": "Control"
         }
       ],

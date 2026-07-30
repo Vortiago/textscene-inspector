@@ -52,9 +52,10 @@ export interface World2DCanvasProps {
   /**
    * Mount the native (WebGL) Control layer as a sibling of `<NodeDispatcher>`
    * instead of leaving Control drawing to the DOM `<ControlOverlay>`
-   * (`Canvas2DStage`, dev-only `useNativeControls` flag). For now this
-   * layer is a placeholder that draws nothing — the flag only exercises the
-   * mount seam.
+   * (`Canvas2DStage`, dev-only `useNativeControls` flag). Still missing every
+   * per-type painter (an unregistered type draws `<ControlFallback>`'s
+   * outline) and the ordered viewport-pass driver for nested SubViewports —
+   * those land in later packets.
    */
   nativeControls?: boolean;
 }
@@ -101,7 +102,7 @@ export function World2DContents({
             // Inside the lighting provider because a Control is a CanvasItem
             // like any other, so a 2D light reaches it.
             <Suspense fallback={null}>
-              <ControlCanvasLayer />
+              <ControlCanvasLayer nodes={nodes} />
             </Suspense>
           )}
         </CanvasLighting2DProvider>
@@ -116,16 +117,20 @@ export function World2DCanvas(props: World2DCanvasProps) {
       orthographic
       camera={{ position: [0, 0, 1000], near: 0.1, far: 4000 }}
       gl={{ alpha: true }}
-      // `flat` = `NoToneMapping`. Godot never tonemaps a canvas: the RD
-      // renderer runs `_render_buffers_post_process_and_tonemap` on the 3D
-      // buffers and composites canvas items into the viewport AFTER it, so a
-      // Sprite2D's albedo reaches the framebuffer as authored. Without this
-      // @react-three/fiber's default (ACES Filmic) applies to every 2D
-      // material, and — because a viewport surface only ever exists in this
-      // workspace — to the offscreen pass of a container's 3D sub-viewport
-      // too, which `<SubViewport>` deliberately leaves on the renderer's live
-      // curve. That is the one canvas where "the parent viewport's curve" has
-      // no Environment behind it, so the honest curve is none.
+      // Godot never tone-maps a canvas: the RD renderer runs
+      // `_render_buffers_post_process_and_tonemap` on the 3D buffers and
+      // composites canvas items into the viewport AFTER it, so authored 2D
+      // colour reaches the framebuffer as written. `flat` = `NoToneMapping`;
+      // without it @react-three/fiber defaults to ACES Filmic, which lifted
+      // highlights and desaturated every fill in this stage.
+      //
+      // It reaches further than the stage's own content: a viewport surface
+      // only ever exists in this workspace, so the default also applied to the
+      // offscreen pass of a container's 3D sub-viewport, which the
+      // `SubViewport` component deliberately leaves on the renderer's live
+      // curve. This is the one
+      // canvas where "the parent viewport's curve" has no Environment behind
+      // it, so the honest curve is none.
       flat
       // Fill the stage and stay transparent to pointer input so the stage's
       // own drag-to-pan / wheel-to-zoom handlers keep working.

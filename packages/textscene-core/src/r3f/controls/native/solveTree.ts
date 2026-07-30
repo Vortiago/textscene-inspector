@@ -9,42 +9,12 @@
  */
 
 import type { TscnNode } from '../../../parser/types';
-import type { ControlColor } from '../../../nodes/2d/ui/control/types';
 import type { Vec2 } from './rect';
+import type { StyleBoxFlatData } from './styleBoxFlat';
 
-/**
- * A resolved `StyleBoxFlat`, numbers only — the shape `native/parseStyleBox.ts`
- * (packet P5) produces and `native/styleBoxFlatGeometry.ts` consumes. Defined
- * here (rather than in P5) because `SolveNode.styleBoxes` already needs the
- * shape: a container's minimum-size math (e.g. PanelContainer's content
- * margins) reads a StyleBox's numbers before P5's parser or geometry builder
- * exist.
- *
- * Field names and defaults transcribed from
- * `scene/resources/style_box_flat.h`/`.cpp` (Godot 4.6.3):
- *  - `bg_color` default `Color(0.6, 0.6, 0.6)` (`style_box_flat.h:36`).
- *  - `border_color` default `Color(0.8, 0.8, 0.8)` (`:38`).
- *  - `border_width`, `corner_radius`, `expand_margin` are `real_t[4]`, all
- *    zero by default (`:40-42`), indexed by `Side` (LEFT/TOP/RIGHT/BOTTOM) for
- *    the first two and `Corner` (TOP_LEFT/TOP_RIGHT/BOTTOM_RIGHT/BOTTOM_LEFT)
- *    for radius.
- *  - `content_margin` lives on the `StyleBox` base (`style_box.h:43`), default
- *    `-1` per side meaning "ask `get_style_margin`", which `StyleBoxFlat`
- *    overrides to fall back to the matching `border_width`
- *    (`style_box_flat.cpp::get_style_margin`).
- *  - `draw_center` default `true`, `blend_border` (`border_blend` in the
- *    scene-file property name) default `false` (`style_box_flat.h:44-45`).
- */
-export interface StyleBoxFlatData {
-  bgColor: ControlColor;
-  borderColor: ControlColor;
-  borderWidth: { left: number; top: number; right: number; bottom: number };
-  cornerRadius: { topLeft: number; topRight: number; bottomRight: number; bottomLeft: number };
-  expandMargin: { left: number; top: number; right: number; bottom: number };
-  contentMargin: { left: number; top: number; right: number; bottom: number };
-  drawCenter: boolean;
-  borderBlend: boolean;
-}
+// Re-exported for existing importers of the type from its former home —
+// `native/styleBoxFlat.ts` is the single definition now.
+export type { StyleBoxFlatData };
 
 /**
  * One Control (or 2D-UI node) in the live, already-collapsed scene tree —

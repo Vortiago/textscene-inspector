@@ -14,7 +14,26 @@
  */
 
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v } from '../../../../linter/validators/index.js';
+import { v, layerBitmask } from '../../../../linter/validators/index.js';
+
+/** `CanvasItem::TextureFilter` (`scene/main/canvas_item.h:52-60`). */
+const CANVAS_ITEM_TEXTURE_FILTER = {
+  0: 'PARENT_NODE',
+  1: 'NEAREST',
+  2: 'LINEAR',
+  3: 'NEAREST_WITH_MIPMAPS',
+  4: 'LINEAR_WITH_MIPMAPS',
+  5: 'NEAREST_WITH_MIPMAPS_ANISOTROPIC',
+  6: 'LINEAR_WITH_MIPMAPS_ANISOTROPIC',
+};
+
+/** `CanvasItem::TextureRepeat` (`scene/main/canvas_item.h:63-69`). */
+const CANVAS_ITEM_TEXTURE_REPEAT = {
+  0: 'PARENT_NODE',
+  1: 'DISABLED',
+  2: 'ENABLED',
+  3: 'MIRROR',
+};
 
 validatorRegistry.registerAll('Control', {
   // CanvasItem visibility / tint.
@@ -45,6 +64,15 @@ validatorRegistry.registerAll('Control', {
   size_flags_vertical: v.int('size_flags_vertical', { min: 0 }),
   size_flags_stretch_ratio: v.nonNegativeFloat('size_flags_stretch_ratio'),
   custom_minimum_size: v.vector2('custom_minimum_size'),
+
+  // CanvasItem draw-order + sampler properties. `z_index`'s -4096..4096 is a
+  // PROPERTY_HINT_RANGE for the inspector slider only, not a setter guard, so
+  // (like Node2D's own z_index validator) it stays unbounded here too.
+  z_index: v.strictInt('z_index'),
+  show_behind_parent: v.boolean('show_behind_parent'),
+  light_mask: layerBitmask('light_mask'),
+  texture_filter: v.enumInt('texture_filter', 0, 6, CANVAS_ITEM_TEXTURE_FILTER),
+  texture_repeat: v.enumInt('texture_repeat', 0, 3, CANVAS_ITEM_TEXTURE_REPEAT),
 
   // Per-instance theme overrides (grouped keys → one validator each).
   'theme_override_colors/*': v.color('theme_override_colors'),

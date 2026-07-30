@@ -1,0 +1,171 @@
+/**
+ * `shapeText` — a framework-free port of Godot's Label line-shaping, against
+ * the vendored Open Sans SemiBold atlas/metrics (packet P10). Every expected
+ * pixel width below is hand-derived from `OPEN_SANS_ATLAS_GLYPHS[ch].xadvance`
+ * scaled to the target font size (`fontSizePx / OPEN_SANS_ATLAS_INFO.fontSize`,
+ * the atlas's own bake size of 42) — an independent source of truth from the
+ * line-breaking algorithm under test, never the algorithm's own arithmetic
+ * fed back at itself.
+ *
+ * Citations:
+ *   scene/gui/label.cpp :: Label::_shape() (~209-225) -- AUTOWRAP_* -> break
+ *     flag mapping (BREAK_WORD_BOUND / BREAK_GRAPHEME_BOUND / BREAK_ADAPTIVE),
+ *     ORed with `autowrap_flags_trim`.
+ *   scene/gui/label.h:45 -- Label's default trim flags,
+ *     BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES, applied even
+ *     when a scene sets no trim flags of its own.
+ *   servers/text/text_server.cpp :: TextServer::shaped_text_get_line_breaks()
+ *     (~1024-1209) -- the scalar-width overflow/backtrack/tail algorithm
+ *     ported below (the overload Label actually calls, not the multi-chunk
+ *     `_adv` sibling).
+ *   modules/text_server_adv/text_server_adv.cpp:1515-1516 -- FreeType's
+ *     pixel-quantized ascent/descent, each ceiling-rounded independently
+ *     before summing (see `openSansMetrics.ts#getLinePitchPx`).
+ *   text_server.cpp:1174-1176 -- BREAK_ADAPTIVE, live only while `wordCount`
+ *     is still zero on the current line (no word boundary found yet).
+ */
+import { afterEach, describe, expect, it } from 'vitest';
+import { AutowrapMode, shapeText } from './textLayout';
+import { OPEN_SANS_METRICS } from './openSansMetrics';
+
+/** Every line's rendered text, in order — the shape most tests care about. */
+function lineTexts(text: string, boxWidthPx: number, autowrapMode: AutowrapMode, fontSizePx = 16): string[] {
+  return shapeText(text, { fontSizePx, boxWidthPx, autowrapMode }).lines.map((l) => l.text);
+}
+
+describe('shapeText — autowrap OFF', () => {
+  it('never soft-wraps, however narrow the box', () => {
+    expect(lineTexts('AAAA BBBB CCCC', 5, AutowrapMode.OFF)).toEqual(['AAAA BBBB CCCC']);
+  });
+
+  it('still breaks on an explicit newline (Label always paragraph-splits on it)', () => {
+    expect(lineTexts('AAAA\nBBBB', 0, AutowrapMode.OFF)).toEqual(['AAAA', 'BBBB']);
+  });
+});
+
+describe('shapeText — autowrap ARBITRARY (BREAK_GRAPHEME_BOUND)', () => {
+  it('wraps at any glyph boundary, irrespective of word count', () => {
+    // 'A' xadvance 28 @ bake 42 -> 28*16/42 = 10.666...7 px/glyph at size 16.
+    // width 50 fits 4 (42.67px) but not 5 (53.33px) -> 4,4,2.
+    expect(lineTexts('AAAAAAAAAA', 50, AutowrapMode.ARBITRARY)).toEqual(['AAAA', 'AAAA', 'AA']);
+  });
+});
+
+describe('shapeText — autowrap WORD (BREAK_WORD_BOUND, no BREAK_ADAPTIVE)', () => {
+  it('breaks only at spaces — an over-wide word overflows instead of splitting', () => {
+    // No BREAK_ADAPTIVE fallback: since 'internationalization' never contains a
+    // space, no safe break exists inside it, so it rides past the 60px box
+    // whole rather than breaking mid-word (that is WORD_SMART's job, below).
+    expect(lineTexts('short internationalization word', 60, AutowrapMode.WORD)).toEqual([
+      'short',
+      'internationalization',
+      'word',
+    ]);
+  });
+});
+
+describe('shapeText — autowrap WORD_SMART (BREAK_WORD_BOUND | BREAK_ADAPTIVE | BREAK_MANDATORY)', () => {
+  it('breaks at the word boundary that keeps every line under the box width', () => {
+    // AAAA=42.667, ' '=4.190, BBBB=42.667 -> "AAAA BBBB"=89.52 (<90) but the
+    // trailing space of the NEXT word's lookahead pushes over 90 first.
+    expect(lineTexts('AAAA BBBB CCCC', 90, AutowrapMode.WORD_SMART)).toEqual(['AAAA', 'BBBB CCCC']);
+  });
+
+  it('falls back to BREAK_ADAPTIVE mid-word only while no word has fit yet on the line', () => {
+    expect(lineTexts('short internationalization word', 60, AutowrapMode.WORD_SMART)).toEqual([
+      'short',
+      'interna',
+      'tionaliz',
+      'ation',
+      'word',
+    ]);
+  });
+
+  it('trims the edge space at a soft break from the emitted line, per Label.h:45 defaults', () => {
+    const lines = shapeText('AAAA BBBB CCCC', {
+      fontSizePx: 16,
+      boxWidthPx: 90,
+      autowrapMode: AutowrapMode.WORD_SMART,
+    }).lines;
+    expect(lines[0]!.text.endsWith(' ')).toBe(false);
+    expect(lines[0]!.text.startsWith(' ')).toBe(false);
+  });
+
+  it("but the trimmed space's advance still counted toward the width that decided the break", () => {
+    // If the space's advance were dropped before the break decision, "AAAA B"
+    // (46.857+10.667=57.52) would still be well under 90 and the algorithm
+    // would keep pulling "BBBB" onto line 1 too eagerly at a narrower width —
+    // pinned instead at the exact width (90) where S2 measured the real
+    // Godot break, which only holds if the space's advance was counted.
+    expect(lineTexts('AAAA BBBB CCCC', 90, AutowrapMode.WORD_SMART)).toEqual(['AAAA', 'BBBB CCCC']);
+  });
+});
+
+describe('shapeText — uppercase transform', () => {
+  it('shapes the UPPERCASED string, not the source casing', () => {
+    const layout = shapeText('abc', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, uppercase: true });
+    expect(layout.lines[0]!.text).toBe('ABC');
+    expect(layout.lines[0]!.glyphs.map((g) => g.char)).toEqual(['A', 'B', 'C']);
+  });
+
+  it('leaves the string as-is when uppercase is not requested', () => {
+    const layout = shapeText('abc', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    expect(layout.lines[0]!.text).toBe('abc');
+  });
+});
+
+describe('shapeText — glyph pen positions', () => {
+  it('places the first glyph at x=0 and advances by exactly its own advance', () => {
+    const layout = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    const [a, b] = layout.lines[0]!.glyphs;
+    expect(a!.x).toBe(0);
+    expect(b!.x).toBeCloseTo(a!.advance, 10);
+    // 'A' xadvance 28 @ bake 42 -> 28*16/42.
+    expect(a!.advance).toBeCloseTo((28 * 16) / 42, 10);
+  });
+});
+
+describe('shapeText — kerning plumbing', () => {
+  // OpenSans_SemiBold carries only mark/mkmk GPOS features -- zero ASCII kern
+  // pairs -- but the table must still be wired in generically (per packet P10's
+  // vendoring notes) so a future bold/italic synthesis or a different theme
+  // font, which DOES have pairs, does not need a shape change downstream.
+  // Injecting a synthetic pair into the real (mutable, exported) metrics
+  // object is how that plumbing is exercised without inventing a second,
+  // parallel metrics format just for this test.
+  afterEach(() => {
+    delete OPEN_SANS_METRICS.kerning.AB;
+  });
+
+  it('folds a kerning adjustment for an adjacent pair into the pen advance', () => {
+    // -256 design units @ unitsPerEm 2048 -> -256*16/2048 = -2px at size 16.
+    OPEN_SANS_METRICS.kerning.AB = -256;
+    const layout = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    const [a, b] = layout.lines[0]!.glyphs;
+    const bareAdvance = (28 * 16) / 42;
+    expect(a!.advance).toBeCloseTo(bareAdvance - 2, 10);
+    expect(b!.x).toBeCloseTo(bareAdvance - 2, 10);
+  });
+});
+
+describe('shapeText — line pitch', () => {
+  it('pins line height at font size 16 to 26px (ceil(ascent)+ceil(descent)+3, not the raw float sum of 24.79)', () => {
+    const layout = shapeText('X', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    expect(layout.linePitchPx).toBe(26);
+  });
+
+  it('reports total height as lines.length * linePitchPx', () => {
+    const layout = shapeText('AAAA\nBBBB\nCCCC', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    expect(layout.lines).toHaveLength(3);
+    expect(layout.heightPx).toBe(3 * 26);
+  });
+});
+
+describe('shapeText — empty text', () => {
+  it('shapes to exactly one empty line', () => {
+    const layout = shapeText('', { fontSizePx: 16, boxWidthPx: 100, autowrapMode: AutowrapMode.WORD_SMART });
+    expect(layout.lines).toHaveLength(1);
+    expect(layout.lines[0]!.text).toBe('');
+    expect(layout.heightPx).toBe(26);
+  });
+});

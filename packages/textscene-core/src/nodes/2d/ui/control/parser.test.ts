@@ -49,4 +49,35 @@ describe('parseControl', () => {
     const p = parseControl(heading('Control', { name: 'C' }), { visible: 'false' });
     expect(p.visible).toBe(false);
   });
+
+  describe('CanvasItem draw-order + sampler properties', () => {
+    it('parses explicit z_index, show_behind_parent, light_mask, texture_filter, texture_repeat', () => {
+      const p = parseControl(heading('Control', { name: 'Badge' }), {
+        z_index: '3',
+        show_behind_parent: 'true',
+        light_mask: '3',
+        texture_filter: '2',
+        texture_repeat: '1',
+      });
+      expect(p.zIndex).toBe(3);
+      expect(p.showBehindParent).toBe(true);
+      expect(p.lightMask).toBe(3);
+      expect(p.textureFilter).toBe(2);
+      expect(p.textureRepeat).toBe(1);
+    });
+
+    it('defaults to Godot values when absent (scene/main/canvas_item.h:98,101,113,123-124)', () => {
+      const p = parseControl(heading('Control', { name: 'Plain' }), {});
+      // z_index (canvas_item.h:101): `int z_index = 0;`
+      expect(p.zIndex).toBe(0);
+      // show_behind_parent (canvas_item.h:113): `bool behind = false;`
+      expect(p.showBehindParent).toBe(false);
+      // light_mask (canvas_item.h:98): `int light_mask = 1;`
+      expect(p.lightMask).toBe(1);
+      // texture_filter (canvas_item.h:123): `TextureFilter texture_filter = TEXTURE_FILTER_PARENT_NODE;` (0)
+      expect(p.textureFilter).toBe(0);
+      // texture_repeat (canvas_item.h:124): `TextureRepeat texture_repeat = TEXTURE_REPEAT_PARENT_NODE;` (0)
+      expect(p.textureRepeat).toBe(0);
+    });
+  });
 });

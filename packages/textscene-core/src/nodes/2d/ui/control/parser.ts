@@ -3,7 +3,7 @@
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { ControlProperties, ControlColor } from './types';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
-import { parseOptionalFloat, parseOptionalVector2 } from '../../../../parser/valueParsers';
+import { intOr, parseOptionalFloat, parseOptionalVector2 } from '../../../../parser/valueParsers';
 
 /** Collect `theme_override_<category>/<name> = value` into the four typed maps. */
 function parseThemeOverrides(properties: Record<string, string>): Partial<ControlProperties> {
@@ -88,6 +88,24 @@ export function parseControl(
   result.scale = parseOptionalVector2(properties.scale);
   result.pivotOffset = parseOptionalVector2(properties.pivot_offset);
   result.pivotOffsetRatio = parseOptionalVector2(properties.pivot_offset_ratio);
+
+  // CanvasItem draw-order + sampler properties (mirrors node2d/parser.ts's
+  // z_index/show_behind_parent/light_mask reads: same helpers, same Godot
+  // defaults). Never left undefined — an unset Control has these values in
+  // real Godot too, so the parsed type should not lie about it.
+  result.zIndex = intOr(properties.z_index, 0);
+  result.showBehindParent = properties.show_behind_parent === 'true';
+  result.lightMask = intOr(properties.light_mask, 1, `${result.name || 'Control'}.light_mask`);
+  result.textureFilter = intOr(
+    properties.texture_filter,
+    0,
+    `${result.name || 'Control'}.texture_filter`
+  );
+  result.textureRepeat = intOr(
+    properties.texture_repeat,
+    0,
+    `${result.name || 'Control'}.texture_repeat`
+  );
 
   Object.assign(result, parseThemeOverrides(properties));
 

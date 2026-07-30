@@ -35,7 +35,10 @@ describe('World2DCanvas tone mapping', () => {
   it('passes `flat` to <Canvas> so R3F selects NoToneMapping', () => {
     // `<Canvas\s`, not `<Canvas\b` — the file's own docstring mentions
     // "`<Canvas>` host", which would otherwise match first and never carry the prop.
-    const canvasTag = /<Canvas\s[\s\S]*?>/.exec(SOURCE)?.[0] ?? '';
+    // Line comments are stripped first: the props are interleaved with prose,
+    // and a `>` inside one (a JSX element named in passing) ends the non-greedy
+    // match early, truncating the tag before the prop this asserts on.
+    const canvasTag = /<Canvas\s[\s\S]*?>/.exec(SOURCE.replace(/\/\/.*$/gm, ''))?.[0] ?? '';
     expect(canvasTag).not.toBe('');
     expect(canvasTag).toMatch(/^\s*flat\s*$/m);
   });

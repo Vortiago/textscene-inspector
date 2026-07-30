@@ -1,0 +1,222 @@
+/**
+ * `styleBoxFlatGeometry` — ported from `scene/resources/style_box_flat.cpp`'s
+ * `StyleBoxFlat::draw` and its `draw_rounded_rectangle` helper (Godot 4.6.3),
+ * restricted to this packet's scope: fill, per-corner radii, per-edge
+ * borders, `border_blend`, `draw_center`, expand margins. Anti-aliasing,
+ * `skew` and the drop shadow are out of scope (not in `StyleBoxFlatData`), so
+ * every expected number below traces the NON-anti-aliased branch of `draw()`
+ * (`aa_on` forced false) with `skew = (0, 0)`.
+ *
+ * Every expected vertex position/count in this file was hand-derived by
+ * tracing `draw_rounded_rectangle`'s corner-arc formula and the adjacent
+ * `adapt_values`/`set_inner_corner_radius`/`set_corner_scale` helpers against
+ * each fixture's own numbers — an independent derivation from the cited
+ * source, not a re-run of this module's own code.
+ */
+import { describe, expect, it } from 'vitest';
+import { styleBoxFlatGeometry } from './styleBoxFlatGeometry';
+import type { StyleBoxFlatData } from './styleBoxFlat';
+
+const RED = { r: 1, g: 0, b: 0, a: 1 };
+const GREEN = { r: 0, g: 1, b: 0, a: 1 };
+
+const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
+const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
+
+function box(overrides: Partial<StyleBoxFlatData>): StyleBoxFlatData {
+  return {
+    bgColor: RED,
+    borderColor: GREEN,
+    borderWidth: { ...ZERO_SIDES },
+    cornerRadius: { ...ZERO_CORNERS },
+    expandMargin: { ...ZERO_SIDES },
+    contentMargin: { ...ZERO_SIDES },
+    drawCenter: true,
+    borderBlend: false,
+    ...overrides,
+  };
+}
+
+describe('styleBoxFlatGeometry', () => {
+  it('a sharp rect (no radius, no border): 8 duplicated-corner vertices, 6 triangles, all bg_color', () => {
+    // style_box_flat.cpp::draw: draw_border=false (border_width all 0);
+    // draw_rounded_rectangle: adapted_corner_detail = 1 (no corner has
+    // radius > 0) -> ring_vert_count = 4 corners * (1+1) details = 8 (not
+    // doubled: is_filled -> draw_border=false inside the helper). Each
+    // corner's 2 detail steps collapse to the SAME point (radius 0), so the
+    // 8 vertices are the 4 rect corners, each written twice. stripes_count =
+    // 8/2 - 1 = 3 -> 3*6 = 18 indices (2 of the 3 stripes are genuinely
+    // degenerate zero-area triangles; the middle stripe's 2 triangles are the
+    // rect's own diagonal split — together they still cover the full rect).
+    const geo = styleBoxFlatGeometry(box({}), { x: 0, y: 0, w: 100, h: 50 });
+
+    expect(geo.positions).toHaveLength(8 * 3);
+    expect(geo.indices).toHaveLength(18);
+    expect(geo.colors).toHaveLength(8 * 4);
+
+    const corners = [
+      [0, 0],
+      [0, 0],
+      [100, 0],
+      [100, 0],
+      [100, 50],
+      [100, 50],
+      [0, 50],
+      [0, 50],
+    ];
+    for (let i = 0; i < 8; i++) {
+      expect(geo.positions[i * 3]).toBeCloseTo(corners[i]![0]!);
+      expect(geo.positions[i * 3 + 1]).toBeCloseTo(corners[i]![1]!);
+      expect(geo.positions[i * 3 + 2]).toBe(0);
+      expect(geo.colors.slice(i * 4, i * 4 + 4)).toEqual([RED.r, RED.g, RED.b, RED.a]);
+    }
+  });
+
+  it('a uniform corner radius: 36 vertices (corner_detail=8), rounded-corner landmark positions', () => {
+    // corner_radius[*] = 10 on a 100x50 rect: no edge overflow (10+10=20 <
+    // 100 and < 50), so scale = 1 and radii are unchanged. adapted_corner_detail
+    // = 8 (a radius is > 0) -> 9 points/corner * 4 corners = 36 vertices
+    // (not doubled: draw_center only, no border). Corner 0 (TL, centre
+    // (10,10)) sweeps angle PI..3PI/2 -> (0,10) to (10,0); corner 1 (TR,
+    // centre (90,10)) sweeps 3PI/2..2PI -> (90,0) to (100,10).
+    const geo = styleBoxFlatGeometry(
+      box({ cornerRadius: { topLeft: 10, topRight: 10, bottomRight: 10, bottomLeft: 10 } }),
+      { x: 0, y: 0, w: 100, h: 50 }
+    );
+
+    expect(geo.positions).toHaveLength(36 * 3);
+    expect(geo.colors).toHaveLength(36 * 4);
+
+    const tlFirst = 0;
+    const tlLast = 8;
+    expect(geo.positions[tlFirst * 3]).toBeCloseTo(0);
+    expect(geo.positions[tlFirst * 3 + 1]).toBeCloseTo(10);
+    expect(geo.positions[tlLast * 3]).toBeCloseTo(10);
+    expect(geo.positions[tlLast * 3 + 1]).toBeCloseTo(0);
+
+    const trFirst = 9;
+    const trLast = 17;
+    expect(geo.positions[trFirst * 3]).toBeCloseTo(90);
+    expect(geo.positions[trFirst * 3 + 1]).toBeCloseTo(0);
+    expect(geo.positions[trLast * 3]).toBeCloseTo(100);
+    expect(geo.positions[trLast * 3 + 1]).toBeCloseTo(10);
+
+    for (let i = 0; i < 36; i++) {
+      expect(geo.colors.slice(i * 4, i * 4 + 4)).toEqual([RED.r, RED.g, RED.b, RED.a]);
+    }
+  });
+
+  it('per-corner radii: each corner arcs around its OWN centre/radius, corner_detail stays 8 even where a corner is sharp', () => {
+    // 100x100 rect, radii TL=10 TR=20 BR=5 BL=0. No edge sums overlap
+    // (max pair sum 30 < 100), so scale = 1 throughout. adapted_corner_detail
+    // = 8 because SOME corner has radius > 0 (a global flag, not per-corner) —
+    // so the sharp BL corner still gets 9 (duplicated) points, same as a
+    // sharp rect's corners collapse in the first test.
+    //  TL centre (10,10):  first (0,10),  last (10,0)
+    //  TR centre (80,20):  first (80,0),  last (100,20)
+    //  BR centre (95,95):  first (100,95), last (95,100)
+    //  BL centre (0,100), radius 0: first == last == (0,100)
+    const geo = styleBoxFlatGeometry(
+      box({ cornerRadius: { topLeft: 10, topRight: 20, bottomRight: 5, bottomLeft: 0 } }),
+      { x: 0, y: 0, w: 100, h: 100 }
+    );
+
+    expect(geo.positions).toHaveLength(36 * 3);
+
+    const at = (i: number, expected: [number, number]) => {
+      expect(geo.positions[i * 3]).toBeCloseTo(expected[0]);
+      expect(geo.positions[i * 3 + 1]).toBeCloseTo(expected[1]);
+    };
+    at(0, [0, 10]); // TL first
+    at(8, [10, 0]); // TL last
+    at(9, [80, 0]); // TR first
+    at(17, [100, 20]); // TR last
+    at(18, [100, 95]); // BR first
+    at(26, [95, 100]); // BR last
+    at(27, [0, 100]); // BL first
+    at(35, [0, 100]); // BL last (duplicate, radius 0)
+  });
+
+  it('a border with border_blend: inner (fill-boundary) ring vertices carry bg_color, outer vertices carry border_color', () => {
+    // 100x50 rect, uniform 5px border, sharp corners, draw_center + border_blend
+    // both true. border_color_inner = draw_center ? bg_color : transparent
+    // (style_box_flat.cpp:475-477) when blend_border is on — so the border
+    // ring's INNER edge (touching the infill) is bg_color and its OUTER edge
+    // (the style rect boundary) is border_color; three's vertex-colour
+    // interpolation across the ring's triangles is what blends one into the
+    // other, with no shader involved.
+    const geo = styleBoxFlatGeometry(
+      box({
+        borderWidth: { left: 5, top: 5, right: 5, bottom: 5 },
+        borderBlend: true,
+      }),
+      { x: 0, y: 0, w: 100, h: 50 }
+    );
+
+    // draw_rounded_rectangle for the border ring: adapted_corner_detail = 1
+    // (no radius), draw_border = true -> ring_vert_count = 4*(1+1)*2 = 16,
+    // vertices alternate INNER (idx even), OUTER (idx odd) per detail step.
+    const ring = { positions: geo.positions.slice(0, 16 * 3), colors: geo.colors.slice(0, 16 * 4) };
+    for (let i = 0; i < 16; i += 2) {
+      expect(ring.colors.slice(i * 4, i * 4 + 4)).toEqual([RED.r, RED.g, RED.b, RED.a]); // inner -> bg_color
+      expect(ring.colors.slice((i + 1) * 4, (i + 1) * 4 + 4)).toEqual([GREEN.r, GREEN.g, GREEN.b, GREEN.a]); // outer -> border_color
+    }
+    // The border ring's own vertices span the [0,100]x[0,50] outer edge and
+    // the [5,95]x[5,45] inner (infill) edge.
+    expect(Math.min(...[...ring.positions].filter((_, idx) => idx % 3 === 0))).toBeCloseTo(0);
+    expect(Math.max(...[...ring.positions].filter((_, idx) => idx % 3 === 0))).toBeCloseTo(100);
+  });
+
+  it('draw_center: false produces the border ring but no interior/centre-fill triangles', () => {
+    // Same 100x50 rect + 5px uniform border as the previous test, but
+    // draw_center = false: style_box_flat.cpp::draw only calls
+    // draw_rounded_rectangle for the centre fill `if (draw_center && ...)` —
+    // skipped entirely here, so indices contain ONLY the border ring's
+    // 16 vertices * 3 = 48 indices, nothing more.
+    const geo = styleBoxFlatGeometry(
+      box({
+        borderWidth: { left: 5, top: 5, right: 5, bottom: 5 },
+        drawCenter: false,
+      }),
+      { x: 0, y: 0, w: 100, h: 50 }
+    );
+
+    expect(geo.positions).toHaveLength(16 * 3);
+    expect(geo.colors).toHaveLength(16 * 4);
+    expect(geo.indices).toHaveLength(48);
+    // Every color is border_color (border_blend is off, so border_color_inner
+    // == border_color — see style_box_flat.cpp:475-477).
+    for (let i = 0; i < 16; i++) {
+      expect(geo.colors.slice(i * 4, i * 4 + 4)).toEqual([GREEN.r, GREEN.g, GREEN.b, GREEN.a]);
+    }
+  });
+
+  it('draw_center: false and no border produces no geometry at all', () => {
+    // style_box_flat.cpp::draw: `if (!draw_border && !draw_center &&
+    // !draw_shadow) return;` — with no border and no shadow modelled, an
+    // un-drawn centre means nothing is drawn.
+    const geo = styleBoxFlatGeometry(box({ drawCenter: false }), { x: 0, y: 0, w: 100, h: 50 });
+    expect(geo.positions).toHaveLength(0);
+    expect(geo.indices).toHaveLength(0);
+    expect(geo.colors).toHaveLength(0);
+  });
+
+  it('expand margins grow the drawn rect outward before any other geometry is built', () => {
+    // StyleBoxFlat::get_draw_rect / draw(): style_rect =
+    // p_rect.grow_individual(expand_margin[LEFT/TOP/RIGHT/BOTTOM]) — a
+    // positive expand margin shifts the position OUTWARD (grow_individual,
+    // core/math/rect2.h) and enlarges the size by left+right / top+bottom.
+    const geo = styleBoxFlatGeometry(box({ expandMargin: { left: 2, top: 3, right: 4, bottom: 5 } }), {
+      x: 10,
+      y: 10,
+      w: 100,
+      h: 50,
+    });
+    const xs = [...geo.positions].filter((_, idx) => idx % 3 === 0);
+    const ys = [...geo.positions].filter((_, idx) => idx % 3 === 1);
+    expect(Math.min(...xs)).toBeCloseTo(10 - 2);
+    expect(Math.max(...xs)).toBeCloseTo(10 + 100 + 4);
+    expect(Math.min(...ys)).toBeCloseTo(10 - 3);
+    expect(Math.max(...ys)).toBeCloseTo(10 + 50 + 5);
+  });
+});

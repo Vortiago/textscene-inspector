@@ -10,6 +10,11 @@
  * path against its own rect).
  *
  * Pure data + functions, no React, no THREE.
+*
+ * Portions ported from Godot Engine (MIT).
+ * Copyright (c) 2014-present Godot Engine contributors.
+ * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+ * See THIRD-PARTY-NOTICES.md.
  */
 
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
@@ -144,17 +149,9 @@ export function createSolveContext(
 
 // --- Paint order --------------------------------------------------------------
 
-/**
- * `z_index` (`scene/main/canvas_item.h:101`, default 0) is not yet parsed
- * onto `ControlProperties` (the DOM overlay never needed it — CSS document
- * order already gave it paint order for free), so it is read defensively off
- * the raw properties bag. Once a later packet parses it, this keeps working
- * unchanged.
- */
+/** `CanvasItem.z_index` (`scene/main/canvas_item.h:101`), default 0. */
 function zIndexOf(n: SolveNode): number {
-  const raw = (n.node.properties as Record<string, unknown>).z_index;
-  const value = Number(raw);
-  return Number.isFinite(value) ? value : 0;
+  return controlProps(n).zIndex ?? 0;
 }
 
 /**

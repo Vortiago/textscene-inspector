@@ -56,6 +56,31 @@ describe('Control Linter', () => {
       valid: ['Color(1, 1, 1, 1)', 'Color(0.5, 0.5, 0.5, 0.8)'],
       invalid: [{ value: 'Color(1, 1, 1)', contains: ['Color'] }],
     },
+    {
+      prop: 'z_index',
+      valid: [0, -10, 4096, -4096, 5000],
+      invalid: [{ value: 1.5, contains: ['integer'] }],
+    },
+    {
+      prop: 'show_behind_parent',
+      valid: ['true', 'false'],
+      invalid: [{ value: 'maybe', contains: ['boolean'] }],
+    },
+    {
+      prop: 'light_mask',
+      valid: [0, 1, 4294967295],
+      invalid: [{ value: 'top', contains: ['must be a number'] }],
+    },
+    {
+      prop: 'texture_filter',
+      valid: [0, 1, 6],
+      invalid: [{ value: 7, contains: ['0-6'] }],
+    },
+    {
+      prop: 'texture_repeat',
+      valid: [0, 1, 3],
+      invalid: [{ value: 4, contains: ['0-3'] }],
+    },
   ]);
 
   describe('theme_override wildcard groups', () => {
@@ -118,6 +143,11 @@ describe('Control Linter', () => {
       ['custom_minimum_size', 'Vector2(1)'],
       ['theme_override_font_sizes/font_size', 'big'],
       ['theme_override_fonts/font', 'notaref'],
+      ['z_index', '1.5'],
+      ['show_behind_parent', 'maybe'],
+      ['light_mask', 'top'],
+      ['texture_filter', '99'],
+      ['texture_repeat', '99'],
     ];
     for (const [prop, value] of MALFORMED) {
       it(`rejects a malformed ${prop}`, () => {

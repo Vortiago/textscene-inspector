@@ -1,0 +1,40 @@
+/**
+ * `StyleBoxFlatData` — a resolved `StyleBoxFlat`, numbers only. The shape
+ * `native/parseStyleBox.ts` produces and `native/styleBoxFlatGeometry.ts`
+ * consumes; `native/solveTree.ts` also type-imports it because a container's
+ * minimum-size math (e.g. PanelContainer's content margins) needs a
+ * StyleBox's numbers before any geometry is built.
+ *
+ * Pure data, no React, no THREE.
+ *
+ * Field names and defaults transcribed from
+ * `scene/resources/style_box_flat.h`/`.cpp` (Godot 4.6.3):
+ *  - `bg_color` default `Color(0.6, 0.6, 0.6)` (`style_box_flat.h:38`).
+ *  - `border_color` default `Color(0.8, 0.8, 0.8)` (`:40`).
+ *  - `border_width`, `corner_radius`, `expand_margin` are `real_t[4]`, all
+ *    zero by default (`:42-44`), indexed by `Side` (LEFT/TOP/RIGHT/BOTTOM) for
+ *    the first two and `Corner` (TOP_LEFT/TOP_RIGHT/BOTTOM_RIGHT/BOTTOM_LEFT)
+ *    for radius.
+ *  - `content_margin` lives on the `StyleBox` base (`style_box.h:43`), default
+ *    `-1` per side meaning "ask `get_style_margin`", which `StyleBoxFlat`
+ *    overrides to fall back to the matching `border_width`
+ *    (`style_box_flat.cpp::get_style_margin`, `style_box.cpp::get_margin`).
+ *    This struct stores the EFFECTIVE margin (post fallback), not the raw
+ *    `-1` sentinel, so every consumer reads one number per side without
+ *    repeating the fallback rule.
+ *  - `draw_center` default `true`, `blend_border` (`border_blend` in the
+ *    scene-file property name) default `false` (`style_box_flat.h:46-47`).
+ */
+
+import type { ControlColor } from '../../../nodes/2d/ui/control/types';
+
+export interface StyleBoxFlatData {
+  bgColor: ControlColor;
+  borderColor: ControlColor;
+  borderWidth: { left: number; top: number; right: number; bottom: number };
+  cornerRadius: { topLeft: number; topRight: number; bottomRight: number; bottomLeft: number };
+  expandMargin: { left: number; top: number; right: number; bottom: number };
+  contentMargin: { left: number; top: number; right: number; bottom: number };
+  drawCenter: boolean;
+  borderBlend: boolean;
+}

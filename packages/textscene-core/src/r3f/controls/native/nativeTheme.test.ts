@@ -22,7 +22,7 @@ describe('nativeTheme', () => {
 
   it('carries every ScaledGodotTheme field verbatim at scale 1', () => {
     const theme = nativeTheme(1);
-    const { styleFill: _styleFill, ...scaledFields } = theme;
+    const { styleFill: _styleFill, widgets: _widgets, ...scaledFields } = theme;
     expect(scaledFields).toEqual(scaledGodotTheme(1));
   });
 
@@ -44,5 +44,100 @@ describe('nativeTheme', () => {
     // at any scale.
     const theme = nativeTheme(2);
     expect(theme.styleFill.normal).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
+  });
+
+  const DEFAULT_BORDER_COLOR = { r: 0.8, g: 0.8, b: 0.8, a: 1 }; // style_box_flat.h:40, unset by make_flat_stylebox
+  const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
+  const uniform = (n: number) => ({ left: n, top: n, right: n, bottom: n });
+  const uniformCorners = (n: number) => ({ topLeft: n, topRight: n, bottomRight: n, bottomLeft: n });
+
+  describe('widgets', () => {
+    it('Panel: make_flat_stylebox(style_normal_color, 0, 0, 0, 0) — default_theme.cpp:134', () => {
+      const theme = nativeTheme(1);
+      expect(theme.widgets.panel).toEqual({
+        bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 },
+        borderColor: DEFAULT_BORDER_COLOR,
+        borderWidth: ZERO_SIDES,
+        cornerRadius: uniformCorners(3), // default_corner_radius, Math.round(3*1)
+        expandMargin: ZERO_SIDES,
+        contentMargin: ZERO_SIDES,
+        drawCenter: true,
+        borderBlend: false,
+      });
+    });
+
+    it('Button normal/hover/pressed/disabled: make_flat_stylebox(color) with every default arg — default_theme.cpp:138-141', () => {
+      const theme = nativeTheme(1);
+      const shared = {
+        borderColor: DEFAULT_BORDER_COLOR,
+        borderWidth: ZERO_SIDES,
+        cornerRadius: uniformCorners(3), // default_corner_radius
+        expandMargin: ZERO_SIDES,
+        contentMargin: uniform(4), // default_margin
+        drawCenter: true,
+        borderBlend: false,
+      };
+      expect(theme.widgets.button.normal).toEqual({ ...shared, bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 } });
+      expect(theme.widgets.button.hover).toEqual({ ...shared, bgColor: { r: 0.225, g: 0.225, b: 0.225, a: 0.6 } });
+      expect(theme.widgets.button.pressed).toEqual({ ...shared, bgColor: { r: 0, g: 0, b: 0, a: 0.6 } });
+      expect(theme.widgets.button.disabled).toEqual({ ...shared, bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.3 } });
+    });
+
+    it('ScrollBar scroll: make_flat_stylebox(style_normal_color, ..., 10) per axis — default_theme.cpp:543-544', () => {
+      const theme = nativeTheme(1);
+      // style_h_scrollbar = make_flat_stylebox(style_normal_color, 0, 4, 0, 4, 10):
+      // 0 margin along the track axis (left/right), 4 across it (top/bottom).
+      expect(theme.widgets.scrollBar.scrollHorizontal).toEqual({
+        bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 },
+        borderColor: DEFAULT_BORDER_COLOR,
+        borderWidth: ZERO_SIDES,
+        cornerRadius: uniformCorners(10),
+        expandMargin: ZERO_SIDES,
+        contentMargin: { left: 0, top: 4, right: 0, bottom: 4 },
+        drawCenter: true,
+        borderBlend: false,
+      });
+      // style_v_scrollbar = make_flat_stylebox(style_normal_color, 4, 0, 4, 0, 10): transposed.
+      expect(theme.widgets.scrollBar.scrollVertical).toEqual({
+        bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 },
+        borderColor: DEFAULT_BORDER_COLOR,
+        borderWidth: ZERO_SIDES,
+        cornerRadius: uniformCorners(10),
+        expandMargin: ZERO_SIDES,
+        contentMargin: { left: 4, top: 0, right: 4, bottom: 0 },
+        drawCenter: true,
+        borderBlend: false,
+      });
+    });
+
+    it('ScrollBar grabber: make_flat_stylebox(style_progress_color, 4, 4, 4, 4, 10) — default_theme.cpp:545', () => {
+      const theme = nativeTheme(1);
+      expect(theme.widgets.scrollBar.grabber).toEqual({
+        bgColor: { r: 1, g: 1, b: 1, a: 0.4 },
+        borderColor: DEFAULT_BORDER_COLOR,
+        borderWidth: ZERO_SIDES,
+        cornerRadius: uniformCorners(10),
+        expandMargin: ZERO_SIDES,
+        contentMargin: uniform(4),
+        drawCenter: true,
+        borderBlend: false,
+      });
+    });
+
+    it('scales widget geometry (margins, corner radii) at scale 2, per make_flat_stylebox\'s Math.round(x * scale)', () => {
+      const theme = nativeTheme(2);
+      expect(theme.widgets.panel.cornerRadius).toEqual(uniformCorners(6));
+      expect(theme.widgets.button.normal.contentMargin).toEqual(uniform(8));
+      expect(theme.widgets.button.normal.cornerRadius).toEqual(uniformCorners(6));
+      expect(theme.widgets.scrollBar.scrollHorizontal.cornerRadius).toEqual(uniformCorners(20));
+      expect(theme.widgets.scrollBar.scrollHorizontal.contentMargin).toEqual({ left: 0, top: 8, right: 0, bottom: 8 });
+      expect(theme.widgets.scrollBar.grabber.cornerRadius).toEqual(uniformCorners(20));
+    });
+
+    it('does NOT scale widget fill colours', () => {
+      const theme = nativeTheme(2);
+      expect(theme.widgets.button.normal.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
+      expect(theme.widgets.scrollBar.grabber.bgColor).toEqual({ r: 1, g: 1, b: 1, a: 0.4 });
+    });
   });
 });

@@ -61,6 +61,7 @@ Strict parsing format-checks these `Control` properties. Every validator failure
 | `grow_horizontal` |
 | `grow_vertical` |
 | `layout_mode` |
+| `light_mask` |
 | `modulate` |
 | `offset_bottom` |
 | `offset_left` |
@@ -71,15 +72,19 @@ Strict parsing format-checks these `Control` properties. Every validator failure
 | `rotation` |
 | `scale` |
 | `self_modulate` |
+| `show_behind_parent` |
 | `size_flags_horizontal` |
 | `size_flags_stretch_ratio` |
 | `size_flags_vertical` |
+| `texture_filter` |
+| `texture_repeat` |
 | `theme_override_colors/*` |
 | `theme_override_constants/*` |
 | `theme_override_font_sizes/*` |
 | `theme_override_fonts/*` |
 | `theme_override_styles/*` |
 | `visible` |
+| `z_index` |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

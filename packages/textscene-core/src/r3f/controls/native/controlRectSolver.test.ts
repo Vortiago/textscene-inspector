@@ -15,7 +15,7 @@ import { combinedMinimumSize, createSolveContext, solveControlTree } from './con
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 
-/** A `ControlProperties`-shaped bag, loosely typed so fixtures can also carry `z_index` (not yet parsed onto `ControlProperties` itself — see `controlRectSolver.ts`'s `zIndexOf`). */
+/** A `ControlProperties`-shaped bag, loosely typed so fixtures can build one field at a time without satisfying the whole interface. */
 type Props = Record<string, unknown>;
 
 function node(path: string, type: string, properties: Props, children: SolveNode[] = []): SolveNode {
@@ -181,10 +181,10 @@ describe('solveControlTree — nested free Controls resolve against their parent
 
 describe('solveControlTree — paintIndex is pre-order with siblings pre-sorted by z_index', () => {
   it('sorts roots and each sibling group by z_index (canvas_item.h:101), ties keeping author order', () => {
-    const c1 = node('R1/C1', 'Control', { z_index: 2 });
-    const c2 = node('R1/C2', 'Control', { z_index: 0 });
-    const r1 = node('R1', 'Control', { z_index: 5 }, [c1, c2]); // authored [C1, C2]
-    const r2 = node('R2', 'Control', { z_index: 1 });
+    const c1 = node('R1/C1', 'Control', { zIndex: 2 });
+    const c2 = node('R1/C2', 'Control', { zIndex: 0 });
+    const r1 = node('R1', 'Control', { zIndex: 5 }, [c1, c2]); // authored [C1, C2]
+    const r2 = node('R2', 'Control', { zIndex: 1 });
 
     // Roots authored [R1, R2] but R2 (z=1) sorts before R1 (z=5).
     const solved = solveControlTree([r1, r2], VIEWPORT, ctx());
@@ -198,7 +198,7 @@ describe('solveControlTree — paintIndex is pre-order with siblings pre-sorted 
 
   it('defaults an absent z_index to 0 (canvas_item.h:101)', () => {
     const a = node('A', 'Control', {});
-    const b = node('B', 'Control', { z_index: -1 });
+    const b = node('B', 'Control', { zIndex: -1 });
     const solved = solveControlTree([a, b], VIEWPORT, ctx());
     expect(solved.get('B')?.paintIndex).toBe(0);
     expect(solved.get('A')?.paintIndex).toBe(1);
