@@ -35,7 +35,7 @@ import type {
 } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import { joinPath } from '../../../utils/nodePath';
-import { resolveExtResourcePath, resolveInstancePath } from '../../../resources/SubResourceResolver';
+import { resolveInstancePath, resolveTexture2DPath } from '../../../resources/SubResourceResolver';
 import { useResourceLoader } from '../../../resources/useResource';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { liveChildGroups, type CachedSceneSource } from '../../liveSceneTree';
@@ -109,7 +109,11 @@ function buildForest(
     : EMPTY_SCENE_CACHE;
   const textureCache = loader ? { getCached: (p: string) => loader.textures.getCached(p) } : NO_TEXTURE_CACHE;
 
-  function resolveTextureSize(node: TscnNode, ext: readonly TscnExternalResource[]): Vec2 | null {
+  function resolveTextureSize(
+    node: TscnNode,
+    ext: readonly TscnExternalResource[],
+    int: readonly TscnInternalResource[]
+  ): Vec2 | null {
     // Whichever single Texture2D-valued property this node's own type
     // carries — TextureRect's `texture`, Button's (and its `Button`-family
     // subclasses') `icon`. The two never coexist on one node type, so
@@ -118,7 +122,13 @@ function buildForest(
     const props = node.properties as Record<string, unknown>;
     const ref = props.texture ?? props.icon;
     if (typeof ref !== 'string' || ref === '') return null;
-    const path = resolveExtResourcePath(ref, ext);
+    // `resolveTexture2DPath`, not `resolveExtResourcePath`: the painters resolve
+    // the same property through it (`texturerect/NativeComponent.tsx`), so it
+    // also unwraps a `SubResource(...)` texture. Resolving only ExtResource here
+    // would give such a node a minimum size of (0, 0) while it still PAINTS —
+    // inside a box or grid container it collapses to nothing and draws over its
+    // siblings.
+    const path = resolveTexture2DPath(ref, ext, int);
     if (!path) return null;
     const cached = textureCache.getCached(path);
     if (cached === undefined) {
@@ -167,7 +177,7 @@ function buildForest(
           node: collapsed,
           children,
           styleBoxes: resolveStyleBoxes(collapsed, ownInternal),
-          textureSize: resolveTextureSize(collapsed, ownExternal),
+          textureSize: resolveTextureSize(collapsed, ownExternal, ownInternal),
         });
       } else {
         // Not a genuine Control type — transparent passthrough (see module doc):

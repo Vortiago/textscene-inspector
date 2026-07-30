@@ -89,6 +89,13 @@ export function TextureRectNative({ solveNode, rect, renderOrder }: NativeContro
       // is a per-call sampler override in Godot, not a texture_repeat read).
       cloned.wrapS = cloned.wrapT = THREE.RepeatWrapping;
       repeat = { x: draw.size.x / draw.textureSize.x, y: draw.size.y / draw.textureSize.y };
+      // Godot tiles from the rect's TOP-left; three's `v` runs bottom-up, so a
+      // zero offset would anchor the pattern at the BOTTOM and leave the
+      // partial tile at the top showing the texture's bottom rows instead of
+      // its top ones. `1 - repeat.y` puts `v = 1` (the quad's top edge) exactly
+      // on the image's own top row — the same UV-Y flip the region branch below
+      // applies for a crop. `u` needs no equivalent: it is not flipped.
+      offset = { x: 0, y: 1 - repeat.y };
     } else {
       cloned.wrapS = cloned.wrapT = WRAP[resolveTextureRectRepeat(props.textureRepeat)];
       if (draw.region) {

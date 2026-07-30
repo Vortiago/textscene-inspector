@@ -22,21 +22,15 @@
  * SUBTREE into it); `LineEdit` instead clips only the single run it draws
  * ITSELF, to `layoutLineEditContent`'s own `contentRect` (the rect inset by
  * the ACTIVE stylebox's margins — `ofs_max`/`x_ofs`'s box in
- * `NOTIFICATION_DRAW`, `line_edit.cpp:1392-1427`). The technique is
- * `ScrollContainer`'s own (`nodes/2d/ui/scrollcontainer/NativeComponent.tsx`):
- * build the LOCAL content-rect planes via `localRectClipPlanes`, transform
- * them into WORLD space via an enclosing `<group ref={anchorRef}>`'s
- * `matrixWorld` (three's `material.clippingPlanes` are evaluated in world
- * space, not local to the mesh), and merge onto whatever this node already
- * inherited via `withAdditionalClipPlanes` — inherited first, so an ancestor's
- * clip (e.g. an enclosing `ScrollContainer`) is narrowed further, never
- * overridden. Unlike ScrollContainer this painter has no descendants of its
- * own to re-publish the merged planes to (`LineEdit` draws no children), so it
- * only ever CONSUMES the merged result for its own `<TextRun>` — no
- * `ControlClipProvider` here. The `useLayoutEffect`-with-no-dependency-array
- * plus float-comparison guard is duplicated from `ScrollContainer`'s own
- * module rather than extracted to shared `native/` code, since this is the
- * only other consumer of the technique so far.
+ * `NOTIFICATION_DRAW`, `line_edit.cpp:1392-1427`). `useWorldClipPlanes`
+ * (`native/controlClipping.tsx`) does the work — local planes for the rect it
+ * is given, transformed to world space through the `<group ref={anchorRef}>`
+ * below and merged onto whatever this node inherited, so an enclosing
+ * `ScrollContainer`'s clip is narrowed further and never overridden.
+ *
+ * Unlike `ScrollContainer`, this painter has no descendants to re-publish the
+ * merged planes to (`LineEdit` draws no children), so it only CONSUMES the
+ * result for its own `<TextRun>` — no `ControlClipProvider` here.
  *
  * This component never checks `props.visible`, never renders `children`, and
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
@@ -80,8 +74,19 @@ export function LineEditNative({ solveNode, rect, renderOrder, theme }: NativeCo
   const { fontSizePx, color: baseFontColor } = lineEditTextTheme(props, textState, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
+  // `lineSpacingPx: 0`, not the shared default of 3: `layout.heightPx` is what
+  // feeds `layoutLineEditContent`'s vertical centring as Godot's
+  // `shaped_text_get_size(text_rid).y`, which is the run's bare ascent+descent.
+  // LineEdit sets no `line_spacing` theme constant at all — the same `0` its own
+  // `lineEditMinimumSize` passes to `getLinePitchPx`. Shaping with the default
+  // instead makes the height 3px too tall and lifts every field's text 1.5px
+  // above where both Godot and this slice's own solver put it, past the top of
+  // the content rect it is then clipped to.
   const layout: TextLayoutResult | null = useMemo(
-    () => (hasText ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF }) : null),
+    () =>
+      hasText
+        ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0 })
+        : null,
     [hasText, text, fontSizePx]
   );
 

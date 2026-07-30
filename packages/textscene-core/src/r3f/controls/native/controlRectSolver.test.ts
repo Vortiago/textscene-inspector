@@ -315,3 +315,54 @@ describe('solveControlTree — a registered ContainerLayoutFn overrides its chil
     expect(solved.get('Stack/Child/Grandchild')?.rect).toEqual({ x: 0, y: 0, w: 1152, h: 20 });
   });
 });
+
+describe('solveControlTree — a registered canvas boundary (CanvasLayer)', () => {
+  const BOUNDARY = 'TestCanvasBoundary';
+
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  it('fills the rect it was handed instead of the (0,0) its absent anchors would give', () => {
+    controlSolverRegistry.registerCanvasBoundary(BOUNDARY);
+    const layer = node('Root/HUD', BOUNDARY, {});
+    const root = node('Root', 'Control', { anchorsPreset: 15 }, [layer]);
+
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Root/HUD')?.rect).toEqual({ x: 0, y: 0, w: 1152, h: 648 });
+  });
+
+  it('lets a Control under it anchor against the full rect, not a degenerate one', () => {
+    controlSolverRegistry.registerCanvasBoundary(BOUNDARY);
+    // anchors_preset 1 (TOP_RIGHT) + the fixture's own offsets: left = -120 + 1*1152.
+    const score = node('Root/HUD/Score', 'Control', {
+      anchorLeft: 1,
+      anchorRight: 1,
+      offsetLeft: -120,
+      offsetTop: 8,
+      offsetRight: -8,
+      offsetBottom: 32,
+    });
+    const layer = node('Root/HUD', BOUNDARY, {}, [score]);
+    const root = node('Root', 'Control', { anchorsPreset: 15 }, [layer]);
+
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Root/HUD/Score')?.rect).toEqual({ x: 1032, y: 8, w: 112, h: 24 });
+  });
+
+  it('is unaffected by an enclosing container fn, which never owns a non-CanvasItem child', () => {
+    const CONTAINER = 'TestContainerForBoundary';
+    controlSolverRegistry.registerCanvasBoundary(BOUNDARY);
+    controlSolverRegistry.registerContainerLayout(CONTAINER, (_n, children) => {
+      const out = new Map<string, Rect2>();
+      for (const c of children) out.set(c.node.path, { x: 5, y: 5, w: 10, h: 10 });
+      return out;
+    });
+
+    const layer = node('Box/HUD', BOUNDARY, {});
+    const box = node('Box', CONTAINER, { anchorsPreset: 15 }, [layer]);
+
+    const solved = solveControlTree([box], VIEWPORT, ctx());
+    expect(solved.get('Box/HUD')?.rect).toEqual({ x: 0, y: 0, w: 1152, h: 648 });
+  });
+});

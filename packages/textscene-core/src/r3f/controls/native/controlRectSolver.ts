@@ -97,6 +97,23 @@ function controlProps(n: SolveNode): ControlProperties {
   return n.node.properties as ControlProperties;
 }
 
+/**
+ * The rect a registered canvas boundary (`controlSolverRegistry.isCanvasBoundary`
+ * — `CanvasLayer`) takes: the whole rect it was handed, at its origin.
+ *
+ * Such a node is not a `CanvasItem`, so `Control::get_parent_anchorable_rect`
+ * (`control.cpp:1568-1578`) never consults it — a Control under one resolves
+ * against the viewport instead. It also authors no anchors or offsets, so the
+ * anchor formula would hand it `(0, 0, 0, 0)` and every Control beneath it would
+ * anchor against a degenerate rect: a `FULL_RECT` HUD collapses to nothing, and a
+ * right-anchored one lands at negative x. Filling the rect it was given
+ * reproduces the DOM overlay's own `position: absolute; inset: 0` passthrough,
+ * which is where the same rule already lives for that renderer.
+ */
+function canvasBoundaryRect(parentRect: Rect2): Rect2 {
+  return { x: 0, y: 0, w: parentRect.w, h: parentRect.h };
+}
+
 // --- Phase 1: combined minimum size ------------------------------------------
 
 /**
@@ -202,8 +219,14 @@ function solveFree(
 ): void {
   const minSize = ctx.combinedMinimumSize(n);
   const props = controlProps(n);
-  const raw = computeAnchoredRect(props, parentRect);
-  const rect = floorAtMinimumSize(raw, minSize, props.growHorizontal ?? 1, props.growVertical ?? 1);
+  const rect = controlSolverRegistry.isCanvasBoundary(n.node.type)
+    ? canvasBoundaryRect(parentRect)
+    : floorAtMinimumSize(
+        computeAnchoredRect(props, parentRect),
+        minSize,
+        props.growHorizontal ?? 1,
+        props.growVertical ?? 1
+      );
   record(n, rect, minSize, paintIndexOf, out);
   dispatchChildren(n, rect, ctx, paintIndexOf, out);
 }
@@ -259,12 +282,9 @@ function dispatchChildren(
     // faithfully from its own source would omit it, and each would be wrong the
     // moment a child's minimum is fractional. Every real text minimum is.
     const childProps = controlProps(child);
-    const childRect = floorAtMinimumSize(
-      assigned,
-      minSize,
-      childProps.growHorizontal ?? 1,
-      childProps.growVertical ?? 1
-    );
+    const childRect = controlSolverRegistry.isCanvasBoundary(child.node.type)
+      ? canvasBoundaryRect(rect)
+      : floorAtMinimumSize(assigned, minSize, childProps.growHorizontal ?? 1, childProps.growVertical ?? 1);
     record(child, childRect, minSize, paintIndexOf, out);
     dispatchChildren(child, childRect, ctx, paintIndexOf, out);
   }

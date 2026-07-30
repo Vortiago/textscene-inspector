@@ -10,28 +10,15 @@
  * this node's ENTIRE own rect, never reduced by a scrollbar reservation
  * (confirmed against the real engine: the focus-panel comment in
  * `scroll_container.cpp`'s constructor says outright that the scrolled child
- * and the focus border share one CanvasItem and its ONE clip). Those 4 planes
- * are built in this node's own LOCAL frame by `localRectClipPlanes`, then
- * transformed into WORLD space via `anchorRef`'s own `matrixWorld` —
- * `clippingPlanes` are evaluated against the fragment's world position, so a
- * plane expressed only in local coordinates is only correct for a node with
- * no ancestor offset at all. `anchorRef` carries no local transform of its
- * own, so its `matrixWorld` equals whatever the walker's outer group for this
- * node already is (rect.x, -rect.y, composed through every ancestor) — which
- * is exactly "this node's local origin, in world space".
+ * and the focus border share one CanvasItem and its ONE clip).
  *
- * That computation runs in `useLayoutEffect` with NO dependency array (so it
- * runs after every render, not just once): a Control's ancestor chain is not
- * a React value the effect could depend on — it is whatever three composed
- * through the whole tree by the time refs settle, the same argument
- * `useShadowLightPose` (`r3f/lighting2d/shadowLightPose.ts`) makes for
- * sampling every frame rather than once. Running the layout effect on mount
- * (before any browser paint) makes a STILL frame correct with no render loop
- * having run at all; the guard below (comparing the flattened plane numbers
- * against the previous computation) is not an optimisation, it is what stops
- * that same-every-render effect from calling `setState` forever — a state
- * update inside `useLayoutEffect` re-renders synchronously, so an
- * unconditional `setState` here would loop.
+ * `useWorldClipPlanes` (`native/controlClipping.tsx`) turns that rect into the
+ * 4 world-space planes and merges them onto whatever this node inherited; the
+ * result is published to the subtree through `ControlClipProvider` below.
+ * `anchorRef` carries no local transform of its own, so its `matrixWorld`
+ * equals the walker's outer group for this node (rect.x, -rect.y, composed
+ * through every ancestor) — exactly "this node's local origin, in world
+ * space", which is the frame the rect handed to the hook is expressed in.
  *
  * SCROLLBAR GEOMETRY. `scrollContainerScrollBars` (`nativeSolver.ts`) is the
  * ONE function this painter and `scrollContainerLayout` (this type's
@@ -132,8 +119,15 @@ function ScrollBarChrome({ bar, track, grabber, renderOrder }: ScrollBarChromePr
 export function ScrollContainerNative({ solveNode, rect, renderOrder, theme, children }: NativeControlComponentProps) {
   const props = solveNode.node.properties as ControlProperties;
   // A FRESH SolveContext, built from the exact same theme/measurer the real
-  // solve uses — not a second, narrower approximation of one.
-  const solveCtx = useMemo(() => createSolveContext(theme, measureText), [theme]);
+  // solve uses — not a second, narrower approximation of one. Rebuilt whenever
+  // `solveNode` changes, not only on a theme change: the context carries a
+  // path-keyed minimum-size cache, so reusing one across a re-walk (a sub-scene
+  // or a child's texture arriving, which gives that child a real minimum where
+  // it had none) would answer from the pre-arrival numbers — the bars would
+  // disagree with the registered layout fn about whether anything overflows.
+  // `solveNode` is an intentional cache-buster, not a value the callback reads.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const solveCtx = useMemo(() => createSolveContext(theme, measureText), [theme, solveNode]);
   const layout = useMemo(
     () => scrollContainerScrollBars(solveNode, solveCtx, rect),
     [solveNode, solveCtx, rect]

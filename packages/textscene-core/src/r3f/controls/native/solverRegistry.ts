@@ -62,6 +62,26 @@ class ControlSolverRegistry {
   private readonly containerLayoutFns = createTypeRegistry<ContainerLayoutFn>(
     'controlSolverRegistry.containerLayout'
   );
+  private readonly canvasBoundaryTypes = new Set<string>();
+
+  /**
+   * Declares a type that lives in the Control walk but is NOT a `CanvasItem` —
+   * `CanvasLayer` is the one such type today. It authors no anchors/offsets, so
+   * the anchor formula would give it a degenerate `(0, 0)` rect, and every real
+   * Control under it would then anchor against THAT instead of the rect Godot
+   * uses (`Control::get_parent_anchorable_rect` falls back to the viewport when
+   * the parent is not a CanvasItem). Data on the registry rather than a type
+   * comparison inside the solver, matching how every other per-type behaviour
+   * reaches it.
+   */
+  registerCanvasBoundary(typeName: string): void {
+    this.canvasBoundaryTypes.add(typeName);
+  }
+
+  /** Whether this type is a non-CanvasItem canvas host (see `registerCanvasBoundary`). */
+  isCanvasBoundary(typeName: string): boolean {
+    return this.canvasBoundaryTypes.has(typeName);
+  }
 
   registerMinimumSize(typeName: string, fn: MinimumSizeFn): void {
     this.minimumSizeFns.register(typeName, fn);
@@ -83,6 +103,7 @@ class ControlSolverRegistry {
   clear(): void {
     this.minimumSizeFns.clear();
     this.containerLayoutFns.clear();
+    this.canvasBoundaryTypes.clear();
   }
 }
 

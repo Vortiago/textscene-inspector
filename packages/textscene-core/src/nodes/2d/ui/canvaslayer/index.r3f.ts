@@ -10,6 +10,7 @@
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { CanvasLayer } from './Component';
 import { CanvasLayerNative } from './NativeComponent';
 
@@ -19,5 +20,9 @@ controlComponentRegistry.register({
   Native: CanvasLayerNative,
   wrapsChildren: true,
 });
+// Not a CanvasItem, and it authors no anchors/offsets — without this the rect
+// solve hands it (0, 0, 0, 0) and every Control in the HUD under it anchors
+// against that instead of the layer's full rect (see `registerCanvasBoundary`).
+controlSolverRegistry.registerCanvasBoundary('CanvasLayer');
 
 export { CanvasLayer, CanvasLayerNative };

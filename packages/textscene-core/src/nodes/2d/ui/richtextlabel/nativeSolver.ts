@@ -276,7 +276,12 @@ export function layoutRichTextRuns(
         i++;
       }
       const run = styledRuns[runIdx];
-      if (!run) break;
+      // No run, or no glyph consumed (the cursor ran off the end of the plain
+      // text while glyphs remain — only reachable if `layout` was shaped from a
+      // different string than `styledRuns` concatenates). Both mean this pass
+      // cannot advance, and the enclosing `while` has no other exit: without
+      // this it spins forever rather than dropping the unattributable tail.
+      if (!run || i === start) break;
       placements.push({
         lineIndex,
         bold: run.bold,
