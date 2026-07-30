@@ -96,7 +96,7 @@ separately.
 ## Linting
 
 <!-- lint:begin CSGCombiner3D -->
-Strict parsing format-checks these `CSGCombiner3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
+Strict parsing format-checks these `CSGCombiner3D` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
 | Property |
 | --- |

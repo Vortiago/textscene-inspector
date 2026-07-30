@@ -37,7 +37,7 @@ None visible in this fixture. Measured at 0.052% against Godot 4.6.3 with
 ## Linting
 
 <!-- lint:begin CSGCylinder3D -->
-Strict parsing format-checks these `CSGCylinder3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
+Strict parsing format-checks these `CSGCylinder3D` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
 | Property |
 | --- |

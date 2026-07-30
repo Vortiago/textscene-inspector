@@ -1,10 +1,10 @@
 /**
  * SkeletonModifier3D strict validators — format and range checks.
  *
- * Asserted through `validatorRegistry`, not through `Linter`: Linter pulls
- * `linter/index.ts`, the barrel that imports every slice, so a scoped run while
- * sibling slices are being written fails on their half-finished files. The
- * barrel path is covered by the full suite.
+ * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
+ * unit under test is the validator, so a failure points at the validator
+ * instead of at scene parsing, and no fixture text has to be maintained
+ * alongside it. Rule-level behaviour is tested through `Linter` in linter.test.ts.
  *
  * Grow this into one case per property — happy, malformed, and any bound — and
  * quote the governing Godot source line beside every numeric bound.

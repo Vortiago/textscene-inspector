@@ -171,16 +171,6 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare.',
   },
 
-  SubViewportContainer: {
-    linterOnly: [
-      // Inherited from Control through the base-walk, and asymmetric there for
-      // the same reason: the linter wildcard-matches these keys while the
-      // parser loop-scrapes them, so there is no per-key surface to compare.
-      'theme_override_icons/*',
-    ],
-    reason: 'Inherits Control theme-override wildcards; the icons key has no per-key parser surface, exactly as on Control itself.',
-  },
-
   // -------------------------------------------------------------------------
   // 2D leaf slices
   // -------------------------------------------------------------------------
@@ -334,6 +324,19 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
   CSGPolygon3D: {
     linterOnly: ['material', 'operation'],
     reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
+  },
+
+  // Registered on the base and delivered to every 3D visual by the base-walk,
+  // so one entry here covers MeshInstance3D, Sprite3D, Label3D, Decal,
+  // GPUParticles3D and the seven CSG shapes rather than twelve leaf copies.
+  VisualInstance3D: {
+    linterOnly: [
+      // `layers` selects which Camera3D cull masks see the object. The previewer
+      // renders through a single camera with no cull-mask support, so no parser
+      // reads it — but it is a real serialised property worth format-checking.
+      'layers',
+    ],
+    reason: 'Render layers are validated for format but unused: the previewer has one camera and no cull-mask filtering, so no parser reads them.',
   },
 
   Decal: {
@@ -698,11 +701,23 @@ describe('property-grammar parity guard', () => {
     const slicesByType = new Map(collectSlices().map((s) => [s.nodeType, s]));
     const staleSections: string[] = [];
 
+    // A base class validates for its descendants without parsing anything of
+    // its own (it reuses the base parser), so it has no parser.ts and never
+    // appears in `collectSlices`. Its allowlist entry is still live: the
+    // base-walk delivers those keys to every leaf below it, and one entry there
+    // is what keeps a dozen identical leaf entries from existing.
+    const validatingBases = new Set(
+      collectSlices().flatMap((s) => baseChain(s.nodeType))
+    );
+
     for (const [nodeType, entry] of Object.entries(ASYMMETRY_ALLOWLIST)) {
       const slice = slicesByType.get(nodeType);
       if (!slice) {
+        if (validatingBases.has(nodeType)) continue;
         // Node type no longer has a slice pair — allowlist entry is stale.
-        staleSections.push(`${nodeType}: no parser.ts+linterParser.ts pair found`);
+        staleSections.push(
+          `${nodeType}: no parser.ts+linterParser.ts pair found, and no slice inherits from it`
+        );
         continue;
       }
 

@@ -22,12 +22,10 @@ export const INTERNAL_DISPLAY_NODE_TYPES: ReadonlySet<string> = new Set<string>(
 export function isRenderableNodeType(type: string): boolean {
   return (
     type === 'Node' ||
-    // GLBSceneRoot + the synthetic GLB-internal hierarchy types (GLBMesh,
-    // GLBBone, GLBNode, …) — all created programmatically, none authored.
-    type.startsWith('GLB') ||
     nodeRegistry.getRegistration(type) !== null ||
-    nodeComponentRegistry.get(type) !== undefined ||
-    INTERNAL_DISPLAY_NODE_TYPES.has(type)
+    // Covers the GLB-synthesised types, the internal display types and every
+    // component registration, so those conditions live in one place.
+    rendersOwnVisual(type) !== 'not-implemented'
   );
 }
 

@@ -92,15 +92,23 @@ function scannableFiles() {
   });
 }
 
+/**
+ * One read of the repo, shared by every assertion below. Walking and reading
+ * ~3,800 tracked files per `it` costs about half a second of pure duplicate
+ * work; `linter/reactFree.test.ts` hoists its own sweep for the same reason.
+ */
+const SCANNED = scannableFiles().map((file) => ({
+  file,
+  body: readFileSync(join(REPO_ROOT, file), 'utf8'),
+}));
+
 /** `[{ file, line, text }]` for every line matching `re`, outside `allowed`. */
 function offenders(re, allowed) {
   const hits = [];
-  for (const rel of scannableFiles()) {
-    if (allowed.has(rel)) continue;
-    const body = readFileSync(join(REPO_ROOT, rel), 'utf8');
-    if (!re.test(body)) continue;
+  for (const { file, body } of SCANNED) {
+    if (allowed.has(file) || !re.test(body)) continue;
     body.split('\n').forEach((text, i) => {
-      if (re.test(text)) hits.push({ file: rel, line: i + 1, text: text.trim().slice(0, 120) });
+      if (re.test(text)) hits.push({ file, line: i + 1, text: text.trim().slice(0, 120) });
     });
   }
   return hits;
@@ -122,6 +130,6 @@ describe('Godot source stays a reading aid, not a dependency', () => {
   });
 
   it('scans a meaningful share of the repo, so a broken glob cannot pass it', () => {
-    expect(scannableFiles().length).toBeGreaterThan(200);
+    expect(SCANNED.length).toBeGreaterThan(200);
   });
 });

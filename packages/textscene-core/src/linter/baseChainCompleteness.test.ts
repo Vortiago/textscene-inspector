@@ -16,10 +16,26 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { nodeRegistry } from '../core/NodeRegistry.js';
+import { validatorRegistry } from './ValidatorRegistry.js';
 import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its validators
+
+/**
+ * Godot's real class hierarchy, from the committed catalog. This is the
+ * generated artifact, not the engine checkout — nothing here reads a Godot
+ * source tree (see scripts/godot-source-decoupling.test.mjs).
+ */
+const CATALOG_CHAINS: ReadonlyMap<string, readonly string[]> = new Map(
+  (
+    JSON.parse(
+      readFileSync(join(import.meta.dirname, '../../../../scripts/compare-docs/node-catalog.json'), 'utf8')
+    ) as { nodes: { name: string; chain: string[] }[] }
+  ).nodes.map((n) => [n.name, n.chain])
+);
 
 /**
  * Types that legitimately terminate the walk on their own.
@@ -79,5 +95,55 @@ describe('NODE_BASE_TYPES covers every registered node type', () => {
     // a permanent exemption.
     const nowResolvable = [...TERMINAL].filter((type) => NODE_BASE_TYPES[type] !== undefined);
     expect(nowResolvable).toEqual([]);
+  });
+
+  /**
+   * The table deliberately flattens: a leaf maps to its nearest
+   * VALIDATOR-BEARING ancestor, not to its immediate Godot parent, so `HSlider`
+   * points at `Control` while Godot says `Slider` (which carries nothing).
+   *
+   * That shortcut is only safe while the classes it skips stay empty. The day a
+   * skipped class gains validators — and this branch exists to add ~148 of them,
+   * `Range` among the first — every leaf that jumped over it silently stops
+   * inheriting them: `findValidator` walks straight past, returns null, and
+   * `StrictTscnParser` accepts the property without a word. Reachability to
+   * `Node` still holds, so the assertion above cannot see it.
+   *
+   * This is the assertion that does. It fails the moment a skipped ancestor
+   * starts validating something, naming the leaves that must be re-chained.
+   */
+  it('skips no ancestor that carries validators of its own', () => {
+    const validating = new Set(validatorRegistry.getRegisteredNodeTypes());
+
+    const skipped = registered.flatMap((type) => {
+      const parent = NODE_BASE_TYPES[type];
+      const chain = CATALOG_CHAINS.get(type);
+      if (!parent || !chain) return [];
+      const parentAt = chain.indexOf(parent);
+      if (parentAt === -1) return []; // not a Godot ancestor at all — see below
+      return chain
+        .slice(0, parentAt)
+        .filter((ancestor) => validating.has(ancestor))
+        .map(
+          (ancestor) =>
+            `${type} is chained to ${parent}, skipping ${ancestor}, which now has its own validators`
+        );
+    });
+
+    expect(skipped).toEqual([]);
+  });
+
+  it('never chains a type to something Godot does not list as its ancestor', () => {
+    const wrong = registered
+      .filter((type) => {
+        const parent = NODE_BASE_TYPES[type];
+        const chain = CATALOG_CHAINS.get(type);
+        // `Node` is every chain's terminal and the catalog omits types Godot
+        // cannot instantiate, so an absent chain proves nothing.
+        return parent && parent !== 'Node' && chain && !chain.includes(parent);
+      })
+      .map((type) => `${type} → ${NODE_BASE_TYPES[type]} is not on its Godot ancestor chain`);
+
+    expect(wrong).toEqual([]);
   });
 });

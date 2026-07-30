@@ -54,52 +54,44 @@ export interface NodeComponentRegistration {
 }
 
 class NodeComponentRegistryImpl {
-  private readonly registry = createTypeRegistry<NodeComponent>('NodeComponentRegistry');
-  private readonly canvasItemTypes = new Set<string>();
-  private readonly containerTypes = new Set<string>();
-  private readonly csgShapes = new Map<string, CsgShapeRegistration>();
-  private readonly transformOnlyTypes = new Set<string>();
+  // The whole registration is stored, and every flag is answered from it. Four
+  // parallel Sets/Maps meant each new flag cost add/delete plumbing in
+  // `register`, a line in `clear`, and a field — three places to forget.
+  private readonly registry = createTypeRegistry<NodeComponentRegistration>(
+    'NodeComponentRegistry'
+  );
 
   register(registration: NodeComponentRegistration): void {
-    this.registry.register(registration.typeName, registration.Component);
-    if (registration.canvasItem) this.canvasItemTypes.add(registration.typeName);
-    else this.canvasItemTypes.delete(registration.typeName);
-    if (registration.container) this.containerTypes.add(registration.typeName);
-    else this.containerTypes.delete(registration.typeName);
-    if (registration.csgShape) this.csgShapes.set(registration.typeName, registration.csgShape);
-    else this.csgShapes.delete(registration.typeName);
-    if (registration.renderIntent === 'transform-only')
-      this.transformOnlyTypes.add(registration.typeName);
-    else this.transformOnlyTypes.delete(registration.typeName);
+    this.registry.register(registration.typeName, registration);
   }
 
   get(typeName: string): NodeComponent | undefined {
-    return this.registry.get(typeName);
+    return this.registry.get(typeName)?.Component;
   }
 
   /** True when the type registered as CanvasItem (2D-canvas world content). */
   isCanvasItem(typeName: string): boolean {
-    return this.canvasItemTypes.has(typeName);
+    return this.registry.get(typeName)?.canvasItem === true;
   }
 
   /** True when the type registered as a workspace-neutral container. */
   isContainer(typeName: string): boolean {
-    return this.containerTypes.has(typeName);
-  }
-
-  /** True when the type registered as drawing nothing of its own (ADR-0008). */
-  isTransformOnly(typeName: string): boolean {
-    return this.transformOnlyTypes.has(typeName);
+    return this.registry.get(typeName)?.container === true;
   }
 
   /** True when the type takes part in CSG boolean evaluation. */
   isCsgShape(typeName: string): boolean {
-    return this.csgShapes.has(typeName);
+    return this.registry.get(typeName)?.csgShape !== undefined;
+  }
+
+  /** True when the type registered as drawing nothing of its own (ADR-0008). */
+  isTransformOnly(typeName: string): boolean {
+    return this.registry.get(typeName)?.renderIntent === 'transform-only';
   }
 
   /** The CSG registration for a type, or undefined when it is not a CSG shape. */
   getCsgShape(typeName: string): CsgShapeRegistration | undefined {
-    return this.csgShapes.get(typeName);
+    return this.registry.get(typeName)?.csgShape;
   }
 
   getAllTypeNames(): string[] {
@@ -108,10 +100,6 @@ class NodeComponentRegistryImpl {
 
   clear(): void {
     this.registry.clear();
-    this.canvasItemTypes.clear();
-    this.containerTypes.clear();
-    this.csgShapes.clear();
-    this.transformOnlyTypes.clear();
   }
 }
 

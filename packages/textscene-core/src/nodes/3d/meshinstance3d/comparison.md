@@ -40,14 +40,13 @@ otherwise matches.
 ## Linting
 
 <!-- lint:begin MeshInstance3D -->
-Strict parsing format-checks these `MeshInstance3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
+Strict parsing format-checks these `MeshInstance3D` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
 | Property |
 | --- |
 | `cast_shadow` |
 | `gi_lightmap_scale` |
 | `gi_mode` |
-| `layers` |
 | `material_overlay` |
 | `material_override` |
 | `mesh` |

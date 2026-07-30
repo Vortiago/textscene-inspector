@@ -14,85 +14,103 @@
  *
  * `--dry-run` prints the full plan and writes nothing, so these assert the plan
  * without touching the tree.
+ *
+ * Every case writes nothing and shares no state, so all of them are launched at
+ * module scope and awaited together: each run is ~100ms of Node cold start and
+ * vitest runs `it` blocks in a file serially, so running them inline would make
+ * the file ten cold starts long instead of one.
  */
 
 import { describe, expect, it } from 'vitest';
-import { execFileSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { join } from 'node:path';
+
+const execFileAsync = promisify(execFile);
 
 const SCRIPT = join(import.meta.dirname, 'new-node-slice.mjs');
 const REPO_ROOT = join(import.meta.dirname, '..');
 
-/** Run the scaffold; returns `{ ok, out }` with stdout+stderr merged. */
-function run(args) {
+/** Run the scaffold as a dry run; resolves to `{ ok, out }`, stdout+stderr merged. */
+async function dry(args) {
   try {
-    return {
-      ok: true,
-      out: execFileSync('node', [SCRIPT, ...args], {
-        cwd: REPO_ROOT,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-      }),
-    };
+    const { stdout } = await execFileAsync('node', [SCRIPT, ...args, '--dry-run'], {
+      cwd: REPO_ROOT,
+    });
+    return { ok: true, out: stdout };
   } catch (err) {
     return { ok: false, out: `${err.stdout ?? ''}${err.stderr ?? ''}` };
   }
 }
 
-const dry = (args) => run([...args, '--dry-run']);
+const INVOCATIONS = {
+  noIntent: ['Widget3D', '3d', '--chain', 'Node3D'],
+  badIntent: ['Widget3D', '3d', '--intent', 'maybe', '--chain', 'Node3D'],
+  noChain: ['Widget3D', '3d', '--intent', 'pending'],
+  selfChain: ['Widget3D', '3d', '--intent', 'pending', '--chain', 'Widget3D'],
+  removedFlag: [
+    'Widget3D', '3d', '--intent', 'transform-only', '--chain', 'Node3D', '--transform-only',
+  ],
+  controlRendering: [
+    'Container', '2d/ui', '--base', 'control', '--intent', 'transform-only', '--chain', 'Control',
+  ],
+  transformOnly: [
+    'RayCast3D', 'physics/3d', '--intent', 'transform-only', '--chain', 'Node3D', '--linter',
+  ],
+  pending: [
+    'ProgressBar', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'Range', '--linter',
+  ],
+  draws: ['Widget3D', '3d', '--intent', 'draws', '--chain', 'Node3D'],
+  controlPending: [
+    'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'BaseButton',
+  ],
+};
+
+const keys = Object.keys(INVOCATIONS);
+const results = Object.fromEntries(
+  (await Promise.all(keys.map((k) => dry(INVOCATIONS[k])))).map((r, i) => [keys[i], r])
+);
 
 describe('new-node-slice argument contract', () => {
   it('refuses to run without --intent', () => {
-    const { ok, out } = dry(['Widget3D', '3d', '--chain', 'Node3D']);
-    expect(ok).toBe(false);
-    expect(out).toMatch(/--intent is required/);
+    expect(results.noIntent.ok).toBe(false);
+    expect(results.noIntent.out).toMatch(/--intent is required/);
   });
 
   it('refuses an unknown --intent', () => {
-    const { ok, out } = dry(['Widget3D', '3d', '--intent', 'maybe', '--chain', 'Node3D']);
-    expect(ok).toBe(false);
-    expect(out).toMatch(/--intent is required and must be one of/);
+    expect(results.badIntent.ok).toBe(false);
+    expect(results.badIntent.out).toMatch(/--intent is required and must be one of/);
   });
 
   it('refuses to run without --chain, naming the silent failure it prevents', () => {
-    const { ok, out } = dry(['Widget3D', '3d', '--intent', 'pending']);
-    expect(ok).toBe(false);
-    expect(out).toMatch(/--chain is required/);
-    expect(out).toMatch(/no inherited validation/);
+    expect(results.noChain.ok).toBe(false);
+    expect(results.noChain.out).toMatch(/--chain is required/);
+    expect(results.noChain.out).toMatch(/no inherited validation/);
   });
 
   it('refuses a --chain that names the type itself', () => {
-    const { ok, out } = dry(['Widget3D', '3d', '--intent', 'pending', '--chain', 'Widget3D']);
-    expect(ok).toBe(false);
-    expect(out).toMatch(/must be the PARENT class/);
+    expect(results.selfChain.ok).toBe(false);
+    expect(results.selfChain.out).toMatch(/must be the PARENT class/);
   });
 
   it('rejects the removed --transform-only flag instead of silently ignoring it', () => {
-    const { ok, out } = dry([
-      'Widget3D',
-      '3d',
-      '--intent',
-      'transform-only',
-      '--chain',
-      'Node3D',
-      '--transform-only',
-    ]);
-    expect(ok).toBe(false);
-    expect(out).toMatch(/--transform-only is gone/);
+    expect(results.removedFlag.ok).toBe(false);
+    expect(results.removedFlag.out).toMatch(/--transform-only is gone/);
+  });
+
+  it('refuses a rendering Control, which needs the overlay registry it cannot wire', () => {
+    // The scaffold emits nodeComponentRegistry + r3f/nodes/index.ts. A Control
+    // that draws belongs to controlComponentRegistry, r3f/controls/index.ts and
+    // TWO_D_UI_TYPES (ADR-0003) — so it must refuse rather than register a DOM
+    // component into the THREE registry.
+    expect(results.controlRendering.ok).toBe(false);
+    expect(results.controlRendering.out).toMatch(/--base control supports only --intent pending/);
   });
 });
 
 describe('new-node-slice intent shapes', () => {
   it('gives a transform-only slice a render registration and the base-type entry', () => {
-    const { ok, out } = dry([
-      'RayCast3D',
-      'physics/3d',
-      '--intent',
-      'transform-only',
-      '--chain',
-      'Node3D',
-      '--linter',
-    ]);
+    const { ok, out } = results.transformOnly;
     expect(ok).toBe(true);
     expect(out).toMatch(/create {2}nodes\/physics\/3d\/raycast3d\/index\.r3f\.ts/);
     expect(out).toMatch(/wire.*r3f\/nodes\/index\.ts/);
@@ -103,17 +121,7 @@ describe('new-node-slice intent shapes', () => {
   });
 
   it('leaves a pending slice with no render registration and no render wiring', () => {
-    const { ok, out } = dry([
-      'ProgressBar',
-      '2d/ui',
-      '--base',
-      'control',
-      '--intent',
-      'pending',
-      '--chain',
-      'Range',
-      '--linter',
-    ]);
+    const { ok, out } = results.pending;
     expect(ok).toBe(true);
     expect(out).not.toMatch(/index\.r3f\.ts/);
     expect(out).not.toMatch(/wire.*r3f\/nodes\/index\.ts/);
@@ -123,32 +131,21 @@ describe('new-node-slice intent shapes', () => {
   });
 
   it('gives a draws slice its own parser, types and Component', () => {
-    const { ok, out } = dry(['Widget3D', '3d', '--intent', 'draws', '--chain', 'Node3D']);
+    const { ok, out } = results.draws;
     expect(ok).toBe(true);
     expect(out).toMatch(/create {2}nodes\/3d\/widget3d\/parser\.ts/);
     expect(out).toMatch(/create {2}nodes\/3d\/widget3d\/types\.ts/);
     expect(out).toMatch(/create {2}nodes\/3d\/widget3d\/Component\.tsx/);
   });
 
-  it('accepts control as a base', () => {
-    const { ok, out } = dry([
-      'CheckButton',
-      '2d/ui',
-      '--base',
-      'control',
-      '--intent',
-      'pending',
-      '--chain',
-      'BaseButton',
-    ]);
-    expect(ok).toBe(true);
-    expect(out).toMatch(/base: control, intent: pending/);
+  it('accepts control as a base for a pending slice', () => {
+    expect(results.controlPending.ok).toBe(true);
+    expect(results.controlPending.out).toMatch(/base: control, intent: pending/);
   });
 
   it('writes nothing on a dry run', () => {
-    const { out } = dry(['RayCast3D', 'physics/3d', '--intent', 'transform-only', '--chain', 'Node3D']);
-    expect(out).toMatch(/dry run — nothing written/);
     // The scaffold aborts on an existing slice, so a leaked write would turn the
     // repeated runs above into failures rather than passing silently.
+    expect(results.transformOnly.out).toMatch(/dry run — nothing written/);
   });
 });

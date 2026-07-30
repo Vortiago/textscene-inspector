@@ -266,12 +266,20 @@ describe('comparison sheets', () => {
    */
   describe('status agrees with the render registration', () => {
     /** Slice-backed sheets only; the `complex-*` showcases have no slice. */
+    // Filter first, then read once per slice: the two directional assertions
+    // below would otherwise re-stat and re-read the same index.r3f.ts files.
     const sliceSheets = sheets
-      .map((s) => ({ ...s, r3f: join(dirname(s.file), 'index.r3f.ts') }))
-      .filter((s) => s.file.includes(`${sep}nodes${sep}`));
-
-    const registersTransformOnly = (s) =>
-      existsSync(s.r3f) && /renderIntent:\s*'transform-only'/.test(readFileSync(s.r3f, 'utf8'));
+      .filter((s) => s.file.includes(`${sep}nodes${sep}`))
+      .map((s) => {
+        const r3f = join(dirname(s.file), 'index.r3f.ts');
+        const hasComponent = existsSync(r3f);
+        return {
+          ...s,
+          hasComponent,
+          transformOnly:
+            hasComponent && /renderIntent:\s*'transform-only'/.test(readFileSync(r3f, 'utf8')),
+        };
+      });
 
     it('finds slice-backed sheets, so a bad filter cannot vacuously pass', () => {
       expect(sliceSheets.length).toBeGreaterThan(50);
@@ -279,7 +287,7 @@ describe('comparison sheets', () => {
 
     it('backs every `linter-only` sheet with a transform-only registration', () => {
       const bad = sliceSheets
-        .filter((s) => s.meta.status === 'linter-only' && !registersTransformOnly(s))
+        .filter((s) => s.meta.status === 'linter-only' && !s.transformOnly)
         .map((s) => `${s.label}: claims linter-only but its index.r3f.ts is not transform-only`);
       expect(bad).toEqual([]);
     });
@@ -288,7 +296,7 @@ describe('comparison sheets', () => {
       // The reverse direction: a slice that declares it draws nothing must say so
       // on its sheet, or the gallery shows it as an unassessed gap forever.
       const bad = sliceSheets
-        .filter((s) => registersTransformOnly(s) && s.meta.status !== 'linter-only')
+        .filter((s) => s.transformOnly && s.meta.status !== 'linter-only')
         .map(
           (s) => `${s.label}: registers transform-only but its status is ${s.meta.status ?? 'unset'}`
         );
@@ -297,7 +305,7 @@ describe('comparison sheets', () => {
 
     it('leaves every `unimplemented` sheet without a render component', () => {
       const bad = sliceSheets
-        .filter((s) => s.meta.status === 'unimplemented' && existsSync(s.r3f))
+        .filter((s) => s.meta.status === 'unimplemented' && s.hasComponent)
         .map((s) => `${s.label}: claims unimplemented but registers a render component`);
       expect(bad).toEqual([]);
     });

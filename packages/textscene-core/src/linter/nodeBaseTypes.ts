@@ -19,17 +19,21 @@ const LIGHT3D_LEAVES = [
   'AreaLight3D',
 ] as const;
 
-/** Base for every spatial (3D) node — Node3D carries the transform/visible set. */
-const NODE3D_LEAVES = [
+/**
+ * VisualInstance3D-derived nodes — every 3D type that actually draws. They map
+ * to `VisualInstance3D` (render layers, AABB) and on to `Node3D`.
+ *
+ * Godot puts `GeometryInstance3D` between most of these and VisualInstance3D;
+ * it is not modelled yet because it carries no validators, and
+ * `baseChainCompleteness.test.ts` fails the day it does, naming the leaves to
+ * re-chain. Do not flatten past a level that validates something.
+ */
+const VISUALINSTANCE3D_LEAVES = [
   'MeshInstance3D',
-  'Camera3D',
   'Sprite3D',
   'Label3D',
   'Decal',
-  'GridMap',
-  'Skeleton3D',
   'GPUParticles3D',
-  'Marker3D',
   'CSGBox3D',
   'CSGCylinder3D',
   'CSGSphere3D',
@@ -37,6 +41,14 @@ const NODE3D_LEAVES = [
   'CSGCombiner3D',
   'CSGMesh3D',
   'CSGPolygon3D',
+] as const;
+
+/** Base for every spatial (3D) node — Node3D carries the transform/visible set. */
+const NODE3D_LEAVES = [
+  'Camera3D',
+  'GridMap',
+  'Skeleton3D',
+  'Marker3D',
   'Path3D',
   'PathFollow3D',
   'NavigationRegion3D',
@@ -122,11 +134,15 @@ const CONTROL_LEAVES = [
 
 export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   ...Object.fromEntries(LIGHT3D_LEAVES.map((t) => [t, 'Light3D'])),
+  ...Object.fromEntries(VISUALINSTANCE3D_LEAVES.map((t) => [t, 'VisualInstance3D'])),
   ...Object.fromEntries(NODE3D_LEAVES.map((t) => [t, 'Node3D'])),
   ...Object.fromEntries(NODE2D_LEAVES.map((t) => [t, 'Node2D'])),
   ...Object.fromEntries(CONTROL_LEAVES.map((t) => [t, 'Control'])),
   // Abstract/non-authorable intermediate classes.
-  Light3D: 'Node3D',
+  // Light3D < VisualInstance3D in Godot, and VisualInstance3D validates the
+  // render `layers` every light also carries.
+  Light3D: 'VisualInstance3D',
+  VisualInstance3D: 'Node3D',
   // SubViewport < Viewport < Node. `Viewport` is not modelled as its own link
   // because SubViewport is the only authorable subclass we support (`Window` is
   // not), so its Viewport-level properties are validated on the leaf itself.

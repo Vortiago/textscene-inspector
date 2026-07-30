@@ -69,33 +69,14 @@ const FAMILY_ORDER = [
 ];
 
 /**
- * Godot's intermediate classes are `can_instantiate`, so they are ordinary
- * catalog entries and get ordinary slices — but every leaf below them inherits
- * their validators, so implementing one first is what stops a property being
- * declared five times. Ordered before everything else regardless of family.
+ * A node is a "base class" here when some other catalogued node lists it as an
+ * ancestor. Godot's own hierarchy already says so — every catalog entry carries
+ * its `chain` — so this is derived rather than listed: a hand-written list had
+ * already gone stale after one wave, and a base nobody remembered to add would
+ * sort as an ordinary leaf and turn the wave that reaches its subclass red for
+ * a reason that reads as unrelated.
  */
-const BASE_CLASSES = new Set([
-  'Range',
-  'BaseButton',
-  'Container',
-  'BoxContainer',
-  'FlowContainer',
-  'SplitContainer',
-  'TextEdit',
-  'Window',
-  'Popup',
-  'AcceptDialog',
-  'ConfirmationDialog',
-  'GraphElement',
-  'VisualInstance3D',
-  'GeometryInstance3D',
-  'SkeletonModifier3D',
-  'SpringBoneCollision3D',
-  'BoneConstraint3D',
-  'XRNode3D',
-  'VisibleOnScreenNotifier2D',
-  'VisibleOnScreenNotifier3D',
-]);
+const baseClassesOf = (nodes) => new Set(nodes.flatMap((n) => n.chain));
 
 function parseArgs(argv) {
   const opts = { next: 0, json: false };
@@ -111,30 +92,21 @@ function parseArgs(argv) {
   return opts;
 }
 
-/**
- * Sort key: base classes first — shallowest chain first, so a base lands before
- * any base derived from it (`Container` before `BoxContainer`) — then family
- * order, then name.
- */
-function waveKey(node) {
-  const isBase = BASE_CLASSES.has(node.name);
-  const family = FAMILY_ORDER.indexOf(node.group);
-  return [
-    isBase ? 0 : 1,
-    isBase ? node.chain.length : family === -1 ? FAMILY_ORDER.length : family,
-    node.name,
-  ];
+/** Family position; anything ungrouped sorts after every named family. */
+function familyRank(group) {
+  const i = FAMILY_ORDER.indexOf(group);
+  return i === -1 ? FAMILY_ORDER.length : i;
 }
 
-const byWave = (a, b) => {
-  const ka = waveKey(a);
-  const kb = waveKey(b);
-  for (let i = 0; i < ka.length; i++) {
-    if (ka[i] < kb[i]) return -1;
-    if (ka[i] > kb[i]) return 1;
-  }
-  return 0;
-};
+/**
+ * Base classes first — shallowest chain first, so a base lands before any base
+ * derived from it (`Container` before `BoxContainer`) — then family, then name.
+ * `isBase` is stamped on each node by `collectCoverage`.
+ */
+const byWave = (a, b) =>
+  Number(!a.isBase) - Number(!b.isBase) ||
+  (a.isBase ? a.chain.length - b.chain.length : familyRank(a.group) - familyRank(b.group)) ||
+  a.name.localeCompare(b.name);
 
 export async function collectCoverage() {
   const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
@@ -144,13 +116,17 @@ export async function collectCoverage() {
   const registered = new Set(nodeRegistry.getAllTypeNames());
   const validated = new Set(validatorRegistry.getRegisteredNodeTypes());
 
-  const missing = catalog.nodes.filter((n) => !registered.has(n.name)).sort(byWave);
+  const bases = baseClassesOf(catalog.nodes);
+  const catalogued = new Set(catalog.nodes.map((n) => n.name));
+
+  const missing = catalog.nodes
+    .filter((n) => !registered.has(n.name))
+    .map((n) => ({ ...n, isBase: bases.has(n.name) }))
+    .sort(byWave);
 
   // A registration for a type Godot's ClassDB never listed is either a node
   // newer than the catalog's engine build or a typo; either way, say so.
-  const phantom = [...registered].filter(
-    (t) => !catalog.nodes.some((n) => n.name === t) && !NOT_IN_CLASSDB.has(t)
-  );
+  const phantom = [...registered].filter((t) => !catalogued.has(t) && !NOT_IN_CLASSDB.has(t));
 
   return {
     godotVersion: catalog.godotVersion,
@@ -159,8 +135,6 @@ export async function collectCoverage() {
     validated: [...validated].sort(),
     missing,
     phantom,
-    /** Registered but with no validators of its own — inherits everything. */
-    registeredWithoutOwnValidators: [...registered].filter((t) => !validated.has(t)).sort(),
   };
 }
 
@@ -177,7 +151,7 @@ function report(data, opts) {
       return;
     }
     for (const n of next) {
-      const base = BASE_CLASSES.has(n.name) ? '  [BASE CLASS — do these first]' : '';
+      const base = n.isBase ? '  [BASE CLASS — do these first]' : '';
       console.log(`${n.name.padEnd(32)} ${n.category.padEnd(3)} ${n.group}${base}`);
       console.log(`${' '.repeat(32)} chain: ${n.chain.join(' < ')}`);
     }
@@ -199,17 +173,11 @@ function report(data, opts) {
     if (!groups.has(n.group)) groups.set(n.group, []);
     groups.get(n.group).push(n.name);
   }
-  // Family position only — the base-class tier is reported separately above, so
-  // letting it rank a group here would show a family out of its own order.
-  const familyRank = (g) => {
-    const i = FAMILY_ORDER.indexOf(g);
-    return i === -1 ? FAMILY_ORDER.length : i;
-  };
   const ordered = [...groups.entries()].sort(
     (a, b) => familyRank(a[0]) - familyRank(b[0]) || a[0].localeCompare(b[0])
   );
 
-  const bases = data.missing.filter((n) => BASE_CLASSES.has(n.name)).map((n) => n.name);
+  const bases = data.missing.filter((n) => n.isBase).map((n) => n.name);
   if (bases.length) {
     console.log(`Base classes still missing (${bases.length}) — implement before their leaves:`);
     console.log(`  ${bases.join(', ')}\n`);

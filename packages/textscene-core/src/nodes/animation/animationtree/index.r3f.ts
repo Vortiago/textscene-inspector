@@ -8,7 +8,8 @@ import { AnimationTree } from './Component';
 nodeComponentRegistry.register({
   typeName: 'AnimationTree',
   Component: AnimationTree,
-  container: true, renderIntent: 'transform-only'
+  container: true,
+  renderIntent: 'transform-only',
 });
 
 export { AnimationTree };

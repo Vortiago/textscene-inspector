@@ -5,7 +5,7 @@
 
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { layerBitmask, v } from '../../../linter/validators/index.js';
+import { v } from '../../../linter/validators/index.js';
 
 const CAST_SHADOW = { 0: 'OFF', 1: 'ON', 2: 'DOUBLE_SIDED', 3: 'SHADOWS_ONLY' };
 const GI_MODE = { 0: 'DISABLED', 1: 'STATIC', 2: 'DYNAMIC' };
@@ -26,7 +26,6 @@ validatorRegistry.registerAll('MeshInstance3D', {
     2,
     VISIBILITY_FADE_MODE
   ),
-  layers: layerBitmask('layers'),
   mesh: v.resourceReference('mesh'),
   material_override: v.resourceReference('material_override'),
   material_overlay: v.resourceReference('material_overlay'),

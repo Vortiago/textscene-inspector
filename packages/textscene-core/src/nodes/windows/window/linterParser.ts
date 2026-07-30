@@ -17,6 +17,7 @@
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { THEME_OVERRIDE_VALIDATORS } from '../../../linter/validators/themeOverrides.js';
 
 // `theme_type_variation` is a StringName: Godot always serialises it `&"..."`,
 // but the variant text parser also accepts a plain `"..."` literal (it implicitly
@@ -106,15 +107,6 @@ validatorRegistry.registerAll('Window', {
   theme: v.resourceReference('theme'),
   theme_type_variation: v.stringName('theme_type_variation'),
 
-  // Per-instance theme overrides — `foo/*` wildcard keys, one per override kind
-  // Window's own _get_property_list registers (colors/constants/fonts/font_sizes/
-  // icons/styles), same shape as Control's (see control/linterParser.ts).
-  'theme_override_colors/*': v.color('theme_override_colors'),
-  // scene/main/window.cpp: theme_override_constants PROPERTY_HINT_RANGE "-16384,16384" (both bounds hard)
-  'theme_override_constants/*': v.int('theme_override_constants', { min: -16384, max: 16384 }),
-  'theme_override_fonts/*': v.resourceReference('theme_override_fonts'),
-  // scene/main/window.cpp: theme_override_font_sizes PROPERTY_HINT_RANGE "1,256,1,or_greater" — 256 is a soft editor bound
-  'theme_override_font_sizes/*': v.int('theme_override_font_sizes', { min: 1 }),
-  'theme_override_icons/*': v.resourceReference('theme_override_icons'),
-  'theme_override_styles/*': v.resourceReference('theme_override_styles'),
+  // Shared with Control — Godot emits this family from both, identically.
+  ...THEME_OVERRIDE_VALIDATORS,
 });

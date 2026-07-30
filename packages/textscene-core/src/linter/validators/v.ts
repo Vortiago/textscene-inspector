@@ -76,6 +76,8 @@ export interface EnumOpts {
   labels: Record<number, string>;
 }
 
+const RECT2I_RE = /^Rect2i\(\s*-?\d+\s*,\s*-?\d+\s*,\s*-?\d+\s*,\s*-?\d+\s*\)$/;
+
 /**
  * The declarative validator namespace. Use as `v.float`, `v.enum`, etc.
  */
@@ -210,8 +212,7 @@ export const v = {
   rect2i(name: string): PropertyValidator {
     const code = formatCode(name);
     return (key, value, line) => {
-      const match = /^Rect2i\(\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/.exec(value);
-      if (!match) {
+      if (!RECT2I_RE.test(value)) {
         return propertyError(
           key,
           line,

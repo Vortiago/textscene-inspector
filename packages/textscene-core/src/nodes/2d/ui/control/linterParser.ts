@@ -15,6 +15,7 @@
 
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { THEME_OVERRIDE_VALIDATORS } from '../../../../linter/validators/themeOverrides.js';
 
 validatorRegistry.registerAll('Control', {
   // CanvasItem visibility / tint.
@@ -46,15 +47,6 @@ validatorRegistry.registerAll('Control', {
   size_flags_stretch_ratio: v.nonNegativeFloat('size_flags_stretch_ratio'),
   custom_minimum_size: v.vector2('custom_minimum_size'),
 
-  // Per-instance theme overrides (grouped keys → one validator each).
-  'theme_override_colors/*': v.color('theme_override_colors'),
-  // scene/gui/control.cpp:432: PROPERTY_HINT_RANGE, "-16384,16384" — both bounds hard.
-  'theme_override_constants/*': v.int('theme_override_constants', { min: -16384, max: 16384 }),
-  // scene/gui/control.cpp:446: PROPERTY_HINT_RANGE, "1,256,1,or_greater,suffix:px" —
-  // min 1 is hard; `or_greater` makes 256 a soft editor bound, so it is not capped.
-  'theme_override_font_sizes/*': v.int('theme_override_font_sizes', { min: 1 }),
-  'theme_override_styles/*': v.resourceReference('theme_override_styles'),
-  'theme_override_fonts/*': v.resourceReference('theme_override_fonts'),
-  // scene/gui/control.cpp:452: PROPERTY_HINT_RESOURCE_TYPE, "Texture2D".
-  'theme_override_icons/*': v.resourceReference('theme_override_icons'),
+  // Shared with Window — Godot emits this family from both, identically.
+  ...THEME_OVERRIDE_VALIDATORS,
 });

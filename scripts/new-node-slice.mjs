@@ -211,6 +211,17 @@ function parseArgs(argv) {
     );
   }
   if (opts.chain === typeName) fail('--chain must be the PARENT class, not the type itself');
+  if (opts.base === 'control' && opts.intent !== 'pending') {
+    fail(
+      `--base control supports only --intent pending.\n` +
+        `A Control that RENDERS belongs to the 2D DOM overlay (ADR-0003): it registers ` +
+        `into controlComponentRegistry, wires r3f/controls/index.ts, and must join ` +
+        `TWO_D_UI_TYPES in r3f/controls/has2DUIContent.ts, whose driftguard asserts exact ` +
+        `set equality. This scaffold emits none of that — it would register a DOM ` +
+        `component into the THREE registry and mount a <div> into the R3F reconciler. ` +
+        `Scaffold it as pending, or teach BASES to own its registry and barrel first.`
+    );
+  }
   return { typeName, category, ...opts };
 }
 
@@ -577,10 +588,10 @@ import './linterParser.js';
       `/**
  * ${typeName} strict validators — format and range checks.
  *
- * Asserted through \`validatorRegistry\`, not through \`Linter\`: Linter pulls
- * \`linter/index.ts\`, the barrel that imports every slice, so a scoped run while
- * sibling slices are being written fails on their half-finished files. The
- * barrel path is covered by the full suite.
+ * Asserted through \`validatorRegistry\` rather than by linting a \`.tscn\`: the
+ * unit under test is the validator, so a failure points at the validator
+ * instead of at scene parsing, and no fixture text has to be maintained
+ * alongside it. Rule-level behaviour belongs in linter.test.ts, through \`Linter\`.
  *
  * Grow this into one case per property — happy, malformed, and any bound — and
  * quote the governing Godot source line beside every numeric bound.
