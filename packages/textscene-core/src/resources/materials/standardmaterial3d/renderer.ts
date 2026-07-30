@@ -6,33 +6,34 @@ import * as THREE from 'three';
 import type { StandardMaterial3DProperties } from './types';
 import { emissionScalars, resolveEmission } from './emission';
 import { info } from '../../../logger';
+import { applyTextureState } from '../../textures/applyTextureState';
 
 /**
- * Apply UV transform to texture based on uv1_scale property.
- * In Godot: UV = UV * uv1_scale (higher scale = more tiling)
- * In THREE.js: texture.repeat (higher repeat = more tiling)
- * Conversion: THREE.repeat = Godot.uv1_scale (direct mapping)
+ * The texture this material samples: the shared cached one when it needs no
+ * state of its own, otherwise a clone carrying its UV transform and sampler
+ * filter. `applyTextureState` owns both; see it for why cloning is mandatory.
  *
- * Returns a cloned texture with the UV transform applied if uv1_scale is set,
- * otherwise returns the original texture.
+ * Godot's `uv1_scale` maps to three's `repeat` directly (higher = more tiling).
+ * `uv1_offset` is not parsed on this path yet, so it passes zero.
  */
-function applyUVTransform(texture: THREE.Texture, properties: StandardMaterial3DProperties): THREE.Texture {
-  if (properties.uv1_scale) {
-    // Clone the texture to avoid modifying the shared cached instance
-    const clonedTexture = texture.clone();
-    clonedTexture.repeat.set(properties.uv1_scale.x, properties.uv1_scale.y);
-    clonedTexture.wrapS = THREE.RepeatWrapping;
-    clonedTexture.wrapT = THREE.RepeatWrapping;
-    clonedTexture.needsUpdate = true;
+function materialTexture(
+  texture: THREE.Texture,
+  properties: StandardMaterial3DProperties
+): THREE.Texture {
+  const result = applyTextureState(texture, {
+    uv: properties.uv1_scale
+      ? { scale: properties.uv1_scale, offset: { x: 0, y: 0 } }
+      : undefined,
+    filter: properties.texture_filter,
+  });
 
+  if (result !== texture) {
     info(
-      `[StandardMaterial3D] Applied uv1_scale: (${properties.uv1_scale.x}, ${properties.uv1_scale.y}) -> repeat: (${clonedTexture.repeat.x}, ${clonedTexture.repeat.y})`
+      `[StandardMaterial3D] Cloned texture for uv1_scale=${JSON.stringify(properties.uv1_scale)} texture_filter=${properties.texture_filter ?? '(default)'}`
     );
-
-    return clonedTexture;
   }
 
-  return texture;
+  return result;
 }
 
 /**
@@ -72,28 +73,28 @@ export function createStandardMaterial(properties: StandardMaterial3DProperties)
 
   // Map texture properties and apply UV transforms
   if (properties.albedo_texture) {
-    materialOptions.map = applyUVTransform(properties.albedo_texture, properties);
+    materialOptions.map = materialTexture(properties.albedo_texture, properties);
   }
 
   if (properties.normal_enabled && properties.normal_texture) {
-    materialOptions.normalMap = applyUVTransform(properties.normal_texture, properties);
+    materialOptions.normalMap = materialTexture(properties.normal_texture, properties);
   }
 
   if (properties.metallic_texture) {
-    materialOptions.metalnessMap = applyUVTransform(properties.metallic_texture, properties);
+    materialOptions.metalnessMap = materialTexture(properties.metallic_texture, properties);
   }
 
   if (properties.roughness_texture) {
-    materialOptions.roughnessMap = applyUVTransform(properties.roughness_texture, properties);
+    materialOptions.roughnessMap = materialTexture(properties.roughness_texture, properties);
   }
 
   if (properties.ao_texture) {
-    materialOptions.aoMap = applyUVTransform(properties.ao_texture, properties);
+    materialOptions.aoMap = materialTexture(properties.ao_texture, properties);
   }
 
   if (properties.emission_enabled) {
     if (properties.emission_texture) {
-      materialOptions.emissiveMap = applyUVTransform(properties.emission_texture, properties);
+      materialOptions.emissiveMap = materialTexture(properties.emission_texture, properties);
     }
     // An emission colour and energy reach the material the same way they do on
     // the inline-SubResource path, through the one shared decomposition —

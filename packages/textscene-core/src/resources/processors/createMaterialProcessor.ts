@@ -14,6 +14,7 @@ import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import { createMaterialFromContent, isMaterialPath, type TextureLoaderFn } from '../processing/materialProcessing';
 import { parseSubResourcePath } from '../subResourcePath';
+import { isMaterialOwnedTexture } from '../textures/applyTextureState';
 
 /**
  * Create a material processor that handles loading and caching materials.
@@ -34,6 +35,42 @@ export function createMaterialProcessor(
       const { subResourceId } = parseSubResourcePath(path);
       return createMaterialFromContent(data as string, loadTexture, subResourceId);
     },
-    dispose: (material) => material.dispose(),
+    dispose: disposeMaterialAndOwnedTextures,
   });
+}
+
+/** Every `THREE.Material` texture slot, so disposal can walk them. */
+const TEXTURE_SLOTS = [
+  'map',
+  'normalMap',
+  'roughnessMap',
+  'metalnessMap',
+  'emissiveMap',
+  'aoMap',
+  'displacementMap',
+  'alphaMap',
+  'bumpMap',
+  'lightMap',
+  'envMap',
+  'anisotropyMap',
+  'clearcoatMap',
+  'clearcoatRoughnessMap',
+  'clearcoatNormalMap',
+  'specularMap',
+] as const;
+
+/**
+ * `Material.dispose()` does NOT dispose its maps, and this material's maps may
+ * include per-material clones that nothing else owns — so without this every
+ * clone leaks its GPU upload for the life of the session. Only clones are
+ * freed: the shared source belongs to the loader's cache and may still be in
+ * use by other materials.
+ */
+function disposeMaterialAndOwnedTextures(material: THREE.Material): void {
+  const slots = material as unknown as Record<string, THREE.Texture | null | undefined>;
+  for (const slot of TEXTURE_SLOTS) {
+    const texture = slots[slot];
+    if (texture && isMaterialOwnedTexture(texture)) texture.dispose();
+  }
+  material.dispose();
 }

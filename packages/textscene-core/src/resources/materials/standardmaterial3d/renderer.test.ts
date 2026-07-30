@@ -542,7 +542,12 @@ describe('StandardMaterial3D Renderer', () => {
       expect(material.map!.wrapT).toBe(THREE.RepeatWrapping);
     });
 
-    it('should handle uv1_scale with value of 1.0 (no tiling change)', () => {
+    it('hands back the shared texture for an identity uv1_scale', () => {
+      // An identity scale asks for nothing, so there is nothing to clone. This
+      // path used to clone anyway — and incidentally flipped the clone to
+      // RepeatWrapping, which is not something `uv1_scale` means. Godot's
+      // wrapping comes from `texture_repeat`, a property neither path parses;
+      // until it does, an untransformed texture keeps three's ClampToEdge.
       const albedoTexture = new THREE.Texture();
       const properties: StandardMaterial3DProperties = {
         albedo_texture: albedoTexture,
@@ -551,10 +556,9 @@ describe('StandardMaterial3D Renderer', () => {
 
       const material = createStandardMaterial(properties);
 
-      expect(material.map!.repeat.x).toBe(1); // Direct: uv1_scale = 1.0
+      expect(material.map).toBe(albedoTexture);
+      expect(material.map!.repeat.x).toBe(1);
       expect(material.map!.repeat.y).toBe(1);
-      expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
-      expect(material.map!.wrapT).toBe(THREE.RepeatWrapping);
     });
 
     it('should apply UV transform independently to each texture type', () => {
