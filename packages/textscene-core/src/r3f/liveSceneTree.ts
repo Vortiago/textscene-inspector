@@ -89,7 +89,7 @@ export function collapseLiveNode(
   if (!scenePath) return node;
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return node;
-  return mergeInstanceRoot(node, cached) ?? node;
+  return mergeInstanceRoot(node, cached, externalResources) ?? node;
 }
 
 /** A node's live children, paired with the ExtResource scope those children resolve against. */
@@ -173,7 +173,7 @@ export function liveChildGroups(
   // Collapsed single-root instance (ADR-0013): one merged group under sub-scene
   // scope. The merged node rides along on the group so a caller needing the
   // collapsed identity (the tree row) reuses this merge instead of re-running it.
-  const merged = mergeInstanceRoot(node, cached);
+  const merged = mergeInstanceRoot(node, cached, externalResources);
   if (merged) {
     return [
       { origin: 'merged', children: merged.children, externalResources: subResources, mergedNode: merged },
