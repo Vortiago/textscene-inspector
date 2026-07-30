@@ -53,6 +53,35 @@ advance is about 0.94em, that runs a few percent wide. It only shows on a field
 that gets no width from a container or from its own offsets; anywhere else the
 laid-out width exceeds the floor and the substitution is invisible.
 
+## Native (WebGL canvas) painter
+
+`nativeSolver.ts` registers `LineEdit::get_minimum_size` (`controlSolverRegistry.registerMinimumSize`,
+`line_edit.cpp:2443-2477`) — the exact `minimum_character_width * 'W'-advance`
+term the DOM overlay only approximates with `4em` above, now measured against
+the SAME vendored Open Sans atlas Godot's own default theme font is baked
+from. `NativeComponent.tsx` draws the `normal`/`read_only` `StyleBoxQuad`
+(skipped when `flat`) and one `<TextRun>` — whichever string
+`lineEditDisplayText` selects, at `font_color`/`font_uneditable_color`/
+`font_placeholder_color` per state, aligned per `alignment`, and clipped to
+the content rect (the rect inset by the ACTIVE stylebox's margins) the same
+way `ScrollContainer` (packet P16) clips its own subtree, just for this one
+run rather than a whole descendant tree. `nativeTheme.ts` gained LineEdit's
+own `normal`/`read_only` StyleBoxFlat structs (`widgets.lineEdit`) as part of
+this packet — no earlier packet needed them. As with every native painter
+shipped so far, this is a static-viewer draw: no caret, no selection, no IME.
+
+### Known, deliberate gap: the default secret bullet has no atlas glyph
+
+`secret`'s substitution logic is exact (`displayText.ts`'s `lineEditDisplayText`,
+independently unit-tested), but the vendored Open Sans atlas
+(`r3f/controls/native/text/openSansAtlas.ts`) only bakes printable ASCII —
+`•` (U+2022), the DEFAULT `secret_character`, is not among them. A secret
+field that never overrides `secret_character` therefore echoes a run of
+GLYPHS THAT DRAW NOTHING on the native canvas (zero quads, verified in
+`NativeComponent.test.tsx`) — invisible rather than wrong, but still a gap:
+an ASCII override (e.g. `*`) renders correctly. Closing it would mean adding
+`•` to the baked atlas, out of this packet's scope.
+
 ## Linting
 
 <!-- lint:begin LineEdit -->

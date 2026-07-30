@@ -31,6 +31,44 @@ a drawn approximation. A scene-authored `theme_override_icons/<name>` is a separ
 case: `parseThemeOverrides` drops it through its `default` branch, but it would
 resolve the way `theme_override_styles` already does. The checked/unchecked distinction and the dimmed disabled row
 read correctly in both, and the labels sit at the same place.
+**Closed by the native (WebGL) painter below**, which draws the actual vendored
+icon textures instead of a hand-drawn approximation — see its own section.
+
+## Native (WebGL canvas) painter
+
+`nativeSolver.ts` registers `CheckBox::get_minimum_size`
+(`controlSolverRegistry.registerMinimumSize`); `NativeComponent.tsx` draws the
+check (or radio, when the node belongs to a `button_group`) indicator using the
+real vendored icon textures (`native/themeIcons.ts`'s `CHECK_BOX_ICONS`, 8
+draw-state variants), followed by the label — CheckBox draws NO chrome mesh at
+all, since its own "normal" StyleBox is a `StyleBoxEmpty` (`default_theme.cpp:
+276-277`).
+
+### The checked state draws DRAW_PRESSED, not DRAW_NORMAL — a label colour a
+### static preview could easily get wrong
+
+`button_pressed = true` makes `BaseButton::get_draw_mode()`
+(`scene/gui/base_button.cpp:325-358`) return `DRAW_PRESSED` even with no pointer
+ever touching the control (a static preview never sets `hovering`/`press_attempt`,
+so the function's own `else` branch collapses to `pressing = status.pressed`).
+CheckBox registers its own `font_pressed_color = control_font_pressed_color =
+Color(1, 1, 1)` (`default_theme.cpp:108,301`), so a CHECKED, non-disabled row's
+label draws pure white — NOT the 0.875-gray `font_color` a merely-normal label
+would use.
+
+Measured against real Godot 4.6.3 — `pnpm ref:godot scenes/fixtures/unit-checkbox.tscn
+--mode 2d --probe 527,298` (a solid glyph-stroke pixel inside the checked row's
+label) → `rgb(255, 255, 255)`. The disabled row's label, by contrast, reads
+`rgb(150, 150, 150)` at probe `526,350` — `font_disabled_color` (`{0.875, 0.875,
+0.875, 0.5}`, `default_theme.cpp:106,305`) alpha-blended over the `rgb(76,76,76)`
+clear colour: `0.5*223 + 0.5*76 = 149.5`. The native painter resolves all three
+states (`resolveCheckBoxDrawState`), so the checked row draws white and the
+disabled row draws the blended gray, matching both probes exactly.
+
+No pointer-dependent draw gate: the check/radio icon and the label both draw
+unconditionally in `CheckBox::_notification`'s `NOTIFICATION_DRAW` — there is no
+`mouse_inside`/hover condition to reproduce here, unlike the SplitContainer
+grabber's `autohide`.
 
 ## Linting
 

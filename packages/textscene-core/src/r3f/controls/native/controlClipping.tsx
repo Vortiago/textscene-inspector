@@ -22,7 +22,7 @@
  * scrollbar chrome (built from `StyleBoxQuad`) and every descendant Control
  * inherit the clip for free.
  */
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import * as THREE from 'three';
 import type { Rect2 } from './rect';
 
@@ -75,4 +75,75 @@ export function localRectClipPlanes(rect: Rect2): THREE.Plane[] {
     new THREE.Plane(new THREE.Vector3(0, 1, 0), -bottom), // keep y >= bottom
     new THREE.Plane(new THREE.Vector3(0, -1, 0), top), // keep y <= top
   ];
+}
+
+/** 4 planes × (normal.x, normal.y, normal.z, constant). */
+const PLANE_FLOATS = 16;
+
+function flattenPlanes(planes: readonly THREE.Plane[], out: Float64Array): void {
+  planes.forEach((p, i) => {
+    out[i * 4] = p.normal.x;
+    out[i * 4 + 1] = p.normal.y;
+    out[i * 4 + 2] = p.normal.z;
+    out[i * 4 + 3] = p.constant;
+  });
+}
+
+function sameFloats(a: Float64Array, b: Float64Array): boolean {
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+/**
+ * `localRect` clipped in WORLD space and merged onto whatever this node
+ * inherited — the whole mechanism a Control needs to clip its own content.
+ *
+ * Attach the returned `anchorRef` to the group whose local frame `localRect`
+ * is expressed in; the returned `clippingPlanes` go on every material that
+ * must be clipped, and (for a node that clips its subtree) into a
+ * `ControlClipProvider`.
+ *
+ * The effect deliberately has NO dependency array: an ancestor's world
+ * transform is not a React value it could list — it is whatever three composed
+ * through the WHOLE tree by the time refs settle, not just this node's own
+ * rect — so it must re-sample after every render, exactly like
+ * `useShadowLightPose` samples every FRAME for the identical reason. What
+ * stops that same-every-render effect from calling `setState` forever is the
+ * float comparison against the previous computation, not a deps rule.
+ */
+export function useWorldClipPlanes(localRect: Rect2): {
+  anchorRef: RefObject<THREE.Group | null>;
+  clippingPlanes: readonly THREE.Plane[];
+} {
+  const inherited = useControlClipPlanes();
+  const anchorRef = useRef<THREE.Group>(null);
+  const [ownPlanes, setOwnPlanes] = useState<readonly THREE.Plane[]>([]);
+  const previousFloats = useRef<Float64Array | null>(null);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    const anchor = anchorRef.current;
+    if (!anchor) return;
+    anchor.updateWorldMatrix(true, false);
+    const local = localRectClipPlanes(localRect);
+    const world = local.map((p) => p.clone().applyMatrix4(anchor.matrixWorld));
+    const floats = new Float64Array(PLANE_FLOATS);
+    flattenPlanes(world, floats);
+    if (previousFloats.current && sameFloats(previousFloats.current, floats)) return;
+    previousFloats.current = floats;
+    setOwnPlanes(world);
+  });
+
+  // Memoised, not recomputed inline: this is a context VALUE, and
+  // `withAdditionalClipPlanes` necessarily returns a fresh array once this node
+  // contributes planes of its own. A fresh identity per render re-renders every
+  // descendant consumer, and `TextRun` keys its `ShaderMaterial` off this array.
+  const clippingPlanes = useMemo(
+    () => withAdditionalClipPlanes(inherited, ownPlanes),
+    [inherited, ownPlanes]
+  );
+
+  return { anchorRef, clippingPlanes };
 }

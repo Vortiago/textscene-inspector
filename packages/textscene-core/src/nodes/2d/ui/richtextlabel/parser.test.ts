@@ -26,4 +26,9 @@ describe('parseRichTextLabel', () => {
     expect(p.bbcodeEnabled).toBe(false);
     expect(p.fitContent).toBe(false);
   });
+
+  it('parses autowrap_mode (rich_text_label.cpp:7761), undefined when absent', () => {
+    expect(parseRichTextLabel(h({ name: 'T', type: 'RichTextLabel' }), { autowrap_mode: '2' }).autowrapMode).toBe(2);
+    expect(parseRichTextLabel(h({ name: 'T', type: 'RichTextLabel' }), {}).autowrapMode).toBeUndefined();
+  });
 });

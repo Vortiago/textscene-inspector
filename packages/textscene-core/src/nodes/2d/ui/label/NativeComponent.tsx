@@ -28,22 +28,16 @@ import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { AutowrapMode, shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  AutowrapMode,
+  clampAutowrapMode,
+  shapeText,
+  type TextLayoutResult,
+} from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { labelTextTheme, layoutLabelLines, type LabelLinePlacement } from './nativeSolver';
 import type { LabelProperties } from './types';
 
-/** Godot `Label.autowrap_mode` values line up 1:1 with `AutowrapMode`'s own numeric values; an unrecognised value falls back to OFF, the same silent-lenient default `parseOptionalInt` already applies at parse time. */
-function resolveAutowrapMode(mode: number | undefined): AutowrapMode {
-  switch (mode) {
-    case AutowrapMode.ARBITRARY:
-    case AutowrapMode.WORD:
-    case AutowrapMode.WORD_SMART:
-      return mode;
-    default:
-      return AutowrapMode.OFF;
-  }
-}
 
 /** A single line, wrapped as its own one-line `TextLayoutResult` — `TextRun` computes `lineIndex * linePitchPx` internally, which is 0 for a solo line, so it draws relative to y=0 with no cumulative pitch of its own; the caller (this component) supplies the real cumulative Y via the wrapping `<group>`'s position. */
 function soloLineLayout(placement: LabelLinePlacement, linePitchPx: number): TextLayoutResult {
@@ -77,7 +71,8 @@ export function LabelNative({ solveNode, rect, renderOrder, theme }: NativeContr
   const clippingPlanes = useControlClipPlanes();
 
   const text = props.text ?? '';
-  const autowrapMode = resolveAutowrapMode(props.autowrapMode);
+  // Label's own default is OFF (`label.h`'s `autowrap_mode` initialiser).
+  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
   const layout = useMemo(
     () =>
       shapeText(text, {

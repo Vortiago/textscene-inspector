@@ -170,7 +170,7 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
 
   // --- Counts (csg_shape.cpp:2201-2231) ---
   const curveLength = path ? path.sampler.length : 1;
-  let extrusions = 0;
+  let extrusions: number;
   let endCount = 0;
   switch (mode) {
     case PolygonMode.DEPTH:
@@ -258,7 +258,7 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
   const baseXform = path?.baseMatrix ? path.baseMatrix.clone() : new THREE.Matrix4();
   let currentXform = new THREE.Matrix4();
   let previousXform = new THREE.Matrix4();
-  let previousPreviousXform = new THREE.Matrix4();
+  let previousPreviousXform: THREE.Matrix4;
 
   const sampleAt = (d: number): THREE.Vector3 => {
     const s = path!.sampler.sampleAt(d);

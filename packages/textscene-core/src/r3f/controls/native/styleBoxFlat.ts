@@ -27,6 +27,7 @@
  */
 
 import type { ControlColor } from '../../../nodes/2d/ui/control/types';
+import type { Vec2 } from './rect';
 
 export interface StyleBoxFlatData {
   bgColor: ControlColor;
@@ -37,4 +38,20 @@ export interface StyleBoxFlatData {
   contentMargin: { left: number; top: number; right: number; bottom: number };
   drawCenter: boolean;
   borderBlend: boolean;
+}
+
+/**
+ * The total space a StyleBox's content margins take from a rect — the amount
+ * every `get_minimum_size` adds on top of its content, and the amount every
+ * content rect is inset by (`StyleBox::get_minimum_size`, which sums the same
+ * two pairs).
+ *
+ * The margins are already effective values: `parseStyleBox` resolves the `-1`
+ * sentinel to the matching border width before it ever reaches this struct.
+ */
+export function contentMarginSize(box: StyleBoxFlatData): Vec2 {
+  return {
+    x: box.contentMargin.left + box.contentMargin.right,
+    y: box.contentMargin.top + box.contentMargin.bottom,
+  };
 }

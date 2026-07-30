@@ -27,7 +27,7 @@
  */
 
 import type { ControlColor } from '../../../nodes/2d/ui/control/types';
-import { scaledGodotTheme, STYLE_FILL, type ScaledGodotTheme } from '../godotDefaultTheme';
+import { LINE_EDIT_BORDER_BOTTOM_WIDTH, scaledGodotTheme, STYLE_FILL, type ScaledGodotTheme } from '../godotDefaultTheme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 
 /**
@@ -88,6 +88,35 @@ function flatStyleBox(
 }
 
 /**
+ * LineEdit's own `normal`/`read_only` styleboxes (`default_theme.cpp:405-417`):
+ * `make_flat_stylebox(fill)` — same scaled margin/radius `flatStyleBox` above
+ * already produces for Button — PLUS a bottom border Godot sets directly on
+ * the built box via `set_border_width(SIDE_BOTTOM, 2)`/`set_border_color`,
+ * bypassing `make_flat_stylebox` entirely. That is why the border width is a
+ * bare `2`, never `Math.round(2 * scale)`: the comment above `make_flat_stylebox`
+ * in `default_theme.cpp` scales every length it's ROUTED THROUGH, and this
+ * call never routes the border through it.
+ */
+function lineEditStyleBox(
+  bgColor: ControlColor,
+  borderColor: ControlColor,
+  contentMargin: { left: number; top: number; right: number; bottom: number },
+  cornerRadius: number
+): StyleBoxFlatData {
+  return {
+    ...flatStyleBox(bgColor, contentMargin, cornerRadius),
+    borderColor,
+    borderWidth: { left: 0, top: 0, right: 0, bottom: LINE_EDIT_BORDER_BOTTOM_WIDTH },
+  };
+}
+
+/** `style_pressed_color` (`default_theme.cpp:115`) — LineEdit `normal`'s own bottom-border colour (`:408`). */
+const LINE_EDIT_NORMAL_BORDER_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 0.6 };
+
+/** `style_pressed_color * Color(1, 1, 1, 0.5)` (`default_theme.cpp:416`) — `read_only`'s own bottom-border colour, half `normal`'s alpha. */
+const LINE_EDIT_READ_ONLY_BORDER_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 0.3 };
+
+/**
  * The default-theme StyleBoxFlat structs later packets (Panel/Button/
  * ScrollBar/ScrollContainer) compose their Controls from.
  */
@@ -98,6 +127,33 @@ export interface NativeThemeWidgets {
     hover: StyleBoxFlatData;
     pressed: StyleBoxFlatData;
     disabled: StyleBoxFlatData;
+  };
+  /** LineEdit's own `normal`/`read_only` styleboxes — `default_theme.cpp:405-417`. */
+  lineEdit: {
+    normal: StyleBoxFlatData;
+    readOnly: StyleBoxFlatData;
+  };
+  /**
+   * `sb_optbutton_normal`/`sb_optbutton_disabled` (`default_theme.cpp:212-215`):
+   * the same corner radius as every other default-theme flat stylebox, with
+   * content margins unique to OptionButton (asymmetric X vs Y). Only the two
+   * states `ButtonDrawState` can select in a pointer-less static preview are
+   * built — hover/pressed never arise.
+   */
+  optionButton: {
+    normal: StyleBoxFlatData;
+    disabled: StyleBoxFlatData;
+  };
+  /**
+   * HSlider/VSlider's `slider` (track) and `grabber_area` (fill) styleboxes —
+   * `make_flat_stylebox(color, 4, 4, 4, 4, 4)` (`default_theme.cpp:579-580`),
+   * the identical shape for both orientations. `contentMargin` stays zero:
+   * on-screen thickness comes from `sliderTrackThickness` via the solver's
+   * rect math, never from summing this struct's margins.
+   */
+  slider: {
+    track: StyleBoxFlatData;
+    fill: StyleBoxFlatData;
   };
   scrollBar: {
     /** HScrollBar's "scroll" (track) stylebox — `style_h_scrollbar`, `default_theme.cpp:543`. */
@@ -156,6 +212,12 @@ export function nativeTheme(scale: number): NativeTheme {
     right: scaled.contentMargin,
     bottom: scaled.contentMargin,
   };
+  const optionButtonMargin = {
+    left: scaled.optionButtonMarginX,
+    top: scaled.optionButtonMarginY,
+    right: scaled.optionButtonMarginX,
+    bottom: scaled.optionButtonMarginY,
+  };
   const scrollBarCornerRadius = Math.round(SCROLL_BAR_CORNER_RADIUS * scale);
 
   return {
@@ -170,6 +232,34 @@ export function nativeTheme(scale: number): NativeTheme {
         hover: flatStyleBox(STYLE_FILL.hover, buttonMargin, scaled.cornerRadius),
         pressed: flatStyleBox(STYLE_FILL.pressed, buttonMargin, scaled.cornerRadius),
         disabled: flatStyleBox(STYLE_FILL.disabled, buttonMargin, scaled.cornerRadius),
+      },
+      lineEdit: {
+        // default_theme.cpp:405-409: make_flat_stylebox(style_normal_color) + border.
+        normal: lineEditStyleBox(
+          STYLE_FILL.normal,
+          LINE_EDIT_NORMAL_BORDER_COLOR,
+          buttonMargin,
+          scaled.cornerRadius
+        ),
+        // default_theme.cpp:413-417: make_flat_stylebox(style_disabled_color) + border.
+        readOnly: lineEditStyleBox(
+          STYLE_FILL.disabled,
+          LINE_EDIT_READ_ONLY_BORDER_COLOR,
+          buttonMargin,
+          scaled.cornerRadius
+        ),
+      },
+      optionButton: {
+        // default_theme.cpp:212-215: make_flat_stylebox(color, 2*default_margin,
+        // default_margin, 2*default_margin, default_margin) — X and Y differ.
+        normal: flatStyleBox(STYLE_FILL.normal, optionButtonMargin, scaled.cornerRadius),
+        disabled: flatStyleBox(STYLE_FILL.disabled, optionButtonMargin, scaled.cornerRadius),
+      },
+      slider: {
+        // default_theme.cpp:579-580: make_flat_stylebox(color, 4, 4, 4, 4, 4) for
+        // both `slider` and `grabber_area`; margins are never read back off these.
+        track: flatStyleBox(STYLE_FILL.normal, ZERO_SIDES, scaled.sliderCornerRadius),
+        fill: flatStyleBox(STYLE_FILL.progress, ZERO_SIDES, scaled.sliderCornerRadius),
       },
       scrollBar: {
         scrollHorizontal: flatStyleBox(

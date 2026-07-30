@@ -24,6 +24,20 @@
  *      set_icon("v_grabber", "SplitContainer", icons["vsplitter"])
  *      set_icon("grabber",   "HSplitContainer", icons["hsplitter"])
  *      set_icon("grabber",   "VSplitContainer", icons["vsplitter"])
+ *  - HSlider / VSlider (`default_theme.cpp:589-592,604-607`), IDENTICAL for
+ *    both orientations except the `tick` icon:
+ *      set_icon("grabber",           "HSlider", icons["slider_grabber"])
+ *      set_icon("grabber_highlight", "HSlider", icons["slider_grabber_hl"])
+ *      set_icon("grabber_disabled",  "HSlider", icons["slider_grabber_disabled"])
+ *      set_icon("tick",              "HSlider", icons["hslider_tick"])
+ *      set_icon("grabber",           "VSlider", icons["slider_grabber"])
+ *      set_icon("grabber_highlight", "VSlider", icons["slider_grabber_hl"])
+ *      set_icon("grabber_disabled",  "VSlider", icons["slider_grabber_disabled"])
+ *      set_icon("tick",              "VSlider", icons["vslider_tick"])
+ *    `grabber_highlight` is Slider's hover/focus state — out of scope for a
+ *    static previewer (same restriction as Button's hover/pressed states), so
+ *    it is not vended here; only the `normal`/`disabled` pair a static render
+ *    ever needs.
  *
  * The bytes embedded below are unmodified copies of those SVG files from
  * Godot 4.6.3's `scene/theme/icons/`. Licence: Godot Engine, MIT — see
@@ -122,4 +136,42 @@ export interface SplitContainerIcons {
 export const SPLIT_CONTAINER_ICONS: SplitContainerIcons = {
   hsplitter: svgDataUrl(HSPLITTER_B64),
   vsplitter: svgDataUrl(VSPLITTER_B64),
+};
+
+/** `scene/theme/icons/slider_grabber.svg` (16x16) — HSlider/VSlider's `grabber` icon. */
+const SLIDER_GRABBER_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZWZlZmUiIGZpbGwtb3BhY2l0eT0iLjc1Ii8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/slider_grabber_disabled.svg` (16x16) — HSlider/VSlider's `grabber_disabled` icon. */
+const SLIDER_GRABBER_DISABLED_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZWZlZmUiIGZpbGwtb3BhY2l0eT0iLjM3Ii8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/hslider_tick.svg` (4x8) — HSlider's `tick` icon. */
+const HSLIDER_TICK_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjgiPjxwYXRoIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjI1IiBkPSJNMSAwaDJ2MTZIMXoiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/vslider_tick.svg` (8x4) — VSlider's `tick` icon. */
+const VSLIDER_TICK_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjQiPjxwYXRoIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjI1IiBkPSJNMCAzVjFoMTZ2MnoiLz48L3N2Zz4K';
+
+/** HSlider/VSlider's `grabber`/`grabber_disabled` icons — identical for both orientations (`default_theme.cpp:589-591,604-606`). */
+export interface SliderGrabberIcons {
+  grabber: string;
+  grabberDisabled: string;
+}
+
+export const SLIDER_GRABBER_ICONS: SliderGrabberIcons = {
+  grabber: svgDataUrl(SLIDER_GRABBER_B64),
+  grabberDisabled: svgDataUrl(SLIDER_GRABBER_DISABLED_B64),
+};
+
+/** HSlider/VSlider's single `tick` icon, per axis (`default_theme.cpp:592,607`). */
+export interface SliderTickIcons {
+  hslider: string;
+  vslider: string;
+}
+
+export const SLIDER_TICK_ICONS: SliderTickIcons = {
+  hslider: svgDataUrl(HSLIDER_TICK_B64),
+  vslider: svgDataUrl(VSLIDER_TICK_B64),
 };

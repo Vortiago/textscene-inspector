@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { CHECK_BOX_ICONS, OPTION_BUTTON_ICONS, SPLIT_CONTAINER_ICONS } from './themeIcons';
+import {
+  CHECK_BOX_ICONS,
+  OPTION_BUTTON_ICONS,
+  SPLIT_CONTAINER_ICONS,
+  SLIDER_GRABBER_ICONS,
+  SLIDER_TICK_ICONS,
+} from './themeIcons';
 
 const DATA_URL_PREFIX = 'data:image/svg+xml;base64,';
 
@@ -78,5 +84,44 @@ describe('SPLIT_CONTAINER_ICONS', () => {
 
   it('the two icons are distinct data: URLs', () => {
     expect(SPLIT_CONTAINER_ICONS.hsplitter).not.toBe(SPLIT_CONTAINER_ICONS.vsplitter);
+  });
+});
+
+describe('SLIDER_GRABBER_ICONS', () => {
+  it.each(['grabber', 'grabberDisabled'] as const)(
+    '%s is 16x16 — default_theme.cpp:589-591,604-606 (HSlider/VSlider grabber icons)',
+    (id) => {
+      const svg = decodeSvg(SLIDER_GRABBER_ICONS[id]);
+      expect(svg).toContain('<svg');
+      const { width, height } = svgSize(svg);
+      expect(width).toBe(16);
+      expect(height).toBe(16);
+    }
+  );
+
+  it('the two icons are distinct data: URLs', () => {
+    expect(SLIDER_GRABBER_ICONS.grabber).not.toBe(SLIDER_GRABBER_ICONS.grabberDisabled);
+  });
+});
+
+describe('SLIDER_TICK_ICONS', () => {
+  it('hslider is 4x8 — default_theme.cpp:592 (HSlider tick), not the 4x16 the DOM overlay assumes', () => {
+    const svg = decodeSvg(SLIDER_TICK_ICONS.hslider);
+    expect(svg).toContain('<svg');
+    const { width, height } = svgSize(svg);
+    expect(width).toBe(4);
+    expect(height).toBe(8);
+  });
+
+  it('vslider is 8x4 — default_theme.cpp:607 (VSlider tick), the transpose of hslider', () => {
+    const svg = decodeSvg(SLIDER_TICK_ICONS.vslider);
+    expect(svg).toContain('<svg');
+    const { width, height } = svgSize(svg);
+    expect(width).toBe(8);
+    expect(height).toBe(4);
+  });
+
+  it('the two icons are distinct data: URLs', () => {
+    expect(SLIDER_TICK_ICONS.hslider).not.toBe(SLIDER_TICK_ICONS.vslider);
   });
 });

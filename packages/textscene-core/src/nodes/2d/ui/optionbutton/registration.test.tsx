@@ -7,8 +7,11 @@ import './index'; // parser registration side effect
 import './index.r3f'; // DOM-overlay component registration side effect
 import { nodeRegistry } from '../../../../core/NodeRegistry';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { parseOptionButton } from './parser';
 import { OptionButton } from './Component';
+import { OptionButtonNative } from './NativeComponent';
+import { optionButtonMinimumSize } from './nativeSolver';
 
 describe('OptionButton registration', () => {
   it('registers the parser under its type name', () => {
@@ -19,5 +22,10 @@ describe('OptionButton registration', () => {
 
   it('registers the DOM-overlay component in the control registry', () => {
     expect(controlComponentRegistry.get('OptionButton')).toBe(OptionButton);
+  });
+
+  it('registers the native (WebGL) painter and rect solver', () => {
+    expect(controlComponentRegistry.getNative('OptionButton')).toBe(OptionButtonNative);
+    expect(controlSolverRegistry.minimumSize('OptionButton')).toBe(optionButtonMinimumSize);
   });
 });

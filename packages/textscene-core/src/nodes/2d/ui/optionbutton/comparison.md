@@ -29,6 +29,44 @@ none. The arrow is a default-theme icon texture outside the fill/radius/padding
 chrome the previewer synthesises, so the collapsed affordance ends at the label.
 The box fill (dark charcoal ~rgb(46,46,46)), corner radius, padding, font, and the
 `Normal` label otherwise match.
+**Closed by the native (WebGL) painter below**, which draws the real vendored
+chevron icon — see its own section.
+
+## Native (WebGL canvas) painter
+
+`nativeSolver.ts` registers `OptionButton::get_minimum_size`
+(`controlSolverRegistry.registerMinimumSize`, honouring `fit_to_longest_item`'s
+engine default of `true` — the minimum size floors on the WIDEST item's text,
+not the selected one's); `NativeComponent.tsx` draws the Button-style StyleBox
+chrome, the SELECTED item's text only (never the popup's full list, matching
+`Component.tsx`), and the chevron (`native/themeIcons.ts`'s
+`OPTION_BUTTON_ICONS.arrow`) at the right edge.
+
+### The chevron sits at `arrow_margin`, not the content-margin edge
+
+OptionButton's own `_notification` positions the arrow directly against the
+FULL control size and its own `arrow_margin` theme constant
+(`option_button.cpp:113-121`; `default_theme.cpp:249`, `round(4*scale) = 4` at
+scale 1) — NOT the stylebox's content margin (8px horizontal,
+`default_theme.cpp:212-215`, already `theme.optionButtonMarginX` in
+`godotDefaultTheme.ts`) the text box narrows against. The two numbers are
+independent and, in the default theme, different.
+
+Measured against real Godot 4.6.3 — `pnpm ref:godot
+scenes/fixtures/unit-optionbutton.tscn --mode 2d`: the 150×32 button's box fill
+(`rgb(46,46,46)`) extends flush to its rightmost pixel (probe `649,316` → fill,
+`651,316` → the `rgb(76,76,76)` backdrop, i.e. the box's own right edge), while
+the chevron's own ink sits at probe `641,316` (`rgb(148,148,148)`, a partial-
+coverage sample of the `#b2b2b2`-stroke SVG) — `150 - 12(arrow width) -
+4(arrow_margin) = 134` in from the left, not `150 - 12 - 8`. `modulate_arrow`
+defaults `false` (`:251`), so `NOTIFICATION_DRAW` never enters the font-colour
+switch at all and the chevron always draws opaque white, unaffected by
+`disabled`/state — the native painter models exactly that (no per-state arrow
+tint).
+
+No pointer-dependent draw gate: the chevron's own draw condition
+(`has_theme_icon("arrow")`) is unconditionally true in the default theme, with
+no `mouse_inside`/hover check — unlike the SplitContainer grabber's `autohide`.
 
 ## Linting
 

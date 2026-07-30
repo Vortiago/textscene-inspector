@@ -9,8 +9,11 @@ import './index'; // parser registration side effect
 import './index.r3f'; // DOM-overlay component registration side effect
 import { nodeRegistry } from '../../../../core/NodeRegistry';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { parseCheckBox } from './parser';
 import { CheckBox } from './Component';
+import { CheckBoxNative } from './NativeComponent';
+import { checkBoxMinimumSize } from './nativeSolver';
 
 describe('CheckBox registration', () => {
   it('registers the parser under its type name', () => {
@@ -21,5 +24,10 @@ describe('CheckBox registration', () => {
 
   it('registers the DOM-overlay component in the control registry', () => {
     expect(controlComponentRegistry.get('CheckBox')).toBe(CheckBox);
+  });
+
+  it('registers the native (WebGL) painter and rect solver', () => {
+    expect(controlComponentRegistry.getNative('CheckBox')).toBe(CheckBoxNative);
+    expect(controlSolverRegistry.minimumSize('CheckBox')).toBe(checkBoxMinimumSize);
   });
 });

@@ -63,41 +63,16 @@
  * the whole tree). The two h/v bars never spatially overlap (each dodges the
  * other's own reserved strip), so ordering between them is not load-bearing.
  */
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import * as THREE from 'three';
+import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { createSolveContext } from '../../../../r3f/controls/native/controlRectSolver';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import {
-  ControlClipProvider,
-  localRectClipPlanes,
-  useControlClipPlanes,
-  withAdditionalClipPlanes,
-} from '../../../../r3f/controls/native/controlClipping';
+import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { StyleBoxQuad, tintStyleBox } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useCanvasItemTint, WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { ControlProperties } from '../control/types';
 import { scrollContainerScrollBars, type ScrollBarPlacement } from './nativeSolver';
-
-/** 4 planes × (normal.x, normal.y, normal.z, constant). */
-const PLANE_FLOATS = 16;
-
-function flattenPlanes(planes: readonly THREE.Plane[], out: Float64Array): void {
-  planes.forEach((p, i) => {
-    out[i * 4] = p.normal.x;
-    out[i * 4 + 1] = p.normal.y;
-    out[i * 4 + 2] = p.normal.z;
-    out[i * 4 + 3] = p.constant;
-  });
-}
-
-function sameFloats(a: Float64Array, b: Float64Array): boolean {
-  for (let i = 0; i < a.length; i += 1) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-}
 
 
 interface ScrollBarChromeProps {
@@ -176,44 +151,13 @@ export function ScrollContainerNative({ solveNode, rect, renderOrder, theme, chi
   );
   const grabber = useMemo(() => tintStyleBox(theme.widgets.scrollBar.grabber, tint.own), [theme, tint.own]);
 
-  const inherited = useControlClipPlanes();
-  const anchorRef = useRef<THREE.Group>(null);
-  const [ownPlanes, setOwnPlanes] = useState<readonly THREE.Plane[]>([]);
-  const previousFloats = useRef<Float64Array | null>(null);
-
-  // Deliberately no dependency array: an ancestor's world transform is not a
-  // React value this effect could list (it is whatever three composed through
-  // the WHOLE tree by the time refs settle, not just this node's own `rect`),
-  // so it must re-sample after every render, exactly like `useShadowLightPose`
-  // samples every FRAME for the identical reason. The guard below (comparing
-  // flattened plane numbers against the previous computation) is what stops
-  // that same-every-render effect from calling `setState` forever, not this
-  // rule.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useLayoutEffect(() => {
-    const anchor = anchorRef.current;
-    if (!anchor) return;
-    anchor.updateWorldMatrix(true, false);
-    const local = localRectClipPlanes({ x: 0, y: 0, w: rect.w, h: rect.h });
-    const world = local.map((p) => p.clone().applyMatrix4(anchor.matrixWorld));
-    const floats = new Float64Array(PLANE_FLOATS);
-    flattenPlanes(world, floats);
-    if (previousFloats.current && sameFloats(previousFloats.current, floats)) return;
-    previousFloats.current = floats;
-    setOwnPlanes(world);
-  });
-
-  // Memoised, not recomputed inline: this is a context VALUE, and
-  // `withAdditionalClipPlanes` necessarily returns a fresh array once this node
-  // contributes planes of its own. A fresh identity per render re-renders every
-  // descendant consumer, and `TextRun` keys its `ShaderMaterial` off this array
-  // — so an inline call rebuilds (and disposes) one material per glyph run on
-  // every render of this container.
-  const merged = useMemo(() => withAdditionalClipPlanes(inherited, ownPlanes), [inherited, ownPlanes]);
+  // The whole widget rect clips its subtree — the planes go into the Provider below.
+  const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
+  const { anchorRef, clippingPlanes } = useWorldClipPlanes(ownRect);
 
   return (
     <group ref={anchorRef}>
-      <ControlClipProvider value={merged}>
+      <ControlClipProvider value={clippingPlanes}>
         <ScrollBarChrome bar={layout.horizontal} track={trackHorizontal} grabber={grabber} renderOrder={renderOrder} />
         <ScrollBarChrome bar={layout.vertical} track={trackVertical} grabber={grabber} renderOrder={renderOrder} />
         {children}

@@ -60,3 +60,28 @@ behaves exactly as HSlider does when they are malformed: an unparseable `value`,
 defaults (0, 0, 100), so a typo'd `value` renders as a grabber resting at the
 bottom rather than as an error. Out-of-range values are clamped silently and a
 degenerate range renders as fully filled, both matching the engine.
+
+## Native (WebGL canvas) painter
+
+`nativeSolver.ts` registers `Slider::get_minimum_size()`
+(`controlSolverRegistry.registerMinimumSize`); `NativeComponent.tsx` is
+HSlider's identical painter at `vertical = true` (`shared/sliderSolver.ts`,
+shared by both slices), drawing the actual vendored `slider_grabber(_disabled).svg`
+/ `vslider_tick.svg` textures rather than a synthesized `div`. The axis swap —
+grabber BOTTOM at `value = min_value`, TOP at `max_value`; ticks marching from
+the widget's leading edge, not mirrored with the value axis — is the shared
+solver's own `vertical` branch, proved once against real Godot in
+`shared/sliderSolver.test.ts`.
+
+### Divergences from the DOM component
+
+**The tick's cross-axis length is 8px, not 16px** — see the HSlider sheet's
+identical note (`vslider_tick.svg` is `hslider_tick.svg`'s transpose, `width="8"
+height="4"`, measured the same way against real Godot 4.6.3). Otherwise none.
+
+### Known limitations (native only)
+
+Same as HSlider: no anti-aliased corner feather on the track/fill roundrect
+corners, and `ticks_position` is not modelled (every tick draws at Godot's
+default, `TICK_POSITION_BOTTOM_RIGHT` — right of the track for a vertical
+slider). See the HSlider sheet.

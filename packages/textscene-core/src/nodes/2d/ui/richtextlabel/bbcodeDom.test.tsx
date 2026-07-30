@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
-import { parseBBCode } from './bbcode';
+import { parseBBCode } from './bbcodeDom';
 
 function renderBB(text: string): HTMLElement {
   return render(<div>{parseBBCode(text)}</div>).container;

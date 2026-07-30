@@ -17,6 +17,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
@@ -114,8 +115,7 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ButtonProperties;
   const state = resolveButtonDrawState(props.disabled);
   const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.button, state);
-  const marginX = styleBox.contentMargin.left + styleBox.contentMargin.right;
-  const marginY = styleBox.contentMargin.top + styleBox.contentMargin.bottom;
+  const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
   const text = props.text ?? '';
   const hasText = text.length > 0;

@@ -39,7 +39,7 @@
 import type { ControlProperties } from '../control/types';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { ContainerLayoutFn, MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, isSortableControl, SIZE_FILL } from '../shared/fitChildInRect';
 
@@ -53,13 +53,6 @@ function panelStyleOf(n: SolveNode, ctx: SolveContext): StyleBoxFlatData {
   return n.styleBoxes.panel ?? ctx.theme.widgets.panel;
 }
 
-/** `StyleBox::get_minimum_size` (`style_box.cpp:35-36`): margin-left+right, margin-top+bottom. */
-function styleMinimumSize(style: StyleBoxFlatData): Vec2 {
-  return {
-    x: style.contentMargin.left + style.contentMargin.right,
-    y: style.contentMargin.top + style.contentMargin.bottom,
-  };
-}
 
 /**
  * `PanelContainer::get_minimum_size` (`panel_container.cpp:35-51`).
@@ -74,7 +67,7 @@ export const panelContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
     y = Math.max(y, childMin.y);
   }
 
-  const styleMin = styleMinimumSize(panelStyleOf(n, ctx));
+  const styleMin = contentMarginSize(panelStyleOf(n, ctx));
   return { x: x + styleMin.x, y: y + styleMin.y };
 };
 

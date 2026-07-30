@@ -30,7 +30,7 @@ export function parseNode2D(
   let scale: Vector2 = { x: 1, y: 1 };
   // Matrix form wins and carries its own (decomposed) skew; the discrete `skew`
   // property only applies in the discrete-props path.
-  let skew = 0;
+  let skew: number;
 
   const matrix = properties.transform ? decomposeTransform2D(properties.transform, name) : null;
   if (matrix) {

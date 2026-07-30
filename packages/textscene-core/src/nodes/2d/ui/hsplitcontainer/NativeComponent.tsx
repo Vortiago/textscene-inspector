@@ -34,11 +34,10 @@
  * calls `useCanvasItemTint` with `modulate: WHITE_MODULATE` and only this
  * node's own `self_modulate`.
  */
-import { useEffect, useMemo } from 'react';
-import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { isSortableControl } from '../shared/fitChildInRect';
@@ -53,24 +52,6 @@ import type { SplitContainerProperties } from '../shared/splitContainer';
 
 /** `hsplitter.svg`'s own authored size (`native/themeIcons.ts`) — 8px along the split axis, 48px across it. */
 const ICON_SIZE = { x: 8, y: 48 };
-
-/**
- * A stable `THREE.Texture` handle for a vendored `data:` SVG icon —
- * `TextureLoader.load` returns one synchronously (initially blank, painted
- * once the underlying `<img>` decodes, exactly like any browser-loaded
- * texture), so nothing here needs to gate rendering on load completion the
- * way `TextureRectNative` does for a user-authored resource that might
- * genuinely be missing. Disposed on unmount/URL change.
- */
-function useIconTexture(dataUrl: string): THREE.Texture {
-  const texture = useMemo(() => {
-    const tex = new THREE.TextureLoader().load(dataUrl);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    return tex;
-  }, [dataUrl]);
-  useEffect(() => () => texture.dispose(), [texture]);
-  return texture;
-}
 
 export function HSplitContainerNative({ solveNode, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = solveNode.node.properties as SplitContainerProperties;

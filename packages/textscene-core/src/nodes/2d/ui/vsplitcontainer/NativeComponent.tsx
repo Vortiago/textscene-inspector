@@ -6,11 +6,10 @@
  * (48px along the container's width, 8px along the split axis) instead of
  * `hsplitter`.
  */
-import { useEffect, useMemo } from 'react';
-import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { isSortableControl } from '../shared/fitChildInRect';
@@ -25,17 +24,6 @@ import type { SplitContainerProperties } from '../shared/splitContainer';
 
 /** `vsplitter.svg`'s own authored size (`native/themeIcons.ts`) — 48px across the split axis, 8px along it. */
 const ICON_SIZE = { x: 48, y: 8 };
-
-/** A stable `THREE.Texture` handle for a vendored `data:` SVG icon — see `hsplitcontainer/NativeComponent.tsx`'s identical helper for why nothing here gates on load completion. */
-function useIconTexture(dataUrl: string): THREE.Texture {
-  const texture = useMemo(() => {
-    const tex = new THREE.TextureLoader().load(dataUrl);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    return tex;
-  }, [dataUrl]);
-  useEffect(() => () => texture.dispose(), [texture]);
-  return texture;
-}
 
 export function VSplitContainerNative({ solveNode, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = solveNode.node.properties as SplitContainerProperties;

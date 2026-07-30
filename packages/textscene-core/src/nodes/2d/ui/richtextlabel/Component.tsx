@@ -14,7 +14,7 @@ import { useControlParent } from '../../../../r3f/controls/ControlParentContext'
 import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
 import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
 import { useGodotTheme } from '../../../../r3f/controls/useGodotTheme';
-import { parseBBCode } from './bbcode';
+import { parseBBCode } from './bbcodeDom';
 import type { RichTextLabelProperties } from './types';
 
 export function RichTextLabel({ node, children }: ControlComponentProps) {

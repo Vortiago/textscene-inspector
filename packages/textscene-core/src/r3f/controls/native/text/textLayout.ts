@@ -68,6 +68,26 @@ export enum AutowrapMode {
   WORD_SMART = 3,
 }
 
+/**
+ * Narrows a parsed `autowrap_mode` to the enum, falling back when the value is
+ * absent or outside it — the same silent-lenient handling `parseOptionalInt`
+ * already applies at parse time.
+ *
+ * The fallback differs per Control and is the caller's to state: `Label`
+ * defaults to `OFF`, `RichTextLabel` to `WORD_SMART` (`rich_text_label.h:557`).
+ */
+export function clampAutowrapMode(mode: number | undefined, fallback: AutowrapMode): AutowrapMode {
+  switch (mode) {
+    case AutowrapMode.OFF:
+    case AutowrapMode.ARBITRARY:
+    case AutowrapMode.WORD:
+    case AutowrapMode.WORD_SMART:
+      return mode;
+    default:
+      return fallback;
+  }
+}
+
 export interface ShapeTextOptions {
   /** Target render font size, px. Atlas advances (baked at 42px) scale by `fontSizePx / 42`. */
   fontSizePx: number;

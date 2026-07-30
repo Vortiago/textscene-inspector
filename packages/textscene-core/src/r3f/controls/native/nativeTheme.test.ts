@@ -149,5 +149,49 @@ describe('nativeTheme', () => {
       const theme = nativeTheme(2);
       expect(theme.widgets.splitContainer).toEqual({ separation: 24, grabberExtent: 16, autohide: true });
     });
+
+    it(
+      'LineEdit normal: make_flat_stylebox(style_normal_color) + a 2px UNSCALED bottom border in ' +
+        'style_pressed_color — default_theme.cpp:405-409',
+      () => {
+        const theme = nativeTheme(1);
+        expect(theme.widgets.lineEdit.normal).toEqual({
+          bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 }, // style_normal_color
+          borderColor: { r: 0, g: 0, b: 0, a: 0.6 }, // style_pressed_color
+          borderWidth: { left: 0, top: 0, right: 0, bottom: 2 },
+          cornerRadius: uniformCorners(3), // default_corner_radius
+          expandMargin: ZERO_SIDES,
+          contentMargin: uniform(4), // default_margin
+          drawCenter: true,
+          borderBlend: false,
+        });
+      }
+    );
+
+    it(
+      'LineEdit read_only: make_flat_stylebox(style_disabled_color) + the SAME 2px bottom border, ' +
+        'HALF style_pressed_color\'s alpha — default_theme.cpp:413-417',
+      () => {
+        const theme = nativeTheme(1);
+        expect(theme.widgets.lineEdit.readOnly).toEqual({
+          bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.3 }, // style_disabled_color
+          borderColor: { r: 0, g: 0, b: 0, a: 0.3 }, // style_pressed_color * Color(1,1,1,0.5)
+          borderWidth: { left: 0, top: 0, right: 0, bottom: 2 },
+          cornerRadius: uniformCorners(3),
+          expandMargin: ZERO_SIDES,
+          contentMargin: uniform(4),
+          drawCenter: true,
+          borderBlend: false,
+        });
+      }
+    );
+
+    it('scales LineEdit\'s margin/radius at scale 2, but the 2px bottom border stays UNSCALED', () => {
+      const theme = nativeTheme(2);
+      expect(theme.widgets.lineEdit.normal.contentMargin).toEqual(uniform(8));
+      expect(theme.widgets.lineEdit.normal.cornerRadius).toEqual(uniformCorners(6));
+      expect(theme.widgets.lineEdit.normal.borderWidth).toEqual({ left: 0, top: 0, right: 0, bottom: 2 });
+      expect(theme.widgets.lineEdit.readOnly.borderWidth).toEqual({ left: 0, top: 0, right: 0, bottom: 2 });
+    });
   });
 });
