@@ -13,6 +13,17 @@
  * `gui/theme/default_theme_scale` — NOT the hardcoded 1152x648/scale-1 a
  * module constant would silently apply to every project), and
  * `<ControlCanvasWalker>` to solve + draw.
+ *
+ * Also provides the LAYER-0 `CanvasModulateContext` scope — the one a native
+ * Control with no enclosing `CanvasLayer` shares with the 2D world, since
+ * both live on the same default canvas in Godot. `NodeDispatcher.tsx`
+ * computes the identical `canvasModulateColor(nodes)` for its own root nodes;
+ * this mount point is the Control tree's equivalent root, so it scans the
+ * SAME root list rather than inheriting anything from the world canvas's own
+ * provider (a `CanvasLayer` node further down gets its OWN fresh scope from
+ * its `Native` painter, `canvaslayer/NativeComponent.tsx` — this one never
+ * reaches inside one, matching `canvasModulateColor`'s own "does not descend
+ * into a CanvasLayer" rule).
  */
 import { useMemo } from 'react';
 import type { TscnNode } from '../../../parser/types';
@@ -22,6 +33,7 @@ import { useBuildSolveTree } from './buildSolveTree';
 import { nativeTheme } from './nativeTheme';
 import type { Rect2 } from './rect';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
+import { canvasModulateColor, CanvasModulateContext } from '../../canvasModulate';
 
 export interface ControlCanvasLayerProps {
   nodes: readonly TscnNode[];
@@ -54,14 +66,17 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
     () => ({ x: 0, y: 0, w: viewportSize.width, h: viewportSize.height }),
     [viewportSize.width, viewportSize.height]
   );
+  const canvasModulate = useMemo(() => canvasModulateColor(rootNodes), [rootNodes]);
 
   return (
-    <ControlCanvasWalker
-      tree={tree}
-      generation={generation}
-      viewport={viewport}
-      theme={theme}
-      measurer={null}
-    />
+    <CanvasModulateContext.Provider value={canvasModulate}>
+      <ControlCanvasWalker
+        tree={tree}
+        generation={generation}
+        viewport={viewport}
+        theme={theme}
+        measurer={null}
+      />
+    </CanvasModulateContext.Provider>
   );
 }

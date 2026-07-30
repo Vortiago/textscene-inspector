@@ -17,6 +17,19 @@ import { nativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type ContainerLayoutFn } from './solverRegistry';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
+import { bandBase } from './controlDrawOrder';
+import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
+import { CanvasLayerIndexProvider } from '../../lighting2d/canvasItemPlacement';
+
+// A stand-in for the real `canvaslayer/NativeComponent.tsx` (a different
+// slice's file, not this suite's concern): just enough to prove the WALKER
+// threads `children` through the painter and republishes
+// `CanvasLayerIndexProvider` for a `CanvasLayer` type, without depending on
+// that slice's own implementation.
+const StubCanvasLayerNative: NativeControlComponent = ({ solveNode, children }) => {
+  const layer = (solveNode.node.properties as { layer?: number }).layer ?? 1;
+  return <CanvasLayerIndexProvider value={layer}>{children}</CanvasLayerIndexProvider>;
+};
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -54,6 +67,7 @@ function namedGroup(scene: { findAllByType: (t: string) => { instance: WrapperIn
 describe('<ControlCanvasWalker>', () => {
   afterEach(() => {
     controlSolverRegistry.clear();
+    controlComponentRegistry.clear();
   });
 
   it('emits one named group per Control, at its solved rect (Godot pixels, +Y down → three -y)', async () => {
@@ -181,5 +195,62 @@ describe('<ControlCanvasWalker>', () => {
 
     const groups = renderer.scene.findAllByType('Group').map((g) => g.instance);
     expect(groups.every((g) => g.rotation.z === 0)).toBe(true);
+  });
+
+  it("assigns a fallback painter's renderOrder from bandBase(0) plus its solved paintIndex, with no enclosing CanvasLayer", async () => {
+    const child = solveNode('Root/Child', 'TestType', { anchorsPreset: 15 });
+    const root = solveNode('Root', 'TestType', { anchorsPreset: 15 }, [child]);
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+    );
+
+    const lines = renderer.scene.findAllByType('LineSegments').map((l) => l.instance as { renderOrder: number });
+    // Pre-order, so Root gets paintIndex 0 and Child gets paintIndex 1.
+    expect(lines.some((l) => l.renderOrder === bandBase(0) + 0)).toBe(true);
+    expect(lines.some((l) => l.renderOrder === bandBase(0) + 1)).toBe(true);
+  });
+
+  it('bands every Control under a CanvasLayer by its layer property, reaching arbitrarily nested descendants', async () => {
+    controlComponentRegistry.register({ typeName: 'CanvasLayer', Component: () => null, Native: StubCanvasLayerNative });
+    const grandchild = solveNode('Layer/Child/Grandchild', 'TestType', { anchorsPreset: 15 });
+    const child = solveNode('Layer/Child', 'TestType', { anchorsPreset: 15 }, [grandchild]);
+    const layer = solveNode('Layer', 'CanvasLayer', { layer: 5 }, [child]);
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ControlCanvasWalker tree={[layer]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+    );
+
+    const lines = renderer.scene.findAllByType('LineSegments').map((l) => l.instance as { renderOrder: number });
+    expect(lines.some((l) => l.renderOrder === bandBase(5) + 1)).toBe(true);
+    expect(lines.some((l) => l.renderOrder === bandBase(5) + 2)).toBe(true);
+  });
+
+  it('gives a negative-layer CanvasLayer a band below the world default, still reaching its Control', async () => {
+    controlComponentRegistry.register({ typeName: 'CanvasLayer', Component: () => null, Native: StubCanvasLayerNative });
+    const child = solveNode('Layer/Child', 'TestType', { anchorsPreset: 15 });
+    const layer = solveNode('Layer', 'CanvasLayer', { layer: -1 }, [child]);
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ControlCanvasWalker tree={[layer]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+    );
+
+    const lines = renderer.scene.findAllByType('LineSegments').map((l) => l.instance as { renderOrder: number });
+    expect(lines.some((l) => l.renderOrder === bandBase(-1) + 1)).toBe(true);
+    expect(lines.some((l) => l.renderOrder < 0)).toBe(true);
+  });
+
+  it('leaves every Control group at z=0 regardless of CanvasLayer nesting — paint order comes from renderOrder alone', async () => {
+    const child = solveNode('Layer/Child', 'TestType', { anchorsPreset: 15 });
+    const layer = solveNode('Layer', 'CanvasLayer', { layer: 3 }, [child]);
+    const bare = solveNode('Bare', 'TestType', { anchorsPreset: 15 });
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ControlCanvasWalker tree={[layer, bare]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+    );
+
+    const groups = renderer.scene.findAllByType('Group').map((g) => g.instance as { position: { z: number } });
+    expect(groups.length).toBeGreaterThan(0);
+    expect(groups.every((g) => g.position.z === 0)).toBe(true);
   });
 });

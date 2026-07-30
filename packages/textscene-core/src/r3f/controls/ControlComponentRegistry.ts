@@ -5,6 +5,7 @@
  */
 
 import type React from 'react';
+import type { ReactNode } from 'react';
 import type { TscnNode } from '../../parser/types';
 import { createTypeRegistry } from '../../core/createTypeRegistry';
 import type { Rect2 } from './native/rect';
@@ -39,6 +40,28 @@ export interface NativeControlComponentProps {
   solveNode: SolveNode;
   /** This Control's solved rect, LOCAL space (position already applied by the walker). */
   rect: Rect2;
+  /**
+   * This Control's draw-order key — `bandBase(canvasLayer) + paintIndex`
+   * (`native/controlDrawOrder.ts`) — for the painter's own mesh(es). Every 2D
+   * material in this codebase is transparent + depthWrite=false, so three's
+   * transparent sort decides paint order from this value, never from z.
+   *
+   * Optional so an existing painter's own isolated unit test (constructing
+   * this prop object directly, not through the walker) keeps type-checking
+   * without a value: `ControlCanvasWalker` — the only real caller — always
+   * supplies one.
+   */
+  renderOrder?: number;
+  /**
+   * Rendered ONLY for a passthrough host that draws no chrome of its own but
+   * must still wrap its descendants in fresh context — `CanvasLayer`'s native
+   * painter (`nodes/2d/ui/canvaslayer/NativeComponent.tsx`) is the one type
+   * that needs this. Every other registered painter draws fixed chrome and
+   * receives `undefined` here: `ControlCanvasWalker` renders a Control's
+   * children as SIBLINGS of its painter, not through this prop, except for
+   * that one passthrough case.
+   */
+  children?: ReactNode;
 }
 
 export type NativeControlComponent = React.ComponentType<NativeControlComponentProps>;

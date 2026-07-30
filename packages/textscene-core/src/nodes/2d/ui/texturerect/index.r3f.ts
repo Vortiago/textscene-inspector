@@ -1,8 +1,12 @@
-/** TextureRect registration — 2D-overlay DOM component. */
+/** TextureRect registration — 2D-overlay DOM component + native (WebGL) painter/solver. */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { TextureRect } from './Component';
+import { TextureRectNative } from './NativeComponent';
+import { textureRectMinimumSize } from './nativeSolver';
 
-controlComponentRegistry.register({ typeName: 'TextureRect', Component: TextureRect });
+controlComponentRegistry.register({ typeName: 'TextureRect', Component: TextureRect, Native: TextureRectNative });
+controlSolverRegistry.registerMinimumSize('TextureRect', textureRectMinimumSize);
 
-export { TextureRect };
+export { TextureRect, TextureRectNative };

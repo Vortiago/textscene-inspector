@@ -33,6 +33,8 @@ import { controlComponentRegistry } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
 import { Modulate2DContext, useControlTint } from './useControlTint';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
+import { controlRenderOrder } from './controlDrawOrder';
+import { useCanvasLayerIndex } from '../../lighting2d/canvasItemPlacement';
 
 export interface ControlCanvasWalkerProps {
   tree: readonly SolveNode[];
@@ -89,7 +91,18 @@ function ControlNodeGroup({ solveNode, solved, hiddenNodePaths, isFreeParent }: 
 
   // Structurally guaranteed present (the solve walks this exact tree); the
   // fallback only guards a mismatched tree/solved pair from ever crashing.
-  const rect = solved.get(solveNode.path)?.rect ?? ZERO_RECT;
+  const solvedEntry = solved.get(solveNode.path);
+  const rect = solvedEntry?.rect ?? ZERO_RECT;
+
+  // `useCanvasLayerIndex` reads whichever CanvasLayer band is ambient at this
+  // position — `WORLD_CANVAS_LAYER` (0) with none, or the value a `CanvasLayer`
+  // ancestor's own `Native` painter published (see the `isCanvasLayer` branch
+  // below, mirroring `NodeDispatcher.tsx`'s identical `CanvasLayer` handling).
+  // `paintIndex` is the solver's own pre-order counter (`controlRectSolver.ts`),
+  // so `renderOrder` is deterministic across the whole tree by construction —
+  // see `controlDrawOrder.ts` for why this replaces a z offset entirely.
+  const layer = useCanvasLayerIndex();
+  const renderOrder = controlRenderOrder(layer, solvedEntry?.paintIndex ?? 0);
 
   const rotation = props.rotation ?? 0;
   const scaleX = props.scale?.x ?? 1;
@@ -103,18 +116,34 @@ function ControlNodeGroup({ solveNode, solved, hiddenNodePaths, isFreeParent }: 
   // exact registry read so the walker and the solver never disagree.
   const childIsFreeParent = controlSolverRegistry.containerLayout(solveNode.node.type) === undefined;
 
-  const content = (
+  const childElements = solveNode.children.map((child) => (
+    <ControlNodeGroup
+      key={child.path}
+      solveNode={child}
+      solved={solved}
+      hiddenNodePaths={hiddenNodePaths}
+      isFreeParent={childIsFreeParent}
+    />
+  ));
+
+  // A `CanvasLayer` is not chrome, it is a passthrough canvas boundary — its
+  // `Native` painter (`canvaslayer/NativeComponent.tsx`) needs to WRAP its
+  // descendants in fresh `CanvasLayerIndexProvider`/modulate context, which
+  // only works if they are its React children rather than its siblings. Every
+  // other registered painter draws fixed chrome unrelated to its descendants'
+  // own React subtree, so it keeps the sibling shape (`NativeControlComponentProps`'s
+  // own doc comment). This hardcoded type check mirrors `NodeDispatcher.tsx`'s
+  // identical `node.type === 'CanvasLayer'` branch — the same convention, not
+  // a second one.
+  const isCanvasLayer = solveNode.node.type === 'CanvasLayer';
+  const content = isCanvasLayer ? (
+    <Painter solveNode={solveNode} rect={rect} renderOrder={renderOrder}>
+      {childElements}
+    </Painter>
+  ) : (
     <>
-      <Painter solveNode={solveNode} rect={rect} />
-      {solveNode.children.map((child) => (
-        <ControlNodeGroup
-          key={child.path}
-          solveNode={child}
-          solved={solved}
-          hiddenNodePaths={hiddenNodePaths}
-          isFreeParent={childIsFreeParent}
-        />
-      ))}
+      <Painter solveNode={solveNode} rect={rect} renderOrder={renderOrder} />
+      {childElements}
     </>
   );
 

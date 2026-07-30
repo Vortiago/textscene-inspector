@@ -202,6 +202,51 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     expect(solved.textureSize).toEqual({ x: 40, y: 20 });
   });
 
+  it("populates a top-level TextureRect's own textureSize from its `texture` property, no instancing involved", () => {
+    // `resolveTextureSize` reads `node.properties.texture` generically for any
+    // 2D-UI node — TextureRect just happens to be the first type whose native
+    // minimum-size solver actually consumes this field
+    // (`nodes/2d/ui/texturerect/nativeSolver.ts`).
+    const loader = createFakeResourceLoader();
+    const texturePath = 'res://portrait.png';
+    loader.textures.seed(texturePath, { image: { width: 320, height: 160 } } as unknown as THREE.Texture);
+
+    const nodes = [
+      node('Portrait', 'TextureRect', { properties: { name: 'Portrait', texture: 'ExtResource("1")' } }),
+    ];
+    const externalResources = [{ id: '1', path: texturePath, type: 'Texture2D' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree).toHaveLength(1);
+    expect(result.current.tree[0]?.textureSize).toEqual({ x: 320, y: 160 });
+  });
+
+  it("generation bumps when a TextureRect's not-yet-cached texture resolves, and the tree picks up its size", async () => {
+    const loader = createFakeResourceLoader();
+    const texturePath = 'res://portrait.png';
+    const nodes = [
+      node('Portrait', 'TextureRect', { properties: { name: 'Portrait', texture: 'ExtResource("1")' } }),
+    ];
+    const externalResources = [{ id: '1', path: texturePath, type: 'Texture2D' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    const initialGeneration = result.current.generation;
+    expect(result.current.tree[0]?.textureSize).toBeNull();
+
+    await act(async () => {
+      loader.textures._resolve(texturePath, { image: { width: 320, height: 160 } } as unknown as THREE.Texture);
+    });
+
+    expect(result.current.generation).toBeGreaterThan(initialGeneration);
+    expect(result.current.tree[0]?.textureSize).toEqual({ x: 320, y: 160 });
+  });
+
   it('generation bumps when a not-yet-cached sub-scene arrives, and the tree picks it up', async () => {
     const loader = createFakeResourceLoader();
     const nodes = [instanceOf('Hud', '1_layer')];

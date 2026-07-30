@@ -11,6 +11,12 @@
  *
  * An outline, never a filled quad: a quad would read as actual content, which
  * this deliberately is not.
+ *
+ * Forwards `children` unchanged (only ever non-empty for a passthrough type
+ * like `CanvasLayer` — `ControlCanvasWalker`'s `isCanvasLayer` branch, `
+ * NativeControlComponentProps`'s own doc comment): if that type has no real
+ * `Native` painter registered yet, its descendants must still reach the
+ * scene, just without the fresh context a real one would have provided.
  */
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
@@ -24,7 +30,7 @@ import { useControlClipPlanes } from './controlClipping';
  */
 const FALLBACK_COLOR = new THREE.Color(0x38bdf8);
 
-export function ControlFallback({ rect }: NativeControlComponentProps) {
+export function ControlFallback({ rect, renderOrder, children }: NativeControlComponentProps) {
   const clippingPlanes = useControlClipPlanes();
 
   const geometry = useMemo(() => {
@@ -36,8 +42,11 @@ export function ControlFallback({ rect }: NativeControlComponentProps) {
   useEffect(() => () => geometry.dispose(), [geometry]);
 
   return (
-    <lineSegments position={[rect.w / 2, -(rect.h / 2), 0]} geometry={geometry}>
-      <lineBasicMaterial color={FALLBACK_COLOR} clippingPlanes={clippingPlanes as THREE.Plane[]} />
-    </lineSegments>
+    <>
+      <lineSegments position={[rect.w / 2, -(rect.h / 2), 0]} renderOrder={renderOrder ?? 0} geometry={geometry}>
+        <lineBasicMaterial color={FALLBACK_COLOR} clippingPlanes={clippingPlanes as THREE.Plane[]} />
+      </lineSegments>
+      {children}
+    </>
   );
 }

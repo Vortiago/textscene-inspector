@@ -250,6 +250,53 @@ describe('solveControlTree — a registered ContainerLayoutFn overrides its chil
     expect(solved.get('Stack/Child1')?.rect).toEqual({ x: 0, y: 10, w: 1152, h: 10 });
   });
 
+  it("re-floors a container-assigned rect against the child's FULL-PRECISION minimum", () => {
+    // `Container::fit_child_in_rect` ends by calling `Control::set_rect`, and
+    // `Control::_size_changed` (control.cpp:1531-1541,1760-1797 — a third file
+    // neither container.cpp nor any container's own source names) re-floors the
+    // rect against the child's own minimum. Containers that truncate their cell
+    // bookkeeping to integers therefore hand out a cell SMALLER than a child
+    // whose minimum is fractional, and the child still renders at its minimum.
+    // Every real text minimum is fractional, so a solver that trusts the cell
+    // verbatim is wrong for any Control carrying font metrics.
+    const tinyCell: ContainerLayoutFn = (_n, children) => {
+      const out = new Map<string, Rect2>();
+      // Deliberately smaller than the child's minimum, and integer-truncated
+      // the way grid_container.cpp's Size2i bookkeeping is.
+      children.forEach((c) => out.set(c.node.path, { x: 0, y: 0, w: 100, h: 20 }));
+      return out;
+    };
+    controlSolverRegistry.registerContainerLayout(TYPE, tinyCell);
+
+    const child = node('Cells/Fractional', 'Control', {
+      customMinimumSize: { x: 100.5, y: 20.5 },
+    });
+    const root = node('Cells', TYPE, { anchorsPreset: 15 }, [child]);
+
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Cells/Fractional')?.rect).toEqual({ x: 0, y: 0, w: 100.5, h: 20.5 });
+  });
+
+  it('applies the grow direction when re-flooring a container-assigned rect', () => {
+    // Same re-floor, but GROW_DIRECTION_BEGIN (0) shifts the position back by
+    // the whole shortfall rather than growing away from the origin.
+    const tinyCell: ContainerLayoutFn = (_n, children) => {
+      const out = new Map<string, Rect2>();
+      children.forEach((c) => out.set(c.node.path, { x: 200, y: 100, w: 50, h: 30 }));
+      return out;
+    };
+    controlSolverRegistry.registerContainerLayout(TYPE, tinyCell);
+
+    const child = node('Cells/Grown', 'Control', {
+      customMinimumSize: { x: 80, y: 30 },
+      growHorizontal: 0,
+    });
+    const root = node('Cells', TYPE, { anchorsPreset: 15 }, [child]);
+
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Cells/Grown')?.rect).toEqual({ x: 170, y: 100, w: 80, h: 30 });
+  });
+
   it("recurses into a container child's OWN children against the rect the container assigned it", () => {
     const stack: ContainerLayoutFn = (_n, children, contentRect) => {
       const out = new Map<string, Rect2>();

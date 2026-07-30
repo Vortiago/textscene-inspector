@@ -46,3 +46,34 @@ Strict parsing format-checks the inherited set (33 inherited from Control); `Pan
 `PanelContainer` declares no validators of its own, and its parser performs no
 substitution either: it delegates straight to `parseControl` and adds no properties,
 so all lenient-fallback behaviour for this node lives in the Control slice.
+
+## Native (WebGL canvas) painter
+
+`NativeComponent.tsx` draws the SAME chrome `Panel`'s native painter draws —
+the resolved `theme_override_styles/panel` override, or the default-theme
+`panel` struct, across the node's whole solved rect. The container BEHAVIOUR
+lives in `nativeSolver.ts`, a port of `PanelContainer::get_minimum_size` and
+`PanelContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN`
+(`scene/gui/panel_container.cpp`) plus `Container::fit_child_in_rect`
+(`scene/gui/container.cpp`): the content rect is the node's own rect inset by
+the StyleBox's content margins on all four sides, and the container's own
+minimum size is the per-axis MAX of every child's combined minimum size plus
+those same margins — verified against this fixture's `16`/`12` px margins
+with synthetic `custom_minimum_size` children in `nativeSolver.test.ts`.
+
+### A DOM-vs-native default-margin divergence, found while wiring the native painter
+
+The DOM component's `useDefaults` fallback pads with `theme.contentMargin`
+(4px at scale 1) when no `theme_override_styles/panel` is set. Real Godot's
+actual default (`scene/theme/default_theme.cpp:1274`) calls
+`make_flat_stylebox(style_normal_color, 0, 0, 0, 0)` — explicit ZERO content
+margins, the identical call `Panel`'s own default stylebox makes (`:134`).
+The native painter/solver reproduce that zero-margin default verbatim
+(`native/nativeTheme.ts`'s `widgets.panel`, shared with `Panel`); the DOM
+component's 4px fallback padding is a pre-existing divergence from real
+Godot that predates this native slice and is unchanged by it.
+
+### Divergences from the DOM component
+
+None for this fixture — it carries an explicit `theme_override_styles/panel`
+override, so neither side's default-fallback path (see above) is exercised.

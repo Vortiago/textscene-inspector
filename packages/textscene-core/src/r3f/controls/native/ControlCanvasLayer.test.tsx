@@ -7,11 +7,20 @@
  * project's settings rather than a hardcoded constant, and forces a
  * `visible = false` root visible the same way `<ControlOverlay>` does.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import { SceneResourcesProvider } from '../../SceneResourcesContext';
 import { ControlCanvasLayer } from './ControlCanvasLayer';
+import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
+import { useCanvasModulate } from '../../canvasModulate';
+
+// A stand-in `Native` painter that surfaces the ambient CanvasModulate scope
+// as a named group, so this suite can observe it without reading pixels.
+const ModulateProbeNative: NativeControlComponent = () => {
+  const modulate = useCanvasModulate();
+  return <group name={`modulate:r=${modulate.r}`} />;
+};
 
 const projectSettingsMock = vi.hoisted(() => ({
   viewportSize: { width: 1152, height: 648 },
@@ -31,6 +40,24 @@ function namedGroup(scene: { findAllByType: (t: string) => { instance: { name: s
 }
 
 describe('<ControlCanvasLayer>', () => {
+  afterEach(() => {
+    controlComponentRegistry.clear();
+  });
+
+  it("gives layer-0 UI (no enclosing CanvasLayer) this canvas's own CanvasModulate scope, from a sibling root CanvasModulate", async () => {
+    controlComponentRegistry.register({ typeName: 'Control', Component: () => null, Native: ModulateProbeNative });
+    const tint = node('CanvasModulate', 'CanvasModulate', { color: { r: 0.25, g: 0.5, b: 0.75, a: 1 } });
+    const probe = node('Probe', 'Control', { anchorsPreset: 15 });
+
+    const renderer = await ReactThreeTestRenderer.create(<ControlCanvasLayer nodes={[tint, probe]} />);
+
+    const group = renderer.scene
+      .findAllByType('Group')
+      .map((g) => g.instance as { name: string })
+      .find((g) => g.name.startsWith('modulate:'));
+    expect(group?.name).toBe('modulate:r=0.25');
+  });
+
   it('renders nothing for a Control-free subtree', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ControlCanvasLayer nodes={[node('Mesh', 'MeshInstance3D')]} />

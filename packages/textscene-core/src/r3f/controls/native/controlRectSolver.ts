@@ -244,7 +244,27 @@ function dispatchChildren(
   const childRects = containerFn(n, childEntries, rect, ctx);
 
   for (const { node: child, minSize } of childEntries) {
-    const childRect = childRects.get(child.path) ?? { x: 0, y: 0, w: 0, h: 0 };
+    const assigned = childRects.get(child.path) ?? { x: 0, y: 0, w: 0, h: 0 };
+    // `Container::fit_child_in_rect` ends by calling `Control::set_rect`, so
+    // `Control::_size_changed` (control.cpp:1531-1541,1760-1797) re-floors the
+    // assigned rect against the child's OWN minimum — full precision, whatever
+    // the container's own cell bookkeeping rounded to. `GridContainer` truncates
+    // its per-column/row minima to `Size2i`, so a child with a fractional
+    // minimum is handed a cell smaller than itself and still renders at its
+    // minimum, position shifted per its grow direction.
+    //
+    // Applied here rather than in each container's port for two reasons: it is
+    // `Control`'s behaviour, not any container's, and neither `container.cpp`
+    // nor any container's own source file names it — so every port transcribed
+    // faithfully from its own source would omit it, and each would be wrong the
+    // moment a child's minimum is fractional. Every real text minimum is.
+    const childProps = controlProps(child);
+    const childRect = floorAtMinimumSize(
+      assigned,
+      minSize,
+      childProps.growHorizontal ?? 1,
+      childProps.growVertical ?? 1
+    );
     record(child, childRect, minSize, paintIndexOf, out);
     dispatchChildren(child, childRect, ctx, paintIndexOf, out);
   }

@@ -1148,6 +1148,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Hbox Container Stretch",
+    "file": "unit-hbox-container-stretch.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Hbox Container",
     "file": "unit-hbox-container.tscn",
     "category": "Unit - 2D UI Controls"

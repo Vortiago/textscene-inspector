@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyHBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 11
+
+[node name="Narrow" type="Control" parent="MyHBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 0)
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.0
+
+[node name="Wide" type="Control" parent="MyHBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 0)
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 3.0
+
+[node name="Oversized" type="Control" parent="MyHBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(600, 0)
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0

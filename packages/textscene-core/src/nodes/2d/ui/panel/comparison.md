@@ -42,3 +42,32 @@ there is no Panel-specific lenient fallback beyond what Control already covers.
 ## Known limitations
 
 - **StyleBoxFlat.border_blend** — with `border_blend = true` Godot fades the border from `border_color` into `bg_color`; we map borders to a solid CSS border with a sharp edge. Defaults to false; no corpus fixture enables it.
+
+## Native (WebGL canvas) painter
+
+`NativeComponent.tsx` draws the resolved `theme_override_styles/panel`
+StyleBox — or, absent one, the default-theme `panel` struct
+(`native/nativeTheme.ts`'s `widgets.panel`) — across the node's whole solved
+rect via `StyleBoxQuad`, the shared ring-tessellation geometry every native
+StyleBox-painted Control uses. Not a container: `Panel` registers no
+`ContainerLayoutFn`, so its children solve as free/anchored Controls against
+its own rect, exactly like the DOM overlay's `ControlParentProvider
+kind="free"`.
+
+### Divergences from the DOM component
+
+None for this fixture's colours/geometry — `resolveStyleBoxCss` (DOM) and
+`parseStyleBox` (native) read the identical `StyleBoxFlat` fields.
+
+### Known limitations (native only)
+
+- **No anti-aliased corner feather** — `styleBoxFlatGeometry.ts` implements
+  Godot's non-anti-aliased `StyleBoxFlat` branch, while Godot's actual default
+  is `anti_aliased = true`, `aa_size = 1` (a ~1px soft edge on every rounded
+  corner). Measured against this fixture (8px corner radius, 2px border) with
+  `pnpm ref:godot scenes/fixtures/unit-panel.tscn --mode 2d --probe 418,226`:
+  real Godot returns `rgb(84, 88, 100)` at that pixel, a blend between the
+  panel's interior and the background straddling the nominal arc boundary —
+  our renderer draws a hard, unblended edge there instead. Tracked as its own
+  decision (port the AA ring, or record the parity limitation), not fixed
+  here.
