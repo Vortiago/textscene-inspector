@@ -24,7 +24,7 @@
  */
 
 import type { ControlColor } from '../../../nodes/2d/ui/control/types';
-import { scaledGodotTheme, type ScaledGodotTheme } from '../godotDefaultTheme';
+import { scaledGodotTheme, STYLE_FILL, type ScaledGodotTheme } from '../godotDefaultTheme';
 
 /**
  * The default flat stylebox's fill, by draw state — `scene/theme/default_theme.cpp`,
@@ -49,15 +49,6 @@ export interface NativeThemeStyleFill {
 export interface NativeTheme extends ScaledGodotTheme {
   styleFill: NativeThemeStyleFill;
 }
-
-const STYLE_FILL: NativeThemeStyleFill = {
-  normal: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 },
-  hover: { r: 0.225, g: 0.225, b: 0.225, a: 0.6 },
-  pressed: { r: 0, g: 0, b: 0, a: 0.6 },
-  disabled: { r: 0.1, g: 0.1, b: 0.1, a: 0.3 },
-  popup: { r: 0.25, g: 0.25, b: 0.25, a: 1 },
-  progress: { r: 1, g: 1, b: 1, a: 0.4 },
-};
 
 /** `NativeTheme` at a project's `gui/theme/default_theme_scale`. */
 export function nativeTheme(scale: number): NativeTheme {

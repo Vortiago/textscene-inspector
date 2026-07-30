@@ -38,12 +38,12 @@ vi.mock('./World2DCanvas', () => ({
   ),
 }));
 
+import { NATIVE_CONTROLS_STORAGE_KEY } from './viewport2d';
 import { Canvas2DStage } from './Canvas2DStage';
 import {
   CameraControlProvider,
   useCameraControl,
 } from '../../contexts/CameraControlContext';
-import { ViewportModeProvider } from '../../contexts/ViewportModeContext';
 import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d';
 import type { TscnNode } from '../../../parser/types';
 
@@ -380,7 +380,7 @@ describe('<Canvas2DStage>', () => {
     expect(frame.style.transform).toBe('translate(0px, 0px) scale(1)');
   });
 
-  it('useNativeControls off (default, no provider): renders <ControlOverlay> inside the capture frame, World2DCanvas gets nativeControls=false', async () => {
+  it('native controls off (the default): renders <ControlOverlay> inside the capture frame, World2DCanvas gets nativeControls=false', async () => {
     renderStage([makeNode('A')]);
     const overlay = await screen.findByTestId('overlay-stub');
     const captureFrame = screen.getByTestId('canvas-2d-capture-frame');
@@ -390,11 +390,12 @@ describe('<Canvas2DStage>', () => {
     );
   });
 
-  it('useNativeControls on: omits <ControlOverlay>, keeps the capture frame, and passes nativeControls=true to World2DCanvas', () => {
+  it('native controls on: omits <ControlOverlay>, keeps the capture frame, and passes nativeControls=true to World2DCanvas', () => {
+    // Seeded the way the flag is actually flipped — a persisted value read once
+    // at mount, which is also how the capture harnesses set it before load.
+    window.localStorage.setItem(NATIVE_CONTROLS_STORAGE_KEY, 'true');
     render(
-      <ViewportModeProvider initialUseNativeControls>
-        <Canvas2DStage nodes={[makeNode('A')]} internalResources={[]} externalResources={[]} />
-      </ViewportModeProvider>
+      <Canvas2DStage nodes={[makeNode('A')]} internalResources={[]} externalResources={[]} />
     );
     expect(screen.queryByTestId('overlay-stub')).toBeNull();
     // The capture frame itself is the parity-capture contract (ADR — see

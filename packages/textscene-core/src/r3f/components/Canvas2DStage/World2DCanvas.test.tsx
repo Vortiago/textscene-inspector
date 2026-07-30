@@ -19,8 +19,8 @@ import { join } from 'node:path';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SelectionProvider } from '../../contexts/SelectionContext';
 
-// A stand-in for the real (barrel-registered) ControlCanvasLayer: the real
-// P2 placeholder renders null, which makes its presence unobservable from
+// A stand-in for the real (barrel-registered) ControlCanvasLayer: the
+// placeholder renders null, which makes its presence unobservable from
 // outside — mocking the barrel is what turns "did the mount seam actually
 // wire it up" into an assertable fact.
 vi.mock('../../controls/index.js', () => ({
@@ -48,7 +48,7 @@ describe('World2DCanvas tone mapping', () => {
   });
 });
 
-describe('World2DContents native-controls mount seam (#368 packet P2)', () => {
+describe('World2DContents native-controls mount seam', () => {
   const baseProps = {
     nodes: [],
     internalResources: [],

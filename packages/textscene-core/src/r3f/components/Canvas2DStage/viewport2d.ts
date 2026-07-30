@@ -16,3 +16,15 @@ export const CANVAS_2D_HEIGHT = 648;
  * scene (`scripts/compare-docs/capture.mjs` seeds it off).
  */
 export const FIT_ON_OPEN_2D_STORAGE_KEY = 'tsi.fitOnOpen2D';
+
+/**
+ * Whether the 2D stage draws Control nodes natively in the WebGL canvas
+ * instead of as the DOM overlay. Development-only, OFF by default, and
+ * deliberately not on the viewport-mode seam: everything there is a display
+ * preference with a toolbar affordance, whereas this selects a rendering path
+ * and has no UI at all — Godot has no such concept, so exposing one would
+ * misrepresent the preview as offering a choice a real scene never makes.
+ * Read once at mount like `FIT_ON_OPEN_2D_STORAGE_KEY`; flipped from devtools,
+ * or seeded by a harness before load.
+ */
+export const NATIVE_CONTROLS_STORAGE_KEY = 'tsi.native2dUi';

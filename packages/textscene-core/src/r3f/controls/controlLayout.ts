@@ -15,6 +15,7 @@
 
 import type { CSSProperties } from 'react';
 import type { ControlProperties } from '../../nodes/2d/ui/control/types';
+import { PRESET_ANCHORS, resolveAnchors } from './controlAnchors.js';
 
 /**
  * The layout regime a container imposes on its direct Control children:
@@ -45,25 +46,6 @@ export type ParentLayoutKind =
    */
   | 'split';
 
-/** Godot Control.LayoutPreset → [anchor_left, anchor_top, anchor_right, anchor_bottom]. */
-const PRESET_ANCHORS: Record<number, [number, number, number, number]> = {
-  0: [0, 0, 0, 0], // TOP_LEFT
-  1: [1, 0, 1, 0], // TOP_RIGHT
-  2: [0, 1, 0, 1], // BOTTOM_LEFT
-  3: [1, 1, 1, 1], // BOTTOM_RIGHT
-  4: [0, 0.5, 0, 0.5], // CENTER_LEFT
-  5: [0.5, 0, 0.5, 0], // CENTER_TOP
-  6: [1, 0.5, 1, 0.5], // CENTER_RIGHT
-  7: [0.5, 1, 0.5, 1], // CENTER_BOTTOM
-  8: [0.5, 0.5, 0.5, 0.5], // CENTER
-  9: [0, 0, 0, 1], // LEFT_WIDE
-  10: [0, 0, 1, 0], // TOP_WIDE
-  11: [1, 0, 1, 1], // RIGHT_WIDE
-  12: [0, 1, 1, 1], // BOTTOM_WIDE
-  13: [0.5, 0, 0.5, 1], // VCENTER_WIDE
-  14: [0, 0.5, 1, 0.5], // HCENTER_WIDE
-  15: [0, 0, 1, 1], // FULL_RECT
-};
 
 // Godot SizeFlags bitmask.
 const SIZE_FLAG_FILL = 1;
@@ -71,20 +53,6 @@ const SIZE_FLAG_EXPAND = 2;
 const SIZE_FLAG_SHRINK_CENTER = 4;
 const SIZE_FLAG_SHRINK_END = 8;
 
-function resolveAnchors(p: ControlProperties): [number, number, number, number] {
-  const hasExplicit =
-    p.anchorLeft !== undefined ||
-    p.anchorTop !== undefined ||
-    p.anchorRight !== undefined ||
-    p.anchorBottom !== undefined;
-  if (hasExplicit) {
-    return [p.anchorLeft ?? 0, p.anchorTop ?? 0, p.anchorRight ?? 0, p.anchorBottom ?? 0];
-  }
-  if (p.anchorsPreset !== undefined && PRESET_ANCHORS[p.anchorsPreset]) {
-    return PRESET_ANCHORS[p.anchorsPreset]!;
-  }
-  return [0, 0, 0, 0];
-}
 
 /** Combine an anchor fraction (as %) and a px offset into the tersest CSS length. */
 function edge(percent: number, offsetPx: number): string {

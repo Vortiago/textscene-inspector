@@ -9,7 +9,7 @@
  * The overlay still does the real Control layout; the stage owns the chrome
  * (bounds, zoom %, scroll-to-zoom, drag-to-pan).
  *
- * The dev-only `useNativeControls` flag (see `ViewportModeContext`) swaps
+ * The dev-only native-controls flag (`NATIVE_CONTROLS_STORAGE_KEY`) swaps
  * step 3 for a native layer mounted INSIDE `<World2DCanvas>` instead — the
  * `.overlayFrame` div (and its capture-contract testid) stays either way, but
  * `<ControlOverlay>` itself only mounts while the flag is off.
@@ -29,7 +29,6 @@ import type {
   TscnInternalResource,
 } from '../../../parser/types.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
-import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { readPersisted } from '../../hooks/usePersistedState.js';
 import {
   clampWheelNotches,
@@ -42,7 +41,7 @@ import {
   type TouchPoint,
 } from '../../pointerGesture.js';
 import { World2DCanvas } from './World2DCanvas.js';
-import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d.js';
+import { FIT_ON_OPEN_2D_STORAGE_KEY, NATIVE_CONTROLS_STORAGE_KEY } from './viewport2d.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import styles from './Canvas2DStage.module.css';
 
@@ -103,10 +102,13 @@ export function Canvas2DStage({
   const stageRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View2D>({ pan: { x: 0, y: 0 }, zoom: 1 });
   const { pan, zoom } = view;
-  // Development-only mount seam: OFF by default and mirrored down to
-  // `World2DCanvas` instead of rendering the DOM `<ControlOverlay>` below.
-  // No toolbar/menu surface flips it — see `ViewportModeContext`'s doc.
-  const { useNativeControls } = useViewportMode();
+  // Development-only mount seam, read once at mount like `fitOnOpen` below:
+  // no UI flips it, so there is nothing to react to mid-session, and it stays
+  // off the viewport-mode seam where every other flag is a user preference
+  // with a toolbar affordance.
+  const [nativeControls] = useState(() =>
+    readPersisted(NATIVE_CONTROLS_STORAGE_KEY, false, isBoolean)
+  );
   // `display/window/size/viewport_*`, or Godot's 1152x648 for a scene with no
   // project around it. This rect is what a root Control resolves its anchors
   // to, so 23 of the corpus's 81 projects were being composed against the
@@ -388,7 +390,7 @@ export function Canvas2DStage({
         externalResources={externalResources}
         pan={pan}
         zoom={zoom}
-        nativeControls={useNativeControls}
+        nativeControls={nativeControls}
       />
 
       {/* The Godot project-viewport rectangle in the DOM: the Control overlay's
@@ -408,7 +410,7 @@ export function Canvas2DStage({
         // can hardcode (`projectViewportSize`).
         data-viewport-size={`${canvasWidth}x${canvasHeight}`}
       >
-        {!useNativeControls && (
+        {!nativeControls && (
           <Suspense
             fallback={
               <div className={styles.loading} aria-busy="true">

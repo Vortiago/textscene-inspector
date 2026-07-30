@@ -17,6 +17,7 @@ import type { Rect2, Vec2 } from './rect';
 import type { SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type SolveContext, type TextMeasurer } from './solverRegistry';
+import { resolveAnchors } from '../controlAnchors.js';
 
 export interface SolvedControl {
   rect: Rect2;
@@ -25,54 +26,6 @@ export interface SolvedControl {
 }
 
 // --- Anchors ---------------------------------------------------------------
-
-/**
- * `Control::LayoutPreset` (0..15) → `[anchor_left, anchor_top, anchor_right,
- * anchor_bottom]`. Transcribed from the four per-edge `switch` statements in
- * `scene/gui/control.cpp::Control::set_anchors_preset` (:1114-1229):
- * `ANCHOR_BEGIN` = 0, `ANCHOR_END` = 1, and the four CENTER_* presets anchor
- * that edge at 0.5.
- */
-const PRESET_ANCHORS: Record<number, [number, number, number, number]> = {
-  0: [0, 0, 0, 0], // TOP_LEFT
-  1: [1, 0, 1, 0], // TOP_RIGHT
-  2: [0, 1, 0, 1], // BOTTOM_LEFT
-  3: [1, 1, 1, 1], // BOTTOM_RIGHT
-  4: [0, 0.5, 0, 0.5], // CENTER_LEFT
-  5: [0.5, 0, 0.5, 0], // CENTER_TOP
-  6: [1, 0.5, 1, 0.5], // CENTER_RIGHT
-  7: [0.5, 1, 0.5, 1], // CENTER_BOTTOM
-  8: [0.5, 0.5, 0.5, 0.5], // CENTER
-  9: [0, 0, 0, 1], // LEFT_WIDE
-  10: [0, 0, 1, 0], // TOP_WIDE
-  11: [1, 0, 1, 1], // RIGHT_WIDE
-  12: [0, 1, 1, 1], // BOTTOM_WIDE
-  13: [0.5, 0, 0.5, 1], // VCENTER_WIDE
-  14: [0, 0.5, 1, 0.5], // HCENTER_WIDE
-  15: [0, 0, 1, 1], // FULL_RECT
-};
-
-/**
- * Explicit `anchor_*` properties win over `anchors_preset` (the scene file
- * carries both once a preset is applied in the editor, but the four explicit
- * floats are what `Control::_size_changed` actually reads); absent either,
- * anchors default to `(0, 0, 0, 0)` — `layout_mode = 0` (Position) leaves
- * anchors at that default and encodes position/size entirely through offsets.
- */
-function resolveAnchors(p: ControlProperties): [number, number, number, number] {
-  const hasExplicit =
-    p.anchorLeft !== undefined ||
-    p.anchorTop !== undefined ||
-    p.anchorRight !== undefined ||
-    p.anchorBottom !== undefined;
-  if (hasExplicit) {
-    return [p.anchorLeft ?? 0, p.anchorTop ?? 0, p.anchorRight ?? 0, p.anchorBottom ?? 0];
-  }
-  if (p.anchorsPreset !== undefined && PRESET_ANCHORS[p.anchorsPreset]) {
-    return PRESET_ANCHORS[p.anchorsPreset]!;
-  }
-  return [0, 0, 0, 0];
-}
 
 /**
  * `Control::_size_changed` (`control.cpp:1760-1771`), the non-RTL branch:
@@ -159,12 +112,32 @@ export function combinedMinimumSize(n: SolveNode, ctx: SolveContext): Vec2 {
  * itself, so a registered `MinimumSizeFn`/`ContainerLayoutFn` recursing into
  * a child through `ctx.combinedMinimumSize` gets the exact same function
  * `solveControlTree`'s own floor step uses.
+ *
+ * Memoised per node path, which the two-phase walk needs rather than merely
+ * benefits from: a container's own minimum size is the aggregate of its
+ * children's, so the bottom-up pass already costs one visit per descendant —
+ * and then the top-down pass asks each container for its children's minima
+ * again. Without the cache a chain of nested containers recomputes each
+ * subtree once per ancestor level, which is the common Godot UI shape
+ * (Panel → MarginContainer → VBoxContainer → …) and turns a linear walk
+ * quadratic. The cache lives on the context, so it spans both phases of one
+ * solve and is discarded with it.
  */
-export function createSolveContext(theme: NativeTheme, measureText: TextMeasurer | null = null): SolveContext {
+export function createSolveContext(
+  theme: NativeTheme,
+  measureText: TextMeasurer | null = null
+): SolveContext {
+  const cache = new Map<string, Vec2>();
   const ctx: SolveContext = {
     theme,
     measureText,
-    combinedMinimumSize: (n) => combinedMinimumSize(n, ctx),
+    combinedMinimumSize: (n) => {
+      const hit = cache.get(n.path);
+      if (hit) return hit;
+      const value = combinedMinimumSize(n, ctx);
+      cache.set(n.path, value);
+      return value;
+    },
   };
   return ctx;
 }
@@ -265,16 +238,17 @@ function dispatchChildren(
     return;
   }
 
-  const childMinSizes = new Map(n.children.map((child) => [child.path, ctx.combinedMinimumSize(child)] as const));
-  const childEntries = n.children.map((child) => ({ node: child, minSize: childMinSizes.get(child.path)! }));
-  // P1 registers no containers, so there is no chrome to inset yet; a
-  // registered container (P6b/P7 onward) insets its own content rect before
-  // calling its ContainerLayoutFn.
+  const childEntries = n.children.map((child) => ({
+    node: child,
+    minSize: ctx.combinedMinimumSize(child),
+  }));
+  // No container registers chrome yet; one that does insets its own content
+  // rect before calling its ContainerLayoutFn.
   const childRects = containerFn(n, childEntries, rect, ctx);
 
-  for (const child of n.children) {
+  for (const { node: child, minSize } of childEntries) {
     const childRect = childRects.get(child.path) ?? { x: 0, y: 0, w: 0, h: 0 };
-    record(child, childRect, childMinSizes.get(child.path)!, paintIndexOf, out);
+    record(child, childRect, minSize, paintIndexOf, out);
     dispatchChildren(child, childRect, ctx, paintIndexOf, out);
   }
 }

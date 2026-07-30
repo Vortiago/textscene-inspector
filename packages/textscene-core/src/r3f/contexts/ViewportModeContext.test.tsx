@@ -52,27 +52,4 @@ describe('ViewportModeContext', () => {
     expect(result.current.mode).toBe('2D');
   });
 
-  it('defaults useNativeControls to false when no provider is mounted', () => {
-    const { result } = renderHook(() => useViewportMode());
-    expect(result.current.useNativeControls).toBe(false);
-  });
-
-  it('defaults useNativeControls to false under a provider with no initial value', () => {
-    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
-    expect(result.current.useNativeControls).toBe(false);
-  });
-
-  it('honors initialUseNativeControls from the provider', () => {
-    const { result } = renderHook(() => useViewportMode(), {
-      wrapper: wrapper({ initialUseNativeControls: true }),
-    });
-    expect(result.current.useNativeControls).toBe(true);
-  });
-
-  it('toggles useNativeControls', () => {
-    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
-    expect(result.current.useNativeControls).toBe(false);
-    act(() => result.current.setUseNativeControls(true));
-    expect(result.current.useNativeControls).toBe(true);
-  });
 });

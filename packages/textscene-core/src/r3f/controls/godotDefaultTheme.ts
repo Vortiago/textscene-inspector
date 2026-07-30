@@ -27,20 +27,55 @@ export const DEFAULT_FONT_SIZE = 16;
 
 // --- StyleBoxFlat fills (button / dropdown / panel chrome), by draw state ---
 
-/** `style_normal_color` = Color(0.1, 0.1, 0.1, 0.6). Button/OptionButton/Panel "normal". */
-export const STYLE_NORMAL_FILL = 'rgba(26, 26, 26, 0.6)';
+/** A `Color` as `default_theme.cpp` writes it: linear-ish 0..1 channels. */
+export interface ThemeFill {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}
 
-/** `style_hover_color` = Color(0.225, 0.225, 0.225, 0.6). */
-export const STYLE_HOVER_FILL = 'rgba(57, 57, 57, 0.6)';
+/**
+ * The default flat-stylebox fill per draw state, as Godot's own `Color`
+ * literals. These are the ground truth: the CSS strings below are formatted
+ * from them, and the native canvas renderer reads the same numbers to build a
+ * material colour. Two independent transcriptions of `default_theme.cpp` would
+ * let a corrected constant land on one renderer and not the other, which shows
+ * up as nothing failing and the two paths quietly disagreeing.
+ *
+ * Kept deliberately translucent rather than pre-composited: Godot blends these
+ * over whatever the 2D viewport cleared to, so the renderer must too.
+ */
+export const STYLE_FILL = {
+  /** `style_normal_color`. Button/OptionButton/Panel "normal". */
+  normal: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 },
+  /** `style_hover_color`. */
+  hover: { r: 0.225, g: 0.225, b: 0.225, a: 0.6 },
+  /** `style_pressed_color`. */
+  pressed: { r: 0, g: 0, b: 0, a: 0.6 },
+  /** `style_disabled_color`. */
+  disabled: { r: 0.1, g: 0.1, b: 0.1, a: 0.3 },
+  /** `style_popup_color`. PopupMenu / dropdown-list panel. */
+  popup: { r: 0.25, g: 0.25, b: 0.25, a: 1 },
+  /** `style_progress_color`. */
+  progress: { r: 1, g: 1, b: 1, a: 0.4 },
+} as const satisfies Record<string, ThemeFill>;
 
-/** `style_pressed_color` = Color(0, 0, 0, 0.6). */
-export const STYLE_PRESSED_FILL = 'rgba(0, 0, 0, 0.6)';
+/**
+ * Formats a {@link ThemeFill} as CSS. Deliberately a local three-liner rather
+ * than an import of `styleBoxToCss`'s equivalent: this module's contract is to
+ * stay readable by the `.ts`-only consumers, and that module value-imports the
+ * colour/vector parsers, which would widen this one's import closure to buy
+ * nothing.
+ */
+const fillCss = (c: ThemeFill): string =>
+  `rgba(${Math.round(c.r * 255)}, ${Math.round(c.g * 255)}, ${Math.round(c.b * 255)}, ${c.a})`;
 
-/** `style_disabled_color` = Color(0.1, 0.1, 0.1, 0.3). */
-export const STYLE_DISABLED_FILL = 'rgba(26, 26, 26, 0.3)';
-
-/** `style_popup_color` = Color(0.25, 0.25, 0.25, 1). PopupMenu / dropdown-list panel. */
-export const STYLE_POPUP_FILL = 'rgba(64, 64, 64, 1)';
+export const STYLE_NORMAL_FILL = fillCss(STYLE_FILL.normal);
+export const STYLE_HOVER_FILL = fillCss(STYLE_FILL.hover);
+export const STYLE_PRESSED_FILL = fillCss(STYLE_FILL.pressed);
+export const STYLE_DISABLED_FILL = fillCss(STYLE_FILL.disabled);
+export const STYLE_POPUP_FILL = fillCss(STYLE_FILL.popup);
 
 // --- Flat-stylebox geometry (make_flat_stylebox defaults) ---
 

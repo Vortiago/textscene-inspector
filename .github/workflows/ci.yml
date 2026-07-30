@@ -47,6 +47,12 @@ jobs:
       - name: Check Generated Lint Sections
         run: pnpm docs:lint-sections --check
 
+      # The committed font metrics + MSDF atlas are generated from the vendored
+      # woff2. Nothing else notices if they drift: eslint deliberately ignores
+      # the base64 modules, and no test re-derives them.
+      - name: Check Generated Font Artifacts
+        run: pnpm fonts:bake --check
+
       - name: Build Web Previewer
         run: pnpm --filter @textscene/web-previewer build
 
