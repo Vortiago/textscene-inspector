@@ -31,15 +31,15 @@ None visible in this fixture. Measured at 0.013% against Godot 4.6.3 with
 <!-- lint:begin CSGSphere3D -->
 Strict parsing format-checks these `CSGSphere3D` properties, plus 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `flip_faces` |
-| `material` |
-| `operation` |
-| `radial_segments` |
-| `radius` |
-| `rings` |
-| `smooth_faces` |
+| Property | Accepts |
+| --- | --- |
+| `flip_faces` | true or false |
+| `material` | SubResource("id") or ExtResource("id") |
+| `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) |
+| `radial_segments` | integer >= 1 |
+| `radius` | float > 0 |
+| `rings` | integer >= 1 |
+| `smooth_faces` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

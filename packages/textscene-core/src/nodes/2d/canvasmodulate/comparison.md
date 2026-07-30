@@ -50,9 +50,9 @@ Two consequences of Godot applying the colour to the CANVAS
 <!-- lint:begin CanvasModulate -->
 Strict parsing format-checks these `CanvasModulate` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `color` |
+| Property | Accepts |
+| --- | --- |
+| `color` | Color(r, g, b, a) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

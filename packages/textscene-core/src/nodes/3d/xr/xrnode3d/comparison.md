@@ -32,11 +32,11 @@ A previewer has no XR runtime, so the tracker never moves it.
 <!-- lint:begin XRNode3D -->
 Strict parsing format-checks these `XRNode3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `pose` |
-| `show_when_tracked` |
-| `tracker` |
+| Property | Accepts |
+| --- | --- |
+| `pose` | quoted string or &"name" |
+| `show_when_tracked` | true or false |
+| `tracker` | quoted string or &"name" |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

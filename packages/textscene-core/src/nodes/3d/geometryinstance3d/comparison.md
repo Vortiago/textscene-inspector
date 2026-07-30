@@ -49,25 +49,25 @@ from Godot.
 <!-- lint:begin GeometryInstance3D -->
 Strict parsing format-checks these `GeometryInstance3D` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `cast_shadow` |
-| `custom_aabb` |
-| `extra_cull_margin` |
-| `gi_lightmap_texel_scale` |
-| `gi_mode` |
-| `ignore_occlusion_culling` |
-| `lod_bias` |
-| `material_overlay` |
-| `material_override` |
-| `sorting_offset` |
-| `sorting_use_aabb_center` |
-| `transparency` |
-| `visibility_range_begin` |
-| `visibility_range_begin_margin` |
-| `visibility_range_end` |
-| `visibility_range_end_margin` |
-| `visibility_range_fade_mode` |
+| Property | Accepts |
+| --- | --- |
+| `cast_shadow` | enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY) |
+| `custom_aabb` | AABB(12 floats) |
+| `extra_cull_margin` | float 0-16384 |
+| `gi_lightmap_texel_scale` | float >= 0.01 |
+| `gi_mode` | enum 0-2 (DISABLED/STATIC/DYNAMIC) |
+| `ignore_occlusion_culling` | true or false |
+| `lod_bias` | float 0-128 |
+| `material_overlay` | SubResource("id") or ExtResource("id") |
+| `material_override` | SubResource("id") or ExtResource("id") |
+| `sorting_offset` | float |
+| `sorting_use_aabb_center` | true or false |
+| `transparency` | float 0-1 |
+| `visibility_range_begin` | float >= 0 |
+| `visibility_range_begin_margin` | float >= 0 |
+| `visibility_range_end` | float >= 0 |
+| `visibility_range_end_margin` | float >= 0 |
+| `visibility_range_fade_mode` | enum 0-2 (DISABLED/SELF/DEPENDENCIES) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

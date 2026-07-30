@@ -58,11 +58,11 @@ rather than the copied child.
 <!-- lint:begin ParallaxLayer -->
 Strict parsing format-checks these `ParallaxLayer` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `motion_mirroring` |
-| `motion_offset` |
-| `motion_scale` |
+| Property | Accepts |
+| --- | --- |
+| `motion_mirroring` | Vector2(x, y) |
+| `motion_offset` | Vector2(x, y) |
+| `motion_scale` | Vector2(x, y) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

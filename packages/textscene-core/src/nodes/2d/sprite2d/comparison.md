@@ -47,19 +47,19 @@ output; the Below sprite is that shift plus the tint multiply, not a separate
 <!-- lint:begin Sprite2D -->
 Strict parsing format-checks these `Sprite2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `centered` |
-| `flip_h` |
-| `flip_v` |
-| `frame` |
-| `frame_coords` |
-| `hframes` |
-| `offset` |
-| `region_enabled` |
-| `region_rect` |
-| `texture` |
-| `vframes` |
+| Property | Accepts |
+| --- | --- |
+| `centered` | true or false |
+| `flip_h` | true or false |
+| `flip_v` | true or false |
+| `frame` | integer >= 0 |
+| `frame_coords` | Vector2i(x, y), both >= 0 |
+| `hframes` | integer > 0 |
+| `offset` | Vector2(x, y) |
+| `region_enabled` | true or false |
+| `region_rect` | Rect2(x, y, w, h) |
+| `texture` | SubResource("id") or ExtResource("id") |
+| `vframes` | integer > 0 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

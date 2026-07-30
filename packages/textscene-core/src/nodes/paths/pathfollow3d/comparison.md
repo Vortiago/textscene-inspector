@@ -37,17 +37,17 @@ PathFollow3D behaviour.
 <!-- lint:begin PathFollow3D -->
 Strict parsing format-checks these `PathFollow3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `cubic_interp` |
-| `h_offset` |
-| `loop` |
-| `progress` |
-| `progress_ratio` |
-| `rotation_mode` |
-| `tilt_enabled` |
-| `use_model_front` |
-| `v_offset` |
+| Property | Accepts |
+| --- | --- |
+| `cubic_interp` | true or false |
+| `h_offset` | float |
+| `loop` | true or false |
+| `progress` | float |
+| `progress_ratio` | float |
+| `rotation_mode` | enum 0-4 (NONE/Y/XY/XYZ/ORIENTED) |
+| `tilt_enabled` | true or false |
+| `use_model_front` | true or false |
+| `v_offset` | float |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

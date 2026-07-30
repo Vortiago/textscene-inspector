@@ -34,9 +34,9 @@ This is the useful thing a previewer can show, not a defect to fix.
 <!-- lint:begin NavigationRegion3D -->
 Strict parsing format-checks these `NavigationRegion3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `navigation_mesh` |
+| Property | Accepts |
+| --- | --- |
+| `navigation_mesh` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

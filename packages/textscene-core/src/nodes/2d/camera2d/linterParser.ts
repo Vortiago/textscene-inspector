@@ -59,3 +59,6 @@ validatorRegistry.registerAll('Camera2D', {
   editor_draw_limits: v.boolean('editor_draw_limits'),
   editor_draw_drag_margin: v.boolean('editor_draw_drag_margin'),
 });
+
+// Shown in the generated `## Linting` table of this node's sheet.
+zoomValidator.accepts = 'Vector2(x, y), both > 0';

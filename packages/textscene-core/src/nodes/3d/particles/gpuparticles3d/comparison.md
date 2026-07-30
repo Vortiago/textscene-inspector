@@ -40,28 +40,28 @@ regression.
 <!-- lint:begin GPUParticles3D -->
 Strict parsing format-checks these `GPUParticles3D` properties, plus 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `amount` |
-| `collision_base_size` |
-| `draw_order` |
-| `draw_pass_1` |
-| `emitting` |
-| `explosiveness` |
-| `fixed_fps` |
-| `fract_delta` |
-| `interp_to_end` |
-| `lifetime` |
-| `local_coords` |
-| `one_shot` |
-| `preprocess` |
-| `process_material` |
-| `randomness` |
-| `speed_scale` |
-| `sub_emitter` |
-| `trail_enabled` |
-| `trail_lifetime` |
-| `visibility_aabb` |
+| Property | Accepts |
+| --- | --- |
+| `amount` | integer > 0 |
+| `collision_base_size` | float > 0 |
+| `draw_order` | enum 0-2 (INDEX/LIFETIME/VIEW_DEPTH) |
+| `draw_pass_1` | SubResource("id") or ExtResource("id") |
+| `emitting` | true or false |
+| `explosiveness` | float 0-1 |
+| `fixed_fps` | integer 0-120 |
+| `fract_delta` | true or false |
+| `interp_to_end` | float 0-1 |
+| `lifetime` | float > 0 |
+| `local_coords` | true or false |
+| `one_shot` | true or false |
+| `preprocess` | float >= 0 |
+| `process_material` | SubResource("id") or ExtResource("id") |
+| `randomness` | float 0-1 |
+| `speed_scale` | float >= 5e-324 |
+| `sub_emitter` | NodePath("path/to/node") |
+| `trail_enabled` | true or false |
+| `trail_lifetime` | float > 0 |
+| `visibility_aabb` | AABB(12 floats) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

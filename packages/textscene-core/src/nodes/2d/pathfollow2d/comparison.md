@@ -42,15 +42,15 @@ directly.
 <!-- lint:begin PathFollow2D -->
 Strict parsing format-checks these `PathFollow2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `cubic_interp` |
-| `h_offset` |
-| `loop` |
-| `progress` |
-| `progress_ratio` |
-| `rotates` |
-| `v_offset` |
+| Property | Accepts |
+| --- | --- |
+| `cubic_interp` | true or false |
+| `h_offset` | float |
+| `loop` | true or false |
+| `progress` | float |
+| `progress_ratio` | float |
+| `rotates` | true or false |
+| `v_offset` | float |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

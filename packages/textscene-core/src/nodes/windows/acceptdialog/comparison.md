@@ -31,13 +31,13 @@ compare against Godot.
 <!-- lint:begin AcceptDialog -->
 Strict parsing format-checks these `AcceptDialog` properties, plus 45 inherited from Window, 9 inherited from Viewport. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `dialog_autowrap` |
-| `dialog_close_on_escape` |
-| `dialog_hide_on_ok` |
-| `dialog_text` |
-| `ok_button_text` |
+| Property | Accepts |
+| --- | --- |
+| `dialog_autowrap` | true or false |
+| `dialog_close_on_escape` | true or false |
+| `dialog_hide_on_ok` | true or false |
+| `dialog_text` | quoted string |
+| `ok_button_text` | quoted string |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

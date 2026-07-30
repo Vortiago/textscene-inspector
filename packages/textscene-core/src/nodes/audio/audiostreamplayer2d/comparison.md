@@ -32,21 +32,21 @@ None visible in this fixture.
 <!-- lint:begin AudioStreamPlayer2D -->
 Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `area_mask` |
-| `attenuation` |
-| `autoplay` |
-| `bus` |
-| `max_distance` |
-| `max_polyphony` |
-| `panning_strength` |
-| `pitch_scale` |
-| `playback_type` |
-| `playing` |
-| `stream` |
-| `stream_paused` |
-| `volume_db` |
+| Property | Accepts |
+| --- | --- |
+| `area_mask` | 32-bit layer mask (layers 1-32) |
+| `attenuation` | float > 0 |
+| `autoplay` | true or false |
+| `bus` | quoted string or &"name" |
+| `max_distance` | float > 0 |
+| `max_polyphony` | integer >= 1 |
+| `panning_strength` | float 0-1 |
+| `pitch_scale` | float >= 5e-324 |
+| `playback_type` | enum 0-2 (DEFAULT/STREAM/SAMPLE) |
+| `playing` | true or false |
+| `stream` | SubResource("id") or ExtResource("id") |
+| `stream_paused` | true or false |
+| `volume_db` | float |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

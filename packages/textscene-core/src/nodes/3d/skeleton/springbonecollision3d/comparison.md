@@ -33,12 +33,12 @@ None visible in this fixture.
 <!-- lint:begin SpringBoneCollision3D -->
 Strict parsing format-checks these `SpringBoneCollision3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `bone` |
-| `bone_name` |
-| `position_offset` |
-| `rotation_offset` |
+| Property | Accepts |
+| --- | --- |
+| `bone` | integer |
+| `bone_name` | quoted string or &"name" |
+| `position_offset` | Vector3(x, y, z) |
+| `rotation_offset` | Quaternion(x, y, z, w) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -35,6 +35,7 @@ const scaleValidator: PropertyValidator = (key, value, line) => {
 
   return null;
 };
+scaleValidator.accepts = 'Vector2(x, y), no zero component';
 
 validatorRegistry.registerAll('Node2D', {
   position: v.vector2('position'),

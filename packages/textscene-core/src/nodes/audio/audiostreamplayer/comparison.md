@@ -31,16 +31,16 @@ None visible in this fixture.
 <!-- lint:begin AudioStreamPlayer -->
 Strict parsing format-checks these `AudioStreamPlayer` properties. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `autoplay` |
-| `bus` |
-| `max_polyphony` |
-| `pitch_scale` |
-| `playing` |
-| `stream` |
-| `stream_paused` |
-| `volume_db` |
+| Property | Accepts |
+| --- | --- |
+| `autoplay` | true or false |
+| `bus` | quoted string or &"name" |
+| `max_polyphony` | integer >= 1 |
+| `pitch_scale` | float > 0 |
+| `playing` | true or false |
+| `stream` | SubResource("id") or ExtResource("id") |
+| `stream_paused` | true or false |
+| `volume_db` | float |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

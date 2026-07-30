@@ -43,10 +43,10 @@ approximated.
 <!-- lint:begin WorldEnvironment -->
 Strict parsing format-checks these `WorldEnvironment` properties. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `camera_attributes` |
-| `environment` |
+| Property | Accepts |
+| --- | --- |
+| `camera_attributes` | SubResource("id") or ExtResource("id") |
+| `environment` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -33,14 +33,14 @@ None visible in this fixture.
 <!-- lint:begin Timer -->
 Strict parsing format-checks these `Timer` properties. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `autostart` |
-| `ignore_time_scale` |
-| `one_shot` |
-| `paused` |
-| `process_callback` |
-| `wait_time` |
+| Property | Accepts |
+| --- | --- |
+| `autostart` | true or false |
+| `ignore_time_scale` | true or false |
+| `one_shot` | true or false |
+| `paused` | true or false |
+| `process_callback` | enum 0-1 (PHYSICS/IDLE) |
+| `wait_time` | float > 0 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

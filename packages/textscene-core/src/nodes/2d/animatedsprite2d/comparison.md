@@ -38,19 +38,19 @@ Position, scale, and the played frames match at each moment of the clip.
 <!-- lint:begin AnimatedSprite2D -->
 Strict parsing format-checks these `AnimatedSprite2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `animation` |
-| `autoplay` |
-| `centered` |
-| `flip_h` |
-| `flip_v` |
-| `frame` |
-| `frame_progress` |
-| `offset` |
-| `playing` |
-| `speed_scale` |
-| `sprite_frames` |
+| Property | Accepts |
+| --- | --- |
+| `animation` | any value (no format constraint) |
+| `autoplay` | any value (no format constraint) |
+| `centered` | true or false |
+| `flip_h` | true or false |
+| `flip_v` | true or false |
+| `frame` | integer >= 0 |
+| `frame_progress` | float |
+| `offset` | Vector2(x, y) |
+| `playing` | true or false |
+| `speed_scale` | float |
+| `sprite_frames` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

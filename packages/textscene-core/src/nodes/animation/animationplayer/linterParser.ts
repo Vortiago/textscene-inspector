@@ -42,14 +42,23 @@ function nonEmptyQuotedString(
   emptyMessage: string,
   code: string
 ): PropertyValidator {
-  return (key, value, line) => {
+  const validator: PropertyValidator = (key, value, line) => {
     const strValue = value.replace(/^["']|["']$/g, '').trim();
     if (strValue.length === 0) {
       return propertyError(key, line, emptyMessage, code);
     }
     return null;
   };
+  validator.accepts = 'non-empty quoted string';
+  return validator;
 }
+
+/**
+ * Accepts anything: recognised on this node but with no format Godot
+ * enforces, so there is nothing to check.
+ */
+const anyValue: PropertyValidator = () => null;
+anyValue.accepts = 'any value (no format constraint)';
 
 validatorRegistry.registerAll('AnimationPlayer', {
   speed_scale: speedScaleValidator,
@@ -67,7 +76,7 @@ validatorRegistry.registerAll('AnimationPlayer', {
     "Property 'autoplay' cannot be empty. Specify a valid animation name.",
     'INVALID_AUTOPLAY_EMPTY'
   ),
-  current_animation: () => null,
+  current_animation: anyValue,
   root_node: nonEmptyQuotedString(
     'root_node',
     "Property 'root_node' cannot be empty. Specify a valid NodePath.",
@@ -82,3 +91,6 @@ validatorRegistry.registerAll('AnimationPlayer', {
     message: "Property 'current_animation_position' must be >= 0",
   }),
 });
+
+// Shown in the generated `## Linting` table of this node's sheet.
+speedScaleValidator.accepts = 'float, non-zero';

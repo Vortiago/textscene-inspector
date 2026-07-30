@@ -36,13 +36,13 @@ a placeholder-material effect — the GridMap geometry itself matches.
 <!-- lint:begin GridMap -->
 Strict parsing format-checks these `GridMap` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `cell_center_x` |
-| `cell_center_y` |
-| `cell_center_z` |
-| `cell_size` |
-| `mesh_library` |
+| Property | Accepts |
+| --- | --- |
+| `cell_center_x` | true or false |
+| `cell_center_y` | true or false |
+| `cell_center_z` | true or false |
+| `cell_size` | Vector3(x, y, z) |
+| `mesh_library` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

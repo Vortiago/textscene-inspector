@@ -32,9 +32,9 @@ None visible in this fixture.
 <!-- lint:begin Marker2D -->
 Strict parsing format-checks these `Marker2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `gizmo_extents` |
+| Property | Accepts |
+| --- | --- |
+| `gizmo_extents` | float |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

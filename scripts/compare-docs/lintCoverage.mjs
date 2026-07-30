@@ -26,7 +26,11 @@ export function validatorsFor(type, validatorRegistry, baseTypes) {
       // A subclass key shadows the base's, exactly as findValidator resolves it.
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({ property: key, declaredOn: current });
+      // `accepts` is set by the `v` DSL at construction time, where the bounds
+      // are known. A hand-rolled validator has none and renders blank rather
+      // than being guessed at.
+      const validator = validatorRegistry.findValidator(current, key);
+      out.push({ property: key, declaredOn: current, accepts: validator?.accepts ?? '' });
     }
     current = baseTypes[current];
   }
@@ -89,9 +93,9 @@ export function renderCoverage(type, coverage) {
     lines.push(`Strict parsing format-checks ${scope}. Every validator failure is an **error**.`);
     if (own.length) {
       lines.push('');
-      lines.push('| Property |');
-      lines.push('| --- |');
-      for (const v of own) lines.push(`| \`${v.property}\` |`);
+      lines.push('| Property | Accepts |');
+      lines.push('| --- | --- |');
+      for (const v of own) lines.push(`| \`${v.property}\` | ${v.accepts} |`);
     }
   }
 

@@ -92,27 +92,27 @@ sweep's silhouette, not a shape difference.
 <!-- lint:begin CSGPolygon3D -->
 Strict parsing format-checks these `CSGPolygon3D` properties, plus 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `depth` |
-| `flip_faces` |
-| `material` |
-| `mode` |
-| `operation` |
-| `path_continuous_u` |
-| `path_interval` |
-| `path_interval_type` |
-| `path_joined` |
-| `path_local` |
-| `path_node` |
-| `path_rotation` |
-| `path_rotation_accurate` |
-| `path_simplify_angle` |
-| `path_u_distance` |
-| `polygon` |
-| `smooth_faces` |
-| `spin_degrees` |
-| `spin_sides` |
+| Property | Accepts |
+| --- | --- |
+| `depth` | float > 0 |
+| `flip_faces` | true or false |
+| `material` | SubResource("id") or ExtResource("id") |
+| `mode` | enum 0-2 (DEPTH/SPIN/PATH) |
+| `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) |
+| `path_continuous_u` | true or false |
+| `path_interval` | float > 0 |
+| `path_interval_type` | enum 0-1 (DISTANCE/SUBDIVIDE) |
+| `path_joined` | true or false |
+| `path_local` | true or false |
+| `path_node` | NodePath("path/to/node") |
+| `path_rotation` | enum 0-2 (POLYGON/PATH/PATH_FOLLOW) |
+| `path_rotation_accurate` | true or false |
+| `path_simplify_angle` | float 0-180 |
+| `path_u_distance` | float >= 0 |
+| `polygon` | PackedVector2Array(x, y, …) — even count |
+| `smooth_faces` | true or false |
+| `spin_degrees` | float 1-360 |
+| `spin_sides` | integer 3-64 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

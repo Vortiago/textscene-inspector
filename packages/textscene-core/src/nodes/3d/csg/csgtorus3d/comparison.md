@@ -41,16 +41,16 @@ None visible in this fixture. Measured at 0.046% against Godot 4.6.3 with
 <!-- lint:begin CSGTorus3D -->
 Strict parsing format-checks these `CSGTorus3D` properties, plus 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `flip_faces` |
-| `inner_radius` |
-| `material` |
-| `operation` |
-| `outer_radius` |
-| `ring_sides` |
-| `sides` |
-| `smooth_faces` |
+| Property | Accepts |
+| --- | --- |
+| `flip_faces` | true or false |
+| `inner_radius` | float > 0 |
+| `material` | SubResource("id") or ExtResource("id") |
+| `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) |
+| `outer_radius` | float > 0 |
+| `ring_sides` | integer 3-64 |
+| `sides` | integer 3-64 |
+| `smooth_faces` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

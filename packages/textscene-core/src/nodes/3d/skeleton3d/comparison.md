@@ -30,13 +30,13 @@ None visible in this fixture.
 <!-- lint:begin Skeleton3D -->
 Strict parsing format-checks these `Skeleton3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `animate_physical_bones` |
-| `bones/*` |
-| `modifier_callback_mode_process` |
-| `motion_scale` |
-| `show_rest_only` |
+| Property | Accepts |
+| --- | --- |
+| `animate_physical_bones` | true or false |
+| `bones/*` | bone pose component (float, Vector3 or Quaternion) |
+| `modifier_callback_mode_process` | enum 0-2 (PHYSICS/IDLE/MANUAL) |
+| `motion_scale` | float >= 5e-324 |
+| `show_rest_only` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

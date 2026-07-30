@@ -94,6 +94,24 @@ const QUOTED_RE = /^"(?:[^"\\]|\\[\s\S])*"$/;
 const STRING_NAME_RE = /^&?"(?:[^"\\]|\\[\s\S])*"$/;
 
 /**
+ * Tag a validator with what it accepts, for the generated `## Linting` table.
+ * Exported so a slice with a bespoke validator can describe it too — an
+ * untagged one renders an empty cell, which `validatorAccepts.test.ts` fails on.
+ */
+export function accepts(validator: PropertyValidator, description: string): PropertyValidator {
+  validator.accepts = description;
+  return validator;
+}
+
+/** `float 0-1` / `float >= 0` / `integer 1-256` / `float`, from the bounds. */
+function numericRange(kind: 'float' | 'integer', min?: number, max?: number): string {
+  if (min !== undefined && max !== undefined) return `${kind} ${min}-${max}`;
+  if (min !== undefined) return `${kind} >= ${min}`;
+  if (max !== undefined) return `${kind} <= ${max}`;
+  return kind;
+}
+
+/**
  * The declarative validator namespace. Use as `v.float`, `v.enum`, etc.
  */
 export const v = {
@@ -102,63 +120,65 @@ export const v = {
    * Default `min = null` (no lower bound), `max = null` (no upper bound).
    */
   float(name: string, opts: FloatOpts = {}): PropertyValidator {
-    return createNumericRangeValidator(
+    return accepts(
+      createNumericRangeValidator(
       name,
       opts.min ?? null,
       opts.max ?? null,
       false,
-      opts.message,
-      formatCode(name),
-      valueCode(name)
+        opts.message,
+        formatCode(name),
+        valueCode(name)
+      ),
+      numericRange('float', opts.min, opts.max)
     );
   },
 
   /** Float ≥ 0. Convenience alias for `v.float(name, { min: 0 })`. */
   nonNegativeFloat(name: string): PropertyValidator {
-    return createNumericRangeValidator(
-      name,
-      0,
-      null,
-      false,
-      undefined,
-      formatCode(name),
-      valueCode(name)
+    return accepts(
+      createNumericRangeValidator(name, 0, null, false, undefined, formatCode(name), valueCode(name)),
+      'float >= 0'
     );
   },
 
   /** Float > 0 (strict). Useful for distances, energies, near/far planes. */
   positiveFloat(name: string, message?: string): PropertyValidator {
-    return createNumericRangeValidator(
-      name,
-      Number.MIN_VALUE,
-      null,
-      false,
-      message ?? `Property '${name}' must be greater than 0`,
-      formatCode(name),
-      valueCode(name)
+    return accepts(
+      createNumericRangeValidator(
+        name,
+        Number.MIN_VALUE,
+        null,
+        false,
+        message ?? `Property '${name}' must be greater than 0`,
+        formatCode(name),
+        valueCode(name)
+      ),
+      'float > 0'
     );
   },
 
   /** Integer in a range, parsed as base 10. */
   int(name: string, opts: IntOpts = {}): PropertyValidator {
-    return createNumericRangeValidator(
-      name,
-      opts.min ?? null,
-      opts.max ?? null,
-      true,
-      opts.message,
-      formatCode(name),
-      valueCode(name)
+    return accepts(
+      createNumericRangeValidator(
+        name,
+        opts.min ?? null,
+        opts.max ?? null,
+        true,
+        opts.message,
+        formatCode(name),
+        valueCode(name)
+      ),
+      numericRange('integer', opts.min, opts.max)
     );
   },
 
   /** Positive integer (> 0). Specialised wrapper from `commonValidators`. */
   positiveInt(name: string, message?: string): PropertyValidator {
-    return createPositiveIntegerValidator(
-      name,
-      message,
-      formatCode(name),
-      valueCode(name)
+    return accepts(
+      createPositiveIntegerValidator(name, message, formatCode(name), valueCode(name)),
+      'integer > 0'
     );
   },
 
@@ -169,24 +189,27 @@ export const v = {
     max: number,
     labels: Record<number, string>
   ): PropertyValidator {
-    return createEnumValidator(
-      name,
-      min,
-      max,
-      labels,
-      formatCode(name),
-      valueCode(name)
+    // The labels are the point: `enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY)`
+    // tells a reader what each number means without opening Godot's docs.
+    const names = Object.keys(labels)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map((k) => labels[k])
+      .join('/');
+    return accepts(
+      createEnumValidator(name, min, max, labels, formatCode(name), valueCode(name)),
+      `enum ${min}-${max} (${names})`
     );
   },
 
   /** Boolean (`'true'` | `'false'`). */
   boolean(name: string): PropertyValidator {
-    return createBooleanValidator(name, formatCode(name));
+    return accepts(createBooleanValidator(name, formatCode(name)), 'true or false');
   },
 
   /** Non-empty string (anything that isn't whitespace-only). */
   string(name: string): PropertyValidator {
-    return createStringValidator(name, formatCode(name));
+    return accepts(createStringValidator(name, formatCode(name)), 'non-empty string');
   },
 
   /**
@@ -195,12 +218,12 @@ export const v = {
    */
   quotedString(name: string): PropertyValidator {
     const code = formatCode(name);
-    return (key, value, line) => {
+    return accepts((key, value, line) => {
       if (!QUOTED_RE.test(value)) {
         return propertyError(key, line, `Property '${name}' must be a quoted string, got: ${value}`, code);
       }
       return null;
-    };
+    }, 'quoted string');
   },
 
   /**
@@ -210,7 +233,7 @@ export const v = {
    */
   stringName(name: string): PropertyValidator {
     const code = formatCode(name);
-    return (key, value, line) => {
+    return accepts((key, value, line) => {
       if (!STRING_NAME_RE.test(value)) {
         return propertyError(
           key,
@@ -220,13 +243,13 @@ export const v = {
         );
       }
       return null;
-    };
+    }, 'quoted string or &"name"');
   },
 
   /** `Rect2i(x, y, w, h)` integer format. */
   rect2i(name: string): PropertyValidator {
     const code = formatCode(name);
-    return (key, value, line) => {
+    return accepts((key, value, line) => {
       if (!RECT2I_RE.test(value)) {
         return propertyError(
           key,
@@ -236,12 +259,12 @@ export const v = {
         );
       }
       return null;
-    };
+    }, 'Rect2i(x, y, w, h)');
   },
 
   /** `Vector2(x, y)` format. */
   vector2(name: string): PropertyValidator {
-    return createVector2Validator(name, formatCode(name));
+    return accepts(createVector2Validator(name, formatCode(name)), 'Vector2(x, y)');
   },
 
   /**
@@ -249,40 +272,44 @@ export const v = {
    * requirement (defaults to false to match the underlying factory).
    */
   vector2i(name: string, requireNonNegative = false): PropertyValidator {
-    return createVector2iValidator(
-      name,
-      requireNonNegative,
-      formatCode(name),
-      valueCode(name)
+    return accepts(
+      createVector2iValidator(name, requireNonNegative, formatCode(name), valueCode(name)),
+      requireNonNegative ? 'Vector2i(x, y), both >= 0' : 'Vector2i(x, y)'
     );
   },
 
   /** `Vector3(x, y, z)` format. */
   vector3(name: string): PropertyValidator {
-    return createVector3Validator(name, formatCode(name));
+    return accepts(createVector3Validator(name, formatCode(name)), 'Vector3(x, y, z)');
   },
 
   /** `Rect2(x, y, w, h)` format. */
   rect2(name: string): PropertyValidator {
-    return createRect2Validator(name, formatCode(name));
+    return accepts(createRect2Validator(name, formatCode(name)), 'Rect2(x, y, w, h)');
   },
 
   /** `Transform3D(...12 floats)` format. */
   transform3d(name: string): PropertyValidator {
-    return createTransform3DValidator(name, formatCode(name));
+    return accepts(createTransform3DValidator(name, formatCode(name)), 'Transform3D(12 floats)');
   },
 
   /** `SubResource("id")` or `ExtResource("id")` format. */
   resourceReference(name: string): PropertyValidator {
-    return createResourceReferenceValidator(
+    return accepts(
+      createResourceReferenceValidator(
       name,
       `INVALID_${upper(name)}_REFERENCE`
+    ),
+      'SubResource("id") or ExtResource("id")'
     );
   },
 
   /** `NodePath("path/to/node")` format. */
   nodePath(name: string): PropertyValidator {
-    return createNodePathValidator(name, `INVALID_${upper(name)}_PATH`);
+    return accepts(
+      createNodePathValidator(name, `INVALID_${upper(name)}_PATH`),
+      'NodePath("path/to/node")'
+    );
   },
 
   /**
@@ -291,22 +318,34 @@ export const v = {
    * directionallight3d/omnilight3d/spotlight3d's hand-rolled version.
    */
   color(name: string): PropertyValidator {
-    return floatTupleValidator(name, 'Color', 4, 'Color with 4 numbers like Color(1, 1, 1, 1)', formatCode(name));
+    return accepts(
+      floatTupleValidator(name, 'Color', 4, 'Color with 4 numbers like Color(1, 1, 1, 1)', formatCode(name)),
+      'Color(r, g, b, a)'
+    );
   },
 
   /** `AABB(x, y, z, w, h, d)` format. */
   aabb(name: string): PropertyValidator {
-    return floatTupleValidator(name, 'AABB', 6, 'AABB with 6 numbers like AABB(0, 0, 0, 1, 1, 1)', formatCode(name));
+    return accepts(
+      floatTupleValidator(name, 'AABB', 6, 'AABB with 6 numbers like AABB(0, 0, 0, 1, 1, 1)', formatCode(name)),
+      'AABB(12 floats)'
+    );
   },
 
   /** `Quaternion(x, y, z, w)` format. */
   quaternion(name: string): PropertyValidator {
-    return floatTupleValidator(name, 'Quaternion', 4, 'Quaternion with 4 numbers like Quaternion(0, 0, 0, 1)', formatCode(name));
+    return accepts(
+      floatTupleValidator(name, 'Quaternion', 4, 'Quaternion with 4 numbers like Quaternion(0, 0, 0, 1)', formatCode(name)),
+      'Quaternion(x, y, z, w)'
+    );
   },
 
   /** `Transform2D(6 floats)` format. */
   transform2d(name: string): PropertyValidator {
-    return floatTupleValidator(name, 'Transform2D', 6, 'Transform2D with 6 numbers like Transform2D(1, 0, 0, 1, 0, 0)', formatCode(name));
+    return accepts(
+      floatTupleValidator(name, 'Transform2D', 6, 'Transform2D with 6 numbers like Transform2D(1, 0, 0, 1, 0, 0)', formatCode(name)),
+      'Transform2D(6 floats)'
+    );
   },
 
   /**
@@ -317,13 +356,16 @@ export const v = {
    */
   lenientInt(name: string): PropertyValidator {
     const formatErr = formatCode(name);
-    return (key, value, line) => {
+    return accepts(
+      (key, value, line) => {
       const parsed = parseInt(value, 10);
       if (isNaN(parsed)) {
         return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
       }
       return null;
-    };
+    },
+      'integer'
+    );
   },
 
   /**
@@ -334,13 +376,16 @@ export const v = {
    */
   strictInt(name: string): PropertyValidator {
     const formatErr = formatCode(name);
-    return (key, value, line) => {
+    return accepts(
+      (key, value, line) => {
       const parsed = parseFloat(value);
       if (isNaN(parsed) || !Number.isInteger(parsed)) {
         return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
       }
       return null;
-    };
+    },
+      'integer'
+    );
   },
 
   /**
@@ -351,7 +396,8 @@ export const v = {
   strictNonNegativeInt(name: string): PropertyValidator {
     const formatErr = formatCode(name);
     const valueErr = valueCode(name);
-    return (key, value, line) => {
+    return accepts(
+      (key, value, line) => {
       const parsed = parseFloat(value);
       if (isNaN(parsed) || !Number.isInteger(parsed)) {
         return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
@@ -360,12 +406,17 @@ export const v = {
         return propertyError(key, line, `Property '${name}' must be non-negative (got ${parsed})`, valueErr);
       }
       return null;
-    };
+    },
+      'integer >= 0'
+    );
   },
 
   /** `Basis(9 floats)` format. */
   basis(name: string): PropertyValidator {
-    return floatTupleValidator(name, 'Basis', 9, 'Basis with 9 numbers like Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)', formatCode(name));
+    return accepts(
+      floatTupleValidator(name, 'Basis', 9, 'Basis with 9 numbers like Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)', formatCode(name)),
+      'Basis(9 floats)'
+    );
   },
 
   /**
@@ -387,7 +438,8 @@ export const v = {
     const formatErr = formatCode(name);
     const valueErr = valueCode(name);
     const WRAPPER = /^\s*PackedVector2Array\s*\(([\s\S]*)\)\s*$/;
-    return (key, value, line) => {
+    return accepts(
+      (key, value, line) => {
       const match = WRAPPER.exec(value);
       if (!match) {
         return propertyError(
@@ -421,6 +473,8 @@ export const v = {
         );
       }
       return null;
-    };
+    },
+      'PackedVector2Array(x, y, …) — even count'
+    );
   },
 };

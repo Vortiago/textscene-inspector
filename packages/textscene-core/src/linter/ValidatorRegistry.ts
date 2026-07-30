@@ -12,11 +12,23 @@ import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
  * @param line - Line number in source file
  * @returns ParseError if validation fails, null if valid
  */
-export type PropertyValidator = (
+export type PropertyValidator = ((
   key: string,
   value: string,
   line: number
-) => ParseError | null;
+) => ParseError | null) & {
+  /**
+   * What this validator accepts, in one short human phrase — `float 0–1`,
+   * `enum 0–3 (OFF/ON/…)`, `Vector3(x, y, z)`, `32-bit layer mask`.
+   *
+   * A validator is otherwise an opaque closure, so the generated `## Linting`
+   * table could only list property NAMES and a reader had no way to see the
+   * bounds. The `v` DSL knows them at construction time, so it tags them here
+   * and `lintCoverage.mjs` renders them. Untagged validators simply render
+   * blank rather than being guessed at.
+   */
+  accepts?: string;
+};
 
 /**
  * Registry for property validators by node type

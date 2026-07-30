@@ -98,9 +98,9 @@ separately.
 <!-- lint:begin CSGCombiner3D -->
 Strict parsing format-checks these `CSGCombiner3D` properties, plus 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `operation` |
+| Property | Accepts |
+| --- | --- |
+| `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

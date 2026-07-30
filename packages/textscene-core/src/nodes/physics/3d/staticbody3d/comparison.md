@@ -31,17 +31,17 @@ None visible in this fixture.
 <!-- lint:begin StaticBody3D -->
 Strict parsing format-checks these `StaticBody3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `collision_layer` |
-| `collision_mask` |
-| `collision_priority` |
-| `constant_angular_velocity` |
-| `constant_linear_velocity` |
-| `disable_mode` |
-| `input_capture_on_drag` |
-| `input_ray_pickable` |
-| `physics_material_override` |
+| Property | Accepts |
+| --- | --- |
+| `collision_layer` | 32-bit layer mask (layers 1-32) |
+| `collision_mask` | 32-bit layer mask (layers 1-32) |
+| `collision_priority` | float |
+| `constant_angular_velocity` | Vector3(x, y, z) |
+| `constant_linear_velocity` | Vector3(x, y, z) |
+| `disable_mode` | enum 0-2 (REMOVE/MAKE_STATIC/KEEP_ACTIVE) |
+| `input_capture_on_drag` | true or false |
+| `input_ray_pickable` | true or false |
+| `physics_material_override` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

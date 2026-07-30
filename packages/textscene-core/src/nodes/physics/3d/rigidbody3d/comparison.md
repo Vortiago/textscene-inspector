@@ -34,31 +34,31 @@ None visible in this fixture.
 <!-- lint:begin RigidBody3D -->
 Strict parsing format-checks these `RigidBody3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `angular_damp` |
-| `angular_damp_mode` |
-| `can_sleep` |
-| `center_of_mass` |
-| `center_of_mass_mode` |
-| `collision_layer` |
-| `collision_mask` |
-| `collision_priority` |
-| `contact_monitor` |
-| `continuous_cd` |
-| `custom_integrator` |
-| `disable_mode` |
-| `freeze` |
-| `freeze_mode` |
-| `gravity_scale` |
-| `inertia` |
-| `linear_damp` |
-| `linear_damp_mode` |
-| `lock_rotation` |
-| `mass` |
-| `max_contacts_reported` |
-| `physics_material_override` |
-| `sleeping` |
+| Property | Accepts |
+| --- | --- |
+| `angular_damp` | float >= 0 |
+| `angular_damp_mode` | enum 0-1 (COMBINE/REPLACE) |
+| `can_sleep` | true or false |
+| `center_of_mass` | Vector3(x, y, z) |
+| `center_of_mass_mode` | enum 0-1 (AUTO/CUSTOM) |
+| `collision_layer` | 32-bit layer mask (layers 1-32) |
+| `collision_mask` | 32-bit layer mask (layers 1-32) |
+| `collision_priority` | float |
+| `contact_monitor` | true or false |
+| `continuous_cd` | true or false |
+| `custom_integrator` | true or false |
+| `disable_mode` | enum 0-1 (REMOVE/KEEP_ACTIVE) |
+| `freeze` | true or false |
+| `freeze_mode` | enum 0-1 (STATIC/KINEMATIC) |
+| `gravity_scale` | float |
+| `inertia` | Vector3(x, y, z), all >= 0 |
+| `linear_damp` | float >= 0 |
+| `linear_damp_mode` | enum 0-1 (COMBINE/REPLACE) |
+| `lock_rotation` | true or false |
+| `mass` | float >= 5e-324 |
+| `max_contacts_reported` | integer > 0 |
+| `physics_material_override` | SubResource("id") or ExtResource("id") |
+| `sleeping` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

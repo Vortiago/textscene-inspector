@@ -35,14 +35,14 @@ pixel, but the colours are dimmer and shifted. Godot draws pure white
 <!-- lint:begin Line2D -->
 Strict parsing format-checks these `Line2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `closed` |
-| `default_color` |
-| `joint_mode` |
-| `round_precision` |
-| `sharp_limit` |
-| `width` |
+| Property | Accepts |
+| --- | --- |
+| `closed` | true or false |
+| `default_color` | Color(r, g, b, a) |
+| `joint_mode` | enum 0-2 (SHARP/BEVEL/ROUND) |
+| `round_precision` | integer >= 1 |
+| `sharp_limit` | float >= 0 |
+| `width` | float |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

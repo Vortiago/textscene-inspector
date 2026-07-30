@@ -39,27 +39,27 @@ None visible in this fixture.
 <!-- lint:begin Area2D -->
 Strict parsing format-checks these `Area2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `angular_damp` |
-| `angular_damp_space_override` |
-| `audio_bus_name` |
-| `audio_bus_override` |
-| `collision_layer` |
-| `collision_mask` |
-| `disable_mode` |
-| `gravity` |
-| `gravity_direction` |
-| `gravity_point` |
-| `gravity_point_center` |
-| `gravity_point_unit_distance` |
-| `gravity_space_override` |
-| `linear_damp` |
-| `linear_damp_space_override` |
-| `monitorable` |
-| `monitoring` |
-| `priority` |
-| `space_override` |
+| Property | Accepts |
+| --- | --- |
+| `angular_damp` | float >= 0 |
+| `angular_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
+| `audio_bus_name` | non-empty string |
+| `audio_bus_override` | true or false |
+| `collision_layer` | 32-bit layer mask (layers 1-32) |
+| `collision_mask` | 32-bit layer mask (layers 1-32) |
+| `disable_mode` | enum 0-2 (REMOVE/MAKE_STATIC/KEEP_ACTIVE) |
+| `gravity` | float |
+| `gravity_direction` | Vector2(x, y) |
+| `gravity_point` | true or false |
+| `gravity_point_center` | Vector2(x, y) |
+| `gravity_point_unit_distance` | float >= 0.0001 |
+| `gravity_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
+| `linear_damp` | float >= 0 |
+| `linear_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
+| `monitorable` | true or false |
+| `monitoring` | true or false |
+| `priority` | float |
+| `space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

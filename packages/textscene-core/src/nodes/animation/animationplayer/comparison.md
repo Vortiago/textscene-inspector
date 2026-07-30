@@ -51,18 +51,18 @@ not exercise is where the real gaps are, so they are listed rather than shown:
 <!-- lint:begin AnimationPlayer -->
 Strict parsing format-checks these `AnimationPlayer` properties. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `autoplay` |
-| `current_animation` |
-| `current_animation_length` |
-| `current_animation_position` |
-| `method_call_mode` |
-| `playback_active` |
-| `playback_default_blend_time` |
-| `playback_process_mode` |
-| `root_node` |
-| `speed_scale` |
+| Property | Accepts |
+| --- | --- |
+| `autoplay` | non-empty quoted string |
+| `current_animation` | any value (no format constraint) |
+| `current_animation_length` | float >= 0 |
+| `current_animation_position` | float >= 0 |
+| `method_call_mode` | enum 0-1 (DEFERRED/IMMEDIATE) |
+| `playback_active` | true or false |
+| `playback_default_blend_time` | float >= 0 |
+| `playback_process_mode` | enum 0-2 (PHYSICS/IDLE/MANUAL) |
+| `root_node` | non-empty quoted string |
+| `speed_scale` | float, non-zero |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -36,9 +36,9 @@ than a divergence.
 <!-- lint:begin Path3D -->
 Strict parsing format-checks these `Path3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `curve` |
+| Property | Accepts |
+| --- | --- |
+| `curve` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -28,9 +28,13 @@ export const MAX_LAYER_BITMASK = 4294967295;
  * simply means "no layers"), so there is no lower bound to configure.
  */
 export function layerBitmask(name: string): PropertyValidator {
-  return v.int(name, {
+  const validator = v.int(name, {
     min: 0,
     max: MAX_LAYER_BITMASK,
     message: `Property '${name}' must be between 0 and ${MAX_LAYER_BITMASK}. Valid range: 32-bit bitmask (layers 1-32)`,
   });
+  // `integer 0-4294967295` is technically what v.int tagged it, but the number
+  // is meaningless to a reader — what matters is that it is a layer bitmask.
+  validator.accepts = '32-bit layer mask (layers 1-32)';
+  return validator;
 }

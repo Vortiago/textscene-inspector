@@ -42,13 +42,13 @@ One visible difference remains, in the polygon fill rather than its placement:
 <!-- lint:begin RemoteTransform2D -->
 Strict parsing format-checks these `RemoteTransform2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `remote_path` |
-| `update_position` |
-| `update_rotation` |
-| `update_scale` |
-| `use_global_coordinates` |
+| Property | Accepts |
+| --- | --- |
+| `remote_path` | NodePath("path/to/node") |
+| `update_position` | true or false |
+| `update_rotation` | true or false |
+| `update_scale` | true or false |
+| `use_global_coordinates` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

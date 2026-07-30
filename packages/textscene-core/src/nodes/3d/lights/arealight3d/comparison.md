@@ -40,11 +40,11 @@ a 4.7 binary sits beside the 4.6 one.
 <!-- lint:begin AreaLight3D -->
 Strict parsing format-checks these `AreaLight3D` properties, plus 15 inherited from Light3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `area_normalize_energy` |
-| `area_range` |
-| `area_size` |
+| Property | Accepts |
+| --- | --- |
+| `area_normalize_energy` | true or false |
+| `area_range` | float > 0 |
+| `area_size` | Vector2(x, y) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

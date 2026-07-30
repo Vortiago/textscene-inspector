@@ -1,6 +1,7 @@
 /** Shared validator utilities for physics-related properties */
 
 import type { ParseError } from '../../linter/types.js';
+import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
 import { MAX_LAYER_BITMASK } from './layerBitmask.js';
 
@@ -35,7 +36,7 @@ export function createCollisionLayerValidator(
   errorCodeFormat: string = 'INVALID_COLLISION_LAYER_FORMAT',
   errorCodeValue: string = 'INVALID_COLLISION_LAYER_VALUE'
 ): (key: string, value: string, line: number) => ParseError | null {
-  return (key, value, line) => {
+  const validator: PropertyValidator = (key, value, line) => {
     const num = parseInt(value, 10);
     if (isNaN(num)) {
       return propertyError(key, line, `Property 'collision_layer' must be a number, got: "${value}"`, errorCodeFormat);
@@ -45,6 +46,8 @@ export function createCollisionLayerValidator(
     }
     return null;
   };
+  validator.accepts = '32-bit layer mask (layers 1-32)';
+  return validator;
 }
 
 /**
@@ -55,7 +58,7 @@ export function createCollisionMaskValidator(
   errorCodeFormat: string = 'INVALID_COLLISION_MASK_FORMAT',
   errorCodeValue: string = 'INVALID_COLLISION_MASK_VALUE'
 ): (key: string, value: string, line: number) => ParseError | null {
-  return (key, value, line) => {
+  const validator: PropertyValidator = (key, value, line) => {
     const num = parseInt(value, 10);
     if (isNaN(num)) {
       return propertyError(key, line, `Property 'collision_mask' must be a number, got: "${value}"`, errorCodeFormat);
@@ -65,6 +68,8 @@ export function createCollisionMaskValidator(
     }
     return null;
   };
+  validator.accepts = '32-bit layer mask (layers 1-32)';
+  return validator;
 }
 
 /**
@@ -76,7 +81,7 @@ export function createSpaceOverrideValidator(
   errorCodeFormat: string,
   errorCodeValue: string
 ): (key: string, value: string, line: number) => ParseError | null {
-  return (key, value, line) => {
+  const validator: PropertyValidator = (key, value, line) => {
     const num = parseInt(value, 10);
     if (isNaN(num)) {
       return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
@@ -89,6 +94,8 @@ export function createSpaceOverrideValidator(
     }
     return null;
   };
+  validator.accepts = 'enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE)';
+  return validator;
 }
 
 /**
@@ -98,7 +105,7 @@ export function createDisableModeValidator(
   errorCodeFormat: string = 'INVALID_DISABLE_MODE_FORMAT',
   errorCodeValue: string = 'INVALID_DISABLE_MODE_VALUE'
 ): (key: string, value: string, line: number) => ParseError | null {
-  return (key, value, line) => {
+  const validator: PropertyValidator = (key, value, line) => {
     const num = parseInt(value, 10);
     if (isNaN(num)) {
       return propertyError(key, line, `Property 'disable_mode' must be a number, got: "${value}"`, errorCodeFormat);
@@ -111,4 +118,6 @@ export function createDisableModeValidator(
     }
     return null;
   };
+  validator.accepts = 'enum 0-2 (REMOVE/MAKE_STATIC/KEEP_ACTIVE)';
+  return validator;
 }

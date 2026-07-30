@@ -30,9 +30,9 @@ None visible in this fixture.
 <!-- lint:begin VisualInstance3D -->
 Strict parsing format-checks these `VisualInstance3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `layers` |
+| Property | Accepts |
+| --- | --- |
+| `layers` | 32-bit layer mask (layers 1-32) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

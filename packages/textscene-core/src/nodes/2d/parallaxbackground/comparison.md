@@ -70,22 +70,22 @@ exact for a sub-viewport and irrelevant on the 2D stage, where no scroll runs.
 <!-- lint:begin ParallaxBackground -->
 Strict parsing format-checks these `ParallaxBackground` properties. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `follow_viewport_enabled` |
-| `follow_viewport_scale` |
-| `layer` |
-| `offset` |
-| `rotation` |
-| `scale` |
-| `scroll_base_offset` |
-| `scroll_base_scale` |
-| `scroll_ignore_camera_zoom` |
-| `scroll_limit_begin` |
-| `scroll_limit_end` |
-| `scroll_offset` |
-| `transform` |
-| `visible` |
+| Property | Accepts |
+| --- | --- |
+| `follow_viewport_enabled` | true or false |
+| `follow_viewport_scale` | float |
+| `layer` | integer |
+| `offset` | Vector2(x, y) |
+| `rotation` | float |
+| `scale` | Vector2(x, y) |
+| `scroll_base_offset` | Vector2(x, y) |
+| `scroll_base_scale` | Vector2(x, y) |
+| `scroll_ignore_camera_zoom` | true or false |
+| `scroll_limit_begin` | Vector2(x, y) |
+| `scroll_limit_end` | Vector2(x, y) |
+| `scroll_offset` | Vector2(x, y) |
+| `transform` | Transform2D(6 floats) |
+| `visible` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

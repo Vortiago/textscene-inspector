@@ -43,12 +43,12 @@ filtered one — a shadow-map resolution/bias artifact, not the cone.
 <!-- lint:begin SpotLight3D -->
 Strict parsing format-checks these `SpotLight3D` properties, plus 15 inherited from Light3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `spot_angle` |
-| `spot_angle_attenuation` |
-| `spot_attenuation` |
-| `spot_range` |
+| Property | Accepts |
+| --- | --- |
+| `spot_angle` | float 0-90 |
+| `spot_angle_attenuation` | float >= 0 |
+| `spot_attenuation` | float >= 0 |
+| `spot_range` | float > 0 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

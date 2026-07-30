@@ -42,12 +42,12 @@ otherwise matches.
 <!-- lint:begin MeshInstance3D -->
 Strict parsing format-checks these `MeshInstance3D` properties, plus 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `mesh` |
-| `skeleton` |
-| `skin` |
-| `surface_material_override/*` |
+| Property | Accepts |
+| --- | --- |
+| `mesh` | SubResource("id") or ExtResource("id") |
+| `skeleton` | NodePath("path/to/node") |
+| `skin` | SubResource("id") or ExtResource("id") |
+| `surface_material_override/*` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

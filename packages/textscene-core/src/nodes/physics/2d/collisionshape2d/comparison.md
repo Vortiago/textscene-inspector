@@ -29,13 +29,13 @@ None visible in this fixture.
 <!-- lint:begin CollisionShape2D -->
 Strict parsing format-checks these `CollisionShape2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `debug_color` |
-| `disabled` |
-| `one_way_collision` |
-| `one_way_collision_margin` |
-| `shape` |
+| Property | Accepts |
+| --- | --- |
+| `debug_color` | Color(r, g, b, a) |
+| `disabled` | true or false |
+| `one_way_collision` | true or false |
+| `one_way_collision_margin` | float >= 0 |
+| `shape` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

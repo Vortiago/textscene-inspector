@@ -32,19 +32,19 @@ None visible in this fixture.
 <!-- lint:begin NavigationAgent3D -->
 Strict parsing format-checks these `NavigationAgent3D` properties. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `avoidance_enabled` |
-| `avoidance_layers` |
-| `avoidance_mask` |
-| `height` |
-| `max_neighbors` |
-| `max_speed` |
-| `navigation_layers` |
-| `path_desired_distance` |
-| `radius` |
-| `target_desired_distance` |
-| `target_position` |
+| Property | Accepts |
+| --- | --- |
+| `avoidance_enabled` | true or false |
+| `avoidance_layers` | 32-bit layer mask (layers 1-32) |
+| `avoidance_mask` | 32-bit layer mask (layers 1-32) |
+| `height` | float >= 0 |
+| `max_neighbors` | integer >= 0 |
+| `max_speed` | float >= 0 |
+| `navigation_layers` | 32-bit layer mask (layers 1-32) |
+| `path_desired_distance` | float >= 0 |
+| `radius` | float >= 0 |
+| `target_desired_distance` | float >= 0 |
+| `target_position` | Vector3(x, y, z) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

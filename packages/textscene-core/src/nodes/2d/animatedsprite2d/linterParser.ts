@@ -8,12 +8,20 @@
  * behaviour with a passthrough validator.
  */
 
+import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
+
+/**
+ * Accepts anything: the property is recognised as valid on this node but has
+ * no format Godot enforces, so there is nothing to check.
+ */
+const anyValue: PropertyValidator = () => null;
+anyValue.accepts = 'any value (no format constraint)';
 validatorRegistry.registerAll('AnimatedSprite2D', {
   sprite_frames: v.resourceReference('sprite_frames'),
-  animation: () => null,
+  animation: anyValue,
   frame: v.strictNonNegativeInt('frame'),
   speed_scale: v.float('speed_scale'),
   centered: v.boolean('centered'),
@@ -21,6 +29,6 @@ validatorRegistry.registerAll('AnimatedSprite2D', {
   flip_h: v.boolean('flip_h'),
   flip_v: v.boolean('flip_v'),
   frame_progress: v.float('frame_progress'),
-  autoplay: () => null,
+  autoplay: anyValue,
   playing: v.boolean('playing'),
 });

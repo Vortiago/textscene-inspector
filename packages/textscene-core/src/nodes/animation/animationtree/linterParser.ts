@@ -23,12 +23,14 @@ const RESOURCE_REGEX = /^(SubResource|ExtResource)\("([^"]+)"\)$/;
 const NODEPATH_REGEX = /^NodePath\("([^"]*)"\)$/;
 
 function resourceRef(name: string, code: string): PropertyValidator {
-  return (key, value, line) => {
+  const validator: PropertyValidator = (key, value, line) => {
     if (!RESOURCE_REGEX.test(value.trim())) {
       return propertyError(key, line, `Property '${name}' must be a SubResource or ExtResource reference, got: "${value}"`, code);
     }
     return null;
   };
+  validator.accepts = 'SubResource("id") or ExtResource("id")';
+  return validator;
 }
 
 /** Two-bound int with distinct messages on each branch (legacy wording). */
@@ -47,12 +49,14 @@ const audioMaxPolyphony: PropertyValidator = (key, value, line) => {
 };
 
 function nodePath(name: string, code: string): PropertyValidator {
-  return (key, value, line) => {
+  const validator: PropertyValidator = (key, value, line) => {
     if (!NODEPATH_REGEX.test(value.trim())) {
       return propertyError(key, line, `Property '${name}' must be a NodePath reference, got: "${value}"`, code);
     }
     return null;
   };
+  validator.accepts = 'NodePath("path/to/node")';
+  return validator;
 }
 
 validatorRegistry.registerAll('AnimationTree', {
@@ -74,3 +78,6 @@ validatorRegistry.registerAll('AnimationTree', {
   reset_on_save: v.boolean('reset_on_save'),
   root_motion_local: v.boolean('root_motion_local'),
 });
+
+// Shown in the generated `## Linting` table of this node's sheet.
+audioMaxPolyphony.accepts = 'integer >= 0';

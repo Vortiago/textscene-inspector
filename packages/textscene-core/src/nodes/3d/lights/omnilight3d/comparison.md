@@ -40,11 +40,11 @@ distance-falloff divergence does not surface at this range.
 <!-- lint:begin OmniLight3D -->
 Strict parsing format-checks these `OmniLight3D` properties, plus 15 inherited from Light3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `omni_attenuation` |
-| `omni_range` |
-| `omni_shadow_mode` |
+| Property | Accepts |
+| --- | --- |
+| `omni_attenuation` | float >= 0 |
+| `omni_range` | float > 0 |
+| `omni_shadow_mode` | enum 0-1 (DUAL_PARABOLOID/CUBE) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

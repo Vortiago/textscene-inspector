@@ -35,18 +35,18 @@ Not captured yet.
 <!-- lint:begin BaseButton -->
 Strict parsing format-checks these `BaseButton` properties, plus 29 inherited from Control. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `action_mode` |
-| `button_group` |
-| `button_mask` |
-| `button_pressed` |
-| `disabled` |
-| `keep_pressed_outside` |
-| `shortcut` |
-| `shortcut_feedback` |
-| `shortcut_in_tooltip` |
-| `toggle_mode` |
+| Property | Accepts |
+| --- | --- |
+| `action_mode` | enum 0-1 (ACTION_MODE_BUTTON_PRESS/ACTION_MODE_BUTTON_RELEASE) |
+| `button_group` | SubResource("id") or ExtResource("id") |
+| `button_mask` | integer >= 0 |
+| `button_pressed` | true or false |
+| `disabled` | true or false |
+| `keep_pressed_outside` | true or false |
+| `shortcut` | SubResource("id") or ExtResource("id") |
+| `shortcut_feedback` | true or false |
+| `shortcut_in_tooltip` | true or false |
+| `toggle_mode` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

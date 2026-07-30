@@ -101,75 +101,75 @@ every scene:
 <!-- lint:begin CPUParticles2D -->
 Strict parsing format-checks these `CPUParticles2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `amount` |
-| `angle_curve` |
-| `angle_max` |
-| `angle_min` |
-| `angular_velocity_curve` |
-| `angular_velocity_max` |
-| `angular_velocity_min` |
-| `anim_offset_curve` |
-| `anim_offset_max` |
-| `anim_offset_min` |
-| `anim_speed_curve` |
-| `anim_speed_max` |
-| `anim_speed_min` |
-| `color` |
-| `color_initial_ramp` |
-| `color_ramp` |
-| `damping_curve` |
-| `damping_max` |
-| `damping_min` |
-| `direction` |
-| `emission_normals` |
-| `emission_points` |
-| `emission_rect_extents` |
-| `emission_ring_inner_radius` |
-| `emission_ring_radius` |
-| `emission_shape` |
-| `emission_sphere_radius` |
-| `emitting` |
-| `explosiveness` |
-| `fixed_fps` |
-| `fract_delta` |
-| `gravity` |
-| `hue_variation_curve` |
-| `hue_variation_max` |
-| `hue_variation_min` |
-| `initial_velocity_max` |
-| `initial_velocity_min` |
-| `lifetime` |
-| `lifetime_randomness` |
-| `linear_accel_curve` |
-| `linear_accel_max` |
-| `linear_accel_min` |
-| `local_coords` |
-| `one_shot` |
-| `orbit_velocity_curve` |
-| `orbit_velocity_max` |
-| `orbit_velocity_min` |
-| `particle_flag_align_y` |
-| `preprocess` |
-| `radial_accel_curve` |
-| `radial_accel_max` |
-| `radial_accel_min` |
-| `randomness` |
-| `scale_amount_curve` |
-| `scale_amount_max` |
-| `scale_amount_min` |
-| `scale_curve_x` |
-| `scale_curve_y` |
-| `seed` |
-| `speed_scale` |
-| `split_scale` |
-| `spread` |
-| `tangential_accel_curve` |
-| `tangential_accel_max` |
-| `tangential_accel_min` |
-| `texture` |
-| `use_fixed_seed` |
+| Property | Accepts |
+| --- | --- |
+| `amount` | integer > 0 |
+| `angle_curve` | SubResource("id") or ExtResource("id") |
+| `angle_max` | float |
+| `angle_min` | float |
+| `angular_velocity_curve` | SubResource("id") or ExtResource("id") |
+| `angular_velocity_max` | float |
+| `angular_velocity_min` | float |
+| `anim_offset_curve` | SubResource("id") or ExtResource("id") |
+| `anim_offset_max` | float |
+| `anim_offset_min` | float |
+| `anim_speed_curve` | SubResource("id") or ExtResource("id") |
+| `anim_speed_max` | float |
+| `anim_speed_min` | float |
+| `color` | Color(r, g, b, a) |
+| `color_initial_ramp` | SubResource("id") or ExtResource("id") |
+| `color_ramp` | SubResource("id") or ExtResource("id") |
+| `damping_curve` | SubResource("id") or ExtResource("id") |
+| `damping_max` | float >= 0 |
+| `damping_min` | float >= 0 |
+| `direction` | Vector2(x, y) |
+| `emission_normals` | PackedVector2Array(x, y, …) — even count |
+| `emission_points` | PackedVector2Array(x, y, …) — even count |
+| `emission_rect_extents` | Vector2(x, y) |
+| `emission_ring_inner_radius` | float >= 0 |
+| `emission_ring_radius` | float >= 0 |
+| `emission_shape` | enum 0-6 (POINT/SPHERE/SPHERE_SURFACE/RECTANGLE/POINTS/DIRECTED_POINTS/RING) |
+| `emission_sphere_radius` | float >= 0 |
+| `emitting` | true or false |
+| `explosiveness` | float 0-1 |
+| `fixed_fps` | integer >= 0 |
+| `fract_delta` | true or false |
+| `gravity` | Vector2(x, y) |
+| `hue_variation_curve` | SubResource("id") or ExtResource("id") |
+| `hue_variation_max` | float -1-1 |
+| `hue_variation_min` | float -1-1 |
+| `initial_velocity_max` | float |
+| `initial_velocity_min` | float |
+| `lifetime` | float > 0 |
+| `lifetime_randomness` | float 0-1 |
+| `linear_accel_curve` | SubResource("id") or ExtResource("id") |
+| `linear_accel_max` | float |
+| `linear_accel_min` | float |
+| `local_coords` | true or false |
+| `one_shot` | true or false |
+| `orbit_velocity_curve` | SubResource("id") or ExtResource("id") |
+| `orbit_velocity_max` | float |
+| `orbit_velocity_min` | float |
+| `particle_flag_align_y` | true or false |
+| `preprocess` | float >= 0 |
+| `radial_accel_curve` | SubResource("id") or ExtResource("id") |
+| `radial_accel_max` | float |
+| `radial_accel_min` | float |
+| `randomness` | float 0-1 |
+| `scale_amount_curve` | SubResource("id") or ExtResource("id") |
+| `scale_amount_max` | float >= 0 |
+| `scale_amount_min` | float >= 0 |
+| `scale_curve_x` | SubResource("id") or ExtResource("id") |
+| `scale_curve_y` | SubResource("id") or ExtResource("id") |
+| `seed` | integer >= 0 |
+| `speed_scale` | float >= 0 |
+| `split_scale` | true or false |
+| `spread` | float 0-180 |
+| `tangential_accel_curve` | SubResource("id") or ExtResource("id") |
+| `tangential_accel_max` | float |
+| `tangential_accel_min` | float |
+| `texture` | SubResource("id") or ExtResource("id") |
+| `use_fixed_seed` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

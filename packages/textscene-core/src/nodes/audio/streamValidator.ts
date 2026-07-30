@@ -14,3 +14,6 @@ export const streamValidator: PropertyValidator = (key, value, line) => {
   }
   return null;
 };
+
+// Shown in each sheet's generated `## Linting` table.
+streamValidator.accepts = 'SubResource("id") or ExtResource("id")';

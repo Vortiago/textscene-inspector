@@ -43,10 +43,10 @@ See "Why 2D colours read paler in our captures" in docs/comparison/README.md.
 <!-- lint:begin TileMap -->
 Strict parsing format-checks these `TileMap` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `format` |
-| `tile_set` |
+| Property | Accepts |
+| --- | --- |
+| `format` | integer >= 0 |
+| `tile_set` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

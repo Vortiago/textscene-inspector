@@ -30,10 +30,10 @@ None visible in this fixture.
 <!-- lint:begin SkeletonModifier3D -->
 Strict parsing format-checks these `SkeletonModifier3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `active` |
-| `influence` |
+| Property | Accepts |
+| --- | --- |
+| `active` | true or false |
+| `influence` | float 0-1 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

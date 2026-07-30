@@ -25,12 +25,14 @@ const QUATERNION_REGEX = makeFloatTupleRegex('Quaternion', 4);
 
 /** Custom boolean validator with the legacy "true or false" message wording. */
 function legacyBoolean(name: string): PropertyValidator {
-  return (key, value, line) => {
+  const validator: PropertyValidator = (key, value, line) => {
     if (value !== 'true' && value !== 'false') {
       return propertyError(key, line, `Property '${name}' must be true or false, got: "${value}"`, `INVALID_${name.toUpperCase()}_FORMAT`);
     }
     return null;
   };
+  validator.accepts = 'true or false';
+  return validator;
 }
 
 const bonesValidator: PropertyValidator = (key, value, line) => {
@@ -86,3 +88,6 @@ validatorRegistry.registerAll('Skeleton3D', {
   ),
   'bones/*': bonesValidator,
 });
+
+// Shown in the generated `## Linting` table of this node's sheet.
+bonesValidator.accepts = 'bone pose component (float, Vector3 or Quaternion)';

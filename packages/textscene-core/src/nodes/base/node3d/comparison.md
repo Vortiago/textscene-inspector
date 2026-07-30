@@ -35,24 +35,24 @@ None visible in this fixture.
 <!-- lint:begin Node3D -->
 Strict parsing format-checks these `Node3D` properties. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `basis` |
-| `global_basis` |
-| `global_position` |
-| `global_rotation` |
-| `global_rotation_degrees` |
-| `global_transform` |
-| `position` |
-| `quaternion` |
-| `rotation` |
-| `rotation_degrees` |
-| `rotation_order` |
-| `scale` |
-| `top_level` |
-| `transform` |
-| `visibility_parent` |
-| `visible` |
+| Property | Accepts |
+| --- | --- |
+| `basis` | Basis(9 floats) |
+| `global_basis` | Basis(9 floats) |
+| `global_position` | Vector3(x, y, z) |
+| `global_rotation` | Vector3(x, y, z) |
+| `global_rotation_degrees` | Vector3(x, y, z) |
+| `global_transform` | Transform3D(12 floats) |
+| `position` | Vector3(x, y, z) |
+| `quaternion` | Quaternion(x, y, z, w) |
+| `rotation` | Vector3(x, y, z) |
+| `rotation_degrees` | Vector3(x, y, z) |
+| `rotation_order` | enum 0-5 (XYZ/XZY/YXZ/YZX/ZXY/ZYX) |
+| `scale` | Vector3(x, y, z), no zero component |
+| `top_level` | true or false |
+| `transform` | Transform3D(12 floats) |
+| `visibility_parent` | NodePath("path/to/node") |
+| `visible` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

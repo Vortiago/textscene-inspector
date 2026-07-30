@@ -50,37 +50,37 @@ minimum sizes versus the previewer's more compact metrics.
 <!-- lint:begin Control -->
 Strict parsing format-checks these `Control` properties. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `anchor_bottom` |
-| `anchor_left` |
-| `anchor_right` |
-| `anchor_top` |
-| `anchors_preset` |
-| `custom_minimum_size` |
-| `grow_horizontal` |
-| `grow_vertical` |
-| `layout_mode` |
-| `modulate` |
-| `offset_bottom` |
-| `offset_left` |
-| `offset_right` |
-| `offset_top` |
-| `pivot_offset` |
-| `pivot_offset_ratio` |
-| `rotation` |
-| `scale` |
-| `self_modulate` |
-| `size_flags_horizontal` |
-| `size_flags_stretch_ratio` |
-| `size_flags_vertical` |
-| `theme_override_colors/*` |
-| `theme_override_constants/*` |
-| `theme_override_font_sizes/*` |
-| `theme_override_fonts/*` |
-| `theme_override_icons/*` |
-| `theme_override_styles/*` |
-| `visible` |
+| Property | Accepts |
+| --- | --- |
+| `anchor_bottom` | float |
+| `anchor_left` | float |
+| `anchor_right` | float |
+| `anchor_top` | float |
+| `anchors_preset` | integer -1-15 |
+| `custom_minimum_size` | Vector2(x, y) |
+| `grow_horizontal` | integer 0-2 |
+| `grow_vertical` | integer 0-2 |
+| `layout_mode` | integer 0-3 |
+| `modulate` | Color(r, g, b, a) |
+| `offset_bottom` | float |
+| `offset_left` | float |
+| `offset_right` | float |
+| `offset_top` | float |
+| `pivot_offset` | Vector2(x, y) |
+| `pivot_offset_ratio` | Vector2(x, y) |
+| `rotation` | float |
+| `scale` | Vector2(x, y) |
+| `self_modulate` | Color(r, g, b, a) |
+| `size_flags_horizontal` | integer >= 0 |
+| `size_flags_stretch_ratio` | float >= 0 |
+| `size_flags_vertical` | integer >= 0 |
+| `theme_override_colors/*` | Color(r, g, b, a) |
+| `theme_override_constants/*` | integer -16384-16384 |
+| `theme_override_font_sizes/*` | integer >= 1 |
+| `theme_override_fonts/*` | SubResource("id") or ExtResource("id") |
+| `theme_override_icons/*` | SubResource("id") or ExtResource("id") |
+| `theme_override_styles/*` | SubResource("id") or ExtResource("id") |
+| `visible` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

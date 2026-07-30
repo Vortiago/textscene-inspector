@@ -69,3 +69,6 @@ validatorRegistry.registerAll('RigidBody3D', {
   disable_mode: v.enumInt('disable_mode', 0, 1, DISABLE_MODE),
   custom_integrator: v.boolean('custom_integrator'),
 });
+
+// Shown in the generated `## Linting` table of this node's sheet.
+inertia3d.accepts = 'Vector3(x, y, z), all >= 0';

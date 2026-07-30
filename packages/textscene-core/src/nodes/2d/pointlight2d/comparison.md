@@ -276,25 +276,25 @@ What is left unimplemented:
 <!-- lint:begin PointLight2D -->
 Strict parsing format-checks these `PointLight2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `blend_mode` |
-| `color` |
-| `enabled` |
-| `energy` |
-| `offset` |
-| `range_item_cull_mask` |
-| `range_layer_max` |
-| `range_layer_min` |
-| `range_z_max` |
-| `range_z_min` |
-| `shadow_color` |
-| `shadow_enabled` |
-| `shadow_filter` |
-| `shadow_filter_smooth` |
-| `shadow_item_cull_mask` |
-| `texture` |
-| `texture_scale` |
+| Property | Accepts |
+| --- | --- |
+| `blend_mode` | enum 0-2 (ADD/SUB/MIX) |
+| `color` | Color(r, g, b, a) |
+| `enabled` | true or false |
+| `energy` | float >= 0 |
+| `offset` | Vector2(x, y) |
+| `range_item_cull_mask` | 32-bit layer mask (layers 1-32) |
+| `range_layer_max` | integer |
+| `range_layer_min` | integer |
+| `range_z_max` | integer |
+| `range_z_min` | integer |
+| `shadow_color` | Color(r, g, b, a) |
+| `shadow_enabled` | true or false |
+| `shadow_filter` | enum 0-2 (NONE/PCF5/PCF13) |
+| `shadow_filter_smooth` | float 0-64 |
+| `shadow_item_cull_mask` | 32-bit layer mask (layers 1-32) |
+| `texture` | SubResource("id") or ExtResource("id") |
+| `texture_scale` | float >= 0 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

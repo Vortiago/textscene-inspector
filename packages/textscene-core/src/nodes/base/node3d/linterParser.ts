@@ -42,6 +42,7 @@ const scaleValidator: PropertyValidator = (key, value, line) => {
 
   return null;
 };
+scaleValidator.accepts = 'Vector3(x, y, z), no zero component';
 
 validatorRegistry.registerAll('Node3D', {
   transform: v.transform3d('transform'),

@@ -32,26 +32,26 @@ None visible in this fixture.
 <!-- lint:begin Area3D -->
 Strict parsing format-checks these `Area3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `angular_damp` |
-| `angular_damp_space_override` |
-| `audio_bus_name` |
-| `audio_bus_override` |
-| `collision_layer` |
-| `collision_mask` |
-| `gravity` |
-| `gravity_direction` |
-| `gravity_point` |
-| `gravity_point_center` |
-| `gravity_point_unit_distance` |
-| `gravity_space_override` |
-| `linear_damp` |
-| `linear_damp_space_override` |
-| `monitorable` |
-| `monitoring` |
-| `priority` |
-| `space_override` |
+| Property | Accepts |
+| --- | --- |
+| `angular_damp` | float >= 0 |
+| `angular_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
+| `audio_bus_name` | non-empty string |
+| `audio_bus_override` | true or false |
+| `collision_layer` | 32-bit layer mask (layers 1-32) |
+| `collision_mask` | 32-bit layer mask (layers 1-32) |
+| `gravity` | float |
+| `gravity_direction` | Vector3(x, y, z) |
+| `gravity_point` | true or false |
+| `gravity_point_center` | Vector3(x, y, z) |
+| `gravity_point_unit_distance` | float >= 5e-324 |
+| `gravity_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
+| `linear_damp` | float >= 0 |
+| `linear_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
+| `monitorable` | true or false |
+| `monitoring` | true or false |
+| `priority` | float |
+| `space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

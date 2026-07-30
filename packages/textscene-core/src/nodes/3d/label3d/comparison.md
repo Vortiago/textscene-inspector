@@ -40,18 +40,18 @@ font-outline weight rather than a heavy centred stroke.
 <!-- lint:begin Label3D -->
 Strict parsing format-checks these `Label3D` properties, plus 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `billboard` |
-| `font_size` |
-| `horizontal_alignment` |
-| `line_spacing` |
-| `modulate` |
-| `no_depth_test` |
-| `outline_modulate` |
-| `outline_size` |
-| `pixel_size` |
-| `text` |
+| Property | Accepts |
+| --- | --- |
+| `billboard` | enum 0-2 (DISABLED/ENABLED/FIXED_Y) |
+| `font_size` | float > 0 |
+| `horizontal_alignment` | enum 0-3 (LEFT/CENTER/RIGHT/FILL) |
+| `line_spacing` | float |
+| `modulate` | Color(r, g, b, a) |
+| `no_depth_test` | true or false |
+| `outline_modulate` | Color(r, g, b, a) |
+| `outline_size` | float >= 0 |
+| `pixel_size` | float > 0 |
+| `text` | quoted string |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -31,20 +31,20 @@ None visible in this fixture.
 <!-- lint:begin Camera3D -->
 Strict parsing format-checks these `Camera3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `cull_mask` |
-| `current` |
-| `doppler_tracking` |
-| `far` |
-| `fov` |
-| `frustum_offset` |
-| `h_offset` |
-| `keep_aspect` |
-| `near` |
-| `projection` |
-| `size` |
-| `v_offset` |
+| Property | Accepts |
+| --- | --- |
+| `cull_mask` | 32-bit layer mask (layers 1-32) |
+| `current` | true or false |
+| `doppler_tracking` | enum 0-2 (DISABLED/IDLE_STEP/PHYSICS_STEP) |
+| `far` | float > 0 |
+| `fov` | float 1-179 |
+| `frustum_offset` | Vector2(x, y) |
+| `h_offset` | float |
+| `keep_aspect` | enum 0-2 (KEEP_WIDTH/KEEP_HEIGHT/KEEP_ASPECT_DISABLED) |
+| `near` | float > 0 |
+| `projection` | enum 0-2 (PERSPECTIVE/ORTHOGONAL/FRUSTUM) |
+| `size` | float > 0 |
+| `v_offset` | float |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

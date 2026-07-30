@@ -39,16 +39,16 @@ None visible in this fixture. Measured at 0.052% against Godot 4.6.3 with
 <!-- lint:begin CSGCylinder3D -->
 Strict parsing format-checks these `CSGCylinder3D` properties, plus 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `cone` |
-| `flip_faces` |
-| `height` |
-| `material` |
-| `operation` |
-| `radius` |
-| `sides` |
-| `smooth_faces` |
+| Property | Accepts |
+| --- | --- |
+| `cone` | true or false |
+| `flip_faces` | true or false |
+| `height` | float > 0 |
+| `material` | SubResource("id") or ExtResource("id") |
+| `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) |
+| `radius` | float > 0 |
+| `sides` | integer 3-64 |
+| `smooth_faces` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

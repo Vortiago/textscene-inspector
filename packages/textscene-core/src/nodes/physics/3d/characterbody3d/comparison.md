@@ -31,26 +31,26 @@ None visible in this fixture.
 <!-- lint:begin CharacterBody3D -->
 Strict parsing format-checks these `CharacterBody3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `collision_layer` |
-| `collision_mask` |
-| `collision_priority` |
-| `disable_mode` |
-| `floor_block_on_wall` |
-| `floor_constant_speed` |
-| `floor_max_angle` |
-| `floor_snap_length` |
-| `floor_stop_on_slope` |
-| `max_slides` |
-| `motion_mode` |
-| `platform_floor_layers` |
-| `platform_on_leave` |
-| `platform_wall_layers` |
-| `safe_margin` |
-| `up_direction` |
-| `velocity` |
-| `wall_min_slide_angle` |
+| Property | Accepts |
+| --- | --- |
+| `collision_layer` | 32-bit layer mask (layers 1-32) |
+| `collision_mask` | 32-bit layer mask (layers 1-32) |
+| `collision_priority` | float |
+| `disable_mode` | enum 0-1 (REMOVE/KEEP_ACTIVE) |
+| `floor_block_on_wall` | true or false |
+| `floor_constant_speed` | true or false |
+| `floor_max_angle` | float 0-1.5708963267948965 |
+| `floor_snap_length` | float >= 0 |
+| `floor_stop_on_slope` | true or false |
+| `max_slides` | integer > 0 |
+| `motion_mode` | enum 0-1 (GROUNDED/FLOATING) |
+| `platform_floor_layers` | integer 0-4294967295 |
+| `platform_on_leave` | enum 0-2 (ADD_VELOCITY/ADD_UPWARD_VELOCITY/DO_NOTHING) |
+| `platform_wall_layers` | integer 0-4294967295 |
+| `safe_margin` | float >= 0 |
+| `up_direction` | Vector3(x, y, z) |
+| `velocity` | Vector3(x, y, z) |
+| `wall_min_slide_angle` | float 0-1.5708963267948965 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

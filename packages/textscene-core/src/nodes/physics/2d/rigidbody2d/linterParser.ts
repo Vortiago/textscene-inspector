@@ -51,3 +51,6 @@ validatorRegistry.registerAll('RigidBody2D', {
   contact_monitor: v.boolean('contact_monitor'),
   max_contacts_reported: v.positiveInt('max_contacts_reported'),
 });
+
+// Shown in the generated `## Linting` table of this node's sheet.
+inertia2d.accepts = 'float >= 0';

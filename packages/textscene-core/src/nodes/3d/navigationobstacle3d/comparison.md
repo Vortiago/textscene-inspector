@@ -33,15 +33,15 @@ None visible in this fixture.
 <!-- lint:begin NavigationObstacle3D -->
 Strict parsing format-checks these `NavigationObstacle3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `affect_navigation_mesh` |
-| `avoidance_enabled` |
-| `avoidance_layers` |
-| `carve_navigation_mesh` |
-| `height` |
-| `radius` |
-| `use_3d_avoidance` |
+| Property | Accepts |
+| --- | --- |
+| `affect_navigation_mesh` | true or false |
+| `avoidance_enabled` | true or false |
+| `avoidance_layers` | 32-bit layer mask (layers 1-32) |
+| `carve_navigation_mesh` | true or false |
+| `height` | float >= 0 |
+| `radius` | float >= 0 |
+| `use_3d_avoidance` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

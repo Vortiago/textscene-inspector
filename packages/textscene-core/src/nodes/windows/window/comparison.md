@@ -71,53 +71,53 @@ compare against Godot.
 <!-- lint:begin Window -->
 Strict parsing format-checks these `Window` properties, plus 9 inherited from Viewport. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `accessibility_description` |
-| `accessibility_name` |
-| `always_on_top` |
-| `borderless` |
-| `content_scale_aspect` |
-| `content_scale_factor` |
-| `content_scale_mode` |
-| `content_scale_size` |
-| `content_scale_stretch` |
-| `current_screen` |
-| `exclude_from_capture` |
-| `exclusive` |
-| `extend_to_title` |
-| `force_native` |
-| `initial_position` |
-| `keep_title_visible` |
-| `max_size` |
-| `maximize_disabled` |
-| `min_size` |
-| `minimize_disabled` |
-| `mode` |
-| `mouse_passthrough` |
-| `mouse_passthrough_polygon` |
-| `nonclient_area` |
-| `popup_window` |
-| `popup_wm_hint` |
-| `position` |
-| `sharp_corners` |
-| `size` |
-| `theme` |
-| `theme_override_colors/*` |
-| `theme_override_constants/*` |
-| `theme_override_font_sizes/*` |
-| `theme_override_fonts/*` |
-| `theme_override_icons/*` |
-| `theme_override_styles/*` |
-| `theme_type_variation` |
-| `title` |
-| `transient` |
-| `transient_to_focused` |
-| `transparent` |
-| `unfocusable` |
-| `unresizable` |
-| `visible` |
-| `wrap_controls` |
+| Property | Accepts |
+| --- | --- |
+| `accessibility_description` | quoted string |
+| `accessibility_name` | quoted string |
+| `always_on_top` | true or false |
+| `borderless` | true or false |
+| `content_scale_aspect` | enum 0-4 (IGNORE/KEEP/KEEP_WIDTH/KEEP_HEIGHT/EXPAND) |
+| `content_scale_factor` | float 0.5-8 |
+| `content_scale_mode` | enum 0-2 (DISABLED/CANVAS_ITEMS/VIEWPORT) |
+| `content_scale_size` | Vector2i(x, y), both >= 0 |
+| `content_scale_stretch` | enum 0-1 (FRACTIONAL/INTEGER) |
+| `current_screen` | integer >= 0 |
+| `exclude_from_capture` | true or false |
+| `exclusive` | true or false |
+| `extend_to_title` | true or false |
+| `force_native` | true or false |
+| `initial_position` | enum 0-5 (ABSOLUTE/CENTER_PRIMARY_SCREEN/CENTER_MAIN_WINDOW_SCREEN/CENTER_OTHER_SCREEN/CENTER_SCREEN_WITH_MOUSE_FOCUS/CENTER_SCREEN_WITH_KEYBOARD_FOCUS) |
+| `keep_title_visible` | true or false |
+| `max_size` | Vector2i(x, y), both >= 0 |
+| `maximize_disabled` | true or false |
+| `min_size` | Vector2i(x, y), both >= 0 |
+| `minimize_disabled` | true or false |
+| `mode` | enum 0-4 (WINDOWED/MINIMIZED/MAXIMIZED/FULLSCREEN/EXCLUSIVE_FULLSCREEN) |
+| `mouse_passthrough` | true or false |
+| `mouse_passthrough_polygon` | PackedVector2Array(x, y, …) — even count |
+| `nonclient_area` | Rect2i(x, y, w, h) |
+| `popup_window` | true or false |
+| `popup_wm_hint` | true or false |
+| `position` | Vector2i(x, y) |
+| `sharp_corners` | true or false |
+| `size` | Vector2i(x, y), both >= 0 |
+| `theme` | SubResource("id") or ExtResource("id") |
+| `theme_override_colors/*` | Color(r, g, b, a) |
+| `theme_override_constants/*` | integer -16384-16384 |
+| `theme_override_font_sizes/*` | integer >= 1 |
+| `theme_override_fonts/*` | SubResource("id") or ExtResource("id") |
+| `theme_override_icons/*` | SubResource("id") or ExtResource("id") |
+| `theme_override_styles/*` | SubResource("id") or ExtResource("id") |
+| `theme_type_variation` | quoted string or &"name" |
+| `title` | quoted string |
+| `transient` | true or false |
+| `transient_to_focused` | true or false |
+| `transparent` | true or false |
+| `unfocusable` | true or false |
+| `unresizable` | true or false |
+| `visible` | true or false |
+| `wrap_controls` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

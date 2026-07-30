@@ -35,12 +35,12 @@ None visible in this fixture. Measured at 0.011% against Godot 4.6.3 with
 <!-- lint:begin CSGBox3D -->
 Strict parsing format-checks these `CSGBox3D` properties, plus 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `flip_faces` |
-| `material` |
-| `operation` |
-| `size` |
+| Property | Accepts |
+| --- | --- |
+| `flip_faces` | true or false |
+| `material` | SubResource("id") or ExtResource("id") |
+| `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) |
+| `size` | Vector3(x, y, z) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

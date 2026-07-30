@@ -32,9 +32,9 @@ and paints the polygon fill and edges. Turning the toggle off matches Godot.
 <!-- lint:begin NavigationRegion2D -->
 Strict parsing format-checks these `NavigationRegion2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `navigation_polygon` |
+| Property | Accepts |
+| --- | --- |
+| `navigation_polygon` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

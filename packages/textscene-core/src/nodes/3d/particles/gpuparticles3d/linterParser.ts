@@ -83,3 +83,7 @@ validatorRegistry.registerAll('GPUParticles3D', {
   sub_emitter: v.nodePath('sub_emitter'),
   interp_to_end: v.float('interp_to_end', { min: 0, max: 1 }),
 });
+
+// Shown in the generated `## Linting` table of this node's sheet.
+amountValidator.accepts = 'integer > 0';
+visibilityAabbValidator.accepts = 'AABB(12 floats)';

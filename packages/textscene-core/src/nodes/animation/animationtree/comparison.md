@@ -52,22 +52,22 @@ hardcodes `AnimationPlayer` as the driver, so it cannot select an
 <!-- lint:begin AnimationTree -->
 Strict parsing format-checks these `AnimationTree` properties. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `active` |
-| `advance_expression_base_node` |
-| `anim_player` |
-| `audio_max_polyphony` |
-| `callback_mode_discrete` |
-| `callback_mode_method` |
-| `callback_mode_process` |
-| `deterministic` |
-| `process_callback` |
-| `reset_on_save` |
-| `root_motion_local` |
-| `root_motion_track` |
-| `root_node` |
-| `tree_root` |
+| Property | Accepts |
+| --- | --- |
+| `active` | true or false |
+| `advance_expression_base_node` | NodePath("path/to/node") |
+| `anim_player` | NodePath("path/to/node") |
+| `audio_max_polyphony` | integer >= 0 |
+| `callback_mode_discrete` | enum 0-2 (DOMINANT/RECESSIVE/FORCE_CONTINUOUS) |
+| `callback_mode_method` | enum 0-1 (DEFERRED/IMMEDIATE) |
+| `callback_mode_process` | enum 0-2 (PHYSICS/IDLE/MANUAL) |
+| `deterministic` | true or false |
+| `process_callback` | enum 0-2 (PHYSICS/IDLE/MANUAL) |
+| `reset_on_save` | true or false |
+| `root_motion_local` | true or false |
+| `root_motion_track` | NodePath("path/to/node") |
+| `root_node` | NodePath("path/to/node") |
+| `tree_root` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

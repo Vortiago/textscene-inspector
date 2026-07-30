@@ -49,3 +49,6 @@ export const debugColorValidator: PropertyValidator = (key, value, line) => {
   }
   return null;
 };
+
+// Shown in each sheet's generated `## Linting` table.
+debugColorValidator.accepts = 'Color(r, g, b, a)';

@@ -37,17 +37,17 @@ out by the bright sky-ambient fill.
 <!-- lint:begin DirectionalLight3D -->
 Strict parsing format-checks these `DirectionalLight3D` properties, plus 15 inherited from Light3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `directional_shadow_blend_splits` |
-| `directional_shadow_fade_start` |
-| `directional_shadow_max_distance` |
-| `directional_shadow_mode` |
-| `directional_shadow_pancake_size` |
-| `directional_shadow_split_1` |
-| `directional_shadow_split_2` |
-| `directional_shadow_split_3` |
-| `sky_mode` |
+| Property | Accepts |
+| --- | --- |
+| `directional_shadow_blend_splits` | true or false |
+| `directional_shadow_fade_start` | float 0-1 |
+| `directional_shadow_max_distance` | float >= 0 |
+| `directional_shadow_mode` | enum 0-2 (ORTHOGONAL/PARALLEL_2_SPLITS/PARALLEL_4_SPLITS) |
+| `directional_shadow_pancake_size` | float >= 0 |
+| `directional_shadow_split_1` | float 0-1 |
+| `directional_shadow_split_2` | float 0-1 |
+| `directional_shadow_split_3` | float 0-1 |
+| `sky_mode` | enum 0-2 (LIGHT_AND_SKY/LIGHT_ONLY/SKY_ONLY) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

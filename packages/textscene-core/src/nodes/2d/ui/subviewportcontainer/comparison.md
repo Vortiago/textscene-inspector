@@ -176,10 +176,10 @@ also the blit's coverage guard. Measured through Godot 4.6.3 with
 <!-- lint:begin SubViewportContainer -->
 Strict parsing format-checks these `SubViewportContainer` properties, plus 29 inherited from Control. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `stretch` |
-| `stretch_shrink` |
+| Property | Accepts |
+| --- | --- |
+| `stretch` | true or false |
+| `stretch_shrink` | integer > 0 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

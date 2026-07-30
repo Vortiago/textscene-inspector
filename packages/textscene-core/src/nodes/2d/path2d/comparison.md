@@ -33,9 +33,9 @@ None visible in this fixture.
 <!-- lint:begin Path2D -->
 Strict parsing format-checks these `Path2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `curve` |
+| Property | Accepts |
+| --- | --- |
+| `curve` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

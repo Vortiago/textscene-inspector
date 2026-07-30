@@ -31,11 +31,11 @@ and shading identically on both sides.
 <!-- lint:begin CollisionShape3D -->
 Strict parsing format-checks these `CollisionShape3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `debug_color` |
-| `disabled` |
-| `shape` |
+| Property | Accepts |
+| --- | --- |
+| `debug_color` | Color(r, g, b, a) |
+| `disabled` | true or false |
+| `shape` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

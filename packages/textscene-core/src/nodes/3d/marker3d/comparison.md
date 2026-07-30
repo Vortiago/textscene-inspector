@@ -29,9 +29,9 @@ None visible in this fixture.
 <!-- lint:begin Marker3D -->
 Strict parsing format-checks these `Marker3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `gizmo_extents` |
+| Property | Accepts |
+| --- | --- |
+| `gizmo_extents` | float |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

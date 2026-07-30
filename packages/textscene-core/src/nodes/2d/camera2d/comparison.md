@@ -36,35 +36,35 @@ blue fill rather than the layout:
 <!-- lint:begin Camera2D -->
 Strict parsing format-checks these `Camera2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
-| Property |
-| --- |
-| `anchor_mode` |
-| `drag_bottom_margin` |
-| `drag_horizontal_enabled` |
-| `drag_horizontal_offset` |
-| `drag_left_margin` |
-| `drag_right_margin` |
-| `drag_top_margin` |
-| `drag_vertical_enabled` |
-| `drag_vertical_offset` |
-| `editor_draw_drag_margin` |
-| `editor_draw_limits` |
-| `editor_draw_screen` |
-| `enabled` |
-| `ignore_rotation` |
-| `limit_bottom` |
-| `limit_enabled` |
-| `limit_left` |
-| `limit_right` |
-| `limit_smoothed` |
-| `limit_top` |
-| `offset` |
-| `position_smoothing_enabled` |
-| `position_smoothing_speed` |
-| `process_callback` |
-| `rotation_smoothing_enabled` |
-| `rotation_smoothing_speed` |
-| `zoom` |
+| Property | Accepts |
+| --- | --- |
+| `anchor_mode` | enum 0-1 (FIXED_TOP_LEFT/DRAG_CENTER) |
+| `drag_bottom_margin` | float 0-1 |
+| `drag_horizontal_enabled` | true or false |
+| `drag_horizontal_offset` | float -1-1 |
+| `drag_left_margin` | float 0-1 |
+| `drag_right_margin` | float 0-1 |
+| `drag_top_margin` | float 0-1 |
+| `drag_vertical_enabled` | true or false |
+| `drag_vertical_offset` | float -1-1 |
+| `editor_draw_drag_margin` | true or false |
+| `editor_draw_limits` | true or false |
+| `editor_draw_screen` | true or false |
+| `enabled` | true or false |
+| `ignore_rotation` | true or false |
+| `limit_bottom` | integer |
+| `limit_enabled` | true or false |
+| `limit_left` | integer |
+| `limit_right` | integer |
+| `limit_smoothed` | true or false |
+| `limit_top` | integer |
+| `offset` | Vector2(x, y) |
+| `position_smoothing_enabled` | true or false |
+| `position_smoothing_speed` | float > 0 |
+| `process_callback` | enum 0-1 (PHYSICS/IDLE) |
+| `rotation_smoothing_enabled` | true or false |
+| `rotation_smoothing_speed` | float > 0 |
+| `zoom` | Vector2(x, y), both > 0 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
