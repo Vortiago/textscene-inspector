@@ -2512,39 +2512,6 @@
         }
       ]
     },
-    "SkeletonModifier3D": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-node3d-visibility",
-          "description": "Validates Node3D visibility_parent references exist in scene tree",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "error"
-            },
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
     "SliderJoint3D": {
       "validators": [],
       "rules": [
@@ -2679,39 +2646,6 @@
       ]
     },
     "SpringArm3D": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-node3d-visibility",
-          "description": "Validates Node3D visibility_parent references exist in scene tree",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "error"
-            },
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
-    "SpringBoneCollision3D": {
       "validators": [],
       "rules": [
         {
@@ -3245,39 +3179,6 @@
         }
       ]
     },
-    "VisualInstance3D": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-node3d-visibility",
-          "description": "Validates Node3D visibility_parent references exist in scene tree",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "error"
-            },
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
     "VoxelGI": {
       "validators": [],
       "rules": [
@@ -3313,23 +3214,6 @@
       ]
     },
     "VSeparator": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
-    "Window": {
       "validators": [],
       "rules": [
         {
@@ -3512,39 +3396,6 @@
       ]
     },
     "XRHandModifier3D": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-node3d-visibility",
-          "description": "Validates Node3D visibility_parent references exist in scene tree",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "error"
-            },
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
-    "XRNode3D": {
       "validators": [],
       "rules": [
         {

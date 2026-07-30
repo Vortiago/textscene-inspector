@@ -64,14 +64,20 @@ describe('rendersOwnVisual', () => {
     expect(rendersOwnVisual('GLBSceneRoot')).toBe('draws');
   });
 
-  it('agrees with isRenderableNodeType across every type registered today', () => {
-    // Wiring the badge to rendersOwnVisual must be a no-op for the current
-    // corpus: every parser-registered type also has a render component. When
-    // that stops being true, the new signal is the correct one and this
-    // expectation is what says so out loud.
-    const drift = nodeRegistry
-      .getAllTypeNames()
-      .filter((t) => rendersOwnVisual(t) === 'not-implemented');
-    expect(drift).toEqual([]);
+  it('separates from isRenderableNodeType once a type is parsed but not drawn', () => {
+    // The whole reason this function exists. `Window` is parsed and fully
+    // validated, so `isRenderableNodeType` says yes; nothing draws it, so the
+    // badge must still say "not implemented". Before this split, a parser
+    // registration alone silently cleared that badge.
+    expect(isRenderableNodeType('Window')).toBe(true);
+    expect(rendersOwnVisual('Window')).toBe('not-implemented');
+  });
+
+  it('reports every registered type as one of the three states', () => {
+    // Which types are pending changes every wave, so pinning the list here
+    // would churn; the standing invariant is that no type falls through. The
+    // status↔registry agreement is asserted per sheet in sheets.test.mjs.
+    const states = new Set(nodeRegistry.getAllTypeNames().map(rendersOwnVisual));
+    expect([...states].sort()).toEqual(['draws', 'not-implemented', 'transform-only']);
   });
 });

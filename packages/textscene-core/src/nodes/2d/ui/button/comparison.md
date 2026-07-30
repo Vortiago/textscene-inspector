@@ -36,7 +36,7 @@ tint is approximated rather than read from the default theme's disabled color.
 ## Linting
 
 <!-- lint:begin Button -->
-Strict parsing format-checks the inherited set (28 inherited from Control); `Button` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (29 inherited from Control); `Button` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

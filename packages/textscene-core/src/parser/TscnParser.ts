@@ -95,6 +95,11 @@ import '../nodes/2d/parallaxbackground/index.js';
 import '../nodes/2d/cpuparticles2d/index.js';
 import '../nodes/timers/timer/index.js';
 import '../nodes/viewport/subviewport/index.js';
+import '../nodes/3d/skeleton/skeletonmodifier3d/index.js';
+import '../nodes/3d/skeleton/springbonecollision3d/index.js';
+import '../nodes/3d/visualinstance3d/index.js';
+import '../nodes/3d/xr/xrnode3d/index.js';
+import '../nodes/windows/window/index.js';
 
 import type { TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';

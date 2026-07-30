@@ -186,6 +186,43 @@ export const v = {
     };
   },
 
+  /**
+   * A `StringName` property: Godot writes `&"value"`, but the variant text
+   * parser also accepts a plain `"value"`, and both appear in real scenes — so
+   * `quotedString` would reject the form the engine itself saves.
+   */
+  stringName(name: string): PropertyValidator {
+    const code = formatCode(name);
+    return (key, value, line) => {
+      if (!/^&?".*"$/s.test(value)) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must be a string, quoted or a StringName literal (&"…"), got: ${value}`,
+          code
+        );
+      }
+      return null;
+    };
+  },
+
+  /** `Rect2i(x, y, w, h)` integer format. */
+  rect2i(name: string): PropertyValidator {
+    const code = formatCode(name);
+    return (key, value, line) => {
+      const match = /^Rect2i\(\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/.exec(value);
+      if (!match) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must be Rect2i(x, y, w, h) with integer components, got: ${value}`,
+          code
+        );
+      }
+      return null;
+    };
+  },
+
   /** `Vector2(x, y)` format. */
   vector2(name: string): PropertyValidator {
     return createVector2Validator(name, formatCode(name));

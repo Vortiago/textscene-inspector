@@ -139,21 +139,14 @@ const BASES = {
     parser: 'parseNode3D',
     component: 'Node3D',
     propsType: 'Node3DProperties',
-    transformValidator: "transform: v.transform3d('transform'),",
     parserTestCases: NODE3D_PARSER_TEST_CASES,
-    linterTransformValue: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
-    linterBadTransformValue: 'Transform3D(nope)',
   },
   node2d: {
     dir: 'base/node2d',
     parser: 'parseNode2D',
     component: 'Node2D',
     propsType: 'Node2DProperties',
-    transformValidator:
-      "transform: v.transform2d('transform'),\n  position: v.vector2('position'),",
     parserTestCases: NODE2D_PARSER_TEST_CASES,
-    linterTransformValue: 'Transform2D(1, 0, 0, 1, 0, 0)',
-    linterBadTransformValue: 'Transform2D(nope)',
   },
   control: {
     dir: '2d/ui/control',
@@ -163,20 +156,14 @@ const BASES = {
     // Control has no `transform`: layout comes from anchors/offsets, and the
     // whole set is validated on `Control` itself and inherited via the chain.
     // A leaf declares only its OWN members.
-    transformValidator: '',
     parserTestCases: CONTROL_PARSER_TEST_CASES,
-    linterTransformValue: '',
-    linterBadTransformValue: '',
   },
   node: {
     dir: 'node',
     parser: 'parseNode',
     component: 'Node',
     propsType: 'NodeProperties',
-    transformValidator: "transform: v.transform3d('transform'),",
     parserTestCases: NODE3D_PARSER_TEST_CASES,
-    linterTransformValue: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
-    linterBadTransformValue: 'Transform3D(nope)',
   },
 };
 
@@ -562,22 +549,13 @@ export { ${typeName} };
   if (linter) {
     files.set(
       'linterParser.ts',
-      base.transformValidator
-        ? `/** ${typeName} strict validators for linting. */
-
-import { validatorRegistry } from '${toSrc}linter/ValidatorRegistry.js';
-import { v } from '${toSrc}linter/validators/index.js';
-
-validatorRegistry.registerAll('${typeName}', {
-  ${base.transformValidator}
-});
-`
-        : `/**
+      `/**
  * ${typeName} strict validators for linting.
  *
- * Declare only ${typeName}'s OWN members: everything from ${base.component} up is
- * validated on the ancestor and delivered by the NODE_BASE_TYPES base-walk, and
- * re-declaring an inherited key shadows it.
+ * Declare only ${typeName}'s OWN members — the ones doc/classes/${typeName}.xml
+ * lists without an \`overrides=\` attribute. Everything from ${base.component} up is
+ * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
+ * re-declaring an inherited key shadows it and duplicates the rule.
  */
 
 import { validatorRegistry } from '${toSrc}linter/ValidatorRegistry.js';

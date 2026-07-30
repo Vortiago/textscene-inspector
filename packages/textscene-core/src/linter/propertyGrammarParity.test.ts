@@ -166,9 +166,19 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       // there is no fixed per-key scraping surface to compare against.
       'theme_override_colors/*', 'theme_override_constants/*',
       'theme_override_font_sizes/*', 'theme_override_styles/*',
-      'theme_override_fonts/*',
+      'theme_override_fonts/*', 'theme_override_icons/*',
     ],
     reason: 'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare.',
+  },
+
+  SubViewportContainer: {
+    linterOnly: [
+      // Inherited from Control through the base-walk, and asymmetric there for
+      // the same reason: the linter wildcard-matches these keys while the
+      // parser loop-scrapes them, so there is no per-key surface to compare.
+      'theme_override_icons/*',
+    ],
+    reason: 'Inherits Control theme-override wildcards; the icons key has no per-key parser surface, exactly as on Control itself.',
   },
 
   // -------------------------------------------------------------------------
@@ -327,7 +337,14 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   Decal: {
-    reason: 'No unique asymmetries; transform is covered by Node3D base on both parser and validator sides.',
+    linterOnly: [
+      // Godot serialises `sorting_offset` for a Decal (Decal::_validate_property
+      // restores it from VisualInstance3D's PROPERTY_USAGE_NONE), so it is a
+      // valid key worth format-checking — but it only biases draw ORDER among
+      // transparent surfaces, which a static preview has no equivalent for.
+      'sorting_offset',
+    ],
+    reason: 'sorting_offset is a real serialised Decal property, so the linter checks its format, but it only tunes transparency sort order and the renderer has nothing to do with it.',
   },
 
   MeshInstance3D: {

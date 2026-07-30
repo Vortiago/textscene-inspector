@@ -2642,7 +2642,7 @@
       "name": "SkeletonModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -2759,7 +2759,7 @@
       "name": "SpringBoneCollision3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -3232,7 +3232,7 @@
       "name": "VisualInstance3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -3322,7 +3322,7 @@
       "name": "Window",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Viewport",
         "Node",
@@ -3430,7 +3430,7 @@
       "name": "XRNode3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",

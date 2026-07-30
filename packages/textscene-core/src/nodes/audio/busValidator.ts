@@ -1,16 +1,11 @@
 /**
- * Shared audio `bus` linter validator — accepts a plain quoted string
- * ("Master") or Godot's StringName literal (&"Master"), else emits
- * INVALID_BUS_FORMAT. Shared by the AudioStreamPlayer / 2D / 3D linters
- * (the parse-side counterpart is `parseBus`).
+ * Shared audio `bus` linter validator. A bus name is a StringName, so Godot
+ * saves it as `&"Master"` while a hand-written scene may carry plain
+ * `"Master"` — `v.stringName` accepts both. The parse-side counterpart is
+ * `parseBus`. Shared by the AudioStreamPlayer / 2D / 3D linters.
  */
 
-import { propertyError } from '../../linter/validators/index.js';
+import { v } from '../../linter/validators/index.js';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 
-export const busValidator: PropertyValidator = (key, value, line) => {
-  if (!value.startsWith('"') && !value.startsWith('&"')) {
-    return propertyError(key, line, `Property 'bus' must be a string, got: "${value}"`, 'INVALID_BUS_FORMAT');
-  }
-  return null;
-};
+export const busValidator: PropertyValidator = v.stringName('bus');

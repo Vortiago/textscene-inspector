@@ -57,6 +57,7 @@ Strict parsing format-checks these `Decal` properties, plus 16 inherited from No
 | `modulate` |
 | `normal_fade` |
 | `size` |
+| `sorting_offset` |
 | `texture_albedo` |
 | `texture_emission` |
 | `texture_normal` |

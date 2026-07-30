@@ -113,6 +113,10 @@ reproduced:
 - [Sprite3D](../../packages/textscene-core/src/nodes/3d/sprite3d/comparison.md) — an unlit textured THREE.Mesh quad
 - [StaticBody3D](../../packages/textscene-core/src/nodes/physics/3d/staticbody3d/comparison.md) — a transform-only group
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md) — the scene's background and environment lighting
+- [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md) — a transform-only group (it drives a Skeleton3D's bone poses)
+- [SpringBoneCollision3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollision3d/comparison.md) — a transform-only group (a spring-bone collider)
+- [VisualInstance3D](../../packages/textscene-core/src/nodes/3d/visualinstance3d/comparison.md) — a transform-only group (the render-layer/AABB base for 3D visuals)
+- [XRNode3D](../../packages/textscene-core/src/nodes/3d/xr/xrnode3d/comparison.md) — a transform-only group (an XR-tracked transform)
 
 ## 2D
 
@@ -154,3 +158,4 @@ reproduced:
 
 - [AudioStreamPlayer](../../packages/textscene-core/src/nodes/audio/audiostreamplayer/comparison.md) — nothing (a non-spatial audio node)
 - [Timer](../../packages/textscene-core/src/nodes/timers/timer/comparison.md) — nothing (a countdown timer node)
+- [Window](../../packages/textscene-core/src/nodes/windows/window/comparison.md) — nothing yet; parsed and validated but not drawn

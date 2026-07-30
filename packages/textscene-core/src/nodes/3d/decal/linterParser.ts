@@ -17,4 +17,9 @@ validatorRegistry.registerAll('Decal', {
   upper_fade: v.float('upper_fade', { min: 0, max: 1 }),
   lower_fade: v.float('lower_fade', { min: 0, max: 1 }),
   cull_mask: layerBitmask('cull_mask'),
+  // VisualInstance3D declares `sorting_offset` PROPERTY_USAGE_NONE, so most of
+  // its subclasses never serialise it — but `Decal::_validate_property`
+  // (scene/3d/decal.cpp:169) restores PROPERTY_USAGE_DEFAULT for this one
+  // property, so a Decal really can carry it. No range hint on the binding.
+  sorting_offset: v.float('sorting_offset'),
 });

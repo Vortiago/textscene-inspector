@@ -35,7 +35,7 @@ this static capture.
 ## Linting
 
 <!-- lint:begin ScrollContainer -->
-Strict parsing format-checks the inherited set (28 inherited from Control); `ScrollContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (29 inherited from Control); `ScrollContainer` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

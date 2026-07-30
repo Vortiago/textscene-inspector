@@ -498,6 +498,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Skeleton Modifier 3d",
+    "file": "unit-skeleton-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Skeleton3d",
     "file": "unit-skeleton3d.tscn",
     "category": "Other"
@@ -535,6 +540,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Spot Light 3d",
     "file": "unit-spot-light-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spring Bone Collision 3d",
+    "file": "unit-spring-bone-collision-3d.tscn",
     "category": "Other"
   },
   {
@@ -588,8 +598,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Visual Instance 3d",
+    "file": "unit-visual-instance-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Vslider",
     "file": "unit-vslider.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window",
+    "file": "unit-window.tscn",
     "category": "Other"
   },
   {
@@ -600,6 +620,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "World Environment No Fog",
     "file": "unit-world-environment-no-fog.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Xr Node 3d",
+    "file": "unit-xr-node-3d.tscn",
     "category": "Other"
   },
   {

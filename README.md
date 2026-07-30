@@ -23,7 +23,13 @@ primitive nodes.*
 
 ## What it renders
 
-Around 85 node types, each a self-registering vertical slice.
+Around 90 node types, each a self-registering vertical slice.
+
+Coverage is broader than what draws: some node types are parsed and fully
+lint-checked while drawing nothing — either because that is correct (a Timer, a
+skeleton modifier, an XR tracker) or because rendering has not landed yet. The
+parity gallery distinguishes the two, so "not implemented" never gets quietly
+attached to a node that is finished.
 
 | Category | Types |
 |---|---|

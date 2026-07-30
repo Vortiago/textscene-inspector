@@ -78,6 +78,7 @@ Strict parsing format-checks these `Control` properties. Every validator failure
 | `theme_override_constants/*` |
 | `theme_override_font_sizes/*` |
 | `theme_override_fonts/*` |
+| `theme_override_icons/*` |
 | `theme_override_styles/*` |
 | `visible` |
 

@@ -88,6 +88,11 @@ import '../nodes/2d/remotetransform2d/index.linter.js';
 import '../nodes/2d/parallaxlayer/index.linter.js';
 import '../nodes/2d/parallaxbackground/index.linter.js';
 import '../nodes/timers/timer/index.linter.js';
+import '../nodes/3d/skeleton/skeletonmodifier3d/index.linter.js';
+import '../nodes/3d/skeleton/springbonecollision3d/index.linter.js';
+import '../nodes/3d/visualinstance3d/index.linter.js';
+import '../nodes/3d/xr/xrnode3d/index.linter.js';
+import '../nodes/windows/window/index.linter.js';
 
 // Re-export core linter classes
 export { Linter } from './Linter.js';

@@ -48,6 +48,10 @@ const NODE3D_LEAVES = [
   'CollisionShape3D',
   'RemoteTransform3D',
   'NavigationObstacle3D',
+  'SkeletonModifier3D',
+  'SpringBoneCollision3D',
+  'VisualInstance3D',
+  'XRNode3D',
 ] as const;
 
 /** Base for every canvas (2D) node — Node2D carries the transform/skew set. */
@@ -142,4 +146,5 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   AudioStreamPlayer: 'Node',
   Timer: 'Node',
   NavigationAgent3D: 'Node',
+  Window: 'Node',
 });
