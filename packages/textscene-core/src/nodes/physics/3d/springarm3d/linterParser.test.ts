@@ -4,10 +4,8 @@
  * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
  * unit under test is the validator, so a failure points at the validator
  * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * alongside it. SpringArm3D registers no semantic rule, so there is no
+ * linter.ts and nothing else to test.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -48,16 +46,12 @@ describe('SpringArm3D strict validators', () => {
       expect(check('collision_mask', '4294967295')).toBeNull();
     });
 
-    it('rejects a value past the 32-bit mask', () => {
-      const error = check('collision_mask', '4294967296');
-      expect(error).not.toBeNull();
-      expect(error?.message).toContain('collision_mask');
+    it('rejects a value past the 32-bit mask as out of range, not malformed', () => {
+      expect(check('collision_mask', '4294967296')?.code).toBe('INVALID_COLLISION_MASK_VALUE');
     });
 
-    it('rejects a non-numeric value', () => {
-      const error = check('collision_mask', 'all');
-      expect(error).not.toBeNull();
-      expect(error?.message).toContain('collision_mask');
+    it('rejects a non-numeric value as malformed', () => {
+      expect(check('collision_mask', 'all')?.code).toBe('INVALID_COLLISION_MASK_FORMAT');
     });
   });
 
@@ -73,7 +67,7 @@ describe('SpringArm3D strict validators', () => {
     it('rejects a bare string', () => {
       const error = check('shape', '"not_a_reference"');
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('shape');
+      expect(error?.code).toBe('INVALID_SHAPE_REFERENCE');
     });
   });
 
@@ -96,7 +90,7 @@ describe('SpringArm3D strict validators', () => {
     it('rejects a non-numeric value', () => {
       const error = check('spring_length', 'far');
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('spring_length');
+      expect(error?.code).toBe('INVALID_SPRING_LENGTH_FORMAT');
     });
   });
 
@@ -118,7 +112,7 @@ describe('SpringArm3D strict validators', () => {
     it('rejects a non-numeric value', () => {
       const error = check('margin', 'close');
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('margin');
+      expect(error?.code).toBe('INVALID_MARGIN_FORMAT');
     });
   });
 });

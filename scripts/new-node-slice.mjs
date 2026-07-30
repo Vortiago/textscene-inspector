@@ -379,8 +379,7 @@ import { ${base.component} } from '${toBase}/Component';
 nodeComponentRegistry.register({
   typeName: '${typeName}',
   Component: ${base.component},
-  ${base.workspaceFlag}
-  renderIntent: 'transform-only',
+${base.workspaceFlag ? `  ${base.workspaceFlag}\n` : ''}  renderIntent: 'transform-only',
 });
 `
       );

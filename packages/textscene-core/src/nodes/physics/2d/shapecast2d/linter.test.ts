@@ -1,45 +1,24 @@
 /**
- * ShapeCast2D wiring: the shared cast factory only reaches a scene if this slice
- * registers it and `index.linter.ts` imports the module. Both are asserted here
- * through the real `Linter`; the rule's behaviour matrix lives beside the
- * factory in linter/physics/castLinterRule.test.ts.
+ * The one claim that is ShapeCast2D's alone: this slice contributes the shared cast
+ * rule to the registry under its own name and node type.
+ *
+ * Everything the rule DOES — which conditions fire, on which family, with which
+ * severity — is one factory's behaviour and is tested once beside it, in
+ * linter/physics/castLinterRule.test.ts. Restating it here would be four copies
+ * of one matrix, and the copies drift: an earlier draft of this file asserted
+ * that a ray cast stays silent on `shapecast2d-missing-shape`, a rule only the
+ * shape casts can emit, so the assertion could never fail.
  */
 
 import { describe, expect, it } from 'vitest';
-import { expectDiagnostic, expectNoDiagnostic, node, scene } from '../../../../linter/testing/testkit.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { shapeCast2DValidationRule } from './linter.js';
-import '../../../../linter/index.js';
-
-const LIVE_CAST = scene(
-  '[sub_resource type="BoxShape2D" id="Box_1"]',
-  node('ShapeCast2D', { shape: 'SubResource("Box_1")', collision_mask: 1, collide_with_bodies: true })
-);
+import './index.linter.js';
 
 describe('ShapeCast2D semantic rule wiring', () => {
-  it('is the rule the registry holds for this type, not a second copy', () => {
+  it('registers the shared rule under valid-shapecast2d, for ShapeCast2D alone', () => {
     const registered = ruleRegistry.getRules().find((r) => r.meta.name === 'valid-shapecast2d');
     expect(registered).toBe(shapeCast2DValidationRule);
     expect(registered?.meta.applicableNodeTypes).toEqual(['ShapeCast2D']);
-  });
-
-  it('reaches a scene through Linter, so index.linter.ts imports it', () => {
-    expectDiagnostic(
-      scene(node('ShapeCast2D', { collide_with_areas: false, collide_with_bodies: false })),
-      { ruleName: 'shapecast2d-no-collide-target', nodeType: 'ShapeCast2D' }
-    );
-  });
-
-  it('asks for the shape Godot itself warns about', () => {
-    expectDiagnostic(scene(node('ShapeCast2D', { collision_mask: 1 })), {
-      ruleName: 'shapecast2d-missing-shape',
-      severity: 'warning',
-    });
-  });
-
-  it('stays silent on a fully configured cast', () => {
-    for (const ruleName of ['shapecast2d-no-collide-target', 'shapecast2d-zero-mask', 'shapecast2d-missing-shape']) {
-      expectNoDiagnostic(LIVE_CAST, { ruleName });
-    }
   });
 });

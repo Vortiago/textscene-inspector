@@ -26,7 +26,7 @@ RayCast2D casts a ray each physics frame toward `target_position`, reporting the
 
 ## Divergences
 
-None visible in this fixture — the node draws nothing in either engine.
+None visible in this fixture.
 
 ## Linting
 

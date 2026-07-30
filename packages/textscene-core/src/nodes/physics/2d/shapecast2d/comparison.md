@@ -10,7 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # ShapeCast2D
 
-Sweeps a `Shape2D` from its origin to `target_position` to detect `CollisionObject2D`s, but draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story.
+Sweeps a `Shape2D` from its origin to `target_position` to detect `CollisionObject2D`s, but draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story. Godot draws the swept shape only as an editor gizmo or under the "Visible Collision Shapes" debug flag, so a plain capture shows nothing either.
 
 ## Properties exercised
 
@@ -28,7 +28,7 @@ Sweeps a `Shape2D` from its origin to `target_position` to detect `CollisionObje
 
 ## Divergences
 
-None visible in this fixture — Godot's ShapeCast2D shows only an editor gizmo and a "Visible Collision Shapes" debug overlay, neither of which a plain capture shows.
+None visible in this fixture.
 
 ## Linting
 
@@ -53,16 +53,10 @@ Strict parsing format-checks these `ShapeCast2D` properties, plus 12 inherited f
 | `valid-shapecast2d` | `shapecast2d-no-collide-target` | warning |
 |  | `shapecast2d-zero-mask` | warning |
 |  | `shapecast2d-missing-shape` | warning |
+|  | `shapecast2d-unresolved-shape` | error |
 <!-- lint:end -->
 
-ShapeCast2D has no dedicated `parser.ts` — `index.ts` reuses `parseNode2D`
-directly, which only reads Node2D's own transform/draw-order surface into the
-typed `node.properties`. None of ShapeCast2D's own properties (`enabled`,
-`shape`, `exclude_parent`, `target_position`, `margin`, `max_results`,
-`collision_mask`, `collide_with_areas`, `collide_with_bodies`) is parsed,
-validated, or coerced there. The raw string does survive on `node.rawProperties`
-(kept only so a type-less instanced-scene override can be re-parsed later), but
-nothing reads it back out for this type, so a malformed `margin` or an
-unresolvable `shape` reference produces neither a warning nor a substituted
-default — it looks exactly like a valid one to the renderer, because neither is
-ever examined.
+The lenient parser reuses `parseNode2D`, which reads only Node2D's own keys, so none of
+the properties above reaches `node.properties` at all: a malformed `margin` is
+ignored rather than substituted with a default. The raw text survives on
+`node.rawProperties`, but nothing reads it back for this type.

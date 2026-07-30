@@ -4,11 +4,8 @@
  * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
  * unit under test is the validator, so a failure points at the validator
  * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, tested
- * against `check()` directly rather than through `Linter` (see linter.test.ts).
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * alongside it. Rule-level behaviour is the shared cast factory's and is tested
+ * once beside it, in linter/physics/castLinterRule.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -48,7 +45,7 @@ describe('RayCast3D strict validators', () => {
     it('rejects a non-boolean value', () => {
       const error = check('enabled', '1');
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('enabled');
+      expect(error?.code).toBe('INVALID_ENABLED_FORMAT');
     });
   });
 
@@ -64,7 +61,7 @@ describe('RayCast3D strict validators', () => {
     it('rejects a non-boolean value', () => {
       const error = check('exclude_parent', 'yes');
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('exclude_parent');
+      expect(error?.code).toBe('INVALID_EXCLUDE_PARENT_FORMAT');
     });
   });
 
@@ -80,7 +77,7 @@ describe('RayCast3D strict validators', () => {
     it('rejects a Vector2 (wrong arity)', () => {
       const error = check('target_position', 'Vector2(0, -1)');
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('target_position');
+      expect(error?.code).toBe('INVALID_TARGET_POSITION_FORMAT');
     });
   });
 
@@ -97,16 +94,12 @@ describe('RayCast3D strict validators', () => {
       expect(check('collision_mask', '4294967295')).toBeNull();
     });
 
-    it('rejects a value past the 32-bit mask', () => {
-      const error = check('collision_mask', '4294967296');
-      expect(error).not.toBeNull();
-      expect(error?.message).toContain('collision_mask');
+    it('rejects a value past the 32-bit mask as out of range, not malformed', () => {
+      expect(check('collision_mask', '4294967296')?.code).toBe('INVALID_COLLISION_MASK_VALUE');
     });
 
-    it('rejects a non-numeric value', () => {
-      const error = check('collision_mask', 'all');
-      expect(error).not.toBeNull();
-      expect(error?.message).toContain('collision_mask');
+    it('rejects a non-numeric value as malformed', () => {
+      expect(check('collision_mask', 'all')?.code).toBe('INVALID_COLLISION_MASK_FORMAT');
     });
   });
 
@@ -122,7 +115,7 @@ describe('RayCast3D strict validators', () => {
     it('rejects a non-boolean value', () => {
       const error = check('hit_from_inside', 'maybe');
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('hit_from_inside');
+      expect(error?.code).toBe('INVALID_HIT_FROM_INSIDE_FORMAT');
     });
   });
 
@@ -138,7 +131,7 @@ describe('RayCast3D strict validators', () => {
     it('rejects a non-boolean value', () => {
       const error = check('hit_back_faces', '0');
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('hit_back_faces');
+      expect(error?.code).toBe('INVALID_HIT_BACK_FACES_FORMAT');
     });
   });
 
@@ -154,7 +147,7 @@ describe('RayCast3D strict validators', () => {
     it('rejects a non-boolean value', () => {
       const error = check('collide_with_areas', 'nope');
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('collide_with_areas');
+      expect(error?.code).toBe('INVALID_COLLIDE_WITH_AREAS_FORMAT');
     });
   });
 
@@ -170,7 +163,7 @@ describe('RayCast3D strict validators', () => {
     it('rejects a non-boolean value', () => {
       const error = check('collide_with_bodies', 'nope');
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('collide_with_bodies');
+      expect(error?.code).toBe('INVALID_COLLIDE_WITH_BODIES_FORMAT');
     });
   });
 
@@ -186,7 +179,7 @@ describe('RayCast3D strict validators', () => {
     it('rejects a Color missing a component', () => {
       const error = check('debug_shape_custom_color', 'Color(1, 0, 0)');
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('debug_shape_custom_color');
+      expect(error?.code).toBe('INVALID_DEBUG_SHAPE_CUSTOM_COLOR_FORMAT');
     });
   });
 
@@ -205,22 +198,15 @@ describe('RayCast3D strict validators', () => {
       expect(check('debug_shape_thickness', '5')).toBeNull();
     });
 
-    it('rejects 0 (below the lower bound)', () => {
-      const error = check('debug_shape_thickness', '0');
-      expect(error).not.toBeNull();
-      expect(error?.message).toContain('debug_shape_thickness');
+    it('rejects 0 and 6 as out of range, not malformed', () => {
+      expect(check('debug_shape_thickness', '0')?.code).toBe('INVALID_DEBUG_SHAPE_THICKNESS_VALUE');
+      expect(check('debug_shape_thickness', '6')?.code).toBe('INVALID_DEBUG_SHAPE_THICKNESS_VALUE');
     });
 
-    it('rejects 6 (above the upper bound)', () => {
-      const error = check('debug_shape_thickness', '6');
-      expect(error).not.toBeNull();
-      expect(error?.message).toContain('debug_shape_thickness');
-    });
-
-    it('rejects a non-numeric value', () => {
-      const error = check('debug_shape_thickness', 'thick');
-      expect(error).not.toBeNull();
-      expect(error?.message).toContain('debug_shape_thickness');
+    it('rejects a non-numeric value as malformed', () => {
+      expect(check('debug_shape_thickness', 'thick')?.code).toBe(
+        'INVALID_DEBUG_SHAPE_THICKNESS_FORMAT'
+      );
     });
   });
 });

@@ -15,24 +15,11 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import type { PhysicsDim } from './dim.js';
+import { checkResourceExists, referencedResourceType } from '../resourceChecker.js';
 import { dimSuffix } from './dim.js';
 
 /** Which of the two cast families — they differ only by the `shape` property. */
 export type CastKind = 'Ray' | 'Shape';
-
-/**
- * `SubResource("BoxShape3D_ab12")` / `ExtResource("1_xy")` → the resource's
- * declared type, or undefined when the reference names nothing in the scene.
- */
-function referencedResourceType(
-  scene: RuleContext['scene'],
-  value: string | undefined
-): string | undefined {
-  const match = value?.match(/^(SubResource|ExtResource)\("([^"]+)"\)$/);
-  if (!match) return undefined;
-  const pool = match[1] === 'SubResource' ? scene.internalResources : scene.externalResources;
-  return pool.find((r) => r.id === match[2])?.type;
-}
 
 export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
   const type = `${kind}Cast${dim}`;
@@ -87,6 +74,17 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
           nodeType: node.type,
           ruleName: `${prefix}-missing-shape`,
         });
+      } else if (!checkResourceExists(context.scene, props.shape)) {
+        // An error, not advice, and the same severity `CollisionShape2D/3D`
+        // already gives a dangling `shape` — the two nodes take the identical
+        // property and a broken reference is equally fatal on either.
+        diagnostics.push({
+          severity: 'error',
+          message: `${type} '${node.name}' references ${props.shape} for 'shape', which this scene does not define.`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: `${prefix}-unresolved-shape`,
+        });
       } else if (
         rejectsConcave &&
         referencedResourceType(context.scene, props.shape) === 'ConcavePolygonShape3D'
@@ -107,14 +105,17 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
   return {
     meta: {
       name: `valid-${prefix}`,
-      description: `Warns when a ${type} is configured so it can never report a collision`,
+      description: `Flags a ${type} configured so it can never report a collision`,
       category: 'validation',
       applicableNodeTypes: [type],
       emits: [
-        { ruleName: `${prefix}-no-collide-target`, severity: 'warning' as const },
-        { ruleName: `${prefix}-zero-mask`, severity: 'warning' as const },
+        { ruleName: `${prefix}-no-collide-target`, severity: 'warning' },
+        { ruleName: `${prefix}-zero-mask`, severity: 'warning' },
         ...(kind === 'Shape'
-          ? [{ ruleName: `${prefix}-missing-shape`, severity: 'warning' as const }]
+          ? [
+              { ruleName: `${prefix}-missing-shape`, severity: 'warning' as const },
+              { ruleName: `${prefix}-unresolved-shape`, severity: 'error' as const },
+            ]
           : []),
         ...(rejectsConcave
           ? [{ ruleName: `${prefix}-concave-shape`, severity: 'warning' as const }]
