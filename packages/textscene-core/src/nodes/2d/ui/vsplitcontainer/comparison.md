@@ -41,7 +41,11 @@ Measured through Godot 4.6.3 — 300 px tall columns (top | gap | bottom):
 ## Linting
 
 <!-- lint:begin VSplitContainer -->
-Strict parsing format-checks the inherited set (29 inherited from Control); `VSplitContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `VSplitContainer` properties, plus 10 inherited from SplitContainer, 29 inherited from Control. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `vertical` | nothing — orientation is fixed by the class |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

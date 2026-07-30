@@ -100,6 +100,15 @@ const NODE2D_LEAVES = [
 ] as const;
 
 /**
+ * The fixed-orientation container leaves. Each inherits its base's layout set
+ * and then narrows one key: `vertical` is rejected on them, because the class
+ * fixes the orientation and Godot refuses the assignment (see
+ * nodes/2d/ui/shared/fixedOrientation.ts).
+ */
+const BOXCONTAINER_LEAVES = ['HBoxContainer', 'VBoxContainer'] as const;
+const SPLITCONTAINER_LEAVES = ['HSplitContainer', 'VSplitContainer'] as const;
+
+/**
  * Range-derived nodes — they inherit min/max/step/page/value from `Range`, then
  * the anchor/offset/theme set from `Control`.
  *
@@ -143,18 +152,10 @@ const CONTROL_LEAVES = [
   'MarginContainer',
   'ScrollContainer',
   'GridContainer',
-  'HBoxContainer',
-  'VBoxContainer',
   // Displays its SubViewport children's targets (ADR-0030). Needs the Control
   // chain like any other: without it every anchor/offset/layout validator
   // silently skips this type while erroring on every sibling Control.
   'SubViewportContainer',
-  // SplitContainer → Container in Godot, but neither intermediate is modelled
-  // yet, so these link straight to Control like the sliders above. Until they
-  // were listed here they had no validators of their own and no inherited ones
-  // either — every property on a split container was silently accepted.
-  'HSplitContainer',
-  'VSplitContainer',
   'BaseButton',
   'Container',
   'Range',
@@ -167,6 +168,8 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   ...Object.fromEntries(VISUALINSTANCE3D_LEAVES.map((t) => [t, 'VisualInstance3D'])),
   ...Object.fromEntries(NODE3D_LEAVES.map((t) => [t, 'Node3D'])),
   ...Object.fromEntries(NODE2D_LEAVES.map((t) => [t, 'Node2D'])),
+  ...Object.fromEntries(BOXCONTAINER_LEAVES.map((t) => [t, 'BoxContainer'])),
+  ...Object.fromEntries(SPLITCONTAINER_LEAVES.map((t) => [t, 'SplitContainer'])),
   ...Object.fromEntries(RANGE_LEAVES.map((t) => [t, 'Range'])),
   ...Object.fromEntries(BASEBUTTON_LEAVES.map((t) => [t, 'BaseButton'])),
   ...Object.fromEntries(CONTROL_LEAVES.map((t) => [t, 'Control'])),
@@ -176,6 +179,7 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   Light3D: 'VisualInstance3D',
   GeometryInstance3D: 'VisualInstance3D',
   BaseButton: 'Control',
+  SplitContainer: 'Container',
   Range: 'Control',
   TextEdit: 'Control',
   VisualInstance3D: 'Node3D',
@@ -202,4 +206,8 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   AcceptDialog: 'Window',
   BoneConstraint3D: 'SkeletonModifier3D',
   Popup: 'Window',
+  BoxContainer: 'Container',
+  FlowContainer: 'Container',
+  GraphElement: 'Container',
+  ConfirmationDialog: 'AcceptDialog',
 });

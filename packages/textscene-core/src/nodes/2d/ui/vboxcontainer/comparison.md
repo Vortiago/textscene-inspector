@@ -35,7 +35,11 @@ out thinner and a touch dimmer.
 ## Linting
 
 <!-- lint:begin VBoxContainer -->
-Strict parsing format-checks the inherited set (29 inherited from Control); `VBoxContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `VBoxContainer` properties, plus 1 inherited from BoxContainer, 29 inherited from Control. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `vertical` | nothing — orientation is fixed by the class |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

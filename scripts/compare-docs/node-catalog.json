@@ -317,7 +317,7 @@
       "name": "BoxContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -639,7 +639,7 @@
       "name": "ConfirmationDialog",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "AcceptDialog",
         "Window",
@@ -950,7 +950,7 @@
       "name": "FlowContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -1170,7 +1170,7 @@
       "name": "GraphElement",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -2716,7 +2716,7 @@
       "name": "SplitContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",

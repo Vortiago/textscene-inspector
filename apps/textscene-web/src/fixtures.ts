@@ -183,6 +183,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Confirmation Dialog",
+    "file": "unit-confirmation-dialog.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Container",
     "file": "unit-container.tscn",
     "category": "Other"
@@ -238,6 +243,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Flow Container",
+    "file": "unit-flow-container.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Geometry Instance 3d",
     "file": "unit-geometry-instance-3d.tscn",
     "category": "Other"
@@ -290,6 +300,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Gpuparticles3d",
     "file": "unit-gpuparticles3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Element",
+    "file": "unit-graph-element.tscn",
     "category": "Other"
   },
   {
@@ -1080,6 +1095,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Arraymesh",
     "file": "unit-arraymesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Box Container",
+    "file": "unit-box-container.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

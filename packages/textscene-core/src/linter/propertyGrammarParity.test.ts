@@ -347,6 +347,27 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'The geometry base has no parser of its own, so every key it registers is linter-only there; each leaf parser reads the subset it renders and the remainder are bake/cull/draw-order settings a static preview cannot honour.',
   },
 
+  // The container bases have no parser.ts of their own — they reuse parseControl
+  // — so from their own perspective every key they register is linter-only, and
+  // one entry each covers their H/V leaves rather than four near-identical
+  // copies. The leaves' parsers read what they RENDER (the shared
+  // boxContainer/splitContainer helpers handle alignment and offsets for
+  // layout); the rest is editor-side drag tuning a DOM overlay has no use for.
+  BoxContainer: {
+    linterOnly: ['alignment', 'vertical'],
+    reason: 'Layout base with no parser of its own; the leaves render alignment through the shared boxContainer helper, and `vertical` is fixed by the leaf class so nothing reads it there.',
+  },
+
+  SplitContainer: {
+    linterOnly: [
+      'collapsed', 'dragging_enabled', 'dragger_visibility', 'touch_dragger_enabled',
+      'split_offset', 'split_offsets', 'vertical',
+      'drag_area_margin_begin', 'drag_area_margin_end', 'drag_area_offset',
+      'drag_area_highlight_in_editor',
+    ],
+    reason: 'Layout base with no parser of its own; the drag-area and dragger keys tune an interactive splitter the static DOM overlay does not implement, and `vertical` is fixed by the leaf class.',
+  },
+
   // Registered on the base and delivered to every 3D visual by the base-walk,
   // so one entry here covers MeshInstance3D, Sprite3D, Label3D, Decal,
   // GPUParticles3D and the seven CSG shapes rather than twelve leaf copies.

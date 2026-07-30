@@ -97,7 +97,11 @@ So the default separation is **12** and the grabber's own extent is **8** —
 ## Linting
 
 <!-- lint:begin HSplitContainer -->
-Strict parsing format-checks the inherited set (29 inherited from Control); `HSplitContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `HSplitContainer` properties, plus 10 inherited from SplitContainer, 29 inherited from Control. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `vertical` | nothing — orientation is fixed by the class |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

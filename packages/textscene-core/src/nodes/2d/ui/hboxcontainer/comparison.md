@@ -30,7 +30,11 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin HBoxContainer -->
-Strict parsing format-checks the inherited set (29 inherited from Control); `HBoxContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `HBoxContainer` properties, plus 1 inherited from BoxContainer, 29 inherited from Control. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `vertical` | nothing — orientation is fixed by the class |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

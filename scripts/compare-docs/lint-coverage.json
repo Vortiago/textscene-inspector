@@ -284,23 +284,6 @@
         }
       ]
     },
-    "BoxContainer": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
     "CanvasGroup": {
       "validators": [],
       "rules": [
@@ -502,23 +485,6 @@
         }
       ]
     },
-    "ConfirmationDialog": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
     "ConvertTransformModifier3D": {
       "validators": [],
       "rules": [
@@ -686,23 +652,6 @@
       ]
     },
     "FileDialog": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
-    "FlowContainer": {
       "validators": [],
       "rules": [
         {
@@ -1035,23 +984,6 @@
       ]
     },
     "GraphEdit": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
-    "GraphElement": {
       "validators": [],
       "rules": [
         {
@@ -2471,23 +2403,6 @@
             },
             {
               "ruleName": "valid-node3d-visibility",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
-    "SplitContainer": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
               "severity": "warning"
             }
           ]

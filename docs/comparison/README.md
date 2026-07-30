@@ -161,6 +161,10 @@ reproduced:
 - [Range](../../packages/textscene-core/src/nodes/2d/ui/range/comparison.md) — nothing yet; the min/max/step base every slider and bar inherits
 - [TextEdit](../../packages/textscene-core/src/nodes/2d/ui/textedit/comparison.md) — nothing yet; the multi-line text base CodeEdit inherits
 - [VisibleOnScreenNotifier2D](../../packages/textscene-core/src/nodes/2d/visibleonscreennotifier2d/comparison.md) — a transform-only group (signals when its rect enters view)
+- [BoxContainer](../../packages/textscene-core/src/nodes/2d/ui/boxcontainer/comparison.md) — nothing yet; the row/column base HBox and VBox inherit
+- [FlowContainer](../../packages/textscene-core/src/nodes/2d/ui/flowcontainer/comparison.md) — nothing yet; the wrapping-layout base
+- [GraphElement](../../packages/textscene-core/src/nodes/2d/ui/graphelement/comparison.md) — nothing yet; the draggable graph-node base
+- [SplitContainer](../../packages/textscene-core/src/nodes/2d/ui/splitcontainer/comparison.md) — nothing yet; the splitter base HSplit and VSplit inherit
 
 ## Other
 
@@ -169,3 +173,4 @@ reproduced:
 - [Window](../../packages/textscene-core/src/nodes/windows/window/comparison.md) — nothing yet; parsed and validated but not drawn
 - [AcceptDialog](../../packages/textscene-core/src/nodes/windows/acceptdialog/comparison.md) — nothing yet; a dialog Window with an OK button
 - [Popup](../../packages/textscene-core/src/nodes/windows/popup/comparison.md) — nothing yet; a borderless Window that closes on focus loss
+- [ConfirmationDialog](../../packages/textscene-core/src/nodes/windows/confirmationdialog/comparison.md) — nothing yet; an AcceptDialog with a Cancel button

@@ -85,11 +85,26 @@ describe('ValidatorRegistry base-class walk', () => {
 // ---------------------------------------------------------------------------
 
 /**
- * Keys that are intentionally re-declared in a subclass (e.g., a stricter
- * override that passes both linting and tests). Starts empty — add here only
- * after explicit review.
+ * Keys a subclass re-declares on purpose, as `Type:key`.
+ *
+ * The base-walk can only WIDEN what a leaf accepts, so narrowing needs a shadow.
+ * These four are the only narrowing case in the tree: `BoxContainer` and
+ * `SplitContainer` each declare `vertical`, and each fixes the orientation on
+ * its H/V subclasses — `set_vertical` there is
+ * `ERR_FAIL_COND_MSG(is_fixed, "Can't change orientation of …")`
+ * (scene/gui/box_container.cpp:312, split_container.cpp:1120). Without the
+ * shadow the linter would accept a key Godot can never write.
+ *
+ * Add here only for a subclass that accepts strictly LESS than its base. A
+ * re-declaration that merely repeats the base is the drift this guard exists to
+ * catch, and belongs deleted rather than listed.
  */
-const INTENTIONAL_OVERRIDES = new Set<string>([]);
+const INTENTIONAL_OVERRIDES = new Set<string>([
+  'HBoxContainer:vertical',
+  'VBoxContainer:vertical',
+  'HSplitContainer:vertical',
+  'VSplitContainer:vertical',
+]);
 
 /** Walk the filesystem for all linterParser.ts source files. */
 function walkLinterParsers(dir: string): string[] {

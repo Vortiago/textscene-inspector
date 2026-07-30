@@ -75,6 +75,10 @@ import '../nodes/2d/ui/basebutton/index.js';
 import '../nodes/2d/ui/container/index.js';
 import '../nodes/2d/ui/range/index.js';
 import '../nodes/2d/ui/textedit/index.js';
+import '../nodes/2d/ui/boxcontainer/index.js';
+import '../nodes/2d/ui/splitcontainer/index.js';
+import '../nodes/2d/ui/flowcontainer/index.js';
+import '../nodes/2d/ui/graphelement/index.js';
 import '../nodes/base/node2d/index.js';
 import '../nodes/2d/sprite2d/index.js';
 import '../nodes/2d/polygon2d/index.js';
@@ -110,6 +114,7 @@ import '../nodes/3d/visibleonscreennotifier3d/index.js';
 import '../nodes/windows/window/index.js';
 import '../nodes/windows/acceptdialog/index.js';
 import '../nodes/windows/popup/index.js';
+import '../nodes/windows/confirmationdialog/index.js';
 
 import type { TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';

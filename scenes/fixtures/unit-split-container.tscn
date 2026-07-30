@@ -167,3 +167,24 @@ color = Color(1, 0, 0, 1)
 layout_mode = 2
 size_flags_horizontal = 3
 color = Color(0, 1, 0, 1)
+
+; SplitContainer itself (not HSplitContainer/VSplitContainer) is `status:
+; unimplemented` — it parses and validates but does not draw, so this node
+; exercises every one of its own 11 members at a valid value for linter
+; coverage rather than for pixel measurement.
+[node name="LinterCoverage" type="SplitContainer" parent="."]
+offset_left = 20.0
+offset_top = 660.0
+offset_right = 420.0
+offset_bottom = 720.0
+vertical = true
+collapsed = false
+dragging_enabled = false
+dragger_visibility = 1
+touch_dragger_enabled = true
+drag_area_margin_begin = 4
+drag_area_margin_end = 6
+drag_area_offset = -8
+drag_area_highlight_in_editor = true
+split_offsets = PackedInt32Array(80, 40)
+split_offset = 80

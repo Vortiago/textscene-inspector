@@ -20,6 +20,14 @@ import '../nodes/2d/ui/subviewportcontainer/index.linter.js';
 import '../nodes/2d/ui/basebutton/index.linter.js';
 import '../nodes/2d/ui/range/index.linter.js';
 import '../nodes/2d/ui/textedit/index.linter.js';
+import '../nodes/2d/ui/boxcontainer/index.linter.js';
+import '../nodes/2d/ui/splitcontainer/index.linter.js';
+import '../nodes/2d/ui/hboxcontainer/index.linter.js';
+import '../nodes/2d/ui/vboxcontainer/index.linter.js';
+import '../nodes/2d/ui/hsplitcontainer/index.linter.js';
+import '../nodes/2d/ui/vsplitcontainer/index.linter.js';
+import '../nodes/2d/ui/flowcontainer/index.linter.js';
+import '../nodes/2d/ui/graphelement/index.linter.js';
 import '../nodes/viewport/subviewport/index.linter.js';
 import '../nodes/base/node3d/index.linter.js';
 import '../nodes/base/node2d/index.linter.js';
@@ -100,6 +108,7 @@ import '../nodes/3d/geometryinstance3d/index.linter.js';
 import '../nodes/3d/visibleonscreennotifier3d/index.linter.js';
 import '../nodes/windows/window/index.linter.js';
 import '../nodes/windows/acceptdialog/index.linter.js';
+import '../nodes/windows/confirmationdialog/index.linter.js';
 
 // Re-export core linter classes
 export { Linter } from './Linter.js';
