@@ -1,6 +1,7 @@
 import { copyFileSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FLATTENED_CORPUS_ROOTS } from '../../../scripts/corpusRoots.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const scenesRoot = join(__dirname, '../../../scenes');
@@ -52,12 +53,19 @@ for (const file of exampleFiles) {
 const totalFiles = fixtureFiles.length + exampleFiles.length;
 console.log(`Copied ${totalFiles} scene files to public/fixtures/ (${fixtureFiles.length} fixtures + ${exampleFiles.length} examples)`);
 
-// Mirror the optional locally-vendored corpus (scenes/ld58/**) into
-// public/fixtures/ PRESERVING its res:// subpath structure (components/,
-// assets/textures/, …) so each scene's `res://...` references resolve to
-// /fixtures/... at fetch time. Absent on a fresh clone — the try/catch no-ops
-// until the corpus is vendored (`pnpm vendor:ld58`).
-const ld58Source = join(scenesRoot, 'ld58');
+// Mirror each flattened corpus (scenes/<root>/**) into public/fixtures/
+// PRESERVING its res:// subpath structure (components/, decorations/,
+// tileset/, …) so each scene's `res://...` reference resolves to /fixtures/...
+// at fetch time, and a scene one level down keeps that subpath as its fixture
+// id (`decorations/candle.tscn`).
+//
+// This is the DEFINITION of the flattening; scripts/corpusRoots.mjs names the
+// roots, and the Godot reference renderer and the sheet resolver read the same
+// list to undo it. A root copied here but missing there renders in the
+// previewer and nowhere else, which is why the list is shared rather than
+// spelled out three times.
+//
+// Absent on a fresh clone — the try/catch no-ops until the corpus is vendored.
 function copyRecursive(src, dest) {
   for (const entry of readdirSync(src, { withFileTypes: true })) {
     const s = join(src, entry.name);
@@ -72,26 +80,16 @@ function copyRecursive(src, dest) {
     }
   }
 }
-try {
-  if (statSync(ld58Source).isDirectory()) {
-    copyRecursive(ld58Source, fixturesTarget);
-    console.log('Copied the vendored corpus to public/fixtures/ (res:// mirrored)');
+for (const root of FLATTENED_CORPUS_ROOTS) {
+  const source = join(scenesRoot, root);
+  try {
+    if (statSync(source).isDirectory()) {
+      copyRecursive(source, fixturesTarget);
+      console.log(`Copied ${root} closure to public/fixtures/ (res:// mirrored)`);
+    }
+  } catch {
+    // Corpus not vendored — skip.
   }
-} catch {
-  // Corpus not vendored — skip.
-}
-
-// Copy the vendored isometric-dungeon closure (scenes/isometric/**) the same
-// way — its res:// references (tileset/, decorations/, player/) resolve at
-// the public/fixtures root.
-const isometricSource = join(scenesRoot, 'isometric');
-try {
-  if (statSync(isometricSource).isDirectory()) {
-    copyRecursive(isometricSource, fixturesTarget);
-    console.log('Copied isometric-dungeon closure to public/fixtures/ (res:// mirrored)');
-  }
-} catch {
-  // No isometric directory — skip.
 }
 
 // Mirror the godot-demo-projects corpora (scenes/demos/**) PRESERVING the

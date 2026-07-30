@@ -1,38 +1,23 @@
-import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { Modulate2DContext, multiplyModulate, useParentModulate } from '../../../r3f/canvasItemModulate';
 import { Node2D } from '../../base/node2d/Component';
-import type { CanvasModulateProperties } from './types';
 
 /**
- * <CanvasModulate> — a Node2D whose ambient `color` multiplies onto its whole
- * subtree. It delegates ALL Node2D machinery (transform, `visible`, z /
- * draw-order, y-sort dispatch, `modulate`) to `<Node2D>` and only folds its
- * `color` into the inherited modulate.
+ * <CanvasModulate> — a Node2D whose `color` multiplies onto the whole CANVAS,
+ * not onto its own subtree. Godot applies it as
+ * `RS::canvas_set_modulate(canvas, color)` when the node enters the canvas, so
+ * where it sits in the tree does not matter and it needs no children at all to
+ * have an effect — the isometric dungeon's is a childless leaf beside the level,
+ * which a subtree reading of it turns into a no-op.
  *
- * The color provider sits ABOVE `<Node2D>` (folding into what Node2D reads via
- * `useParentModulate`), NOT wrapping the children below it: `YSortDispatcher`
- * ignores its React `children` and re-dispatches `node.children`, so a
- * child-wrapped tint would be dropped whenever `y_sort_enabled=true`. Folding
- * above survives both paths, and `multiplyModulate` is component-wise
- * (commutative), so the non-y-sort result is identical to tinting below.
+ * The colour is therefore collected once per canvas by `canvasModulateColor`
+ * and seeded into the root modulate by `<NodeDispatcher>`; folding it in again
+ * here would square it over this node's own descendants. What is left is an
+ * ordinary Node2D: transform, `visible`, draw order, y-sort dispatch, modulate.
  *
- * `visible=false` therefore hides the subtree, matching Godot: CanvasModulate is
- * a CanvasItem, and `is_visible_in_tree()` ANDs up the parent chain, so a child
- * of a hidden CanvasModulate is not drawn (and its tint is disabled with it).
+ * `visible = false` still hides the subtree, matching Godot — CanvasModulate is
+ * a CanvasItem, so `is_visible_in_tree()` ANDs up the parent chain — and it also
+ * withdraws the canvas tint, which the same collector handles.
  */
 export function CanvasModulate({ node, children }: NodeComponentProps) {
-  const props = node.properties as CanvasModulateProperties;
-
-  const parentModulate = useParentModulate();
-  const modulate = useMemo(
-    () => multiplyModulate(parentModulate, props.color),
-    [parentModulate, props.color],
-  );
-
-  return (
-    <Modulate2DContext.Provider value={modulate}>
-      <Node2D node={node}>{children}</Node2D>
-    </Modulate2DContext.Provider>
-  );
+  return <Node2D node={node}>{children}</Node2D>;
 }

@@ -36,13 +36,12 @@ describe('polygonRings', () => {
   it('builds one ring per `polygons` entry, indexing into `polygon`', () => {
     const rings = polygonRings(TWO_SQUARES, [[0, 1, 2, 3], [4, 5, 6, 7]], 0, false, 100);
     expect(rings.outlines).toHaveLength(2);
-    expect(rings.outlines[0]).toEqual([
-      { x: 0, y: 0 },
-      { x: 10, y: 0 },
-      { x: 10, y: 10 },
-      { x: 0, y: 10 },
-    ]);
-    expect(rings.outlines[1]![0]).toEqual({ x: 20, y: 0 });
+    // Rings are INDICES into the shared vertex pool, so a caller can carry
+    // `uv` / `vertex_colors` through unchanged.
+    expect(rings.outlines[0]).toEqual([0, 1, 2, 3]);
+    expect(rings.outlines[1]).toEqual([4, 5, 6, 7]);
+    expect(rings.points[0]).toEqual({ x: 0, y: 0 });
+    expect(rings.points[4]).toEqual({ x: 20, y: 0 });
   });
 
   it('skips a degenerate `polygons` entry of fewer than three indices', () => {
@@ -58,19 +57,44 @@ describe('polygonRings', () => {
 
   it('inverts into a grown AABB with the polygon as a hole', () => {
     const rings = polygonRings(TWO_SQUARES.slice(0, 8), [], 0, true, 5);
-    // Border rect = AABB (0,0)-(10,10) grown by 5 on every side.
+    // Border rect = AABB (0,0)-(10,10) grown by 5 on every side. Its corners are
+    // new vertices, appended after the polygon's own so they index cleanly.
     expect(rings.outlines).toHaveLength(1);
-    expect(rings.outlines[0]).toEqual([
+    expect(rings.outlines[0]).toEqual([4, 5, 6, 7]);
+    expect(rings.outlines[0]!.map((i) => rings.points[i])).toEqual([
       { x: -5, y: -5 },
       { x: 15, y: -5 },
       { x: 15, y: 15 },
       { x: -5, y: 15 },
     ]);
-    expect(rings.hole).toEqual([
+    expect(rings.hole).toEqual([0, 1, 2, 3]);
+    expect(rings.hole!.map((i) => rings.points[i])).toEqual([
       { x: 0, y: 0 },
       { x: 10, y: 0 },
       { x: 10, y: 10 },
       { x: 0, y: 10 },
+    ]);
+  });
+
+  it('trims internal vertices when inverted — Godot trims on that branch too', () => {
+    // `if ((invert || polygons.is_empty()) && internal_vertices > 0) len -= internal_vertices;`
+    // — the trim is NOT skipped by invert, so the punched-out hole is the
+    // outline alone and the grown bounds are measured from it.
+    const rings = polygonRings(TWO_SQUARES, [], 4, true, 5);
+    expect(rings.hole).toEqual([0, 1, 2, 3]);
+    expect(rings.hole!.map((i) => rings.points[i])).toEqual([
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 10, y: 10 },
+      { x: 0, y: 10 },
+    ]);
+    // Bounds grown from the FIRST square only; the trimmed second square
+    // (x up to 30) must not widen them.
+    expect(rings.outlines[0]!.map((i) => rings.points[i])).toEqual([
+      { x: -5, y: -5 },
+      { x: 15, y: -5 },
+      { x: 15, y: 15 },
+      { x: -5, y: 15 },
     ]);
   });
 

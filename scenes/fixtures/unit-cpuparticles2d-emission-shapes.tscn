@@ -1,0 +1,74 @@
+[gd_scene load_steps=2 format=3]
+
+; The four emission shapes the previewer reproduces, side by side, frozen one
+; frame after birth (preprocess = 1/30) so each cloud still has the shape it was
+; born in rather than the shape gravity dragged it into. POINTS,
+; DIRECTED_POINTS and RING are deliberately absent: they sample Godot's global
+; RNG, which the scene file never carries.
+
+[ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+color = Color(0.08, 0.08, 0.1, 1)
+polygon = PackedVector2Array(320, 68, 832, 68, 832, 580, 320, 580)
+
+[node name="Point" type="CPUParticles2D" parent="."]
+position = Vector2(400, 200)
+amount = 64
+texture = ExtResource("1_ball")
+lifetime = 1.0
+preprocess = 0.0334
+use_fixed_seed = true
+seed = 11
+fixed_fps = 30
+local_coords = true
+emission_shape = 0
+gravity = Vector2(0, 0)
+color = Color(1, 1, 1, 1)
+
+[node name="Sphere" type="CPUParticles2D" parent="."]
+position = Vector2(700, 200)
+amount = 64
+texture = ExtResource("1_ball")
+lifetime = 1.0
+preprocess = 0.0334
+use_fixed_seed = true
+seed = 11
+fixed_fps = 30
+local_coords = true
+emission_shape = 1
+emission_sphere_radius = 60.0
+gravity = Vector2(0, 0)
+color = Color(1, 0.5, 0.3, 1)
+
+[node name="SphereSurface" type="CPUParticles2D" parent="."]
+position = Vector2(400, 450)
+amount = 64
+texture = ExtResource("1_ball")
+lifetime = 1.0
+preprocess = 0.0334
+use_fixed_seed = true
+seed = 11
+fixed_fps = 30
+local_coords = true
+emission_shape = 2
+emission_sphere_radius = 60.0
+gravity = Vector2(0, 0)
+color = Color(0.4, 0.8, 1, 1)
+
+[node name="Rectangle" type="CPUParticles2D" parent="."]
+position = Vector2(700, 450)
+amount = 64
+texture = ExtResource("1_ball")
+lifetime = 1.0
+preprocess = 0.0334
+use_fixed_seed = true
+seed = 11
+fixed_fps = 30
+local_coords = true
+emission_shape = 3
+emission_rect_extents = Vector2(80, 30)
+gravity = Vector2(0, 0)
+color = Color(0.6, 1, 0.5, 1)

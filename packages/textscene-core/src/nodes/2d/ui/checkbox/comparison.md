@@ -25,9 +25,11 @@ indicator followed by the label text.
 The indicator's fill. Godot draws the theme's icon textures — a bright, solid
 square with a tick for the checked row, a gray solid square for the unchecked,
 disabled one — while the previewer draws a thin outlined square with a Unicode
-tick when checked and an empty outline when not. The cause is that the theme's
-icons are textures the previewer has no access to, so the indicator is a drawn
-approximation. The checked/unchecked distinction and the dimmed disabled row
+tick when checked and an empty outline when not. Godot's default-theme icons are
+compiled into the engine rather than shipped as resource files, so the indicator is
+a drawn approximation. A scene-authored `theme_override_icons/<name>` is a separate
+case: `parseThemeOverrides` drops it through its `default` branch, but it would
+resolve the way `theme_override_styles` already does. The checked/unchecked distinction and the dimmed disabled row
 read correctly in both, and the labels sit at the same place.
 
 ## Linting

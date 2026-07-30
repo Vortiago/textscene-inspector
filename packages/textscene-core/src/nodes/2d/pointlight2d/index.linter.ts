@@ -3,4 +3,4 @@
  */
 
 import './linterParser.js';
-// No linter.js — only property validators, no semantic rules.
+import './linter.js';

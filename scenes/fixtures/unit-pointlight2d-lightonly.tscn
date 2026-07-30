@@ -1,0 +1,58 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_lightonly"]
+light_mode = 2
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_unshaded"]
+light_mode = 1
+
+[node name="Root" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+material = SubResource("CanvasItemMaterial_unshaded")
+color = Color(0.06, 0.07, 0.09, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="Floor" type="Polygon2D" parent="."]
+color = Color(0.55, 0.55, 0.6, 1)
+polygon = PackedVector2Array(32, 40, 1120, 40, 1120, 300, 32, 300)
+
+[node name="AddMasked" type="Polygon2D" parent="."]
+material = SubResource("CanvasItemMaterial_lightonly")
+color = Color(0.95, 0.35, 0.2, 1)
+polygon = PackedVector2Array(40, 340, 380, 340, 380, 610, 40, 610)
+
+[node name="MixMasked" type="Polygon2D" parent="."]
+material = SubResource("CanvasItemMaterial_lightonly")
+color = Color(0.95, 0.35, 0.2, 1)
+polygon = PackedVector2Array(406, 340, 746, 340, 746, 610, 406, 610)
+
+[node name="Unlit" type="Polygon2D" parent="."]
+material = SubResource("CanvasItemMaterial_lightonly")
+color = Color(0.95, 0.35, 0.2, 1)
+polygon = PackedVector2Array(772, 340, 1112, 340, 1112, 610, 772, 610)
+
+[node name="AddTorch" type="PointLight2D" parent="."]
+position = Vector2(210, 475)
+texture = ExtResource("1_light")
+color = Color(1, 0.85, 0.55, 1)
+texture_scale = 0.32
+
+[node name="MixTorch" type="PointLight2D" parent="."]
+position = Vector2(576, 475)
+texture = ExtResource("1_light")
+color = Color(1, 0.85, 0.55, 1)
+blend_mode = 2
+texture_scale = 0.32
+
+[node name="FloorTorch" type="PointLight2D" parent="."]
+position = Vector2(576, 170)
+texture = ExtResource("1_light")
+color = Color(1, 0.85, 0.55, 1)
+energy = 1.5
+texture_scale = 0.4
+
+[node name="CanvasModulate" type="CanvasModulate" parent="."]
+color = Color(0.35, 0.4, 0.7, 1)

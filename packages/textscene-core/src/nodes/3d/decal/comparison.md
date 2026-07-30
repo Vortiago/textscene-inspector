@@ -35,10 +35,13 @@ geometry:
   floor more than we do at a partial `albedo_mix`, so its checkerboards are
   paler; ours are higher-contrast. Exact `albedo_mix` blending needs a custom
   projector shader.
-- **No edge fades or extra channels.** `upper/lower/normal_fade`,
-  `distance_fade_*`, `cull_mask`, and the normal/ORM/emission maps are not
-  applied — `DecalGeometry` bakes a static mesh with none of them. They are
+- **No edge fades.** `upper/lower/normal_fade`, `distance_fade_*` and `cull_mask`
+  need per-fragment work the baked `DecalGeometry` mesh cannot do. They are
   near-invisible on the flat surfaces decals usually target.
+- **The normal/ORM/emission maps and `emission_energy` are parsed but unwired.**
+  The projection is already a `MeshStandardMaterial`, which supports every one of
+  them; `DecalGeometry` supplies vertices only and does not constrain this.
+  `createStandardMaterial` does the same slot wiring for every other mesh.
 
 ## Linting
 

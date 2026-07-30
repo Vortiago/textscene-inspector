@@ -26,10 +26,23 @@ export interface Polygon2DProperties extends Node2DProperties {
   invertEnabled: boolean;
   /** Padding added to the bounds when inverted, in pixels (default 100). */
   invertBorder: number;
-  /**
-   * `ExtResource("id")` / `SubResource("id")` texture reference. Captured for
-   * the inspector and linter; the textured/`uv` mapping is deferred — the node
-   * renders its flat-colored fill (see Component).
-   */
+  /** `ExtResource("id")` / `SubResource("id")` texture reference. */
   texture?: string;
+  /**
+   * Per-vertex texture coordinates in TEXEL space (+Y down), flat
+   * `[u0, v0, u1, v1, …]`. Godot pairs these with `polygon` only when the two
+   * hold the same number of vertices; otherwise the point coordinates stand in.
+   */
+  uv: Float32Array;
+  /**
+   * Per-vertex fill colors as flat `[r, g, b, a, …]` in sRGB. Used only when
+   * there is exactly one per vertex; otherwise the flat `color` applies.
+   */
+  vertexColors: Float32Array;
+  /** Pixel offset folded into the UV transform (default 0,0). */
+  textureOffset: Vector2;
+  /** UV scale, applied to the rotated coordinate AND to `textureOffset`. */
+  textureScale: Vector2;
+  /** UV rotation in radians, applied before the offset. */
+  textureRotation: number;
 }

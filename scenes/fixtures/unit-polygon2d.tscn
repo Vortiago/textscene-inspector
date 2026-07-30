@@ -1,5 +1,10 @@
 [gd_scene format=3]
 
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[sub_resource type="CanvasItemMaterial" id="1_add"]
+blend_mode = 1
+
 [node name="Polygon2DRoot" type="Node2D"]
 
 [node name="FilledPolygon" type="Polygon2D" parent="."]
@@ -7,3 +12,20 @@ position = Vector2(112, 72)
 color = Color(1, 0.329412, 0.611765, 0.501961)
 antialiased = true
 polygon = PackedVector2Array(0, 0, 128, 0, 128, 96, 64, 160, 0, 96)
+
+[node name="TexturedPolygon" type="Polygon2D" parent="."]
+position = Vector2(288, 72)
+texture = ExtResource("1_marker")
+polygon = PackedVector2Array(0, 0, 128, 0, 128, 128, 0, 128)
+uv = PackedVector2Array(0, 0, 64, 0, 64, 64, 0, 64)
+
+[node name="AdditivePolygon" type="Polygon2D" parent="."]
+material = SubResource("1_add")
+position = Vector2(112, 264)
+color = Color(1, 0.584314, 0, 0.341176)
+polygon = PackedVector2Array(0, 0, 128, 0, 128, 96, 0, 96)
+
+[node name="VertexColoredPolygon" type="Polygon2D" parent="."]
+position = Vector2(288, 264)
+polygon = PackedVector2Array(0, 0, 128, 0, 128, 96, 0, 96)
+vertex_colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1)

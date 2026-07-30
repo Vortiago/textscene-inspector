@@ -70,8 +70,11 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │           │   ├── 2d/
 │           │   │   ├── ui/                  # 17 Control slices (control, label, button, containers, ...) — DOM overlay (ADR-0003)
 │           │   │   ├── tiles/{tilemap,tilemaplayer}/    # + shared/ — TileSet/atlas decoding
+│           │   │   ├── cpuparticles2d/      # frozen pose at `preprocess` — no clock (ADR-0008)
 │           │   │   └── {sprite2d,camera2d,animatedsprite2d,polygon2d,line2d,
-│           │   │        marker2d,path2d,pathfollow2d,navigationregion2d}/
+│           │   │        marker2d,path2d,pathfollow2d,navigationregion2d,
+│           │   │        pointlight2d,lightoccluder2d,canvasmodulate,
+│           │   │        remotetransform2d}/
 │           │   ├── 3d/
 │           │   │   ├── meshinstance3d/      # parser.ts, linter.ts, Component.tsx, index{,.linter,.r3f}.ts
 │           │   │   ├── camera3d/
@@ -104,6 +107,9 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │           │   ├── controls/               # 2D Control overlay subsystem (ADR-0003):
 │           │   │                           #   ControlComponentRegistry, ControlDispatcher,
 │           │   │                           #   ControlOverlay, layout/StyleBox→CSS mapping
+│           │   ├── lighting2d/             # Godot's canvas light pass (see below):
+│           │   │                           #   CanvasLighting2D (accumulator + pre-pass),
+│           │   │                           #   lightQuad (producer), canvasItemLighting (consumer)
 │           │   ├── components/{TscnPreviewShell,Canvas2DStage,
 │           │   │               SceneTreeViewer,NodeDetailsPanel,ViewportSelector,...}/
 │           │   │   # TscnPreviewShell is a thin composition root; ViewportArea,
@@ -117,6 +123,7 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │               ├── useResource.ts         # React hook over the event bus
 │               ├── ResourceLoaderContext.tsx
 │               ├── meshes/                # Primitive mesh parsers
+│               ├── curve/                 # Godot's 1D Curve — cubic Bezier sample()
 │               └── materials/standardmaterial3d/  # Material parser + renderer
 └── apps/
     ├── textscene-vscode/         # VS Code extension (esbuild)
@@ -213,6 +220,80 @@ A regression here is invisible to most fixtures — an untextured mesh, or a
 vertically symmetric texture, cannot show a V error at all. `unit-arraymesh-uv.tscn`
 exists to pin it: a four-band atlas whose green band must read at the TOP.
 
+### The 2D canvas light pass
+
+`r3f/lighting2d/` ports `drivers/gles3/shaders/canvas.glsl`. A Godot 2D light
+paints nothing on the canvas: it is multiplied into every lit CanvasItem
+beneath it. The shader captures each item's albedo BEFORE the canvas tint and
+folds it into every light term, which collapses the whole pass to
+
+    color.rgb = albedo × S
+
+where `S` starts at the CanvasModulate and each light applies one blend to it
+(`+= light·a` for ADD, `-= light·a` for SUB, `mix(S, light, a)` for MIX). `S`
+depends on the item only through WHICH LIGHTS REACH IT, so it is accumulated
+once per distinct light set, and the three modules split along that seam:
+
+- **`CanvasLighting2D`** owns the accumulators and the pre-pass. Lights live on
+  camera layers, so collecting them needs no second scene graph: each pass just
+  points the camera at one layer. `S` is seeded by a full-NDC quad rather than a
+  clear colour, keeping the seed out of any colour-management path and leaving
+  the renderer's global clear state untouched.
+- **`lightQuad`** is the producer: one PointLight2D's cookie, emitting the light
+  term in rgb and the cookie coverage in alpha, with one fixed-function blend per
+  `Light2D.BlendMode`.
+- **`canvasItemLighting`** is the consumer: an `onBeforeCompile` injection that
+  makes an ordinary `meshBasicMaterial` read the accumulator.
+
+Three properties are load-bearing and easy to undo by accident:
+
+- **The accumulator is half-float and unclamped.** Godot clamps only after the
+  light is multiplied into the albedo. A light blended straight onto the canvas
+  is clamped to [0, 1] BEFORE that multiply, which flattens any `energy > 1`
+  light into a saturated disc with no falloff.
+- **The light path compiles unconditionally**, gated by the
+  `uLightClassWeight` uniform rather than by whether the scene has lights. A
+  light registers only once its cookie resolves, which is always after the items
+  around it have compiled, and R3F never bumps `material.needsUpdate` when
+  `onBeforeCompile` changes, so an item compiled without the path would never
+  get it. Godot's own shader is shaped the same way: zero lights is data, not a
+  different program.
+- **The buffer is read in DEVICE pixels** (`gl.getDrawingBufferSize`), because
+  the lookup is `gl_FragCoord / resolution`. Sizing from the CSS size is correct
+  only at `devicePixelRatio` 1, which is exactly what the capture harness uses —
+  so the goldens cannot see that mistake.
+
+Two things make an item read a DIFFERENT accumulation, and both are one more
+target and one more seeded pass over the same quads:
+
+- `light_mode = Light Only` skips the canvas tint, so it needs the same lights
+  over an unmodulated seed. Allocated only when such an item exists.
+- **The cull tuple.** Godot applies a light to an item only when the item's
+  `light_mask` shares a bit with the light's `range_item_cull_mask`, the item's
+  accumulated `z_final` is inside `range_z_min..max`, and the item's CANVAS layer
+  is inside `range_layer_min..max` (`lightCullKey`). Those five light-side values
+  are the whole test, so lights that agree on all five are indistinguishable to
+  every item and the lights partition into CLASSES by that TUPLE: one
+  accumulation per class, on its own camera layer, with the seed quad on a layer
+  of its own that every pass enables. The partition can be no finer, because the
+  buffer is a screen-space sum no fragment can subtract one light back out of;
+  and it is no coarser in practice, because every light that leaves the range
+  windows at their Godot defaults carries the same tail. An item reads the
+  classes it is not culled from, summed over one shared seed: exact for a single
+  class (the ordinary canvas) and for any number of ADD/SUB classes. The
+  item-side lookup unrolls one sampler per class because GLSL ES 1.00 (what
+  three compiles an `onBeforeCompile` injection as) cannot index a sampler by a
+  runtime value, which also caps the count (`MAX_LIGHT_CLASSES`) and is why the
+  cull test itself runs on the CPU: that GLSL has no bitwise operators at all.
+  The item's two non-mask operands are threaded down the tree by
+  `canvasItemPlacement` — `z_index` accumulates through `CanvasItem2D`, and a
+  `CanvasLayer` publishes its own `layer` (Godot default 1) to its subtree, which
+  is why an untouched light lights the world canvas and never a HUD.
+
+Parity is measured, not derived: `pnpm ref:godot <scene> --probe x,y` prints the
+engine's exact pixels, and the `unit-pointlight2d*` comparison sheets carry the
+resulting numbers.
+
 ### Resource Loading
 
 External resources (textures, materials, GLB meshes, packed scenes) flow through
@@ -271,6 +352,31 @@ do the async I/O underneath — see the note below.)
    values (`GLBMesh`) are cloned per consumer (three.js single-parent rule,
    CLAUDE.md). Components branch on `status` and render placeholders for missing
    resources — the subtree never suspends.
+
+**A resource path is not always a file path.** A `.tres` can declare the resources it
+uses as its own `[sub_resource]` blocks — a mesh's per-surface materials, a
+MeshLibrary's embedded item meshes — and those are addressed with Godot's own
+`res://file.tres::SubId` notation (**Sub-resource path**, ADR-0029). The layers above
+split on that: the **whole address is the resource identity** (processor cache key,
+in-flight key, what `useResource` pins and subscribes to), while layer 3 normalises it
+to its `filePath` before touching layer 2. So the `FileEventBus`, the
+`ResourceProvider`s and the hot-reload watcher only ever see real files — a
+sub-resource's bytes *are* its owning file's bytes — and one arrival settles every
+address waiting on that file. `shouldProcess` is asked about the file, so extension
+checks read unchanged.
+
+That containment holds **downward**. Coming back up it needs help: a failed load is
+reported under the address, so a missing-resources row can carry one, and the panel
+hands its host the `filePath` for both upload and remove (ADR-0022) while `provideFile`
+normalises whatever it is given. Because the normalisation sits in
+`createResourceProcessor`, every processor type gains the fetch/cache/dedupe
+**plumbing** — but not the semantics: a `process()` that ignored its path would hand
+back the whole file's resource under the address, so `addressesSubResources` is opt-in
+and the factory refuses an address without it. Only the material and ArrayMesh
+processors declare it today. So the third kind of reference is invisible to any
+**consumer** holding a path string, while a **producer** minting addresses for a new
+resource type must honour the id in its own `process()`. The
+`resources/subResourcePath.ts` grammar is the only place `::` is written.
 
 **Late arrival — why it's events, not a one-shot promise.** When a load fails the
 hook flips to `missing` and reports the path to `MissingResourcesContext`, which

@@ -98,6 +98,27 @@ export const COMPLEX_SCENES = [
     // Playwright's default action timeout.
     settleTimeout: 120000,
   },
+  {
+    // A vehicle on its own, framed by a fit. The town scene shows the trucks at
+    // a distance where a wrong vertex layout reads as noise; these show the
+    // decoded mesh close enough to judge. Both carry surfaces in Godot 4.2+'s
+    // compressed attribute layout — the only place in the corpus where an
+    // ArrayMesh drives a whole vehicle body rather than a test quad.
+    slug: 'complex-truck-town-trailer',
+    mode: '3d',
+    frame: true,
+    godot: 'scenes/demos/3d/truck_town/vehicles/trailer_truck.tscn',
+    ours: 'demos/3d/truck_town/vehicles/trailer_truck.tscn',
+  },
+  {
+    // The tow truck's mesh mixes compressed and uncompressed surfaces inside
+    // one file, which is what made a per-surface drop necessary.
+    slug: 'complex-truck-town-tow',
+    mode: '3d',
+    frame: true,
+    godot: 'scenes/demos/3d/truck_town/vehicles/tow_truck.tscn',
+    ours: 'demos/3d/truck_town/vehicles/tow_truck.tscn',
+  },
 ];
 
 function parseArgs(argv) {

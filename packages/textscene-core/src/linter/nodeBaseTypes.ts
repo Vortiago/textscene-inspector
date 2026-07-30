@@ -74,6 +74,7 @@ const NODE2D_LEAVES = [
   'LightOccluder2D',
   'PointLight2D',
   'ParallaxLayer',
+  'CPUParticles2D',
 ] as const;
 
 /**

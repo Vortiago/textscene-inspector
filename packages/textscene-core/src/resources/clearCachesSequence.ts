@@ -16,6 +16,7 @@
  *      exactly the ones whose register effects will not re-run.
  */
 import type { ResourceEventBus, ResourceType } from './ResourceEventBus';
+import { clearMaterialParseCache } from './processing/materialProcessing';
 
 interface ClearableProcessor {
   cachedPaths(): string[];
@@ -38,6 +39,8 @@ export function runClearCachesSequence(opts: {
     [...new Set([...proc.cachedPaths(), ...proc.inflightPaths()])],
   ]);
   opts.clearFileBus?.();
+  // Module-scope memo, so no processor's clearCache reaches it.
+  clearMaterialParseCache();
   for (const [, proc] of entries) {
     proc.clearCache();
   }

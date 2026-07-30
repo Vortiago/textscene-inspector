@@ -35,6 +35,8 @@ export function useMeshLibraryModel(meshLibraryRef: string | undefined): MeshLib
     if (tresResult.status === 'unavailable' || !tresResult.value) {
       return { model: null, status: 'unavailable' };
     }
-    return { model: meshLibraryFromTres(tresResult.value), status: 'loaded' };
+    // The library's own path goes in so an item mesh it embeds as a
+    // `[sub_resource]` comes back as an addressable path like any other.
+    return { model: meshLibraryFromTres(tresResult.value, tresPath), status: 'loaded' };
   }, [meshLibraryRef, tresPath, tresResult.status, tresResult.value]);
 }

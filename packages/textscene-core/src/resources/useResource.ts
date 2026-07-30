@@ -334,6 +334,14 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
     return undefined;
   }, [path, result.status, reportMissing, clearMissing, markUploaded]);
 
+  // Publish this consumer's wait to the loader so something outside can tell
+  // when loading has genuinely finished rather than guessing with a timer.
+  // Keyed on `path` too: swapping paths re-enters `pending` for the new one.
+  useEffect(() => {
+    if (!loader || !path || result.status !== 'pending') return undefined;
+    return loader.beginPending();
+  }, [loader, path, result.status]);
+
   return result;
 }
 

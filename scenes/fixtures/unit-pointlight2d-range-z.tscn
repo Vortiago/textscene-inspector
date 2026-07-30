@@ -1,0 +1,30 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
+
+[node name="Root" type="Node2D"]
+
+[node name="InsideWindow" type="Polygon2D" parent="."]
+color = Color(0.72, 0.72, 0.76, 1)
+polygon = PackedVector2Array(40, 150, 380, 150, 380, 500, 40, 500)
+
+[node name="AtWindowMax" type="Polygon2D" parent="."]
+z_index = 4
+color = Color(0.72, 0.72, 0.76, 1)
+polygon = PackedVector2Array(406, 150, 746, 150, 746, 500, 406, 500)
+
+[node name="AboveWindow" type="Polygon2D" parent="."]
+z_index = 5
+color = Color(0.72, 0.72, 0.76, 1)
+polygon = PackedVector2Array(772, 150, 1112, 150, 1112, 500, 772, 500)
+
+[node name="Torch" type="PointLight2D" parent="."]
+position = Vector2(576, 325)
+texture = ExtResource("1_light")
+color = Color(1, 0.7, 0.35, 1)
+energy = 0.9
+range_z_max = 4
+texture_scale = 1.4
+
+[node name="CanvasModulate" type="CanvasModulate" parent="."]
+color = Color(0.3, 0.34, 0.55, 1)

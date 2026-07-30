@@ -56,11 +56,17 @@ describe('<CanvasModulate>', () => {
     renderer.unmount();
   });
 
-  it('folds its color into the inherited Modulate2DContext', async () => {
+  // The tint is a property of the CANVAS, not of this subtree: `NodeDispatcher`
+  // seeds it from `canvasModulateColor` so a childless CanvasModulate still
+  // tints the scene. Rendered in isolation the node therefore passes its parent
+  // modulate straight through — folding `color` in here too would square it
+  // over its own descendants. `canvasModulate.test.ts` pins the collection, and
+  // the slice contract pins the end-to-end tint through the dispatcher.
+  it('passes the inherited modulate through untouched — the tint is canvas-level', async () => {
     const renderer = await renderCM({ color: 'Color(0.5, 0.5, 1, 1)' });
     const captured = readModulate(renderer);
-    expect(captured.r).toBeCloseTo(0.5, 3);
-    expect(captured.g).toBeCloseTo(0.5, 3);
+    expect(captured.r).toBeCloseTo(1, 3);
+    expect(captured.g).toBeCloseTo(1, 3);
     expect(captured.b).toBeCloseTo(1, 3);
     expect(captured.a).toBeCloseTo(1, 3);
     renderer.unmount();
@@ -76,13 +82,13 @@ describe('<CanvasModulate>', () => {
     renderer.unmount();
   });
 
-  it('multiplies its color onto the parent modulate (inherited, commutative)', async () => {
+  it('still inherits an ancestor modulate, as any Node2D does', async () => {
     const renderer = await renderCM({ color: 'Color(0.5, 0.5, 1, 1)' }, (kid) => (
       <Modulate2DContext.Provider value={{ r: 0.5, g: 1, b: 0.5, a: 1 }}>{kid}</Modulate2DContext.Provider>
     ));
     const captured = readModulate(renderer);
-    expect(captured.r).toBeCloseTo(0.25, 3);
-    expect(captured.g).toBeCloseTo(0.5, 3);
+    expect(captured.r).toBeCloseTo(0.5, 3);
+    expect(captured.g).toBeCloseTo(1, 3);
     expect(captured.b).toBeCloseTo(0.5, 3);
     renderer.unmount();
   });

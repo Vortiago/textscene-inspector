@@ -28,6 +28,28 @@ _surfaces = [{
 blend_shape_mode = 0
 `;
 
+/**
+ * The wall quad (uncompressed) followed by truck_cab.tres's `headlights` surface
+ * (ARRAY_FLAG_COMPRESS_ATTRIBUTES). Godot writes both layouts into one mesh, and
+ * every surface merges into one geometry — so a surface read at the wrong stride
+ * does not merely draw wrong, it takes the merged bounds down with it.
+ */
+const MIXED_LAYOUT_TRES = WALL_TRES.replace(
+  '}]\nblend_shape_mode = 0',
+  `}, {
+"aabb": AABB(0.416992, 0.114807, 1.339844, 0.102539, 0.06988499, 0.023437023),
+"format": 34896613383,
+"index_count": 6,
+"index_data": PackedByteArray("AAABAAIAAAADAAEA"),
+"name": "headlights",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("//8B71UVpsQAAEkKqeqmxC4l//8AAKbEj/0AAP//psTYje2P2I3tj9iN7Y/Yje2P")
+}]
+blend_shape_mode = 0`
+);
+
 /** The single-triangle surface these tests vary one field of at a time. */
 function triangle(overrides: Partial<ArrayMeshData['surfaces'][number]> = {}) {
   return {
@@ -45,7 +67,7 @@ function triangle(overrides: Partial<ArrayMeshData['surfaces'][number]> = {}) {
 
 describe('buildArrayMeshGeometry', () => {
   it('builds a BufferGeometry with position, uv, index and Godot normals', () => {
-    const geo = buildArrayMeshGeometry(decodeArrayMesh(WALL_TRES));
+    const geo = buildArrayMeshGeometry(decodeArrayMesh(WALL_TRES, 'res://mesh.tres'));
 
     expect(geo).toBeInstanceOf(THREE.BufferGeometry);
     expect(geo.getAttribute('position').count).toBe(4);
@@ -108,10 +130,26 @@ describe('buildArrayMeshGeometry', () => {
   });
 
   it('adds one draw group per surface for per-surface materials', () => {
-    const geo = buildArrayMeshGeometry(decodeArrayMesh(WALL_TRES));
+    const geo = buildArrayMeshGeometry(decodeArrayMesh(WALL_TRES, 'res://mesh.tres'));
 
     expect(geo.groups).toHaveLength(1);
     expect(geo.groups[0]).toMatchObject({ start: 0, count: 6, materialIndex: 0 });
+  });
+
+  it('computes a finite bounding sphere for a mesh mixing compressed and uncompressed surfaces', () => {
+    // Reading a compressed surface at the uncompressed stride produced NaN
+    // positions, and THREE reported "computeBoundingSphere(): Computed radius is
+    // NaN" for the whole geometry — which also left the camera unable to frame it.
+    const geo = buildArrayMeshGeometry(decodeArrayMesh(MIXED_LAYOUT_TRES, 'res://mesh.tres'));
+
+    geo.computeBoundingSphere();
+    geo.computeBoundingBox();
+    expect(Number.isFinite(geo.boundingSphere!.radius)).toBe(true);
+    expect(geo.boundingSphere!.radius).toBeGreaterThan(0);
+    for (const v of [geo.boundingBox!.min, geo.boundingBox!.max]) {
+      expect([v.x, v.y, v.z].every(Number.isFinite)).toBe(true);
+    }
+    expect(geo.groups).toHaveLength(2);
   });
 
   it('merges multiple surfaces, re-basing each surface\'s indices and grouping them', () => {

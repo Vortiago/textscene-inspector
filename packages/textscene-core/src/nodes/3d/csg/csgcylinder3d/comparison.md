@@ -61,7 +61,6 @@ Strict rejects a non-positive `radius`/`height`, `sides` outside 3-64, or a non-
 falls back when present but unparseable: `radius` to `0.5`, `height` to `2.0`, `sides`
 to `8`. `cone` skips that contract entirely: it's read as a raw `=== 'true'` string
 comparison, so any non-`true` value (not just an absent one) silently becomes `false`
-with no warning. `operation` is read with `parseOptionalInt` (no warning either way)
-and, when present and non-zero, only warns that the primitive still renders as a plain
-union rather than an intersection or subtraction (ADR-0004); `material`, if present, is
-copied through unvalidated.
+with no warning. `operation` is read with `parseOptionalInt`, so it warns neither way;
+a non-zero value is applied by the boolean evaluator rather than dropped (ADR-0027,
+superseding ADR-0004). `material`, if present, is copied through unvalidated.

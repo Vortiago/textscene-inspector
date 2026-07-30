@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="YS" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="Sub" type="Node2D" parent="YS"]
+y_sort_enabled = true
+position = Vector2(0, 200)
+
+[node name="Leaf" type="Polygon2D" parent="YS/Sub"]
+position = Vector2(0, 100)
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(100, 0, 500, 0, 500, 200, 100, 200)
+
+[node name="Ref" type="Polygon2D" parent="YS"]
+position = Vector2(0, 250)
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(200, 0, 600, 0, 600, 200, 200, 200)

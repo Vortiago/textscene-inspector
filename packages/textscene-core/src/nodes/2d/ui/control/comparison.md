@@ -28,8 +28,11 @@ inside the root's full-viewport rect.
 ## Divergences
 
 The OptionButton chevron. Godot draws a right-edge dropdown chevron on the
-"VISIBLE DROPDOWN" bar; the previewer draws none. The chevron is a theme icon
-the previewer has no access to. The bar tone itself now matches — both draw a
+"VISIBLE DROPDOWN" bar; the previewer draws none. The chevron is a default-theme
+icon, compiled into the engine rather than shipped as a resource file. A
+scene-authored `theme_override_icons/<name>` is a separate case: `parseThemeOverrides`
+drops it through its `default` branch, but it would resolve the way
+`theme_override_styles` already does. The bar tone itself now matches — both draw a
 dark neutral StyleBox.
 
 The checkbox and radio indicators are drawn approximations: the previewer draws

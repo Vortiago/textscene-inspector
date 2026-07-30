@@ -407,16 +407,21 @@ function build(sheets, inlineImages, fragment) {
         if (!godot || !ours) missing.push(`${meta.type} › ${s.title} (${s.image})`);
         return { ...s, godot, ours, html: renderBody(s.body) };
       });
+      // The frontmatter pair and the section markers are BOTH sources, never
+      // either/or. A sheet that declares `image:` AND gains sections keeps its
+      // own pair, shown above them: for a whole-scene sheet that overview IS
+      // the subject, and the sections only decompose it. Dropping it when the
+      // first section landed was silent — every other image still rendered.
       let godot = null;
       let ours = null;
-      if (!sectioned) {
+      if (meta.image) {
         godot = imageSrc(meta.image, 'godot', inlineImages);
         ours = imageSrc(meta.image, 'ours', inlineImages);
         // A DECLARED `image:` whose files are absent is a broken reference and
         // fails the build. No `image:` at all is a sheet whose capture has not
         // been run yet (a freshly scaffolded slice) — that renders the
         // "not captured yet" placeholder instead of breaking every consumer.
-        if (meta.image && meta.visual !== 'false' && (!godot || !ours)) {
+        if (meta.visual !== 'false' && (!godot || !ours)) {
           missing.push(`${meta.type} (${meta.image})`);
         }
       }
@@ -565,7 +570,12 @@ function build(sheets, inlineImages, fragment) {
               n.group
             )}</strong> node.</div>${n.html ? `<div class="prose">${n.html}</div>` : ''}`
           : n.sectioned
-            ? n.sections
+            ? `${
+                // The whole-scene pair, when the sheet declares one, above the
+                // sections that break it down.
+                n.visual && n.godot && n.ours ? compareStage(n.godot, n.ours, n.type) : ''
+              }` +
+              n.sections
                 .map(
                   (s) => `
       <section class="prop">

@@ -34,7 +34,13 @@ import type { ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
-import { hasYSortDescendant, YSortSlotProvider, useYSortSlot } from './contexts/YSortContext.js';
+import {
+  hasYSortDescendant,
+  YSortSlotProvider,
+  YSortZProvider,
+  useYSortSlot,
+  useYSortZContext,
+} from './contexts/YSortContext.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { GenericNodeFallback } from './internal/generic-node-fallback/index';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
@@ -57,6 +63,12 @@ import { MissingResourcePlaceholder } from './components/MissingResourcePlacehol
 import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { transformFromNode3DProperties, type NodeTransform } from './nodeTransform.js';
 import { node2dGroupProps } from './node2dTransform.js';
+import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
+import {
+  CanvasLayerIndexProvider,
+  DEFAULT_CANVAS_LAYER,
+  EffectiveZProvider,
+} from './lighting2d/canvasItemPlacement.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
@@ -109,6 +121,8 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
     if (nodes.some(containsCsgShape)) prefetchCsgModule();
   }, [nodes]);
 
+  const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
+
   return (
     <group
       onPointerDown={handlers.onPointerDown}
@@ -116,9 +130,15 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
       onPointerMove={handlers.onPointerMove}
       onPointerOut={handlers.onPointerOut}
     >
-      {nodes.map((node) => (
-        <DispatchedNode key={node.name} node={node} path={node.name} />
-      ))}
+      {/* A CanvasModulate tints the CANVAS, not its subtree, so it is published
+          on its own context rather than seeded into the inherited modulate:
+          each item multiplies it into its OWN pixels once, and an Unshaded item
+          skips it entirely, exactly as Godot's base pass does. */}
+      <CanvasModulateContext.Provider value={canvasModulate}>
+        {nodes.map((node) => (
+          <DispatchedNode key={node.name} node={node} path={node.name} />
+        ))}
+      </CanvasModulateContext.Provider>
     </group>
   );
 }
@@ -134,7 +154,7 @@ interface DispatchedNodeProps {
  * every already-merged node — renders directly in `PlainNode`. Holds no hooks
  * itself so the branch is free of rules-of-hooks concerns.
  */
-function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
+export function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
   if (node.instance) {
     return <InstancedNode node={node} path={path} />;
   }
@@ -191,6 +211,34 @@ function PlainNode({
   // Memoized (before the early returns, for rules-of-hooks) so the recursive
   // subtree scan for the slot distributor runs once per node, not every render.
   const hasYSortChild = useMemo(() => hasYSortDescendant(node), [node]);
+  // A CanvasLayer is its OWN canvas: the root canvas's CanvasModulate does not
+  // reach it, and any CanvasModulate inside it tints only this layer. The
+  // subtree scan already refuses to descend into a CanvasLayer when LOOKING for
+  // the tint, but the value it produced was published once for the whole tree —
+  // so a HUD under a CanvasLayer took the world's night-time tint, and was lit
+  // by main-canvas lights, neither of which happens in Godot.
+  //
+  // A light is handed to a CANVAS only when the canvas's layer falls inside the
+  // light's `range_layer_min/max` window, and Godot's default window is 0..0
+  // while a CanvasLayer's own default `layer` is 1 — so an untouched light
+  // reaches the world and no HUD. The subtree also starts a fresh z
+  // accumulation, because `_cull_canvas_item` walks each canvas from z 0.
+  //
+  // All three facts are one nullable, because they hold together: they are the
+  // whole of "this subtree is its own canvas", and splitting them would let a
+  // later change publish one without the others.
+  const canvasLayer = useMemo(
+    () =>
+      node.type === 'CanvasLayer'
+        ? {
+            modulate: canvasModulateColor(node.children),
+            index: (node.properties as { layer?: number }).layer ?? DEFAULT_CANVAS_LAYER,
+          }
+        : null,
+    [node]
+  );
+
+  const rankZ = useYSortZContext();
   if (workspace === '3d' && isCanvasItem) return null;
   if (
     workspace === '2d' &&
@@ -218,6 +266,14 @@ function PlainNode({
     (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled !== true &&
     node.children.length > 0 &&
     hasYSortChild;
+  // A y-sort pass hands its rank z to exactly ONE node — the item it sorted,
+  // i.e. this one when `rankZ` is set. That rank is this node's whole draw
+  // position; its descendants are part of the same atomic unit and draw at their
+  // own z RELATIVE to it. So the rank is consumed here and cleared for the
+  // subtree — leaving it in context would re-add it at every nesting level. The
+  // slot is NOT reset: the y-sort pass already narrowed it to the gap before this
+  // item's next-ranked sibling, which is exactly the band the subtree may use.
+  const consumedRank = rankZ !== null;
   const subWidth = distribute ? parentSlot.width / node.children.length : 0;
   const inlineChildren = node.children.map((child, i) => {
     const el = <DispatchedNode key={child.name} node={child} path={joinPath(path, child.name)} />;
@@ -232,10 +288,30 @@ function PlainNode({
 
   const children: ReactNode[] = [];
   if (inlineChildren.length > 0) {
-    children.push(<Fragment key="__inline">{inlineChildren}</Fragment>);
+    children.push(
+      consumedRank ? (
+        <YSortZProvider key="__inline" value={null}>
+          {inlineChildren}
+        </YSortZProvider>
+      ) : (
+        <Fragment key="__inline">{inlineChildren}</Fragment>
+      )
+    );
   }
   if (extraChildren) {
-    children.push(<Fragment key="__extra">{extraChildren}</Fragment>);
+    // Rank-cleared exactly like the inline children. These are an instance's
+    // injected sub-scene ROOTS; leaving the parent's rank readable made every
+    // root adopt it as its own z, collapsing a multi-root sub-scene onto one
+    // draw position and discarding each root's own `z_index`.
+    children.push(
+      consumedRank ? (
+        <YSortZProvider key="__extra" value={null}>
+          {extraChildren}
+        </YSortZProvider>
+      ) : (
+        <Fragment key="__extra">{extraChildren}</Fragment>
+      )
+    );
   }
 
   // The wrapper is registered (path <-> Object3D, both directions) so the
@@ -267,7 +343,17 @@ function PlainNode({
           )}
         >
           <Component node={node}>
-            {children.length > 0 ? <>{children}</> : null}
+            {children.length > 0 ? (
+              canvasLayer ? (
+                <CanvasModulateContext.Provider value={canvasLayer.modulate}>
+                  <CanvasLayerIndexProvider value={canvasLayer.index}>
+                    <EffectiveZProvider value={0}>{children}</EffectiveZProvider>
+                  </CanvasLayerIndexProvider>
+                </CanvasModulateContext.Provider>
+              ) : (
+                <>{children}</>
+              )
+            ) : null}
           </Component>
         </ErrorBoundary>
       </group>

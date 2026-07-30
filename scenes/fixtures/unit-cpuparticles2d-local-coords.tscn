@@ -1,0 +1,56 @@
+[gd_scene load_steps=2 format=3]
+
+; `local_coords` under a SCALED emitter, the one place the flag is visible in a
+; still frame. Both emitters carry the same scale = Vector2(3, 3) and the same
+; particle settings; the global-coords one (Godot's default) draws its quads at
+; the texture's own pixel size because Godot spawns in canvas space and draws
+; the item with an identity transform, while the local-coords one is scaled up
+; by its node like any other CanvasItem.
+
+[ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+color = Color(0.08, 0.08, 0.1, 1)
+polygon = PackedVector2Array(320, 68, 832, 68, 832, 580, 320, 580)
+
+[node name="GlobalCoords" type="CPUParticles2D" parent="."]
+position = Vector2(460, 250)
+scale = Vector2(3, 3)
+amount = 16
+texture = ExtResource("1_ball")
+lifetime = 1.0
+preprocess = 1.0
+use_fixed_seed = true
+seed = 21
+fixed_fps = 30
+local_coords = false
+direction = Vector2(1, 0)
+spread = 0.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 60.0
+initial_velocity_max = 60.0
+scale_amount_min = 3.0
+scale_amount_max = 3.0
+color = Color(1, 0.6, 0.2, 1)
+
+[node name="LocalCoords" type="CPUParticles2D" parent="."]
+position = Vector2(460, 420)
+scale = Vector2(3, 3)
+amount = 16
+texture = ExtResource("1_ball")
+lifetime = 1.0
+preprocess = 1.0
+use_fixed_seed = true
+seed = 21
+fixed_fps = 30
+local_coords = true
+direction = Vector2(1, 0)
+spread = 0.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 60.0
+initial_velocity_max = 60.0
+scale_amount_min = 3.0
+scale_amount_max = 3.0
+color = Color(0.4, 0.8, 1, 1)

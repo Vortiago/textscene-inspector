@@ -12,7 +12,7 @@
  * pattern).
  */
 
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import type { OrthographicCamera } from 'three';
 import type {
@@ -24,6 +24,8 @@ import { CanvasWorkspaceProvider } from '../../contexts/CanvasWorkspaceContext.j
 import { SceneResourcesProvider } from '../../SceneResourcesContext.js';
 import { NodeDispatcher } from '../../NodeDispatcher.js';
 import { world2DCameraPose } from './world2DCamera.js';
+import { CanvasLighting2DProvider } from '../../lighting2d/CanvasLighting2D.js';
+import { canvasModulateColor } from '../../canvasModulate.js';
 
 export interface World2DCanvasProps {
   nodes: readonly TscnNode[];
@@ -54,6 +56,7 @@ export function World2DContents({
   pan,
   zoom,
 }: World2DCanvasProps) {
+  const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
   return (
     <CanvasWorkspaceProvider workspace="2d">
       <SceneResourcesProvider
@@ -61,7 +64,12 @@ export function World2DContents({
         externalResources={externalResources}
       >
         <CameraRig pan={pan} zoom={zoom} />
-        <NodeDispatcher nodes={nodes} />
+        {/* The light accumulator starts from the canvas tint, so it needs the
+            same colour the dispatcher publishes to the items — the one pure
+            function of `nodes` is the shared definition of it. */}
+        <CanvasLighting2DProvider canvasModulate={canvasModulate}>
+          <NodeDispatcher nodes={nodes} />
+        </CanvasLighting2DProvider>
       </SceneResourcesProvider>
     </CanvasWorkspaceProvider>
   );
@@ -73,16 +81,20 @@ export function World2DCanvas(props: World2DCanvasProps) {
       orthographic
       camera={{ position: [0, 0, 1000], near: 0.1, far: 4000 }}
       gl={{ alpha: true }}
-      // `flat` = `NoToneMapping`. Godot never tonemaps a canvas: the RD
-      // renderer runs `_render_buffers_post_process_and_tonemap` on the 3D
-      // buffers and composites canvas items into the viewport AFTER it, so a
-      // Sprite2D's albedo reaches the framebuffer as authored. Without this
-      // @react-three/fiber's default (ACES Filmic) applies to every 2D
-      // material, and — because a viewport surface only ever exists in this
-      // workspace — to the offscreen pass of a container's 3D sub-viewport
-      // too, which `<SubViewport>` deliberately leaves on the renderer's live
-      // curve. That is the one canvas where "the parent viewport's curve" has
-      // no Environment behind it, so the honest curve is none.
+      // Godot never tone-maps a canvas: the RD renderer runs
+      // `_render_buffers_post_process_and_tonemap` on the 3D buffers and
+      // composites canvas items into the viewport AFTER it, so authored 2D
+      // colour reaches the framebuffer as written. `flat` = `NoToneMapping`;
+      // without it @react-three/fiber defaults to ACES Filmic, which lifted
+      // highlights and desaturated every fill in this stage.
+      //
+      // It reaches further than the stage's own content: a viewport surface
+      // only ever exists in this workspace, so the default also applied to the
+      // offscreen pass of a container's 3D sub-viewport, which the
+      // `SubViewport` component deliberately leaves on the renderer's live
+      // curve. This is the one
+      // canvas where "the parent viewport's curve" has no Environment behind
+      // it, so the honest curve is none.
       flat
       // Fill the stage and stay transparent to pointer input so the stage's
       // own drag-to-pan / wheel-to-zoom handlers keep working.

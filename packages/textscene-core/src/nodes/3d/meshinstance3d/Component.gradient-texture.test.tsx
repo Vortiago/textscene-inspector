@@ -8,7 +8,7 @@
  * The coin material is `shading_mode = 0` (unshaded) + `blend_mode = 1` (ADD),
  * so it renders as an additive-blended MeshBasicMaterial.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { MeshInstance3D } from './Component';
@@ -17,6 +17,33 @@ import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../i
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+
+/** Pin traffic is invisible from outside the cache, so both entry points are
+ *  wrapped — still calling through to the real implementation. */
+const traffic = vi.hoisted(() => ({ pinned: [] as string[], unpinned: [] as string[] }));
+
+vi.mock('../../../resources/textures/proceduralTextureCache', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('../../../resources/textures/proceduralTextureCache')
+    >();
+  return {
+    ...actual,
+    pinProceduralTexture: (key: string) => {
+      traffic.pinned.push(key);
+      actual.pinProceduralTexture(key);
+    },
+    unpinProceduralTexture: (key: string) => {
+      traffic.unpinned.push(key);
+      actual.unpinProceduralTexture(key);
+    },
+  };
+});
+
+beforeEach(() => {
+  traffic.pinned.length = 0;
+  traffic.unpinned.length = 0;
+});
 
 class NoopProvider implements ResourceProvider {
   async loadResource(): Promise<string | ArrayBuffer | null> {
@@ -103,5 +130,73 @@ describe('<MeshInstance3D> GradientTexture2D albedo (coin glow)', () => {
     // ADD blend + transparency carried from the material.
     expect(basic!.blending).toBe(THREE.AdditiveBlending);
     expect(basic!.transparent).toBe(true);
+  });
+});
+
+/**
+ * A material's texture slots are walked ONCE, and a slot contributes a pin only
+ * where it contributed a texture. The two used to be separate walks with
+ * separate opinions about which references were procedural, and they disagreed:
+ * any SubResource pinned a key, whether or not the cache held one for it.
+ */
+describe('<MeshInstance3D> procedural texture pins', () => {
+  const mixedSlotResources: TscnInternalResource[] = [
+    ...coinResources,
+    { id: 'ImageTexture_plain', type: 'ImageTexture', data: { id: 'ImageTexture_plain' } },
+    {
+      id: 'StandardMaterial3D_mixed',
+      type: 'StandardMaterial3D',
+      data: {
+        id: 'StandardMaterial3D_mixed',
+        albedo_texture: 'SubResource("GradientTexture2D_qhu5r")',
+        // Resolves to nothing procedural: the async slot handles it.
+        normal_texture: 'SubResource("ImageTexture_plain")',
+        roughness_texture: 'ExtResource("7")',
+      } as Record<string, string>,
+    },
+  ];
+
+  function mixedNode(): TscnNode {
+    return {
+      name: 'Mixed',
+      type: 'MeshInstance3D',
+      children: [],
+      properties: {
+        name: 'Mixed',
+        mesh: 'SubResource("QuadMesh_kqa4x")',
+        materialOverride: 'SubResource("StandardMaterial3D_mixed")',
+        surfaceMaterialOverrides: new Map(),
+      } as MeshInstance3DProperties,
+    };
+  }
+
+  async function renderMixed() {
+    return ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={makeLoader()}>
+        <SceneResourcesProvider
+          internalResources={mixedSlotResources}
+          externalResources={[]}
+        >
+          <MeshInstance3D node={mixedNode()} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+  }
+
+  it('pins only the slots that resolved to a cached texture', async () => {
+    await renderMixed();
+
+    // Keys are `sceneToken:subResourceId`; the token belongs to the array the
+    // provider assembled, so the sub-resource half is what identifies the pin.
+    expect(traffic.pinned.map((key) => key.split(':')[1])).toEqual([
+      'GradientTexture2D_qhu5r',
+    ]);
+  });
+
+  it('releases the pin when the node unmounts', async () => {
+    const renderer = await renderMixed();
+    await renderer.unmount();
+
+    expect(traffic.unpinned).toEqual(traffic.pinned);
   });
 });

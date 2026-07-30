@@ -92,6 +92,7 @@ import '../nodes/2d/lightoccluder2d/index.js';
 import '../nodes/2d/pointlight2d/index.js';
 import '../nodes/2d/parallaxlayer/index.js';
 import '../nodes/2d/parallaxbackground/index.js';
+import '../nodes/2d/cpuparticles2d/index.js';
 import '../nodes/timers/timer/index.js';
 import '../nodes/viewport/subviewport/index.js';
 

@@ -168,6 +168,41 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles2d Color Ramp",
+    "file": "unit-cpuparticles2d-color-ramp.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles2d Curves",
+    "file": "unit-cpuparticles2d-curves.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles2d Emission Shapes",
+    "file": "unit-cpuparticles2d-emission-shapes.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles2d Local Coords",
+    "file": "unit-cpuparticles2d-local-coords.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles2d Not Emitting",
+    "file": "unit-cpuparticles2d-not-emitting.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles2d Unpreviewable",
+    "file": "unit-cpuparticles2d-unpreviewable.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles2d",
+    "file": "unit-cpuparticles2d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal",
     "file": "unit-decal.tscn",
     "category": "Other"
@@ -298,6 +333,41 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Lightoccluder2d Cull Mode Reversed",
+    "file": "unit-lightoccluder2d-cull-mode-reversed.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightoccluder2d Cull Mode",
+    "file": "unit-lightoccluder2d-cull-mode.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightoccluder2d Shadow Closed",
+    "file": "unit-lightoccluder2d-shadow-closed.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightoccluder2d Shadow Color",
+    "file": "unit-lightoccluder2d-shadow-color.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightoccluder2d Shadow Mask",
+    "file": "unit-lightoccluder2d-shadow-mask.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightoccluder2d Shadow",
+    "file": "unit-lightoccluder2d-shadow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightoccluder2d Two Lights",
+    "file": "unit-lightoccluder2d-two-lights.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Lightoccluder2d",
     "file": "unit-lightoccluder2d.tscn",
     "category": "Other"
@@ -340,6 +410,51 @@ export const fixtures: Fixture[] = [
   {
     "name": "Photo Frame Base",
     "file": "unit-photo-frame-base.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Blend",
+    "file": "unit-pointlight2d-blend.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Cull Mask",
+    "file": "unit-pointlight2d-cull-mask.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Gradient",
+    "file": "unit-pointlight2d-gradient.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Lightonly",
+    "file": "unit-pointlight2d-lightonly.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Range Layer",
+    "file": "unit-pointlight2d-range-layer.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Range Z",
+    "file": "unit-pointlight2d-range-z.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Shadow Pcf Color",
+    "file": "unit-pointlight2d-shadow-pcf-color.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Shadow Pcf13",
+    "file": "unit-pointlight2d-shadow-pcf13.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Shadow Pcf5",
+    "file": "unit-pointlight2d-shadow-pcf5.tscn",
     "category": "Other"
   },
   {
@@ -485,6 +600,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "World Environment No Fog",
     "file": "unit-world-environment-no-fog.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Ysort Own Body",
+    "file": "unit-ysort-own-body.tscn",
     "category": "Other"
   },
   {
@@ -868,6 +988,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Lights"
   },
   {
+    "name": "Arraymesh Compressed",
+    "file": "unit-arraymesh-compressed.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Arraymesh Own Material",
+    "file": "unit-arraymesh-own-material.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Arraymesh Uv",
     "file": "unit-arraymesh-uv.tscn",
     "category": "Unit - Primitive Meshes"
@@ -1198,6 +1328,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "Material Anisotropy Flowmap",
+    "file": "unit-material-anisotropy-flowmap.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Anisotropy",
     "file": "unit-material-anisotropy.tscn",
     "category": "Unit - Materials"
@@ -1380,6 +1515,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Goblin",
     "file": "player/goblin.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Candle Preview",
+    "file": "previews/candle_preview.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Goblin Preview",
+    "file": "previews/goblin_preview.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Internal Shadow Preview",
+    "file": "previews/internal_shadow_preview.tscn",
     "category": "Examples - Isometric Dungeon"
   },
   {

@@ -11,9 +11,10 @@
  * This Camera" on a Camera3D node.
  */
 import { Canvas, useThree } from '@react-three/fiber';
-import { useEffect, useRef } from 'react';
+import { useContext, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
+import { ResourceLoaderContext } from '../resources/ResourceLoaderContext.js';
 import { useOptionalCameraControl } from './contexts/CameraControlContext.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
@@ -247,16 +248,40 @@ export function CameraFit() {
   const hasScene = !!hierarchy?.sceneGraph;
   const activeCameraPath = control?.activeCameraPath ?? null;
 
+  const loader = useContext(ResourceLoaderContext);
+
   useEffect(() => {
     if (!frameOnOpen || !hasScene || activeCameraPath) return undefined;
-    const timers = [150, 500, 1100].map((delay) =>
-      setTimeout(() => {
-        const state = get();
-        frameSceneBounds(state.scene, state.camera, state.controls as OrbitLike | null);
-      }, delay)
-    );
-    return () => timers.forEach(clearTimeout);
-  }, [rootKey, hasScene, activeCameraPath, frameOnOpen, get]);
+
+    // The camera position this component last set. A settle-fit compares
+    // against it and stands down when it does not match, which is how the
+    // user's own orbit wins without an interaction signal to subscribe to.
+    let lastSet: THREE.Vector3 | null = null;
+    const fit = () => {
+      const state = get();
+      frameSceneBounds(state.scene, state.camera, state.controls as OrbitLike | null);
+      lastSet = state.camera.position.clone();
+    };
+
+    const timers = [150, 500, 1100].map((delay) => setTimeout(fit, delay));
+
+    // Those timers only GUESS when async content has arrived; the loader
+    // knows. Fitting once more the moment nothing is pending is what lets a
+    // scene of large external `.tres` meshes frame its whole geometry rather
+    // than whatever happened to be decoded at 1.1s.
+    let settled = false;
+    const unsubscribe = loader?.subscribePending(() => {
+      if (settled || loader.pendingResourceCount > 0) return;
+      settled = true;
+      if (lastSet && !get().camera.position.equals(lastSet)) return;
+      fit();
+    });
+
+    return () => {
+      timers.forEach(clearTimeout);
+      unsubscribe?.();
+    };
+  }, [rootKey, hasScene, activeCameraPath, frameOnOpen, get, loader]);
 
   return null;
 }

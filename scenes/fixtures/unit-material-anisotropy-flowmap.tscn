@@ -1,0 +1,59 @@
+[gd_scene load_steps=5 format=3 uid="uid://test_anisotropy_flowmap"]
+
+; Moves ONE variable: `anisotropy_flowmap` present vs absent. Both spheres carry the
+; identical anisotropic material (same albedo/metallic/roughness/anisotropy) under the same
+; light; only the right-hand one has the flowmap wired.
+;
+; The flowmap (textures/anisotropy-flowmap-split.png, 64x64 RGBA) is constant R=255 G=128
+; (a +X derivative, neutral Y) with BLUE fixed at 0, and ALPHA — where Godot keeps
+; per-pixel strength — in four alternating quarter-width bands of 0 and 255, so whatever
+; part of the sphere faces the camera shows both regimes. The flowmapped sphere must
+; therefore show the anisotropic streak banded on and off around it, while the
+; scalar-only sphere is streaked all the way round.
+;
+; Why a regression here is invisible in every other scene: no other fixture sets
+; `anisotropy_flowmap` at all — they set the scalar only, which is the left-hand sphere
+; and nothing more. To reach three.js the flowmap must survive a channel repack (Godot
+; strength = ALPHA, three.js reads BLUE) fed by a canvas readback of the decoded PNG, and
+; both failure modes land only here: lose the readback and the banded sphere becomes a
+; copy of the uniform one; drop the repack and the blue-0 texture zeroes the strength,
+; flattening its highlight everywhere.
+
+[ext_resource type="Texture2D" path="res://textures/anisotropy-flowmap-split.png" id="1_flowmap"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 1.3
+height = 2.6
+radial_segments = 48
+rings = 24
+
+[sub_resource type="StandardMaterial3D" id="Material_flowmap"]
+albedo_color = Color(0.62, 0.63, 0.66, 1)
+metallic = 0.6
+roughness = 0.35
+anisotropy_enabled = true
+anisotropy = 1.0
+anisotropy_flowmap = ExtResource("1_flowmap")
+
+[sub_resource type="StandardMaterial3D" id="Material_scalar_only"]
+albedo_color = Color(0.62, 0.63, 0.66, 1)
+metallic = 0.6
+roughness = 0.35
+anisotropy_enabled = true
+anisotropy = 1.0
+
+[node name="Scene" type="Node3D"]
+
+[node name="SphereWithFlowmap" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Material_flowmap")
+
+[node name="SphereScalarOnly" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Material_scalar_only")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707, 0.707, 0, -0.707, 0.707, 0, 4, 4)
+light_energy = 2.0

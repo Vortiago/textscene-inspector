@@ -6,19 +6,28 @@
  * Item properties look like:
  *   item/7/name = "Floor"
  *   item/7/mesh = ExtResource("8_v1wcb")        // → an ArrayMesh .tres
+ *   item/7/mesh = SubResource("ArrayMesh_x")    // → embedded in THIS .tres
  *   item/7/mesh_transform = Transform3D(1,0,0, 0,1,0, 0,0,1, 0,0,0)
  */
 
 import { warn } from '../../logger';
 import type { ParsedTresFile } from '../../parser/tresParser';
-import { parseResourceReference } from '../SubResourceResolver';
+import { resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
 import { unquoteString } from '../../parser/utils';
 import type { MeshLibraryModel, MeshLibraryItem } from './meshLibraryModel';
 
 const ITEM_KEY_RE = /^item\/(\d+)\/(name|mesh|mesh_transform)$/;
 
-export function meshLibraryFromTres(tres: ParsedTresFile): MeshLibraryModel {
+/**
+ * @param selfPath - the `res://` path the library was loaded from. An item mesh
+ *   the library embeds as its own `[sub_resource]` can only be addressed
+ *   relative to that file, so this is an input rather than a convenience.
+ */
+export function meshLibraryFromTres(
+  tres: ParsedTresFile,
+  selfPath: string
+): MeshLibraryModel {
   const extPathById = new Map(tres.extResources.map((r) => [r.id, r.path]));
   const items: MeshLibraryModel = new Map();
 
@@ -41,8 +50,12 @@ export function meshLibraryFromTres(tres: ParsedTresFile): MeshLibraryModel {
     if (field === 'name') {
       item.name = unquoteString(rawValue);
     } else if (field === 'mesh') {
-      const ref = parseResourceReference(rawValue);
-      item.meshPath = ref?.type === 'ExtResource' ? (extPathById.get(ref.id) ?? null) : null;
+      item.meshPath = resolveRefToResourcePath(
+        rawValue,
+        extPathById,
+        selfPath,
+        subResourceTypeGate(tres.subResources, ADDRESSABLE_ITEM_MESH_TYPES)
+      );
     } else if (field === 'mesh_transform') {
       try {
         item.meshTransform = parseTransform3D(rawValue);
@@ -54,3 +67,13 @@ export function meshLibraryFromTres(tres: ParsedTresFile): MeshLibraryModel {
 
   return items;
 }
+
+/**
+ * A library written from a scene can embed a PRIMITIVE mesh (`BoxMesh`,
+ * `CylinderMesh`, …) as its own `[sub_resource]`. Addressing one would hand the
+ * ArrayMesh processor something with no `_surfaces`; leaving it unresolved is what
+ * makes GridMap draw its placeholder cell rather than an empty instanced mesh that
+ * looks like nothing is there.
+ */
+const ADDRESSABLE_ITEM_MESH_TYPES: ReadonlySet<string> = new Set(['ArrayMesh']);
+

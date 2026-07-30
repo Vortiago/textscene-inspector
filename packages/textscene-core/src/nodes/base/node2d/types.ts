@@ -47,8 +47,27 @@ export interface Node2DProperties {
   modulate: Color;
   /** CanvasItem RGBA tint; multiplies onto this node's own pixels only (not inherited). */
   self_modulate: Color;
+  /**
+   * CanvasItem `light_mask`: which 2D lights may reach this item. A light
+   * applies iff `light_mask & light.range_item_cull_mask != 0`, so the Godot
+   * default of `1` is what makes an ordinary item take an ordinary light.
+   * Per-item and NOT inherited by children.
+   */
+  light_mask: number;
+
   /** When true, CanvasItem descendants are sorted by their world-space Y position. */
   y_sort_enabled: boolean;
   /** Y offset applied to sort keys (only meaningful for TileMapLayer tiles). */
   y_sort_origin: number;
+
+  /**
+   * CanvasItem `material` — an `ExtResource`/`SubResource` reference to a
+   * `CanvasItemMaterial` (or a ShaderMaterial, which is not implemented).
+   */
+  material?: string;
+  /**
+   * When true the node draws with its PARENT's material instead of its own,
+   * inherited up the chain until a node supplies one (CanvasItem, default false).
+   */
+  use_parent_material: boolean;
 }

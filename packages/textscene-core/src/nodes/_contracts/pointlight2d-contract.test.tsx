@@ -1,39 +1,50 @@
 /**
  * PointLight2D slice behavioral contract — written RED before the slice shipped.
  *
- * Godot 2D lighting: PointLight2D (a Light2D) renders a light "cookie" texture,
- * tinted by `color` and scaled by `energy`, ADDITIVELY blended onto the canvas —
+ * Godot 2D lighting: PointLight2D (a Light2D) contributes a light "cookie"
+ * texture, tinted by `color` and scaled by `energy`, to the canvas light pass —
  * the isometric dungeon's 23 torches. The previewer had NO PointLight2D, so a
  * scene using it rendered the node as an inert group (GenericNodeFallback) and the
  * torches did not glow. This slice adds the vertical: parse (typed Light2D /
- * PointLight2D props + Godot property-absent defaults) + register + render (an
- * additive textured quad, like Sprite2D but blended ADD and tinted color × energy)
- * + a lint-clean fixture + the property validators.
+ * PointLight2D props + Godot property-absent defaults) + register + render (the
+ * cookie quad the light pass accumulates) + a lint-clean fixture + the property
+ * validators.
  *
- * SCOPE — the additive-glow approximation ONLY. Occluder shadow-casting
- * (LightOccluder2D / OccluderPolygon2D), normal-mapped specular, and CanvasModulate
- * ambient are OUT of scope (tracked follow-ups) — do NOT pin them here.
+ * SCOPE. Occluder shadow-casting (LightOccluder2D / OccluderPolygon2D),
+ * normal-mapped specular, and the light masks (`light_mask`,
+ * `range_item_cull_mask`) are OUT of scope (tracked follow-ups) — do NOT pin
+ * them here.
+ *
+ * WHAT THE MESH IS. A Godot light paints nothing on the canvas: it is applied to
+ * every lit item's albedo. So the quad this slice renders lives on a dedicated
+ * camera LAYER that only the accumulation pre-pass looks at, and the pins below
+ * assert what that quad feeds into the pass — its blend, and the light term its
+ * shader emits. An earlier revision pinned a `DstColorFactor` blend on the
+ * visible canvas, which is the single-quad approximation this slice has since
+ * replaced; a light that reaches the canvas directly would now be the bug.
+ *
+ * COLOUR SPACE. `color` reaches the shader in sRGB, deliberately NOT converted to
+ * linear. Godot's 2D canvas has no linear working space (`Viewport.hdr_2d`
+ * defaults false), so `color × energy` is an sRGB-space product; converting first
+ * would leave `energy` scaling the result by only energy^(1/2.2) once the frame is
+ * re-encoded. Measured against Godot 4.6.3 — an ADD torch at energy 2 over a grey
+ * surface lands within 1/255 of the engine this way.
  *
  * RED-lever notes (this repo's own hard-won lessons):
  *  - An UNREGISTERED type already parses to a node with type === 'PointLight2D'
  *    (base-Node fallback), so type-presence alone is NOT a valid failing lever.
  *    These pins key off what the fallback CANNOT satisfy: the registry entries, the
  *    TYPED light props (with Godot property-ABSENT defaults — .tscn OMITS default
- *    values, so the omitted case is the COMMON case), the additive MESH, and the
+ *    values, so the omitted case is the COMMON case), the emitted MESH, and the
  *    property validators.
- *  - Assert on the RENDERED MESH (material.blending / .color / .map), never a
+ *  - Assert on the RENDERED MESH (its layer, material blend and uniforms), never a
  *    wrapper group. The previewer's y-sort feature shipped green with a feature-
  *    breaking bug precisely because its contract asserted on a proxy and its visual
- *    golden was baked from the code under test. There is NO Godot 2D oracle in this
- *    repo,
- *    so THIS unit contract is the lock; any visual golden is a regression guard only.
+ *    golden was baked from the code under test.
  *  - Linter validator registration is a KNOWN blind spot: with no validator an
  *    invalid property value passes silently and NO gate catches it. Pinned here as a
  *    lint-error DELTA (invalid value => strictly more errors than the valid value),
  *    which stays robust to any baseline (e.g. unresolved-resource) errors.
- *
- * The exact energy photometry and the assertion QUALITY of the shipped co-located
- * tests are judged at /code-review, not over-pinned here.
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -54,6 +65,7 @@ import { SceneResourcesProvider } from '../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { godotColorToLinear } from '../../r3f/godotColor';
+import { CanvasLighting2DProvider, LIGHT_LAYER } from '../../r3f/lighting2d/CanvasLighting2D';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
 
@@ -109,7 +121,12 @@ async function renderScene(tscn: string) {
           externalResources={scene.externalResources}
         >
           <SelectionProvider>
-            <NodeDispatcher nodes={scene.nodes} />
+            {/* The light's camera layer is its cull-mask class's layer, and only
+                the provider assigns one. Mounted here so the quad these pins
+                look for lands where the real 2D stage puts it. */}
+            <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+              <NodeDispatcher nodes={scene.nodes} />
+            </CanvasLighting2DProvider>
           </SelectionProvider>
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
@@ -121,12 +138,23 @@ async function renderScene(tscn: string) {
 
 type TestRenderer = Awaited<ReturnType<typeof renderScene>>;
 
-/** The MeshBasicMaterials of every ADDITIVELY-blended mesh in the render. */
-function additiveMaterials(renderer: TestRenderer): THREE.MeshBasicMaterial[] {
+/**
+ * Every mesh emitted as a LIGHT: one that sits on the light layer, so the
+ * visible pass cannot draw it and the accumulation pre-pass sees nothing else.
+ * That layer is the whole difference between a light and a sprite.
+ */
+function lightMeshes(renderer: TestRenderer): THREE.Mesh[] {
+  const lightLayer = new THREE.Layers();
+  lightLayer.set(LIGHT_LAYER);
   return renderer.scene
     .findAllByType('Mesh')
-    .map((o) => (o.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
-    .filter((m) => m.blending === THREE.AdditiveBlending);
+    .map((o) => o.instance as THREE.Mesh)
+    .filter((m) => m.layers.test(lightLayer));
+}
+
+/** The cookie-quad materials of those meshes. */
+function lightMaterials(renderer: TestRenderer): THREE.ShaderMaterial[] {
+  return lightMeshes(renderer).map((m) => m.material as THREE.ShaderMaterial);
 }
 
 function lintErrorCount(raw: string): number {
@@ -185,38 +213,63 @@ enabled = false
     expect(nodeComponentRegistry.get('PointLight2D')).toBeDefined();
   });
 
-  it('renders an ADDITIVELY-blended textured quad when blend_mode is omitted (default ADD)', async () => {
+  it('emits a cookie quad on the light layer when blend_mode is omitted (default ADD)', async () => {
     if (!requireComp()) return;
-    const mats = additiveMaterials(await renderScene(litScene('')));
-    expect(mats.length, 'PointLight2D should render an additively-blended mesh').toBeGreaterThan(0);
-    expect(mats[0]!.map, 'the light quad should use its light texture').toBeTruthy();
+    const mats = lightMaterials(await renderScene(litScene('')));
+    expect(mats.length, 'PointLight2D should emit a mesh on the light layer').toBeGreaterThan(0);
+    expect(
+      mats[0]!.uniforms.uCookie?.value,
+      'the light quad should sample its light texture'
+    ).toBeTruthy();
+    // Godot's ADD: color += light_color.rgb * light_color.a.
+    expect(mats[0]!.blending).toBe(THREE.CustomBlending);
+    expect(mats[0]!.blendSrc).toBe(THREE.SrcAlphaFactor);
+    expect(mats[0]!.blendDst).toBe(THREE.OneFactor);
+    expect(mats[0]!.blendEquation).toBe(THREE.AddEquation);
   });
 
-  it('tints the light by its color converted sRGB→linear', async () => {
+  it('hands the shader its color in the canvas\' sRGB space, unconverted', async () => {
     if (!requireComp()) return;
-    const mats = additiveMaterials(await renderScene(litScene('color = Color(0.5, 0.5, 0.5, 1)')));
+    const mats = lightMaterials(await renderScene(litScene('color = Color(0.5, 0.5, 0.5, 1)')));
     expect(mats.length).toBeGreaterThan(0);
-    const linHalf = godotColorToLinear({ r: 0.5, g: 0.5, b: 0.5 }).r; // ≈0.214, NOT 0.5
-    expect(mats[0]!.color.r).toBeCloseTo(linHalf, 3);
-    // Raw-sRGB (0.5) or the 3D parseColorToHex path (no linearization) would be WRONG.
-    expect(mats[0]!.color.r).not.toBeCloseTo(0.5, 2);
+    const color = mats[0]!.uniforms.uColor!.value as THREE.Vector3;
+    expect(color.x).toBeCloseTo(0.5, 5);
+    // Linearizing here (≈0.214) is what leaves `energy` scaling by energy^(1/2.2).
+    expect(color.x).not.toBeCloseTo(godotColorToLinear({ r: 0.5, g: 0.5, b: 0.5 }).r, 2);
   });
 
   it('scales the emitted brightness by energy', async () => {
     if (!requireComp()) return;
-    const dim = additiveMaterials(await renderScene(litScene('color = Color(0.5, 0.5, 0.5, 1)')));
-    const bright = additiveMaterials(
+    const dim = lightMaterials(await renderScene(litScene('color = Color(0.5, 0.5, 0.5, 1)')));
+    const bright = lightMaterials(
       await renderScene(litScene('color = Color(0.5, 0.5, 0.5, 1)\nenergy = 2.0'))
     );
     expect(dim.length).toBeGreaterThan(0);
     expect(bright.length).toBeGreaterThan(0);
     // energy MUST meaningfully brighten the light (ignoring it → equal → RED).
-    expect(bright[0]!.color.r).toBeGreaterThan(dim[0]!.color.r * 1.5);
+    expect(bright[0]!.uniforms.uEnergy!.value).toBeGreaterThan(
+      (dim[0]!.uniforms.uEnergy!.value as number) * 1.5
+    );
   });
 
-  it('renders no additive light mesh when the light is disabled (enabled=false)', async () => {
+  it('applies each Light2D.BlendMode as its own accumulation, ADD apart from MIX', async () => {
     if (!requireComp()) return;
-    expect(additiveMaterials(await renderScene(litScene('enabled = false'))).length).toBe(0);
+    const sub = lightMaterials(await renderScene(litScene('blend_mode = 1')));
+    const mix = lightMaterials(await renderScene(litScene('blend_mode = 2')));
+    expect(sub.length).toBeGreaterThan(0);
+    expect(mix.length).toBeGreaterThan(0);
+    // SUB subtracts the same term ADD adds.
+    expect(sub[0]!.blendEquation).toBe(THREE.ReverseSubtractEquation);
+    expect(sub[0]!.blendDst).toBe(THREE.OneFactor);
+    // MIX interpolates toward the light instead: mix(dst, src, srcAlpha).
+    // Leaving it on ADD's OneFactor renders MIX identically to ADD.
+    expect(mix[0]!.blendEquation).toBe(THREE.AddEquation);
+    expect(mix[0]!.blendDst).toBe(THREE.OneMinusSrcAlphaFactor);
+  });
+
+  it('emits no light mesh when the light is disabled (enabled=false)', async () => {
+    if (!requireComp()) return;
+    expect(lightMeshes(await renderScene(litScene('enabled = false'))).length).toBe(0);
   });
 
   it('registers a linter validator that REJECTS an invalid blend_mode', () => {

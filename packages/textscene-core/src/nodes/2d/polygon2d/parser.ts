@@ -8,7 +8,11 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { parseColor } from '../../../utils/colorParser';
 import { boolOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
-import { parsePackedInt32Arrays, parsePackedVector2Array } from '../../../resources/shapes/packedArray';
+import {
+  parsePackedColorArray,
+  parsePackedInt32Arrays,
+  parsePackedVector2Array,
+} from '../../../resources/shapes/packedArray';
 import { warn } from '../../../logger';
 import type { Polygon2DProperties } from './types';
 
@@ -42,10 +46,42 @@ export function parsePolygon2D(
     }
   }
 
+  // `uv` and `vertex_colors` degrade to empty, which is exactly Godot's
+  // "sizes don't match" branch: point coordinates stand in for UVs, and the
+  // flat `color` stands in for per-vertex colors.
+  let uv: Float32Array = new Float32Array(0);
+  if (properties.uv) {
+    try {
+      uv = parsePackedVector2Array(properties.uv);
+    } catch (error) {
+      warn(
+        `Polygon2D "${base.name}": invalid uv ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  let vertexColors: Float32Array = new Float32Array(0);
+  if (properties.vertex_colors) {
+    try {
+      vertexColors = parsePackedColorArray(properties.vertex_colors);
+    } catch (error) {
+      warn(
+        `Polygon2D "${base.name}": invalid vertex_colors ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
   const result: Polygon2DProperties = {
     ...base,
     polygon,
     polygons,
+    uv,
+    vertexColors,
+    // class_polygon2d.html: texture_offset (0,0), texture_scale (1,1),
+    // texture_rotation 0.
+    textureOffset: vec2Or(properties.texture_offset, { x: 0, y: 0 }, base.name || 'Polygon2D'),
+    textureScale: vec2Or(properties.texture_scale, { x: 1, y: 1 }, base.name || 'Polygon2D'),
+    textureRotation: floatOr(properties.texture_rotation, 0, 'Polygon2D'),
     // class_polygon2d.html: internal_vertex_count 0, invert_enabled false,
     // invert_border 100.
     internalVertexCount: intOr(properties.internal_vertex_count, 0, 'Polygon2D'),
