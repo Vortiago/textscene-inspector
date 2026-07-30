@@ -33,6 +33,10 @@ import {
   useViewportTexture,
   type ViewportTextureEntry,
 } from '../../../r3f/contexts/ViewportTextureContext';
+import {
+  ViewportPassProvider,
+  ViewportPassOrchestrator,
+} from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { SubViewport } from './Component';
 
 import '../../../r3f/nodes/index';
@@ -116,9 +120,12 @@ async function renderScene(
         >
           <SelectionProvider>
             <ViewportTextureProvider>
-              {nodes}
-              <Probe path={viewportPath} seen={seen} />
-              <GlSpy captured={capturedGl} />
+              <ViewportPassProvider>
+                {nodes}
+                <Probe path={viewportPath} seen={seen} />
+                <GlSpy captured={capturedGl} />
+                <ViewportPassOrchestrator />
+              </ViewportPassProvider>
             </ViewportTextureProvider>
           </SelectionProvider>
         </SceneResourcesProvider>
@@ -175,16 +182,6 @@ describe('<SubViewport> offscreen publisher', () => {
     const { published } = await renderScene(scene3D());
     expect(published()?.texture).toBeDefined();
     expect(published()?.texture.isTexture).toBe(true);
-  });
-
-  /**
-   * `readPixels` must distinguish "not rendered yet" from "rendered empty" —
-   * the DOM surface paints nothing on null but would paint black on an empty
-   * ImageData. Under the test renderer no frame ever runs, so it stays null.
-   */
-  it('readPixels returns null before the first offscreen render', async () => {
-    const { published } = await renderScene(scene3D());
-    expect(published()?.readPixels?.()).toBeNull();
   });
 
   it('unpublishes when the sub-viewport unmounts', async () => {
@@ -329,7 +326,7 @@ size = Vector2i(300, 300)
    * race that publisher for the same registry key, so this one publishes
    * NOTHING rather than something wrong.
    */
-  it('publishes nothing for a Control-only sub-viewport, leaving the key to the DOM rasterizer', async () => {
+  it('publishes nothing for a Control-only sub-viewport, leaving the key to the native Control-raster pass', async () => {
     const { published } = await renderScene(`[gd_scene format=3]
 
 [node name="Root" type="Node3D"]

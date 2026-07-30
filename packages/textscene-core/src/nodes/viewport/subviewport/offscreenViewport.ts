@@ -260,33 +260,3 @@ export function orthoFrameForSize(size: Vector2): OrthoFrame {
     position: [width / 2, -height / 2, 1000],
   };
 }
-
-/**
- * Turn a `readRenderTargetPixels` buffer into `ImageData`.
- *
- * GL hands rows back bottom-up (its framebuffer origin is bottom-left) while
- * `ImageData` is top-down, so the rows are reversed here. Nothing else in the
- * repo would catch that: the only fixture a DOM consumer is measured against is
- * vertically symmetric, so a flipped target is pixel-identical.
- *
- * Returns null — never a blank image — when the buffer does not describe the
- * stated rect or `ImageData` is unavailable (the linter bundle and any non-DOM
- * host), because callers must be able to tell "not ready" from "empty".
- */
-export function targetPixelsToImageData(
-  pixels: Uint8Array | Uint8ClampedArray,
-  width: number,
-  height: number
-): ImageData | null {
-  if (width <= 0 || height <= 0) return null;
-  const stride = width * 4;
-  if (pixels.length !== stride * height) return null;
-  if (typeof ImageData === 'undefined') return null;
-
-  const flipped = new Uint8ClampedArray(pixels.length);
-  for (let row = 0; row < height; row++) {
-    const source = (height - 1 - row) * stride;
-    flipped.set(pixels.subarray(source, source + stride), row * stride);
-  }
-  return new ImageData(flipped, width, height);
-}

@@ -29,6 +29,7 @@ import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext.js';
 import { ViewportTextureProvider } from '../../contexts/ViewportTextureContext.js';
+import { ViewportPassProvider } from '../../contexts/ViewportPassRegistryContext.js';
 import { ViewportRectProvider } from '../../contexts/ViewportRectContext.js';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext.js';
 import {
@@ -257,6 +258,12 @@ export function TscnPreviewShell({
     // resolves it by NodePath. It wraps BOTH canvases and the DOM overlay
     // because consumers live on both sides of that split (ADR-0030).
     (children) => <ViewportTextureProvider>{children}</ViewportTextureProvider>,
+    // Wraps both canvases for the same reason: each mounts its OWN
+    // `<ViewportPassOrchestrator>` (it needs `useFrame`, so it cannot live up
+    // here), but the registry a pass registers with — and the cycle info a
+    // viewport surface reads back — must be the SAME one regardless of which
+    // canvas the mode switch currently has mounted.
+    (children) => <ViewportPassProvider>{children}</ViewportPassProvider>,
     // The return leg of the same seam: a stretching SubViewportContainer
     // measures its own DOM box and the publisher sizes the target from it,
     // because Godot's `recalc_force_viewport_sizes` makes the CONTAINER's rect

@@ -13,34 +13,24 @@
  * paint, like async-loaded resources). Both hooks are null-safe, so the linter
  * bundle and isolated tests mount without a provider.
  *
- * A sub-viewport has two kinds of consumer with incompatible needs, which is
- * why an entry is not a bare texture:
- *
- *  - **WebGL consumers** (`StandardMaterial3D.albedo_texture`, `Sprite2D`,
- *    `TextureRect`) sample `texture` directly.
- *  - **The DOM overlay surface** (`SubViewportContainer`) cannot sample a WebGL
- *    texture at all — the Control overlay is HTML (ADR-0003) — so it takes CPU
- *    pixels via `readPixels` and paints them into a `<canvas>`.
- *
- * Serving both from one publisher is what lets a consumer stay ignorant of
- * whether the target was produced by 3D content, 2D-canvas content, or a
- * rasterized Control subtree.
+ * Every consumer — `StandardMaterial3D.albedo_texture`, `Sprite2D`,
+ * `TextureRect`, and the native `SubViewportContainer` surface — samples
+ * `texture` directly, in the SAME WebGL canvas the publisher rendered it
+ * into: a Control-only sub-viewport's own content is now published by a
+ * native (WebGL) pass too (`nodes/viewport/subviewport/ControlRasterPass.tsx`),
+ * not rasterised out to DOM/CPU pixels, so there is exactly one consumption
+ * path regardless of whether the target holds 3D content, 2D-canvas content,
+ * or a Control subtree.
  */
 
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import type * as THREE from 'three';
 
 export interface ViewportTextureEntry {
-  /** The rendered target, for consumers that sample it in the WebGL canvas. */
+  /** The rendered target, sampled directly by every consumer. */
   texture: THREE.Texture;
   /** Target size in pixels — the rect the sub-viewport's content was laid out against. */
   size: { x: number; y: number };
-  /**
-   * Snapshot the target into CPU pixels, for DOM consumers that cannot sample a
-   * WebGL texture. Returns null when the target is not yet rendered or the
-   * read is unavailable; callers must treat null as "not ready", never as empty.
-   */
-  readPixels?: () => ImageData | null;
 }
 
 /** Publish the target at `path`; returns a cleanup that unregisters it. */

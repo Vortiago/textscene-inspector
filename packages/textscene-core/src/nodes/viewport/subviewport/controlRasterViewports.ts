@@ -1,27 +1,30 @@
 /**
- * Which sub-viewports are published from a **DOM raster** rather than from a
- * WebGL pass, and in which resource scope their Controls resolve.
+ * Which sub-viewports are published from the native Control-raster pass
+ * (`ControlRasterPass.tsx`) rather than from the 3D/2D offscreen pass, and in
+ * which resource scope their Controls resolve.
  *
  * `viewportContentKind` already decides the OWNERSHIP split — the offscreen
- * publisher takes `'3d'` and `'2d'`, this path takes `'dom'` — because Controls
- * are DOM (ADR-0003) and there is no WebGL source to render. What that
- * classifier cannot answer is where the sub-viewport SITS: the registry is keyed
- * by dispatcher-absolute node path, and the Controls beneath it resolve
+ * publisher takes `'3d'` and `'2d'`, this path takes `'dom'` (Controls have no
+ * WebGL SOURCE of their own to render, though the native pipeline draws them as
+ * ordinary three.js objects once handed a subtree). What that classifier
+ * cannot answer is where the sub-viewport SITS: the registry is keyed by
+ * dispatcher-absolute node path, and the Controls beneath it resolve
  * ExtResource/SubResource ids against the scene they were AUTHORED in, which is
  * not the host scene once an instance is in the way (ADR-0009, ADR-0013). The
  * committed corpus makes that concrete: `gui_in_3d.tscn` instances
  * `gui_panel_3d.tscn`, whose `TextureRect` names `ExtResource("2")` — an id the
  * host scene never defines.
  *
- * The scope rules mirror `ControlDispatcher`'s own walk exactly, because the
- * host mounts that dispatcher and must hand it the scope it would have had:
- * a collapsed single-root instance puts ALL its children in the sub-scene's
- * scope; a multi-root one keeps the instance node, its authored children in the
- * outer scope and the loaded roots in the sub-scene's.
+ * The scope rules mirror `useBuildSolveTree`'s own live-tree walk exactly,
+ * because the native pass mounts a fresh `ControlCanvasWalker` and must hand it
+ * the scope that walk would have resolved: a collapsed single-root instance
+ * puts ALL its children in the sub-scene's scope; a multi-root one keeps the
+ * instance node, its authored children in the outer scope and the loaded roots
+ * in the sub-scene's.
  *
  * Pure (no React, no THREE, no DOM) so the path/scope rules are asserted
- * directly — the rasterisation half needs real layout and is gated in the
- * browser (ADR-0024).
+ * directly — the rasterisation half needs a real renderer and is gated by
+ * `pnpm test:visual`'s golden images.
  */
 
 import type {

@@ -9,16 +9,10 @@
  * actually looks right is `verify:2d`'s job (ADR-0024).
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
-import { act, cleanup, render } from '@testing-library/react';
-import { useEffect, type ReactNode } from 'react';
+import { describe, expect, it } from 'vitest';
+import { render } from '@testing-library/react';
 import type { TscnNode } from '../../../../parser/types';
 import { ControlOverlay } from '../../../../r3f/controls/index';
-import {
-  ViewportTextureProvider,
-  useRegisterViewportTexture,
-  type ViewportTextureEntry,
-} from '../../../../r3f/contexts/ViewportTextureContext';
 
 function node(name: string, type: string, properties: object, children: TscnNode[] = []): TscnNode {
   return { name, type, children, properties: { name, ...properties } } as TscnNode;
@@ -157,155 +151,6 @@ describe('<SubViewportContainer>', () => {
         container.querySelector('[data-control-type="SubViewportContainer"]')
       ).toBeTruthy();
       expect(surfaces(container)).toHaveLength(0);
-    });
-  });
-
-  /**
-   * The pixel arm: 2D-world and 3D content reach the surface as a target
-   * snapshot rather than as DOM. happy-dom has no rasteriser, so these pin the
-   * WIRING — that a target produces a canvas of the right size, in the right
-   * stacking position, painted with the right bytes at the right origin.
-   * Whether the result looks like Godot's render is `verify:2d`'s job.
-   */
-  describe('the pixel arm', () => {
-    /** A checkerboard-free ramp: every row distinct, so a flip cannot hide. */
-    function rows(width: number, height: number): ImageData {
-      const data = new Uint8ClampedArray(width * height * 4);
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          const i = (y * width + x) * 4;
-          data[i] = y;
-          data[i + 1] = 55;
-          data[i + 2] = 19;
-          data[i + 3] = 255;
-        }
-      }
-      return new ImageData(data, width, height);
-    }
-
-    /** Publishes `entry` at `path`, then renders the overlay underneath it. */
-    function Publisher({
-      path,
-      entry,
-      children,
-    }: {
-      path: string;
-      entry: ViewportTextureEntry;
-      children: ReactNode;
-    }) {
-      const register = useRegisterViewportTexture();
-      useEffect(() => register(path, entry), [register, path, entry]);
-      return <>{children}</>;
-    }
-
-    function mount(entry: ViewportTextureEntry | null, nodes = tree({})) {
-      return render(
-        <ViewportTextureProvider>
-          {entry ? (
-            <Publisher path="Booth/View" entry={entry}>
-              <ControlOverlay nodes={nodes} />
-            </Publisher>
-          ) : (
-            <ControlOverlay nodes={nodes} />
-          )}
-        </ViewportTextureProvider>
-      );
-    }
-
-    function fakeEntry(readPixels: () => ImageData | null): ViewportTextureEntry {
-      return {
-        texture: {} as ViewportTextureEntry['texture'],
-        size: { x: 200, y: 150 },
-        readPixels,
-      };
-    }
-
-    /** Captures `putImageData` for the duration of one test. */
-    function captureContext() {
-      const calls: { image: ImageData; x: number; y: number }[] = [];
-      const original = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function getContext() {
-        return {
-          putImageData: (image: ImageData, x: number, y: number) => calls.push({ image, x, y }),
-        };
-      } as typeof original;
-      return { calls, restore: () => (HTMLCanvasElement.prototype.getContext = original) };
-    }
-
-    afterEach(() => cleanup());
-
-    it('publishes no canvas at all when the sub-viewport published no target', () => {
-      const { container } = mount(null);
-      expect(surfaces(container)[0].querySelector('[data-viewport-pixels]')).toBeNull();
-    });
-
-    it('sizes the canvas to the TARGET, which is what the pixels are', () => {
-      const { container } = mount(fakeEntry(() => null));
-      const canvas = surfaces(container)[0].querySelector<HTMLCanvasElement>(
-        '[data-viewport-pixels]'
-      );
-      expect(canvas).toBeTruthy();
-      expect(canvas?.getAttribute('width')).toBe('200');
-      expect(canvas?.getAttribute('height')).toBe('150');
-    });
-
-    /**
-     * Godot composites a viewport's Controls into the same target as its
-     * CanvasItems, Controls last (tree order). The previewer splits them across
-     * two technologies, so the stacking has to be reproduced by DOM order.
-     */
-    it('stacks the canvas UNDER the Control arm', () => {
-      const { container } = mount(fakeEntry(() => null));
-      const surface = surfaces(container)[0];
-      const canvas = surface.querySelector('[data-viewport-pixels]');
-      const inner = surface.querySelector('[data-node-name="Inner"]');
-      expect(canvas && inner && canvas.compareDocumentPosition(inner)).toBe(
-        Node.DOCUMENT_POSITION_FOLLOWING
-      );
-    });
-
-    it('paints nothing while the target has not rendered — null is not empty', async () => {
-      const capture = captureContext();
-      try {
-        mount(fakeEntry(() => null));
-        await act(async () => {
-          await new Promise((resolve) => setTimeout(resolve, 60));
-        });
-        expect(capture.calls).toHaveLength(0);
-      } finally {
-        capture.restore();
-      }
-    });
-
-    /**
-     * The orientation contract, stated where it is consumed: the row flip
-     * belongs to `targetPixelsToImageData` (GL's framebuffer origin is
-     * bottom-left, `ImageData` is top-down), so the blit must NOT flip again —
-     * it draws the snapshot at the origin, row 0 to row 0. Two flips are the
-     * identity, which is exactly why nothing else would catch a second one.
-     */
-    it('draws the snapshot at the origin, row for row, with no second flip', async () => {
-      const capture = captureContext();
-      try {
-        const snapshot = rows(4, 3);
-        mount(fakeEntry(() => snapshot));
-        await act(async () => {
-          await new Promise((resolve) => setTimeout(resolve, 60));
-        });
-        expect(capture.calls.length).toBeGreaterThan(0);
-        const { image, x, y } = capture.calls[0];
-        expect([x, y]).toEqual([0, 0]);
-        // Row r of the snapshot is still row r — the red channel carried the
-        // row index in, and the encode is monotonic so the order survives it.
-        const red = (row: number) => image.data[row * 4 * 4];
-        expect(red(0)).toBeLessThan(red(1));
-        expect(red(1)).toBeLessThan(red(2));
-        // …and the encode did run: 55 → 128, 19 → 77 on every pixel.
-        expect(image.data[1]).toBe(128);
-        expect(image.data[2]).toBe(77);
-      } finally {
-        capture.restore();
-      }
     });
   });
 });

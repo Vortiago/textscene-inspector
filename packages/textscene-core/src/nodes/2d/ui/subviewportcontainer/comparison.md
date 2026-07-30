@@ -39,22 +39,33 @@ Measured through Godot 4.6.3 with a 300×200 container at (100, 80) holding a
 
 ## What the surface shows
 
-Two arms, because a viewport target has two kinds of source and the previewer
-draws them in different technologies:
+Two arms, because a viewport target has two kinds of source. The NATIVE
+painter (`NativeComponent.tsx`, the shipped default — native Controls default
+to `true`) draws both, since every content kind is a WebGL texture it can
+sample directly:
 
-| Sub-viewport holds | Reaches the surface as |
+| Sub-viewport holds | Reaches the native surface as |
 | --- | --- |
-| Controls | DOM, rendered straight into the surface |
-| 2D-world (CanvasItem) or 3D content | the offscreen target's pixels, snapshotted through `ViewportTextureEntry.readPixels` into a `<canvas>` under the Control arm |
+| Controls | its own live `<ControlCanvasWalker>` mount, drawn straight into the surface |
+| 2D-world (CanvasItem) or 3D content | the offscreen target's `texture`, sampled directly on a `<ControlQuad>` — no CPU round trip, no colour-space re-encode |
 
-The target stores **linear** values: `createOffscreenTarget` tags it
-`LinearSRGBColorSpace` and sets `isXRRenderTarget`, so three takes the offscreen
-pass's output space from that tag. A 2D canvas reads `putImageData` bytes as
-sRGB, so the blit applies the sRGB OETF the main WebGL canvas gets from its
-fragment shader. Measured on `unit-sub-viewport-container-2d-content.tscn`
-through Godot 4.6.3:
+The DOM overlay (`Component.tsx`, reachable only via its own storage-key
+opt-out while native Controls are the default) draws ONLY the Control arm now:
+a `<canvas>` element cannot sample a WebGL texture at all (ADR-0003), and the
+`ViewportTextureEntry.readPixels` CPU-blit that used to bridge that gap is
+gone along with the field.
 
-| | Stored in the target | Blitted | Godot 4.6.3 |
+The target itself still stores **linear** values: `createOffscreenTarget` tags
+it `LinearSRGBColorSpace` and sets `isXRRenderTarget`, so three takes the
+offscreen pass's output space from that tag. A WebGL consumer decodes it back
+through the ordinary sampling pipeline, with no hand-written encode step the
+way the deleted CPU blit needed. Measured on
+`unit-sub-viewport-container-2d-content.tscn` through Godot 4.6.3, against
+that (now removed) DOM blit — restated here as the historical colour-accuracy
+baseline, not yet re-measured against the native path (no golden exercises
+`SubViewportContainer` directly; see this slice's own module doc):
+
+| | Stored in the target | Blitted (DOM, historical) | Godot 4.6.3 |
 | --- | --- | --- | --- |
 | default clear colour, sRGB `Color(0.3, 0.3, 0.3)` | 19 | 77 | 76 |
 | authored `Color(0.5, 0.5, 0.5)` | 55 | 128 | 127 |
@@ -127,13 +138,11 @@ also the blit's coverage guard. Measured through Godot 4.6.3 with
 
 ## Divergences
 
-- **Content stops updating once it has settled.** `readRenderTargetPixels` is a
-  synchronous GPU stall, so the surface samples the target on a bounded
-  schedule (an opening animation frame, then `BLIT_ATTEMPTS` × 350 ms, the
-  visual harness's own settle window) and then stops. It re-arms on a new
-  target or a fresh parse. An `AnimationPlayer` running inside a sub-viewport
-  therefore shows its settled frame in the surface, while the same animation
-  drawn directly in the canvas keeps moving.
+- **The DOM overlay's Control arm can drift from what the native surface
+  shows for the SAME scene**, since native Controls are the shipped default
+  and the DOM overlay is a legacy opt-out that no longer draws a pixel arm at
+  all — direct comparison only makes sense native-to-native or DOM-to-DOM, not
+  across the two.
 - **Clipping is a consequence, not an operation.** The container issues no clip;
   content outside the target simply was never rendered, because the texture is
   only `size` pixels. The DOM equivalent puts `overflow: hidden` on the

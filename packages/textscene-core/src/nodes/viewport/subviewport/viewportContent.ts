@@ -3,14 +3,16 @@
  * target is produced.
  *
  * A Godot viewport rasterises its 3D world and its 2D canvas into one target.
- * The previewer cannot: its renderer draws one workspace at a time, and
- * Controls are DOM (ADR-0003) rather than WebGL, so a Control-only sub-viewport
- * has no WebGL source at all and its pixels come from a DOM rasterizer instead.
- * Both rasterizers publish into the same `ViewportTextureRegistry`, so the
- * split has to be decided in ONE place — here — or they race for the same key.
+ * The previewer cannot: its renderer draws one workspace at a time, and a
+ * Control-only sub-viewport has no WebGL SOURCE of its own (nothing in the
+ * main scene renders it) — its pixels come from a SEPARATE native offscreen
+ * pass instead (`ControlRasterPass.tsx`), which draws the same Control
+ * subtree the on-screen native layer would, into its own detached scene. Both
+ * passes publish into the same `ViewportTextureRegistry`, so the split has to
+ * be decided in ONE place — here — or they race for the same key.
  *
- * The offscreen (WebGL) publisher owns `'3d'` and `'2d'`; the DOM rasterizer
- * owns `'dom'`; nobody publishes for `'empty'`.
+ * The 3D/2D offscreen publisher owns `'3d'` and `'2d'`; the native
+ * Control-raster pass owns `'dom'`; nobody publishes for `'empty'`.
  */
 
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';

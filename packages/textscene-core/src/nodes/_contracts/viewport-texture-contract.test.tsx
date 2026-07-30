@@ -14,11 +14,10 @@
  * target appears. That precedent exists because it is the same problem: a node
  * publishes something other nodes resolve by NodePath.
  *
- * Why an entry rather than a bare texture: a sub-viewport has TWO kinds of
- * consumer with incompatible needs. WebGL consumers sample `texture`; the DOM
- * overlay surface cannot sample a WebGL texture at all and needs CPU pixels via
- * `readPixels`. Both are served from one publisher so a consumer never learns
- * which kind of content produced the target.
+ * Every consumer samples `texture` directly in the same WebGL canvas the
+ * publisher rendered it into — 3D content, 2D-canvas content, and a
+ * Control-only subtree's own native pass are all published the same shape,
+ * so a consumer never learns which kind of content produced the target.
  */
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
@@ -37,7 +36,6 @@ function entry(): ViewportTextureEntry {
   return {
     texture: new THREE.Texture(),
     size: { x: 256, y: 256 },
-    readPixels: () => null,
   };
 }
 
@@ -70,7 +68,7 @@ describe('ViewportTextureRegistry contract', () => {
     expect(seen.at(-1)).toBe(value);
   });
 
-  it('serves BOTH consumer kinds from one entry: a WebGL texture and CPU pixels', () => {
+  it('publishes a texture every consumer samples directly, plus its size', () => {
     const value = entry();
     const seen: (ViewportTextureEntry | null)[] = [];
     render(
@@ -82,7 +80,6 @@ describe('ViewportTextureRegistry contract', () => {
     const resolved = seen.at(-1);
     expect(resolved?.texture).toBeInstanceOf(THREE.Texture);
     expect(resolved?.size).toEqual({ x: 256, y: 256 });
-    expect(typeof resolved?.readPixels).toBe('function');
   });
 
   it('returns null for an unpublished path rather than throwing', () => {

@@ -18,10 +18,12 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
 import { Node } from '../../../node/Component';
 import { SubViewportContainer } from './Component';
+import { SubViewportContainerNative } from './NativeComponent';
 
 controlComponentRegistry.register({
   typeName: 'SubViewportContainer',
   Component: SubViewportContainer,
+  Native: SubViewportContainerNative,
 });
 
 nodeComponentRegistry.register({
@@ -30,4 +32,4 @@ nodeComponentRegistry.register({
   container: true,
 });
 
-export { SubViewportContainer };
+export { SubViewportContainer, SubViewportContainerNative };

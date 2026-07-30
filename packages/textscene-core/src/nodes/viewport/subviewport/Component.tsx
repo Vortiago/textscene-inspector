@@ -28,8 +28,8 @@
  * pass, and a probe render confirms it leaves the parent view untouched.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { createPortal, useFrame, useThree } from '@react-three/fiber';
+import { useCallback, useEffect, useMemo } from 'react';
+import { createPortal, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -42,6 +42,7 @@ import {
   useRegisterViewportTexture,
   type ViewportTextureEntry,
 } from '../../../r3f/contexts/ViewportTextureContext';
+import { useRegisterViewportPass } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { Node } from '../../node/Component';
 import {
@@ -53,11 +54,11 @@ import {
   orthoFrameForSize,
   selectViewportCamera,
   selectViewportCamera2D,
-  targetPixelsToImageData,
   viewportAspect,
 } from './offscreenViewport';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { useViewportContentKind } from './useViewportContentKind';
+import { collectNestedViewportPaths } from './nestedViewportPaths';
 import type { SubViewportProperties } from './types';
 
 export function SubViewport({ node, children }: NodeComponentProps) {
@@ -70,7 +71,8 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   const kind = useViewportContentKind(node);
 
   // Only content this subsystem can rasterise gets an offscreen pass; Controls
-  // are the DOM rasterizer's, and an empty viewport has nothing to draw.
+  // are the native Control-raster pass's (`ControlRasterPass.tsx`), and an
+  // empty viewport has nothing to draw.
   const rasterizes = kind === '3d' || kind === '2d';
 
   // The subtree draws in the parent view exactly when all three hold: it is 3D
@@ -107,9 +109,10 @@ interface OffscreenViewportProps extends NodeComponentProps {
  * Owns the render target, drives the offscreen pass, and publishes the result.
  *
  * Split out from `<SubViewport>` so the hooks it needs (a target, a portal
- * scene, a per-frame render) are never mounted for a sub-viewport that has no
- * WebGL source — a Control-only one publishes nothing at all rather than a
- * cleared target, leaving the key to the DOM rasterizer that owns it.
+ * scene, a registered pass) are never mounted for a sub-viewport that has no
+ * WebGL source — a Control-only one publishes nothing at all here, leaving
+ * the key to the native Control-raster pass (`ControlRasterPass.tsx`) that
+ * owns it.
  */
 function OffscreenViewport({
   node,
@@ -133,6 +136,7 @@ function OffscreenViewport({
   const gl = useThree((state) => state.gl);
   const mainScene = useThree((state) => state.scene);
   const registerViewportTexture = useRegisterViewportTexture();
+  const registerViewportPass = useRegisterViewportPass();
 
   const portalScene = useMemo(() => {
     const scene = new THREE.Scene();
@@ -150,29 +154,14 @@ function OffscreenViewport({
 
   useEffect(() => () => target.dispose(), [target]);
 
-  // Gates `readPixels`: a consumer must be able to tell "no frame yet" from
-  // "rendered empty", and only the pass itself knows which it is.
-  const hasRendered = useRef(false);
-  useEffect(() => {
-    hasRendered.current = false;
-  }, [target]);
-
-  const readPixels = useCallback((): ImageData | null => {
-    if (!hasRendered.current) return null;
-    const buffer = new Uint8Array(width * height * 4);
-    try {
-      gl.readRenderTargetPixels(target, 0, 0, width, height, buffer);
-    } catch {
-      // No real GL context (headless harnesses, a lost context) — "not ready",
-      // which is exactly what null means here.
-      return null;
-    }
-    return targetPixelsToImageData(buffer, width, height);
-  }, [gl, target, width, height]);
-
+  // WebGL consumers sample this texture directly (no CPU round trip) — the
+  // ordered pass driver runs every non-cyclic pass before R3F's own automatic
+  // render each frame, so by the time anything samples it this frame's
+  // content is already there, including on the very first frame this target
+  // is published.
   const entry = useMemo<ViewportTextureEntry>(
-    () => ({ texture: target.texture, size: { x: width, y: height }, readPixels }),
-    [target, width, height, readPixels]
+    () => ({ texture: target.texture, size: { x: width, y: height } }),
+    [target, width, height]
   );
 
   useEffect(
@@ -191,10 +180,13 @@ function OffscreenViewport({
     applyOrthoFrame(orthoCamera, orthoFrameForSize({ x: width, y: height }));
   }, [orthoCamera, width, height]);
 
-  // Default priority: a priority-0 subscriber runs BEFORE R3F's automatic main
-  // render, so the target the main pass samples was filled this frame. Any
-  // non-zero priority would also disable that automatic render entirely.
-  useFrame(() => {
+  // Every OTHER viewport boundary nested in this one's own subtree — this
+  // pass's `dependsOn` for the ordered driver (`passOrder.ts`), since any of
+  // them might be sampled by a `ViewportTexture` somewhere below and must
+  // therefore render first.
+  const dependsOn = useMemo(() => collectNestedViewportPaths(node, path), [node, path]);
+
+  const renderPass = useCallback(() => {
     const source = rendersInline ? mainScene : portalScene;
 
     if (kind === '2d') {
@@ -259,7 +251,6 @@ function OffscreenViewport({
       // No camera is not an error — Godot renders the clear colour and nothing
       // else, which is what an unrendered viewport looks like there too.
       if (camera) gl.render(source, camera);
-      hasRendered.current = true;
     } finally {
       gl.setRenderTarget(previousTarget);
       gl.setClearColor(previousColor, previousAlpha);
@@ -269,7 +260,25 @@ function OffscreenViewport({
         perspective.updateProjectionMatrix();
       }
     }
-  });
+  }, [
+    rendersInline,
+    mainScene,
+    portalScene,
+    kind,
+    path,
+    orthoCamera,
+    gl,
+    target,
+    transparentBg,
+    properties.own_world_3d,
+    width,
+    height,
+  ]);
+
+  useEffect(
+    () => registerViewportPass(path, { dependsOn, render: renderPass }),
+    [registerViewportPass, path, dependsOn, renderPass]
+  );
 
   if (rendersInline) return null;
   // Inside its own target a sub-viewport draws its own content, whatever the

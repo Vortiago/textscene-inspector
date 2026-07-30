@@ -31,6 +31,8 @@ import { NodeDispatcher } from '../../NodeDispatcher.js';
 import { world2DCameraPose } from './world2DCamera.js';
 import { CanvasLighting2DProvider } from '../../lighting2d/CanvasLighting2D.js';
 import { canvasModulateColor } from '../../canvasModulate.js';
+import { ViewportPassOrchestrator } from '../../contexts/ViewportPassRegistryContext.js';
+import { useControlRasterViewports } from '../../../nodes/viewport/subviewport/useControlRasterViewports.js';
 
 // The native Control layer is lazy-loaded through the SAME barrel as
 // the DOM `<ControlOverlay>` (see the lazy() in `Canvas2DStage.tsx`) — the
@@ -42,6 +44,17 @@ const ControlCanvasLayer = lazy(() =>
   import('../../controls/index.js').then((m) => ({ default: m.ControlCanvasLayer }))
 );
 
+// The native offscreen publisher for a Control-only sub-viewport
+// (ADR-0030) — a separate lazy boundary from `ControlCanvasLayer` above:
+// this must run regardless of `nativeControls` (a `SubViewportContainer`
+// elsewhere may sample its target even with the DOM overlay still active),
+// so it cannot share that flag's gate.
+const ControlRasterPasses = lazy(() =>
+  import('../../../nodes/viewport/subviewport/ControlRasterPass.js').then((m) => ({
+    default: m.ControlRasterPasses,
+  }))
+);
+
 export interface World2DCanvasProps {
   nodes: readonly TscnNode[];
   internalResources: readonly TscnInternalResource[];
@@ -51,10 +64,13 @@ export interface World2DCanvasProps {
   /**
    * Mount the native (WebGL) Control layer as a sibling of `<NodeDispatcher>`
    * instead of leaving Control drawing to the DOM `<ControlOverlay>`
-   * (`Canvas2DStage`, dev-only `useNativeControls` flag). Still missing every
-   * per-type painter (an unregistered type draws `<ControlFallback>`'s
-   * outline) and the ordered viewport-pass driver for nested SubViewports —
-   * those land in later packets.
+   * (`Canvas2DStage`, defaults to `true` — the DOM overlay is being retired
+   * and stays reachable only via its own storage-key opt-out). An
+   * unregistered type still draws `<ControlFallback>`'s outline, but every
+   * shipped type has a `Native` painter now, `SubViewportContainer` included;
+   * every offscreen viewport pass — this canvas's own and the 3D canvas's —
+   * runs from one ordered driver (`ViewportPassRegistryContext.tsx`) rather
+   * than each publisher's own `useFrame`.
    */
   nativeControls?: boolean;
 }
@@ -82,6 +98,12 @@ export function World2DContents({
   nativeControls,
 }: World2DCanvasProps) {
   const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
+  // A Control-only sub-viewport still needs its own native offscreen pass in
+  // THIS canvas regardless of `nativeControls` — a `SubViewportContainer` (or
+  // another `ViewportTexture` consumer) may be sampling its target even while
+  // the DOM overlay is still what draws the on-screen Controls.
+  const rasterViewports = useControlRasterViewports(nodes, internalResources, externalResources);
+
   return (
     <CanvasWorkspaceProvider workspace="2d">
       <SceneResourcesProvider
@@ -104,8 +126,14 @@ export function World2DContents({
               <ControlCanvasLayer nodes={nodes} />
             </Suspense>
           )}
+          {rasterViewports.length > 0 && (
+            <Suspense fallback={null}>
+              <ControlRasterPasses viewports={rasterViewports} />
+            </Suspense>
+          )}
         </CanvasLighting2DProvider>
       </SceneResourcesProvider>
+      <ViewportPassOrchestrator />
     </CanvasWorkspaceProvider>
   );
 }

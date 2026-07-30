@@ -111,31 +111,23 @@ probe through the quad within 1.0% in linear terms (sky 177,194,212 vs
 - **Only `albedo_texture` accepts a ViewportTexture** among the material slots,
   plus `Sprite2D.texture`. Godot allows one in any Texture2D slot except
   `Decal`, `Light3D` and `PointLight2D`.
-- **`TextureRect` cannot show one.** It is a Control, so it renders in the DOM
-  overlay (ADR-0003) via `imageToDataUrl(texture.image)`, and a render target
-  has no `image` element to draw. That is exactly why `ViewportTextureEntry`
-  also carries `readPixels`; consuming it is the DOM rasterizer's job.
+- **`TextureRect` cannot show one.** It is a Control, so it renders through the
+  native Control pipeline or the DOM overlay (ADR-0003), and a render target
+  has no `image` element for the DOM path's `imageToDataUrl` to draw.
 - **`msaa_3d`, `use_debanding` and `canvas_item_default_texture_filter` still do
   not affect the target**; it is rendered at `size` with linear filtering.
 
-## Control content: the DOM raster
+## Control content: the native Control-raster pass
 
-A sub-viewport holding only Controls has **no WebGL source at all** — Controls
-are DOM (ADR-0003) — so `viewportContentKind` classifies it `'dom'`, the
-offscreen pass declines it, and `ControlRasterHost` publishes instead. It mounts
-the subtree through `ControlDispatcher` into an off-screen host built at the
-sub-viewport's `size`, rasterises that host, and publishes the canvas as a
-`CanvasTexture` under the same node path any other target would use. Consumers
-never learn which publisher filled the slot.
-
-The host is hidden by **moving off-screen** (`position: fixed; left: -99999px`),
-not by `visibility`, `opacity` or `clip-path`: the rasteriser inlines every
-computed property onto its clone, so those three rasterise zero opaque pixels —
-and return a blank canvas rather than `null`, so nothing would report it
-(measured in `verify-raster.mjs` suite A: 5366 opaque px off-screen, 0 for each
-of the others). `overflow: hidden` on the host is Godot's clip: a viewport
-issues none, but its target is only `size` pixels, so anything past the edge was
-never rendered.
+A sub-viewport holding only Controls has **no WebGL source of its own** —
+`viewportContentKind` classifies it `'dom'` and the offscreen pass above
+declines it — but Controls are ordinary three.js objects in the native
+pipeline (`r3f/controls/native/`), so `ControlRasterPass.tsx` gives it the SAME
+offscreen-portal treatment as 3D/2D content: mount `ControlCanvasWalker` into a
+detached scene sized to the sub-viewport's `size`, render it through a fixed
+camera framing that whole rect, publish the result under the same node path
+any other target would use. Consumers never learn which publisher filled the
+slot — every kind samples `texture` directly, with no CPU round trip.
 
 **Colour: exactly one tonemap application, and it is not ours.** Godot draws a
 viewport's canvas AFTER that viewport's tonemap pass —
@@ -143,28 +135,28 @@ viewport's canvas AFTER that viewport's tonemap pass —
 `_render_buffers_post_process_and_tonemap`) before its `render_canvas` loop — so
 a Control-only target stores the canvas's own sRGB values with no curve applied,
 and the curve runs once, on the consuming surface in the main viewport's pass.
-That makes this publisher the mirror image of the offscreen one above: a plain
-`CanvasTexture` tagged `SRGBColorSpace`, no `isXRRenderTarget`, no pre-tonemap.
-Measured on `unit-sub-viewport-control-texture.tscn` against Godot 4.6.3, both
-sides **exact**: a `Color(0.5, 0.5, 0.5)` ColorRect reaches the quad as
-rgb(162, 162, 162), and the default-theme Panel composited over it as
-rgb(84, 84, 84). A pre-tonemapped raster would land them near rgb(196)/rgb(107).
+That makes this publisher the mirror image of the offscreen one above: a
+`WebGLRenderTarget` tagged `SRGBColorSpace`, no `isXRRenderTarget`, rendered
+with `NoToneMapping`. Measured on `unit-sub-viewport-control-texture.tscn`
+against Godot 4.6.3, both sides **exact**: a `Color(0.5, 0.5, 0.5)` ColorRect
+reaches the quad as rgb(162, 162, 162), and the default-theme Panel composited
+over it as rgb(84, 84, 84). A pre-tonemapped raster would land them near
+rgb(196)/rgb(107).
 
-Redraws are driven by a `MutationObserver` on the host rather than per frame:
-the subtree keeps changing after mount (a StyleBox resolves, a `TextureRect`'s
-`src` becomes a data: URL, an instanced sub-scene lands), and serialising an SVG
-every frame would be wasteful. One canvas and one texture live for the host's
-lifetime; a redraw flips `needsUpdate`.
+The pass registers with the ordered viewport-pass driver
+(`ViewportPassRegistryContext.tsx`) exactly like the 3D/2D pass — dependencies
+(any viewport nested in ITS subtree) render first, every frame, so a Control
+subtree that keeps changing (a StyleBox resolving, an instanced sub-scene
+landing) is always current by the time anything samples this target.
 
 ### Divergences (Control raster)
 
-- **Text does not match Godot's.** Godot bundles Open Sans SemiBold; the overlay
-  is system-fonts-only (ADR-0003), so glyph shapes and advance widths differ.
-  Colour, layout boxes and positions do match.
-- **Unimplemented Control types rasterise as nothing.** `LineEdit`, `HSlider`
-  and `VSlider` have no slice, so `GenericControlFallback`'s `display: contents`
-  leaves them absent from the raster — visible in `gui_panel_3d.tscn`, which
-  authors all three. Identical to what the on-screen 2D overlay shows for them.
+- **Text does not match Godot's.** Godot bundles Open Sans SemiBold; the
+  previewer's native text stack is system-fonts-only, so glyph shapes and
+  advance widths differ. Colour, layout boxes and positions do match.
+- **Unimplemented Control types rasterise as an outline.** A type with no
+  registered `Native` painter draws `<ControlFallback>`'s outline instead of
+  its real chrome — the same fallback the on-screen native layer shows for it.
 - **`ProjectSettings` is not read.** `demos/viewport/gui_in_3d` authors
   `gui/theme/default_theme_scale = 2.0`, `renderer/rendering_method =
   "gl_compatibility"`, `msaa_3d = 2` and `use_debanding = true`; none of them

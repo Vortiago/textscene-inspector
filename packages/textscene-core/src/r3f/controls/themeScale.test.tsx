@@ -17,7 +17,8 @@
  *
  * happy-dom has no cascade or layout (ADR-0024), so these assert the INLINE
  * style each component writes, never a laid-out box. The rendered-metric gate
- * is `verify:raster`.
+ * for the DOM overlay is `verify:2d`; for the native pipeline it is
+ * `pnpm test:visual`'s golden images.
  */
 
 import { describe, expect, it, vi } from 'vitest';
