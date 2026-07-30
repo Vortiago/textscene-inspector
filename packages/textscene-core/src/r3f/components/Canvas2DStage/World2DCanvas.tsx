@@ -10,9 +10,14 @@
  * `World2DContents` is exported separately so @react-three/test-renderer can
  * exercise the scene part without a DOM `<Canvas>` host (the TscnSceneContents
  * pattern).
+ *
+ * `nativeControls` (#368, dev-only `useNativeControls` flag) mounts a native
+ * Control layer as a sibling right after `<NodeDispatcher>`. `Canvas2DStage`
+ * decides whether that or the DOM overlay is active — never both — this
+ * canvas only obeys the prop it is handed.
  */
 
-import { useLayoutEffect, useMemo } from 'react';
+import { lazy, Suspense, useLayoutEffect, useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import type { OrthographicCamera } from 'three';
 import type {
@@ -27,12 +32,31 @@ import { world2DCameraPose } from './world2DCamera.js';
 import { CanvasLighting2DProvider } from '../../lighting2d/CanvasLighting2D.js';
 import { canvasModulateColor } from '../../canvasModulate.js';
 
+// The native Control layer (#368) is lazy-loaded through the SAME barrel as
+// the DOM `<ControlOverlay>` (see the lazy() in `Canvas2DStage.tsx`) — the
+// barrel's side-effect imports are what register every Control type, so a
+// direct import of the component file would silently unregister them all.
+// Development-only (`useNativeControls`, off by default): this keeps its 17+
+// registrations out of the 2D canvas's initial bundle for everyone who never
+// flips the flag.
+const ControlCanvasLayer = lazy(() =>
+  import('../../controls/index.js').then((m) => ({ default: m.ControlCanvasLayer }))
+);
+
 export interface World2DCanvasProps {
   nodes: readonly TscnNode[];
   internalResources: readonly TscnInternalResource[];
   externalResources: readonly TscnExternalResource[];
   pan: { x: number; y: number };
   zoom: number;
+  /**
+   * Mount the native (WebGL) Control layer as a sibling of `<NodeDispatcher>`
+   * instead of leaving Control drawing to the DOM `<ControlOverlay>`
+   * (`Canvas2DStage`, dev-only `useNativeControls` flag, #368). This packet's
+   * layer is a placeholder that draws nothing — the flag only exercises the
+   * mount seam.
+   */
+  nativeControls?: boolean;
 }
 
 /** Keeps the ortho camera glued to the stage's pan/zoom transform. */
@@ -55,6 +79,7 @@ export function World2DContents({
   externalResources,
   pan,
   zoom,
+  nativeControls,
 }: World2DCanvasProps) {
   const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
   return (
@@ -69,6 +94,16 @@ export function World2DContents({
             function of `nodes` is the shared definition of it. */}
         <CanvasLighting2DProvider canvasModulate={canvasModulate}>
           <NodeDispatcher nodes={nodes} />
+          {nativeControls && (
+            // `null`, never a DOM element: this Suspense boundary lives inside
+            // the R3F reconciler's tree, which has no host to mount a `<div>`
+            // fallback on — unlike Canvas2DStage's DOM ControlOverlay Suspense.
+            // Inside the lighting provider because a Control is a CanvasItem
+            // like any other, so a 2D light reaches it.
+            <Suspense fallback={null}>
+              <ControlCanvasLayer />
+            </Suspense>
+          )}
         </CanvasLighting2DProvider>
       </SceneResourcesProvider>
     </CanvasWorkspaceProvider>
@@ -81,20 +116,16 @@ export function World2DCanvas(props: World2DCanvasProps) {
       orthographic
       camera={{ position: [0, 0, 1000], near: 0.1, far: 4000 }}
       gl={{ alpha: true }}
-      // Godot never tone-maps a canvas: the RD renderer runs
-      // `_render_buffers_post_process_and_tonemap` on the 3D buffers and
-      // composites canvas items into the viewport AFTER it, so authored 2D
-      // colour reaches the framebuffer as written. `flat` = `NoToneMapping`;
-      // without it @react-three/fiber defaults to ACES Filmic, which lifted
-      // highlights and desaturated every fill in this stage.
-      //
-      // It reaches further than the stage's own content: a viewport surface
-      // only ever exists in this workspace, so the default also applied to the
-      // offscreen pass of a container's 3D sub-viewport, which the
-      // `SubViewport` component deliberately leaves on the renderer's live
-      // curve. This is the one
-      // canvas where "the parent viewport's curve" has no Environment behind
-      // it, so the honest curve is none.
+      // `flat` = `NoToneMapping`. Godot never tonemaps a canvas: the RD
+      // renderer runs `_render_buffers_post_process_and_tonemap` on the 3D
+      // buffers and composites canvas items into the viewport AFTER it, so a
+      // Sprite2D's albedo reaches the framebuffer as authored. Without this
+      // @react-three/fiber's default (ACES Filmic) applies to every 2D
+      // material, and — because a viewport surface only ever exists in this
+      // workspace — to the offscreen pass of a container's 3D sub-viewport
+      // too, which `<SubViewport>` deliberately leaves on the renderer's live
+      // curve. That is the one canvas where "the parent viewport's curve" has
+      // no Environment behind it, so the honest curve is none.
       flat
       // Fill the stage and stay transparent to pointer input so the stage's
       // own drag-to-pan / wheel-to-zoom handlers keep working.
