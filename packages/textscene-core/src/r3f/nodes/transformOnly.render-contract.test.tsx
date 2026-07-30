@@ -72,7 +72,10 @@ async function renderScene(nodes: TscnNode[]) {
 describe('transform-only 3D types: rendered contract (ADR-0008)', () => {
   it('derives a non-trivial set, so an empty filter cannot vacuously pass', () => {
     expect(TRANSFORM_ONLY_3D_TYPES.length).toBeGreaterThanOrEqual(10);
-    expect(TRANSFORM_ONLY_3D_TYPES).toContain('GPUParticles3D');
+    // A physics body is the safe anchor: ADR-0005 settled it and Godot draws
+    // nothing for one at runtime, so it cannot be re-classified out from under
+    // this assertion the way a contested type could.
+    expect(TRANSFORM_ONLY_3D_TYPES).toContain('StaticBody3D');
   });
 
   it.each([...TRANSFORM_ONLY_3D_TYPES])(
