@@ -81,10 +81,20 @@ export function World2DCanvas(props: World2DCanvasProps) {
       orthographic
       camera={{ position: [0, 0, 1000], near: 0.1, far: 4000 }}
       gl={{ alpha: true }}
-      // Godot never tone-maps a canvas: authored 2D colour goes straight to the
-      // framebuffer, and only the 3D pass is tone-mapped. R3F otherwise
-      // defaults to ACESFilmic, which lifted highlights and desaturated every
-      // fill in this stage.
+      // Godot never tone-maps a canvas: the RD renderer runs
+      // `_render_buffers_post_process_and_tonemap` on the 3D buffers and
+      // composites canvas items into the viewport AFTER it, so authored 2D
+      // colour reaches the framebuffer as written. `flat` = `NoToneMapping`;
+      // without it @react-three/fiber defaults to ACES Filmic, which lifted
+      // highlights and desaturated every fill in this stage.
+      //
+      // It reaches further than the stage's own content: a viewport surface
+      // only ever exists in this workspace, so the default also applied to the
+      // offscreen pass of a container's 3D sub-viewport, which the
+      // `SubViewport` component deliberately leaves on the renderer's live
+      // curve. This is the one
+      // canvas where "the parent viewport's curve" has no Environment behind
+      // it, so the honest curve is none.
       flat
       // Fill the stage and stay transparent to pointer input so the stage's
       // own drag-to-pan / wheel-to-zoom handlers keep working.

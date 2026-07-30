@@ -1,0 +1,51 @@
+; HSlider grabber travel: where `value` puts the grabber along the horizontal
+; track, how far the grabber_area fills behind it, and when tick marks appear.
+; This is the only fixture whose geometry is driven by a Range value rather
+; than by anchors or offsets, so a grabber pinned to one end whatever the value
+; — or ticks drawn on a slider that never set tick_count — is invisible in
+; every other scene. unit-vslider moves the same value along the other axis.
+
+[gd_scene format=3 uid="uid://unithslider"]
+
+[node name="HSliderRoot" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Sliders" type="VBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 32.0
+offset_right = -32.0
+offset_bottom = -32.0
+theme_override_constants/separation = 24
+
+[node name="AtMinimum" type="HSlider" parent="Sliders"]
+layout_mode = 2
+
+[node name="AtQuarter" type="HSlider" parent="Sliders"]
+layout_mode = 2
+value = 25.0
+
+[node name="AtMaximum" type="HSlider" parent="Sliders"]
+layout_mode = 2
+value = 100.0
+
+[node name="ShiftedRange" type="HSlider" parent="Sliders"]
+layout_mode = 2
+min_value = -50.0
+max_value = 50.0
+value = 0.0
+
+[node name="Ticked" type="HSlider" parent="Sliders"]
+layout_mode = 2
+value = 60.0
+tick_count = 5
+ticks_on_borders = true
+
+[node name="Disabled" type="HSlider" parent="Sliders"]
+layout_mode = 2
+value = 60.0
+editable = false

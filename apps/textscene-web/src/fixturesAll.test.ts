@@ -26,4 +26,22 @@ describe('fixturesAll', () => {
       expect(typeof f.category).toBe('string');
     }
   });
+
+  /**
+   * The games corpus is DEPLOY-ONLY: `pnpm build:deploy` sets
+   * `VITE_INCLUDE_GAMES=1`, `pnpm dev` and a plain build do not. This asserts
+   * the DEFAULT arm, which is the one a developer runs — and it holds whether
+   * or not the corpus happens to be vendored on this machine, which matters
+   * because verifying this feature against the real RTS scenes requires
+   * vendoring it.
+   *
+   * `copy-fixtures.js` gates the matching `public/fixtures/games/` mirror on
+   * the same variable. If these two ever disagree the selector lists scenes
+   * whose files were never copied, which reads to the user as a broken app
+   * rather than a missing corpus.
+   */
+  it('excludes the games corpus unless VITE_INCLUDE_GAMES is set', () => {
+    expect(import.meta.env.VITE_INCLUDE_GAMES).not.toBe('1');
+    expect(merged.some((f) => f.file.startsWith('games/'))).toBe(false);
+  });
 });

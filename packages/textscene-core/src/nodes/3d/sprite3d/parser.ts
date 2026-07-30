@@ -13,7 +13,14 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { parseColor } from '../../../utils/colorParser';
-import { boolOr, enumOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import {
+  boolOr,
+  enumOr,
+  floatOr,
+  intOr,
+  parseOptionalVector2i,
+  vec2Or,
+} from '../../../parser/valueParsers';
 import { warn } from '../../../logger';
 import {
   AlphaCutMode,
@@ -68,7 +75,7 @@ export function parseSprite3D(
   }
 
   if (properties.frame_coords) {
-    const coords = parseFrameCoords(properties.frame_coords);
+    const coords = parseOptionalVector2i(properties.frame_coords, 'Sprite3D frame_coords');
     if (coords) result.frame_coords = coords;
   }
 
@@ -78,19 +85,6 @@ export function parseSprite3D(
   }
 
   return result;
-}
-
-/**
- * Parse Vector2i(x, y) — integer-only Vector2. The frame_coords property
- * uses Vector2i in Godot to make grid indexing explicit.
- */
-function parseFrameCoords(value: string): { x: number; y: number } | null {
-  const match = value.match(/^Vector2i\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/);
-  if (!match || !match[1] || !match[2]) {
-    warn(`Sprite3D: invalid frame_coords Vector2i "${value}"`);
-    return null;
-  }
-  return { x: parseInt(match[1], 10), y: parseInt(match[2], 10) };
 }
 
 /**

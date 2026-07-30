@@ -18,8 +18,11 @@
  * A 3D scene is captured from Godot's editor camera
  * (`Node3DEditorViewport::Cursor`) at the same frame size on both sides, so a
  * pixel means the same thing in both images without any per-fixture camera
- * derivation. A 2D scene has no such camera: both sides render the project
- * viewport rectangle 1:1 instead (see `CANVAS_2D_CAPTURE`).
+ * derivation. A 2D scene has no such camera: both sides render the SCENE's own
+ * project viewport rectangle instead (`display/window/size/viewport_*`, which
+ * 23 of the corpus's projects set), so that rect is per-fixture rather than a
+ * constant, and the workspace is recorded beside each image rather than
+ * inferred from its size.
  *
  * WHICH of the two a fixture is comes from GODOT, which knows its own class
  * hierarchy, and our side then has to AGREE — the previewer picks its workspace
@@ -31,7 +34,7 @@
  * skipped unless `--force` is passed, so an interrupted run resumes.
  */
 
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -39,7 +42,6 @@ import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { renderReference } from '../godot-ref/run.mjs';
 import {
   assertPortFree,
-  CANVAS_2D_CAPTURE,
   createCaptureContext,
   ensureWebBuilt,
   findCaptureTarget,
@@ -102,24 +104,25 @@ function loadPlan(only) {
 const imagePath = (fixture, side) => join(IMAGES, `${fixture.replace(/\.tscn$/, '')}-${side}.png`);
 
 /**
- * A PNG's dimensions, straight out of the IHDR header — the reference image's
- * size is what a skipped/earlier Godot pass left behind saying which frame it
- * rendered, and decoding sixty full images to read six bytes each is waste.
+ * Where a reference render's WORKSPACE is remembered, beside its image.
+ *
+ * The mode used to be inferred from the image's dimensions — 2D if it measured
+ * exactly the capture frame. That only ever worked because every 2D capture was
+ * the same size; now that a 2D frame is the scene's own
+ * `display/window/size/viewport_*`, a 640x400 pong capture and a 1920x1080 RTS
+ * capture would both read as '3d'. It would not fail, it would quietly build
+ * the gallery against the wrong workspace, which is the worse outcome.
+ *
+ * Godot reports the mode itself (it is the side that classifies the root), so
+ * the value is written here rather than re-derived.
  */
-function pngSize(file) {
-  const header = Buffer.alloc(24);
-  const fd = openSync(file, 'r');
-  try {
-    readSync(fd, header, 0, header.length, 0);
-  } finally {
-    closeSync(fd);
-  }
-  return { width: header.readUInt32BE(16), height: header.readUInt32BE(20) };
-}
+const modePath = (imageFile) => `${imageFile}.mode`;
 
-function modeOfImage(file) {
-  const { width, height } = pngSize(file);
-  return width === CANVAS_2D_CAPTURE.width && height === CANVAS_2D_CAPTURE.height ? '2d' : '3d';
+function readRecordedMode(imageFile) {
+  const file = modePath(imageFile);
+  if (!existsSync(file)) return null;
+  const value = readFileSync(file, 'utf8').trim();
+  return value === '2d' || value === '3d' ? value : null;
 }
 
 async function captureGodot(fixtures, force) {
@@ -138,7 +141,12 @@ async function captureGodot(fixtures, force) {
         scene: join(REPO_ROOT, 'scenes/fixtures', fixture),
         out,
       });
-      if (mode) modes.set(fixture, mode);
+      if (mode) {
+        modes.set(fixture, mode);
+        // Beside the image, so a later run that reuses the cache still knows
+        // which workspace it is — the image's own size no longer says.
+        writeFileSync(modePath(out), `${mode}\n`);
+      }
       console.log(`ok (${mode ?? 'mode unknown'})`);
     } catch (error) {
       // One unrenderable scene must not cost the other sixty.
@@ -151,9 +159,10 @@ async function captureGodot(fixtures, force) {
 
 /**
  * The workspace each fixture is captured in, from the side that knows: Godot.
- * A fixture the reference pass skipped takes it from the reference IMAGE, whose
- * size already says which frame was rendered — and one with no reference at all
- * is not capturable, because there is nothing to compare it against anyway.
+ * A fixture the reference pass skipped takes it from the mode RECORDED beside
+ * that reference — and one with neither is not capturable, because there is
+ * nothing to compare it against anyway. A cached image from before the mode was
+ * recorded lands there too, which re-renders it rather than guessing.
  */
 function resolveModes(fixtures, godotModes) {
   const modes = new Map();
@@ -165,7 +174,8 @@ function resolveModes(fixtures, godotModes) {
       continue;
     }
     const reference = imagePath(fixture, 'godot');
-    if (existsSync(reference)) modes.set(fixture, modeOfImage(reference));
+    const recorded = existsSync(reference) ? readRecordedMode(reference) : null;
+    if (recorded) modes.set(fixture, recorded);
     else unknown.push(fixture);
   }
   return { modes, unknown };

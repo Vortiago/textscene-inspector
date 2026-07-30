@@ -13,15 +13,22 @@ import type { ControlComponentProps } from '../../../../r3f/controls/ControlComp
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
 import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
 import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
+import { useGodotTheme } from '../../../../r3f/controls/useGodotTheme';
 import { parseBBCode } from './bbcode';
 import type { RichTextLabelProperties } from './types';
 
 export function RichTextLabel({ node, children }: ControlComponentProps) {
   const props = node.properties as RichTextLabelProperties;
   const parentKind = useControlParent();
+  const theme = useGodotTheme();
   const style: CSSProperties = {
     ...controlLayoutStyle(props, parentKind),
     whiteSpace: 'pre-wrap',
+    // The theme's `default_font_size` at the project's scale, set explicitly
+    // like Label's: inheriting only agreed with Godot while every ancestor
+    // happened to sit at 16px, and could not follow a scaled project at all.
+    fontSize: `${theme.fontSize}px`,
+    // After it, so `theme_override_font_sizes/normal_font_size` still wins.
     ...textThemeStyle(props, { sizeKey: 'normal_font_size', colorKey: 'default_color' }),
   };
 

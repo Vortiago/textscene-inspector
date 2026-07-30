@@ -1,0 +1,41 @@
+; VSlider travel direction: Godot draws a vertical slider's grabber at
+; `size.height - ratio * areasize - grabber_height`, i.e. measured up from the
+; BOTTOM, so value = min_value sits at the bottom and max_value at the top.
+; unit-hslider moves the identical value along a horizontal axis and cannot
+; catch a vertical axis that runs the wrong way; the three sliders here differ
+; only in `value`, so an inverted axis reverses their order on screen.
+
+[gd_scene format=3 uid="uid://unitvslider"]
+
+[node name="VSliderRoot" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Sliders" type="HBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 48.0
+offset_top = 32.0
+offset_right = -48.0
+offset_bottom = -32.0
+theme_override_constants/separation = 48
+alignment = 1
+
+[node name="AtBottom" type="VSlider" parent="Sliders"]
+layout_mode = 2
+
+[node name="AtMiddle" type="VSlider" parent="Sliders"]
+layout_mode = 2
+value = 50.0
+
+[node name="AtTop" type="VSlider" parent="Sliders"]
+layout_mode = 2
+value = 100.0
+
+[node name="TickedAtMiddle" type="VSlider" parent="Sliders"]
+layout_mode = 2
+value = 50.0
+tick_count = 5
+ticks_on_borders = true

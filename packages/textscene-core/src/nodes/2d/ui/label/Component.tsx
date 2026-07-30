@@ -2,6 +2,12 @@
  * <Label> — a positioned <div> holding the node's text. Font size/color come
  * from `theme_override_font_sizes/font_size` + `theme_override_colors/font_color`;
  * a system font stack is used (the VS Code webview CSP blocks web fonts).
+ *
+ * Absent an override the size is the theme's `default_font_size` at the
+ * project's `gui/theme/default_theme_scale`, set EXPLICITLY rather than left to
+ * inherit: the overlay and the off-screen raster host both happen to sit at
+ * 16px today, so inheriting matched Godot only by coincidence and could not
+ * follow a scaled project at all.
  */
 
 import type { CSSProperties } from 'react';
@@ -9,6 +15,7 @@ import type { ControlComponentProps } from '../../../../r3f/controls/ControlComp
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
 import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
 import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
+import { useGodotTheme } from '../../../../r3f/controls/useGodotTheme';
 import type { LabelProperties } from './types';
 
 const H_ALIGN = ['left', 'center', 'right', 'justify'] as const;
@@ -18,8 +25,11 @@ const V_JUSTIFY = ['flex-start', 'center', 'flex-end', 'stretch'] as const;
 export function Label({ node, children }: ControlComponentProps) {
   const props = node.properties as LabelProperties;
   const parentKind = useControlParent();
+  const theme = useGodotTheme();
   const style: CSSProperties = {
     ...controlLayoutStyle(props, parentKind),
+    fontSize: `${theme.fontSize}px`,
+    // After the theme size, so `theme_override_font_sizes/font_size` still wins.
     ...textThemeStyle(props, { sizeKey: 'font_size', colorKey: 'font_color' }),
   };
 

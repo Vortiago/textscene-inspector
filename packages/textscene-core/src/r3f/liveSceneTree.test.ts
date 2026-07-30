@@ -113,6 +113,47 @@ describe('collectLiveNodes', () => {
       collectLiveNodes(roots, cached, (n) => n.type === 'Camera3D').map((c) => c.path)
     ).toEqual(['A/Cam']);
   });
+
+  describe('descend option', () => {
+    // Some consumers ask "what is in THIS view", which is not the same as "what
+    // is in the tree": a sub-viewport's content is only visible through its
+    // surface, so a consumer answering the first question must be able to stop
+    // at that boundary (ADR-0030).
+    const roots = [
+      makeNode('Root', 'Node3D', {
+        children: [
+          makeNode('OnScreen', 'ColorRect'),
+          makeNode('View', 'SubViewport', {
+            children: [makeNode('OffScreen', 'ColorRect')],
+          }),
+        ],
+      }),
+    ];
+    const ctx: LiveTreeContext = { externalResources: [], sceneCache: cacheOf({}) };
+    const isRect = (n: TscnNode) => n.type === 'ColorRect';
+
+    it('collects the whole tree when no descend predicate is given', () => {
+      expect(collectLiveNodes(roots, ctx, isRect).map((e) => e.path)).toEqual([
+        'Root/OnScreen',
+        'Root/View/OffScreen',
+      ]);
+    });
+
+    it('stops at a node the descend predicate rejects', () => {
+      expect(
+        collectLiveNodes(roots, ctx, isRect, (n) => n.type !== 'SubViewport').map((e) => e.path)
+      ).toEqual(['Root/OnScreen']);
+    });
+
+    it('still VISITS the rejected node itself — only its children are skipped', () => {
+      const isViewport = (n: TscnNode) => n.type === 'SubViewport';
+      expect(
+        collectLiveNodes(roots, ctx, isViewport, (n) => n.type !== 'SubViewport').map(
+          (e) => e.path
+        )
+      ).toEqual(['Root/View']);
+    });
+  });
 });
 
 describe('collapseLiveNode — identity contract', () => {

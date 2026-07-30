@@ -73,10 +73,18 @@ function detectCategory(filename) {
     filename.startsWith('unit-path2d') ||
     filename.startsWith('unit-pathfollow2d') ||
     filename.startsWith('unit-line2d') ||
+    // ParallaxBackground is a CanvasLayer, but it hosts world-canvas content
+    // (its ParallaxLayer children are Node2Ds), so both belong with the canvas
+    // fixtures rather than the DOM-overlay ones.
+    filename.startsWith('unit-parallax-') ||
     filename.startsWith('unit-2d')
   ) {
     return 'Unit - 2D Canvas';
   }
+  // Nested viewports (ADR-0030) — a sub-viewport and the surfaces that display
+  // it. Its own category because it is neither 2D-canvas nor 2D-UI content: a
+  // sub-viewport hosts BOTH kinds and is a plain Node itself.
+  if (filename.startsWith('unit-sub-viewport')) return 'Unit - Viewports';
   if (filename.startsWith('edge-')) return 'Edge Cases';
   if (filename.startsWith('integration-external')) return 'Integration - External Scenes';
   if (filename.startsWith('integration-')) return 'Integration - Multi-Node';

@@ -36,7 +36,14 @@ export type ParentLayoutKind =
   | 'grid'
   | 'center'
   | 'margin'
-  | 'block';
+  | 'block'
+  /**
+   * A SplitContainer track. The parent already solved the child's rect and
+   * applied its size flags to the track itself (`Container::fit_child_in_rect`
+   * is the container's operation, not the child's), so the child contributes
+   * no sizing of its own — it fills the rect it was handed.
+   */
+  | 'split';
 
 /** Godot Control.LayoutPreset → [anchor_left, anchor_top, anchor_right, anchor_bottom]. */
 const PRESET_ANCHORS: Record<number, [number, number, number, number]> = {
@@ -104,6 +111,19 @@ function anchorOffsetStyle(p: ControlProperties): CSSProperties {
   };
 }
 
+/**
+ * `Container::fit_child_in_rect`'s alignment half on one axis, as a grid
+ * self-alignment. FILL short-circuits there exactly as it does in the box
+ * containers — the shrink branch runs inside `if (!flags.has_flag(SIZE_FILL))`.
+ */
+function splitSelfAlign(flag: number | undefined): CSSProperties['justifySelf'] {
+  const flags = flag ?? SIZE_FLAG_FILL;
+  if ((flags & SIZE_FLAG_FILL) !== 0) return 'stretch';
+  if ((flags & SIZE_FLAG_SHRINK_END) !== 0) return 'end';
+  if ((flags & SIZE_FLAG_SHRINK_CENTER) !== 0) return 'center';
+  return 'start';
+}
+
 function containerChildStyle(p: ControlProperties, parent: ParentLayoutKind): CSSProperties {
   const style: CSSProperties = { position: 'relative' };
   const rowMain = parent === 'row';
@@ -128,6 +148,17 @@ function containerChildStyle(p: ControlProperties, parent: ParentLayoutKind): CS
     // No FILL/SHRINK bits (explicit 0): Godot shrinks the child to its content
     // at the begin edge — pin it so CSS flex doesn't stretch it by default.
     else style.alignSelf = 'flex-start';
+  } else if (parent === 'split') {
+    // A SplitContainer grid track IS the rect Godot computed, so the child
+    // contributes no sizing — `Container::fit_child_in_rect` only decides how
+    // it sits inside: SIZE_FILL takes the whole rect (grid's own `stretch`
+    // default), and without it the child takes its minimum size and the shrink
+    // bits place it. `min*: 0` lets a large child fit its track instead of
+    // pushing the split, which Godot does by clipping.
+    style.minWidth = 0;
+    style.minHeight = 0;
+    style.justifySelf = splitSelfAlign(p.sizeFlagsHorizontal);
+    style.alignSelf = splitSelfAlign(p.sizeFlagsVertical);
   } else if (parent === 'margin') {
     // Godot's MarginContainer stretches its single child to fill the padded
     // box. The container renders as a flex column, so the child grows to fill

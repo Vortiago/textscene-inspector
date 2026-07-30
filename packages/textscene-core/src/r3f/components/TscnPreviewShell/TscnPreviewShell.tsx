@@ -28,6 +28,9 @@ import {
 import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext.js';
+import { ViewportTextureProvider } from '../../contexts/ViewportTextureContext.js';
+import { ViewportRectProvider } from '../../contexts/ViewportRectContext.js';
+import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext.js';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
@@ -249,7 +252,33 @@ export function TscnPreviewShell({
     ),
     (children) => <AnimationTransportProvider>{children}</AnimationTransportProvider>,
     (children) => <AnimationDriverProvider>{children}</AnimationDriverProvider>,
-    (children) => <AnimatedValueProvider>{children}</AnimatedValueProvider>
+    // Same reason as the driver registry directly above: a `<SubViewport>`
+    // publishes its offscreen target here and a `ViewportTexture` consumer
+    // resolves it by NodePath. It wraps BOTH canvases and the DOM overlay
+    // because consumers live on both sides of that split (ADR-0030).
+    (children) => <ViewportTextureProvider>{children}</ViewportTextureProvider>,
+    // The return leg of the same seam: a stretching SubViewportContainer
+    // measures its own DOM box and the publisher sizes the target from it,
+    // because Godot's `recalc_force_viewport_sizes` makes the CONTAINER's rect
+    // the viewport's size. Wraps both canvases and the overlay for the same
+    // reason the texture registry does — the two ends live on either side.
+    (children) => <ViewportRectProvider>{children}</ViewportRectProvider>,
+    (children) => <AnimatedValueProvider>{children}</AnimatedValueProvider>,
+    // The scene's `project.godot`. Outermost of the Control-facing providers
+    // because BOTH consumers of the theme scale sit under it — the on-screen
+    // overlay in `<Canvas2DStage>` and the off-screen `<ControlRasterHosts>`,
+    // which `<ViewportArea>` mounts side by side.
+    //
+    // The key carries `panelId` as well as the scene's res:// identity because
+    // `rootScenePath` is relative to the **Corpus root**: two vendored projects
+    // can each hold a `res://main.tscn`, and on that swap the path alone would
+    // not change, so the settings would stay the outgoing project's while the
+    // byte layer had already been cleared for the incoming one.
+    (children) => (
+      <ProjectSettingsProvider sceneKey={`${panelId} ${rootScenePath}`}>
+        {children}
+      </ProjectSettingsProvider>
+    )
   );
 
   return withProviders(

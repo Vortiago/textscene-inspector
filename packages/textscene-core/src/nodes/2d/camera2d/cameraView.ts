@@ -21,7 +21,13 @@ export interface Camera2DView {
   zoom: number;
 }
 
-type ViewProps = Pick<
+/**
+ * Everything `camera2DView` needs, and exactly what `<Camera2D>` publishes on
+ * `userData.camera2d` — the parsed framing surface, with the node's own
+ * position deliberately absent because a consumer resolves that from wherever
+ * it holds the camera (the live tree, or an Object3D's world matrix).
+ */
+export type Camera2DFraming = Pick<
   Camera2DProperties,
   | 'zoom'
   | 'offset'
@@ -33,8 +39,17 @@ type ViewProps = Pick<
   | 'limitEnabled'
 >;
 
+/**
+ * The `userData.camera2d` payload `<Camera2D>` publishes: the framing surface
+ * plus `enabled`, which decides whether the camera is eligible to become its
+ * viewport's current one.
+ */
+export interface Camera2DTag extends Camera2DFraming {
+  enabled: boolean;
+}
+
 export function camera2DView(
-  props: ViewProps,
+  props: Camera2DFraming,
   worldPosition: { x: number; y: number },
   viewportSize: { x: number; y: number }
 ): Camera2DView {

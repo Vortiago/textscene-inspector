@@ -21,6 +21,11 @@
  * node whose path is in `SelectionContext.hiddenNodePaths` (and its subtree) is
  * not rendered. Paths follow the tree scheme — root = node name, child =
  * `parent/child` — so a single hidden set drives both viewports.
+ *
+ * Stops at a **viewport boundary** (ADR-0030): a `SubViewport` always owns its
+ * own World2D, so its Control subtree is drawn by its viewport surface, not
+ * here. Without that stop the subtree leaked into the parent HUD through the
+ * fallback's `display: contents`.
  */
 
 import { useEffect, type ReactNode } from 'react';
@@ -33,6 +38,7 @@ import { collapseLiveNode } from '../liveSceneTree';
 import { parseResourceReference, resolveInstancePath } from '../../resources/SubResourceResolver';
 import { controlComponentRegistry } from './ControlComponentRegistry';
 import { GenericControlFallback } from './GenericControlFallback';
+import { isViewportBoundary } from '../../nodes/viewport/subviewport/viewportBoundary';
 
 const NO_HIDDEN: ReadonlySet<string> = new Set();
 
@@ -53,6 +59,12 @@ export function ControlDispatcher({ nodes, parentPath = '' }: ControlDispatcherP
       {nodes.map((node) => {
         const path = parentPath ? joinPath(parentPath, node.name) : node.name;
         if (hiddenNodePaths.has(path)) return null;
+        // A sub-viewport owns its own World2D, so its Control subtree is drawn
+        // by its viewport surface (a SubViewportContainer, or a ViewportTexture
+        // consumer) and never by the parent overlay — ADR-0030. Stopping HERE
+        // rather than inside DispatchedControl also skips the fallback's
+        // `display: contents` passthrough, which is what leaked the subtree.
+        if (isViewportBoundary(node.type)) return null;
         return <DispatchedControl key={node.name} node={node} path={path} />;
       })}
     </>

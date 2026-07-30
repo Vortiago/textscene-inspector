@@ -28,6 +28,12 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
   preview (`SHOWCASE_URL`, default `:4173`). The goldens are WebGL-canvas-only and
   happy-dom has no layout, so this is the only gate that sees a DOM-overlay
   regression (ADR-0024).
+- Changed the **Control-subtree rasteriser** (`rasterizeControlSubtree`, the
+  DOM→texture path a `ViewportTexture` samples): `pnpm verify:raster` — pixel
+  assertions in a real browser, since happy-dom can neither lay a Control out
+  nor draw an SVG image. Needs a built core (`pnpm --filter @textscene/core
+  build`) and, for its real-overlay suite, the same running preview as
+  `verify:2d`.
 
 ## Vertical slices
 

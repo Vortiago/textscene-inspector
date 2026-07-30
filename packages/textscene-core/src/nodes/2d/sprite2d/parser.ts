@@ -6,10 +6,9 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
-import { boolOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { boolOr, intOr, parseOptionalVector2i, vec2Or } from '../../../parser/valueParsers';
 import { warn } from '../../../logger';
 import type { Rect2, Sprite2DProperties } from './types';
-import type { Vector2 } from '../../base/node2d/types';
 
 export function parseSprite2D(
   heading: ParsedHeading,
@@ -32,7 +31,7 @@ export function parseSprite2D(
 
   if (properties.texture) result.texture = properties.texture;
   if (properties.frame_coords) {
-    const c = parseVector2i(properties.frame_coords);
+    const c = parseOptionalVector2i(properties.frame_coords, 'Sprite2D frame_coords');
     if (c) result.frame_coords = c;
   }
   if (properties.region_rect) {
@@ -41,15 +40,6 @@ export function parseSprite2D(
   }
 
   return result;
-}
-
-function parseVector2i(value: string): Vector2 | null {
-  const m = value.match(/^Vector2i\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/);
-  if (!m) {
-    warn(`Sprite2D: invalid frame_coords Vector2i "${value}"`);
-    return null;
-  }
-  return { x: parseInt(m[1]!, 10), y: parseInt(m[2]!, 10) };
 }
 
 function parseRect2(value: string): Rect2 | null {

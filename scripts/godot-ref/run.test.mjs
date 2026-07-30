@@ -433,6 +433,7 @@ describe('physics pause follows the previews flag', () => {
       modeOut: '/tmp/m.txt',
       fov: 70,
       fovExplicit: false,
+      canvas2DSize: { width: 640, height: 360 },
     });
 
   it('pauses under the editor previews, so the authored pose is what renders', () => {
