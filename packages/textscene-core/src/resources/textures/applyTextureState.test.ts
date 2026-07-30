@@ -21,7 +21,9 @@ function uv(sx: number, sy: number, ox = 0, oy = 0): UVTransform {
 
 describe('applyTextureState', () => {
   describe('no divergence', () => {
-    it('returns the original reference when nothing is asked for', () => {
+    it('returns the original reference when nothing diverges', () => {
+      // Repeat wrapping is Godot's default, so a texture already carrying it
+      // needs nothing of its own.
       const texture = new THREE.Texture();
       expect(applyTextureState(texture, {})).toBe(texture);
     });
@@ -47,7 +49,6 @@ describe('applyTextureState', () => {
       const texture = new THREE.Texture();
       applyTextureState(texture, { uv: uv(1, 1), filter: 3 });
       expect(texture.repeat.x).toBe(1);
-      expect(texture.wrapS).toBe(THREE.ClampToEdgeWrapping);
       expect(texture.version).toBe(0);
     });
   });
@@ -124,6 +125,35 @@ describe('applyTextureState', () => {
       expect(applyTextureState(texture, {})).toBe(texture);
       expect(applyTextureState(texture, { filter: undefined })).toBe(texture);
       expect(texture.minFilter).toBe(THREE.LinearFilter);
+    });
+  });
+
+  describe('texture_repeat', () => {
+    it('does not clone for the default, which the loader already applied', () => {
+      // Godot's BaseMaterial3D constructs with FLAG_USE_TEXTURE_REPEAT = true,
+      // so repeat is the shared default every material inherits — set once on
+      // the loaded texture, not cloned per material. Cloning for it would break
+      // texture identity for essentially every material in the corpus.
+      const texture = new THREE.Texture();
+      expect(applyTextureState(texture, {})).toBe(texture);
+    });
+
+    it('clones only when a material turns repeat OFF', () => {
+      const texture = new THREE.Texture();
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+
+      const result = applyTextureState(texture, { repeat: false });
+
+      expect(result).not.toBe(texture);
+      expect(result.wrapS).toBe(THREE.ClampToEdgeWrapping);
+      expect(texture.wrapS).toBe(THREE.RepeatWrapping);
+    });
+
+    it('leaves a render target alone', () => {
+      // Its wrapping is the target's business, and cloning detaches it.
+      const target = new THREE.WebGLRenderTarget(8, 8);
+      expect(applyTextureState(target.texture, { repeat: false })).toBe(target.texture);
     });
   });
 

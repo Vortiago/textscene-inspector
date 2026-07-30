@@ -50,3 +50,19 @@ export function visualLayersOf(object: THREE.Object3D): number {
   const layers = object.userData[VISUAL_LAYERS_KEY];
   return typeof layers === 'number' ? layers : GODOT_DEFAULT_VISUAL_LAYERS;
 }
+
+/**
+ * Stamp the mask onto `object` and everything beneath it.
+ *
+ * The declarative `visualLayersUserData` covers a slice that renders its own
+ * `<mesh>`. This covers the GLB path, where `layers` is authored on an override
+ * node that matches a glTF node — and one glTF node with several primitives
+ * becomes a Group of Meshes in three, while readers look at one object with no
+ * inheritance. Stamping the subtree is what makes those meshes carry it.
+ */
+export function stampVisualLayers(object: THREE.Object3D, layers: number): void {
+  // `traverse` visits `object` itself first, so the subtree root is covered too.
+  object.traverse((child) => {
+    child.userData[VISUAL_LAYERS_KEY] = layers;
+  });
+}

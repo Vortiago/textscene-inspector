@@ -50,6 +50,14 @@ export interface TextureState {
   uv?: UVTransform;
   /** Godot `BaseMaterial3D.texture_filter` ordinal. Omitted means its default. */
   filter?: number;
+  /**
+   * Godot `BaseMaterial3D.texture_repeat`, whose default is TRUE
+   * (`flags[FLAG_USE_TEXTURE_REPEAT] = true`, mapping to `repeat_enable` on the
+   * sampler). three's `Texture` defaults to clamp-to-edge instead, so a surface
+   * whose UVs leave 0..1 — a large terrain, a tiled road — smears its edge texel
+   * into stripes rather than tiling. Omitted means Godot's default.
+   */
+  repeat?: boolean;
 }
 
 /**
@@ -59,6 +67,14 @@ export interface TextureState {
 export function applyTextureState(texture: THREE.Texture, state: TextureState): THREE.Texture {
   const filterState = godotTextureFilterState(state.filter);
   const uvDiverges = state.uv !== undefined && !isIdentity(state.uv);
+  // Godot's default (repeat) is applied to the shared texture at load, so only
+  // a material that explicitly turns it OFF diverges — the same rule the filter
+  // follows, and what keeps every ordinary texture shared rather than cloned.
+  const wrapping = state.repeat === false ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
+  const wrapDiverges =
+    state.repeat === false &&
+    !texture.isRenderTargetTexture &&
+    (texture.wrapS !== wrapping || texture.wrapT !== wrapping);
   // Only an AUTHORED filter can diverge. Comparing an unauthored material
   // against Godot's default would clone every texture whose sampler state
   // happens not to match it — which for a render-target-backed texture (a
@@ -69,7 +85,7 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
     state.filter !== undefined &&
     !texture.isRenderTargetTexture &&
     !textureFilterMatches(texture, filterState);
-  if (!uvDiverges && !filterDiverges) return texture;
+  if (!uvDiverges && !filterDiverges && !wrapDiverges) return texture;
 
   // ONE clone, however many reasons there were. `clone()` copies parameters and
   // shares `source`, so the image bytes are not duplicated.
@@ -77,8 +93,12 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
   if (uvDiverges) {
     cloned.repeat.set(state.uv!.scale.x, state.uv!.scale.y);
     cloned.offset.set(state.uv!.offset.x, state.uv!.offset.y);
-    cloned.wrapS = THREE.RepeatWrapping;
-    cloned.wrapT = THREE.RepeatWrapping;
+  }
+  // A tiling transform only tiles under repeat wrapping, so a clone made for
+  // one carries it too — unless the material explicitly turned repeat off.
+  if (wrapDiverges || uvDiverges) {
+    cloned.wrapS = wrapping;
+    cloned.wrapT = wrapping;
   }
   if (filterDiverges) applyTextureFilterState(cloned, filterState);
   cloned.userData[MATERIAL_OWNED] = true;

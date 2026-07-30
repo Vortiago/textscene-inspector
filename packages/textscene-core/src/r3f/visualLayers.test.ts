@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   GODOT_DEFAULT_VISUAL_LAYERS,
+  stampVisualLayers,
   visualLayersOf,
   visualLayersUserData,
 } from './visualLayers';
@@ -52,5 +53,31 @@ describe('visualLayersOf', () => {
     parent.add(child);
 
     expect(visualLayersOf(child)).toBe(GODOT_DEFAULT_VISUAL_LAYERS);
+  });
+});
+
+describe('stampVisualLayers', () => {
+  it('stamps the subtree root and every descendant', () => {
+    // One glTF node with several primitives arrives as a Group of Meshes, and
+    // readers look at a single object — so the meshes must carry it themselves.
+    const root = new THREE.Group();
+    const group = new THREE.Group();
+    const mesh = new THREE.Mesh();
+    group.add(mesh);
+    root.add(group);
+
+    stampVisualLayers(root, 2);
+
+    expect(visualLayersOf(root)).toBe(2);
+    expect(visualLayersOf(group)).toBe(2);
+    expect(visualLayersOf(mesh)).toBe(2);
+  });
+
+  it('overwrites an earlier stamp', () => {
+    const mesh = new THREE.Mesh();
+    stampVisualLayers(mesh, 2);
+    stampVisualLayers(mesh, 8);
+
+    expect(visualLayersOf(mesh)).toBe(8);
   });
 });
