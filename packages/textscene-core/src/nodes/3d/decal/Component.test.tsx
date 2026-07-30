@@ -102,19 +102,10 @@ function Receiver() {
 
 /** Decal projections are added to the projection group imperatively, so they
  *  live on the real THREE graph rather than in the test renderer's fiber tree. */
-function bakedProjections(renderer: { scene: { instance: THREE.Object3D } }): number {
-  let count = 0;
+function projections(renderer: { scene: { instance: THREE.Object3D } }): THREE.Mesh[] {
+  const found: THREE.Mesh[] = [];
   renderer.scene.instance.traverse((obj) => {
-    if (obj.userData.isDecalProjection === true) count++;
-  });
-  return count;
-}
-
-/** The first baked projection mesh, for asserting on its geometry and material. */
-function firstProjection(renderer: { scene: { instance: THREE.Object3D } }): THREE.Mesh | null {
-  let found: THREE.Mesh | null = null;
-  renderer.scene.instance.traverse((obj) => {
-    if (!found && obj.userData.isDecalProjection === true) found = obj as THREE.Mesh;
+    if (obj.userData.isDecalProjection === true) found.push(obj as THREE.Mesh);
   });
   return found;
 }
@@ -159,7 +150,7 @@ describe('<Decal>', () => {
       cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
       children: <Receiver />,
     });
-    expect(bakedProjections(renderer)).toBeGreaterThan(0);
+    expect(projections(renderer).length).toBeGreaterThan(0);
   });
 
   it('projects nothing onto a receiver the cull_mask culls', async () => {
@@ -173,7 +164,7 @@ describe('<Decal>', () => {
       cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
       children: <Receiver />,
     });
-    expect(bakedProjections(renderer)).toBe(0);
+    expect(projections(renderer)).toEqual([]);
   });
 
   it('bakes the fade into a vertex-alpha attribute the material opts into', async () => {
@@ -184,7 +175,7 @@ describe('<Decal>', () => {
       children: <Receiver />,
     });
 
-    const projection = firstProjection(renderer);
+    const projection = projections(renderer)[0];
     const color = projection!.geometry.getAttribute('color');
     expect(color).toBeDefined();
     // itemSize 4 is what makes three read the ALPHA channel rather than just RGB.
@@ -209,7 +200,7 @@ describe('<Decal>', () => {
       children: <Receiver />,
     });
 
-    const projection = firstProjection(renderer);
+    const projection = projections(renderer)[0];
     expect((projection!.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.56, 6);
 
     const color = projection!.geometry.getAttribute('color');

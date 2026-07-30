@@ -46,10 +46,14 @@ import * as THREE from 'three';
  * correspondence is readable next to the formula it implements.
  */
 function smoothstep(edge0: number, edge1: number, x: number): number {
+  // Godot's `Math::smoothstep` returns a step rather than dividing by zero when
+  // the edges coincide, which `normal_fade = 1` reaches.
+  if (edge0 === edge1) return x < edge0 ? 0 : 1;
   const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
   return t * t * (3 - 2 * t);
 }
 
+/** The three authored exponents/edges, one field per Godot property. */
 export interface DecalGeometricFade {
   /** Exponent applied above the decal origin. */
   upperFade: number;
@@ -57,8 +61,6 @@ export interface DecalGeometricFade {
   lowerFade: number;
   /** Lower smoothstep edge for the surface-angle term; 0 disables it entirely. */
   normalFade: number;
-  /** The projection box's DEPTH (`size.y`); the half of it normalises `position.y`. */
-  sizeY: number;
 }
 
 /**
@@ -77,11 +79,12 @@ export interface DecalGeometricFade {
  */
 export function bakeDecalFadeAttribute(
   geometry: THREE.BufferGeometry,
-  fade: DecalGeometricFade
+  fade: DecalGeometricFade,
+  sizeY: number
 ): void {
   const position = geometry.getAttribute('position');
   const normal = geometry.getAttribute('normal') ?? null;
-  const halfDepth = fade.sizeY / 2;
+  const halfDepth = sizeY / 2;
   const colors = new Float32Array(position.count * 4);
 
   for (let i = 0; i < position.count; i++) {
@@ -118,14 +121,12 @@ export function bakeDecalFadeAttribute(
  *
  * `distance` is camera-to-DECAL-ORIGIN — one scalar per decal per frame, not a
  * per-fragment quantity.
+ *
+ * This is the curve only. Whether a decal fades at all is the caller's guard,
+ * because a decal with the feature off must skip the matrix reads and the
+ * distance measurement too, not just arrive here and be handed a 1.
  */
-export function decalDistanceFade(
-  enabled: boolean,
-  begin: number,
-  length: number,
-  distance: number
-): number {
-  if (!enabled) return 1;
+export function decalDistanceFade(begin: number, length: number, distance: number): number {
   if (distance > begin + length) return 0;
   if (distance <= begin) return 1;
   return smoothstep(0, 1, 1 - (distance - begin) / length);

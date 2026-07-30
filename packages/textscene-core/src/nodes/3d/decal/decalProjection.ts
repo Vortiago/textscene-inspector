@@ -157,7 +157,7 @@ export function buildDecalProjectionGeometry(
   // of the attributes just emitted, because those are already in the decal's
   // own frame — see decalFade.ts for why that makes the bake exact rather than
   // an approximation, and where it is not.
-  bakeDecalFadeAttribute(geometry, fade);
+  bakeDecalFadeAttribute(geometry, fade, size.y);
 
   return geometry;
 }

@@ -59,6 +59,14 @@ import {
 /** Wireframe colour for the (selection-gated) projection-box gizmo. */
 const BOX_COLOR = '#ff9d3b';
 
+/**
+ * Scratch vectors for the distance-fade frame callback, so it allocates
+ * nothing. Module scope rather than per instance: `useFrame` callbacks are
+ * synchronous and never interleave, and a scene can carry dozens of decals.
+ */
+const decalOrigin = new THREE.Vector3();
+const cameraOrigin = new THREE.Vector3();
+
 export function Decal({ node, children }: NodeComponentProps) {
   const properties = node.properties as DecalProperties;
   const { externalResources, internalResources } = useSceneResources();
@@ -71,9 +79,6 @@ export function Decal({ node, children }: NodeComponentProps) {
   // The projection material, for the per-frame distance-fade write below. It is
   // built imperatively inside the effect, so a ref is the only handle on it.
   const materialRef = useRef<THREE.MeshStandardMaterial | null>(null);
-  // Scratch vectors so the frame callback allocates nothing.
-  const decalOrigin = useRef(new THREE.Vector3()).current;
-  const cameraOrigin = useRef(new THREE.Vector3()).current;
 
   // Unit-cube projection-volume wireframe — `size` scales the gizmo group, so
   // animating `size` (ADR-0017) stays a cheap scale write. Handed to R3F via
@@ -155,15 +160,13 @@ export function Decal({ node, children }: NodeComponentProps) {
       polygonOffsetFactor: -1,
       polygonOffsetUnits: -1,
     });
+    materialRef.current = material;
 
     const fade: DecalGeometricFade = {
       upperFade: properties.upper_fade,
       lowerFade: properties.lower_fade,
       normalFade: properties.normal_fade,
-      sizeY: size.y,
     };
-
-    materialRef.current = material;
 
     for (const receiver of receivers) {
       const geometry = buildDecalProjectionGeometry(receiver, decalWorldInverse, size, fade);
@@ -216,13 +219,15 @@ export function Decal({ node, children }: NodeComponentProps) {
     const material = materialRef.current;
     if (!group || !material || !properties.distance_fade_enabled) return;
 
+    // Both ends read the same way — straight off `matrixWorld`, no update
+    // forced. `getWorldPosition` would call `updateWorldMatrix` first, ~20x the
+    // cost, and buy no extra consistency since the decal end is a raw read.
     decalOrigin.setFromMatrixPosition(group.matrixWorld);
-    const distance = state.camera.getWorldPosition(cameraOrigin).distanceTo(decalOrigin);
+    cameraOrigin.setFromMatrixPosition(state.camera.matrixWorld);
     const fade = decalDistanceFade(
-      true,
       properties.distance_fade_begin,
       properties.distance_fade_length,
-      distance
+      cameraOrigin.distanceTo(decalOrigin)
     );
 
     const next = opacity * fade;
