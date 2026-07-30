@@ -37,7 +37,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin Area2D -->
-Strict parsing format-checks these `Area2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `Area2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

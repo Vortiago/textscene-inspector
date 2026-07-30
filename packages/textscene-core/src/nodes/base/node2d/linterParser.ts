@@ -11,8 +11,9 @@
  * to remove.
  */
 
+import '../../canvasitem/shared/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { layerBitmask, v, makeFloatTupleRegex } from '../../../linter/validators/index.js';
+import { v, makeFloatTupleRegex } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
@@ -50,14 +51,8 @@ validatorRegistry.registerAll('Node2D', {
   global_scale: v.vector2('global_scale'),
   global_skew: v.float('global_skew'),
   global_transform: v.transform2d('global_transform'),
-  z_index: v.strictInt('z_index'),
-  z_as_relative: v.boolean('z_as_relative'),
   // CanvasItem light culling: ANDed against a 2D light's range_item_cull_mask.
-  light_mask: layerBitmask('light_mask'),
-  y_sort_enabled: v.boolean('y_sort_enabled'),
   // CanvasItem material slot. The reference is format-checked; whether it names
   // a CanvasItemMaterial (the only kind the renderer applies) is not, because a
   // ShaderMaterial there is valid Godot, just unimplemented here.
-  material: v.resourceReference('material'),
-  use_parent_material: v.boolean('use_parent_material'),
 });

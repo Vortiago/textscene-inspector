@@ -2,10 +2,10 @@
  * HBoxContainer strict validators.
  *
  * It declares one key of its own, and only to take something AWAY: `vertical`
- * is inherited from Boxcontainer but this class fixes the orientation, so Godot
+ * is inherited from BoxContainer but this class fixes the orientation, so Godot
  * refuses the assignment. See ../shared/fixedOrientation.ts.
  *
- * Everything else — the whole Boxcontainer and Control set — arrives through
+ * Everything else — the whole BoxContainer and Control set — arrives through
  * the NODE_BASE_TYPES base-walk and is not re-declared here.
  */
 

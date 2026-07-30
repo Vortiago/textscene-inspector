@@ -13,16 +13,12 @@
  * whole UI family does not introduce false positives on real Godot scenes.
  */
 
+import '../../../canvasitem/shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import { THEME_OVERRIDE_VALIDATORS } from '../../../../linter/validators/themeOverrides.js';
 
 validatorRegistry.registerAll('Control', {
-  // CanvasItem visibility / tint.
-  visible: v.boolean('visible'),
-  modulate: v.color('modulate'),
-  self_modulate: v.color('self_modulate'),
-
   // Layout regime + anchors/offsets (the free/anchored path).
   layout_mode: v.int('layout_mode', { min: 0, max: 3 }),
   anchors_preset: v.int('anchors_preset', { min: -1, max: 15 }),

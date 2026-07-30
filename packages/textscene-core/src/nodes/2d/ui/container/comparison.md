@@ -23,7 +23,7 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin Container -->
-Strict parsing format-checks the inherited set (29 inherited from Control); `Container` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (26 inherited from Control, 15 inherited from CanvasItem); `Container` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

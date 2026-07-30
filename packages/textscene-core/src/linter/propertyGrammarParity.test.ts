@@ -110,6 +110,22 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
   // Base types
   // -------------------------------------------------------------------------
 
+  // The CanvasItem tier has no parser.ts of its own, so from its perspective
+  // every key it registers is linter-only, and one entry here covers every 2D
+  // leaf and every Control instead of forty near-identical copies.
+  CanvasItem: {
+    linterOnly: [
+      // Editor/scene-tree concerns with no render equivalent: `top_level`
+      // detaches from the parent transform (the dispatcher does not model it),
+      // `visibility_layer` and `clip_children` gate culling and stencil
+      // clipping, and the texture sampler modes are set per material rather
+      // than per node in three.js.
+      'top_level', 'visibility_layer', 'clip_children',
+      'texture_filter', 'texture_repeat',
+    ],
+    reason: 'The CanvasItem base has no parser of its own; these five are culling, clipping and sampler settings the r3f renderer expresses per material or not at all, while the keys it DOES render (visible, modulate, z_index, material…) are read by each family parser.',
+  },
+
   Node3D: {
     linterOnly: [
       // Godot serialises spatial state as either a single `transform` matrix
@@ -134,11 +150,10 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
 
   Node2D: {
     parserOnly: [
-      // CanvasItem draw-order / tint properties parsed by the renderer but
-      // not validated by the linter (no format constraints that could fail).
-      'visible', 'modulate', 'self_modulate', 'show_behind_parent',
       // y_sort_origin only meaningful for TileMapLayer tiles; no linter
-      // validator needed (any number is valid).
+      // validator needed (any number is valid). The CanvasItem tint and
+      // draw-order keys that used to sit here are validated now — they moved to
+      // the CanvasItem tier, which both families inherit.
       'y_sort_origin',
     ],
     linterOnly: [
@@ -147,7 +162,7 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'global_position', 'global_rotation', 'global_rotation_degrees',
       'global_scale', 'global_skew', 'global_transform',
     ],
-    reason: 'Parser reads CanvasItem tint/draw-order, y_sort_enabled and y_sort_origin fields not covered by linter validators; linter validates global-space properties the renderer ignores.',
+    reason: 'Parser reads y_sort_origin, which any number satisfies; linter validates global-space properties the renderer ignores.',
   },
 
   Control: {
@@ -158,6 +173,12 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'transform',
     ],
     linterOnly: [
+      // Inherited from the CanvasItem tier and genuinely unread on this side:
+      // the UI overlay is DOM (ADR-0003), where 2D canvas draw-order and
+      // lighting have no equivalent. The Node2D family DOES render these, which
+      // is why they sit here on Control rather than on the shared tier.
+      'z_index', 'z_as_relative', 'y_sort_enabled', 'show_behind_parent',
+      'light_mask', 'material', 'use_parent_material',
       // (`modulate`, `self_modulate`, `rotation`, `scale` and `pivot_offset`
       // used to sit here as "not read by the parser for rendering"; they are
       // all rendered now.)

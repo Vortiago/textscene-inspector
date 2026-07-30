@@ -16,6 +16,7 @@
 
 import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
+import { CONTAINER_ALIGNMENT } from '../../../../linter/validators/containerAlignment.js';
 import { v } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('BoxContainer', {
@@ -23,11 +24,7 @@ validatorRegistry.registerAll('BoxContainer', {
   // ALIGNMENT_CENTER=1, ALIGNMENT_END=2 is the authoritative range — the
   // ADD_PROPERTY PROPERTY_HINT_ENUM string "Begin,Center,End" is only the
   // editor dropdown label text, not a bound of its own.
-  alignment: v.enumInt('alignment', 0, 2, {
-    0: 'ALIGNMENT_BEGIN',
-    1: 'ALIGNMENT_CENTER',
-    2: 'ALIGNMENT_END',
-  }),
+  alignment: v.enumInt('alignment', 0, 2, CONTAINER_ALIGNMENT),
   // box_container.cpp _bind_methods: ADD_PROPERTY(PropertyInfo(Variant::BOOL,
   // "vertical"), ...). See the file header for why this reaches a plain
   // BoxContainer instance at all.

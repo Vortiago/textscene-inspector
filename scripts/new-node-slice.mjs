@@ -334,7 +334,9 @@ function main() {
   // `draws` is the only intent that gets its own types/parser/Component; the
   // other two reuse the base parser, so the render half is deferred to whoever
   // implements it (decision: property knowledge lives in linterParser.ts).
-  const transformOnly = intent !== 'draws';
+  // True for BOTH `transform-only` and `pending` — it says "reuses the base
+  // parser", not "draws nothing", which is why it is not named for either.
+  const reusesBaseParser = intent !== 'draws';
   const base = BASES[baseKey];
   const lower = typeName.toLowerCase();
   const camel = typeName[0].toLowerCase() + typeName.slice(1);
@@ -350,14 +352,21 @@ function main() {
 
   const files = new Map(); // relative-to-slice name → content
 
-  if (transformOnly) {
+  if (reusesBaseParser) {
     files.set(
       'index.ts',
       `/**
  * ${typeName} registration — parser.
  *
- * Non-visual node: renders as a transform-only group (ADR-0008), reusing the
- * ${base.component} transform parse; the render component (index.r3f.ts) reuses ${base.component}.
+ * Reuses the ${base.component} parse; property knowledge lives in linterParser.ts${
+   intent === 'transform-only'
+     ? `.
+ * Draws nothing by design (ADR-0008), so index.r3f.ts registers ${base.component}
+ * and its children still land in the right transform space.`
+     : `.
+ * Not rendered yet, so it registers NO component: the dispatcher falls back to
+ * GenericNodeFallback and the tree keeps reporting it as not implemented.`
+ }
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '${toSrc}core/NodeRegistry';

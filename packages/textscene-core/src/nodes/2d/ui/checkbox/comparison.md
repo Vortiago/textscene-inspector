@@ -35,7 +35,7 @@ read correctly in both, and the labels sit at the same place.
 ## Linting
 
 <!-- lint:begin CheckBox -->
-Strict parsing format-checks the inherited set (10 inherited from BaseButton, 29 inherited from Control); `CheckBox` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (10 inherited from BaseButton, 26 inherited from Control, 15 inherited from CanvasItem); `CheckBox` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

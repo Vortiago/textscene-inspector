@@ -56,7 +56,7 @@ laid-out width exceeds the floor and the substitution is invisible.
 ## Linting
 
 <!-- lint:begin LineEdit -->
-Strict parsing format-checks the inherited set (29 inherited from Control); `LineEdit` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (26 inherited from Control, 15 inherited from CanvasItem); `LineEdit` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

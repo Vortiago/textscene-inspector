@@ -40,7 +40,7 @@ One visible difference remains, in the polygon fill rather than its placement:
 ## Linting
 
 <!-- lint:begin RemoteTransform2D -->
-Strict parsing format-checks these `RemoteTransform2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `RemoteTransform2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

@@ -35,7 +35,6 @@ const REQUIRED: ReadonlyArray<{ path: string; minCases: number; mentions: string
   { path: `${CORE}/3d/skeleton3d/parser.test.ts`, minCases: 3, mentions: ['Skeleton3D', 'parseNode3D'] },
   { path: `${CORE}/3d/skeleton3d/Component.test.tsx`, minCases: 2, mentions: ['Skeleton3D', 'Node3D'] },
   { path: `${CORE}/3d/particles/gpuparticles3d/parser.test.ts`, minCases: 3, mentions: ['GPUParticles3D', 'parseNode3D'] },
-  { path: `${CORE}/3d/particles/gpuparticles3d/Component.test.tsx`, minCases: 2, mentions: ['GPUParticles3D', 'Node3D'] },
 ];
 
 function countCases(src: string): number {

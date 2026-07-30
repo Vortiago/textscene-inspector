@@ -53,13 +53,6 @@ function nonEmptyQuotedString(
   return validator;
 }
 
-/**
- * Accepts anything: recognised on this node but with no format Godot
- * enforces, so there is nothing to check.
- */
-const anyValue: PropertyValidator = () => null;
-anyValue.accepts = 'any value (no format constraint)';
-
 validatorRegistry.registerAll('AnimationPlayer', {
   speed_scale: speedScaleValidator,
   // Custom message preserves the legacy ">= 0" wording (the per-node test
@@ -76,7 +69,7 @@ validatorRegistry.registerAll('AnimationPlayer', {
     "Property 'autoplay' cannot be empty. Specify a valid animation name.",
     'INVALID_AUTOPLAY_EMPTY'
   ),
-  current_animation: anyValue,
+  current_animation: v.any(),
   root_node: nonEmptyQuotedString(
     'root_node',
     "Property 'root_node' cannot be empty. Specify a valid NodePath.",

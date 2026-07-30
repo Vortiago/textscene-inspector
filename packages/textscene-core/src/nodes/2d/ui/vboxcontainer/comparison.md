@@ -35,7 +35,7 @@ out thinner and a touch dimmer.
 ## Linting
 
 <!-- lint:begin VBoxContainer -->
-Strict parsing format-checks these `VBoxContainer` properties, plus 1 inherited from BoxContainer, 29 inherited from Control. Every validator failure is an **error**.
+Strict parsing format-checks these `VBoxContainer` properties, plus 1 inherited from BoxContainer, 26 inherited from Control, 15 inherited from CanvasItem. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

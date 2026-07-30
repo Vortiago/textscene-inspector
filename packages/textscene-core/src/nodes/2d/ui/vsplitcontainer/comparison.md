@@ -41,7 +41,7 @@ Measured through Godot 4.6.3 — 300 px tall columns (top | gap | bottom):
 ## Linting
 
 <!-- lint:begin VSplitContainer -->
-Strict parsing format-checks these `VSplitContainer` properties, plus 10 inherited from SplitContainer, 29 inherited from Control. Every validator failure is an **error**.
+Strict parsing format-checks these `VSplitContainer` properties, plus 10 inherited from SplitContainer, 26 inherited from Control, 15 inherited from CanvasItem. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

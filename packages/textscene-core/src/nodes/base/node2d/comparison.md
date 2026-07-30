@@ -33,7 +33,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin Node2D -->
-Strict parsing format-checks these `Node2D` properties. Every validator failure is an **error**.
+Strict parsing format-checks these `Node2D` properties, plus 15 inherited from CanvasItem. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
@@ -43,18 +43,12 @@ Strict parsing format-checks these `Node2D` properties. Every validator failure 
 | `global_scale` | Vector2(x, y) |
 | `global_skew` | float |
 | `global_transform` | Transform2D(6 floats) |
-| `light_mask` | 32-bit layer mask (layers 1-32) |
-| `material` | SubResource("id") or ExtResource("id") |
 | `position` | Vector2(x, y) |
 | `rotation` | float |
 | `rotation_degrees` | float |
 | `scale` | Vector2(x, y), no zero component |
 | `skew` | float |
 | `transform` | Transform2D(6 floats) |
-| `use_parent_material` | true or false |
-| `y_sort_enabled` | true or false |
-| `z_as_relative` | true or false |
-| `z_index` | integer |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

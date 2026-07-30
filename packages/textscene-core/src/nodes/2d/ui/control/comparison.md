@@ -48,7 +48,7 @@ minimum sizes versus the previewer's more compact metrics.
 ## Linting
 
 <!-- lint:begin Control -->
-Strict parsing format-checks these `Control` properties. Every validator failure is an **error**.
+Strict parsing format-checks these `Control` properties, plus 15 inherited from CanvasItem. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
@@ -61,7 +61,6 @@ Strict parsing format-checks these `Control` properties. Every validator failure
 | `grow_horizontal` | integer 0-2 |
 | `grow_vertical` | integer 0-2 |
 | `layout_mode` | integer 0-3 |
-| `modulate` | Color(r, g, b, a) |
 | `offset_bottom` | float |
 | `offset_left` | float |
 | `offset_right` | float |
@@ -70,7 +69,6 @@ Strict parsing format-checks these `Control` properties. Every validator failure
 | `pivot_offset_ratio` | Vector2(x, y) |
 | `rotation` | float |
 | `scale` | Vector2(x, y) |
-| `self_modulate` | Color(r, g, b, a) |
 | `size_flags_horizontal` | integer >= 0 |
 | `size_flags_stretch_ratio` | float >= 0 |
 | `size_flags_vertical` | integer >= 0 |
@@ -80,7 +78,6 @@ Strict parsing format-checks these `Control` properties. Every validator failure
 | `theme_override_fonts/*` | SubResource("id") or ExtResource("id") |
 | `theme_override_icons/*` | SubResource("id") or ExtResource("id") |
 | `theme_override_styles/*` | SubResource("id") or ExtResource("id") |
-| `visible` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

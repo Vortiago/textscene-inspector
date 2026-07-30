@@ -1,8 +1,9 @@
 /**
  * GPUParticles3D registration — parser.
  *
- * Non-visual node: renders as a transform-only group (ADR-0008), reusing the
- * Node3D transform parse; the render component (index.r3f.ts) reuses Node3D.
+ * Reuses the Node3D parse; property knowledge lives in linterParser.ts.
+ * Not rendered yet, so it registers NO component: the dispatcher falls back to
+ * GenericNodeFallback and the tree keeps reporting it as not implemented.
  * The previewer does not simulate or draw particles.
  */
 

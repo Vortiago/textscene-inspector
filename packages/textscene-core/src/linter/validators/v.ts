@@ -191,11 +191,8 @@ export const v = {
   ): PropertyValidator {
     // The labels are the point: `enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY)`
     // tells a reader what each number means without opening Godot's docs.
-    const names = Object.keys(labels)
-      .map(Number)
-      .sort((a, b) => a - b)
-      .map((k) => labels[k])
-      .join('/');
+    // Integer-like keys already iterate ascending, so no sort is needed.
+    const names = Object.values(labels).join('/');
     return accepts(
       createEnumValidator(name, min, max, labels, formatCode(name), valueCode(name)),
       `enum ${min}-${max} (${names})`
@@ -205,6 +202,15 @@ export const v = {
   /** Boolean (`'true'` | `'false'`). */
   boolean(name: string): PropertyValidator {
     return accepts(createBooleanValidator(name, formatCode(name)), 'true or false');
+  },
+
+  /**
+   * Accepts anything. For a property that is recognised on the node but has no
+   * format Godot enforces — saying so beats leaving the sheet's Accepts column
+   * blank, which reads as "nobody tagged this".
+   */
+  any(): PropertyValidator {
+    return accepts(() => null, 'any value (no format constraint)');
   },
 
   /** Non-empty string (anything that isn't whitespace-only). */
@@ -374,18 +380,25 @@ export const v = {
    * Use this when the property is a discrete index/count, not a number
    * that happens to be whole-valued.
    */
-  strictInt(name: string): PropertyValidator {
+  strictInt(name: string, opts: IntOpts = {}): PropertyValidator {
     const formatErr = formatCode(name);
-    return accepts(
-      (key, value, line) => {
+    const valueErr = valueCode(name);
+    const { min, max } = opts;
+    return accepts((key, value, line) => {
       const parsed = parseFloat(value);
       if (isNaN(parsed) || !Number.isInteger(parsed)) {
         return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
       }
+      if ((min !== undefined && parsed < min) || (max !== undefined && parsed > max)) {
+        return propertyError(
+          key,
+          line,
+          opts.message ?? `Property '${name}' must be ${numericRange('integer', min, max)} (got ${parsed})`,
+          valueErr
+        );
+      }
       return null;
-    },
-      'integer'
-    );
+    }, numericRange('integer', min, max));
   },
 
   /**

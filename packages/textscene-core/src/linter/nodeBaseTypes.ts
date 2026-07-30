@@ -190,8 +190,12 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   SubViewport: 'Viewport',
   Window: 'Viewport',
   Node3D: 'Node',
-  Node2D: 'Node',
-  Control: 'Node',
+  // Node2D and Control are Godot's two CanvasItem families. CanvasItem is not
+  // instantiable, so like Light3D and Viewport it carries validators without
+  // owning a slice — see nodes/canvasitem/shared/linterParser.ts.
+  CanvasItem: 'Node',
+  Node2D: 'CanvasItem',
+  Control: 'CanvasItem',
   CanvasLayer: 'Node',
   // A CanvasLayer, not a CanvasItem: `GDCLASS(ParallaxBackground, CanvasLayer)`.
   // Chaining it here is what gives it CanvasLayer's `layer`/`visible` rules

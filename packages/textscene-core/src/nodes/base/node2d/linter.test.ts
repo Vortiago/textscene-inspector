@@ -350,12 +350,25 @@ describe('Node2D Linter', () => {
       });
     });
 
-    it('should handle large z_index values', () => {
-      expectClean(scene(node('Node2D', { z_index: 999999 })));
+    it('accepts z_index across the whole range Godot allows', () => {
+      // scene/main/canvas_item.cpp:668-669 — set_z_index ERR_FAIL_CONDs on both
+      // sides of CANVAS_ITEM_Z_MIN/MAX (±4096, rendering_server.h:103-104), so
+      // these are hard bounds and not an editor convenience.
+      expectClean(scene(node('Node2D', { z_index: 4096 })));
+      expectClean(scene(node('Node2D', { z_index: -4096 })));
     });
 
-    it('should handle very small negative z_index', () => {
-      expectClean(scene(node('Node2D', { z_index: -999999 })));
+    it('rejects a z_index Godot itself refuses', () => {
+      // Previously `v.strictInt` with no bounds, so 999999 passed — a value the
+      // engine will not load. The CanvasItem tier carries the real range.
+      expectDiagnostic(scene(node('Node2D', { z_index: 999999 })), {
+        prop: 'z_index',
+        severity: 'error',
+      });
+      expectDiagnostic(scene(node('Node2D', { z_index: -999999 })), {
+        prop: 'z_index',
+        severity: 'error',
+      });
     });
   });
 

@@ -30,7 +30,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin HBoxContainer -->
-Strict parsing format-checks these `HBoxContainer` properties, plus 1 inherited from BoxContainer, 29 inherited from Control. Every validator failure is an **error**.
+Strict parsing format-checks these `HBoxContainer` properties, plus 1 inherited from BoxContainer, 26 inherited from Control, 15 inherited from CanvasItem. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

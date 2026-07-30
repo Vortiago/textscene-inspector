@@ -48,7 +48,7 @@ Two consequences of Godot applying the colour to the CANVAS
 ## Linting
 
 <!-- lint:begin CanvasModulate -->
-Strict parsing format-checks these `CanvasModulate` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `CanvasModulate` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
