@@ -4,14 +4,15 @@
  * cannot exercise: it populates no `matrixWorld` and mounts no sibling meshes).
  *
  * Coverage: the box AABB in world space; the receiver filter (real meshes in,
- * decal projections / non-meshes out, non-overlapping out); and the projection
- * itself — a horizontal floor inside the box bakes to geometry that lies on the
- * floor, stays within the footprint, and carries in-range UVs; a floor outside
- * the box clips to nothing.
+ * decal projections / non-meshes out, non-overlapping out, `cull_mask`-culled
+ * render layers out); and the projection itself — a horizontal floor inside the
+ * box bakes to geometry that lies on the floor, stays within the footprint, and
+ * carries in-range UVs; a floor outside the box clips to nothing.
  */
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { visualLayersUserData } from '../../../r3f/visualLayers';
 import {
   buildDecalProjectionGeometry,
   collectDecalReceivers,
@@ -86,6 +87,59 @@ describe('collectDecalReceivers', () => {
 
     const box = computeDecalBoxWorldAABB(decalAt(0, 1, 0), SIZE);
     expect(collectDecalReceivers(root, box).map((m) => m.name)).toEqual(['near']);
+  });
+
+  it('excludes receivers whose Godot render layers the cull_mask culls', () => {
+    const root = new THREE.Group();
+    const ground = horizontalFloor();
+    ground.name = 'ground'; // untagged → layer 1
+    const vehicle = horizontalFloor();
+    vehicle.name = 'vehicle';
+    Object.assign(vehicle.userData, visualLayersUserData(2)); // layers = 2
+    root.add(ground, vehicle);
+    root.updateMatrixWorld(true);
+
+    const box = computeDecalBoxWorldAABB(decalAt(0, 1, 0), SIZE);
+    // Truck Town's blob shadows: every layer but layer 2.
+    expect(collectDecalReceivers(root, box, 0xffffd).map((m) => m.name)).toEqual(['ground']);
+  });
+
+  it('keeps a layer-2 receiver under the default mask', () => {
+    const root = new THREE.Group();
+    const vehicle = horizontalFloor();
+    vehicle.name = 'vehicle';
+    Object.assign(vehicle.userData, visualLayersUserData(2));
+    root.add(vehicle);
+    root.updateMatrixWorld(true);
+
+    const box = computeDecalBoxWorldAABB(decalAt(0, 1, 0), SIZE);
+    expect(collectDecalReceivers(root, box, 0xfffff).map((m) => m.name)).toEqual(['vehicle']);
+    // An omitted mask behaves as Godot's default, so a decal that never
+    // authored `cull_mask` keeps every receiver it used to have.
+    expect(collectDecalReceivers(root, box).map((m) => m.name)).toEqual(['vehicle']);
+  });
+
+  it('keeps a receiver sharing ANY layer with the mask', () => {
+    const root = new THREE.Group();
+    const both = horizontalFloor();
+    both.name = 'both';
+    Object.assign(both.userData, visualLayersUserData(3)); // layers 1 AND 2
+    root.add(both);
+    root.updateMatrixWorld(true);
+
+    const box = computeDecalBoxWorldAABB(decalAt(0, 1, 0), SIZE);
+    expect(collectDecalReceivers(root, box, 0xffffd).map((m) => m.name)).toEqual(['both']);
+  });
+
+  it('collects nothing when the cull_mask is zero', () => {
+    const root = new THREE.Group();
+    const floor = horizontalFloor();
+    floor.name = 'floor';
+    root.add(floor);
+    root.updateMatrixWorld(true);
+
+    const box = computeDecalBoxWorldAABB(decalAt(0, 1, 0), SIZE);
+    expect(collectDecalReceivers(root, box, 0)).toEqual([]);
   });
 });
 

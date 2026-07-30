@@ -1,13 +1,16 @@
 /**
  * <Decal> component tests.
  *
- * The decal PROJECTS its albedo onto scene surfaces via a post-mount scene walk
- * (the projection maths itself is covered in decalProjection.test.ts — the
- * test-renderer populates no matrixWorld and mounts no sibling meshes, so no
- * projection can be baked here). What IS observable in isolation: the
- * projection-box gizmo is selection-gated (ADR-0018) — hidden by default, shown
- * only when this node is selected — the node never draws a standalone quad, and
- * the Node3D transform / children pass through.
+ * The decal PROJECTS its albedo onto scene surfaces via a post-mount scene walk;
+ * the projection maths itself is covered in decalProjection.test.ts. The
+ * test-renderer mounts no SIBLING meshes, so a bare decal bakes nothing — but a
+ * receiver passed as a child does get projected onto (the effect calls
+ * `scene.updateMatrixWorld(true)` itself, so stale world matrices are not an
+ * obstacle). That makes the `cull_mask` wiring observable end to end here: two
+ * otherwise-identical mounts, one masked and one not, bake different counts.
+ * Also observable: the projection-box gizmo is selection-gated (ADR-0018) —
+ * hidden by default, shown only when this node is selected — the node never
+ * draws a standalone quad, and the Node3D transform / children pass through.
  */
 
 import { useEffect, type ReactNode } from 'react';
@@ -84,6 +87,29 @@ async function render(opts: {
   );
 }
 
+/**
+ * A receiver on Godot render layer 2 — the layer Truck Town's blob shadows
+ * exclude. Big enough to straddle the decal's default 2x2x2 box.
+ */
+function Receiver() {
+  return (
+    <mesh name="receiver" userData={{ godotLayers: 2 }}>
+      <boxGeometry args={[4, 0.1, 4]} />
+      <meshBasicMaterial />
+    </mesh>
+  );
+}
+
+/** Decal projections are added to the projection group imperatively, so they
+ *  live on the real THREE graph rather than in the test renderer's fiber tree. */
+function bakedProjections(renderer: { scene: { instance: THREE.Object3D } }): number {
+  let count = 0;
+  renderer.scene.instance.traverse((obj) => {
+    if (obj.userData.isDecalProjection === true) count++;
+  });
+  return count;
+}
+
 describe('<Decal>', () => {
   it('hides the projection-box gizmo by default (Godot runtime draws none)', async () => {
     const renderer = await render({ node: makeNode() });
@@ -115,6 +141,30 @@ describe('<Decal>', () => {
       cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
     });
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('projects onto a receiver whose render layers the cull_mask admits', async () => {
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
+      children: <Receiver />,
+    });
+    expect(bakedProjections(renderer)).toBeGreaterThan(0);
+  });
+
+  it('projects nothing onto a receiver the cull_mask culls', async () => {
+    // Truck Town's blob shadows: `cull_mask` clears layer 2 and every vehicle
+    // mesh sets `layers = 2`, so Godot never paints the vehicle with its own
+    // shadow. Same node, same box, same albedo as the test above — only the
+    // mask differs.
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")', cull_mask: '1048573' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
+      children: <Receiver />,
+    });
+    expect(bakedProjections(renderer)).toBe(0);
   });
 
   it('applies the Node3D transform and wraps children', async () => {

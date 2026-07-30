@@ -24,6 +24,38 @@ only the projection, as Godot's runtime does.
 | `size` | `Vector3(3, 3, 3)` | the projection footprint and its depth into the surface |
 | `albedo_mix` | `1.0` / `0.7` | how strongly the projection replaces the lit surface |
 | `modulate` | `Color(1, 0.4, 0.3, 0.8)` | salmon tint + lower opacity on the second decal |
+| `cull_mask` | `1048575` | which `VisualInstance3D.layers` may receive — here, all of them |
+
+## Render layers
+
+Godot draws a decal on an instance only where `decal.cull_mask &
+instance.layer_mask` is non-zero — the pairing cull in
+`renderer_scene_cull.cpp` and, per fragment, the `continue //not masked` guard
+in `scene_forward_clustered.glsl`. Defaults are `cull_mask = 1048575`
+(`Decal::cull_mask = (1 << 20) - 1`) and `layers = 1`, so an unmasked decal
+reaches everything.
+
+That mask is what lets a moving object carry its own blob-shadow decal: the blob
+is meant for the ground, and clearing the object's own layer keeps it off the
+object. Ignoring it stamps the blob onto the caster, which reads as the caster
+being far too dark on exactly the faces the blob covers — the whole of #375.
+
+We apply the same test when the receiver set is collected (`decalProjection.ts`),
+which is exact rather than approximate: no per-fragment work is needed, because
+a culled receiver simply never gets a projection mesh baked for it. The fixture
+above leaves every layer enabled, so it cannot witness the mask; the dedicated
+one is `unit-decal-cull-mask.tscn`, which puts a `layers = 2` receiver and a
+default-layer control under the same masked decal.
+
+`layers` is read from `MeshInstance3D`. Every other mesh source — CSG, GridMap,
+Sprite3D, Label3D, MultiMeshInstance3D — reads as Godot's default layer 1 and so
+receives from any decal that has not cleared layer 1. That is correct unless the
+scene sets `layers` on one of them. Two cases in this corpus do and are not
+covered: `GPUParticles3D` in `demos/3d/particles/test.tscn`, whose scene's decals
+are unmasked so nothing changes; and a mesh inside an instanced GLB, whose
+`layers` rides a type-less override node that the scene-tree builder drops before
+the GLB renderer ever sees it (the platformer player's `Robot`). Neither is
+visible today.
 
 ## Divergences
 
@@ -35,9 +67,13 @@ geometry:
   floor more than we do at a partial `albedo_mix`, so its checkerboards are
   paler; ours are higher-contrast. Exact `albedo_mix` blending needs a custom
   projector shader.
-- **No edge fades.** `upper/lower/normal_fade`, `distance_fade_*` and `cull_mask`
-  need per-fragment work the baked `DecalGeometry` mesh cannot do. They are
-  near-invisible on the flat surfaces decals usually target.
+- **No edge fades.** `upper/lower/normal_fade` and `distance_fade_*` need
+  per-fragment work the baked `DecalGeometry` mesh cannot do. Godot's fade is an
+  exponent on distance along the projection axis (`upper_fade` above the origin,
+  `lower_fade` below) plus a `normal_fade` smoothstep against the projector's
+  own normal. They are near-invisible on the flat surfaces decals usually
+  target: where the corpus's blob shadows legitimately land, the fade term
+  computes to ~0.9–1.0.
 - **The normal/ORM/emission maps and `emission_energy` are parsed but unwired.**
   The projection is already a `MeshStandardMaterial`, which supports every one of
   them; `DecalGeometry` supplies vertices only and does not constrain this.

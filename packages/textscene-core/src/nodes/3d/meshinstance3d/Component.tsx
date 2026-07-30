@@ -46,6 +46,7 @@ import { buildArrayMeshGeometry } from '../../../resources/meshes/arrayMeshGeome
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
+import { visualLayersUserData } from '../../../r3f/visualLayers';
 import { applyUVTransform } from './applyUVTransform';
 import { repackAnisotropyFlowmap } from './repackFlowmap';
 import { triplanarPlaneScale } from './triplanarScale';
@@ -391,6 +392,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     visible,
     castShadow,
     shadowsOnly: shadowFlags.shadowsOnly,
+    godotLayers: properties.layers,
     subtree: children,
   };
 
@@ -499,6 +501,8 @@ interface MeshShellProps {
   castShadow: boolean;
   /** `cast_shadow = SHADOWS_ONLY` (3): cast, but draw nothing. */
   shadowsOnly: boolean;
+  /** `layers` — the VisualInstance3D render mask a Decal's `cull_mask` filters on. */
+  godotLayers: number | undefined;
   /** The dispatched scene-tree subtree parented under this MeshInstance3D. */
   subtree: ReactNode;
   children: ReactNode;
@@ -526,6 +530,7 @@ function MeshShell({
   visible,
   castShadow,
   shadowsOnly,
+  godotLayers,
   subtree,
   children,
 }: MeshShellProps) {
@@ -539,6 +544,10 @@ function MeshShell({
       visible={visible}
       castShadow={castShadow}
       receiveShadow
+      // Godot's `layers`, carried for the consumers that filter on it — today
+      // `Decal.cull_mask`. Set on every branch's mesh, including the placeholder
+      // ones, so a decal's receiver test never depends on load order.
+      userData={visualLayersUserData(godotLayers)}
     >
       {children}
       {/* SHADOWS_ONLY draws nothing but must still CAST, and its descendants

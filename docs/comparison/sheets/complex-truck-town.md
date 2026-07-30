@@ -86,19 +86,25 @@ mesh had no usable bounding sphere and the scene could not even be framed. Both
 engines now put every panel, wheel and mirror in the same place at the same scale,
 and the trailer's livery decal lands on the same face.
 
-**What differs: the sun-lit faces are far darker here; the shaded ones match.** The
-trailer's lit side is `rgb(248, 251, 254)` in Godot against `rgb(49, 51, 54)` here,
-while the cab roof — already in shadow in both — is `rgb(21, 18, 55)` against
-`rgb(27, 28, 30)`. The specular highlight along the trailer's top edge is ours alone.
+**Both engines now agree across the frame.** Sampling the same points as before, the
+trailer's lit side is `rgb(248, 251, 254)` in Godot against `rgb(246, 248, 252)` here,
+and the cab roof — shaded in both — is `rgb(21, 18, 55)` against `rgb(20, 16, 52)`.
+Over the whole frame the mean per-pixel max-channel difference is **2.9**, with 0.14%
+of samples above 40; those sit on silhouette edges, in the livery lettering and on the
+headlight squares, i.e. sub-pixel placement, not shading.
 
-That split is the useful part, and it is the same on the tow truck below: a surface
-reading only ambient lands within a few units of Godot, and a surface taking the sun
-is roughly a third of its brightness with its hue washed toward neutral. The
-vehicles carry no DirectionalLight3D or WorldEnvironment — only SpotLight3D
-headlights — so both sides light them from an injected editor preview sun
-(ADR-0025). Not diagnosed: consistent with the sun's diffuse term being weak or
-missing, and not yet separated from the surface materials resolving differently on
-those faces.
+This scene used to read as a lighting bug — lit faces at roughly a third of Godot's
+brightness with their hue washed toward neutral, shaded faces matching within a few
+units. It was **not** lighting. See the tow truck below for the diagnosis; the trailer
+carries three of the same decals, one on the cab and two on the trailer, and the
+darkening tracked their boxes. The ours-only specular highlight previously noted along
+the trailer's top edge went with them — it was the blob's own overlay material, not a
+highlight.
+
+**What still differs: the livery lettering.** Godot's "GODOT" wordmark on the trailer
+side reads bolder and bluer; ours is thinner, so pixels Godot puts at `rgb(63, 115, 165)`
+land near white here. It is the largest residual on this frame and it is sub-pixel
+sampling of the livery texture, unrelated to the decal work above.
 
 ## Tow truck
 <!-- compare: image=complex-truck-town-tow status=limitation fixture=demos/3d/truck_town/vehicles/tow_truck.tscn -->
@@ -109,17 +115,32 @@ per-surface dropping necessary, since one unreadable surface would otherwise poi
 the merged geometry's bounds and take the whole vehicle with it. The crane frame,
 the boom, both cabs and the wheels all sit where Godot puts them.
 
-**The same lit-versus-shaded split, measured on one vehicle.** The crane's shaded
-upright is `rgb(98, 91, 37)` in Godot against `rgb(100, 92, 35)` here — two units
-apart, and yellow in both. The sun-lit body flank is `rgb(183, 173, 80)` against
-`rgb(60, 59, 47)`, which is both darker and close to neutral. The body's material
-(`albedo_color = Color(0.584, 0.527, 0.190)`, no metallic) is strongly yellow, so on
-the lit face the hue is being lost as well as the level.
+**What the darkness actually was: the vehicle's own blob shadow, stamped on itself.**
+Each vehicle carries a `Decal` projecting `blob_shadow.png` — a 16x16 pure-black image
+with a radial alpha blob — with `cull_mask = 1048573` (`0xFFFFD`: every render layer
+but layer 2), while every vehicle `MeshInstance3D` sets `layers = 2`. Godot draws a
+decal on an instance only where `decal.cull_mask & instance.layer_mask` is non-zero,
+so there the blob reaches the ground and never the truck. We ignored `cull_mask`, so
+the blob was baked onto the bodywork as an opaque black overlay.
+
+That explains every symptom the old capture showed, including the ones that ruled
+lighting out and were missed at the time: the lit faces read *darker than the same
+vehicle's ambient-only faces*, which losing a sun term cannot do; grey glass and white
+paint went black alongside yellow paint, which is material-agnostic; and the crane's
+top bar — same mesh, same material, same sun-facing normal as the hood — stayed
+correct, because it falls outside the decal box's z-extent where the blob's alpha is
+near zero.
+
+**Now measured.** The crane's shaded upright is `rgb(99, 92, 37)` in Godot against
+`rgb(96, 89, 34)` here — the control, which had to stay put and did. The sun-lit body
+flank is `rgb(183, 173, 80)` against `rgb(183, 172, 82)`, where it used to be
+`rgb(60, 59, 47)`. Frame-wide, the mean max-channel difference fell from **6.9 to 2.8**
+and the share of samples above 40 from **3.9% to 0.05%**.
 
 This scene additionally carries five `surface_material_override/0` slots, which per
 the ArrayMesh sheet do not reach an ArrayMesh at all — so its grey metallic parts
-take the surface's own material where Godot takes the override. That is a separate,
-known gap from the lighting one above.
+take the surface's own material where Godot takes the override. That gap is unrelated
+to the one above and still open.
 
 ## Known limitations
 
@@ -130,6 +151,13 @@ known gap from the lighting one above.
   runs once when the resource loader reports nothing pending. Selection still never
   moves the camera, and a fit is skipped outright if the user has moved it since the
   last one.
-- The vehicles' body albedo is not diagnosed, as above. It is visible on every
-  vehicle in the town scene too, at a distance where it reads as shading rather than
-  as wrong colour.
+- **`Decal.cull_mask` filters the receiver set, not the fragment.** A masked-out mesh
+  simply never has a projection baked for it, which is exact. What is still
+  approximate on the meshes a decal *does* reach: `upper_fade` / `lower_fade` /
+  `normal_fade` are unimplemented, so a blob does not soften as its caster lifts off
+  the ground. On these vehicles the fades are unreachable — every mesh is masked out —
+  and where the blobs land legitimately the fade term computes to ~0.9-1.0.
+- **The town capture above contains no vehicles.** `town_scene.tscn` instances none;
+  they are spawned at runtime by the car-select flow. An earlier revision of this sheet
+  claimed the vehicle darkening was visible there too — it was not, and the town
+  capture is byte-identical before and after the `cull_mask` fix.

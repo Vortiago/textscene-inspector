@@ -81,6 +81,18 @@ anything other than `0`/`2`/`3` as `1` (cast ON), Godot's own default. `mesh`,
 `surface_material_override/<n>` are assigned straight from the raw string whenever
 present; the lenient parser never checks that they resolve to a real resource or node.
 
+## Render layers
+
+`layers` — Godot's `VisualInstance3D` render mask — reaches the rendered mesh as
+a `userData` tag (`r3f/visualLayers.ts`). It does not change how the mesh itself
+draws; it is what other nodes filter on. Today that is `Decal.cull_mask`, which
+projects onto an instance only where `decal.cull_mask & instance.layers` is
+non-zero, so a mesh on a layer the decal excludes takes no projection.
+
+The mask deliberately does not ride `THREE.Object3D.layers`: that is three's
+camera-cull state, already in use by the 2D lighting passes, and a mesh moved
+off the camera's layer would vanish outright rather than merely go undecalled.
+
 ## Known limitations
 
 - **CylinderMesh single cap** — three removes both end caps or neither, so a Godot cylinder with exactly one of `cap_top` / `cap_bottom` disabled renders with both caps.

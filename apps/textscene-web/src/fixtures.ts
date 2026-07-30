@@ -203,6 +203,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Cull Mask",
+    "file": "unit-decal-cull-mask.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal",
     "file": "unit-decal.tscn",
     "category": "Other"

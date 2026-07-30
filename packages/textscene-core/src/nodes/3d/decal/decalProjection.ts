@@ -20,6 +20,8 @@
 import * as THREE from 'three';
 import { DecalGeometry } from 'three/examples/jsm/geometries/DecalGeometry.js';
 import type { Vector3 } from '../../../parser/vectors';
+import { visualLayersOf } from '../../../r3f/visualLayers';
+import { DECAL_DEFAULT_CULL_MASK } from './parser';
 
 /**
  * The projector orientation, expressed in the decal's LOCAL frame. Godot
@@ -57,37 +59,47 @@ export function computeDecalBoxWorldAABB(decalWorld: THREE.Matrix4, size: Vector
 
 /**
  * A scene object is a decal receiver when it is a real, visible mesh with
- * geometry and is NOT itself a decal projection (so decals never stamp onto
- * each other's output). Gizmos are `LineSegments`/helpers, not `Mesh`, so they
- * fall out here without special-casing. Godot's `cull_mask` layer filtering is
- * not modelled — see the component's limitation note.
+ * geometry, is NOT itself a decal projection (so decals never stamp onto each
+ * other's output), and its Godot render layers survive the decal's `cull_mask`.
+ * Gizmos are `LineSegments`/helpers, not `Mesh`, so they fall out here without
+ * special-casing.
+ *
+ * The layer test is Godot's, exactly: a decal reaches an instance only when
+ * `decal.cull_mask & instance.layer_mask` is non-zero — the CPU-side pairing
+ * cull in `renderer_scene_cull.cpp` and, per fragment, the `continue //not
+ * masked` guard in `scene_forward_clustered.glsl`. It is what lets a vehicle
+ * carry a blob-shadow decal that darkens the ground it stands on without
+ * painting the vehicle itself black.
  */
-function isReceiverMesh(obj: THREE.Object3D): obj is THREE.Mesh {
+function isReceiverMesh(obj: THREE.Object3D, cullMask: number): obj is THREE.Mesh {
   const mesh = obj as THREE.Mesh;
   return (
     mesh.isMesh === true &&
     !!mesh.geometry &&
     obj.visible !== false &&
-    obj.userData.isDecalProjection !== true
+    obj.userData.isDecalProjection !== true &&
+    (cullMask & visualLayersOf(obj)) !== 0
   );
 }
 
 /**
  * Every receiver mesh under `root` whose world bounding box overlaps the decal
- * box. This is only a pre-filter: `DecalGeometry` does the exact per-triangle
- * clipping, but skipping non-overlapping meshes keeps a decal from walking the
- * whole scene's triangles and from producing empty geometries. `root` must have
- * had `updateMatrixWorld(true)` called by the caller so every `matrixWorld` is
- * current.
+ * box and whose render layers `cullMask` admits. The box overlap is only a
+ * pre-filter: `DecalGeometry` does the exact per-triangle clipping, but skipping
+ * non-overlapping meshes keeps a decal from walking the whole scene's triangles
+ * and from producing empty geometries. The layer test, by contrast, is exact —
+ * it is the whole of Godot's rule. `root` must have had `updateMatrixWorld(true)`
+ * called by the caller so every `matrixWorld` is current.
  */
 export function collectDecalReceivers(
   root: THREE.Object3D,
-  boxWorldAABB: THREE.Box3
+  boxWorldAABB: THREE.Box3,
+  cullMask: number = DECAL_DEFAULT_CULL_MASK
 ): THREE.Mesh[] {
   const receivers: THREE.Mesh[] = [];
   const meshBox = new THREE.Box3();
   root.traverse((obj) => {
-    if (!isReceiverMesh(obj)) return;
+    if (!isReceiverMesh(obj, cullMask)) return;
     if (!obj.geometry.boundingBox) obj.geometry.computeBoundingBox();
     const local = obj.geometry.boundingBox;
     if (!local) return;

@@ -20,9 +20,11 @@
  * `useGizmoVisible()` (ADR-0018), matching Marker3D/Path3D. An unselected decal
  * shows only its projection, exactly like Godot at runtime.
  *
- * Honoured: `texture_albedo`, `size`, `modulate`, `albedo_mix`. Parsed but not
- * yet projected: `cull_mask` (layer filtering), `upper_fade`/`lower_fade`/
- * `normal_fade`/`distance_fade_*`, and the normal/ORM/emission maps.
+ * Honoured: `texture_albedo`, `size`, `modulate`, `albedo_mix`, and `cull_mask`
+ * — the last as Godot's exact rule, `decal.cull_mask & instance.layers`, applied
+ * when the receivers are collected (`decalProjection.ts`). Parsed but not yet
+ * projected: `upper_fade`/`lower_fade`/`normal_fade`/`distance_fade_*`, and the
+ * normal/ORM/emission maps.
  *
  * Wraps `<Node3D>` so transform, visibility, and children come from the base.
  */
@@ -119,7 +121,7 @@ export function Decal({ node, children }: NodeComponentProps) {
     const decalWorld = group.matrixWorld;
     const decalWorldInverse = decalWorld.clone().invert();
     const boxAABB = computeDecalBoxWorldAABB(decalWorld, size);
-    const receivers = collectDecalReceivers(scene, boxAABB);
+    const receivers = collectDecalReceivers(scene, boxAABB, properties.cull_mask);
 
     const material = new THREE.MeshStandardMaterial({
       map: albedo,
@@ -161,7 +163,7 @@ export function Decal({ node, children }: NodeComponentProps) {
     // `size` is the authored Vector3 (stable identity) unless an
     // AnimationPlayer is driving it, in which case a size keyframe rebuilds the
     // projection — acceptable for the rare animated-decal case.
-  }, [scene, invalidate, albedo, color, opacity, size, resourceVersion]);
+  }, [scene, invalidate, albedo, color, opacity, size, properties.cull_mask, resourceVersion]);
 
   return (
     <Node3D node={node}>

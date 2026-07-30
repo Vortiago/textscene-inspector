@@ -21,8 +21,12 @@ import type { DecalProperties } from './types';
 /** Godot Decal default box size. */
 const DEFAULT_SIZE: Vector3 = { x: 2, y: 2, z: 2 };
 
-/** Godot Decal default cull_mask — all 20 render layers enabled. */
-const DEFAULT_CULL_MASK = 0xfffff;
+/**
+ * Godot Decal default `cull_mask` — all 20 render layers enabled
+ * (`Decal::cull_mask = (1 << 20) - 1`). Exported so the projection's own default
+ * argument cannot drift from what the parser hands it.
+ */
+export const DECAL_DEFAULT_CULL_MASK = 0xfffff;
 
 export function parseDecal(
   heading: ParsedHeading,
@@ -48,7 +52,7 @@ export function parseDecal(
     normal_fade: floatOr(properties.normal_fade, 0),
     upper_fade: floatOr(properties.upper_fade, 0.3),
     lower_fade: floatOr(properties.lower_fade, 0.3),
-    cull_mask: intOr(properties.cull_mask, DEFAULT_CULL_MASK),
+    cull_mask: intOr(properties.cull_mask, DECAL_DEFAULT_CULL_MASK),
   };
 
   if (properties.texture_albedo) result.texture_albedo = properties.texture_albedo;
