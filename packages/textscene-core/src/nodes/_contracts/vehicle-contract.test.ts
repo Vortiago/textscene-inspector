@@ -38,11 +38,21 @@ function parseFixture(): TscnScene {
 
 describe('#352 fixtures contract — Truck Town vehicle types', () => {
   it(`${FIXTURE} parses with a VehicleBody3D carrying a physics material override`, () => {
-    const nodes = flatten(parseFixture());
+    const scene = parseFixture();
+    const nodes = flatten(scene);
     const bodies = nodes.filter((n) => n.type === 'VehicleBody3D');
     expect(bodies).toHaveLength(1);
     expect(nodes.map((n) => n.type)).toContain('CollisionShape3D');
     expect(nodes.map((n) => n.type)).toContain('MeshInstance3D');
+
+    // The override is what makes this fixture exercise valid-vehiclebody3d-resources
+    // at all, and VehicleBody3D reuses parseNode3D — so it survives only in the
+    // raw body, and only against a PhysicsMaterial the scene actually defines.
+    const override = bodies[0]!.rawProperties?.physics_material_override;
+    expect(override).toBe('SubResource("PhysicsMaterial_tyres")');
+    expect(scene.internalResources.map((r) => `${r.type}:${r.id}`)).toContain(
+      'PhysicsMaterial:PhysicsMaterial_tyres'
+    );
   });
 
   it(`${FIXTURE} carries at least two VehicleWheel3D at distinct origins`, () => {

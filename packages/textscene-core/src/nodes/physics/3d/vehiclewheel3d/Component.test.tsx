@@ -92,9 +92,14 @@ describe('<VehicleWheel3D> gizmo gate', () => {
 
 describe('<VehicleWheel3D> gizmo geometry', () => {
   it('scales the radius circle with wheel_radius', async () => {
-    // The circle lies in the YZ plane, so its extent in Z is the wheel radius.
     const quarter = await gizmoPositions({ wheel_radius: '0.25' });
     const half = await gizmoPositions({ wheel_radius: '0.5' });
+
+    // The circle lies in the YZ plane at x = 0 and starts at (0, 0, r) for
+    // i = 0. Assert that point directly: the buffer's extreme Z below belongs
+    // to the forward arrow, and would still be right with the circle dropped.
+    expect(containsPoint(quarter, [0, 0, 0.25])).toBe(true);
+    expect(containsPoint(half, [0, 0, 0.5])).toBe(true);
 
     const maxZ = (a: Float32Array) => {
       let m = -Infinity;

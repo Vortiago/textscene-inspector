@@ -20,7 +20,10 @@ validatorRegistry.registerAll('VehicleWheel3D', {
     min: 0,
     message: "Property 'wheel_radius' must be >= 0. A wheel cannot have negative radius.",
   }),
-  wheel_rest_length: v.float('wheel_rest_length'),
+  wheel_rest_length: v.float('wheel_rest_length', {
+    min: 0,
+    message: "Property 'wheel_rest_length' must be >= 0. A spring cannot rest at a negative length.",
+  }),
   wheel_friction_slip: v.float('wheel_friction_slip', {
     min: 0,
     message: "Property 'wheel_friction_slip' must be >= 0. Grip cannot be negative.",

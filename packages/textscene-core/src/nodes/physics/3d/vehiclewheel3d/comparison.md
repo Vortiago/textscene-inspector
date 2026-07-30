@@ -87,8 +87,10 @@ Strict parsing format-checks these `VehicleWheel3D` properties, plus 16 inherite
 The lenient parser reads every strict-validated property, so the two grammars
 agree key for key. Unauthored keys stay `undefined` rather than being filled with
 Godot's defaults at parse time — real wheels routinely leave `suspension_travel`
-and `damping_relaxation` unset, and collapsing those into "authored the default"
-would lose the distinction the damping-pair rule depends on. The defaults are
-substituted where the value is consumed instead: the inspector shows the
-effective figure, and the gizmo falls back to `wheel_radius = 0.5` /
-`wheel_rest_length = 0.15`.
+and `damping_relaxation` unset, and "authored the default" is a different fact
+from "authored nothing". The defaults are substituted where the value is consumed
+instead: the inspector shows the effective figure, the gizmo falls back to
+`wheel_radius = 0.5` / `wheel_rest_length = 0.15`, and the damping-pair rule
+compares against `damping_compression = 0.83` / `damping_relaxation = 0.88` so a
+wheel that authors only one side is still checked (Godot's own pair satisfies the
+recommendation, so a wheel authoring neither never warns).

@@ -25,6 +25,17 @@ import { dimSuffix } from './dim.js';
 const MIN_RECOMMENDED_TRAVEL = 0.1;
 const MAX_RECOMMENDED_TRAVEL = 0.3;
 
+/**
+ * The two damping defaults from the class reference. Transcribed here rather
+ * than imported from the slice's types.ts: the linter half of the bundle never
+ * reaches into `nodes/` (the dependency runs the other way), and the rule
+ * factory's signature is pinned to `(dim)` by the ruleCoverage meta-guard, so
+ * they cannot be injected either. They differ — an unauthored side is NOT
+ * interchangeable with the other one.
+ */
+const DEFAULT_DAMPING_COMPRESSION = 0.83;
+const DEFAULT_DAMPING_RELAXATION = 0.88;
+
 export function makeVehicleWheelLinterRule(dim: PhysicsDim): LintRule {
   const type = `VehicleWheel${dim}`;
   const bodyType = `VehicleBody${dim}`;
@@ -67,12 +78,21 @@ export function makeVehicleWheelLinterRule(dim: PhysicsDim): LintRule {
     );
 
     // Godot: damping_relaxation "should be slightly higher than
-    // damping_compression". Only compared when BOTH are authored — the two
-    // defaults are equal, so substituting a missing side would warn about a
-    // configuration Godot itself ships.
-    if (rawProps.damping_compression !== undefined && rawProps.damping_relaxation !== undefined) {
-      const compression = parseFloat(rawProps.damping_compression);
-      const relaxation = parseFloat(rawProps.damping_relaxation);
+    // damping_compression". Either side may be left unauthored — real wheels
+    // routinely set only compression — so the missing one is substituted with
+    // its Godot default. The pair of defaults already satisfies the
+    // recommendation (0.83 < 0.88), so a wheel that authors neither, or only
+    // the one Godot ships, stays quiet; a wheel that authors ONLY the side that
+    // breaks the relationship is exactly the misconfiguration this catches.
+    if (rawProps.damping_compression !== undefined || rawProps.damping_relaxation !== undefined) {
+      const compression =
+        rawProps.damping_compression === undefined
+          ? DEFAULT_DAMPING_COMPRESSION
+          : parseFloat(rawProps.damping_compression);
+      const relaxation =
+        rawProps.damping_relaxation === undefined
+          ? DEFAULT_DAMPING_RELAXATION
+          : parseFloat(rawProps.damping_relaxation);
       if (!isNaN(compression) && !isNaN(relaxation) && relaxation < compression) {
         diagnostics.push({
           severity: 'warning',
