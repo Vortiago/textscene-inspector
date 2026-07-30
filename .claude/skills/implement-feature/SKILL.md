@@ -14,9 +14,11 @@ explicitly N/A-because-X — never silently skipped.
 **Identify the SHAPE first — the wiring differs fundamentally and is the #1 source of forgotten layers:**
 
 - **Node type** (`[node type="X"]`) → **self-registering** via three barrels. Scaffold it:
-  `pnpm new:node <Type> <category> [--linter]` (`scripts/new-node-slice.mjs`) generates the slice + a
-  fixture and wires the three barrels. It does NOT do: semantic `linter.ts`, docs, goldens, or the
-  material/mesh shape.
+  `pnpm new:node <Type> <category> --intent <draws|transform-only|pending> --chain <ParentType>
+  [--base node3d|node2d|node|control] [--linter]` (`scripts/new-node-slice.mjs`) generates the slice
+  + a fixture, wires the barrels, and adds the `NODE_BASE_TYPES` entry. `--intent draws` is the
+  shape for a node you are about to render. It does NOT do: semantic `linter.ts`, docs, goldens, or
+  the material/mesh shape.
 - **Material / mesh / resource** (`[sub_resource type="X"]`, or a StandardMaterial3D property) →
   **central dispatch**: hand-edit a switch. No self-registration, no scaffolder.
 

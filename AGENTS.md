@@ -48,9 +48,21 @@ co-located `*.test.ts(x)` · three entry points:
 - `index.r3f.ts` — render component, the ONLY importer of `./Component` → wire into
   `src/r3f/nodes/index.ts`
 
-Scaffold: `pnpm new:node <TypeName> <category-dir> [--base node3d|node2d] [--linter]`
-(creates the `unit-*.tscn` fixture + aggregation imports). Conformance tests
-(barrelCompleteness, reactFree, ruleCoverage) fail on a mis-wired slice.
+Scaffold: `pnpm new:node <TypeName> <category-dir> --intent <draws|transform-only|pending>
+--chain <ParentType> [--base node3d|node2d|node|control] [--linter]` (creates the
+`unit-*.tscn` fixture, the aggregation imports, and the `NODE_BASE_TYPES` entry).
+
+`--intent` settles the slice shape, the render registration and the sheet status
+together, because `sheets.test.mjs` asserts they agree: `draws` = own
+types/parser/Component and `unreviewed`; `transform-only` = ADR-0008, reuses the base,
+registers `renderIntent: 'transform-only'`, `linter-only`; `pending` = parsed but not
+drawn, registers NO component, `unimplemented`. `--chain` names the Godot parent —
+mandatory because a type absent from `NODE_BASE_TYPES` silently receives zero
+inherited validation. Conformance tests (barrelCompleteness, reactFree, ruleCoverage,
+baseChainCompleteness) fail on a mis-wired slice.
+
+Coverage: `node scripts/coverage-report.mjs [--next 5]` derives which Godot node types
+are still unregistered, base classes first.
 
 ## Conventions
 
