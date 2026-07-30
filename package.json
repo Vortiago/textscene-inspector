@@ -75,7 +75,7 @@
     "@vitest/coverage-v8": "^4.1",
     "@vitest/ui": "catalog:",
     "@vscode/test-electron": "catalog:",
-    "eslint": "^9.18.0",
+    "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "catalog:",
     "globals": "^17.8.0",
     "happy-dom": "^20.11.1",
