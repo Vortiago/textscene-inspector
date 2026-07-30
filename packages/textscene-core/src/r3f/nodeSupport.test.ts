@@ -77,7 +77,15 @@ describe('rendersOwnVisual', () => {
     // Which types are pending changes every wave, so pinning the list here
     // would churn; the standing invariant is that no type falls through. The
     // status↔registry agreement is asserted per sheet in sheets.test.mjs.
-    const states = new Set(nodeRegistry.getAllTypeNames().map(rendersOwnVisual));
-    expect([...states].sort()).toEqual(['draws', 'not-implemented', 'transform-only']);
+    const KNOWN = ['draws', 'not-implemented', 'transform-only'];
+    const states = [...new Set(nodeRegistry.getAllTypeNames().map(rendersOwnVisual))];
+    expect(states.filter((s) => !KNOWN.includes(s))).toEqual([]);
+
+    // Both of these must stay occupied. `not-implemented` deliberately is NOT
+    // required: `Window` is the only type in it, so demanding the bucket be
+    // non-empty would turn this red on the wave that finally draws a Window —
+    // failing the fix rather than the regression.
+    expect(states).toContain('draws');
+    expect(states).toContain('transform-only');
   });
 });

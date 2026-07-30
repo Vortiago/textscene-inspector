@@ -3,7 +3,10 @@
  * Migrated to the declarative `v` namespace.
  */
 
-import '../../base/node3d/linterParser.js';
+// The immediate validator-bearing base, which pulls Node3D in turn — `layers`
+// lives there now, so importing Node3D directly would leave this module unable
+// to answer for a key it is chained to.
+import '../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 

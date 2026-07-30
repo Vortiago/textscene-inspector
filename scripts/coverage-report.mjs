@@ -24,8 +24,8 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { loadCoreLinter, loadCoreParser } from './compare-docs/loadCoreLinter.mjs';
 
-const REPO_ROOT = import.meta.dirname;
-const CATALOG = join(REPO_ROOT, 'compare-docs/node-catalog.json');
+const SCRIPTS_DIR = import.meta.dirname;
+const CATALOG = join(SCRIPTS_DIR, 'compare-docs/node-catalog.json');
 
 /**
  * Godot 4.6.3 parses `AreaLight3D` but emits nothing from it, so the node
@@ -81,8 +81,19 @@ const baseClassesOf = (nodes) => new Set(nodes.flatMap((n) => n.chain));
 function parseArgs(argv) {
   const opts = { next: 0, json: false };
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === '--next') opts.next = Number(argv[++i]) || 5;
-    else if (argv[i] === '--json') opts.json = true;
+    if (argv[i] === '--next') {
+      // Bare `--next` means "the default handful". A value must be a positive
+      // integer: `Number(x) || 5` turned both `--next 0` and `--next later`
+      // into 5, so a typo silently printed a different report than was asked
+      // for while swallowing the next argument.
+      const raw = argv[++i];
+      const n = raw === undefined ? 5 : Number(raw);
+      if (!Number.isInteger(n) || n < 1) {
+        console.error(`[coverage-report] --next needs a positive integer, got: ${raw}`);
+        process.exit(1);
+      }
+      opts.next = n;
+    } else if (argv[i] === '--json') opts.json = true;
     else if (argv[i] === '--help' || argv[i] === '-h') opts.help = true;
     else {
       console.error(`[coverage-report] unknown option: ${argv[i]}`);

@@ -1,6 +1,8 @@
 /** Decal strict validators for linting (format validation). */
 
-import '../../base/node3d/linterParser.js';
+// VisualInstance3D is the immediate validator-bearing base and pulls Node3D in
+// turn, so this module still answers for every key Decal is chained to.
+import '../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 

@@ -133,6 +133,13 @@ const NODE2D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and t
     expect(result.position).toEqual({ x: 0, y: 0 });
   });`;
 
+/**
+ * `hasLinterParser` drives the side-effect import a generated `linterParser.ts`
+ * puts at the top. Without it the module registers only its OWN keys, so a test
+ * that imports `./linterParser` directly sees `findValidator` return null for
+ * every inherited one — the exact breakage `viewport/subviewport` had to be
+ * repaired for by hand. 18 hand-written slices already carry this import.
+ */
 const BASES = {
   node3d: {
     dir: 'base/node3d',
@@ -140,6 +147,7 @@ const BASES = {
     component: 'Node3D',
     propsType: 'Node3DProperties',
     parserTestCases: NODE3D_PARSER_TEST_CASES,
+    hasLinterParser: true,
   },
   node2d: {
     dir: 'base/node2d',
@@ -147,6 +155,7 @@ const BASES = {
     component: 'Node2D',
     propsType: 'Node2DProperties',
     parserTestCases: NODE2D_PARSER_TEST_CASES,
+    hasLinterParser: true,
   },
   control: {
     dir: '2d/ui/control',
@@ -157,6 +166,7 @@ const BASES = {
     // whole set is validated on `Control` itself and inherited via the chain.
     // A leaf declares only its OWN members.
     parserTestCases: CONTROL_PARSER_TEST_CASES,
+    hasLinterParser: true,
   },
   node: {
     dir: 'node',
@@ -164,6 +174,8 @@ const BASES = {
     component: 'Node',
     propsType: 'NodeProperties',
     parserTestCases: NODE3D_PARSER_TEST_CASES,
+    // `nodes/node/` registers no validators, so there is nothing to import.
+    hasLinterParser: false,
   },
 };
 
@@ -241,6 +253,7 @@ function parseArgs(argv) {
  */
 const LEAF_ARRAYS = {
   Light3D: 'LIGHT3D_LEAVES',
+  VisualInstance3D: 'VISUALINSTANCE3D_LEAVES',
   Node3D: 'NODE3D_LEAVES',
   Node2D: 'NODE2D_LEAVES',
   Control: 'CONTROL_LEAVES',
@@ -569,7 +582,7 @@ export { ${typeName} };
  * re-declaring an inherited key shadows it and duplicates the rule.
  */
 
-import { validatorRegistry } from '${toSrc}linter/ValidatorRegistry.js';
+${base.hasLinterParser ? `import '${toBase}/linterParser.js';\n` : ''}import { validatorRegistry } from '${toSrc}linter/ValidatorRegistry.js';
 
 validatorRegistry.registerAll('${typeName}', {});
 `

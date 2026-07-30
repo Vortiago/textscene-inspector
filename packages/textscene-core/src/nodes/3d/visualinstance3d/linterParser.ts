@@ -21,6 +21,7 @@
  * re-enables `sorting_offset` alone.
  */
 
+import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask } from '../../../linter/validators/index.js';
 

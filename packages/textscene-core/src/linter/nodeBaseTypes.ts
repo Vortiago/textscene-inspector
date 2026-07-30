@@ -62,7 +62,6 @@ const NODE3D_LEAVES = [
   'NavigationObstacle3D',
   'SkeletonModifier3D',
   'SpringBoneCollision3D',
-  'VisualInstance3D',
   'XRNode3D',
 ] as const;
 
