@@ -70,6 +70,33 @@ albedo_mix = 1.5
     expect(errors[0]!.message).toContain('albedo_mix');
   });
 
+  it('accepts an upper_fade/lower_fade above 1 — they are curve exponents, not ratios', () => {
+    // class_decal.html: "Sets the curve over which the decal will fade as the
+    // surface gets further from the center of the AABB. Only positive values are
+    // valid (negative values will be clamped to 0.0)." No upper bound is
+    // documented, and shipped Godot demo scenes author 2.0.
+    const content = `[gd_scene format=3]
+
+[node name="X" type="Decal"]
+upper_fade = 2.0
+lower_fade = 8.0
+`;
+
+    expect(errorsOf(linter.lint(content))).toEqual([]);
+  });
+
+  it('rejects a negative upper_fade', () => {
+    const content = `[gd_scene format=3]
+
+[node name="X" type="Decal"]
+upper_fade = -0.5
+`;
+
+    const errors = errorsOf(linter.lint(content));
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0]!.message).toContain('upper_fade');
+  });
+
   it('rejects a cull_mask outside the 32-bit layer range', () => {
     // 0 is legal (renders nothing); 2^32 is not. class_camera3d.html's 1048575
     // is the DEFAULT — the 20 editor-visible layers — never the bound.
