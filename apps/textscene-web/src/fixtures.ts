@@ -278,6 +278,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Hslider",
+    "file": "unit-hslider.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Instance Child",
     "file": "unit-instance-child.tscn",
     "category": "Other"
@@ -365,6 +370,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Lightoccluder2d",
     "file": "unit-lightoccluder2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lineedit",
+    "file": "unit-lineedit.tscn",
     "category": "Other"
   },
   {
@@ -513,8 +523,23 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Split Container Vertical",
+    "file": "unit-split-container-vertical.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Split Container",
+    "file": "unit-split-container.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Spot Light 3d",
     "file": "unit-spot-light-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite3d Region Oversized",
+    "file": "unit-sprite3d-region-oversized.tscn",
     "category": "Other"
   },
   {
@@ -560,6 +585,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Uv Scale",
     "file": "unit-uv-scale.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Vslider",
+    "file": "unit-vslider.tscn",
     "category": "Other"
   },
   {
@@ -883,6 +913,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Parallax Background",
+    "file": "unit-parallax-background.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Parallax Layer",
+    "file": "unit-parallax-layer.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Path2d",
     "file": "unit-path2d.tscn",
     "category": "Unit - 2D Canvas"
@@ -900,6 +940,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite2d Canvastexture",
     "file": "unit-sprite2d-canvastexture.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Region Oversized",
+    "file": "unit-sprite2d-region-oversized.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
@@ -1376,6 +1421,56 @@ export const fixtures: Fixture[] = [
     "name": "Navigation Region 3d",
     "file": "unit-navigation-region-3d.tscn",
     "category": "Unit - Navigation"
+  },
+  {
+    "name": "Sub Viewport Container 2d Content",
+    "file": "unit-sub-viewport-container-2d-content.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Container 3d Content",
+    "file": "unit-sub-viewport-container-3d-content.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Container Camera 2d",
+    "file": "unit-sub-viewport-container-camera-2d.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Container Stretch 2d Content",
+    "file": "unit-sub-viewport-container-stretch-2d-content.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Container Stretch",
+    "file": "unit-sub-viewport-container-stretch.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Container",
+    "file": "unit-sub-viewport-container.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Control Texture",
+    "file": "unit-sub-viewport-control-texture.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Own World",
+    "file": "unit-sub-viewport-own-world.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Texture",
+    "file": "unit-sub-viewport-texture.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport",
+    "file": "unit-sub-viewport.tscn",
+    "category": "Unit - Viewports"
   },
   {
     "name": "Bone Pile 1",

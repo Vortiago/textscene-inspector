@@ -10,7 +10,7 @@
  * re-subscribing to the resource event bus.
  *
  * Pass a STABLE `predicate` (module-level or memoized) so the memo doesn't
- * recompute every render.
+ * recompute every render; the optional `descend` prune must be stable too.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useHierarchy, useOptionalHierarchy } from './contexts/HierarchyContext.js';
@@ -76,7 +76,11 @@ export function useLiveTreeVersion(loader: ResourceLoader | null | undefined): n
   return version;
 }
 
-export function useLiveSceneNodes(predicate: (node: TscnNode) => boolean): LiveTreeEntry[] {
+export function useLiveSceneNodes(
+  predicate: (node: TscnNode) => boolean,
+  /** Stable, like `predicate`: return false to skip a node's children. */
+  descend?: (node: TscnNode) => boolean
+): LiveTreeEntry[] {
   // Optional so viewport-level readers (the preview lighting) work in the
   // empty-canvas and test-renderer cases, where no scene is mounted at all.
   const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
@@ -86,12 +90,12 @@ export function useLiveSceneNodes(predicate: (node: TscnNode) => boolean): LiveT
   return useMemo(() => {
     const lt = liveTreeContext(sceneGraph, loader);
     if (!lt) return [];
-    return collectLiveNodes(lt.roots, lt.ctx, predicate);
+    return collectLiveNodes(lt.roots, lt.ctx, predicate, descend);
     // `version` is an intentional cache-buster: it increments each time a
     // sub-scene or GLB finishes loading so the live-node list re-derives.
     // The value itself is not read inside the callback.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sceneGraph, loader, version, predicate]);
+  }, [sceneGraph, loader, version, predicate, descend]);
 }
 
 /**

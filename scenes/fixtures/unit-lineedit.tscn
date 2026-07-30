@@ -1,0 +1,52 @@
+; LineEdit draw states: which string is painted (placeholder vs text vs secret
+; echo) and which stylebox carries it (normal / read_only / none, when flat).
+; Every other Control fixture paints text at full opacity inside a box that
+; always has a background, so a placeholder drawn at full font colour, a
+; read-only field that keeps the editable fill, or a secret field leaking its
+; plaintext is invisible in all of them.
+
+[gd_scene format=3 uid="uid://unitlineedit"]
+
+[node name="LineEditRoot" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Fields" type="VBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = -24.0
+theme_override_constants/separation = 12
+
+[node name="Placeholder" type="LineEdit" parent="Fields"]
+layout_mode = 2
+placeholder_text = "Enter text here..."
+
+[node name="Filled" type="LineEdit" parent="Fields"]
+layout_mode = 2
+text = "Ada Lovelace"
+placeholder_text = "Enter text here..."
+
+[node name="Secret" type="LineEdit" parent="Fields"]
+layout_mode = 2
+text = "hunter2"
+secret = true
+
+[node name="ReadOnly" type="LineEdit" parent="Fields"]
+layout_mode = 2
+text = "Read only"
+editable = false
+
+[node name="Flat" type="LineEdit" parent="Fields"]
+layout_mode = 2
+text = "Flat, no stylebox"
+flat = true
+
+[node name="Centred" type="LineEdit" parent="Fields"]
+layout_mode = 2
+text = "Centred"
+alignment = 1

@@ -1,0 +1,54 @@
+; A STRETCHING SubViewportContainer holding 2D-world content.
+;
+; The one variable against unit-sub-viewport-container-2d-content.tscn:
+; `stretch`. Identical container geometry, identical authored
+; `size = Vector2i(200, 150)`, identical content.
+;
+; With stretch on, `recalc_force_viewport_sizes` runs
+; `set_size_force(get_size() / stretch_shrink)` and the authored size is dead —
+; the sub-viewport renders at the CONTAINER's 300x200. `Outside` is what proves
+; it: the square spans x 220..280, y 160..190, which is wholly outside a
+; 200x150 target and wholly inside a 300x200 one. It is either drawn or it is
+; not; no amount of scaling turns one into the other.
+;
+; That distinction is invisible in every other container fixture. The Control
+; arm lays its children out against the SURFACE, which fills the container
+; whichever size the target is, so a ColorRect at the same coordinates appears
+; either way. Only content that goes through the render target can see which
+; rect it was laid out against.
+;
+; Band keeps the sibling fixture's authored Color(0.5, 0.5, 0.5) so the colour
+; pipeline stays pinned here too, and the bottom-left corner is left uncovered
+; for the clear colour.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 400.0
+offset_bottom = 280.0
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+size = Vector2i(200, 150)
+render_target_update_mode = 4
+
+[node name="Band" type="Polygon2D" parent="Booth/SubViewport"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 300, 0, 300, 40, 0, 40)
+
+[node name="Outside" type="Polygon2D" parent="Booth/SubViewport"]
+color = Color(1, 0.4, 0, 1)
+polygon = PackedVector2Array(220, 160, 280, 160, 280, 190, 220, 190)

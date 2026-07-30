@@ -36,7 +36,8 @@ import {
   type TouchPoint,
 } from '../../pointerGesture.js';
 import { World2DCanvas } from './World2DCanvas.js';
-import { CANVAS_2D_WIDTH, CANVAS_2D_HEIGHT, FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d.js';
+import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d.js';
+import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import styles from './Canvas2DStage.module.css';
 
 // The 2D-UI overlay (ADR-0003) is lazy-loaded — keeping the 15 Control
@@ -96,6 +97,11 @@ export function Canvas2DStage({
   const stageRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View2D>({ pan: { x: 0, y: 0 }, zoom: 1 });
   const { pan, zoom } = view;
+  // `display/window/size/viewport_*`, or Godot's 1152x648 for a scene with no
+  // project around it. This rect is what a root Control resolves its anchors
+  // to, so 23 of the corpus's 81 projects were being composed against the
+  // wrong frame while it was a module constant.
+  const { width: canvasWidth, height: canvasHeight } = useProjectSettings().viewportSize;
 
   /**
    * The view as of NOW, not as of the last render. A wheel burst or a pinch
@@ -117,16 +123,16 @@ export function Canvas2DStage({
     if (r.width <= 0 || r.height <= 0) return;
     const margin = 56;
     const zoom = clampZoom(
-      Math.min((r.width - margin) / CANVAS_2D_WIDTH, (r.height - margin) / CANVAS_2D_HEIGHT)
+      Math.min((r.width - margin) / canvasWidth, (r.height - margin) / canvasHeight)
     );
     applyView({
       zoom,
       pan: {
-        x: (r.width - CANVAS_2D_WIDTH * zoom) / 2,
-        y: (r.height - CANVAS_2D_HEIGHT * zoom) / 2,
+        x: (r.width - canvasWidth * zoom) / 2,
+        y: (r.height - canvasHeight * zoom) / 2,
       },
     });
-  }, [applyView]);
+  }, [applyView, canvasWidth, canvasHeight]);
 
   // Fit on mount, unless the view is pinned (read once — the preference decides
   // how this scene OPENS; the Fit button and pan/zoom stay live either way).
@@ -339,13 +345,13 @@ export function Canvas2DStage({
         className={styles.canvasFrame}
         data-testid="canvas-2d-frame"
         style={{
-          width: CANVAS_2D_WIDTH,
-          height: CANVAS_2D_HEIGHT,
+          width: canvasWidth,
+          height: canvasHeight,
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
         }}
       >
         <span className={styles.canvasDim} aria-hidden>
-          {CANVAS_2D_WIDTH} × {CANVAS_2D_HEIGHT}
+          {canvasWidth} × {canvasHeight}
         </span>
       </div>
 
@@ -381,10 +387,15 @@ export function Canvas2DStage({
         className={styles.overlayFrame}
         data-testid="canvas-2d-capture-frame"
         style={{
-          width: CANVAS_2D_WIDTH,
-          height: CANVAS_2D_HEIGHT,
+          width: canvasWidth,
+          height: canvasHeight,
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
         }}
+        // The rect this frame IS, before the stage's pan/zoom transform. A
+        // capture harness reads it to know what "zoom 1" means for THIS scene:
+        // the frame is the project's viewport, so it is no longer a constant it
+        // can hardcode (`projectViewportSize`).
+        data-viewport-size={`${canvasWidth}x${canvasHeight}`}
       >
         <Suspense
           fallback={

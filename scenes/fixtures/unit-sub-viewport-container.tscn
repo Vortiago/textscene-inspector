@@ -1,0 +1,49 @@
+; SubViewportContainer with stretch = false (Godot's default).
+;
+; The one variable: how the surface is SIZED when stretch is off. Measured
+; through Godot 4.6.3 — the container is 300x200 at (100, 80) but the drawn
+; surface is 200x150, the SUB-VIEWPORT's own size, anchored at the container's
+; top-left. The container rect does not size the content.
+;
+; Overflow is a consequence, not an operation: the container issues no clip, but
+; the render target is only 200x150 pixels, so Overflow (which extends to
+; 400x300 in viewport space) is cut at the target edge — it shows as a 50x50
+; green square in the bottom-right corner of the orange rect.
+;
+; Backdrop is outside the viewport and proves the surface paints its own clear
+; colour rather than letting the parent show through.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 400.0
+offset_bottom = 280.0
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+size = Vector2i(200, 150)
+render_target_update_mode = 4
+
+[node name="Inner" type="ColorRect" parent="Booth/SubViewport"]
+offset_right = 200.0
+offset_bottom = 150.0
+color = Color(1, 0.6, 0, 1)
+
+[node name="Overflow" type="ColorRect" parent="Booth/SubViewport"]
+offset_left = 150.0
+offset_top = 100.0
+offset_right = 400.0
+offset_bottom = 300.0
+color = Color(0, 1, 0, 1)

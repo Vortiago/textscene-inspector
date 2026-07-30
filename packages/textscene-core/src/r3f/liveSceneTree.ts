@@ -335,7 +335,8 @@ const MAX_DEPTH = 100;
 export function walkLiveTree(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext,
-  visit: (entry: LiveTreeEntry) => void
+  visit: (entry: LiveTreeEntry) => void,
+  descend?: (node: TscnNode) => boolean
 ): void {
   const walk = (
     nodes: readonly TscnNode[],
@@ -346,7 +347,11 @@ export function walkLiveTree(
     if (depth > MAX_DEPTH) return;
     for (const node of nodes) {
       const path = joinPath(parentPath, node.name);
-      visit({ node: collapseLiveNode(node, scope, ctx.sceneCache), path });
+      const effective = collapseLiveNode(node, scope, ctx.sceneCache);
+      visit({ node: effective, path });
+      // The node itself is always visited; `descend` only prunes its CHILDREN,
+      // so a consumer can count a boundary without counting what is behind it.
+      if (descend && !descend(effective)) continue;
       const groups = liveChildGroups(node, scope, ctx.sceneCache, ctx.glbCache);
       for (const group of groups) {
         walk(group.children, group.externalResources, path, depth + 1);
@@ -360,15 +365,27 @@ export function walkLiveTree(
  * Every live-tree node whose effective identity satisfies `predicate`, with its
  * path. Replaces `flattenedNodes.filter(...)` for consumers that must see
  * sub-scene + GLB content (e.g. the cameras panel, node counts).
+ *
+ * `descend` prunes the walk: return false for a node whose CHILDREN should not
+ * be collected (the node itself is still visited). It exists because "what is in
+ * the tree" and "what is in THIS view" are different questions — a sub-viewport's
+ * content is visible only through its surface, so the 2D-content hint stops
+ * there while the scene tree panel does not.
  */
 export function collectLiveNodes(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext,
-  predicate: (node: TscnNode) => boolean
+  predicate: (node: TscnNode) => boolean,
+  descend?: (node: TscnNode) => boolean
 ): LiveTreeEntry[] {
   const out: LiveTreeEntry[] = [];
-  walkLiveTree(roots, ctx, (entry) => {
-    if (predicate(entry.node)) out.push(entry);
-  });
+  walkLiveTree(
+    roots,
+    ctx,
+    (entry) => {
+      if (predicate(entry.node)) out.push(entry);
+    },
+    descend
+  );
   return out;
 }

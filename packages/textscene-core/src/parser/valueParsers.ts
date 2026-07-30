@@ -20,9 +20,13 @@
  *
  * Pure `.ts` — importable by `linterParser` slices; never pulls in THREE.
  * These wrap the canonical leaf scanners (`parseVector2` in `parser/vectors.ts`);
- * one-off structured literals (`Vector2i`, `Rect2`, `frame_coords`) stay inline
- * in their node slice, and the throwing `parseColor` in `standardmaterial3d`
- * keeps its own contract.
+ * genuinely one-off structured literals (`Rect2`, StyleBox shapes) stay inline in
+ * their node slice, and the throwing `parseColor` in `standardmaterial3d` keeps
+ * its own contract. `Vector2i` was such a one-off until a third slice needed it
+ * (`SubViewport.size`/`size_2d_override`, after `Sprite2D`/`Sprite3D`
+ * `frame_coords`); it has its own integer grammar — `parseVector2`'s float
+ * scanner would accept `Vector2i(1.5, 2)` — so it lives here as its own pair
+ * rather than as a third hand-synced copy.
  */
 
 import { warn } from '../logger';
@@ -85,6 +89,47 @@ export function vec2Or(value: string | undefined, fallback: Vector2, context = '
     warn(`${context}: invalid Vector2 "${value}", using fallback`);
     return fallback;
   }
+}
+
+/**
+ * The one `Vector2i(x, y)` grammar — integer-only, which is why it cannot reuse
+ * `parseVector2`'s float scanner. Godot writes Vector2i wherever a value is a
+ * pixel count (`SubViewport.size`, `Sprite2D.frame_coords`).
+ */
+const VECTOR2I_PATTERN = /^Vector2i\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/;
+
+/**
+ * Parse a `Vector2i(x, y)` property, falling back when absent and
+ * warning-then-falling-back when present but unparseable — the integer sibling
+ * of {@link vec2Or}.
+ */
+export function vec2iOr(value: string | undefined, fallback: Vector2, context = 'value'): Vector2 {
+  if (!value) return fallback;
+  const match = VECTOR2I_PATTERN.exec(value);
+  if (!match) {
+    warn(`${context}: invalid Vector2i "${value}", using fallback`);
+    return fallback;
+  }
+  return { x: Number(match[1]), y: Number(match[2]) };
+}
+
+/**
+ * Optional `Vector2i` reader: `undefined` for an absent value, and
+ * warn-then-`undefined` for a present-but-malformed one — the integer sibling of
+ * {@link parseOptionalVector2}, kept warning because a malformed
+ * `frame_coords` silently picks sprite frame (0,0) otherwise.
+ */
+export function parseOptionalVector2i(
+  value: string | undefined,
+  context = 'value'
+): Vector2 | undefined {
+  if (!value) return undefined;
+  const match = VECTOR2I_PATTERN.exec(value);
+  if (!match) {
+    warn(`${context}: invalid Vector2i "${value}"`);
+    return undefined;
+  }
+  return { x: Number(match[1]), y: Number(match[2]) };
 }
 
 /**

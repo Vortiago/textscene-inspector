@@ -6,18 +6,25 @@
  */
 
 import { createContainerComponent } from '../../../../r3f/controls/createContainerComponent';
+import { useGodotTheme } from '../../../../r3f/controls/useGodotTheme';
 import { alignmentJustify } from '../shared/boxContainer';
 import type { HBoxContainerProperties } from './types';
-
-const DEFAULT_SEPARATION = 4; // Godot HBoxContainer default
 
 export const HBoxContainer = createContainerComponent<HBoxContainerProperties>({
   typeName: 'HBoxContainer',
   kind: 'row',
-  useStyle: (props) => ({
-    display: 'flex',
-    flexDirection: 'row',
-    gap: `${props.themeOverrideConstants?.separation ?? DEFAULT_SEPARATION}px`,
-    justifyContent: alignmentJustify(props.alignment),
-  }),
+  useStyle: (props) => {
+    // Called unconditionally, before the `??` that would otherwise short-circuit
+    // it: a hook behind a property test would change hook order the moment a
+    // scene gained or lost its override.
+    const theme = useGodotTheme();
+    return {
+      display: 'flex',
+      flexDirection: 'row',
+      // A `theme_override_constants/separation` is used verbatim — Godot returns
+      // an override as authored — so only the theme fallback follows the scale.
+      gap: `${props.themeOverrideConstants?.separation ?? theme.separation}px`,
+      justifyContent: alignmentJustify(props.alignment),
+    };
+  },
 });

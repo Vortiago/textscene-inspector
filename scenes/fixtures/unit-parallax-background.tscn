@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+; ONE VARIABLE: a ParallaxBackground is a CanvasLayer, so its subtree is laid
+; out against the VIEWPORT and not under its parent node's transform.
+;
+; `Displaced` moves its whole subtree 300 px right and 200 px down. The
+; `Reference` polygon under it shows where that displacement lands; the
+; ParallaxBackground beside it draws its bar at the canvas origin anyway. Every
+; other 2D fixture composes transforms the ordinary way, so a regression that
+; re-attached a CanvasLayer to its parent chain would move nothing in any of
+; them — this is the only place it shows.
+;
+; The CanvasLayer's OWN placement rides along (`offset` shifts the bar down
+; 40 px): "ignores the parent" and "ignores its own transform" look identical in
+; a fixture that leaves `offset` at zero.
+
+[node name="Root" type="Node2D"]
+
+[node name="Displaced" type="Node2D" parent="."]
+position = Vector2(300, 200)
+
+[node name="Reference" type="Polygon2D" parent="Displaced"]
+color = Color(0.9, 0.3, 0.2, 1)
+polygon = PackedVector2Array(0, 0, 120, 0, 120, 40, 0, 40)
+
+[node name="ParallaxBackground" type="ParallaxBackground" parent="Displaced"]
+offset = Vector2(0, 40)
+
+[node name="Layer" type="ParallaxLayer" parent="Displaced/ParallaxBackground"]
+
+[node name="Bar" type="Polygon2D" parent="Displaced/ParallaxBackground/Layer"]
+color = Color(0.2, 0.6, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 240, 0, 240, 40, 0, 40)

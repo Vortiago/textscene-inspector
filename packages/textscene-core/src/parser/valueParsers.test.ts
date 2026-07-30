@@ -10,6 +10,8 @@ import {
   floatOr,
   intOr,
   boolOr,
+  vec2iOr,
+  parseOptionalVector2i,
   enumOr,
   vec2Or,
   parseOptionalInt,
@@ -139,6 +141,35 @@ describe('parseOptionalFloat', () => {
   });
   it('returns undefined for an empty string (parseFloat("") is NaN)', () => {
     expect(parseOptionalFloat('')).toBeUndefined();
+  });
+});
+
+describe('vec2iOr / parseOptionalVector2i', () => {
+  it('parses a Vector2i literal (happy path)', () => {
+    expect(vec2iOr('Vector2i(600, 400)', { x: 0, y: 0 })).toEqual({ x: 600, y: 400 });
+    expect(vec2iOr('Vector2i( -3 , 4 )', { x: 0, y: 0 })).toEqual({ x: -3, y: 4 });
+    expect(parseOptionalVector2i('Vector2i(1, 2)')).toEqual({ x: 1, y: 2 });
+  });
+
+  it('falls back silently when absent, and returns undefined on the optional arm', () => {
+    expect(vec2iOr(undefined, { x: 512, y: 512 })).toEqual({ x: 512, y: 512 });
+    expect(vec2iOr('', { x: 512, y: 512 })).toEqual({ x: 512, y: 512 });
+    expect(parseOptionalVector2i(undefined)).toBeUndefined();
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('REJECTS float components — the reason this is not parseVector2 (error path)', () => {
+    // `Vector2i(1.5, 2)` is not a thing Godot writes; accepting it would let a
+    // float silently become a pixel count via parseInt truncation.
+    expect(vec2iOr('Vector2i(1.5, 2)', { x: 9, y: 9 })).toEqual({ x: 9, y: 9 });
+    expect(parseOptionalVector2i('Vector2i(1.5, 2)')).toBeUndefined();
+  });
+
+  it('warns-then-falls-back on a present-but-malformed value (error path)', () => {
+    expect(vec2iOr('Vector2i(nope)', { x: 512, y: 512 })).toEqual({ x: 512, y: 512 });
+    expect(vec2iOr('Vector2i(1, 2) trailing', { x: 0, y: 0 })).toEqual({ x: 0, y: 0 });
+    expect(vec2iOr('Vector2(1, 2)', { x: 0, y: 0 })).toEqual({ x: 0, y: 0 });
+    expect(warnSpy).toHaveBeenCalled();
   });
 });
 

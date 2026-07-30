@@ -477,6 +477,17 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
     ],
     reason: 'Timer parser inherits transform via parseNode (node/parser.ts); NODE_BASE_TYPES maps Timer to Node with no spatial validators.',
   },
+
+  SubViewport: {
+    parserOnly: [
+      // This guard reads the parser SOURCE chain, so it sees `transform` in
+      // parseNode. The SubViewport slice actually discards it (a Viewport is
+      // not a spatial node, and SubViewportProperties omits the field), so
+      // there is deliberately no validator for it.
+      'transform',
+    ],
+    reason: 'SubViewport inherits transform from parseNode in the source chain but discards it — a Viewport is not spatial, so no validator exists.',
+  },
 };
 
 // ---------------------------------------------------------------------------

@@ -230,6 +230,15 @@ const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
  * the one the Godot frame can be compared with.
  */
 export const FIT_ON_OPEN_2D_STORAGE_KEY = 'tsi.fitOnOpen2D';
+/**
+ * `VIEWPORT_MODE_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx — the
+ * user's own workspace preference, which `WorkspaceAutoSelect` overrides only
+ * when the scene ROOT claims a workspace. A `Node`-rooted 2D scene
+ * (`game_splitscreen.tscn`: Node → ColorRect → SubViewportContainers) claims
+ * neither, exactly as in Godot's editor, so without this a 2D capture of one
+ * opens in the 3D workspace and finds no stage to shoot.
+ */
+export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
 
 export const VIEWPORT = { width: 1280, height: 800 };
 
@@ -316,6 +325,14 @@ export async function createCaptureContext(browser, { frameOnOpen, canvas2D = fa
     await context.addInitScript(
       ([key, value]) => window.localStorage.setItem(key, value),
       [FIT_ON_OPEN_2D_STORAGE_KEY, 'false']
+    );
+    // Seeds the preference the shell reads once at mount. A scene whose root
+    // DOES claim a workspace still wins here (WorkspaceAutoSelect applies its
+    // claim after), so a Node3D-rooted scene captured with --2d still reports
+    // the mismatch rather than silently shooting the wrong frame.
+    await context.addInitScript(
+      ([key, value]) => window.localStorage.setItem(key, value),
+      [VIEWPORT_MODE_STORAGE_KEY, JSON.stringify('2D')]
     );
   }
   // Viewport chrome that floats over the canvas in BOTH modes, and so would
@@ -414,11 +431,32 @@ export async function findCanvas2DFrame(page) {
   const box = await frame.boundingBox();
   const stageBox = await stage.boundingBox();
   if (!box || !stageBox) return { frame: null, reason: '2D stage frame has no layout box' };
-  const { width, height } = CANVAS_2D_CAPTURE;
-  if (box.width !== width || box.height !== height) {
+  // What the frame IS, from the stage itself, rather than a constant here: the
+  // rect is the scene's `display/window/size/viewport_*`, so 23 of the corpus's
+  // projects are not 1152x648. The invariant this guards is still zoom 1 — the
+  // frame's laid-out box must equal its own declared size.
+  const declared = await frame.getAttribute('data-viewport-size');
+  const [width, height] = (declared ?? '').split('x').map(Number);
+  if (!Number.isFinite(width) || !Number.isFinite(height)) {
     return {
       frame: null,
-      reason: `2D frame is ${box.width}x${box.height}, expected ${width}x${height} (zoom is not 1)`,
+      reason: `2D frame declares no usable viewport size (data-viewport-size=${declared})`,
+    };
+  }
+  // Zoom 1 is the goal, not the rule. Godot's own 2D editor zooms to fit a
+  // project rect larger than the window, and `games/godot-open-rts` is
+  // 1920x1080 against a stage of about 950x750 — so a fixed zoom-1 assumption
+  // is OURS, not Godot's, and would report a working capture as broken. What
+  // must hold is that the frame is the project's rect at a UNIFORM scale: both
+  // axes at the same factor, and never magnified (which would resample the
+  // scene up and compare it against a reference rendered at 1:1).
+  const scale = box.width / width;
+  if (scale > 1.001 || Math.abs(box.height / height - scale) > 0.002) {
+    return {
+      frame: null,
+      reason:
+        `2D frame is ${box.width}x${box.height} for a ${width}x${height} viewport — ` +
+        'not the project rect at a uniform scale of 1 or less',
     };
   }
   if (!Number.isInteger(box.x) || !Number.isInteger(box.y)) {
