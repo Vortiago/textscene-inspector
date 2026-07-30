@@ -49,6 +49,30 @@ describe('parseDecal', () => {
     expect(result.upper_fade).toBe(0.3);
     expect(result.lower_fade).toBe(0.3);
     expect(result.cull_mask).toBe(0xfffff);
+    // Godot's `Decal` header: distance_fade_enabled false, begin 40, length 10.
+    expect(result.distance_fade_enabled).toBe(false);
+    expect(result.distance_fade_begin).toBe(40);
+    expect(result.distance_fade_length).toBe(10);
+  });
+
+  it('parses the distance-fade triple', () => {
+    const result = parseDecal(heading('Decal', { name: 'D' }), {
+      distance_fade_enabled: 'true',
+      distance_fade_begin: '2.5',
+      distance_fade_length: '0.0',
+    });
+    expect(result.distance_fade_enabled).toBe(true);
+    expect(result.distance_fade_begin).toBe(2.5);
+    expect(result.distance_fade_length).toBe(0);
+  });
+
+  it('clamps a negative fade exponent to zero, as Decal::set_upper_fade does', () => {
+    const result = parseDecal(heading('Decal', { name: 'D' }), {
+      upper_fade: '-1',
+      lower_fade: '-0.5',
+    });
+    expect(result.upper_fade).toBe(0);
+    expect(result.lower_fade).toBe(0);
   });
 
   it('falls back to the default size on a malformed size (error path)', () => {

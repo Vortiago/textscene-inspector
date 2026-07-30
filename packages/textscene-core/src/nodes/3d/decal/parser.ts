@@ -7,6 +7,7 @@
  *   - albedo_mix = 1, emission_energy = 1
  *   - normal_fade = 0, upper_fade = lower_fade = 0.3
  *   - cull_mask = 0xFFFFF (1048575 — Godot's default: the 20 editor-visible layers)
+ *   - distance_fade_enabled = false, distance_fade_begin = 40, distance_fade_length = 10
  * Texture references are optional and only set when present.
  */
 
@@ -14,7 +15,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { parseColor } from '../../../utils/colorParser';
 import { parseVector3, type Vector3 } from '../../../parser/vectors';
-import { floatOr, intOr } from '../../../parser/valueParsers';
+import { boolOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { warn } from '../../../logger';
 import type { DecalProperties } from './types';
 
@@ -50,9 +51,15 @@ export function parseDecal(
     albedo_mix: floatOr(properties.albedo_mix, 1),
     emission_energy: floatOr(properties.emission_energy, 1),
     normal_fade: floatOr(properties.normal_fade, 0),
-    upper_fade: floatOr(properties.upper_fade, 0.3),
-    lower_fade: floatOr(properties.lower_fade, 0.3),
+    // Godot clamps both exponents at the setter (`Decal::set_upper_fade` /
+    // `set_lower_fade`), so a negative authored value means zero, not a
+    // NaN-producing `pow` base later.
+    upper_fade: Math.max(0, floatOr(properties.upper_fade, 0.3)),
+    lower_fade: Math.max(0, floatOr(properties.lower_fade, 0.3)),
     cull_mask: intOr(properties.cull_mask, DECAL_DEFAULT_CULL_MASK),
+    distance_fade_enabled: boolOr(properties.distance_fade_enabled, false),
+    distance_fade_begin: floatOr(properties.distance_fade_begin, 40),
+    distance_fade_length: floatOr(properties.distance_fade_length, 10),
   };
 
   if (properties.texture_albedo) result.texture_albedo = properties.texture_albedo;

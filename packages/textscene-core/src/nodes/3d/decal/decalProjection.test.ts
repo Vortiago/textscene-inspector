@@ -44,6 +44,9 @@ function decalAt(x: number, y: number, z: number): THREE.Matrix4 {
 
 const SIZE = { x: 3, y: 3, z: 3 };
 
+/** Exponent 0 on both sides means pow(x, 0) === 1 — no depth fade to confound a test. */
+const NO_FADE = { upperFade: 0, lowerFade: 0, normalFade: 0, sizeY: SIZE.y };
+
 describe('computeDecalBoxWorldAABB', () => {
   it('bounds the ±size/2 box around the decal origin', () => {
     const box = computeDecalBoxWorldAABB(decalAt(0, 1, 0), SIZE);
@@ -148,7 +151,7 @@ describe('buildDecalProjectionGeometry', () => {
     const floor = horizontalFloor();
     floor.updateMatrixWorld(true);
     const decalWorld = decalAt(0, 1, 0);
-    const geometry = buildDecalProjectionGeometry(floor, decalWorld.clone().invert(), SIZE);
+    const geometry = buildDecalProjectionGeometry(floor, decalWorld.clone().invert(), SIZE, NO_FADE);
 
     expect(geometry).not.toBeNull();
     const pos = geometry!.getAttribute('position');
@@ -176,6 +179,28 @@ describe('buildDecalProjectionGeometry', () => {
     floor.position.set(100, 0, 0);
     floor.updateMatrixWorld(true);
     const decalWorld = decalAt(0, 1, 0);
-    expect(buildDecalProjectionGeometry(floor, decalWorld.clone().invert(), SIZE)).toBeNull();
+    expect(buildDecalProjectionGeometry(floor, decalWorld.clone().invert(), SIZE, NO_FADE)).toBeNull();
+  });
+
+  it('bakes the depth fade onto the emitted geometry', () => {
+    // The same geometry as the happy path above — a floor 1 unit below a
+    // size.y = 3 decal, i.e. uv_local.y = -2/3 — so Godot's lower_fade 0.3
+    // gives (1 - 2/3)^0.3 = 0.7192231 at every vertex.
+    const floor = horizontalFloor();
+    floor.updateMatrixWorld(true);
+    const decalWorld = decalAt(0, 1, 0);
+    const geometry = buildDecalProjectionGeometry(floor, decalWorld.clone().invert(), SIZE, {
+      upperFade: 0.3,
+      lowerFade: 0.3,
+      normalFade: 0,
+      sizeY: SIZE.y,
+    });
+
+    const color = geometry!.getAttribute('color');
+    expect(color).toBeDefined();
+    expect(color.itemSize).toBe(4);
+    for (let i = 0; i < color.count; i++) {
+      expect(color.getW(i)).toBeCloseTo(0.7192231, 5);
+    }
   });
 });

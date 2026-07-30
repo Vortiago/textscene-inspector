@@ -110,6 +110,15 @@ function bakedProjections(renderer: { scene: { instance: THREE.Object3D } }): nu
   return count;
 }
 
+/** The first baked projection mesh, for asserting on its geometry and material. */
+function firstProjection(renderer: { scene: { instance: THREE.Object3D } }): THREE.Mesh | null {
+  let found: THREE.Mesh | null = null;
+  renderer.scene.instance.traverse((obj) => {
+    if (!found && obj.userData.isDecalProjection === true) found = obj as THREE.Mesh;
+  });
+  return found;
+}
+
 describe('<Decal>', () => {
   it('hides the projection-box gizmo by default (Godot runtime draws none)', async () => {
     const renderer = await render({ node: makeNode() });
@@ -165,6 +174,49 @@ describe('<Decal>', () => {
       children: <Receiver />,
     });
     expect(bakedProjections(renderer)).toBe(0);
+  });
+
+  it('bakes the fade into a vertex-alpha attribute the material opts into', async () => {
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
+      children: <Receiver />,
+    });
+
+    const projection = firstProjection(renderer);
+    const color = projection!.geometry.getAttribute('color');
+    expect(color).toBeDefined();
+    // itemSize 4 is what makes three read the ALPHA channel rather than just RGB.
+    expect(color.itemSize).toBe(4);
+    expect((projection!.material as THREE.MeshStandardMaterial).vertexColors).toBe(true);
+  });
+
+  it('keeps albedo_mix x modulate.a in opacity and the geometric fade in vertex alpha', async () => {
+    // Godot's blend weight is tex.a x modulate.a x fade x albedo_mix. Splitting
+    // it across `opacity` and the baked attribute is only correct if neither
+    // carries the other's factor — so 0.7 x 0.8 must land in opacity ALONE, and
+    // the vertex alpha must stay the near-1 depth fade of a receiver sitting
+    // just below the decal origin.
+    const renderer = await render({
+      node: makeNode({
+        texture_albedo: 'ExtResource("1_tex")',
+        albedo_mix: '0.7',
+        modulate: 'Color(1, 1, 1, 0.8)',
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
+      children: <Receiver />,
+    });
+
+    const projection = firstProjection(renderer);
+    expect((projection!.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.56, 6);
+
+    const color = projection!.geometry.getAttribute('color');
+    for (let i = 0; i < color.count; i++) {
+      // Had opacity been folded in too, every alpha would sit at or below 0.56.
+      expect(color.getW(i)).toBeGreaterThan(0.9);
+    }
   });
 
   it('applies the Node3D transform and wraps children', async () => {

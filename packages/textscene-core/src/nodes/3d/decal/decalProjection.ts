@@ -21,6 +21,7 @@ import * as THREE from 'three';
 import { DecalGeometry } from 'three/examples/jsm/geometries/DecalGeometry.js';
 import type { Vector3 } from '../../../parser/vectors';
 import { visualLayersOf } from '../../../r3f/visualLayers';
+import { bakeDecalFadeAttribute, type DecalGeometricFade } from './decalFade';
 import { DECAL_DEFAULT_CULL_MASK } from './parser';
 
 /**
@@ -125,7 +126,8 @@ export function collectDecalReceivers(
 export function buildDecalProjectionGeometry(
   receiver: THREE.Mesh,
   decalWorldInverse: THREE.Matrix4,
-  size: Vector3
+  size: Vector3,
+  fade: DecalGeometricFade
 ): DecalGeometry | null {
   const proxy = new THREE.Mesh(receiver.geometry);
   proxy.matrixAutoUpdate = false;
@@ -150,6 +152,12 @@ export function buildDecalProjectionGeometry(
     uv.setY(i, 1 - uv.getY(i));
   }
   uv.needsUpdate = true;
+
+  // Godot's depth and normal fades, baked per vertex. Both are pure functions
+  // of the attributes just emitted, because those are already in the decal's
+  // own frame — see decalFade.ts for why that makes the bake exact rather than
+  // an approximation, and where it is not.
+  bakeDecalFadeAttribute(geometry, fade);
 
   return geometry;
 }
