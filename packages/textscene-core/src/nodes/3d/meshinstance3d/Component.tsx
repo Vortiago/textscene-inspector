@@ -18,7 +18,7 @@
  */
 
 import * as THREE from 'three';
-import { useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import type { MeshInstance3DProperties } from './types';
 import type {
   TscnExternalResource,
