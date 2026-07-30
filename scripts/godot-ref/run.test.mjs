@@ -440,6 +440,15 @@ describe('physics pause follows the previews flag', () => {
     expect(script(true)).toContain('const PREVIEWS := true');
   });
 
+  it('freezes the non-physics drivers only under the previews too', () => {
+    // Both halves of "show the authored pose" hang off one flag, so an editor
+    // render is wholly frozen and a runtime render is wholly live.
+    const editor = script(true).split('\n');
+    const freeze = editor.findIndex((l) => l.trim() === '_freeze_game_logic(target)');
+    expect(freeze).toBeGreaterThan(-1);
+    expect(editor[freeze - 1].trim()).toBe('if PREVIEWS:');
+  });
+
   it('still emits the pause behind the PREVIEWS gate rather than hard-coding it', () => {
     // The gate is what makes --no-previews a runtime render; a copy of the line
     // outside the `if` would silently pause there too.

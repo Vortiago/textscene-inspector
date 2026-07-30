@@ -397,8 +397,8 @@ func _is_canvas_scene(target: Node) -> bool:
 
 func _render_3d(target: Node) -> void:
 	add_child(target)
-	_freeze_game_logic(target)
 	if PREVIEWS:
+		_freeze_game_logic(target)
 		_apply_preview_lighting(target)
 	_place_camera(target)
 	await _settle()
@@ -421,7 +421,8 @@ func _render_2d(target: Node) -> void:
 	if not SCENE_CAMERA:
 		_disable_2d_cameras(target)
 	vp.add_child(target)
-	_freeze_game_logic(target)
+	if PREVIEWS:
+		_freeze_game_logic(target)
 	await _settle()
 	vp.get_texture().get_image().save_png(OUT)
 
@@ -457,6 +458,11 @@ func _disable_2d_cameras(node: Node) -> void:
 # for SoftBody3D, whose integration the pause covers but whose disabled
 # process_mode also pins it if a future Godot changes that. GPUParticles are
 # left alone: their preprocessed burst is the authored look, not running logic.
+#
+# Both halves — this walk and the pause — are gated on PREVIEWS together, so
+# "editor" and "runtime" stay two whole answers rather than a mixture. Stopping
+# an AnimationPlayer in a render that is meant to show the running game is the
+# same mistake as pausing its physics.
 func _freeze_game_logic(node: Node) -> void:
 	if node is AnimationPlayer:
 		(node as AnimationPlayer).stop()
