@@ -203,7 +203,13 @@ export function ScrollContainerNative({ solveNode, rect, renderOrder, theme, chi
     setOwnPlanes(world);
   });
 
-  const merged = withAdditionalClipPlanes(inherited, ownPlanes);
+  // Memoised, not recomputed inline: this is a context VALUE, and
+  // `withAdditionalClipPlanes` necessarily returns a fresh array once this node
+  // contributes planes of its own. A fresh identity per render re-renders every
+  // descendant consumer, and `TextRun` keys its `ShaderMaterial` off this array
+  // — so an inline call rebuilds (and disposes) one material per glyph run on
+  // every render of this container.
+  const merged = useMemo(() => withAdditionalClipPlanes(inherited, ownPlanes), [inherited, ownPlanes]);
 
   return (
     <group ref={anchorRef}>

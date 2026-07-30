@@ -20,13 +20,9 @@
  * linear once, matching `TextRun`'s own contract (its `tint` prop is sRGB,
  * converted internally).
  *
- * `renderOrder`: `TextRun` draws a single `<mesh>` with no `renderOrder` prop
- * of its own (three.js reads `renderOrder` per rendered object, never
- * inherited from a wrapping `<group>`), so it cannot be forwarded the way
- * `ControlQuad`/`StyleBoxQuad` accept it directly. Applied here instead via a
- * ref + effect over the whole per-line subtree — covers every line's mesh
- * (one or many) with a single implementation, and re-applies whenever
- * `renderOrder` changes without touching `TextRun.tsx`.
+ * `renderOrder` is passed to each line's `<TextRun>` directly: three.js reads
+ * `renderOrder` per rendered object and never inherits it from a wrapping
+ * `<group>`, so the per-line mesh has to carry it itself.
  */
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -52,6 +48,20 @@ function resolveAutowrapMode(mode: number | undefined): AutowrapMode {
 /** A single line, wrapped as its own one-line `TextLayoutResult` — `TextRun` computes `lineIndex * linePitchPx` internally, which is 0 for a solo line, so it draws relative to y=0 with no cumulative pitch of its own; the caller (this component) supplies the real cumulative Y via the wrapping `<group>`'s position. */
 function soloLineLayout(placement: LabelLinePlacement, linePitchPx: number): TextLayoutResult {
   return { lines: [placement.line], linePitchPx, widthPx: placement.line.widthPx, heightPx: linePitchPx };
+}
+
+/**
+ * The per-line `TextLayoutResult`s, memoised together with the placements they
+ * come from. `TextRun` keys its geometry off its `layout` prop's identity and
+ * disposes the old one on every change, so building these inline would re-mesh
+ * every line of every Label on every render — not just when the text or rect
+ * actually changed.
+ */
+function useSoloLineLayouts(placements: LabelLinePlacement[], linePitchPx: number): TextLayoutResult[] {
+  return useMemo(
+    () => placements.map((placement) => soloLineLayout(placement, linePitchPx)),
+    [placements, linePitchPx]
+  );
 }
 
 export function LabelNative({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
@@ -92,12 +102,14 @@ export function LabelNative({ solveNode, rect, renderOrder, theme }: NativeContr
     [layout, rect.w, rect.h, props.horizontalAlignment, props.verticalAlignment, textTheme.fontSizePx]
   );
 
+  const lineLayouts = useSoloLineLayouts(placements, layout.linePitchPx);
+
   return (
     <>
       {placements.map((placement, index) => (
         <group key={index} position={[placement.x, -placement.y, 0]}>
           <TextRun
-            layout={soloLineLayout(placement, layout.linePitchPx)}
+            layout={lineLayouts[index]!}
             fontSizePx={textTheme.fontSizePx}
             tint={tintColor}
             clippingPlanes={clippingPlanes}

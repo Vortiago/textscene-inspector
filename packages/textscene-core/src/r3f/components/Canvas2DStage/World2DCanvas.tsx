@@ -36,9 +36,8 @@ import { canvasModulateColor } from '../../canvasModulate.js';
 // the DOM `<ControlOverlay>` (see the lazy() in `Canvas2DStage.tsx`) — the
 // barrel's side-effect imports are what register every Control type, so a
 // direct import of the component file would silently unregister them all.
-// Development-only (`useNativeControls`, off by default): this keeps its 17+
-// registrations out of the 2D canvas's initial bundle for everyone who never
-// flips the flag.
+// Lazy so its 17+ registrations stay out of the 2D canvas's initial bundle
+// until a stage that actually renders Controls asks for them.
 const ControlCanvasLayer = lazy(() =>
   import('../../controls/index.js').then((m) => ({ default: m.ControlCanvasLayer }))
 );

@@ -23,14 +23,13 @@
  * ordering for its own StyleBox, just applied three times here instead of
  * once.
  *
- * `renderOrder` is forwarded to EVERY mesh this painter emits: `StyleBoxQuad`
- * and `ControlQuad` (the icon) both take it directly as a prop; `<TextRun>`
- * has no such prop (it lives in `native/text/**`, out of this packet's
- * ownership), so its wrapping `<group renderOrder={renderOrder}>` carries it
- * instead — three.js propagates a `Group`'s own `renderOrder` down to every
- * descendant mesh's paint-order comparison (`Object3D.js`'s `projectObject`),
- * so this is not a workaround, it is the SAME mechanism `StyleBoxQuad`/
- * `ControlQuad`'s own per-mesh prop uses, just applied one level up.
+ * `renderOrder` is forwarded to EVERY mesh this painter emits: `StyleBoxQuad`,
+ * `ControlQuad` (the icon) and `<TextRun>` all take it directly as a prop.
+ * `clippingPlanes` likewise reaches every mesh: the two quads read
+ * `useControlClipPlanes()` internally, but `<TextRun>` builds its own
+ * `ShaderMaterial` and can only be handed the planes explicitly — without that
+ * this button's label would escape an enclosing `ScrollContainer`'s clip while
+ * its own chrome respected it.
  *
  * This component never checks `props.visible`, never renders `children`, and
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
@@ -45,6 +44,7 @@ import { resolveTexture2DPath } from '../../../../resources/SubResourceResolver'
 import { useResource } from '../../../../resources/useResource';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
@@ -76,6 +76,7 @@ export function ButtonNative({ solveNode, rect, renderOrder, theme }: NativeCont
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
 
   const styleBox = useMemo(() => tintStyleBox(baseStyleBox, tint.own), [baseStyleBox, tint.own]);
+  const clippingPlanes = useControlClipPlanes();
 
   // --- Text: theme resolution + shaping ------------------------------------
   const text = props.text ?? '';
@@ -167,6 +168,7 @@ export function ButtonNative({ solveNode, rect, renderOrder, theme }: NativeCont
             layout={layout}
             fontSizePx={fontSizePx}
             tint={tintedFontColor}
+            clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />
         </group>

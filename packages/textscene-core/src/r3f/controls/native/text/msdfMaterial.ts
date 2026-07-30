@@ -15,6 +15,12 @@
  * reference: three.js clip planes are per-material state, and a later
  * mutation of the caller's array (say, a ScrollContainer resizing) must not
  * reach back into a material already built from an earlier snapshot of it.
+ * A custom shader also has to opt IN to clipping twice over — `clipping: true`
+ * on the material (so the renderer binds the `clippingPlanes` uniform at all
+ * for a `ShaderMaterial`) and the four `clipping_planes_*` chunks in the
+ * shader source (which is where the actual `discard` lives; a built-in
+ * material gets them from its own template). Miss either and the planes are
+ * accepted and then ignored, with no error anywhere.
  *
  * No `#extension GL_OES_standard_derivatives` pragma: a plain `ShaderMaterial`
  * (this is one — `isRawShaderMaterial` is never set) is ALWAYS promoted to
@@ -36,9 +42,12 @@ import * as THREE from 'three';
 
 const VERTEX = /* glsl */ `
 varying vec2 vUv;
+#include <clipping_planes_pars_vertex>
 void main() {
   vUv = uv;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+  gl_Position = projectionMatrix * mvPosition;
+  #include <clipping_planes_vertex>
 }
 `;
 
@@ -49,6 +58,7 @@ uniform float uOpacity;
 uniform float uDistanceBias;
 uniform float uPxRange;
 varying vec2 vUv;
+#include <clipping_planes_pars_fragment>
 
 float median(float r, float g, float b) {
   return max(min(r, g), min(max(r, g), b));
@@ -65,7 +75,11 @@ void main() {
   float sigDist = median(msd.r, msd.g, msd.b) - 0.5 + uDistanceBias;
   float screenPxDistance = screenPxRange() * sigDist;
   float alpha = clamp(screenPxDistance + 0.5, 0.0, 1.0);
-  gl_FragColor = vec4(uColor, uOpacity * alpha);
+  // \`clipping_planes_fragment\` reads \`diffuseColor.a\` under ALPHA_TO_COVERAGE
+  // and discards outright otherwise, so the value has to exist either way.
+  vec4 diffuseColor = vec4(uColor, uOpacity * alpha);
+  #include <clipping_planes_fragment>
+  gl_FragColor = diffuseColor;
 }
 `;
 
@@ -100,6 +114,12 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
     depthWrite: false,
     depthTest: false,
     side: THREE.DoubleSide,
+    // `clipping: true` is not optional for a ShaderMaterial: `WebGLRenderer`
+    // only binds the `clippingPlanes` uniform for a shader material that asks
+    // for it (`( !material.isShaderMaterial && !material.isRawShaderMaterial )
+    // || material.clipping === true`), so without it the planes below are
+    // accepted, stored, and silently ignored at draw time.
+    clipping: true,
     clippingPlanes: [...clippingPlanes],
   });
 }

@@ -145,30 +145,37 @@ function bakeAtlas(ttfBuffer) {
           reject(err instanceof Error ? err : new Error(String(err)));
           return;
         }
-        const data = JSON.parse(font.data);
-        const glyphsByChar = {};
-        for (const ch of CHARSET) {
-          const glyph = data.chars.find((c) => c.char === ch);
-          if (!glyph) throw new Error(`msdf-bmfont-xml produced no glyph entry for ${JSON.stringify(ch)}`);
-          glyphsByChar[ch] = {
-            width: glyph.width,
-            height: glyph.height,
-            xoffset: glyph.xoffset,
-            yoffset: glyph.yoffset,
-            xadvance: glyph.xadvance,
-            x: glyph.x,
-            y: glyph.y,
+        // Everything below runs inside the library's own callback, not the
+        // executor, so a `throw` here would escape as an unhandled exception
+        // rather than rejecting this promise — hence the explicit reject.
+        try {
+          const data = JSON.parse(font.data);
+          const glyphsByChar = {};
+          for (const ch of CHARSET) {
+            const glyph = data.chars.find((c) => c.char === ch);
+            if (!glyph) throw new Error(`msdf-bmfont-xml produced no glyph entry for ${JSON.stringify(ch)}`);
+            glyphsByChar[ch] = {
+              width: glyph.width,
+              height: glyph.height,
+              xoffset: glyph.xoffset,
+              yoffset: glyph.yoffset,
+              xadvance: glyph.xadvance,
+              x: glyph.x,
+              y: glyph.y,
+            };
+          }
+          const atlasInfo = {
+            fontSize: data.info.size,
+            distanceRange: data.distanceField.distanceRange,
+            scaleW: data.common.scaleW,
+            scaleH: data.common.scaleH,
+            lineHeight: data.common.lineHeight,
+            base: data.common.base,
           };
+          resolve({ png: textures[0].texture, glyphsByChar, atlasInfo });
+        } catch (parseErr) {
+          reject(parseErr instanceof Error ? parseErr : new Error(String(parseErr)));
         }
-        const atlasInfo = {
-          fontSize: data.info.size,
-          distanceRange: data.distanceField.distanceRange,
-          scaleW: data.common.scaleW,
-          scaleH: data.common.scaleH,
-          lineHeight: data.common.lineHeight,
-          base: data.common.base,
-        };
-        resolve({ png: textures[0].texture, glyphsByChar, atlasInfo });
       },
       quietLogger
     );

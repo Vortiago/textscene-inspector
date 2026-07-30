@@ -10,11 +10,9 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
-import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
 import { isSortableControl } from '../shared/fitChildInRect';
 import {
   axisChildFromCustomMinimumSize,
@@ -39,10 +37,8 @@ function useIconTexture(dataUrl: string): THREE.Texture {
   return texture;
 }
 
-export function VSplitContainerNative({ solveNode, rect, renderOrder }: NativeControlComponentProps) {
+export function VSplitContainerNative({ solveNode, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = solveNode.node.properties as SplitContainerProperties;
-  const { themeScale } = useProjectSettings();
-  const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
 
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });

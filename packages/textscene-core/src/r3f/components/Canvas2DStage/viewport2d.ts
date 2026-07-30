@@ -19,8 +19,10 @@ export const FIT_ON_OPEN_2D_STORAGE_KEY = 'tsi.fitOnOpen2D';
 
 /**
  * Whether the 2D stage draws Control nodes natively in the WebGL canvas
- * instead of as the DOM overlay. Development-only, OFF by default, and
- * deliberately not on the viewport-mode seam: everything there is a display
+ * instead of as the DOM overlay. ON by default — the native canvas is the 2D
+ * Control renderer now, and setting this key to `false` opts back into the
+ * DOM overlay for as long as that still exists. Deliberately not on the
+ * viewport-mode seam: everything there is a display
  * preference with a toolbar affordance, whereas this selects a rendering path
  * and has no UI at all — Godot has no such concept, so exposing one would
  * misrepresent the preview as offering a choice a real scene never makes.

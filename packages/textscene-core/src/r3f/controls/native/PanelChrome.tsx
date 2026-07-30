@@ -22,9 +22,8 @@
 
 import { useMemo } from 'react';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../canvasItemModulate';
-import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { StyleBoxQuad, tintStyleBox } from './StyleBoxQuad';
-import { nativeTheme } from './nativeTheme';
+import type { NativeTheme } from './nativeTheme';
 import type { SolveNode } from './solveTree';
 import type { Rect2 } from './rect';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
@@ -32,13 +31,13 @@ import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 export interface PanelChromeProps {
   solveNode: SolveNode;
   rect: Rect2;
+  /** The walker's own theme — passed down rather than re-derived, so this chrome and the solve that sized it can never read different metrics. */
+  theme: NativeTheme;
   renderOrder: number;
 }
 
-export function PanelChrome({ solveNode, rect, renderOrder }: PanelChromeProps) {
+export function PanelChrome({ solveNode, rect, theme, renderOrder }: PanelChromeProps) {
   const props = solveNode.node.properties as ControlProperties;
-  const { themeScale } = useProjectSettings();
-  const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
   const baseStyleBox = solveNode.styleBoxes.panel ?? theme.widgets.panel;
 
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;

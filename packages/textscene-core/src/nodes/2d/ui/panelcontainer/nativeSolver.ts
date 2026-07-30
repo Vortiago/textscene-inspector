@@ -25,12 +25,13 @@
  * border width" sentinel), so both functions read it directly with no
  * further fallback.
  *
- * Neither function models `as_sortable_control`'s `top_level`/visibility
- * filter (`container.cpp:143-155`): `top_level` Controls are not modelled
- * anywhere in this codebase's solve tree, and no other registered
- * `MinimumSizeFn`/`ContainerLayoutFn` filters by visibility either — a
- * hidden child's own group is hidden at paint time by `ControlCanvasWalker`
- * regardless of the rect this solve gives it.
+ * Both functions apply `as_sortable_control`'s visibility filter
+ * (`container.cpp:143-155`, `isSortableControl`) like every other container
+ * solver here: a hidden child contributes nothing to the aggregate minimum
+ * size, which is what Godot does and is observable — a PanelContainer wrapping
+ * one hidden and one visible child must size to the visible one alone. Its
+ * `top_level` half is not modelled, since `top_level` Controls do not exist
+ * anywhere in this codebase's solve tree.
  *
  * Pure data + functions, no React, no THREE.
  */
@@ -40,7 +41,7 @@ import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { ContainerLayoutFn, MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import { fitChildInRect, SIZE_FILL } from '../shared/fitChildInRect';
+import { fitChildInRect, isSortableControl, SIZE_FILL } from '../shared/fitChildInRect';
 
 
 function controlProps(n: SolveNode): ControlProperties {
@@ -67,6 +68,7 @@ export const panelContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   let x = 0;
   let y = 0;
   for (const child of n.children) {
+    if (!isSortableControl(child)) continue;
     const childMin = ctx.combinedMinimumSize(child);
     x = Math.max(x, childMin.x);
     y = Math.max(y, childMin.y);
@@ -115,6 +117,7 @@ export const panelContainerLayout: ContainerLayoutFn = (n, children, rect, ctx) 
 
   const out = new Map<string, Rect2>();
   for (const { node: child, minSize } of children) {
+    if (!isSortableControl(child)) continue;
     out.set(child.path, fitChild(child, minSize, contentRect));
   }
   return out;

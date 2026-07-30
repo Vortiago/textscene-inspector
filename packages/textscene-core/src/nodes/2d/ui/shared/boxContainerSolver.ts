@@ -44,6 +44,7 @@ import type { BoxContainerProperties } from './boxContainer';
 import {
   fitChildInRect,
   hasFlag,
+  isSortableControl,
   SIZE_EXPAND,
   SIZE_FILL,
 } from './fitChildInRect';
@@ -239,12 +240,19 @@ function toChildInput(node: SolveNode, minSize: Vec2): BoxChildInput {
  * children sit within IT (every returned rect is relative to this node's own
  * top-left, i.e. local (0, 0), exactly like `resortBoxContainer`'s output
  * already is).
+ *
+ * Only SORTABLE children take part (`Container::as_sortable_control`,
+ * `isSortableControl` — the filter `_resort` applies before anything else):
+ * an invisible child claims no slot, no separation and no stretch share, and
+ * is simply absent from the returned map, which `controlRectSolver.ts` floors
+ * to a zero rect it never paints.
  */
 export function makeBoxContainerLayout(vertical: boolean): ContainerLayoutFn {
   return (n, children, contentRect, ctx) => {
     const separation = separationOf(n, ctx);
     const alignment = alignmentOf(n);
-    const inputs = children.map(({ node, minSize }) => toChildInput(node, minSize));
+    const sortable = children.filter(({ node }) => isSortableControl(node));
+    const inputs = sortable.map(({ node, minSize }) => toChildInput(node, minSize));
 
     const rects = resortBoxContainer(
       vertical,
@@ -256,16 +264,18 @@ export function makeBoxContainerLayout(vertical: boolean): ContainerLayoutFn {
     );
 
     const out = new Map<string, Rect2>();
-    children.forEach(({ node: child }, i) => out.set(child.path, rects[i]!));
+    sortable.forEach(({ node: child }, i) => out.set(child.path, rects[i]!));
     return out;
   };
 }
 
-/** Builds the `MinimumSizeFn` for a box axis — this container's OWN contribution to `Control::get_combined_minimum_size` when it is itself a child. */
+/** Builds the `MinimumSizeFn` for a box axis — this container's OWN contribution to `Control::get_combined_minimum_size` when it is itself a child. Same sortable-child filter as the layout above (`BoxContainer::get_minimum_size` skips invisible children too). */
 export function makeBoxContainerMinimumSize(vertical: boolean): MinimumSizeFn {
   return (n, ctx) => {
     const separation = separationOf(n, ctx);
-    const childMinSizes = n.children.map((child) => ctx.combinedMinimumSize(child));
+    const childMinSizes = n.children
+      .filter(isSortableControl)
+      .map((child) => ctx.combinedMinimumSize(child));
     return boxContainerMinimumSize(vertical, separation, childMinSizes);
   };
 }
