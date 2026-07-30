@@ -56,23 +56,80 @@ export const DEFAULT_CLEAR_COLOR = new THREE.Color().setRGB(
 export function createOffscreenTarget(
   width: number,
   height: number,
-  name: string
+  name: string,
+  options: { colorSpace?: THREE.ColorSpace; preTonemapped?: boolean } = {}
 ): THREE.WebGLRenderTarget {
+  const { colorSpace = THREE.LinearSRGBColorSpace, preTonemapped = true } = options;
   const target = new THREE.WebGLRenderTarget(width, height, {
     depthBuffer: true,
     stencilBuffer: false,
   });
-  target.texture.colorSpace = THREE.LinearSRGBColorSpace;
+  target.texture.colorSpace = colorSpace;
   target.texture.name = `${name}::target`;
   // The sub-viewport's own filter enum is not reproduced; linear matches
   // Godot's default `canvas_item_default_texture_filter` (1, LINEAR).
   target.texture.minFilter = THREE.LinearFilter;
   target.texture.magFilter = THREE.LinearFilter;
   target.texture.generateMipmaps = false;
-  // Not declared by @types/three; three itself toggles the flag on plain
-  // render targets the same way (`XRManager.js`).
-  (target as THREE.WebGLRenderTarget & { isXRRenderTarget: boolean }).isXRRenderTarget = true;
+  if (preTonemapped) {
+    // Not declared by @types/three; three itself toggles the flag on plain
+    // render targets the same way (`XRManager.js`).
+    (target as THREE.WebGLRenderTarget & { isXRRenderTarget: boolean }).isXRRenderTarget = true;
+  }
   return target;
+}
+
+/**
+ * Reused across every offscreen pass so the renderer state each one mutates is
+ * captured and restored in one place, and so no pass allocates a `THREE.Color`
+ * per frame merely to hold the previous clear colour.
+ *
+ * Safe as a module-level scratch because passes are driven SEQUENTIALLY by the
+ * one orchestrator (`ViewportPassRegistryContext`), never nested inside one
+ * another — a nested pass would clobber the outer pass's saved colour.
+ */
+const PREVIOUS_CLEAR_COLOR = new THREE.Color();
+
+/**
+ * Bind `target`, clear it, run `draw`, and restore every piece of renderer
+ * state the pass touched — render target, clear colour + alpha, tone mapping.
+ *
+ * `toneMapping` suspends the renderer's curve for the pass when given (a 2D
+ * canvas, an own-world 3D viewport, or a Control subtree is never tonemapped);
+ * omit it to render under whatever curve is in force. `beforeBind` runs inside
+ * the guarded region but BEFORE the target is bound, for state that must be
+ * asserted with no offscreen render in flight under it.
+ *
+ * State a single caller owns (the 3D pass's perspective-aspect swap) stays at
+ * that call site, wrapped around this helper rather than folded into it.
+ */
+export function renderToOffscreenTarget(
+  gl: THREE.WebGLRenderer,
+  options: {
+    target: THREE.WebGLRenderTarget;
+    transparentBg: boolean;
+    toneMapping?: THREE.ToneMapping;
+    beforeBind?: () => void;
+    draw: () => void;
+  }
+): void {
+  const previousTarget = gl.getRenderTarget();
+  const previousAlpha = gl.getClearAlpha();
+  const previousToneMapping = gl.toneMapping;
+  gl.getClearColor(PREVIOUS_CLEAR_COLOR);
+
+  try {
+    if (options.toneMapping !== undefined) gl.toneMapping = options.toneMapping;
+    options.beforeBind?.();
+    gl.setRenderTarget(options.target);
+    gl.setClearColor(DEFAULT_CLEAR_COLOR, options.transparentBg ? 0 : 1);
+    gl.clear(true, true, true);
+    options.draw();
+  } finally {
+    gl.setRenderTarget(previousTarget);
+    gl.setClearColor(PREVIOUS_CLEAR_COLOR, previousAlpha);
+    gl.toneMapping = previousToneMapping;
+  }
 }
 
 /**

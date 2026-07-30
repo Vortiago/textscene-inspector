@@ -38,18 +38,13 @@ import {
   CanvasWorkspaceProvider,
   useCanvasWorkspace,
 } from '../../../r3f/contexts/CanvasWorkspaceContext';
-import {
-  useRegisterViewportTexture,
-  type ViewportTextureEntry,
-} from '../../../r3f/contexts/ViewportTextureContext';
-import { useRegisterViewportPass } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { Node } from '../../node/Component';
 import {
-  DEFAULT_CLEAR_COLOR,
   applyOrthoFrame,
   createOffscreenTarget,
   godotCanvasPosition,
+  renderToOffscreenTarget,
   orthoFrameForCamera2D,
   orthoFrameForSize,
   selectViewportCamera,
@@ -58,7 +53,7 @@ import {
 } from './offscreenViewport';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { useViewportContentKind } from './useViewportContentKind';
-import { collectNestedViewportPaths } from './nestedViewportPaths';
+import { usePublishViewportPass } from './usePublishViewportPass';
 import type { SubViewportProperties } from './types';
 
 export function SubViewport({ node, children }: NodeComponentProps) {
@@ -135,9 +130,6 @@ function OffscreenViewport({
 
   const gl = useThree((state) => state.gl);
   const mainScene = useThree((state) => state.scene);
-  const registerViewportTexture = useRegisterViewportTexture();
-  const registerViewportPass = useRegisterViewportPass();
-
   const portalScene = useMemo(() => {
     const scene = new THREE.Scene();
     scene.name = `${node.name}::offscreen`;
@@ -159,16 +151,6 @@ function OffscreenViewport({
   // render each frame, so by the time anything samples it this frame's
   // content is already there, including on the very first frame this target
   // is published.
-  const entry = useMemo<ViewportTextureEntry>(
-    () => ({ texture: target.texture, size: { x: width, y: height } }),
-    [target, width, height]
-  );
-
-  useEffect(
-    () => registerViewportTexture(path, entry),
-    [registerViewportTexture, path, entry]
-  );
-
   // A persistent camera for 2D-world content. Godot draws a viewport's canvas
   // through its CANVAS TRANSFORM, which is the identity until a Camera2D in the
   // subtree makes itself current — so this starts at the whole target rect and
@@ -184,7 +166,6 @@ function OffscreenViewport({
   // pass's `dependsOn` for the ordered driver (`passOrder.ts`), since any of
   // them might be sampled by a `ViewportTexture` somewhere below and must
   // therefore render first.
-  const dependsOn = useMemo(() => collectNestedViewportPaths(node, path), [node, path]);
 
   const renderPass = useCallback(() => {
     const source = rendersInline ? mainScene : portalScene;
@@ -207,16 +188,11 @@ function OffscreenViewport({
     const camera =
       kind === '3d' ? selectViewportCamera(source, path) : orthoCamera;
 
-    const previousTarget = gl.getRenderTarget();
-    const previousAlpha = gl.getClearAlpha();
-    const previousToneMapping = gl.toneMapping;
-    const previousColor = new THREE.Color();
-    gl.getClearColor(previousColor);
-
     // A perspective camera built by `<Camera3D>` carries the CANVAS aspect
     // (16:9); inside the viewport it frames the TARGET rect instead. Restored
     // straight after, because that same camera object may be the one the main
-    // canvas is rendering through.
+    // canvas is rendering through. This is the one piece of state only THIS
+    // pass touches, so it stays here rather than inside the shared helper.
     const perspective = camera as THREE.PerspectiveCamera | null;
     const restoreAspect = perspective?.isPerspectiveCamera ? perspective.aspect : null;
     if (perspective?.isPerspectiveCamera) {
@@ -225,36 +201,37 @@ function OffscreenViewport({
     }
 
     try {
-      // Godot tonemaps a viewport through ITS OWN world's environment
-      // (`_render_buffers_post_process_and_tonemap` reads the environment the
-      // viewport's `find_world_3d()` resolves). A shared world resolves to the
-      // parent's, whose curve IS the renderer's current tonemap — leave it in
-      // force. An own world is a fresh `World3D` with no Environment, and
-      // Godot's default `tonemap_mode` is LINEAR — no curve. A 2D canvas is
-      // never tonemapped at all: Godot draws canvas items into the target
-      // AFTER the 3D tonemap pass. Suspended before the bind (the test seam
-      // observes the bind), restored in `finally` for the main render.
-      if (properties.own_world_3d || kind === '2d') gl.toneMapping = THREE.NoToneMapping;
-      // The consumer side re-tags this texture: `@react-three/fiber`'s
-      // `applyProps` stamps `SRGBColorSpace` on any RGBA8/UnsignedByte texture
-      // assigned to a colour-map prop, and the published target lands on an
-      // albedo `map` exactly like a file texture. With `isXRRenderTarget` set,
-      // three reads THIS pass's output space from the tag per draw, so the
-      // stamp would bake an sRGB OETF into the offscreen render on top of the
-      // tonemap (measured: the whole target 1.5–6.5x too bright in linear
-      // terms). The stamp lands during React commits; re-asserting here, right
-      // before the bind, means no offscreen render ever runs under it.
-      target.texture.colorSpace = THREE.LinearSRGBColorSpace;
-      gl.setRenderTarget(target);
-      gl.setClearColor(DEFAULT_CLEAR_COLOR, transparentBg ? 0 : 1);
-      gl.clear(true, true, true);
-      // No camera is not an error — Godot renders the clear colour and nothing
-      // else, which is what an unrendered viewport looks like there too.
-      if (camera) gl.render(source, camera);
+      renderToOffscreenTarget(gl, {
+        target,
+        transparentBg,
+        // Godot tonemaps a viewport through ITS OWN world's environment
+        // (`_render_buffers_post_process_and_tonemap` reads the environment the
+        // viewport's `find_world_3d()` resolves). A shared world resolves to the
+        // parent's, whose curve IS the renderer's current tonemap — leave it in
+        // force. An own world is a fresh `World3D` with no Environment, and
+        // Godot's default `tonemap_mode` is LINEAR — no curve. A 2D canvas is
+        // never tonemapped at all: Godot draws canvas items into the target
+        // AFTER the 3D tonemap pass.
+        toneMapping: properties.own_world_3d || kind === '2d' ? THREE.NoToneMapping : undefined,
+        // The consumer side re-tags this texture: `@react-three/fiber`'s
+        // `applyProps` stamps `SRGBColorSpace` on any RGBA8/UnsignedByte texture
+        // assigned to a colour-map prop, and the published target lands on an
+        // albedo `map` exactly like a file texture. With `isXRRenderTarget` set,
+        // three reads THIS pass's output space from the tag per draw, so the
+        // stamp would bake an sRGB OETF into the offscreen render on top of the
+        // tonemap (measured: the whole target 1.5–6.5x too bright in linear
+        // terms). The stamp lands during React commits; re-asserting right
+        // before the bind means no offscreen render ever runs under it.
+        beforeBind: () => {
+          target.texture.colorSpace = THREE.LinearSRGBColorSpace;
+        },
+        // No camera is not an error — Godot renders the clear colour and nothing
+        // else, which is what an unrendered viewport looks like there too.
+        draw: () => {
+          if (camera) gl.render(source, camera);
+        },
+      });
     } finally {
-      gl.setRenderTarget(previousTarget);
-      gl.setClearColor(previousColor, previousAlpha);
-      gl.toneMapping = previousToneMapping;
       if (perspective?.isPerspectiveCamera && restoreAspect !== null) {
         perspective.aspect = restoreAspect;
         perspective.updateProjectionMatrix();
@@ -275,10 +252,7 @@ function OffscreenViewport({
     height,
   ]);
 
-  useEffect(
-    () => registerViewportPass(path, { dependsOn, render: renderPass }),
-    [registerViewportPass, path, dependsOn, renderPass]
-  );
+  usePublishViewportPass({ path, node, texture: target.texture, width, height, render: renderPass });
 
   if (rendersInline) return null;
   // Inside its own target a sub-viewport draws its own content, whatever the

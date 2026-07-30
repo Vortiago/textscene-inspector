@@ -11,7 +11,7 @@
  * This Camera" on a Camera3D node.
  */
 import { Canvas, useThree } from '@react-three/fiber';
-import { lazy, Suspense, useContext, useEffect, useRef } from 'react';
+import { useContext, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { ResourceLoaderContext } from '../resources/ResourceLoaderContext.js';
@@ -28,19 +28,11 @@ import { PreviewLighting } from './preview/PreviewLighting.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js';
 import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
-import { useControlRasterViewports } from '../nodes/viewport/subviewport/useControlRasterViewports.js';
+import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
 import styles from './TscnCanvas.module.css';
 
 // Lazy for the same reason `Canvas2DStage` lazy-loads its Control overlay:
 // this pulls in the native Control barrel (17+ registrations), which have no
-// business in the 3D canvas's initial bundle. Mounted only when the cheap
-// walk below actually finds a Control-only sub-viewport.
-const ControlRasterPasses = lazy(() =>
-  import('../nodes/viewport/subviewport/ControlRasterPass.js').then((m) => ({
-    default: m.ControlRasterPasses,
-  }))
-);
-
 /**
  * The contents of the R3F scene (everything that would normally live
  * inside `<Canvas>`). Exported separately so `@react-three/test-renderer`
@@ -62,16 +54,6 @@ export function TscnSceneContents() {
   // surface so the initial-camera framing feels intentional.
   const isEmpty = nodes === null || nodes.length === 0;
 
-  // Control-only sub-viewports (ADR-0030) still need a native offscreen pass
-  // in THIS canvas even though the 3D workspace never draws Controls
-  // on-screen — a `SubViewportContainer` (or another `ViewportTexture`
-  // consumer) here may still be sampling one.
-  const rasterViewports = useControlRasterViewports(
-    nodes ?? [],
-    rootScene?.internalResources ?? [],
-    rootScene?.externalResources ?? []
-  );
-
   return (
     <>
       {/* Godot's editor preview sun and preview environment, each mounted only
@@ -89,11 +71,11 @@ export function TscnSceneContents() {
           <NodeDispatcher nodes={nodes} />
         </SceneResourcesProvider>
       )}
-      {rasterViewports.length > 0 && (
-        <Suspense fallback={null}>
-          <ControlRasterPasses viewports={rasterViewports} />
-        </Suspense>
-      )}
+      <ControlRasterLayer
+        nodes={nodes ?? []}
+        internalResources={rootScene?.internalResources ?? []}
+        externalResources={rootScene?.externalResources ?? []}
+      />
       <ViewportPassOrchestrator />
       <SelectionHighlight />
       <HoverHighlight />

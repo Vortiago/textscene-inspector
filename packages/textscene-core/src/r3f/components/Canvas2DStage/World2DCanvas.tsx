@@ -32,7 +32,7 @@ import { world2DCameraPose } from './world2DCamera.js';
 import { CanvasLighting2DProvider } from '../../lighting2d/CanvasLighting2D.js';
 import { canvasModulateColor } from '../../canvasModulate.js';
 import { ViewportPassOrchestrator } from '../../contexts/ViewportPassRegistryContext.js';
-import { useControlRasterViewports } from '../../../nodes/viewport/subviewport/useControlRasterViewports.js';
+import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
 
 // The native Control layer is lazy-loaded through the SAME barrel as
 // the DOM `<ControlOverlay>` (see the lazy() in `Canvas2DStage.tsx`) — the
@@ -49,12 +49,6 @@ const ControlCanvasLayer = lazy(() =>
 // this must run regardless of `nativeControls` (a `SubViewportContainer`
 // elsewhere may sample its target even with the DOM overlay still active),
 // so it cannot share that flag's gate.
-const ControlRasterPasses = lazy(() =>
-  import('../../../nodes/viewport/subviewport/ControlRasterPass.js').then((m) => ({
-    default: m.ControlRasterPasses,
-  }))
-);
-
 export interface World2DCanvasProps {
   nodes: readonly TscnNode[];
   internalResources: readonly TscnInternalResource[];
@@ -99,11 +93,6 @@ export function World2DContents({
 }: World2DCanvasProps) {
   const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
   // A Control-only sub-viewport still needs its own native offscreen pass in
-  // THIS canvas regardless of `nativeControls` — a `SubViewportContainer` (or
-  // another `ViewportTexture` consumer) may be sampling its target even while
-  // the DOM overlay is still what draws the on-screen Controls.
-  const rasterViewports = useControlRasterViewports(nodes, internalResources, externalResources);
-
   return (
     <CanvasWorkspaceProvider workspace="2d">
       <SceneResourcesProvider
@@ -126,11 +115,14 @@ export function World2DContents({
               <ControlCanvasLayer nodes={nodes} />
             </Suspense>
           )}
-          {rasterViewports.length > 0 && (
-            <Suspense fallback={null}>
-              <ControlRasterPasses viewports={rasterViewports} />
-            </Suspense>
-          )}
+          {/* Driven in THIS canvas regardless of `nativeControls`: a
+              `SubViewportContainer` (or another `ViewportTexture` consumer) may
+              be sampling its target whoever draws the on-screen Controls. */}
+          <ControlRasterLayer
+            nodes={nodes}
+            internalResources={internalResources}
+            externalResources={externalResources}
+          />
         </CanvasLighting2DProvider>
       </SceneResourcesProvider>
       <ViewportPassOrchestrator />

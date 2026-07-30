@@ -48,8 +48,8 @@ import { useViewportTexture } from '../../../../r3f/contexts/ViewportTextureCont
 import { useViewportPassCycle } from '../../../../r3f/contexts/ViewportPassRegistryContext.js';
 import { useRegisterViewportRect } from '../../../../r3f/contexts/ViewportRectContext.js';
 import { joinPath } from '../../../../utils/nodePath.js';
-import type { TscnNode } from '../../../../parser/types.js';
-import type { TscnExternalResource, TscnInternalResource } from '../../../../parser/types.js';
+import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../../parser/types.js';
+import { isViewportBoundary } from '../../../viewport/subviewport/viewportBoundary.js';
 import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
 import type { SubViewportContainerProperties } from './types.js';
 
@@ -119,8 +119,12 @@ function ViewportSurfaceNative({
   // Godot lays a viewport's own Controls out against the target it actually
   // renders at, then the WHOLE target (pixels + composited Controls) is what
   // gets scaled back up to fill the container.
-  const renderedWidth = stretch && shrink > 1 ? Math.max(1, Math.round(width / shrink)) : width;
-  const renderedHeight = stretch && shrink > 1 ? Math.max(1, Math.round(height / shrink)) : height;
+  // `shrink` only bites while stretching, and only above 1 — the same predicate
+  // decides the rendered size and the scale it is blown back up by, so the two
+  // can never disagree.
+  const shrinking = stretch && shrink > 1;
+  const renderedWidth = shrinking ? Math.max(1, Math.round(width / shrink)) : width;
+  const renderedHeight = shrinking ? Math.max(1, Math.round(height / shrink)) : height;
 
   const { tree, generation } = useBuildSolveTree(viewport.children, externalResources, internalResources);
   const controlsViewport: Rect2 = useMemo(
@@ -133,7 +137,7 @@ function ViewportSurfaceNative({
     [path, viewport]
   );
 
-  const scale = stretch && shrink > 1 ? shrink : 1;
+  const scale = shrinking ? shrink : 1;
 
   // The render target is only `renderedWidth`x`renderedHeight` pixels — Godot
   // clips a viewport's content to exactly that, as a CONSEQUENCE of nothing
@@ -194,7 +198,7 @@ export function SubViewportContainerNative({
   // Raw live children (unlike `solveNode.children`, the Control-only solve
   // forest — `buildSolveTree` skips a viewport boundary entirely), so a
   // nested `SubViewport` is found here rather than via the walker.
-  const viewports = solveNode.node.children.filter((child) => child.type === 'SubViewport');
+  const viewports = solveNode.node.children.filter((child) => isViewportBoundary(child.type));
 
   return (
     <>

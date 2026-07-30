@@ -51,8 +51,6 @@ import * as THREE from 'three';
 // `ControlRasterHost`'s own bundle boundary), so this import costs nothing
 // for a scene with no Control-only sub-viewport.
 import '../../../r3f/controls/index.js';
-import { useRegisterViewportTexture, type ViewportTextureEntry } from '../../../r3f/contexts/ViewportTextureContext.js';
-import { useRegisterViewportPass } from '../../../r3f/contexts/ViewportPassRegistryContext.js';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext.js';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext.js';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext.js';
@@ -61,8 +59,13 @@ import { ControlCanvasWalker } from '../../../r3f/controls/native/ControlCanvasW
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme.js';
 import { measureText } from '../../../r3f/controls/native/text/measurer.js';
 import type { Rect2 } from '../../../r3f/controls/native/rect.js';
-import { DEFAULT_CLEAR_COLOR, applyOrthoFrame, orthoFrameForSize } from './offscreenViewport.js';
-import { collectNestedViewportPaths } from './nestedViewportPaths.js';
+import {
+  applyOrthoFrame,
+  createOffscreenTarget,
+  orthoFrameForSize,
+  renderToOffscreenTarget,
+} from './offscreenViewport.js';
+import { usePublishViewportPass } from './usePublishViewportPass.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
 
 export interface ControlRasterPassesProps {
@@ -81,20 +84,17 @@ export function ControlRasterPasses({ viewports }: ControlRasterPassesProps) {
   );
 }
 
+/**
+ * The opposite tags from the 3D/2D pass's own target — see the module doc's
+ * COLOUR section for why a Control-only target wants sRGB storage and no
+ * pre-tonemap flag rather than the linear/XR pair. Everything else about the
+ * target is the shared default.
+ */
 function createRasterTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
-  const target = new THREE.WebGLRenderTarget(width, height, {
-    depthBuffer: true,
-    stencilBuffer: false,
+  return createOffscreenTarget(width, height, name, {
+    colorSpace: THREE.SRGBColorSpace,
+    preTonemapped: false,
   });
-  // The opposite tag from `createOffscreenTarget`'s 3D/2D target — see the
-  // module doc's COLOUR section for why a Control-only target wants sRGB
-  // storage and no `isXRRenderTarget` rather than the linear/XR pair.
-  target.texture.colorSpace = THREE.SRGBColorSpace;
-  target.texture.name = `${name}::target`;
-  target.texture.minFilter = THREE.LinearFilter;
-  target.texture.magFilter = THREE.LinearFilter;
-  target.texture.generateMipmaps = false;
-  return target;
 }
 
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
@@ -108,8 +108,6 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const height = Math.max(1, Math.round(forcedRect?.y ?? viewport.size.y));
 
   const gl = useThree((state) => state.gl);
-  const registerViewportTexture = useRegisterViewportTexture();
-  const registerViewportPass = useRegisterViewportPass();
   const { themeScale } = useProjectSettings();
 
   const portalScene = useMemo(() => {
@@ -120,14 +118,6 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
 
   const target = useMemo(() => createRasterTarget(width, height, node.name), [width, height, node.name]);
   useEffect(() => () => target.dispose(), [target]);
-
-  const entry = useMemo<ViewportTextureEntry>(
-    () => ({ texture: target.texture, size: { x: width, y: height } }),
-    [target, width, height]
-  );
-  useEffect(() => registerViewportTexture(path, entry), [registerViewportTexture, path, entry]);
-
-  const dependsOn = useMemo(() => collectNestedViewportPaths(node, path), [node, path]);
 
   const camera = useMemo(() => new THREE.OrthographicCamera(), []);
   useEffect(() => {
@@ -141,30 +131,16 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const solveViewport: Rect2 = useMemo(() => ({ x: 0, y: 0, w: width, h: height }), [width, height]);
 
   const renderPass = useCallback(() => {
-    const previousTarget = gl.getRenderTarget();
-    const previousAlpha = gl.getClearAlpha();
-    const previousToneMapping = gl.toneMapping;
-    const previousColor = new THREE.Color();
-    gl.getClearColor(previousColor);
-
-    try {
+    renderToOffscreenTarget(gl, {
+      target,
+      transparentBg,
       // Controls are never tonemapped, on-screen or off (see module doc).
-      gl.toneMapping = THREE.NoToneMapping;
-      gl.setRenderTarget(target);
-      gl.setClearColor(DEFAULT_CLEAR_COLOR, transparentBg ? 0 : 1);
-      gl.clear(true, true, true);
-      gl.render(portalScene, camera);
-    } finally {
-      gl.setRenderTarget(previousTarget);
-      gl.setClearColor(previousColor, previousAlpha);
-      gl.toneMapping = previousToneMapping;
-    }
+      toneMapping: THREE.NoToneMapping,
+      draw: () => gl.render(portalScene, camera),
+    });
   }, [gl, target, transparentBg, portalScene, camera]);
 
-  useEffect(
-    () => registerViewportPass(path, { dependsOn, render: renderPass }),
-    [registerViewportPass, path, dependsOn, renderPass]
-  );
+  usePublishViewportPass({ path, node, texture: target.texture, width, height, render: renderPass });
 
   return createPortal(
     <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
