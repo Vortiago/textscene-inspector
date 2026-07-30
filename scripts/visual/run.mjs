@@ -31,7 +31,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
@@ -42,7 +42,7 @@ import {
   assertPortFree,
   createCaptureContext,
   ensureWebBuilt,
-  findCanvas,
+  findCaptureTarget,
   gotoFixture,
   killPreviewGroup,
   setDisplayToggle,
@@ -84,9 +84,88 @@ function parseArgs(argv) {
 }
 
 /**
- * Navigate to a scene and capture the canvas once it is provably settled:
+ * A throwaway WebGL context, created and torn down before any real scene is
+ * captured.
+ *
+ * The first WebGL context in a fresh headless Chromium+SwiftShader process
+ * can lose context under load before a screenshot lands — and `settleCanvas`
+ * cannot tell a lost context from a settled one: two captures of a dead,
+ * uniform canvas are exactly as byte-identical as two captures of a
+ * genuinely stable frame, so the settle gate is silently defeated rather than
+ * failed. Whichever scene captures first in a fresh process absorbs that
+ * risk (the observed symptom this fixes); this burns the risk here instead,
+ * on a page nothing depends on, before the real capture pages ever open.
+ */
+async function warmUpGLContext(browser) {
+  const context = await browser.newContext({ viewport: { width: 64, height: 64 } });
+  try {
+    const page = await context.newPage();
+    await page.setContent(
+      '<canvas id="warmup" width="64" height="64"></canvas><script>' +
+        'const gl = document.getElementById("warmup").getContext("webgl2") || ' +
+        'document.getElementById("warmup").getContext("webgl"); ' +
+        'if (gl) { for (let i = 0; i < 60; i++) { ' +
+        'gl.clearColor(Math.random(), Math.random(), Math.random(), 1); ' +
+        'gl.clear(gl.COLOR_BUFFER_BIT); gl.finish(); } }' +
+        '</script>'
+    );
+    await page.waitForTimeout(500);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * A fully uniform image is never a legitimate golden — it is either a WebGL
+ * context that died mid-capture (readback comes back all-black or all one
+ * clear colour) or a scene that rendered nothing. Two captures of that dead
+ * frame are byte-identical, so `settleCanvas` reports it as settled; this is
+ * the guard that stops `--update` writing it as a baseline, which would make
+ * every future compare pass against a blank reference no matter how badly the
+ * renderer breaks.
+ */
+export function isUniformImage(buffer) {
+  const { data } = PNG.sync.read(buffer);
+  const [r0, g0, b0, a0] = data;
+  for (let i = 4; i < data.length; i += 4) {
+    if (data[i] !== r0 || data[i + 1] !== g0 || data[i + 2] !== b0 || data[i + 3] !== a0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Fail-on-console-error gate, attached to every capture page. A scene that
+ * logs a console error or throws is a broken render even when its pixels
+ * happen to settle and look plausible — this generalises `verify:2d`'s
+ * strongest assertion from a hand-picked few DOM-overlay targets to every
+ * golden scene. Returns the mutable array `captureScene` checks and clears
+ * per scene, so errors from one scene never bleed into the next.
+ */
+function attachConsoleGate(page) {
+  const errors = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+  page.on('pageerror', (err) => errors.push(String(err)));
+  return errors;
+}
+
+/**
+ * Navigate to a scene and capture its target once it is provably settled:
  * two consecutive byte-identical screenshots. Returns the PNG buffer, or
- * null with a reason when the scene never stabilizes.
+ * null with a reason when the scene never stabilizes, fails to log console-
+ * error free, or (in `--update` only, see the caller) settles to a uniform
+ * image.
+ *
+ * `pages` holds one page per capture context — `pages.default` (the fixed
+ * Godot editor orbit, ADR-0025) and `pages.canvas2D` (the 2D parity frame:
+ * zoom 1, chrome hidden, Godot clear colour — created only when the run
+ * includes a `mode: '2d'` scene). A scene's `mode: '2d'` field routes it
+ * through the LATTER, both for navigation (`gotoFixture`) and for which
+ * element is screenshotted (`findCaptureTarget`) — so a 2D scene is never
+ * measured against the 3D canvas by construction.
  *
  * When `scene.select` is set, the harness drives a real tree selection first
  * (expand the tree, click that node's row) so a selection-gated gizmo
@@ -94,12 +173,24 @@ function parseArgs(argv) {
  * tree-click → SelectionContext → NodeDispatcher → useGizmoVisible path in the
  * browser, not just the component's gating logic in isolation.
  */
-async function captureScene(page, baseUrl, scene) {
+export async function captureScene(pages, baseUrl, scene) {
+  const canvas2D = scene.mode === '2d';
+  const pageState = canvas2D ? pages.canvas2D : pages.default;
+  if (!pageState) {
+    throw new Error(
+      `scene "${scene.name}" needs the canvas2D capture context, which this run did not create`
+    );
+  }
+  const { page, errors } = pageState;
+  // Cleared here, not by the caller, so a leftover error from the PREVIOUS
+  // scene captured on this same page can never be blamed on this one.
+  errors.length = 0;
+
   // Silence here is how a stalled resource chain becomes a baseline, so say so.
   await gotoFixture(page, baseUrl, scene.file, (ms) =>
     console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`)
   );
-  const { canvas, reason: canvasReason } = await findCanvas(page);
+  const { target: canvas, reason: canvasReason } = await findCaptureTarget(page, { canvas2D });
   if (!canvas) return { buffer: null, reason: canvasReason };
 
   if (scene.navigation) {
@@ -156,7 +247,19 @@ async function captureScene(page, baseUrl, scene) {
     await page.mouse.move(0, 0);
   }
 
-  return settleCanvas(page, canvas);
+  const result = await settleCanvas(page, canvas);
+  if (!result.buffer) return result;
+  if (errors.length > 0) {
+    // A console error during a settled, otherwise-plausible capture is still
+    // a broken render — pixels alone cannot see e.g. a caught-and-swallowed
+    // resource failure that leaves the previous frame on screen.
+    return {
+      buffer: null,
+      reason: `console error(s) logged during capture: ${errors.join(' | ')}`,
+      status: 'console-error',
+    };
+  }
+  return result;
 }
 
 function compareToBaseline(scene, actualBuffer) {
@@ -229,6 +332,10 @@ async function main() {
       headless: true,
       args: SWIFTSHADER_GL_ARGS,
     });
+    // Burn the first-WebGL-context-lost risk here, before either real capture
+    // page opens — see warmUpGLContext's own doc comment.
+    await warmUpGLContext(browser);
+
     // Frame each scene on load. The APP defaults to Godot's fixed orbit
     // (ADR-0025), which would leave the larger fixtures mostly out of frame —
     // a baseline showing empty space cannot fail when the render breaks. These
@@ -237,14 +344,42 @@ async function main() {
     // opens at that same fixed orbit).
     const context = await createCaptureContext(browser, { frameOnOpen: true });
     const page = await context.newPage();
+    const pages = { default: { page, errors: attachConsoleGate(page) }, canvas2D: null };
+
+    // The 2D capture context is its own browser context (different viewport,
+    // different localStorage seeding) — create it only when a scene actually
+    // needs it, so a plain `--scene <3d-scene>` run pays nothing for it.
+    if (scenes.some((s) => s.mode === '2d')) {
+      const context2D = await createCaptureContext(browser, {
+        frameOnOpen: false,
+        canvas2D: true,
+      });
+      const page2D = await context2D.newPage();
+      pages.canvas2D = { page: page2D, errors: attachConsoleGate(page2D) };
+    }
 
     for (const scene of scenes) {
-      const { buffer, reason } = await captureScene(page, baseUrl, scene);
+      const { buffer, reason, status } = await captureScene(pages, baseUrl, scene);
       if (!buffer) {
-        results.push({ scene, status: 'unstable', detail: reason });
+        results.push({ scene, status: status ?? 'unstable', detail: reason });
         continue;
       }
       if (opts.update) {
+        // Two identical frames of a DEAD context settle just as cleanly as two
+        // identical frames of a real one — this is the only place that
+        // distinction still matters, because writing the dead one as a
+        // baseline makes every future compare pass no matter how badly the
+        // renderer breaks.
+        if (isUniformImage(buffer)) {
+          results.push({
+            scene,
+            status: 'refused',
+            detail:
+              'capture is a single uniform colour throughout — refusing to write it as a ' +
+              'baseline (a lost WebGL context or an unrendered scene, never a real golden)',
+          });
+          continue;
+        }
         mkdirSync(BASELINE_DIR, { recursive: true });
         writeFileSync(join(BASELINE_DIR, `${scene.name}.png`), buffer);
         results.push({ scene, status: 'updated', detail: `${buffer.length} bytes` });
@@ -288,4 +423,6 @@ async function main() {
   process.exit(0);
 }
 
-await main();
+if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename)) {
+  await main();
+}
