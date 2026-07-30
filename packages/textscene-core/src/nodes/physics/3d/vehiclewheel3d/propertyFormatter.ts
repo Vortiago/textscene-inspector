@@ -14,22 +14,8 @@
 
 import type { PropertySection, PropertyItem } from '../../../../core/NodeRegistry';
 import { formatNode3DProperties } from '../../../base/node3d/propertyFormatter';
+import { VEHICLE_WHEEL_3D_DEFAULTS as DEFAULTS } from './types';
 import type { VehicleWheel3DProperties } from './types';
-
-/** Godot 4.6 VehicleWheel3D defaults (doc/classes/VehicleWheel3D.xml). */
-const DEFAULTS = {
-  wheel_radius: 0.5,
-  wheel_rest_length: 0.15,
-  wheel_friction_slip: 10.5,
-  wheel_roll_influence: 0.1,
-  suspension_stiffness: 5.88,
-  suspension_travel: 0.2,
-  suspension_max_force: 6000,
-  damping_compression: 0.83,
-  damping_relaxation: 0.88,
-  use_as_traction: false,
-  use_as_steering: false,
-} as const;
 
 export function formatVehicleWheel3DProperties(
   properties: VehicleWheel3DProperties

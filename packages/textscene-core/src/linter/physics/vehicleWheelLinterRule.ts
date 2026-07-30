@@ -17,6 +17,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { findParentNode } from '../linterUtils.js';
+import { rangeAdvisories } from '../rangeAdvisory.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 
@@ -53,18 +54,17 @@ export function makeVehicleWheelLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
-    if (rawProps.suspension_travel !== undefined) {
-      const travel = parseFloat(rawProps.suspension_travel);
-      if (!isNaN(travel) && (travel < MIN_RECOMMENDED_TRAVEL || travel > MAX_RECOMMENDED_TRAVEL)) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `${type} '${node.name}' has suspension_travel ${travel}, outside the recommended ${MIN_RECOMMENDED_TRAVEL}–${MAX_RECOMMENDED_TRAVEL} range. Values far outside it make the suspension floaty or rigid.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-suspension-travel-out-of-range`,
-        });
-      }
-    }
+    const outOfRange = `${prefix}-suspension-travel-out-of-range`;
+    const travelMessage = (value: number): string =>
+      `${type} '${node.name}' has suspension_travel ${value}, outside the recommended ${MIN_RECOMMENDED_TRAVEL}–${MAX_RECOMMENDED_TRAVEL} range. Values far outside it make the suspension floaty or rigid.`;
+    diagnostics.push(
+      ...rangeAdvisories(node, {
+        suspension_travel: [
+          { under: MIN_RECOMMENDED_TRAVEL, ruleName: outOfRange, message: travelMessage },
+          { over: MAX_RECOMMENDED_TRAVEL, ruleName: outOfRange, message: travelMessage },
+        ],
+      })
+    );
 
     // Godot: damping_relaxation "should be slightly higher than
     // damping_compression". Only compared when BOTH are authored — the two

@@ -13,20 +13,10 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { checkResourceExists } from '../resourceChecker.js';
-import { hasCollisionShapeChild } from './hasCollisionShapeChild.js';
+import { hasDescendantOfType } from './hasDescendantOfType.js';
 import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import type { TscnNode } from '../../parser/types.js';
-
-/** True when `node` has a descendant of `wheelType` at any depth. */
-function hasWheelChild(node: TscnNode, wheelType: string): boolean {
-  for (const child of node.children) {
-    if (child.type === wheelType) return true;
-    if (hasWheelChild(child, wheelType)) return true;
-  }
-  return false;
-}
 
 export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `VehicleBody${dim}`;
@@ -58,7 +48,7 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
 
     // A vehicle body is driven entirely by its wheels: with none, engine_force
     // and steering do nothing at all and the body behaves as a plain RigidBody3D.
-    if (!hasWheelChild(node, wheelType)) {
+    if (!hasDescendantOfType(node, wheelType)) {
       diagnostics.push({
         severity: 'warning',
         message: `${type} '${node.name}' has no ${wheelType} children. A vehicle body is driven by its wheels; without them engine_force and steering have no effect.`,
@@ -68,7 +58,7 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
-    if (!hasCollisionShapeChild(node, shapeType)) {
+    if (!hasDescendantOfType(node, shapeType)) {
       diagnostics.push({
         severity: 'warning',
         message: `${type} '${node.name}' has no ${shapeType} children. Vehicle bodies need collision shapes for their chassis to collide with the world.`,

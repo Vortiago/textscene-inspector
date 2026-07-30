@@ -12,11 +12,8 @@ import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../../base/node3d/Component';
 import { useGizmoVisible } from '../../../../r3f/hooks/useGizmoVisible';
 import { WheelGizmo } from './WheelGizmo';
+import { VEHICLE_WHEEL_3D_DEFAULTS as DEFAULTS } from './types';
 import type { VehicleWheel3DProperties } from './types';
-
-/** Godot 4.6 defaults for the two properties the gizmo is built from. */
-const DEFAULT_RADIUS = 0.5;
-const DEFAULT_REST_LENGTH = 0.15;
 
 export function VehicleWheel3D({ node, children }: NodeComponentProps) {
   const props = node.properties as VehicleWheel3DProperties;
@@ -25,8 +22,8 @@ export function VehicleWheel3D({ node, children }: NodeComponentProps) {
     <Node3D node={node}>
       {gizmoVisible && (
         <WheelGizmo
-          radius={props.wheel_radius ?? DEFAULT_RADIUS}
-          restLength={props.wheel_rest_length ?? DEFAULT_REST_LENGTH}
+          radius={props.wheel_radius ?? DEFAULTS.wheel_radius}
+          restLength={props.wheel_rest_length ?? DEFAULTS.wheel_rest_length}
         />
       )}
       {children}

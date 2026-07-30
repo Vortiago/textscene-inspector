@@ -5,6 +5,7 @@ import {
   lint,
   expectClean,
   expectDiagnostic,
+  expectNoDiagnostic,
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
 import '../../../base/node3d/linterParser';
@@ -87,9 +88,7 @@ describe('VehicleWheel3D Linter', () => {
         vehicleBody,
         node('VehicleWheel3D', {}, { name: 'Wheel1', parent: '.' })
       );
-      expect(
-        lint(content).filter((d) => d.ruleName === 'vehiclewheel3d-not-under-vehicle-body')
-      ).toHaveLength(0);
+      expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-not-under-vehicle-body' });
     });
 
     it('warns for a wheel nested under a container inside the body — Godot requires a direct child', () => {
@@ -98,9 +97,7 @@ describe('VehicleWheel3D Linter', () => {
         node('Node3D', {}, { name: 'Axle', parent: '.' }),
         node('VehicleWheel3D', {}, { name: 'Wheel1', parent: 'Axle' })
       );
-      expect(
-        lint(content).filter((d) => d.ruleName === 'vehiclewheel3d-not-under-vehicle-body')
-      ).toHaveLength(1);
+      expectDiagnostic(content, { ruleName: 'vehiclewheel3d-not-under-vehicle-body', severity: 'warning' });
     });
   });
 
@@ -121,11 +118,7 @@ describe('VehicleWheel3D Linter', () => {
           vehicleBody,
           node('VehicleWheel3D', { suspension_travel: travel }, { name: 'Wheel1', parent: '.' })
         );
-        expect(
-          lint(content).filter(
-            (d) => d.ruleName === 'vehiclewheel3d-suspension-travel-out-of-range'
-          )
-        ).toHaveLength(0);
+        expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-suspension-travel-out-of-range' });
       }
     });
 
@@ -154,11 +147,7 @@ describe('VehicleWheel3D Linter', () => {
         vehicleBody,
         node('VehicleWheel3D', { damping_compression: 0.88 }, { name: 'Wheel1', parent: '.' })
       );
-      expect(
-        lint(content).filter(
-          (d) => d.ruleName === 'vehiclewheel3d-damping-relaxation-below-compression'
-        )
-      ).toHaveLength(0);
+      expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-damping-relaxation-below-compression' });
     });
 
     it('stays quiet when relaxation equals compression', () => {
@@ -170,11 +159,7 @@ describe('VehicleWheel3D Linter', () => {
           { name: 'Wheel1', parent: '.' }
         )
       );
-      expect(
-        lint(content).filter(
-          (d) => d.ruleName === 'vehiclewheel3d-damping-relaxation-below-compression'
-        )
-      ).toHaveLength(0);
+      expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-damping-relaxation-below-compression' });
     });
   });
 

@@ -12,6 +12,27 @@
 
 import type { Node3DProperties } from '../../../base/node3d/types';
 
+/**
+ * Godot 4.6 VehicleWheel3D defaults (doc/classes/VehicleWheel3D.xml), in one
+ * place because two consumers substitute them independently: the inspector
+ * formatter shows the effective figure, and the gizmo sizes its circle and
+ * travel line. Transcribed separately, correcting a default in one leaves the
+ * other drawing the old wheel, and no test compares the two copies.
+ */
+export const VEHICLE_WHEEL_3D_DEFAULTS = {
+  wheel_radius: 0.5,
+  wheel_rest_length: 0.15,
+  wheel_friction_slip: 10.5,
+  wheel_roll_influence: 0.1,
+  suspension_stiffness: 5.88,
+  suspension_travel: 0.2,
+  suspension_max_force: 6000,
+  damping_compression: 0.83,
+  damping_relaxation: 0.88,
+  use_as_traction: false,
+  use_as_steering: false,
+} as const;
+
 export interface VehicleWheel3DProperties extends Node3DProperties {
   /** Wheel radius in metres. Godot default 0.5. */
   wheel_radius?: number;

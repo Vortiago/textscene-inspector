@@ -13,6 +13,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../../parser/types';
 import { VehicleWheel3D } from './Component';
 import { parseVehicleWheel3D } from './parser';
+import { heading } from '../../../../parser/testing/parserKit';
 import { NodePathProvider } from '../../../../r3f/contexts/NodePathContext';
 import { SelectionProvider, useSelection } from '../../../../r3f/contexts/SelectionContext';
 
@@ -21,10 +22,7 @@ function wheelNode(props: Record<string, string> = {}): TscnNode {
     name: 'Wheel1',
     type: 'VehicleWheel3D',
     children: [],
-    properties: parseVehicleWheel3D(
-      { type: 'node', attributes: { type: 'VehicleWheel3D', name: 'Wheel1' } },
-      props
-    ),
+    properties: parseVehicleWheel3D(heading('VehicleWheel3D', { name: 'Wheel1' }), props),
   } as TscnNode;
 }
 

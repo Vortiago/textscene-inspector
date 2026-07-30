@@ -11,24 +11,14 @@
  * insensitive to its own depth.
  */
 import { describe, it, expect } from 'vitest';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import { TscnParser } from '../../parser/TscnParser';
+import { fixturesDir } from '../../parser/testing/parserKit';
 import type { TscnScene, TscnNode } from '../../parser/types';
 import type { Node3DProperties } from '../base/node3d/types';
 
-function repoRoot(): string {
-  let dir = dirname(fileURLToPath(import.meta.url));
-  for (let i = 0; i < 12; i += 1) {
-    if (existsSync(resolve(dir, 'pnpm-workspace.yaml'))) return dir;
-    dir = dirname(dir);
-  }
-  throw new Error('repo root (pnpm-workspace.yaml) not found above this test');
-}
-
 const FIXTURE = 'unit-physics-vehicle.tscn';
-const fixturesDir = resolve(repoRoot(), 'scenes/fixtures');
 
 function flatten(scene: TscnScene): TscnNode[] {
   const out: TscnNode[] = [];
@@ -41,7 +31,7 @@ function flatten(scene: TscnScene): TscnNode[] {
 }
 
 function parseFixture(): TscnScene {
-  const f = resolve(fixturesDir, FIXTURE);
+  const f = resolve(fixturesDir(), FIXTURE);
   if (!existsSync(f)) throw new Error(`fixture missing: scenes/fixtures/${FIXTURE}`);
   return new TscnParser().parse(readFileSync(f, 'utf8'));
 }

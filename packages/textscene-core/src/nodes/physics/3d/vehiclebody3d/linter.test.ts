@@ -6,6 +6,7 @@ import {
   collisionShape3d,
   expectClean,
   expectDiagnostic,
+  expectNoDiagnostic,
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
 // VehicleBody3D inherits RigidBody3D's validators through nodeBaseTypes, so the
@@ -97,9 +98,7 @@ describe('VehicleBody3D Linter', () => {
         '',
         '[node name="CollisionShape3D" type="CollisionShape3D" parent="."]',
       ].join('\n');
-      expect(
-        lint(content).filter((d) => d.ruleName === 'valid-vehiclebody3d-resources')
-      ).toHaveLength(0);
+      expectNoDiagnostic(content, { ruleName: 'valid-vehiclebody3d-resources' });
     });
   });
 
@@ -118,9 +117,7 @@ describe('VehicleBody3D Linter', () => {
         node('VehicleWheel3D', {}, { name: 'Wheel1', parent: 'Axle' }),
         collisionShape3d
       );
-      expect(
-        lint(content).filter((d) => d.ruleName === 'vehiclebody3d-needs-wheels')
-      ).toHaveLength(0);
+      expectNoDiagnostic(content, { ruleName: 'vehiclebody3d-needs-wheels' });
     });
 
     it('warns when the body has no CollisionShape3D children', () => {

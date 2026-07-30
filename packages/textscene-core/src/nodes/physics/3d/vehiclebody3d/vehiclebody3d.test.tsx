@@ -45,20 +45,15 @@ async function render(node: TscnNode) {
   );
 }
 
+// The rest of the ADR-0008 rendered contract — bare Group, no placeholder
+// userData, visible by default, zero own meshes, children inheriting the
+// transform — is asserted for VehicleBody3D by the shared
+// r3f/nodes/transformOnly.render-contract.test.tsx, which this slice joins.
+// Only `visible = false` is left here, because that contract checks the
+// default-visible case and this is the behaviour registering the type restored.
 describe('<VehicleBody3D> render contract', () => {
   it('honours visible = false, hiding itself and its subtree', async () => {
     const renderer = await render(vehicleNode({ visible: false }));
     expect(renderer.scene.findByProps({ name: 'Vehicle' }).instance.visible).toBe(false);
-  });
-
-  it('stays visible when visible is not authored', async () => {
-    const renderer = await render(vehicleNode({}));
-    expect(renderer.scene.findByProps({ name: 'Vehicle' }).instance.visible).toBe(true);
-  });
-
-  it('is a real registration, not the generic placeholder fallback', async () => {
-    const renderer = await render(vehicleNode({}));
-    const group = renderer.scene.findByProps({ name: 'Vehicle' });
-    expect(group.instance.userData.isPlaceholder).toBeUndefined();
   });
 });
