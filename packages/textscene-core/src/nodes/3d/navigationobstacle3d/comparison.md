@@ -1,6 +1,7 @@
 ---
 type: NavigationObstacle3D
 category: 3D
+status: linter-only
 fixture: unit-navigation-obstacle-3d.tscn
 image: unit-navigation-obstacle-3d
 visual: false

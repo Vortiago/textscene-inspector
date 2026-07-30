@@ -17,6 +17,29 @@ Use these with the Context7 MCP tool for up-to-date documentation:
 - **ViTest**: `/websites/vitest_dev`
 - **PNPM**: `/pnpm/pnpm`
 
+## Godot engine source — a local reading aid, never a dependency
+
+Property bounds (`PROPERTY_HINT_RANGE`), enum constants and the own-vs-inherited
+member split are only stated in the engine source, so linter validators are measured
+from it rather than guessed. Clone it anywhere; nothing in this repo reads it:
+
+```bash
+git clone --filter=blob:none --sparse --depth 1 --branch 4.6.3-stable \
+    https://github.com/godotengine/godot.git godot-4.6.3
+cd godot-4.6.3 && git sparse-checkout set scene doc/classes modules servers
+```
+
+Match the tag to the `godot` binary `pnpm ref:godot` uses (currently 4.6.3). Read
+`doc/classes/<Type>.xml` for members, defaults, enum constants and the `inherits=`
+parent; read the class `.cpp` for `ADD_PROPERTY` bounds. A member tagged
+`overrides="…"` is a default-value override, not a new property; a property flagged
+`PROPERTY_USAGE_NONE` is never serialised into a `.tscn`.
+
+Values learned this way are baked into the code as literals with the governing source
+line reproduced as a comment. No source file, test, fixture, script or CI step may
+resolve a path into the checkout — `scripts/godot-source-decoupling.test.mjs` enforces
+that, and deleting the clone must leave `pnpm validate` unchanged.
+
 ## Core Documentation
 
 ### TSCN Format

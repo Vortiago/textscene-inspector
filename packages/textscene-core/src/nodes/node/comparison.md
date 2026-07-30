@@ -1,6 +1,7 @@
 ---
 type: Node
 category: Other
+status: linter-only
 visual: false
 renders_as: nothing — a non-spatial base node
 ---

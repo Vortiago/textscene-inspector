@@ -1,6 +1,7 @@
 ---
 type: GPUParticles3D
 category: 3D
+status: linter-only
 fixture: unit-gpuparticles3d.tscn
 image: unit-gpuparticles3d
 renders_as: a transform-only group

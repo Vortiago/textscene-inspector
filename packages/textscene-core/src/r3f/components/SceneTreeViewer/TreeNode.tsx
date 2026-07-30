@@ -5,7 +5,7 @@
 import { memo, useMemo, type MouseEvent } from 'react';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
-import { isRenderableNodeType } from '../../nodeSupport.js';
+import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver.js';
 import { liveChildGroups, singleSceneCache, type LiveChildGroup } from '../../liveSceneTree.js';
@@ -190,7 +190,9 @@ function TreeNodeImpl({
   const isSelected = selectedNodePath === nodePath;
   const isHidden = hiddenNodePaths.has(nodePath);
 
-  const isUnsupported = !isRenderableNodeType(effective.type);
+  // A parser registration alone is not evidence of a render, so ask what the
+  // viewport will actually do: only a type with no component at all is a gap.
+  const isUnsupported = rendersOwnVisual(effective.type) === 'not-implemented';
 
   // Roving tabIndex: this row is the tree's ONE tab stop when it's
   // selected, or when it's the designated fallback row (the first root row,

@@ -1,6 +1,7 @@
 ---
 type: RemoteTransform2D
 category: 2D
+status: linter-only
 fixture: unit-remote-transform-2d.tscn
 image: unit-remote-transform-2d
 renders_as: nothing itself; it copies its transform onto its remote_path target

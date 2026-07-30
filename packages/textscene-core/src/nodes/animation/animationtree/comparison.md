@@ -1,6 +1,7 @@
 ---
 type: AnimationTree
 category: 3D
+status: linter-only
 fixture: unit-animationtree-blend.tscn
 image: unit-animationtree-blend
 renders_as: an empty group (a non-visual driver)

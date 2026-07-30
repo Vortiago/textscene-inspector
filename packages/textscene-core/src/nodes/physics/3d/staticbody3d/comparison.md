@@ -1,6 +1,7 @@
 ---
 type: StaticBody3D
 category: 3D
+status: linter-only
 fixture: unit-physics-bodies.tscn
 image: unit-physics-bodies
 renders_as: a transform-only group

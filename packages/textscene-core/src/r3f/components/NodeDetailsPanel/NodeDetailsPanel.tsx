@@ -5,7 +5,7 @@
  * inspector shows the same effective identity as the tree and viewport.
  */
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
-import { isRenderableNodeType } from '../../nodeSupport.js';
+import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { useLiveNode } from '../../useLiveSceneTree.js';
@@ -33,42 +33,8 @@ export function NodeDetailsPanel() {
   const { node, instanceRef } = entry;
   const path = selectedNodePath;
   const registration = nodeRegistry.getRegistration(node.type);
-  const isUnsupported = !isRenderableNodeType(node.type);
-
-  if (isUnsupported) {
-    return (
-      <div className={styles.root}>
-        <h3 className={styles.title}>{node.name}</h3>
-        <div className={`${styles.section} ${styles.warningSection}`}>
-          <h4 className={styles.sectionTitle}>Not Implemented</h4>
-          <p className={styles.warningText}>
-            The node type <strong>{node.type}</strong> is not yet supported by the renderer.
-            The node is preserved in the tree hierarchy, but it won&rsquo;t be visualized in
-            the 3D viewport.
-          </p>
-        </div>
-        <div className={styles.section}>
-          <h4 className={styles.sectionTitle}>Node Information</h4>
-          <div className={styles.row}>
-            <span className={styles.label}>Name:</span>
-            <span className={styles.value}>{node.name}</span>
-          </div>
-          <div className={styles.row}>
-            <span className={styles.label}>Type:</span>
-            <span className={styles.value}>
-              <code>{node.type}</code>
-            </span>
-          </div>
-          <div className={styles.row}>
-            <span className={styles.label}>Path:</span>
-            <span className={styles.value}>
-              <code>{path}</code>
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // See TreeNode: a parser registration does not mean the node renders.
+  const isNotRendered = rendersOwnVisual(node.type) === 'not-implemented';
 
   const sections = registration?.propertyFormatter
     ? registration.propertyFormatter(node.properties)
@@ -81,6 +47,23 @@ export function NodeDetailsPanel() {
   return (
     <div className={styles.root}>
       <h3 className={styles.title}>{node.name}</h3>
+
+      {/*
+        A banner rather than a replacement for the panel: the node is parsed and
+        its properties are known and validated even when nothing is drawn, and
+        hiding all of that behind the warning would make the inspector useless
+        for exactly the node types someone is most likely inspecting. The type
+        itself is not repeated here — the Type row below states it.
+      */}
+      {isNotRendered && (
+        <div className={`${styles.section} ${styles.warningSection}`}>
+          <h4 className={styles.sectionTitle}>Not Implemented</h4>
+          <p className={styles.warningText}>
+            This node type is not yet drawn by the previewer. It is preserved in the tree
+            and its properties are parsed, but nothing appears in the viewport.
+          </p>
+        </div>
+      )}
 
       <div className={styles.section}>
         <div className={styles.row}>

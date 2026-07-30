@@ -1,6 +1,7 @@
 ---
 type: Timer
 category: Other
+status: linter-only
 fixture: unit-timer.tscn
 image: unit-timer
 visual: false

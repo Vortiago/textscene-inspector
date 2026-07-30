@@ -8,7 +8,7 @@ import { AnimationPlayer } from './Component';
 nodeComponentRegistry.register({
   typeName: 'AnimationPlayer',
   Component: AnimationPlayer,
-  container: true,
+  container: true, renderIntent: 'transform-only'
 });
 
 export { AnimationPlayer };

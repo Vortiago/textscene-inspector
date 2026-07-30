@@ -11,4 +11,4 @@
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
 
-nodeComponentRegistry.register({ typeName: 'RemoteTransform2D', Component: Node2D, canvasItem: true });
+nodeComponentRegistry.register({ typeName: 'RemoteTransform2D', Component: Node2D, canvasItem: true, renderIntent: 'transform-only' });

@@ -1,6 +1,7 @@
 ---
 type: NavigationAgent3D
 category: 3D
+status: linter-only
 fixture: unit-navigation-agent-3d.tscn
 image: unit-navigation-agent-3d
 visual: false

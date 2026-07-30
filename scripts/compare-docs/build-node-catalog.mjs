@@ -10,18 +10,20 @@
  *
  * The node list is Godot's own ClassDB (via enumerate-nodes.gd through the local
  * `godot` + `xvfb-run`), so re-running against a newer Godot picks up any nodes a
- * Godot update introduced. "Supported" = a type registered in the node registry
- * (`nodeRegistry.register({ typeName })`). The functional grouping is derived from
+ * Godot update introduced. "Supported" is read from the live `nodeRegistry` in
+ * the built package, so this needs `pnpm --filter @textscene/core build` first.
+ * The functional grouping is derived from
  * each class's ancestor chain, so a new node auto-groups if it extends a known
  * base; a genuinely novel base falls to "Uncategorized" and wants a GROUP_RULES
  * entry.
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { docsUrl, fetchSourceIndex, makeResolver, mapPool } from './godotLinks.mjs';
+import { loadCoreParser } from './loadCoreLinter.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '../..');
@@ -157,19 +159,20 @@ const GROUP_RULES = [
   ['SpringBoneCollision3D', 'Skeleton, bones & IK'],
 ];
 
-function supportedTypes() {
-  const types = new Set();
-  const walk = (dir) => {
-    for (const entry of readdirSync(dir)) {
-      const p = join(dir, entry);
-      if (statSync(p).isDirectory()) walk(p);
-      else if (/\.tsx?$/.test(entry) && !/\.test\./.test(entry)) {
-        for (const m of readFileSync(p, 'utf8').matchAll(/typeName:\s*'([^']+)'/g)) types.add(m[1]);
-      }
-    }
-  };
-  walk(join(repoRoot, 'packages/textscene-core/src/nodes'));
-  return types;
+/**
+ * The types the lenient parser actually recognises, read from the live registry
+ * in the built package.
+ *
+ * This was a `typeName: '…'` scrape of the slice sources, which silently
+ * undercounted: `StaticBody2D`, `RigidBody2D` and `CharacterBody2D` are
+ * registered by a loop over `TWO_D_PHYSICS_TYPES` with no string literal to
+ * match, so the catalog called three shipped types "not implemented". Reading
+ * the registry cannot drift from what the parser does, and it is the same
+ * source `coverage-report.mjs` uses, so the two agree by construction.
+ */
+async function supportedTypes() {
+  const { nodeRegistry } = await loadCoreParser();
+  return new Set(nodeRegistry.getAllTypeNames());
 }
 
 function enumerateGodotNodes() {
@@ -321,7 +324,7 @@ if (linksOnly) {
   }
   godotVersionValue = previous.godotVersion ?? 'unknown';
 } else {
-  const supported = supportedTypes();
+  const supported = await supportedTypes();
   nodes = enumerateGodotNodes()
     // Editor-only plugins and engine-internal placeholders are not scene content.
     .filter((n) => !n.name.startsWith('Editor') && !n.name.endsWith('EditorPlugin') && n.name !== 'MissingNode')

@@ -1,6 +1,7 @@
 ---
 type: Area3D
 category: 3D
+status: linter-only
 fixture: edge-area3d-inactive.tscn
 image: edge-area3d-inactive
 visual: false

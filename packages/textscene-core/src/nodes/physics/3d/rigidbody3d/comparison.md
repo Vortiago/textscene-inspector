@@ -1,6 +1,7 @@
 ---
 type: RigidBody3D
 category: 3D
+status: linter-only
 fixture: unit-rigidbody3d.tscn
 image: unit-rigidbody3d
 renders_as: an invisible transform-only group

@@ -1,6 +1,7 @@
 ---
 type: Area2D
 category: 2D
+status: linter-only
 fixture: unit-area2d.tscn
 image: unit-area2d
 visual: false

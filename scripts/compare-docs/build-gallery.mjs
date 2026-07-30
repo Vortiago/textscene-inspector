@@ -61,14 +61,22 @@ function parseSheet(text, file) {
  * yet assessed against Godot reads `unreviewed` (grey), so the gallery never
  * over-claims parity. `unreviewed` outranks `done` in the rollup so a single
  * unchecked section keeps the whole node out of green.
+ *
+ * `linter-only` (blue) is the finished state for a node that draws nothing at
+ * runtime — a Timer, a joint, an XR tracker. It is parsed and fully validated
+ * and there is no render to assess, so it is not a gap the way `unimplemented`
+ * is. It sits LAST because it is the weakest claim in a rollup: such a node has
+ * a single sheet and no sections, so if it ever appears beside a real visual
+ * assessment that assessment must win rather than be masked as "nothing to see".
  */
-const STATUS_ORDER = ['unimplemented', 'limitation', 'unreviewed', 'done'];
+const STATUS_ORDER = ['unimplemented', 'limitation', 'unreviewed', 'done', 'linter-only'];
 const DEFAULT_STATUS = 'unreviewed';
 const STATUS_LABEL = {
   done: 'Done',
   limitation: 'Limitation',
   unimplemented: 'Not implemented',
   unreviewed: 'Unreviewed',
+  'linter-only': 'Linter only',
 };
 const rollupStatus = (statuses) =>
   STATUS_ORDER.find((s) => statuses.includes(s)) ?? DEFAULT_STATUS;
@@ -638,15 +646,18 @@ const CSS = String.raw`
 :root{
   --bg:#f5f6f8; --panel:#fff; --panel-2:#eceef2; --ink:#161a20; --muted:#5c6470;
   --line:#dde1e8; --godot:#b07430; --ours:#37729e; --ok:#2f8158; --warn:#b4553a; --err:#a23b3b;
+  /* Finished, but draws nothing. Distinct from --ours, which means "our render". */
+  --novis:#4a6f8f;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root{
   --bg:#0e1014; --panel:#161a20; --panel-2:#1d222b; --ink:#e6e9ee; --muted:#98a1af;
   --line:#272d38; --godot:#d69b58; --ours:#69a8d6; --ok:#57b085; --warn:#e07a5f; --err:#e06a6a;
+  --novis:#7fa6c4;
 }}
-:root[data-theme=dark]{--bg:#0e1014;--panel:#161a20;--panel-2:#1d222b;--ink:#e6e9ee;--muted:#98a1af;--line:#272d38;--godot:#d69b58;--ours:#69a8d6;--ok:#57b085;--warn:#e07a5f;--err:#e06a6a}
-:root[data-theme=light]{--bg:#f5f6f8;--panel:#fff;--panel-2:#eceef2;--ink:#161a20;--muted:#5c6470;--line:#dde1e8;--godot:#b07430;--ours:#37729e;--ok:#2f8158;--warn:#b4553a;--err:#a23b3b}
+:root[data-theme=dark]{--bg:#0e1014;--panel:#161a20;--panel-2:#1d222b;--ink:#e6e9ee;--muted:#98a1af;--line:#272d38;--godot:#d69b58;--ours:#69a8d6;--ok:#57b085;--warn:#e07a5f;--err:#e06a6a;--novis:#7fa6c4}
+:root[data-theme=light]{--bg:#f5f6f8;--panel:#fff;--panel-2:#eceef2;--ink:#161a20;--muted:#5c6470;--line:#dde1e8;--godot:#b07430;--ours:#37729e;--ok:#2f8158;--warn:#b4553a;--err:#a23b3b;--novis:#4a6f8f}
 *{box-sizing:border-box}
 body{margin:0;display:grid;grid-template-columns:264px 1fr;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6}
 .side{border-right:1px solid var(--line);background:var(--panel);padding:18px 14px;position:sticky;top:0;height:100vh;overflow-y:auto}
@@ -666,14 +677,15 @@ body{margin:0;display:grid;grid-template-columns:264px 1fr;min-height:100vh;back
 /* Status: a small nav dot (.st) and a header/section chip (.status). */
 .st{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:middle}
 .st-done{background:var(--ok)}.st-limitation{background:var(--warn)}.st-unimplemented{background:var(--err)}
-.st-unreviewed{background:var(--muted);opacity:.55}
+.st-unreviewed{background:var(--muted);opacity:.55}.st-linter-only{background:var(--novis)}
 .status{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:20px;color:#fff;white-space:nowrap}
 .status.st-done{background:var(--ok)}.status.st-limitation{background:var(--warn)}.status.st-unimplemented{background:var(--err)}
 .status.st-unreviewed{background:none;color:var(--muted);border:1px solid var(--line)}
+.status.st-linter-only{background:var(--novis)}
 .sheet-head .status{margin-left:auto}
 .status-note{height:3px;border-radius:3px;margin:-6px 0 20px}
 .status-note.st-done{background:var(--ok)}.status-note.st-limitation{background:var(--warn)}.status-note.st-unimplemented{background:var(--err)}
-.status-note.st-unreviewed{background:var(--line)}
+.status-note.st-unreviewed{background:var(--line)}.status-note.st-linter-only{background:var(--novis)}
 .prop{border-top:1px solid var(--line);padding-top:24px;margin-top:30px}
 .prop:first-of-type{border-top:0;padding-top:4px;margin-top:8px}
 .prop-head{display:flex;align-items:center;gap:12px;margin:0 0 14px}

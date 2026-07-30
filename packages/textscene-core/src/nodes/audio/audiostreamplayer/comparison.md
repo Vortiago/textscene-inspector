@@ -1,6 +1,7 @@
 ---
 type: AudioStreamPlayer
 category: Other
+status: linter-only
 fixture: unit-physics-bodies.tscn
 image: unit-physics-bodies
 visual: false

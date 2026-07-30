@@ -23,7 +23,7 @@ website. So author plain, strict Markdown; styling is not your concern.
 ---
 type: OmniLight3D
 category: 3D            # 3D | 2D | Resources | Other
-status: unreviewed     # done | limitation | unimplemented | unreviewed (see Status)
+status: unreviewed     # done | limitation | unimplemented | linter-only | unreviewed (see Status)
 fixture: unit-omni-light-3d.tscn
 image: unit-omni-light-3d
 renders_as: a THREE.PointLight    # one short noun phrase
@@ -108,6 +108,23 @@ What the fixture sets and what the two images show; fold any limitation in here.
 `## Known limitations` is an accepted optional fifth section, used by sheets whose
 constraint is structural rather than visible in the capture. Put it last.
 
+## Optional frontmatter keys
+
+Beyond the six in the template, three keys are accepted. They are optional, and a
+sheet that needs none of them should carry none of them.
+
+| Key | Use |
+| --- | --- |
+| `visual: false` | A plain capture has nothing worth comparing, so the gallery prints "No visual output" instead of an empty image pair — and the sheet is exempt from the image-exists check. |
+| `group: Lighting` | Overrides the nav grouping the catalog derives from the ancestor chain. |
+| `camera: 4,3,6` | The capture's camera position, for a scene the default framing suits badly. |
+
+`visual: false` is about the IMAGE, not about the node — a Marker2D draws a real
+gizmo but a plain capture shows nothing, so it sets the key; a RigidBody3D draws
+nothing itself yet its capture usefully shows the child mesh it carries, so it does
+not. That is why `visual:` is deliberately independent of `status: linter-only`,
+which is a claim about the node and is machine-checked against the registration.
+
 ## What the generator supplies — never hand-write these
 
 - **The Godot docs and source links** in the sheet header. Both are generated from
@@ -137,12 +154,21 @@ and a header/section badge. A node's badge **rolls up to its worst section**.
 | --- | --- |
 | `done` | Faithful to Godot, verified by eye. Green. **Never the default — earn it.** |
 | `limitation` | Renders, but with a known divergence (a three.js constraint). Orange. |
-| `unimplemented` | Not rendered at all. Red. |
+| `unimplemented` | Should render, and does not yet. Red. |
+| `linter-only` | Draws nothing at runtime, by nature — parsed and validated, and complete. Blue. |
 | `unreviewed` | Not yet assessed against Godot. Grey. **The default.** |
 
 `done` is the strong claim: reserve it for a feature you have looked at and found
 matches. An unassessed sheet stays `unreviewed`; a whole-scene showcase with gaps is
 `limitation`, not `done`. When in doubt, do not go green.
+
+`linter-only` is the other finished state, for a Timer, a joint, an XR tracker: there
+is no render to assess, so red would be wrong and grey would imply someone still has
+to look. It is **checked, not trusted** — the sheet must be backed by a
+`renderIntent: 'transform-only'` registration in the slice's `index.r3f.ts`, and
+`sheets.test.mjs` asserts that in both directions. Judge by RUNTIME output only: an
+editor-only or selection-gated gizmo (ADR-0018) does not make a node visual, and a
+node that should draw but does not yet is `unimplemented`, never this.
 
 ## Rules
 

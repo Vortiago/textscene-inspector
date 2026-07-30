@@ -1,6 +1,7 @@
 ---
 type: Node3D
 category: 3D
+status: linter-only
 fixture: unit-node3d-basic.tscn
 image: unit-node3d-basic
 visual: false

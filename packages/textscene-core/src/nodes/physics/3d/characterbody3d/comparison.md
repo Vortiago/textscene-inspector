@@ -1,6 +1,7 @@
 ---
 type: CharacterBody3D
 category: 3D
+status: linter-only
 fixture: unit-characterbody3d.tscn
 image: unit-characterbody3d
 renders_as: a transform-only Node3D group

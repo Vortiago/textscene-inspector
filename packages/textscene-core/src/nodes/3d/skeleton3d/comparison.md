@@ -1,6 +1,7 @@
 ---
 type: Skeleton3D
 category: 3D
+status: linter-only
 fixture: unit-skeleton3d.tscn
 image: unit-skeleton3d
 visual: false

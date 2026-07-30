@@ -1,6 +1,7 @@
 ---
 type: AudioStreamPlayer2D
 category: 2D
+status: linter-only
 fixture: unit-audio-stream-player-2d.tscn
 image: unit-audio-stream-player-2d
 visual: false

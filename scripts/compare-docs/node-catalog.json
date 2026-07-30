@@ -446,7 +446,7 @@
       "name": "CharacterBody2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "PhysicsBody2D",
         "CollisionObject2D",
@@ -1337,7 +1337,7 @@
       "name": "HSlider",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Slider",
         "Range",
@@ -1353,7 +1353,7 @@
       "name": "HSplitContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SplitContainer",
         "Container",
@@ -1523,7 +1523,7 @@
       "name": "LineEdit",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -2106,7 +2106,7 @@
       "name": "ParallaxBackground",
       "category": "Other",
       "group": "Canvas layers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "CanvasLayer",
         "Node",
@@ -2119,7 +2119,7 @@
       "name": "ParallaxLayer",
       "category": "2D",
       "group": "Parallax & scrolling",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -2486,7 +2486,7 @@
       "name": "RigidBody2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "PhysicsBody2D",
         "CollisionObject2D",
@@ -2858,7 +2858,7 @@
       "name": "StaticBody2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "PhysicsBody2D",
         "CollisionObject2D",
@@ -2901,7 +2901,7 @@
       "name": "SubViewport",
       "category": "Other",
       "group": "Viewports",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Viewport",
         "Node",
@@ -2914,7 +2914,7 @@
       "name": "SubViewportContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -3290,7 +3290,7 @@
       "name": "VSlider",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Slider",
         "Range",
@@ -3306,7 +3306,7 @@
       "name": "VSplitContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SplitContainer",
         "Container",

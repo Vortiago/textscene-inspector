@@ -1,6 +1,7 @@
 ---
 type: AnimationPlayer
 category: 3D
+status: linter-only
 fixture: unit-animation-player.tscn
 image: unit-animation-player
 renders_as: no visual of its own; an invisible driver of other nodes' properties

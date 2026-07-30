@@ -108,6 +108,12 @@ const CONTROL_LEAVES = [
   // chain like any other: without it every anchor/offset/layout validator
   // silently skips this type while erroring on every sibling Control.
   'SubViewportContainer',
+  // SplitContainer → Container in Godot, but neither intermediate is modelled
+  // yet, so these link straight to Control like the sliders above. Until they
+  // were listed here they had no validators of their own and no inherited ones
+  // either — every property on a split container was silently accepted.
+  'HSplitContainer',
+  'VSplitContainer',
 ] as const;
 
 export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({

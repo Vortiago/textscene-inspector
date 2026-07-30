@@ -14,9 +14,10 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFile, rm } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -42,7 +43,7 @@ const KNOWN_KEYS = new Set([
   'group',
   'camera',
 ]);
-const STATUSES = new Set(['done', 'limitation', 'unimplemented', 'unreviewed']);
+const STATUSES = new Set(['done', 'limitation', 'unimplemented', 'unreviewed', 'linter-only']);
 const CATEGORIES = new Set(['3D', '2D', 'Resources', 'Complex Scenes', 'Other']);
 
 const sheets = await Promise.all(
@@ -50,6 +51,7 @@ const sheets = await Promise.all(
     const text = await readFile(file, 'utf8');
     const parsed = parseFrontmatter(text);
     return {
+      file,
       label: sheetLabel(file),
       meta: parsed?.meta ?? {},
       body: parsed?.body ?? '',
@@ -245,5 +247,59 @@ describe('comparison sheets', () => {
       .filter((s) => /\]\([^)]*adr\/|\[ADR-\d{4}\]:/.test(s.body))
       .map((s) => s.label);
     expect(bad).toEqual([]);
+  });
+
+  /**
+   * A sheet's status is a claim about what the viewport does; the r3f
+   * registration is what the viewport actually does. Nothing keeps a hand-written
+   * claim honest, and broad node coverage means most sheets are written once and
+   * never looked at again — so the two are asserted against each other.
+   *
+   * `visual:` is deliberately NOT tied to this. The three say different things:
+   * `visual: false` means a plain capture has nothing worth comparing — also true
+   * of a Marker2D whose gizmo is selection-gated (ADR-0018) — while
+   * `renderIntent: 'transform-only'` means the node itself draws nothing. They
+   * come apart in both directions: a gizmo node draws but has no useful pair, and
+   * a RigidBody3D draws nothing yet its sheet's capture usefully shows the child
+   * mesh it carries. Only the registry claim is machine-checkable, so only it is
+   * asserted; whether to show an image pair stays an editorial call per sheet.
+   */
+  describe('status agrees with the render registration', () => {
+    /** Slice-backed sheets only; the `complex-*` showcases have no slice. */
+    const sliceSheets = sheets
+      .map((s) => ({ ...s, r3f: join(dirname(s.file), 'index.r3f.ts') }))
+      .filter((s) => s.file.includes(`${sep}nodes${sep}`));
+
+    const registersTransformOnly = (s) =>
+      existsSync(s.r3f) && /renderIntent:\s*'transform-only'/.test(readFileSync(s.r3f, 'utf8'));
+
+    it('finds slice-backed sheets, so a bad filter cannot vacuously pass', () => {
+      expect(sliceSheets.length).toBeGreaterThan(50);
+    });
+
+    it('backs every `linter-only` sheet with a transform-only registration', () => {
+      const bad = sliceSheets
+        .filter((s) => s.meta.status === 'linter-only' && !registersTransformOnly(s))
+        .map((s) => `${s.label}: claims linter-only but its index.r3f.ts is not transform-only`);
+      expect(bad).toEqual([]);
+    });
+
+    it('gives every transform-only registration the `linter-only` status', () => {
+      // The reverse direction: a slice that declares it draws nothing must say so
+      // on its sheet, or the gallery shows it as an unassessed gap forever.
+      const bad = sliceSheets
+        .filter((s) => registersTransformOnly(s) && s.meta.status !== 'linter-only')
+        .map(
+          (s) => `${s.label}: registers transform-only but its status is ${s.meta.status ?? 'unset'}`
+        );
+      expect(bad).toEqual([]);
+    });
+
+    it('leaves every `unimplemented` sheet without a render component', () => {
+      const bad = sliceSheets
+        .filter((s) => s.meta.status === 'unimplemented' && existsSync(s.r3f))
+        .map((s) => `${s.label}: claims unimplemented but registers a render component`);
+      expect(bad).toEqual([]);
+    });
   });
 });

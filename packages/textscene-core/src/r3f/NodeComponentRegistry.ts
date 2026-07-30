@@ -37,6 +37,20 @@ export interface NodeComponentRegistration {
    * can consume triangles rather than a React element. See csg/csgRegistration.ts.
    */
   csgShape?: CsgShapeRegistration;
+  /**
+   * Whether this type draws anything of its own.
+   *
+   * `'transform-only'` says the node is finished and correct while drawing
+   * nothing — a Timer, a joint, an XR tracker (ADR-0008). It registers a base
+   * component so its children land in the right transform space, and its
+   * comparison sheet reads `linter-only`. Defaults to `'draws'`.
+   *
+   * A type that SHOULD draw but does not yet registers no component at all and
+   * falls through to `GenericNodeFallback`; that absence is what
+   * `rendersOwnVisual` reports as "not implemented". The distinction matters
+   * because a parser registration alone already clears the tree's badge.
+   */
+  renderIntent?: 'draws' | 'transform-only';
 }
 
 class NodeComponentRegistryImpl {
@@ -44,6 +58,7 @@ class NodeComponentRegistryImpl {
   private readonly canvasItemTypes = new Set<string>();
   private readonly containerTypes = new Set<string>();
   private readonly csgShapes = new Map<string, CsgShapeRegistration>();
+  private readonly transformOnlyTypes = new Set<string>();
 
   register(registration: NodeComponentRegistration): void {
     this.registry.register(registration.typeName, registration.Component);
@@ -53,6 +68,9 @@ class NodeComponentRegistryImpl {
     else this.containerTypes.delete(registration.typeName);
     if (registration.csgShape) this.csgShapes.set(registration.typeName, registration.csgShape);
     else this.csgShapes.delete(registration.typeName);
+    if (registration.renderIntent === 'transform-only')
+      this.transformOnlyTypes.add(registration.typeName);
+    else this.transformOnlyTypes.delete(registration.typeName);
   }
 
   get(typeName: string): NodeComponent | undefined {
@@ -67,6 +85,11 @@ class NodeComponentRegistryImpl {
   /** True when the type registered as a workspace-neutral container. */
   isContainer(typeName: string): boolean {
     return this.containerTypes.has(typeName);
+  }
+
+  /** True when the type registered as drawing nothing of its own (ADR-0008). */
+  isTransformOnly(typeName: string): boolean {
+    return this.transformOnlyTypes.has(typeName);
   }
 
   /** True when the type takes part in CSG boolean evaluation. */
@@ -88,6 +111,7 @@ class NodeComponentRegistryImpl {
     this.canvasItemTypes.clear();
     this.containerTypes.clear();
     this.csgShapes.clear();
+    this.transformOnlyTypes.clear();
   }
 }
 

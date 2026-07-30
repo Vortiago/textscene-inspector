@@ -92,7 +92,13 @@ describe('<NodeDetailsPanel>', () => {
     });
 
     expect(screen.getByText('Not Implemented')).toBeTruthy();
-    expect(screen.getByText(/not yet supported/i)).toBeTruthy();
+    expect(screen.getByText(/not yet drawn/i)).toBeTruthy();
+    // The banner sits above the details rather than replacing them: an
+    // unrendered node still has parsed, validated properties worth inspecting,
+    // and it is precisely the node someone opens the inspector to understand.
+    expect(screen.getByRole('heading', { name: 'Mystery' })).toBeTruthy();
+    expect(screen.getByText('TotallyUnknownType')).toBeTruthy();
+    expect(screen.getByText('Path:')).toBeTruthy();
   });
 
   it('renders propertyFormatter sections from the registry', async () => {
