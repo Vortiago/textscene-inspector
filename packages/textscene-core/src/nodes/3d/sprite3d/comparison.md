@@ -32,7 +32,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin Sprite3D -->
-Strict parsing format-checks these `Sprite3D` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
+Strict parsing format-checks these `Sprite3D` properties, plus 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
 | Property |
 | --- |
@@ -48,7 +48,6 @@ Strict parsing format-checks these `Sprite3D` properties, plus 1 inherited from 
 | `region_rect` |
 | `render_priority` |
 | `texture` |
-| `transparency` |
 | `vframes` |
 
 | Rule | Reports | Severity |

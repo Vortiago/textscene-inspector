@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node"]
+
+[node name="MyAcceptDialog" type="AcceptDialog" parent="."]
+dialog_text = "Are you sure you want to continue?"
+ok_button_text = "Got it"
+dialog_autowrap = true
+dialog_close_on_escape = false
+dialog_hide_on_ok = false

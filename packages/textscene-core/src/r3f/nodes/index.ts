@@ -74,7 +74,9 @@ import '../../nodes/timers/timer/index.r3f';
 import '../../nodes/viewport/subviewport/index.r3f';
 import '../../nodes/3d/skeleton/skeletonmodifier3d/index.r3f';
 import '../../nodes/3d/skeleton/springbonecollision3d/index.r3f';
+import '../../nodes/3d/skeleton/boneconstraint3d/index.r3f';
 import '../../nodes/3d/visualinstance3d/index.r3f';
 import '../../nodes/3d/xr/xrnode3d/index.r3f';
+import '../../nodes/3d/geometryinstance3d/index.r3f';
 
 export { GenericNodeFallback } from '../internal/generic-node-fallback/index';

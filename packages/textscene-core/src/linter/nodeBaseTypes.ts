@@ -20,19 +20,15 @@ const LIGHT3D_LEAVES = [
 ] as const;
 
 /**
- * VisualInstance3D-derived nodes — every 3D type that actually draws. They map
- * to `VisualInstance3D` (render layers, AABB) and on to `Node3D`.
- *
- * Godot puts `GeometryInstance3D` between most of these and VisualInstance3D;
- * it is not modelled yet because it carries no validators, and
- * `baseChainCompleteness.test.ts` fails the day it does, naming the leaves to
- * re-chain. Do not flatten past a level that validates something.
+ * GeometryInstance3D-derived nodes — everything that draws real geometry. They
+ * inherit the shadow / LOD / GI / visibility-range set from
+ * `GeometryInstance3D`, then render layers from `VisualInstance3D`, then the
+ * transform from `Node3D`.
  */
-const VISUALINSTANCE3D_LEAVES = [
+const GEOMETRYINSTANCE3D_LEAVES = [
   'MeshInstance3D',
   'Sprite3D',
   'Label3D',
-  'Decal',
   'GPUParticles3D',
   'CSGBox3D',
   'CSGCylinder3D',
@@ -41,6 +37,15 @@ const VISUALINSTANCE3D_LEAVES = [
   'CSGCombiner3D',
   'CSGMesh3D',
   'CSGPolygon3D',
+] as const;
+
+/**
+ * VisualInstance3D-derived nodes that are NOT GeometryInstance3D. `Decal` is
+ * the only registered one — Godot's chain for it has no GeometryInstance3D hop,
+ * so it takes render layers and skips the geometry set.
+ */
+const VISUALINSTANCE3D_LEAVES = [
+  'Decal',
 ] as const;
 
 /** Base for every spatial (3D) node — Node3D carries the transform/visible set. */
@@ -93,6 +98,20 @@ const NODE2D_LEAVES = [
 ] as const;
 
 /**
+ * BaseButton-derived nodes — they inherit the pressed/toggle/shortcut set from
+ * `BaseButton`, then the anchor/offset/theme set from `Control`.
+ *
+ * Godot puts `Button` between `CheckBox`/`OptionButton` and `BaseButton`, but
+ * `Button` registers no validators of its own, so the chain flattens past it.
+ * `baseChainCompleteness.test.ts` fails the day that stops being true.
+ */
+const BASEBUTTON_LEAVES = [
+  'Button',
+  'CheckBox',
+  'OptionButton',
+] as const;
+
+/**
  * Base for the Control (2D UI) family — Control carries the layout/anchor/offset
  * + theme-override set. `Control` and `CanvasLayer` are NOT in here: Control is
  * itself the base, and CanvasLayer descends from Node (not CanvasItem/Control).
@@ -100,9 +119,6 @@ const NODE2D_LEAVES = [
 const CONTROL_LEAVES = [
   'Label',
   'RichTextLabel',
-  'Button',
-  'CheckBox',
-  'OptionButton',
   'LineEdit',
   // Range → Slider → H/VSlider in Godot, but neither intermediate is
   // authorable and neither carries a validator of its own, so the leaves link
@@ -129,18 +145,24 @@ const CONTROL_LEAVES = [
   // either — every property on a split container was silently accepted.
   'HSplitContainer',
   'VSplitContainer',
+  'BaseButton',
+  'Container',
 ] as const;
 
 export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   ...Object.fromEntries(LIGHT3D_LEAVES.map((t) => [t, 'Light3D'])),
+  ...Object.fromEntries(GEOMETRYINSTANCE3D_LEAVES.map((t) => [t, 'GeometryInstance3D'])),
   ...Object.fromEntries(VISUALINSTANCE3D_LEAVES.map((t) => [t, 'VisualInstance3D'])),
   ...Object.fromEntries(NODE3D_LEAVES.map((t) => [t, 'Node3D'])),
   ...Object.fromEntries(NODE2D_LEAVES.map((t) => [t, 'Node2D'])),
+  ...Object.fromEntries(BASEBUTTON_LEAVES.map((t) => [t, 'BaseButton'])),
   ...Object.fromEntries(CONTROL_LEAVES.map((t) => [t, 'Control'])),
   // Abstract/non-authorable intermediate classes.
   // Light3D < VisualInstance3D in Godot, and VisualInstance3D validates the
   // render `layers` every light also carries.
   Light3D: 'VisualInstance3D',
+  GeometryInstance3D: 'VisualInstance3D',
+  BaseButton: 'Control',
   VisualInstance3D: 'Node3D',
   // SubViewport and Window are Godot's two instantiable Viewports. `Viewport`
   // itself is not instantiable, so like Light3D it carries validators without
@@ -162,4 +184,6 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   AudioStreamPlayer: 'Node',
   Timer: 'Node',
   NavigationAgent3D: 'Node',
+  AcceptDialog: 'Window',
+  BoneConstraint3D: 'SkeletonModifier3D',
 });

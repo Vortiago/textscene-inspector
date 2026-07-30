@@ -326,6 +326,27 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
   },
 
+  // GeometryInstance3D is a transform-only slice with no parser.ts of its own,
+  // so from its perspective every key it registers is linter-only. One entry
+  // here covers the eleven leaves that inherit them — MeshInstance3D, Sprite3D,
+  // Label3D, GPUParticles3D and the seven CSG shapes — instead of eleven
+  // near-identical copies. Each leaf's parser reads whatever subset it actually
+  // renders (MeshInstance3D reads the shadow/GI/visibility set, Sprite3D reads
+  // transparency); the rest tune baking, culling and draw order, which a static
+  // preview has no equivalent for.
+  GeometryInstance3D: {
+    linterOnly: [
+      'cast_shadow', 'gi_mode', 'gi_lightmap_texel_scale', 'lod_bias',
+      'custom_aabb', 'extra_cull_margin', 'ignore_occlusion_culling',
+      'material_override', 'material_overlay', 'transparency',
+      'sorting_offset', 'sorting_use_aabb_center',
+      'visibility_range_begin', 'visibility_range_begin_margin',
+      'visibility_range_end', 'visibility_range_end_margin',
+      'visibility_range_fade_mode',
+    ],
+    reason: 'The geometry base has no parser of its own, so every key it registers is linter-only there; each leaf parser reads the subset it renders and the remainder are bake/cull/draw-order settings a static preview cannot honour.',
+  },
+
   // Registered on the base and delivered to every 3D visual by the base-walk,
   // so one entry here covers MeshInstance3D, Sprite3D, Label3D, Decal,
   // GPUParticles3D and the seven CSG shapes rather than twelve leaf copies.
@@ -351,6 +372,13 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   MeshInstance3D: {
+    parserOnly: [
+      // Deprecated. `scene/3d/visual_instance_3d.cpp` binds `gi_lightmap_scale`
+      // PROPERTY_USAGE_NONE and nothing restores it, so Godot never writes it to
+      // a .tscn and its validator was deleted as dead. The parser still reads it
+      // so an older hand-written scene carrying the key still loads.
+      'gi_lightmap_scale',
+    ],
     linterOnly: [
       // Wildcard slot validator (surface_material_override/N) registered as
       // a pattern; parser reads via a loop over Object.keys and is not

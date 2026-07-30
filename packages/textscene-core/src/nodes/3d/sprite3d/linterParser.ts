@@ -3,6 +3,9 @@
  * Migrated to the declarative `v` namespace.
  */
 
+// The immediate validator-bearing base, which pulls VisualInstance3D and Node3D
+// in turn, so this module answers for every key Sprite3D is chained to.
+import '../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
@@ -16,7 +19,7 @@ validatorRegistry.registerAll('Sprite3D', {
   alpha_cut: v.enumInt('alpha_cut', 0, 2, ALPHA_CUT),
   axis: v.enumInt('axis', 0, 2, AXIS),
   pixel_size: v.positiveFloat('pixel_size'),
-  transparency: v.float('transparency', { min: 0, max: 1 }),
+  // `transparency` is GeometryInstance3D's and arrives via the base-walk.
   hframes: v.positiveInt('hframes'),
   vframes: v.positiveInt('vframes'),
   frame: v.int('frame', { min: 0 }),

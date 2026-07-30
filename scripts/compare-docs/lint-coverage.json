@@ -1,23 +1,6 @@
 {
   "generated": "pnpm docs:lint-sections",
   "unsupported": {
-    "AcceptDialog": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
     "AimModifier3D": {
       "validators": [],
       "rules": [
@@ -218,23 +201,6 @@
         }
       ]
     },
-    "BaseButton": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
     "Bone2D": {
       "validators": [],
       "rules": [
@@ -253,39 +219,6 @@
       ]
     },
     "BoneAttachment3D": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-node3d-visibility",
-          "description": "Validates Node3D visibility_parent references exist in scene tree",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "error"
-            },
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
-    "BoneConstraint3D": {
       "validators": [],
       "rules": [
         {
@@ -586,23 +519,6 @@
         }
       ]
     },
-    "Container": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
     "ConvertTransformModifier3D": {
       "validators": [],
       "rules": [
@@ -838,39 +754,6 @@
       ]
     },
     "Generic6DOFJoint3D": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-node3d-visibility",
-          "description": "Validates Node3D visibility_parent references exist in scene tree",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "error"
-            },
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
-    "GeometryInstance3D": {
       "validators": [],
       "rules": [
         {

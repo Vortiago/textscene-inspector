@@ -17,6 +17,7 @@
 import '../nodes/node/index.linter.js';
 import '../nodes/2d/ui/control/index.linter.js';
 import '../nodes/2d/ui/subviewportcontainer/index.linter.js';
+import '../nodes/2d/ui/basebutton/index.linter.js';
 import '../nodes/viewport/subviewport/index.linter.js';
 import '../nodes/base/node3d/index.linter.js';
 import '../nodes/base/node2d/index.linter.js';
@@ -92,7 +93,9 @@ import '../nodes/3d/skeleton/skeletonmodifier3d/index.linter.js';
 import '../nodes/3d/skeleton/springbonecollision3d/index.linter.js';
 import '../nodes/3d/visualinstance3d/index.linter.js';
 import '../nodes/3d/xr/xrnode3d/index.linter.js';
+import '../nodes/3d/geometryinstance3d/index.linter.js';
 import '../nodes/windows/window/index.linter.js';
+import '../nodes/windows/acceptdialog/index.linter.js';
 
 // Re-export core linter classes
 export { Linter } from './Linter.js';

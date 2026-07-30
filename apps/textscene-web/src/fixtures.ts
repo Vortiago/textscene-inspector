@@ -68,6 +68,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Accept Dialog",
+    "file": "unit-accept-dialog.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animatedsprite2d Atlas",
     "file": "unit-animatedsprite2d-atlas.tscn",
     "category": "Other"
@@ -148,6 +153,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Base Button",
+    "file": "unit-base-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Bone Constraint 3d",
+    "file": "unit-bone-constraint-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Modulate",
     "file": "unit-canvas-modulate.tscn",
     "category": "Other"
@@ -165,6 +180,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Coin Glow",
     "file": "unit-coin-glow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Container",
+    "file": "unit-container.tscn",
     "category": "Other"
   },
   {
@@ -215,6 +235,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Environment Sky Tonemap",
     "file": "unit-environment-sky-tonemap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Geometry Instance 3d",
+    "file": "unit-geometry-instance-3d.tscn",
     "category": "Other"
   },
   {

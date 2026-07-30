@@ -65,7 +65,11 @@ describe('MeshInstance3D Linter', () => {
 
     runPropertyValidation({ nodeType: 'MeshInstance3D' }, [
       { prop: 'gi_mode', valid: [0, 1, 2], invalid: [{ value: 5, contains: ['0-2'] }] },
-      { prop: 'gi_lightmap_scale', valid: [0, 1, 2, 3], invalid: [{ value: 10, contains: ['0-3'] }] },
+      // `gi_lightmap_scale` had a validator here until GeometryInstance3D took
+      // over this family. It is deprecated and bound PROPERTY_USAGE_NONE
+      // (scene/3d/visual_instance_3d.cpp), so Godot never writes it to a .tscn
+      // and nothing could ever have reached that check. The parser still reads
+      // the key so an older hand-written scene carrying it still loads.
       {
         prop: 'visibility_range_begin',
         valid: ['10.5'],

@@ -38,7 +38,7 @@ font-outline weight rather than a heavy centred stroke.
 ## Linting
 
 <!-- lint:begin Label3D -->
-Strict parsing format-checks these `Label3D` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
+Strict parsing format-checks these `Label3D` properties, plus 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
 | Property |
 | --- |

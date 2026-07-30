@@ -6,7 +6,7 @@
       "name": "AcceptDialog",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Window",
         "Viewport",
@@ -248,7 +248,7 @@
       "name": "BaseButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -289,7 +289,7 @@
       "name": "BoneConstraint3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -654,7 +654,7 @@
       "name": "Container",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -1008,7 +1008,7 @@
       "name": "GeometryInstance3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",

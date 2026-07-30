@@ -117,6 +117,8 @@ reproduced:
 - [SpringBoneCollision3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollision3d/comparison.md) — a transform-only group (a spring-bone collider)
 - [VisualInstance3D](../../packages/textscene-core/src/nodes/3d/visualinstance3d/comparison.md) — a transform-only group (the render-layer/AABB base for 3D visuals)
 - [XRNode3D](../../packages/textscene-core/src/nodes/3d/xr/xrnode3d/comparison.md) — a transform-only group (an XR-tracked transform)
+- [BoneConstraint3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneconstraint3d/comparison.md) — a transform-only group (the base for bone constraints)
+- [GeometryInstance3D](../../packages/textscene-core/src/nodes/3d/geometryinstance3d/comparison.md) — a transform-only group (the shadow/LOD/GI base for 3D visuals)
 
 ## 2D
 
@@ -153,9 +155,12 @@ reproduced:
 - [TileMap](../../packages/textscene-core/src/nodes/2d/tiles/tilemap/comparison.md) — batched textured tile quads
 - [TileMapLayer](../../packages/textscene-core/src/nodes/2d/tiles/tilemaplayer/comparison.md) — batched textured tile quads
 - [VBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/vboxcontainer/comparison.md) — a CSS flex-column `<div>`
+- [BaseButton](../../packages/textscene-core/src/nodes/2d/ui/basebutton/comparison.md) — nothing yet; the base every button inherits from
+- [Container](../../packages/textscene-core/src/nodes/2d/ui/container/comparison.md) — nothing yet; the base every layout container inherits from
 
 ## Other
 
 - [AudioStreamPlayer](../../packages/textscene-core/src/nodes/audio/audiostreamplayer/comparison.md) — nothing (a non-spatial audio node)
 - [Timer](../../packages/textscene-core/src/nodes/timers/timer/comparison.md) — nothing (a countdown timer node)
 - [Window](../../packages/textscene-core/src/nodes/windows/window/comparison.md) — nothing yet; parsed and validated but not drawn
+- [AcceptDialog](../../packages/textscene-core/src/nodes/windows/acceptdialog/comparison.md) — nothing yet; a dialog Window with an OK button
