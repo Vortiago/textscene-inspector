@@ -324,7 +324,10 @@ function main() {
 
   const sliceRel = `nodes/${category}/${lower}`;
   const sliceDir = join(CORE_SRC, sliceRel);
-  if (existsSync(sliceDir)) fail(`slice already exists: ${sliceDir}`);
+  // A dry run writes nothing, so an already-scaffolded slice is no obstacle to
+  // printing its plan — and the contract tests below name real Godot types, all
+  // of which get scaffolded eventually.
+  if (!dryRun && existsSync(sliceDir)) fail(`slice already exists: ${sliceDir}`);
 
   const catDepth = category.split('/').length;
   const toSrc = '../'.repeat(catDepth + 2); // slice dir → src/

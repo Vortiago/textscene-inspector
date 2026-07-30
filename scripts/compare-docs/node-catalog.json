@@ -2364,7 +2364,7 @@
       "name": "RayCast2D",
       "category": "2D",
       "group": "Physics — queries",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -2378,7 +2378,7 @@
       "name": "RayCast3D",
       "category": "3D",
       "group": "Physics — queries",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -2574,7 +2574,7 @@
       "name": "ShapeCast2D",
       "category": "2D",
       "group": "Physics — queries",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -2588,7 +2588,7 @@
       "name": "ShapeCast3D",
       "category": "3D",
       "group": "Physics — queries",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -2746,7 +2746,7 @@
       "name": "SpringArm3D",
       "category": "3D",
       "group": "Physics — queries",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",

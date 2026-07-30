@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="MyRayCast2D" type="RayCast2D" parent="."]
+position = Vector2(10, 20)
+enabled = true
+exclude_parent = true
+target_position = Vector2(0, 96)
+collision_mask = 1
+hit_from_inside = false
+collide_with_areas = true
+collide_with_bodies = true

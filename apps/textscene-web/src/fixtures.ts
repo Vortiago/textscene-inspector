@@ -518,6 +518,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Ray Cast 2d",
+    "file": "unit-ray-cast-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Ray Cast 3d",
+    "file": "unit-ray-cast-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Remote Transform 2d",
     "file": "unit-remote-transform-2d.tscn",
     "category": "Other"
@@ -545,6 +555,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Shadows Only",
     "file": "unit-shadows-only.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Shape Cast 2d",
+    "file": "unit-shape-cast-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Shape Cast 3d",
+    "file": "unit-shape-cast-3d.tscn",
     "category": "Other"
   },
   {
@@ -590,6 +610,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Spot Light 3d",
     "file": "unit-spot-light-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spring Arm 3d",
+    "file": "unit-spring-arm-3d.tscn",
     "category": "Other"
   },
   {

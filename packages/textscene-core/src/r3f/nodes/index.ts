@@ -30,6 +30,9 @@ import '../../nodes/physics/3d/collisionshape3d/index.r3f';
 // Non-visual nodes — transform-only groups (ADR-0008).
 import '../../nodes/physics/3d/characterbody3d/index.r3f';
 import '../../nodes/physics/3d/rigidbody3d/index.r3f';
+import '../../nodes/physics/3d/raycast3d/index.r3f';
+import '../../nodes/physics/3d/shapecast3d/index.r3f';
+import '../../nodes/physics/3d/springarm3d/index.r3f';
 import '../../nodes/3d/skeleton3d/index.r3f';
 import '../../nodes/paths/path3d/index.r3f';
 import '../../nodes/paths/pathfollow3d/index.r3f';
@@ -55,6 +58,8 @@ import '../../nodes/2d/animatedsprite2d/index.r3f';
 import '../../nodes/physics/2d/index.r3f';
 import '../../nodes/physics/2d/area2d/index.r3f';
 import '../../nodes/physics/2d/collisionshape2d/index.r3f';
+import '../../nodes/physics/2d/raycast2d/index.r3f';
+import '../../nodes/physics/2d/shapecast2d/index.r3f';
 import '../internal/glb-scene-root/index';
 import '../../nodes/2d/tiles/tilemaplayer/index.r3f';
 import '../../nodes/2d/tiles/tilemap/index.r3f';

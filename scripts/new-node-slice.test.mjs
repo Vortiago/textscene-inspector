@@ -25,6 +25,7 @@
 import { describe, expect, it } from 'vitest';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const execFileAsync = promisify(execFile);
@@ -71,6 +72,15 @@ const INVOCATIONS = {
   unknownType: ['Widget3D', '3d', '--intent', 'pending', '--chain', 'Node3D'],
   wrongChain: ['ShapeCast3D', '3d', '--intent', 'pending', '--chain', 'Node2D'],
 };
+
+/**
+ * Every case names a REAL Godot type, because `--chain` is checked against
+ * ClassDB. Real types get scaffolded as the coverage waves reach them, so
+ * nothing here may assume its type is still unscaffolded — hence the
+ * before/after snapshot rather than a bare `not.toExist`.
+ */
+const PROGRESSBAR_SLICE = join(REPO_ROOT, 'packages/textscene-core/src/nodes/2d/ui/progressbar');
+const existedBefore = existsSync(PROGRESSBAR_SLICE);
 
 const keys = Object.keys(INVOCATIONS);
 const results = Object.fromEntries(
@@ -170,8 +180,9 @@ describe('new-node-slice intent shapes', () => {
   });
 
   it('writes nothing on a dry run', () => {
-    // The scaffold aborts on an existing slice, so a leaked write would turn the
-    // repeated runs above into failures rather than passing silently.
+    // Asserted against the filesystem, not just the message: the ProgressBar run
+    // above prints a full create/wire plan, so a leaked write would land here.
     expect(results.transformOnly.out).toMatch(/dry run — nothing written/);
+    expect(existsSync(PROGRESSBAR_SLICE)).toBe(existedBefore);
   });
 });

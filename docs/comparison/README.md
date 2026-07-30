@@ -106,10 +106,13 @@ reproduced:
 - [OmniLight3D](../../packages/textscene-core/src/nodes/3d/lights/omnilight3d/comparison.md) — a THREE.PointLight
 - [Path3D](../../packages/textscene-core/src/nodes/paths/path3d/comparison.md) — a selection-gated curve gizmo
 - [PathFollow3D](../../packages/textscene-core/src/nodes/paths/pathfollow3d/comparison.md) — a curve-positioned transform group
+- [RayCast3D](../../packages/textscene-core/src/nodes/physics/3d/raycast3d/comparison.md) — nothing (a transform-only group; the ray is an editor gizmo)
 - [RemoteTransform3D](../../packages/textscene-core/src/nodes/3d/remotetransform3d/comparison.md) — nothing (a transform-only group that drives its target)
 - [RigidBody3D](../../packages/textscene-core/src/nodes/physics/3d/rigidbody3d/comparison.md) — an invisible transform-only group
+- [ShapeCast3D](../../packages/textscene-core/src/nodes/physics/3d/shapecast3d/comparison.md) — nothing (a transform-only group; the swept shape is an editor gizmo)
 - [Skeleton3D](../../packages/textscene-core/src/nodes/3d/skeleton3d/comparison.md) — a transform-only group
 - [SpotLight3D](../../packages/textscene-core/src/nodes/3d/lights/spotlight3d/comparison.md) — a THREE.SpotLight
+- [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md) — nothing itself (a transform-only group that pulls its children in on a hit)
 - [Sprite3D](../../packages/textscene-core/src/nodes/3d/sprite3d/comparison.md) — an unlit textured THREE.Mesh quad
 - [StaticBody3D](../../packages/textscene-core/src/nodes/physics/3d/staticbody3d/comparison.md) — a transform-only group
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md) — the scene's background and environment lighting
@@ -148,9 +151,11 @@ reproduced:
 - [Path2D](../../packages/textscene-core/src/nodes/2d/path2d/comparison.md) — nothing at runtime; a selection-gated curve gizmo
 - [PathFollow2D](../../packages/textscene-core/src/nodes/2d/pathfollow2d/comparison.md) — a transform-only follower with a selection-gated dot
 - [Polygon2D](../../packages/textscene-core/src/nodes/2d/polygon2d/comparison.md) — a filled ShapeGeometry mesh
+- [RayCast2D](../../packages/textscene-core/src/nodes/physics/2d/raycast2d/comparison.md) — nothing (a transform-only group; the ray is an editor gizmo)
 - [RemoteTransform2D](../../packages/textscene-core/src/nodes/2d/remotetransform2d/comparison.md) — nothing itself; it copies its transform onto its remote_path target
 - [RichTextLabel](../../packages/textscene-core/src/nodes/2d/ui/richtextlabel/comparison.md) — a positioned HTML div of styled text
 - [ScrollContainer](../../packages/textscene-core/src/nodes/2d/ui/scrollcontainer/comparison.md) — an overflow-scrolling DOM container
+- [ShapeCast2D](../../packages/textscene-core/src/nodes/physics/2d/shapecast2d/comparison.md) — nothing (a transform-only group; the swept shape is an editor gizmo)
 - [Sprite2D](../../packages/textscene-core/src/nodes/2d/sprite2d/comparison.md) — an unlit textured quad
 - [TextureRect](../../packages/textscene-core/src/nodes/2d/ui/texturerect/comparison.md) — an HTML img element
 - [TileMap](../../packages/textscene-core/src/nodes/2d/tiles/tilemap/comparison.md) — batched textured tile quads

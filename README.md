@@ -23,7 +23,7 @@ primitive nodes.*
 
 ## What it renders
 
-Around 105 node types, each a self-registering vertical slice.
+Around 112 node types, each a self-registering vertical slice.
 
 Coverage is broader than what draws: some node types are parsed and fully
 lint-checked while drawing nothing — either because that is correct (a Timer, a
@@ -36,7 +36,7 @@ attached to a node that is finished.
 | Meshes | Box, Sphere, Cylinder, Plane, Capsule, Torus, Prism, Quad |
 | CSG | CSGBox3D, CSGCylinder3D, CSGSphere3D, CSGTorus3D, CSGMesh3D, CSGPolygon3D, CSGCombiner3D — with real union / intersection / subtraction |
 | Lights & camera | Spot, Directional, Omni, Area (with shadows), Camera3D, Camera2D, WorldEnvironment |
-| Physics | Bodies plus collision-shape gizmos |
+| Physics | Bodies plus collision-shape gizmos; ray/shape casts and spring arms are lint-checked |
 | 2D | Sprite2D, AnimatedSprite2D, Polygon2D, Line2D, TileMap, TileMapLayer, NavigationRegion2D, Marker2D, Path2D, PathFollow2D, ParallaxBackground, ParallaxLayer |
 | 3D scene | Sprite3D, Label3D, Decal, GridMap, NavigationRegion3D, Marker3D, Path3D, PathFollow3D |
 | Viewports | SubViewport, SubViewportContainer — nested viewports, with `ViewportTexture` composited onto 3D surfaces |

@@ -47,7 +47,12 @@ const REGISTER_ALL_RE = /registerAll\(\s*'([^']+)'/g;
 // middle segment, lowercased), so credit that as a declaration here.
 // NavigationRegion is the one irregular family: its rule carries a `-resources`
 // suffix (`valid-navigationregion2d-resources`).
-const FACTORY_RULE_RE = /make(\w+?)LinterRule\(\s*'(2D|3D)'\s*\)/g;
+/**
+ * `makeAreaLinterRule('3D')` → `valid-area3d`, and the two-argument form
+ * `makeCastLinterRule('3D', 'Ray')` → `valid-raycast3d`, where the second
+ * argument selects a family the factory serves and prefixes the name.
+ */
+const FACTORY_RULE_RE = /make(\w+?)LinterRule\(\s*'(2D|3D)'\s*(?:,\s*'(\w+)'\s*)?\)/g;
 
 function extractAll(file: string, re: RegExp): string[] {
   const src = readFileSync(file, 'utf8');
@@ -65,7 +70,8 @@ function extractFactoryRuleNames(file: string): string[] {
   let m: RegExpExecArray | null;
   while ((m = matcher.exec(src)) !== null) {
     const suffix = m[1] === 'NavigationRegion' ? '-resources' : '';
-    out.push(`valid-${m[1]!.toLowerCase()}${m[2]!.toLowerCase()}${suffix}`);
+    const family = (m[3] ?? '').toLowerCase();
+    out.push(`valid-${family}${m[1]!.toLowerCase()}${m[2]!.toLowerCase()}${suffix}`);
   }
   return out;
 }

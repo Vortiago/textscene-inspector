@@ -1,0 +1,19 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(1, 1, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="MyShapeCast3D" type="ShapeCast3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+enabled = true
+shape = SubResource("BoxShape3D_1")
+exclude_parent = true
+target_position = Vector3(0, -1, 0)
+margin = 2.0
+max_results = 32
+collision_mask = 1
+collide_with_areas = false
+collide_with_bodies = true
+debug_shape_custom_color = Color(0, 0, 0, 1)

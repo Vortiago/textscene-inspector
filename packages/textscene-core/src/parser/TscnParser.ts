@@ -35,6 +35,9 @@ import '../nodes/physics/3d/collisionshape3d/index.js';
 // Non-visual nodes — transform-only groups, no own geometry (ADR-0008).
 import '../nodes/physics/3d/characterbody3d/index.js';
 import '../nodes/physics/3d/rigidbody3d/index.js';
+import '../nodes/physics/3d/raycast3d/index.js';
+import '../nodes/physics/3d/shapecast3d/index.js';
+import '../nodes/physics/3d/springarm3d/index.js';
 import '../nodes/3d/skeleton3d/index.js';
 import '../nodes/3d/particles/gpuparticles3d/index.js';
 import '../nodes/3d/marker3d/index.js';
@@ -87,6 +90,8 @@ import '../nodes/2d/animatedsprite2d/index.js';
 import '../nodes/physics/2d/index.js';
 import '../nodes/physics/2d/area2d/index.js';
 import '../nodes/physics/2d/collisionshape2d/index.js';
+import '../nodes/physics/2d/raycast2d/index.js';
+import '../nodes/physics/2d/shapecast2d/index.js';
 import '../nodes/2d/tiles/tilemaplayer/index.js';
 import '../nodes/2d/tiles/tilemap/index.js';
 import '../nodes/2d/navigationregion2d/index.js';
