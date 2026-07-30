@@ -129,8 +129,48 @@ sphere. three.js has no parallax; it maps to `displacementMap`, which moves real
 vertices, so the sphere deforms into a lumpy blob (and the depth scale is in world
 units, a different space than Godot's).
 
+## Texture filter
+<!-- compare: image=unit-material-texture-filter status=done fixture=unit-material-texture-filter.tscn -->
+
+`texture_filter` picks the sampler every texture slot on the material reads through.
+Godot allocates one sampler per mode in `MaterialStorage::samplers_rd_allocate`, where
+`min_filter` is the WITHIN-level filter and `mip_filter` the BETWEEN-level one; three
+fuses both into a single `minFilter`, which is the only non-obvious step:
+
+| Godot | `magFilter` | `minFilter` | mipmaps | anisotropy |
+| --- | --- | --- | --- | --- |
+| 0 NEAREST | Nearest | Nearest | no | 1 |
+| 1 LINEAR | Linear | Linear | no | 1 |
+| 2 NEAREST_WITH_MIPMAPS | Nearest | NearestMipmapLinear | yes | 1 |
+| 3 LINEAR_WITH_MIPMAPS *(default)* | Linear | LinearMipmapLinear | yes | 1 |
+| 4 NEAREST_..._ANISOTROPIC | Nearest | NearestMipmapLinear | yes | 16 |
+| 5 LINEAR_..._ANISOTROPIC | Linear | LinearMipmapLinear | yes | 16 |
+
+Row 3 is also three's own default state, so a material that does not author the property
+renders byte-identically to before it was honoured.
+
+The state is applied **at material build, never at texture load**. It is per-material in
+Godot but lives on the `THREE.Texture` in three, and the loader caches one texture per
+path — so writing it at load would let whichever material built last win for every
+consumer of that image, silently and in load order. A material that diverges gets a clone
+instead (one clone however many reasons it has, shared `source`, so no image bytes are
+copied), and the clone is tagged so its material disposes it.
+
 ## Known limitations
 
+- **texture_mipmap_bias** — Godot applies the project's `lod_bias` to every sampler, so a
+  project that sharpens (Truck Town sets `-0.5`) reads softer here at minification. WebGL2
+  exposes no per-texture LOD bias; the only route is a per-fragment `texture(s, uv, bias)`
+  in a patched shader.
+- **anisotropic_filtering_level** — pinned at 16x rather than read from `project.godot`.
+  Every project in this corpus that states a level states 4 (= 16x), and three clamps to
+  the GPU maximum at upload, so this is a ceiling rather than an error.
+- **texture_filter rows 4** — three skips anisotropy entirely when `magFilter` is
+  `NearestFilter`, so a nearest-sampled texture takes the property but not the sampling.
+  Godot does apply it. One corpus material sits there, and it is pixel art.
+- **texture_repeat** — not parsed. Godot defaults it on (textures repeat); three's default
+  is clamp-to-edge, and a texture only becomes `RepeatWrapping` here when a `uv1_scale`
+  makes it necessary.
 - **diffuse_mode** — Godot defaults to Burley; three's material is always Lambert. They agree near normal incidence; a rough sphere reads ~5/255 dark at grazing silhouette.
 - **metallic_specular** — three hard-wires dielectric F0 at 0.04 (Godot's 0.5 default). Authoring it away from 0.5 has no effect.
 - **uv1 V-anchoring** — Godot measures V from the image top, three from the bottom, so a non-integer `uv1_scale.y` or non-zero `uv1_offset.y` shifts V differently. Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.

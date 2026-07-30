@@ -101,10 +101,25 @@ darkening tracked their boxes. The ours-only specular highlight previously noted
 the trailer's top edge went with them — it was the blob's own overlay material, not a
 highlight.
 
-**What still differs: the livery lettering.** Godot's "GODOT" wordmark on the trailer
-side reads bolder and bluer; ours is thinner, so pixels Godot puts at `rgb(63, 115, 165)`
-land near white here. It is the largest residual on this frame and it is sub-pixel
-sampling of the livery texture, unrelated to the decal work above.
+**What still differs: the livery lettering, now about half closed.** Godot's "GODOT"
+wordmark on the trailer side reads bolder and bluer than ours. The cause was
+`texture_filter`, which we did not parse: `vehicles/truck_trailer.tres` — the **material**,
+not the same-named ArrayMesh under `meshes/` — asks for `texture_filter = 5`
+(LINEAR + mipmaps + anisotropic), and `truck_town/project.godot` asks for 16x anisotropy,
+while every texture kept three's `anisotropy = 1`. Honouring it recovers roughly half the
+deficit over the wordmark's bounding box:
+
+| measure | Godot | before | after |
+| --- | --- | --- | --- |
+| blue stroke pixels | 1376 | 800 | 1074 |
+| `b − r` saturated bin (100–120) | 1243 | 321 | 775 |
+| mean max-channel delta vs Godot | — | 11.35 | 8.60 |
+
+The rest is `texture_mipmap_bias = -0.5` (`project.godot`), which samples half a mip level
+sharper than the LOD would pick. WebGL2 exposes no per-texture LOD bias — desktop GL's
+`GL_TEXTURE_LOD_BIAS` has no WebGL counterpart, and the only route is a per-fragment
+`texture(sampler, uv, bias)` in a patched shader. Left unimplemented deliberately; the
+frame-wide delta is unaffected either way, since this is confined to one small region.
 
 ## Tow truck
 <!-- compare: image=complex-truck-town-tow status=limitation fixture=demos/3d/truck_town/vehicles/tow_truck.tscn -->
