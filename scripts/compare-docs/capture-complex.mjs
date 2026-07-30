@@ -147,6 +147,10 @@ async function captureGodot(scenes) {
       mode: c.mode,
       frame: c.frame ?? false,
       sceneCamera: c.sceneCamera ?? false,
+      // The same node the previewer looks through, so both sides are pointed at
+      // one camera by name. A scene with several Camera3Ds otherwise leaves the
+      // choice to tree order on this side and to `oursCamera` on the other.
+      sceneCameraPath: c.oursCamera ?? null,
     });
     console.log('ok');
   }

@@ -8,7 +8,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { hasCollisionShapeChild } from './hasCollisionShapeChild.js';
+import { hasDescendantOfType } from './hasDescendantOfType.js';
 import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
 import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
 import type { PhysicsDim } from './dim.js';
@@ -41,7 +41,7 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
     const rawProps = node.properties as unknown as Record<string, string>;
 
     // Warning: CharacterBody without collision shape is useless
-    if (!hasCollisionShapeChild(node, shapeType)) {
+    if (!hasDescendantOfType(node, shapeType)) {
       diagnostics.push({
         severity: 'warning',
         message: `${type} '${node.name}' has no ${shapeType} children. Character bodies need collision shapes to function in physics.`,

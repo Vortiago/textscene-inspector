@@ -1238,6 +1238,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Physics"
   },
   {
+    "name": "Physics Vehicle",
+    "file": "unit-physics-vehicle.tscn",
+    "category": "Unit - Physics"
+  },
+  {
     "name": "Csg Boolean Ops",
     "file": "unit-csg-boolean-ops.tscn",
     "category": "Unit - CSG Primitives"

@@ -70,6 +70,8 @@ import '../nodes/physics/3d/characterbody3d/index.linter.js';
 import '../nodes/physics/3d/collisionshape3d/index.linter.js';
 import '../nodes/physics/3d/rigidbody3d/index.linter.js';
 import '../nodes/physics/3d/staticbody3d/index.linter.js';
+import '../nodes/physics/3d/vehiclebody3d/index.linter.js';
+import '../nodes/physics/3d/vehiclewheel3d/index.linter.js';
 import '../nodes/3d/marker3d/index.linter.js';
 import '../nodes/3d/remotetransform3d/index.linter.js';
 import '../nodes/3d/navigationagent3d/index.linter.js';

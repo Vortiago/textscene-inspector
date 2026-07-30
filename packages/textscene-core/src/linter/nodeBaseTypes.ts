@@ -4,10 +4,10 @@
  * Node2D / Control base validator sets apply to every subclass automatically,
  * instead of each subclass silently escaping validation.
  *
- * Five levels carry validators today — `Node3D`, `Light3D`, `Node2D`,
- * `Control`, and the terminal `Node` — so leaves map straight to their nearest
- * validator-bearing ancestor rather than modelling every intermediate Godot
- * class. Every chain terminates at `Node` (which has no entry). Pure data:
+ * Six levels carry validators today — `Node3D`, `Light3D`, `RigidBody3D`,
+ * `Node2D`, `Control`, and the terminal `Node` — so leaves map straight to their
+ * nearest validator-bearing ancestor rather than modelling every intermediate
+ * Godot class. Every chain terminates at `Node` (which has no entry). Pure data:
  * React/THREE-free, so it stays on the linter side of the bundle boundary.
  */
 
@@ -48,6 +48,7 @@ const NODE3D_LEAVES = [
   'CollisionShape3D',
   'RemoteTransform3D',
   'NavigationObstacle3D',
+  'VehicleWheel3D',
 ] as const;
 
 /** Base for every canvas (2D) node — Node2D carries the transform/skew set. */
@@ -117,6 +118,11 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   ...Object.fromEntries(CONTROL_LEAVES.map((t) => [t, 'Control'])),
   // Abstract/non-authorable intermediate classes.
   Light3D: 'Node3D',
+  // VehicleBody3D really is a RigidBody3D subclass, and scenes author the
+  // inherited mass / physics_material_override / center_of_mass_mode on it.
+  // Chaining through RigidBody3D (itself a NODE3D_LEAF) inherits that whole
+  // validator set instead of duplicating it here.
+  VehicleBody3D: 'RigidBody3D',
   // SubViewport < Viewport < Node. `Viewport` is not modelled as its own link
   // because SubViewport is the only authorable subclass we support (`Window` is
   // not), so its Viewport-level properties are validated on the leaf itself.

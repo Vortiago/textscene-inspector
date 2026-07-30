@@ -3115,7 +3115,7 @@
       "name": "VehicleBody3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "RigidBody3D",
         "PhysicsBody3D",
@@ -3131,7 +3131,7 @@
       "name": "VehicleWheel3D",
       "category": "3D",
       "group": "Physics — vehicles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",

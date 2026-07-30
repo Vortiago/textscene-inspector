@@ -69,14 +69,14 @@
     "url": "https://github.com/Vortiago/textscene-inspector/issues"
   },
   "devDependencies": {
-    "@eslint/js": "^9.18.0",
+    "@eslint/js": "^10.0.1",
     "@types/node": "catalog:",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
     "@vitest/coverage-v8": "^4.1",
     "@vitest/ui": "catalog:",
     "@vscode/test-electron": "catalog:",
-    "eslint": "^9.18.0",
+    "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "catalog:",
     "fontkit": "catalog:",
     "globals": "^17.8.0",

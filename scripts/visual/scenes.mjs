@@ -261,6 +261,11 @@ export const GOLDEN_SCENES = [
   { name: 'marker3d-selected', file: 'unit-marker-3d.tscn', select: 'Root/MyMarker3D', maxDiffPct: 0.5 },
   { name: 'path3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath', maxDiffPct: 0.5 },
   { name: 'pathfollow3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath/Follower', maxDiffPct: 0.5 },
+  // The VehicleWheel3D gizmo — radius circle, spring coil, travel line, axle
+  // ticks, forward arrow. Thin AA lines, hence the same tolerance as the other
+  // gizmo goldens. No unselected companion: with the gizmo hidden this scene
+  // renders like any other transform-only body fixture.
+  { name: 'vehiclewheel3d-selected', file: 'unit-physics-vehicle.tscn', select: 'Root/Vehicle/Wheel1', maxDiffPct: 0.5 },
 
   // --- Lights / Camera3D / AudioStreamPlayer3D gizmo E2E coverage ---
   // Unselected: pins the non-gizmo render (ground + shading only — no helper).

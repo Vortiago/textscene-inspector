@@ -14,7 +14,10 @@ validatorRegistry.registerAll('Decal', {
   albedo_mix: v.float('albedo_mix', { min: 0, max: 1 }),
   emission_energy: v.nonNegativeFloat('emission_energy'),
   normal_fade: v.float('normal_fade', { min: 0, max: 1 }),
-  upper_fade: v.float('upper_fade', { min: 0, max: 1 }),
-  lower_fade: v.float('lower_fade', { min: 0, max: 1 }),
+  // No upper bound: unlike albedo_mix and normal_fade, these two are curve
+  // exponents rather than ratios — Godot documents only "positive values are
+  // valid (negative values will be clamped to 0.0)".
+  upper_fade: v.float('upper_fade', { min: 0 }),
+  lower_fade: v.float('lower_fade', { min: 0 }),
   cull_mask: layerBitmask('cull_mask'),
 });

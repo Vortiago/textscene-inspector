@@ -30,7 +30,7 @@ import {
   FIT_ON_OPEN_2D_STORAGE_KEY,
   VIEWPORT,
 } from '../visual/previewServer.mjs';
-import {
+import { bootstrapScript,
   EDITOR_CAMERA_DIRECTION,
   EDITOR_CAMERA_DISTANCE,
   EDITOR_FOV,
@@ -408,4 +408,55 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     expect(Math.max(...lit.ground)).toBeGreaterThan(3 * Math.max(...unlit.ground));
     expect(Math.max(...unlit.ground)).toBeLessThan(80);
   }, 360_000);
+});
+
+/**
+ * The harness has two jobs and one flag that selects between them. The editor
+ * preview never runs game logic, so the default pauses the tree — that is what
+ * keeps a RigidBody where it was authored and stops VehicleBody3D repositioning
+ * its wheels. `--no-previews` asks for true RUNTIME semantics instead, and a
+ * runtime that never steps physics is not one: a body is supposed to fall there.
+ */
+describe('physics pause follows the previews flag', () => {
+  const script = (previews) =>
+    bootstrapScript({
+      scenePath: 'res://x.tscn',
+      previews,
+      camera: null,
+      lookAt: null,
+      frame: false,
+      sceneCamera: false,
+      sceneCameraPath: null,
+      mode: 'auto',
+      out: '/tmp/o.png',
+      boundsOut: null,
+      modeOut: '/tmp/m.txt',
+      fov: 70,
+      fovExplicit: false,
+      canvas2DSize: { width: 640, height: 360 },
+    });
+
+  it('pauses under the editor previews, so the authored pose is what renders', () => {
+    expect(script(true)).toContain('get_tree().paused = true');
+    expect(script(true)).toContain('const PREVIEWS := true');
+  });
+
+  it('freezes the non-physics drivers only under the previews too', () => {
+    // Both halves of "show the authored pose" hang off one flag, so an editor
+    // render is wholly frozen and a runtime render is wholly live.
+    const editor = script(true).split('\n');
+    const freeze = editor.findIndex((l) => l.trim() === '_freeze_game_logic(target)');
+    expect(freeze).toBeGreaterThan(-1);
+    expect(editor[freeze - 1].trim()).toBe('if PREVIEWS:');
+  });
+
+  it('still emits the pause behind the PREVIEWS gate rather than hard-coding it', () => {
+    // The gate is what makes --no-previews a runtime render; a copy of the line
+    // outside the `if` would silently pause there too.
+    const lines = script(false).split('\n');
+    const pauseLine = lines.findIndex((l) => l.includes('get_tree().paused = true'));
+    expect(pauseLine).toBeGreaterThan(-1);
+    expect(lines[pauseLine - 1].trim()).toBe('if PREVIEWS:');
+    expect(script(false)).toContain('const PREVIEWS := false');
+  });
 });

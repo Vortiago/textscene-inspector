@@ -9,7 +9,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { checkResourceExists } from '../resourceChecker.js';
-import { hasCollisionShapeChild } from './hasCollisionShapeChild.js';
+import { hasDescendantOfType } from './hasDescendantOfType.js';
 import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
 import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
 import type { PhysicsDim } from './dim.js';
@@ -75,7 +75,7 @@ export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
     }
 
     // Warning: StaticBody without collision shape is useless
-    if (!hasCollisionShapeChild(node, shapeType)) {
+    if (!hasDescendantOfType(node, shapeType)) {
       diagnostics.push({
         severity: 'warning',
         message: `${type} '${node.name}' has no ${shapeType} children. Static bodies need collision shapes to function in physics.`,
