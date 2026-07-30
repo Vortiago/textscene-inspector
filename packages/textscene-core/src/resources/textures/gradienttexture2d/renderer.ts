@@ -34,7 +34,7 @@ export function gradientOffsetAt(tex: GradientTexture2D, x: number, y: number): 
   const dx = fillTo.x - fillFrom.x;
   const dy = fillTo.y - fillFrom.y;
 
-  let ofs = 0;
+  let ofs: number;
   if (fill === GradientFill.Linear) {
     // Godot projects onto the UNCAPPED segment: ofs is the signed projection
     // parameter along (fill_to - fill_from).

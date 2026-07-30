@@ -256,7 +256,7 @@ async function attachLinks(entries, previousByName) {
   const unresolved = [];
   const carried = [];
   const linked = await mapPool(entries, 8, async (e) => {
-    let source = null;
+    let source;
     try {
       source = await resolve(e.name, e.chain ?? []);
     } catch {
