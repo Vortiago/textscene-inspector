@@ -54,6 +54,7 @@ Strict parsing format-checks these `VehicleBody3D` properties, plus 23 inherited
 | `valid-vehiclebody3d` | `valid-vehiclebody3d-resources` | error |
 |  | `vehiclebody3d-needs-wheels` | warning |
 |  | `vehiclebody3d-needs-collision-shape` | warning |
+|  | `vehiclebody3d-scaled-transform` | warning |
 |  | `vehiclebody3d-zero-collision-layer` | warning |
 |  | `vehiclebody3d-zero-collision-mask` | warning |
 <!-- lint:end -->

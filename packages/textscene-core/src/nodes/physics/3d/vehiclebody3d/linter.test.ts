@@ -110,13 +110,23 @@ describe('VehicleBody3D Linter', () => {
       );
     });
 
-    it('accepts a body whose wheels are nested under a container', () => {
-      const content = scene(
-        node('VehicleBody3D', {}, { name: 'Vehicle' }),
-        node('Node3D', {}, { name: 'Axle', parent: '.' }),
-        node('VehicleWheel3D', {}, { name: 'Wheel1', parent: 'Axle' }),
-        collisionShape3d
+    it('still warns when every wheel is nested under a container — Godot attaches only direct children', () => {
+      // VehicleWheel3D registers itself via cast_to<VehicleBody3D>(get_parent()),
+      // so a wheel under an intermediate node is never attached and the vehicle
+      // has no working wheels at all.
+      expectDiagnostic(
+        scene(
+          node('VehicleBody3D', {}, { name: 'Vehicle' }),
+          node('Node3D', {}, { name: 'Axle', parent: '.' }),
+          node('VehicleWheel3D', {}, { name: 'Wheel1', parent: 'Axle' }),
+          collisionShape3d
+        ),
+        { ruleName: 'vehiclebody3d-needs-wheels', severity: 'warning' }
       );
+    });
+
+    it('accepts a body with a direct wheel child', () => {
+      const content = scene(node('VehicleBody3D', {}, { name: 'Vehicle' }), wheel, collisionShape3d);
       expectNoDiagnostic(content, { ruleName: 'vehiclebody3d-needs-wheels' });
     });
 
@@ -125,6 +135,51 @@ describe('VehicleBody3D Linter', () => {
         ruleName: 'vehiclebody3d-needs-collision-shape',
         severity: 'warning',
       });
+    });
+  });
+
+  describe('Semantic Validation (Scaled Transform)', () => {
+    it('warns on a scaled transform — the physics engine overrides it at runtime', () => {
+      expectDiagnostic(
+        scene(
+          node(
+            'VehicleBody3D',
+            { transform: 'Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)' },
+            { name: 'Vehicle' }
+          ),
+          wheel,
+          collisionShape3d
+        ),
+        { ruleName: 'vehiclebody3d-scaled-transform', severity: 'warning' }
+      );
+    });
+
+    it('stays quiet on a rotated but unscaled transform (edge)', () => {
+      // A pure rotation keeps every basis column at unit length; comparing the
+      // raw matrix entries instead of the column lengths would false-positive here.
+      const content = scene(
+        node(
+          'VehicleBody3D',
+          { transform: 'Transform3D(0.866025, 0, -0.5, 0, 1, 0, 0.5, 0, 0.866025, 0, 1, 0)' },
+          { name: 'Vehicle' }
+        ),
+        wheel,
+        collisionShape3d
+      );
+      expectNoDiagnostic(content, { ruleName: 'vehiclebody3d-scaled-transform' });
+    });
+
+    it('stays quiet on an unscaled translated transform', () => {
+      const content = scene(
+        node(
+          'VehicleBody3D',
+          { transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)' },
+          { name: 'Vehicle' }
+        ),
+        wheel,
+        collisionShape3d
+      );
+      expectNoDiagnostic(content, { ruleName: 'vehiclebody3d-scaled-transform' });
     });
   });
 
