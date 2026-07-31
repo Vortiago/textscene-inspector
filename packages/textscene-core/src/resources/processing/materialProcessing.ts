@@ -5,45 +5,10 @@
 
 import * as THREE from 'three';
 import { warn } from '../../logger';
-import type { ParsedTresFile } from '../../parser/tresParser';
 import { BUILDABLE_MATERIAL_TYPES } from '../materials/buildableMaterialTypes';
 
 /** Function type for loading a texture by its resolved res:// path */
 export type TextureLoaderFn = (path: string) => Promise<THREE.Texture | null>;
-
-/**
- * Last parse, memoised by string IDENTITY.
- *
- * One `.tres` that carries its own surface materials is built once per
- * **Sub-resource path** into it, and every one of those calls is handed the same
- * `content` instance by `createResourceProcessor`'s arrival loop. Re-parsing per
- * address is O(file) each time, which on the corpus's largest mesh means four
- * ~600 ms parses of one 5.4 MB file where one would do.
- *
- * A single slot is enough because those calls are consecutive, and it is keyed by
- * `===` rather than by content equality so it can never mistake two files with
- * equal text. The cost is that the most recent material file's text stays
- * reachable until the next one replaces it.
- */
-let lastParsed: { content: string; parsed: ParsedTresFile } | null = null;
-
-function parseMemoised(content: string, parse: (c: string) => ParsedTresFile): ParsedTresFile {
-  if (lastParsed?.content === content) return lastParsed.parsed;
-  const parsed = parse(content);
-  lastParsed = { content, parsed };
-  return parsed;
-}
-
-/**
- * Release the memo. Without this the slot is only ever overwritten by the NEXT
- * material file, so a teardown that drops every cache would still leave the last
- * one's whole source text — megabytes, for a mesh that carries its own
- * materials — reachable for the page's lifetime. Called from the loader's clear
- * sequence, which exists to make that teardown complete.
- */
-export function clearMaterialParseCache(): void {
-  lastParsed = null;
-}
 
 /**
  * Check if a path is a material file (.tres).
@@ -69,11 +34,11 @@ export async function createMaterialFromContent(
   loadTexture?: TextureLoaderFn,
   subResourceId?: string
 ): Promise<THREE.Material> {
-  const { parseTresFile } = await import('../../parser/tresParser');
+  const { parseTresFile } = await import('../../parser/parsedResource');
   const { resolveExtResourcePath, findSubResource } = await import('../SubResourceResolver');
 
   // parseTresFile throws when [gd_resource] header is absent or typeless.
-  const parsed = parseMemoised(content, parseTresFile);
+  const parsed = parseTresFile(content);
   const { extResources } = parsed;
 
   let resourceType: string;

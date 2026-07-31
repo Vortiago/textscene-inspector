@@ -14,7 +14,7 @@
 
 import { useMemo } from 'react';
 import { warn } from '../logger';
-import type { ParsedTresFile } from '../parser/tresParser';
+import type { ParsedResource } from '../parser/parsedResource';
 import { parseResourceReference, resolveExtResourcePath } from '../resources/SubResourceResolver';
 import { tileSetFromScene, tileSetFromTres } from '../resources/tileset/resolveTileSet';
 import type { TileSetModel } from '../resources/tileset/tileSetModel';
@@ -35,7 +35,7 @@ export function useTileSetModel(tileSetRef: string | undefined): TileSetModelRes
   // Only text resources can ever parse; requesting e.g. a binary `.res`
   // TileSet would park the load in-flight forever (no processor handles it).
   const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
-  const tresResult = useResource<ParsedTresFile>(tresPath ?? '', 'Resource');
+  const tresResult = useResource<ParsedResource>(tresPath ?? '', 'Resource');
 
   return useMemo((): TileSetModelResult => {
     if (!tileSetRef) return { model: null, status: 'unavailable' };

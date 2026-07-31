@@ -43,7 +43,7 @@ import { createTresResourceProcessor } from './processors/createTresResourceProc
 import { createArrayMeshProcessor, type ArrayMeshResource } from './processors/createArrayMeshProcessor';
 import { runClearCachesSequence } from './clearCachesSequence';
 import { resourceFilePath } from './subResourcePath';
-import type { ParsedTresFile } from '../parser/tresParser';
+import type { ParsedResource } from '../parser/parsedResource';
 import type { ResourceProcessor } from './createResourceProcessor';
 import * as logger from '../logger';
 
@@ -71,8 +71,8 @@ export class ResourceLoader {
   readonly materials: ResourceProcessor<THREE.Material>;
   readonly glbMeshes: ResourceProcessor<THREE.Object3D>;
   readonly scenes: ResourceProcessor<TscnScene>;
-  /** Generic .tres files (currently TileSet) parsed as ParsedTresFile. */
-  readonly resources: ResourceProcessor<ParsedTresFile>;
+  /** Generic .tres files (currently TileSet) parsed as ParsedResource. */
+  readonly resources: ResourceProcessor<ParsedResource>;
   /** ArrayMesh .tres decoded into geometry + per-surface material paths. */
   readonly arrayMeshes: ResourceProcessor<ArrayMeshResource>;
 

@@ -7,7 +7,7 @@
  */
 
 import { warn } from '../../logger';
-import type { ParsedTresFile } from '../../parser/tresParser';
+import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
 import { TILE_SHAPE_HEXAGON, TILE_SHAPE_SQUARE } from './tileSetModel';
@@ -84,7 +84,7 @@ function intEnumOr(value: unknown, fallback: number, label: string): number {
 }
 
 /** Adapter: a TileSet loaded from an external .tres file. Null = not a TileSet. */
-export function tileSetFromTres(parsed: ParsedTresFile): TileSetModel | null {
+export function tileSetFromTres(parsed: ParsedResource): TileSetModel | null {
   if (parsed.resourceType !== 'TileSet') return null;
   return resolveTileSetModel({
     properties: parsed.properties,

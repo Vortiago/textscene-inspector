@@ -16,7 +16,7 @@
  */
 
 import { useMemo } from 'react';
-import type { ParsedTresFile } from '../../../parser/tresParser';
+import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import {
@@ -53,7 +53,7 @@ export function useSpriteFrames(spriteFramesRef: string | undefined): SpriteFram
   // Only text resources can ever parse; a binary `.res` SpriteFrames would park
   // the load in-flight forever (no processor handles it).
   const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
-  const tresResult = useResource<ParsedTresFile>(tresPath ?? '', 'Resource');
+  const tresResult = useResource<ParsedResource>(tresPath ?? '', 'Resource');
 
   return useMemo((): SpriteFramesResult => {
     if (!spriteFramesRef) return EMPTY;

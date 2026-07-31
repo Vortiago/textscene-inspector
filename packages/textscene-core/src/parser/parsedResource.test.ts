@@ -4,7 +4,7 @@
  * value strings.
  */
 import { describe, it, expect } from 'vitest';
-import { parseTresFile } from './tresParser';
+import { parseTresFile } from './parsedResource';
 
 const TILESET_TRES = `[gd_resource type="TileSet" load_steps=3 format=3 uid="uid://x"]
 

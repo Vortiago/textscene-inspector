@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types';
-import type { ParsedTresFile } from '../../../parser/tresParser';
+import type { ParsedResource } from '../../../parser/parsedResource';
 import { parseNavigationRegion2D } from './parser';
 import { NavigationRegion2D } from './Component';
 import { NAV_OVERLAY_COLOR } from '../../../r3f/navigationOverlay';
@@ -22,7 +22,7 @@ class NoopProvider implements ResourceProvider {
   }
 }
 
-const NAVPOLY_TRES: ParsedTresFile = {
+const NAVPOLY_TRES: ParsedResource = {
   resourceType: 'NavigationPolygon',
   properties: {
     vertices: 'PackedVector2Array(0, 0, 64, 0, 64, 64, 0, 64)',
@@ -36,7 +36,7 @@ const EXT: TscnExternalResource[] = [
   { id: '2_poly', path: 'res://nav_polygon.tres', type: 'NavigationPolygon' },
 ];
 
-function makeLoaderWith(path: string, tres: ParsedTresFile): ResourceLoader {
+function makeLoaderWith(path: string, tres: ParsedResource): ResourceLoader {
   const provider = new NoopProvider();
   const loader = new ResourceLoader(new FileEventBus(provider));
   loader.setProvider(provider);
@@ -44,7 +44,7 @@ function makeLoaderWith(path: string, tres: ParsedTresFile): ResourceLoader {
   const origReq = loader.resources.request.bind(loader.resources);
   loader.resources.getCached = (p: string) => (p === path ? tres : origGet(p));
   loader.resources.request = (p: string) => {
-    if (p === path) loader.eventBus.emit<ParsedTresFile>('resource', 'loaded', p, tres);
+    if (p === path) loader.eventBus.emit<ParsedResource>('resource', 'loaded', p, tres);
     else origReq(p);
   };
   return loader;

@@ -4,7 +4,7 @@
  * to res:// paths against the file's own ext_resources.
  */
 import { describe, it, expect } from 'vitest';
-import { parseTresFile } from '../../parser/tresParser';
+import { parseTresFile } from '../../parser/parsedResource';
 import { meshLibraryFromTres } from './resolveMeshLibrary';
 
 const TILES_TRES = `[gd_resource type="MeshLibrary" format=3 uid="uid://tiles"]

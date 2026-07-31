@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../../../parser/TscnParser';
-import { parseTresFile } from '../../../../parser/tresParser';
+import { parseTresFile } from '../../../../parser/parsedResource';
 import { tileSetFromTres } from '../../../../resources/tileset/resolveTileSet';
 import { mapToLocalPx } from '../../../../resources/tileset/tilePlacement';
 import { TileMapLayer } from './Component';

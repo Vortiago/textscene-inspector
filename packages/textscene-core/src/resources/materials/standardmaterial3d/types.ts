@@ -4,12 +4,11 @@
 
 import type * as THREE from 'three';
 
-export interface Color {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
+// One Color declaration repo-wide; re-exported here because this slice's
+// consumers (sky, environment, preview lighting) historically imported it
+// from this module.
+export type { Color } from '../../../utils/colorParser';
+import type { Color } from '../../../utils/colorParser';
 
 export interface StandardMaterial3DProperties {
   albedo_color?: Color;

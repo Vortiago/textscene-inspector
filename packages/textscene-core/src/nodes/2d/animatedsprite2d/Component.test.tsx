@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseAnimatedSprite2D } from './parser';
 import { AnimatedSprite2D } from './Component';
-import { parseTresFile } from '../../../parser/tresParser';
+import { parseTresFile } from '../../../parser/parsedResource';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';

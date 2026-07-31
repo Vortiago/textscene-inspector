@@ -26,7 +26,7 @@
  */
 
 import { warn } from '../../logger.js';
-import { parseTresFile, type ParsedTresFile } from '../../parser/tresParser.js';
+import { parseTresFile, type ParsedResource } from '../../parser/parsedResource.js';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types.js';
 import { BUILDABLE_MATERIAL_TYPES } from '../materials/buildableMaterialTypes.js';
 import { findSubResource, parseResourceReference } from '../SubResourceResolver.js';
@@ -445,7 +445,7 @@ function decodeIndices(
  */
 function readMaterialPath(
   block: string,
-  parsed: ParsedTresFile,
+  parsed: ParsedResource,
   extById: ReadonlyMap<string, string>,
   selfPath: string
 ): string | undefined {
@@ -473,7 +473,7 @@ function readMaterialRef(block: string): string | undefined {
  * said about why. The material path fails loudly for the same class of error.
  */
 function readSurfacesRaw(
-  parsed: ParsedTresFile,
+  parsed: ParsedResource,
   filePath: string,
   subResourceId: string | undefined
 ): string | undefined {

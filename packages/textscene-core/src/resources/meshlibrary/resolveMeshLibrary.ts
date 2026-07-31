@@ -11,7 +11,7 @@
  */
 
 import { warn } from '../../logger';
-import type { ParsedTresFile } from '../../parser/tresParser';
+import type { ParsedResource } from '../../parser/parsedResource';
 import { resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
 import { unquoteString } from '../../parser/utils';
@@ -25,7 +25,7 @@ const ITEM_KEY_RE = /^item\/(\d+)\/(name|mesh|mesh_transform)$/;
  *   relative to that file, so this is an input rather than a convenience.
  */
 export function meshLibraryFromTres(
-  tres: ParsedTresFile,
+  tres: ParsedResource,
   selfPath: string
 ): MeshLibraryModel {
   const extPathById = new Map(tres.extResources.map((r) => [r.id, r.path]));

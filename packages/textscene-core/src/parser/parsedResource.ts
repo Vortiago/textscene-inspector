@@ -11,7 +11,7 @@
 import { TscnParserCore, type ParseObserver } from './TscnParserCore.js';
 import type { TscnExternalResource, TscnInternalResource } from './types.js';
 
-export interface ParsedTresFile {
+export interface ParsedResource {
   /** The [gd_resource type="…"] header type. */
   resourceType: string;
   /** The [resource] section's properties, raw value strings. */
@@ -21,7 +21,7 @@ export interface ParsedTresFile {
 }
 
 /** Throws when the content has no [gd_resource] header (not a .tres file). */
-export function parseTresFile(content: string): ParsedTresFile {
+export function parseTresFile(content: string): ParsedResource {
   let resourceType: string | null = null;
   let inResourceSection = false;
   const properties: Record<string, string> = {};

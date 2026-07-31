@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as logger from '../../logger';
 import { tileSetFromScene, tileSetFromTres } from './resolveTileSet';
-import { parseTresFile } from '../../parser/tresParser';
+import { parseTresFile } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
