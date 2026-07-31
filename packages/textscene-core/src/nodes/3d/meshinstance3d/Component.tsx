@@ -48,6 +48,7 @@ import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlo
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import { applyTextureState, type TextureState } from '../../../resources/textures/applyTextureState';
+import { GODOT_TEXTURE_FILTER_DEFAULT } from '../../../resources/textures/godotTextureFilter';
 import { repackAnisotropyFlowmap } from './repackFlowmap';
 import { triplanarPlaneScale } from './triplanarScale';
 
@@ -232,7 +233,15 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     // shipped scene sets uv1_offset, so impact is currently zero.
     return {
       uv: { scale, offset: materialScalars.uv1Offset },
-      filter: materialScalars.textureFilter,
+      // Only an AUTHORED filter is a divergence. The scalars parser fills in
+      // Godot's default, and passing that would clone every texture whose
+      // sampler state merely differs from it — a procedural GradientTexture2D
+      // has no mipmaps, so it would clone and re-upload per material per slot
+      // for a filter no material asked for.
+      filter:
+        materialScalars.textureFilter === GODOT_TEXTURE_FILTER_DEFAULT
+          ? undefined
+          : materialScalars.textureFilter,
     };
   }, [materialScalars, meshResource]);
 

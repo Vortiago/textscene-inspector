@@ -35,14 +35,6 @@
 
 import * as THREE from 'three';
 
-/**
- * `BaseMaterial3D` constructs with `flags[FLAG_USE_TEXTURE_REPEAT] = true`, which
- * the shader turns into `repeat_enable`. three's `Texture` defaults to
- * clamp-to-edge, so this is a real divergence for any surface whose UVs leave
- * 0..1 — the difference between a tiled terrain and one smeared edge texel.
- */
-export const GODOT_TEXTURE_REPEAT_DEFAULT = true;
-
 /** `BaseMaterial3D::texture_filter = TEXTURE_FILTER_LINEAR_WITH_MIPMAPS`. */
 export const GODOT_TEXTURE_FILTER_DEFAULT = 3;
 

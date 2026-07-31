@@ -16,37 +16,16 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import * as THREE from 'three';
 import { matchGlbTarget } from './matchGlbTarget';
 import { flattenGlbObjects } from './glbHierarchy';
+import { buildTestGlbGraph } from './testGraph';
 import * as logger from '../../../logger';
-
-/** Build a THREE graph from `parent/child` path strings. */
-function graph(paths: string[]): THREE.Object3D {
-  const root = new THREE.Object3D();
-  root.name = 'Scene';
-  for (const path of paths) {
-    let node = root;
-    for (const segment of path.split('/')) {
-      let next = node.children.find((c) => c.name === segment);
-      if (!next) {
-        next = new THREE.Object3D();
-        next.name = segment;
-        node.add(next);
-      }
-      node = next;
-    }
-  }
-  return root;
-}
-
-const entriesOf = (root: THREE.Object3D) => flattenGlbObjects(root);
 
 describe('matchGlbTarget', () => {
   it('matches an exact relPath', () => {
     // Truck Town's terrain: `TownModel/Terrain/GrassMesh` lines up 1:1.
-    const root = graph(['Terrain/GrassMesh', 'Terrain/RoadMesh']);
-    const match = matchGlbTarget(entriesOf(root), 'Terrain/GrassMesh');
+    const root = buildTestGlbGraph(['Terrain/GrassMesh', 'Terrain/RoadMesh']);
+    const match = matchGlbTarget(flattenGlbObjects(root), 'Terrain/GrassMesh');
 
     expect(match?.object.name).toBe('GrassMesh');
     expect(match?.relPath).toBe('Terrain/GrassMesh');
@@ -54,8 +33,8 @@ describe('matchGlbTarget', () => {
 
   it('matches across a level Godot synthesised but three did not', () => {
     // The player: three has Skeleton/Robot, Godot says Skeleton/Skeleton3D/Robot.
-    const root = graph(['Skeleton/Robot', 'Skeleton/MASTER/hip']);
-    const match = matchGlbTarget(entriesOf(root), 'Skeleton/Skeleton3D/Robot');
+    const root = buildTestGlbGraph(['Skeleton/Robot', 'Skeleton/MASTER/hip']);
+    const match = matchGlbTarget(flattenGlbObjects(root), 'Skeleton/Skeleton3D/Robot');
 
     expect(match?.relPath).toBe('Skeleton/Robot');
   });
@@ -63,39 +42,39 @@ describe('matchGlbTarget', () => {
   it('aliases to the nearest matching ancestor when the node itself has no counterpart', () => {
     // The enemy/ragdoll: `Skeleton3D` exists ONLY in Godot's tree, so an
     // override naming it can only mean the node three does have above it.
-    const root = graph(['root/root_001/Body']);
-    const match = matchGlbTarget(entriesOf(root), 'root/root_001/Skeleton3D');
+    const root = buildTestGlbGraph(['root/root_001/Body']);
+    const match = matchGlbTarget(flattenGlbObjects(root), 'root/root_001/Skeleton3D');
 
     expect(match?.relPath).toBe('root/root_001');
   });
 
   it('prefers the deepest candidate when several could match', () => {
     // Two objects named `Body`; the one whose path shares more with Godot's wins.
-    const root = graph(['Body', 'Rig/Armature/Body']);
-    const match = matchGlbTarget(entriesOf(root), 'Rig/Armature/Skeleton3D/Body');
+    const root = buildTestGlbGraph(['Body', 'Rig/Armature/Body']);
+    const match = matchGlbTarget(flattenGlbObjects(root), 'Rig/Armature/Skeleton3D/Body');
 
     expect(match?.relPath).toBe('Rig/Armature/Body');
   });
 
   it('does not match a same-named node on an unrelated branch', () => {
     // A bare-name matcher would happily return this one. The path has to agree.
-    const root = graph(['Weapons/Body']);
-    const match = matchGlbTarget(entriesOf(root), 'Character/Torso/Body');
+    const root = buildTestGlbGraph(['Weapons/Body']);
+    const match = matchGlbTarget(flattenGlbObjects(root), 'Character/Torso/Body');
 
     expect(match).toBeNull();
   });
 
   it('returns null and warns when nothing matches at all', () => {
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-    const root = graph(['Terrain/GrassMesh']);
+    const root = buildTestGlbGraph(['Terrain/GrassMesh']);
 
-    expect(matchGlbTarget(entriesOf(root), 'NoSuch/Thing')).toBeNull();
+    expect(matchGlbTarget(flattenGlbObjects(root), 'NoSuch/Thing')).toBeNull();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('NoSuch/Thing'));
     warnSpy.mockRestore();
   });
 
   it('matches a top-level node', () => {
-    const root = graph(['Robot']);
-    expect(matchGlbTarget(entriesOf(root), 'Robot')?.relPath).toBe('Robot');
+    const root = buildTestGlbGraph(['Robot']);
+    expect(matchGlbTarget(flattenGlbObjects(root), 'Robot')?.relPath).toBe('Robot');
   });
 });

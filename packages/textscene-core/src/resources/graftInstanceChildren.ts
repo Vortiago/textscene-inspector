@@ -18,6 +18,7 @@
  */
 
 import type { TscnExternalResource, TscnNode } from '../parser/types';
+import { layerRawOverride } from './layerRawOverride';
 import { warn } from '../logger';
 
 /**
@@ -40,7 +41,7 @@ export function graftInstanceChildren(
   const appendedAtRoot: TscnNode[] = [];
 
   for (const child of hostChildren) {
-    const stamped = stamp(child, outerResources);
+    const stamped = outerResources ? { ...child, authoredResources: outerResources } : child;
     if (!child.instanceSubPath) {
       appendedAtRoot.push(stamped);
       continue;
@@ -127,16 +128,11 @@ function attach(parent: TscnNode, child: TscnNode): TscnNode {
   }
 
   const existing = parent.children[index]!;
-  const merged: TscnNode = {
-    ...existing,
-    rawProperties: { ...existing.rawProperties, ...child.rawProperties },
+  const children = [...parent.children];
+  children[index] = {
+    ...layerRawOverride(existing, child.rawProperties),
     ...(child.authoredResources ? { authoredResources: child.authoredResources } : {}),
   };
-  const children = [...parent.children];
-  children[index] = merged;
   return { ...parent, children };
 }
 
-function stamp(node: TscnNode, outerResources?: readonly TscnExternalResource[]): TscnNode {
-  return outerResources ? { ...node, authoredResources: outerResources } : node;
-}

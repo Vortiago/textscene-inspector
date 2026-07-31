@@ -34,8 +34,12 @@ import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
 import { useGlbOverrides } from './GlbOverridesContext';
-import { applyGlbNodeOverrides } from './glbNodeOverrides';
-import { flattenGlbObjects, GLB_ANIMATION_PLAYER_NAME } from './glbHierarchy';
+import {
+  applyGlbNodeOverrides,
+  isApplicableGlbOverride,
+  resolveGlbOverrideTarget,
+} from './glbNodeOverrides';
+import { flattenGlbObjects, GLB_ANIMATION_PLAYER_NAME, type GlbObjectEntry } from './glbHierarchy';
 import { useAnimationTransport, type PlayState } from '../../contexts/AnimationTransportContext';
 import { useNodePath } from '../../contexts/NodePathContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
@@ -48,7 +52,6 @@ import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
-import { matchGlbTarget } from './matchGlbTarget';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
 
 /**
@@ -78,17 +81,24 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // GLB node's large baked translation is overridden as Godot does.
   const overrides = useGlbOverrides();
   const object = result.value;
+
+  // ONE flattening of the loaded clone, shared by everything below: selection
+  // registration, visibility, override resolution and the material slots all
+  // ask the same question of the same graph.
+  const entries = useMemo(() => (object ? flattenGlbObjects(object) : []), [object]);
+
+  // BUG 2 (cont.): apply the overrides' transforms / layers / visibility.
   useMemo(() => {
-    if (object) applyGlbNodeOverrides(object, overrides);
+    if (object) applyGlbNodeOverrides(object, overrides, entries);
     // The clone is per-consumer and stable, so re-applying when the
     // resolved object or override set changes is sufficient and cheap.
-  }, [object, overrides]);
+  }, [object, overrides, entries]);
 
   // `surface_material_override/0` on an override node needs an ExtResource
   // resolved and a `.tres` loaded, which the synchronous mutation above cannot
   // do — so each one mounts its own slot component instead. This is what
   // retextures the Truck Town landscape.
-  const materialOverrides = useGlbMaterialOverrides(object, overrides);
+  const materialOverrides = useGlbMaterialOverrides(object, entries, overrides);
 
   // Tie each internal GLB object to a tree path so the SceneTreeViewer
   // can select (gizmo) + hide individual nodes. We walk THIS rendered clone
@@ -96,7 +106,6 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // drive its visibility from the hidden-paths set.
   const selection = useOptionalSelection();
   const nodePath = useNodePath();
-  const entries = useMemo(() => (object ? flattenGlbObjects(object) : []), [object]);
 
   const registerNodeObject = selection?.registerNodeObject;
   const unregisterNodeObject = selection?.unregisterNodeObject;
@@ -223,38 +232,35 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
  */
 function useGlbMaterialOverrides(
   object: THREE.Object3D | undefined,
+  entries: readonly GlbObjectEntry[],
   overrides: readonly TscnNode[]
 ): ReactNode {
   const { externalResources } = useSceneResources();
 
   return useMemo(() => {
     if (!object) return null;
-    let entries: ReturnType<typeof flattenGlbObjects> | null = null;
 
     const slots: ReactNode[] = [];
     for (const override of overrides) {
       const ref = override.rawProperties?.['surface_material_override/0'];
-      if (!ref) continue;
+      if (!ref || !isApplicableGlbOverride(override)) continue;
 
       // A grafted override's ids belong to the scene that AUTHORED it, which is
       // the outer one — not the sub-scene whose provider it now renders under.
       const path = resolveExtResourcePath(ref, override.authoredResources ?? externalResources);
       if (!path) continue;
 
-      entries ??= flattenGlbObjects(object);
-      const target = override.instanceSubPath
-        ? matchGlbTarget(entries, `${override.instanceSubPath}/${override.name}`)?.object
-        : entries.find((e) => e.object.name === override.name)?.object;
+      const target = resolveGlbOverrideTarget(object, entries, override);
       if (!target) continue;
 
       slots.push(
         <GlbSurfaceMaterialOverride
-          key={`${override.instanceSubPath ?? ''}/${override.name}`}
+          key={joinPath(override.instanceSubPath ?? '', override.name)}
           target={target}
           path={path}
         />
       );
     }
     return slots.length > 0 ? <>{slots}</> : null;
-  }, [object, overrides, externalResources]);
+  }, [object, entries, overrides, externalResources]);
 }

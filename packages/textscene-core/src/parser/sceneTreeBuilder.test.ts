@@ -243,7 +243,6 @@ describe('buildSceneTree', () => {
     });
   });
 
-
   describe('parents inside instanced content', () => {
     /** A node, with only the fields these tests care about. */
     const node = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({

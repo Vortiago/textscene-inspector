@@ -49,10 +49,9 @@ export function matchGlbTarget(
   // The node itself has no counterpart — `Skeleton3D` exists only in Godot's
   // tree. The nearest ancestor that DOES match is the object it must have meant.
   for (let depth = segments.length - 1; depth > 0; depth--) {
-    const ancestor = segments.slice(0, depth);
-    const match =
-      entries.find((e) => e.relPath === ancestor.join('/')) ??
-      bestSubsequenceMatch(entries, ancestor);
+    // No exact-match fast path here: an exact hit is itself the deepest
+    // possible subsequence match, so `bestSubsequenceMatch` already returns it.
+    const match = bestSubsequenceMatch(entries, segments.slice(0, depth));
     if (match) {
       info(
         `[matchGlbTarget] "${godotPath}" has no counterpart; using its nearest ancestor "${match.relPath}"`
@@ -93,9 +92,8 @@ function bestSubsequenceMatch(
 /** Whether every segment of `inner` appears in `outer`, in order. */
 function isOrderedSubsequence(inner: readonly string[], outer: readonly string[]): boolean {
   let i = 0;
-  for (const segment of outer) {
-    if (segment === inner[i]) i++;
-    if (i === inner.length) return true;
-  }
+  // Once `i` reaches the end, `inner[i]` is undefined and matches nothing, so
+  // the counter stops climbing on its own — no in-loop exit needed.
+  for (const segment of outer) if (segment === inner[i]) i++;
   return i === inner.length;
 }

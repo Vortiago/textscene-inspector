@@ -215,8 +215,11 @@ function AuthoredResourceScope({
  * why the coin counter does not render at all yet.
  */
 function withoutDeepChildren(node: TscnNode): TscnNode {
-  const direct = node.children.filter((c) => !c.instanceSubPath);
-  return direct.length === node.children.length ? node : { ...node, children: direct };
+  // `some` before `filter`: the overwhelming majority of nodes have no deep
+  // children, and returning the SAME reference is what keeps the downstream
+  // `useMemo([node])`s in `PlainNode` from invalidating every render.
+  if (!node.children.some((c) => c.instanceSubPath)) return node;
+  return { ...node, children: node.children.filter((c) => !c.instanceSubPath) };
 }
 
 interface PlainNodeProps extends DispatchedNodeProps {

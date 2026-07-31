@@ -13,28 +13,10 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
 import { applyGlbNodeOverrides } from './glbNodeOverrides';
 import { visualLayersOf } from '../../visualLayers';
 import type { TscnNode } from '../../../parser/types';
-
-function graph(paths: string[]): THREE.Object3D {
-  const root = new THREE.Object3D();
-  root.name = 'Scene';
-  for (const path of paths) {
-    let node: THREE.Object3D = root;
-    for (const segment of path.split('/')) {
-      let next = node.children.find((c) => c.name === segment);
-      if (!next) {
-        next = new THREE.Mesh();
-        next.name = segment;
-        node.add(next);
-      }
-      node = next;
-    }
-  }
-  return root;
-}
+import { buildTestGlbGraph } from './testGraph';
 
 const override = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
   type: '',
@@ -47,7 +29,7 @@ const override = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
 
 describe('applyGlbNodeOverrides', () => {
   it('applies layers from a deep override, across the level Godot synthesised', () => {
-    const root = graph(['Skeleton/Robot']);
+    const root = buildTestGlbGraph(['Skeleton/Robot']);
 
     applyGlbNodeOverrides(root, [
       override('Robot', { instanceSubPath: 'Skeleton/Skeleton3D', rawProperties: { layers: '2' } }),
@@ -60,7 +42,7 @@ describe('applyGlbNodeOverrides', () => {
 
   it('stamps layers over the matched object’s whole subtree', () => {
     // One glTF node with several primitives becomes a Group of Meshes.
-    const root = graph(['Body/Part1', 'Body/Part2']);
+    const root = buildTestGlbGraph(['Body/Part1', 'Body/Part2']);
 
     applyGlbNodeOverrides(root, [override('Body', { rawProperties: { layers: '4' } })]);
 
@@ -71,7 +53,7 @@ describe('applyGlbNodeOverrides', () => {
 
   it('resolves a deep override by PATH, not by bare name', () => {
     // Two objects share a name; only the one whose path agrees may be touched.
-    const root = graph(['Weapons/Body', 'Character/Torso/Body']);
+    const root = buildTestGlbGraph(['Weapons/Body', 'Character/Torso/Body']);
 
     applyGlbNodeOverrides(root, [
       override('Body', { instanceSubPath: 'Character/Torso', rawProperties: { layers: '2' } }),
@@ -84,7 +66,7 @@ describe('applyGlbNodeOverrides', () => {
 
   it('still applies a shallow by-name transform override', () => {
     // The original case, unchanged: no instanceSubPath, flat name lookup.
-    const root = graph(['plafoniera']);
+    const root = buildTestGlbGraph(['plafoniera']);
     root.children[0]!.position.set(1.11, -9.73, -9.73);
 
     const applied = applyGlbNodeOverrides(root, [
@@ -108,7 +90,7 @@ describe('applyGlbNodeOverrides', () => {
   });
 
   it('applies visible', () => {
-    const root = graph(['Hidden']);
+    const root = buildTestGlbGraph(['Hidden']);
 
     applyGlbNodeOverrides(root, [override('Hidden', { rawProperties: { visible: 'false' } })]);
 
@@ -116,7 +98,7 @@ describe('applyGlbNodeOverrides', () => {
   });
 
   it('leaves everything alone when nothing matches', () => {
-    const root = graph(['Body']);
+    const root = buildTestGlbGraph(['Body']);
 
     expect(() =>
       applyGlbNodeOverrides(root, [
@@ -132,7 +114,7 @@ describe('applyGlbNodeOverrides', () => {
     // `Skeleton` (three has no CoinCount), so treating it as an override wrote
     // its 3.33x scale and 7.5-unit offset onto the entire robot and flung it out
     // of frame. Godot renders the robot centred; so must we.
-    const root = graph(['Skeleton/Robot']);
+    const root = buildTestGlbGraph(['Skeleton/Robot']);
     const skeleton = root.children[0]!;
 
     applyGlbNodeOverrides(root, [
@@ -157,7 +139,7 @@ describe('applyGlbNodeOverrides', () => {
   });
 
   it('reports only transform overrides as applied — a layers-only override moves nothing', () => {
-    const root = graph(['Robot']);
+    const root = buildTestGlbGraph(['Robot']);
 
     const applied = applyGlbNodeOverrides(root, [
       override('Robot', { rawProperties: { layers: '2' } }),

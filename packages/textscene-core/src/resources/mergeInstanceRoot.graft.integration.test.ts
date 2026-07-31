@@ -68,6 +68,11 @@ describe('deep overrides through mergeInstanceRoot', () => {
     const bodies = pivot.children.filter((c) => c.name === 'Body');
     expect(bodies).toHaveLength(1);
     expect(bodies[0]!.rawProperties?.texture).toBe(body.rawProperties?.texture);
+    // And the TYPED properties too, which is what components actually read —
+    // merging the raw map alone would render as if the override never existed.
+    expect((bodies[0]!.properties as { texture?: string }).texture).toBe(
+      body.rawProperties?.texture
+    );
   });
 
   it('stamps the host resource table onto a grafted node', () => {

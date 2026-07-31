@@ -40,17 +40,19 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
   // re-run, so a deferred node's own descendants resolve through their declared
   // paths and never pick up a marker of their own.
   while (remaining.length > 0) {
-    const index = remaining.findIndex((node) => findInstanceAnchor(node, pathMap) !== null);
-    if (index === -1) break;
+    const deferred = firstAnchorable(remaining, pathMap);
+    if (!deferred) break;
 
-    const node = remaining[index]!;
-    const anchor = findInstanceAnchor(node, pathMap)!;
+    const { node, anchor } = deferred;
     anchor.node.children.push(node);
     node.instanceSubPath = anchor.subPath;
     pathMap.set(`${node.parent}/${node.name}`, node);
-    remaining.splice(index, 1);
 
-    remaining = placeResolvable(remaining, rootNode, pathMap);
+    remaining = placeResolvable(
+      remaining.filter((n) => n !== node),
+      rootNode,
+      pathMap
+    );
   }
 
   // Warn about any orphaned nodes
@@ -110,6 +112,18 @@ function placeResolvable(
   }
 
   return remaining;
+}
+
+/** The first node that has an instance anchor, paired with that anchor. */
+function firstAnchorable(
+  remaining: readonly TscnNode[],
+  pathMap: Map<string, TscnNode>
+): { node: TscnNode; anchor: { node: TscnNode; subPath: string } } | null {
+  for (const node of remaining) {
+    const anchor = findInstanceAnchor(node, pathMap);
+    if (anchor) return { node, anchor };
+  }
+  return null;
 }
 
 /**

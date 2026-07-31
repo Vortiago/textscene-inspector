@@ -39,26 +39,6 @@ export function createMaterialProcessor(
   });
 }
 
-/** Every `THREE.Material` texture slot, so disposal can walk them. */
-const TEXTURE_SLOTS = [
-  'map',
-  'normalMap',
-  'roughnessMap',
-  'metalnessMap',
-  'emissiveMap',
-  'aoMap',
-  'displacementMap',
-  'alphaMap',
-  'bumpMap',
-  'lightMap',
-  'envMap',
-  'anisotropyMap',
-  'clearcoatMap',
-  'clearcoatRoughnessMap',
-  'clearcoatNormalMap',
-  'specularMap',
-] as const;
-
 /**
  * `Material.dispose()` does NOT dispose its maps, and this material's maps may
  * include per-material clones that nothing else owns — so without this every
@@ -67,10 +47,11 @@ const TEXTURE_SLOTS = [
  * use by other materials.
  */
 function disposeMaterialAndOwnedTextures(material: THREE.Material): void {
-  const slots = material as unknown as Record<string, THREE.Texture | null | undefined>;
-  for (const slot of TEXTURE_SLOTS) {
-    const texture = slots[slot];
-    if (texture && isMaterialOwnedTexture(texture)) texture.dispose();
+  // Walk the material's own values rather than a hand-listed set of slot names:
+  // three assigns every map in its constructor, so this cannot go stale the day
+  // a new one is wired, and the ownership tag is the real discriminator anyway.
+  for (const value of Object.values(material)) {
+    if (value instanceof THREE.Texture && isMaterialOwnedTexture(value)) value.dispose();
   }
   material.dispose();
 }
