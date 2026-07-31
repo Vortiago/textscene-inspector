@@ -9,6 +9,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 
 /**
  * Node3D properties interface for type checking
@@ -159,8 +160,11 @@ const node3DValidationRule: LintRule = {
     category: 'validation',
     // Applies to Node3D and every spatial subclass (MeshInstance3D, Camera3D, …).
     // A predicate is required because getRulesForNodeType matches exact type
-    // names, so a literal ['Node3D'] would never reach the subclasses.
-    applicableNodeTypeMatcher: (nodeType) => nodeType === 'Node3D' || nodeType.endsWith('3D'),
+    // names, so a literal ['Node3D'] would never reach the subclasses. Asking
+    // the real chain rather than the name: `endsWith('3D')` claimed
+    // NavigationAgent3D, which descends from plain Node, and missed the 16
+    // spatial types Godot did not suffix (GridMap, Decal, ReflectionProbe, …).
+    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Node3D'),
     emits: [
       { ruleName: 'valid-node3d-visibility', severity: 'error' },
       { ruleName: 'valid-node3d-visibility', severity: 'warning' },

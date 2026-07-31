@@ -45,6 +45,9 @@ Strict parsing format-checks these `CSGSphere3D` properties, plus 17 inherited f
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
+|  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
+|  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
 Strict rejects a non-positive `radius`, or `radial_segments`/`rings` below 1, as

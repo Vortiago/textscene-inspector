@@ -67,6 +67,7 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 | `valid-decal-resources` | `decal-requires-texture` | warning |
 |  | `valid-decal-resources` | error |
 <!-- lint:end -->

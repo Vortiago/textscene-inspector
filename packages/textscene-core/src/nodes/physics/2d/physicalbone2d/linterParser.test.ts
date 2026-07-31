@@ -5,9 +5,6 @@
  * unit under test is the validator, so a failure points at the validator
  * instead of at scene parsing, and no fixture text has to be maintained
  * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';

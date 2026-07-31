@@ -40,10 +40,10 @@ Strict parsing format-checks these `HingeJoint3D` properties, plus 4 inherited f
 | --- | --- |
 | `angular_limit/bias` | float 0.01-0.99 |
 | `angular_limit/enable` | true or false |
-| `angular_limit/lower` | float -3.1416926535897933-3.1416926535897933 |
+| `angular_limit/lower` | radians, -180° to 180° |
 | `angular_limit/relaxation` | float 0.01-16 |
 | `angular_limit/softness` | float 0.01-16 |
-| `angular_limit/upper` | float -3.1416926535897933-3.1416926535897933 |
+| `angular_limit/upper` | radians, -180° to 180° |
 | `motor/enable` | true or false |
 | `motor/max_impulse` | float 0.01-1024 |
 | `motor/target_velocity` | float |
@@ -53,10 +53,8 @@ Strict parsing format-checks these `HingeJoint3D` properties, plus 4 inherited f
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
-| `valid-joint` (type-family match) | `joint2d-not-connected` | warning |
-|  | `joint2d-same-body` | warning |
-|  | `joint3d-not-connected` | warning |
-|  | `joint3d-same-body` | warning |
+| `valid-joint` (type-family match) | `joint-not-connected` | warning |
+|  | `joint-same-body` | warning |
 <!-- lint:end -->
 
 `index.ts` registers `parseNode3D` directly, which reads only `transform` and

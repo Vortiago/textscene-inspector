@@ -72,6 +72,9 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 17 inherite
 |  | `valid-gpuparticles3d-trail-config` | error |
 |  | `valid-gpuparticles3d-sub-emitter` | error |
 |  | `gpuparticles3d-performance` | warning |
+| `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
+|  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
+|  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
 GPUParticles3D has no `parser.ts` of its own: registration wires `parseNode3D`

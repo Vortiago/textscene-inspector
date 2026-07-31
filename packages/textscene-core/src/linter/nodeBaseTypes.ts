@@ -37,3 +37,29 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
 });
 
 export { UNCATALOGUED as UNCATALOGUED_BASE_TYPES };
+
+/**
+ * Does `nodeType` descend from (or equal) `ancestor`, per Godot's class tree?
+ *
+ * `RuleRegistry` matches `applicableNodeTypes` by exact name, unlike
+ * `ValidatorRegistry`, which walks this table. A rule mirroring a
+ * `get_configuration_warnings` override therefore reaches only the class that
+ * declares it, never the subclasses that inherit the warning, unless it pairs
+ * `applicableNodeTypeMatcher` with this.
+ *
+ * Use it instead of a name heuristic. `nodeType.endsWith('3D')` was the earlier
+ * approximation and disagrees with the real tree on 17 types: it claims
+ * `NavigationAgent3D` (whose base is plain `Node`) and misses the 16 spatial
+ * nodes Godot did not suffix, `GridMap`, `Decal`, `ReflectionProbe`, `VoxelGI`
+ * and the OpenXR family among them.
+ */
+export function descendsFrom(nodeType: string, ancestor: string): boolean {
+  const seen = new Set<string>();
+  let current: string | undefined = nodeType;
+  while (current && !seen.has(current)) {
+    if (current === ancestor) return true;
+    seen.add(current);
+    current = NODE_BASE_TYPES[current];
+  }
+  return false;
+}

@@ -46,6 +46,9 @@ Strict parsing format-checks these `CSGBox3D` properties, plus 17 inherited from
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
+|  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
+|  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
 Strict rejects a malformed `size` (it must be a three-float `Vector3`) and an `operation` outside 0 to 2 as errors. The lenient parser keeps the default size of `(1, 1, 1)` when `size` is absent, and warns and keeps that same default when it is present but unparseable. `operation` is read with `parseOptionalInt`, so it warns neither way; a non-zero value is applied by the boolean evaluator rather than dropped (ADR-0027, superseding ADR-0004). `material`, if present, is copied through unvalidated.

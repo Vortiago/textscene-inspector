@@ -25,33 +25,15 @@
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
-import { NODE_BASE_TYPES } from '../../../../linter/nodeBaseTypes.js';
+import { extractNodePath } from '../../../../linter/linterUtils.js';
+import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-
-/** Does `nodeType` descend from (or equal) `ancestor`? */
-function descendsFrom(nodeType: string, ancestor: string): boolean {
-  const seen = new Set<string>();
-  let current: string | undefined = nodeType;
-  while (current && !seen.has(current)) {
-    if (current === ancestor) return true;
-    seen.add(current);
-    current = NODE_BASE_TYPES[current];
-  }
-  return false;
-}
 
 /** `'2D'` or `'3D'` for a joint type, or undefined when it is not a joint. */
 function jointDim(nodeType: string): '2D' | '3D' | undefined {
   if (descendsFrom(nodeType, 'Joint2D')) return '2D';
   if (descendsFrom(nodeType, 'Joint3D')) return '3D';
   return undefined;
-}
-
-/** `NodePath("../BodyA")` → `../BodyA`; anything else, including empty → undefined. */
-function nodePathTarget(raw: string | undefined): string | undefined {
-  const match = raw?.match(/^NodePath\("([^"]*)"\)$/);
-  const path = match?.[1]?.trim();
-  return path ? path : undefined;
 }
 
 function checkJoint(context: RuleContext): Diagnostic[] {
@@ -61,10 +43,11 @@ function checkJoint(context: RuleContext): Diagnostic[] {
 
   const props = node.properties as Record<string, string>;
   const bodyType = `PhysicsBody${dim}`;
-  const prefix = `joint${dim.toLowerCase()}`;
 
-  const a = nodePathTarget(props.node_a);
-  const b = nodePathTarget(props.node_b);
+  // `extractNodePath` already treats an empty NodePath as absent, which is how
+  // Godot serialises "not connected".
+  const a = props.node_a ? extractNodePath(props.node_a) : null;
+  const b = props.node_b ? extractNodePath(props.node_b) : null;
 
   // Exclusive, as in Godot's own chain: an unset end is reported once, and the
   // same-body case cannot arise while an end is unset.
@@ -76,7 +59,7 @@ function checkJoint(context: RuleContext): Diagnostic[] {
         message: `${node.type} '${node.name}' is not connected to two ${bodyType}s: ${which} unset, so the joint does nothing.`,
         nodeName: node.name,
         nodeType: node.type,
-        ruleName: `${prefix}-not-connected`,
+        ruleName: 'joint-not-connected',
       },
     ];
   }
@@ -88,7 +71,7 @@ function checkJoint(context: RuleContext): Diagnostic[] {
         message: `${node.type} '${node.name}' has 'node_a' and 'node_b' both pointing at ${a}. A joint must connect two different ${bodyType}s.`,
         nodeName: node.name,
         nodeType: node.type,
-        ruleName: `${prefix}-same-body`,
+        ruleName: 'joint-same-body',
       },
     ];
   }
@@ -102,11 +85,12 @@ const jointValidationRule: LintRule = {
     description: 'Flags a joint that cannot form a constraint',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => jointDim(nodeType) !== undefined,
+    // Dimension-free: `emits` is rule-level, so a per-dimension name would put
+    // `joint3d-not-connected` in every PinJoint2D sheet. The dimension is
+    // already on the diagnostic's `nodeType` and in its message.
     emits: [
-      { ruleName: 'joint2d-not-connected', severity: 'warning' },
-      { ruleName: 'joint2d-same-body', severity: 'warning' },
-      { ruleName: 'joint3d-not-connected', severity: 'warning' },
-      { ruleName: 'joint3d-same-body', severity: 'warning' },
+      { ruleName: 'joint-not-connected', severity: 'warning' },
+      { ruleName: 'joint-same-body', severity: 'warning' },
     ],
   },
   check: checkJoint,

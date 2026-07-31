@@ -34,7 +34,7 @@ Strict parsing format-checks these `VehicleBody3D` properties, plus 19 inherited
 | --- | --- |
 | `brake` | float |
 | `engine_force` | float |
-| `steering` | float -3.1416926535897933-3.1416926535897933 |
+| `steering` | radians, -180° to 180° |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -15,19 +15,18 @@
  * project's renderer setting (project.godot), information a single-.tscn-file linter
  * does not have — not an oversight.
  *
- * Applicability is exact-match (`applicableNodeTypes: ['GeometryInstance3D']`), same
- * default RuleRegistry semantics every other slice rule uses (see camera2d/linter.ts).
- * It does not yet reach concrete descendants (MeshInstance3D, Sprite3D, the CSG
- * shapes, …) because RuleRegistry's applicability is exact-match by design, unlike
- * ValidatorRegistry's base-walk — see RuleRegistry.ts. Reaching the whole family
- * would need either an analogous rule on each descendant slice (with its own
- * citation) or a shared predicate keyed off NODE_BASE_TYPES, which is out of this
- * slice's scope.
+ * Applicability is the whole GeometryInstance3D family, via `descendsFrom`.
+ * Godot declares the warning on the base and every subclass inherits it, but
+ * RuleRegistry matches `applicableNodeTypes` by exact name, so an exact-match
+ * rule here fired only on a literal `GeometryInstance3D` node and stayed silent
+ * on MeshInstance3D, Sprite3D, Label3D, GPUParticles3D and the CSG shapes,
+ * which is where the property is actually used.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
+import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 
 const FADE_SELF = '1';
 const FADE_DEPENDENCIES = '2';
@@ -59,7 +58,7 @@ function checkGeometryInstance3D(context: RuleContext): Diagnostic[] {
     if (!Number.isNaN(end) && !Number.isNaN(begin) && end <= begin) {
       diagnostics.push({
         severity: 'warning',
-        message: `GeometryInstance3D visibility range's End distance (${end}) is set to a non-zero value, but is lower than or equal to the Begin distance (${begin}). This means the node will never be visible. Set End to 0 or to a value greater than Begin.`,
+        message: `${node.type} visibility range's End distance (${end}) is set to a non-zero value, but is lower than or equal to the Begin distance (${begin}). This means the node will never be visible. Set End to 0 or to a value greater than Begin.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'geometryinstance3d-visibility-range-end-before-begin',
@@ -72,7 +71,7 @@ function checkGeometryInstance3D(context: RuleContext): Diagnostic[] {
   if (fades && !isZeroish(props.visibility_range_begin) && isZeroish(props.visibility_range_begin_margin)) {
     diagnostics.push({
       severity: 'warning',
-      message: `GeometryInstance3D is configured to fade in smoothly over distance, but 'visibility_range_begin_margin' is 0. Increase Visibility Range Begin Margin above 0 for the fade transition to be noticeable.`,
+      message: `${node.type} is configured to fade in smoothly over distance, but 'visibility_range_begin_margin' is 0. Increase Visibility Range Begin Margin above 0 for the fade transition to be noticeable.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'geometryinstance3d-visibility-range-begin-fade-without-margin',
@@ -84,7 +83,7 @@ function checkGeometryInstance3D(context: RuleContext): Diagnostic[] {
   if (fades && !isZeroish(props.visibility_range_end) && isZeroish(props.visibility_range_end_margin)) {
     diagnostics.push({
       severity: 'warning',
-      message: `GeometryInstance3D is configured to fade out smoothly over distance, but 'visibility_range_end_margin' is 0. Increase Visibility Range End Margin above 0 for the fade transition to be noticeable.`,
+      message: `${node.type} is configured to fade out smoothly over distance, but 'visibility_range_end_margin' is 0. Increase Visibility Range End Margin above 0 for the fade transition to be noticeable.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'geometryinstance3d-visibility-range-end-fade-without-margin',
@@ -100,7 +99,7 @@ const geometryInstance3DValidationRule: LintRule = {
     description:
       "Validates GeometryInstance3D's visibility-range cross-field consistency (End vs Begin distance, fade transitions needing a non-zero margin)",
     category: 'validation',
-    applicableNodeTypes: ['GeometryInstance3D'],
+    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'GeometryInstance3D'),
     emits: [
       { ruleName: 'geometryinstance3d-visibility-range-end-before-begin', severity: 'warning' },
       { ruleName: 'geometryinstance3d-visibility-range-begin-fade-without-margin', severity: 'warning' },

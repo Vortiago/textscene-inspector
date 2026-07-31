@@ -35,8 +35,8 @@ Strict parsing format-checks these `PinJoint2D` properties, plus 4 inherited fro
 | Property | Accepts |
 | --- | --- |
 | `angular_limit_enabled` | true or false |
-| `angular_limit_lower` | float -3.1416926535897933-3.1416926535897933 |
-| `angular_limit_upper` | float -3.1416926535897933-3.1416926535897933 |
+| `angular_limit_lower` | radians, -180° to 180° |
+| `angular_limit_upper` | radians, -180° to 180° |
 | `motor_enabled` | true or false |
 | `motor_target_velocity` | float |
 | `softness` | float 0-16 |
@@ -44,10 +44,8 @@ Strict parsing format-checks these `PinJoint2D` properties, plus 4 inherited fro
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-joint` (type-family match) | `joint2d-not-connected` | warning |
-|  | `joint2d-same-body` | warning |
-|  | `joint3d-not-connected` | warning |
-|  | `joint3d-same-body` | warning |
+| `valid-joint` (type-family match) | `joint-not-connected` | warning |
+|  | `joint-same-body` | warning |
 <!-- lint:end -->
 
 PinJoint2D has no parser.ts: it reuses parseNode2D directly (index.ts), so its own

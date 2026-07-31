@@ -36,10 +36,8 @@ Strict parsing format-checks these `GrooveJoint2D` properties, plus 4 inherited 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-joint` (type-family match) | `joint2d-not-connected` | warning |
-|  | `joint2d-same-body` | warning |
-|  | `joint3d-not-connected` | warning |
-|  | `joint3d-same-body` | warning |
+| `valid-joint` (type-family match) | `joint-not-connected` | warning |
+|  | `joint-same-body` | warning |
 <!-- lint:end -->
 
 GrooveJoint2D has no `parser.ts` of its own: it registers `parseNode2D` directly

@@ -5,9 +5,6 @@
  * unit under test is the validator, so a failure points at the validator
  * instead of at scene parsing, and no fixture text has to be maintained
  * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -82,7 +79,7 @@ describe('PinJoint3D strict validators', () => {
   // pin_joint_3d.cpp:39 — PROPERTY_HINT_RANGE "0.0,64.0,0.01", no or_greater/or_less: both bounds hard.
   describe('params/impulse_clamp', () => {
     it('accepts a value inside 0.0-64.0', () => {
-      expect(check('params/impulse_clamp', '0.0')).toBeNull();
+      expect(check('params/impulse_clamp', '32.0')).toBeNull();
     });
 
     it('accepts the exact bounds', () => {

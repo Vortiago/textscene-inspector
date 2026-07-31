@@ -30,9 +30,8 @@ describe('joint dead-configuration rule', () => {
   });
 
   it.each([...LEAVES_2D, ...LEAVES_3D])('reaches the %s leaf through the matcher', (type) => {
-    const dim = type.endsWith('3D') ? '3d' : '2d';
     expectDiagnostic(scene(node(type, {})), {
-      ruleName: `joint${dim}-not-connected`,
+      ruleName: 'joint-not-connected',
       severity: 'warning',
       nodeType: type,
     });
@@ -44,26 +43,26 @@ describe('joint dead-configuration rule', () => {
 
   it('names which end is unset rather than saying only "not connected"', () => {
     const onlyA = expectDiagnostic(scene(node('PinJoint2D', { node_a: 'NodePath("../BodyA")' })), {
-      ruleName: 'joint2d-not-connected',
+      ruleName: 'joint-not-connected',
     });
     expect(onlyA.message).toContain("'node_b' is unset");
 
     const neither = expectDiagnostic(scene(node('PinJoint2D', {})), {
-      ruleName: 'joint2d-not-connected',
+      ruleName: 'joint-not-connected',
     });
     expect(neither.message).toContain("'node_a' and 'node_b' are unset");
   });
 
   it('treats an empty NodePath as unset, which is how Godot serialises "none"', () => {
     expectDiagnostic(scene(node('PinJoint3D', { node_a: 'NodePath("")', node_b: 'NodePath("../B")' })), {
-      ruleName: 'joint3d-not-connected',
+      ruleName: 'joint-not-connected',
     });
   });
 
   it('flags both ends pointing at the same body', () => {
     const d = expectDiagnostic(
       scene(node('HingeJoint3D', { node_a: 'NodePath("../Body")', node_b: 'NodePath("../Body")' })),
-      { ruleName: 'joint3d-same-body', severity: 'warning' }
+      { ruleName: 'joint-same-body', severity: 'warning' }
     );
     expect(d.message).toContain('../Body');
   });
@@ -73,12 +72,12 @@ describe('joint dead-configuration rule', () => {
     // double up on one defect.
     expectNoDiagnostic(
       scene(node('PinJoint2D', { node_a: 'NodePath("../B")', node_b: 'NodePath("../B")' })),
-      { ruleName: 'joint2d-not-connected' }
+      { ruleName: 'joint-not-connected' }
     );
   });
 
   it('leaves non-joints alone, and keeps the dimensions apart', () => {
-    expectNoDiagnostic(scene(node('StaticBody2D', {})), { ruleName: 'joint2d-not-connected' });
+    expectNoDiagnostic(scene(node('StaticBody2D', {})), { ruleName: 'joint-not-connected' });
     // The matcher takes both dimensions; `check` picks the noun per node.
     const matches = jointValidationRule.meta.applicableNodeTypeMatcher!;
     expect(matches('PinJoint3D')).toBe(true);
@@ -86,16 +85,11 @@ describe('joint dead-configuration rule', () => {
     expect(matches('StaticBody2D')).toBe(false);
   });
 
-  it('does not guess at the body TYPE, which needs a tree this linter cannot see', () => {
+  it('declares exactly the two names it can emit, and no per-dimension variants', () => {
     // Godot's other three warnings ("Node A must be a PhysicsBody2D", …) resolve
     // the path and check the class. A NodePath can cross into an instanced
     // sub-scene, so answering that statically false-positives on real scenes.
     const emitted = jointValidationRule.meta.emits?.map((e) => e.ruleName) ?? [];
-    expect(emitted).toEqual([
-      'joint2d-not-connected',
-      'joint2d-same-body',
-      'joint3d-not-connected',
-      'joint3d-same-body',
-    ]);
+    expect(emitted).toEqual(['joint-not-connected', 'joint-same-body']);
   });
 });

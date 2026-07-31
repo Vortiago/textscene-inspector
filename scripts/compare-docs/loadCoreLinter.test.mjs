@@ -29,11 +29,20 @@ describe.skipIf(!built)('loadCoreLinter', { timeout: 30_000 }, () => {
     const { ruleRegistry } = await loadCoreLinter();
     const named = (type) => ruleRegistry.getRulesForNodeType(type).map((r) => r.meta.name);
 
-    // The universal rule reaches every node; the `endsWith('3D')` matcher does
-    // not reach ReflectionProbe. This asymmetry is what the generated Linting
-    // block for unsupported nodes reports, so pin it.
+    // The universal rule reaches every node. The spatial matcher asks the real
+    // base chain, so it reaches every Node3D descendant whether or not Godot
+    // suffixed the name, and NO type that merely ends in "3D".
+    //
+    // This case previously pinned the opposite for ReflectionProbe, back when
+    // the matcher was `nodeType.endsWith('3D')`: that heuristic missed the 16
+    // spatial types Godot did not suffix and claimed NavigationAgent3D, whose
+    // base is plain Node. The generated Linting block reports whatever this
+    // resolves to, so the asymmetry was published as fact.
     expect(named('ReflectionProbe')).toContain('binary-resource-reference');
-    expect(named('ReflectionProbe')).not.toContain('valid-node3d-visibility');
+    expect(named('ReflectionProbe')).toContain('valid-node3d-visibility');
+    expect(named('GridMap')).toContain('valid-node3d-visibility');
     expect(named('RayCast3D')).toContain('valid-node3d-visibility');
+    expect(named('NavigationAgent3D')).not.toContain('valid-node3d-visibility');
+    expect(named('Label')).not.toContain('valid-node3d-visibility');
   });
 });

@@ -59,6 +59,9 @@ Strict parsing format-checks these `Sprite3D` properties, plus 17 inherited from
 |  | `sprite3d-frame-range` | warning |
 |  | `sprite3d-region-configuration` | warning |
 |  | `sprite3d-axis-usage` | warning |
+| `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
+|  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
+|  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
 Most properties follow the warn-then-fallback contract: an invalid `billboard`,

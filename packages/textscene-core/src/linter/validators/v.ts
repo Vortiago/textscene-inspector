@@ -134,6 +134,41 @@ export const v = {
     );
   },
 
+  /**
+   * An angle Godot hints `radians_as_degrees`: the inspector shows degrees, the
+   * `.tscn` stores radians. Give the DEGREE bounds from the hint string and this
+   * converts them, so the literal in the slice matches the literal in the `.cpp`.
+   *
+   * The epsilon absorbs float round-trip: Godot writes `3.1415927`, and a bare
+   * `<= Math.PI` comparison rejects a value the engine itself produced.
+   *
+   * Five slices hand-rolled this constant and three hand-wrote the message
+   * before it existed, and two agents in one wave independently extracted the
+   * same helper, which is what a missing combinator looks like.
+   *
+   * @param name - the property key.
+   * @param opts - the hint's degree extents; omit `minDeg` for a one-sided
+   *   range such as `"0,180,…"`.
+   */
+  radians(name: string, opts: { minDeg?: number; maxDeg: number }): PropertyValidator {
+    const EPSILON = 0.0001;
+    const max = (opts.maxDeg * Math.PI) / 180 + EPSILON;
+    const min = opts.minDeg === undefined ? 0 : (opts.minDeg * Math.PI) / 180 - EPSILON;
+    const lowDeg = opts.minDeg ?? 0;
+    return accepts(
+      createNumericRangeValidator(
+        name,
+        min,
+        max,
+        false,
+        `Property '${name}' must be between ${min.toFixed(4)} and ${max.toFixed(4)} radians (${lowDeg} to ${opts.maxDeg} degrees)`,
+        formatCode(name),
+        valueCode(name)
+      ),
+      `radians, ${lowDeg}° to ${opts.maxDeg}°`
+    );
+  },
+
   /** Float ≥ 0. Convenience alias for `v.float(name, { min: 0 })`. */
   nonNegativeFloat(name: string): PropertyValidator {
     return accepts(

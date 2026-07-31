@@ -13,12 +13,6 @@ const PLATFORM_ON_LEAVE = {
   1: 'ADD_UPWARD_VELOCITY',
   2: 'DO_NOTHING',
 };
-// character_body_2d.cpp:742/748 and character_body_3d.cpp:927/933 hint both
-// angles "0,180,0.1,radians_as_degrees" with no `or_greater`, so the editor's
-// hard stop is 180 degrees: PI radians, not the half-turn this once used. The
-// setters are bare assignments, so nothing narrows it further.
-const PI_PLUS_EPSILON = Math.PI + 0.0001;
-
 validatorRegistry.registerAll('CharacterBody3D', {
   motion_mode: v.enumInt('motion_mode', 0, 1, MOTION_MODE),
   up_direction: v.vector3('up_direction'),
@@ -26,20 +20,14 @@ validatorRegistry.registerAll('CharacterBody3D', {
   floor_stop_on_slope: v.boolean('floor_stop_on_slope'),
   floor_constant_speed: v.boolean('floor_constant_speed'),
   floor_block_on_wall: v.boolean('floor_block_on_wall'),
-  floor_max_angle: v.float('floor_max_angle', {
-    min: 0,
-    max: PI_PLUS_EPSILON,
-    message: `Property 'floor_max_angle' must be between 0 and ${Math.PI.toFixed(4)} radians (0-180 degrees)`,
-  }),
+  // character_body_3d.cpp:927/933, PROPERTY_HINT_RANGE "0,180,0.1,radians_as_degrees", no or_greater;
+  // the setters are bare assignments, so PI is the hard bound.
+  floor_max_angle: v.radians('floor_max_angle', { maxDeg: 180 }),
   floor_snap_length: v.float('floor_snap_length', {
     min: 0,
     message: "Property 'floor_snap_length' must be >= 0",
   }),
-  wall_min_slide_angle: v.float('wall_min_slide_angle', {
-    min: 0,
-    max: PI_PLUS_EPSILON,
-    message: `Property 'wall_min_slide_angle' must be between 0 and ${Math.PI.toFixed(4)} radians (0-180 degrees)`,
-  }),
+  wall_min_slide_angle: v.radians('wall_min_slide_angle', { maxDeg: 180 }),
   platform_on_leave: v.enumInt('platform_on_leave', 0, 2, PLATFORM_ON_LEAVE),
   platform_floor_layers: v.int('platform_floor_layers', {
     min: 0,

@@ -326,6 +326,26 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-geometryinstance3d-visibility-range",
+          "description": "Validates GeometryInstance3D's visibility-range cross-field consistency (End vs Begin distance, fade transitions needing a non-zero margin)",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "geometryinstance3d-visibility-range-end-before-begin",
+              "severity": "warning"
+            },
+            {
+              "ruleName": "geometryinstance3d-visibility-range-begin-fade-without-margin",
+              "severity": "warning"
+            },
+            {
+              "ruleName": "geometryinstance3d-visibility-range-end-fade-without-margin",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -3284,19 +3304,11 @@
           "viaMatcher": true,
           "emits": [
             {
-              "ruleName": "joint2d-not-connected",
+              "ruleName": "joint-not-connected",
               "severity": "warning"
             },
             {
-              "ruleName": "joint2d-same-body",
-              "severity": "warning"
-            },
-            {
-              "ruleName": "joint3d-not-connected",
-              "severity": "warning"
-            },
-            {
-              "ruleName": "joint3d-same-body",
+              "ruleName": "joint-same-body",
               "severity": "warning"
             }
           ]
@@ -3749,6 +3761,26 @@
             },
             {
               "ruleName": "valid-node3d-visibility",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-geometryinstance3d-visibility-range",
+          "description": "Validates GeometryInstance3D's visibility-range cross-field consistency (End vs Begin distance, fade transitions needing a non-zero margin)",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "geometryinstance3d-visibility-range-end-before-begin",
+              "severity": "warning"
+            },
+            {
+              "ruleName": "geometryinstance3d-visibility-range-begin-fade-without-margin",
+              "severity": "warning"
+            },
+            {
+              "ruleName": "geometryinstance3d-visibility-range-end-fade-without-margin",
               "severity": "warning"
             }
           ]
@@ -4450,6 +4482,22 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-node3d-visibility",
+          "description": "Validates Node3D visibility_parent references exist in scene tree",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "error"
+            },
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -4815,19 +4863,11 @@
           "viaMatcher": true,
           "emits": [
             {
-              "ruleName": "joint2d-not-connected",
+              "ruleName": "joint-not-connected",
               "severity": "warning"
             },
             {
-              "ruleName": "joint2d-same-body",
-              "severity": "warning"
-            },
-            {
-              "ruleName": "joint3d-not-connected",
-              "severity": "warning"
-            },
-            {
-              "ruleName": "joint3d-same-body",
+              "ruleName": "joint-same-body",
               "severity": "warning"
             }
           ]
@@ -7861,6 +7901,22 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-node3d-visibility",
+          "description": "Validates Node3D visibility_parent references exist in scene tree",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "error"
+            },
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -7956,6 +8012,22 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-node3d-visibility",
+          "description": "Validates Node3D visibility_parent references exist in scene tree",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "error"
+            },
+            {
+              "ruleName": "valid-node3d-visibility",
               "severity": "warning"
             }
           ]
@@ -9610,6 +9682,26 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-geometryinstance3d-visibility-range",
+          "description": "Validates GeometryInstance3D's visibility-range cross-field consistency (End vs Begin distance, fade transitions needing a non-zero margin)",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "geometryinstance3d-visibility-range-end-before-begin",
+              "severity": "warning"
+            },
+            {
+              "ruleName": "geometryinstance3d-visibility-range-begin-fade-without-margin",
+              "severity": "warning"
+            },
+            {
+              "ruleName": "geometryinstance3d-visibility-range-end-fade-without-margin",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -10744,6 +10836,22 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-node3d-visibility",
+          "description": "Validates Node3D visibility_parent references exist in scene tree",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "error"
+            },
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -10839,6 +10947,22 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-node3d-visibility",
+          "description": "Validates Node3D visibility_parent references exist in scene tree",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "error"
+            },
+            {
+              "ruleName": "valid-node3d-visibility",
               "severity": "warning"
             }
           ]
@@ -10940,6 +11064,22 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-node3d-visibility",
+          "description": "Validates Node3D visibility_parent references exist in scene tree",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "error"
+            },
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -11035,6 +11175,22 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-node3d-visibility",
+          "description": "Validates Node3D visibility_parent references exist in scene tree",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "error"
+            },
+            {
+              "ruleName": "valid-node3d-visibility",
               "severity": "warning"
             }
           ]
@@ -11370,6 +11526,22 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-node3d-visibility",
+          "description": "Validates Node3D visibility_parent references exist in scene tree",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "error"
+            },
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -11465,6 +11637,22 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-node3d-visibility",
+          "description": "Validates Node3D visibility_parent references exist in scene tree",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "error"
+            },
+            {
+              "ruleName": "valid-node3d-visibility",
               "severity": "warning"
             }
           ]
@@ -11568,6 +11756,22 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-node3d-visibility",
+          "description": "Validates Node3D visibility_parent references exist in scene tree",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "error"
+            },
+            {
+              "ruleName": "valid-node3d-visibility",
               "severity": "warning"
             }
           ]
@@ -13018,6 +13222,22 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-node3d-visibility",
+          "description": "Validates Node3D visibility_parent references exist in scene tree",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "error"
+            },
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -13259,6 +13479,22 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-node3d-visibility",
+          "description": "Validates Node3D visibility_parent references exist in scene tree",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "error"
+            },
+            {
+              "ruleName": "valid-node3d-visibility",
               "severity": "warning"
             }
           ]
@@ -14016,19 +14252,11 @@
           "viaMatcher": true,
           "emits": [
             {
-              "ruleName": "joint2d-not-connected",
+              "ruleName": "joint-not-connected",
               "severity": "warning"
             },
             {
-              "ruleName": "joint2d-same-body",
-              "severity": "warning"
-            },
-            {
-              "ruleName": "joint3d-not-connected",
-              "severity": "warning"
-            },
-            {
-              "ruleName": "joint3d-same-body",
+              "ruleName": "joint-same-body",
               "severity": "warning"
             }
           ]
@@ -14253,6 +14481,26 @@
             },
             {
               "ruleName": "valid-node3d-visibility",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-geometryinstance3d-visibility-range",
+          "description": "Validates GeometryInstance3D's visibility-range cross-field consistency (End vs Begin distance, fade transitions needing a non-zero margin)",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "geometryinstance3d-visibility-range-end-before-begin",
+              "severity": "warning"
+            },
+            {
+              "ruleName": "geometryinstance3d-visibility-range-begin-fade-without-margin",
+              "severity": "warning"
+            },
+            {
+              "ruleName": "geometryinstance3d-visibility-range-end-fade-without-margin",
               "severity": "warning"
             }
           ]
@@ -17645,6 +17893,22 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-node3d-visibility",
+          "description": "Validates Node3D visibility_parent references exist in scene tree",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "valid-node3d-visibility",
+              "severity": "error"
+            },
+            {
+              "ruleName": "valid-node3d-visibility",
               "severity": "warning"
             }
           ]

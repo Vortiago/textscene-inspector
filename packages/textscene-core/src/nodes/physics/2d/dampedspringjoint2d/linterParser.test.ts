@@ -5,9 +5,6 @@
  * unit under test is the validator, so a failure points at the validator
  * instead of at scene parsing, and no fixture text has to be maintained
  * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -51,20 +48,17 @@ describe('DampedSpringJoint2D strict validators', () => {
 
     it('rejects a non-numeric value', () => {
       const error = check('length', 'far');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_LENGTH_FORMAT');
+      expect(error?.code).toBe('INVALID_LENGTH_FORMAT');
     });
 
     it('rejects a value below the minimum bound', () => {
       const error = check('length', '0');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_LENGTH_VALUE');
+      expect(error?.code).toBe('INVALID_LENGTH_VALUE');
     });
 
     it('rejects a value beyond the 65535 cap (no or_greater on this hint)', () => {
       const error = check('length', '65536');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_LENGTH_VALUE');
+      expect(error?.code).toBe('INVALID_LENGTH_VALUE');
     });
   });
 
@@ -80,20 +74,17 @@ describe('DampedSpringJoint2D strict validators', () => {
 
     it('rejects a non-numeric value', () => {
       const error = check('rest_length', 'none');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_REST_LENGTH_FORMAT');
+      expect(error?.code).toBe('INVALID_REST_LENGTH_FORMAT');
     });
 
     it('rejects a negative value', () => {
       const error = check('rest_length', '-1');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_REST_LENGTH_VALUE');
+      expect(error?.code).toBe('INVALID_REST_LENGTH_VALUE');
     });
 
     it('rejects a value beyond the 65535 cap (no or_greater on this hint)', () => {
       const error = check('rest_length', '65536');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_REST_LENGTH_VALUE');
+      expect(error?.code).toBe('INVALID_REST_LENGTH_VALUE');
     });
   });
 
@@ -113,20 +104,17 @@ describe('DampedSpringJoint2D strict validators', () => {
 
     it('rejects a non-numeric value', () => {
       const error = check('stiffness', 'stiff');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_STIFFNESS_FORMAT');
+      expect(error?.code).toBe('INVALID_STIFFNESS_FORMAT');
     });
 
     it('rejects a value below the 0.1 floor (no or_greater on this hint)', () => {
       const error = check('stiffness', '0');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_STIFFNESS_VALUE');
+      expect(error?.code).toBe('INVALID_STIFFNESS_VALUE');
     });
 
     it('rejects a value beyond the 64 cap (no or_greater on this hint)', () => {
       const error = check('stiffness', '64.1');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_STIFFNESS_VALUE');
+      expect(error?.code).toBe('INVALID_STIFFNESS_VALUE');
     });
   });
 
@@ -146,20 +134,17 @@ describe('DampedSpringJoint2D strict validators', () => {
 
     it('rejects a non-numeric value', () => {
       const error = check('damping', 'soft');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_DAMPING_FORMAT');
+      expect(error?.code).toBe('INVALID_DAMPING_FORMAT');
     });
 
     it('rejects a value below the 0.01 floor (no or_greater on this hint)', () => {
       const error = check('damping', '0');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_DAMPING_VALUE');
+      expect(error?.code).toBe('INVALID_DAMPING_VALUE');
     });
 
     it('rejects a value beyond the 16 cap (no or_greater on this hint)', () => {
       const error = check('damping', '16.01');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_DAMPING_VALUE');
+      expect(error?.code).toBe('INVALID_DAMPING_VALUE');
     });
   });
 });

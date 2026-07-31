@@ -35,7 +35,7 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | --- | --- |
 | `floor_block_on_wall` | true or false |
 | `floor_constant_speed` | true or false |
-| `floor_max_angle` | float 0-3.1416926535897933 |
+| `floor_max_angle` | radians, 0° to 180° |
 | `floor_snap_length` | float >= 0 |
 | `floor_stop_on_slope` | true or false |
 | `max_slides` | integer > 0 |
@@ -46,7 +46,7 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | `safe_margin` | float >= 0 |
 | `up_direction` | Vector3(x, y, z) |
 | `velocity` | Vector3(x, y, z) |
-| `wall_min_slide_angle` | float 0-3.1416926535897933 |
+| `wall_min_slide_angle` | radians, 0° to 180° |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

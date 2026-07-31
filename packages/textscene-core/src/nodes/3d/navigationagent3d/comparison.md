@@ -49,7 +49,6 @@ Strict parsing format-checks these `NavigationAgent3D` properties. Every validat
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 <!-- lint:end -->
 
 The ten scalar properties (`radius`, `height`, `avoidance_enabled`,
