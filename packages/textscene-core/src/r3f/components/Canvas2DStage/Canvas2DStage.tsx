@@ -112,6 +112,13 @@ export function Canvas2DStage({
   const viewRef = useRef(view);
 
   const applyView = useCallback((next: View2D) => {
+    const current = viewRef.current;
+    // A commit identical to the current view still re-renders the stage and
+    // the Control overlay. Every committer (drag, touch, wheel, HUD buttons)
+    // crosses this seam, so the no-op rule lives here once.
+    if (next.zoom === current.zoom && next.pan.x === current.pan.x && next.pan.y === current.pan.y) {
+      return;
+    }
     viewRef.current = next;
     setView(next);
   }, []);
@@ -296,11 +303,6 @@ export function Canvas2DStage({
 
     const dx = centroid.x - origin.centroid.x;
     const dy = centroid.y - origin.centroid.y;
-    // One move per pointer means a two-finger gesture also delivers events in
-    // which nothing moved: nothing to apply, and no reason to re-render the
-    // stage and the Control overlay with it. The 3D viewport guards the same way.
-    if (dx === 0 && dy === 0 && span === origin.span) return;
-
     const panned: View2D = {
       pan: { x: view.pan.x + dx, y: view.pan.y + dy },
       zoom: view.zoom,
@@ -326,12 +328,10 @@ export function Canvas2DStage({
     }
     const d = pan2dDrag.current;
     if (!d.active) return;
-    const nx = d.ox + (e.clientX - d.startX);
-    const ny = d.oy + (e.clientY - d.startY);
-    // A move that lands on the current pan has nothing to apply, and no reason
-    // to re-render the stage. The 3D viewport guards its mouse path the same way.
-    if (nx === viewRef.current.pan.x && ny === viewRef.current.pan.y) return;
-    applyView({ pan: { x: nx, y: ny }, zoom: viewRef.current.zoom });
+    applyView({
+      pan: { x: d.ox + (e.clientX - d.startX), y: d.oy + (e.clientY - d.startY) },
+      zoom: viewRef.current.zoom,
+    });
   };
 
   const endStageDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
