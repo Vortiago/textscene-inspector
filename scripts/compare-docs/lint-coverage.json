@@ -2641,14 +2641,15 @@
     "ColorPicker": {
       "validators": [
         {
-          "property": "vertical",
-          "declaredOn": "VBoxContainer",
-          "accepts": "nothing — orientation is fixed by the class"
-        },
-        {
           "property": "alignment",
           "declaredOn": "BoxContainer",
           "accepts": "enum 0-2 (ALIGNMENT_BEGIN/ALIGNMENT_CENTER/ALIGNMENT_END)"
+        },
+        {
+          "property": "vertical",
+          "declaredOn": "BoxContainer",
+          "accepts": "true or false",
+          "unavailable": true
         },
         {
           "property": "anchor_bottom",
@@ -11375,14 +11376,15 @@
     "OpenXRInteractionProfileEditor": {
       "validators": [
         {
-          "property": "vertical",
-          "declaredOn": "HBoxContainer",
-          "accepts": "nothing — orientation is fixed by the class"
-        },
-        {
           "property": "alignment",
           "declaredOn": "BoxContainer",
           "accepts": "enum 0-2 (ALIGNMENT_BEGIN/ALIGNMENT_CENTER/ALIGNMENT_END)"
+        },
+        {
+          "property": "vertical",
+          "declaredOn": "BoxContainer",
+          "accepts": "true or false",
+          "unavailable": true
         },
         {
           "property": "anchor_bottom",

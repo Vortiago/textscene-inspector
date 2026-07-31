@@ -664,8 +664,16 @@ function getFullValidatorKeys(nodeType: string): Set<string> {
  * `registerAll('TypeName', ...)`.  Returns null for shared helpers that
  * export constants but do not call registerAll.
  */
+/**
+ * The node type a linterParser.ts speaks for.
+ *
+ * Both spellings count. A slice that only REMOVES inherited keys
+ * (`registerUnavailable`, the fixed-orientation containers) registers no
+ * validator at all, and scraping `registerAll` alone dropped it silently out of
+ * this whole inventory — taking its base's allowlist entry down with it.
+ */
 function extractNodeType(src: string): string | null {
-  const m = /registerAll\s*\(\s*'([^']+)'/.exec(src);
+  const m = /register(?:All|Unavailable)\s*\(\s*'([^']+)'/.exec(src);
   return m ? m[1]! : null;
 }
 

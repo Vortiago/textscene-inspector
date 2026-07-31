@@ -79,6 +79,77 @@ describe('ValidatorRegistry base-class walk', () => {
   });
 });
 
+describe('ValidatorRegistry.registerUnavailable', () => {
+  const CHAIN = { Leaf: 'Mid', Mid: 'Root' };
+  const ok: PropertyValidator = () => null;
+
+  it('rejects every value for a key the leaf removes, naming the reason', () => {
+    const r = new ValidatorRegistry(CHAIN);
+    r.registerAll('Root', { vertical: ok });
+    r.registerUnavailable('Leaf', { vertical: 'its orientation is fixed' });
+    const diagnostic = r.findValidator('Leaf', 'vertical')!('vertical', 'true', 7);
+    expect(diagnostic?.code).toBe('UNAVAILABLE_VERTICAL');
+    expect(diagnostic?.severity).toBe('error');
+    expect(diagnostic?.message).toContain('cannot be set on Leaf');
+    expect(diagnostic?.message).toContain('its orientation is fixed');
+  });
+
+  it('rejects the key whatever the value, since presence is the defect', () => {
+    const r = new ValidatorRegistry(CHAIN);
+    r.registerAll('Root', { vertical: ok });
+    r.registerUnavailable('Leaf', { vertical: 'fixed' });
+    const validator = r.findValidator('Leaf', 'vertical')!;
+    for (const value of ['true', 'false', '', 'garbage']) {
+      expect(validator('vertical', value, 1)).not.toBeNull();
+    }
+  });
+
+  it('leaves siblings and the declaring base untouched', () => {
+    const r = new ValidatorRegistry({ ...CHAIN, Other: 'Root' });
+    r.registerAll('Root', { vertical: ok });
+    r.registerUnavailable('Leaf', { vertical: 'fixed' });
+    expect(r.findValidator('Other', 'vertical')).toBe(ok);
+    expect(r.findValidator('Root', 'vertical')).toBe(ok);
+  });
+
+  it('does not count a removal as a declared key', () => {
+    // getOwnKeys feeds the shadow guard and the sheet's own-property table; a
+    // removal is neither a declaration nor a shadow.
+    const r = new ValidatorRegistry(CHAIN);
+    r.registerUnavailable('Leaf', { vertical: 'fixed' });
+    expect(r.getOwnKeys('Leaf')).toEqual([]);
+    expect(r.getUnavailableKeys('Leaf')).toEqual(['vertical']);
+  });
+
+  it('stops at a descendant that re-declares the key', () => {
+    // Mid removes it, but Leaf validates it again, so Leaf can carry it.
+    const r = new ValidatorRegistry(CHAIN);
+    r.registerAll('Root', { vertical: ok });
+    r.registerUnavailable('Mid', { vertical: 'fixed' });
+    r.registerAll('Leaf', { vertical: ok });
+    expect(r.findValidator('Leaf', 'vertical')).toBe(ok);
+    expect(r.findValidator('Mid', 'vertical')?.accepts).toBe('not available on this type');
+  });
+
+  it('is cleared with the validators', () => {
+    const r = new ValidatorRegistry(CHAIN);
+    r.registerUnavailable('Leaf', { vertical: 'fixed' });
+    r.clear();
+    expect(r.findValidator('Leaf', 'vertical')).toBeNull();
+  });
+
+  it('refuses `vertical` on all four fixed-orientation containers, and allows it on their bases', () => {
+    for (const fixed of ['HBoxContainer', 'VBoxContainer', 'HSplitContainer', 'VSplitContainer']) {
+      const diagnostic = validatorRegistry.findValidator(fixed, 'vertical')!('vertical', 'true', 1);
+      expect(diagnostic?.code, fixed).toBe('UNAVAILABLE_VERTICAL');
+      expect(validatorRegistry.getOwnKeys(fixed), fixed).toEqual([]);
+    }
+    for (const base of ['BoxContainer', 'SplitContainer']) {
+      expect(validatorRegistry.findValidator(base, 'vertical')!('vertical', 'true', 1)).toBeNull();
+    }
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Meta-guard: no linterParser.ts may re-declare a key that its base chain
 // already carries — a shadow copy silently drifts from the base validator.
@@ -87,24 +158,17 @@ describe('ValidatorRegistry base-class walk', () => {
 /**
  * Keys a subclass re-declares on purpose, as `Type:key`.
  *
- * The base-walk can only WIDEN what a leaf accepts, so narrowing needs a shadow.
- * These four are the only narrowing case in the tree: `BoxContainer` and
- * `SplitContainer` each declare `vertical`, and each fixes the orientation on
- * its H/V subclasses — `set_vertical` there is
- * `ERR_FAIL_COND_MSG(is_fixed, "Can't change orientation of …")`
- * (scene/gui/box_container.cpp:312, split_container.cpp:1120). Without the
- * shadow the linter would accept a key Godot can never write.
+ * Empty, and that is the point. The four entries this once held were the
+ * fixed-orientation containers, which do not re-declare `vertical` at all —
+ * they REMOVE it, via `registerUnavailable`, so there is no shadow to allow.
+ * Narrowing has its own mechanism now, which means a re-declaration is once
+ * again always the drift this guard exists to catch.
  *
- * Add here only for a subclass that accepts strictly LESS than its base. A
- * re-declaration that merely repeats the base is the drift this guard exists to
- * catch, and belongs deleted rather than listed.
+ * Add here only for a subclass that genuinely re-declares a base key and
+ * accepts something DIFFERENT, not less; a leaf that accepts less belongs in
+ * `registerUnavailable`.
  */
-const INTENTIONAL_OVERRIDES = new Set<string>([
-  'HBoxContainer:vertical',
-  'VBoxContainer:vertical',
-  'HSplitContainer:vertical',
-  'VSplitContainer:vertical',
-]);
+const INTENTIONAL_OVERRIDES = new Set<string>([]);
 
 /** Walk the filesystem for all linterParser.ts source files. */
 function walkLinterParsers(dir: string): string[] {

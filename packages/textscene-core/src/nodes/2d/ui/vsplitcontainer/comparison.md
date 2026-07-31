@@ -41,11 +41,11 @@ Measured through Godot 4.6.3 — 300 px tall columns (top | gap | bottom):
 ## Linting
 
 <!-- lint:begin VSplitContainer -->
-Strict parsing format-checks these `VSplitContainer` properties, plus 10 inherited from SplitContainer, 26 inherited from Control, 15 inherited from CanvasItem. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (10 inherited from SplitContainer, 26 inherited from Control, 15 inherited from CanvasItem); `VSplitContainer` declares none of its own. Every validator failure is an **error**. `VSplitContainer` also REFUSES `vertical`, which its base declares but this class cannot carry.
 
 | Property | Accepts |
 | --- | --- |
-| `vertical` | nothing — orientation is fixed by the class |
+| `vertical` | **not available on this type** |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

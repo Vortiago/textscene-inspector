@@ -18,6 +18,10 @@
 export function validatorsFor(type, validatorRegistry, baseTypes) {
   const seen = new Set();
   const out = [];
+  // Keys an ancestor declares that THIS type removes (registerUnavailable).
+  // Resolved against the leaf, not the declaring type, because the removal
+  // lives on the leaf and the declaration lives above it.
+  const removed = new Set(validatorRegistry.getUnavailableKeys?.(type) ?? []);
   let current = type;
   const visited = new Set();
   while (current && !visited.has(current)) {
@@ -30,9 +34,20 @@ export function validatorsFor(type, validatorRegistry, baseTypes) {
       // are known. A hand-rolled validator has none and renders blank rather
       // than being guessed at.
       const validator = validatorRegistry.findValidator(current, key);
-      out.push({ property: key, declaredOn: current, accepts: validator?.accepts ?? '' });
+      out.push({
+        property: key,
+        declaredOn: current,
+        accepts: validator?.accepts ?? '',
+        ...(removed.has(key) ? { unavailable: true } : {}),
+      });
     }
     current = baseTypes[current];
+  }
+  // A removal whose declaring ancestor was never reached still belongs in the
+  // list: the reader needs to know the key is refused, not merely unlisted.
+  for (const key of [...removed].sort()) {
+    if (seen.has(key)) continue;
+    out.push({ property: key, declaredOn: type, accepts: '', unavailable: true });
   }
   return out;
 }
@@ -72,10 +87,13 @@ export function renderCoverage(type, coverage) {
   // inherited sets are identical across every node sharing a base (all 34 of a
   // light's validated properties are 31 Node3D/Light3D ones), so listing them in
   // full would repeat one table across dozens of sheets to no purpose.
-  const own = validators.filter((v) => v.declaredOn === type);
+  // A removal belongs in the type's OWN table even though the key it refuses is
+  // declared by an ancestor: refusing it is this type's own statement, and
+  // counting it as "inherited from BoxContainer" would say the opposite.
+  const own = validators.filter((v) => v.declaredOn === type || v.unavailable);
   const inheritedBy = new Map();
   for (const v of validators) {
-    if (v.declaredOn === type) continue;
+    if (v.declaredOn === type || v.unavailable) continue;
     inheritedBy.set(v.declaredOn, (inheritedBy.get(v.declaredOn) ?? 0) + 1);
   }
   const inheritedNote = [...inheritedBy]
@@ -87,15 +105,31 @@ export function renderCoverage(type, coverage) {
       `Strict parsing format-checks nothing on this node: no validators are registered for \`${type}\`, and it inherits none.`
     );
   } else {
-    const scope = own.length
+    // A removal is not a check, so a type whose only own entry is a removal must
+    // not be described as format-checking it.
+    const checked = own.filter((v) => !v.unavailable);
+    const refused = own.filter((v) => v.unavailable);
+    const scope = checked.length
       ? `these \`${type}\` properties${inheritedNote ? `, plus ${inheritedNote}` : ''}`
       : `the inherited set (${inheritedNote}); \`${type}\` declares none of its own`;
-    lines.push(`Strict parsing format-checks ${scope}. Every validator failure is an **error**.`);
+    const refusalNote = refused.length
+      ? ` \`${type}\` also REFUSES ${refused
+          .map((v) => `\`${v.property}\``)
+          .join(', ')}, which its base declares but this class cannot carry.`
+      : '';
+    lines.push(
+      `Strict parsing format-checks ${scope}. Every validator failure is an **error**.${refusalNote}`
+    );
     if (own.length) {
       lines.push('');
       lines.push('| Property | Accepts |');
       lines.push('| --- | --- |');
-      for (const v of own) lines.push(`| \`${v.property}\` | ${v.accepts} |`);
+      for (const v of own) {
+        // A removed key is not a property with a narrow domain; it is one this
+        // class refuses outright, so it must not read as an accepted value.
+        const accepts = v.unavailable ? '**not available on this type**' : v.accepts;
+        lines.push(`| \`${v.property}\` | ${accepts} |`);
+      }
     }
   }
 
