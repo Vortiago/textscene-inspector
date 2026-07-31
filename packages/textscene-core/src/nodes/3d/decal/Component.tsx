@@ -217,18 +217,26 @@ export function Decal({ node, children }: NodeComponentProps) {
   useFrame((state) => {
     const group = projectionRef.current;
     const material = materialRef.current;
-    if (!group || !material || !properties.distance_fade_enabled) return;
+    if (!group || !material) return;
 
-    // Both ends read the same way — straight off `matrixWorld`, no update
-    // forced. `getWorldPosition` would call `updateWorldMatrix` first, ~20x the
-    // cost, and buy no extra consistency since the decal end is a raw read.
-    decalOrigin.setFromMatrixPosition(group.matrixWorld);
-    cameraOrigin.setFromMatrixPosition(state.camera.matrixWorld);
-    const fade = decalDistanceFade(
-      properties.distance_fade_begin,
-      properties.distance_fade_length,
-      cameraOrigin.distanceTo(decalOrigin)
-    );
+    // The DISABLED case still has to run, and settle at fade = 1: the effect
+    // above does not depend on `distance_fade_enabled`, so turning the feature
+    // off on a re-parse rebuilds nothing — a decal left faded (or hidden) by an
+    // earlier frame would stay that way for the rest of the session.
+    let fade = 1;
+    if (properties.distance_fade_enabled) {
+      // Both ends read the same way — straight off `matrixWorld`, no update
+      // forced. `getWorldPosition` would call `updateWorldMatrix` first, ~20x
+      // the cost, and buy no extra consistency since the decal end is a raw
+      // read.
+      decalOrigin.setFromMatrixPosition(group.matrixWorld);
+      cameraOrigin.setFromMatrixPosition(state.camera.matrixWorld);
+      fade = decalDistanceFade(
+        properties.distance_fade_begin,
+        properties.distance_fade_length,
+        cameraOrigin.distanceTo(decalOrigin)
+      );
+    }
 
     const next = opacity * fade;
     if (material.opacity !== next) {

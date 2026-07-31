@@ -10,8 +10,9 @@ import { applyTextureState } from '../../textures/applyTextureState';
 
 /**
  * The texture this material samples: the shared cached one when it needs no
- * state of its own, otherwise a clone carrying its UV transform and sampler
- * filter. `applyTextureState` owns both; see it for why cloning is mandatory.
+ * state of its own, otherwise a clone carrying its UV transform, sampler filter
+ * and wrapping. `applyTextureState` owns all three; see it for why cloning is
+ * mandatory.
  *
  * Godot's `uv1_scale` maps to three's `repeat` directly (higher = more tiling).
  * `uv1_offset` is not parsed on this path yet, so it passes zero.
@@ -25,11 +26,12 @@ function materialTexture(
       ? { scale: properties.uv1_scale, offset: { x: 0, y: 0 } }
       : undefined,
     filter: properties.texture_filter,
+    repeat: properties.texture_repeat,
   });
 
   if (result !== texture) {
     info(
-      `[StandardMaterial3D] Cloned texture for uv1_scale=${JSON.stringify(properties.uv1_scale)} texture_filter=${properties.texture_filter ?? '(default)'}`
+      `[StandardMaterial3D] Cloned texture for uv1_scale=${JSON.stringify(properties.uv1_scale)} texture_filter=${properties.texture_filter ?? '(default)'} texture_repeat=${properties.texture_repeat ?? '(default)'}`
     );
   }
 

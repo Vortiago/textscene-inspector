@@ -119,13 +119,31 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     };
   }, [entries, nodePath, registerNodeObject, unregisterNodeObject]);
 
+  // The objects an override node hides. `applyGlbNodeOverrides` writes
+  // `visible` during render, but the tree's hidden-paths effect below assigns
+  // EVERY entry's `visible` unconditionally and runs after it — so an authored
+  // `visible = false` would be switched straight back on. The two write the
+  // same field, so they have to be resolved in one place.
+  const overrideHidden = useMemo(() => {
+    const hidden = new Set<THREE.Object3D>();
+    if (!object) return hidden;
+    for (const override of overrides) {
+      if (override.rawProperties?.visible !== 'false') continue;
+      if (!isApplicableGlbOverride(override)) continue;
+      const target = resolveGlbOverrideTarget(object, entries, override);
+      if (target) hidden.add(target);
+    }
+    return hidden;
+  }, [object, entries, overrides]);
+
   const hiddenNodePaths = selection?.hiddenNodePaths;
   useEffect(() => {
     if (nodePath === null) return;
     for (const { relPath, object: obj } of entries) {
-      obj.visible = !(hiddenNodePaths?.has(joinPath(nodePath, relPath)) ?? false);
+      obj.visible =
+        !(hiddenNodePaths?.has(joinPath(nodePath, relPath)) ?? false) && !overrideHidden.has(obj);
     }
-  }, [entries, nodePath, hiddenNodePaths]);
+  }, [entries, nodePath, hiddenNodePaths, overrideHidden]);
 
   // --- GLB animation driver (selection-driven, ADR-0012) ---------------
   // Godot parity: a GLB's clips live on an `AnimationPlayer` node in the

@@ -495,11 +495,17 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
     [node, externalResources, scenePath, loadedScene]
   );
 
+  // Memoized because `withoutDeepChildren` allocates a new node whenever there
+  // IS a deep child — exactly the case this feature creates — and `PlainNode`
+  // memoizes a recursive subtree scan on node identity, so an unmemoized strip
+  // would re-run that scan on every render of every instance with an override.
+  const shallow = useMemo(() => withoutDeepChildren(node), [node]);
+
   // Unresolvable ref or failed load: keep the node visible with a magenta
   // placeholder child, matching the missing-texture UX.
   if (!scenePath || result.status === 'unavailable') {
     return (
-      <PlainNode node={withoutDeepChildren(node)} path={path}>
+      <PlainNode node={shallow} path={path}>
         <MissingResourcePlaceholder shape="box" />
       </PlainNode>
     );
@@ -507,7 +513,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // Still loading: render the instancing node's own subtree; the merged
   // result swaps in once the sub-scene arrives.
   if (result.status === 'pending' || !loadedScene) {
-    return <PlainNode node={withoutDeepChildren(node)} path={path} />;
+    return <PlainNode node={shallow} path={path} />;
   }
 
   if (effective !== node) {
@@ -524,7 +530,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // Fallback (`.glb` synthetic root / multi-root): historical nested form.
   return (
     <GlbOverridesProvider overrides={node.children}>
-      <PlainNode node={withoutDeepChildren(node)} path={path}>
+      <PlainNode node={shallow} path={path}>
         <SceneResourcesProvider
           internalResources={loadedScene.internalResources}
           externalResources={loadedScene.externalResources}

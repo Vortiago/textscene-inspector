@@ -211,8 +211,9 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   );
   useProceduralTexturePins(proceduralKeys);
 
-  // Per-material texture state: the UV transform (`uv1_scale` / `uv1_offset`)
-  // and the sampler filter (`texture_filter`). `applyTextureState` clones
+  // Per-material texture state: the UV transform (`uv1_scale` / `uv1_offset`),
+  // the sampler filter (`texture_filter`) and the wrapping (`texture_repeat`,
+  // whose default is applied to the shared texture at load). `applyTextureState` clones
   // before mutating, so two MeshInstance3D nodes sharing a texture path with
   // different tiling or filtering don't clobber each other, and hands the
   // original straight back when this material asks for neither.
@@ -242,6 +243,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
         materialScalars.textureFilter === GODOT_TEXTURE_FILTER_DEFAULT
           ? undefined
           : materialScalars.textureFilter,
+      repeat: materialScalars.textureRepeat,
     };
   }, [materialScalars, meshResource]);
 

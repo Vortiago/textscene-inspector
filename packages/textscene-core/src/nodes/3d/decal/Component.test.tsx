@@ -61,30 +61,40 @@ function SelectSeeder({ path }: { path: string | null }) {
   return null;
 }
 
-async function render(opts: {
+interface RenderOptions {
   node: TscnNode;
   externals?: TscnExternalResource[];
   cached?: Array<{ path: string; texture: THREE.Texture | 'missing' }>;
   children?: ReactNode;
   selectedPath?: string | null;
-}) {
-  const fake = createFakeResourceLoader();
-  for (const { path, texture } of opts.cached ?? []) {
-    fake.textures.seed(path, texture === 'missing' ? null : texture);
-  }
-  const path = opts.node.name;
-  return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={fake.loader}>
+}
+
+/** The mounted tree, separated from `create` so a test can re-render it. */
+function decalTree(opts: RenderOptions, loader: ReturnType<typeof createFakeResourceLoader>['loader']) {
+  return (
+    <ResourceLoaderProvider loader={loader}>
       <SceneResourcesProvider externalResources={opts.externals ?? []}>
         <SelectionProvider>
           {opts.selectedPath !== undefined && <SelectSeeder path={opts.selectedPath} />}
-          <NodePathProvider path={path}>
+          <NodePathProvider path={opts.node.name}>
             <Decal node={opts.node}>{opts.children}</Decal>
           </NodePathProvider>
         </SelectionProvider>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+}
+
+function seededLoader(cached: RenderOptions['cached']) {
+  const fake = createFakeResourceLoader();
+  for (const { path, texture } of cached ?? []) {
+    fake.textures.seed(path, texture === 'missing' ? null : texture);
+  }
+  return fake.loader;
+}
+
+async function render(opts: RenderOptions) {
+  return ReactThreeTestRenderer.create(decalTree(opts, seededLoader(opts.cached)));
 }
 
 /**
@@ -208,6 +218,50 @@ describe('<Decal>', () => {
       // Had opacity been folded in too, every alpha would sit at or below 0.56.
       expect(color.getW(i)).toBeGreaterThan(0.9);
     }
+  });
+
+  it('restores a distance-faded decal when the fade is turned back off', async () => {
+    // The frame callback culls a decal past `begin + length` by hiding its
+    // projection group and zeroing the material's opacity. Neither is part of
+    // the rebuild effect's inputs, so a re-parse that DISABLES the fade rebuilds
+    // nothing — the callback itself has to settle back at full strength, or the
+    // decal stays invisible for the rest of the session.
+    const loader = seededLoader([{ path: TEXTURE_PATH, texture: makeTexture() }]);
+    const options = {
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      children: <Receiver />,
+    };
+    const faded = {
+      texture_albedo: 'ExtResource("1_tex")',
+      distance_fade_enabled: 'true',
+      // The test renderer's camera sits metres away, so anything past this is culled.
+      distance_fade_begin: '0.01',
+      distance_fade_length: '0.01',
+    };
+
+    const renderer = await ReactThreeTestRenderer.create(
+      decalTree({ ...options, node: makeNode(faded) }, loader)
+    );
+    await renderer.advanceFrames(1, 16);
+
+    const projection = projections(renderer)[0]!;
+    // The group is the component's own ref and outlives a rebuild; the meshes
+    // and material inside it do not.
+    const group = projection.parent!;
+    expect(group.visible).toBe(false);
+    expect((projection.material as THREE.MeshStandardMaterial).opacity).toBe(0);
+
+    await renderer.update(
+      decalTree(
+        { ...options, node: makeNode({ ...faded, distance_fade_enabled: 'false' }) },
+        loader
+      )
+    );
+    await renderer.advanceFrames(1, 16);
+
+    expect(group.visible).toBe(true);
+    const rebuilt = projections(renderer)[0]!;
+    expect((rebuilt.material as THREE.MeshStandardMaterial).opacity).toBe(1);
   });
 
   it('applies the Node3D transform and wraps children', async () => {

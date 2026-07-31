@@ -39,6 +39,14 @@ export interface StandardMaterial3DProperties {
    */
   texture_filter?: number;
 
+  /**
+   * Godot `BaseMaterial3D.texture_repeat`, default TRUE. Textures are loaded
+   * with repeat wrapping because that default is the common case, so only a
+   * material that turns it OFF diverges — and it must, or a tile atlas sampled
+   * outside 0..1 wraps where Godot clamps.
+   */
+  texture_repeat?: boolean;
+
   // Texture maps
   albedo_texture?: THREE.Texture;
   normal_texture?: THREE.Texture;

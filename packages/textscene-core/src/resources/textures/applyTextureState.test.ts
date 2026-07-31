@@ -114,6 +114,13 @@ describe('applyTextureState', () => {
 
       expect(applyTextureState(target.texture, { filter: 0 })).toBe(target.texture);
       expect(applyTextureState(target.texture, {})).toBe(target.texture);
+      // The UV transform is no different: a tiled ViewportTexture that froze
+      // would be the same bug arriving through the other divergence.
+      expect(
+        applyTextureState(target.texture, {
+          uv: { scale: { x: 4, y: 4 }, offset: { x: 0, y: 0 } },
+        })
+      ).toBe(target.texture);
     });
 
     it('does not clone merely because the source diverges from Godot\'s default', () => {

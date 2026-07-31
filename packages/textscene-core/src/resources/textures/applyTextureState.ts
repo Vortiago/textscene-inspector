@@ -65,6 +65,12 @@ export interface TextureState {
  * of its own, otherwise a clone carrying every divergence at once.
  */
 export function applyTextureState(texture: THREE.Texture, state: TextureState): THREE.Texture {
+  // A render target is excluded OUTRIGHT, whatever the material asked for: its
+  // texture is the live attachment of a `WebGLRenderTarget` (a ViewportTexture),
+  // and a clone shares only the source — the material would sample a copy that
+  // no longer follows the target, i.e. a frozen frame.
+  if (texture.isRenderTargetTexture) return texture;
+
   const filterState = godotTextureFilterState(state.filter);
   const uvDiverges = state.uv !== undefined && !isIdentity(state.uv);
   // Godot's default (repeat) is applied to the shared texture at load, so only
@@ -72,19 +78,14 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
   // follows, and what keeps every ordinary texture shared rather than cloned.
   const wrapping = state.repeat === false ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
   const wrapDiverges =
-    state.repeat === false &&
-    !texture.isRenderTargetTexture &&
-    (texture.wrapS !== wrapping || texture.wrapT !== wrapping);
+    state.repeat === false && (texture.wrapS !== wrapping || texture.wrapT !== wrapping);
   // Only an AUTHORED filter can diverge. Comparing an unauthored material
   // against Godot's default would clone every texture whose sampler state
-  // happens not to match it — which for a render-target-backed texture (a
-  // ViewportTexture) means handing the material a copy that is no longer
-  // attached to the target, i.e. a frozen frame. Render targets are excluded
-  // outright for the same reason, authored or not.
+  // happens not to match it — a procedural GradientTexture2D has no mipmaps, so
+  // it would clone and re-upload per material per slot for a filter no material
+  // asked for.
   const filterDiverges =
-    state.filter !== undefined &&
-    !texture.isRenderTargetTexture &&
-    !textureFilterMatches(texture, filterState);
+    state.filter !== undefined && !textureFilterMatches(texture, filterState);
   if (!uvDiverges && !filterDiverges && !wrapDiverges) return texture;
 
   // ONE clone, however many reasons there were. `clone()` copies parameters and
