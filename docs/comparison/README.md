@@ -117,6 +117,7 @@ reproduced:
 - [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md) — nothing itself (a transform-only group that pulls its children in on a hit)
 - [Sprite3D](../../packages/textscene-core/src/nodes/3d/sprite3d/comparison.md) — an unlit textured THREE.Mesh quad
 - [StaticBody3D](../../packages/textscene-core/src/nodes/physics/3d/staticbody3d/comparison.md) — a transform-only group
+- [SubViewport](../../packages/textscene-core/src/nodes/viewport/subviewport/comparison.md) — an offscreen render target, plus a boundary that scopes its canvas subtree
 - [VehicleBody3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclebody3d/comparison.md) — nothing (a transform-only group; its VehicleWheel3D children do the driving)
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md) — the scene's background and environment lighting
 - [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md) — a transform-only group (it drives a Skeleton3D's bone poses)
@@ -136,15 +137,21 @@ reproduced:
 - [Button](../../packages/textscene-core/src/nodes/2d/ui/button/comparison.md) — a positioned HTML div
 - [Camera2D](../../packages/textscene-core/src/nodes/2d/camera2d/comparison.md) — a 2D view frame with no drawn geometry
 - [CanvasLayer](../../packages/textscene-core/src/nodes/2d/ui/canvaslayer/comparison.md) — a full-rect passthrough layer hosting Control children
+- [CanvasModulate](../../packages/textscene-core/src/nodes/2d/canvasmodulate/comparison.md) — a colour multiply applied to the whole canvas
 - [CenterContainer](../../packages/textscene-core/src/nodes/2d/ui/centercontainer/comparison.md) — a centering flex container
 - [CheckBox](../../packages/textscene-core/src/nodes/2d/ui/checkbox/comparison.md) — an inline HTML row with a drawn check indicator
 - [CollisionShape2D](../../packages/textscene-core/src/nodes/physics/2d/collisionshape2d/comparison.md) — a toggle-gated collision outline
 - [ColorRect](../../packages/textscene-core/src/nodes/2d/ui/colorrect/comparison.md) — a color-filled div
 - [Control](../../packages/textscene-core/src/nodes/2d/ui/control/comparison.md) — a full-rect layout region
+- [CPUParticles2D](../../packages/textscene-core/src/nodes/2d/cpuparticles2d/comparison.md) — one merged quad mesh holding a frozen particle pose
 - [GridContainer](../../packages/textscene-core/src/nodes/2d/ui/gridcontainer/comparison.md) — a CSS grid container
 - [HBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/hboxcontainer/comparison.md) — a CSS flex-row `<div>`
+- [HSlider](../../packages/textscene-core/src/nodes/2d/ui/hslider/comparison.md) — a horizontal track with a round grabber
+- [HSplitContainer](../../packages/textscene-core/src/nodes/2d/ui/hsplitcontainer/comparison.md) — two children side by side, split at a computed offset
 - [Label](../../packages/textscene-core/src/nodes/2d/ui/label/comparison.md) — a positioned HTML div in the Control overlay
+- [LightOccluder2D](../../packages/textscene-core/src/nodes/2d/lightoccluder2d/comparison.md) — a selection-gated outline of its occluder polygon; it occludes 2D light
 - [Line2D](../../packages/textscene-core/src/nodes/2d/line2d/comparison.md) — a stroked mesh polyline
+- [LineEdit](../../packages/textscene-core/src/nodes/2d/ui/lineedit/comparison.md) — a single-line text box
 - [MarginContainer](../../packages/textscene-core/src/nodes/2d/ui/margincontainer/comparison.md) — a padded flex container
 - [Marker2D](../../packages/textscene-core/src/nodes/2d/marker2d/comparison.md) — a selection-gated cross gizmo
 - [NavigationRegion2D](../../packages/textscene-core/src/nodes/2d/navigationregion2d/comparison.md) — a translucent green navigation-mesh overlay
@@ -152,9 +159,12 @@ reproduced:
 - [OptionButton](../../packages/textscene-core/src/nodes/2d/ui/optionbutton/comparison.md) — a collapsed dropdown div
 - [Panel](../../packages/textscene-core/src/nodes/2d/ui/panel/comparison.md) — a StyleBox-painted <div>
 - [PanelContainer](../../packages/textscene-core/src/nodes/2d/ui/panelcontainer/comparison.md) — a StyleBox panel around its child
+- [ParallaxBackground](../../packages/textscene-core/src/nodes/2d/parallaxbackground/comparison.md) — a viewport-anchored group holding its ParallaxLayer children
+- [ParallaxLayer](../../packages/textscene-core/src/nodes/2d/parallaxlayer/comparison.md) — a Node2D transform group, repeated once per mirrored axis
 - [Path2D](../../packages/textscene-core/src/nodes/2d/path2d/comparison.md) — nothing at runtime; a selection-gated curve gizmo
 - [PathFollow2D](../../packages/textscene-core/src/nodes/2d/pathfollow2d/comparison.md) — a transform-only follower with a selection-gated dot
 - [PhysicalBone2D](../../packages/textscene-core/src/nodes/physics/2d/physicalbone2d/comparison.md) — nothing (a transform-only group; one Skeleton2D bone driven by physics)
+- [PointLight2D](../../packages/textscene-core/src/nodes/2d/pointlight2d/comparison.md) — the light's cookie multiplied into every CanvasItem beneath it
 - [Polygon2D](../../packages/textscene-core/src/nodes/2d/polygon2d/comparison.md) — a filled ShapeGeometry mesh
 - [RayCast2D](../../packages/textscene-core/src/nodes/physics/2d/raycast2d/comparison.md) — nothing (a transform-only group; the ray is an editor gizmo)
 - [RemoteTransform2D](../../packages/textscene-core/src/nodes/2d/remotetransform2d/comparison.md) — nothing itself; it copies its transform onto its remote_path target
@@ -162,6 +172,7 @@ reproduced:
 - [ScrollContainer](../../packages/textscene-core/src/nodes/2d/ui/scrollcontainer/comparison.md) — an overflow-scrolling DOM container
 - [ShapeCast2D](../../packages/textscene-core/src/nodes/physics/2d/shapecast2d/comparison.md) — nothing (a transform-only group; the swept shape is an editor gizmo)
 - [Sprite2D](../../packages/textscene-core/src/nodes/2d/sprite2d/comparison.md) — an unlit textured quad
+- [SubViewportContainer](../../packages/textscene-core/src/nodes/2d/ui/subviewportcontainer/comparison.md) — a clipped surface showing its SubViewport children's targets
 - [TextureRect](../../packages/textscene-core/src/nodes/2d/ui/texturerect/comparison.md) — an HTML img element
 - [TileMap](../../packages/textscene-core/src/nodes/2d/tiles/tilemap/comparison.md) — batched textured tile quads
 - [TileMapLayer](../../packages/textscene-core/src/nodes/2d/tiles/tilemaplayer/comparison.md) — batched textured tile quads
@@ -176,9 +187,12 @@ reproduced:
 - [GraphElement](../../packages/textscene-core/src/nodes/2d/ui/graphelement/comparison.md) — nothing yet; the draggable graph-node base
 - [SplitContainer](../../packages/textscene-core/src/nodes/2d/ui/splitcontainer/comparison.md) — nothing yet; the splitter base HSplit and VSplit inherit
 
+- [VSlider](../../packages/textscene-core/src/nodes/2d/ui/vslider/comparison.md) — a vertical track with a round grabber
+- [VSplitContainer](../../packages/textscene-core/src/nodes/2d/ui/vsplitcontainer/comparison.md) — two children stacked, split at a computed offset
 ## Other
 
 - [AudioStreamPlayer](../../packages/textscene-core/src/nodes/audio/audiostreamplayer/comparison.md) — nothing (a non-spatial audio node)
+- [Node](../../packages/textscene-core/src/nodes/node/comparison.md) — nothing; the non-spatial base every other node descends from
 - [Timer](../../packages/textscene-core/src/nodes/timers/timer/comparison.md) — nothing (a countdown timer node)
 - [Window](../../packages/textscene-core/src/nodes/windows/window/comparison.md) — nothing yet; parsed and validated but not drawn
 - [AcceptDialog](../../packages/textscene-core/src/nodes/windows/acceptdialog/comparison.md) — nothing yet; a dialog Window with an OK button

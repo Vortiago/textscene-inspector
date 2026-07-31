@@ -410,11 +410,28 @@ describe('rule emits meta-guard', () => {
     // The per-slice check attributes every scraped name to every rule declared in
     // the file, which is only sound while that is one rule. Assert the assumption
     // rather than leaving a second rule to produce an unfixable red test.
+    //
+    // Counts BOTH spellings. A factory-built slice contains no `name: '…'`
+    // literal at all, so scraping RULE_NAME_RE alone evaluated `[].length > 1`
+    // and passed without inspecting anything — vacuous for every slice built
+    // from makeAreaLinterRule / makeCastLinterRule / makeCollisionShapeLinterRule
+    // / makeNavigationRegionLinterRule, which is ten of them.
     const multiple = walk(nodesRoot, 'linter.ts')
-      .map((f) => ({ f, names: extractAll(f, RULE_NAME_RE) }))
+      .map((f) => ({ f, names: [...extractAll(f, RULE_NAME_RE), ...extractFactoryRuleNames(f)] }))
       .filter((e) => e.names.length > 1)
       .map((e) => `${e.f.slice(nodesRoot.length + 1)}: ${e.names.join(', ')}`);
     expect(multiple).toEqual([]);
+  });
+
+  it('sees a rule in every slice linter.ts, whichever spelling it uses', () => {
+    // The guard above can only bite on files it can read a rule out of. If a
+    // future factory is named differently, FACTORY_RULE_RE stops matching and
+    // that slice silently leaves the inventory — so assert the scrape finds
+    // something everywhere, which is what makes the count meaningful.
+    const invisible = walk(nodesRoot, 'linter.ts')
+      .filter((f) => extractAll(f, RULE_NAME_RE).length + extractFactoryRuleNames(f).length === 0)
+      .map((f) => f.slice(nodesRoot.length + 1));
+    expect(invisible).toEqual([]);
   });
 
   it('declares each emitted ruleName once per severity', () => {

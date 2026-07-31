@@ -46,6 +46,19 @@ const KNOWN_KEYS = new Set([
 const STATUSES = new Set(['done', 'limitation', 'unimplemented', 'unreviewed', 'linter-only']);
 const CATEGORIES = new Set(['3D', '2D', 'Resources', 'Complex Scenes', 'Other']);
 
+/**
+ * The hand-maintained index at docs/comparison/README.md, and the node count in
+ * the root README.
+ *
+ * Neither is generated and neither was guarded, so every wave appended five
+ * entries by hand and a missed one was invisible until somebody read the doc.
+ * Both stay hand-written on purpose: the index's per-node blurbs are richer
+ * than `renders_as:` and generating them would lose that. Only the SET of
+ * entries is asserted, never their prose.
+ */
+const COMPARISON_INDEX = join(HERE, '../../docs/comparison/README.md');
+const ROOT_README = join(HERE, '../../README.md');
+
 const sheets = await Promise.all(
   collectSheetFiles().map(async (file) => {
     const text = await readFile(file, 'utf8');
@@ -315,5 +328,43 @@ describe('comparison sheets', () => {
         .map((s) => `${s.label}: claims unimplemented but registers a render component`);
       expect(bad).toEqual([]);
     });
+  });
+});
+
+describe('hand-maintained docs stay in step with the sheets', () => {
+  /** Every `- [Name](…comparison.md)` link target in the index, by node type. */
+  const indexed = new Set(
+    [...readFileSync(COMPARISON_INDEX, 'utf8').matchAll(/^- \[([^\]]+)\]\([^)]*comparison\.md\)/gm)].map(
+      (m) => m[1]
+    )
+  );
+
+  it('lists every slice sheet, so a new node cannot be absent from the index', () => {
+    // Loose showcase sheets live outside src/nodes and describe scenes, not
+    // types; the index covers node types only.
+    const sliceTypes = sheets
+      .filter((s) => s.file.includes(`${sep}nodes${sep}`) && s.meta.type)
+      .map((s) => s.meta.type);
+    const missing = [...new Set(sliceTypes)].filter((t) => !indexed.has(t)).sort();
+    expect(missing).toEqual([]);
+  });
+
+  it('lists no node the sheets no longer define', () => {
+    const known = new Set(sheets.map((s) => s.meta.type).filter(Boolean));
+    const stale = [...indexed].filter((t) => !known.has(t)).sort();
+    expect(stale).toEqual([]);
+  });
+
+  it("states a node count the ledger agrees with, rounded to the README's own phrasing", () => {
+    // The README says "Around N node types". N is allowed to trail the true
+    // count by the rounding the word "Around" implies, but not to drift by a
+    // whole wave, which is what silently happened before this existed.
+    const claimed = Number(
+      /Around (\d+) node types/.exec(readFileSync(ROOT_README, 'utf8'))?.[1] ?? NaN
+    );
+    const actual = new Set(
+      sheets.filter((s) => s.file.includes(`${sep}nodes${sep}`) && s.meta.type).map((s) => s.meta.type)
+    ).size;
+    expect(Math.abs(claimed - actual)).toBeLessThanOrEqual(5);
   });
 });
