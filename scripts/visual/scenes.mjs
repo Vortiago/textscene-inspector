@@ -225,6 +225,18 @@ export const GOLDEN_SCENES = [
   // texture (deterministic local SVG, gated by the two-identical-frames settle);
   // the projection edges are AA-sensitive, hence the relaxed threshold.
   { name: 'decal', file: 'unit-decal.tscn', maxDiffPct: 0.3 },
+  // The ONE variable against `decal` above: a receiver on `layers = 2` under a
+  // `cull_mask` that clears layer 2, beside a default-layer control receiver.
+  // Godot's rule is `decal.cull_mask & instance.layers`, so the left floor must
+  // show bare albedo and the right one the checkerboard. `unit-decal.tscn` uses
+  // cull_mask = 1048575, which excludes nothing, so it cannot witness this.
+  { name: 'decal-cull-mask', file: 'unit-decal-cull-mask.tscn', maxDiffPct: 0.3 },
+  // One image, two inline StandardMaterial3D sub-resources differing ONLY in
+  // `texture_filter` (0 NEAREST vs 3 LINEAR_WITH_MIPMAPS). Also the only scene
+  // that witnesses per-material texture cloning: filter state lives on the
+  // THREE.Texture but the loader caches one per path, so a renderer that writes
+  // it onto the shared texture renders both quads identically.
+  { name: 'material-texture-filter', file: 'unit-material-texture-filter.tscn' },
   // `anisotropy_flowmap` as a real PNG — the ONLY scene where a decoded image
   // reaches the anisotropy channel repack (Godot keeps per-pixel strength in
   // ALPHA, three.js reads it from BLUE), which needs a canvas readback that no

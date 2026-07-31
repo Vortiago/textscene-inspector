@@ -20,4 +20,8 @@ validatorRegistry.registerAll('Decal', {
   upper_fade: v.float('upper_fade', { min: 0 }),
   lower_fade: v.float('lower_fade', { min: 0 }),
   cull_mask: layerBitmask('cull_mask'),
+  // Godot hints these as "0.0,4096.0,0.01,or_greater", i.e. a lower bound only.
+  distance_fade_enabled: v.boolean('distance_fade_enabled'),
+  distance_fade_begin: v.nonNegativeFloat('distance_fade_begin'),
+  distance_fade_length: v.nonNegativeFloat('distance_fade_length'),
 });

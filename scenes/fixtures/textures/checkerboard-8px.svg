@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 8 8" shape-rendering="crispEdges">
+  <!-- A deliberately TINY 4x4 checkerboard: 8x8 pixels, each cell 2x2. Sized so
+       a quad filling part of the frame magnifies it ~25x, which is what makes
+       magFilter (NEAREST vs LINEAR) the dominant term rather than a sub-pixel
+       difference. `shape-rendering="crispEdges"` keeps the source raster free of
+       antialiasing, so any softness in a render came from the sampler. -->
+  <rect width="8" height="8" fill="#ffffff"/>
+  <rect x="0" y="0" width="2" height="2" fill="#101010"/>
+  <rect x="4" y="0" width="2" height="2" fill="#101010"/>
+  <rect x="2" y="2" width="2" height="2" fill="#101010"/>
+  <rect x="6" y="2" width="2" height="2" fill="#101010"/>
+  <rect x="0" y="4" width="2" height="2" fill="#101010"/>
+  <rect x="4" y="4" width="2" height="2" fill="#101010"/>
+  <rect x="2" y="6" width="2" height="2" fill="#101010"/>
+  <rect x="6" y="6" width="2" height="2" fill="#101010"/>
+</svg>

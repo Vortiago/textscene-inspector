@@ -49,4 +49,13 @@ export interface DecalProperties extends Node3DProperties {
 
   /** Render-layer bitmask deciding which surfaces receive the decal. */
   cull_mask: number;
+
+  /** Whether the decal fades out with camera distance (default: false). */
+  distance_fade_enabled: boolean;
+
+  /** Camera distance at which the fade starts (default: 40). */
+  distance_fade_begin: number;
+
+  /** Distance over which the fade completes; past it the decal is culled (default: 10). */
+  distance_fade_length: number;
 }

@@ -71,7 +71,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
 
       const errorMsg = `Failed to load resource: ${resourcePath} (${primaryError instanceof Error ? primaryError.message : 'Unknown error'})`;
       error(`[VSCodeResourceProvider] ${errorMsg}`);
-      throw new Error(errorMsg);
+      throw new Error(errorMsg, { cause: primaryError });
     }
   }
 

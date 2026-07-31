@@ -4,14 +4,15 @@
  * cannot exercise: it populates no `matrixWorld` and mounts no sibling meshes).
  *
  * Coverage: the box AABB in world space; the receiver filter (real meshes in,
- * decal projections / non-meshes out, non-overlapping out); and the projection
- * itself — a horizontal floor inside the box bakes to geometry that lies on the
- * floor, stays within the footprint, and carries in-range UVs; a floor outside
- * the box clips to nothing.
+ * decal projections / non-meshes out, non-overlapping out, `cull_mask`-culled
+ * render layers out); and the projection itself — a horizontal floor inside the
+ * box bakes to geometry that lies on the floor, stays within the footprint, and
+ * carries in-range UVs; a floor outside the box clips to nothing.
  */
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { visualLayersUserData } from '../../../r3f/visualLayers';
 import {
   buildDecalProjectionGeometry,
   collectDecalReceivers,
@@ -42,6 +43,9 @@ function decalAt(x: number, y: number, z: number): THREE.Matrix4 {
 }
 
 const SIZE = { x: 3, y: 3, z: 3 };
+
+/** Exponent 0 on both sides means pow(x, 0) === 1 — no depth fade to confound a test. */
+const NO_FADE = { upperFade: 0, lowerFade: 0, normalFade: 0, sizeY: SIZE.y };
 
 describe('computeDecalBoxWorldAABB', () => {
   it('bounds the ±size/2 box around the decal origin', () => {
@@ -87,6 +91,59 @@ describe('collectDecalReceivers', () => {
     const box = computeDecalBoxWorldAABB(decalAt(0, 1, 0), SIZE);
     expect(collectDecalReceivers(root, box).map((m) => m.name)).toEqual(['near']);
   });
+
+  it('excludes receivers whose Godot render layers the cull_mask culls', () => {
+    const root = new THREE.Group();
+    const ground = horizontalFloor();
+    ground.name = 'ground'; // untagged → layer 1
+    const vehicle = horizontalFloor();
+    vehicle.name = 'vehicle';
+    Object.assign(vehicle.userData, visualLayersUserData(2)); // layers = 2
+    root.add(ground, vehicle);
+    root.updateMatrixWorld(true);
+
+    const box = computeDecalBoxWorldAABB(decalAt(0, 1, 0), SIZE);
+    // Truck Town's blob shadows: every layer but layer 2.
+    expect(collectDecalReceivers(root, box, 0xffffd).map((m) => m.name)).toEqual(['ground']);
+  });
+
+  it('keeps a layer-2 receiver under the default mask', () => {
+    const root = new THREE.Group();
+    const vehicle = horizontalFloor();
+    vehicle.name = 'vehicle';
+    Object.assign(vehicle.userData, visualLayersUserData(2));
+    root.add(vehicle);
+    root.updateMatrixWorld(true);
+
+    const box = computeDecalBoxWorldAABB(decalAt(0, 1, 0), SIZE);
+    expect(collectDecalReceivers(root, box, 0xfffff).map((m) => m.name)).toEqual(['vehicle']);
+    // An omitted mask behaves as Godot's default, so a decal that never
+    // authored `cull_mask` keeps every receiver it used to have.
+    expect(collectDecalReceivers(root, box).map((m) => m.name)).toEqual(['vehicle']);
+  });
+
+  it('keeps a receiver sharing ANY layer with the mask', () => {
+    const root = new THREE.Group();
+    const both = horizontalFloor();
+    both.name = 'both';
+    Object.assign(both.userData, visualLayersUserData(3)); // layers 1 AND 2
+    root.add(both);
+    root.updateMatrixWorld(true);
+
+    const box = computeDecalBoxWorldAABB(decalAt(0, 1, 0), SIZE);
+    expect(collectDecalReceivers(root, box, 0xffffd).map((m) => m.name)).toEqual(['both']);
+  });
+
+  it('collects nothing when the cull_mask is zero', () => {
+    const root = new THREE.Group();
+    const floor = horizontalFloor();
+    floor.name = 'floor';
+    root.add(floor);
+    root.updateMatrixWorld(true);
+
+    const box = computeDecalBoxWorldAABB(decalAt(0, 1, 0), SIZE);
+    expect(collectDecalReceivers(root, box, 0)).toEqual([]);
+  });
 });
 
 describe('buildDecalProjectionGeometry', () => {
@@ -94,7 +151,7 @@ describe('buildDecalProjectionGeometry', () => {
     const floor = horizontalFloor();
     floor.updateMatrixWorld(true);
     const decalWorld = decalAt(0, 1, 0);
-    const geometry = buildDecalProjectionGeometry(floor, decalWorld.clone().invert(), SIZE);
+    const geometry = buildDecalProjectionGeometry(floor, decalWorld.clone().invert(), SIZE, NO_FADE);
 
     expect(geometry).not.toBeNull();
     const pos = geometry!.getAttribute('position');
@@ -122,6 +179,28 @@ describe('buildDecalProjectionGeometry', () => {
     floor.position.set(100, 0, 0);
     floor.updateMatrixWorld(true);
     const decalWorld = decalAt(0, 1, 0);
-    expect(buildDecalProjectionGeometry(floor, decalWorld.clone().invert(), SIZE)).toBeNull();
+    expect(buildDecalProjectionGeometry(floor, decalWorld.clone().invert(), SIZE, NO_FADE)).toBeNull();
+  });
+
+  it('bakes the depth fade onto the emitted geometry', () => {
+    // The same geometry as the happy path above — a floor 1 unit below a
+    // size.y = 3 decal, i.e. uv_local.y = -2/3 — so Godot's lower_fade 0.3
+    // gives (1 - 2/3)^0.3 = 0.7192231 at every vertex.
+    const floor = horizontalFloor();
+    floor.updateMatrixWorld(true);
+    const decalWorld = decalAt(0, 1, 0);
+    const geometry = buildDecalProjectionGeometry(floor, decalWorld.clone().invert(), SIZE, {
+      upperFade: 0.3,
+      lowerFade: 0.3,
+      normalFade: 0,
+      sizeY: SIZE.y,
+    });
+
+    const color = geometry!.getAttribute('color');
+    expect(color).toBeDefined();
+    expect(color.itemSize).toBe(4);
+    for (let i = 0; i < color.count; i++) {
+      expect(color.getW(i)).toBeCloseTo(0.7192231, 5);
+    }
   });
 });

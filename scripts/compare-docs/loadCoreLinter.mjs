@@ -61,7 +61,8 @@ export async function loadCoreLinter() {
     throw new Error(
       `Could not load the built linter at ${LINTER_ENTRY}.\n` +
         `Run \`pnpm --filter @textscene/core build\` first.\n` +
-        `Underlying error: ${err.message}`
+        `Underlying error: ${err.message}`,
+      { cause: err }
     );
   }
 }

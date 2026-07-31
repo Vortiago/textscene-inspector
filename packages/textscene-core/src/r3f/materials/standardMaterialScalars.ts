@@ -23,6 +23,7 @@ import {
   emissionScalars,
   type EmissionScalars,
 } from '../../resources/materials/standardmaterial3d/emission';
+import { GODOT_TEXTURE_FILTER_DEFAULT } from '../../resources/textures/godotTextureFilter';
 
 export interface StandardMaterial3DScalars extends EmissionScalars {
   color: [number, number, number];
@@ -34,6 +35,13 @@ export interface StandardMaterial3DScalars extends EmissionScalars {
    * alongside an `emission_texture` — `resolveEmission` combines the two.
    */
   emissionOperator: number;
+  /** Godot `texture_filter` — the sampler state every texture slot samples with. */
+  textureFilter: number;
+  /**
+   * Godot `texture_repeat` (default true) — whether a UV outside 0..1 tiles or
+   * clamps. Textures load with repeat wrapping, so only `false` diverges.
+   */
+  textureRepeat: boolean;
   /** Per-axis tiling factor for every texture map applied by this material. */
   uv1Scale: { x: number; y: number };
   /** Per-axis offset for every texture map applied by this material. */
@@ -119,6 +127,8 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   emissive: [0, 0, 0],
   emissiveIntensity: 1,
   emissionOperator: 0,
+  textureFilter: GODOT_TEXTURE_FILTER_DEFAULT,
+  textureRepeat: true,
   uv1Scale: { x: 1, y: 1 },
   uv1Offset: { x: 0, y: 0 },
   transparent: false,
@@ -166,6 +176,10 @@ export function parseStandardMaterial3DScalars(
     numericOr(properties['emission_operator'], DEFAULT_SCALARS.emissionOperator)
   );
 
+  const textureFilter = Math.trunc(
+    numericOr(properties['texture_filter'], DEFAULT_SCALARS.textureFilter)
+  );
+  const textureRepeat = properties['texture_repeat'] !== 'false';
   const uv1Scale = parseVec2Components(properties['uv1_scale']) ?? DEFAULT_SCALARS.uv1Scale;
   const uv1Offset = parseVec2Components(properties['uv1_offset']) ?? DEFAULT_SCALARS.uv1Offset;
 
@@ -258,6 +272,8 @@ export function parseStandardMaterial3DScalars(
     emissive: emission.emissive,
     emissiveIntensity: emission.emissiveIntensity,
     emissionOperator,
+    textureFilter,
+    textureRepeat,
     uv1Scale,
     uv1Offset,
     transparent,

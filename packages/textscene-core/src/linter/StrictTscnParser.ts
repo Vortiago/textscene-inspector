@@ -12,7 +12,7 @@ import type { TscnNode } from '../parser/types.js';
 import type { ParseError, StrictParseResult } from './types.js';
 import { TscnParserCore } from '../parser/TscnParserCore.js';
 import type { ParseObserver } from '../parser/TscnParserCore.js';
-import type { ParsedHeading } from '../parser/utils.js';
+import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 
 /**
@@ -31,6 +31,10 @@ function createSimpleNode(heading: ParsedHeading, properties: Record<string, str
   // Only set parent if it exists (optional property)
   if (heading.attributes.parent) {
     node.parent = heading.attributes.parent;
+  }
+
+  if (isPropertyOverrideHeading(heading)) {
+    node.overridesExistingNode = true;
   }
 
   // Carry an instance reference on the dedicated TscnNode field rather than

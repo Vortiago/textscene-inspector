@@ -207,4 +207,28 @@ describe('GLBSceneRoot — BUG 2 instance override onto GLB-internal node', () =
     expect(pos.y).toBeCloseTo(4 + BAKED.y, 4);
     expect(pos.z).toBeCloseTo(0 + BAKED.z, 4);
   });
+
+  it('keeps an override’s `visible = false` hidden after the tree’s visibility pass', async () => {
+    // Two writers, one field: the override is applied during render, while the
+    // scene tree's hidden-paths effect assigns `visible` for EVERY GLB object
+    // afterwards. Asserting on the mounted object rather than on
+    // `applyGlbNodeOverrides` in isolation is the whole point — the unit test
+    // passes either way, because the clobber only exists once both run.
+    const fake = createFakeResourceLoader();
+    const hiddenScene = makeCeilingLampScene();
+    const override = hiddenScene.nodes[0]!.children.find((c) => c.name === 'plafoniera')!;
+    override.rawProperties = { visible: 'false' };
+
+    fake.scenes.seed(LAMP_TSCN, hiddenScene);
+    fake.scenes.seed(GLB_PATH, makeSynthesisedGlbScene());
+    fake.glbMeshes.seed(GLB_PATH, makeFakeGlb());
+
+    const renderer = await renderHallwayLamp(fake.loader);
+
+    const mesh = renderer.scene
+      .findAllByType('Mesh')
+      .find((m) => m.instance.name === 'plafoniera');
+    expect(mesh).toBeDefined();
+    expect((mesh!.instance as THREE.Object3D).visible).toBe(false);
+  });
 });
