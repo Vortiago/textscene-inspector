@@ -126,6 +126,36 @@ describe('applyGlbNodeOverrides', () => {
     expect(visualLayersOf(root.children[0]!)).toBe(1);
   });
 
+  it('never applies a TYPED deep child as an override', () => {
+    // The platformer's `CoinCount` is a Label3D that belongs INSIDE the GLB, not
+    // a set of properties for something already there. Its path aliases to
+    // `Skeleton` (three has no CoinCount), so treating it as an override wrote
+    // its 3.33x scale and 7.5-unit offset onto the entire robot and flung it out
+    // of frame. Godot renders the robot centred; so must we.
+    const root = graph(['Skeleton/Robot']);
+    const skeleton = root.children[0]!;
+
+    applyGlbNodeOverrides(root, [
+      {
+        type: 'Label3D',
+        name: 'CoinCount',
+        instanceSubPath: 'Skeleton',
+        children: [],
+        properties: {
+          transform: {
+            basis_x: { x: 3.33, y: 0, z: 0 },
+            basis_y: { x: 0, y: 3.33, z: 0 },
+            basis_z: { x: 0, y: 0, z: 3.33 },
+            origin: { x: 0, y: 7.51, z: 0.53 },
+          },
+        },
+      },
+    ]);
+
+    expect(skeleton.position.toArray()).toEqual([0, 0, 0]);
+    expect(skeleton.scale.toArray()).toEqual([1, 1, 1]);
+  });
+
   it('reports only transform overrides as applied — a layers-only override moves nothing', () => {
     const root = graph(['Robot']);
 

@@ -197,6 +197,28 @@ function AuthoredResourceScope({
   );
 }
 
+/**
+ * The node with its DEEP children removed — those whose authored parent path
+ * descended into this instance's content.
+ *
+ * They are addressed against the instanced scene, not against this node, so
+ * rendering them here would put them at the INSTANCE's transform instead of
+ * their real parent's: the platformer player's coin counter is a 3.33x-scaled
+ * Label3D 7.5 units up, and misplacing it visibly breaks the scene's framing.
+ * A node that cannot yet be placed correctly renders nowhere rather than
+ * somewhere wrong.
+ *
+ * Override-only deep children reach their target through
+ * `GlbOverridesProvider`, which still receives the FULL child list; they never
+ * wanted a row of their own. What is still missing is the counterpart for a
+ * TYPED deep child — it needs portalling onto the matched GLB object, which is
+ * why the coin counter does not render at all yet.
+ */
+function withoutDeepChildren(node: TscnNode): TscnNode {
+  const direct = node.children.filter((c) => !c.instanceSubPath);
+  return direct.length === node.children.length ? node : { ...node, children: direct };
+}
+
 interface PlainNodeProps extends DispatchedNodeProps {
   /** Extra rendered subtree appended after the node's own inline children. */
   children?: ReactNode;
@@ -474,7 +496,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // placeholder child, matching the missing-texture UX.
   if (!scenePath || result.status === 'unavailable') {
     return (
-      <PlainNode node={node} path={path}>
+      <PlainNode node={withoutDeepChildren(node)} path={path}>
         <MissingResourcePlaceholder shape="box" />
       </PlainNode>
     );
@@ -482,7 +504,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // Still loading: render the instancing node's own subtree; the merged
   // result swaps in once the sub-scene arrives.
   if (result.status === 'pending' || !loadedScene) {
-    return <PlainNode node={node} path={path} />;
+    return <PlainNode node={withoutDeepChildren(node)} path={path} />;
   }
 
   if (effective !== node) {
@@ -499,7 +521,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // Fallback (`.glb` synthetic root / multi-root): historical nested form.
   return (
     <GlbOverridesProvider overrides={node.children}>
-      <PlainNode node={node} path={path}>
+      <PlainNode node={withoutDeepChildren(node)} path={path}>
         <SceneResourcesProvider
           internalResources={loadedScene.internalResources}
           externalResources={loadedScene.externalResources}

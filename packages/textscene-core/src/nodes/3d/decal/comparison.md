@@ -47,15 +47,14 @@ above leaves every layer enabled, so it cannot witness the mask; the dedicated
 one is `unit-decal-cull-mask.tscn`, which puts a `layers = 2` receiver and a
 default-layer control under the same masked decal.
 
-`layers` is read from `MeshInstance3D`. Every other mesh source — CSG, GridMap,
-Sprite3D, Label3D, MultiMeshInstance3D — reads as Godot's default layer 1 and so
-receives from any decal that has not cleared layer 1. That is correct unless the
-scene sets `layers` on one of them. Two cases in this corpus do and are not
-covered: `GPUParticles3D` in `demos/3d/particles/test.tscn`, whose scene's decals
-are unmasked so nothing changes; and a mesh inside an instanced GLB, whose
-`layers` rides a type-less override node that the scene-tree builder drops before
-the GLB renderer ever sees it (the platformer player's `Robot`). Neither is
-visible today.
+`layers` is read from `MeshInstance3D`, and from an override node addressed into
+an instanced GLB — the platformer player's `Robot` sets `layers = 2` that way,
+and its blob shadow clears exactly that layer. Every other mesh source — CSG,
+GridMap, Sprite3D, Label3D, MultiMeshInstance3D — reads as Godot's default layer
+1 and so receives from any decal that has not cleared layer 1. That is correct
+unless the scene sets `layers` on one of them, which in this corpus only
+`GPUParticles3D` does (`demos/3d/particles/test.tscn`), in a scene whose decals
+are unmasked — so nothing changes there either way.
 
 ## Fades
 

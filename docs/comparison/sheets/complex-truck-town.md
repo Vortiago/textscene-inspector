@@ -62,6 +62,23 @@ no sky was built at all. That cost the backdrop *and* the ambient — the enviro
 half its ambient from the sky, so every surface the sun did not reach went black, most
 visibly the tree trunks. Both engines now draw the same procedural gradient.
 
+**The terrain now carries its own materials.** `town_scene.tscn` retextures the glTF
+town through four `surface_material_override/0` nodes — grass on the terrain and the
+outer ground, cement on the roads and the racetrack. Every one addresses a node INSIDE
+the instanced `town_model.gltf` (`parent="TownModel/Terrain"`), and the scene-tree
+builder used to drop any node whose parent path descended into instanced content, so all
+four vanished and the landscape rendered in the glTF's own materials.
+
+Applying them surfaced the next gap rather than closing the frame: the grass came out in
+**stripes**, because Godot's `BaseMaterial3D` constructs with
+`FLAG_USE_TEXTURE_REPEAT = true` while three's `Texture` defaults to clamp-to-edge, so a
+terrain whose UVs leave 0..1 smears one edge texel instead of tiling. With repeat honoured
+the texture tiles as Godot's does.
+
+Worth stating plainly: **the frame-wide number did not move** — mean max-channel delta
+against Godot went 19.52 → 20.09. The ground-brightness gap below dominates this frame
+and swamps the improvement. The behaviour is now right; the metric is unchanged.
+
 **What still differs: the ground reads far brighter and more saturated here.** Sampling
 the same regions of both frames, the near ground is `rgb(55, 110, 92)` in Godot against
 `rgb(165, 190, 119)` here, and the far ground `rgb(50, 74, 86)` against
@@ -167,12 +184,21 @@ to the one above and still open.
   moves the camera, and a fit is skipped outright if the user has moved it since the
   last one.
 - **`Decal.cull_mask` filters the receiver set, not the fragment.** A masked-out mesh
-  simply never has a projection baked for it, which is exact. What is still
-  approximate on the meshes a decal *does* reach: `upper_fade` / `lower_fade` /
-  `normal_fade` are unimplemented, so a blob does not soften as its caster lifts off
-  the ground. On these vehicles the fades are unreachable — every mesh is masked out —
-  and where the blobs land legitimately the fade term computes to ~0.9-1.0.
+  simply never has a projection baked for it, which is exact. The fades are now
+  honoured too — baked per vertex, see the Decal sheet — though on these vehicles they
+  are unreachable, since every mesh is masked out and no receiver survives.
 - **The town capture above contains no vehicles.** `town_scene.tscn` instances none;
   they are spawned at runtime by the car-select flow. An earlier revision of this sheet
   claimed the vehicle darkening was visible there too — it was not, and the town
   capture is byte-identical before and after the `cull_mask` fix.
+- **A TYPED node addressed into instanced content still does not render.** An override
+  (no `type=`) reaches its target and applies; a node that declares a type belongs
+  *inside* the instanced content at a path only that content can resolve, and placing it
+  needs a portal onto the matched object. Until then it renders nowhere rather than at
+  the instance's own transform — the platformer player's coin counter is a 3.33x-scaled
+  Label3D 7.5 units up, and putting it in the wrong frame visibly wrecks the scene. This
+  costs the town nothing (all four of its overrides are type-less) and costs the
+  platformer its coin counter.
+- **`texture_mipmap_bias` has no WebGL2 equivalent.** The project sets `-0.5`, i.e. half
+  a mip level sharper than the LOD picks. Desktop GL's `GL_TEXTURE_LOD_BIAS` has no
+  WebGL counterpart; the only route is a per-fragment bias in a patched shader.

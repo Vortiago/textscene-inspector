@@ -79,6 +79,14 @@ export function applyGlbNodeOverrides(
   };
 
   for (const override of overrides) {
+    // A node addressed INTO the GLB is only an override when Godot wrote it as
+    // one (no `type=`). A TYPED deep child is a new node that belongs at that
+    // path, not a set of properties for whatever is already there — and
+    // applying its transform to the object the path resolves to is actively
+    // destructive: the platformer's `CoinCount` Label3D aliases to `Skeleton`
+    // and would write its 3.33x scale and 7.5-unit offset onto the whole robot.
+    if (override.instanceSubPath && !override.overridesExistingNode) continue;
+
     const target = resolve(override);
     if (!target) continue;
 

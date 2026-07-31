@@ -149,6 +149,15 @@ fuses both into a single `minFilter`, which is the only non-obvious step:
 Row 3 is also three's own default state, so a material that does not author the property
 renders byte-identically to before it was honoured.
 
+`texture_repeat` rides the same helper. Godot constructs `BaseMaterial3D` with
+`FLAG_USE_TEXTURE_REPEAT = true` (`material.cpp`), which the shader turns into
+`repeat_enable`; three's `Texture` defaults to clamp-to-edge, so a surface whose UVs
+leave 0..1 — a terrain, a tiled road — smears one edge texel instead of tiling. Because
+repeat is a shared DEFAULT rather than a per-material choice, it is set once on the
+loaded texture; only a material that authors `texture_repeat = false` diverges and
+clones. Cloning for the default would have broken texture identity for essentially every
+material in the corpus.
+
 The state is applied **at material build, never at texture load**. It is per-material in
 Godot but lives on the `THREE.Texture` in three, and the loader caches one texture per
 path — so writing it at load would let whichever material built last win for every
@@ -168,9 +177,6 @@ copied), and the clone is tagged so its material disposes it.
 - **texture_filter rows 4** — three skips anisotropy entirely when `magFilter` is
   `NearestFilter`, so a nearest-sampled texture takes the property but not the sampling.
   Godot does apply it. One corpus material sits there, and it is pixel art.
-- **texture_repeat** — not parsed. Godot defaults it on (textures repeat); three's default
-  is clamp-to-edge, and a texture only becomes `RepeatWrapping` here when a `uv1_scale`
-  makes it necessary.
 - **diffuse_mode** — Godot defaults to Burley; three's material is always Lambert. They agree near normal incidence; a rough sphere reads ~5/255 dark at grazing silhouette.
 - **metallic_specular** — three hard-wires dielectric F0 at 0.04 (Godot's 0.5 default). Authoring it away from 0.5 has no effect.
 - **uv1 V-anchoring** — Godot measures V from the image top, three from the bottom, so a non-integer `uv1_scale.y` or non-zero `uv1_offset.y` shifts V differently. Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
