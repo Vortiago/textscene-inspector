@@ -858,7 +858,7 @@
       "name": "DampedSpringJoint2D",
       "category": "2D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint2D",
         "Node2D",
@@ -1245,7 +1245,7 @@
       "name": "GrooveJoint2D",
       "category": "2D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint2D",
         "Node2D",
@@ -1292,7 +1292,7 @@
       "name": "HingeJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint3D",
         "Node3D",
@@ -2233,7 +2233,7 @@
       "name": "PinJoint2D",
       "category": "2D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint2D",
         "Node2D",
@@ -2248,7 +2248,7 @@
       "name": "PinJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint3D",
         "Node3D",

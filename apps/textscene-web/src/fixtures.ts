@@ -238,6 +238,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Damped Spring Joint 2d",
+    "file": "unit-damped-spring-joint-2d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal",
     "file": "unit-decal.tscn",
     "category": "Other"
@@ -325,6 +330,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Grid Map",
     "file": "unit-grid-map.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Groove Joint 2d",
+    "file": "unit-groove-joint-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Hinge Joint 3d",
+    "file": "unit-hinge-joint-3d.tscn",
     "category": "Other"
   },
   {
@@ -470,6 +485,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Physical Bone 3d",
     "file": "unit-physical-bone-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pin Joint 2d",
+    "file": "unit-pin-joint-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pin Joint 3d",
+    "file": "unit-pin-joint-3d.tscn",
     "category": "Other"
   },
   {

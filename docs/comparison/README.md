@@ -97,6 +97,7 @@ reproduced:
 - [DirectionalLight3D](../../packages/textscene-core/src/nodes/3d/lights/directionallight3d/comparison.md) — a THREE.DirectionalLight
 - [GPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/gpuparticles3d/comparison.md) — a transform-only group
 - [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md) — a THREE.InstancedMesh per MeshLibrary item
+- [HingeJoint3D](../../packages/textscene-core/src/nodes/physics/3d/hingejoint3d/comparison.md) — nothing (a transform-only group; one rotational axis between two bodies)
 - [Label3D](../../packages/textscene-core/src/nodes/3d/label3d/comparison.md) — a canvas-textured plane
 - [Marker3D](../../packages/textscene-core/src/nodes/3d/marker3d/comparison.md) — a selection-gated axis-cross gizmo
 - [MeshInstance3D](../../packages/textscene-core/src/nodes/3d/meshinstance3d/comparison.md) — a THREE.Mesh
@@ -108,6 +109,7 @@ reproduced:
 - [Path3D](../../packages/textscene-core/src/nodes/paths/path3d/comparison.md) — a selection-gated curve gizmo
 - [PathFollow3D](../../packages/textscene-core/src/nodes/paths/pathfollow3d/comparison.md) — a curve-positioned transform group
 - [PhysicalBone3D](../../packages/textscene-core/src/nodes/physics/3d/physicalbone3d/comparison.md) — nothing (a transform-only group; one ragdoll bone and its joint)
+- [PinJoint3D](../../packages/textscene-core/src/nodes/physics/3d/pinjoint3d/comparison.md) — nothing (a transform-only group; a ball joint between two bodies)
 - [RayCast3D](../../packages/textscene-core/src/nodes/physics/3d/raycast3d/comparison.md) — nothing (a transform-only group; the ray is an editor gizmo)
 - [RemoteTransform3D](../../packages/textscene-core/src/nodes/3d/remotetransform3d/comparison.md) — nothing (a transform-only group that drives its target)
 - [RigidBody3D](../../packages/textscene-core/src/nodes/physics/3d/rigidbody3d/comparison.md) — an invisible transform-only group
@@ -144,7 +146,9 @@ reproduced:
 - [ColorRect](../../packages/textscene-core/src/nodes/2d/ui/colorrect/comparison.md) — a color-filled div
 - [Control](../../packages/textscene-core/src/nodes/2d/ui/control/comparison.md) — a full-rect layout region
 - [CPUParticles2D](../../packages/textscene-core/src/nodes/2d/cpuparticles2d/comparison.md) — one merged quad mesh holding a frozen particle pose
+- [DampedSpringJoint2D](../../packages/textscene-core/src/nodes/physics/2d/dampedspringjoint2d/comparison.md) — nothing (a transform-only group; a spring between two bodies)
 - [GridContainer](../../packages/textscene-core/src/nodes/2d/ui/gridcontainer/comparison.md) — a CSS grid container
+- [GrooveJoint2D](../../packages/textscene-core/src/nodes/physics/2d/groovejoint2d/comparison.md) — nothing (a transform-only group; a slot one body slides along)
 - [HBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/hboxcontainer/comparison.md) — a CSS flex-row `<div>`
 - [HSlider](../../packages/textscene-core/src/nodes/2d/ui/hslider/comparison.md) — a horizontal track with a round grabber
 - [HSplitContainer](../../packages/textscene-core/src/nodes/2d/ui/hsplitcontainer/comparison.md) — two children side by side, split at a computed offset
@@ -164,6 +168,7 @@ reproduced:
 - [Path2D](../../packages/textscene-core/src/nodes/2d/path2d/comparison.md) — nothing at runtime; a selection-gated curve gizmo
 - [PathFollow2D](../../packages/textscene-core/src/nodes/2d/pathfollow2d/comparison.md) — a transform-only follower with a selection-gated dot
 - [PhysicalBone2D](../../packages/textscene-core/src/nodes/physics/2d/physicalbone2d/comparison.md) — nothing (a transform-only group; one Skeleton2D bone driven by physics)
+- [PinJoint2D](../../packages/textscene-core/src/nodes/physics/2d/pinjoint2d/comparison.md) — nothing (a transform-only group; a pivot between two bodies)
 - [PointLight2D](../../packages/textscene-core/src/nodes/2d/pointlight2d/comparison.md) — the light's cookie multiplied into every CanvasItem beneath it
 - [Polygon2D](../../packages/textscene-core/src/nodes/2d/polygon2d/comparison.md) — a filled ShapeGeometry mesh
 - [RayCast2D](../../packages/textscene-core/src/nodes/physics/2d/raycast2d/comparison.md) — nothing (a transform-only group; the ray is an editor gizmo)

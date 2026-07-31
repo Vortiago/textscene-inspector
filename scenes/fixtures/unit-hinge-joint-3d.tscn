@@ -1,0 +1,32 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="BoxShape3D" id="Shape_1"]
+
+; Exercises HingeJoint3D's own properties at valid values.
+
+[node name="Root" type="Node3D"]
+
+[node name="MyHingeJoint3D" type="HingeJoint3D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+params/bias = 0.3
+angular_limit/enable = true
+angular_limit/upper = 1.0471975
+angular_limit/lower = -1.0471975
+angular_limit/bias = 0.3
+angular_limit/softness = 0.9
+angular_limit/relaxation = 1.0
+motor/enable = true
+motor/target_velocity = 3.0
+motor/max_impulse = 1.0
+
+[node name="BodyA" type="StaticBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="BodyA"]
+shape = SubResource("Shape_1")
+
+[node name="BodyB" type="StaticBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="BodyB"]
+shape = SubResource("Shape_1")
