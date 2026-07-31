@@ -7,19 +7,18 @@
  * must be non-negative.
  */
 
+import '../../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import {
   v,
   VECTOR3_REGEX,
 } from '../../../../linter/validators/index.js';
-import { layerBitmask, propertyError } from '../../../../linter/validators/index.js';
+import { propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 const CENTER_OF_MASS_MODE = { 0: 'AUTO', 1: 'CUSTOM' };
 const DAMP_MODE = { 0: 'COMBINE', 1: 'REPLACE' };
 const FREEZE_MODE = { 0: 'STATIC', 1: 'KINEMATIC' };
-const DISABLE_MODE = { 0: 'REMOVE', 1: 'KEEP_ACTIVE' };
-
 const inertia3d: PropertyValidator = (key, value, line) => {
   const match = VECTOR3_REGEX.exec(value);
   if (!match) {
@@ -55,9 +54,6 @@ validatorRegistry.registerAll('RigidBody3D', {
     min: 0,
     message: "Property 'angular_damp' must be >= 0. Damping cannot be negative.",
   }),
-  collision_layer: layerBitmask('collision_layer'),
-  collision_mask: layerBitmask('collision_mask'),
-  collision_priority: v.float('collision_priority'),
   lock_rotation: v.boolean('lock_rotation'),
   freeze_mode: v.enumInt('freeze_mode', 0, 1, FREEZE_MODE),
   freeze: v.boolean('freeze'),
@@ -66,7 +62,6 @@ validatorRegistry.registerAll('RigidBody3D', {
   max_contacts_reported: v.positiveInt('max_contacts_reported'),
   can_sleep: v.boolean('can_sleep'),
   sleeping: v.boolean('sleeping'),
-  disable_mode: v.enumInt('disable_mode', 0, 1, DISABLE_MODE),
   custom_integrator: v.boolean('custom_integrator'),
 });
 

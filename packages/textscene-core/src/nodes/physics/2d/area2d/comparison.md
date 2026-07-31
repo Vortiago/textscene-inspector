@@ -37,7 +37,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin Area2D -->
-Strict parsing format-checks these `Area2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem. Every validator failure is an **error**.
+Strict parsing format-checks these `Area2D` properties, plus 5 inherited from CollisionObject2D, 12 inherited from Node2D, 15 inherited from CanvasItem. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
@@ -45,9 +45,6 @@ Strict parsing format-checks these `Area2D` properties, plus 12 inherited from N
 | `angular_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
 | `audio_bus_name` | non-empty string |
 | `audio_bus_override` | true or false |
-| `collision_layer` | 32-bit layer mask (layers 1-32) |
-| `collision_mask` | 32-bit layer mask (layers 1-32) |
-| `disable_mode` | enum 0-2 (REMOVE/MAKE_STATIC/KEEP_ACTIVE) |
 | `gravity` | float |
 | `gravity_direction` | Vector2(x, y) |
 | `gravity_point` | true or false |

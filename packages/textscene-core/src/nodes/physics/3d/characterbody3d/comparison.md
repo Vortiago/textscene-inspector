@@ -29,14 +29,10 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin CharacterBody3D -->
-Strict parsing format-checks these `CharacterBody3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
+Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherited from CollisionObject3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
-| `collision_layer` | 32-bit layer mask (layers 1-32) |
-| `collision_mask` | 32-bit layer mask (layers 1-32) |
-| `collision_priority` | float |
-| `disable_mode` | enum 0-1 (REMOVE/KEEP_ACTIVE) |
 | `floor_block_on_wall` | true or false |
 | `floor_constant_speed` | true or false |
 | `floor_max_angle` | float 0-1.5708963267948965 |

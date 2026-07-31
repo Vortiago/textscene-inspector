@@ -30,7 +30,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin Area3D -->
-Strict parsing format-checks these `Area3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
+Strict parsing format-checks these `Area3D` properties, plus 6 inherited from CollisionObject3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
@@ -38,8 +38,6 @@ Strict parsing format-checks these `Area3D` properties, plus 16 inherited from N
 | `angular_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
 | `audio_bus_name` | non-empty string |
 | `audio_bus_override` | true or false |
-| `collision_layer` | 32-bit layer mask (layers 1-32) |
-| `collision_mask` | 32-bit layer mask (layers 1-32) |
 | `gravity` | float |
 | `gravity_direction` | Vector3(x, y, z) |
 | `gravity_point` | true or false |

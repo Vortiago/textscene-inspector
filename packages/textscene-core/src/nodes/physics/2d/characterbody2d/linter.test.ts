@@ -125,9 +125,11 @@ describe('CharacterBody2D Linter', () => {
         invalid: [{ value: '"high"' }],
       },
       {
+        // 2 is KEEP_ACTIVE — collision_object_2d.cpp:654 and its 3D twin bind
+        // three constants. This table asserted 0-1 and encoded the bug.
         prop: 'disable_mode',
-        valid: [0, 1],
-        invalid: [{ value: 5, contains: ['0-1'] }],
+        valid: [0, 1, 2],
+        invalid: [{ value: 5, contains: ['0-2'] }],
       },
       {
         // Valid values warn (e.g. zero-layer) but produce no errors.

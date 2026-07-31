@@ -8,13 +8,11 @@
  * were purpose-built for; everything else goes through the `v` namespace.
  */
 
+import '../../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import {
   v,
   createSpaceOverrideValidator,
-  createCollisionLayerValidator,
-  createCollisionMaskValidator,
-  createDisableModeValidator,
 } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('Area2D', {
@@ -61,7 +59,4 @@ validatorRegistry.registerAll('Area2D', {
   priority: v.float('priority'),
   audio_bus_override: v.boolean('audio_bus_override'),
   audio_bus_name: v.string('audio_bus_name'),
-  collision_layer: createCollisionLayerValidator(),
-  collision_mask: createCollisionMaskValidator(),
-  disable_mode: createDisableModeValidator(),
 });

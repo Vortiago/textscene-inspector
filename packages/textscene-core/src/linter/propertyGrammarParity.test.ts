@@ -532,8 +532,13 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'gravity_direction', 'gravity', 'linear_damp_space_override',
       'linear_damp', 'angular_damp_space_override', 'angular_damp',
       'priority', 'audio_bus_override', 'audio_bus_name', 'disable_mode',
+      // Inherited from the CollisionObject2D tier, which Area2D is the only
+      // member of that has a typed parser.ts and so the only one this guard
+      // sees. Neither reaches the renderer: `collision_priority` orders solver
+      // depenetration and `input_pickable` gates mouse picking.
+      'collision_priority', 'input_pickable',
     ],
-    reason: 'Area2D physics simulation properties (gravity, damping, space-override) are linter-validated but ignored by the static previewer which only needs collision_layer/mask.',
+    reason: 'Area2D physics simulation properties (gravity, damping, space-override, solver priority, input picking) are linter-validated but ignored by the static previewer which only needs collision_layer/mask.',
   },
 
   CollisionShape2D: {

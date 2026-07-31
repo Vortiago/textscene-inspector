@@ -93,9 +93,11 @@ describe('CharacterBody3D Linter', () => {
       { prop: 'platform_wall_layers', valid: [0, 1, 65535, 4294967295] },
       { prop: 'collision_priority', valid: [0.0, 0.5, 1.0, -1.0, 100.5], invalid: [{ value: '"high"' }] },
       {
+        // 2 is KEEP_ACTIVE — collision_object_2d.cpp:654 and its 3D twin bind
+        // three constants. This table asserted 0-1 and encoded the bug.
         prop: 'disable_mode',
-        valid: [0, 1],
-        invalid: [{ value: 5, contains: ['0-1'] }],
+        valid: [0, 1, 2],
+        invalid: [{ value: 5, contains: ['0-2'] }],
       },
     ]);
 

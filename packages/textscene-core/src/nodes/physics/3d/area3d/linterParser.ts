@@ -3,8 +3,9 @@
  * Migrated to the declarative `v` namespace.
  */
 
+import '../../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { layerBitmask, v } from '../../../../linter/validators/index.js';
+import { v } from '../../../../linter/validators/index.js';
 
 const SPACE_OVERRIDE = {
   0: 'DISABLED',
@@ -13,7 +14,6 @@ const SPACE_OVERRIDE = {
   3: 'REPLACE',
   4: 'REPLACE_COMBINE',
 };
-
 
 validatorRegistry.registerAll('Area3D', {
   monitoring: v.boolean('monitoring'),
@@ -52,6 +52,4 @@ validatorRegistry.registerAll('Area3D', {
   priority: v.float('priority'),
   audio_bus_override: v.boolean('audio_bus_override'),
   audio_bus_name: v.string('audio_bus_name'),
-  collision_layer: layerBitmask('collision_layer'),
-  collision_mask: layerBitmask('collision_mask'),
 });

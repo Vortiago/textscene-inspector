@@ -3,8 +3,9 @@
  * Migrated to the declarative `v` namespace.
  */
 
+import '../../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { layerBitmask, v } from '../../../../linter/validators/index.js';
+import { v } from '../../../../linter/validators/index.js';
 import { propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
@@ -44,8 +45,6 @@ validatorRegistry.registerAll('RigidBody2D', {
     min: 0,
     message: "Property 'angular_damp' must be >= 0. Damping cannot be negative.",
   }),
-  collision_layer: layerBitmask('collision_layer'),
-  collision_mask: layerBitmask('collision_mask'),
   lock_rotation: v.boolean('lock_rotation'),
   freeze: v.boolean('freeze'),
   contact_monitor: v.boolean('contact_monitor'),

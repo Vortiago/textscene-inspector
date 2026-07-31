@@ -32,7 +32,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin RigidBody3D -->
-Strict parsing format-checks these `RigidBody3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
+Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited from CollisionObject3D, 16 inherited from Node3D. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
@@ -41,13 +41,9 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 16 inherited f
 | `can_sleep` | true or false |
 | `center_of_mass` | Vector3(x, y, z) |
 | `center_of_mass_mode` | enum 0-1 (AUTO/CUSTOM) |
-| `collision_layer` | 32-bit layer mask (layers 1-32) |
-| `collision_mask` | 32-bit layer mask (layers 1-32) |
-| `collision_priority` | float |
 | `contact_monitor` | true or false |
 | `continuous_cd` | true or false |
 | `custom_integrator` | true or false |
-| `disable_mode` | enum 0-1 (REMOVE/KEEP_ACTIVE) |
 | `freeze` | true or false |
 | `freeze_mode` | enum 0-1 (STATIC/KINEMATIC) |
 | `gravity_scale` | float |

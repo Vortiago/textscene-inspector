@@ -3,8 +3,9 @@
  * Migrated to the declarative `v` namespace.
  */
 
+import '../../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { layerBitmask, v } from '../../../../linter/validators/index.js';
+import { v } from '../../../../linter/validators/index.js';
 
 const MOTION_MODE = { 0: 'GROUNDED', 1: 'FLOATING' };
 const PLATFORM_ON_LEAVE = {
@@ -12,7 +13,6 @@ const PLATFORM_ON_LEAVE = {
   1: 'ADD_UPWARD_VELOCITY',
   2: 'DO_NOTHING',
 };
-const DISABLE_MODE = { 0: 'REMOVE', 1: 'KEEP_ACTIVE' };
 const HALF_PI = Math.PI / 2;
 const HALF_PI_PLUS_EPSILON = HALF_PI + 0.0001;
 
@@ -54,12 +54,8 @@ validatorRegistry.registerAll('CharacterBody2D', {
     min: 0,
     message: "Property 'safe_margin' must be >= 0",
   }),
-  collision_layer: layerBitmask('collision_layer'),
-  collision_mask: layerBitmask('collision_mask'),
-  collision_priority: v.float('collision_priority'),
   max_slides: v.positiveInt(
     'max_slides',
     "Property 'max_slides' must be greater than 0. Character needs at least 1 slide iteration to function."
   ),
-  disable_mode: v.enumInt('disable_mode', 0, 1, DISABLE_MODE),
 });

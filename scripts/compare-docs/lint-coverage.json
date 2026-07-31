@@ -128,21 +128,6 @@
     "AnimatableBody2D": {
       "validators": [
         {
-          "property": "collision_layer",
-          "declaredOn": "StaticBody2D",
-          "accepts": "32-bit layer mask (layers 1-32)"
-        },
-        {
-          "property": "collision_mask",
-          "declaredOn": "StaticBody2D",
-          "accepts": "32-bit layer mask (layers 1-32)"
-        },
-        {
-          "property": "collision_priority",
-          "declaredOn": "StaticBody2D",
-          "accepts": "float"
-        },
-        {
           "property": "constant_angular_velocity",
           "declaredOn": "StaticBody2D",
           "accepts": "float"
@@ -153,14 +138,34 @@
           "accepts": "Vector2(x, y)"
         },
         {
-          "property": "input_pickable",
-          "declaredOn": "StaticBody2D",
-          "accepts": "true or false"
-        },
-        {
           "property": "physics_material_override",
           "declaredOn": "StaticBody2D",
           "accepts": "SubResource(\"id\") or ExtResource(\"id\")"
+        },
+        {
+          "property": "collision_layer",
+          "declaredOn": "CollisionObject2D",
+          "accepts": "32-bit layer mask (layers 1-32)"
+        },
+        {
+          "property": "collision_mask",
+          "declaredOn": "CollisionObject2D",
+          "accepts": "32-bit layer mask (layers 1-32)"
+        },
+        {
+          "property": "collision_priority",
+          "declaredOn": "CollisionObject2D",
+          "accepts": "float"
+        },
+        {
+          "property": "disable_mode",
+          "declaredOn": "CollisionObject2D",
+          "accepts": "enum 0-2 (REMOVE/MAKE_STATIC/KEEP_ACTIVE)"
+        },
+        {
+          "property": "input_pickable",
+          "declaredOn": "CollisionObject2D",
+          "accepts": "true or false"
         },
         {
           "property": "global_position",
@@ -316,21 +321,6 @@
     "AnimatableBody3D": {
       "validators": [
         {
-          "property": "collision_layer",
-          "declaredOn": "StaticBody3D",
-          "accepts": "32-bit layer mask (layers 1-32)"
-        },
-        {
-          "property": "collision_mask",
-          "declaredOn": "StaticBody3D",
-          "accepts": "32-bit layer mask (layers 1-32)"
-        },
-        {
-          "property": "collision_priority",
-          "declaredOn": "StaticBody3D",
-          "accepts": "float"
-        },
-        {
           "property": "constant_angular_velocity",
           "declaredOn": "StaticBody3D",
           "accepts": "Vector3(x, y, z)"
@@ -341,24 +331,39 @@
           "accepts": "Vector3(x, y, z)"
         },
         {
-          "property": "disable_mode",
+          "property": "physics_material_override",
           "declaredOn": "StaticBody3D",
+          "accepts": "SubResource(\"id\") or ExtResource(\"id\")"
+        },
+        {
+          "property": "collision_layer",
+          "declaredOn": "CollisionObject3D",
+          "accepts": "32-bit layer mask (layers 1-32)"
+        },
+        {
+          "property": "collision_mask",
+          "declaredOn": "CollisionObject3D",
+          "accepts": "32-bit layer mask (layers 1-32)"
+        },
+        {
+          "property": "collision_priority",
+          "declaredOn": "CollisionObject3D",
+          "accepts": "float"
+        },
+        {
+          "property": "disable_mode",
+          "declaredOn": "CollisionObject3D",
           "accepts": "enum 0-2 (REMOVE/MAKE_STATIC/KEEP_ACTIVE)"
         },
         {
           "property": "input_capture_on_drag",
-          "declaredOn": "StaticBody3D",
+          "declaredOn": "CollisionObject3D",
           "accepts": "true or false"
         },
         {
           "property": "input_ray_pickable",
-          "declaredOn": "StaticBody3D",
+          "declaredOn": "CollisionObject3D",
           "accepts": "true or false"
-        },
-        {
-          "property": "physics_material_override",
-          "declaredOn": "StaticBody3D",
-          "accepts": "SubResource(\"id\") or ExtResource(\"id\")"
         },
         {
           "property": "basis",
@@ -12427,16 +12432,6 @@
           "accepts": "enum 0-1 (AUTO/CUSTOM)"
         },
         {
-          "property": "collision_layer",
-          "declaredOn": "RigidBody2D",
-          "accepts": "32-bit layer mask (layers 1-32)"
-        },
-        {
-          "property": "collision_mask",
-          "declaredOn": "RigidBody2D",
-          "accepts": "32-bit layer mask (layers 1-32)"
-        },
-        {
           "property": "contact_monitor",
           "declaredOn": "RigidBody2D",
           "accepts": "true or false"
@@ -12485,6 +12480,31 @@
           "property": "physics_material_override",
           "declaredOn": "RigidBody2D",
           "accepts": "SubResource(\"id\") or ExtResource(\"id\")"
+        },
+        {
+          "property": "collision_layer",
+          "declaredOn": "CollisionObject2D",
+          "accepts": "32-bit layer mask (layers 1-32)"
+        },
+        {
+          "property": "collision_mask",
+          "declaredOn": "CollisionObject2D",
+          "accepts": "32-bit layer mask (layers 1-32)"
+        },
+        {
+          "property": "collision_priority",
+          "declaredOn": "CollisionObject2D",
+          "accepts": "float"
+        },
+        {
+          "property": "disable_mode",
+          "declaredOn": "CollisionObject2D",
+          "accepts": "enum 0-2 (REMOVE/MAKE_STATIC/KEEP_ACTIVE)"
+        },
+        {
+          "property": "input_pickable",
+          "declaredOn": "CollisionObject2D",
+          "accepts": "true or false"
         },
         {
           "property": "global_position",
@@ -12639,6 +12659,36 @@
     },
     "PhysicalBone3D": {
       "validators": [
+        {
+          "property": "collision_layer",
+          "declaredOn": "CollisionObject3D",
+          "accepts": "32-bit layer mask (layers 1-32)"
+        },
+        {
+          "property": "collision_mask",
+          "declaredOn": "CollisionObject3D",
+          "accepts": "32-bit layer mask (layers 1-32)"
+        },
+        {
+          "property": "collision_priority",
+          "declaredOn": "CollisionObject3D",
+          "accepts": "float"
+        },
+        {
+          "property": "disable_mode",
+          "declaredOn": "CollisionObject3D",
+          "accepts": "enum 0-2 (REMOVE/MAKE_STATIC/KEEP_ACTIVE)"
+        },
+        {
+          "property": "input_capture_on_drag",
+          "declaredOn": "CollisionObject3D",
+          "accepts": "true or false"
+        },
+        {
+          "property": "input_ray_pickable",
+          "declaredOn": "CollisionObject3D",
+          "accepts": "true or false"
+        },
         {
           "property": "basis",
           "declaredOn": "Node3D",
@@ -17956,21 +18006,6 @@
           "accepts": "enum 0-1 (AUTO/CUSTOM)"
         },
         {
-          "property": "collision_layer",
-          "declaredOn": "RigidBody3D",
-          "accepts": "32-bit layer mask (layers 1-32)"
-        },
-        {
-          "property": "collision_mask",
-          "declaredOn": "RigidBody3D",
-          "accepts": "32-bit layer mask (layers 1-32)"
-        },
-        {
-          "property": "collision_priority",
-          "declaredOn": "RigidBody3D",
-          "accepts": "float"
-        },
-        {
           "property": "contact_monitor",
           "declaredOn": "RigidBody3D",
           "accepts": "true or false"
@@ -17984,11 +18019,6 @@
           "property": "custom_integrator",
           "declaredOn": "RigidBody3D",
           "accepts": "true or false"
-        },
-        {
-          "property": "disable_mode",
-          "declaredOn": "RigidBody3D",
-          "accepts": "enum 0-1 (REMOVE/KEEP_ACTIVE)"
         },
         {
           "property": "freeze",
@@ -18043,6 +18073,36 @@
         {
           "property": "sleeping",
           "declaredOn": "RigidBody3D",
+          "accepts": "true or false"
+        },
+        {
+          "property": "collision_layer",
+          "declaredOn": "CollisionObject3D",
+          "accepts": "32-bit layer mask (layers 1-32)"
+        },
+        {
+          "property": "collision_mask",
+          "declaredOn": "CollisionObject3D",
+          "accepts": "32-bit layer mask (layers 1-32)"
+        },
+        {
+          "property": "collision_priority",
+          "declaredOn": "CollisionObject3D",
+          "accepts": "float"
+        },
+        {
+          "property": "disable_mode",
+          "declaredOn": "CollisionObject3D",
+          "accepts": "enum 0-2 (REMOVE/MAKE_STATIC/KEEP_ACTIVE)"
+        },
+        {
+          "property": "input_capture_on_drag",
+          "declaredOn": "CollisionObject3D",
+          "accepts": "true or false"
+        },
+        {
+          "property": "input_ray_pickable",
+          "declaredOn": "CollisionObject3D",
           "accepts": "true or false"
         },
         {
