@@ -161,7 +161,11 @@ function useForcedViewportRect(path: string, stretch: boolean) {
     const publish = () => {
       const x = Math.max(1, Math.round(element.offsetWidth));
       const y = Math.max(1, Math.round(element.offsetHeight));
-      release?.();
+      // Register WITHOUT releasing first: re-registering the same path
+      // transfers ownership, and an unchanged measurement then keeps the
+      // registry's map identity. Release-then-register is a delete+insert
+      // that re-rendered every rect consumer per ResizeObserver pass.
+      // Superseded release closures are no-ops; the final one runs at teardown.
       release = registerViewportRect(path, { x, y });
     };
     publish();

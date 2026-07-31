@@ -189,9 +189,9 @@ export function Canvas2DStage({
     return () => el.removeEventListener('wheel', onWheel);
   }, [applyView]);
 
-  // Drag-to-pan via pointer capture (like <Splitter>): the drag keeps tracking
-  // off the element with NO window listeners, so an unmount mid-drag can't leak
-  // a listener or call setPan on an unmounted component.
+  // Drag-to-pan via pointer capture (like <Splitter>): the mouse drag keeps
+  // tracking off the element rather than off window listeners, so an unmount
+  // mid-drag can't call setPan on an unmounted component.
   const pan2dDrag = useRef({ startX: 0, startY: 0, ox: 0, oy: 0, active: false });
 
   // Touch takes its own path: one finger pans, two pan AND pinch together, so
@@ -217,6 +217,29 @@ export function Canvas2DStage({
   // so a getBoundingClientRect() here forces a synchronous layout of the whole
   // stage — including the Control overlay — on every single pointermove.
   const touchRect = useRef<DOMRect | null>(null);
+
+  // A window blur is fingers leaving with no pointerup ever arriving: alt-tab
+  // mid-gesture would otherwise leave the map holding pointers that never lift,
+  // and `resolveTouchMode` would read the next single-finger drag as a pinch.
+  // The cleanup doubles as the unmount reset.
+  useEffect(() => {
+    /**
+     * The invariant every touch path maintains: no fingers, no gesture origin. A
+     * stale origin is what would make the next single-finger drag pan from
+     * wherever a two-finger gesture happened to end — and a stale rect would
+     * anchor its pinch to where the stage was before whatever moved it.
+     */
+    function resetTouch() {
+      touchPoints.current.clear();
+      touchOrigin.current = null;
+      touchRect.current = null;
+    }
+    window.addEventListener('blur', resetTouch);
+    return () => {
+      window.removeEventListener('blur', resetTouch);
+      resetTouch();
+    };
+  }, []);
 
   const onStagePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (isGesturePointer(e.pointerType)) {
@@ -271,11 +294,15 @@ export function Canvas2DStage({
     }
     touchOrigin.current = { ...origin, centroid, span };
 
+    const dx = centroid.x - origin.centroid.x;
+    const dy = centroid.y - origin.centroid.y;
+    // One move per pointer means a two-finger gesture also delivers events in
+    // which nothing moved: nothing to apply, and no reason to re-render the
+    // stage and the Control overlay with it. The 3D viewport guards the same way.
+    if (dx === 0 && dy === 0 && span === origin.span) return;
+
     const panned: View2D = {
-      pan: {
-        x: view.pan.x + (centroid.x - origin.centroid.x),
-        y: view.pan.y + (centroid.y - origin.centroid.y),
-      },
+      pan: { x: view.pan.x + dx, y: view.pan.y + dy },
       zoom: view.zoom,
     };
     // Not inverted, unlike the 3D viewport: a CSS scale grows as the fingers
@@ -299,10 +326,12 @@ export function Canvas2DStage({
     }
     const d = pan2dDrag.current;
     if (!d.active) return;
-    applyView({
-      pan: { x: d.ox + (e.clientX - d.startX), y: d.oy + (e.clientY - d.startY) },
-      zoom: viewRef.current.zoom,
-    });
+    const nx = d.ox + (e.clientX - d.startX);
+    const ny = d.oy + (e.clientY - d.startY);
+    // A move that lands on the current pan has nothing to apply, and no reason
+    // to re-render the stage. The 3D viewport guards its mouse path the same way.
+    if (nx === viewRef.current.pan.x && ny === viewRef.current.pan.y) return;
+    applyView({ pan: { x: nx, y: ny }, zoom: viewRef.current.zoom });
   };
 
   const endStageDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -338,6 +367,10 @@ export function Canvas2DStage({
       onPointerMove={onStagePointerMove}
       onPointerUp={endStageDrag}
       onPointerCancel={endStageDrag}
+      // A pointer can vanish without a pointerup — capture stolen, or the
+      // browser taking the gesture over — which would leave a finger in the map
+      // for the next drag to misread as a pinch.
+      onLostPointerCapture={endStageDrag}
       aria-label="2D canvas"
       data-testid="canvas-2d-stage"
     >

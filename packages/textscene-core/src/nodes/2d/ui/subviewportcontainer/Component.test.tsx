@@ -19,6 +19,11 @@ import {
   useRegisterViewportTexture,
   type ViewportTextureEntry,
 } from '../../../../r3f/contexts/ViewportTextureContext';
+import {
+  ViewportRectProvider,
+  useViewportRect,
+  type ViewportRect,
+} from '../../../../r3f/contexts/ViewportRectContext';
 
 function node(name: string, type: string, properties: object, children: TscnNode[] = []): TscnNode {
   return { name, type, children, properties: { name, ...properties } } as TscnNode;
@@ -84,6 +89,50 @@ describe('<SubViewportContainer>', () => {
       const surface = surfaces(container)[0];
       expect(surface.style.transform).not.toContain('scale');
       expect(surface.style.width).toBe('200px');
+    });
+  });
+
+  describe('forced rect publishing', () => {
+    it('a ResizeObserver pass with an unchanged measurement does not re-render rect consumers', () => {
+      // happy-dom has no ResizeObserver; a stub exposes the resize callback so
+      // the test can drive layout passes by hand.
+      const resizeCallbacks: (() => void)[] = [];
+      class ResizeObserverStub {
+        constructor(callback: () => void) {
+          resizeCallbacks.push(callback);
+        }
+        observe() {}
+        disconnect() {}
+      }
+      (globalThis as { ResizeObserver?: unknown }).ResizeObserver = ResizeObserverStub;
+      try {
+        let probeRenders = 0;
+        let seenRect: ViewportRect | null = null;
+        function Probe() {
+          probeRenders += 1;
+          seenRect = useViewportRect('Booth/View');
+          return null;
+        }
+        render(
+          <ViewportRectProvider>
+            <ControlOverlay nodes={tree({ stretch: true })} />
+            <Probe />
+          </ViewportRectProvider>
+        );
+        // happy-dom reports offsetWidth/Height 0, floored to the 1×1 minimum.
+        expect(seenRect).toEqual({ x: 1, y: 1 });
+        const rendersAfterMount = probeRenders;
+
+        act(() => {
+          for (const callback of resizeCallbacks) callback();
+          for (const callback of resizeCallbacks) callback();
+        });
+
+        expect(seenRect).toEqual({ x: 1, y: 1 });
+        expect(probeRenders).toBe(rendersAfterMount);
+      } finally {
+        delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
+      }
     });
   });
 

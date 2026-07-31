@@ -22,7 +22,7 @@ import {
   type LogAdapter,
 } from '@textscene/core';
 import type { TscnNode } from '@textscene/core';
-import type { HostToWebviewMessage, WebviewToHostMessage } from '../protocol';
+import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
 import { readInitialConfig, resolveInitialViewportMode } from './initialConfig';
 
@@ -78,8 +78,9 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
-      const message = event.data as HostToWebviewMessage | undefined;
-      if (!message) return;
+      const data: unknown = event.data;
+      if (!isHostToWebviewMessage(data)) return;
+      const message = data;
       if (message.type === 'loadTscn') {
         setContent(message.content);
       } else if (message.type === 'incrementalUpdate') {
