@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+; PhysicalBone2D's own properties under a Skeleton2D parent, bone2d_index assigned.
+
+[node name="Root" type="Node2D"]
+
+[node name="MySkeleton2D" type="Skeleton2D" parent="."]
+
+[node name="Bone" type="Bone2D" parent="MySkeleton2D"]
+
+[node name="MyPhysicalBone2D" type="PhysicalBone2D" parent="MySkeleton2D"]
+position = Vector2(10, 20)
+bone2d_nodepath = NodePath("../Bone")
+bone2d_index = 0
+auto_configure_joint = false
+simulate_physics = true
+follow_bone_when_simulating = true

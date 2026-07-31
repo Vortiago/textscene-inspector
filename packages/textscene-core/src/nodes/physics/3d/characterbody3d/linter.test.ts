@@ -67,18 +67,21 @@ describe('CharacterBody3D Linter', () => {
       { prop: 'floor_constant_speed', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
       { prop: 'floor_block_on_wall', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
       {
+        // Godot hints "0,180,0.1,radians_as_degrees" with no `or_greater`, so
+        // PI is the last legal value; this table used to stop at PI/2 and
+        // rejected the upper half of the range as an error.
         prop: 'floor_max_angle',
-        valid: [0, 0.785398, 1.5708],
+        valid: [0, 0.785398, 1.5708, 3.14159],
         invalid: [
-          { value: 3.14159, contains: ['radians'] },
+          { value: 4.0, contains: ['radians'] },
           { value: -0.5 },
           { value: '"45 degrees"' },
         ],
       },
       {
         prop: 'wall_min_slide_angle',
-        valid: [0, 0.261799, 0.785398, 1.5708],
-        invalid: [{ value: 2.0, contains: ['radians'] }, { value: -0.1 }],
+        valid: [0, 0.261799, 0.785398, 1.5708, 2.0, 3.14159],
+        invalid: [{ value: 4.0, contains: ['radians'] }, { value: -0.1 }],
       },
       {
         prop: 'platform_on_leave',

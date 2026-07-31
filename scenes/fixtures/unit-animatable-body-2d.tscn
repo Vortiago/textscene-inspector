@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+; Exercises AnimatableBody2D's own sync_to_physics flag.
+
+[node name="Root" type="Node2D"]
+
+[node name="MyAnimatableBody2D" type="AnimatableBody2D" parent="."]
+position = Vector2(10, 20)
+sync_to_physics = false

@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+; Exercises VehicleBody3D's own properties: engine_force, brake, steering.
+
+[node name="Root" type="Node3D"]
+
+[node name="MyVehicleBody3D" type="VehicleBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+engine_force = 40.0
+brake = 12.5
+steering = 0.5236

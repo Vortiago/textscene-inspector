@@ -70,6 +70,9 @@ const INVOCATIONS = {
     'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'Button',
   ],
   unknownType: ['Widget3D', '3d', '--intent', 'pending', '--chain', 'Node3D'],
+  inheritsSkippingEmpty: [
+    'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'Button', '--linter',
+  ],
   wrongChain: ['ShapeCast3D', '3d', '--intent', 'pending', '--chain', 'Node2D'],
 };
 
@@ -115,6 +118,16 @@ describe('new-node-slice argument contract', () => {
     // the shape of that mistake: plausible, and absent from ClassDB.
     expect(results.unknownType.ok).toBe(false);
     expect(results.unknownType.out).toMatch(/Widget3D is not in .*node-catalog\.json/);
+  });
+
+  it('inherits from the nearest ancestor that registers, not the --base flag', () => {
+    // `Button` sits between CheckButton and BaseButton and registers nothing,
+    // so stopping at the immediate parent would skip BaseButton's whole set —
+    // and stopping at `--base control` would skip both. Three agents in one
+    // wave disagreed about this import; the scaffold now settles it.
+    const { ok, out } = results.inheritsSkippingEmpty;
+    expect(ok).toBe(true);
+    expect(out).toMatch(/inherit \.\.\/basebutton\/linterParser\.js/);
   });
 
   it('refuses a --chain Godot disagrees with, naming the real parent', () => {

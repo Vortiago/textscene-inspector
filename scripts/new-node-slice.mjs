@@ -46,8 +46,8 @@
  */
 
 import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -245,6 +245,51 @@ function parseArgs(argv) {
     );
   }
   return { typeName, category, ...opts };
+}
+
+/**
+ * Path from `sliceDir` to the linterParser that registers `parentType`.
+ *
+ * A generated `linterParser.ts` side-effect-imports its parent's so that a test
+ * importing only `./linterParser` sees the inherited keys through
+ * `findValidator`. The parent is a Godot class, not the `--base` flag: chaining
+ * to `base/node3d` when the real parent is `RigidBody3D` skips every validator
+ * between them, which is invisible until someone writes such a test. Resolved
+ * by scanning for the `registerAll('<Parent>'` that owns the type, so abstract
+ * tiers (`physics/shared` for CollisionObject3D) resolve like any other.
+ *
+ * Falls back to the `--base` slice when the parent registers nothing yet, which
+ * is correct: there is no tier to reach.
+ */
+function parentLinterParser(typeName, parentType, sliceDir, fallback) {
+  /** Directory of the linterParser that calls `registerAll('<type>')`, if one does. */
+  const ownerOf = (type) => {
+    const needle = `registerAll('${type}'`;
+    const found = [];
+    (function walk(dir) {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (entry.name === 'linterParser.ts' && readFileSync(full, 'utf8').includes(needle)) {
+          found.push(dirname(full));
+        }
+      }
+    })(join(CORE_SRC, 'nodes'));
+    return found.length === 1 ? found[0] : undefined;
+  };
+
+  // Walk up Godot's chain to the NEAREST ancestor that registers something.
+  // `PhysicsBody3D` and `Button` bind nothing and own no slice, so stopping at
+  // the immediate parent would skip the tier above them.
+  const catalog = JSON.parse(readFileSync(join(REPO_ROOT, 'scripts/compare-docs/node-catalog.json'), 'utf8'));
+  const chain = catalog.nodes.find((n) => n.name === typeName)?.chain ?? [parentType];
+  for (const ancestor of chain) {
+    const dir = ownerOf(ancestor);
+    if (!dir) continue;
+    const rel = relative(sliceDir, dir).replaceAll('\\', '/');
+    return `${rel.startsWith('.') ? rel : `./${rel}`}/linterParser.js`;
+  }
+  return fallback;
 }
 
 /**
@@ -577,12 +622,12 @@ export { ${typeName} };
  * ${typeName} strict validators for linting.
  *
  * Declare only ${typeName}'s OWN members — the ones doc/classes/${typeName}.xml
- * lists without an \`overrides=\` attribute. Everything from ${base.component} up is
+ * lists without an \`overrides=\` attribute. Everything from ${chain} up is
  * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
  * re-declaring an inherited key shadows it and duplicates the rule.
  */
 
-${base.hasLinterParser ? `import '${toBase}/linterParser.js';\n` : ''}import { validatorRegistry } from '${toSrc}linter/ValidatorRegistry.js';
+${base.hasLinterParser ? `import '${parentLinterParser(typeName, chain, sliceDir, `${toBase}/linterParser.js`)}';\n` : ''}import { validatorRegistry } from '${toSrc}linter/ValidatorRegistry.js';
 
 validatorRegistry.registerAll('${typeName}', {});
 `
@@ -795,6 +840,11 @@ the property and the value the lenient parser falls back to.
   console.log(`  create  scenes/fixtures/${fixtureName}`);
   for (const w of wirings) console.log(`  wire    ${w.filePath.slice(REPO_ROOT.length + 1)} (${w.action})`);
   console.log(`  chain   ${chainNote}`);
+  if (linter) {
+    console.log(
+      `  inherit ${parentLinterParser(typeName, chain, sliceDir, `${toBase}/linterParser.js`)}`
+    );
+  }
 
   if (dryRun) {
     console.log('[new-node-slice] dry run — nothing written.');

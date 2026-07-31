@@ -77,6 +77,7 @@ reproduced:
 
 ## 3D
 
+- [AnimatableBody3D](../../packages/textscene-core/src/nodes/physics/3d/animatablebody3d/comparison.md) — nothing (a transform-only group; a StaticBody3D moved by animation)
 - [AnimationPlayer](../../packages/textscene-core/src/nodes/animation/animationplayer/comparison.md) — no geometry of its own; a working driver of other nodes' properties
 - [AnimationTree](../../packages/textscene-core/src/nodes/animation/animationtree/comparison.md) — no geometry of its own; a working blend-tree driver
 - [Area3D](../../packages/textscene-core/src/nodes/physics/3d/area3d/comparison.md) — an invisible transform-only group
@@ -106,6 +107,7 @@ reproduced:
 - [OmniLight3D](../../packages/textscene-core/src/nodes/3d/lights/omnilight3d/comparison.md) — a THREE.PointLight
 - [Path3D](../../packages/textscene-core/src/nodes/paths/path3d/comparison.md) — a selection-gated curve gizmo
 - [PathFollow3D](../../packages/textscene-core/src/nodes/paths/pathfollow3d/comparison.md) — a curve-positioned transform group
+- [PhysicalBone3D](../../packages/textscene-core/src/nodes/physics/3d/physicalbone3d/comparison.md) — nothing (a transform-only group; one ragdoll bone and its joint)
 - [RayCast3D](../../packages/textscene-core/src/nodes/physics/3d/raycast3d/comparison.md) — nothing (a transform-only group; the ray is an editor gizmo)
 - [RemoteTransform3D](../../packages/textscene-core/src/nodes/3d/remotetransform3d/comparison.md) — nothing (a transform-only group that drives its target)
 - [RigidBody3D](../../packages/textscene-core/src/nodes/physics/3d/rigidbody3d/comparison.md) — an invisible transform-only group
@@ -115,6 +117,7 @@ reproduced:
 - [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md) — nothing itself (a transform-only group that pulls its children in on a hit)
 - [Sprite3D](../../packages/textscene-core/src/nodes/3d/sprite3d/comparison.md) — an unlit textured THREE.Mesh quad
 - [StaticBody3D](../../packages/textscene-core/src/nodes/physics/3d/staticbody3d/comparison.md) — a transform-only group
+- [VehicleBody3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclebody3d/comparison.md) — nothing (a transform-only group; its VehicleWheel3D children do the driving)
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md) — the scene's background and environment lighting
 - [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md) — a transform-only group (it drives a Skeleton3D's bone poses)
 - [SpringBoneCollision3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollision3d/comparison.md) — a transform-only group (a spring-bone collider)
@@ -126,6 +129,7 @@ reproduced:
 
 ## 2D
 
+- [AnimatableBody2D](../../packages/textscene-core/src/nodes/physics/2d/animatablebody2d/comparison.md) — nothing (a transform-only group; a StaticBody2D moved by animation)
 - [AnimatedSprite2D](../../packages/textscene-core/src/nodes/2d/animatedsprite2d/comparison.md) — a textured quad
 - [Area2D](../../packages/textscene-core/src/nodes/physics/2d/area2d/comparison.md) — a transform-only Node2D group
 - [AudioStreamPlayer2D](../../packages/textscene-core/src/nodes/audio/audiostreamplayer2d/comparison.md) — an invisible Node2D transform group
@@ -150,6 +154,7 @@ reproduced:
 - [PanelContainer](../../packages/textscene-core/src/nodes/2d/ui/panelcontainer/comparison.md) — a StyleBox panel around its child
 - [Path2D](../../packages/textscene-core/src/nodes/2d/path2d/comparison.md) — nothing at runtime; a selection-gated curve gizmo
 - [PathFollow2D](../../packages/textscene-core/src/nodes/2d/pathfollow2d/comparison.md) — a transform-only follower with a selection-gated dot
+- [PhysicalBone2D](../../packages/textscene-core/src/nodes/physics/2d/physicalbone2d/comparison.md) — nothing (a transform-only group; one Skeleton2D bone driven by physics)
 - [Polygon2D](../../packages/textscene-core/src/nodes/2d/polygon2d/comparison.md) — a filled ShapeGeometry mesh
 - [RayCast2D](../../packages/textscene-core/src/nodes/physics/2d/raycast2d/comparison.md) — nothing (a transform-only group; the ray is an editor gizmo)
 - [RemoteTransform2D](../../packages/textscene-core/src/nodes/2d/remotetransform2d/comparison.md) — nothing itself; it copies its transform onto its remote_path target

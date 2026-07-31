@@ -73,6 +73,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animatable Body 2d",
+    "file": "unit-animatable-body-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animatable Body 3d",
+    "file": "unit-animatable-body-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animatedsprite2d Atlas",
     "file": "unit-animatedsprite2d-atlas.tscn",
     "category": "Other"
@@ -453,6 +463,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Physical Bone 2d",
+    "file": "unit-physical-bone-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Physical Bone 3d",
+    "file": "unit-physical-bone-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d Blend",
     "file": "unit-pointlight2d-blend.tscn",
     "category": "Other"
@@ -675,6 +695,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Uv Scale",
     "file": "unit-uv-scale.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Vehicle Body 3d",
+    "file": "unit-vehicle-body-3d.tscn",
     "category": "Other"
   },
   {

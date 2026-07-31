@@ -35,7 +35,7 @@
       "name": "AnimatableBody2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "StaticBody2D",
         "PhysicsBody2D",
@@ -52,7 +52,7 @@
       "name": "AnimatableBody3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "StaticBody3D",
         "PhysicsBody3D",
@@ -2187,7 +2187,7 @@
       "name": "PhysicalBone2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "RigidBody2D",
         "PhysicsBody2D",
@@ -2204,7 +2204,7 @@
       "name": "PhysicalBone3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "PhysicsBody3D",
         "CollisionObject3D",
@@ -3115,7 +3115,7 @@
       "name": "VehicleBody3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "RigidBody3D",
         "PhysicsBody3D",
