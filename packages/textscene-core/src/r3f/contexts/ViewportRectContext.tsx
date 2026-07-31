@@ -29,7 +29,7 @@
  * `size`, which is exactly what Godot does for them.
  */
 
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 
 /** The forced rect, in viewport pixels — already divided by `stretch_shrink`. */
 export interface ViewportRect {
@@ -37,7 +37,11 @@ export interface ViewportRect {
   y: number;
 }
 
-/** Publish the rect at `path`; returns a cleanup that unregisters it. */
+/**
+ * Publish the rect at `path`; returns a cleanup that unregisters it.
+ * Re-registering the same path transfers ownership: superseded cleanups become
+ * no-ops, so a publisher may re-register freely without releasing first.
+ */
 export type RegisterViewportRect = (path: string, rect: ViewportRect) => () => void;
 
 const NO_OP_REGISTER: RegisterViewportRect = () => () => {};
@@ -62,27 +66,45 @@ export function useViewportRect(path: string | null): ViewportRect | null {
 
 export function ViewportRectProvider({ children }: { children: ReactNode }) {
   const [rects, setRects] = useState<ReadonlyMap<string, ViewportRect>>(() => new Map());
+  /**
+   * Which registration currently owns each path. The sibling registries
+   * identify the owner by the registered entry itself, which cannot work here:
+   * the fast path below leaves an equal measurement's ORIGINAL object in the
+   * map, so a remount that re-measures the same rect would look like the
+   * departing mount and its stale cleanup would delete the live registration.
+   * A ref, so transferring ownership never renders.
+   */
+  const owners = useRef(new Map<string, object>()).current;
 
-  const registerViewportRect = useCallback<RegisterViewportRect>((path, rect) => {
-    setRects((prev) => {
-      // Identity-stable on an unchanged measurement: a ResizeObserver fires on
-      // every layout pass, and a new Map each time would re-render every
-      // consumer and re-allocate every render target.
-      const current = prev.get(path);
-      if (current && current.x === rect.x && current.y === rect.y) return prev;
-      const next = new Map(prev);
-      next.set(path, rect);
-      return next;
-    });
-    return () => {
+  const registerViewportRect = useCallback<RegisterViewportRect>(
+    (path, rect) => {
+      // Ownership binds at call time and outside the updater, which must stay
+      // pure for StrictMode's double invocation.
+      const token = {};
+      owners.set(path, token);
       setRects((prev) => {
-        if (!prev.has(path)) return prev;
+        // Identity-stable on an unchanged measurement: a ResizeObserver fires on
+        // every layout pass, and a new Map each time would re-render every
+        // consumer and re-allocate every render target.
+        const current = prev.get(path);
+        if (current && current.x === rect.x && current.y === rect.y) return prev;
         const next = new Map(prev);
-        next.delete(path);
+        next.set(path, rect);
         return next;
       });
-    };
-  }, []);
+      return () => {
+        if (owners.get(path) !== token) return;
+        owners.delete(path);
+        setRects((prev) => {
+          if (!prev.has(path)) return prev;
+          const next = new Map(prev);
+          next.delete(path);
+          return next;
+        });
+      };
+    },
+    [owners]
+  );
 
   return (
     <RegisterViewportRectContext.Provider value={registerViewportRect}>
