@@ -41,7 +41,7 @@ Strict parsing format-checks these `StaticBody3D` properties, plus 6 inherited f
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
-| `valid-staticbody3d` | `valid-staticbody3d-resources` | error |
+| `valid-staticbody3d` (type-family match) | `valid-staticbody3d-resources` | error |
 |  | `staticbody3d-needs-collision-shape` | warning |
 |  | `staticbody3d-constant-velocity-warning` | warning |
 |  | `staticbody3d-zero-collision-layer` | warning |

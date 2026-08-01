@@ -3165,156 +3165,6 @@
         }
       ]
     },
-    "ConeTwistJoint3D": {
-      "validators": [
-        {
-          "property": "exclude_nodes_from_collision",
-          "declaredOn": "Joint3D",
-          "accepts": "true or false"
-        },
-        {
-          "property": "node_a",
-          "declaredOn": "Joint3D",
-          "accepts": "NodePath(\"path/to/node\")"
-        },
-        {
-          "property": "node_b",
-          "declaredOn": "Joint3D",
-          "accepts": "NodePath(\"path/to/node\")"
-        },
-        {
-          "property": "solver_priority",
-          "declaredOn": "Joint3D",
-          "accepts": "integer 1-8"
-        },
-        {
-          "property": "basis",
-          "declaredOn": "Node3D",
-          "accepts": "Basis(9 floats)"
-        },
-        {
-          "property": "global_basis",
-          "declaredOn": "Node3D",
-          "accepts": "Basis(9 floats)"
-        },
-        {
-          "property": "global_position",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_rotation",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_rotation_degrees",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_transform",
-          "declaredOn": "Node3D",
-          "accepts": "Transform3D(12 floats)"
-        },
-        {
-          "property": "position",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "quaternion",
-          "declaredOn": "Node3D",
-          "accepts": "Quaternion(x, y, z, w)"
-        },
-        {
-          "property": "rotation",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "rotation_degrees",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "rotation_order",
-          "declaredOn": "Node3D",
-          "accepts": "enum 0-5 (XYZ/XZY/YXZ/YZX/ZXY/ZYX)"
-        },
-        {
-          "property": "scale",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
-        },
-        {
-          "property": "top_level",
-          "declaredOn": "Node3D",
-          "accepts": "true or false"
-        },
-        {
-          "property": "transform",
-          "declaredOn": "Node3D",
-          "accepts": "Transform3D(12 floats)"
-        },
-        {
-          "property": "visibility_parent",
-          "declaredOn": "Node3D",
-          "accepts": "NodePath(\"path/to/node\")"
-        },
-        {
-          "property": "visible",
-          "declaredOn": "Node3D",
-          "accepts": "true or false"
-        }
-      ],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-node3d-visibility",
-          "description": "Validates Node3D visibility_parent references exist in scene tree",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "error"
-            },
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-joint",
-          "description": "Flags a joint that cannot form a constraint",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "joint-not-connected",
-              "severity": "warning"
-            },
-            {
-              "ruleName": "joint-same-body",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
     "ConvertTransformModifier3D": {
       "validators": [
         {
@@ -4379,6 +4229,18 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-window-properties",
+          "description": "Validates Window's max_size/min_size consistency",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "window-max-size-below-min-size",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -4718,156 +4580,6 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
-    "Generic6DOFJoint3D": {
-      "validators": [
-        {
-          "property": "exclude_nodes_from_collision",
-          "declaredOn": "Joint3D",
-          "accepts": "true or false"
-        },
-        {
-          "property": "node_a",
-          "declaredOn": "Joint3D",
-          "accepts": "NodePath(\"path/to/node\")"
-        },
-        {
-          "property": "node_b",
-          "declaredOn": "Joint3D",
-          "accepts": "NodePath(\"path/to/node\")"
-        },
-        {
-          "property": "solver_priority",
-          "declaredOn": "Joint3D",
-          "accepts": "integer 1-8"
-        },
-        {
-          "property": "basis",
-          "declaredOn": "Node3D",
-          "accepts": "Basis(9 floats)"
-        },
-        {
-          "property": "global_basis",
-          "declaredOn": "Node3D",
-          "accepts": "Basis(9 floats)"
-        },
-        {
-          "property": "global_position",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_rotation",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_rotation_degrees",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_transform",
-          "declaredOn": "Node3D",
-          "accepts": "Transform3D(12 floats)"
-        },
-        {
-          "property": "position",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "quaternion",
-          "declaredOn": "Node3D",
-          "accepts": "Quaternion(x, y, z, w)"
-        },
-        {
-          "property": "rotation",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "rotation_degrees",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "rotation_order",
-          "declaredOn": "Node3D",
-          "accepts": "enum 0-5 (XYZ/XZY/YXZ/YZX/ZXY/ZYX)"
-        },
-        {
-          "property": "scale",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
-        },
-        {
-          "property": "top_level",
-          "declaredOn": "Node3D",
-          "accepts": "true or false"
-        },
-        {
-          "property": "transform",
-          "declaredOn": "Node3D",
-          "accepts": "Transform3D(12 floats)"
-        },
-        {
-          "property": "visibility_parent",
-          "declaredOn": "Node3D",
-          "accepts": "NodePath(\"path/to/node\")"
-        },
-        {
-          "property": "visible",
-          "declaredOn": "Node3D",
-          "accepts": "true or false"
-        }
-      ],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-node3d-visibility",
-          "description": "Validates Node3D visibility_parent references exist in scene tree",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "error"
-            },
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-joint",
-          "description": "Flags a joint that cannot form a constraint",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "joint-not-connected",
-              "severity": "warning"
-            },
-            {
-              "ruleName": "joint-same-body",
               "severity": "warning"
             }
           ]
@@ -6333,6 +6045,18 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-graph-element-selection",
+          "description": "Flags a GraphElement authored with selected = true and selectable = false — Godot always forces the element back to deselected regardless of load order",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "graph-element-selected-not-selectable",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -6583,6 +6307,18 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-graph-element-selection",
+          "description": "Flags a GraphElement authored with selected = true and selectable = false — Godot always forces the element back to deselected regardless of load order",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "graph-element-selected-not-selectable",
               "severity": "warning"
             }
           ]
@@ -7094,6 +6830,18 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-range-bounds",
+          "description": "Flags a Range whose max_value is authored below min_value — Godot clamps the range to a single point rather than rejecting it",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "range-max-below-min",
               "severity": "warning"
             }
           ]
@@ -12340,6 +12088,18 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-window-properties",
+          "description": "Validates Window's max_size/min_size consistency",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "window-max-size-below-min-size",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -12628,6 +12388,18 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-window-properties",
+          "description": "Validates Window's max_size/min_size consistency",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "window-max-size-below-min-size",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -12893,6 +12665,18 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-range-bounds",
+          "description": "Flags a Range whose max_value is authored below min_value — Godot clamps the range to a single point rather than rejecting it",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "range-max-below-min",
               "severity": "warning"
             }
           ]
@@ -13816,6 +13600,18 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-window-properties",
+          "description": "Validates Window's max_size/min_size consistency",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "window-max-size-below-min-size",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -14113,400 +13909,6 @@
         }
       ]
     },
-    "SliderJoint3D": {
-      "validators": [
-        {
-          "property": "exclude_nodes_from_collision",
-          "declaredOn": "Joint3D",
-          "accepts": "true or false"
-        },
-        {
-          "property": "node_a",
-          "declaredOn": "Joint3D",
-          "accepts": "NodePath(\"path/to/node\")"
-        },
-        {
-          "property": "node_b",
-          "declaredOn": "Joint3D",
-          "accepts": "NodePath(\"path/to/node\")"
-        },
-        {
-          "property": "solver_priority",
-          "declaredOn": "Joint3D",
-          "accepts": "integer 1-8"
-        },
-        {
-          "property": "basis",
-          "declaredOn": "Node3D",
-          "accepts": "Basis(9 floats)"
-        },
-        {
-          "property": "global_basis",
-          "declaredOn": "Node3D",
-          "accepts": "Basis(9 floats)"
-        },
-        {
-          "property": "global_position",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_rotation",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_rotation_degrees",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_transform",
-          "declaredOn": "Node3D",
-          "accepts": "Transform3D(12 floats)"
-        },
-        {
-          "property": "position",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "quaternion",
-          "declaredOn": "Node3D",
-          "accepts": "Quaternion(x, y, z, w)"
-        },
-        {
-          "property": "rotation",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "rotation_degrees",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "rotation_order",
-          "declaredOn": "Node3D",
-          "accepts": "enum 0-5 (XYZ/XZY/YXZ/YZX/ZXY/ZYX)"
-        },
-        {
-          "property": "scale",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
-        },
-        {
-          "property": "top_level",
-          "declaredOn": "Node3D",
-          "accepts": "true or false"
-        },
-        {
-          "property": "transform",
-          "declaredOn": "Node3D",
-          "accepts": "Transform3D(12 floats)"
-        },
-        {
-          "property": "visibility_parent",
-          "declaredOn": "Node3D",
-          "accepts": "NodePath(\"path/to/node\")"
-        },
-        {
-          "property": "visible",
-          "declaredOn": "Node3D",
-          "accepts": "true or false"
-        }
-      ],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-node3d-visibility",
-          "description": "Validates Node3D visibility_parent references exist in scene tree",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "error"
-            },
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-joint",
-          "description": "Flags a joint that cannot form a constraint",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "joint-not-connected",
-              "severity": "warning"
-            },
-            {
-              "ruleName": "joint-same-body",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
-    "SoftBody3D": {
-      "validators": [
-        {
-          "property": "mesh",
-          "declaredOn": "MeshInstance3D",
-          "accepts": "SubResource(\"id\") or ExtResource(\"id\")"
-        },
-        {
-          "property": "skeleton",
-          "declaredOn": "MeshInstance3D",
-          "accepts": "NodePath(\"path/to/node\")"
-        },
-        {
-          "property": "skin",
-          "declaredOn": "MeshInstance3D",
-          "accepts": "SubResource(\"id\") or ExtResource(\"id\")"
-        },
-        {
-          "property": "surface_material_override/*",
-          "declaredOn": "MeshInstance3D",
-          "accepts": "SubResource(\"id\") or ExtResource(\"id\")"
-        },
-        {
-          "property": "cast_shadow",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY)"
-        },
-        {
-          "property": "custom_aabb",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "AABB(x, y, z, w, h, d)"
-        },
-        {
-          "property": "extra_cull_margin",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "float 0-16384"
-        },
-        {
-          "property": "gi_lightmap_texel_scale",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "float >= 0.01"
-        },
-        {
-          "property": "gi_mode",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "enum 0-2 (DISABLED/STATIC/DYNAMIC)"
-        },
-        {
-          "property": "ignore_occlusion_culling",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "true or false"
-        },
-        {
-          "property": "lod_bias",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "float 0-128"
-        },
-        {
-          "property": "material_overlay",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "SubResource(\"id\") or ExtResource(\"id\")"
-        },
-        {
-          "property": "material_override",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "SubResource(\"id\") or ExtResource(\"id\")"
-        },
-        {
-          "property": "sorting_offset",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "float"
-        },
-        {
-          "property": "sorting_use_aabb_center",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "true or false"
-        },
-        {
-          "property": "transparency",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "float 0-1"
-        },
-        {
-          "property": "visibility_range_begin",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "float >= 0"
-        },
-        {
-          "property": "visibility_range_begin_margin",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "float >= 0"
-        },
-        {
-          "property": "visibility_range_end",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "float >= 0"
-        },
-        {
-          "property": "visibility_range_end_margin",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "float >= 0"
-        },
-        {
-          "property": "visibility_range_fade_mode",
-          "declaredOn": "GeometryInstance3D",
-          "accepts": "enum 0-2 (DISABLED/SELF/DEPENDENCIES)"
-        },
-        {
-          "property": "layers",
-          "declaredOn": "VisualInstance3D",
-          "accepts": "32-bit layer mask (layers 1-32)"
-        },
-        {
-          "property": "basis",
-          "declaredOn": "Node3D",
-          "accepts": "Basis(9 floats)"
-        },
-        {
-          "property": "global_basis",
-          "declaredOn": "Node3D",
-          "accepts": "Basis(9 floats)"
-        },
-        {
-          "property": "global_position",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_rotation",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_rotation_degrees",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_transform",
-          "declaredOn": "Node3D",
-          "accepts": "Transform3D(12 floats)"
-        },
-        {
-          "property": "position",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "quaternion",
-          "declaredOn": "Node3D",
-          "accepts": "Quaternion(x, y, z, w)"
-        },
-        {
-          "property": "rotation",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "rotation_degrees",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "rotation_order",
-          "declaredOn": "Node3D",
-          "accepts": "enum 0-5 (XYZ/XZY/YXZ/YZX/ZXY/ZYX)"
-        },
-        {
-          "property": "scale",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
-        },
-        {
-          "property": "top_level",
-          "declaredOn": "Node3D",
-          "accepts": "true or false"
-        },
-        {
-          "property": "transform",
-          "declaredOn": "Node3D",
-          "accepts": "Transform3D(12 floats)"
-        },
-        {
-          "property": "visibility_parent",
-          "declaredOn": "Node3D",
-          "accepts": "NodePath(\"path/to/node\")"
-        },
-        {
-          "property": "visible",
-          "declaredOn": "Node3D",
-          "accepts": "true or false"
-        }
-      ],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-node3d-visibility",
-          "description": "Validates Node3D visibility_parent references exist in scene tree",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "error"
-            },
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-geometryinstance3d-visibility-range",
-          "description": "Validates GeometryInstance3D's visibility-range cross-field consistency (End vs Begin distance, fade transitions needing a non-zero margin)",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "geometryinstance3d-visibility-range-end-before-begin",
-              "severity": "warning"
-            },
-            {
-              "ruleName": "geometryinstance3d-visibility-range-begin-fade-without-margin",
-              "severity": "warning"
-            },
-            {
-              "ruleName": "geometryinstance3d-visibility-range-end-fade-without-margin",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
     "SpinBox": {
       "validators": [
         {
@@ -14772,6 +14174,18 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-range-bounds",
+          "description": "Flags a Range whose max_value is authored below min_value — Godot clamps the range to a single point rather than rejecting it",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "range-max-below-min",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -15030,6 +14444,18 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-springbonecollision3d-parent",
+          "description": "Warns when a SpringBoneCollision3D is not a direct child of a SpringBoneSimulator3D, where Godot never consults it",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "springbonecollision3d-outside-springbonesimulator3d",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -15164,6 +14590,18 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-springbonecollision3d-parent",
+          "description": "Warns when a SpringBoneCollision3D is not a direct child of a SpringBoneSimulator3D, where Godot never consults it",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "springbonecollision3d-outside-springbonesimulator3d",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -15295,6 +14733,18 @@
             },
             {
               "ruleName": "valid-node3d-visibility",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-springbonecollision3d-parent",
+          "description": "Warns when a SpringBoneCollision3D is not a direct child of a SpringBoneSimulator3D, where Godot never consults it",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "springbonecollision3d-outside-springbonesimulator3d",
               "severity": "warning"
             }
           ]
@@ -16426,6 +15876,18 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-range-bounds",
+          "description": "Flags a Range whose max_value is authored below min_value — Godot clamps the range to a single point rather than rejecting it",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "range-max-below-min",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -16817,120 +16279,6 @@
           "declaredOn": "SkeletonModifier3D",
           "accepts": "float 0-1"
         },
-        {
-          "property": "basis",
-          "declaredOn": "Node3D",
-          "accepts": "Basis(9 floats)"
-        },
-        {
-          "property": "global_basis",
-          "declaredOn": "Node3D",
-          "accepts": "Basis(9 floats)"
-        },
-        {
-          "property": "global_position",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_rotation",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_rotation_degrees",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "global_transform",
-          "declaredOn": "Node3D",
-          "accepts": "Transform3D(12 floats)"
-        },
-        {
-          "property": "position",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "quaternion",
-          "declaredOn": "Node3D",
-          "accepts": "Quaternion(x, y, z, w)"
-        },
-        {
-          "property": "rotation",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "rotation_degrees",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z)"
-        },
-        {
-          "property": "rotation_order",
-          "declaredOn": "Node3D",
-          "accepts": "enum 0-5 (XYZ/XZY/YXZ/YZX/ZXY/ZYX)"
-        },
-        {
-          "property": "scale",
-          "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
-        },
-        {
-          "property": "top_level",
-          "declaredOn": "Node3D",
-          "accepts": "true or false"
-        },
-        {
-          "property": "transform",
-          "declaredOn": "Node3D",
-          "accepts": "Transform3D(12 floats)"
-        },
-        {
-          "property": "visibility_parent",
-          "declaredOn": "Node3D",
-          "accepts": "NodePath(\"path/to/node\")"
-        },
-        {
-          "property": "visible",
-          "declaredOn": "Node3D",
-          "accepts": "true or false"
-        }
-      ],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
-              "severity": "warning"
-            }
-          ]
-        },
-        {
-          "name": "valid-node3d-visibility",
-          "description": "Validates Node3D visibility_parent references exist in scene tree",
-          "universal": false,
-          "viaMatcher": true,
-          "emits": [
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "error"
-            },
-            {
-              "ruleName": "valid-node3d-visibility",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
-    "VehicleWheel3D": {
-      "validators": [
         {
           "property": "basis",
           "declaredOn": "Node3D",
@@ -18180,6 +17528,18 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "valid-range-bounds",
+          "description": "Flags a Range whose max_value is authored below min_value — Godot clamps the range to a single point rather than rejecting it",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "range-max-below-min",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -18827,6 +18187,30 @@
             },
             {
               "ruleName": "valid-node3d-visibility",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-camera3d-properties",
+          "description": "Validates Camera3D property values, required properties, clipping plane relationships, and performance considerations",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "camera3d-invalid-clipping-planes",
+              "severity": "error"
+            },
+            {
+              "ruleName": "camera3d-small-near-plane",
+              "severity": "warning"
+            },
+            {
+              "ruleName": "camera3d-large-far-plane",
+              "severity": "warning"
+            },
+            {
+              "ruleName": "camera3d-extreme-fov",
               "severity": "warning"
             }
           ]

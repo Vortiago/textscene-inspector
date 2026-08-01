@@ -21,10 +21,11 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { findParentNode } from '../../../../linter/linterUtils.js';
+import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 
 function checkSpringBoneCollision3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  if (node.type !== 'SpringBoneCollision3D') return [];
+  if (!descendsFrom(node.type, 'SpringBoneCollision3D')) return [];
 
   const parent = findParentNode(scene.nodes, node);
   // An instanced parent's type lives in another file; treat it as unknown.
@@ -49,7 +50,7 @@ const springBoneCollision3DParentRule: LintRule = {
     description:
       'Warns when a SpringBoneCollision3D is not a direct child of a SpringBoneSimulator3D, where Godot never consults it',
     category: 'validation',
-    applicableNodeTypes: ['SpringBoneCollision3D'],
+    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SpringBoneCollision3D'),
     emits: [{ ruleName: 'springbonecollision3d-outside-springbonesimulator3d', severity: 'warning' }],
   },
   check: checkSpringBoneCollision3D,

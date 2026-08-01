@@ -27,7 +27,7 @@ import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
+import { baseChain } from './nodeBaseTypes.js';
 import { PARAM_SLOTS } from '../nodes/2d/cpuparticles2d/types.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import './index.js';
@@ -614,19 +614,6 @@ function scrapeParserProps(src: string): Set<string> {
   const bracketRe = /\bproperties\[['"]([^'"]+)['"]\]/g;
   while ((m = bracketRe.exec(src)) !== null) props.add(m[1]!);
   return props;
-}
-
-/** Ancestor chain of a node type (excluding the type itself), cycle-safe. */
-function baseChain(nodeType: string): string[] {
-  const chain: string[] = [];
-  const visited = new Set<string>([nodeType]);
-  let current: string | undefined = NODE_BASE_TYPES[nodeType];
-  while (current && !visited.has(current)) {
-    visited.add(current);
-    chain.push(current);
-    current = NODE_BASE_TYPES[current];
-  }
-  return chain;
 }
 
 /**

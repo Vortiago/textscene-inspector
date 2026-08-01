@@ -48,7 +48,7 @@ Strict parsing format-checks these `GraphElement` properties, plus 26 inherited 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-graph-element-selection` | `graph-element-selected-not-selectable` | warning |
+| `valid-graph-element-selection` (type-family match) | `graph-element-selected-not-selectable` | warning |
 <!-- lint:end -->
 
 All 6 of GraphElement's own members format-check as a plain `Vector2` or boolean

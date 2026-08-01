@@ -122,7 +122,7 @@ Strict parsing format-checks these `Window` properties, plus 9 inherited from Vi
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-window-properties` | `window-max-size-below-min-size` | warning |
+| `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | warning |
 <!-- lint:end -->
 
 The lenient parser (`parser.ts`) reuses the plain `Node` parser: it reads only the

@@ -14,6 +14,7 @@ import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
 import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
+import { descendsFrom } from '../nodeBaseTypes.js';
 
 export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `StaticBody${dim}`;
@@ -53,7 +54,7 @@ export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
     const diagnostics: Diagnostic[] = [];
     const { node, scene } = context;
 
-    if (node.type !== type) {
+    if (!descendsFrom(node.type, type)) {
       return diagnostics;
     }
 
@@ -115,7 +116,7 @@ export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
       name: `valid-${prefix}`,
       description: `Validates ${type} resource references, collision shapes, and physics configuration`,
       category: 'validation',
-      applicableNodeTypes: [type],
+      applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, type),
       emits: [
         { ruleName: `valid-${prefix}-resources`, severity: 'error' },
         { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },

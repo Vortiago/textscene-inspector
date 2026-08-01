@@ -14,6 +14,9 @@ const OMNI_SHADOW_MODE = { 0: 'DUAL_PARABOLOID', 1: 'CUBE' };
 
 validatorRegistry.registerAll('OmniLight3D', {
   omni_range: v.positiveFloat('omni_range'),
-  omni_attenuation: v.nonNegativeFloat('omni_attenuation'),
+  // light_3d.cpp:640, PROPERTY_HINT_RANGE "-10,10,0.001,or_greater,or_less":
+  // the range starts below zero and both ends are soft, so a negative is legal
+  // and means an inverse falloff curve.
+  omni_attenuation: v.float('omni_attenuation'),
   omni_shadow_mode: v.enumInt('omni_shadow_mode', 0, 1, OMNI_SHADOW_MODE),
 });

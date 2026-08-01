@@ -12,7 +12,9 @@ import { v } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('SpotLight3D', {
   spot_range: v.positiveFloat('spot_range'),
-  spot_attenuation: v.nonNegativeFloat('spot_attenuation'),
+  // light_3d.cpp:673, PROPERTY_HINT_RANGE "-10,10,0.01,or_greater,or_less":
+  // negative is legal and means an inverse falloff curve.
+  spot_attenuation: v.float('spot_attenuation'),
   // Custom message keeps the "degrees" qualifier the per-node test asserts.
   spot_angle: v.float('spot_angle', {
     min: 0,

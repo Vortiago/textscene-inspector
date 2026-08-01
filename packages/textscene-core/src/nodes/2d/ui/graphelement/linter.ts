@@ -42,10 +42,11 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 
 function checkSelectedRequiresSelectable(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (node.type !== 'GraphElement') return [];
+  if (!descendsFrom(node.type, 'GraphElement')) return [];
   if (!isValidProperties(node.properties)) return [];
 
   const props = node.properties as Record<string, string>;
@@ -76,7 +77,7 @@ const selectedRequiresSelectableRule: LintRule = {
       'Flags a GraphElement authored with selected = true and selectable = false — Godot ' +
       'always forces the element back to deselected regardless of load order',
     category: 'validation',
-    applicableNodeTypes: ['GraphElement'],
+    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'GraphElement'),
     emits: [{ ruleName: 'graph-element-selected-not-selectable', severity: 'warning' }],
   },
   check: checkSelectedRequiresSelectable,

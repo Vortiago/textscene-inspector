@@ -58,12 +58,13 @@ describe('SpotLight3D Linter', () => {
         ],
       },
       {
+        // light_3d.cpp:673 hints "-10,10,0.01,or_greater,or_less": the range
+        // starts below zero and both ends are soft, so a negative is a legal
+        // inverse falloff.
         prop: 'spot_attenuation',
-        valid: [1.5],
-        invalid: [
-          { value: -1.0, contains: ['non-negative'] },
-          { value: 'abc', contains: ['must be a number'] },
-        ],
+        valid: [1.5, 0, -0.5, -2],
+        acceptMode: 'no-error',
+        invalid: [{ value: 'abc', contains: ['must be a number'] }],
       },
       {
         prop: 'spot_angle_attenuation',

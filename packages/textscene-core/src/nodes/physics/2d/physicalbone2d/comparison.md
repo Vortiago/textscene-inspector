@@ -43,6 +43,15 @@ Strict parsing format-checks these `PhysicalBone2D` properties, plus 14 inherite
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-rigidbody2d` (type-family match) | `valid-rigidbody2d-resources` | error |
+|  | `rigidbody2d-needs-collision-shape` | warning |
+|  | `rigidbody2d-mass-too-low` | warning |
+|  | `rigidbody2d-mass-too-high` | warning |
+|  | `rigidbody2d-excessive-linear-damp` | warning |
+|  | `rigidbody2d-excessive-angular-damp` | warning |
+|  | `rigidbody2d-max-contacts-without-monitor` | warning |
+|  | `rigidbody2d-zero-collision-layer` | warning |
+|  | `rigidbody2d-zero-collision-mask` | warning |
 | `valid-physicalbone2d` | `physicalbone2d-missing-skeleton-parent` | warning |
 |  | `physicalbone2d-missing-bone-index` | warning |
 |  | `physicalbone2d-missing-joint-child` | warning |

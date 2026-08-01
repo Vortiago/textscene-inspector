@@ -86,6 +86,7 @@ reproduced:
 - [Camera3D](../../packages/textscene-core/src/nodes/3d/camera3d/comparison.md) — a passive THREE.PerspectiveCamera
 - [CharacterBody3D](../../packages/textscene-core/src/nodes/physics/3d/characterbody3d/comparison.md) — a transform-only Node3D group
 - [CollisionShape3D](../../packages/textscene-core/src/nodes/physics/3d/collisionshape3d/comparison.md) — a toggle-gated collision wireframe
+- [ConeTwistJoint3D](../../packages/textscene-core/src/nodes/physics/3d/conetwistjoint3d/comparison.md) — nothing (a transform-only group; a ball joint with a swing cone and twist limit)
 - [CSGBox3D](../../packages/textscene-core/src/nodes/3d/csg/csgbox3d/comparison.md) — a solid box mesh
 - [CSGCombiner3D](../../packages/textscene-core/src/nodes/3d/csg/csgcombiner3d/comparison.md) — a grouping node whose children fold into one solid
 - [CSGCylinder3D](../../packages/textscene-core/src/nodes/3d/csg/csgcylinder3d/comparison.md) — a solid cylinder or cone mesh
@@ -95,6 +96,7 @@ reproduced:
 - [CSGTorus3D](../../packages/textscene-core/src/nodes/3d/csg/csgtorus3d/comparison.md) — a solid torus mesh
 - [Decal](../../packages/textscene-core/src/nodes/3d/decal/comparison.md) — a texture projected onto the surfaces its box intersects
 - [DirectionalLight3D](../../packages/textscene-core/src/nodes/3d/lights/directionallight3d/comparison.md) — a THREE.DirectionalLight
+- [Generic6DOFJoint3D](../../packages/textscene-core/src/nodes/physics/3d/generic6dofjoint3d/comparison.md) — nothing (a transform-only group; per-axis limits, motors and springs)
 - [GPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/gpuparticles3d/comparison.md) — a transform-only group
 - [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md) — a THREE.InstancedMesh per MeshLibrary item
 - [HingeJoint3D](../../packages/textscene-core/src/nodes/physics/3d/hingejoint3d/comparison.md) — nothing (a transform-only group; one rotational axis between two bodies)
@@ -115,12 +117,15 @@ reproduced:
 - [RigidBody3D](../../packages/textscene-core/src/nodes/physics/3d/rigidbody3d/comparison.md) — an invisible transform-only group
 - [ShapeCast3D](../../packages/textscene-core/src/nodes/physics/3d/shapecast3d/comparison.md) — nothing (a transform-only group; the swept shape is an editor gizmo)
 - [Skeleton3D](../../packages/textscene-core/src/nodes/3d/skeleton3d/comparison.md) — a transform-only group
+- [SliderJoint3D](../../packages/textscene-core/src/nodes/physics/3d/sliderjoint3d/comparison.md) — nothing (a transform-only group; one body slides along an axis of another)
+- [SoftBody3D](../../packages/textscene-core/src/nodes/physics/3d/softbody3d/comparison.md) — nothing yet; Godot draws a deformable mesh and the previewer does not
 - [SpotLight3D](../../packages/textscene-core/src/nodes/3d/lights/spotlight3d/comparison.md) — a THREE.SpotLight
 - [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md) — nothing itself (a transform-only group that pulls its children in on a hit)
 - [Sprite3D](../../packages/textscene-core/src/nodes/3d/sprite3d/comparison.md) — an unlit textured THREE.Mesh quad
 - [StaticBody3D](../../packages/textscene-core/src/nodes/physics/3d/staticbody3d/comparison.md) — a transform-only group
 - [SubViewport](../../packages/textscene-core/src/nodes/viewport/subviewport/comparison.md) — an offscreen render target, plus a boundary that scopes its canvas subtree
 - [VehicleBody3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclebody3d/comparison.md) — nothing (a transform-only group; its VehicleWheel3D children do the driving)
+- [VehicleWheel3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclewheel3d/comparison.md) — nothing (a transform-only group; suspension and traction for its VehicleBody3D parent)
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md) — the scene's background and environment lighting
 - [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md) — a transform-only group (it drives a Skeleton3D's bone poses)
 - [SpringBoneCollision3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollision3d/comparison.md) — a transform-only group (a spring-bone collider)

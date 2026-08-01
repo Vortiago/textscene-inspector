@@ -208,12 +208,14 @@ describe('AudioStreamPlayer3D Linter', () => {
 
   describe('Semantic Validation', () => {
     describe('missing stream error', () => {
-      it('should error when stream is missing', () => {
+      it('should WARN, not error, when stream is missing', () => {
+        // Godot defines no configuration warning for this and accepts the node
+        // happily; a script may assign the stream at runtime.
         expectDiagnostic(bare({ volume_db: 0.0, pitch_scale: 1.0 }), {
           prop: 'stream',
-          severity: 'error',
+          severity: 'warning',
           nodeType: 'AudioStreamPlayer3D',
-          contains: ['requires', 'audio'],
+          contains: ['no', 'stream'],
         });
       });
 

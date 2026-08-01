@@ -53,7 +53,7 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 | `albedo_mix` | float 0-1 |
 | `cull_mask` | 32-bit layer mask (layers 1-32) |
 | `emission_energy` | float >= 0 |
-| `lower_fade` | float 0-1 |
+| `lower_fade` | float >= 0 |
 | `modulate` | Color(r, g, b, a) |
 | `normal_fade` | float 0-1 |
 | `size` | Vector3(x, y, z) |
@@ -62,7 +62,7 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 | `texture_emission` | SubResource("id") or ExtResource("id") |
 | `texture_normal` | SubResource("id") or ExtResource("id") |
 | `texture_orm` | SubResource("id") or ExtResource("id") |
-| `upper_fade` | float 0-1 |
+| `upper_fade` | float >= 0 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

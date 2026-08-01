@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(2, 0.2, 2)
+
+[node name="Root" type="Node3D"]
+
+[node name="Ground" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+shape = SubResource("BoxShape3D_1")
+
+[node name="MySoftBody3D" type="SoftBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("BoxMesh_1")
+collision_layer = 3
+collision_mask = 5
+parent_collision_ignore = NodePath("../Ground")
+simulation_precision = 8
+total_mass = 2.5
+linear_stiffness = 0.6
+shrinking_factor = 0.1
+pressure_coefficient = 1.5
+damping_coefficient = 0.05
+drag_coefficient = 0.1
+ray_pickable = false
+disable_mode = 1

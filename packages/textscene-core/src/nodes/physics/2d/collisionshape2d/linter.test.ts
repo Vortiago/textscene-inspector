@@ -258,9 +258,20 @@ shape = SubResource("capsule_shape")
         ruleName: 'collisionshape2d-invalid-parent',
         severity: 'warning',
         nodeType: 'CollisionShape2D',
-        contains: ['Node2D', 'should be a child of'],
+        contains: ['Node2D', 'not a CollisionObject2D'],
       });
       expect(parentError.nodeName).toBe('Collision');
+    });
+
+    it('accepts a PhysicalBone2D parent, which IS a CollisionObject2D', () => {
+      // Godot's test is `cast_to<CollisionObject2D>(get_parent())`
+      // (collision_shape_2d.cpp), which PhysicalBone2D passes.
+      const content = scene(
+        rectShape,
+        node('PhysicalBone2D', {}, { name: 'Bone' }),
+        node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: 'Bone' })
+      );
+      expectNoDiagnostic(content, { ruleName: 'collisionshape2d-invalid-parent' });
     });
 
     it('should warn when parent is invalid type (Sprite2D)', () => {

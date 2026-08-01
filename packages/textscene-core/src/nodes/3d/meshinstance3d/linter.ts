@@ -9,6 +9,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { MeshInstance3DProperties } from './types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
 import { extractNodePath, resolveNodePathTarget } from '../../../linter/linterUtils.js';
 
@@ -32,8 +33,10 @@ function checkMeshInstance3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Only run for MeshInstance3D nodes
-  if (node.type !== 'MeshInstance3D') {
+  // Every MeshInstance3D, including its subclasses: a SoftBody3D carries the
+  // same `mesh` and surface-material properties and a dangling reference on one
+  // is equally broken.
+  if (!descendsFrom(node.type, 'MeshInstance3D')) {
     return diagnostics;
   }
 
@@ -186,7 +189,10 @@ const meshInstance3DValidationRule: LintRule = {
     name: 'valid-meshinstance3d-resources',
     description: 'Validates MeshInstance3D resource references, skeleton paths, and visibility ranges',
     category: 'validation',
-    applicableNodeTypes: ['MeshInstance3D'],
+    // Matcher, not a name list: RuleRegistry matches applicableNodeTypes by
+    // exact name, so SoftBody3D — which inherits `mesh` from MeshInstance3D —
+    // got no resource-existence check at all.
+    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'MeshInstance3D'),
     emits: [
       { ruleName: 'valid-meshinstance3d-resources', severity: 'error' },
       { ruleName: 'valid-meshinstance3d-surface-index', severity: 'warning' },

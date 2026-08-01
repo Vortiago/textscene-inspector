@@ -1,0 +1,52 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="BoxShape3D" id="Shape_1"]
+
+; Generic6DOFJoint3D: one representative property per group (linear/angular ×
+; limit/motor/spring), spread across x/y/z to exercise the wildcard dispatch
+; on every axis letter.
+
+[node name="Root" type="Node3D"]
+
+[node name="MyGeneric6DOFJoint3D" type="Generic6DOFJoint3D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+linear_limit_x/enabled = true
+linear_limit_x/upper_distance = 2.0
+linear_limit_x/lower_distance = -2.0
+linear_limit_x/softness = 0.7
+linear_limit_x/restitution = 0.5
+linear_limit_x/damping = 1.0
+linear_motor_y/enabled = true
+linear_motor_y/target_velocity = 3.0
+linear_motor_y/force_limit = 10.0
+linear_spring_z/enabled = true
+linear_spring_z/stiffness = 4.0
+linear_spring_z/damping = 0.02
+linear_spring_z/equilibrium_point = 0.1
+angular_limit_x/enabled = true
+angular_limit_x/upper_angle = 0.5
+angular_limit_x/lower_angle = -0.5
+angular_limit_x/softness = 0.5
+angular_limit_x/restitution = 0.2
+angular_limit_x/damping = 1.0
+angular_limit_x/force_limit = 0.0
+angular_limit_x/erp = 0.5
+angular_motor_y/enabled = true
+angular_motor_y/target_velocity = 1.0
+angular_motor_y/force_limit = 300.0
+angular_spring_z/enabled = true
+angular_spring_z/stiffness = 0.0
+angular_spring_z/damping = 0.0
+angular_spring_z/equilibrium_point = 0.3
+
+[node name="BodyA" type="StaticBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="BodyA"]
+shape = SubResource("Shape_1")
+
+[node name="BodyB" type="StaticBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="BodyB"]
+shape = SubResource("Shape_1")

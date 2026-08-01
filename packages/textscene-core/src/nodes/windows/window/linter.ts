@@ -15,6 +15,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { VECTOR2I_REGEX } from '../../../linter/validators/index.js';
+import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 
 function parseVector2i(raw: string): { x: number; y: number } | null {
   const match = VECTOR2I_REGEX.exec(raw);
@@ -26,7 +27,7 @@ function checkWindow(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  if (node.type !== 'Window') return diagnostics;
+  if (!descendsFrom(node.type, 'Window')) return diagnostics;
   if (!isValidProperties(node.properties)) return diagnostics;
   const rawProps = node.properties as Record<string, string>;
 
@@ -69,7 +70,7 @@ const windowValidationRule: LintRule = {
     name: 'valid-window-properties',
     description: "Validates Window's max_size/min_size consistency",
     category: 'validation',
-    applicableNodeTypes: ['Window'],
+    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Window'),
     emits: [{ ruleName: 'window-max-size-below-min-size', severity: 'warning' }],
   },
   check: checkWindow,

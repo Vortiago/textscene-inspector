@@ -74,6 +74,12 @@ const INVOCATIONS = {
     'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'Button', '--linter',
   ],
   wrongChain: ['ShapeCast3D', '3d', '--intent', 'pending', '--chain', 'Node2D'],
+  tierValidatorsOnly: ['SpriteBase3D', '3d/sprites', '--tier'],
+  tierWithRule: ['SpriteBase3D', '3d/sprites', '--tier', '--rule'],
+  tierInstantiable: ['PinJoint2D', 'physics/2d', '--tier'],
+  tierUnknown: ['Jiont2D', 'physics/2d', '--tier'],
+  tierWithLeafFlag: ['SpriteBase3D', '3d/sprites', '--tier', '--chain', 'Node3D'],
+  ruleWithoutTier: ['ShapeCast3D', '3d', '--intent', 'pending', '--chain', 'Node3D', '--rule'],
 };
 
 /**
@@ -147,6 +153,50 @@ describe('new-node-slice argument contract', () => {
     // component into the THREE registry.
     expect(results.controlRendering.ok).toBe(false);
     expect(results.controlRendering.out).toMatch(/--base control supports only --intent pending/);
+  });
+});
+
+describe('new-node-slice tier mode', () => {
+  it('scaffolds a validators-only tier with no barrel entry', () => {
+    // A validators-only tier is pulled in by whichever leaf imports its
+    // linterParser, so wiring the barrel would be redundant.
+    const { ok, out } = results.tierValidatorsOnly;
+    expect(ok).toBe(true);
+    expect(out).toMatch(/create {2}nodes\/3d\/sprites\/shared\/linterParser\.ts/);
+    expect(out).not.toMatch(/linter\/index\.ts/);
+    expect(out).toMatch(/validators-only tier: no barrel entry/);
+  });
+
+  it('wires the barrel only when the tier carries a rule', () => {
+    // A rule has no leaf importer, so without the barrel entry ruleCoverage
+    // reports it as declared-but-never-registered.
+    const { ok, out } = results.tierWithRule;
+    expect(ok).toBe(true);
+    expect(out).toMatch(/create {2}nodes\/3d\/sprites\/shared\/linter\.ts/);
+    expect(out).toMatch(/wire.*linter\/index\.ts/);
+  });
+
+  it('names the subclasses the tier will reach, so a mis-keyed tier is visible', () => {
+    expect(results.tierValidatorsOnly.out).toMatch(/heirs {3}\d+: /);
+  });
+
+  it('refuses an instantiable type, which wants an ordinary slice', () => {
+    expect(results.tierInstantiable.ok).toBe(false);
+    expect(results.tierInstantiable.out).toMatch(/PinJoint2D is instantiable/);
+  });
+
+  it('refuses a name no catalogued type descends from', () => {
+    // The tier-shaped typo: it registers validators nothing can inherit, and
+    // nothing else would fail.
+    expect(results.tierUnknown.ok).toBe(false);
+    expect(results.tierUnknown.out).toMatch(/No catalogued type descends from Jiont2D/);
+  });
+
+  it('refuses leaf flags on a tier, and --rule without one', () => {
+    expect(results.tierWithLeafFlag.ok).toBe(false);
+    expect(results.tierWithLeafFlag.out).toMatch(/--chain does not apply to --tier/);
+    expect(results.ruleWithoutTier.ok).toBe(false);
+    expect(results.ruleWithoutTier.out).toMatch(/--rule only applies with --tier/);
   });
 });
 

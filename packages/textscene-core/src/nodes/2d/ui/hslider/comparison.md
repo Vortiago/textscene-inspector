@@ -57,6 +57,7 @@ Strict parsing format-checks the inherited set (9 inherited from Range, 26 inher
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-range-bounds` (type-family match) | `range-max-below-min` | warning |
 <!-- lint:end -->
 
 `HSlider` has no strict counterpart for the `Range` or `Slider` properties.

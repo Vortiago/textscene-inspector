@@ -47,7 +47,7 @@ Strict parsing format-checks these `SpotLight3D` properties, plus 15 inherited f
 | --- | --- |
 | `spot_angle` | float 0-90 |
 | `spot_angle_attenuation` | float >= 0 |
-| `spot_attenuation` | float >= 0 |
+| `spot_attenuation` | float |
 | `spot_range` | float > 0 |
 
 | Rule | Reports | Severity |

@@ -193,6 +193,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cone Twist Joint 3d",
+    "file": "unit-cone-twist-joint-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Confirmation Dialog",
     "file": "unit-confirmation-dialog.tscn",
     "category": "Other"
@@ -260,6 +265,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Flow Container",
     "file": "unit-flow-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Generic 6d Of Joint 3d",
+    "file": "unit-generic-6d-of-joint-3d.tscn",
     "category": "Other"
   },
   {
@@ -638,6 +648,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Slider Joint 3d",
+    "file": "unit-slider-joint-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Soft Body 3d",
+    "file": "unit-soft-body-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Softbody3d",
     "file": "unit-softbody3d.tscn",
     "category": "Other"
@@ -725,6 +745,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Vehicle Body 3d",
     "file": "unit-vehicle-body-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Vehicle Wheel 3d",
+    "file": "unit-vehicle-wheel-3d.tscn",
     "category": "Other"
   },
   {

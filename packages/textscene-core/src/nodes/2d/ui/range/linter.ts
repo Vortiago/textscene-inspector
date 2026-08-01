@@ -18,10 +18,11 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 
 function checkRangeBounds(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (node.type !== 'Range') return [];
+  if (!descendsFrom(node.type, 'Range')) return [];
   if (!isValidProperties(node.properties)) return [];
 
   const props = node.properties as Record<string, string>;
@@ -52,7 +53,7 @@ const rangeBoundsRule: LintRule = {
     description:
       'Flags a Range whose max_value is authored below min_value — Godot clamps the range to a single point rather than rejecting it',
     category: 'validation',
-    applicableNodeTypes: ['Range'],
+    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Range'),
     emits: [{ ruleName: 'range-max-below-min', severity: 'warning' }],
   },
   check: checkRangeBounds,

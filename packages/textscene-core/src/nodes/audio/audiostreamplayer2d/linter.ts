@@ -43,11 +43,13 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // ERROR: stream is missing (REQUIRED - no sound without this)
+  // Advisory, not an error: audio_stream_player_2d.cpp defines no
+  // configuration warning, and a player with no stream is valid Godot; a script
+  // may assign one at runtime.
   if (rawProps.stream === undefined) {
     diagnostics.push({
-      severity: 'error',
-      message: `AudioStreamPlayer2D requires 'stream' property to function. This defines what audio to play.`,
+      severity: 'warning',
+      message: `AudioStreamPlayer2D '${node.name}' has no 'stream', so it will not play anything until one is assigned.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'audiostreamplayer2d-missing-stream',
@@ -141,7 +143,7 @@ const audioStreamPlayer2DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer2D'],
     emits: [
-      { ruleName: 'audiostreamplayer2d-missing-stream', severity: 'error' },
+      { ruleName: 'audiostreamplayer2d-missing-stream', severity: 'warning' },
       { ruleName: 'audiostreamplayer2d-missing-stream-resource', severity: 'error' },
       { ruleName: 'audiostreamplayer2d-autoplay-without-stream', severity: 'warning' },
       { ruleName: 'audiostreamplayer2d-zero-pitch-scale', severity: 'error' },

@@ -28,6 +28,7 @@ Strict parsing format-checks the inherited set (45 inherited from Window, 9 inhe
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | warning |
 <!-- lint:end -->
 
 Popup registers no validators or semantic rules of its own yet, so the strict

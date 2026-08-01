@@ -9,18 +9,21 @@
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { checkResourceExists } from '../resourceChecker.js';
 import { findParentNode } from '../linterUtils.js';
+import { descendsFrom } from '../nodeBaseTypes.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-
-const VALID_PARENT_TYPES: Record<PhysicsDim, string[]> = {
-  '2D': ['StaticBody2D', 'RigidBody2D', 'CharacterBody2D', 'Area2D', 'AnimatableBody2D'],
-  '3D': ['StaticBody3D', 'RigidBody3D', 'CharacterBody3D', 'Area3D', 'AnimatableBody3D', 'VehicleBody3D'],
-};
 
 export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
   const type = `CollisionShape${dim}`;
   const prefix = `collisionshape${dimSuffix(dim)}`;
-  const validParents = VALID_PARENT_TYPES[dim];
+  const collisionObject = `CollisionObject${dim}`;
+  // Prose only. The check asks the base chain, because Godot's test is
+  // `Object::cast_to<CollisionObject2D>(get_parent())` (collision_shape_2d.cpp:174),
+  // not a list of names.
+  const examples = ['Area', 'StaticBody', 'RigidBody', 'CharacterBody']
+    .map((n) => n + dim)
+    .join(', ');
+  const advice = `${type} only gives a shape to a ${collisionObject}: use it under ${examples} or another subclass.`;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
@@ -59,10 +62,10 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // WARNING: Check if parent is a valid physics body type
     const parent = findParentNode(scene.nodes, node);
     if (parent) {
-      if (!validParents.includes(parent.type)) {
+      if (!descendsFrom(parent.type, collisionObject)) {
         diagnostics.push({
           severity: 'warning',
-          message: `${type} '${node.name}' has parent '${parent.name}' of type '${parent.type}'. ${type} should be a child of ${validParents.join(', ')}.`,
+          message: `${type} '${node.name}' has parent '${parent.name}' of type '${parent.type}', which is not a ${collisionObject}. ${advice}`,
           nodeName: node.name,
           nodeType: node.type,
           ruleName: `${prefix}-invalid-parent`,
@@ -72,7 +75,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       // WARNING: CollisionShape at root level (no parent)
       diagnostics.push({
         severity: 'warning',
-        message: `${type} '${node.name}' has no parent node. ${type} should be a child of ${validParents.join(', ')}.`,
+        message: `${type} '${node.name}' has no parent node. ${advice}`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: `${prefix}-no-parent`,

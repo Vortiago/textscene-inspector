@@ -54,7 +54,7 @@ Strict parsing format-checks these `Range` properties, plus 26 inherited from Co
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-range-bounds` | `range-max-below-min` | warning |
+| `valid-range-bounds` (type-family match) | `range-max-below-min` | warning |
 <!-- lint:end -->
 
 Every property above format-checks as a plain float or boolean literal —

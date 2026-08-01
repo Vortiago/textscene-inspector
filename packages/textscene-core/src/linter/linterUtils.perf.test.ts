@@ -91,12 +91,20 @@ function runLookupsForEveryNode(roots: TscnNode[], leaves: TscnNode[]): void {
   }
 }
 
+/**
+ * Repetitions per timed sample. One pass over the small tree costs ~0.7ms, and
+ * a sub-millisecond denominator makes the ratio below a measure of the big side
+ * alone rather than of scaling. Ten puts the small side around 7ms, clear of
+ * timer resolution and scheduler granularity, without paying for more.
+ */
+const REPEATS = 10;
+
 /** Best-of-`trials` timing for repeated lookups against the SAME tree. */
 function bestOf(roots: TscnNode[], leaves: TscnNode[], trials: number): number {
   let best = Infinity;
   for (let t = 0; t < trials; t++) {
     const start = performance.now();
-    runLookupsForEveryNode(roots, leaves);
+    for (let r = 0; r < REPEATS; r++) runLookupsForEveryNode(roots, leaves);
     best = Math.min(best, performance.now() - start);
   }
   return best;
@@ -140,7 +148,7 @@ describe('NodePath helper lookup performance', () => {
     for (let m = 0; m < RATIO_MEASUREMENTS && bestRatio >= THRESHOLD; m++) {
       const smallMs = bestOf(smallTree, smallLeaves, TRIALS);
       const bigMs = bestOf(bigTree, bigLeaves, TRIALS);
-      bestRatio = Math.min(bestRatio, bigMs / Math.max(smallMs, 1));
+      bestRatio = Math.min(bestRatio, bigMs / smallMs);
     }
 
     expect(bestRatio).toBeLessThan(THRESHOLD);

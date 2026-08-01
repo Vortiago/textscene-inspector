@@ -16,10 +16,74 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Linter } from './Linter.js';
+import type { Diagnostic } from './types.js';
 import './index.js';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../packages/textscene-core/src/linter
 const scenesRoot = resolve(here, '../../../../scenes');
+
+/**
+ * `unit-*` fixtures allowed to carry advisory warnings, keyed by the EXACT rules
+ * they may trip.
+ *
+ * A unit fixture exists to demonstrate one node configured correctly, so a
+ * warning on it usually means the fixture is wrong, not the rule. The gap this
+ * closes is specific: a rule shipped in the same wave as the leaves it covers
+ * fires on their own fixtures, and the error-only check above stays green.
+ *
+ * Keyed by rule, not by filename, and asserted as SET EQUALITY. A filename-only
+ * exemption would blind a fixture to every FUTURE rule too, which is the very
+ * hole this exists to close - and the broad multi-node fixtures here are the
+ * ones a later wave is most likely to trip.
+ *
+ * Add an entry only when the warning is the fixture's POINT; fixing the fixture
+ * is the default.
+ */
+const UNIT_FIXTURE_WARNINGS: Readonly<Record<string, { rules: readonly string[]; reason: string }>> = {
+  'unit-unsupported-nodes.tscn': {
+    rules: ['area3d-needs-collision-shape', 'animationplayer-no-animations'],
+    reason: 'exists to show unsupported types; the Area3D has no shape and the AnimationPlayer no animations on purpose',
+  },
+  'unit-cpuparticles2d-unpreviewable.tscn': {
+    rules: [
+      'cpuparticles2d-nondeterministic-emission-shape',
+      'cpuparticles2d-fract-delta-ignored',
+    ],
+    reason: 'named for the two advisories it carries; they are the fixture',
+  },
+  'unit-light-transport-ambient.tscn': {
+    rules: ['directionallight3d-extreme-energy'],
+    reason: 'the sun is named DarkSun and has energy 0, which is the ambient-only variable under test',
+  },
+  'unit-light-transport-sky.tscn': {
+    rules: ['directionallight3d-extreme-energy'],
+    reason: 'the sun is named DarkSun and has energy 0, which is the sky-only variable under test',
+  },
+  'unit-light-transport-sky-graded.tscn': {
+    rules: ['directionallight3d-extreme-energy'],
+    reason: 'the sun is named DarkSun and has energy 0, which is the sky-only variable under test',
+  },
+  'unit-path3d.tscn': {
+    rules: ['path3d-unused'],
+    reason: 'a Path3D with no follower is exactly what this fixture demonstrates',
+  },
+  'unit-pathfollow-3d.tscn': {
+    rules: ['pathfollow3d-both-progress-properties'],
+    reason: 'sets both progress properties deliberately, to pin which one wins',
+  },
+  'unit-instance-child.tscn': {
+    rules: ['area3d-needs-collision-shape'],
+    reason: "the Area3D root is a coin pickup whose shape comes from the scene that instances it; the fixture is about the instanced child's transform",
+  },
+  'unit-csg-combiner.tscn': {
+    rules: ['staticbody3d-needs-collision-shape'],
+    reason: 'the StaticBody3D holds CSG geometry rather than a CollisionShape3D; the fixture is about CSG boolean output, not collision',
+  },
+  'unit-animation-tree-stateless.tscn': {
+    rules: ['animationtree-inactive'],
+    reason: 'named for it: the tree is inactive on purpose, which is the advisory',
+  },
+};
 
 /**
  * Negative lint fixtures: each must produce ≥1 error. Other `edge-*` files
@@ -31,7 +95,6 @@ const EDGE_FIXTURES_WITH_ERRORS = new Set([
   'edge-invalid-cast-shadow.tscn',
   'edge-invalid-transform.tscn',
   'edge-malformed-bracket.tscn',
-  'edge-photo-wall.tscn',
   'edge-tilemap-bad-tile-data.tscn',
 ]);
 
@@ -41,14 +104,33 @@ function tscnFiles(dir: string): string[] {
     .sort();
 }
 
+/** Diagnostics for one file, linted once and reused by all three sweeps below. */
+const diagnosticCache = new Map<string, Diagnostic[]>();
+
+function diagnosticsFor(dir: string, file: string): Diagnostic[] {
+  const key = join(dir, file);
+  let cached = diagnosticCache.get(key);
+  if (!cached) {
+    cached = new Linter().lint(readFileSync(key, 'utf8'));
+    diagnosticCache.set(key, cached);
+  }
+  return cached;
+}
+
 function lintFile(dir: string, file: string): { errors: number; messages: string[] } {
-  const linter = new Linter();
-  const diagnostics = linter.lint(readFileSync(join(dir, file), 'utf8'));
-  const errors = diagnostics.filter((d) => d.severity === 'error');
-  return {
-    errors: errors.length,
-    messages: errors.map((e) => `${file}: ${e.message}`),
-  };
+  const errors = diagnosticsFor(dir, file).filter((d) => d.severity === 'error');
+  return { errors: errors.length, messages: errors.map((e) => `${file}: ${e.message}`) };
+}
+
+/** Distinct warning rule names one file trips. */
+function warningRulesFor(dir: string, file: string): string[] {
+  return [
+    ...new Set(
+      diagnosticsFor(dir, file)
+        .filter((d) => d.severity === 'warning')
+        .map((d) => d.ruleName)
+    ),
+  ];
 }
 
 describe('shipped scenes lint clean (bulk fixture guard)', () => {
@@ -58,6 +140,33 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
   it('finds the scenes directories (path layout guard)', () => {
     expect(tscnFiles(fixturesDir).length).toBeGreaterThan(0);
     expect(tscnFiles(examplesDir).length).toBeGreaterThan(0);
+  });
+
+  it('every unit-* fixture warns only where allowlisted, rule by rule', () => {
+    const unexpected: string[] = [];
+    for (const file of tscnFiles(fixturesDir)) {
+      if (!file.startsWith('unit-')) continue;
+      const allowed = new Set(UNIT_FIXTURE_WARNINGS[file]?.rules ?? []);
+      unexpected.push(
+        ...warningRulesFor(fixturesDir, file)
+          .filter((rule) => !allowed.has(rule))
+          .map((rule) => `${file}: ${rule}`)
+      );
+    }
+    expect(unexpected).toEqual([]);
+  });
+
+  it('keeps the allowlist honest: every listed rule still fires', () => {
+    // Set equality both ways. An entry that stopped firing means the fixture was
+    // fixed or the rule changed, and the exemption is now a lie about the file.
+    const stale: string[] = [];
+    for (const [file, { rules }] of Object.entries(UNIT_FIXTURE_WARNINGS)) {
+      const firing = new Set(warningRulesFor(fixturesDir, file));
+      for (const rule of rules) {
+        if (!firing.has(rule)) stale.push(`${file}: ${rule} is allowlisted but no longer fires`);
+      }
+    }
+    expect(stale).toEqual([]);
   });
 
   it('every positive fixture produces zero error diagnostics', () => {

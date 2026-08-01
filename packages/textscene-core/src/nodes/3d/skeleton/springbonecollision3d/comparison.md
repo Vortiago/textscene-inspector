@@ -44,7 +44,7 @@ Strict parsing format-checks these `SpringBoneCollision3D` properties, plus 16 i
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
-| `valid-springbonecollision3d-parent` | `springbonecollision3d-outside-springbonesimulator3d` | warning |
+| `valid-springbonecollision3d-parent` (type-family match) | `springbonecollision3d-outside-springbonesimulator3d` | warning |
 <!-- lint:end -->
 
 SpringBoneCollision3D has no `parser.ts` of its own: it registers `parseNode3D` directly

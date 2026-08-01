@@ -625,7 +625,7 @@
       "name": "ConeTwistJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint3D",
         "Node3D",
@@ -994,7 +994,7 @@
       "name": "Generic6DOFJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint3D",
         "Node3D",
@@ -2655,7 +2655,7 @@
       "name": "SliderJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint3D",
         "Node3D",
@@ -2669,7 +2669,7 @@
       "name": "SoftBody3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "MeshInstance3D",
         "GeometryInstance3D",
@@ -3131,7 +3131,7 @@
       "name": "VehicleWheel3D",
       "category": "3D",
       "group": "Physics — vehicles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",

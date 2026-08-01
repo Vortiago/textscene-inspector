@@ -196,7 +196,7 @@ function fail(message) {
 
 function parseArgs(argv) {
   const positional = [];
-  const opts = { base: 'node3d', intent: '', chain: '', linter: false, dryRun: false };
+  const opts = { base: 'node3d', intent: '', chain: '', linter: false, dryRun: false, tier: false, rule: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--base') opts.base = argv[++i];
@@ -208,6 +208,8 @@ function parseArgs(argv) {
       // alias so a stale invocation cannot quietly skip that classification.
       fail('--transform-only is gone: pass `--intent transform-only` instead.');
     } else if (a === '--linter') opts.linter = true;
+    else if (a === '--tier') opts.tier = true;
+    else if (a === '--rule') opts.rule = true;
     else if (a === '--dry-run') opts.dryRun = true;
     else if (a.startsWith('--')) fail(`unknown option: ${a}`);
     else positional.push(a);
@@ -215,12 +217,26 @@ function parseArgs(argv) {
   if (positional.length !== 2) {
     fail(
       'usage: pnpm new:node <TypeName> <category-dir> --intent <draws|transform-only|pending> ' +
-        '--chain <ParentType> [--base node3d|node2d|node|control] [--linter] [--dry-run]'
+        '--chain <ParentType> [--base node3d|node2d|node|control] [--linter] [--dry-run]\n' +
+        '   or: pnpm new:node <AbstractType> <category-dir> --tier [--rule] [--dry-run]'
     );
   }
   const [typeName, category] = positional;
   if (!/^[A-Z][A-Za-z0-9]*$/.test(typeName)) fail(`TypeName must be PascalCase, got: ${typeName}`);
   if (!/^[a-z0-9/]+$/.test(category)) fail(`category-dir must be lowercase path segments, got: ${category}`);
+
+  if (opts.tier) {
+    // A tier is a validator set for an abstract Godot class: no parser, no
+    // component, no fixture, no sheet, because the class cannot appear in a
+    // .tscn. So --intent, --base and --chain are all meaningless here.
+    for (const [flag, value] of [['--intent', opts.intent], ['--chain', opts.chain]]) {
+      if (value) fail(`${flag} does not apply to --tier: an abstract class has no slice shape and no leaf chain.`);
+    }
+    if (opts.linter) fail('--linter does not apply to --tier: a tier is validators by definition.');
+    return { typeName, category, ...opts };
+  }
+  if (opts.rule) fail('--rule only applies with --tier.');
+
   if (!BASES[opts.base]) fail(`--base must be one of ${Object.keys(BASES).join('|')}, got: ${opts.base}`);
   if (!INTENTS.includes(opts.intent)) {
     fail(`--intent is required and must be one of ${INTENTS.join('|')}, got: ${opts.intent || '(none)'}`);
@@ -293,6 +309,79 @@ function parentLinterParser(typeName, parentType, sliceDir, fallback) {
 }
 
 /**
+ * The parse function a `transform-only` / `pending` slice should reuse.
+ *
+ * The sibling of `parentLinterParser`, and needed for the same reason: `--base`
+ * is a coarse flag (node3d/node2d/node/control) while `--chain` is the real
+ * Godot parent. They diverge whenever an ancestor has its OWN typed parser, and
+ * the split is silent - `SoftBody3D` registered `parseNode3D` while its linter
+ * side inherited every MeshInstance3D validator, so `mesh`, `skin` and the
+ * material overrides were validated and then discarded, leaving the inspector
+ * blank for exactly the properties the sheet advertises.
+ *
+ * Walks the catalog ancestry to the nearest ancestor that owns a `parser.ts`,
+ * falling back to the `--base` slice when none does.
+ *
+ * @returns `{ importPath, fn }` relative to the slice directory.
+ */
+function parentParser(typeName, sliceDir, fallback) {
+  const catalog = JSON.parse(readFileSync(join(REPO_ROOT, 'scripts/compare-docs/node-catalog.json'), 'utf8'));
+  const chain = catalog.nodes.find((n) => n.name === typeName)?.chain ?? [];
+  for (const ancestor of chain) {
+    const owner = ownerOfParser(ancestor);
+    if (!owner) continue;
+    const rel = relative(sliceDir, owner).replaceAll('\\', '/');
+    return { importPath: `${rel.startsWith('.') ? rel : `./${rel}`}/parser`, fn: `parse${ancestor}` };
+  }
+  return fallback;
+}
+
+/** Directory of the slice whose parser.ts exports `parse<Type>`, if one does. */
+function ownerOfParser(type) {
+  const needle = `export function parse${type}(`;
+  const found = [];
+  (function walk(dir) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name === 'parser.ts' && readFileSync(full, 'utf8').includes(needle)) {
+        found.push(dirname(full));
+      }
+    }
+  })(join(CORE_SRC, 'nodes'));
+  return found.length === 1 ? found[0] : undefined;
+}
+
+/**
+ * Check a `--tier` name against ClassDB, and report who inherits from it.
+ *
+ * The opposite check from `checkChain`: an abstract class is by definition NOT
+ * instantiable, so it is absent from the catalog's node list and present only
+ * inside other types' `chain` arrays. A tier keyed on a name Godot never had
+ * registers validators nothing can inherit, and nothing fails, so the spelling
+ * check matters more here than for a leaf.
+ *
+ * @returns the concrete catalogued types that would inherit the tier.
+ */
+function checkTier(typeName) {
+  const catalog = JSON.parse(readFileSync(join(REPO_ROOT, 'scripts/compare-docs/node-catalog.json'), 'utf8'));
+  if (catalog.nodes.some((n) => n.name === typeName)) {
+    fail(
+      `${typeName} is instantiable, so it is a node type, not an abstract tier. ` +
+        `Scaffold it as an ordinary slice: drop --tier and pass --intent and --chain.`
+    );
+  }
+  const heirs = catalog.nodes.filter((n) => (n.chain ?? []).includes(typeName)).map((n) => n.name);
+  if (heirs.length === 0) {
+    fail(
+      `No catalogued type descends from ${typeName}, so a tier keyed on it would ` +
+        `register validators nothing inherits. Check the spelling against ClassDB.`
+    );
+  }
+  return heirs;
+}
+
+/**
  * Check `--chain` against Godot's own answer in the node catalog.
  *
  * `NODE_BASE_TYPES` is derived from that catalog, so nothing needs writing —
@@ -352,10 +441,179 @@ function wireImport(filePath, importLine, categoryNeedle) {
   return { filePath, action: `insert at line ${at + 1}`, content: lines.join('\n') };
 }
 
-function main() {
-  const { typeName, category, base: baseKey, intent, chain, linter, dryRun } = parseArgs(
-    process.argv.slice(2)
+/**
+ * Scaffold a shared validator tier for an abstract Godot class.
+ *
+ * A tier is not a slice: the class cannot be instantiated, so there is no
+ * parser, no component, no fixture and no comparison sheet. It exists because
+ * `NODE_BASE_TYPES` carries every hop of Godot's ancestry, so validators
+ * registered on an intermediate reach its subclasses.
+ *
+ * `--rule` decides the wiring, and the distinction is the one the guards
+ * already enforce: a tier carrying only validators is pulled in by whichever
+ * leaf imports its linterParser, so it needs no barrel entry. A tier carrying a
+ * RULE has no such consumer, so it needs `index.linter.ts` and a line in
+ * `linter/index.ts`, or `ruleCoverage` reports the rule as declared-but-never-
+ * registered.
+ */
+function scaffoldTier({ typeName, category, rule, dryRun }) {
+  const heirs = checkTier(typeName);
+  const sliceRel = `nodes/${category}/shared`;
+  const sliceDir = join(CORE_SRC, sliceRel);
+  if (!dryRun && existsSync(sliceDir)) fail(`tier already exists: ${sliceDir}`);
+  const toSrc = '../'.repeat(category.split('/').length + 2);
+
+  const files = new Map();
+  files.set(
+    'linterParser.ts',
+    `/**
+ * Validators shared by every ${typeName}-derived node.
+ *
+ * Registered under the abstract key '${typeName}', which Godot cannot
+ * instantiate, so it appears in no .tscn and owns no slice. It reaches its
+ * ${heirs.length} subclass${heirs.length === 1 ? '' : 'es'} through the
+ * NODE_BASE_TYPES base-walk.
+ *
+ * Declare only ${typeName}'s OWN members: the ones doc/classes/${typeName}.xml
+ * lists without an \`overrides=\` attribute, cross-checked against ADD_PROPERTY
+ * in the .cpp. Quote the governing source line beside every non-obvious bound.
+ */
+
+import { validatorRegistry } from '${toSrc}linter/ValidatorRegistry.js';
+
+validatorRegistry.registerAll('${typeName}', {});
+`
   );
+  files.set(
+    'linterParser.test.ts',
+    `/**
+ * The ${typeName} set must reach its subclasses, which is the whole point of
+ * the tier. Assert through \`findValidator\` on a real leaf, not just on the
+ * abstract key: a tier that registers but is never imported registers nothing.
+ */
+
+import { describe, expect, it } from 'vitest';
+import { validatorRegistry } from '${toSrc}linter/ValidatorRegistry.js';
+import './linterParser.js';
+
+/** Fill from doc/classes/${typeName}.xml. Red until you do, deliberately. */
+const KEYS: string[] = [];
+const LEAVES = ${JSON.stringify(heirs.slice(0, 3))} as const;
+
+describe('${typeName} shared validators', () => {
+  it('registers exactly what ${typeName} binds', () => {
+    // Emptiness check first: an empty KEYS against an empty registerAll would
+    // otherwise pass vacuously and ship a tier that validates nothing.
+    expect(validatorRegistry.getOwnKeys('${typeName}')).not.toEqual([]);
+    expect(validatorRegistry.getOwnKeys('${typeName}').sort()).toEqual([...KEYS].sort());
+  });
+
+  it.each(LEAVES)('delivers every key to %s through the base-walk', (nodeType) => {
+    const missing = KEYS.filter((key) => !validatorRegistry.findValidator(nodeType, key));
+    expect(missing).toEqual([]);
+  });
+});
+`
+  );
+  if (rule) {
+    files.set(
+      'linter.ts',
+      `/**
+ * Semantic rule for the whole ${typeName} family.
+ *
+ * One registration reaching every descendant through
+ * \`applicableNodeTypeMatcher\`, because RuleRegistry matches
+ * \`applicableNodeTypes\` by exact name and would otherwise never reach a
+ * subclass. Mirror Godot's own \`${typeName}::get_configuration_warnings\`;
+ * skip any case that needs resolving a NodePath's target TYPE, which crosses
+ * into instanced sub-scenes this linter cannot see.
+ */
+
+import type { Diagnostic, LintRule, RuleContext } from '${toSrc}linter/types.js';
+import { ruleRegistry } from '${toSrc}linter/RuleRegistry.js';
+import { descendsFrom } from '${toSrc}linter/nodeBaseTypes.js';
+
+function check${typeName}(context: RuleContext): Diagnostic[] {
+  const { node } = context;
+  if (!descendsFrom(node.type, '${typeName}')) return [];
+  return [];
+}
+
+const ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule: LintRule = {
+  meta: {
+    name: 'valid-${typeName.toLowerCase()}',
+    description: 'TBD',
+    category: 'validation',
+    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, '${typeName}'),
+    emits: [],
+  },
+  check: check${typeName},
+};
+
+ruleRegistry.register(${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule);
+
+export { ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule };
+`
+    );
+    files.set(
+      'linter.test.ts',
+      `/**
+ * The ${typeName} family rule, asserted once for every subclass it reaches.
+ */
+
+import { describe, expect, it } from 'vitest';
+import { ruleRegistry } from '${toSrc}linter/RuleRegistry.js';
+import { ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule } from './linter.js';
+import '${toSrc}linter/index.js';
+
+describe('${typeName} family rule', () => {
+  it('registers one rule for the family', () => {
+    expect(ruleRegistry.getRules().find((r) => r.meta.name === 'valid-${typeName.toLowerCase()}')).toBe(
+      ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule
+    );
+  });
+});
+`
+    );
+    files.set(
+      'index.linter.ts',
+      `/**
+ * ${typeName} tier registration: the shared validators and the family rule.
+ * Barrel-imported because a rule has no leaf to pull it in.
+ */
+
+import './linterParser.js';
+import './linter.js';
+`
+    );
+  }
+
+  const wirings = rule
+    ? [wireImport(join(CORE_SRC, 'linter/index.ts'), `import '../${sliceRel}/index.linter.js';`, `'../nodes/${category}/`)]
+    : [];
+
+  console.log(`[new-node-slice] ${typeName} tier -> ${sliceRel}${rule ? ' (with family rule)' : ' (validators only)'}`);
+  for (const name of files.keys()) console.log(`  create  ${sliceRel}/${name}`);
+  for (const w of wirings) console.log(`  wire    ${w.filePath.slice(REPO_ROOT.length + 1)} (${w.action})`);
+  console.log(`  heirs   ${heirs.length}: ${heirs.slice(0, 6).join(', ')}${heirs.length > 6 ? ', ...' : ''}`);
+  if (!rule) {
+    console.log('  note    validators-only tier: no barrel entry, each leaf imports ./linterParser.js');
+  }
+
+  if (dryRun) {
+    console.log('[new-node-slice] dry run - nothing written.');
+    return;
+  }
+  mkdirSync(sliceDir, { recursive: true });
+  for (const [name, content] of files) writeFileSync(join(sliceDir, name), content);
+  for (const w of wirings) if (w.content) writeFileSync(w.filePath, w.content);
+  console.log(`[new-node-slice] done. Fill ${sliceRel}/linterParser.ts from doc/classes/${typeName}.xml, and list the keys in KEYS in its test.`);
+}
+
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (args.tier) return scaffoldTier(args);
+  const { typeName, category, base: baseKey, intent, chain, linter, dryRun } = args;
   // `draws` is the only intent that gets its own types/parser/Component; the
   // other two reuse the base parser, so the render half is deferred to whoever
   // implements it (decision: property knowledge lives in linterParser.ts).
@@ -378,6 +636,13 @@ function main() {
   const toSrc = '../'.repeat(catDepth + 2); // slice dir → src/
   const toBase = '../'.repeat(catDepth + 1) + base.dir; // slice dir → base slice
 
+  // Reuse the nearest ancestor's typed parser, not the --base flag's: they
+  // differ whenever a Godot ancestor owns a parser.ts, and taking the flag
+  // silently discards every property that ancestor reads.
+  const reusedParser = reusesBaseParser
+    ? parentParser(typeName, sliceDir, { importPath: `${toBase}/parser`, fn: base.parser })
+    : { importPath: `${toBase}/parser`, fn: base.parser };
+
   const files = new Map(); // relative-to-slice name → content
 
   if (reusesBaseParser) {
@@ -398,11 +663,11 @@ function main() {
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '${toSrc}core/NodeRegistry';
-import { ${base.parser} } from '${toBase}/parser';
+import { ${reusedParser.fn} } from '${reusedParser.importPath}';
 
 const ${camel}Registration: NodeTypeRegistration = {
   typeName: '${typeName}',
-  parser: ${base.parser},
+  parser: ${reusedParser.fn},
 };
 
 nodeRegistry.register(${camel}Registration);
@@ -440,7 +705,7 @@ ${base.workspaceFlag ? `  ${base.workspaceFlag}\n` : ''}  renderIntent: 'transfo
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '${toSrc}core/NodeRegistry';
 import { nodeComponentRegistry } from '${toSrc}r3f/NodeComponentRegistry';
-import { ${base.parser} } from '${toBase}/parser';
+import { ${reusedParser.fn} } from '${reusedParser.importPath}';
 import { ${base.component} } from '${toBase}/Component';
 import './index';
 import './index.r3f';
@@ -472,7 +737,7 @@ describe('${typeName} registration', () => {
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '${toSrc}core/NodeRegistry';
 import { nodeComponentRegistry } from '${toSrc}r3f/NodeComponentRegistry';
-import { ${base.parser} } from '${toBase}/parser';
+import { ${reusedParser.fn} } from '${reusedParser.importPath}';
 import './index';
 
 describe('${typeName} registration', () => {
@@ -509,7 +774,7 @@ export type ${typeName}Properties = ${base.propsType};
  */
 
 import type { ParsedHeading } from '${toSrc}parser/utils';
-import { ${base.parser} } from '${toBase}/parser';
+import { ${reusedParser.fn} } from '${reusedParser.importPath}';
 import type { ${typeName}Properties } from './types';
 
 export function parse${typeName}(
@@ -840,6 +1105,7 @@ the property and the value the lenient parser falls back to.
   console.log(`  create  scenes/fixtures/${fixtureName}`);
   for (const w of wirings) console.log(`  wire    ${w.filePath.slice(REPO_ROOT.length + 1)} (${w.action})`);
   console.log(`  chain   ${chainNote}`);
+  console.log(`  parser  ${reusedParser.fn} from ${reusedParser.importPath}`);
   if (linter) {
     console.log(
       `  inherit ${parentLinterParser(typeName, chain, sliceDir, `${toBase}/linterParser.js`)}`

@@ -152,13 +152,16 @@ describe('AudioStreamPlayer2D Linter', () => {
   });
 
   describe('Semantic Validation', () => {
-    describe('missing stream error', () => {
-      it('should error when stream is missing', () => {
+    describe('missing stream advisory', () => {
+      it('should WARN, not error, when stream is missing', () => {
+        // Godot defines no configuration warning for this and accepts the node
+        // happily; a script may assign the stream at runtime, which is what the
+        // vendored platformer's coin pickup does.
         expectDiagnostic(bare({ volume_db: 0.0, pitch_scale: 1.0 }), {
           ruleName: 'audiostreamplayer2d-missing-stream',
-          severity: 'error',
+          severity: 'warning',
           nodeType: 'AudioStreamPlayer2D',
-          contains: ['requires', 'audio'],
+          contains: ['no', 'stream'],
         });
       });
 

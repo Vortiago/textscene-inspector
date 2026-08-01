@@ -42,6 +42,7 @@ Strict parsing format-checks these `AcceptDialog` properties, plus 45 inherited 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | warning |
 <!-- lint:end -->
 
 The lenient parser (`parser.ts`) reuses the plain `Node` parser: it reads only the

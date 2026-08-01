@@ -42,7 +42,7 @@ Strict parsing format-checks these `OmniLight3D` properties, plus 15 inherited f
 
 | Property | Accepts |
 | --- | --- |
-| `omni_attenuation` | float >= 0 |
+| `omni_attenuation` | float |
 | `omni_range` | float > 0 |
 | `omni_shadow_mode` | enum 0-1 (DUAL_PARABOLOID/CUBE) |
 

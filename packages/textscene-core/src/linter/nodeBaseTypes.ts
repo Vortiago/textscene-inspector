@@ -63,3 +63,24 @@ export function descendsFrom(nodeType: string, ancestor: string): boolean {
   }
   return false;
 }
+
+/**
+ * Every ancestor of `nodeType`, nearest first, excluding the type itself.
+ *
+ * Cycle-safe, so a malformed table truncates rather than hanging. Consumers
+ * that need the whole chain should use this rather than re-implementing the
+ * loop; `nodeBaseTypes.test.ts` and `baseChainCompleteness.test.ts` are the
+ * deliberate exceptions, since a guard on the table must not be written in
+ * terms of a helper that reads the same table.
+ */
+export function baseChain(nodeType: string): string[] {
+  const chain: string[] = [];
+  const seen = new Set<string>([nodeType]);
+  let current: string | undefined = NODE_BASE_TYPES[nodeType];
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    chain.push(current);
+    current = NODE_BASE_TYPES[current];
+  }
+  return chain;
+}

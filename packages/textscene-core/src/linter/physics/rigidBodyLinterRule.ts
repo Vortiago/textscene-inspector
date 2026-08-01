@@ -13,6 +13,7 @@ import { hasCollisionShapeChild } from './hasCollisionShapeChild.js';
 import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
+import { descendsFrom } from '../nodeBaseTypes.js';
 
 /** Minimum recommended mass value (below this causes instability) */
 const MIN_RECOMMENDED_MASS = 0.01;
@@ -32,7 +33,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     const diagnostics: Diagnostic[] = [];
     const { node, scene } = context;
 
-    if (node.type !== type) {
+    if (!descendsFrom(node.type, type)) {
       return diagnostics;
     }
 
@@ -141,7 +142,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       name: `valid-${prefix}`,
       description: `Validates ${type} resource references, collision shapes, mass values, and physics configuration`,
       category: 'validation',
-      applicableNodeTypes: [type],
+      applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, type),
       emits: [
         { ruleName: `valid-${prefix}-resources`, severity: 'error' },
         { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },

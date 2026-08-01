@@ -118,12 +118,13 @@ describe('OmniLight3D Linter', () => {
         ],
       },
       {
+        // light_3d.cpp:640 hints "-10,10,0.001,or_greater,or_less": the range
+        // starts below zero and both ends are soft, so a negative is a legal
+        // inverse falloff.
         prop: 'omni_attenuation',
-        valid: [1.5],
-        invalid: [
-          { value: -1.0, contains: ['non-negative'] },
-          { value: 'abc', contains: ['must be a number'] },
-        ],
+        valid: [1.5, 0, -0.5, -2],
+        acceptMode: 'no-error',
+        invalid: [{ value: 'abc', contains: ['must be a number'] }],
       },
       {
         prop: 'omni_shadow_mode',

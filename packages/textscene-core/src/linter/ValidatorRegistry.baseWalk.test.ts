@@ -12,7 +12,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ValidatorRegistry, validatorRegistry } from './ValidatorRegistry.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
-import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
+import { baseChain } from './nodeBaseTypes.js';
 import './index.js'; // trigger all validator registrations
 
 // Child → Parent → Grandparent → (root). Grandparent has no further base.
@@ -259,16 +259,7 @@ function findShadowViolations(
 
 /** Collect all keys registered for a type by walking up its base chain. */
 function baseChainKeys(nodeType: string): Set<string> {
-  const keys = new Set<string>();
-  let current: string | undefined = NODE_BASE_TYPES[nodeType];
-  const visited = new Set<string>();
-  while (current && !visited.has(current)) {
-    visited.add(current);
-    const ownKeys = validatorRegistry.getOwnKeys(current);
-    for (const k of ownKeys) keys.add(k);
-    current = NODE_BASE_TYPES[current];
-  }
-  return keys;
+  return new Set(baseChain(nodeType).flatMap((ancestor) => validatorRegistry.getOwnKeys(ancestor)));
 }
 
 describe('ValidatorRegistry meta-guard: no shadow copies', () => {

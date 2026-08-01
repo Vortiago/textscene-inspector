@@ -39,11 +39,13 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // ERROR: stream is missing (REQUIRED - no sound without this)
+  // Advisory, not an error: audio_stream_player_3d.cpp defines no
+  // configuration warning, and a player with no stream is valid Godot; a script
+  // may assign one at runtime.
   if (rawProps.stream === undefined) {
     diagnostics.push({
-      severity: 'error',
-      message: `AudioStreamPlayer3D requires 'stream' property to function. This defines what audio to play.`,
+      severity: 'warning',
+      message: `AudioStreamPlayer3D '${node.name}' has no 'stream', so it will not play anything until one is assigned.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'audiostreamplayer3d-missing-stream',
@@ -148,7 +150,7 @@ const audioStreamPlayer3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer3D'],
     emits: [
-      { ruleName: 'audiostreamplayer3d-missing-stream', severity: 'error' },
+      { ruleName: 'audiostreamplayer3d-missing-stream', severity: 'warning' },
       { ruleName: 'audiostreamplayer3d-missing-stream-resource', severity: 'error' },
       { ruleName: 'audiostreamplayer3d-invalid-unit-size', severity: 'error' },
       { ruleName: 'audiostreamplayer3d-invalid-max-distance', severity: 'error' },

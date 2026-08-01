@@ -9,6 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
+import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 
 // Thresholds for warnings
 const MIN_NEAR_CLIPPING_WARNING = 0.01;
@@ -16,8 +17,6 @@ const MAX_FAR_CLIPPING_WARNING = 10000;
 const MIN_NORMAL_FOV = 20;
 const MAX_NORMAL_FOV = 120;
 
-// Projection mode constants
-const PROJECTION_PERSPECTIVE = 0;
 
 /**
  * Validate Camera3D semantic rules
@@ -27,7 +26,7 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
   // Only run for Camera3D nodes
-  if (node.type !== 'Camera3D') {
+  if (!descendsFrom(node.type, 'Camera3D')) {
     return diagnostics;
   }
 
@@ -38,19 +37,9 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // Get projection mode (default to PERSPECTIVE if not specified)
-  const projection = rawProps.projection !== undefined ? parseInt(rawProps.projection, 10) : PROJECTION_PERSPECTIVE;
-
-  // ERROR: fov is required for PERSPECTIVE projection (unless attributes overrides it)
-  if (projection === PROJECTION_PERSPECTIVE && rawProps.fov === undefined && rawProps.attributes === undefined) {
-    diagnostics.push({
-      severity: 'error',
-      message: `Camera3D with PERSPECTIVE projection (projection=0) requires 'fov' property. This defines the field of view in degrees.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'camera3d-missing-fov',
-    });
-  }
+  // `fov` gets no presence check. Godot defaults it to 75 (camera_3d.h:68) and
+  // omits defaults when serialising, and camera3d/parser.ts defaults it the
+  // same way, so an absent key means 75 rather than missing.
 
   // ERROR: near must be less than far (cross-field consistency, not a range advisory)
   if (rawProps.near !== undefined && rawProps.far !== undefined) {
@@ -118,13 +107,12 @@ const camera3DValidationRule: LintRule = {
     description: 'Validates Camera3D property values, required properties, clipping plane relationships, and performance considerations',
     category: 'validation',
     emits: [
-      { ruleName: 'camera3d-missing-fov', severity: 'error' },
       { ruleName: 'camera3d-invalid-clipping-planes', severity: 'error' },
       { ruleName: 'camera3d-small-near-plane', severity: 'warning' },
       { ruleName: 'camera3d-large-far-plane', severity: 'warning' },
       { ruleName: 'camera3d-extreme-fov', severity: 'warning' },
     ],
-    applicableNodeTypes: ['Camera3D'],
+    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Camera3D'),
   },
   check: checkCamera3D,
 };

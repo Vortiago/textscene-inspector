@@ -1,4 +1,6 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="RectangleShape2D" id="Shape_1"]
 
 ; PhysicalBone2D's own properties under a Skeleton2D parent, bone2d_index assigned.
 
@@ -15,3 +17,6 @@ bone2d_index = 0
 auto_configure_joint = false
 simulate_physics = true
 follow_bone_when_simulating = true
+
+[node name="Shape" type="CollisionShape2D" parent="MySkeleton2D/MyPhysicalBone2D"]
+shape = SubResource("Shape_1")

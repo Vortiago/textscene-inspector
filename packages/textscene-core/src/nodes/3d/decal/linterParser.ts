@@ -16,8 +16,11 @@ validatorRegistry.registerAll('Decal', {
   albedo_mix: v.float('albedo_mix', { min: 0, max: 1 }),
   emission_energy: v.nonNegativeFloat('emission_energy'),
   normal_fade: v.float('normal_fade', { min: 0, max: 1 }),
-  upper_fade: v.float('upper_fade', { min: 0, max: 1 }),
-  lower_fade: v.float('lower_fade', { min: 0, max: 1 }),
+  // decal.cpp:254-255 hint these PROPERTY_HINT_EXP_EASING with NO range: an
+  // easing-curve editor, not a 0-1 bound. The setters clamp the low end only
+  // (`upper_fade = MAX(p_fade, 0.0)`, :89), so min 0 and no maximum.
+  upper_fade: v.nonNegativeFloat('upper_fade'),
+  lower_fade: v.nonNegativeFloat('lower_fade'),
   cull_mask: layerBitmask('cull_mask'),
   // VisualInstance3D declares `sorting_offset` PROPERTY_USAGE_NONE, so most of
   // its subclasses never serialise it — but `Decal::_validate_property`

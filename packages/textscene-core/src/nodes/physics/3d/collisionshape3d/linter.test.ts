@@ -3,7 +3,14 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { node, scene, lint, expectClean, expectDiagnostic } from '../../../../linter/testing/testkit';
+import {
+  node,
+  scene,
+  lint,
+  expectClean,
+  expectDiagnostic,
+  expectNoDiagnostic,
+} from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
@@ -260,9 +267,24 @@ shape = SubResource("shape_1")
         ruleName: 'collisionshape3d-invalid-parent',
         severity: 'warning',
         nodeType: 'CollisionShape3D',
-        contains: ['Node3D', 'should be a child of'],
+        contains: ['Node3D', 'not a CollisionObject3D'],
       });
       expect(parentError.nodeName).toBe('Collision');
+    });
+
+    it('accepts a PhysicalBone3D parent, which IS a CollisionObject3D', () => {
+      // Godot's test is `cast_to<CollisionObject3D>(get_parent())`
+      // (collision_shape_3d.cpp), which PhysicalBone3D passes.
+      const content = `[gd_scene format=3]
+
+[sub_resource type="BoxShape3D" id="shape_1"]
+
+[node name="Bone" type="PhysicalBone3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="Bone"]
+shape = SubResource("shape_1")
+`;
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-invalid-parent' });
     });
 
     it('should warn when parent is invalid type (MeshInstance3D)', () => {

@@ -51,7 +51,7 @@ Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inh
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-audiostreamplayer2d-properties` | `audiostreamplayer2d-missing-stream` | error |
+| `valid-audiostreamplayer2d-properties` | `audiostreamplayer2d-missing-stream` | warning |
 |  | `audiostreamplayer2d-missing-stream-resource` | error |
 |  | `audiostreamplayer2d-autoplay-without-stream` | warning |
 |  | `audiostreamplayer2d-zero-pitch-scale` | error |
