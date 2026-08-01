@@ -14,8 +14,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
-import { BackgroundMode } from '../../resources/environment/types';
-import type { EnvironmentSettings } from '../../resources/environment/renderer';
+import { BackgroundMode, type EnvironmentSettings } from '../../resources/environment/types';
 import { applyToneMapping } from '../../resources/environment/toneMapping';
 import {
   unexposedBrightPassThreshold,
@@ -272,16 +271,33 @@ function EnvironmentApplier({ settings, hasSky, suppressToneMapping }: Environme
     };
   }, [scene, showBackgroundColor, mode, settings.background.color, hasSky]);
 
-  const { mode: toneMapMode, exposure: toneMapExposure, white: toneMapWhite } =
-    settings.toneMapping;
+  const {
+    mode: toneMapMode,
+    exposure: toneMapExposure,
+    white: toneMapWhite,
+    agxContrast: toneMapAgxContrast,
+  } = settings.toneMapping;
   useEffect(() => {
     if (suppressToneMapping) return undefined;
     return applyToneMapping(
       gl,
-      { mode: toneMapMode, exposure: toneMapExposure, white: toneMapWhite },
+      {
+        mode: toneMapMode,
+        exposure: toneMapExposure,
+        white: toneMapWhite,
+        agxContrast: toneMapAgxContrast,
+      },
       scene
     );
-  }, [gl, scene, toneMapMode, toneMapExposure, toneMapWhite, suppressToneMapping]);
+  }, [
+    gl,
+    scene,
+    toneMapMode,
+    toneMapExposure,
+    toneMapWhite,
+    toneMapAgxContrast,
+    suppressToneMapping,
+  ]);
 
   const fog = settings.fog;
   useEffect(() => {

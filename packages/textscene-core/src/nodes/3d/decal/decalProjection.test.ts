@@ -45,7 +45,7 @@ function decalAt(x: number, y: number, z: number): THREE.Matrix4 {
 const SIZE = { x: 3, y: 3, z: 3 };
 
 /** Exponent 0 on both sides means pow(x, 0) === 1 — no depth fade to confound a test. */
-const NO_FADE = { upperFade: 0, lowerFade: 0, normalFade: 0, sizeY: SIZE.y };
+const NO_FADE = { upperFade: 0, lowerFade: 0, normalFade: 0 };
 
 describe('computeDecalBoxWorldAABB', () => {
   it('bounds the ±size/2 box around the decal origin', () => {
@@ -193,7 +193,6 @@ describe('buildDecalProjectionGeometry', () => {
       upperFade: 0.3,
       lowerFade: 0.3,
       normalFade: 0,
-      sizeY: SIZE.y,
     });
 
     const color = geometry!.getAttribute('color');

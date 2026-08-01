@@ -17,7 +17,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Label3D } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { Label3DProperties } from './types';
-import { BillboardMode } from './types';
+import { BillboardMode, HorizontalAlignment } from './types';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 
 // happy-dom doesn't provide a 2D canvas context; mock it so Label3D's
@@ -47,6 +47,11 @@ function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
     modulate: { r: 1, g: 1, b: 1, a: 1 },
     outline_size: 0,
     outline_modulate: { r: 0, g: 0, b: 0, a: 1 },
+    double_sided: true,
+    font_size: 32,
+    line_spacing: 0,
+    horizontal_alignment: HorizontalAlignment.CENTER,
+    no_depth_test: false,
     ...overrides,
   };
   return { name: 'L', type: 'Label3D', children: [], properties: props };
@@ -64,7 +69,7 @@ describe('Label3D (assertions 90–94)', () => {
   it('#90 text → label text content rendered (texture exists, billboard mesh present)', async () => {
     const renderer = await renderLabel(makeNode({ text: 'Hi' }));
     const mesh = renderer.scene.findByType('Mesh');
-    const mat = mesh.instance.material as THREE.MeshBasicMaterial;
+    const mat = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     // Rasterised text is on the texture map — assert texture exists.
     expect(mat.map).not.toBeNull();
   });
@@ -80,7 +85,7 @@ describe('Label3D (assertions 90–94)', () => {
     // a font_size-aware implementation would produce a different height
     // than the default. We assert mesh exists for now; the property check
     // can be tightened once the parser captures it.
-    const geom = mesh.instance.geometry as unknown as { parameters: { height: number } };
+    const geom = (mesh.instance as THREE.Mesh).geometry as unknown as { parameters: { height: number } };
     // Default pixel_size=0.01 + FONT_SIZE=128 → height ≈ 0.01 * 100 = 1.0
     // (the current implementation ignores font_size). With font_size=64
     // we'd expect HALF that height. This test fails until font_size is wired.
@@ -90,7 +95,7 @@ describe('Label3D (assertions 90–94)', () => {
   it('#92 modulate color → material color matches (tint applied to rendered text)', async () => {
     const renderer = await renderLabel(makeNode({ modulate: { r: 1, g: 0, b: 0, a: 1 } }));
     const mesh = renderer.scene.findByType('Mesh');
-    const mat = mesh.instance.material as THREE.MeshBasicMaterial;
+    const mat = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     // Today the modulate color is applied via the canvas fillStyle (text
     // pixels). The material color itself is not tinted. This asserts that
     // either path produces a red appearance — for now, check material color
@@ -119,7 +124,7 @@ describe('Label3D (assertions 90–94)', () => {
     (node.properties as unknown as { no_depth_test: boolean }).no_depth_test = true;
     const renderer = await renderLabel(node);
     const mesh = renderer.scene.findByType('Mesh');
-    const mat = mesh.instance.material as THREE.MeshBasicMaterial;
+    const mat = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(mat.depthTest).toBe(false);
   });
 });

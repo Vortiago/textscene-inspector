@@ -37,7 +37,7 @@ async function render(node: TscnNode, internalResources: TscnInternalResource[] 
 }
 
 function geometryOf(renderer: Awaited<ReturnType<typeof render>>): THREE.BufferGeometry {
-  return renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
 }
 
 describe('<CSGMesh3D>', () => {

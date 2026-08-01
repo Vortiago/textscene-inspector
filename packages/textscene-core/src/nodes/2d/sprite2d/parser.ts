@@ -6,9 +6,14 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
-import { boolOr, intOr, parseOptionalVector2i, vec2Or } from '../../../parser/valueParsers';
-import { warn } from '../../../logger';
-import type { Rect2, Sprite2DProperties } from './types';
+import {
+  boolOr,
+  intOr,
+  parseOptionalRect2,
+  parseOptionalVector2i,
+  vec2Or,
+} from '../../../parser/valueParsers';
+import type { Sprite2DProperties } from './types';
 
 export function parseSprite2D(
   heading: ParsedHeading,
@@ -35,20 +40,10 @@ export function parseSprite2D(
     if (c) result.frame_coords = c;
   }
   if (properties.region_rect) {
-    const r = parseRect2(properties.region_rect);
+    const r = parseOptionalRect2(properties.region_rect, 'Sprite2D region_rect');
     if (r) result.region_rect = r;
   }
 
   return result;
 }
 
-function parseRect2(value: string): Rect2 | null {
-  const m = value.match(
-    /^Rect2\(\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*\)$/
-  );
-  if (!m) {
-    warn(`Sprite2D: invalid region_rect Rect2 "${value}"`);
-    return null;
-  }
-  return { x: parseFloat(m[1]!), y: parseFloat(m[2]!), width: parseFloat(m[3]!), height: parseFloat(m[4]!) };
-}

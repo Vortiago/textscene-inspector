@@ -21,7 +21,7 @@ async function geometryOf(shape: TscnInternalResource) {
   const renderer = await ReactThreeTestRenderer.create(
     <CollisionGizmo shape={shape} color={new THREE.Color(0x00ff88)} />
   );
-  return renderer.scene.findByType('Mesh').instance.geometry as unknown as {
+  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
     type: string;
     parameters: Record<string, number>;
   };
@@ -47,8 +47,12 @@ describe('<CollisionGizmo> primitive shapes', () => {
     expect(geometry.parameters.height).toBeCloseTo(1.0, 6);
   });
 
-  it('degenerates a too-short capsule to a sphere rather than inverting it', async () => {
+  it('degenerates a too-short capsule to a sphere of HALF the authored height', async () => {
+    // Godot's set_height lowers the radius to `height * 0.5`
+    // (capsule_shape_3d.cpp:118), so the sphere is 0.25 here — not the authored
+    // radius of 1. Asserting the cylindrical section alone cannot see that.
     const geometry = await geometryOf(shape('CapsuleShape3D', { radius: '1', height: '0.5' }));
+    expect(geometry.parameters.radius).toBeCloseTo(0.25, 6);
     expect(geometry.parameters.height).toBeCloseTo(0, 6);
   });
 

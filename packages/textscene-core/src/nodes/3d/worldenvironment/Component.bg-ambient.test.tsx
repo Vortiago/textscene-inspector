@@ -33,7 +33,7 @@ async function ambientLights(environmentBody: string) {
       internalResources={scene.internalResources}
       externalResources={scene.externalResources}
     >
-      <WorldEnvironment node={scene.nodes[0].children[0]} />
+      <WorldEnvironment node={scene.nodes[0]!.children[0]!} />
     </SceneResourcesProvider>
   );
   return renderer.scene

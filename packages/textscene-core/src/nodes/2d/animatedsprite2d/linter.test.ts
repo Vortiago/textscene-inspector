@@ -182,7 +182,7 @@ describe('AnimatedSprite2D Linter', () => {
         nodeType: 'AnimatedSprite2D',
         ruleName: 'valid-animatedsprite2d-resources',
       });
-      expect(diagnostics[0].message).toContain('SpriteFrames resource not found');
+      expect(diagnostics[0]!.message).toContain('SpriteFrames resource not found');
     });
 
     it('should pass when sprite_frames resource exists (SubResource)', () => {

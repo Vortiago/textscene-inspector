@@ -142,7 +142,7 @@ pixel_size = 0.01
         nodeType: 'Sprite3D',
         ruleName: 'valid-sprite3d-resources',
       });
-      expect(diagnostics[0].message).toContain('Texture resource not found');
+      expect(diagnostics[0]!.message).toContain('Texture resource not found');
     });
 
     it('should pass when texture resource exists', () => {

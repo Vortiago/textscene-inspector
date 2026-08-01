@@ -15,6 +15,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import * as THREE from 'three';
 import { Label3D } from './Component';
 import { parseLabel3D } from './parser';
 import type { TscnNode } from '../../../parser/types';
@@ -53,8 +54,8 @@ async function quad(properties: Record<string, string>) {
       <Label3D node={makeNode(properties)} />
     </ViewportModeProvider>
   );
-  const geometry = renderer.scene.findByType('Mesh').instance
-    .geometry as unknown as { parameters: { width: number; height: number } };
+  const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+    .geometry as THREE.PlaneGeometry;
   return geometry.parameters;
 }
 

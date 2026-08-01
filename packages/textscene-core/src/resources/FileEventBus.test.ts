@@ -43,8 +43,8 @@ describe('FileEventBus', () => {
       });
 
       expect(loadedHandler).not.toHaveBeenCalled();
-      expect(failedHandler.mock.calls[0][0]).toBe('res://missing.tscn');
-      expect(failedHandler.mock.calls[0][1]).toBeInstanceOf(Error);
+      expect(failedHandler.mock.calls[0]![0]).toBe('res://missing.tscn');
+      expect(failedHandler.mock.calls[0]![1]).toBeInstanceOf(Error);
     });
 
     it('emits failed event when provider returns null', async () => {
@@ -59,7 +59,7 @@ describe('FileEventBus', () => {
         expect(failedHandler).toHaveBeenCalled();
       });
 
-      expect(failedHandler.mock.calls[0][1].message).toContain('File not found');
+      expect((failedHandler.mock.calls[0]![1] as Error).message).toContain('File not found');
     });
 
     it('caches loaded files', async () => {

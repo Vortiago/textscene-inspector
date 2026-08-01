@@ -116,7 +116,15 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │           │   │   # CamerasPanel, and DockChrome are files inside TscnPreviewShell/;
 │           │   │   # the 2D stage and viewport switch are sibling focused units
 │           │   └── hooks/{useViewportSelection.tsx,useParsedScene.ts}
-│           └── resources/       # Async resource loading
+│           └── resources/       # Async resource loading + RESOURCE SLICES (ADR-0031):
+│               │                #   one folder per resource type — index.ts (registration,
+│               │                #   THREE-free) · decode.ts (pure bag → Data) · build.ts
+│               │                #   (Data + deps → THREE, only where THREE construction
+│               │                #   exists) · types.ts · co-located tests. Foreign formats
+│               │                #   (formats/{glb,image,packedscene}) declare their real
+│               │                #   parser instead of a decode/build split. Routing derives
+│               │                #   from sliceRegistrations.ts + sliceRegistration.ts;
+│               │                #   guards: resourceSlice{Conformance,Isolation}.test.ts
 │               ├── FileEventBus.ts        # request(path) -> loaded/failed
 │               ├── ResourceEventBus.ts    # typed processor events
 │               ├── ResourceLoader.ts      # Texture/Material/GLB/Scene
@@ -203,7 +211,7 @@ decoders, which stay faithful readers of what the file says:
   uploads the image bottom-up, so a Godot V must be mirrored: `v → 1 - v`.
   Textures are shared **by identity** between 2D and 3D consumers, so this is
   converted per consumer, never by flipping the texture:
-  `resources/meshes/arrayMeshGeometry.ts` (mesh UV attribute),
+  `resources/meshes/arraymesh/build.ts` (mesh UV attribute),
   `resources/tileset/tileGeometry.ts` (`pxRectToUv`) and `r3f/spriteFrame.ts`
   (region/frame windowing via texture offset+repeat). The shapes differ enough
   that the shared part is only the `1 -`; there is deliberately no helper.
@@ -211,7 +219,7 @@ decoders, which stay faithful readers of what the file says:
   see the `uv1 V-anchoring` note in the StandardMaterial3D comparison sheet
   ([packages/textscene-core/src/resources/materials/standardmaterial3d/comparison.md](./packages/textscene-core/src/resources/materials/standardmaterial3d/comparison.md)).
 - **Triangle winding.** Godot fronts triangles clockwise, three.js expects
-  counter-clockwise — every decoded index triple is reversed (`arrayMeshGeometry.ts`).
+  counter-clockwise — every decoded index triple is reversed (`meshes/arraymesh/build.ts`).
   Without it, flat meshes vanish and closed meshes render inside-out.
 - **2D Y.** Godot's 2D Y grows downward; the Y negation lives in
   `r3f/node2dTransform.ts`.
@@ -295,6 +303,17 @@ engine's exact pixels, and the `unit-pointlight2d*` comparison sheets carry the
 resulting numbers.
 
 ### Resource Loading
+
+Every resource type is a **Resource slice** (ADR-0031, CONTEXT.md):
+`resources/<category>/<type>/` with a THREE-free `index.ts` that registers the
+slice's claims (TSCN type names, extensions, bus tag, failure label) into
+`sliceRegistration.ts`'s registry via the `sliceRegistrations.ts` barrel.
+Routing derives from those claims — nothing sniffs a type name by substring.
+Godot-text slices carry a pure `decode.ts` (a **ParsedResource** section → typed
+Data) and, only where THREE construction exists, a `build.ts`; foreign-format
+slices (`formats/{glb,image,packedscene}`) declare their real parser openly.
+`resourceSliceConformance.test.ts` and `resourceSliceIsolation.test.ts` enforce
+the shape.
 
 External resources (textures, materials, GLB meshes, packed scenes) flow through
 a **two-bus, event-driven pipeline** — *not* promises/Suspense at the component

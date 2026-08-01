@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import type { ReactTestInstance } from '@react-three/test-renderer';
+import type { ReactThreeTest } from '@react-three/test-renderer';
 import { TscnParser } from '../parser/TscnParser';
 import { NodeDispatcher } from './NodeDispatcher';
 import { SceneResourcesProvider } from './SceneResourcesContext';
@@ -22,11 +22,15 @@ import './nodes/index';
 
 // Use the test renderer tree API to find meshes/lights — avoids the dual-THREE
 // instanceof problem that occurs when traverse() is called on scene.instance.
-function findMeshes(scene: { findAllByType(t: string): ReactTestInstance[] }) {
+function findMeshes(scene: {
+  findAllByType(t: string): ReactThreeTest.ReactThreeTestInstance[];
+}) {
   return scene.findAllByType('Mesh');
 }
 
-function findLights(scene: { findAllByType(t: string): ReactTestInstance[] }) {
+function findLights(scene: {
+  findAllByType(t: string): ReactThreeTest.ReactThreeTestInstance[];
+}) {
   return [
     ...scene.findAllByType('DirectionalLight'),
     ...scene.findAllByType('AmbientLight'),
@@ -75,7 +79,7 @@ mesh = SubResource("BoxMesh_abc123")
       const meshes = findMeshes(renderer.scene);
       expect(meshes.length).toBeGreaterThan(0);
       // Geometry type should be BufferGeometry (BoxGeometry extends it)
-      expect(meshes[0]!.instance.geometry.type).toMatch(/Geometry/);
+      expect((meshes[0]!.instance as THREE.Mesh).geometry.type).toMatch(/Geometry/);
     });
 
     it('renders scene with mesh and material', async () => {
@@ -95,7 +99,9 @@ mesh = SubResource("BoxMesh_abc123")
       const meshes = findMeshes(renderer.scene);
       expect(meshes.length).toBeGreaterThan(0);
       // Material type string check avoids dual-THREE instanceof issue
-      expect(meshes[0]!.instance.material.type).toBe('MeshStandardMaterial');
+      expect(((meshes[0]!.instance as THREE.Mesh).material as THREE.Material).type).toBe(
+        'MeshStandardMaterial'
+      );
     });
   });
 
@@ -116,7 +122,7 @@ mesh = SubResource("BoxMesh_1")
 `);
       const meshes = findMeshes(renderer.scene);
       expect(meshes.length).toBe(1);
-      const mat = meshes[0]!.instance.material as { type: string; color: THREE.Color };
+      const mat = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
       expect(mat.type).toBe('MeshStandardMaterial');
       expect(mat.color.getHex()).toBe(0xffff00);
     });
@@ -140,7 +146,7 @@ mesh = SubResource("BoxMesh_1")
 material_override = SubResource("mat_red")
 `);
       const meshes = findMeshes(renderer.scene);
-      const mat = meshes[0]!.instance.material as { color: THREE.Color };
+      const mat = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
       expect(mat.color.getHex()).toBe(0xff0000);
     });
 
@@ -163,7 +169,7 @@ mesh = SubResource("BoxMesh_1")
 surface_material_override/0 = SubResource("mat_blue")
 `);
       const meshes = findMeshes(renderer.scene);
-      const mat = meshes[0]!.instance.material as { color: THREE.Color };
+      const mat = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
       expect(mat.color.getHex()).toBe(0x0000ff);
     });
 
@@ -190,7 +196,7 @@ material_override = SubResource("mat_red")
 surface_material_override/0 = SubResource("mat_blue")
 `);
       const meshes = findMeshes(renderer.scene);
-      const mat = meshes[0]!.instance.material as { color: THREE.Color };
+      const mat = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
       expect(mat.color.getHex()).toBe(0x0000ff);
     });
   });

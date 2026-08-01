@@ -24,7 +24,7 @@ import {
   parseCurve3DPoints,
   tessellateCurve3D,
   type Curve3DSampler,
-} from '../../../resources/shapes/curve3d';
+} from '../../../resources/curves/curve3d';
 import { Path3DCurveProvider } from '../../../r3f/contexts/Path3DCurveContext';
 import type { Path3DProperties } from './types';
 

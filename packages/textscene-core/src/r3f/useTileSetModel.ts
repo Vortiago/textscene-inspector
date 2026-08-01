@@ -16,8 +16,8 @@ import { useMemo } from 'react';
 import { warn } from '../logger';
 import type { ParsedResource } from '../parser/parsedResource';
 import { parseResourceReference, resolveExtResourcePath } from '../resources/SubResourceResolver';
-import { tileSetFromScene, tileSetFromTres } from '../resources/tileset/resolveTileSet';
-import type { TileSetModel } from '../resources/tileset/tileSetModel';
+import { tileSetFromScene, tileSetFromTres } from '../resources/tileset/decode';
+import type { TileSetModel } from '../resources/tileset/types';
 import { useResource } from '../resources/useResource';
 import { useSceneResources } from './SceneResourcesContext';
 

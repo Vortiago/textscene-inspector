@@ -28,8 +28,8 @@ curve = SubResource("curve_1")
       const diagnostics = lint(content);
       // Should only have unused warning, no format errors
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0].severity).toBe('warning');
-      expect(diagnostics[0].ruleName).toBe('path3d-unused');
+      expect(diagnostics[0]!.severity).toBe('warning');
+      expect(diagnostics[0]!.ruleName).toBe('path3d-unused');
     });
 
     it('should pass format validation for Path3D with ExtResource curve (with unused warning)', () => {
@@ -44,8 +44,8 @@ curve = ExtResource("curve_ext")
       const diagnostics = lint(content);
       // Should only have unused warning, no format errors
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0].severity).toBe('warning');
-      expect(diagnostics[0].ruleName).toBe('path3d-unused');
+      expect(diagnostics[0]!.severity).toBe('warning');
+      expect(diagnostics[0]!.ruleName).toBe('path3d-unused');
     });
 
     it('should pass validation for Path3D with PathFollow3D child', () => {

@@ -139,3 +139,18 @@ describe('previewEnvironment', () => {
     expect(sky.ground_horizon_color).toEqual(sky.sky_horizon_color);
   });
 });
+
+describe('preview environment — tone mapping', () => {
+  it('picks FILMIC, so neither AgX property reaches its curve (invariant)', () => {
+    // The preview flows through the SAME decode/build pipeline as an authored
+    // WorldEnvironment, which means `whiteFor`'s mode gate applies to it too.
+    // Pinned because the preview is the environment most scenes actually get:
+    // an AgX default leaking in here would re-tone every scene that authors none.
+    expect(previewEnvironment().settings.toneMapping).toEqual({
+      mode: 2,
+      exposure: 1,
+      white: 1,
+      agxContrast: 1.25,
+    });
+  });
+});

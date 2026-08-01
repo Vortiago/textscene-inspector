@@ -49,6 +49,7 @@
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui",
     "type-check": "tsc --noEmit",
+    "type-check:tests": "tsc --noEmit -p tsconfig.tests.json",
     "clean": "rimraf dist tsconfig.tsbuildinfo"
   },
   "keywords": [

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Camera3D } from './Component';
 import type { TscnNode } from '../../../parser/types';
@@ -50,7 +51,7 @@ describe('<Camera3D>', () => {
       <Camera3D node={makeNode({ fov: 60 })} />
     );
     const cam = renderer.scene.findByType('PerspectiveCamera');
-    expect((cam.instance as { fov: number }).fov).toBe(60);
+    expect((cam.instance as THREE.PerspectiveCamera).fov).toBe(60);
   });
 
   it('clamps near to >= 0.001', async () => {
@@ -58,7 +59,7 @@ describe('<Camera3D>', () => {
       <Camera3D node={makeNode({ near: 0 })} />
     );
     const cam = renderer.scene.findByType('PerspectiveCamera');
-    expect((cam.instance as { near: number }).near).toBeGreaterThanOrEqual(0.001);
+    expect((cam.instance as THREE.PerspectiveCamera).near).toBeGreaterThanOrEqual(0.001);
   });
 
   it('ensures far > near (adds 0.1 margin if needed)', async () => {
@@ -66,7 +67,7 @@ describe('<Camera3D>', () => {
       <Camera3D node={makeNode({ near: 10, far: 5 })} />
     );
     const cam = renderer.scene.findByType('PerspectiveCamera');
-    const { near, far } = cam.instance as { near: number; far: number };
+    const { near, far } = cam.instance as THREE.PerspectiveCamera;
     expect(far).toBeGreaterThan(near);
   });
 
@@ -83,7 +84,7 @@ describe('<Camera3D>', () => {
       <Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size: 4 })} />
     );
     const cam = renderer.scene.findByType('OrthographicCamera');
-    const o = cam.instance as { top: number; bottom: number; left: number; right: number };
+    const o = cam.instance as THREE.OrthographicCamera;
     // Godot `size` is the full frustum height → half-extent = size/2.
     expect(o.top).toBe(2);
     expect(o.bottom).toBe(-2);

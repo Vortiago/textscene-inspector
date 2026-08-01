@@ -70,6 +70,33 @@ async function render(rootNode: TscnNode) {
   );
 }
 
+/**
+ * Narrow on three's own cross-copy flags rather than `instanceof`: the test
+ * renderer resolves a different `three` module instance, so `instanceof` is
+ * false even for genuine Meshes.
+ */
+function isMesh(o: THREE.Object3D): o is THREE.Mesh {
+  return (o as Partial<THREE.Mesh>).isMesh === true;
+}
+
+function isBasicMaterial(m: THREE.Material): m is THREE.MeshBasicMaterial {
+  return (m as Partial<THREE.MeshBasicMaterial>).isMeshBasicMaterial === true;
+}
+
+function meshOf(instance: THREE.Object3D): THREE.Mesh {
+  if (!isMesh(instance)) throw new Error('scene-graph instance is not a Mesh');
+  return instance;
+}
+
+/** The basic material a drawn mesh carries. */
+function basicMaterial(instance: THREE.Object3D): THREE.MeshBasicMaterial {
+  const material = meshOf(instance).material;
+  if (Array.isArray(material) || !isBasicMaterial(material)) {
+    throw new Error('mesh material is not a MeshBasicMaterial');
+  }
+  return material;
+}
+
 describe('AnimatedSprite2D render', () => {
   it('draws the current frame texture as a quad with the modulate tint applied', async () => {
     const r = await render(
@@ -80,8 +107,8 @@ describe('AnimatedSprite2D render', () => {
         modulate: 'Color(0.5, 0.5, 0.5, 1)',
       })
     );
-    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
-    const material = mesh.material as THREE.MeshBasicMaterial;
+    const mesh = meshOf(r.scene.findByType('Mesh').instance);
+    const material = basicMaterial(mesh);
     expect(material.map).toBeTruthy();
     expect((mesh.geometry as THREE.PlaneGeometry).parameters.width).toBe(32);
     expect(material.color.r).toBeCloseTo(srgbToLinear(0.5), 4);
@@ -89,7 +116,7 @@ describe('AnimatedSprite2D render', () => {
 
   it('renders the magenta placeholder when sprite_frames is missing', async () => {
     const r = await render(makeNode({}));
-    const material = r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const material = basicMaterial(r.scene.findByType('Mesh').instance);
     expect(material.color.getHexString()).toBe('ff00ff');
   });
 });

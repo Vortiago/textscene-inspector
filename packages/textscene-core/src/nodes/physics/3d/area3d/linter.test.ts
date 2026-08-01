@@ -314,7 +314,7 @@ describe('Area3D Linter', () => {
       const diagnostics = lint(scene(node('Area3D')));
       // Should only have warning about missing CollisionShape3D
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0].ruleName).toBe('area3d-needs-collision-shape');
+      expect(diagnostics[0]!.ruleName).toBe('area3d-needs-collision-shape');
     });
 
     it('should handle scientific notation in numeric values', () => {

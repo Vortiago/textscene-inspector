@@ -19,10 +19,10 @@
 import { useMemo } from 'react';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
-import { parseEnvironment } from '../../../resources/environment/parser';
-import { createEnvironmentSettings } from '../../../resources/environment/renderer';
-import type { EnvironmentSettings } from '../../../resources/environment/renderer';
-import { parseSkyMaterial } from '../../../resources/sky/parser';
+import { decodeEnvironment } from '../../../resources/environment/decode';
+import { createEnvironmentSettings } from '../../../resources/environment/build';
+import type { EnvironmentSettings } from '../../../resources/environment/types';
+import { decodeSkyMaterial, skyMaterialRef } from '../../../resources/sky/decode';
 import type { SkyProperties } from '../../../resources/sky/types';
 
 export interface ResolvedEnvironment {
@@ -40,7 +40,7 @@ export function useResolvedEnvironment(
   const envProps = useMemo(
     () =>
       environment?.type === 'Environment'
-        ? parseEnvironment(environment.data as Record<string, string>)
+        ? decodeEnvironment(environment.data as Record<string, string>)
         : null,
     [environment]
   );
@@ -49,14 +49,14 @@ export function useResolvedEnvironment(
   // `useSubOrExtResource` short-circuits that to "nothing", so rules of hooks holds
   // whatever shape the chain takes.
   const skyResource = useSubOrExtResource(envProps?.sky, internalResources, externalResources);
-  const materialRef =
-    skyResource?.type === 'Sky'
-      ? (skyResource.data as { sky_material?: string }).sky_material
-      : undefined;
+  const materialRef = skyMaterialRef(
+    skyResource?.type,
+    skyResource?.data as Record<string, unknown> | undefined
+  );
   const material = useSubOrExtResource(materialRef, internalResources, externalResources);
 
   const sky = useMemo(
-    () => (material ? parseSkyMaterial(material.type, material.data as Record<string, string>) : null),
+    () => (material ? decodeSkyMaterial(material.type, material.data as Record<string, string>) : null),
     [material]
   );
 

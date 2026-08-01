@@ -47,6 +47,29 @@ async function render(rootNode: TscnNode) {
   );
 }
 
+/**
+ * Narrow on three's own cross-copy flags rather than `instanceof`: the test
+ * renderer resolves a different `three` module instance, so `instanceof` is
+ * false even for genuine Meshes.
+ */
+function isMesh(o: THREE.Object3D): o is THREE.Mesh {
+  return (o as Partial<THREE.Mesh>).isMesh === true;
+}
+
+function isBasicMaterial(m: THREE.Material): m is THREE.MeshBasicMaterial {
+  return (m as Partial<THREE.MeshBasicMaterial>).isMeshBasicMaterial === true;
+}
+
+/** The basic material a drawn mesh carries. */
+function basicMaterial(instance: THREE.Object3D): THREE.MeshBasicMaterial {
+  if (!isMesh(instance)) throw new Error('scene-graph instance is not a Mesh');
+  const material = instance.material;
+  if (Array.isArray(material) || !isBasicMaterial(material)) {
+    throw new Error('mesh material is not a MeshBasicMaterial');
+  }
+  return material;
+}
+
 describe('Sprite2D parser parity', () => {
   it('self_modulate defaults to white opaque', () => {
     expect(parseSprite2D(heading, {}).self_modulate).toEqual({ r: 1, g: 1, b: 1, a: 1 });
@@ -61,13 +84,13 @@ describe('Sprite2D parser parity', () => {
 describe('Sprite2D render parity', () => {
   it('modulate is converted sRGB→linear before reaching the material', async () => {
     const r = await render(node({ modulate: 'Color(0.5, 0.5, 0.5, 1)' }));
-    const color = (r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial).color;
+    const color = basicMaterial(r.scene.findByType('Mesh').instance).color;
     expect(color.r).toBeCloseTo(srgbToLinear(0.5), 4); // ≈ 0.214, not 0.5
   });
 
   it('self_modulate multiplies onto own pixels', async () => {
     const r = await render(node({ self_modulate: 'Color(0, 0, 0, 1)' }));
-    const color = (r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial).color;
+    const color = basicMaterial(r.scene.findByType('Mesh').instance).color;
     expect(color.r).toBeCloseTo(0, 5);
   });
 
@@ -76,8 +99,8 @@ describe('Sprite2D render parity', () => {
     const parent = node({ self_modulate: 'Color(0, 0, 0, 1)' }, [child]);
     const r = await render(parent);
     const meshes = r.scene.findAllByType('Mesh');
-    const parentColor = (meshes[0]!.instance.material as THREE.MeshBasicMaterial).color;
-    const childColor = (meshes[1]!.instance.material as THREE.MeshBasicMaterial).color;
+    const parentColor = basicMaterial(meshes[0]!.instance).color;
+    const childColor = basicMaterial(meshes[1]!.instance).color;
     expect(parentColor.r).toBeCloseTo(0, 5); // parent's own pixels darkened
     expect(childColor.r).toBeCloseTo(1, 5); // child unaffected by parent self_modulate
   });

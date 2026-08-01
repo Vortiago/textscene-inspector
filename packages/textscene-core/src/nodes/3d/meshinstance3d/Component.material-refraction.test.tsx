@@ -78,7 +78,7 @@ describe('<MeshInstance3D> refraction material (WI-69)', () => {
 
     const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = physical[0]!.instance as THREE.MeshPhysicalMaterial;
+    const material = physical[0]!.instance as THREE.Object3D & THREE.MeshPhysicalMaterial;
     expect(material.transmission).toBeCloseTo(1, 5);
     expect(material.thickness).toBeCloseTo(0.2, 5);
     // ior is left unset so it stays at three's MeshPhysicalMaterial glass

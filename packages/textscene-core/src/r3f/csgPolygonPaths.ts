@@ -26,7 +26,7 @@ import type { CSGPolygon3DProperties } from '../nodes/3d/csg/csgpolygon3d/types.
 import type { Path3DProperties } from '../nodes/paths/path3d/types.js';
 import { joinPath, resolveNodePathLiteral } from '../utils/nodePath.js';
 import { findSubResource, parseResourceReference } from '../resources/SubResourceResolver.js';
-import { parseCurve3DPoints } from '../resources/shapes/curve3d.js';
+import { parseCurve3DPoints } from '../resources/curves/curve3d/index.js';
 import { globalMatrix3D, matrixToTransform3D } from './nodeTreeTransforms.js';
 import { warn } from '../logger.js';
 

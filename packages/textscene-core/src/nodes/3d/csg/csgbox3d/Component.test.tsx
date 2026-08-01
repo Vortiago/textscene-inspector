@@ -35,7 +35,7 @@ describe('<CSGBox3D>', () => {
   // boxGeometry.test.ts.
   it('builds a box of the requested size, centred on the origin', async () => {
     const renderer = await render(makeNode({ size: { x: 3, y: 0.2, z: 12 } }));
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     geom.computeBoundingBox();
     const b = geom.boundingBox!;
     expect(b.max.x - b.min.x).toBeCloseTo(3, 5);

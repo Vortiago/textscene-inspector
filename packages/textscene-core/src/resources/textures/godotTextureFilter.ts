@@ -1,6 +1,10 @@
 /**
  * Godot's `BaseMaterial3D.texture_filter` → three.js sampler state.
  *
+ * NOT A RESOURCE SLICE (ADR-0031): a parity TABLE plus the appliers over it,
+ * shared by every material slice's renderer. It claims no type name and decodes
+ * no serialization — the material slices decode the ordinal and pass it here.
+ *
  * Godot allocates one sampler per filter mode in
  * `MaterialStorage::samplers_rd_allocate`. Its `min_filter` there is the
  * WITHIN-level filter and `mip_filter` the BETWEEN-level one; three fuses both

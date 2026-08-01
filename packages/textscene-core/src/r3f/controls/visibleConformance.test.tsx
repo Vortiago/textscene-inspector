@@ -25,7 +25,7 @@ function parseHiddenNode(type: string): TscnNode {
   const scene = new TscnParser().parse(
     `[gd_scene format=3]\n\n[node name="Probe" type="${type}"]\nvisible = false\n`
   );
-  return scene.nodes[0];
+  return scene.nodes[0]!;
 }
 
 describe('Control visibility conformance', () => {

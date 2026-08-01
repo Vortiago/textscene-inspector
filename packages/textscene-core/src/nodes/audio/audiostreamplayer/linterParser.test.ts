@@ -67,8 +67,8 @@ stream = "res://sound.ogg"
 
       const diagnostics = linter.lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0].message).toContain('stream');
-      expect(diagnostics[0].message).toContain('resource reference');
+      expect(diagnostics[0]!.message).toContain('stream');
+      expect(diagnostics[0]!.message).toContain('resource reference');
     });
   });
 
@@ -96,8 +96,8 @@ volume_db = loud
 
       const diagnostics = linter.lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0].message).toContain('volume_db');
-      expect(diagnostics[0].message).toContain('must be a number');
+      expect(diagnostics[0]!.message).toContain('volume_db');
+      expect(diagnostics[0]!.message).toContain('must be a number');
     });
   });
 
@@ -125,8 +125,8 @@ pitch_scale = 0
 
       const diagnostics = linter.lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0].message).toContain('pitch_scale');
-      expect(diagnostics[0].message).toContain('greater than 0');
+      expect(diagnostics[0]!.message).toContain('pitch_scale');
+      expect(diagnostics[0]!.message).toContain('greater than 0');
     });
 
     it('should reject negative pitch_scale', () => {
@@ -138,8 +138,8 @@ pitch_scale = -1.0
 
       const diagnostics = linter.lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0].message).toContain('pitch_scale');
-      expect(diagnostics[0].message).toContain('greater than 0');
+      expect(diagnostics[0]!.message).toContain('pitch_scale');
+      expect(diagnostics[0]!.message).toContain('greater than 0');
     });
 
     it('should reject non-numeric pitch_scale', () => {
@@ -151,8 +151,8 @@ pitch_scale = fast
 
       const diagnostics = linter.lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0].message).toContain('pitch_scale');
-      expect(diagnostics[0].message).toContain('must be a number');
+      expect(diagnostics[0]!.message).toContain('pitch_scale');
+      expect(diagnostics[0]!.message).toContain('must be a number');
     });
   });
 
@@ -180,8 +180,8 @@ autoplay = 1
 
       const diagnostics = linter.lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0].message).toContain('autoplay');
-      expect(diagnostics[0].message).toContain('boolean');
+      expect(diagnostics[0]!.message).toContain('autoplay');
+      expect(diagnostics[0]!.message).toContain('boolean');
     });
   });
 
@@ -209,8 +209,8 @@ stream_paused = yes
 
       const diagnostics = linter.lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0].message).toContain('stream_paused');
-      expect(diagnostics[0].message).toContain('boolean');
+      expect(diagnostics[0]!.message).toContain('stream_paused');
+      expect(diagnostics[0]!.message).toContain('boolean');
     });
   });
 
@@ -238,8 +238,8 @@ max_polyphony = 0
 
       const diagnostics = linter.lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0].message).toContain('max_polyphony');
-      expect(diagnostics[0].message).toContain('>= 1');
+      expect(diagnostics[0]!.message).toContain('max_polyphony');
+      expect(diagnostics[0]!.message).toContain('>= 1');
     });
 
     it('should reject non-numeric max_polyphony', () => {
@@ -251,8 +251,8 @@ max_polyphony = many
 
       const diagnostics = linter.lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0].message).toContain('max_polyphony');
-      expect(diagnostics[0].message).toContain('must be a number');
+      expect(diagnostics[0]!.message).toContain('max_polyphony');
+      expect(diagnostics[0]!.message).toContain('must be a number');
     });
   });
 
@@ -279,8 +279,8 @@ playing = yes
 
       const diagnostics = linter.lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0].message).toContain('playing');
-      expect(diagnostics[0].message).toContain('boolean');
+      expect(diagnostics[0]!.message).toContain('playing');
+      expect(diagnostics[0]!.message).toContain('boolean');
     });
   });
 
@@ -316,8 +316,8 @@ bus = Master
 
       const diagnostics = linter.lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0].message).toContain('bus');
-      expect(diagnostics[0].message).toContain('must be a string');
+      expect(diagnostics[0]!.message).toContain('bus');
+      expect(diagnostics[0]!.message).toContain('must be a string');
     });
   });
 });

@@ -62,8 +62,8 @@ function navNode(): TscnNode {
   };
 }
 
-async function render(showNavigation: boolean) {
-  const loader = makeLoaderWith('res://nav_polygon.tres', NAVPOLY_TRES);
+async function render(showNavigation: boolean, tres: ParsedResource = NAVPOLY_TRES) {
+  const loader = makeLoaderWith('res://nav_polygon.tres', tres);
   const renderer = await ReactThreeTestRenderer.create(
     <ViewportModeProvider initialShowNavigation={showNavigation}>
       <ResourceLoaderProvider loader={loader}>
@@ -82,7 +82,7 @@ describe('<NavigationRegion2D>', () => {
     const renderer = await render(true);
     const overlay = renderer.scene
       .findAllByType('Mesh')
-      .map((m) => m.instance.material as THREE.MeshBasicMaterial)
+      .map((m) => (m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
       .find((mat) => mat?.transparent && mat.color?.getHex() === NAV_OVERLAY_COLOR);
     expect(overlay).toBeDefined();
     expect(renderer.scene.findAllByType('LineSegments').length).toBeGreaterThan(0);
@@ -91,5 +91,15 @@ describe('<NavigationRegion2D>', () => {
   it('hides the overlay when showNavigation is off', async () => {
     const renderer = await render(false);
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('draws nothing when the polygon is unreadable, instead of faulting the render', async () => {
+    // The decode totalizes what used to throw straight out of a render pass.
+    const renderer = await render(true, {
+      ...NAVPOLY_TRES,
+      properties: { vertices: 'PackedVector2Array(0, oops)', polygons: '[PackedInt32Array(0, 1, 2)]' },
+    });
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 });

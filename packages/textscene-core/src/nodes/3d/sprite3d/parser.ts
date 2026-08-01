@@ -18,17 +18,11 @@ import {
   enumOr,
   floatOr,
   intOr,
+  parseOptionalRect2,
   parseOptionalVector2i,
   vec2Or,
 } from '../../../parser/valueParsers';
-import { warn } from '../../../logger';
-import {
-  AlphaCutMode,
-  AxisMode,
-  BillboardMode,
-  type Rect2,
-  type Sprite3DProperties,
-} from './types';
+import { AlphaCutMode, AxisMode, BillboardMode, type Sprite3DProperties } from './types';
 
 export function parseSprite3D(
   heading: ParsedHeading,
@@ -80,28 +74,9 @@ export function parseSprite3D(
   }
 
   if (properties.region_rect) {
-    const rect = parseRect2(properties.region_rect);
+    const rect = parseOptionalRect2(properties.region_rect, 'Sprite3D region_rect');
     if (rect) result.region_rect = rect;
   }
 
   return result;
-}
-
-/**
- * Parse Rect2(x, y, w, h) — float-valued rectangle.
- */
-function parseRect2(value: string): Rect2 | null {
-  const match = value.match(
-    /^Rect2\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/
-  );
-  if (!match || !match[1] || !match[2] || !match[3] || !match[4]) {
-    warn(`Sprite3D: invalid region_rect Rect2 "${value}"`);
-    return null;
-  }
-  return {
-    x: parseFloat(match[1]),
-    y: parseFloat(match[2]),
-    width: parseFloat(match[3]),
-    height: parseFloat(match[4]),
-  };
 }

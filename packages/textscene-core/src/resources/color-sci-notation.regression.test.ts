@@ -18,7 +18,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { parseColor } from './materials/standardmaterial3d/parser';
-import { parseEnvironment } from './environment/parser';
+import { decodeEnvironment } from './environment/decode';
 import { validatorRegistry } from '../linter/ValidatorRegistry';
 import './environment/linterValidators';
 import './materials/standardmaterial3d/linterValidators';
@@ -31,8 +31,8 @@ describe('#141 scientific-notation color channels', () => {
     expect(parseColor(MAT_SCI)).toEqual({ r: 1.8771e-6, g: 0.751954, b: 0.25936, a: 1 });
   });
 
-  it('Environment parseEnvironment decodes a sci-notation background_color (does not throw)', () => {
-    expect(parseEnvironment({ background_color: ENV_SCI }).background_color).toEqual({
+  it('Environment decodeEnvironment decodes a sci-notation background_color (does not throw)', () => {
+    expect(decodeEnvironment({ background_color: ENV_SCI }).background_color).toEqual({
       r: 1.01075e-6,
       g: 0,
       b: 0.451248,

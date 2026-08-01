@@ -1,13 +1,18 @@
 /**
- * Factory for creating texture processors.
- * Uses createResourceProcessor with texture-specific processing logic.
+ * Factory for creating texture processors — the image slice's loader-facing
+ * adapter (`resources/formats/image/`, ADR-0031). Stays here because the
+ * `ResourceLoader` constructs it alongside its peer factories.
  */
 
 import * as THREE from 'three';
 import type { FileEventBus } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import { createTextureFromBuffer, getMimeType, isTexturePath } from '../processing/textureProcessing';
+import {
+  createTextureFromBuffer,
+  getMimeType,
+  isTexturePath,
+} from '../formats/image/textureProcessing';
 
 /**
  * Create a texture processor that handles loading and caching textures.

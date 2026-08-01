@@ -52,6 +52,15 @@ Scaffold: `pnpm new:node <TypeName> <category-dir> [--base node3d|node2d] [--lin
 (creates the `unit-*.tscn` fixture + aggregation imports). Conformance tests
 (barrelCompleteness, reactFree, ruleCoverage) fail on a mis-wired slice.
 
+Resource types: `packages/textscene-core/src/resources/<category>/<type>/`
+(**Resource slice**, ADR-0031) — `index.ts` (registration via
+`registerResourceSlice`, THREE-free, wired into `resources/sliceRegistrations.ts`)
+· `decode.ts` (pure: property bag → typed Data; `decode<Type>` naming) ·
+`build.ts` only where THREE construction exists · `types.ts` · co-located tests
+incl. a registration test. Foreign formats (`resources/formats/`) declare their
+real parser instead of the decode/build split. Conformance:
+`resourceSliceConformance` + `resourceSliceIsolation` fail on a mis-shaped slice.
+
 ## Conventions
 
 - Two parsers, one scanning loop (`TscnParserCore`, `ParseObserver` seam): lenient

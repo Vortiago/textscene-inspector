@@ -11,7 +11,7 @@
  *   16a — cast_shadow=2 → material.shadowSide === DoubleSide
  *   16b — cast_shadow=3 → castShadow === true, colour write suppressed
  *   38a — ao_texture → material.aoMap is a THREE.Texture
- *   59a — PrismMesh rotateY(π/6) aligns triangular face with +X
+ *   59a — PrismMesh apex placed by left_to_right atop the size box, extruded along Z
  *   60  — PlaneMesh flip_faces=true → mirrored geometry (negative scale on X axis)
  *   66a — Camera3D h_offset → position shifted along local X
  *   66b — Camera3D v_offset → position shifted along local Y
@@ -38,7 +38,7 @@ import {
   KeepAspectMode,
 } from '../../nodes/3d/camera3d/types';
 import type { Label3DProperties } from '../../nodes/3d/label3d/types';
-import { BillboardMode } from '../../nodes/3d/label3d/types';
+import { BillboardMode, HorizontalAlignment } from '../../nodes/3d/label3d/types';
 
 function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
   return {
@@ -99,12 +99,9 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         />
       </SceneResourcesProvider>
     );
-    const mesh = renderer.scene.findByType('Mesh').instance as {
-      castShadow: boolean;
-      material: { shadowSide: THREE.Side };
-    };
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     expect(mesh.castShadow).toBe(true);
-    expect(mesh.material.shadowSide).toBe(THREE.DoubleSide);
+    expect((mesh.material as { shadowSide: THREE.Side }).shadowSide).toBe(THREE.DoubleSide);
   });
 
   it('audit slot 16b — cast_shadow=3 (SHADOWS_ONLY) → still casts, draws no colour', async () => {
@@ -124,18 +121,14 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         />
       </SceneResourcesProvider>
     );
-    const mesh = renderer.scene.findByType('Mesh').instance as {
-      castShadow: boolean;
-      visible: boolean;
-      material: { colorWrite: boolean };
-    };
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     expect(mesh.castShadow).toBe(true);
     // NOT `visible = false`: three's shadow pass bails on an invisible object
     // and stops walking its subtree, so that spelling cost both the shadow and
     // every descendant. Suppressing the colour write leaves both intact — see
     // meshinstance3d/Component.shadows-only.test.tsx.
     expect(mesh.visible).toBe(true);
-    expect(mesh.material.colorWrite).toBe(false);
+    expect((mesh.material as { colorWrite: boolean }).colorWrite).toBe(false);
   });
 
   it('audit slot 38a — ao_texture loaded → material.aoMap is a THREE.Texture', async () => {
@@ -163,7 +156,8 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshStandardMaterial;
     expect(mat.aoMap).toBeInstanceOf(THREE.Texture);
   });
 
@@ -194,7 +188,13 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     expect(pos.getX(0)).toBeLessThan(0);
   });
 
-  it('audit slot 59a — PrismMesh geometry rotated by π/6 around Y', async () => {
+  it('audit slot 59a — PrismMesh fills its size box with the apex placed by left_to_right', async () => {
+    // The real port (primitive_meshes.cpp PrismMesh::_create_mesh_array): a
+    // triangular cross-section in the XY plane — apex on top, its X placed by
+    // left_to_right (default 0.5 = centred) — extruded along Z, filling the
+    // size box exactly. The retired approximation was a 3-segment cylinder
+    // rotated π/6, inscribed in a circle and extruded along Y; this pin is
+    // what replaced that contract.
     const renderer = await renderMesh(
       { albedo_color: 'Color(1, 1, 1, 1)' },
       'PrismMesh',
@@ -202,52 +202,34 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const pos = mesh.geometry.attributes.position!;
-    // CylinderGeometry(r=1, r=1, h=2, segments=3) places side-wall
-    // vertices at azimuths {0, 2π/3, 4π/3}. After `geom.rotateY(π/6)`,
-    // those become {π/6, 5π/6, 9π/6}. Collect all unique radial
-    // azimuths (rounded) at radius ≈ 1 and confirm they match the
-    // rotated set rather than the un-rotated set.
-    // Bucket every vertex's azimuth (atan2 over the XZ plane), filtering
-    // out cap-center verts which live on the Y axis (r ≈ 0). The remaining
-    // vertices are the three triangle corners — at rotated azimuths
-    // {30°, 150°, 270°}. We use a generous radius filter (anything with
-    // r > 0.1) so the test stays robust against subdivision sampling.
-    const azimuths = new Set<string>();
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    let minZ = Infinity;
+    let maxZ = -Infinity;
     for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const z = pos.getZ(i);
-      const r = Math.sqrt(x * x + z * z);
-      if (r < 0.1) continue;
-      const theta = (Math.atan2(z, x) + 2 * Math.PI) % (2 * Math.PI);
-      const bucket = Math.round((theta * 180) / Math.PI / 5) * 5;
-      // Normalise the 360° wrap-closing duplicate to 0° so a vertex at
-      // exactly 360° shows up as 0° in the set (and is correctly
-      // flagged as the unrotated reference).
-      azimuths.add((bucket % 360).toString());
+      minX = Math.min(minX, pos.getX(i));
+      maxX = Math.max(maxX, pos.getX(i));
+      minY = Math.min(minY, pos.getY(i));
+      maxY = Math.max(maxY, pos.getY(i));
+      minZ = Math.min(minZ, pos.getZ(i));
+      maxZ = Math.max(maxZ, pos.getZ(i));
     }
-    // Build a baseline CylinderGeometry with the same args BUT without
-    // the rotation, and capture its azimuths. The PrismMeshGeometry's
-    // output should be the baseline rotated by π/6 — i.e. each baseline
-    // azimuth A maps to A + 30° (mod 360°) in the rendered geometry.
-    const baseline = new THREE.CylinderGeometry(1, 1, 2, 3, 1, false);
-    const baselineAzimuths = new Set<string>();
-    const basePos = baseline.attributes.position!;
-    for (let i = 0; i < basePos.count; i++) {
-      const x = basePos.getX(i);
-      const z = basePos.getZ(i);
-      const r = Math.sqrt(x * x + z * z);
-      if (r < 0.1) continue;
-      const theta = (Math.atan2(z, x) + 2 * Math.PI) % (2 * Math.PI);
-      const bucket = Math.round((theta * 180) / Math.PI / 5) * 5;
-      baselineAzimuths.add((bucket % 360).toString());
+    // Fills the size box on every axis (the approximation inscribed a circle,
+    // so its X/Z extent fell short of ±1).
+    expect(minX).toBeCloseTo(-1, 5);
+    expect(maxX).toBeCloseTo(1, 5);
+    expect(minY).toBeCloseTo(-1, 5);
+    expect(maxY).toBeCloseTo(1, 5);
+    expect(minZ).toBeCloseTo(-1, 5);
+    expect(maxZ).toBeCloseTo(1, 5);
+    // Every top-row vertex sits at the apex X: left_to_right 0.5 centres it.
+    for (let i = 0; i < pos.count; i++) {
+      if (Math.abs(pos.getY(i) - maxY) < 1e-5) {
+        expect(pos.getX(i)).toBeCloseTo(0, 5);
+      }
     }
-    baseline.dispose();
-    // Every baseline azimuth must NOT appear in the rotated set.
-    for (const a of baselineAzimuths) {
-      expect(azimuths.has(a)).toBe(false);
-    }
-    // The rotated set must have at least one entry; baseline disturbed.
-    expect(azimuths.size).toBeGreaterThan(0);
   });
 
   it('audit slot 66a — Camera3D h_offset shifts position along local X', async () => {
@@ -377,15 +359,16 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         />
       </SceneResourcesProvider>
     );
-    const mesh = renderer.scene.findByType('Mesh').instance as {
-      material: Array<{ color: { r: number; g: number } }>;
-    };
-    expect(Array.isArray(mesh.material)).toBe(true);
-    expect(mesh.material).toHaveLength(2);
-    expect(mesh.material[0]!.color.r).toBe(1);
-    expect(mesh.material[0]!.color.g).toBe(0);
-    expect(mesh.material[1]!.color.r).toBe(0);
-    expect(mesh.material[1]!.color.g).toBe(1);
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const surfaceMaterials = mesh.material as unknown as Array<{
+      color: { r: number; g: number };
+    }>;
+    expect(Array.isArray(surfaceMaterials)).toBe(true);
+    expect(surfaceMaterials).toHaveLength(2);
+    expect(surfaceMaterials[0]!.color.r).toBe(1);
+    expect(surfaceMaterials[0]!.color.g).toBe(0);
+    expect(surfaceMaterials[1]!.color.r).toBe(0);
+    expect(surfaceMaterials[1]!.color.g).toBe(1);
   });
 
   it('audit slot 93a — Label3D billboard=ENABLED → mesh.userData.billboardMode set + useFrame copies camera.quaternion', async () => {
@@ -411,6 +394,11 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       modulate: { r: 1, g: 1, b: 1, a: 1 },
       outline_size: 0,
       outline_modulate: { r: 0, g: 0, b: 0, a: 1 },
+      double_sided: true,
+      font_size: 32,
+      line_spacing: 0,
+      horizontal_alignment: HorizontalAlignment.CENTER,
+      no_depth_test: false,
     };
     const node: TscnNode = { name: 'L', type: 'Label3D', children: [], properties: props };
 

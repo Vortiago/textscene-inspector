@@ -121,7 +121,7 @@ describe('ShadowCasterStage', () => {
     expect(casters).toHaveLength(1);
     // Local (0,0)–(10,0) placed at (100,-50): the flatten drops the z and pairs
     // the points as `[ax,ay, bx,by]`.
-    expect([...casters[0]!.segments]).toEqual([100, -50, 110, -50]);
+    expect(Array.from(casters[0]!.segments)).toEqual([100, -50, 110, -50]);
   });
 
   it('hands back the SAME array while nothing moves', async () => {
@@ -142,7 +142,7 @@ describe('ShadowCasterStage', () => {
     await frames(renderer, 2);
     const after = seen.at(-1)!;
     expect(after).not.toBe(before);
-    expect([...after[0]!.segments]).toEqual([7, 0, 17, 0]);
+    expect(Array.from(after[0]!.segments)).toEqual([7, 0, 17, 0]);
   });
 
   it('drops an occluder hidden by an ancestor', async () => {

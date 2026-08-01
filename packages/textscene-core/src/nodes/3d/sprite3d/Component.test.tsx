@@ -51,6 +51,11 @@ function makeNode(overrides: Partial<Sprite3DProperties> = {}): TscnNode {
     vframes: 1,
     frame: 0,
     offset: { x: 0, y: 0 },
+    centered: true,
+    flip_h: false,
+    flip_v: false,
+    double_sided: true,
+    transparent: true,
     region_enabled: false,
     modulate: { r: 1, g: 1, b: 1, a: 1 },
     render_priority: 0,
@@ -90,7 +95,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
     const mesh = renderer.scene.findByType('Mesh');
-    const mat = mesh.instance.material as THREE.MeshBasicMaterial;
+    const mat = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(mat.map).toBeInstanceOf(THREE.Texture);
   });
 
@@ -104,7 +109,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     // Placeholder uses a magenta meshBasicMaterial; search for it.
     const meshes = renderer.scene.findAllByType('Mesh');
     const placeholder = meshes.find((m) => {
-      const mat = m.instance.material as THREE.MeshBasicMaterial;
+      const mat = (m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
       return mat.color.r === 1 && mat.color.g === 0 && mat.color.b === 1;
     });
     expect(group).toBeDefined();
@@ -135,7 +140,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as unknown as {
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
       parameters: { width: number; height: number };
     };
     // 200 px × 0.01 = 2 world units wide; 100 px × 0.01 = 1 world unit tall.
@@ -153,7 +158,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     // Godot modulate is sRGB → converted to the linear working space: 1→1, 0→0,
     // 0.5→~0.214 (IEC 61966-2-1 inverse transfer).
     expect(mat.color.r).toBeCloseTo(1, 3);
@@ -172,7 +177,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     // opacity = clamp01(0.8 * (1 - 0.5)) = 0.4
     expect(mat.opacity).toBeCloseTo(0.4, 5);
     expect(mat.transparent).toBe(true);
@@ -191,14 +196,14 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
     const mesh = renderer.scene.findByType('Mesh');
-    const mat = mesh.instance.material as THREE.MeshBasicMaterial;
+    const mat = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(mat.map?.repeat.x).toBeCloseTo(0.5, 5);
     expect(mat.map?.repeat.y).toBeCloseTo(0.5, 5);
     // Y-flip: offset.y = 1 - (25 + 50) / 100 = 0.25
     expect(mat.map?.offset.x).toBeCloseTo(0.25, 5);
     expect(mat.map?.offset.y).toBeCloseTo(0.25, 5);
     // Quad sized to the sub-region.
-    const geom = mesh.instance.geometry as unknown as { parameters: { width: number; height: number } };
+    const geom = (mesh.instance as THREE.Mesh).geometry as unknown as { parameters: { width: number; height: number } };
     expect(geom.parameters.width).toBeCloseTo(0.5, 5);
     expect(geom.parameters.height).toBeCloseTo(0.5, 5);
   });
@@ -215,7 +220,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     // repeat = (1/4, 1/2); offset for top-left = (0, 1 - 1/2) = (0, 0.5)
     expect(mat.map?.repeat.x).toBeCloseTo(0.25, 5);
     expect(mat.map?.repeat.y).toBeCloseTo(0.5, 5);
@@ -235,7 +240,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     // frame=5 → col = 5%4 = 1, row = floor(5/4) = 1
     // offset = (1/4, 1 - (1+1)/2) = (0.25, 0)
     expect(mat.map?.offset.x).toBeCloseTo(0.25, 5);
@@ -255,7 +260,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     // col=2, row=0 → offset = (2/3, 1 - 1/1) = (0.6667, 0)
     expect(mat.map?.offset.x).toBeCloseTo(2 / 3, 5);
     expect(mat.map?.offset.y).toBeCloseTo(0, 5);
@@ -271,7 +276,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(mat.alphaTest).toBeGreaterThan(0);
     expect(mat.depthWrite).toBe(true);
   });

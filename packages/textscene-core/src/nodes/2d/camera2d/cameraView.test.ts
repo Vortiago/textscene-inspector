@@ -3,19 +3,24 @@
  * canvas pixels and the magnification, honoring anchor_mode and offset.
  */
 import { describe, it, expect } from 'vitest';
-import { camera2DView } from './cameraView';
+import { camera2DView, type Camera2DTag } from './cameraView';
 import { Camera2DAnchorMode } from './types';
 
 const VIEWPORT = { x: 1152, y: 648 };
 
-function props(overrides: Record<string, unknown> = {}) {
+function props(overrides: Partial<Camera2DTag> = {}): Camera2DTag {
   return {
     zoom: { x: 2, y: 2 },
     offset: { x: 0, y: 0 },
     anchor_mode: Camera2DAnchorMode.DRAG_CENTER,
+    limitLeft: -10000000,
+    limitTop: -10000000,
+    limitRight: 10000000,
+    limitBottom: 10000000,
+    limitEnabled: true,
     enabled: true,
     ...overrides,
-  } as Parameters<typeof camera2DView>[0];
+  };
 }
 
 describe('camera2DView', () => {

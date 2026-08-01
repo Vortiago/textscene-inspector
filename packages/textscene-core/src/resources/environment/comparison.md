@@ -23,6 +23,20 @@ green horizon band, ground below — and the sphere and floor it lights match Go
 on this scene), so the lit grass reads the same warm green and the shadow crushes to
 the same near-black as Godot's.
 
+Which white the curve is anchored to is two decisions, both ported. AGX reads
+`tonemap_agx_white` — default 16.29, Blender's AgX white — while every other curve
+reads `tonemap_white`, default 1.0 (`Environment::_update_tonemap`). Godot then FLOORS
+whichever it picked before the shader sees it (`environment_get_white`): 1.0 for LINEAR
+whatever the scene authored, `max(1, white)` for REINHARDT / FILMIC / ACES,
+`max(2, white)` for AGX. SCREEN-blended glow normalises against that same floored
+value, as in Godot. For AgX the white is the shoulder's high-clip point rather than a
+normalisation divisor, so reading the wrong property is invisible below middle grey and
+decisive above it — at a linear input of 1.0 the two defaults differ by 21/255, at 2.0
+by 63/255, and a high clip of 2.0 saturates everything at or above it.
+
+`tonemap_agx_contrast` (default 1.25) is ported too, baked into the curve on both the
+in-material and the glow-composer path so the two cannot draw different AgX.
+
 ## Ambient light + sky reflection
 <!-- compare: image=unit-stage-ambient-ibl status=limitation fixture=unit-stage-ambient-ibl.tscn -->
 
@@ -86,6 +100,6 @@ the pass at all — has to use the same exposed values or it disagrees with the 
 - **Volumetric fog** — screen-space fog (`fog_enabled`) maps to `THREE.FogExp2` and is supported; volumetric fog (`volumetric_fog_*`) has no three.js equivalent and is intentionally not approximated.
 - **tonemap_exposure under LINEAR** — three emits the exposure uniform only when a tonemapper is active, so an exposure set under the default LINEAR tonemapper is ignored (faithful at the 1.0 default).
 - **Switching tone curves at runtime** — three's program cache keys on the tonemapping enum, not the ported chunk text, so a second Environment with a different curve reaching live materials (a hot-reload edit, or a late-loading instanced WorldEnvironment) keeps rendering with the first curve.
-- **AGX contrast** — the AgX curve contrast is fixed at Godot 4.6.3's built-in 1.25 (the engine exposes no per-Environment setter in this version); the ~2/255 residual on the controlled fixture is GPU float precision.
+- **AGX residual** — the curve, its white and its contrast are all ported; the residual on the controlled AgX fixture is GPU float precision, pending a re-measure of its magnitude against the ported white.
 - **glow_map** — Godot modulates the glow buffer by a screen-stretched "lens dirt" texture at `glow_map_strength`. The strength is parsed and validated, but the map itself is not resolved, so a scene supplying one gets unmodulated glow. Godot zeroes the strength when no map is set, which is every scene in the corpus.
 - **Glow blur kernel** — Godot ships two glow implementations that filter differently, and the one it runs depends on the GPU: the raster path box-samples four bilinear taps per 4x4 block, while the compute path (taken whenever storage buffers are supported, so on every desktop target) uses a separable gaussian. The chain here uses a 13-tap downsample with a 9-tap tent upsample, which measures closer than porting the raster gather did — that change moved the REPLACE fixture, which shows the glow buffer with nothing underneath it, from exact to 0.1% off. The per-level weighting and the pyramid's resolution are ported exactly, and those are what set the halo's shape and size.

@@ -9,8 +9,8 @@
 import { useMemo } from 'react';
 import type { ParsedResource } from '../parser/parsedResource';
 import { resolveExtResourcePath } from '../resources/SubResourceResolver';
-import { meshLibraryFromTres } from '../resources/meshlibrary/resolveMeshLibrary';
-import type { MeshLibraryModel } from '../resources/meshlibrary/meshLibraryModel';
+import { meshLibraryFromTres } from '../resources/meshlibrary/decode';
+import type { MeshLibraryModel } from '../resources/meshlibrary/types';
 import { useResource } from '../resources/useResource';
 import { useSceneResources } from './SceneResourcesContext';
 

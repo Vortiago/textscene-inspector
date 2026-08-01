@@ -59,6 +59,35 @@ form.**
   tests; no code outside the loading layer parses a Godot resource serialization or
   value-shape-sniffs a property bag.
 
+## Decisions made during the campaign (amendments)
+
+- **Naming**: a property-bag decoder is `decode<Type>`; leaf value scanners
+  (`tessellateCurve3D`, `parseCurve3DPoints`, `parseAtlasRegion`) keep `parse*`
+  names — they read one literal, not a bag.
+- **Bus tags are the cached-artifact kinds** (`texture` `material` `scene`
+  `glb` `resource` `arraymesh`); many Godot-text types share the generic
+  `resource` slot (a ParsedResource) and give it meaning in their own decode.
+  `busType: null` marks a claimed type the loader never serves
+  (`ViewportTexture` resolves by NodePath); such a slice carries no `decode.ts`
+  because no ParsedResource section ever reaches it.
+- **Family-helper registration** (the nine collision shapes, the eight
+  primitive meshes) keeps its claims table in the helper's co-located test —
+  one table per family, accepted by the conformance guard.
+- **Routing fixes shipped by claims**: `CanvasItemMaterial`, the three sky
+  materials (previously substring-routed to the material bus, which throws),
+  and Environment/SpriteFrames/Navigation* (previously unroutable on
+  `provideFile`). `StyleBoxTexture` is deliberately unclaimed — no decode
+  exists, and a claim is a promise of one; it now takes the null-route
+  fallback instead of failing inside the image decoder.
+- **Premultiplied alpha**: Godot's PREMULT blend mode programs blend
+  attachments only; three's `premultipliedAlpha` flag adds an in-shader
+  `rgb *= a` Godot does not have, so both renderers keep it OFF and carry the
+  ported factors.
+- **AgX tonemapping** reads `tonemap_agx_white` (default 16.29) per
+  `Environment::_update_tonemap`, and `tonemap_agx_contrast` is threaded
+  through both tonemap paths (in-material chunk and glow composer) so the
+  two bake one curve.
+
 ## Consequences
 
 - Adding a resource type means adding one slice folder and registering it — the

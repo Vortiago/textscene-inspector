@@ -41,7 +41,7 @@ function gridMapNode(properties: Record<string, string>): TscnNode {
 function placeholderCells(renderer: Awaited<ReturnType<typeof render>>) {
   return renderer.scene
     .findAllByType('Mesh')
-    .filter((m) => (m.instance.material as THREE.MeshBasicMaterial)?.wireframe);
+    .filter((m) => ((m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)?.wireframe);
 }
 
 function render(node: TscnNode, children?: ReactNode) {

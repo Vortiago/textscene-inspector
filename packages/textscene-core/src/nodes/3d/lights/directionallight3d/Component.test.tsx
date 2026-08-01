@@ -28,7 +28,7 @@ describe('<DirectionalLight3D>', () => {
       <DirectionalLight3D node={makeNode({ light_energy: 2 })} />
     );
     const light = renderer.scene.findByType('DirectionalLight');
-    expect((light.instance as { intensity: number }).intensity).toBe(2 * LIGHT_INTENSITY_SCALE);
+    expect((light.instance as THREE.DirectionalLight).intensity).toBe(2 * LIGHT_INTENSITY_SCALE);
   });
 
   it('parses light_color hex', async () => {
@@ -36,7 +36,7 @@ describe('<DirectionalLight3D>', () => {
       <DirectionalLight3D node={makeNode({ light_color: 'Color(1, 0, 0, 1)' })} />
     );
     const light = renderer.scene.findByType('DirectionalLight');
-    expect((light.instance as { color: { getHex(): number } }).color.getHex()).toBe(0xff0000);
+    expect((light.instance as THREE.DirectionalLight).color.getHex()).toBe(0xff0000);
   });
 
   it('enables castShadow when shadow_enabled is true', async () => {
@@ -44,7 +44,7 @@ describe('<DirectionalLight3D>', () => {
       <DirectionalLight3D node={makeNode({ shadow_enabled: true })} />
     );
     const light = renderer.scene.findByType('DirectionalLight');
-    expect((light.instance as { castShadow: boolean }).castShadow).toBe(true);
+    expect((light.instance as THREE.DirectionalLight).castShadow).toBe(true);
   });
 
   it('positions light group at transform origin', async () => {
@@ -71,8 +71,17 @@ describe('<DirectionalLight3D> shadow frustum', () => {
     // therefore had every caster behind its own near plane and cast nothing.
     const renderer = await ReactThreeTestRenderer.create(
       <DirectionalLight3D
-        node={{ name: 'Sun', type: 'DirectionalLight3D', properties: {}, children: [] } as never}
-        properties={{ light_color: 'Color(1, 1, 1, 1)', light_energy: 1, shadow_enabled: true } as never}
+        node={{
+          name: 'Sun',
+          type: 'DirectionalLight3D',
+          children: [],
+          properties: {
+            name: 'Sun',
+            light_color: 'Color(1, 1, 1, 1)',
+            light_energy: 1,
+            shadow_enabled: true,
+          },
+        }}
       />
     );
     const light = renderer.scene.findByType('DirectionalLight').instance as THREE.DirectionalLight;

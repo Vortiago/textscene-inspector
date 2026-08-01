@@ -14,7 +14,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
-import { parseStandardMaterial3DScalars } from '../materials/standardMaterialScalars';
+import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import { resolveStandardMaterial } from '../materials/resolveStandardMaterial';
 import { StandardMaterialSlot } from '../materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../materials/ExternalMaterialSlot';

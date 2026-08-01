@@ -20,7 +20,7 @@ function node(body = ''): TscnNode {
   const scene = new TscnParser().parse(
     `[gd_scene format=3]\n\n[node name="Box" type="CheckBox"]\n${body}`
   );
-  return scene.nodes[0];
+  return scene.nodes[0]!;
 }
 
 function renderBox(body = '') {

@@ -13,8 +13,8 @@ import * as THREE from 'three';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
-import { decodeArrayMesh } from '../../../resources/meshes/arrayMeshDecode';
-import { buildArrayMeshGeometry } from '../../../resources/meshes/arrayMeshGeometry';
+import { decodeArrayMesh } from '../../../resources/meshes/arraymesh/decode';
+import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
@@ -201,7 +201,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     expect(Number.isFinite(geo!.boundingSphere!.radius)).toBe(true);
     const wireframes = renderer.scene
       .findAllByType('MeshBasicMaterial')
-      .filter((m) => (m.instance as THREE.MeshBasicMaterial).wireframe);
+      .filter((m) => (m.instance as THREE.Object3D & THREE.MeshBasicMaterial).wireframe);
     expect(wireframes).toHaveLength(0);
   });
 
@@ -232,7 +232,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     expect(Number.isFinite(geo!.boundingSphere!.radius)).toBe(true);
     const noWireframe = renderer.scene
       .findAllByType('MeshBasicMaterial')
-      .filter((m) => (m.instance as THREE.MeshBasicMaterial).wireframe);
+      .filter((m) => (m.instance as THREE.Object3D & THREE.MeshBasicMaterial).wireframe);
     expect(noWireframe).toHaveLength(0);
   });
 
@@ -267,7 +267,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
 
     const materials = renderer.scene.findAllByType('MeshStandardMaterial');
     const colours = materials.map((m) =>
-      (m.instance as THREE.MeshStandardMaterial).color.getHex()
+      (m.instance as THREE.Object3D & THREE.MeshStandardMaterial).color.getHex()
     );
     // The material's albedo, not ExternalMaterialSlot's 0xffffff default.
     expect(colours).not.toContain(0xffffff);
@@ -292,7 +292,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
 
     const wireframes = renderer.scene
       .findAllByType('MeshBasicMaterial')
-      .filter((m) => (m.instance as THREE.MeshBasicMaterial).wireframe);
+      .filter((m) => (m.instance as THREE.Object3D & THREE.MeshBasicMaterial).wireframe);
     expect(wireframes.length).toBeGreaterThan(0);
   });
 
@@ -312,7 +312,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
 
     const materials = renderer.scene.findAllByType('MeshBasicMaterial');
     const placeholder = materials.find(
-      (m) => (m.instance as THREE.MeshBasicMaterial).wireframe
+      (m) => (m.instance as THREE.Object3D & THREE.MeshBasicMaterial).wireframe
     );
     expect(placeholder).toBeDefined();
   });

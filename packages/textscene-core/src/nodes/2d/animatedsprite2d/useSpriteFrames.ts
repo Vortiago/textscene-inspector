@@ -13,6 +13,10 @@
  *
  * Mirrors useTileSetModel: hook-call count stays constant by feeding `''` to
  * useResource on the synchronous branch (the documented no-request idiom).
+ *
+ * The hook is the SpriteFrames slice's host adapter: both homes hand the same
+ * property bag to `decodeSpriteFrames`, so the decode never learns which one it
+ * came from (or, once #110 lands, which serialization).
  */
 
 import { useMemo } from 'react';
@@ -25,7 +29,8 @@ import {
   resolveExtResourcePath,
 } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
-import { parseSpriteFramesAnimations, type SpriteFramesAnimation } from './spriteFrames';
+import { decodeSpriteFrames } from '../../../resources/textures/spriteframes/decode';
+import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';
 
 export interface ResolvedSpriteFrames {
   /** animation name → its parsed frames + timing. */
@@ -61,9 +66,16 @@ export function useSpriteFrames(spriteFramesRef: string | undefined): SpriteFram
     // In-scene SubResource — resolve synchronously against the scene's pools.
     if (ref?.type === 'SubResource') {
       const sub = findSubResource(internalResources, ref.id);
-      const animations = parseAnimations((sub?.data as Record<string, unknown> | undefined)?.animations);
-      return animations
-        ? { spriteFrames: { animations, subResources: internalResources, externalResources }, status: 'loaded' }
+      const decoded = sub ? decodeSpriteFrames(sub.data) : null;
+      return decoded
+        ? {
+            spriteFrames: {
+              animations: decoded.animations,
+              subResources: internalResources,
+              externalResources,
+            },
+            status: 'loaded',
+          }
         : EMPTY;
     }
 
@@ -75,11 +87,11 @@ export function useSpriteFrames(spriteFramesRef: string | undefined): SpriteFram
     if (tresResult.status === 'unavailable' || !tresResult.value) return EMPTY;
 
     const file = tresResult.value;
-    const animations = parseAnimations(file.properties.animations);
-    return animations
+    const decoded = decodeSpriteFrames(file.properties);
+    return decoded
       ? {
           spriteFrames: {
-            animations,
+            animations: decoded.animations,
             subResources: file.subResources,
             externalResources: file.extResources,
           },
@@ -87,11 +99,4 @@ export function useSpriteFrames(spriteFramesRef: string | undefined): SpriteFram
         }
       : EMPTY;
   }, [spriteFramesRef, ref?.type, ref?.id, internalResources, externalResources, tresPath, tresResult.status, tresResult.value]);
-}
-
-/** Parse a raw `animations` value into the map, or null when absent/empty. */
-function parseAnimations(value: unknown): Map<string, SpriteFramesAnimation> | null {
-  if (typeof value !== 'string') return null;
-  const map = parseSpriteFramesAnimations(value);
-  return map.size > 0 ? map : null;
 }

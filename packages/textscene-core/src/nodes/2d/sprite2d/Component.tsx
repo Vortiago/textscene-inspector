@@ -30,7 +30,7 @@ import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmate
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
-import { resolveTexture2DPath } from '../../../resources/SubResourceResolver';
+import { resolveTexture2DSource } from '../../../resources/SubResourceResolver';
 import {
   isViewportTextureRef,
   useViewportTextureSlot,
@@ -56,13 +56,14 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   const isViewportSlot = isViewportTextureRef(props.texture, internalResources);
   const viewportTexture = useViewportTextureSlot(props.texture, internalResources);
 
-  const texturePath = useMemo(
+  const resolvedTexture = useMemo(
     () =>
       isViewportSlot
-        ? null
-        : resolveTexture2DPath(props.texture, externalResources, internalResources),
+        ? { path: null }
+        : resolveTexture2DSource(props.texture, externalResources, internalResources),
     [isViewportSlot, props.texture, externalResources, internalResources]
   );
+  const texturePath = resolvedTexture.path;
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
 
   // A driven `frame` overrides the authored `frame` AND any authored
@@ -73,8 +74,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     // 'clamp': the 2D canvas samples with texture-repeat DISABLED, so a
     // region_rect overrunning the texture stretches its edge texels rather
     // than tiling.
-    return composeFrameTexture(texResult.value, frameProps, 'clamp');
-  }, [texResult.value, props, animatedFrame]);
+    return composeFrameTexture(texResult.value, frameProps, 'clamp', resolvedTexture.region);
+  }, [texResult.value, props, animatedFrame, resolvedTexture.region]);
   // composeFrameTexture clones the texture per frame; dispose the prior clone
   // when the frame advances (and on unmount) so playback doesn't leak GPU
   // textures (~one per keyframe otherwise).
@@ -85,8 +86,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // target reports its rect through the same `image` shape a loaded texture
   // uses, so the sizing path is shared.
   const { width, height } = useMemo(
-    () => frameSizePx(viewportTexture ?? texResult.value, props),
-    [viewportTexture, texResult.value, props]
+    () => frameSizePx(viewportTexture ?? texResult.value, props, resolvedTexture.region),
+    [viewportTexture, texResult.value, props, resolvedTexture.region]
   );
 
   // Placeholder when no texture is referenced or it failed to load. A

@@ -20,12 +20,16 @@
  * status explaining why not).
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
-import { resolveTexture2DPath } from './SubResourceResolver.js';
+import { composeFrameTexture } from '../r3f/spriteFrame.js';
+import { resolveTexture2DSource } from './SubResourceResolver.js';
 import { useProceduralTexture } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
+
+/** No frame grid and no authored region — the atlas cell is the whole window. */
+const WHOLE_IMAGE = { region_enabled: false, hframes: 1, vframes: 1, frame: 0 } as const;
 
 export interface Texture2DResult {
   /** The resolved texture, or null while loading / when there is nothing to show. */
@@ -45,14 +49,31 @@ export function useTexture2D(
   // (pinned by the hook while mounted), never disposed.
   const procedural = useProceduralTexture(ref, internalResources);
 
-  const path = useMemo(
-    () => (procedural ? null : resolveTexture2DPath(ref, externalResources, internalResources)),
+  const source = useMemo(
+    () =>
+      procedural
+        ? { path: null }
+        : resolveTexture2DSource(ref, externalResources, internalResources),
     [procedural, ref, externalResources, internalResources]
   );
+  const path = source.path;
   const loaded = useResource<THREE.Texture>(path ?? '', 'Texture2D');
+
+  // An AtlasTexture slot loads the SHEET, so the cell has to be windowed before
+  // the caller sees it — otherwise every such consumer would draw the whole
+  // sprite sheet. The window is a CLONE (the cached texture is shared by every
+  // consumer of that path, the identity-equality contract), so this hook owns it
+  // and disposes it on change/unmount; callers still just receive a texture.
+  const region = source.region;
+  const windowed = useMemo(
+    () => (region ? (composeFrameTexture(loaded.value, WHOLE_IMAGE, 'clamp', region) ?? null) : null),
+    [loaded.value, region]
+  );
+  useEffect(() => () => windowed?.dispose(), [windowed]);
 
   if (procedural) return { texture: procedural, missing: false };
   if (!ref) return { texture: null, missing: false };
   if (!path) return { texture: null, missing: true };
+  if (region) return { texture: windowed, missing: loaded.status === 'unavailable' };
   return { texture: loaded.value ?? null, missing: loaded.status === 'unavailable' };
 }

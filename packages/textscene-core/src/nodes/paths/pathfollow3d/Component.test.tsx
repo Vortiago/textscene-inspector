@@ -16,7 +16,7 @@ import {
   parseCurve3DPoints,
   tessellateCurve3D,
   type Curve3DSampler,
-} from '../../../resources/shapes/curve3d';
+} from '../../../resources/curves/curve3d';
 
 // Straight curve along +X, (0,0,0) → (10,0,0), length 10.
 const STRAIGHT: Curve3DSampler = tessellateCurve3D(

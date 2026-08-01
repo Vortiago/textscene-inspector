@@ -113,6 +113,131 @@ describe('composeFrameTexture', () => {
   });
 });
 
+describe('composeFrameTexture — an AtlasTexture region as the base rect', () => {
+  // Godot's AtlasTexture remaps every draw into its region
+  // (atlas_texture.cpp `get_rect_region`), so the region IS the sprite's
+  // "full image": region_rect coordinates and the frame grid live inside it.
+  const ATLAS = { x: 20, y: 16, width: 40, height: 32 };
+
+  it('windows UVs to the atlas region when the sprite adds nothing', () => {
+    const result = composeFrameTexture(makeTexture(100, 80), baseProps(), 'clamp', ATLAS)!;
+    expect(result.repeat.x).toBeCloseTo(0.4);
+    expect(result.repeat.y).toBeCloseTo(0.4);
+    expect(result.offset.x).toBeCloseTo(0.2);
+    // image-Y 16..48 of 80 → UV-Y offset 1 - 48/80
+    expect(result.offset.y).toBeCloseTo(1 - 48 / 80);
+  });
+
+  it('translates a sprite region_rect by the atlas origin', () => {
+    const result = composeFrameTexture(
+      makeTexture(100, 80),
+      baseProps({ region_enabled: true, region_rect: { x: 10, y: 8, width: 20, height: 16 } }),
+      'clamp',
+      ATLAS
+    )!;
+    // Sheet-space rect: (20+10, 16+8, 20, 16)
+    expect(result.repeat.x).toBeCloseTo(0.2);
+    expect(result.repeat.y).toBeCloseTo(0.2);
+    expect(result.offset.x).toBeCloseTo(0.3);
+    expect(result.offset.y).toBeCloseTo(1 - 40 / 80);
+  });
+
+  it('subdivides the atlas region by the frame grid', () => {
+    const result = composeFrameTexture(
+      makeTexture(100, 80),
+      baseProps({ hframes: 2, vframes: 2, frame: 3 }),
+      'clamp',
+      ATLAS
+    )!;
+    // Quarter of the atlas window, bottom-right frame.
+    expect(result.repeat.x).toBeCloseTo(0.2);
+    expect(result.repeat.y).toBeCloseTo(0.2);
+    expect(result.offset.x).toBeCloseTo(0.2 + 0.2);
+    expect(result.offset.y).toBeCloseTo(1 - 48 / 80);
+  });
+
+  // An AtlasTexture is the ONE texture kind Godot clips an oversized source rect
+  // against: `get_rect_region` intersects it with the cell
+  // (`src_clipped = _get_region_rect().intersection(src)`, atlas_texture.cpp:204)
+  // and draws nothing when that comes back empty. A plain Texture2D is never
+  // clipped — the sibling suite below pins that opposite rule — so an unclipped
+  // atlas sprite bleeds pixels from the neighbouring cell.
+  it('CLIPS a sprite region_rect that overruns its atlas cell', () => {
+    const result = composeFrameTexture(
+      makeTexture(100, 80),
+      // Starts inside the cell, runs 20px past its right edge and 16px past the bottom.
+      baseProps({ region_enabled: true, region_rect: { x: 20, y: 16, width: 40, height: 32 } }),
+      'clamp',
+      ATLAS
+    )!;
+    // Sheet-space rect (40, 32, 40, 32) ∩ cell (20, 16, 40, 32) = (40, 32, 20, 16).
+    expect(result.repeat.x).toBeCloseTo(20 / 100);
+    expect(result.repeat.y).toBeCloseTo(16 / 80);
+    expect(result.offset.x).toBeCloseTo(40 / 100);
+    expect(result.offset.y).toBeCloseTo(1 - 48 / 80);
+  });
+
+  it('draws NOTHING when the sprite region_rect misses the cell entirely', () => {
+    // Godot's get_rect_region returns false for an empty intersection, so the
+    // draw is skipped — not "fall back to the whole cell", which would show a
+    // frame the engine does not.
+    expect(
+      composeFrameTexture(
+        makeTexture(100, 80),
+        baseProps({ region_enabled: true, region_rect: { x: 60, y: 0, width: 20, height: 16 } }),
+        'clamp',
+        ATLAS
+      )
+    ).toBeUndefined();
+  });
+
+  it('leaves a region_rect that fits inside the cell untouched', () => {
+    // The clip must not shrink a legitimate sub-rect (the common case).
+    const result = composeFrameTexture(
+      makeTexture(100, 80),
+      baseProps({ region_enabled: true, region_rect: { x: 4, y: 4, width: 8, height: 8 } }),
+      'clamp',
+      ATLAS
+    )!;
+    expect(result.repeat.x).toBeCloseTo(8 / 100);
+    expect(result.repeat.y).toBeCloseTo(8 / 80);
+    expect(result.offset.x).toBeCloseTo(24 / 100);
+    expect(result.offset.y).toBeCloseTo(1 - 28 / 80);
+  });
+});
+
+describe('frameSizePx — atlas region sizing', () => {
+  it('sizes by the atlas region, not the sheet', () => {
+    const size = frameSizePx(makeTexture(100, 80), baseProps(), {
+      x: 20,
+      y: 16,
+      width: 40,
+      height: 32,
+    });
+    expect(size).toEqual({ width: 40, height: 32 });
+  });
+
+  it('a sprite region inside an atlas keeps the sprite region dims', () => {
+    const size = frameSizePx(
+      makeTexture(100, 80),
+      baseProps({ region_enabled: true, region_rect: { x: 0, y: 0, width: 10, height: 6 } }),
+      { x: 20, y: 16, width: 40, height: 32 }
+    );
+    expect(size).toEqual({ width: 10, height: 6 });
+  });
+
+  it('sizes by the CLIPPED rect when the sprite region overruns the cell', () => {
+    // The quad must match the pixels that survive the clip, or the cell's
+    // content is stretched over a quad the engine never draws that big.
+    const size = frameSizePx(
+      makeTexture(100, 80),
+      baseProps({ region_enabled: true, region_rect: { x: 20, y: 16, width: 40, height: 32 } }),
+      { x: 20, y: 16, width: 40, height: 32 }
+    );
+    expect(size).toEqual({ width: 20, height: 16 });
+  });
+});
+
 describe('composeFrameTexture — region_rect larger than its texture', () => {
   /**
    * Godot does not clip an oversized region. `Sprite2D::_get_rects` takes the

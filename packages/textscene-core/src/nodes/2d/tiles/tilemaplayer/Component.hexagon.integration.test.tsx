@@ -11,9 +11,9 @@ import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 import { TscnParser } from '../../../../parser/TscnParser';
 import { parseTresFile } from '../../../../parser/parsedResource';
-import { tileSetFromTres } from '../../../../resources/tileset/resolveTileSet';
+import { tileSetFromTres } from '../../../../resources/tileset/decode';
 import { mapToLocalPx } from '../../../../resources/tileset/tilePlacement';
-import { TILE_SHAPE_HEXAGON } from '../../../../resources/tileset/tileSetModel';
+import { TILE_SHAPE_HEXAGON } from '../../../../resources/tileset/types';
 import { findByType } from './findByType';
 import type { TileMapLayerProperties } from './types';
 

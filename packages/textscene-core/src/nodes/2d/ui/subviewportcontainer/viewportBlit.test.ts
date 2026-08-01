@@ -92,7 +92,7 @@ describe('encodeTargetPixels', () => {
       const out = encodeTargetPixels(new ImageData(ramp, 256, 1)).data;
       for (let i = 0; i < 256; i++) {
         expect(out[i * 4]).toBeGreaterThanOrEqual(i);
-        if (i > 0) expect(out[i * 4]).toBeGreaterThanOrEqual(out[(i - 1) * 4]);
+        if (i > 0) expect(out[i * 4]).toBeGreaterThanOrEqual(out[(i - 1) * 4]!);
       }
     });
   });

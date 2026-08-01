@@ -63,6 +63,16 @@ describe('resolveFrameTexture', () => {
     expect(r).toEqual({ path: 'res://atlas.png' });
   });
 
+  it('delegates the region to the AtlasTexture decode, which rejects a malformed Rect2', () => {
+    const bad: TscnInternalResource = {
+      id: 'b',
+      type: 'AtlasTexture',
+      data: { atlas: 'ExtResource("2")', region: 'Rect2(1.2.3, 0, 16, 16)', id: 'b' },
+    };
+    // No NaN-windowed (invisible) frame: an unparseable region samples the sheet.
+    expect(resolveFrameTexture('SubResource("b")', [bad], EXT)).toEqual({ path: 'res://atlas.png' });
+  });
+
   it('returns a null path for a null/empty ref', () => {
     expect(resolveFrameTexture(null, [], EXT)).toEqual({ path: null });
     expect(resolveFrameTexture('', [], EXT)).toEqual({ path: null });

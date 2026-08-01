@@ -12,9 +12,9 @@
 
 import { useMemo } from 'react';
 import type { TscnInternalResource } from '../../../../parser/types';
-import { parseRectangleShape2D } from '../../../../resources/shapes/rectangleshape2d/parser';
-import { parseCircleShape2D } from '../../../../resources/shapes/circleshape2d/parser';
-import { parseCapsuleShape2D } from '../../../../resources/shapes/capsuleshape2d/parser';
+import { decodeRectangleShape2D } from '../../../../resources/shapes/rectangleshape2d';
+import { decodeCircleShape2D } from '../../../../resources/shapes/circleshape2d';
+import { decodeCapsuleShape2D } from '../../../../resources/shapes/capsuleshape2d';
 import type * as THREE from 'three';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { warn } from '../../../../logger';
@@ -118,11 +118,11 @@ export function CollisionGizmo2D({
   const points = useMemo((): Point2D[] => {
     switch (shape.type) {
       case 'RectangleShape2D':
-        return rectanglePoints(parseRectangleShape2D(data).size);
+        return rectanglePoints(decodeRectangleShape2D(data).size);
       case 'CircleShape2D':
-        return circlePoints(parseCircleShape2D(data).radius);
+        return circlePoints(decodeCircleShape2D(data).radius);
       case 'CapsuleShape2D': {
-        const { radius, height } = parseCapsuleShape2D(data);
+        const { radius, height } = decodeCapsuleShape2D(data);
         return capsulePoints(radius, height);
       }
       default:

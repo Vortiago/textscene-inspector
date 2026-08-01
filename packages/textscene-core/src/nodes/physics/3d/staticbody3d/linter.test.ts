@@ -335,7 +335,7 @@ input_capture_on_drag = false
       const diagnostics = lint(scene(node('StaticBody3D')));
       // Should only have warning about missing CollisionShape3D
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0].ruleName).toBe('staticbody3d-needs-collision-shape');
+      expect(diagnostics[0]!.ruleName).toBe('staticbody3d-needs-collision-shape');
     });
 
     it('should handle scientific notation in velocities', () => {

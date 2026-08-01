@@ -50,6 +50,29 @@ async function render(node: TscnNode) {
   );
 }
 
+/**
+ * Narrow on three's own cross-copy flags rather than `instanceof`: the test
+ * renderer resolves a different `three` module instance, so `instanceof` is
+ * false even for genuine Meshes.
+ */
+function isMesh(o: THREE.Object3D): o is THREE.Mesh {
+  return (o as Partial<THREE.Mesh>).isMesh === true;
+}
+
+function isBasicMaterial(m: THREE.Material): m is THREE.MeshBasicMaterial {
+  return (m as Partial<THREE.MeshBasicMaterial>).isMeshBasicMaterial === true;
+}
+
+/** The basic material a drawn mesh carries. */
+function basicMaterial(instance: THREE.Object3D): THREE.MeshBasicMaterial {
+  if (!isMesh(instance)) throw new Error('scene-graph instance is not a Mesh');
+  const material = instance.material;
+  if (Array.isArray(material) || !isBasicMaterial(material)) {
+    throw new Error('mesh material is not a MeshBasicMaterial');
+  }
+  return material;
+}
+
 describe('TileMap render parity', () => {
   it('renders enabled layers in order with the layer z rule; disabled layers are skipped', async () => {
     const r = await render(
@@ -92,7 +115,7 @@ describe('TileMap render parity', () => {
         'layer_0/modulate': 'Color(0.5, 0.5, 0.5, 0.5)',
       })
     );
-    const material = r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const material = basicMaterial(r.scene.findByType('Mesh').instance);
     const srgbToLinear = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
     expect(material.color.r).toBeCloseTo(srgbToLinear(0.5), 4);
     expect(material.opacity).toBeCloseTo(0.5, 5);

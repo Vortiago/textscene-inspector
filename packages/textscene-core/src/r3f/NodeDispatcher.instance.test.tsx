@@ -151,7 +151,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     // The placeholder is a magenta wireframe BoxMesh with a floating label.
     const meshes = renderer.scene.findAllByType('Mesh');
     const magenta = meshes.find((m) => {
-      const mat = m.instance.material as { color?: THREE.Color };
+      const mat = (m.instance as THREE.Mesh).material as { color?: THREE.Color };
       return mat.color && mat.color.r > 0.9 && mat.color.g < 0.1 && mat.color.b > 0.9;
     });
     expect(magenta).toBeDefined();
@@ -220,7 +220,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     const meshes = renderer.scene.findAllByType('Mesh');
     const sphere = meshes.find((m) => m.instance.name === 'OuterRoot');
     expect(sphere).toBeDefined();
-    const geom = sphere!.instance.geometry as { type: string };
+    const geom = (sphere!.instance as THREE.Mesh).geometry as { type: string };
     expect(geom.type).toBe('SphereGeometry');
     // The intermediate root names are gone — no wrapper levels survive.
     expect(meshes.find((m) => m.instance.name === 'Inner')).toBeUndefined();
@@ -446,7 +446,9 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     // HOST 'gadget_ref' even though it lives under the collapsed Wrapper.
     const sphere = renderer.scene.findAllByType('Mesh').find((m) => m.instance.name === 'Gadget');
     expect(sphere).toBeDefined();
-    expect((sphere!.instance.geometry as { type: string }).type).toBe('SphereGeometry');
+    expect(((sphere!.instance as THREE.Mesh).geometry as { type: string }).type).toBe(
+      'SphereGeometry'
+    );
   });
 
   it('REGRESSION (ADR-0013): the outermost instance transform REPLACES the nested root transforms', async () => {

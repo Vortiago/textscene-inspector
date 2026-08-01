@@ -52,7 +52,8 @@ async function renderWithMaterial(materialProps: Record<string, string>) {
       <MeshInstance3D node={node} />
     </SceneResourcesProvider>
   );
-  return renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+    .material as THREE.MeshStandardMaterial;
 }
 
 describe('StandardMaterial3D — sRGB albedo conversion (WI-HALL-2)', () => {

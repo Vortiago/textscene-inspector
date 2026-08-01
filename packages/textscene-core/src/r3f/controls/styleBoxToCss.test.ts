@@ -32,18 +32,21 @@ describe('styleBoxToCss', () => {
     expect(css.padding).toBe('6px 10px 6px 10px');
   });
 
-  it('returns transparent ({}) for StyleBoxEmpty', () => {
-    expect(styleBoxToCss('StyleBoxEmpty', {})).toEqual({});
+  it('returns an explicit transparent fill for StyleBoxEmpty', () => {
+    // StyleBoxEmpty::draw (style_box.h:80) is empty, so the box paints nothing —
+    // stated as `transparent` rather than as an absent property, which a
+    // consumer default would otherwise fill in.
+    expect(styleBoxToCss('StyleBoxEmpty', {})).toEqual({ backgroundColor: 'transparent' });
   });
 
-  it('omits the fill when draw_center=false (border-only box)', () => {
+  it('paints no fill when draw_center=false (border-only box)', () => {
     const css = styleBoxToCss('StyleBoxFlat', {
       bg_color: 'Color(0.2, 0.2, 0.2, 1)',
       draw_center: 'false',
       border_width_left: '2',
       border_color: 'Color(1, 1, 1, 1)',
     });
-    expect(css.backgroundColor).toBeUndefined();
+    expect(css.backgroundColor).toBe('transparent');
     expect(css.borderColor).toBe('rgba(255, 255, 255, 1)'); // border still drawn
   });
 });

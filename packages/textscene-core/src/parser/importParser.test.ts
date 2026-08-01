@@ -45,7 +45,7 @@ offset_mesh=Vector3(0, 0, 0)
 
 describe('parseImportFile', () => {
   it('reads the importer name and the [params] block', () => {
-    const parsed = parseImportFile(TREE_IMPORT);
+    const parsed = parseImportFile(TREE_IMPORT)!;
     expect(parsed.importer).toBe('scene');
     expect(parsed.params['nodes/root_scale']).toBe('0.00999999999999999');
     expect(parsed.params['nodes/apply_root_scale']).toBe('true');
@@ -54,20 +54,20 @@ describe('parseImportFile', () => {
   it('keeps [remap] and [deps] out of params', () => {
     // Only [params] describes the import; the other sections address the baked
     // artifact under .godot/imported/, which we never read.
-    const parsed = parseImportFile(TREE_IMPORT);
+    const parsed = parseImportFile(TREE_IMPORT)!;
     expect(parsed.params).not.toHaveProperty('importer');
     expect(parsed.params).not.toHaveProperty('source_file');
     expect(parsed.params).not.toHaveProperty('path');
   });
 
   it('reads a wavefront_obj sidecar, whose params are a different set entirely', () => {
-    const parsed = parseImportFile(OBJ_IMPORT);
+    const parsed = parseImportFile(OBJ_IMPORT)!;
     expect(parsed.importer).toBe('wavefront_obj');
     expect(parsed.params['scale_mesh']).toBe('Vector3(1, 1, 1)');
   });
 
   it('returns empty params rather than throwing on a sidecar with no [params]', () => {
-    expect(parseImportFile('[remap]\n\nimporter="scene"\n').params).toEqual({});
+    expect(parseImportFile('[remap]\n\nimporter="scene"\n')!.params).toEqual({});
   });
 
   it('returns null for content that is not a sidecar', () => {

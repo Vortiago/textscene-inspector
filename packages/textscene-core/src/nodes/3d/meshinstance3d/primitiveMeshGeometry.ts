@@ -1,27 +1,37 @@
 /**
  * Builds a `BufferGeometry` from a Godot PrimitiveMesh sub-resource.
  *
- * Extracted from `meshGeometry.tsx` so callers that need geometry as DATA rather than as
- * JSX can share one definition: CSGMesh3D wraps a mesh resource as a CSG contribution,
- * and the boolean evaluator needs triangles, not a React element.
+ * A dispatch over the mesh slices: each slice owns its own decode (`decode.ts`,
+ * property bag → typed data) and its own THREE construction (`build.ts`,
+ * ADR-0031), so the axis fixes and off-by-30-degree corrections live next to the
+ * type they belong to. This file only chooses which slice a `type=` names.
  *
- * Returns `null` for unknown, external (GLB) or unresolvable mesh types; the caller
- * decides whether that means a placeholder or nothing at all.
+ * Callers that need geometry as DATA rather than as JSX share this one
+ * definition: CSGMesh3D wraps a mesh resource as a CSG contribution, and the
+ * boolean evaluator needs triangles, not a React element.
  *
- * Every axis fix and off-by-30-degree correction here is load-bearing parity work
- * measured against real Godot; the comments say which and why.
+ * Returns `null` for unknown, external (GLB) or unresolvable mesh types, and for
+ * a mesh Godot itself would refuse to build; the caller decides whether that
+ * means a placeholder or nothing at all.
  */
 
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
-import { parseBoxMesh } from '../../../resources/meshes/boxmesh/parser';
-import { parseSphereMesh } from '../../../resources/meshes/spheremesh/parser';
-import { parsePlaneMesh } from '../../../resources/meshes/planemesh/parser';
-import { parseCylinderMesh } from '../../../resources/meshes/cylindermesh/parser';
-import { parseCapsuleMesh } from '../../../resources/meshes/capsulemesh/parser';
-import { parseTorusMesh } from '../../../resources/meshes/torusmesh/parser';
-import { parsePrismMesh } from '../../../resources/meshes/prismmesh/parser';
-import { parseQuadMesh } from '../../../resources/meshes/quadmesh/parser';
+import { decodeBoxMesh } from '../../../resources/meshes/boxmesh/decode';
+import { buildBoxMeshGeometry } from '../../../resources/meshes/boxmesh/build';
+import { decodeSphereMesh } from '../../../resources/meshes/spheremesh/decode';
+import { buildSphereMeshGeometry } from '../../../resources/meshes/spheremesh/build';
+import { decodePlaneMesh } from '../../../resources/meshes/planemesh/decode';
+import { buildPlaneMeshGeometry } from '../../../resources/meshes/planemesh/build';
+import { decodeQuadMesh } from '../../../resources/meshes/quadmesh/decode';
+import { decodeCylinderMesh } from '../../../resources/meshes/cylindermesh/decode';
+import { buildCylinderMeshGeometry } from '../../../resources/meshes/cylindermesh/build';
+import { decodeCapsuleMesh } from '../../../resources/meshes/capsulemesh/decode';
+import { buildCapsuleMeshGeometry } from '../../../resources/meshes/capsulemesh/build';
+import { decodeTorusMesh } from '../../../resources/meshes/torusmesh/decode';
+import { buildTorusMeshGeometry } from '../../../resources/meshes/torusmesh/build';
+import { decodePrismMesh } from '../../../resources/meshes/prismmesh/decode';
+import { buildPrismMeshGeometry } from '../../../resources/meshes/prismmesh/build';
 
 /**
  * A stable key over the sub-resource's CONTENT, for memoizing the build.
@@ -34,120 +44,25 @@ export function primitiveMeshGeometryKey(resource: TscnInternalResource): string
   return `${resource.type}|${JSON.stringify(resource.data)}`;
 }
 
+/**
+ * Godot `type=` → the slice that decodes and builds it. QuadMesh has no
+ * `build.ts` of its own: it is a PlaneMesh subclass differing only in defaults,
+ * so it decodes with its own defaults and builds through PlaneMesh's geometry.
+ */
+const BUILDERS: Record<string, (data: Record<string, string>) => THREE.BufferGeometry | null> = {
+  BoxMesh: (data) => buildBoxMeshGeometry(decodeBoxMesh(data)),
+  SphereMesh: (data) => buildSphereMeshGeometry(decodeSphereMesh(data)),
+  PlaneMesh: (data) => buildPlaneMeshGeometry(decodePlaneMesh(data)),
+  QuadMesh: (data) => buildPlaneMeshGeometry(decodeQuadMesh(data)),
+  CylinderMesh: (data) => buildCylinderMeshGeometry(decodeCylinderMesh(data)),
+  CapsuleMesh: (data) => buildCapsuleMeshGeometry(decodeCapsuleMesh(data)),
+  TorusMesh: (data) => buildTorusMeshGeometry(decodeTorusMesh(data)),
+  PrismMesh: (data) => buildPrismMeshGeometry(decodePrismMesh(data)),
+};
+
 export function buildPrimitiveMeshGeometry(
   resource: TscnInternalResource
 ): THREE.BufferGeometry | null {
-  const data = resource.data as Record<string, string>;
-
-  switch (resource.type) {
-    case 'BoxMesh': {
-      const p = parseBoxMesh(data);
-      // Godot subdivide_* counts extra edge loops: N loops give N+1 face segments.
-      return new THREE.BoxGeometry(
-        p.size.x,
-        p.size.y,
-        p.size.z,
-        p.subdivideWidth + 1,
-        p.subdivideHeight + 1,
-        p.subdivideDepth + 1
-      );
-    }
-
-    case 'SphereMesh': {
-      const p = parseSphereMesh(data);
-      // is_hemisphere sweeps theta 0..pi/2 instead of 0..pi.
-      return new THREE.SphereGeometry(
-        p.radius,
-        p.radial_segments ?? 64,
-        p.rings ?? 32,
-        0,
-        Math.PI * 2,
-        0,
-        p.isHemisphere ? Math.PI / 2 : Math.PI
-      );
-    }
-
-    case 'PlaneMesh':
-    case 'QuadMesh': {
-      // QuadMesh is a PlaneMesh whose orientation is fixed to FACE_Z.
-      const p = resource.type === 'QuadMesh' ? parseQuadMesh(data) : parsePlaneMesh(data);
-      const geom = new THREE.PlaneGeometry(
-        p.size.x,
-        p.size.y,
-        p.subdivideWidth + 1,
-        p.subdivideDepth + 1
-      );
-      // three's PlaneGeometry is an XY plane with normal +Z, which is Godot's FACE_Z (2).
-      // FACE_X (0) rotates it into YZ, FACE_Y (1) into XZ.
-      if (p.orientation === 0) geom.rotateY(Math.PI / 2);
-      else if (p.orientation === 1) geom.rotateX(-Math.PI / 2);
-
-      const offset = p.centerOffset;
-      if (offset) geom.translate(offset.x, offset.y, offset.z);
-
-      // flip_faces reverses winding so the surface is visible from the other side.
-      if (p.flipFaces) {
-        geom.scale(-1, 1, 1);
-        geom.computeVertexNormals();
-      }
-      return geom;
-    }
-
-    case 'CylinderMesh': {
-      const p = parseCylinderMesh(data);
-      return new THREE.CylinderGeometry(
-        p.top_radius,
-        p.bottom_radius,
-        p.height,
-        p.radial_segments ?? 64,
-        p.rings ?? 4,
-        // three can only drop BOTH caps, so Godot's single-cap removal is not
-        // representable; open the ends only when both caps are off.
-        p.capTop === false && p.capBottom === false
-      );
-    }
-
-    case 'CapsuleMesh': {
-      const p = parseCapsuleMesh(data);
-      // Godot's `height` is the TOTAL height including both hemisphere caps; three
-      // wants only the cylindrical mid-section.
-      const mid = Math.max(0.01, p.height - 2 * p.radius);
-      return new THREE.CapsuleGeometry(p.radius, mid, p.rings, p.radialSegments);
-    }
-
-    case 'TorusMesh': {
-      const p = parseTorusMesh(data);
-      // three revolves the tube around Z (ring in XY, hole facing +Z); Godot revolves
-      // around Y (ring in XZ, hole facing +Y). The torus is symmetric about its ring
-      // plane, so the rotation sign is immaterial.
-      const geom = new THREE.TorusGeometry(
-        (p.outerRadius + p.innerRadius) / 2,
-        (p.outerRadius - p.innerRadius) / 2,
-        p.ringSegments,
-        p.rings
-      );
-      geom.rotateX(Math.PI / 2);
-      return geom;
-    }
-
-    case 'PrismMesh': {
-      const p = parsePrismMesh(data);
-      // Approximated as a 3-segment cylinder. Godot puts a vertex of the triangular
-      // face at +X (azimuth 0); three's CylinderGeometry starts at an EDGE, so without
-      // the pi/6 rotation the prism sits 30 degrees off.
-      const geom = new THREE.CylinderGeometry(
-        p.size.x / 2,
-        p.size.x / 2,
-        p.size.y,
-        3,
-        p.subdivideHeight + 1,
-        false
-      );
-      geom.rotateY(Math.PI / 6);
-      return geom;
-    }
-
-    default:
-      return null;
-  }
+  const build = BUILDERS[resource.type];
+  return build ? build(resource.data as Record<string, string>) : null;
 }

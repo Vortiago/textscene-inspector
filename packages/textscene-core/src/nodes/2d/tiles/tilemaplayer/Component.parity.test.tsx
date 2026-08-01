@@ -91,6 +91,29 @@ async function render(
   );
 }
 
+/**
+ * Narrow on three's own cross-copy flags rather than `instanceof`: the test
+ * renderer resolves a different `three` module instance, so `instanceof` is
+ * false even for genuine Meshes.
+ */
+function isMesh(o: THREE.Object3D): o is THREE.Mesh {
+  return (o as Partial<THREE.Mesh>).isMesh === true;
+}
+
+function isBasicMaterial(m: THREE.Material): m is THREE.MeshBasicMaterial {
+  return (m as Partial<THREE.MeshBasicMaterial>).isMeshBasicMaterial === true;
+}
+
+/** The basic material a drawn mesh carries. */
+function basicMaterial(instance: THREE.Object3D): THREE.MeshBasicMaterial {
+  if (!isMesh(instance)) throw new Error('scene-graph instance is not a Mesh');
+  const material = instance.material;
+  if (Array.isArray(material) || !isBasicMaterial(material)) {
+    throw new Error('mesh material is not a MeshBasicMaterial');
+  }
+  return material;
+}
+
 describe('TileMapLayer render parity', () => {
   it('renders one batched mesh whose geometry and material match the builder output and sprite recipe', async () => {
     const r = await render(makeNode({ modulate: 'Color(0.5, 0.5, 0.5, 1)' }));
@@ -375,11 +398,11 @@ describe('TileMapLayer degradation (ADR-0008)', () => {
     const meshes = r.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(2);
     const colors = meshes.map((m) =>
-      (m.instance.material as THREE.MeshBasicMaterial).color.getHexString()
+      basicMaterial(m.instance).color.getHexString()
     );
     expect(colors).toContain('ff00ff'); // the magenta per-source placeholder
     const tiled = meshes.find(
-      (m) => (m.instance.material as THREE.MeshBasicMaterial).map !== null
+      (m) => basicMaterial(m.instance).map !== null
     );
     expect(tiled).toBeDefined();
   });

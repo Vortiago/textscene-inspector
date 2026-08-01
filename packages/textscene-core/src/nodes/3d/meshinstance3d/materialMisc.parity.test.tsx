@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { parseStandardMaterial3DScalars } from '../../../r3f/materials/standardMaterialScalars';
+import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
@@ -66,7 +66,7 @@ describe('StandardMaterialSlot vertexColors', () => {
         <StandardMaterialSlot scalars={scalars} />
       </mesh>
     );
-    const m = r.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const m = (r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
     expect(m.vertexColors).toBe(true);
   });
 
@@ -80,7 +80,7 @@ describe('StandardMaterialSlot vertexColors', () => {
         <StandardMaterialSlot scalars={scalars} />
       </mesh>
     );
-    const m = r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const m = (r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect((m as THREE.Material).type).toBe('MeshBasicMaterial');
     expect(m.vertexColors).toBe(true);
   });
@@ -100,7 +100,7 @@ describe('StandardMaterialSlot vertexColors', () => {
         <StandardMaterialSlot scalars={scalars} />
       </mesh>
     );
-    const m = r.scene.findByType('Mesh').instance.material as THREE.Material;
+    const m = (r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
     expect(m.type).toBe('MeshBasicMaterial');
     expect('emissive' in m).toBe(false);
   });
@@ -131,7 +131,7 @@ async function renderAo(matData: Record<string, string>): Promise<THREE.MeshStan
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
-  return renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
 }
 
 describe('ao_enabled gate', () => {

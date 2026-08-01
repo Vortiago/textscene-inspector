@@ -24,6 +24,12 @@ import {
   DopplerTracking,
 } from './types';
 
+// `instanceof THREE.Mesh` is false across @react-three/test-renderer's separate
+// `three` copy; three's own cross-realm duck flag is the reliable narrowing.
+function isMesh(o: THREE.Object3D): o is THREE.Mesh {
+  return (o as Partial<THREE.Mesh>).isMesh === true;
+}
+
 /**
  * The speaker + range gizmos are now gated on selection. To
  * exercise the gizmo content the test scaffolding must (a) place the
@@ -164,10 +170,12 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes.length).toBeGreaterThan(0);
     for (const m of meshes) {
-      const mat = m.instance.material as { type: string };
+      const mesh = m.instance;
+      if (!isMesh(mesh)) throw new Error(`findAllByType('Mesh') returned a ${mesh.type}`);
+      const mat = mesh.material as THREE.Material;
       expect(mat.type).toBe('MeshBasicMaterial');
       // None of the meshes should cast shadows — gizmos are non-lit.
-      expect(m.instance.castShadow).toBe(false);
+      expect(mesh.castShadow).toBe(false);
     }
   });
 

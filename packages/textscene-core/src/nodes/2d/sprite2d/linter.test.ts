@@ -141,7 +141,7 @@ describe('Sprite2D Linter', () => {
         nodeType: 'Sprite2D',
         ruleName: 'valid-sprite2d-resources',
       });
-      expect(diagnostics[0].message).toContain('Texture resource not found');
+      expect(diagnostics[0]!.message).toContain('Texture resource not found');
     });
 
     it('should pass when texture resource exists (SubResource)', () => {

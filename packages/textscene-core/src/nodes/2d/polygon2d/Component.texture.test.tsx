@@ -67,7 +67,7 @@ function mesh(renderer: Awaited<ReturnType<typeof render>>['renderer']): THREE.M
 
 /** The `uv` attribute as (u, v) pairs. */
 function uvs(geom: THREE.BufferGeometry): Array<[number, number]> {
-  const attr = geom.attributes.uv;
+  const attr = geom.attributes.uv!;
   const out: Array<[number, number]> = [];
   for (let i = 0; i < attr.count; i++) out.push([attr.getX(i), attr.getY(i)]);
   return out;
@@ -75,7 +75,7 @@ function uvs(geom: THREE.BufferGeometry): Array<[number, number]> {
 
 /** The `position` attribute's (x, y) pairs — three-local, so Godot Y is negated. */
 function positions(geom: THREE.BufferGeometry): Array<[number, number]> {
-  const attr = geom.attributes.position;
+  const attr = geom.attributes.position!;
   const out: Array<[number, number]> = [];
   for (let i = 0; i < attr.count; i++) out.push([attr.getX(i), attr.getY(i)]);
   return out;

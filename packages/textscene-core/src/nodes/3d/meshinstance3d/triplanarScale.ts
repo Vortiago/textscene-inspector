@@ -16,13 +16,13 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { parsePlaneMesh } from '../../../resources/meshes/planemesh/parser';
+import { decodePlaneMesh } from '../../../resources/meshes/planemesh/decode';
 
 export function triplanarPlaneScale(
   mesh: TscnInternalResource,
   baseScale: { x: number; y: number }
 ): { x: number; y: number } {
   if (mesh.type !== 'PlaneMesh') return baseScale;
-  const { size } = parsePlaneMesh(mesh.data as Record<string, string>);
+  const { size } = decodePlaneMesh(mesh.data as Record<string, string>);
   return { x: size.x * baseScale.x, y: size.y * baseScale.y };
 }

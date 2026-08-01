@@ -8,6 +8,7 @@
  * scenes reference `godot3_robot_head_collision.tres` that way.
  */
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionShape3D } from './Component';
 import { CollisionShape2D } from '../../2d/collisionshape2d/Component';
@@ -43,7 +44,7 @@ function node(type: string, shape: string | undefined): TscnNode {
   const scene = new TscnParser().parse(
     `[gd_scene format=3]\n\n[node name="My${type}" type="${type}"]\n${body}`
   );
-  return scene.nodes[0];
+  return scene.nodes[0]!;
 }
 
 async function render3D(shape: string | undefined, tres?: ParsedResource) {
@@ -61,7 +62,7 @@ async function render3D(shape: string | undefined, tres?: ParsedResource) {
 }
 
 function boxSize(renderer: Awaited<ReturnType<typeof render3D>>) {
-  const geometry = renderer.scene.findByType('Mesh').instance.geometry as unknown as {
+  const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
     parameters: { width: number; height: number; depth: number };
   };
   return [geometry.parameters.width, geometry.parameters.height, geometry.parameters.depth];

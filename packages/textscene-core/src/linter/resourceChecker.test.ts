@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { checkResourceExists } from './resourceChecker.js';
-import type { TscnScene, TscnInternalResource, TscnExternalResource } from '../parser/types.js';
+import type { TscnScene, TscnExternalResource } from '../parser/types.js';
 
 describe('checkResourceExists', () => {
   describe('SubResource validation', () => {
@@ -14,11 +14,11 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: 1,
+            id: '1',
             type: 'ArrayMesh',
             data: { id: 'mesh_1' },
           },
-        ] as TscnInternalResource[],
+        ],
       };
 
       expect(checkResourceExists(scene, 'SubResource("mesh_1")')).toBe(true);
@@ -30,11 +30,11 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: 1,
+            id: '1',
             type: 'ArrayMesh',
             data: { id: 'mesh_1' },
           },
-        ] as TscnInternalResource[],
+        ],
       };
 
       expect(checkResourceExists(scene, 'SubResource("mesh_999")')).toBe(false);
@@ -51,11 +51,12 @@ describe('checkResourceExists', () => {
     });
 
     it('should handle scene with undefined internal resources', () => {
-      const scene: TscnScene = {
+      // TscnScene marks the array required; the checker still defends against a
+      // scene assembled without it (e.g. rehydrated across the webview boundary).
+      const scene = {
         nodes: [],
         externalResources: [],
-        internalResources: undefined,
-      };
+      } as Partial<TscnScene> as TscnScene;
 
       expect(checkResourceExists(scene, 'SubResource("mesh_1")')).toBe(false);
     });
@@ -66,11 +67,11 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: 1,
+            id: '1',
             type: 'StandardMaterial3D',
             data: { id: 'material-red-glossy' },
           },
-        ] as TscnInternalResource[],
+        ],
       };
 
       expect(checkResourceExists(scene, 'SubResource("material-red-glossy")')).toBe(true);
@@ -82,11 +83,11 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: 1,
+            id: '1',
             type: 'StandardMaterial3D',
             data: { id: 'material_red_glossy' },
           },
-        ] as TscnInternalResource[],
+        ],
       };
 
       expect(checkResourceExists(scene, 'SubResource("material_red_glossy")')).toBe(true);
@@ -98,21 +99,21 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: 1,
+            id: '1',
             type: 'ArrayMesh',
             data: { id: 'mesh_1' },
           },
           {
-            id: 2,
+            id: '2',
             type: 'StandardMaterial3D',
             data: { id: 'material_1' },
           },
           {
-            id: 3,
+            id: '3',
             type: 'BoxShape3D',
             data: { id: 'shape_1' },
           },
-        ] as TscnInternalResource[],
+        ],
       };
 
       expect(checkResourceExists(scene, 'SubResource("mesh_1")')).toBe(true);
@@ -165,11 +166,12 @@ describe('checkResourceExists', () => {
     });
 
     it('should handle scene with undefined external resources', () => {
-      const scene: TscnScene = {
+      // TscnScene marks the array required; the checker still defends against a
+      // scene assembled without it (e.g. rehydrated across the webview boundary).
+      const scene = {
         nodes: [],
-        externalResources: undefined,
         internalResources: [],
-      };
+      } as Partial<TscnScene> as TscnScene;
 
       expect(checkResourceExists(scene, 'ExtResource("texture_1")')).toBe(false);
     });
@@ -281,11 +283,11 @@ describe('checkResourceExists', () => {
         ] as TscnExternalResource[],
         internalResources: [
           {
-            id: 1,
+            id: '1',
             type: 'ArrayMesh',
             data: { id: 'resource_1' },
           },
-        ] as TscnInternalResource[],
+        ],
       };
 
       expect(checkResourceExists(scene, 'SubResource("resource_1")')).toBe(true);
@@ -315,11 +317,11 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: 1,
+            id: '1',
             type: 'ArrayMesh',
             data: { id: 'resource_1' },
           },
-        ] as TscnInternalResource[],
+        ],
       };
 
       expect(checkResourceExists(scene, 'ExtResource("resource_1")')).toBe(false);

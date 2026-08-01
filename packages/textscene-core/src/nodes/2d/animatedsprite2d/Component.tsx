@@ -32,9 +32,11 @@ import { stepPlayback } from '../../../r3f/animation/stepPlayback';
 import { loopsUnderOverride } from '../../../r3f/animation/loopOverride';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
-import { resolveFrameTexture, type FrameTextureRegion } from './frameTexture';
+import type { AtlasRegion } from '../../../resources/textures/atlastexture/types';
+import { clipDuration, frameAtTime } from '../../../resources/textures/spriteframes/playback';
+import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';
+import { resolveFrameTexture } from './frameTexture';
 import { useSpriteFrames } from './useSpriteFrames';
-import { frameAtTime, clipDuration, type SpriteFramesAnimation } from './spriteFrames';
 import type { AnimatedSprite2DProperties } from './types';
 
 export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
@@ -222,7 +224,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
  * frameSizePx: an AtlasTexture cell maps to a region_rect; a whole-image frame
  * uses the full texture (no region, single frame).
  */
-function regionFrameProps(region?: FrameTextureRegion): SpriteFrameProps {
+function regionFrameProps(region?: AtlasRegion): SpriteFrameProps {
   return region
     ? { region_enabled: true, region_rect: region, hframes: 1, vframes: 1, frame: 0 }
     : { region_enabled: false, hframes: 1, vframes: 1, frame: 0 };

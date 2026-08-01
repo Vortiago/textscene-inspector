@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { OmniLight3D } from './Component';
 import type { TscnNode } from '../../../../parser/types';
@@ -29,7 +30,7 @@ describe('<OmniLight3D>', () => {
       <OmniLight3D node={makeNode({ omni_range: 12 })} />
     );
     const light = renderer.scene.findByType('PointLight');
-    expect((light.instance as { distance: number }).distance).toBe(12);
+    expect((light.instance as THREE.PointLight).distance).toBe(12);
   });
 
   it('maps omni_attenuation to decay', async () => {
@@ -37,7 +38,7 @@ describe('<OmniLight3D>', () => {
       <OmniLight3D node={makeNode({ omni_attenuation: 3 })} />
     );
     const light = renderer.scene.findByType('PointLight');
-    expect((light.instance as { decay: number }).decay).toBe(3);
+    expect((light.instance as THREE.PointLight).decay).toBe(3);
   });
 
   it('applies energy * LIGHT_INTENSITY_SCALE as intensity', async () => {
@@ -45,7 +46,7 @@ describe('<OmniLight3D>', () => {
       <OmniLight3D node={makeNode({ light_energy: 1.5 })} />
     );
     const light = renderer.scene.findByType('PointLight');
-    expect((light.instance as { intensity: number }).intensity).toBe(1.5 * LIGHT_INTENSITY_SCALE);
+    expect((light.instance as THREE.PointLight).intensity).toBe(1.5 * LIGHT_INTENSITY_SCALE);
   });
 
   it('places light at the transform origin', async () => {

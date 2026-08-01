@@ -25,6 +25,7 @@ function animation(track: Partial<GodotTrack>): GodotAnimation {
     name: 'A',
     length: 1,
     loopMode: 0,
+    step: 0.1,
     tracks: [
       {
         type: 'value',
