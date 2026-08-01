@@ -21,6 +21,7 @@
 
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
+import { VECTOR3_REGEX } from './vectorValidators.js';
 import { floatTupleValidator } from './floatTupleValidator.js';
 import {
   createBooleanValidator,
@@ -322,6 +323,54 @@ export const v = {
   /** `Vector3(x, y, z)` format. */
   vector3(name: string): PropertyValidator {
     return accepts(createVector3Validator(name, formatCode(name)), 'Vector3(x, y, z)');
+  },
+
+  /**
+   * `Vector3(x, y, z)` with a per-COMPONENT numeric range.
+   *
+   * Godot writes a component bound as an ordinary PROPERTY_HINT_RANGE on a
+   * VECTOR3 property, e.g. gpu_particles_collision_3d.cpp:101 hints `size`
+   * "0.01,1024,0.01,or_greater" - meaning every component must be at least
+   * 0.01, with the upper end a soft editor bound. `v.vector3` only checks the
+   * literal's shape, so three slices hand-rolled the parse-and-compare loop
+   * before this existed.
+   *
+   * Bounds are inclusive, and either may be omitted. A predicate that is not a
+   * range (Camera2D's `zoom` must be non-zero, Node2D's `scale` likewise) is
+   * not this, and stays hand-rolled.
+   */
+  boundedVector3(name: string, opts: { min?: number; max?: number } = {}): PropertyValidator {
+    const { min, max } = opts;
+    return accepts((key, value, line) => {
+      const match = VECTOR3_REGEX.exec(value);
+      if (!match) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must be Vector3 with 3 numbers like Vector3(1, 1, 1), got: "${value}"`,
+          formatCode(name)
+        );
+      }
+      const parts = [match[1], match[2], match[3]].map((c) => parseFloat(c ?? '0'));
+      const offending = parts.some(
+        (c) => (min !== undefined && c < min) || (max !== undefined && c > max)
+      );
+      if (offending) {
+        const bound =
+          min !== undefined && max !== undefined
+            ? `between ${min} and ${max}`
+            : min !== undefined
+              ? `>= ${min}`
+              : `<= ${max}`;
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' components must be ${bound}, got: Vector3(${parts.join(', ')})`,
+          valueCode(name)
+        );
+      }
+      return null;
+    }, `Vector3(x, y, z), each ${numericRange('float', min, max)}`);
   },
 
   /** `Rect2(x, y, w, h)` format. */

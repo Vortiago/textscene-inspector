@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="MyGPUParticlesAttractorSphere3D" type="GPUParticlesAttractorSphere3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+radius = 2.5

@@ -130,6 +130,11 @@ import '../nodes/3d/visibleonscreennotifier3d/index.linter.js';
 import '../nodes/windows/window/index.linter.js';
 import '../nodes/windows/acceptdialog/index.linter.js';
 import '../nodes/windows/confirmationdialog/index.linter.js';
+import '../nodes/3d/particles/attractors/gpuparticlesattractorbox3d/index.linter.js';
+import '../nodes/3d/particles/attractors/gpuparticlesattractorsphere3d/index.linter.js';
+import '../nodes/3d/particles/collisions/gpuparticlescollisionbox3d/index.linter.js';
+import '../nodes/3d/particles/collisions/gpuparticlescollisionsphere3d/index.linter.js';
+import '../nodes/3d/particles/cpuparticles3d/index.linter.js';
 
 // Re-export core linter classes
 export { Linter } from './Linter.js';

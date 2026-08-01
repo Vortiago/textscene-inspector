@@ -725,7 +725,7 @@
       "name": "CPUParticles3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GeometryInstance3D",
         "VisualInstance3D",
@@ -1051,7 +1051,7 @@
       "name": "GPUParticlesAttractorBox3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GPUParticlesAttractor3D",
         "VisualInstance3D",
@@ -1066,7 +1066,7 @@
       "name": "GPUParticlesAttractorSphere3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GPUParticlesAttractor3D",
         "VisualInstance3D",
@@ -1096,7 +1096,7 @@
       "name": "GPUParticlesCollisionBox3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GPUParticlesCollision3D",
         "VisualInstance3D",
@@ -1141,7 +1141,7 @@
       "name": "GPUParticlesCollisionSphere3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GPUParticlesCollision3D",
         "VisualInstance3D",

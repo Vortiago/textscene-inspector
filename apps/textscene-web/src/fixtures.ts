@@ -208,6 +208,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpu Particles 3d",
+    "file": "unit-cpu-particles-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Cpuparticles2d Color Ramp",
     "file": "unit-cpuparticles2d-color-ramp.tscn",
     "category": "Other"
@@ -320,6 +325,26 @@ export const fixtures: Fixture[] = [
   {
     "name": "Glow Strength",
     "file": "unit-glow-strength.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpu Particles Attractor Box 3d",
+    "file": "unit-gpu-particles-attractor-box-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpu Particles Attractor Sphere 3d",
+    "file": "unit-gpu-particles-attractor-sphere-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpu Particles Collision Box 3d",
+    "file": "unit-gpu-particles-collision-box-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpu Particles Collision Sphere 3d",
+    "file": "unit-gpu-particles-collision-sphere-3d.tscn",
     "category": "Other"
   },
   {

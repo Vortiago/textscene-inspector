@@ -47,7 +47,7 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited fr
 | `freeze` | true or false |
 | `freeze_mode` | enum 0-1 (STATIC/KINEMATIC) |
 | `gravity_scale` | float |
-| `inertia` | Vector3(x, y, z), all >= 0 |
+| `inertia` | Vector3(x, y, z), each float >= 0 |
 | `linear_damp` | float >= 0 |
 | `linear_damp_mode` | enum 0-1 (COMBINE/REPLACE) |
 | `lock_rotation` | true or false |

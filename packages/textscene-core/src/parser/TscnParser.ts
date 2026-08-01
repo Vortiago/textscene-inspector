@@ -135,6 +135,11 @@ import '../nodes/windows/window/index.js';
 import '../nodes/windows/acceptdialog/index.js';
 import '../nodes/windows/popup/index.js';
 import '../nodes/windows/confirmationdialog/index.js';
+import '../nodes/3d/particles/attractors/gpuparticlesattractorbox3d/index.js';
+import '../nodes/3d/particles/attractors/gpuparticlesattractorsphere3d/index.js';
+import '../nodes/3d/particles/collisions/gpuparticlescollisionbox3d/index.js';
+import '../nodes/3d/particles/collisions/gpuparticlescollisionsphere3d/index.js';
+import '../nodes/3d/particles/cpuparticles3d/index.js';
 
 import type { TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';

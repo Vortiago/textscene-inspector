@@ -87,6 +87,7 @@ reproduced:
 - [CharacterBody3D](../../packages/textscene-core/src/nodes/physics/3d/characterbody3d/comparison.md) — a transform-only Node3D group
 - [CollisionShape3D](../../packages/textscene-core/src/nodes/physics/3d/collisionshape3d/comparison.md) — a toggle-gated collision wireframe
 - [ConeTwistJoint3D](../../packages/textscene-core/src/nodes/physics/3d/conetwistjoint3d/comparison.md) — nothing (a transform-only group; a ball joint with a swing cone and twist limit)
+- [CPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/cpuparticles3d/comparison.md) — nothing yet; Godot draws a CPU-simulated particle cloud and the previewer does not
 - [CSGBox3D](../../packages/textscene-core/src/nodes/3d/csg/csgbox3d/comparison.md) — a solid box mesh
 - [CSGCombiner3D](../../packages/textscene-core/src/nodes/3d/csg/csgcombiner3d/comparison.md) — a grouping node whose children fold into one solid
 - [CSGCylinder3D](../../packages/textscene-core/src/nodes/3d/csg/csgcylinder3d/comparison.md) — a solid cylinder or cone mesh
@@ -98,6 +99,10 @@ reproduced:
 - [DirectionalLight3D](../../packages/textscene-core/src/nodes/3d/lights/directionallight3d/comparison.md) — a THREE.DirectionalLight
 - [Generic6DOFJoint3D](../../packages/textscene-core/src/nodes/physics/3d/generic6dofjoint3d/comparison.md) — nothing (a transform-only group; per-axis limits, motors and springs)
 - [GPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/gpuparticles3d/comparison.md) — a transform-only group
+- [GPUParticlesAttractorBox3D](../../packages/textscene-core/src/nodes/3d/particles/attractors/gpuparticlesattractorbox3d/comparison.md) — nothing yet; a box-shaped region that pulls or pushes particles
+- [GPUParticlesAttractorSphere3D](../../packages/textscene-core/src/nodes/3d/particles/attractors/gpuparticlesattractorsphere3d/comparison.md) — nothing yet; a spherical region that pulls or pushes particles
+- [GPUParticlesCollisionBox3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionbox3d/comparison.md) — nothing yet; a box particles collide with
+- [GPUParticlesCollisionSphere3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionsphere3d/comparison.md) — nothing yet; a sphere particles collide with
 - [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md) — a THREE.InstancedMesh per MeshLibrary item
 - [HingeJoint3D](../../packages/textscene-core/src/nodes/physics/3d/hingejoint3d/comparison.md) — nothing (a transform-only group; one rotational axis between two bodies)
 - [Label3D](../../packages/textscene-core/src/nodes/3d/label3d/comparison.md) — a canvas-textured plane
