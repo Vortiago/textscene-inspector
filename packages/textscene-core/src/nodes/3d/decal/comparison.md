@@ -46,7 +46,7 @@ geometry:
 ## Linting
 
 <!-- lint:begin Decal -->
-Strict parsing format-checks these `Decal` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D. Every validator failure is an **error**.
+Strict parsing format-checks these `Decal` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

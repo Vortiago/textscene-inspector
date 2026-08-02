@@ -25,7 +25,7 @@ compare against Godot.
 ## Linting
 
 <!-- lint:begin ConfirmationDialog -->
-Strict parsing format-checks these `ConfirmationDialog` properties, plus 5 inherited from AcceptDialog, 45 inherited from Window, 9 inherited from Viewport. Every validator failure is an **error**.
+Strict parsing format-checks these `ConfirmationDialog` properties, plus 5 inherited from AcceptDialog, 45 inherited from Window, 9 inherited from Viewport, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

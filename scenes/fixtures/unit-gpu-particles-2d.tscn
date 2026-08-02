@@ -1,0 +1,42 @@
+; GPUParticles2D emitting upward sparks. Godot draws a particle cloud here;
+; the previewer draws nothing yet (ADR-0008 transform-only fallback), so this
+; fixture exists to exercise the strict validators at valid, non-default
+; values across every property group: emission core, timing, seeding,
+; drawing, collision, and trails.
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="ParticleProcessMaterial" id="Process_1"]
+direction = Vector3(0, -1, 0)
+spread = 20.0
+gravity = Vector3(0, 98, 0)
+initial_velocity_min = 40.0
+initial_velocity_max = 80.0
+
+[node name="Root" type="Node2D"]
+
+[node name="MyGPUParticles2D" type="GPUParticles2D" parent="."]
+position = Vector2(10, 20)
+emitting = true
+amount = 64
+amount_ratio = 0.8
+lifetime = 2.0
+interp_to_end = 0.25
+one_shot = false
+preprocess = 1.0
+speed_scale = 1.0
+explosiveness = 0.2
+randomness = 0.1
+use_fixed_seed = true
+seed = 4242
+fixed_fps = 30
+interpolate = true
+fract_delta = true
+collision_base_size = 1.0
+visibility_rect = Rect2(-100, -100, 200, 200)
+local_coords = false
+draw_order = 1
+trail_enabled = true
+trail_lifetime = 0.3
+trail_sections = 8
+trail_section_subdivisions = 4
+process_material = SubResource("Process_1")

@@ -47,7 +47,7 @@ track and a 32px grabber on both sides. See the HSlider sheet.
 ## Linting
 
 <!-- lint:begin VSlider -->
-Strict parsing format-checks the inherited set (9 inherited from Range, 26 inherited from Control, 15 inherited from CanvasItem); `VSlider` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (5 inherited from Slider, 9 inherited from Range, 26 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `VSlider` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

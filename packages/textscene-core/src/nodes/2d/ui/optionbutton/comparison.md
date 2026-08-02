@@ -33,11 +33,12 @@ The box fill (dark charcoal ~rgb(46,46,46)), corner radius, padding, font, and t
 ## Linting
 
 <!-- lint:begin OptionButton -->
-Strict parsing format-checks the inherited set (10 inherited from BaseButton, 26 inherited from Control, 15 inherited from CanvasItem); `OptionButton` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (13 inherited from Button, 10 inherited from BaseButton, 26 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `OptionButton` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
 `OptionButton` has no strict counterpart of its own for `selected`, `popup/item_N/id`,

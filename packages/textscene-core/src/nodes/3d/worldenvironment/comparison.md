@@ -41,7 +41,7 @@ approximated.
 ## Linting
 
 <!-- lint:begin WorldEnvironment -->
-Strict parsing format-checks these `WorldEnvironment` properties. Every validator failure is an **error**.
+Strict parsing format-checks these `WorldEnvironment` properties, plus 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

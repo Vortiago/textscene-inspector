@@ -31,7 +31,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin Timer -->
-Strict parsing format-checks these `Timer` properties. Every validator failure is an **error**.
+Strict parsing format-checks these `Timer` properties, plus 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

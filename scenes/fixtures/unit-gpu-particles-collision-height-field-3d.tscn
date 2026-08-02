@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="MyGPUParticlesCollisionHeightField3D" type="GPUParticlesCollisionHeightField3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+size = Vector3(8, 4, 8)
+resolution = 3
+update_mode = 1
+follow_camera_enabled = true
+heightfield_mask = 3

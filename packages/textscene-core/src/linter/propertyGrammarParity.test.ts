@@ -126,6 +126,27 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'The CanvasItem base has no parser of its own; these five are culling, clipping and sampler settings the r3f renderer expresses per material or not at all, while the keys it DOES render (visible, modulate, z_index, material…) are read by each family parser.',
   },
 
+  Node: {
+    parserOnly: [
+      // `parseNode` (node/parser.ts) reads `transform` for every node, but a
+      // plain Node is not spatial and registers no spatial validator, so the
+      // key is parser-only on Node and on every non-spatial type below it.
+      // One entry here replaces the identical per-type entries NavigationAgent3D,
+      // WorldEnvironment, Timer and SubViewport each used to carry.
+      'transform',
+    ],
+    linterOnly: [
+      // Pause/process behaviour and thread-group assignment: engine lifecycle,
+      // decided at runtime and with no bearing on a still frame.
+      'process_mode', 'process_priority', 'process_physics_priority',
+      'process_thread_group', 'process_thread_group_order', 'process_thread_messages',
+      'physics_interpolation_mode',
+      // Editor and localisation metadata the renderer never consults.
+      'auto_translate_mode', 'editor_description', 'unique_name_in_owner',
+    ],
+    reason: 'Node is the terminal of every base chain, so its ten validators reach all 240 types; node/parser.ts reads none of them because pause/threading/localisation state has no effect on a rendered frame. One entry here rather than the same ten repeated on every leaf.',
+  },
+
   Node3D: {
     linterOnly: [
       // Godot serialises spatial state as either a single `transform` matrix
@@ -389,6 +410,30 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'Layout base with no parser of its own; the drag-area and dragger keys tune an interactive splitter the static DOM overlay does not implement, and `vertical` is fixed by the leaf class.',
   },
 
+  // Like the container bases, BaseButton has no parser.ts, so one entry covers
+  // Button and every button leaf below it. `disabled` is absent because
+  // button/parser.ts does read it: the preview dims a disabled button.
+  BaseButton: {
+    linterOnly: [
+      // Interaction state and press semantics, all meaningless in a still frame.
+      'toggle_mode', 'button_pressed', 'action_mode', 'button_mask',
+      'keep_pressed_outside',
+      // Grouping and keyboard shortcuts, which the preview does not dispatch.
+      'button_group', 'shortcut', 'shortcut_feedback', 'shortcut_in_tooltip',
+    ],
+    reason: 'Interaction base with no parser of its own; press semantics, grouping and shortcuts describe behaviour under input, which a static preview never applies.',
+  },
+
+  Button: {
+    linterOnly: [
+      // Text shaping and localisation left to the browser: the DOM overlay
+      // renders the label as text and lets CSS wrap and trim it.
+      'text_overrun_behavior', 'autowrap_mode', 'autowrap_trim_flags', 'clip_text',
+      'text_direction', 'language',
+    ],
+    reason: "The overlay renders the label as DOM text, so wrapping, trimming and bidi are the browser's job rather than properties the parser reads.",
+  },
+
   // Registered on the base and delivered to every 3D visual by the base-walk,
   // so one entry here covers MeshInstance3D, Sprite3D, Label3D, Decal,
   // GPUParticles3D and the seven CSG shapes rather than twelve leaf copies.
@@ -430,15 +475,6 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'MeshInstance3D linter uses a wildcard pattern for surface_material_override/N; the parser reads those via an Object.keys loop not captured by the scrape.',
   },
 
-  NavigationAgent3D: {
-    parserOnly: [
-      // NavigationAgent3D's parser inherits `transform` via parseNode
-      // (node/parser.ts), but NODE_BASE_TYPES maps NavigationAgent3D to Node,
-      // which registers no spatial validators — so transform is parser-only.
-      'transform',
-    ],
-    reason: 'NavigationAgent3D parser inherits transform via parseNode (node/parser.ts); NODE_BASE_TYPES maps NavigationAgent3D to Node with no spatial validators, so transform is parser-only.',
-  },
 
   // -------------------------------------------------------------------------
   // Animation
@@ -554,35 +590,8 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
   // Nodes that parser uses parseNode3D but NODE_BASE_TYPES maps to Node
   // -------------------------------------------------------------------------
 
-  WorldEnvironment: {
-    parserOnly: [
-      // WorldEnvironment parser calls parseNode3D but NODE_BASE_TYPES
-      // declares it a plain Node; transform/visible are parsed but no
-      // Node3D validators are inherited.
-      'transform',
-    ],
-    reason: 'WorldEnvironment parser calls parseNode3D but NODE_BASE_TYPES declares it a plain Node; transform is parser-only with no counterpart validator.',
-  },
 
-  Timer: {
-    parserOnly: [
-      // Timer parser calls parseNode which reads transform; NODE_BASE_TYPES
-      // maps Timer to Node with no spatial validators.
-      'transform',
-    ],
-    reason: 'Timer parser inherits transform via parseNode (node/parser.ts); NODE_BASE_TYPES maps Timer to Node with no spatial validators.',
-  },
 
-  SubViewport: {
-    parserOnly: [
-      // This guard reads the parser SOURCE chain, so it sees `transform` in
-      // parseNode. The SubViewport slice actually discards it (a Viewport is
-      // not a spatial node, and SubViewportProperties omits the field), so
-      // there is deliberately no validator for it.
-      'transform',
-    ],
-    reason: 'SubViewport inherits transform from parseNode in the source chain but discards it — a Viewport is not spatial, so no validator exists.',
-  },
 };
 
 // ---------------------------------------------------------------------------

@@ -188,6 +188,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Check Button",
+    "file": "unit-check-button.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Coin Glow",
     "file": "unit-coin-glow.tscn",
     "category": "Other"
@@ -328,6 +333,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Gpu Particles 2d",
+    "file": "unit-gpu-particles-2d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Gpu Particles Attractor Box 3d",
     "file": "unit-gpu-particles-attractor-box-3d.tscn",
     "category": "Other"
@@ -338,8 +348,23 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Gpu Particles Attractor Vector Field 3d",
+    "file": "unit-gpu-particles-attractor-vector-field-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Gpu Particles Collision Box 3d",
     "file": "unit-gpu-particles-collision-box-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpu Particles Collision Height Field 3d",
+    "file": "unit-gpu-particles-collision-height-field-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpu Particles Collision Sdf 3d",
+    "file": "unit-gpu-particles-collision-sdf-3d.tscn",
     "category": "Other"
   },
   {

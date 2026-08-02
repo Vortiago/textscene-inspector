@@ -36,7 +36,7 @@ Position, scale, and the played frames match at each moment of the clip.
 ## Linting
 
 <!-- lint:begin AnimatedSprite2D -->
-Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem. Every validator failure is an **error**.
+Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

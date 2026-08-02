@@ -19,7 +19,20 @@ None — a `Node` draws nothing in either engine. That absence is the useful fac
 ## Linting
 
 <!-- lint:begin Node -->
-Strict parsing format-checks nothing on this node: no validators are registered for `Node`, and it inherits none.
+Strict parsing format-checks these `Node` properties. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `auto_translate_mode` | enum 0-2 (AUTO_TRANSLATE_MODE_INHERIT/AUTO_TRANSLATE_MODE_ALWAYS/AUTO_TRANSLATE_MODE_DISABLED) |
+| `editor_description` | quoted string |
+| `physics_interpolation_mode` | enum 0-2 (INHERIT/ON/OFF) |
+| `process_mode` | enum 0-4 (PROCESS_MODE_INHERIT/PROCESS_MODE_PAUSABLE/PROCESS_MODE_WHEN_PAUSED/PROCESS_MODE_ALWAYS/PROCESS_MODE_DISABLED) |
+| `process_physics_priority` | integer |
+| `process_priority` | integer |
+| `process_thread_group` | enum 0-2 (PROCESS_THREAD_GROUP_INHERIT/PROCESS_THREAD_GROUP_MAIN_THREAD/PROCESS_THREAD_GROUP_SUB_THREAD) |
+| `process_thread_group_order` | integer |
+| `process_thread_messages` | integer >= 0 |
+| `unique_name_in_owner` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

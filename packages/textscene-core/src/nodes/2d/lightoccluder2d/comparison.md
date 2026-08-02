@@ -89,7 +89,7 @@ is why every wedge above reads as a one-pixel step.
 ## Linting
 
 <!-- lint:begin LightOccluder2D -->
-Strict parsing format-checks these `LightOccluder2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem. Every validator failure is an **error**.
+Strict parsing format-checks these `LightOccluder2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

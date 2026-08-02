@@ -29,7 +29,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin MarginContainer -->
-Strict parsing format-checks the inherited set (26 inherited from Control, 15 inherited from CanvasItem); `MarginContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (26 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `MarginContainer` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

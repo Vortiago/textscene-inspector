@@ -219,7 +219,7 @@ lifetime; a redraw flips `needsUpdate`.
 ## Linting
 
 <!-- lint:begin SubViewport -->
-Strict parsing format-checks these `SubViewport` properties, plus 9 inherited from Viewport. Every validator failure is an **error**.
+Strict parsing format-checks these `SubViewport` properties, plus 9 inherited from Viewport, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

@@ -37,7 +37,7 @@ leading stand in for Godot's bundled theme font and nudge the break to a differe
 ## Linting
 
 <!-- lint:begin Label -->
-Strict parsing format-checks the inherited set (26 inherited from Control, 15 inherited from CanvasItem); `Label` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (26 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `Label` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

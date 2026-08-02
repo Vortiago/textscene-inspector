@@ -71,6 +71,10 @@ const INVOCATIONS = {
   ],
   unknownType: ['Widget3D', '3d', '--intent', 'pending', '--chain', 'Node3D'],
   inheritsSkippingEmpty: [
+    'AspectRatioContainer', '2d/ui', '--base', 'control', '--intent', 'pending',
+    '--chain', 'Container', '--linter',
+  ],
+  inheritsFromImmediateParent: [
     'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'Button', '--linter',
   ],
   wrongChain: ['ShapeCast3D', '3d', '--intent', 'pending', '--chain', 'Node2D'],
@@ -127,13 +131,21 @@ describe('new-node-slice argument contract', () => {
   });
 
   it('inherits from the nearest ancestor that registers, not the --base flag', () => {
-    // `Button` sits between CheckButton and BaseButton and registers nothing,
-    // so stopping at the immediate parent would skip BaseButton's whole set —
-    // and stopping at `--base control` would skip both. Three agents in one
-    // wave disagreed about this import; the scaffold now settles it.
+    // `Container` sits between AspectRatioContainer and Control and registers
+    // nothing (Godot binds it no properties), so stopping at the immediate
+    // parent would skip Control's whole set. Three agents in one wave
+    // disagreed about this import; the scaffold now settles it.
     const { ok, out } = results.inheritsSkippingEmpty;
     expect(ok).toBe(true);
-    expect(out).toMatch(/inherit \.\.\/basebutton\/linterParser\.js/);
+    expect(out).toMatch(/inherit \.\.\/control\/linterParser\.js/);
+  });
+
+  it('stops at the immediate parent when that parent does register', () => {
+    // The other half of the same rule: Button declares its own 13 members, so
+    // CheckButton must import Button rather than walking past it to BaseButton.
+    const { ok, out } = results.inheritsFromImmediateParent;
+    expect(ok).toBe(true);
+    expect(out).toMatch(/inherit \.\.\/button\/linterParser\.js/);
   });
 
   it('refuses a --chain Godot disagrees with, naming the real parent', () => {

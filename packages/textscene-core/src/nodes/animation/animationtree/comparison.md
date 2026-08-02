@@ -50,7 +50,7 @@ hardcodes `AnimationPlayer` as the driver, so it cannot select an
 ## Linting
 
 <!-- lint:begin AnimationTree -->
-Strict parsing format-checks these `AnimationTree` properties. Every validator failure is an **error**.
+Strict parsing format-checks these `AnimationTree` properties, plus 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

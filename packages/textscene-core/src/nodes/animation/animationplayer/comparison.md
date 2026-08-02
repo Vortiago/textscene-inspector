@@ -49,7 +49,7 @@ not exercise is where the real gaps are, so they are listed rather than shown:
 ## Linting
 
 <!-- lint:begin AnimationPlayer -->
-Strict parsing format-checks these `AnimationPlayer` properties. Every validator failure is an **error**.
+Strict parsing format-checks these `AnimationPlayer` properties, plus 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

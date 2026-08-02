@@ -125,7 +125,19 @@ export async function collectCoverage() {
   const { validatorRegistry } = await loadCoreLinter();
 
   const registered = new Set(nodeRegistry.getAllTypeNames());
-  const validated = new Set(validatorRegistry.getRegisteredNodeTypes());
+  // A registration entry is not coverage: a slice may call registerAll with an
+  // empty map, which is correct for a type Godot gives no own members but
+  // indistinguishable from a slice nobody finished. Count declared keys.
+  const validated = new Set(
+    validatorRegistry
+      .getRegisteredNodeTypes()
+      .filter((t) => validatorRegistry.getOwnKeys(t).length > 0)
+  );
+
+  // Registered by the parser, declaring nothing of its own. These read as
+  // covered in the `registered` count while StrictTscnParser accepts every
+  // value on them, so they are listed rather than left to be inferred.
+  const undeclared = [...registered].filter((t) => !validated.has(t)).sort();
 
   const bases = baseClassesOf(catalog.nodes);
   const catalogued = new Set(catalog.nodes.map((n) => n.name));
@@ -144,6 +156,7 @@ export async function collectCoverage() {
     total: catalog.nodes.length,
     registered: [...registered].sort(),
     validated: [...validated].sort(),
+    undeclared,
     missing,
     phantom,
   };
@@ -173,7 +186,14 @@ function report(data, opts) {
   const pct = ((done / data.total) * 100).toFixed(1);
   console.log(`Godot ${data.godotVersion}`);
   console.log(`Node types: ${done}/${data.total} registered (${pct}%), ${data.missing.length} missing`);
-  console.log(`Types with their own validators: ${data.validated.length}\n`);
+  console.log(`Types with their own validators: ${data.validated.length}`);
+  if (data.undeclared.length) {
+    console.log(
+      `Registered but declaring none: ${data.undeclared.length} ` +
+        `(see linter/ownValidatorCoverage.test.ts for which are correct)`
+    );
+  }
+  console.log('');
 
   if (data.phantom.length) {
     console.log(`Registered but absent from ClassDB: ${data.phantom.join(', ')}\n`);

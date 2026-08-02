@@ -30,7 +30,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin AudioStreamPlayer2D -->
-Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem. Every validator failure is an **error**.
+Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

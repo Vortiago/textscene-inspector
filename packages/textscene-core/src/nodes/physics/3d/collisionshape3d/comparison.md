@@ -29,7 +29,7 @@ and shading identically on both sides.
 ## Linting
 
 <!-- lint:begin CollisionShape3D -->
-Strict parsing format-checks these `CollisionShape3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
+Strict parsing format-checks these `CollisionShape3D` properties, plus 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

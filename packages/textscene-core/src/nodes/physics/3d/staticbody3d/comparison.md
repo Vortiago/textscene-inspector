@@ -29,7 +29,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin StaticBody3D -->
-Strict parsing format-checks these `StaticBody3D` properties, plus 6 inherited from CollisionObject3D, 16 inherited from Node3D. Every validator failure is an **error**.
+Strict parsing format-checks these `StaticBody3D` properties, plus 6 inherited from CollisionObject3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

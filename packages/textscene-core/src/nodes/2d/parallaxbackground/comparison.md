@@ -68,7 +68,7 @@ exact for a sub-viewport and irrelevant on the 2D stage, where no scroll runs.
 ## Linting
 
 <!-- lint:begin ParallaxBackground -->
-Strict parsing format-checks these `ParallaxBackground` properties. Every validator failure is an **error**.
+Strict parsing format-checks these `ParallaxBackground` properties, plus 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

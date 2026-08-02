@@ -30,7 +30,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin NavigationAgent3D -->
-Strict parsing format-checks these `NavigationAgent3D` properties. Every validator failure is an **error**.
+Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

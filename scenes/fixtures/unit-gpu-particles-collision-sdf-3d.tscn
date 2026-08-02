@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+[ext_resource type="CompressedTexture3D" path="res://textures/gpuparticlescollisionsdf3d-baked.exr" id="1_sdf"]
+
+[node name="Root" type="Node3D"]
+
+[node name="MyGPUParticlesCollisionSDF3D" type="GPUParticlesCollisionSDF3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+size = Vector3(4, 2, 4)
+resolution = 2
+thickness = 0.5
+bake_mask = 3
+texture = ExtResource("1_sdf")

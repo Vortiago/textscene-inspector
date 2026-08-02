@@ -26,7 +26,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin CanvasLayer -->
-Strict parsing format-checks nothing on this node: no validators are registered for `CanvasLayer`, and it inherits none.
+Strict parsing format-checks the inherited set (10 inherited from Node); `CanvasLayer` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

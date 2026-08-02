@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="PlaceholderTexture3D" id="PlaceholderTexture3D_1"]
+size = Vector3i(64, 64, 64)
+
+[node name="Root" type="Node3D"]
+
+[node name="MyGPUParticlesAttractorVectorField3D" type="GPUParticlesAttractorVectorField3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+size = Vector3(3, 1.5, 3)
+texture = SubResource("PlaceholderTexture3D_1")

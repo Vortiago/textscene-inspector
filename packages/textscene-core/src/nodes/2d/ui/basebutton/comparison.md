@@ -33,7 +33,7 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin BaseButton -->
-Strict parsing format-checks these `BaseButton` properties, plus 26 inherited from Control, 15 inherited from CanvasItem. Every validator failure is an **error**.
+Strict parsing format-checks these `BaseButton` properties, plus 26 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
@@ -51,6 +51,7 @@ Strict parsing format-checks these `BaseButton` properties, plus 26 inherited fr
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
 `linterParser.ts` now format-checks all 10 of BaseButton's own members

@@ -36,11 +36,28 @@ tint is approximated rather than read from the default theme's disabled color.
 ## Linting
 
 <!-- lint:begin Button -->
-Strict parsing format-checks the inherited set (10 inherited from BaseButton, 26 inherited from Control, 15 inherited from CanvasItem); `Button` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `Button` properties, plus 10 inherited from BaseButton, 26 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `alignment` | enum 0-2 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT) |
+| `autowrap_mode` | enum 0-3 (AUTOWRAP_OFF/AUTOWRAP_ARBITRARY/AUTOWRAP_WORD/AUTOWRAP_WORD_SMART) |
+| `autowrap_trim_flags` | integer >= 0 |
+| `clip_text` | true or false |
+| `expand_icon` | true or false |
+| `flat` | true or false |
+| `icon` | SubResource("id") or ExtResource("id") |
+| `icon_alignment` | enum 0-2 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT) |
+| `language` | quoted string |
+| `text` | quoted string |
+| `text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) |
+| `text_overrun_behavior` | enum 0-6 (OVERRUN_NO_TRIMMING/OVERRUN_TRIM_CHAR/OVERRUN_TRIM_WORD/OVERRUN_TRIM_ELLIPSIS/OVERRUN_TRIM_WORD_ELLIPSIS/OVERRUN_TRIM_ELLIPSIS_FORCE/OVERRUN_TRIM_WORD_ELLIPSIS_FORCE) |
+| `vertical_icon_alignment` | enum 0-2 (VERTICAL_ALIGNMENT_TOP/VERTICAL_ALIGNMENT_CENTER/VERTICAL_ALIGNMENT_BOTTOM) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
 Button's own fields, `text`, `disabled`, `flat`, `alignment`, `icon`,

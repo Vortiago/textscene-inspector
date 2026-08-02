@@ -101,7 +101,10 @@ reproduced:
 - [GPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/gpuparticles3d/comparison.md) — a transform-only group
 - [GPUParticlesAttractorBox3D](../../packages/textscene-core/src/nodes/3d/particles/attractors/gpuparticlesattractorbox3d/comparison.md) — nothing yet; a box-shaped region that pulls or pushes particles
 - [GPUParticlesAttractorSphere3D](../../packages/textscene-core/src/nodes/3d/particles/attractors/gpuparticlesattractorsphere3d/comparison.md) — nothing yet; a spherical region that pulls or pushes particles
+- [GPUParticlesAttractorVectorField3D](../../packages/textscene-core/src/nodes/3d/particles/attractors/gpuparticlesattractorvectorfield3d/comparison.md) — nothing yet; a box region steering particles by a 3D texture
 - [GPUParticlesCollisionBox3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionbox3d/comparison.md) — nothing yet; a box particles collide with
+- [GPUParticlesCollisionHeightField3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionheightfield3d/comparison.md) — nothing yet; a baked height field particles collide with
+- [GPUParticlesCollisionSDF3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionsdf3d/comparison.md) — nothing yet; a baked signed-distance volume particles collide with
 - [GPUParticlesCollisionSphere3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionsphere3d/comparison.md) — nothing yet; a sphere particles collide with
 - [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md) — a THREE.InstancedMesh per MeshLibrary item
 - [HingeJoint3D](../../packages/textscene-core/src/nodes/physics/3d/hingejoint3d/comparison.md) — nothing (a transform-only group; one rotational axis between two bodies)
@@ -152,11 +155,13 @@ reproduced:
 - [CanvasModulate](../../packages/textscene-core/src/nodes/2d/canvasmodulate/comparison.md) — a colour multiply applied to the whole canvas
 - [CenterContainer](../../packages/textscene-core/src/nodes/2d/ui/centercontainer/comparison.md) — a centering flex container
 - [CheckBox](../../packages/textscene-core/src/nodes/2d/ui/checkbox/comparison.md) — an inline HTML row with a drawn check indicator
+- [CheckButton](../../packages/textscene-core/src/nodes/2d/ui/checkbutton/comparison.md) — nothing yet; a labelled on/off switch
 - [CollisionShape2D](../../packages/textscene-core/src/nodes/physics/2d/collisionshape2d/comparison.md) — a toggle-gated collision outline
 - [ColorRect](../../packages/textscene-core/src/nodes/2d/ui/colorrect/comparison.md) — a color-filled div
 - [Control](../../packages/textscene-core/src/nodes/2d/ui/control/comparison.md) — a full-rect layout region
 - [CPUParticles2D](../../packages/textscene-core/src/nodes/2d/cpuparticles2d/comparison.md) — one merged quad mesh holding a frozen particle pose
 - [DampedSpringJoint2D](../../packages/textscene-core/src/nodes/physics/2d/dampedspringjoint2d/comparison.md) — nothing (a transform-only group; a spring between two bodies)
+- [GPUParticles2D](../../packages/textscene-core/src/nodes/2d/particles/gpuparticles2d/comparison.md) — nothing yet; a GPU-simulated 2D particle cloud
 - [GridContainer](../../packages/textscene-core/src/nodes/2d/ui/gridcontainer/comparison.md) — a CSS grid container
 - [GrooveJoint2D](../../packages/textscene-core/src/nodes/physics/2d/groovejoint2d/comparison.md) — nothing (a transform-only group; a slot one body slides along)
 - [HBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/hboxcontainer/comparison.md) — a CSS flex-row `<div>`

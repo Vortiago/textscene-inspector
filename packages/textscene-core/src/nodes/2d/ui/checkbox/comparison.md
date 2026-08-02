@@ -35,11 +35,12 @@ read correctly in both, and the labels sit at the same place.
 ## Linting
 
 <!-- lint:begin CheckBox -->
-Strict parsing format-checks the inherited set (10 inherited from BaseButton, 26 inherited from Control, 15 inherited from CanvasItem); `CheckBox` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (13 inherited from Button, 10 inherited from BaseButton, 26 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `CheckBox` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
 CheckBox's own fields, `text`, `button_pressed`, `disabled`, `button_group`, are

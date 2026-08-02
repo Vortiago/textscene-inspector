@@ -493,7 +493,7 @@
       "name": "CheckButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Button",
         "BaseButton",
@@ -1022,7 +1022,7 @@
       "name": "GPUParticles2D",
       "category": "2D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -1081,7 +1081,7 @@
       "name": "GPUParticlesAttractorVectorField3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GPUParticlesAttractor3D",
         "VisualInstance3D",
@@ -1111,7 +1111,7 @@
       "name": "GPUParticlesCollisionHeightField3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GPUParticlesCollision3D",
         "VisualInstance3D",
@@ -1126,7 +1126,7 @@
       "name": "GPUParticlesCollisionSDF3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GPUParticlesCollision3D",
         "VisualInstance3D",
