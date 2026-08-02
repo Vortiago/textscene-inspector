@@ -40,13 +40,13 @@ afterEach(() => {
 describe('resolveProceduralTexture', () => {
   it('resolves a GradientTexture2D', () => {
     const resolved = resolveProceduralTexture('SubResource("GradientTexture2D_a")', RESOURCES)!;
-    expect(resolved.texture.image.width).toBe(8);
+    expect((resolved.texture.image as { width: number }).width).toBe(8);
     expect(resolved.key).toContain('GradientTexture2D_a');
   });
 
   it('resolves a NoiseTexture2D', () => {
     const resolved = resolveProceduralTexture('SubResource("NoiseTexture2D_a")', RESOURCES)!;
-    expect(resolved.texture.image.width).toBe(8);
+    expect((resolved.texture.image as { width: number }).width).toBe(8);
     expect(resolved.key).toContain('NoiseTexture2D_a');
   });
 

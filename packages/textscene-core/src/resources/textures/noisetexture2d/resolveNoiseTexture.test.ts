@@ -81,7 +81,7 @@ describe('resolveNoiseTexture2D — the ice.tres shape', () => {
     const data = resolved.texture.image.data as Uint8Array;
     for (let i = 0; i < data.length; i += 4) {
       // Unit normals packed around the midpoint, +Z dominant for a height field.
-      const [nx, ny, nz] = [data[i]!, data[i + 1]!, data[i + 2]!].map((v) => v / 127.5 - 1);
+      const [nx = 0, ny = 0, nz = 0] = [data[i]!, data[i + 1]!, data[i + 2]!].map((v) => v / 127.5 - 1);
       expect(Math.hypot(nx, ny, nz)).toBeCloseTo(1, 1);
       expect(nz).toBeGreaterThan(0);
     }

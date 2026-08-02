@@ -29,7 +29,7 @@ const RAMP: Gradient = {
     { offset: 0, color: { r: 0, g: 0, b: 0, a: 1 } },
     { offset: 1, color: { r: 1, g: 0, b: 0, a: 1 } },
   ],
-  interpolationMode: GradientInterpolationMode.LINEAR,
+  interpolationMode: GradientInterpolationMode.Linear,
 };
 
 describe('noiseImage', () => {
@@ -129,7 +129,7 @@ describe('bumpMapToNormalMap', () => {
     const ramp = grayToRgba(new Uint8Array([0, 255, 0, 255]));
     const normals = bumpMapToNormalMap(ramp, 2, 2, 1);
     expect(normals[0]!).toBeLessThan(127);
-    const [nx, ny, nz] = [normals[0]!, normals[1]!, normals[2]!].map((v) => v / 127.5 - 1);
+    const [nx = 0, ny = 0, nz = 0] = [normals[0]!, normals[1]!, normals[2]!].map((v) => v / 127.5 - 1);
     expect(Math.hypot(nx, ny, nz)).toBeCloseTo(1, 1);
     expect(normals[3]).toBe(255);
   });
@@ -195,7 +195,7 @@ describe('rasterizeNoiseTexture2D', () => {
     // Every pixel is a unit normal packed around the midpoint, and opaque.
     for (let i = 0; i < data.length; i += 4) {
       expect(data[i + 3]).toBe(255);
-      const [nx, ny, nz] = [data[i]!, data[i + 1]!, data[i + 2]!].map((v) => v / 127.5 - 1);
+      const [nx = 0, ny = 0, nz = 0] = [data[i]!, data[i + 1]!, data[i + 2]!].map((v) => v / 127.5 - 1);
       expect(Math.hypot(nx, ny, nz)).toBeCloseTo(1, 1);
     }
   });
