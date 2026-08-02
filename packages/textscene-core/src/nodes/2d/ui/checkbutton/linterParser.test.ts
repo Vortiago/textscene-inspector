@@ -4,8 +4,9 @@
  * CheckButton declares no member of its own (see linterParser.ts for the
  * source citations), so the real content of this slice's test is that the
  * base-walk still resolves every inherited key a scene author can set on a
- * CheckButton: `toggle_mode` and `button_pressed` from BaseButton,
- * `anchor_right` from Control, `modulate` from CanvasItem.
+ * CheckButton: `alignment` and `text` from Button, `toggle_mode` and
+ * `button_pressed` from BaseButton, `anchor_right` from Control, `modulate`
+ * from CanvasItem.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,6 +23,15 @@ function check(property: string, value: string) {
 describe('CheckButton strict validators', () => {
   it('declares no members of its own: check_button.cpp binds no ADD_PROPERTY', () => {
     expect(validatorRegistry.getOwnKeys('CheckButton')).toEqual([]);
+  });
+
+  it('resolves Button keys, the nearest ancestor that declares any', () => {
+    // linterParser.ts imports ../button, not ../basebutton: the scaffold's rule
+    // is to import the nearest ancestor that registers, and Button declares 13
+    // members. Importing past it would leave these unresolved in this graph.
+    expect(check('alignment', '1')).toBeNull();
+    expect(check('alignment', '3')?.code).toBe('INVALID_ALIGNMENT_VALUE');
+    expect(check('text', '"Sound"')).toBeNull();
   });
 
   it('resolves toggle_mode through the BaseButton base-walk', () => {

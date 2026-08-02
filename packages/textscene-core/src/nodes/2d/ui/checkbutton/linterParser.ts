@@ -16,7 +16,7 @@
  * delivered by the NODE_BASE_TYPES base-walk (see linterParser.test.ts).
  */
 
-import '../basebutton/linterParser.js';
+import '../button/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 
 validatorRegistry.registerAll('CheckButton', {});
