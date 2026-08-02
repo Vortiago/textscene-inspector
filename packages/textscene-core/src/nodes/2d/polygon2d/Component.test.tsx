@@ -5,6 +5,7 @@ import { Polygon2D } from './Component';
 import { parsePolygon2D } from './parser';
 import type { ParsedHeading } from '../../../parser/utils';
 import type { TscnNode } from '../../../parser/types';
+import { isMesh, isBasicMaterial } from '../../../r3f/testing/threeNarrow';
 
 function node(rawProps: Record<string, string>, name = 'Poly'): TscnNode {
   const heading: ParsedHeading = { type: 'node', attributes: { name, type: 'Polygon2D' } };
@@ -16,19 +17,6 @@ async function render(n: TscnNode) {
 }
 
 type Renderer = Awaited<ReturnType<typeof render>>;
-
-/**
- * Narrow on three's own cross-copy flags, not `instanceof`: the test renderer
- * resolves a different `three` module instance, so `instanceof` is false even
- * for genuine Meshes.
- */
-function isMesh(o: THREE.Object3D): o is THREE.Mesh {
-  return (o as Partial<THREE.Mesh>).isMesh === true;
-}
-
-function isBasicMaterial(m: THREE.Material): m is THREE.MeshBasicMaterial {
-  return (m as Partial<THREE.MeshBasicMaterial>).isMeshBasicMaterial === true;
-}
 
 /** The single fill Mesh the component draws, narrowed from the scene graph. */
 function fillMesh(renderer: Renderer): THREE.Mesh {

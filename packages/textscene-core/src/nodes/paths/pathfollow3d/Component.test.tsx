@@ -63,7 +63,7 @@ async function render(
 function namedGroup(renderer: Awaited<ReturnType<typeof render>>): THREE.Object3D | undefined {
   return renderer.scene
     .findAllByType('Group')
-    .map((g) => g.instance as unknown as THREE.Object3D)
+    .map((g) => g.instance as THREE.Object3D)
     .find((o) => o.name === 'MyFollow');
 }
 

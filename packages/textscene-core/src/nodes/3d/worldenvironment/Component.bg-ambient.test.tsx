@@ -38,7 +38,7 @@ async function ambientLights(environmentBody: string) {
   );
   return renderer.scene
     .findAllByType('AmbientLight')
-    .map((l) => l.instance as unknown as THREE.AmbientLight);
+    .map((l) => l.instance as THREE.AmbientLight);
 }
 
 describe('<WorldEnvironment> ambient from the background', () => {

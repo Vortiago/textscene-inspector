@@ -23,12 +23,7 @@ import {
   AttenuationModel,
   DopplerTracking,
 } from './types';
-
-// `instanceof THREE.Mesh` is false across @react-three/test-renderer's separate
-// `three` copy; three's own cross-realm duck flag is the reliable narrowing.
-function isMesh(o: THREE.Object3D): o is THREE.Mesh {
-  return (o as Partial<THREE.Mesh>).isMesh === true;
-}
+import { isMesh } from '../../../r3f/testing/threeNarrow';
 
 /**
  * The speaker + range gizmos are now gated on selection. To

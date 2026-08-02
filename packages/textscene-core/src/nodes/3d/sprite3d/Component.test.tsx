@@ -203,7 +203,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(mat.map?.offset.x).toBeCloseTo(0.25, 5);
     expect(mat.map?.offset.y).toBeCloseTo(0.25, 5);
     // Quad sized to the sub-region.
-    const geom = (mesh.instance as THREE.Mesh).geometry as unknown as { parameters: { width: number; height: number } };
+    const geom = (mesh.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
     expect(geom.parameters.width).toBeCloseTo(0.5, 5);
     expect(geom.parameters.height).toBeCloseTo(0.5, 5);
   });

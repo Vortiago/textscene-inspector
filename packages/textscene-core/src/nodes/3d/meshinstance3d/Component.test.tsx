@@ -80,7 +80,8 @@ describe('<MeshInstance3D>', () => {
       const renderer = await render(node, [resource]);
       const mesh = renderer.scene.findByType('Mesh');
       expect((mesh.instance as THREE.Mesh).geometry.type).toBe('BoxGeometry');
-      const params = ((mesh.instance as THREE.Mesh).geometry as unknown as { parameters: { width: number; height: number; depth: number } }).parameters;
+      const params = ((mesh.instance as THREE.Mesh).geometry as THREE.BoxGeometry)
+        .parameters;
       expect(params.width).toBe(2);
       expect(params.height).toBe(3);
       expect(params.depth).toBe(4);

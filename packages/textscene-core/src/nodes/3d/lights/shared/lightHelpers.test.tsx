@@ -152,7 +152,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
           </HierarchyProvider>,
         );
 
-        const scene = renderer.scene.instance as unknown as THREE.Scene;
+        const scene = renderer.scene.instance as THREE.Scene;
         const helpers = findHelpersOfType(scene, c.helperCtor);
         expect(helpers).toHaveLength(0);
       });
@@ -171,7 +171,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
           </HierarchyProvider>,
         );
 
-        const scene = renderer.scene.instance as unknown as THREE.Scene;
+        const scene = renderer.scene.instance as THREE.Scene;
         const helpers = findHelpersOfType(scene, c.helperCtor);
         expect(helpers).toHaveLength(1);
       });
@@ -190,7 +190,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
           </HierarchyProvider>,
         );
 
-        const scene = renderer.scene.instance as unknown as THREE.Scene;
+        const scene = renderer.scene.instance as THREE.Scene;
         expect(findHelpersOfType(scene, c.helperCtor)).toHaveLength(1);
 
         await renderer.update(
@@ -223,7 +223,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
           </HierarchyProvider>,
         );
 
-        const scene = renderer.scene.instance as unknown as THREE.Scene;
+        const scene = renderer.scene.instance as THREE.Scene;
         expect(findHelpersOfType(scene, c.helperCtor)).toHaveLength(0);
       });
     });
@@ -245,7 +245,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
       </HierarchyProvider>,
     );
 
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    const scene = renderer.scene.instance as THREE.Scene;
     expect(findHelpersOfType(scene, THREE.SpotLightHelper)).toHaveLength(0);
     // But the 18 SpotLight nodes themselves still mount — only the
     // gizmos were the visual-pollution problem, not the lights. We
@@ -277,7 +277,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
       </HierarchyProvider>,
     );
 
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    const scene = renderer.scene.instance as THREE.Scene;
     // No selection, only hover ⇒ no SpotLightHelper.
     expect(findHelpersOfType(scene, THREE.SpotLightHelper)).toHaveLength(0);
   });
@@ -332,7 +332,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     // any matrixWorld, matching what always happens before a real paint.
     await renderer.advanceFrames(1, 16);
 
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    const scene = renderer.scene.instance as THREE.Scene;
     scene.updateMatrixWorld(true);
     const [helper] = findHelpersOfType(scene, THREE.DirectionalLightHelper);
     expect(helper).toBeDefined();
@@ -344,7 +344,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     // 18-spotlight test does for `'SpotLight'`.
     const [lightNode] = renderer.scene.findAllByType('DirectionalLight');
     expect(lightNode).toBeDefined();
-    const light = lightNode!.instance as unknown as THREE.DirectionalLight;
+    const light = lightNode!.instance as THREE.DirectionalLight;
 
     // The helper must track the light's TRUE world position exactly — not
     // squared through the parent group (the original double-transform bug:
@@ -414,14 +414,14 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     // `useFrame` tick, which requires advancing at least one frame.
     await renderer.advanceFrames(1, 16);
 
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    const scene = renderer.scene.instance as THREE.Scene;
     scene.updateMatrixWorld(true);
     const [helper] = findHelpersOfType(scene, THREE.PointLightHelper);
     expect(helper).toBeDefined();
 
     const [lightNode] = renderer.scene.findAllByType('PointLight');
     expect(lightNode).toBeDefined();
-    const light = lightNode!.instance as unknown as THREE.PointLight;
+    const light = lightNode!.instance as THREE.PointLight;
 
     // Same invariant as the DirectionalLight case above: the helper must
     // track the light's own current matrixWorld exactly, and that
@@ -478,7 +478,7 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
       </HierarchyProvider>,
     );
 
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    const scene = renderer.scene.instance as THREE.Scene;
     expect(findHelpersOfType(scene, THREE.CameraHelper)).toHaveLength(0);
   });
 
@@ -497,7 +497,7 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
       </HierarchyProvider>,
     );
 
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    const scene = renderer.scene.instance as THREE.Scene;
     expect(findHelpersOfType(scene, THREE.CameraHelper)).toHaveLength(1);
   });
 
@@ -516,7 +516,7 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
       </HierarchyProvider>,
     );
 
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    const scene = renderer.scene.instance as THREE.Scene;
     expect(findHelpersOfType(scene, THREE.CameraHelper)).toHaveLength(1);
 
     await renderer.update(
@@ -573,14 +573,14 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
     // one frame so it fires before reading any matrixWorld.
     await renderer.advanceFrames(1, 16);
 
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    const scene = renderer.scene.instance as THREE.Scene;
     scene.updateMatrixWorld(true);
     const [helper] = findHelpersOfType(scene, THREE.CameraHelper);
     expect(helper).toBeDefined();
 
     const [cameraNode3] = renderer.scene.findAllByType('PerspectiveCamera');
     expect(cameraNode3).toBeDefined();
-    const camera = cameraNode3!.instance as unknown as THREE.PerspectiveCamera;
+    const camera = cameraNode3!.instance as THREE.PerspectiveCamera;
 
     const helperWorldPos = new THREE.Vector3().setFromMatrixPosition(helper!.matrixWorld);
     const cameraWorldPos = new THREE.Vector3().setFromMatrixPosition(camera.matrixWorld);

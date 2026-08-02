@@ -85,7 +85,7 @@ describe('Label3D (assertions 90–94)', () => {
     // a font_size-aware implementation would produce a different height
     // than the default. We assert mesh exists for now; the property check
     // can be tightened once the parser captures it.
-    const geom = (mesh.instance as THREE.Mesh).geometry as unknown as { parameters: { height: number } };
+    const geom = (mesh.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
     // Default pixel_size=0.01 + FONT_SIZE=128 → height ≈ 0.01 * 100 = 1.0
     // (the current implementation ignores font_size). With font_size=64
     // we'd expect HALF that height. This test fails until font_size is wired.

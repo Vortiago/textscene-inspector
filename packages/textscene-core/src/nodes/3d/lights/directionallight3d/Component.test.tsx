@@ -88,6 +88,7 @@ describe('<DirectionalLight3D> shadow frustum', () => {
     // The reach comes from a NEGATIVE near plane, not from displacing the
     // light: everything anchored to the light's transform — its helper, the
     // selection box, F-to-frame — must stay at the node, as Godot draws them.
+    expect(light.castShadow).toBe(true);
     expect(light.position.length()).toBe(0);
     expect(light.shadow.camera.near).toBeLessThan(0);
     expect(light.shadow.camera.far).toBeGreaterThan(0);

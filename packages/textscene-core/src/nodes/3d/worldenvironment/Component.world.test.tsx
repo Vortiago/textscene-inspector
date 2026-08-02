@@ -90,7 +90,7 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     ]);
     const lights = renderer.scene.findAllByType('AmbientLight');
     expect(lights.length).toBe(1);
-    expect((lights[0]!.instance as unknown as THREE.AmbientLight).color.getHexString()).toBe(
+    expect((lights[0]!.instance as THREE.AmbientLight).color.getHexString()).toBe(
       '666666'
     );
   });

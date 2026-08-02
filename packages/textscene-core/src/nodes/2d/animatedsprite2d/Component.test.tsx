@@ -26,6 +26,7 @@ import {
 } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import type { TscnNode } from '../../../parser/types';
+import { isMesh, isBasicMaterial } from '../../../r3f/testing/threeNarrow';
 
 const heading = { type: 'node', attributes: { type: 'AnimatedSprite2D', name: 'A' } };
 const TEX = 'res://frame3.png';
@@ -68,19 +69,6 @@ async function render(rootNode: TscnNode) {
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
-}
-
-/**
- * Narrow on three's own cross-copy flags rather than `instanceof`: the test
- * renderer resolves a different `three` module instance, so `instanceof` is
- * false even for genuine Meshes.
- */
-function isMesh(o: THREE.Object3D): o is THREE.Mesh {
-  return (o as Partial<THREE.Mesh>).isMesh === true;
-}
-
-function isBasicMaterial(m: THREE.Material): m is THREE.MeshBasicMaterial {
-  return (m as Partial<THREE.MeshBasicMaterial>).isMeshBasicMaterial === true;
 }
 
 function meshOf(instance: THREE.Object3D): THREE.Mesh {

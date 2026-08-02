@@ -106,10 +106,10 @@ describe('<Label3D>', () => {
     const a = await renderLabel(makeNode({ pixel_size: 0.01 }));
     const b = await renderLabel(makeNode({ pixel_size: 0.02 }));
     const ah = (
-      (a.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as { parameters: { height: number } }
+      (a.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.PlaneGeometry
     ).parameters.height;
     const bh = (
-      (b.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as { parameters: { height: number } }
+      (b.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.PlaneGeometry
     ).parameters.height;
     expect(bh).toBeCloseTo(2 * ah, 5);
   });
