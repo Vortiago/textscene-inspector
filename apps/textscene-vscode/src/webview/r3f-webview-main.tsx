@@ -78,9 +78,8 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
-      const data: unknown = event.data;
-      if (!isHostToWebviewMessage(data)) return;
-      const message = data;
+      const message: unknown = event.data;
+      if (!isHostToWebviewMessage(message)) return;
       if (message.type === 'loadTscn') {
         setContent(message.content);
       } else if (message.type === 'incrementalUpdate') {
