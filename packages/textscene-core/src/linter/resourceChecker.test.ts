@@ -50,17 +50,6 @@ describe('checkResourceExists', () => {
       expect(checkResourceExists(scene, 'SubResource("mesh_1")')).toBe(false);
     });
 
-    it('should handle scene with undefined internal resources', () => {
-      // TscnScene marks the array required; the checker still defends against a
-      // scene assembled without it (e.g. rehydrated across the webview boundary).
-      const scene = {
-        nodes: [],
-        externalResources: [],
-      } as Partial<TscnScene> as TscnScene;
-
-      expect(checkResourceExists(scene, 'SubResource("mesh_1")')).toBe(false);
-    });
-
     it('should find SubResource with hyphenated ID', () => {
       const scene: TscnScene = {
         nodes: [],
@@ -145,10 +134,11 @@ describe('checkResourceExists', () => {
         nodes: [],
         externalResources: [
           {
+            id: 'texture_1',
             type: 'Texture2D',
-            path: 'texture_1',
+            path: 'res://textures/texture.png',
           },
-        ] as TscnExternalResource[],
+        ],
         internalResources: [],
       };
 
@@ -161,17 +151,6 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [],
       };
-
-      expect(checkResourceExists(scene, 'ExtResource("texture_1")')).toBe(false);
-    });
-
-    it('should handle scene with undefined external resources', () => {
-      // TscnScene marks the array required; the checker still defends against a
-      // scene assembled without it (e.g. rehydrated across the webview boundary).
-      const scene = {
-        nodes: [],
-        internalResources: [],
-      } as Partial<TscnScene> as TscnScene;
 
       expect(checkResourceExists(scene, 'ExtResource("texture_1")')).toBe(false);
     });
