@@ -23,8 +23,8 @@ describe('packedscene slice registration', () => {
   });
 
   it('leaves binary .scn unclaimed', () => {
-    // Issue #110: no loader produces a ParsedResource from binary yet, and a
-    // claim would route a file nothing can read.
+    // No loader produces a ParsedResource from binary yet, and a claim would
+    // route a file nothing can read.
     expect(resourceSliceRegistry.byExtension('.scn')).toBeNull();
   });
 
