@@ -35,6 +35,7 @@ import {
   isViewportTextureRef,
   useViewportTextureSlot,
 } from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
+import { useProceduralTexture } from '../../../resources/useProceduralTexture';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { Sprite2DProperties } from './types';
@@ -56,6 +57,12 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   const isViewportSlot = isViewportTextureRef(props.texture, internalResources);
   const viewportTexture = useViewportTextureSlot(props.texture, internalResources);
 
+  // A procedural texture (GradientTexture2D, NoiseTexture2D) is described
+  // entirely by the scene — no file exists, so the path arm below resolves
+  // nothing for it. Borrowed from the procedural cache; frame composition
+  // clones it like any loaded texture.
+  const proceduralTexture = useProceduralTexture(props.texture, internalResources);
+
   const resolvedTexture = useMemo(
     () =>
       isViewportSlot
@@ -74,8 +81,13 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     // 'clamp': the 2D canvas samples with texture-repeat DISABLED, so a
     // region_rect overrunning the texture stretches its edge texels rather
     // than tiling.
-    return composeFrameTexture(texResult.value, frameProps, 'clamp', resolvedTexture.region);
-  }, [texResult.value, props, animatedFrame, resolvedTexture.region]);
+    return composeFrameTexture(
+      proceduralTexture ?? texResult.value,
+      frameProps,
+      'clamp',
+      resolvedTexture.region
+    );
+  }, [proceduralTexture, texResult.value, props, animatedFrame, resolvedTexture.region]);
   // composeFrameTexture clones the texture per frame; dispose the prior clone
   // when the frame advances (and on unmount) so playback doesn't leak GPU
   // textures (~one per keyframe otherwise).
@@ -86,8 +98,13 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // target reports its rect through the same `image` shape a loaded texture
   // uses, so the sizing path is shared.
   const { width, height } = useMemo(
-    () => frameSizePx(viewportTexture ?? texResult.value, props, resolvedTexture.region),
-    [viewportTexture, texResult.value, props, resolvedTexture.region]
+    () =>
+      frameSizePx(
+        viewportTexture ?? proceduralTexture ?? texResult.value,
+        props,
+        resolvedTexture.region
+      ),
+    [viewportTexture, proceduralTexture, texResult.value, props, resolvedTexture.region]
   );
 
   // Placeholder when no texture is referenced or it failed to load. A
@@ -95,7 +112,9 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // is there and simply has not rendered, so the sprite draws nothing until it
   // does rather than flashing a placeholder.
   const showPlaceholder =
-    !isViewportSlot && (!texturePath || texResult.status === 'unavailable');
+    !isViewportSlot &&
+    !proceduralTexture &&
+    (!texturePath || texResult.status === 'unavailable');
 
   return (
     <CanvasItem2D

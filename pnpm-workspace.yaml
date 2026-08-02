@@ -43,6 +43,12 @@ catalog:
   three: ^0.185
   '@types/three': ^0.185
 
+  # Procedural noise (NoiseTexture2D / FastNoiseLite). The official JS port of
+  # the same upstream FastNoiseLite that Godot vendors in
+  # `thirdparty/misc/FastNoiseLite.h`, so its enum values and generators are the
+  # engine's own rather than a hand-port that would drift from them. MIT.
+  fastnoise-lite: 1.1.1
+
   # Real CSG boolean evaluation (ADR-0026). three-bvh-csg is used DIRECTLY rather
   # than via @react-three/csg, whose latest release hard-pins three-bvh-csg ^0.0.16
   # and three-mesh-bvh ^0.6.8, both below what 0.0.18 requires against three 0.185.

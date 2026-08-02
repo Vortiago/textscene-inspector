@@ -21,7 +21,7 @@ import * as THREE from 'three';
 import { warn } from '../../../logger';
 import { parseTresFile, type ParsedResource } from '../../../parser/parsedResource';
 import { findSubResource, resolveExtResourcePath } from '../../SubResourceResolver';
-import { resolveGradientTexture2D } from '../../textures/gradienttexture2d/resolveGradientTexture';
+import { resolveProceduralTexture } from '../../textures/resolveProceduralTexture';
 import {
   pinProceduralTexture,
   unpinProceduralTexture,
@@ -194,7 +194,7 @@ async function resolveTextureSlots(
     const reference = slots[slot];
     if (reference === undefined) continue;
 
-    const procedural = resolveGradientTexture2D(reference, parsed.subResources);
+    const procedural = resolveProceduralTexture(reference, parsed.subResources);
     if (procedural) {
       pinProceduralTexture(procedural.key);
       proceduralKeys.push(procedural.key);

@@ -11,7 +11,7 @@ import { Sprite2D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import type { TscnNode } from '../../../parser/types';
+import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 
 const heading = { type: 'node', attributes: { type: 'Sprite2D', name: 'S' } };
 const TEX = 'res://sprite.png';
@@ -29,7 +29,7 @@ function srgbToLinear(c: number): number {
   return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
 
-async function render(rootNode: TscnNode) {
+async function render(rootNode: TscnNode, internalResources: TscnInternalResource[] = []) {
   const fake = createFakeResourceLoader();
   const tex = new THREE.Texture();
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 100, height: 50 };
@@ -40,7 +40,7 @@ async function render(rootNode: TscnNode) {
   );
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
+      <SceneResourcesProvider internalResources={internalResources} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
         {renderNode(rootNode)}
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
@@ -103,6 +103,28 @@ describe('Sprite2D render parity', () => {
     const childColor = basicMaterial(meshes[1]!.instance).color;
     expect(parentColor.r).toBeCloseTo(0, 5); // parent's own pixels darkened
     expect(childColor.r).toBeCloseTo(1, 5); // child unaffected by parent self_modulate
+  });
+
+  it('renders a procedural SubResource texture instead of the placeholder', async () => {
+    // A GradientTexture2D (and NoiseTexture2D, same machinery) is described
+    // entirely by the scene — no file exists to load, so the path-based arm
+    // resolves nothing and the sprite must ride the procedural rasteriser.
+    // The regression this pins: the noise golden captured an EMPTY stage.
+    const internal: TscnInternalResource[] = [
+      {
+        id: 'Gradient_g',
+        type: 'Gradient',
+        data: { colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)' },
+      },
+      {
+        id: 'GradientTexture2D_t',
+        type: 'GradientTexture2D',
+        data: { gradient: 'SubResource("Gradient_g")', width: '8', height: '4' },
+      },
+    ];
+    const r = await render(node({ texture: 'SubResource("GradientTexture2D_t")' }), internal);
+    const material = basicMaterial(r.scene.findByType('Mesh').instance);
+    expect((material.map as Partial<THREE.DataTexture> | null)?.isDataTexture).toBe(true);
   });
 
   it('region_rect + hframes subdivide the region (not the full image)', async () => {

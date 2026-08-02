@@ -31,7 +31,7 @@ import {
   useSceneResources,
 } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
-import { resolveGradientTexture2D } from '../../../resources/textures/gradienttexture2d/resolveGradientTexture';
+import { resolveProceduralTexture } from '../../../resources/textures/resolveProceduralTexture';
 import { useViewportTextureSlot } from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { useProceduralTexturePins } from '../../../resources/useProceduralTexture';
 import { useResource } from '../../../resources/useResource';
@@ -691,7 +691,7 @@ function resolveProceduralTextures(
   for (const slot of TEXTURE_PROPERTIES) {
     const raw = data[slot];
     if (typeof raw !== 'string') continue;
-    const resolved = resolveGradientTexture2D(raw, internalResources);
+    const resolved = resolveProceduralTexture(raw, internalResources);
     if (resolved) {
       out.textures[slot] = resolved.texture;
       out.keys.push(resolved.key);

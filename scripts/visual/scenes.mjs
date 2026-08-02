@@ -496,6 +496,13 @@ export const GOLDEN_SCENES = [
   // relaxed threshold.
   { name: 'coin-glow', file: 'unit-coin-glow.tscn', maxDiffPct: 0.5 },
 
+  // The ONE golden containing a NoiseTexture2D: pins the whole rasterisation
+  // pipeline (seeded FastNoiseLite ridged fBm → normalize → seamless blend
+  // skirt → Gradient ramp) on a Sprite2D. No other scene carries any noise
+  // texture, so a generator/default drift or a broken skirt is invisible in
+  // every other golden.
+  { name: 'noisetexture2d', file: 'unit-noisetexture2d.tscn' },
+
   // --- Sprite2D/Sprite3D + 3D physics-body roundout ---
   { name: 'sprite2d', file: 'unit-sprite2d.tscn' },
   { name: 'sprite3d', file: 'unit-sprite3d.tscn' },
