@@ -80,7 +80,6 @@ Strict parsing format-checks these `VehicleWheel3D` properties, plus 16 inherite
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 | `valid-vehiclewheel3d` | `vehiclewheel3d-not-under-vehicle-body` | warning |
-|  | `vehiclewheel3d-suspension-travel-out-of-range` | warning |
 |  | `vehiclewheel3d-damping-relaxation-below-compression` | warning |
 <!-- lint:end -->
 

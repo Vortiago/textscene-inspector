@@ -17,13 +17,8 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { findParentNode } from '../linterUtils.js';
-import { rangeAdvisories } from '../rangeAdvisory.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-
-/** VehicleWheel3D.suspension_travel: "try a value between 0.1 and 0.3". */
-const MIN_RECOMMENDED_TRAVEL = 0.1;
-const MAX_RECOMMENDED_TRAVEL = 0.3;
 
 /**
  * The two damping defaults from the class reference. Transcribed here rather
@@ -68,18 +63,6 @@ export function makeVehicleWheelLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
-    const outOfRange = `${prefix}-suspension-travel-out-of-range`;
-    const travelMessage = (value: number): string =>
-      `${type} '${node.name}' has suspension_travel ${value}, outside the recommended ${MIN_RECOMMENDED_TRAVEL}–${MAX_RECOMMENDED_TRAVEL} range. Values far outside it make the suspension floaty or rigid.`;
-    diagnostics.push(
-      ...rangeAdvisories(node, {
-        suspension_travel: [
-          { under: MIN_RECOMMENDED_TRAVEL, ruleName: outOfRange, message: travelMessage },
-          { over: MAX_RECOMMENDED_TRAVEL, ruleName: outOfRange, message: travelMessage },
-        ],
-      })
-    );
-
     // Godot: damping_relaxation "should be slightly higher than
     // damping_compression". Either side may be left unauthored — real wheels
     // routinely set only compression — so the missing one is substituted with
@@ -118,8 +101,7 @@ export function makeVehicleWheelLinterRule(dim: PhysicsDim): LintRule {
       applicableNodeTypes: [type],
       emits: [
         { ruleName: `${prefix}-not-under-vehicle-body`, severity: 'warning' },
-        { ruleName: `${prefix}-suspension-travel-out-of-range`, severity: 'warning' },
-        { ruleName: `${prefix}-damping-relaxation-below-compression`, severity: 'warning' },
+          { ruleName: `${prefix}-damping-relaxation-below-compression`, severity: 'warning' },
       ],
     },
     check,

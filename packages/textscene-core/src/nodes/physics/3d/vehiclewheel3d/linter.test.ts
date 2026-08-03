@@ -102,18 +102,13 @@ describe('VehicleWheel3D Linter', () => {
   });
 
   describe('Semantic Validation (Suspension)', () => {
-    it('warns when suspension_travel is outside the documented 0.1–0.3 range', () => {
-      expectDiagnostic(
-        scene(
-          vehicleBody,
-          node('VehicleWheel3D', { suspension_travel: 2.0 }, { name: 'Wheel1', parent: '.' })
-        ),
-        { ruleName: 'vehiclewheel3d-suspension-travel-out-of-range', severity: 'warning' }
-      );
-    });
-
-    it('accepts suspension_travel at both ends of the documented range', () => {
-      for (const travel of [0.1, 0.3]) {
+    it('says nothing about the magnitude of suspension_travel', () => {
+      // vehicle_body_3d.cpp:335 binds it PROPERTY_HINT_NONE and
+      // set_suspension_travel (:198) assigns without a clamp, so the engine
+      // states no range. The class reference suggests 0.1-0.3, but that is
+      // prose advice, and Godot's own truck_town demo ships 2.0 on all eight
+      // wheels. A warning here fired on the canonical example of the node.
+      for (const travel of [0.05, 0.2, 2.0, 50]) {
         const content = scene(
           vehicleBody,
           node('VehicleWheel3D', { suspension_travel: travel }, { name: 'Wheel1', parent: '.' })
@@ -235,7 +230,6 @@ describe('VehicleWheel3D Linter', () => {
       );
       const names = diagnostics.map((d) => d.ruleName);
       expect(names).toContain('vehiclewheel3d-not-under-vehicle-body');
-      expect(names).toContain('vehiclewheel3d-suspension-travel-out-of-range');
       expect(names).toContain('vehiclewheel3d-damping-relaxation-below-compression');
     });
   });
