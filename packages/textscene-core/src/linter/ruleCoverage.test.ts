@@ -486,15 +486,14 @@ describe('validator coverage meta-guard', () => {
     expect(untested).toEqual([]);
   });
 
-  it('uses a matcher, not an exact list, for a type Godot gives subclasses', () => {
+  it('reaches every subclass of a type a rule applies to', () => {
     // `RuleRegistry` matches `applicableNodeTypes` by exact name, so a rule
     // naming a type that HAS descendants goes silent on every one of them: the
-    // subclass inherits the engine's configuration warning but not ours. Nine
-    // rules were migrated to `applicableNodeTypeMatcher` by hand after that was
-    // found; this is the check that keeps the tenth from being written.
-    //
-    // Driven by the committed catalog, so a rule targeting a childless leaf
-    // (the common case) stays free to use the simpler exact list.
+    // subclass inherits the engine's configuration warning but not ours. A
+    // matcher is the fix, but only if it matches the subclasses too, so both
+    // forms are checked against the committed catalog's ancestry. A rule
+    // targeting a childless leaf (the common case) stays free to use the
+    // simpler exact list.
     const catalog = JSON.parse(
       readFileSync(resolve(here, '../../../../scripts/compare-docs/node-catalog.json'), 'utf8')
     ) as { nodes: { name: string; chain: string[] }[] };
@@ -502,18 +501,27 @@ describe('validator coverage meta-guard', () => {
     const descendants = new Map<string, string[]>();
     for (const n of catalog.nodes) {
       for (const ancestor of n.chain) {
-        if (ancestor !== n.name) descendants.set(ancestor, [...(descendants.get(ancestor) ?? []), n.name]);
+        if (ancestor === n.name) continue;
+        let list = descendants.get(ancestor);
+        if (!list) descendants.set(ancestor, (list = []));
+        list.push(n.name);
       }
     }
+    // Without this the guard is vacuous whenever the catalog's shape drifts.
+    expect(descendants.get('Node3D')?.length).toBeGreaterThan(10);
 
-    const unreachable = ruleRegistry
-      .getRules()
-      .filter((r) => !r.meta.applicableNodeTypeMatcher)
-      .flatMap((r) =>
-        (r.meta.applicableNodeTypes ?? [])
-          .filter((t) => (descendants.get(t) ?? []).length > 0)
-          .map((t) => `${r.meta.name}: ${t} misses ${descendants.get(t)!.join(', ')}`)
-      );
+    const unreachable = ruleRegistry.getRules().flatMap((rule) => {
+      const { name, applicableNodeTypes, applicableNodeTypeMatcher } = rule.meta;
+      if (applicableNodeTypeMatcher) {
+        return catalog.nodes
+          .filter((n) => applicableNodeTypeMatcher(n.name))
+          .flatMap((n) => (descendants.get(n.name) ?? []).filter((d) => !applicableNodeTypeMatcher(d)))
+          .map((d) => `${name}: matcher misses ${d}`);
+      }
+      return (applicableNodeTypes ?? [])
+        .filter((t) => (descendants.get(t) ?? []).length > 0)
+        .map((t) => `${name}: ${t} misses ${descendants.get(t)!.join(', ')}`);
+    });
 
     expect(unreachable.sort()).toEqual([]);
   });

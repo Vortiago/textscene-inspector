@@ -86,7 +86,6 @@ export class ValidatorRegistry {
     Object.assign(this.unavailable.get(nodeType)!, removals);
   }
 
-
   /** Keys `nodeType` removes, whether declared here or inherited. */
   getUnavailableKeys(nodeType: string): string[] {
     const keys = new Set<string>();
@@ -119,12 +118,8 @@ export class ValidatorRegistry {
     while (type && !visited.has(type)) {
       visited.add(type);
 
-      // Removals and validators are resolved in ONE walk. They used to be two
-      // identical passes over the same chain — the removal pass already called
-      // findOwnValidator at every hop to decide whether a descendant had
-      // re-declared the key, and then the validator pass repeated it. This is
-      // the hottest path in the linter, reached for every property of every
-      // node, so the duplicate walk and its second Set cost real time.
+      // Removals and validators resolve in ONE walk: this is the hottest path
+      // in the linter, reached for every property of every node.
       const reason = this.unavailable.get(type)?.[propertyKey];
       if (reason !== undefined) return unavailableValidator(nodeType, reason);
 
