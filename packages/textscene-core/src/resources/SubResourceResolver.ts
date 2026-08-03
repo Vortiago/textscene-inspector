@@ -14,6 +14,8 @@
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
+import { decodeAtlasTexture } from './textures/atlastexture/decode.js';
+import { ATLAS_TEXTURE_TYPE, type AtlasRegion } from './textures/atlastexture/types.js';
 
 export function parseResourceReference(
   ref: string
@@ -82,33 +84,58 @@ export function resolveSubResourceRef(
   return findSubResource(internalResources, parsed.id);
 }
 
+export interface Texture2DSource {
+  /** The `res://` image path to sample, or null when the ref resolves to none. */
+  path: string | null;
+  /**
+   * The sheet sub-rect an `AtlasTexture` windows every draw into
+   * (`atlas_texture.cpp` `get_rect_region`); absent for whole-image forms.
+   */
+  region?: AtlasRegion;
+}
+
 /**
- * Resolve a **Texture2D-valued** property to the `res://` path of the image to
- * sample. Covers all three forms such a slot can carry:
+ * Resolve a **Texture2D-valued** property to the image to sample. Covers the
+ * four forms such a slot can carry:
  *
  *   `res://path`        — passes straight through
  *   `ExtResource("id")` — an external image or `.tres`
- *   `SubResource("id")` — a `CanvasTexture`, a first-class Texture2D that wraps
- *                         a `diffuse_texture` (plus normal/specular maps we do
- *                         not sample) — Godot draws its diffuse map, so that is
- *                         what the slot resolves to
+ *   `SubResource("id")` of a `CanvasTexture` — a first-class Texture2D that
+ *                         wraps a `diffuse_texture` (plus normal/specular maps
+ *                         we do not sample) — Godot draws its diffuse map
+ *   `SubResource("id")` of an `AtlasTexture` — its `atlas` sheet plus the
+ *                         `region` every draw is remapped into
  *
- * `resolveExtResourcePath` alone returns null for the SubResource form, which
- * renders a CanvasTexture-textured node as a missing-resource placeholder.
+ * `resolveExtResourcePath` alone returns null for the SubResource forms, which
+ * rendered such nodes as missing-resource placeholders.
  */
+export function resolveTexture2DSource(
+  ref: string | null | undefined,
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[]
+): Texture2DSource {
+  if (!ref) return { path: null };
+  const parsed = parseResourceReference(ref);
+  if (parsed?.type === 'SubResource') {
+    const sub = findSubResource(internalResources, parsed.id);
+    if (sub?.type === ATLAS_TEXTURE_TYPE) {
+      const { atlas, region } = decodeAtlasTexture(sub.data);
+      const path = atlas ? resolveExtResourcePath(atlas, externalResources) : null;
+      return region ? { path, region } : { path };
+    }
+    const diffuse = (sub?.data as { diffuse_texture?: string } | undefined)?.diffuse_texture;
+    return { path: diffuse ? resolveExtResourcePath(diffuse, externalResources) : null };
+  }
+  return { path: resolveExtResourcePath(ref, externalResources) };
+}
+
+/** {@link resolveTexture2DSource}, path half only. */
 export function resolveTexture2DPath(
   ref: string | null | undefined,
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[]
 ): string | null {
-  if (!ref) return null;
-  const parsed = parseResourceReference(ref);
-  if (parsed?.type === 'SubResource') {
-    const sub = findSubResource(internalResources, parsed.id);
-    const diffuse = (sub?.data as { diffuse_texture?: string } | undefined)?.diffuse_texture;
-    return diffuse ? resolveExtResourcePath(diffuse, externalResources) : null;
-  }
-  return resolveExtResourcePath(ref, externalResources);
+  return resolveTexture2DSource(ref, externalResources, internalResources).path;
 }
 
 /**

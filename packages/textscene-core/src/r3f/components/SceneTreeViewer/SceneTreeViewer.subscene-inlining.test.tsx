@@ -145,7 +145,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
     // A collapses subA (ARoot merges in), so its child row is "Inner". Expand A.
-    const aRow = screen.getByText('A').closest('[data-node-path]');
+    const aRow = screen.getByText('A').closest<HTMLElement>('[data-node-path]');
     act(() => fireEvent.click(within(aRow!).getByRole('button', { name: 'Expand' })));
 
     // Inner's nested subB resolved against subA's resources → it has a chevron.

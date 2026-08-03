@@ -98,7 +98,7 @@ describe('<CollisionShape3D> gizmo', () => {
     expect(meshes).toHaveLength(1);
     const mesh = meshes[0]!.instance as THREE.Mesh;
     expect(mesh.geometry).toBeInstanceOf(THREE.BufferGeometry);
-    expect(mesh.geometry.attributes.position.count).toBeGreaterThan(0);
+    expect(mesh.geometry.attributes.position!.count).toBeGreaterThan(0);
     expect((mesh.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
   });
 
@@ -111,7 +111,7 @@ describe('<CollisionShape3D> gizmo', () => {
     const meshes = renderer.scene.findAll((n) => n.type === 'Mesh');
     expect(meshes).toHaveLength(1);
     const mesh = meshes[0]!.instance as THREE.Mesh;
-    expect(mesh.geometry.attributes.position.count).toBe(3);
+    expect(mesh.geometry.attributes.position!.count).toBe(3);
     expect((mesh.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
   });
 

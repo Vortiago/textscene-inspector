@@ -26,7 +26,7 @@ import {
   parseCurve2DPoints,
   tessellateCurve2D,
   type Curve2DSampler,
-} from '../../../resources/shapes/curve2d';
+} from '../../../resources/curves/curve2d';
 import { Path2DCurveProvider } from '../../../r3f/contexts/Path2DCurveContext';
 import type { Path2DProperties } from './types';
 

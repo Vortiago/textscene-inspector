@@ -8,11 +8,12 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseTileMapLayer } from './parser';
 import { TileMapLayer } from './Component';
-import { parseTresFile } from '../../../../parser/tresParser';
+import { parseTresFile } from '../../../../parser/parsedResource';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
+import { isMesh, isBasicMaterial } from '../../../../r3f/testing/threeNarrow';
 
 const heading = { type: 'node', attributes: { type: 'TileMapLayer', name: 'Layer0' } };
 const TEX = 'res://tiles.png';
@@ -89,6 +90,16 @@ async function render(
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+}
+
+/** The basic material a drawn mesh carries. */
+function basicMaterial(instance: THREE.Object3D): THREE.MeshBasicMaterial {
+  if (!isMesh(instance)) throw new Error('scene-graph instance is not a Mesh');
+  const material = instance.material;
+  if (Array.isArray(material) || !isBasicMaterial(material)) {
+    throw new Error('mesh material is not a MeshBasicMaterial');
+  }
+  return material;
 }
 
 describe('TileMapLayer render parity', () => {
@@ -375,11 +386,11 @@ describe('TileMapLayer degradation (ADR-0008)', () => {
     const meshes = r.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(2);
     const colors = meshes.map((m) =>
-      (m.instance.material as THREE.MeshBasicMaterial).color.getHexString()
+      basicMaterial(m.instance).color.getHexString()
     );
     expect(colors).toContain('ff00ff'); // the magenta per-source placeholder
     const tiled = meshes.find(
-      (m) => (m.instance.material as THREE.MeshBasicMaterial).map !== null
+      (m) => basicMaterial(m.instance).map !== null
     );
     expect(tiled).toBeDefined();
   });

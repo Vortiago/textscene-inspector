@@ -13,7 +13,7 @@ import type { CSSProperties } from 'react';
 import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useControlParent, ControlParentProvider } from '../../../../r3f/controls/ControlParentContext';
 import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
-import { resolveStyleBoxCss } from '../../../../r3f/controls/resolveStyleBox';
+import { resolveStyleBox } from '../../../../r3f/controls/resolveStyleBox';
 import { STYLE_NORMAL_FILL } from '../../../../r3f/controls/godotDefaultTheme';
 import { useGodotTheme } from '../../../../r3f/controls/useGodotTheme';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
@@ -24,13 +24,13 @@ export function PanelContainer({ node, children }: ControlComponentProps) {
   const parentKind = useControlParent();
   const { internalResources } = useSceneResources();
   const theme = useGodotTheme();
-  const styleBoxCss = resolveStyleBoxCss(props.themeOverrideStyles?.panel, internalResources);
-  const useDefaults = Object.keys(styleBoxCss).length === 0;
+  const styleBoxCss = resolveStyleBox(props.themeOverrideStyles?.panel, internalResources);
   const layout = controlLayoutStyle(props, parentKind);
   // Godot's default PanelContainer `panel` stylebox: the button "normal" fill
   // with 3px corners and 4px content margins at scale 1, which inset the child
   // (a PanelContainer exists to pad its content). A resolved
-  // `theme_override_styles/panel` replaces it entirely — including its margins.
+  // `theme_override_styles/panel` replaces it entirely — its margins included,
+  // and a box that paints nothing replaces the fill with nothing.
   const defaultPanelStyle: CSSProperties = {
     backgroundColor: STYLE_NORMAL_FILL,
     borderRadius: `${theme.cornerRadius}px`,
@@ -38,7 +38,7 @@ export function PanelContainer({ node, children }: ControlComponentProps) {
   };
   const style: CSSProperties = {
     ...layout,
-    ...(useDefaults ? defaultPanelStyle : styleBoxCss),
+    ...(styleBoxCss ?? defaultPanelStyle),
     // Flex column so the single child fills the content rect's HEIGHT (the
     // 'margin' child kind adds flex-grow + stretch). Keep a hidden panel hidden
     // — display:none must win over the flex we add here.

@@ -133,7 +133,7 @@ reproduced:
 - [StaticBody3D](../../packages/textscene-core/src/nodes/physics/3d/staticbody3d/comparison.md) — a transform-only group
 - [SubViewport](../../packages/textscene-core/src/nodes/viewport/subviewport/comparison.md) — an offscreen render target, plus a boundary that scopes its canvas subtree
 - [VehicleBody3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclebody3d/comparison.md) — nothing (a transform-only group; its VehicleWheel3D children do the driving)
-- [VehicleWheel3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclewheel3d/comparison.md) — nothing (a transform-only group; suspension and traction for its VehicleBody3D parent)
+- [VehicleWheel3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclewheel3d/comparison.md) — a transform group with a selection-gated wheel gizmo (suspension and traction for its VehicleBody3D parent)
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md) — the scene's background and environment lighting
 - [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md) — a transform-only group (it drives a Skeleton3D's bone poses)
 - [SpringBoneCollision3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollision3d/comparison.md) — a transform-only group (a spring-bone collider)

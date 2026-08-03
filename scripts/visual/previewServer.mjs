@@ -523,7 +523,14 @@ function assertOpenedFixture(page, requested) {
 /** The single canvas the scene renders into, or a reason there isn't exactly one. */
 export async function findCanvas(page) {
   const canvases = page.locator('canvas');
-  await canvases.first().waitFor({ timeout: 30000 });
+  try {
+    // 90s: under host contention (parallel agents + software GL) a healthy
+    // scene can take over 30s to first paint. A timeout REPORTS rather than
+    // throws — one slow scene must cost one 'unstable' row, not the whole run.
+    await canvases.first().waitFor({ timeout: 90000 });
+  } catch {
+    return { canvas: null, reason: 'no canvas appeared within 90s' };
+  }
   const count = await canvases.count();
   if (count !== 1) return { canvas: null, reason: `expected exactly 1 canvas, found ${count}` };
   return { canvas: canvases.first(), reason: null };

@@ -27,8 +27,8 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Root');
-      expect(result[0].children).toHaveLength(0);
+      expect(result[0]!.name).toBe('Root');
+      expect(result[0]!.children).toHaveLength(0);
     });
 
     it('should handle single root node without parent attribute', () => {
@@ -44,7 +44,7 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Root');
+      expect(result[0]!.name).toBe('Root');
     });
   });
 
@@ -69,9 +69,9 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Root');
-      expect(result[0].children).toHaveLength(1);
-      expect(result[0].children[0].name).toBe('Child');
+      expect(result[0]!.name).toBe('Root');
+      expect(result[0]!.children).toHaveLength(1);
+      expect(result[0]!.children[0]!.name).toBe('Child');
     });
 
     it('should attach multiple children with parent="." to root', () => {
@@ -101,8 +101,8 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       expect(result).toHaveLength(1);
-      expect(result[0].children).toHaveLength(2);
-      const childNames = result[0].children.map(c => c.name).sort();
+      expect(result[0]!.children).toHaveLength(2);
+      const childNames = result[0]!.children.map(c => c.name).sort();
       expect(childNames).toEqual(['Child1', 'Child2']);
     });
   });
@@ -135,11 +135,11 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Root');
-      expect(result[0].children).toHaveLength(1);
-      expect(result[0].children[0].name).toBe('Child');
-      expect(result[0].children[0].children).toHaveLength(1);
-      expect(result[0].children[0].children[0].name).toBe('GrandChild');
+      expect(result[0]!.name).toBe('Root');
+      expect(result[0]!.children).toHaveLength(1);
+      expect(result[0]!.children[0]!.name).toBe('Child');
+      expect(result[0]!.children[0]!.children).toHaveLength(1);
+      expect(result[0]!.children[0]!.children[0]!.name).toBe('GrandChild');
     });
 
     it('should build complex multi-level hierarchy', () => {
@@ -183,7 +183,7 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       expect(result).toHaveLength(1);
-      const root = result[0];
+      const root = result[0]!;
       expect(root.children).toHaveLength(2);
 
       const child1 = root.children.find(c => c.name === 'Child1');
@@ -192,9 +192,9 @@ describe('buildSceneTree', () => {
       expect(child1).toBeDefined();
       expect(child2).toBeDefined();
       expect(child1!.children).toHaveLength(1);
-      expect(child1!.children[0].name).toBe('GrandChild1');
+      expect(child1!.children[0]!.name).toBe('GrandChild1');
       expect(child2!.children).toHaveLength(1);
-      expect(child2!.children[0].name).toBe('GrandChild2');
+      expect(child2!.children[0]!.name).toBe('GrandChild2');
     });
   });
 
@@ -232,14 +232,133 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       // Traverse down to verify depth
-      let currentNode = result[0];
+      let currentNode = result[0]!;
       for (let i = 0; i < 10; i++) {
         expect(currentNode.name).toBe(`Level${i}`);
         if (i < 10) {
           expect(currentNode.children).toHaveLength(1);
-          currentNode = currentNode.children[0];
+          currentNode = currentNode.children[0]!;
         }
       }
+    });
+  });
+
+  describe('parents inside instanced content', () => {
+    /** A node, with only the fields these tests care about. */
+    const node = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
+      type: 'Node3D',
+      name,
+      properties: {},
+      children: [],
+      ...extra,
+    });
+
+    it('attaches a node whose parent path descends into an instance to that instance', () => {
+      // player.tscn's shape: `Robot` names a node INSIDE player.glb, so
+      // `Player/Skeleton/Skeleton3D` can never resolve against declared nodes.
+      // Godot only lets you address into a sub-scene you instanced, so the
+      // instance node is the anchor and the rest is its business.
+      const nodes = [
+        node('Main'),
+        node('Player', { parent: '.', instance: 'ExtResource("3")' }),
+        node('Robot', { parent: 'Player/Skeleton/Skeleton3D' }),
+      ];
+
+      const [root] = buildSceneTree(nodes);
+
+      const player = root!.children[0]!;
+      expect(player.name).toBe('Player');
+      expect(player.children.map((c) => c.name)).toEqual(['Robot']);
+      expect(player.children[0]!.instanceSubPath).toBe('Skeleton/Skeleton3D');
+      // The authored path is untouched — the linter and the instance re-parse
+      // both read it.
+      expect(player.children[0]!.parent).toBe('Player/Skeleton/Skeleton3D');
+    });
+
+    it('resolves a descendant of a deep-attached node the ordinary way', () => {
+      // Once `CoinCount` is placed at its declared path, `Parallax` resolves
+      // through it normally and needs no marker of its own.
+      const nodes = [
+        node('Main'),
+        node('Player', { parent: '.', instance: 'ExtResource("3")' }),
+        node('CoinCount', { parent: 'Player/Skeleton' }),
+        node('Parallax', { parent: 'Player/Skeleton/CoinCount' }),
+      ];
+
+      const [root] = buildSceneTree(nodes);
+
+      const coinCount = root!.children[0]!.children[0]!;
+      expect(coinCount.name).toBe('CoinCount');
+      expect(coinCount.children.map((c) => c.name)).toEqual(['Parallax']);
+      expect(coinCount.children[0]!.instanceSubPath).toBeUndefined();
+    });
+
+    it('anchors at the root when the root itself is the instance', () => {
+      // The 2D pause menus: the scene root IS an instance of pause_menu.tscn,
+      // and the override addresses a Control several levels inside it.
+      const nodes = [
+        node('PauseMenu', { instance: 'ExtResource("1")' }),
+        node('SplitscreenButton', { parent: 'ColorRect/CenterContainer/VBoxContainer' }),
+      ];
+
+      const [root] = buildSceneTree(nodes);
+
+      expect(root!.children.map((c) => c.name)).toEqual(['SplitscreenButton']);
+      expect(root!.children[0]!.instanceSubPath).toBe('ColorRect/CenterContainer/VBoxContainer');
+    });
+
+    it('leaves a node orphaned when no ancestor on its path is an instance', () => {
+      // A malformed authored path, not an instance override. Godot drops these
+      // too, and so must we — otherwise a fixture named "deep" would silently
+      // re-root fifteen levels as siblings and stop testing depth.
+      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+      const nodes = [node('Level0'), node('Level1', { parent: '.' }), node('Level3', { parent: 'Level2' })];
+
+      const [root] = buildSceneTree(nodes);
+
+      expect(root!.children.map((c) => c.name)).toEqual(['Level1']);
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        'WARNING: 1 orphaned nodes will be dropped from scene tree!'
+      );
+      loggerWarnSpy.mockRestore();
+    });
+
+    it('does not anchor at a plain node that merely shares the path prefix', () => {
+      // `Player` here is an ordinary node, not an instance — so nothing inside
+      // it can be addressed that we cannot already see, and an unresolvable
+      // path is a mistake rather than an override.
+      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+      const nodes = [
+        node('Main'),
+        node('Player', { parent: '.' }),
+        node('Robot', { parent: 'Player/Skeleton' }),
+      ];
+
+      const [root] = buildSceneTree(nodes);
+
+      expect(root!.children[0]!.children).toEqual([]);
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        'WARNING: 1 orphaned nodes will be dropped from scene tree!'
+      );
+      loggerWarnSpy.mockRestore();
+    });
+
+    it('prefers the DEEPEST instance on the path', () => {
+      // Nested instances: the remainder must be measured from the innermost
+      // one, or the sub-path names a node the wrong scene has to resolve.
+      const nodes = [
+        node('Main'),
+        node('Outer', { parent: '.', instance: 'ExtResource("1")' }),
+        node('Inner', { parent: 'Outer', instance: 'ExtResource("2")' }),
+        node('Deep', { parent: 'Outer/Inner/Body/Mesh' }),
+      ];
+
+      const [root] = buildSceneTree(nodes);
+
+      const inner = root!.children[0]!.children[0]!;
+      expect(inner.name).toBe('Inner');
+      expect(inner.children[0]!.name).toBe('Deep');
+      expect(inner.children[0]!.instanceSubPath).toBe('Body/Mesh');
     });
   });
 
@@ -274,7 +393,7 @@ describe('buildSceneTree', () => {
       );
       // Orphaned nodes are dropped (not added as roots)
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Root');
+      expect(result[0]!.name).toBe('Root');
 
       loggerWarnSpy.mockRestore();
     });
@@ -336,11 +455,11 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Root');
-      expect(result[0].children).toHaveLength(1);
-      expect(result[0].children[0].name).toBe('Child1');
-      expect(result[0].children[0].children).toHaveLength(1);
-      expect(result[0].children[0].children[0].name).toBe('Child2');
+      expect(result[0]!.name).toBe('Root');
+      expect(result[0]!.children).toHaveLength(1);
+      expect(result[0]!.children[0]!.name).toBe('Child1');
+      expect(result[0]!.children[0]!.children).toHaveLength(1);
+      expect(result[0]!.children[0]!.children[0]!.name).toBe('Child2');
     });
 
     it('should preserve node properties during tree building', () => {
@@ -362,8 +481,8 @@ describe('buildSceneTree', () => {
 
       const result = buildSceneTree(nodes);
 
-      expect(result[0].properties).toHaveProperty('customProp', 'value');
-      expect(result[0].children[0].properties).toHaveProperty('anotherProp', 'test');
+      expect(result[0]!.properties).toHaveProperty('customProp', 'value');
+      expect(result[0]!.children[0]!.properties).toHaveProperty('anotherProp', 'test');
     });
 
     it('should preserve node type during tree building', () => {
@@ -385,8 +504,8 @@ describe('buildSceneTree', () => {
 
       const result = buildSceneTree(nodes);
 
-      expect(result[0].type).toBe('Node3D');
-      expect(result[0].children[0].type).toBe('MeshInstance3D');
+      expect(result[0]!.type).toBe('Node3D');
+      expect(result[0]!.children[0]!.type).toBe('MeshInstance3D');
     });
   });
 });

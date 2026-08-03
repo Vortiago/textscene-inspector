@@ -381,6 +381,13 @@ describe('Environment Linter Validators', () => {
       const white = validatorRegistry.findValidator('Environment', 'tonemap_white');
       expect(white!('tonemap_white', '-1', 1)).not.toBeNull();
     });
+
+    it('validates AgX’s separate white, which AGX reads instead of tonemap_white', () => {
+      const agxWhite = validatorRegistry.findValidator('Environment', 'tonemap_agx_white');
+      expect(agxWhite).not.toBeNull();
+      expect(agxWhite!('tonemap_agx_white', '16.29', 1)).toBeNull();
+      expect(agxWhite!('tonemap_agx_white', 'bright', 1)).not.toBeNull();
+    });
   });
 
   describe('sky validator', () => {
@@ -396,5 +403,19 @@ describe('Environment Linter Validators', () => {
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
     });
+  });
+});
+
+describe('index.linter entry point', () => {
+  it('registers the same validators when imported through the slice entry point', async () => {
+    // The barrel wires `index.linter.ts`, not the implementation module. Both
+    // reach the same `registerAll`, which merges rather than replaces — so the
+    // interim state (barrel on one path, this test on the other) is a no-op
+    // rather than a double registration.
+    await import('./index.linter');
+    const validator = validatorRegistry.findValidator('Environment', 'glow_blend_mode');
+    expect(validator).not.toBeNull();
+    expect(validator!('glow_blend_mode', '2', 1)).toBeNull();
+    expect(validator!('glow_blend_mode', '9', 1)).not.toBeNull();
   });
 });

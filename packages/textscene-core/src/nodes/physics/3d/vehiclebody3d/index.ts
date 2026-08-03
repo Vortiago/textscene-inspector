@@ -1,9 +1,11 @@
 /**
  * VehicleBody3D registration — parser.
  *
- * Reuses the Node3D parse; property knowledge lives in linterParser.ts.
- * Draws nothing by design (ADR-0008), so index.r3f.ts registers Node3D
- * and its children still land in the right transform space.
+ * A RigidBody3D subclass driven by its VehicleWheel3D children. Non-visual node:
+ * renders as a transform-only group (ADR-0005, ADR-0008), reusing the Node3D
+ * transform parse; the render component (index.r3f.ts) reuses Node3D. Its own
+ * properties (mass, engine_force, brake, steering, …) drive simulation only,
+ * which a static preview does not run — they are validated, not parsed.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

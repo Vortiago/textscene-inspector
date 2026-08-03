@@ -1,10 +1,11 @@
 /**
- * Edge cases for resolveStyleBoxCss: ref parsing + SubResource lookup.
+ * Edge cases for the StyleBox override funnel: ref parsing + SubResource lookup.
  * The StyleBoxFlat→CSS mapping itself is covered in styleBoxToCss.test.ts —
- * here we pin the resolution funnel (every miss collapses to `{}`).
+ * here we pin what resolves (`resolveStyleBox` → CSS) and what does not
+ * (`null`), plus the `resolveStyleBoxCss` collapse every miss keeps.
  */
 import { describe, expect, it } from 'vitest';
-import { resolveStyleBoxCss } from './resolveStyleBox';
+import { resolveStyleBox, resolveStyleBoxCss } from './resolveStyleBox';
 import type { TscnInternalResource } from '../../parser/types';
 
 const resources: TscnInternalResource[] = [
@@ -38,8 +39,10 @@ describe('resolveStyleBoxCss', () => {
     expect(resolveStyleBoxCss('SubResource("StandardMaterial3D_m")', resources)).toEqual({});
   });
 
-  it('returns {} for StyleBoxEmpty (transparent box)', () => {
-    expect(resolveStyleBoxCss('SubResource("StyleBoxEmpty_x")', resources)).toEqual({});
+  it('returns an explicit transparent fill for StyleBoxEmpty (a box that paints nothing)', () => {
+    expect(resolveStyleBoxCss('SubResource("StyleBoxEmpty_x")', resources)).toEqual({
+      backgroundColor: 'transparent',
+    });
   });
 
   it('passes a valid StyleBoxFlat through to CSS', () => {
@@ -50,5 +53,41 @@ describe('resolveStyleBoxCss', () => {
 
   it('returns {} when the resource list is empty', () => {
     expect(resolveStyleBoxCss('SubResource("StyleBoxFlat_p4nl")', [])).toEqual({});
+  });
+});
+
+/**
+ * `resolveStyleBox` is the reader consumers pick their default with: `null`
+ * means NO box resolved (so the Control keeps its own default chrome), while a
+ * resolved box returns its CSS — even when that CSS paints nothing. Consumers
+ * asking "is this object empty?" cannot tell those two apart.
+ */
+describe('resolveStyleBox — resolved or not', () => {
+  it('is null for every leg that resolves no box', () => {
+    expect(resolveStyleBox(undefined, resources)).toBeNull();
+    expect(resolveStyleBox('not-a-ref', resources)).toBeNull();
+    expect(resolveStyleBox('ExtResource("1_abc")', resources)).toBeNull();
+    expect(resolveStyleBox('SubResource("StyleBoxFlat_nope")', resources)).toBeNull();
+    expect(resolveStyleBox('SubResource("StyleBoxFlat_p4nl")', [])).toBeNull();
+  });
+
+  it('is null for a sub-resource that is not a StyleBox this slice decodes', () => {
+    // A StyleBoxTexture is a box we cannot paint at all — treated as unresolved
+    // so the Control keeps visible default chrome rather than vanishing.
+    expect(resolveStyleBox('SubResource("StandardMaterial3D_m")', resources)).toBeNull();
+    expect(
+      resolveStyleBox('SubResource("SB_tex")', [
+        { id: 'SB_tex', type: 'StyleBoxTexture', data: {} },
+      ])
+    ).toBeNull();
+  });
+
+  it('returns the CSS of a box that resolves, including one that paints nothing', () => {
+    expect(resolveStyleBox('SubResource("StyleBoxFlat_p4nl")', resources)?.backgroundColor).toBe(
+      'rgba(255, 0, 0, 1)'
+    );
+    expect(resolveStyleBox('SubResource("StyleBoxEmpty_x")', resources)).toEqual({
+      backgroundColor: 'transparent',
+    });
   });
 });

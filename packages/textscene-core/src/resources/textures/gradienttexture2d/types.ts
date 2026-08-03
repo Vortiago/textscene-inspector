@@ -6,8 +6,8 @@
  * the 3D platformer uses one as its additive-glow albedo: a radial white→
  * transparent falloff that produces the halo around each coin.
  *
- * Pure data — no THREE. The rasteriser (`renderer.ts`) is the only THREE
- * consumer, so these types stay importable by pure `.ts` (parser/linter) paths.
+ * Pure data — no THREE. The rasteriser (`build.ts`) is the only THREE consumer,
+ * so these types stay importable by pure `.ts` (parser/linter) paths.
  */
 
 import type { Color } from '../../../utils/colorParser';
@@ -55,6 +55,6 @@ export interface GradientTexture2D {
   fillTo: { x: number; y: number };
   repeat: GradientRepeat;
   /** `use_hdr` — an RGBAF float image instead of RGBA8. We always rasterise
-   *  RGBA8 (see renderer.ts); this flag is parsed for completeness. */
+   *  RGBA8 (see build.ts); this flag is parsed for completeness. */
   useHdr: boolean;
 }

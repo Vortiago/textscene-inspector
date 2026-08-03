@@ -69,6 +69,19 @@ export type HostToWebviewMessage =
   | ResourceLoadErrorMessage
   | ResourceChangedMessage;
 
+/**
+ * Anything can post to a webview, so a listener narrows before it reads: a
+ * message is a non-null object carrying a string `type`. Both webview
+ * listeners share this guard so the wire is policed one way.
+ */
+export function isHostToWebviewMessage(data: unknown): data is HostToWebviewMessage {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof (data as { type?: unknown }).type === 'string'
+  );
+}
+
 // ============================================================================
 // Webview -> Host
 // ============================================================================

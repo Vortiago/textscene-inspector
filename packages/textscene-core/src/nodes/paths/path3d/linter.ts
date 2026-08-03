@@ -38,10 +38,11 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // ERROR: curve property is REQUIRED
+  // WARNING: a curve-less Path3D is valid (the curve can be assigned at
+  // runtime) but draws nothing until one is set.
   if (!rawProps.curve) {
     diagnostics.push({
-      severity: 'error',
+      severity: 'warning',
       message: `Path3D '${node.name}' is missing required property 'curve'. A Path3D without a Curve3D resource is useless.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -172,7 +173,7 @@ const path3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['Path3D'],
     emits: [
-      { ruleName: 'path3d-requires-curve', severity: 'error' },
+      { ruleName: 'path3d-requires-curve', severity: 'warning' },
       { ruleName: 'valid-path3d-resources', severity: 'error' },
       { ruleName: 'path3d-unused', severity: 'warning' },
       { ruleName: 'curve3d-loadable', severity: 'error' },

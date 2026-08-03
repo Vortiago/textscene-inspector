@@ -111,7 +111,7 @@ describe('<MeshInstance3D> missing-texture chain (WI-R3F-7 / WEB-03/04/05)', () 
 
     const materials = renderer.scene.findAllByType('MeshStandardMaterial');
     const magenta = materials.find((m) => {
-      const color = (m.instance as THREE.MeshStandardMaterial).color;
+      const color = (m.instance as THREE.Object3D & THREE.MeshStandardMaterial).color;
       // "magenta" in CSS is the same as r=1, g=0, b=1 in linear-ish space.
       return color.r > 0.9 && color.g < 0.1 && color.b > 0.9;
     });

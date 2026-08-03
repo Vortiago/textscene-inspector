@@ -85,7 +85,7 @@ describe('<SceneTreeViewer>', () => {
     expect(screen.queryByText('ChildMesh')).toBeNull();
 
     // The row's expand toggle is labeled "Expand" (not "Expand all").
-    await userEvent.click(screen.getByRole('button', { name: 'Expand', exact: true }));
+    await userEvent.click(screen.getByRole('button', { name: 'Expand' }));
     expect(screen.getByText('ChildMesh')).toBeTruthy();
   });
 

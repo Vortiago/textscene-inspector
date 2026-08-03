@@ -162,7 +162,7 @@ describe('Control components — StyleBox panels', () => {
     // child renders inside, in-flow (block) → position relative, not absolute
     const inner = pc?.querySelector('[data-control-type="ColorRect"]');
     expect(inner).toBeTruthy();
-    expect(styleOf(inner).position).toBe('relative');
+    expect(styleOf(inner ?? null).position).toBe('relative');
   });
 });
 
@@ -227,7 +227,7 @@ describe('Control components — CanvasLayer passthrough', () => {
     expect(styleOf(layer).position).toBe('absolute');
     // child Control is anchored (free regime) → absolute
     const hud = layer?.querySelector('[data-control-type="Control"]');
-    expect(styleOf(hud).position).toBe('absolute');
+    expect(styleOf(hud ?? null).position).toBe('absolute');
   });
 
   it('a hidden CanvasLayer NESTED under a visible root is display:none', () => {

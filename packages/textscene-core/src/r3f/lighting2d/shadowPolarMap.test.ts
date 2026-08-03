@@ -40,6 +40,7 @@ import {
   OCCLUDER_CULL_CLOCKWISE,
   OCCLUDER_CULL_COUNTER_CLOCKWISE,
   type LightRect,
+  type OccluderCullMode,
   type ShadowCasterEdges,
 } from './shadowVolumes';
 
@@ -69,7 +70,7 @@ function segment(
   ay: number,
   bx: number,
   by: number,
-  cullMode = OCCLUDER_CULL_DISABLED
+  cullMode: OccluderCullMode = OCCLUDER_CULL_DISABLED
 ): ShadowCasterEdges {
   return { segments: [ax, ay, bx, by], cullMode };
 }

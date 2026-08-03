@@ -62,7 +62,6 @@ function makePhotoFrameScene(canvasName: string): TscnScene {
 /** A Hallway-level PhotoFrame instancing node carrying the authored transform basis + origin. */
 function makeFrameInstanceNode(
   name: string,
-  scenePath: string,
   origin: { x: number; y: number; z: number }
 ): TscnNode {
   return {
@@ -133,7 +132,7 @@ describe('PhotoFrame composition — Canvas mesh inherits the authored instance 
 
       const renderer = await renderFrame(
         fake.loader,
-        makeFrameInstanceNode(name, scenePath, origin),
+        makeFrameInstanceNode(name, origin),
         { id: `${name}_ref`, path: scenePath }
       );
 
@@ -151,7 +150,7 @@ describe('PhotoFrame composition — Canvas mesh inherits the authored instance 
 
     const renderer = await renderFrame(
       fake.loader,
-      makeFrameInstanceNode('PhotoFrameA', 'res://PhotoFrameA.tscn', origin),
+      makeFrameInstanceNode('PhotoFrameA', origin),
       { id: 'PhotoFrameA_ref', path: 'res://PhotoFrameA.tscn' }
     );
 

@@ -1,6 +1,11 @@
+; A CollisionShape3D parented to a MeshInstance3D — a hierarchy Godot allows to
+; exist but does not treat as collision geometry. The `collisionshape3d-invalid-parent`
+; WARNING that produces is the point of this scene; it must keep firing.
 [gd_scene format=3]
 
 [sub_resource type="BoxMesh" id="mesh_1"]
+
+[sub_resource type="BoxShape3D" id="shape_1"]
 
 [node name="Root" type="Node3D"]
 
@@ -8,8 +13,9 @@
 
 [node name="CollisionArea" type="Area3D" parent="PhysicsBody"]
 
-[node name="VisibleMesh" type="MeshInstance3D" parent="CollisionArea"]
+[node name="VisibleMesh" type="MeshInstance3D" parent="PhysicsBody/CollisionArea"]
 mesh = SubResource("mesh_1")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 
-[node name="CollisionShape" type="CollisionShape3D" parent="CollisionArea/VisibleMesh"]
+[node name="CollisionShape" type="CollisionShape3D" parent="PhysicsBody/CollisionArea/VisibleMesh"]
+shape = SubResource("shape_1")

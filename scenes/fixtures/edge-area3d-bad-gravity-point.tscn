@@ -1,12 +1,8 @@
 [gd_scene load_steps=2 format=3 uid="uid://edge_area3d_bad_gravity_point"]
 
-; The issue asked for an incomplete/bad gravity_point config — but
-; `gravity_point=true` with a missing/non-positive `gravity_point_unit_distance`
-; is an ERROR (area3d-point-gravity-missing-distance/-invalid-distance), which
-; would break the fixtureLint gate. This pins the nearest lint-safe edge case:
-; `gravity_point=true` with a valid `gravity_point_unit_distance` but
-; `gravity_point_center` OMITTED — Area3D falls back to its render/physics
-; default center (the node's own origin) rather than erroring. Lints clean.
+; Point gravity with `gravity_point_center` omitted: Area3D falls back to the
+; default center (the node's own origin), like every omitted property takes
+; Godot's default. Lints clean.
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_1"]
 size = Vector3(3, 3, 3)

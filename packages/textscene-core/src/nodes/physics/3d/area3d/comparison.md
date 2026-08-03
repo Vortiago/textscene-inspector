@@ -42,7 +42,7 @@ Strict parsing format-checks these `Area3D` properties, plus 6 inherited from Co
 | `gravity_direction` | Vector3(x, y, z) |
 | `gravity_point` | true or false |
 | `gravity_point_center` | Vector3(x, y, z) |
-| `gravity_point_unit_distance` | float >= 5e-324 |
+| `gravity_point_unit_distance` | float >= 0 |
 | `gravity_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
 | `linear_damp` | float >= 0 |
 | `linear_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
@@ -57,8 +57,6 @@ Strict parsing format-checks these `Area3D` properties, plus 6 inherited from Co
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 | `valid-area3d` | `area3d-needs-collision-shape` | warning |
 |  | `area3d-inactive` | warning |
-|  | `area3d-point-gravity-missing-distance` | error |
-|  | `area3d-point-gravity-invalid-distance` | error |
 |  | `area3d-monitoring-zero-layer` | warning |
 |  | `area3d-monitoring-zero-mask` | warning |
 |  | `area3d-monitoring-no-collision` | warning |

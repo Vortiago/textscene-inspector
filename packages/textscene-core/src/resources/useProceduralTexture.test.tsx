@@ -84,7 +84,7 @@ describe('useProceduralTexture', () => {
     );
 
     expect(result.current).toBeInstanceOf(THREE.DataTexture);
-    expect(result.current!.image.width).toBe(8);
+    expect((result.current!.image as { width: number }).width).toBe(8);
   });
 
   it('pins the texture while mounted and releases it on unmount', () => {

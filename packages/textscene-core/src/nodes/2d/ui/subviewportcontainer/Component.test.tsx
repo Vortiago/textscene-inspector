@@ -19,6 +19,11 @@ import {
   useRegisterViewportTexture,
   type ViewportTextureEntry,
 } from '../../../../r3f/contexts/ViewportTextureContext';
+import {
+  ViewportRectProvider,
+  useViewportRect,
+  type ViewportRect,
+} from '../../../../r3f/contexts/ViewportRectContext';
 
 function node(name: string, type: string, properties: object, children: TscnNode[] = []): TscnNode {
   return { name, type, children, properties: { name, ...properties } } as TscnNode;
@@ -42,6 +47,13 @@ function surfaces(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll('[data-viewport-surface]'));
 }
 
+/** The first viewport surface, narrowed — every case below renders at least one. */
+function firstSurface(container: HTMLElement): HTMLElement {
+  const [first] = surfaces(container);
+  if (!first) throw new Error('no viewport surface was rendered');
+  return first;
+}
+
 describe('<SubViewportContainer>', () => {
   it('renders the container itself', () => {
     const { container } = render(<ControlOverlay nodes={tree({})} />);
@@ -53,7 +65,7 @@ describe('<SubViewportContainer>', () => {
   describe('surface sizing (the measured parity table)', () => {
     it('stretch = false: the surface takes the SUB-VIEWPORT’s size, not the container’s', () => {
       const { container } = render(<ControlOverlay nodes={tree({ stretch: false })} />);
-      const surface = surfaces(container)[0];
+      const surface = firstSurface(container);
       expect(surface).toBeTruthy();
       expect(surface.style.width).toBe('200px');
       expect(surface.style.height).toBe('150px');
@@ -61,7 +73,7 @@ describe('<SubViewportContainer>', () => {
 
     it('stretch = true: the surface fills the container’s own rect instead', () => {
       const { container } = render(<ControlOverlay nodes={tree({ stretch: true })} />);
-      const surface = surfaces(container)[0];
+      const surface = firstSurface(container);
       expect(surface.style.width).toBe('100%');
       expect(surface.style.height).toBe('100%');
     });
@@ -70,7 +82,7 @@ describe('<SubViewportContainer>', () => {
       const { container } = render(
         <ControlOverlay nodes={tree({ stretch: true, stretch_shrink: 2 })} />
       );
-      const surface = surfaces(container)[0];
+      const surface = firstSurface(container);
       // Content is laid out against rect/shrink, then scaled by shrink —
       // `recalc_force_viewport_sizes` does `set_size_force(get_size() / shrink)`.
       expect(surface.style.transform).toContain('scale(2)');
@@ -81,16 +93,60 @@ describe('<SubViewportContainer>', () => {
       const { container } = render(
         <ControlOverlay nodes={tree({ stretch: false, stretch_shrink: 2 })} />
       );
-      const surface = surfaces(container)[0];
+      const surface = firstSurface(container);
       expect(surface.style.transform).not.toContain('scale');
       expect(surface.style.width).toBe('200px');
+    });
+  });
+
+  describe('forced rect publishing', () => {
+    it('a ResizeObserver pass with an unchanged measurement does not re-render rect consumers', () => {
+      // happy-dom has no ResizeObserver; a stub exposes the resize callback so
+      // the test can drive layout passes by hand.
+      const resizeCallbacks: (() => void)[] = [];
+      class ResizeObserverStub {
+        constructor(callback: () => void) {
+          resizeCallbacks.push(callback);
+        }
+        observe() {}
+        disconnect() {}
+      }
+      (globalThis as { ResizeObserver?: unknown }).ResizeObserver = ResizeObserverStub;
+      try {
+        let probeRenders = 0;
+        let seenRect: ViewportRect | null = null;
+        function Probe() {
+          probeRenders += 1;
+          seenRect = useViewportRect('Booth/View');
+          return null;
+        }
+        render(
+          <ViewportRectProvider>
+            <ControlOverlay nodes={tree({ stretch: true })} />
+            <Probe />
+          </ViewportRectProvider>
+        );
+        // happy-dom reports offsetWidth/Height 0, floored to the 1×1 minimum.
+        expect(seenRect).toEqual({ x: 1, y: 1 });
+        const rendersAfterMount = probeRenders;
+
+        act(() => {
+          for (const callback of resizeCallbacks) callback();
+          for (const callback of resizeCallbacks) callback();
+        });
+
+        expect(seenRect).toEqual({ x: 1, y: 1 });
+        expect(probeRenders).toBe(rendersAfterMount);
+      } finally {
+        delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
+      }
     });
   });
 
   describe('clipping and clear colour', () => {
     it('clips on the SURFACE, because the target is only `size` pixels', () => {
       const { container } = render(<ControlOverlay nodes={tree({})} />);
-      expect(surfaces(container)[0].style.overflow).toBe('hidden');
+      expect(firstSurface(container).style.overflow).toBe('hidden');
     });
 
     it('does NOT clip on the container — Godot Controls clip only with clip_contents', () => {
@@ -103,14 +159,14 @@ describe('<SubViewportContainer>', () => {
 
     it('paints an opaque clear colour by default', () => {
       const { container } = render(<ControlOverlay nodes={tree({})} />);
-      expect(surfaces(container)[0].style.backgroundColor).toBeTruthy();
+      expect(firstSurface(container).style.backgroundColor).toBeTruthy();
     });
 
     it('paints no clear colour when the sub-viewport is transparent_bg', () => {
       const { container } = render(
         <ControlOverlay nodes={tree({}, { transparent_bg: true })} />
       );
-      expect(surfaces(container)[0].style.backgroundColor).toBe('');
+      expect(firstSurface(container).style.backgroundColor).toBe('');
     });
   });
 
@@ -119,7 +175,7 @@ describe('<SubViewportContainer>', () => {
       const { container } = render(<ControlOverlay nodes={tree({})} />);
       const inner = container.querySelector('[data-node-name="Inner"]');
       expect(inner).toBeTruthy();
-      expect(surfaces(container)[0].contains(inner)).toBe(true);
+      expect(firstSurface(container).contains(inner)).toBe(true);
     });
 
     it('surfaces EVERY SubViewport child, stacked in tree order', () => {
@@ -133,8 +189,8 @@ describe('<SubViewportContainer>', () => {
       const { container } = render(<ControlOverlay nodes={two} />);
       const found = surfaces(container);
       expect(found).toHaveLength(2);
-      expect(found[0].style.width).toBe('100px');
-      expect(found[1].style.width).toBe('60px');
+      expect(found[0]!.style.width).toBe('100px');
+      expect(found[1]!.style.width).toBe('60px');
     });
 
     it('still renders non-SubViewport children normally', () => {
@@ -147,7 +203,7 @@ describe('<SubViewportContainer>', () => {
       const { container } = render(<ControlOverlay nodes={mixed} />);
       const badge = container.querySelector('[data-node-name="Badge"]');
       expect(badge).toBeTruthy();
-      expect(surfaces(container)[0].contains(badge)).toBe(false);
+      expect(firstSurface(container).contains(badge)).toBe(false);
     });
 
     it('renders an empty surface when the container has no SubViewport child', () => {
@@ -224,11 +280,13 @@ describe('<SubViewportContainer>', () => {
     function captureContext() {
       const calls: { image: ImageData; x: number; y: number }[] = [];
       const original = HTMLCanvasElement.prototype.getContext;
+      // Only `putImageData` is exercised, so this browser-API double deliberately
+      // stands in for the whole `getContext` overload set.
       HTMLCanvasElement.prototype.getContext = function getContext() {
         return {
           putImageData: (image: ImageData, x: number, y: number) => calls.push({ image, x, y }),
         };
-      } as typeof original;
+      } as unknown as typeof original;
       return { calls, restore: () => (HTMLCanvasElement.prototype.getContext = original) };
     }
 
@@ -236,12 +294,12 @@ describe('<SubViewportContainer>', () => {
 
     it('publishes no canvas at all when the sub-viewport published no target', () => {
       const { container } = mount(null);
-      expect(surfaces(container)[0].querySelector('[data-viewport-pixels]')).toBeNull();
+      expect(firstSurface(container).querySelector('[data-viewport-pixels]')).toBeNull();
     });
 
     it('sizes the canvas to the TARGET, which is what the pixels are', () => {
       const { container } = mount(fakeEntry(() => null));
-      const canvas = surfaces(container)[0].querySelector<HTMLCanvasElement>(
+      const canvas = firstSurface(container).querySelector<HTMLCanvasElement>(
         '[data-viewport-pixels]'
       );
       expect(canvas).toBeTruthy();
@@ -256,7 +314,7 @@ describe('<SubViewportContainer>', () => {
      */
     it('stacks the canvas UNDER the Control arm', () => {
       const { container } = mount(fakeEntry(() => null));
-      const surface = surfaces(container)[0];
+      const surface = firstSurface(container);
       const canvas = surface.querySelector('[data-viewport-pixels]');
       const inner = surface.querySelector('[data-node-name="Inner"]');
       expect(canvas && inner && canvas.compareDocumentPosition(inner)).toBe(
@@ -293,11 +351,12 @@ describe('<SubViewportContainer>', () => {
           await new Promise((resolve) => setTimeout(resolve, 60));
         });
         expect(capture.calls.length).toBeGreaterThan(0);
-        const { image, x, y } = capture.calls[0];
+        const { image, x, y } = capture.calls[0]!;
         expect([x, y]).toEqual([0, 0]);
         // Row r of the snapshot is still row r — the red channel carried the
         // row index in, and the encode is monotonic so the order survives it.
-        const red = (row: number) => image.data[row * 4 * 4];
+        // The snapshot is 4x3, so rows 0..2 are all in range.
+        const red = (row: number) => image.data[row * 4 * 4]!;
         expect(red(0)).toBeLessThan(red(1));
         expect(red(1)).toBeLessThan(red(2));
         // …and the encode did run: 55 → 128, 19 → 77 on every pixel.

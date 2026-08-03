@@ -13,12 +13,13 @@ import { useControlParent } from '../../../../r3f/controls/ControlParentContext'
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
-import { resolveStyleBoxCss } from '../../../../r3f/controls/resolveStyleBox';
+import { resolveStyleBox } from '../../../../r3f/controls/resolveStyleBox';
 import { imageToDataUrl } from '../../../../r3f/controls/imageToDataUrl';
 import { DEFAULT_FONT_COLOR, STYLE_NORMAL_FILL } from '../../../../r3f/controls/godotDefaultTheme';
 import { useGodotTheme } from '../../../../r3f/controls/useGodotTheme';
 import type { ScaledGodotTheme } from '../../../../r3f/controls/godotDefaultTheme';
-import { resolveTexture2DPath } from '../../../../resources/SubResourceResolver';
+import { resolveTexture2DSource } from '../../../../resources/SubResourceResolver';
+import { atlasRegionDataUrl } from '../../../../resources/textures/atlastexture/build';
 import { useResource } from '../../../../resources/useResource';
 import type { ButtonProperties } from './types';
 
@@ -50,8 +51,10 @@ export function Button({ node, children }: ControlComponentProps) {
   const { internalResources } = useSceneResources();
   const theme = useGodotTheme();
 
-  const styleBoxCss = resolveStyleBoxCss(props.themeOverrideStyles?.normal, internalResources);
-  const useDefaults = !props.flat && Object.keys(styleBoxCss).length === 0;
+  const styleBoxCss = resolveStyleBox(props.themeOverrideStyles?.normal, internalResources);
+  // The default chrome is for a button with NO box of its own; a box that
+  // resolved replaces it, even when that box paints nothing.
+  const useDefaults = !props.flat && styleBoxCss === null;
 
   const alignment = props.alignment ?? 1; // Godot default: CENTER
   const style: CSSProperties = controlStyle(
@@ -66,7 +69,7 @@ export function Button({ node, children }: ControlComponentProps) {
       textAlign: TEXT_ALIGN[alignment] ?? 'center',
     },
     useDefaults ? buttonDefaults(theme) : {},
-    styleBoxCss,
+    styleBoxCss ?? {},
     textThemeStyle(props, { sizeKey: 'font_size', colorKey: 'font_color' })
   );
 
@@ -111,10 +114,16 @@ function ButtonIcon({
   gap: number;
 }) {
   const { externalResources, internalResources } = useSceneResources();
-  const path = resolveTexture2DPath(icon, externalResources, internalResources);
+  // An icon is very often one cell of a tool sheet (`SubResource(AtlasTexture)`);
+  // an <img> cannot window with UVs, so the cell is cut out of the decoded sheet.
+  const { path, region } = resolveTexture2DSource(icon, externalResources, internalResources);
   // Always call the hook (rules of hooks); '' short-circuits to pending.
   const tex = useResource<THREE.Texture>(path ?? '', 'Texture2D');
-  const src = useMemo(() => imageToDataUrl(tex.value?.image), [tex.value]);
+  const src = useMemo(
+    () =>
+      region ? atlasRegionDataUrl(tex.value?.image, region) : imageToDataUrl(tex.value?.image),
+    [tex.value, region]
+  );
   if (!icon) return null;
 
   const style: CSSProperties = {

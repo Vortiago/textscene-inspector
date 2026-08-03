@@ -6,7 +6,11 @@
  *  - an unchanged measurement must not produce a new map, or every layout pass
  *    re-renders the sub-viewport and re-allocates its render target;
  *  - "no rect" must stay distinguishable from "a rect of zero", because the
- *    consumer falls back to the authored `size` on the former.
+ *    consumer falls back to the authored `size` on the former;
+ *  - a departing mount's cleanup must not clobber a remount's registration,
+ *    which the sibling registries' entry-identity guard cannot catch here: the
+ *    unchanged-measurement bail leaves the old mount's object in the map, so
+ *    the two registrations are indistinguishable by entry alone.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -138,6 +142,131 @@ describe('ViewportRectContext', () => {
   it('mounts without a provider at all', () => {
     const { getByTestId } = render(<Reader path="Booth/View" />);
     expect(getByTestId('rect').textContent).toBe('none');
+  });
+
+  /**
+   * A remounting surface re-registers before the departing mount's cleanup
+   * fires, so the stale cleanup must not delete the live registration.
+   */
+  it('a stale cleanup does not delete a successor’s different rect', () => {
+    let register!: ReturnType<typeof useRegisterViewportRect>;
+    const { getByTestId } = mount(
+      <>
+        <Publisher onReady={(fn) => (register = fn)} />
+        <Reader path="Booth/View" />
+      </>
+    );
+    let releaseOld!: () => void;
+    act(() => {
+      releaseOld = register('Booth/View', { x: 572, y: 648 });
+    });
+    act(() => {
+      register('Booth/View', { x: 300, y: 200 });
+    });
+    act(() => {
+      releaseOld();
+    });
+    expect(getByTestId('rect').textContent).toBe('300x200');
+  });
+
+  /**
+   * The same race with an unchanged measurement, which an entry-identity guard
+   * cannot see: the fast path leaves the map holding the object the departing
+   * mount registered, so only ownership distinguishes the two registrations.
+   */
+  it('a stale cleanup does not delete a successor’s equal rect', () => {
+    let register!: ReturnType<typeof useRegisterViewportRect>;
+    const { getByTestId } = mount(
+      <>
+        <Publisher onReady={(fn) => (register = fn)} />
+        <Reader path="Booth/View" />
+      </>
+    );
+    let releaseOld!: () => void;
+    act(() => {
+      releaseOld = register('Booth/View', { x: 572, y: 648 });
+    });
+    act(() => {
+      register('Booth/View', { x: 572, y: 648 });
+    });
+    act(() => {
+      releaseOld();
+    });
+    expect(getByTestId('rect').textContent).toBe('572x648');
+  });
+
+  it('the successor’s own cleanup still unregisters after a stale one no-ops', () => {
+    let register!: ReturnType<typeof useRegisterViewportRect>;
+    const { getByTestId } = mount(
+      <>
+        <Publisher onReady={(fn) => (register = fn)} />
+        <Reader path="Booth/View" />
+      </>
+    );
+    let releaseOld!: () => void;
+    let releaseNew!: () => void;
+    act(() => {
+      releaseOld = register('Booth/View', { x: 572, y: 648 });
+    });
+    act(() => {
+      releaseNew = register('Booth/View', { x: 572, y: 648 });
+    });
+    act(() => {
+      releaseOld();
+    });
+    act(() => {
+      releaseNew();
+    });
+    expect(getByTestId('rect').textContent).toBe('none');
+  });
+
+  /**
+   * The publisher's identity is load-bearing: the container holds it in its
+   * effect deps, so a churning one would release and re-register on every
+   * render. Reading the map here is what makes this component re-render at all.
+   */
+  it('keeps the register function identity stable across map changes', () => {
+    let register!: ReturnType<typeof useRegisterViewportRect>;
+    const identities: unknown[] = [];
+    function Probe() {
+      useViewportRect('Booth/View');
+      identities.push(useRegisterViewportRect());
+      return null;
+    }
+    mount(
+      <>
+        <Publisher onReady={(fn) => (register = fn)} />
+        <Probe />
+      </>
+    );
+    act(() => {
+      register('Booth/View', { x: 572, y: 648 });
+    });
+    act(() => {
+      register('Booth/View', { x: 300, y: 200 });
+    });
+    expect(identities.length).toBeGreaterThan(1);
+    expect(new Set(identities).size).toBe(1);
+  });
+
+  /** Ownership is per path: releasing one surface leaves every other standing. */
+  it('unregistering one path leaves another path’s rect registered', () => {
+    let register!: ReturnType<typeof useRegisterViewportRect>;
+    const { getByTestId } = mount(
+      <>
+        <Publisher onReady={(fn) => (register = fn)} />
+        <Reader path="Booth/View" />
+      </>
+    );
+    let releaseOther!: () => void;
+    act(() => {
+      register('Booth/View', { x: 572, y: 648 });
+      releaseOther = register('Other/View', { x: 10, y: 10 });
+    });
+    act(() => {
+      releaseOther();
+    });
+    expect(getByTestId('rect').textContent).toBe('572x648');
   });
 
   it('a zero-sized rect is still a rect, not an absence', () => {

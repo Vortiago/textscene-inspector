@@ -11,6 +11,10 @@
  * `nodes/root_scale` and `nodes/apply_root_scale` are the only parameters we honour;
  * everything else is either something three's GLTFLoader already does or a bake concern
  * with no visual consequence in a preview.
+ *
+ * A foreign-format parser OUTSIDE the resource-slice registry (ADR-0031): a
+ * sidecar is found by path convention beside its asset, never named by a
+ * scene, so it claims no type name and no bus slot.
  */
 
 /** A `key=value` line, tolerating surrounding whitespace and a trailing comment-free tail. */

@@ -23,6 +23,7 @@ import {
   AttenuationModel,
   DopplerTracking,
 } from './types';
+import { isMesh } from '../../../r3f/testing/threeNarrow';
 
 /**
  * The speaker + range gizmos are now gated on selection. To
@@ -164,10 +165,12 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes.length).toBeGreaterThan(0);
     for (const m of meshes) {
-      const mat = m.instance.material as { type: string };
+      const mesh = m.instance;
+      if (!isMesh(mesh)) throw new Error(`findAllByType('Mesh') returned a ${mesh.type}`);
+      const mat = mesh.material as THREE.Material;
       expect(mat.type).toBe('MeshBasicMaterial');
       // None of the meshes should cast shadows — gizmos are non-lit.
-      expect(m.instance.castShadow).toBe(false);
+      expect(mesh.castShadow).toBe(false);
     }
   });
 

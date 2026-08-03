@@ -4,11 +4,11 @@
  * Property names and units mirror Godot exactly (`sun_angle_max` is degrees,
  * `sky_curve` is the authored easing value): the shader-uniform conversions
  * the engine performs on upload happen at the same boundary here, in
- * `skyUniforms.ts`, so nothing downstream has to know which space a number is
+ * `build.ts`, so nothing downstream has to know which space a number is
  * in.
  */
 
-import type { Color } from '../materials/standardmaterial3d/types';
+import type { Color } from '../../utils/colorParser';
 
 export interface ProceduralSkyProperties {
   kind: 'procedural';

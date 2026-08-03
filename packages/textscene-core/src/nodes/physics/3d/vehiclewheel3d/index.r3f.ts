@@ -1,13 +1,9 @@
 /**
- * VehicleWheel3D draws nothing of its own (ADR-0008) — reuse the Node3D
- * component so its children still land in the right transform space.
+ * VehicleWheel3D renders as a transform group with a selection-gated wheel gizmo
+ * (ADR-0008 + ADR-0018). The ONLY importer of ./Component.
  */
 
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../../base/node3d/Component';
+import { VehicleWheel3D } from './Component';
 
-nodeComponentRegistry.register({
-  typeName: 'VehicleWheel3D',
-  Component: Node3D,
-  renderIntent: 'transform-only',
-});
+nodeComponentRegistry.register({ typeName: 'VehicleWheel3D', Component: VehicleWheel3D });

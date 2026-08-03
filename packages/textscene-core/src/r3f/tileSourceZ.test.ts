@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'vitest';
 import { drawnSources, tileSourceZ } from './tileSourceZ';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
-import type { AtlasSourceModel } from '../resources/tileset/tileSetModel';
+import type { AtlasSourceModel } from '../resources/tileset/types';
 
 function atlasSource(id: number): AtlasSourceModel {
   return {

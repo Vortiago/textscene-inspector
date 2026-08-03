@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseAnimatedSprite2D } from './parser';
 import { AnimatedSprite2D } from './Component';
-import { parseTresFile } from '../../../parser/tresParser';
+import { parseTresFile } from '../../../parser/parsedResource';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -25,7 +25,8 @@ import {
   type SelectionContextValue,
 } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import type { TscnNode } from '../../../parser/types';
+import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import { isMesh, isBasicMaterial } from '../../../r3f/testing/threeNarrow';
 
 const heading = { type: 'node', attributes: { type: 'AnimatedSprite2D', name: 'A' } };
 const TEX = 'res://frame3.png';
@@ -70,6 +71,47 @@ async function render(rootNode: TscnNode) {
   );
 }
 
+function meshOf(instance: THREE.Object3D): THREE.Mesh {
+  if (!isMesh(instance)) throw new Error('scene-graph instance is not a Mesh');
+  return instance;
+}
+
+/** Like `render`, but the SpriteFrames' single frame is a procedural texture. */
+async function renderProceduralFrame(rootNode: TscnNode) {
+  const fake = createFakeResourceLoader();
+  const animations =
+    '[{"frames": [{"duration": 1.0, "texture": SubResource("GradientTexture2D_t")}], "loop": true, "name": &"glow", "speed": 5.0}]';
+  const internals: TscnInternalResource[] = [
+    { id: 'sf', type: 'SpriteFrames', data: { animations, id: 'sf' } },
+    {
+      id: 'Gradient_g',
+      type: 'Gradient',
+      data: { colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)' },
+    },
+    {
+      id: 'GradientTexture2D_t',
+      type: 'GradientTexture2D',
+      data: { gradient: 'SubResource("Gradient_g")', width: '8', height: '4' },
+    },
+  ];
+  return ReactThreeTestRenderer.create(
+    <ResourceLoaderProvider loader={fake.loader}>
+      <SceneResourcesProvider internalResources={internals} externalResources={[]}>
+        <AnimatedSprite2D node={rootNode} />
+      </SceneResourcesProvider>
+    </ResourceLoaderProvider>
+  );
+}
+
+/** The basic material a drawn mesh carries. */
+function basicMaterial(instance: THREE.Object3D): THREE.MeshBasicMaterial {
+  const material = meshOf(instance).material;
+  if (Array.isArray(material) || !isBasicMaterial(material)) {
+    throw new Error('mesh material is not a MeshBasicMaterial');
+  }
+  return material;
+}
+
 describe('AnimatedSprite2D render', () => {
   it('draws the current frame texture as a quad with the modulate tint applied', async () => {
     const r = await render(
@@ -80,8 +122,8 @@ describe('AnimatedSprite2D render', () => {
         modulate: 'Color(0.5, 0.5, 0.5, 1)',
       })
     );
-    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
-    const material = mesh.material as THREE.MeshBasicMaterial;
+    const mesh = meshOf(r.scene.findByType('Mesh').instance);
+    const material = basicMaterial(mesh);
     expect(material.map).toBeTruthy();
     expect((mesh.geometry as THREE.PlaneGeometry).parameters.width).toBe(32);
     expect(material.color.r).toBeCloseTo(srgbToLinear(0.5), 4);
@@ -89,7 +131,7 @@ describe('AnimatedSprite2D render', () => {
 
   it('renders the magenta placeholder when sprite_frames is missing', async () => {
     const r = await render(makeNode({}));
-    const material = r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const material = basicMaterial(r.scene.findByType('Mesh').instance);
     expect(material.color.getHexString()).toBe('ff00ff');
   });
 });
@@ -481,5 +523,23 @@ animations = [{
       </ResourceLoaderProvider>
     );
     expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+});
+
+describe('AnimatedSprite2D procedural frames', () => {
+  it('renders a frame that is a procedural SubResource texture', async () => {
+    // A SpriteFrames frame may name a GradientTexture2D/NoiseTexture2D of the
+    // same file — no image to load, so the frame must ride the shared
+    // procedural rasteriser rather than falling to the placeholder.
+    const renderer = await renderProceduralFrame(
+      makeNode({ sprite_frames: 'SubResource("sf")', animation: '&"glow"' })
+    );
+    const material = basicMaterial(renderer.scene.findByType('Mesh').instance);
+    expect((material.map as Partial<THREE.DataTexture> | null)?.isDataTexture).toBe(true);
+    // Whole-image frame: the borrowed cache texture is drawn directly, not a
+    // clone (a clone would re-upload the shared pixels on every frame advance).
+    // The rasteriser leaves the original at version 1; composing a clone would
+    // bump it to 2.
+    expect((material.map as THREE.Texture).version).toBe(1);
   });
 });

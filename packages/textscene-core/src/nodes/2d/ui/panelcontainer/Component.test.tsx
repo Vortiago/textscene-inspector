@@ -48,6 +48,32 @@ describe('<PanelContainer>', () => {
     expect(div.style.backgroundColor).toBe('rgba(0, 255, 0, 1)');
   });
 
+  it('keeps the default fill when the panel ref cannot resolve', () => {
+    const div = renderBox({ 'theme_override_styles/panel': 'SubResource("Missing")' });
+    expect(div.style.backgroundColor).toBe(DEFAULT_BACKGROUND);
+  });
+
+  it('paints nothing when the resolved box paints nothing', () => {
+    // A resolved StyleBoxEmpty (style_box.h:80) or a centre-less StyleBoxFlat
+    // (style_box_flat.cpp:455-460) replaces the default box with nothing — the
+    // default fill must not survive underneath it.
+    const empty: TscnInternalResource = { id: 'SB', type: 'StyleBoxEmpty', data: {} };
+    expect(
+      renderBox({ 'theme_override_styles/panel': 'SubResource("SB")' }, [empty]).style
+        .backgroundColor
+    ).toBe('transparent');
+
+    const noCentre: TscnInternalResource = {
+      id: 'SB2',
+      type: 'StyleBoxFlat',
+      data: { bg_color: 'Color(1, 0, 0, 1)', draw_center: 'false' },
+    };
+    expect(
+      renderBox({ 'theme_override_styles/panel': 'SubResource("SB2")' }, [noCentre]).style
+        .backgroundColor
+    ).toBe('transparent');
+  });
+
   it('provides the margin layout kind to its subtree, so the child fills the box', () => {
     const { getByTestId } = render(
       <SceneResourcesProvider>

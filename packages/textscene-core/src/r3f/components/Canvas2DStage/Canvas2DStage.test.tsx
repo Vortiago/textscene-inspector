@@ -13,6 +13,13 @@ vi.mock('../../controls/index.js', () => ({
   ),
 }));
 
+/**
+ * Renders of the stubbed world canvas — the stage re-rendering re-renders it, so
+ * a delta of 0 across an event is how "that event committed no state update" is
+ * observable here. Module-global and never reset, so always compare deltas.
+ */
+const worldRenders = vi.hoisted(() => ({ count: 0 }));
+
 // The 2D-world R3F canvas needs WebGL — stub it, recording the pan/zoom it
 // receives so the transform-sync contract is assertable in jsdom.
 vi.mock('./World2DCanvas', () => ({
@@ -24,14 +31,17 @@ vi.mock('./World2DCanvas', () => ({
     pan: { x: number; y: number };
     zoom: number;
     nodes: readonly unknown[];
-  }) => (
-    <div
-      data-testid="world-canvas-stub"
-      data-pan={`${pan.x},${pan.y}`}
-      data-zoom={zoom}
-      data-node-count={nodes.length}
-    />
-  ),
+  }) => {
+    worldRenders.count += 1;
+    return (
+      <div
+        data-testid="world-canvas-stub"
+        data-pan={`${pan.x},${pan.y}`}
+        data-zoom={zoom}
+        data-node-count={nodes.length}
+      />
+    );
+  },
 }));
 
 import { Canvas2DStage } from './Canvas2DStage';
@@ -296,6 +306,83 @@ describe('<Canvas2DStage>', () => {
     touch(stage, 'move', 2, 260, 140);
     touch(stage, 'move', 3, 360, 140);
     expect(frame.style.transform).toBe('translate(0px, 0px) scale(1)');
+  });
+
+  it('ignores a zero-delta two-finger move rather than committing a no-op update', async () => {
+    const { stage, frame } = renderStage();
+    // Settle the lazy overlay first: its resolution is itself a render, and it
+    // must not land between the two counter reads.
+    await screen.findByTestId('overlay-stub');
+    touch(stage, 'down', 1, 100, 300);
+    touch(stage, 'down', 2, 200, 300);
+    touch(stage, 'move', 1, 100, 300);
+    touch(stage, 'move', 2, 200, 300);
+    const settled = frame.style.transform;
+    const renders = worldRenders.count;
+
+    // A browser fires one pointermove PER POINTER, so a two-finger gesture also
+    // delivers events in which nothing moved: nothing to apply, nothing to
+    // re-render — and a re-render here also re-renders the Control overlay.
+    touch(stage, 'move', 1, 100, 300);
+    touch(stage, 'move', 2, 200, 300);
+
+    expect(frame.style.transform).toBe(settled);
+    expect(worldRenders.count - renders).toBe(0);
+  });
+
+  it('ignores a zero-delta mouse move rather than committing a no-op update', async () => {
+    const { stage, frame } = renderStage();
+    await screen.findByTestId('overlay-stub');
+    fireEvent.pointerDown(stage, { button: 0, clientX: 10, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(stage, { clientX: 60, clientY: 40, pointerId: 1 });
+    const settled = frame.style.transform;
+    const renders = worldRenders.count;
+
+    fireEvent.pointerMove(stage, { clientX: 60, clientY: 40, pointerId: 1 });
+
+    expect(frame.style.transform).toBe(settled);
+    expect(worldRenders.count - renders).toBe(0);
+  });
+
+  it('drops the gesture on window blur, so the next drag pans from its own start', () => {
+    const { stage, frame } = renderStage();
+    touch(stage, 'down', 1, 100, 100);
+    touch(stage, 'down', 2, 200, 100);
+    touch(stage, 'move', 1, 100, 100);
+    touch(stage, 'move', 2, 200, 100);
+
+    // Alt-tab mid-gesture: neither finger ever delivers a pointerup.
+    fireEvent.blur(window);
+
+    touch(stage, 'down', 1, 300, 100);
+    touch(stage, 'move', 1, 300, 100);
+    touch(stage, 'move', 1, 350, 100);
+    // A stale second finger at (200, 100) would halve this pan and pinch the
+    // stage to 150% on the side.
+    expect(frame.style.transform).toBe('translate(50px, 0px) scale(1)');
+    expect(zoomLabel()).toBe('100%');
+  });
+
+  it('drops a finger whose pointer capture was lost, without waiting for a pointerup', () => {
+    const { stage, frame } = renderStage();
+    touch(stage, 'down', 1, 100, 100);
+    touch(stage, 'down', 2, 200, 100);
+    fireEvent.lostPointerCapture(stage, { pointerType: 'touch', pointerId: 2 });
+
+    touch(stage, 'move', 1, 100, 100);
+    touch(stage, 'move', 1, 150, 100);
+    expect(frame.style.transform).toBe('translate(50px, 0px) scale(1)');
+  });
+
+  it('ends a mouse drag whose pointer capture was lost mid-drag', () => {
+    const { stage, frame } = renderStage();
+    fireEvent.pointerDown(stage, { button: 0, clientX: 10, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(stage, { clientX: 60, clientY: 40, pointerId: 1 });
+    expect(frame.style.transform).toBe('translate(50px, 30px) scale(1)');
+
+    fireEvent.lostPointerCapture(stage, { pointerId: 1 });
+    fireEvent.pointerMove(stage, { clientX: 200, clientY: 200, pointerId: 1 });
+    expect(frame.style.transform).toBe('translate(50px, 30px) scale(1)');
   });
 
   it('frames a 2D camera view on request: centers the view point at the requested zoom', () => {

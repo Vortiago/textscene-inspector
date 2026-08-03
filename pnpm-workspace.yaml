@@ -39,9 +39,15 @@ catalog:
   # NOTE: ^5 latest (5.2.0) declares peer vite ^4.2 || ^5 || ^6 || ^7 || ^8,
   # so it spans the vite 8 workspace pin. ^6.0 targets vite ^8 exclusively —
   # move there in its own bump if 5.x ever lags behind a vite major.
-  '@vitejs/plugin-react': ^5.0
+  '@vitejs/plugin-react': ^6.0
   three: ^0.185
   '@types/three': ^0.185
+
+  # Procedural noise (NoiseTexture2D / FastNoiseLite). The official JS port of
+  # the same upstream FastNoiseLite that Godot vendors in
+  # `thirdparty/misc/FastNoiseLite.h`, so its enum values and generators are the
+  # engine's own rather than a hand-port that would drift from them. MIT.
+  fastnoise-lite: 1.1.1
 
   # Real CSG boolean evaluation (ADR-0026). three-bvh-csg is used DIRECTLY rather
   # than via @react-three/csg, whose latest release hard-pins three-bvh-csg ^0.0.16

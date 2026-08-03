@@ -3,7 +3,8 @@
 import * as THREE from 'three';
 import type { CsgGeometryBuilder } from '../../../../r3f/csg/csgRegistration';
 import { transform3DToMatrix } from '../../../../r3f/nodeTreeTransforms';
-import { tessellateCurve3D } from '../../../../resources/shapes/curve3d';
+import { tessellateCurve3D, type Vec3 } from '../../../../resources/shapes/curve3d';
+import type { Transform3D } from '../../../base/node3d/types';
 import { buildCsgPolygonGeometry, PolygonMode, type CsgPolygonPathPlan } from './polygonGeometry';
 import type { CSGPolygon3DProperties } from './types';
 
@@ -43,15 +44,31 @@ export const csgPolygon3DGeometry: CsgGeometryBuilder = (properties): THREE.Buff
   });
 };
 
+/**
+ * Full precision, deliberately: rounding would collide two nearby handles, positions or
+ * basis rows into one key and serve the wrong solid, where a long key only costs bytes.
+ */
+const vec3Key = (v: Vec3): string => `${v.x},${v.y},${v.z}`;
+
+function transformKey(t: Transform3D | null): string {
+  return t ? [t.basis_x, t.basis_y, t.basis_z, t.origin].map(vec3Key).join(',') : '';
+}
+
 export function csgPolygon3DGeometryKey(properties: Record<string, unknown>): string {
   const p = properties as unknown as CSGPolygon3DProperties;
   // The resolved curve is part of the shape, so its points belong in the key; the pass
-  // rewrites `resolvedPath` on every reparse, so identity alone would never match.
+  // rewrites `resolvedPath` on every reparse, so identity alone would never match. Both
+  // Bézier handles ride along because `tessellateCurve3D` consumes them, so a dragged
+  // tangent is a shape change with every position left untouched.
   const curve = p.resolvedPath
     ? p.resolvedPath.curvePoints
-        .map((c) => `${c.position.x},${c.position.y},${c.position.z}`)
+        .map((c) => `${vec3Key(c.in)}/${vec3Key(c.out)}/${vec3Key(c.position)}`)
         .join(';')
     : '';
+  // Serialised unconditionally rather than gated on PATH mode the way `pathPlan` is: a
+  // second copy of that condition could drift from it, and over-keying only costs a miss.
+  // Its own element, never folded into `curve`, so neither field can absorb the other.
+  const base = transformKey(p.resolvedPath?.baseTransform ?? null);
   return [
     'poly',
     Array.from(p.polygon).join(','),
@@ -70,5 +87,6 @@ export function csgPolygon3DGeometryKey(properties: Record<string, unknown>): st
     p.pathUDistance,
     p.pathJoined,
     curve,
+    base,
   ].join('|');
 }

@@ -149,7 +149,7 @@ describe('<CPUParticles2D>', () => {
   it('tints every vertex from a Gradient `color_ramp` sub-resource', async () => {
     const gradient: TscnInternalResource = {
       type: 'Gradient',
-      id: 1,
+      id: 'ramp',
       data: {
         id: 'ramp',
         offsets: 'PackedFloat32Array(0, 1)',
@@ -169,7 +169,7 @@ describe('<CPUParticles2D>', () => {
   it('honours a `scale_amount_curve` Curve sub-resource', async () => {
     const curve: TscnInternalResource = {
       type: 'Curve',
-      id: 1,
+      id: 'shrink',
       data: {
         id: 'shrink',
         _data: '[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]',
@@ -227,7 +227,7 @@ describe('<CPUParticles2D>', () => {
     // renders as a row of eleven flames rather than one.
     const material: TscnInternalResource = {
       type: 'CanvasItemMaterial',
-      id: 1,
+      id: 'anim',
       data: {
         id: 'anim',
         particles_animation: 'true',

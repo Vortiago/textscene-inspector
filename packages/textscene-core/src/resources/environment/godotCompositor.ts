@@ -15,7 +15,7 @@
 
 import { blendGlsl, blendsAfterToneMapping, type GlowParams } from './godotGlow';
 import { glslFloat } from './glslLiterals';
-import { toneMappingEffectGlsl } from './godotToneMapping';
+import { resolvedWhite, toneMappingEffectGlsl } from './godotToneMapping';
 
 /**
  * The whole composite, in `tonemap.glsl`'s order — the glow gather, the blend, and
@@ -30,7 +30,7 @@ import { toneMappingEffectGlsl } from './godotToneMapping';
  */
 export function compositeGlsl(
   params: GlowParams,
-  toneMapping: { mode: number; white: number }
+  toneMapping: { mode: number; white: number; agxContrast?: number }
 ): string {
   const blend = blendsAfterToneMapping(params)
     ? /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0);
@@ -38,11 +38,16 @@ export function compositeGlsl(
     : /* glsl */ `  vec3 color = godotGlowBlend(max(inputColor.rgb, 0.0) * godotExposure, glow);
   color = godotToneMap(color, 1.0);`;
 
+  // SCREEN normalises against Godot's `params.white`, which the renderer fills
+  // from `environment_get_white` — the FLOORED white, not the authored property
+  // (`renderer_scene_render_rd.cpp`: `tonemap.white = environment_get_white(...)`).
+  // Godot's own comment on the clamp inside `apply_glow` says as much: "white
+  // cannot be smaller than the maximum output value".
   return /* glsl */ `
 uniform sampler2D godotGlowBuffer;
 uniform float godotExposure;
-${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white)}
-${blendGlsl(params, toneMapping.white)}
+${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white, toneMapping.agxContrast)}
+${blendGlsl(params, resolvedWhite(toneMapping.mode, toneMapping.white))}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
   vec3 glow = texture2D(godotGlowBuffer, uv).rgb * ${glslFloat(params.intensity)};
 ${blend}

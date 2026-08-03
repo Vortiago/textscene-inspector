@@ -1,0 +1,74 @@
+; Calibration scene for the sign convention of Godot's Decal depth fade.
+;
+; Godot fades a decal along its own local Y with a DIFFERENT exponent above and
+; below the node origin:
+;
+;   fade = pow(1 - abs(uv_local.y), uv_local.y > 0 ? upper_fade : lower_fade)
+;
+; where uv_local.y = (receiver_y - decal_y) / (size.y / 2), so it runs -1 at the
+; box's bottom face to +1 at its top. Which of the two exponents applies above
+; the origin is the one thing a renderer can silently get backwards, and no
+; corpus scene separates them: every blob shadow puts its receiver BELOW the
+; projector, where only lower_fade is ever read.
+;
+; So: two identical decals, both size.y = 4 (half-depth 2), both
+; upper_fade = 0.0 and lower_fade = 4.0, over identical receivers placed one
+; unit ABOVE and one unit BELOW their projector. Both sit at |uv_local.y| = 0.5.
+;
+;   LEFT  receiver at +1 -> uv_local.y = +0.5 -> upper_fade 0 -> (1-0.5)^0 = 1.0
+;   RIGHT receiver at -1 -> uv_local.y = -0.5 -> lower_fade 4 -> (1-0.5)^4 = 0.0625
+;
+; Godot must therefore render the LEFT plane saturated red and the RIGHT plane
+; almost bare grey. A renderer that swaps the two exponents produces exactly the
+; mirror image, which is unmissable. The albedo is a flat red GradientTexture2D
+; rather than an ExtResource because a scene under scripts/godot-ref/scenes/ has
+; no res:// root to resolve a sibling file against.
+;
+; Render with:
+;   pnpm ref:godot scripts/godot-ref/scenes/decal-fade-sign.tscn \
+;     --camera 0,7,7 --look-at 0,0,0 --out /tmp/fade-sign.png
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="Gradient" id="Gradient_red"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 0, 0, 1, 1, 0, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="Texture_red"]
+gradient = SubResource("Gradient_red")
+width = 64
+height = 64
+
+[sub_resource type="PlaneMesh" id="Plane_receiver"]
+size = Vector2(3, 3)
+
+[sub_resource type="StandardMaterial3D" id="Material_receiver"]
+albedo_color = Color(0.35, 0.35, 0.35, 1)
+roughness = 1.0
+
+[node name="DecalFadeSign" type="Node3D"]
+
+[node name="AboveReceiver" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 1, 0)
+mesh = SubResource("Plane_receiver")
+surface_material_override/0 = SubResource("Material_receiver")
+
+[node name="AboveDecal" type="Decal" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 0)
+size = Vector3(3, 4, 3)
+texture_albedo = SubResource("Texture_red")
+albedo_mix = 1.0
+upper_fade = 0.0
+lower_fade = 4.0
+
+[node name="BelowReceiver" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, -1, 0)
+mesh = SubResource("Plane_receiver")
+surface_material_override/0 = SubResource("Material_receiver")
+
+[node name="BelowDecal" type="Decal" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 0)
+size = Vector3(3, 4, 3)
+texture_albedo = SubResource("Texture_red")
+albedo_mix = 1.0
+upper_fade = 0.0
+lower_fade = 4.0

@@ -4,7 +4,7 @@
  */
 
 import type { ResourceProvider } from '@textscene/core';
-import type { HostToWebviewMessage, WebviewToHostMessage } from '../protocol';
+import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
 import { decodeResourceResponse } from '../wireCodec';
 
 interface VsCodeApi {
@@ -20,7 +20,8 @@ export class WebviewResourceProvider implements ResourceProvider {
   constructor(private vscode: VsCodeApi) {
     // Listen for resource responses from extension
     window.addEventListener('message', (event) => {
-      const message = event.data as HostToWebviewMessage;
+      const message: unknown = event.data;
+      if (!isHostToWebviewMessage(message)) return;
 
       if (message.type === 'resourceLoaded') {
         const pending = this.pendingRequests.get(message.requestId);

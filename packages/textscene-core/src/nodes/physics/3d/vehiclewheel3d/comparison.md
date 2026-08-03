@@ -1,40 +1,57 @@
 ---
 type: VehicleWheel3D
 category: 3D
-status: linter-only
-fixture: unit-vehicle-wheel-3d.tscn
-# image: unit-vehicle-wheel-3d
-visual: false
-renders_as: nothing (a transform-only group)
+status: unreviewed
+fixture: unit-physics-vehicle.tscn
+image: unit-physics-vehicle
+renders_as: a transform group with a selection-gated wheel gizmo
 ---
 
 # VehicleWheel3D
 
-VehicleWheel3D simulates one wheel of a VehicleBody3D's raycast suspension and also acts as the wheel's ground collider; it draws nothing of its own, so the previewer mounts it as a transform-only Node3D group (ADR-0008) and lets only its children (a `MeshInstance3D` wheel mesh, not present in this fixture) draw.
+VehicleWheel3D positions one wheel of a VehicleBody3D. It draws no geometry at
+runtime in either engine — the visible wheel is its child `MeshInstance3D` — so
+the previewer mounts it as a transform group (ADR-0005/0008) that additionally
+draws Godot's wheel gizmo.
+
+Godot's editor draws that gizmo for **every** wheel at all times
+(`vehicle_body_3d_gizmo_plugin.cpp`): a radius circle in the YZ plane, a
+four-section spring coil, a suspension-travel line from the origin up to
+`wheel_rest_length`, an axle tick at each end of it, and a forward arrow at
+`y = −radius` pointing +Z. The previewer draws the same geometry but gates it on
+selection (ADR-0018) — a four-wheeled vehicle would otherwise fill the viewport
+with coils.
+
+Neither frame below shows that gizmo: it is editor-only in Godot, and these
+captures come from the runtime renderer, while ours is hidden with nothing
+selected. Both engines therefore agree on what a wheel draws by itself — nothing
+— and the `vehiclewheel3d-selected` golden is where our copy of the gizmo is
+pinned instead.
 
 ## Properties exercised
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `transform` | translate `(0.75, -0.3, 1.2)` | positions the transform-only group; no visual effect, the node draws nothing |
-| `use_as_traction` | `true` | physics-only, transfers engine force to the ground; no visual in a static preview |
-| `use_as_steering` | `true` | physics-only, turns with `VehicleBody3D.steering`; no visual in a static preview |
-| `engine_force` | `25.0` | physics-only per-wheel drive force; no visual in a static preview |
-| `brake` | `12.5` | physics-only per-wheel braking force; no visual in a static preview |
-| `steering` | `0.3927` | physics-only per-wheel steering angle in radians (~22.5°); no visual in a static preview |
-| `wheel_roll_influence` | `0.1` | physics-only, resists body roll; no visual in a static preview |
-| `wheel_radius` | `0.5` | physics-only raycast/collider radius in meters; no visual in a static preview |
-| `wheel_rest_length` | `0.15` | physics-only suspension rest distance in meters; no visual in a static preview |
-| `wheel_friction_slip` | `10.5` | physics-only grip factor; no visual in a static preview |
-| `suspension_travel` | `0.2` | physics-only suspension travel distance in meters; no visual in a static preview |
-| `suspension_stiffness` | `5.88` | physics-only spring stiffness; no visual in a static preview |
-| `suspension_max_force` | `6000.0` | physics-only maximum spring force; no visual in a static preview |
-| `damping_compression` | `0.83` | physics-only compression damping; no visual in a static preview |
-| `damping_relaxation` | `0.88` | physics-only rebound damping; no visual in a static preview |
+| `transform` | four distinct offsets around the chassis | places each wheel and its child mesh; the only property with a visual effect when nothing is selected |
+| `wheel_radius` | `0.25` (Wheel1–3), `0.3` (Wheel4) | sizes the gizmo's radius circle and forward arrow; Wheel4's larger value makes the scaling visible |
+| `wheel_rest_length` | `0.2` on Wheel1 | length of the gizmo's suspension-travel line (Godot default `0.15`) |
+| `use_as_traction` | `true` on Wheel1–3 | physics-only; surfaced in the inspector's Drive section |
+| `use_as_steering` | `true` on Wheel1 and Wheel3 | physics-only; the front pair |
+| `wheel_roll_influence` | `0.4` | physics-only |
+| `wheel_friction_slip` | `1.0` | physics-only |
+| `suspension_travel` | `0.2` | physics-only; inside Godot's documented 0.1–0.3 range, so the fixture lints without advisories |
+| `suspension_stiffness` | `40.0` | physics-only |
+| `damping_compression` | `0.88` | physics-only |
 
 ## Divergences
 
-None visible in this fixture.
+None visible in this fixture — 70 of 721 980 pixels differ (0.010%), all of them
+antialiasing along the chassis and wheel silhouettes. Each wheel places its mesh
+at the same point in both engines.
+
+The gizmo is a deliberate divergence from Godot's **editor**, not from the frames
+above: Godot draws it for every wheel unconditionally, we draw it only for the
+selected node (ADR-0018).
 
 ## Linting
 
@@ -62,11 +79,18 @@ Strict parsing format-checks these `VehicleWheel3D` properties, plus 16 inherite
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
-| `valid-vehiclewheel3d-parent` (type-family match) | `vehiclewheel3d-no-parent` | warning |
-|  | `vehiclewheel3d-invalid-parent` | warning |
+| `valid-vehiclewheel3d` | `vehiclewheel3d-not-under-vehicle-body` | warning |
+|  | `vehiclewheel3d-suspension-travel-out-of-range` | warning |
+|  | `vehiclewheel3d-damping-relaxation-below-compression` | warning |
 <!-- lint:end -->
 
-VehicleWheel3D has no `parser.ts` of its own: it reuses `parseNode3D` directly, so a
-malformed `steering`, `engine_force`, or any other property value the strict parser
-rejects is simply never read by the lenient parser — there is no substitution to
-make, and the node still renders as an empty transform-only group.
+The lenient parser reads every strict-validated property, so the two grammars
+agree key for key. Unauthored keys stay `undefined` rather than being filled with
+Godot's defaults at parse time — real wheels routinely leave `suspension_travel`
+and `damping_relaxation` unset, and "authored the default" is a different fact
+from "authored nothing". The defaults are substituted where the value is consumed
+instead: the inspector shows the effective figure, the gizmo falls back to
+`wheel_radius = 0.5` / `wheel_rest_length = 0.15`, and the damping-pair rule
+compares against `damping_compression = 0.83` / `damping_relaxation = 0.88` so a
+wheel that authors only one side is still checked (Godot's own pair satisfies the
+recommendation, so a wheel authoring neither never warns).

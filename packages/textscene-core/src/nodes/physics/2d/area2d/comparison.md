@@ -49,7 +49,7 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 | `gravity_direction` | Vector2(x, y) |
 | `gravity_point` | true or false |
 | `gravity_point_center` | Vector2(x, y) |
-| `gravity_point_unit_distance` | float >= 0.0001 |
+| `gravity_point_unit_distance` | float >= 0 |
 | `gravity_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
 | `linear_damp` | float >= 0 |
 | `linear_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
@@ -63,8 +63,6 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-area2d` | `area2d-needs-collision-shape` | warning |
 |  | `area2d-inactive` | warning |
-|  | `area2d-point-gravity-missing-distance` | error |
-|  | `area2d-point-gravity-invalid-distance` | error |
 |  | `area2d-monitoring-zero-layer` | warning |
 |  | `area2d-monitoring-zero-mask` | warning |
 |  | `area2d-monitoring-no-collision` | warning |

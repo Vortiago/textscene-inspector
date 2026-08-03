@@ -1,7 +1,15 @@
 /**
  * `<StandardMaterialSlot>` — renders a three.js `<meshStandardMaterial>` from
- * parsed StandardMaterial3D scalars plus optional texture maps. Shared by every
+ * decoded StandardMaterial3D scalars plus optional texture maps. Shared by every
  * StandardMaterial3D-bearing node type (MeshInstance3D, CSGBox3D, CSGCylinder3D).
+ *
+ * The REACTIVE adapter over the slice's one decode (ADR-0031); its imperative
+ * twin is `standardmaterial3d/build.ts`, which the resource pipeline uses for an
+ * external `.tres`. It exists separately only because R3F needs a JSX element to
+ * prop-diff a material across re-renders. Everything where "the same material
+ * state" is non-obvious — the physical-material upgrade, the rim sheen colour,
+ * the blend fields a CustomBlending mode needs — is imported from that module
+ * rather than restated, which is what keeps the two from drifting.
  *
  * Scalar-only callers (e.g. CSG nodes whose materials carry no textures) pass
  * just `scalars`; the texture-map props stay undefined and the slot renders a
@@ -10,8 +18,14 @@
  */
 
 import * as THREE from 'three';
+import {
+  materialBlendProps,
+  needsPhysicalMaterial,
+  RIM_SHEEN_ROUGHNESS,
+  rimSheenColor,
+} from '../../resources/materials/standardmaterial3d/build';
 import { resolveEmission } from '../../resources/materials/standardmaterial3d/emission';
-import type { StandardMaterial3DScalars } from './standardMaterialScalars';
+import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 
 /**
  * Godot's default 3D material — what a mesh with no material actually gets.
@@ -67,23 +81,6 @@ export interface StandardMaterialSlotProps {
   attach?: string;
 }
 
-/**
- * A StandardMaterial3D upgrades from <meshStandardMaterial> to
- * <meshPhysicalMaterial> when any physical-only feature is active: clearcoat
- * (FEATURE_CLEARCOAT), rim → sheen (FEATURE_RIM), anisotropy
- * (FEATURE_ANISOTROPY), or refraction → transmission (FEATURE_REFRACTION).
- * Declared in one place so a new physical-only flag extends exactly this set
- * rather than an inline OR chain that a future addition could forget.
- */
-function needsPhysicalMaterial(scalars: StandardMaterial3DScalars): boolean {
-  return (
-    scalars.clearcoat > 0 ||
-    scalars.rim > 0 ||
-    scalars.anisotropy > 0 ||
-    scalars.transmission > 0
-  );
-}
-
 export function StandardMaterialSlot({
   scalars,
   albedoMap,
@@ -116,6 +113,10 @@ export function StandardMaterialSlot({
   // Respect the source material's cull_mode verbatim. Godot's default
   // when cull_mode is unset is BACK culling → THREE.FrontSide.
   const effectiveSide = scalars.side;
+  // Godot's blend modes SUB and PREMULT_ALPHA have no three preset, so they
+  // arrive as CustomBlending plus six factor fields. Omitted (never
+  // `undefined`) for the preset modes — see `materialBlendProps`.
+  const blendProps = materialBlendProps(scalars);
   // The material's shader needs to be recompiled whenever the set of
   // active texture maps changes — three.js bakes `USE_MAP` / `USE_NORMALMAP`
   // / etc. into shader defines at first compile. Keying the material on which
@@ -155,7 +156,8 @@ export function StandardMaterialSlot({
         opacity={scalars.opacity}
         alphaTest={scalars.alphaTest}
         depthWrite={scalars.depthWrite}
-        blending={scalars.blending}
+        depthTest={scalars.depthTest}
+        {...blendProps}
         side={effectiveSide}
       />
     );
@@ -177,7 +179,8 @@ export function StandardMaterialSlot({
     opacity: scalars.opacity,
     alphaTest: scalars.alphaTest,
     depthWrite: scalars.depthWrite,
-    blending: scalars.blending,
+    depthTest: scalars.depthTest,
+    ...blendProps,
     side: effectiveSide,
     shadowSide: shadowSide ?? null,
     map: albedoMap ?? null,
@@ -214,12 +217,6 @@ export function StandardMaterialSlot({
   // rim_tint blends the highlight from the light colour (0) toward the albedo
   // (1) via sheenColor.
   if (needsPhysicalMaterial(scalars)) {
-    const rimTint = scalars.rimTint;
-    const sheenColor = new THREE.Color(
-      1 + rimTint * (scalars.color[0] - 1),
-      1 + rimTint * (scalars.color[1] - 1),
-      1 + rimTint * (scalars.color[2] - 1)
-    );
     return (
       <meshPhysicalMaterial
         key={`physical-${slotKey}`}
@@ -227,11 +224,8 @@ export function StandardMaterialSlot({
         clearcoat={scalars.clearcoat}
         clearcoatRoughness={scalars.clearcoatRoughness}
         sheen={scalars.rim}
-        sheenColor={sheenColor}
-        // A low sheenRoughness concentrates the sheen toward grazing angles, so
-        // the effect reads as an edge rim rather than a broad fabric glow that
-        // would wash a dark-albedo sphere out to bright grey.
-        sheenRoughness={0.1}
+        sheenColor={rimSheenColor(scalars)}
+        sheenRoughness={RIM_SHEEN_ROUGHNESS}
         anisotropy={scalars.anisotropy}
         anisotropyRotation={scalars.anisotropyRotation}
         anisotropyMap={anisotropyMap ?? null}

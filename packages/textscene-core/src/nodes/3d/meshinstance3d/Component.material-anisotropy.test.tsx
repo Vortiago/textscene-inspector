@@ -115,7 +115,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
 
     const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = physical[0]!.instance as THREE.MeshPhysicalMaterial;
+    const material = physical[0]!.instance as THREE.Object3D & THREE.MeshPhysicalMaterial;
     expect(material.anisotropy).toBeCloseTo(0.8, 5);
     expect(material.anisotropyRotation).toBeCloseTo(0, 5);
   });
@@ -132,7 +132,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
 
     const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = physical[0]!.instance as THREE.MeshPhysicalMaterial;
+    const material = physical[0]!.instance as THREE.Object3D & THREE.MeshPhysicalMaterial;
     expect(material.anisotropy).toBeCloseTo(0.8, 5); // magnitude preserved
     expect(material.anisotropyRotation).toBeCloseTo(Math.PI / 2, 5); // direction flipped perpendicular
   });
@@ -184,7 +184,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
 
     const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    return physical[0]!.instance as THREE.MeshPhysicalMaterial;
+    return physical[0]!.instance as THREE.Object3D & THREE.MeshPhysicalMaterial;
   }
 
   it('wires anisotropy_flowmap onto material.anisotropyMap, repacking Godot alpha-strength into three.js blue', async () => {
@@ -255,7 +255,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     await renderer.update(tree(makeNode('mat'), internal, external, loader));
 
     const material = renderer.scene.findAllByType('MeshPhysicalMaterial')[0]!
-      .instance as THREE.MeshPhysicalMaterial;
+      .instance as THREE.Object3D & THREE.MeshPhysicalMaterial;
     const sampled = material.anisotropyMap!;
     // The clone, not the repack: only the UV transform sets `repeat`.
     expect(sampled.repeat.x).toBeCloseTo(3, 5);

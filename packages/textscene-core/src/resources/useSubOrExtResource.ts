@@ -14,7 +14,7 @@
 
 import { useMemo } from 'react';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
-import type { ParsedTresFile } from '../parser/tresParser';
+import type { ParsedResource } from '../parser/parsedResource';
 import { resolveExtResourcePath, resolveSubResourceRef } from './SubResourceResolver';
 import { useResource } from './useResource';
 
@@ -34,7 +34,7 @@ export function useSubOrExtResource(
     () => (inline ? null : resolveExtResourcePath(ref, externalResources)),
     [inline, ref, externalResources]
   );
-  const external = useResource<ParsedTresFile>(externalPath ?? '', 'Resource');
+  const external = useResource<ParsedResource>(externalPath ?? '', 'Resource');
 
   return useMemo(() => {
     if (inline) return inline;

@@ -22,7 +22,8 @@ import type { ControlComponentProps } from '../../../../r3f/controls/ControlComp
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
 import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { resolveTexture2DPath } from '../../../../resources/SubResourceResolver';
+import { resolveTexture2DSource } from '../../../../resources/SubResourceResolver';
+import { atlasRegionDataUrl } from '../../../../resources/textures/atlastexture/build';
 import { imageToDataUrl } from '../../../../r3f/controls/imageToDataUrl';
 import { useResource } from '../../../../resources/useResource';
 import type { TextureRectProperties } from './types';
@@ -32,16 +33,25 @@ export function TextureRect({ node, children }: ControlComponentProps) {
   const parentKind = useControlParent();
   const { externalResources, internalResources } = useSceneResources();
 
-  const path = resolveTexture2DPath(props.texture, externalResources, internalResources);
+  // An AtlasTexture resolves to the SHEET plus the cell to show. A control draws
+  // an <img>, not a textured quad, so the cell is cut out of the decoded bitmap
+  // rather than windowed with UVs — and the control's intrinsic size is the
+  // cell's, since Godot sizes it from `texture->get_size()`, which for an
+  // AtlasTexture is its region (atlas_texture.cpp:33-42).
+  const { path, region } = resolveTexture2DSource(props.texture, externalResources, internalResources);
 
   // Always call the hook (rules of hooks); '' short-circuits to pending.
   const tex = useResource<THREE.Texture>(path ?? '', 'Texture2D');
-  const src = useMemo(() => imageToDataUrl(tex.value?.image), [tex.value]);
+  const src = useMemo(
+    () =>
+      region ? atlasRegionDataUrl(tex.value?.image, region) : imageToDataUrl(tex.value?.image),
+    [tex.value, region]
+  );
 
   const layout = controlStyle(
     props,
     parentKind,
-    textureRectMinSize(props.expandMode, tex.value?.image as ImageLike | undefined)
+    textureRectMinSize(props.expandMode, region ?? (tex.value?.image as ImageLike | undefined))
   );
 
   if (src) {

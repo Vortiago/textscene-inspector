@@ -20,10 +20,10 @@ import type { ResolvedEnvironment } from './useResolvedEnvironment';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import type { ParsedTresFile } from '../../../parser/tresParser';
+import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 
-function tres(resourceType: string, properties: Record<string, string>): ParsedTresFile {
+function tres(resourceType: string, properties: Record<string, string>): ParsedResource {
   return { resourceType, properties, extResources: [], subResources: [] };
 }
 
@@ -37,7 +37,7 @@ async function resolve(
   environmentRef: string | undefined,
   internals: TscnInternalResource[],
   externals: TscnExternalResource[],
-  files: Record<string, ParsedTresFile> = {}
+  files: Record<string, ParsedResource> = {}
 ): Promise<ResolvedEnvironment | null> {
   const fake = createFakeResourceLoader();
   for (const [path, parsed] of Object.entries(files)) fake.resources.seed(path, parsed);

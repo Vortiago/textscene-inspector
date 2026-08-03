@@ -2,7 +2,7 @@
  * Tests for SpotLight3D parser
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import * as logger from '../../../../logger';
 import { parseSpotLight3D } from './parser';
 import { heading } from '../../../../parser/testing/parserKit';

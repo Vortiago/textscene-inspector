@@ -14,7 +14,7 @@ import { Node3D } from '../../base/node3d/Component';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
-import { parsePackedVector3Array, parsePackedInt32Arrays } from '../../../resources/shapes/packedArray';
+import { decodeNavigationMesh } from '../../../resources/navigation/navigationmesh';
 import {
   buildNavFaceGeometry,
   buildNavEdgeGeometry,
@@ -36,14 +36,12 @@ export function NavigationRegion3D({ node, children }: NodeComponentProps) {
   );
 
   const overlay = useMemo(() => {
-    const props = resource?.data as Record<string, string> | undefined;
-    if (!props || !props['vertices'] || !props['polygons']) return null;
-    const positions = parsePackedVector3Array(props['vertices']);
-    const polygons = parsePackedInt32Arrays(props['polygons']);
-    if (positions.length === 0 || polygons.length === 0) return null;
+    const navmesh = resource ? decodeNavigationMesh(resource.data) : null;
+    if (!navmesh) return null;
+    // Godot 3D space matches three.js, so the vertices are positions already.
     return {
-      faces: buildNavFaceGeometry(positions, polygons),
-      edges: buildNavEdgeGeometry(positions, polygons),
+      faces: buildNavFaceGeometry(navmesh.vertices, navmesh.polygons),
+      edges: buildNavEdgeGeometry(navmesh.vertices, navmesh.polygons),
     };
   }, [resource]);
 

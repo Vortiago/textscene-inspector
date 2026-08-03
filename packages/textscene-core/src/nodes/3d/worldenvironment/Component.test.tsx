@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { WorldEnvironment } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
@@ -38,8 +39,8 @@ describe('<WorldEnvironment>', () => {
       background_color: 'Color(0.2, 0.4, 0.8, 1)',
     });
     const renderer = await render(node, [resource]);
-    const scene = renderer.scene.instance;
-    const bg = scene.background as { getHexString(): string } | null;
+    const scene = renderer.scene.instance as THREE.Scene;
+    const bg = scene.background as THREE.Color | null;
     expect(bg).not.toBeNull();
     // Godot Color is sRGB; three.js stores linear, so compare via the sRGB hex.
     expect(bg!.getHexString()).toBe('3366cc'); // (0.2,0.4,0.8) → 8-bit sRGB
@@ -52,7 +53,7 @@ describe('<WorldEnvironment>', () => {
       fog_density: '0.1',
     });
     const renderer = await render(node, [resource]);
-    expect(renderer.scene.instance.fog).not.toBeNull();
+    expect((renderer.scene.instance as THREE.Scene).fog).not.toBeNull();
   });
 
   it('does NOT attach fog when volumetric_fog_enabled is false', async () => {
@@ -62,13 +63,13 @@ describe('<WorldEnvironment>', () => {
       background_color: 'Color(0, 0, 0, 1)',
     });
     const renderer = await render(node, [resource]);
-    expect(renderer.scene.instance.fog).toBeNull();
+    expect((renderer.scene.instance as THREE.Scene).fog).toBeNull();
   });
 
   it('renders nothing extra when environment reference is missing', async () => {
     const node = makeNode('SubResource("Nope")');
     const renderer = await render(node, []);
-    expect(renderer.scene.instance.background).toBeNull();
-    expect(renderer.scene.instance.fog).toBeNull();
+    expect((renderer.scene.instance as THREE.Scene).background).toBeNull();
+    expect((renderer.scene.instance as THREE.Scene).fog).toBeNull();
   });
 });

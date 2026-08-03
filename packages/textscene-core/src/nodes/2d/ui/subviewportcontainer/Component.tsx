@@ -161,7 +161,8 @@ function useForcedViewportRect(path: string, stretch: boolean) {
     const publish = () => {
       const x = Math.max(1, Math.round(element.offsetWidth));
       const y = Math.max(1, Math.round(element.offsetHeight));
-      release?.();
+      // Register without releasing, so an unchanged measurement keeps the
+      // registry's map identity (the transfer contract is on RegisterViewportRect).
       release = registerViewportRect(path, { x, y });
     };
     publish();

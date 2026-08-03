@@ -66,6 +66,15 @@ baseChainCompleteness) fail on a mis-wired slice.
 Coverage: `node scripts/coverage-report.mjs [--next 5]` derives which Godot node types
 are still unregistered, base classes first.
 
+Resource types: `packages/textscene-core/src/resources/<category>/<type>/`
+(**Resource slice**, ADR-0031) — `index.ts` (registration via
+`registerResourceSlice`, THREE-free, wired into `resources/sliceRegistrations.ts`)
+· `decode.ts` (pure: property bag → typed Data; `decode<Type>` naming) ·
+`build.ts` only where THREE construction exists · `types.ts` · co-located tests
+incl. a registration test. Foreign formats (`resources/formats/`) declare their
+real parser instead of the decode/build split. Conformance:
+`resourceSliceConformance` + `resourceSliceIsolation` fail on a mis-shaped slice.
+
 ## Conventions
 
 - Two parsers, one scanning loop (`TscnParserCore`, `ParseObserver` seam): lenient

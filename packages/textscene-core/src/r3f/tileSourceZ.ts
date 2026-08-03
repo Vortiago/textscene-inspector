@@ -1,5 +1,5 @@
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
-import type { AtlasSourceModel, TileSetModel } from '../resources/tileset/tileSetModel';
+import type { AtlasSourceModel, TileSetModel } from '../resources/tileset/types';
 
 /**
  * Where one atlas source's batched mesh sits inside a tile layer's draw

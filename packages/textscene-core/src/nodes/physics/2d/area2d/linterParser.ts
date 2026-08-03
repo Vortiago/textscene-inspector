@@ -31,10 +31,11 @@ validatorRegistry.registerAll('Area2D', {
   ),
   gravity_point: v.boolean('gravity_point'),
   gravity_point_center: v.vector2('gravity_point_center'),
+  // Range hint "0,1024,0.001,or_greater" (area_2d.cpp): 0 is legal and IS the
+  // default — constant point gravity with no distance falloff.
   gravity_point_unit_distance: v.float('gravity_point_unit_distance', {
-    min: 0.0001,
-    message:
-      "Property 'gravity_point_unit_distance' must be greater than 0. This distance is required for point gravity calculations.",
+    min: 0,
+    message: "Property 'gravity_point_unit_distance' must be at least 0.",
   }),
   gravity_direction: v.vector2('gravity_direction'),
   gravity: v.float('gravity'),

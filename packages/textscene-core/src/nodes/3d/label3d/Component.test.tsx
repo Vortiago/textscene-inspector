@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Label3D } from './Component';
 import type { TscnNode } from '../../../parser/types';
@@ -68,13 +69,13 @@ describe('<Label3D>', () => {
   it('renders a Mesh with a PlaneGeometry when labels are toggled on', async () => {
     const renderer = await renderLabel(makeNode());
     const mesh = renderer.scene.findByType('Mesh');
-    expect(mesh.instance.geometry.type).toBe('PlaneGeometry');
+    expect((mesh.instance as THREE.Mesh).geometry.type).toBe('PlaneGeometry');
   });
 
   it('uses a transparent MeshBasicMaterial', async () => {
     const renderer = await renderLabel(makeNode());
     const mesh = renderer.scene.findByType('Mesh');
-    const material = mesh.instance.material as { transparent: boolean; type: string };
+    const material = (mesh.instance as THREE.Mesh).material as { transparent: boolean; type: string };
     expect(material.transparent).toBe(true);
     expect(material.type).toBe('MeshBasicMaterial');
   });
@@ -82,7 +83,7 @@ describe('<Label3D>', () => {
   it('applies modulate alpha to material opacity', async () => {
     const renderer = await renderLabel(makeNode({ modulate: { r: 1, g: 1, b: 1, a: 0.5 } }));
     const mesh = renderer.scene.findByType('Mesh');
-    expect((mesh.instance.material as { opacity: number }).opacity).toBe(0.5);
+    expect(((mesh.instance as THREE.Mesh).material as { opacity: number }).opacity).toBe(0.5);
   });
 
   it('positions the mesh at transform origin', async () => {
@@ -105,10 +106,10 @@ describe('<Label3D>', () => {
     const a = await renderLabel(makeNode({ pixel_size: 0.01 }));
     const b = await renderLabel(makeNode({ pixel_size: 0.02 }));
     const ah = (
-      a.scene.findByType('Mesh').instance.geometry as unknown as { parameters: { height: number } }
+      (a.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.PlaneGeometry
     ).parameters.height;
     const bh = (
-      b.scene.findByType('Mesh').instance.geometry as unknown as { parameters: { height: number } }
+      (b.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.PlaneGeometry
     ).parameters.height;
     expect(bh).toBeCloseTo(2 * ah, 5);
   });

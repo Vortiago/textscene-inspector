@@ -107,7 +107,9 @@ export function collectControlRasterViewports(
         : null;
       // A single-root sub-scene collapses INTO the instance node (ADR-0013), so
       // the node itself is already the sub-scene's root and is read in that scope.
-      const merged = subScene ? mergeInstanceRoot(node, subScene) : null;
+      const merged = subScene
+        ? mergeInstanceRoot(node, subScene, current.externalResources)
+        : null;
       const effective = merged ?? node;
 
       if (isViewportBoundary(effective.type) && viewportContentKind(effective) === 'dom') {

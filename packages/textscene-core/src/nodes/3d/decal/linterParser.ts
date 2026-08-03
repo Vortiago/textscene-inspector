@@ -22,6 +22,11 @@ validatorRegistry.registerAll('Decal', {
   upper_fade: v.nonNegativeFloat('upper_fade'),
   lower_fade: v.nonNegativeFloat('lower_fade'),
   cull_mask: layerBitmask('cull_mask'),
+  // decal.cpp:258-260. `or_greater` with no `or_less`, so the 0 floor is a real
+  // bound and 4096 is only the slider extent.
+  distance_fade_enabled: v.boolean('distance_fade_enabled'),
+  distance_fade_begin: v.nonNegativeFloat('distance_fade_begin'),
+  distance_fade_length: v.nonNegativeFloat('distance_fade_length'),
   // VisualInstance3D declares `sorting_offset` PROPERTY_USAGE_NONE, so most of
   // its subclasses never serialise it — but `Decal::_validate_property`
   // (scene/3d/decal.cpp:169) restores PROPERTY_USAGE_DEFAULT for this one

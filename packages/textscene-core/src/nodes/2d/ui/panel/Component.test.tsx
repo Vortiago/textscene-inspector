@@ -52,6 +52,38 @@ describe('<Panel>', () => {
     expect(div.style.backgroundColor).toBe(DEFAULT_BACKGROUND);
   });
 
+  it('paints nothing when the resolved box is a StyleBoxEmpty', () => {
+    // StyleBoxEmpty::draw (style_box.h:80) is empty: an override that resolves
+    // to one replaces the default panel box with nothing, so the neutral fill
+    // must NOT show through.
+    const styleBox: TscnInternalResource = { id: 'SB', type: 'StyleBoxEmpty', data: {} };
+    const div = renderPanel({ 'theme_override_styles/panel': 'SubResource("SB")' }, [styleBox]);
+    expect(div.style.backgroundColor).toBe('transparent');
+  });
+
+  it('paints nothing when the resolved box draws neither centre, border nor shadow', () => {
+    // StyleBoxFlat::draw (style_box_flat.cpp:455-460) returns before drawing
+    // anything in that case.
+    const styleBox: TscnInternalResource = {
+      id: 'SB',
+      type: 'StyleBoxFlat',
+      data: { bg_color: 'Color(1, 0, 0, 1)', draw_center: 'false' },
+    };
+    const div = renderPanel({ 'theme_override_styles/panel': 'SubResource("SB")' }, [styleBox]);
+    expect(div.style.backgroundColor).toBe('transparent');
+  });
+
+  it('keeps the border of a border-only box without its default fill', () => {
+    const styleBox: TscnInternalResource = {
+      id: 'SB',
+      type: 'StyleBoxFlat',
+      data: { draw_center: 'false', border_width_left: '8', border_color: 'Color(0, 0, 1, 1)' },
+    };
+    const div = renderPanel({ 'theme_override_styles/panel': 'SubResource("SB")' }, [styleBox]);
+    expect(div.style.backgroundColor).toBe('transparent');
+    expect(div.style.borderColor).toBe('rgba(0, 0, 255, 1)');
+  });
+
   it('provides the free layout kind to its subtree', () => {
     const { getByTestId } = render(
       <Panel node={node()}>

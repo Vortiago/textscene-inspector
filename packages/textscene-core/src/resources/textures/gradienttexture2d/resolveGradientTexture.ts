@@ -1,14 +1,15 @@
 /**
- * Resolve a Texture2D-valued property that references an inline
- * `GradientTexture2D` sub-resource to a rasterised `THREE.DataTexture`.
+ * Resolve a `GradientTexture2D` reference — a Texture2D-valued property naming
+ * an inline `[sub_resource]` — to a rasterised `THREE.DataTexture`.
  *
- * Unlike an `ExtResource` texture (an image file loaded asynchronously through
- * the resource pipeline), a `GradientTexture2D` is fully described inside the
- * scene: the texture block plus the `Gradient` block it references. So it
+ * Unlike an `ExtResource` image (a file loaded asynchronously through the
+ * resource pipeline), a `GradientTexture2D` is fully described by the file it
+ * lives in: the texture block plus the `Gradient` block it references. So it
  * resolves synchronously, right where the material's texture slots are read —
- * no `useResource`/host-file round trip. Returns `null` for any other reference
- * form (ExtResource, a different SubResource type, a missing gradient), leaving
- * the caller's async path untouched.
+ * no `useResource`/host-file round trip once the file itself is in hand. The
+ * walk, the cache contract, and the pin-key story live in the shared
+ * `resolveProceduralSubResource`; this file owns only what is
+ * gradient-specific — the rasterisation.
  *
  * The result is SHARED and owned by `proceduralTextureCache` — many nodes point
  * at one gradient, so it is rasterised once per (scene, sub-resource). Callers
@@ -17,52 +18,31 @@
  * rather than calling this directly.
  */
 
+import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
 import {
-  findSubResource,
-  parseResourceReference,
-  resolveSubResourceRef,
-} from '../../SubResourceResolver';
-import { parseGradient, parseGradientTexture2D } from './parser';
-import { rasterizeGradientTexture2D } from './renderer';
-import { proceduralTexture, proceduralTextureKey } from '../proceduralTextureCache';
-import type * as THREE from 'three';
-
-/**
- * A rasterised gradient and the procedural-cache key that keeps it resident.
- *
- * The two travel together because holding one without the other is the bug: a
- * consumer that samples the texture without pinning the key is sampling
- * something capacity eviction is free to dispose. Deriving the key separately
- * also let it be minted for references that resolve to no texture at all — a
- * key the cache never holds.
- */
-export interface GradientTexture2DResolution {
-  texture: THREE.DataTexture;
-  /** Pinned for as long as a consumer holds `texture`. */
-  key: string;
-}
+  resolveProceduralSubResource,
+  type ProceduralTextureResolution,
+} from '../resolveProceduralSubResource';
+import { decodeGradientTexture2D, resolveGradient } from './decode';
+import { rasterizeGradientTexture2D } from './build';
 
 export function resolveGradientTexture2D(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
-): GradientTexture2DResolution | null {
-  const parsed = parseResourceReference(ref ?? '');
-  if (!parsed || parsed.type !== 'SubResource') return null;
+): ProceduralTextureResolution<THREE.DataTexture> | null {
+  return resolveProceduralSubResource(ref, internalResources, 'GradientTexture2D', rasterize);
+}
 
-  const texture = proceduralTexture(internalResources, parsed.id, () => {
-    const textureResource = findSubResource(internalResources, parsed.id);
-    if (!textureResource || textureResource.type !== 'GradientTexture2D') return null;
-
-    const data = textureResource.data as Record<string, string>;
-    const gradientResource = resolveSubResourceRef(data.gradient, internalResources);
-    if (!gradientResource || gradientResource.type !== 'Gradient') return null;
-
-    const texture = parseGradientTexture2D(data);
-    const gradient = parseGradient(gradientResource.data as Record<string, string>);
-    return rasterizeGradientTexture2D(texture, gradient);
-  }) as THREE.DataTexture | null;
-  if (!texture) return null;
-
-  return { texture, key: proceduralTextureKey(internalResources, parsed.id) };
+/**
+ * Texture properties plus the table their `gradient` reference resolves in →
+ * pixels.
+ */
+function rasterize(
+  properties: Record<string, string>,
+  resources: readonly TscnInternalResource[]
+): THREE.DataTexture | null {
+  const gradient = resolveGradient(properties.gradient, resources);
+  if (!gradient) return null;
+  return rasterizeGradientTexture2D(decodeGradientTexture2D(properties), gradient);
 }

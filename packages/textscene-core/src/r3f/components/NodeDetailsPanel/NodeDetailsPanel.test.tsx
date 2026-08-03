@@ -50,7 +50,6 @@ describe('<NodeDetailsPanel>', () => {
       typeName: FAKE_TYPE,
       typeGuard: () => false,
       parser: () => ({}),
-      renderer: () => null as never,
     });
 
     const graph = createSceneGraphFromTscnScene({
@@ -106,7 +105,6 @@ describe('<NodeDetailsPanel>', () => {
       typeName: FAKE_TYPE,
       typeGuard: () => false,
       parser: () => ({}),
-      renderer: () => null as never,
       propertyFormatter: () => [
         {
           title: 'Stub Section',
@@ -142,7 +140,6 @@ describe('<NodeDetailsPanel>', () => {
       typeName: FAKE_TYPE,
       typeGuard: () => false,
       parser: () => ({}),
-      renderer: () => null as never,
     });
 
     const graph = createSceneGraphFromTscnScene({

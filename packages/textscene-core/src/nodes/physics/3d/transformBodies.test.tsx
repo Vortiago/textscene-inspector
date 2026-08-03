@@ -26,6 +26,7 @@ describe('transform-only bodies render without a fallback placeholder', () => {
     'StaticBody3D',
     'Area3D',
     'RigidBody3D',
+    'VehicleBody3D',
     'CharacterBody3D',
     'Skeleton3D',
   ])('%s reuses the Node3D transform group', (type) => {

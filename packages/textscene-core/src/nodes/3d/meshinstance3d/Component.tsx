@@ -31,23 +31,26 @@ import {
   useSceneResources,
 } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
-import { resolveGradientTexture2D } from '../../../resources/textures/gradienttexture2d/resolveGradientTexture';
+import { resolveProceduralTexture } from '../../../resources/textures/resolveProceduralTexture';
 import { useViewportTextureSlot } from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { useProceduralTexturePins } from '../../../resources/useProceduralTexture';
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
 import { resolveEmission } from '../../../resources/materials/standardmaterial3d/emission';
-import { parseStandardMaterial3DScalars } from '../../../r3f/materials/standardMaterialScalars';
+import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
+import { materialBlendProps } from '../../../resources/materials/standardmaterial3d/build';
 import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
 import { warn } from '../../../logger';
-import { decodeSceneArrayMesh } from '../../../resources/meshes/arrayMeshDecode';
-import { buildArrayMeshGeometry } from '../../../resources/meshes/arrayMeshGeometry';
+import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode';
+import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
-import { applyUVTransform } from './applyUVTransform';
-import { repackAnisotropyFlowmap } from './repackFlowmap';
+import { visualLayersUserData } from '../../../r3f/visualLayers';
+import { applyTextureState, type TextureState } from '../../../resources/textures/applyTextureState';
+import { GODOT_TEXTURE_FILTER_DEFAULT } from '../../../resources/textures/godotTextureFilter';
+import { repackAnisotropyFlowmap } from '../../../resources/textures/repackFlowmap';
 import { triplanarPlaneScale } from './triplanarScale';
 
 /** Texture slots StandardMaterial3D exposes — checked in this order. */
@@ -209,18 +212,18 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   );
   useProceduralTexturePins(proceduralKeys);
 
-  // Apply the material's UV transform (`uv1_scale` / `uv1_offset`) to
-  // every loaded texture. `applyUVTransform` clones the texture before
-  // mutating, so two MeshInstance3D nodes sharing the same path with
-  // different scale don't clobber each other. Identity transforms
-  // (scale = 1,1 and offset = 0,0) skip the clone and return the
-  // original.
+  // Per-material texture state: the UV transform (`uv1_scale` / `uv1_offset`),
+  // the sampler filter (`texture_filter`) and the wrapping (`texture_repeat`,
+  // whose default is applied to the shared texture at load). `applyTextureState` clones
+  // before mutating, so two MeshInstance3D nodes sharing a texture path with
+  // different tiling or filtering don't clobber each other, and hands the
+  // original straight back when this material asks for neither.
   //
   // A triplanar material tiles per WORLD unit, not across the
   // mesh's 0..1 UVs. For a PlaneMesh we reproduce that density by folding
   // the plane's size into the scale (repeat = size × uv1_scale) — otherwise
   // a 12×3.5 hallway floor stretched one texture copy and read "too big".
-  const uvTransform = useMemo(() => {
+  const textureState = useMemo((): TextureState | null => {
     if (!materialScalars) return null;
     const scale =
       materialScalars.triplanar && meshResource
@@ -230,7 +233,19 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     // `offset` in UV space, but Godot's world-triplanar offset is in world
     // units, so a non-zero offset would shift by a different amount here. No
     // shipped scene sets uv1_offset, so impact is currently zero.
-    return { scale, offset: materialScalars.uv1Offset };
+    return {
+      uv: { scale, offset: materialScalars.uv1Offset },
+      // Only an AUTHORED filter is a divergence. The scalars parser fills in
+      // Godot's default, and passing that would clone every texture whose
+      // sampler state merely differs from it — a procedural GradientTexture2D
+      // has no mipmaps, so it would clone and re-upload per material per slot
+      // for a filter no material asked for.
+      filter:
+        materialScalars.textureFilter === GODOT_TEXTURE_FILTER_DEFAULT
+          ? undefined
+          : materialScalars.textureFilter,
+      repeat: materialScalars.textureRepeat,
+    };
   }, [materialScalars, meshResource]);
 
   // A `SubResource(ViewportTexture)` albedo names a `<SubViewport>` rather than
@@ -249,17 +264,17 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
         viewportAlbedo
           ? { value: viewportAlbedo }
           : effectiveSlot(proceduralTextures.albedo_texture, textureSlots.albedo_texture),
-        uvTransform
+        textureState
       ),
-    [viewportAlbedo, proceduralTextures.albedo_texture, textureSlots.albedo_texture, uvTransform]
+    [viewportAlbedo, proceduralTextures.albedo_texture, textureSlots.albedo_texture, textureState]
   );
   const normalMap = useMemo(
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.normal_texture, textureSlots.normal_texture),
-        uvTransform
+        textureState
       ),
-    [proceduralTextures.normal_texture, textureSlots.normal_texture, uvTransform]
+    [proceduralTextures.normal_texture, textureSlots.normal_texture, textureState]
   );
   // PARITY LIMITATION (metallic/roughness texture channel): Godot reads the
   // channel named by `metallic_texture_channel` / `roughness_texture_channel`
@@ -271,41 +286,41 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.roughness_texture, textureSlots.roughness_texture),
-        uvTransform
+        textureState
       ),
-    [proceduralTextures.roughness_texture, textureSlots.roughness_texture, uvTransform]
+    [proceduralTextures.roughness_texture, textureSlots.roughness_texture, textureState]
   );
   const metalnessMap = useMemo(
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.metallic_texture, textureSlots.metallic_texture),
-        uvTransform
+        textureState
       ),
-    [proceduralTextures.metallic_texture, textureSlots.metallic_texture, uvTransform]
+    [proceduralTextures.metallic_texture, textureSlots.metallic_texture, textureState]
   );
   const emissiveMap = useMemo(
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.emission_texture, textureSlots.emission_texture),
-        uvTransform
+        textureState
       ),
-    [proceduralTextures.emission_texture, textureSlots.emission_texture, uvTransform]
+    [proceduralTextures.emission_texture, textureSlots.emission_texture, textureState]
   );
   const aoMap = useMemo(
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.ao_texture, textureSlots.ao_texture),
-        uvTransform
+        textureState
       ),
-    [proceduralTextures.ao_texture, textureSlots.ao_texture, uvTransform]
+    [proceduralTextures.ao_texture, textureSlots.ao_texture, textureState]
   );
   const displacementMap = useMemo(
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.heightmap_texture, textureSlots.heightmap_texture),
-        uvTransform
+        textureState
       ),
-    [proceduralTextures.heightmap_texture, textureSlots.heightmap_texture, uvTransform]
+    [proceduralTextures.heightmap_texture, textureSlots.heightmap_texture, textureState]
   );
   // Depend on the two values the repack actually reads, not on their wrappers:
   // `materialScalars` and the slot object are re-created on every re-parse and
@@ -323,8 +338,8 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   }, [anisotropyStrength, anisotropyFlowmap]);
 
   const anisotropyMap = useMemo(
-    () => transformedTexture({ value: repackedFlowmap }, uvTransform),
-    [repackedFlowmap, uvTransform]
+    () => transformedTexture({ value: repackedFlowmap }, textureState),
+    [repackedFlowmap, textureState]
   );
 
   // The repack allocates its own pixel buffer, so it is disposed on the same
@@ -391,6 +406,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     visible,
     castShadow,
     shadowsOnly: shadowFlags.shadowsOnly,
+    godotLayers: properties.layers,
     subtree: children,
   };
 
@@ -499,6 +515,8 @@ interface MeshShellProps {
   castShadow: boolean;
   /** `cast_shadow = SHADOWS_ONLY` (3): cast, but draw nothing. */
   shadowsOnly: boolean;
+  /** `layers` — the VisualInstance3D render mask a Decal's `cull_mask` filters on. */
+  godotLayers: number | undefined;
   /** The dispatched scene-tree subtree parented under this MeshInstance3D. */
   subtree: ReactNode;
   children: ReactNode;
@@ -526,6 +544,7 @@ function MeshShell({
   visible,
   castShadow,
   shadowsOnly,
+  godotLayers,
   subtree,
   children,
 }: MeshShellProps) {
@@ -539,6 +558,10 @@ function MeshShell({
       visible={visible}
       castShadow={castShadow}
       receiveShadow
+      // Godot's `layers`, carried for the consumers that filter on it — today
+      // `Decal.cull_mask`. Set on every branch's mesh, including the placeholder
+      // ones, so a decal's receiver test never depends on load order.
+      userData={visualLayersUserData(godotLayers)}
     >
       {children}
       {/* SHADOWS_ONLY draws nothing but must still CAST, and its descendants
@@ -604,7 +627,8 @@ function SecondarySurfaceMaterial({
       roughness={scalars.roughness}
       transparent={scalars.transparent}
       opacity={scalars.opacity}
-      blending={scalars.blending}
+      {...materialBlendProps(scalars)}
+      depthTest={scalars.depthTest}
       side={scalars.side}
       shadowSide={shadowSide ?? null}
       emissive={emission.emissive}
@@ -614,18 +638,18 @@ function SecondarySurfaceMaterial({
 }
 
 /**
- * Clone the loaded texture (if any) with the material's UV transform
+ * Clone the loaded texture (if any) with the material's own texture state
  * applied. Returns `undefined` when nothing is loaded yet, so the
  * `<meshStandardMaterial>` falls back to `null` for that slot.
  */
 function transformedTexture(
   slot: { value: THREE.Texture | undefined } | null,
-  uv: { scale: { x: number; y: number }; offset: { x: number; y: number } } | null
+  state: TextureState | null
 ): THREE.Texture | undefined {
   const value = slot?.value;
   if (!value) return undefined;
-  if (!uv) return value;
-  return applyUVTransform(value, uv);
+  if (!state) return value;
+  return applyTextureState(value, state);
 }
 
 /**
@@ -667,7 +691,7 @@ function resolveProceduralTextures(
   for (const slot of TEXTURE_PROPERTIES) {
     const raw = data[slot];
     if (typeof raw !== 'string') continue;
-    const resolved = resolveGradientTexture2D(raw, internalResources);
+    const resolved = resolveProceduralTexture(raw, internalResources);
     if (resolved) {
       out.textures[slot] = resolved.texture;
       out.keys.push(resolved.key);

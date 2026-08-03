@@ -25,7 +25,7 @@ import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useParentPath3DCurve } from '../../../r3f/contexts/Path3DCurveContext';
 import { transformFromNode3DProperties, type Vec3Tuple } from '../../../r3f/nodeTransform';
-import type { Curve3DSampler } from '../../../resources/shapes/curve3d';
+import type { Curve3DSampler } from '../../../resources/curves/curve3d';
 import { RotationMode, type PathFollow3DProperties } from './types';
 
 /** Godot editor path-follow handle color (orange). */

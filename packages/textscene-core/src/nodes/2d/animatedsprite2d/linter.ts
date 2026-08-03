@@ -23,7 +23,7 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   // Check if sprite_frames resource exists (REQUIRED - AnimatedSprite2D is useless without SpriteFrames)
   if (!rawProps.sprite_frames) {
     diagnostics.push({
-      severity: 'error',
+      severity: 'warning',
       message: `AnimatedSprite2D requires a 'sprite_frames' property. AnimatedSprite2D cannot play animations without a SpriteFrames resource.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -123,7 +123,7 @@ const animatedSprite2DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['AnimatedSprite2D'],
     emits: [
-      { ruleName: 'animatedsprite2d-requires-spriteframes', severity: 'error' },
+      { ruleName: 'animatedsprite2d-requires-spriteframes', severity: 'warning' },
       { ruleName: 'valid-animatedsprite2d-resources', severity: 'error' },
       { ruleName: 'animatedsprite2d-autoplay-no-spriteframes', severity: 'warning' },
       { ruleName: 'animatedsprite2d-animation-no-spriteframes', severity: 'warning' },

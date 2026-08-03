@@ -8,6 +8,7 @@
  * scenes reference `godot3_robot_head_collision.tres` that way.
  */
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionShape3D } from './Component';
 import { CollisionShape2D } from '../../2d/collisionshape2d/Component';
@@ -15,7 +16,7 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import type { ParsedTresFile } from '../../../../parser/tresParser';
+import type { ParsedResource } from '../../../../parser/parsedResource';
 import { TscnParser } from '../../../../parser/TscnParser';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
 
@@ -30,7 +31,7 @@ const INLINE_BOX: readonly TscnInternalResource[] = [
 ];
 
 /** A .tres carrying a BoxShape3D, as the resource pipeline would parse it. */
-const BOX_TRES: ParsedTresFile = {
+const BOX_TRES: ParsedResource = {
   resourceType: 'BoxShape3D',
   properties: { size: 'Vector3(2, 6, 8)' },
   extResources: [],
@@ -43,10 +44,10 @@ function node(type: string, shape: string | undefined): TscnNode {
   const scene = new TscnParser().parse(
     `[gd_scene format=3]\n\n[node name="My${type}" type="${type}"]\n${body}`
   );
-  return scene.nodes[0];
+  return scene.nodes[0]!;
 }
 
-async function render3D(shape: string | undefined, tres?: ParsedTresFile) {
+async function render3D(shape: string | undefined, tres?: ParsedResource) {
   const fake = createFakeResourceLoader();
   if (tres) fake.resources.seed(SHAPE_PATH, tres);
   return ReactThreeTestRenderer.create(
@@ -61,7 +62,7 @@ async function render3D(shape: string | undefined, tres?: ParsedTresFile) {
 }
 
 function boxSize(renderer: Awaited<ReturnType<typeof render3D>>) {
-  const geometry = renderer.scene.findByType('Mesh').instance.geometry as unknown as {
+  const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
     parameters: { width: number; height: number; depth: number };
   };
   return [geometry.parameters.width, geometry.parameters.height, geometry.parameters.depth];

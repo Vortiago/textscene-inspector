@@ -11,7 +11,7 @@
  */
 
 import { createContext, useContext } from 'react';
-import type { Curve3DSampler } from '../../resources/shapes/curve3d';
+import type { Curve3DSampler } from '../../resources/curves/curve3d';
 
 const Path3DCurveContext = createContext<Curve3DSampler | null>(null);
 Path3DCurveContext.displayName = 'Path3DCurveContext';

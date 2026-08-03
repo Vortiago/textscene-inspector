@@ -258,6 +258,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Cull Mask",
+    "file": "unit-decal-cull-mask.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal",
     "file": "unit-decal.tscn",
     "category": "Other"
@@ -515,6 +520,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Multi Camera",
     "file": "unit-multi-camera.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Noisetexture2d Normal",
+    "file": "unit-noisetexture2d-normal.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Noisetexture2d",
+    "file": "unit-noisetexture2d.tscn",
     "category": "Other"
   },
   {
@@ -790,16 +805,6 @@ export const fixtures: Fixture[] = [
   {
     "name": "Uv Scale",
     "file": "unit-uv-scale.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Vehicle Body 3d",
-    "file": "unit-vehicle-body-3d.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Vehicle Wheel 3d",
-    "file": "unit-vehicle-wheel-3d.tscn",
     "category": "Other"
   },
   {
@@ -1478,6 +1483,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Physics"
   },
   {
+    "name": "Physics Vehicle",
+    "file": "unit-physics-vehicle.tscn",
+    "category": "Unit - Physics"
+  },
+  {
     "name": "Csg Boolean Ops",
     "file": "unit-csg-boolean-ops.tscn",
     "category": "Unit - CSG Primitives"
@@ -1640,6 +1650,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Rim",
     "file": "unit-material-rim.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Texture Filter",
+    "file": "unit-material-texture-filter.tscn",
     "category": "Unit - Materials"
   },
   {

@@ -1,19 +1,26 @@
 /**
- * VehicleWheel3D registration — parser.
+ * VehicleWheel3D registration — parser + inspector formatter.
  *
- * Reuses the Node3D parse; property knowledge lives in linterParser.ts.
- * Draws nothing by design (ADR-0008), so index.r3f.ts registers Node3D
- * and its children still land in the right transform space.
+ * A wheel of a VehicleBody3D. It draws no geometry of its own — the visible
+ * wheel is its child MeshInstance3D — so it renders as a transform group
+ * (ADR-0005, ADR-0008) that additionally draws a selection-gated gizmo
+ * (ADR-0018). Unlike the physics bodies it parses its own properties: the
+ * wheel's whole configuration is geometric, and the inspector is the only place
+ * it is legible.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseNode3D } from '../../../base/node3d/parser';
+import { parseVehicleWheel3D } from './parser';
+import { formatVehicleWheel3DProperties } from './propertyFormatter';
 
 const vehicleWheel3DRegistration: NodeTypeRegistration = {
   typeName: 'VehicleWheel3D',
-  parser: parseNode3D,
+  parser: parseVehicleWheel3D,
+  propertyFormatter: formatVehicleWheel3DProperties,
 };
 
 nodeRegistry.register(vehicleWheel3DRegistration);
 
 export { vehicleWheel3DRegistration };
+export * from './parser';
+export * from './types';

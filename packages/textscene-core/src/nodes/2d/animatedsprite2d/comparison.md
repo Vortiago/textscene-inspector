@@ -55,7 +55,7 @@ Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inheri
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-animatedsprite2d-resources` | `animatedsprite2d-requires-spriteframes` | error |
+| `valid-animatedsprite2d-resources` | `animatedsprite2d-requires-spriteframes` | warning |
 |  | `valid-animatedsprite2d-resources` | error |
 |  | `animatedsprite2d-autoplay-no-spriteframes` | warning |
 |  | `animatedsprite2d-animation-no-spriteframes` | warning |

@@ -13,11 +13,12 @@
 
 import * as THREE from 'three';
 import type { TscnNode } from '../../parser/types';
-import type { Color } from '../../resources/materials/standardmaterial3d/types';
-import { createEnvironmentSettings, type EnvironmentSettings } from '../../resources/environment/renderer';
-import { parseSkyMaterial } from '../../resources/sky/parser';
+import type { Color } from '../../utils/colorParser';
+import { createEnvironmentSettings } from '../../resources/environment/build';
+import type { EnvironmentSettings } from '../../resources/environment/types';
+import { decodeSkyMaterial } from '../../resources/sky/decode';
 import type { ProceduralSkyProperties, SkyProperties } from '../../resources/sky/types';
-import { parseEnvironment } from '../../resources/environment/parser';
+import { decodeEnvironment } from '../../resources/environment/decode';
 
 /** The node types the editor counts, one independent counter each. */
 export const PREVIEW_SUN_YIELD_TYPE = 'DirectionalLight3D';
@@ -117,9 +118,9 @@ function previewHorizonColor(): Color {
 }
 
 /**
- * Godot's preview environment, built through the same parse→settings pipeline
- * an authored `WorldEnvironment` goes through, so the two cannot diverge in
- * how they are applied.
+ * Godot's preview environment, built through the same decode→build pipeline an
+ * authored `WorldEnvironment` goes through, so the two cannot diverge in how
+ * they are applied.
  *
  * The preview also enables glow (matching `_load_default_preview_settings`),
  * which the render layer turns into a bloom compositor pass (`GlowLayer`) so
@@ -127,7 +128,7 @@ function previewHorizonColor(): Color {
  */
 export function previewEnvironment(): { settings: EnvironmentSettings; sky: SkyProperties } {
   const settings = createEnvironmentSettings(
-    parseEnvironment({
+    decodeEnvironment({
       background_mode: String(2), // BG_SKY
       // TONE_MAPPER_FILMIC — the preview's deliberate departure from the
       // LINEAR default an authored Environment starts with.
@@ -138,7 +139,7 @@ export function previewEnvironment(): { settings: EnvironmentSettings; sky: SkyP
   );
 
   const horizon = previewHorizonColor();
-  const sky = parseSkyMaterial('ProceduralSkyMaterial', {}) as ProceduralSkyProperties;
+  const sky = decodeSkyMaterial('ProceduralSkyMaterial', {}) as ProceduralSkyProperties;
 
   return {
     settings,

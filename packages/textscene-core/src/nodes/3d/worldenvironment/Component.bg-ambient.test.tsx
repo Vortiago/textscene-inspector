@@ -33,12 +33,12 @@ async function ambientLights(environmentBody: string) {
       internalResources={scene.internalResources}
       externalResources={scene.externalResources}
     >
-      <WorldEnvironment node={scene.nodes[0].children[0]} />
+      <WorldEnvironment node={scene.nodes[0]!.children[0]!} />
     </SceneResourcesProvider>
   );
   return renderer.scene
     .findAllByType('AmbientLight')
-    .map((l) => l.instance as unknown as THREE.AmbientLight);
+    .map((l) => l.instance as THREE.AmbientLight);
 }
 
 describe('<WorldEnvironment> ambient from the background', () => {

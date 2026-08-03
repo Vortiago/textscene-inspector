@@ -32,7 +32,7 @@ describe('<CSGTorus3D>', () => {
     const renderer = await render(
       makeNode({ inner_radius: '0.25', outer_radius: '0.4', sides: '64', ring_sides: '64' })
     );
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     geom.computeBoundingBox();
     expect(geom.boundingBox!.max.y).toBeCloseTo(0.075, 3);
     expect(geom.boundingBox!.max.x).toBeCloseTo(0.4, 3);
@@ -88,7 +88,7 @@ describe('<CSGTorus3D>', () => {
   it('renders nothing but does not throw when the radii are equal', async () => {
     // Godot returns an empty brush rather than clamping (csg_shape.cpp:1930).
     const renderer = await render(makeNode({ inner_radius: '0.5', outer_radius: '0.5' }));
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     expect(geom.getAttribute('position').count).toBe(0);
   });
 

@@ -14,7 +14,7 @@ vi.mock('three', async () => {
 
   // Create a mock TextureLoader constructor
   class MockTextureLoader {
-    load(url: string, onLoad?: (texture: THREE.Texture) => void, _onProgress?: () => void, onError?: (error: Error) => void) {
+    load(_url: string, onLoad?: (texture: THREE.Texture) => void, _onProgress?: () => void, onError?: (error: Error) => void) {
       try {
         // Simulate successful texture load
         const mockTexture = new actual.Texture();
@@ -53,7 +53,9 @@ function createMockFileEventBus(): {
   let autoLoadEnabled = false;
   let autoLoadGetData: ((path: string) => FileData | Promise<FileData>) | undefined;
 
-  const fileEventBus: FileEventBus = {
+  // A behavioural double of the concrete class: only the surface the test
+  // drives exists, so the cast is the honest statement of that.
+  const fileEventBus = {
     on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
       if (!listeners.has(event)) {
         listeners.set(event, new Set());
@@ -85,7 +87,7 @@ function createMockFileEventBus(): {
         cache.clear();
       }
     }),
-  };
+  } as unknown as FileEventBus;
 
   return {
     fileEventBus,

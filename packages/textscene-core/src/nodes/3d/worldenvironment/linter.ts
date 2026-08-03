@@ -57,7 +57,7 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
   // Check if environment property exists (REQUIRED)
   if (!rawProps.environment) {
     diagnostics.push({
-      severity: 'error',
+      severity: 'warning',
       message: `WorldEnvironment requires an 'environment' property. A WorldEnvironment without an Environment resource does nothing.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -125,7 +125,7 @@ const worldEnvironmentValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['WorldEnvironment'],
     emits: [
-      { ruleName: 'worldenvironment-requires-environment', severity: 'error' },
+      { ruleName: 'worldenvironment-requires-environment', severity: 'warning' },
       { ruleName: 'valid-worldenvironment-resources', severity: 'error' },
       { ruleName: 'valid-worldenvironment-resources', severity: 'warning' },
       { ruleName: 'single-worldenvironment', severity: 'warning' },

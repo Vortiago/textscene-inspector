@@ -1,13 +1,16 @@
 /**
  * <Decal> component tests.
  *
- * The decal PROJECTS its albedo onto scene surfaces via a post-mount scene walk
- * (the projection maths itself is covered in decalProjection.test.ts — the
- * test-renderer populates no matrixWorld and mounts no sibling meshes, so no
- * projection can be baked here). What IS observable in isolation: the
- * projection-box gizmo is selection-gated (ADR-0018) — hidden by default, shown
- * only when this node is selected — the node never draws a standalone quad, and
- * the Node3D transform / children pass through.
+ * The decal PROJECTS its albedo onto scene surfaces via a post-mount scene walk;
+ * the projection maths itself is covered in decalProjection.test.ts. The
+ * test-renderer mounts no SIBLING meshes, so a bare decal bakes nothing — but a
+ * receiver passed as a child does get projected onto (the effect calls
+ * `scene.updateMatrixWorld(true)` itself, so stale world matrices are not an
+ * obstacle). That makes the `cull_mask` wiring observable end to end here: two
+ * otherwise-identical mounts, one masked and one not, bake different counts.
+ * Also observable: the projection-box gizmo is selection-gated (ADR-0018) —
+ * hidden by default, shown only when this node is selected — the node never
+ * draws a standalone quad, and the Node3D transform / children pass through.
  */
 
 import { useEffect, type ReactNode } from 'react';
@@ -58,30 +61,63 @@ function SelectSeeder({ path }: { path: string | null }) {
   return null;
 }
 
-async function render(opts: {
+interface RenderOptions {
   node: TscnNode;
   externals?: TscnExternalResource[];
   cached?: Array<{ path: string; texture: THREE.Texture | 'missing' }>;
   children?: ReactNode;
   selectedPath?: string | null;
-}) {
-  const fake = createFakeResourceLoader();
-  for (const { path, texture } of opts.cached ?? []) {
-    fake.textures.seed(path, texture === 'missing' ? null : texture);
-  }
-  const path = opts.node.name;
-  return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={fake.loader}>
+}
+
+/** The mounted tree, separated from `create` so a test can re-render it. */
+function decalTree(opts: RenderOptions, loader: ReturnType<typeof createFakeResourceLoader>['loader']) {
+  return (
+    <ResourceLoaderProvider loader={loader}>
       <SceneResourcesProvider externalResources={opts.externals ?? []}>
         <SelectionProvider>
           {opts.selectedPath !== undefined && <SelectSeeder path={opts.selectedPath} />}
-          <NodePathProvider path={path}>
+          <NodePathProvider path={opts.node.name}>
             <Decal node={opts.node}>{opts.children}</Decal>
           </NodePathProvider>
         </SelectionProvider>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+}
+
+function seededLoader(cached: RenderOptions['cached']) {
+  const fake = createFakeResourceLoader();
+  for (const { path, texture } of cached ?? []) {
+    fake.textures.seed(path, texture === 'missing' ? null : texture);
+  }
+  return fake.loader;
+}
+
+async function render(opts: RenderOptions) {
+  return ReactThreeTestRenderer.create(decalTree(opts, seededLoader(opts.cached)));
+}
+
+/**
+ * A receiver on Godot render layer 2 — the layer Truck Town's blob shadows
+ * exclude. Big enough to straddle the decal's default 2x2x2 box.
+ */
+function Receiver() {
+  return (
+    <mesh name="receiver" userData={{ godotLayers: 2 }}>
+      <boxGeometry args={[4, 0.1, 4]} />
+      <meshBasicMaterial />
+    </mesh>
+  );
+}
+
+/** Decal projections are added to the projection group imperatively, so they
+ *  live on the real THREE graph rather than in the test renderer's fiber tree. */
+function projections(renderer: { scene: { instance: THREE.Object3D } }): THREE.Mesh[] {
+  const found: THREE.Mesh[] = [];
+  renderer.scene.instance.traverse((obj) => {
+    if (obj.userData.isDecalProjection === true) found.push(obj as THREE.Mesh);
+  });
+  return found;
 }
 
 describe('<Decal>', () => {
@@ -97,7 +133,7 @@ describe('<Decal>', () => {
     });
     const box = renderer.scene.findAllByType('LineSegments');
     expect(box).toHaveLength(1);
-    const scale = (box[0].instance as THREE.Object3D).parent!.scale;
+    const scale = (box[0]!.instance as THREE.Object3D).parent!.scale;
     expect([scale.x, scale.y, scale.z]).toEqual([3, 2, 4]);
   });
 
@@ -115,6 +151,117 @@ describe('<Decal>', () => {
       cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
     });
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('projects onto a receiver whose render layers the cull_mask admits', async () => {
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
+      children: <Receiver />,
+    });
+    expect(projections(renderer).length).toBeGreaterThan(0);
+  });
+
+  it('projects nothing onto a receiver the cull_mask culls', async () => {
+    // Truck Town's blob shadows: `cull_mask` clears layer 2 and every vehicle
+    // mesh sets `layers = 2`, so Godot never paints the vehicle with its own
+    // shadow. Same node, same box, same albedo as the test above — only the
+    // mask differs.
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")', cull_mask: '1048573' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
+      children: <Receiver />,
+    });
+    expect(projections(renderer)).toEqual([]);
+  });
+
+  it('bakes the fade into a vertex-alpha attribute the material opts into', async () => {
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
+      children: <Receiver />,
+    });
+
+    const projection = projections(renderer)[0];
+    const color = projection!.geometry.getAttribute('color');
+    expect(color).toBeDefined();
+    // itemSize 4 is what makes three read the ALPHA channel rather than just RGB.
+    expect(color.itemSize).toBe(4);
+    expect((projection!.material as THREE.MeshStandardMaterial).vertexColors).toBe(true);
+  });
+
+  it('keeps albedo_mix x modulate.a in opacity and the geometric fade in vertex alpha', async () => {
+    // Godot's blend weight is tex.a x modulate.a x fade x albedo_mix. Splitting
+    // it across `opacity` and the baked attribute is only correct if neither
+    // carries the other's factor — so 0.7 x 0.8 must land in opacity ALONE, and
+    // the vertex alpha must stay the near-1 depth fade of a receiver sitting
+    // just below the decal origin.
+    const renderer = await render({
+      node: makeNode({
+        texture_albedo: 'ExtResource("1_tex")',
+        albedo_mix: '0.7',
+        modulate: 'Color(1, 1, 1, 0.8)',
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
+      children: <Receiver />,
+    });
+
+    const projection = projections(renderer)[0];
+    expect((projection!.material as THREE.MeshStandardMaterial).opacity).toBeCloseTo(0.56, 6);
+
+    const color = projection!.geometry.getAttribute('color');
+    for (let i = 0; i < color.count; i++) {
+      // Had opacity been folded in too, every alpha would sit at or below 0.56.
+      expect(color.getW(i)).toBeGreaterThan(0.9);
+    }
+  });
+
+  it('restores a distance-faded decal when the fade is turned back off', async () => {
+    // The frame callback culls a decal past `begin + length` by hiding its
+    // projection group and zeroing the material's opacity. Neither is part of
+    // the rebuild effect's inputs, so a re-parse that DISABLES the fade rebuilds
+    // nothing — the callback itself has to settle back at full strength, or the
+    // decal stays invisible for the rest of the session.
+    const loader = seededLoader([{ path: TEXTURE_PATH, texture: makeTexture() }]);
+    const options = {
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      children: <Receiver />,
+    };
+    const faded = {
+      texture_albedo: 'ExtResource("1_tex")',
+      distance_fade_enabled: 'true',
+      // The test renderer's camera sits metres away, so anything past this is culled.
+      distance_fade_begin: '0.01',
+      distance_fade_length: '0.01',
+    };
+
+    const renderer = await ReactThreeTestRenderer.create(
+      decalTree({ ...options, node: makeNode(faded) }, loader)
+    );
+    await renderer.advanceFrames(1, 16);
+
+    const projection = projections(renderer)[0]!;
+    // The group is the component's own ref and outlives a rebuild; the meshes
+    // and material inside it do not.
+    const group = projection.parent!;
+    expect(group.visible).toBe(false);
+    expect((projection.material as THREE.MeshStandardMaterial).opacity).toBe(0);
+
+    await renderer.update(
+      decalTree(
+        { ...options, node: makeNode({ ...faded, distance_fade_enabled: 'false' }) },
+        loader
+      )
+    );
+    await renderer.advanceFrames(1, 16);
+
+    expect(group.visible).toBe(true);
+    const rebuilt = projections(renderer)[0]!;
+    expect((rebuilt.material as THREE.MeshStandardMaterial).opacity).toBe(1);
   });
 
   it('applies the Node3D transform and wraps children', async () => {

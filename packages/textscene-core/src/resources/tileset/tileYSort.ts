@@ -6,7 +6,7 @@
  * encounters a y-sorted TileMapLayer child.
  */
 
-import type { TileGrid } from './tileSetModel';
+import type { TileGrid } from './types';
 import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
 import { mapToLocalPx } from './tilePlacement';
 

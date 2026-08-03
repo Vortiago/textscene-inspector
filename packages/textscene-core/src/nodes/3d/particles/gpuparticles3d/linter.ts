@@ -22,14 +22,15 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // CRITICAL: Check if process_material exists (REQUIRED for particles to work)
+  // WARNING: a material-less emitter is valid (the material can be assigned
+  // at runtime) but renders no particles until one is set.
   if (!rawProps.process_material) {
     diagnostics.push({
-      severity: 'error',
-      message: `GPUParticles3D requires 'process_material' property. Particles will not render without it`,
+      severity: 'warning',
+      message: `GPUParticles3D has no 'process_material' set. Particles will not render until one is assigned`,
       nodeName: node.name,
       nodeType: node.type,
-      ruleName: 'valid-gpuparticles3d-process-material',
+      ruleName: 'gpuparticles3d-missing-process-material',
     });
   } else {
     // Check if process_material resource exists
@@ -150,6 +151,7 @@ const gpuParticles3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['GPUParticles3D'],
     emits: [
+      { ruleName: 'gpuparticles3d-missing-process-material', severity: 'warning' },
       { ruleName: 'valid-gpuparticles3d-process-material', severity: 'error' },
       { ruleName: 'valid-gpuparticles3d-resources', severity: 'error' },
       { ruleName: 'valid-gpuparticles3d-trail-config', severity: 'error' },

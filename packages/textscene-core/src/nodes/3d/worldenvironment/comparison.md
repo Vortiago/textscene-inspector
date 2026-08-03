@@ -51,7 +51,7 @@ Strict parsing format-checks these `WorldEnvironment` properties, plus 10 inheri
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-worldenvironment` | `worldenvironment-requires-environment` | error |
+| `valid-worldenvironment` | `worldenvironment-requires-environment` | warning |
 |  | `valid-worldenvironment-resources` | error, warning |
 |  | `single-worldenvironment` | warning |
 <!-- lint:end -->

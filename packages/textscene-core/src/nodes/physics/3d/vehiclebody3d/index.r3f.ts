@@ -1,6 +1,6 @@
 /**
- * VehicleBody3D draws nothing of its own (ADR-0008) — reuse the Node3D
- * component so its children still land in the right transform space.
+ * VehicleBody3D renders as a transform-only group — reuse the Node3D component
+ * (ADR-0005, ADR-0008), so its children still land in the right transform space.
  */
 
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';

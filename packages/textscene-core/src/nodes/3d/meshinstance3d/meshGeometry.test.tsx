@@ -24,7 +24,7 @@ async function renderGeometry(resource: TscnInternalResource): Promise<THREE.Buf
       <MeshGeometry resource={resource} />
     </mesh>
   );
-  return renderer.scene.findByType('Mesh').instance.geometry;
+  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
 }
 
 function params<T>(geometry: THREE.BufferGeometry): T {
@@ -40,7 +40,8 @@ describe('MeshGeometry dispatch (buildPrimitiveMeshGeometry)', () => {
     ['CylinderMesh', 'CylinderGeometry'],
     ['CapsuleMesh', 'CapsuleGeometry'],
     ['TorusMesh', 'TorusGeometry'],
-    ['PrismMesh', 'CylinderGeometry'],
+    // PrismMesh is hand-built from Godot's own algorithm, so it has no three
+    // geometry class of its own; the block below asserts its shape instead.
   ];
 
   for (const [resourceType, geometryType] of cases) {
@@ -228,34 +229,45 @@ describe('TorusMesh radii mapping', () => {
   });
 });
 
-describe('PrismMesh approximation', () => {
-  it('maps size.x to the triangle radius (size.x / 2) and size.y to height', async () => {
-    const p = params<{
-      radiusTop: number;
-      radiusBottom: number;
-      height: number;
-      radialSegments: number;
-    }>(await renderGeometry(sub('PrismMesh', { size: 'Vector3(2, 1, 2)' })));
-    expect(p.radiusTop).toBe(1);
-    expect(p.radiusBottom).toBe(1);
-    expect(p.height).toBe(1);
-    expect(p.radialSegments).toBe(3);
+describe('PrismMesh', () => {
+  /** X of every vertex on the prism's top plane — its apex line. */
+  function apexXs(geometry: THREE.BufferGeometry, topY: number): number[] {
+    const position = geometry.getAttribute('position');
+    const xs: number[] = [];
+    for (let i = 0; i < position.count; i++) {
+      if (Math.abs(position.getY(i) - topY) < 1e-6) xs.push(position.getX(i));
+    }
+    return xs;
+  }
+
+  it('builds Godot\'s triangular prism, not a three primitive', async () => {
+    const geometry = await renderGeometry(sub('PrismMesh', { size: 'Vector3(2, 1, 2)' }));
+
+    // 20 vertices / 8 triangles: two triangular caps, two slanted sides, one base.
+    expect(geometry.getAttribute('position').count).toBe(20);
+    expect(geometry.getIndex()!.count).toBe(24);
+    geometry.computeBoundingBox();
+    expect(geometry.boundingBox!.max.toArray()).toEqual([1, 0.5, 1]);
+    expect(geometry.boundingBox!.min.toArray()).toEqual([-1, -0.5, -1]);
   });
 
-  it('maps subdivide_height (extra edge loops) to N+1 height segments', async () => {
-    const p = params<{ heightSegments: number }>(
-      await renderGeometry(sub('PrismMesh', { size: 'Vector3(1, 1, 1)', subdivide_height: '2' }))
+  it('maps subdivide_height to extra rows, per Godot num_points', async () => {
+    const geometry = await renderGeometry(
+      sub('PrismMesh', { size: 'Vector3(1, 1, 1)', subdivide_height: '2' })
     );
-    expect(p.heightSegments).toBe(3);
+
+    // (2+2)(0+2)·2 + (2+2)(0+2)·2 + (0+2)(0+2) = 36.
+    expect(geometry.getAttribute('position').count).toBe(36);
   });
 
-  it('ignores left_to_right (current contract: 3-sided-cylinder approximation has no apex skew)', async () => {
-    const base = params<Record<string, number>>(
-      await renderGeometry(sub('PrismMesh', { size: 'Vector3(2, 2, 2)' }))
+  it('skews the apex with left_to_right', async () => {
+    const centred = await renderGeometry(sub('PrismMesh', { size: 'Vector3(2, 2, 2)' }));
+    const skewed = await renderGeometry(
+      sub('PrismMesh', { size: 'Vector3(2, 2, 2)', left_to_right: '0.9' })
     );
-    const skewed = params<Record<string, number>>(
-      await renderGeometry(sub('PrismMesh', { size: 'Vector3(2, 2, 2)', left_to_right: '0.9' }))
-    );
-    expect(skewed).toEqual(base);
+
+    for (const x of apexXs(centred, 1)) expect(x).toBeCloseTo(0, 6);
+    // start_x = -size.x/2 + size.x * left_to_right = -1 + 1.8.
+    for (const x of apexXs(skewed, 1)) expect(x).toBeCloseTo(0.8, 6);
   });
 });

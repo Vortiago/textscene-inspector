@@ -225,6 +225,18 @@ export const GOLDEN_SCENES = [
   // texture (deterministic local SVG, gated by the two-identical-frames settle);
   // the projection edges are AA-sensitive, hence the relaxed threshold.
   { name: 'decal', file: 'unit-decal.tscn', maxDiffPct: 0.3 },
+  // The ONE variable against `decal` above: a receiver on `layers = 2` under a
+  // `cull_mask` that clears layer 2, beside a default-layer control receiver.
+  // Godot's rule is `decal.cull_mask & instance.layers`, so the left floor must
+  // show bare albedo and the right one the checkerboard. `unit-decal.tscn` uses
+  // cull_mask = 1048575, which excludes nothing, so it cannot witness this.
+  { name: 'decal-cull-mask', file: 'unit-decal-cull-mask.tscn', maxDiffPct: 0.3 },
+  // One image, two inline StandardMaterial3D sub-resources differing ONLY in
+  // `texture_filter` (0 NEAREST vs 3 LINEAR_WITH_MIPMAPS). Also the only scene
+  // that witnesses per-material texture cloning: filter state lives on the
+  // THREE.Texture but the loader caches one per path, so a renderer that writes
+  // it onto the shared texture renders both quads identically.
+  { name: 'material-texture-filter', file: 'unit-material-texture-filter.tscn' },
   // `anisotropy_flowmap` as a real PNG — the ONLY scene where a decoded image
   // reaches the anisotropy channel repack (Godot keeps per-pixel strength in
   // ALPHA, three.js reads it from BLUE), which needs a canvas readback that no
@@ -261,6 +273,11 @@ export const GOLDEN_SCENES = [
   { name: 'marker3d-selected', file: 'unit-marker-3d.tscn', select: 'Root/MyMarker3D', maxDiffPct: 0.5 },
   { name: 'path3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath', maxDiffPct: 0.5 },
   { name: 'pathfollow3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath/Follower', maxDiffPct: 0.5 },
+  // The VehicleWheel3D gizmo — radius circle, spring coil, travel line, axle
+  // ticks, forward arrow. Thin AA lines, hence the same tolerance as the other
+  // gizmo goldens. No unselected companion: with the gizmo hidden this scene
+  // renders like any other transform-only body fixture.
+  { name: 'vehiclewheel3d-selected', file: 'unit-physics-vehicle.tscn', select: 'Root/Vehicle/Wheel1', maxDiffPct: 0.5 },
 
   // --- Lights / Camera3D / AudioStreamPlayer3D gizmo E2E coverage ---
   // Unselected: pins the non-gizmo render (ground + shading only — no helper).
@@ -478,6 +495,17 @@ export const GOLDEN_SCENES = [
   // body. Pins the additive-billboard-gradient glow path. Additive edges →
   // relaxed threshold.
   { name: 'coin-glow', file: 'unit-coin-glow.tscn', maxDiffPct: 0.5 },
+
+  // The colour-ramp noise golden: pins the rasterisation pipeline (seeded
+  // FastNoiseLite ridged fBm → normalize → seamless blend skirt → Gradient
+  // ramp) on a Sprite2D. Besides these two, no other scene carries any noise
+  // texture, so a generator/default drift or a broken skirt is invisible in
+  // every other golden.
+  { name: 'noisetexture2d', file: 'unit-noisetexture2d.tscn' },
+  // The as_normal_map arm under lighting: bump_to_normal_map's sign/packing
+  // and the NoColorSpace tagging only surface when a lit material perturbs
+  // its normals with the result — the ramp golden above is unlit 2D.
+  { name: 'noisetexture2d-normal', file: 'unit-noisetexture2d-normal.tscn' },
 
   // --- Sprite2D/Sprite3D + 3D physics-body roundout ---
   { name: 'sprite2d', file: 'unit-sprite2d.tscn' },

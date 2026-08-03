@@ -9,7 +9,7 @@ import type { CSSProperties } from 'react';
 import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useControlParent, ControlParentProvider } from '../../../../r3f/controls/ControlParentContext';
 import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
-import { resolveStyleBoxCss } from '../../../../r3f/controls/resolveStyleBox';
+import { resolveStyleBox } from '../../../../r3f/controls/resolveStyleBox';
 import { STYLE_NORMAL_FILL } from '../../../../r3f/controls/godotDefaultTheme';
 import { useGodotTheme } from '../../../../r3f/controls/useGodotTheme';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
@@ -20,19 +20,18 @@ export function Panel({ node, children }: ControlComponentProps) {
   const parentKind = useControlParent();
   const { internalResources } = useSceneResources();
   const theme = useGodotTheme();
-  const styleBoxCss = resolveStyleBoxCss(props.themeOverrideStyles?.panel, internalResources);
-  const useDefaults = Object.keys(styleBoxCss).length === 0;
+  const styleBoxCss = resolveStyleBox(props.themeOverrideStyles?.panel, internalResources);
   // Godot's default Panel `panel` stylebox: the button "normal" fill with 3px
   // corners at scale 1 (no content margins — a Panel's children anchor against
   // its rect, not a padded box). A resolved `theme_override_styles/panel`
-  // replaces it entirely.
+  // replaces it entirely, including one that paints nothing.
   const defaultPanelStyle: CSSProperties = {
     backgroundColor: STYLE_NORMAL_FILL,
     borderRadius: `${theme.cornerRadius}px`,
   };
   const style: CSSProperties = {
     ...controlLayoutStyle(props, parentKind),
-    ...(useDefaults ? defaultPanelStyle : styleBoxCss),
+    ...(styleBoxCss ?? defaultPanelStyle),
   };
   return (
     <div data-control-type="Panel" data-node-name={node.name} style={style}>

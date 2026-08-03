@@ -28,8 +28,8 @@ curve = SubResource("curve_1")
       const diagnostics = lint(content);
       // Should only have unused warning, no format errors
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0].severity).toBe('warning');
-      expect(diagnostics[0].ruleName).toBe('path3d-unused');
+      expect(diagnostics[0]!.severity).toBe('warning');
+      expect(diagnostics[0]!.ruleName).toBe('path3d-unused');
     });
 
     it('should pass format validation for Path3D with ExtResource curve (with unused warning)', () => {
@@ -44,8 +44,8 @@ curve = ExtResource("curve_ext")
       const diagnostics = lint(content);
       // Should only have unused warning, no format errors
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0].severity).toBe('warning');
-      expect(diagnostics[0].ruleName).toBe('path3d-unused');
+      expect(diagnostics[0]!.severity).toBe('warning');
+      expect(diagnostics[0]!.ruleName).toBe('path3d-unused');
     });
 
     it('should pass validation for Path3D with PathFollow3D child', () => {
@@ -125,7 +125,7 @@ curve = ExtResource("curve_ext")
       it('should detect missing curve property', () => {
         expectDiagnostic(scene(node('Path3D')), {
           ruleName: 'path3d-requires-curve',
-          severity: 'error',
+          severity: 'warning',
           contains: ["missing required property 'curve'", 'useless'],
         });
       });
@@ -325,7 +325,7 @@ curve = ExtResource("curve_ext")
       const content = scene(node('Path3D'));
 
       // Should have missing curve error
-      expectDiagnostic(content, { ruleName: 'path3d-requires-curve', severity: 'error' });
+      expectDiagnostic(content, { ruleName: 'path3d-requires-curve', severity: 'warning' });
 
       // Should also have unused warning
       expectDiagnostic(content, { ruleName: 'path3d-unused', severity: 'warning' });

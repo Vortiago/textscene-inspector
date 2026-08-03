@@ -35,8 +35,18 @@ export interface GodotGlowOptions {
   glow: GlowParams;
   /** Godot `tonemap_mode`: 0 LINEAR, 1 REINHARDT, 2 FILMIC, 3 ACES, 4 AGX. */
   toneMapMode: number;
-  /** Godot `tonemap_white` — also the white point SCREEN normalises against. */
+  /**
+   * Godot's `env->white` — the value the curve maps to 1.0, and (after the
+   * per-curve floor) the point SCREEN normalises the glow against.
+   */
   toneMapWhite: number;
+  /**
+   * Godot `tonemap_agx_contrast`. Only AgX reads it, but it is threaded here
+   * rather than defaulted, because this path and the in-material one must draw
+   * the SAME curve — a default that diverged between them would show up only
+   * when glow happened to be mounted.
+   */
+  toneMapAgxContrast?: number;
 }
 
 /** Shared by every pyramid material so they agree on how `vUv` is derived. */
@@ -59,17 +69,25 @@ export class GodotGlowEffect extends Effect {
   private readonly weights: number[];
   private readonly maxLevel: number;
 
-  constructor({ glow, toneMapMode, toneMapWhite }: GodotGlowOptions) {
-    super('GodotGlowEffect', compositeGlsl(glow, { mode: toneMapMode, white: toneMapWhite }), {
-      // This effect writes the finished frame — the glow blend and the tone
-      // curve are both already applied — so the composer must not blend it into
-      // the scene a second time.
-      blendFunction: BlendFunction.SRC,
-      uniforms: new Map<string, THREE.Uniform>([
-        ['godotGlowBuffer', new THREE.Uniform(null)],
-        ['godotExposure', new THREE.Uniform(glow.exposure)],
-      ]),
-    });
+  constructor({ glow, toneMapMode, toneMapWhite, toneMapAgxContrast }: GodotGlowOptions) {
+    super(
+      'GodotGlowEffect',
+      compositeGlsl(glow, {
+        mode: toneMapMode,
+        white: toneMapWhite,
+        agxContrast: toneMapAgxContrast,
+      }),
+      {
+        // This effect writes the finished frame — the glow blend and the tone
+        // curve are both already applied — so the composer must not blend it
+        // into the scene a second time.
+        blendFunction: BlendFunction.SRC,
+        uniforms: new Map<string, THREE.Uniform>([
+          ['godotGlowBuffer', new THREE.Uniform(null)],
+          ['godotExposure', new THREE.Uniform(glow.exposure)],
+        ]),
+      }
+    );
 
     // `glowParamsFor` returns null rather than an empty pyramid, so a `GlowParams`
     // that exists always has at least one weighted level.

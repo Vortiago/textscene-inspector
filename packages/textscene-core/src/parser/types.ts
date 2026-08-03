@@ -35,6 +35,32 @@ export interface TscnNode {
   properties: Node3DProperties | Record<string, unknown>;
   /** Raw body properties as strings, retained so a type-less instance node's overrides can be re-parsed against the instanced root's type. */
   rawProperties?: Record<string, string>;
+  /**
+   * Set when this node's authored `parent` path descends INTO instanced content
+   * — a `.tscn` PackedScene or a `.glb` — whose interior this file does not
+   * declare. The node is attached in the tree to the nearest enclosing INSTANCE
+   * node, and this holds the remainder of the path BELOW that instance
+   * (`"Skeleton/Skeleton3D"`, `"ColorRect/CenterContainer/VBoxContainer"`).
+   * Never the empty string.
+   *
+   * `parent` keeps the authored path verbatim, so this is purely additive: the
+   * linter and `mergeInstanceRoot`'s re-parse both still read what the file said.
+   */
+  instanceSubPath?: string;
+  /**
+   * True when the `[node]` heading declared neither `type=` nor `instance=` —
+   * Godot's marker for "override properties on the node already at this path"
+   * rather than "add a new node here". See `isPropertyOverrideHeading`.
+   */
+  overridesExistingNode?: boolean;
+  /**
+   * The ExtResource table this node's subtree must resolve against, set when the
+   * node has been grafted into content loaded from ANOTHER scene. It was
+   * authored in the outer scene, so its `ExtResource("3")` means whatever the
+   * OUTER table says — under the sub-scene's table the same id is a different
+   * resource, or absent entirely.
+   */
+  authoredResources?: readonly TscnExternalResource[];
   /** External scene instance reference (e.g., ExtResource("1_abc")) */
   instance?: string;
 }

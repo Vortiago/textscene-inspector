@@ -16,7 +16,7 @@ describe('parseSubViewport', () => {
     expect(result.name).toBe('RenderBooth');
     expect(result.parent).toBe('.');
     // A SubViewport derives from Viewport < Node — it has no spatial transform.
-    expect(result.transform).toBeUndefined();
+    expect('transform' in result).toBe(false);
   });
 
   describe('size', () => {
