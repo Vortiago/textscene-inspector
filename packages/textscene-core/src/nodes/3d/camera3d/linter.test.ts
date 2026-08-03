@@ -151,15 +151,10 @@ describe('Camera3D Linter', () => {
 
   describe('Semantic Validation', () => {
     describe('missing required properties errors', () => {
-      it('should error when fov is missing for PERSPECTIVE projection', () => {
-        expectDiagnostic(
+      it('should NOT error when fov is missing for PERSPECTIVE projection (Godot omits the 75 default)', () => {
+        expectNoDiagnostic(
           scene(node('Camera3D', { projection: 0, near: 0.1, far: 100.0 })),
-          {
-            prop: 'fov',
-            severity: 'error',
-            nodeType: 'Camera3D',
-            contains: ['requires', 'field of view'],
-          }
+          { prop: 'fov' }
         );
       });
 
@@ -299,8 +294,9 @@ describe('Camera3D Linter', () => {
 
   describe('Edge Cases', () => {
     it('should handle Camera3D with no properties (defaults)', () => {
-      // Default projection is PERSPECTIVE (0), so fov is required.
-      expectDiagnostic(scene(node('Camera3D')), { prop: 'fov' });
+      // A bare Camera3D is exactly what the editor saves for an all-default
+      // camera (defaults are omitted on serialize), so it must lint clean.
+      expectClean(scene(node('Camera3D')));
     });
 
     it('should handle all properties together', () => {

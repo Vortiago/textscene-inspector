@@ -1,14 +1,14 @@
 /**
  * Regression contract for #149 — Camera3D linter is over-strict.
  *
- * Two false positives on valid Godot output:
+ * False positives on valid Godot output:
  *  - a PERSPECTIVE camera with no explicit `fov` but `attributes =
- *    SubResource(CameraAttributesPhysical)` drives fov physically — valid, must
- *    not error (the rule must become attributes-aware).
+ *    SubResource(CameraAttributesPhysical)` drives fov physically — valid.
  *  - an ORTHOGONAL camera with no `size` is valid (Godot defaults size to 1.0).
- *
- * Adversarial: the relaxation must NOT delete the genuine check — a PERSPECTIVE
- * camera with neither `fov` NOR `attributes` must STILL error.
+ *  - a PERSPECTIVE camera with no `fov` at all is valid: Godot's serializer
+ *    omits default-valued properties, so the editor's own output for a
+ *    default-fov camera carries no `fov` line. The missing-fov error rule is
+ *    gone entirely; the parser supplies the 75-degree default.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -47,15 +47,13 @@ projection = 1
     expect(sizeError).toBeUndefined();
   });
 
-  it('STILL errors on a perspective camera with neither fov nor attributes', () => {
+  it('does NOT error on a perspective camera with no fov (Godot omits the 75 default)', () => {
     const content = `[gd_scene format=3]
 
 [node name="Camera" type="Camera3D"]
 projection = 0
 `;
-    const fovError = linter.lint(content).find((d) => d.ruleName === 'camera3d-missing-fov');
-    expect(fovError).toBeDefined();
-    expect(fovError!.severity).toBe('error');
+    expect(linter.lint(content).filter((d) => d.severity === 'error')).toEqual([]);
   });
 
   it('does NOT error on a perspective camera with an explicit fov', () => {
@@ -65,7 +63,6 @@ projection = 0
 projection = 0
 fov = 75.0
 `;
-    const fovError = linter.lint(content).find((d) => d.ruleName === 'camera3d-missing-fov');
-    expect(fovError).toBeUndefined();
+    expect(linter.lint(content).filter((d) => d.severity === 'error')).toEqual([]);
   });
 });
