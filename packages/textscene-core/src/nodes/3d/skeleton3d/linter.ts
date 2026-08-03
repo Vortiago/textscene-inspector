@@ -77,10 +77,6 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Only run for Skeleton3D nodes
-  if (node.type !== 'Skeleton3D') {
-    return diagnostics;
-  }
 
   // Type guard for properties
   if (!isSkeleton3DProperties(node.properties)) {

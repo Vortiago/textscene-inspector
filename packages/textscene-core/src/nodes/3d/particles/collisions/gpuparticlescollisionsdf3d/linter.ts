@@ -31,7 +31,6 @@ import { descendsFrom } from '../../../../../linter/nodeBaseTypes.js';
 
 function checkGPUParticlesCollisionSDF3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!descendsFrom(node.type, 'GPUParticlesCollisionSDF3D')) return [];
   if (!isValidProperties(node.properties)) return [];
 
   const rawProps = node.properties as Record<string, string>;

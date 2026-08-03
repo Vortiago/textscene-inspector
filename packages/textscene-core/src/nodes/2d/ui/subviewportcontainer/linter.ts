@@ -16,7 +16,6 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
-  if (node.type !== 'SubViewportContainer') return diagnostics;
 
   const children = node.children ?? [];
   if (children.some((child) => child.type === 'SubViewport')) return diagnostics;

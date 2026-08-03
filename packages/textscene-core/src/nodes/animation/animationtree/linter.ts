@@ -56,10 +56,6 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Only run for AnimationTree nodes
-  if (node.type !== 'AnimationTree') {
-    return diagnostics;
-  }
 
   // Type guard for properties
   if (!isValidProperties(node.properties)) {

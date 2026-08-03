@@ -25,10 +25,6 @@ const SMALL_SPOT_ANGLE = 1;
 function checkSpotLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
-  // Only run for SpotLight3D nodes
-  if (node.type !== 'SpotLight3D') {
-    return [];
-  }
 
   return rangeAdvisories(node, {
     light_energy: lightEnergyArms('spotlight3d'),

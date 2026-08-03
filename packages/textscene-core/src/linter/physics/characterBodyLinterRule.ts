@@ -33,9 +33,6 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
     const diagnostics: Diagnostic[] = [];
     const { node } = context;
 
-    if (node.type !== type) {
-      return diagnostics;
-    }
 
     // Access raw properties from the node (Record<string, string>)
     const rawProps = node.properties as unknown as Record<string, string>;

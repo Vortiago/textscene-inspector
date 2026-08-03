@@ -183,7 +183,12 @@ const scrapeCache = new Map<string, Array<{ name: string; severity: string }>>()
 function scrapePairs(file: string): Array<{ name: string; severity: string }> {
   const cached = scrapeCache.get(file);
   if (cached) return cached;
-  const src = stripEmits(readFileSync(file, 'utf8'));
+  // Block comments first: prose is not code, and it emits nothing. Without this
+  // the token regex reads doc text, and a comment mentioning `ruleName:`
+  // immediately before a backtick opens a capture that runs to the next
+  // backtick anywhere in the file — which is how a sentence in types.ts became
+  // an "undeclared ruleName".
+  const src = stripEmits(readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''));
 
   // A rule may hoist its name (`const ruleName = \`valid-x${dim}-resources\``)
   // and then use the shorthand `ruleName,` in the diagnostic. Resolve those

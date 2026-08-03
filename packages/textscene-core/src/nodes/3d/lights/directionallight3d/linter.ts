@@ -20,10 +20,6 @@ const LARGE_SHADOW_MAX_DISTANCE = 10000;
 function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
-  // Only run for DirectionalLight3D nodes
-  if (node.type !== 'DirectionalLight3D') {
-    return [];
-  }
 
   // Range advisories: light energy + very large shadow distance.
   const diagnostics = rangeAdvisories(node, {

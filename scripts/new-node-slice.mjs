@@ -571,8 +571,11 @@ import { ruleRegistry } from '${toSrc}linter/RuleRegistry.js';
 import { descendsFrom } from '${toSrc}linter/nodeBaseTypes.js';
 
 function check${typeName}(context: RuleContext): Diagnostic[] {
+  // No applicability check here: RuleRegistry has already filtered by the
+  // matcher below, so re-asserting it states the same fact twice and the two
+  // can drift.
   const { node } = context;
-  if (!descendsFrom(node.type, '${typeName}')) return [];
+  void node;
   return [];
 }
 

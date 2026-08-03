@@ -46,7 +46,6 @@ const JOINT2D_TYPES = new Set(['Joint2D', 'PinJoint2D', 'GrooveJoint2D', 'Damped
 function checkPhysicalBone2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
-  if (node.type !== 'PhysicalBone2D') return diagnostics;
   if (!isValidProperties(node.properties)) return diagnostics;
 
   const rawProps = node.properties as Record<string, string>;

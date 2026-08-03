@@ -22,9 +22,6 @@ function checkDecal(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  if (node.type !== 'Decal') {
-    return diagnostics;
-  }
 
   const rawProps = node.properties as unknown as Record<string, string>;
 

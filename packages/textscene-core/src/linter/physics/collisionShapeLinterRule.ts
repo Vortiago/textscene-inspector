@@ -29,9 +29,6 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     const diagnostics: Diagnostic[] = [];
     const { node, scene } = context;
 
-    if (node.type !== type) {
-      return diagnostics;
-    }
 
     // Access raw properties from the node (Record<string, string>)
     const rawProps = node.properties as unknown as Record<string, string>;

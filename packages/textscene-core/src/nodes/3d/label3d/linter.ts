@@ -21,10 +21,6 @@ function checkLabel3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  // Only run for Label3D nodes
-  if (node.type !== 'Label3D') {
-    return diagnostics;
-  }
 
   // Type guard for properties
   if (!isValidProperties(node.properties)) {

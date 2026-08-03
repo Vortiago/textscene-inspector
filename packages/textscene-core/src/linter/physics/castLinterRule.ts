@@ -33,7 +33,6 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
 
   function check(context: RuleContext): Diagnostic[] {
     const { node } = context;
-    if (node.type !== type) return [];
 
     const props = node.properties as Record<string, string>;
     const diagnostics: Diagnostic[] = [];

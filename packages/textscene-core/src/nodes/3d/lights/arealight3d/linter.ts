@@ -16,9 +16,6 @@ import { lightEnergyArms } from '../shared/linterChecks.js';
 function checkAreaLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
-  if (node.type !== 'AreaLight3D') {
-    return [];
-  }
 
   return rangeAdvisories(node, {
     light_energy: lightEnergyArms('arealight3d'),

@@ -25,10 +25,6 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  // Only run for Camera3D nodes
-  if (!descendsFrom(node.type, 'Camera3D')) {
-    return diagnostics;
-  }
 
   // Type guard for properties
   if (!isValidProperties(node.properties)) {

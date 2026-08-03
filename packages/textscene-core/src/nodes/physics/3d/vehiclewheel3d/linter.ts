@@ -22,7 +22,6 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 
 function checkVehicleWheel3DParent(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  if (node.type !== 'VehicleWheel3D') return [];
 
   const parent = findParentNode(scene.nodes, node);
 

@@ -38,7 +38,6 @@ function isButton(nodeType: string): boolean {
 
 function checkButtonGroup(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isButton(node.type)) return [];
 
   const props = node.properties as Record<string, string>;
 

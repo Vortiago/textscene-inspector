@@ -15,7 +15,6 @@ const VECTOR2I = /^Vector2i\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/;
 function checkSubViewport(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
-  if (node.type !== 'SubViewport') return diagnostics;
   if (!isValidProperties(node.properties)) return diagnostics;
 
   const props = node.properties as Record<string, string>;

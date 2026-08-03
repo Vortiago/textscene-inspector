@@ -25,7 +25,6 @@ import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 
 function checkSpringBoneCollision3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  if (!descendsFrom(node.type, 'SpringBoneCollision3D')) return [];
 
   const parent = findParentNode(scene.nodes, node);
   // An instanced parent's type lives in another file; treat it as unknown.

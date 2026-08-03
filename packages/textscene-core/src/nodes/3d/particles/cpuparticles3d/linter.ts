@@ -33,7 +33,6 @@ import { checkResourceExists } from '../../../../linter/resourceChecker.js';
 
 function checkCPUParticles3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  if (node.type !== 'CPUParticles3D') return [];
 
   const rawProps = node.properties as unknown as Record<string, string>;
   const diagnostics: Diagnostic[] = [];

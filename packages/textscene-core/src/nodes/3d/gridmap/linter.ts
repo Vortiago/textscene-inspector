@@ -13,9 +13,6 @@ function checkGridMap(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  if (node.type !== 'GridMap') {
-    return diagnostics;
-  }
 
   const rawProps = node.properties as unknown as Record<string, string>;
 

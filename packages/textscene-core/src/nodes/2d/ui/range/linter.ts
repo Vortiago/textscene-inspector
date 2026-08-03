@@ -22,7 +22,6 @@ import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 
 function checkRangeBounds(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!descendsFrom(node.type, 'Range')) return [];
   if (!isValidProperties(node.properties)) return [];
 
   const props = node.properties as Record<string, string>;

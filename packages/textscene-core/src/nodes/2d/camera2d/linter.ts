@@ -54,10 +54,6 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Only run for Camera2D nodes
-  if (node.type !== 'Camera2D') {
-    return diagnostics;
-  }
 
   // Check for multiple enabled cameras first (before properties guard)
   // This check should run even if properties are empty (defaults to enabled=true)

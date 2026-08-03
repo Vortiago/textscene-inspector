@@ -14,7 +14,6 @@ const LAYER_DATA_KEY_RE = /^layer_(\d+)\/tile_data$/;
 function checkTileMap(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
-  if (node.type !== 'TileMap') return diagnostics;
 
   const rawProps = node.properties as unknown as Record<string, string>;
   const layerData = Object.entries(rawProps).filter(([key]) => LAYER_DATA_KEY_RE.test(key));

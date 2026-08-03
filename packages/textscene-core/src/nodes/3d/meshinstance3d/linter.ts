@@ -33,12 +33,6 @@ function checkMeshInstance3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Every MeshInstance3D, including its subclasses: a SoftBody3D carries the
-  // same `mesh` and surface-material properties and a dangling reference on one
-  // is equally broken.
-  if (!descendsFrom(node.type, 'MeshInstance3D')) {
-    return diagnostics;
-  }
 
   // Type guard for properties
   if (!isMeshInstance3DProperties(node.properties)) {

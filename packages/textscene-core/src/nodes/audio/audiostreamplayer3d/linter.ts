@@ -27,10 +27,6 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Only run for AudioStreamPlayer3D nodes
-  if (node.type !== 'AudioStreamPlayer3D') {
-    return diagnostics;
-  }
 
   // Type guard for properties
   if (!isValidProperties(node.properties)) {

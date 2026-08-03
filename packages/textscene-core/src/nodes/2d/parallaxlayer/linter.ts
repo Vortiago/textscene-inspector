@@ -32,7 +32,6 @@ function findParent(nodes: readonly TscnNode[], target: TscnNode): TscnNode | nu
 
 function checkParallaxLayer(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  if (node.type !== 'ParallaxLayer') return [];
 
   const parent = findParent(scene.nodes, node);
   // An instanced parent's type lives in another file; treat it as unknown.

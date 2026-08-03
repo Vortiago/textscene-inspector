@@ -46,7 +46,6 @@ import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 
 function checkSelectedRequiresSelectable(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!descendsFrom(node.type, 'GraphElement')) return [];
   if (!isValidProperties(node.properties)) return [];
 
   const props = node.properties as Record<string, string>;

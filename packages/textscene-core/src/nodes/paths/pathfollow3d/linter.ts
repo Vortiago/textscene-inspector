@@ -16,10 +16,6 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Only run for PathFollow3D nodes
-  if (node.type !== 'PathFollow3D') {
-    return diagnostics;
-  }
 
   // Type guard for properties
   if (!isValidProperties(node.properties)) {

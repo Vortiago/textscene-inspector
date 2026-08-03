@@ -20,9 +20,6 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  if (node.type !== 'AudioStreamPlayer') {
-    return diagnostics;
-  }
 
   if (!isValidProperties(node.properties)) {
     return diagnostics;

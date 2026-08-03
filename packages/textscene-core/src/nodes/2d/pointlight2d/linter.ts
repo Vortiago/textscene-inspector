@@ -55,7 +55,6 @@ function bound(raw: string | undefined, fallback: number): number | null {
 
 function checkPointLight2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (node.type !== 'PointLight2D') return [];
   if (!isValidProperties(node.properties)) return [];
   const props = node.properties as Record<string, string>;
 

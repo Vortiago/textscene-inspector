@@ -21,9 +21,6 @@ export function makeNavigationRegionLinterRule(dim: PhysicsDim): LintRule {
     const diagnostics: Diagnostic[] = [];
     const { node, scene } = context;
 
-    if (node.type !== type) {
-      return diagnostics;
-    }
 
     const rawProps = node.properties as unknown as Record<string, string>;
 

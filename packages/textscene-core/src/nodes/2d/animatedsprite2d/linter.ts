@@ -16,10 +16,6 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Only run for AnimatedSprite2D nodes
-  if (node.type !== 'AnimatedSprite2D') {
-    return diagnostics;
-  }
 
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;

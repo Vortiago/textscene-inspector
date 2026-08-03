@@ -54,9 +54,6 @@ export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
     const diagnostics: Diagnostic[] = [];
     const { node, scene } = context;
 
-    if (!descendsFrom(node.type, type)) {
-      return diagnostics;
-    }
 
     // Access raw properties from the node (Record<string, string>)
     const rawProps = node.properties as unknown as Record<string, string>;

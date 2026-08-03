@@ -20,7 +20,6 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 
 function checkGPUParticles2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (node.type !== 'GPUParticles2D') return [];
   if (!isValidProperties(node.properties)) return [];
 
   const props = node.properties as Record<string, string>;

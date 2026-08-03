@@ -27,7 +27,6 @@ function checkWindow(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  if (!descendsFrom(node.type, 'Window')) return diagnostics;
   if (!isValidProperties(node.properties)) return diagnostics;
   const rawProps = node.properties as Record<string, string>;
 

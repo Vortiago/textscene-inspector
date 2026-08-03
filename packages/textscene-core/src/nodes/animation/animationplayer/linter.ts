@@ -23,10 +23,6 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Only run for AnimationPlayer nodes
-  if (node.type !== 'AnimationPlayer') {
-    return diagnostics;
-  }
 
   // Type guard for properties
   if (!isValidProperties(node.properties)) {

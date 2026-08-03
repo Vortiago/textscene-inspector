@@ -13,7 +13,6 @@ import { isValidProperties, findParentNode } from '../../../linter/linterUtils.j
 function checkPathFollow2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
-  if (node.type !== 'PathFollow2D') return diagnostics;
   if (!isValidProperties(node.properties)) return diagnostics;
 
   const rawProps = node.properties as Record<string, string>;

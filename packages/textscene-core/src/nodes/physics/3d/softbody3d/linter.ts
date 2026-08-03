@@ -22,9 +22,6 @@ function checkSoftBody3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  if (!descendsFrom(node.type, 'SoftBody3D')) {
-    return diagnostics;
-  }
 
   if (!isValidProperties(node.properties)) return [];
   const rawProps = node.properties as Record<string, string>;

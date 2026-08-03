@@ -29,7 +29,6 @@ const GLOBAL_RNG_SHAPES: Record<string, string> = {
 
 function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (node.type !== 'CPUParticles2D') return [];
   if (!isValidProperties(node.properties)) return [];
 
   const props = node.properties as Record<string, string>;

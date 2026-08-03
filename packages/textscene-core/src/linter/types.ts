@@ -128,7 +128,19 @@ export interface LintRule {
   /** Rule metadata */
   meta: RuleMeta;
   /**
-   * Check function that validates a node and returns diagnostics
+   * Check function that validates a node and returns diagnostics.
+   *
+   * **Applicability is already decided.** `RuleRegistry.getRulesForNodeType`
+   * filters by `meta` before `Linter` calls this, so a rule must NOT re-assert
+   * its own `applicableNodeTypes` / `applicableNodeTypeMatcher` here. Fifty
+   * rules used to, which is a second copy of a predicate that can disagree with
+   * the first: widening the meta to cover a sibling type would then be silently
+   * cancelled by the stale guard below it.
+   *
+   * Checking something ELSE about the tree — a parent's type, a child's
+   * presence — is a different thing and belongs here (see
+   * `vehiclewheel3d/linter.ts`, which asserts its PARENT is a VehicleBody3D).
+   *
    * @param context - The rule execution context
    * @returns Array of diagnostics (empty if no issues found)
    */

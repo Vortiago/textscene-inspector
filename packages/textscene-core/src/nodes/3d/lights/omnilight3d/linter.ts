@@ -22,10 +22,6 @@ const EXTREME_OMNI_ATTENUATION_MAX = 5;
 function checkOmniLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
-  // Only run for OmniLight3D nodes
-  if (node.type !== 'OmniLight3D') {
-    return [];
-  }
 
   return rangeAdvisories(node, {
     light_energy: lightEnergyArms('omnilight3d'),

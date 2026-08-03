@@ -34,10 +34,6 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Only run for Path3D nodes
-  if (node.type !== 'Path3D') {
-    return diagnostics;
-  }
 
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
