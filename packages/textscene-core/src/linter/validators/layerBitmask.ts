@@ -17,7 +17,7 @@
  * exist and the remaining 12 are engine-internal).
  */
 
-import { v } from './v.js';
+import { v, type Grounding } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 
 /** 2^32 - 1 — the largest value any Godot layer/mask property can hold. */
@@ -27,8 +27,9 @@ export const MAX_LAYER_BITMASK = 4294967295;
  * Validator for a 32-bit layer/mask property. `0` is legal everywhere (it
  * simply means "no layers"), so there is no lower bound to configure.
  */
-export function layerBitmask(name: string): PropertyValidator {
+export function layerBitmask(name: string, opts: Grounding = {}): PropertyValidator {
   const validator = v.int(name, {
+    ...opts,
     min: 0,
     max: MAX_LAYER_BITMASK,
     message: `Property '${name}' must be between 0 and ${MAX_LAYER_BITMASK}. Valid range: 32-bit bitmask (layers 1-32)`,

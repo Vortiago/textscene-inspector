@@ -62,8 +62,14 @@ export function createNumericRangeValidator(
   customMessage?: string,
   errorCodeFormat: string = 'INVALID_FORMAT',
   errorCodeValue: string = 'INVALID_VALUE',
-  /** Severity of the RANGE branch; the FORMAT branch stays an error. */
-  valueSeverity: ParseError['severity'] = 'error'
+  /**
+   * Severity of the MIN branch; the FORMAT branch stays an error.
+   * Separate from the max because a property can have an enforced floor and a
+   * merely hinted ceiling (ADR-0032).
+   */
+  valueSeverity: ParseError['severity'] = 'error',
+  /** Severity of the MAX branch. Defaults to the min's. */
+  maxSeverity: ParseError['severity'] = valueSeverity
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
     const num = parseAsInt ? parseInt(value, 10) : parseFloat(value);
@@ -94,7 +100,7 @@ export function createNumericRangeValidator(
         min !== null
           ? `Property '${propertyName}' must be between ${min} and ${max} (got ${num})`
           : `Property '${propertyName}' must be <= ${max}, got: ${num}`;
-      return propertyError(key, line, customMessage || defaultMsg, errorCodeValue, valueSeverity);
+      return propertyError(key, line, customMessage || defaultMsg, errorCodeValue, maxSeverity);
     }
 
     return null;

@@ -77,10 +77,21 @@ function valueCode(name: string): string {
  * counted by `boundGrounding.test.ts`, whose ratchet only goes down.
  */
 export interface Grounding {
-  /** `file:line` of the setter guard that refuses or alters the value. */
-  enforced?: string;
+  /**
+   * `file:line` of the setter guard that refuses or alters the value. A bare
+   * string grounds BOTH ends; `{ min, max }` grounds them separately, which
+   * real properties need: `PhysicalBone2D.bone2d_index` has an `ERR_FAIL_COND`
+   * on its floor and nothing but a hint on its ceiling.
+   */
+  enforced?: string | { min?: string; max?: string };
   /** `file:line` of the ADD_PROPERTY whose PROPERTY_HINT_RANGE states the bound. */
-  hinted?: string;
+  hinted?: string | { min?: string; max?: string };
+}
+
+/** The citation covering one end of a bound, if the grounding names it. */
+function citeFor(g: string | { min?: string; max?: string } | undefined, end: 'min' | 'max') {
+  if (g === undefined) return undefined;
+  return typeof g === 'string' ? g : g[end];
 }
 
 export interface FloatOpts extends Grounding {
@@ -135,15 +146,29 @@ export function accepts(validator: PropertyValidator, description: string): Prop
  * un-audited, behaves as it always has, and is counted by the ratchet.
  */
 function ground(validator: PropertyValidator, opts: Grounding): PropertyValidator {
-  if (opts.enforced) validator.grounding = { kind: 'enforced', cite: opts.enforced };
-  else if (opts.hinted) validator.grounding = { kind: 'hinted', cite: opts.hinted };
+  const enforced = citeFor(opts.enforced, 'min') ?? citeFor(opts.enforced, 'max');
+  const hinted = citeFor(opts.hinted, 'min') ?? citeFor(opts.hinted, 'max');
+  if (enforced) validator.grounding = { kind: 'enforced', cite: enforced };
+  else if (hinted) validator.grounding = { kind: 'hinted', cite: hinted };
   validator.bounded = true;
   return validator;
 }
 
-/** `warning` for a hint-only bound, `error` otherwise (ADR-0032). */
+/**
+ * Severity for one END of a bound (ADR-0032): `warning` when only a hint names
+ * it, `error` when the setter does. Un-audited ends keep erroring, which is the
+ * pre-split behaviour.
+ */
+function endSeverity(opts: Grounding, end: 'min' | 'max'): Severity {
+  if (citeFor(opts.enforced, end)) return 'error';
+  return citeFor(opts.hinted, end) ? 'warning' : 'error';
+}
+
+/** Single severity, for validators whose bound has only one range (enums). */
 function boundSeverity(opts: Grounding): Severity {
-  return opts.hinted && !opts.enforced ? 'warning' : 'error';
+  return endSeverity(opts, 'min') === 'warning' && endSeverity(opts, 'max') === 'warning'
+    ? 'warning'
+    : 'error';
 }
 
 /** `float 0-1` / `float >= 0` / `integer 1-256` / `float`, from the bounds. */
@@ -197,12 +222,13 @@ export const v = {
    * @param opts - the hint's degree extents; omit `minDeg` for a one-sided
    *   range such as `"0,180,…"`.
    */
-  radians(name: string, opts: { minDeg?: number; maxDeg: number }): PropertyValidator {
+  radians(name: string, opts: { minDeg?: number; maxDeg: number } & Grounding): PropertyValidator {
     const EPSILON = 0.0001;
     const max = (opts.maxDeg * Math.PI) / 180 + EPSILON;
     const min = opts.minDeg === undefined ? 0 : (opts.minDeg * Math.PI) / 180 - EPSILON;
     const lowDeg = opts.minDeg ?? 0;
-    return accepts(
+    return ground(
+      accepts(
       createNumericRangeValidator(
         name,
         min,
@@ -210,33 +236,53 @@ export const v = {
         false,
         `Property '${name}' must be between ${min.toFixed(4)} and ${max.toFixed(4)} radians (${lowDeg} to ${opts.maxDeg} degrees)`,
         formatCode(name),
-        valueCode(name)
+        valueCode(name),
+        endSeverity(opts, 'min'),
+        endSeverity(opts, 'max')
       ),
       `radians, ${lowDeg}° to ${opts.maxDeg}°`
+      ),
+      opts
     );
   },
 
   /** Float ≥ 0. Convenience alias for `v.float(name, { min: 0 })`. */
-  nonNegativeFloat(name: string): PropertyValidator {
-    return accepts(
-      createNumericRangeValidator(name, 0, null, false, undefined, formatCode(name), valueCode(name)),
-      'float >= 0'
+  nonNegativeFloat(name: string, opts: Grounding = {}): PropertyValidator {
+    return ground(
+      accepts(
+        createNumericRangeValidator(
+          name,
+          0,
+          null,
+          false,
+          undefined,
+          formatCode(name),
+          valueCode(name),
+          endSeverity(opts, 'min')
+        ),
+        'float >= 0'
+      ),
+      opts
     );
   },
 
   /** Float > 0 (strict). Useful for distances, energies, near/far planes. */
-  positiveFloat(name: string, message?: string): PropertyValidator {
-    return accepts(
-      createNumericRangeValidator(
-        name,
-        Number.MIN_VALUE,
-        null,
-        false,
-        message ?? `Property '${name}' must be greater than 0`,
-        formatCode(name),
-        valueCode(name)
+  positiveFloat(name: string, message?: string, opts: Grounding = {}): PropertyValidator {
+    return ground(
+      accepts(
+        createNumericRangeValidator(
+          name,
+          Number.MIN_VALUE,
+          null,
+          false,
+          message ?? `Property '${name}' must be greater than 0`,
+          formatCode(name),
+          valueCode(name),
+          endSeverity(opts, 'min')
+        ),
+        'float > 0'
       ),
-      'float > 0'
+      opts
     );
   },
 
@@ -261,10 +307,19 @@ export const v = {
   },
 
   /** Positive integer (> 0). Specialised wrapper from `commonValidators`. */
-  positiveInt(name: string, message?: string): PropertyValidator {
-    return accepts(
-      createPositiveIntegerValidator(name, message, formatCode(name), valueCode(name)),
-      'integer > 0'
+  positiveInt(name: string, message?: string, opts: Grounding = {}): PropertyValidator {
+    return ground(
+      accepts(
+        createPositiveIntegerValidator(
+          name,
+          message,
+          formatCode(name),
+          valueCode(name),
+          endSeverity(opts, 'min')
+        ),
+        'integer > 0'
+      ),
+      opts
     );
   },
 
@@ -401,9 +456,14 @@ export const v = {
    * range (Camera2D's `zoom` must be non-zero, Node2D's `scale` likewise) is
    * not this, and stays hand-rolled.
    */
-  boundedVector3(name: string, opts: { min?: number; max?: number } = {}): PropertyValidator {
+  boundedVector3(
+    name: string,
+    opts: { min?: number; max?: number } & Grounding = {}
+  ): PropertyValidator {
     const { min, max } = opts;
-    return accepts((key, value, line) => {
+    // One severity: a component bound states a single range for all three.
+    const severity = boundSeverity(opts);
+    return ground(accepts((key, value, line) => {
       const match = VECTOR3_REGEX.exec(value);
       if (!match) {
         return propertyError(
@@ -428,11 +488,12 @@ export const v = {
           key,
           line,
           `Property '${name}' components must be ${bound}, got: Vector3(${parts.join(', ')})`,
-          valueCode(name)
+          valueCode(name),
+          severity
         );
       }
       return null;
-    }, `Vector3(x, y, z), each ${numericRange('float', min, max)}`);
+    }, `Vector3(x, y, z), each ${numericRange('float', min, max)}`), opts);
   },
 
   /** `Rect2(x, y, w, h)` format. */
@@ -530,21 +591,24 @@ export const v = {
     const formatErr = formatCode(name);
     const valueErr = valueCode(name);
     const { min, max } = opts;
-    return accepts((key, value, line) => {
+    return ground(accepts((key, value, line) => {
       const parsed = parseFloat(value);
       if (isNaN(parsed) || !Number.isInteger(parsed)) {
         return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
       }
-      if ((min !== undefined && parsed < min) || (max !== undefined && parsed > max)) {
+      const belowMin = min !== undefined && parsed < min;
+      const aboveMax = max !== undefined && parsed > max;
+      if (belowMin || aboveMax) {
         return propertyError(
           key,
           line,
           opts.message ?? `Property '${name}' must be ${numericRange('integer', min, max)} (got ${parsed})`,
-          valueErr
+          valueErr,
+          endSeverity(opts, belowMin ? 'min' : 'max')
         );
       }
       return null;
-    }, numericRange('integer', min, max));
+    }, numericRange('integer', min, max)), opts);
   },
 
   /**
@@ -552,21 +616,25 @@ export const v = {
    * `value >= 0`. Used for frame indices and similar count-style
    * properties where `"5.5"` is a format error and `-1` is a value error.
    */
-  strictNonNegativeInt(name: string): PropertyValidator {
+  strictNonNegativeInt(name: string, opts: Grounding = {}): PropertyValidator {
     const formatErr = formatCode(name);
     const valueErr = valueCode(name);
-    return accepts(
-      (key, value, line) => {
-      const parsed = parseFloat(value);
-      if (isNaN(parsed) || !Number.isInteger(parsed)) {
-        return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
-      }
-      if (parsed < 0) {
-        return propertyError(key, line, `Property '${name}' must be non-negative (got ${parsed})`, valueErr);
-      }
-      return null;
-    },
-      'integer >= 0'
+    const severity = endSeverity(opts, 'min');
+    return ground(
+      accepts(
+        (key, value, line) => {
+          const parsed = parseFloat(value);
+          if (isNaN(parsed) || !Number.isInteger(parsed)) {
+            return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
+          }
+          if (parsed < 0) {
+            return propertyError(key, line, `Property '${name}' must be non-negative (got ${parsed})`, valueErr, severity);
+          }
+          return null;
+        },
+        'integer >= 0'
+      ),
+      opts
     );
   },
 
