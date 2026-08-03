@@ -55,7 +55,7 @@ Strict parsing format-checks these `Sprite3D` properties, plus 16 inherited from
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
-| `valid-sprite3d-resources` | `sprite3d-requires-texture` | error |
+| `valid-sprite3d-resources` | `sprite3d-requires-texture` | warning |
 |  | `valid-sprite3d-resources` | error |
 |  | `sprite3d-frame-range` | warning |
 |  | `sprite3d-region-configuration` | warning |

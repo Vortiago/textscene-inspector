@@ -43,10 +43,11 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // ERROR: stream is missing (REQUIRED - no sound without this)
+  // WARNING: a streamless player is valid (the stream can be assigned at
+  // runtime, as the non-positional AudioStreamPlayer documents) but silent.
   if (rawProps.stream === undefined) {
     diagnostics.push({
-      severity: 'error',
+      severity: 'warning',
       message: `AudioStreamPlayer2D requires 'stream' property to function. This defines what audio to play.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -141,7 +142,7 @@ const audioStreamPlayer2DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer2D'],
     emits: [
-      { ruleName: 'audiostreamplayer2d-missing-stream', severity: 'error' },
+      { ruleName: 'audiostreamplayer2d-missing-stream', severity: 'warning' },
       { ruleName: 'audiostreamplayer2d-missing-stream-resource', severity: 'error' },
       { ruleName: 'audiostreamplayer2d-autoplay-without-stream', severity: 'warning' },
       { ruleName: 'audiostreamplayer2d-zero-pitch-scale', severity: 'error' },

@@ -160,7 +160,7 @@ describe('AnimatedSprite2D Linter', () => {
     it('should detect missing sprite_frames (REQUIRED)', () => {
       expectDiagnostic(scene(node('AnimatedSprite2D', { animation: '"default"' })), {
         ruleName: 'animatedsprite2d-requires-spriteframes',
-        severity: 'error',
+        severity: 'warning',
         contains: ["requires a 'sprite_frames' property"],
       });
     });

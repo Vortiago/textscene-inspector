@@ -28,7 +28,7 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
   // Check if texture resource exists (REQUIRED - Sprite2D is useless without texture)
   if (!rawProps.texture) {
     diagnostics.push({
-      severity: 'error',
+      severity: 'warning',
       message: `Sprite2D requires a 'texture' property. Sprite2D is not visible without a texture.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -136,7 +136,7 @@ const sprite2DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['Sprite2D'],
     emits: [
-      { ruleName: 'sprite2d-requires-texture', severity: 'error' },
+      { ruleName: 'sprite2d-requires-texture', severity: 'warning' },
       { ruleName: 'valid-sprite2d-resources', severity: 'error' },
       { ruleName: 'sprite2d-frame-range', severity: 'warning' },
       { ruleName: 'sprite2d-frame-coords-range', severity: 'warning' },

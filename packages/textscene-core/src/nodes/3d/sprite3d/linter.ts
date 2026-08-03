@@ -28,7 +28,7 @@ function checkSprite3D(context: RuleContext): Diagnostic[] {
   // Check if texture resource exists (REQUIRED - Sprite3D is useless without texture)
   if (!rawProps.texture) {
     diagnostics.push({
-      severity: 'error',
+      severity: 'warning',
       message: `Sprite3D requires a 'texture' property. Sprite3D is not visible without a texture.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -118,7 +118,7 @@ const sprite3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['Sprite3D'],
     emits: [
-      { ruleName: 'sprite3d-requires-texture', severity: 'error' },
+      { ruleName: 'sprite3d-requires-texture', severity: 'warning' },
       { ruleName: 'valid-sprite3d-resources', severity: 'error' },
       { ruleName: 'sprite3d-frame-range', severity: 'warning' },
       { ruleName: 'sprite3d-region-configuration', severity: 'warning' },

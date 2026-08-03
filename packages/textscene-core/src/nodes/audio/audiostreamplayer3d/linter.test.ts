@@ -208,10 +208,10 @@ describe('AudioStreamPlayer3D Linter', () => {
 
   describe('Semantic Validation', () => {
     describe('missing stream error', () => {
-      it('should error when stream is missing', () => {
+      it('should warn when stream is missing (valid, assignable at runtime)', () => {
         expectDiagnostic(bare({ volume_db: 0.0, pitch_scale: 1.0 }), {
           prop: 'stream',
-          severity: 'error',
+          severity: 'warning',
           nodeType: 'AudioStreamPlayer3D',
           contains: ['requires', 'audio'],
         });

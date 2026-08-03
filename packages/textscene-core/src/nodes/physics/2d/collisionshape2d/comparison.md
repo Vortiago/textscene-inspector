@@ -40,7 +40,7 @@ Strict parsing format-checks these `CollisionShape2D` properties, plus 18 inheri
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-collisionshape2d` | `collisionshape2d-requires-shape` | error |
+| `valid-collisionshape2d` | `collisionshape2d-requires-shape` | warning |
 |  | `valid-collisionshape2d-resources` | error |
 |  | `collisionshape2d-invalid-parent` | warning |
 |  | `collisionshape2d-no-parent` | warning |

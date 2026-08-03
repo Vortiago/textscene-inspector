@@ -129,7 +129,7 @@ disabled = "yes"
       );
       const shapeError = expectDiagnostic(content, {
         ruleName: 'collisionshape3d-requires-shape',
-        severity: 'error',
+        severity: 'warning',
         nodeType: 'CollisionShape3D',
         contains: ['missing required property', 'shape'],
       });

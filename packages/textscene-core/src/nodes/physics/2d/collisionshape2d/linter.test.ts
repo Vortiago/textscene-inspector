@@ -132,7 +132,7 @@ describe('CollisionShape2D Linter', () => {
       );
       const shapeError = expectDiagnostic(content, {
         ruleName: 'collisionshape2d-requires-shape',
-        severity: 'error',
+        severity: 'warning',
         nodeType: 'CollisionShape2D',
         contains: ['missing required property', 'shape'],
       });

@@ -124,7 +124,7 @@ describe('Sprite2D Linter', () => {
     it('should detect missing texture (REQUIRED)', () => {
       expectDiagnostic(scene(node('Sprite2D', { centered: true })), {
         ruleName: 'sprite2d-requires-texture',
-        severity: 'error',
+        severity: 'warning',
         nodeType: 'Sprite2D',
         contains: ["requires a 'texture' property"],
       });
