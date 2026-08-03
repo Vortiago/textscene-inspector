@@ -147,7 +147,7 @@ camera_attributes = invalid
 `,
           {
             ruleName: 'worldenvironment-requires-environment',
-            severity: 'error',
+            severity: 'warning',
             contains: ["requires an 'environment' property", 'does nothing'],
           }
         );
@@ -449,7 +449,7 @@ camera_attributes = invalid_format
 
 [node name="WorldEnvironment" type="WorldEnvironment"]
 `,
-        { ruleName: 'worldenvironment-requires-environment', severity: 'error' }
+        { ruleName: 'worldenvironment-requires-environment', severity: 'warning' }
       );
     });
 

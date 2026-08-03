@@ -10,7 +10,11 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { applyToneMapping, toneMappingFor } from './toneMapping';
+import {
+  applyToneMapping,
+  toneMappingFor,
+  type ToneMappedRenderer,
+} from './toneMapping';
 import {
   toneMappingEffectGlsl,
   toneMappingShaderChunk,
@@ -118,7 +122,7 @@ describe('Godot\u2019s curves', () => {
 const ORIGINAL_CHUNK = THREE.ShaderChunk.tonemapping_pars_fragment;
 
 describe('applyToneMapping', () => {
-  function fakeRenderer() {
+  function fakeRenderer(): ToneMappedRenderer {
     return { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 };
   }
 

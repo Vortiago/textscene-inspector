@@ -52,6 +52,13 @@ const WRAP: Record<SpriteWrapMode, THREE.Wrapping> = {
   repeat: THREE.RepeatWrapping,
 };
 
+export interface SpriteRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface SpriteFrameProps {
   region_enabled: boolean;
   region_rect?: { x: number; y: number; width: number; height: number };
@@ -60,6 +67,31 @@ export interface SpriteFrameProps {
   frame: number;
   /** Explicit (col, row) frame coordinates; overrides the linear `frame` index. */
   frame_coords?: { x: number; y: number };
+}
+
+/**
+ * Whether {@link composeFrameTexture} would window anything for these props —
+ * false when the frame is the whole image (no region, no atlas cell, no
+ * sprite-sheet grid).
+ *
+ * Callers use this to skip composition and draw the source texture directly:
+ * cloning is not free even though it shares the pixel `Source`, because
+ * `Texture.copy` marks `needsUpdate`, which bumps the shared Source's version
+ * and forces the GPU to re-upload the pixel buffer — per mount, and per
+ * keyframe when an animation drives the frame. For a cached procedural texture
+ * that re-upload is exactly what `proceduralTextureCache` exists to prevent.
+ * A borrowed texture keeps its own wrap mode where composition would set the
+ * sampler's; with the whole image mapped, UVs stay inside [0, 1] and wrap
+ * never applies, so nothing observable differs. Callers that mutate the
+ * result (Sprite3D's UV flips) must still clone.
+ */
+export function needsFrameComposition(props: SpriteFrameProps, atlasRegion?: SpriteRect): boolean {
+  return (
+    atlasRegion !== undefined ||
+    Boolean(props.region_enabled && props.region_rect) ||
+    props.hframes > 1 ||
+    props.vframes > 1
+  );
 }
 
 /**
@@ -73,16 +105,23 @@ export interface SpriteFrameProps {
 export function composeFrameTexture(
   texture: THREE.Texture | undefined,
   props: SpriteFrameProps,
-  wrap: SpriteWrapMode
+  wrap: SpriteWrapMode,
+  atlasRegion?: SpriteRect
 ): THREE.Texture | undefined {
   if (!texture) return undefined;
+
+  const baseRect = baseRectFor(props, atlasRegion);
+  // An empty intersection is Godot's "draw nothing": `get_rect_region` returns
+  // false and the draw is skipped. Decided before the clone so the discarded
+  // frame costs no GPU texture.
+  if (baseRect === null) return undefined;
 
   const cloned = texture.clone();
   cloned.wrapS = WRAP[wrap];
   cloned.wrapT = WRAP[wrap];
 
-  if (props.region_enabled && props.region_rect) {
-    applyRegionRect(cloned, props.region_rect);
+  if (baseRect) {
+    applyRegionRect(cloned, baseRect);
   }
   if (props.hframes > 1 || props.vframes > 1) {
     applySpritesheetUV(cloned, props);
@@ -99,19 +138,63 @@ export function composeFrameTexture(
  */
 export function frameSizePx(
   texture: THREE.Texture | undefined,
-  props: SpriteFrameProps
+  props: SpriteFrameProps,
+  atlasRegion?: SpriteRect
 ): { width: number; height: number } {
   const image = texture?.image as { width?: number; height?: number } | undefined;
   const H = Math.max(1, props.hframes);
   const V = Math.max(1, props.vframes);
 
-  let pxW = image?.width ?? 1;
-  let pxH = image?.height ?? 1;
+  let pxW = atlasRegion?.width ?? image?.width ?? 1;
+  let pxH = atlasRegion?.height ?? image?.height ?? 1;
   if (props.region_enabled && props.region_rect && image?.width && image.height) {
-    pxW = props.region_rect.width;
-    pxH = props.region_rect.height;
+    // The CLIPPED rect, so the quad matches the pixels that survive the atlas
+    // clip — otherwise the cell's content stretches over a quad Godot never
+    // draws that big. Null (no overlap) draws nothing, so any size will do.
+    const clipped = baseRectFor(props, atlasRegion) ?? props.region_rect;
+    pxW = clipped.width;
+    pxH = clipped.height;
   }
   return { width: pxW / H, height: pxH / V };
+}
+
+/**
+ * The rect UVs window to, in SHEET pixels: the sprite's own region (translated
+ * into the atlas cell and clipped to it when there is one), else the cell, else
+ * undefined for a full-image sprite. Null means the sprite's region misses the
+ * cell entirely — Godot draws nothing.
+ *
+ * The clip is the one place an AtlasTexture differs from a plain Texture2D:
+ * `get_rect_region` intersects the source rect with the cell
+ * (`src_clipped = _get_region_rect().intersection(src)`,
+ * `scene/resources/atlas_texture.cpp:204`) and bails when that is empty, while a
+ * plain texture's oversized region is passed through untouched and simply runs
+ * its UVs past 1.0 (see `SpriteWrapMode`). Without it a sprite would sample its
+ * neighbours' cells.
+ */
+function baseRectFor(
+  props: SpriteFrameProps,
+  atlasRegion: SpriteRect | undefined
+): SpriteRect | undefined | null {
+  if (!props.region_enabled || !props.region_rect) return atlasRegion;
+  if (!atlasRegion) return props.region_rect;
+  const translated = {
+    x: atlasRegion.x + props.region_rect.x,
+    y: atlasRegion.y + props.region_rect.y,
+    width: props.region_rect.width,
+    height: props.region_rect.height,
+  };
+  return intersectRects(atlasRegion, translated);
+}
+
+/** Rect intersection; null when empty (Godot's `Rect2::intersection` + its zero-size test). */
+function intersectRects(a: SpriteRect, b: SpriteRect): SpriteRect | null {
+  const x = Math.max(a.x, b.x);
+  const y = Math.max(a.y, b.y);
+  const right = Math.min(a.x + a.width, b.x + b.width);
+  const bottom = Math.min(a.y + a.height, b.y + b.height);
+  if (!(right > x) || !(bottom > y)) return null;
+  return { x, y, width: right - x, height: bottom - y };
 }
 
 function applySpritesheetUV(texture: THREE.Texture, props: SpriteFrameProps): void {

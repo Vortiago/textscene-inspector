@@ -81,7 +81,7 @@ import '../nodes/paths/pathfollow3d/index.linter.js';
 
 // Import resource validators
 import '../resources/materials/standardmaterial3d/linterValidators.js';
-import '../resources/environment/linterValidators.js';
+import '../resources/environment/index.linter.js';
 import '../resources/meshes/planemesh/linterValidators.js';
 import '../resources/meshes/quadmesh/linterValidators.js';
 import '../nodes/2d/tiles/tilemaplayer/index.linter.js';

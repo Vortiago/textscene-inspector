@@ -16,9 +16,6 @@ const MAX_FAR_CLIPPING_WARNING = 10000;
 const MIN_NORMAL_FOV = 20;
 const MAX_NORMAL_FOV = 120;
 
-// Projection mode constants
-const PROJECTION_PERSPECTIVE = 0;
-
 /**
  * Validate Camera3D semantic rules
  */
@@ -38,19 +35,11 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // Get projection mode (default to PERSPECTIVE if not specified)
-  const projection = rawProps.projection !== undefined ? parseInt(rawProps.projection, 10) : PROJECTION_PERSPECTIVE;
-
-  // ERROR: fov is required for PERSPECTIVE projection (unless attributes overrides it)
-  if (projection === PROJECTION_PERSPECTIVE && rawProps.fov === undefined && rawProps.attributes === undefined) {
-    diagnostics.push({
-      severity: 'error',
-      message: `Camera3D with PERSPECTIVE projection (projection=0) requires 'fov' property. This defines the field of view in degrees.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'camera3d-missing-fov',
-    });
-  }
+  // No missing-fov rule: Godot's serializer OMITS default-valued properties,
+  // so an editor-authored perspective camera at the default fov (75, per
+  // camera_3d.h) has no `fov` line at all — absence is the normal form, and
+  // the parser supplies the same default. Only explicit out-of-range values
+  // are worth flagging (the range advisories below).
 
   // ERROR: near must be less than far (cross-field consistency, not a range advisory)
   if (rawProps.near !== undefined && rawProps.far !== undefined) {
@@ -118,7 +107,6 @@ const camera3DValidationRule: LintRule = {
     description: 'Validates Camera3D property values, required properties, clipping plane relationships, and performance considerations',
     category: 'validation',
     emits: [
-      { ruleName: 'camera3d-missing-fov', severity: 'error' },
       { ruleName: 'camera3d-invalid-clipping-planes', severity: 'error' },
       { ruleName: 'camera3d-small-near-plane', severity: 'warning' },
       { ruleName: 'camera3d-large-far-plane', severity: 'warning' },

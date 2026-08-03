@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as logger from '../../logger';
 import { mapToLocalPx } from './tilePlacement';
-import { TILE_SHAPE_ISOMETRIC, TILE_SHAPE_SQUARE, type TileGrid } from './tileSetModel';
+import { TILE_SHAPE_ISOMETRIC, TILE_SHAPE_SQUARE, type TileGrid } from './types';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {

@@ -2,10 +2,10 @@
  * <Sprite3D> — billboarded 2D texture rendered in 3D space.
  *
  * Architecture:
- *   - Texture state machine: `useResource('Texture2D')` against the
- *     resolved ExtResource path. Pending → render nothing (lets the
- *     scene continue); missing/error → magenta placeholder mesh +
- *     drei `<Text>` label naming the path (matches MeshInstance3D UX).
+ *   - Texture source: the shared `useTexture2DSource` hook — procedural
+ *     (GradientTexture2D / NoiseTexture2D), AtlasTexture cell, or loaded
+ *     file. Pending → render nothing (lets the scene continue);
+ *     missing/error → magenta placeholder mesh (matches MeshInstance3D UX).
  *   - Quad geometry: `<planeGeometry>` sized by `pixel_size` × the
  *     active texture region (full image, sprite-sheet tile, or
  *     `region_rect` sub-image). Same pattern as Label3D's textured
@@ -42,10 +42,9 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
-import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
+import { composeFrameTexture, frameSizePx, needsFrameComposition } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { resolveTexture2DPath } from '../../../resources/SubResourceResolver';
-import { useResource } from '../../../resources/useResource';
+import { useTexture2DSource } from '../../../resources/useTexture2D';
 import {
   AlphaCutMode,
   type Sprite3DProperties,
@@ -68,25 +67,29 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     [properties]
   );
 
-  // Resolve `texture = ExtResource("id")` → res:// path via the scene's
-  // external-resource table. Empty string short-circuits the hook (per
-  // useResource's contract) so we keep the hook-call count stable when
-  // texture is absent.
-  const texturePath = useMemo(
-    () => resolveTexture2DPath(properties.texture, externalResources, internalResources),
-    [properties.texture, externalResources, internalResources]
-  );
-
-  const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
+  // The shared source hook resolves procedural (GradientTexture2D /
+  // NoiseTexture2D), AtlasTexture cell + region, and loaded-file forms alike.
+  const source = useTexture2DSource(properties.texture, externalResources, internalResources);
+  const sourceTexture = source.texture ?? undefined;
 
   // Compose the visible texture (shared spriteFrame module clones + windows
   // the UVs to the region/frame), then mirror via UV negation: flip the
   // (already cropped) UV window by negating the repeat and shifting the
-  // offset to the opposite edge.
+  // offset to the opposite edge. A whole-image, unflipped sprite draws the
+  // borrowed source directly (needsFrameComposition); the flips MUTATE
+  // repeat/offset, so they always work on a clone.
   const displayedTexture = useMemo(() => {
+    if (
+      sourceTexture &&
+      !needsFrameComposition(properties, source.region) &&
+      !properties.flip_h &&
+      !properties.flip_v
+    ) {
+      return sourceTexture;
+    }
     // 'repeat': Sprite3D's material keeps StandardMaterial3D's texture-repeat
     // default, so an oversized region_rect tiles here where the 2D canvas clamps.
-    const cloned = composeFrameTexture(texResult.value, properties, 'repeat');
+    const cloned = composeFrameTexture(sourceTexture, properties, 'repeat', source.region);
     if (!cloned) return undefined;
     if (properties.flip_h) {
       cloned.offset.x += cloned.repeat.x;
@@ -97,14 +100,17 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       cloned.repeat.y = -cloned.repeat.y;
     }
     return cloned;
-  }, [texResult.value, properties]);
+  }, [sourceTexture, source.region, properties]);
+  // Dispose only clones this component made; a borrowed source is shared.
+  const ownedTexture = displayedTexture !== sourceTexture ? displayedTexture : undefined;
+  useEffect(() => () => ownedTexture?.dispose(), [ownedTexture]);
 
   // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback
   // before the image loads keeps the placeholder at expected scale).
   const { width, height } = useMemo(() => {
-    const px = frameSizePx(texResult.value, properties);
+    const px = frameSizePx(sourceTexture, properties, source.region);
     return { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
-  }, [texResult.value, properties]);
+  }, [sourceTexture, source.region, properties]);
 
   // Modulate RGB and effective opacity. Transparency property is
   // additive: opacity = modulate.a * (1 - transparency). Godot stores modulate
@@ -159,27 +165,11 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       </group>
     );
 
-  // No texture path requested at all: render a stub placeholder so users
-  // see that the sprite node exists in the scene even without a texture.
-  // (Linter would already flag this as `sprite3d-requires-texture`.)
-  if (!texturePath) {
-    return (
-      <>
-        <MissingResourcePlaceholder
-          shape="plane"
-          name={node.name}
-          position={position}
-          rotation={rotation}
-          scale={scale}
-        />
-        {subtree}
-      </>
-    );
-  }
-
-  // Texture failed to load: magenta-quad placeholder. The in-3D path
-  // label was moved to the DOM `<MissingResourcesPanel>`.
-  if (texResult.status === 'unavailable') {
+  // No texture requested, an unresolvable reference, or a failed load: render
+  // a stub placeholder so users see that the sprite node exists in the scene.
+  // (The linter would already flag the missing-texture case as
+  // `sprite3d-requires-texture`.)
+  if (!properties.texture || source.missing) {
     return (
       <>
         <MissingResourcePlaceholder

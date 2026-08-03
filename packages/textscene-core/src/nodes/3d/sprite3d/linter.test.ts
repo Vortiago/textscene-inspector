@@ -126,7 +126,7 @@ pixel_size = 0.01
     it('should detect missing texture (REQUIRED)', () => {
       expectDiagnostic(scene(node('Sprite3D', { billboard: 1 }, { name: 'NoTexture' })), {
         ruleName: 'sprite3d-requires-texture',
-        severity: 'error',
+        severity: 'warning',
         contains: ["requires a 'texture' property"],
       });
     });
@@ -142,7 +142,7 @@ pixel_size = 0.01
         nodeType: 'Sprite3D',
         ruleName: 'valid-sprite3d-resources',
       });
-      expect(diagnostics[0].message).toContain('Texture resource not found');
+      expect(diagnostics[0]!.message).toContain('Texture resource not found');
     });
 
     it('should pass when texture resource exists', () => {

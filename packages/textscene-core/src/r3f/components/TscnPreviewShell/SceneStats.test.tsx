@@ -10,7 +10,7 @@ import { SceneStats } from './SceneStats';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { ResourceEventBus } from '../../../resources/ResourceEventBus';
-import { buildSceneGraph } from '../../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import { TscnParser } from '../../../parser/TscnParser';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene } from '../../../parser/types';
@@ -56,7 +56,7 @@ describe('<SceneStats>', () => {
       internalResources: [],
     };
     const parsed = new TscnParser().parse(root);
-    const sceneGraph = buildSceneGraph({ ...parsed, path: 'res://game.tscn' });
+    const sceneGraph = createSceneGraphFromTscnScene(parsed, 'res://game.tscn');
     const loader = makeLoader({ 'res://player.tscn': playerScene });
 
     render(

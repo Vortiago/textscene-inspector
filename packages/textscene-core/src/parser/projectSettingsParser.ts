@@ -15,6 +15,10 @@
  * name `ProjectSettings.get_setting()` takes. Keys above the first heading
  * (`config_version=5`) have no prefix and keep their bare name.
  *
+ * A foreign-format parser OUTSIDE the resource-slice registry (ADR-0031):
+ * `project.godot` is found at the `res://` root by convention, never named by
+ * a scene, so it claims no type name and no bus slot.
+ *
  * Values stay raw strings, and typed readers are ENUMERATED rather than
  * general: only settings this previewer actually honours get one, so the store
  * cannot quietly become a settings grab-bag.

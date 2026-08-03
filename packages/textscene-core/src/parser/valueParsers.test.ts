@@ -17,6 +17,10 @@ import {
   parseOptionalInt,
   parseOptionalFloat,
   parseNodePathLiteral,
+  settableNonNegative,
+  nonNegativeOr,
+  nonNegativeSizeOr,
+  parseOptionalRect2,
 } from './valueParsers';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -187,5 +191,84 @@ describe('parseNodePathLiteral', () => {
   it('returns null for an absent value, without warning', () => {
     expect(parseNodePathLiteral(undefined)).toBeNull();
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('settableNonNegative / nonNegativeOr', () => {
+  it('reads a non-negative value', () => {
+    expect(settableNonNegative('2.5', 'Shape')).toBe(2.5);
+    expect(nonNegativeOr('2.5', 0.5, 'Shape')).toBe(2.5);
+    expect(settableNonNegative('0', 'Shape')).toBe(0);
+  });
+
+  it('treats an absent value as unset, silently', () => {
+    expect(settableNonNegative(undefined, 'Shape')).toBeUndefined();
+    expect(nonNegativeOr(undefined, 0.5, 'Shape')).toBe(0.5);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('refuses a negative value the way Godot ERR_FAILs it, and warns', () => {
+    // The setter returns before assigning, so the property keeps its default.
+    expect(settableNonNegative('-3', 'Shape')).toBeUndefined();
+    expect(nonNegativeOr('-3', 0.5, 'Shape')).toBe(0.5);
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it('warns then reports unset for an unparseable value (never NaN)', () => {
+    expect(settableNonNegative('nope', 'Shape')).toBeUndefined();
+    expect(nonNegativeOr('nope', 0.5, 'Shape')).toBe(0.5);
+    expect(Number.isNaN(nonNegativeOr('nope', 0.5, 'Shape'))).toBe(false);
+    expect(warnSpy).toHaveBeenCalled();
+  });
+});
+
+describe('nonNegativeSizeOr', () => {
+  const FALLBACK_2D = { x: 20, y: 20 };
+  const FALLBACK_3D = { x: 1, y: 1, z: 1 };
+
+  it('passes a non-negative size through unchanged', () => {
+    expect(nonNegativeSizeOr({ x: 4, y: 6 }, FALLBACK_2D, 'Rect')).toEqual({ x: 4, y: 6 });
+    expect(nonNegativeSizeOr({ x: 0, y: 0, z: 0 }, FALLBACK_3D, 'Box')).toEqual({
+      x: 0,
+      y: 0,
+      z: 0,
+    });
+  });
+
+  it('refuses the WHOLE size when any component is negative, not just that one', () => {
+    // Godot's set_size ERR_FAILs on the call, so no component is stored; a
+    // per-component clamp would invent a size Godot never holds.
+    expect(nonNegativeSizeOr({ x: 4, y: -1 }, FALLBACK_2D, 'Rect')).toEqual(FALLBACK_2D);
+    expect(nonNegativeSizeOr({ x: 1, y: 2, z: -3 }, FALLBACK_3D, 'Box')).toEqual(FALLBACK_3D);
+    expect(warnSpy).toHaveBeenCalled();
+  });
+});
+
+describe('parseOptionalRect2', () => {
+  it('is silent and unset when the property is absent', () => {
+    expect(parseOptionalRect2(undefined, 'Rect')).toBeUndefined();
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('parses the Godot form, scientific notation and negatives included', () => {
+    expect(parseOptionalRect2('Rect2(0, 0, 16, 24)', 'Rect')).toEqual({
+      x: 0,
+      y: 0,
+      width: 16,
+      height: 24,
+    });
+    expect(parseOptionalRect2('Rect2( -8.5, 1e-05, 2E+1, 4 )', 'Rect')).toEqual({
+      x: -8.5,
+      y: 1e-5,
+      width: 20,
+      height: 4,
+    });
+  });
+
+  it('warns and reports unset for every malformed component the loose grammar accepted', () => {
+    for (const bad of ['Rect2(1.2.3, 0, 8, 8)', 'Rect2(--1, 0, 8, 8)', 'Rect2(1e-, 0, 8, 8)', 'Rect2(1, 2, 3)', 'notarect']) {
+      expect(parseOptionalRect2(bad, 'Rect')).toBeUndefined();
+    }
+    expect(warnSpy).toHaveBeenCalledTimes(5);
   });
 });

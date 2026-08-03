@@ -35,7 +35,7 @@ describe('<CSGSphere3D>', () => {
   // construction lives in sphereGeometry.test.ts.
   it('builds a sphere of the requested radius and tessellation', async () => {
     const renderer = await render(makeNode({ radius: 1.25, radialSegments: 48, rings: 24 }));
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     geom.computeBoundingSphere();
     expect(geom.boundingSphere!.radius).toBeCloseTo(1.25, 5);
     // csg_shape.cpp:1329 — two triangles per segment per ring, one fewer at each pole.

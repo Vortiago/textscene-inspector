@@ -23,7 +23,7 @@
  */
 
 import * as THREE from 'three';
-import type { ParsedTresFile } from '../../parser/tresParser';
+import type { ParsedResource } from '../../parser/parsedResource';
 import type { ExtResource, TscnScene } from '../../parser/types';
 import { ResourceEventBus, type ResourceType } from '../ResourceEventBus';
 import { MetadataStore } from '../MetadataStore';
@@ -72,7 +72,7 @@ export interface FakeResourceLoader {
   readonly materials: FakeProcessor<THREE.Material>;
   readonly glbMeshes: FakeProcessor<THREE.Object3D>;
   readonly scenes: FakeProcessor<TscnScene>;
-  readonly resources: FakeProcessor<ParsedTresFile>;
+  readonly resources: FakeProcessor<ParsedResource>;
   readonly arrayMeshes: FakeProcessor<ArrayMeshResource>;
   /** Every ExtResource passed to `loader.register`, in call order — for assertions. */
   readonly registerCalls: ExtResource[];
@@ -144,7 +144,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
   const materials = makeFakeProcessor<THREE.Material>(eventBus, 'material');
   const glbMeshes = makeFakeProcessor<THREE.Object3D>(eventBus, 'glb');
   const scenes = makeFakeProcessor<TscnScene>(eventBus, 'scene');
-  const resources = makeFakeProcessor<ParsedTresFile>(eventBus, 'resource');
+  const resources = makeFakeProcessor<ParsedResource>(eventBus, 'resource');
   const arrayMeshes = makeFakeProcessor<ArrayMeshResource>(eventBus, 'arraymesh');
   const registerCalls: ExtResource[] = [];
 

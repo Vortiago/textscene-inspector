@@ -10,10 +10,9 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { resolveSubResourceRef } from '../../../resources/SubResourceResolver';
-import { resolveCurve } from '../../../resources/curve/parser';
-import type { Curve } from '../../../resources/curve/types';
-import { parseGradient } from '../../../resources/textures/gradienttexture2d/parser';
+import { resolveCurve } from '../../../resources/curves/curve/decode';
+import type { Curve } from '../../../resources/curves/curve/types';
+import { resolveGradient } from '../../../resources/textures/gradienttexture2d/decode';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 import { CPU_PARTICLES_2D_PARAM_COUNT, type ParticleParam } from './types';
 
@@ -34,15 +33,13 @@ export function resolveParticleCurves(
 }
 
 /**
- * The `Gradient` a `color_ramp` / `color_initial_ramp` names, or null. Godot's
- * CPUParticles2D takes a bare `Gradient`, not the `GradientTexture1D` its GPU
- * sibling uses, so this resolves the sub-resource directly.
+ * The `Gradient` a `color_ramp` / `color_initial_ramp` names, or null. Named for
+ * the emitter's slots so the simulation reads in its own vocabulary; the
+ * reference form and the type check belong to the gradient slice.
  */
 export function resolveParticleGradient(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
 ): Gradient | null {
-  const resource = resolveSubResourceRef(ref, internalResources);
-  if (!resource || resource.type !== 'Gradient') return null;
-  return parseGradient(resource.data as Record<string, string>);
+  return resolveGradient(ref, internalResources);
 }

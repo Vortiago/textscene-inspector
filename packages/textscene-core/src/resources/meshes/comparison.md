@@ -65,13 +65,19 @@ Dropped with a `[ArrayMesh]` warning; the mesh's other surfaces still render. Tr
 one geometry, so one NaN would poison the whole mesh's bounding sphere — and with it the
 camera fit, making the scene unframeable rather than merely misdrawn.
 
+A surface whose `primitive` is not `3` (TRIANGLES) is skipped the same way: POINTS, LINES
+and the strips index their vertices under other rules, so reading one as triangles
+fabricates faces that were never authored. A surface that omits `primitive` decodes as
+triangles, the value Godot writes for one.
+
 Dropping happens in the decoder, not the geometry builder, so one list is the source of
 both the draw groups and the per-surface material paths.
 
 A mesh with NO readable surface fails outright, rather than caching an empty geometry as
-a success and rendering invisibly. An `attribute_data` record narrower than the format
-implies costs that surface its UVs only; a wider one is an unmodelled CUSTOM channel and
-reads fine.
+a success and rendering invisibly; the error names how many surfaces were skipped for
+their primitive, so a LINES-only mesh does not read as a byte defect. An
+`attribute_data` record narrower than the format implies costs that surface its UVs only;
+a wider one is an unmodelled CUSTOM channel and reads fine.
 
 ## Known limitations
 

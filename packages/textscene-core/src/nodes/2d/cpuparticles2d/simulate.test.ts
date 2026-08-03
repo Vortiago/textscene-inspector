@@ -11,9 +11,9 @@ import {
 import { CPUParticles2DParam, type CPUParticles2DProperties } from './types';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 import { GradientInterpolationMode } from '../../../resources/textures/gradienttexture2d/types';
-import { CurveTangentMode, type Curve } from '../../../resources/curve/types';
+import { CurveTangentMode, type Curve } from '../../../resources/curves/curve/types';
 
-const NO_CURVES = Array.from({ length: 12 }, () => null);
+const NO_CURVES: Array<Curve | null> = Array.from({ length: 12 }, () => null);
 
 function props(overrides: Record<string, string> = {}): CPUParticles2DProperties {
   return parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), {

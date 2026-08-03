@@ -1,21 +1,9 @@
-/**
- * BoxMesh-specific type definitions
- */
+/** BoxMesh decoded data. */
 
-/**
- * Represents a 3D vector (position, scale, size, etc.)
- */
-export interface Vector3 {
-  x: number;
-  y: number;
-  z: number;
-}
+import type { Vector3 } from '../../../parser/vectors';
 
-/**
- * BoxMesh resource properties
- */
 export interface BoxMeshProperties {
-  /** Box size in Godot units (default: 1, 1, 1) */
+  /** Box size. `primitive_meshes.h:164`: `Vector3 size = Vector3(1, 1, 1)`. */
   size: Vector3;
   /** Extra edge loops per axis (Godot default 0 → 1 face segment). */
   subdivideWidth: number;

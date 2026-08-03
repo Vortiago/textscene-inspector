@@ -1,0 +1,374 @@
+/**
+ * The ONE StandardMaterial3D decode (ADR-0031).
+ *
+ * Raw Godot property strings in, `StandardMaterial3DData` out. Both arrival
+ * paths call exactly this: an inline `[sub_resource type="StandardMaterial3D"]`
+ * read straight off the parsed scene, and an external `.tres` read as a
+ * `ParsedResource` `[resource]` body. They used to be two implementations that
+ * disagreed — the inline one honoured Godot's rule that albedo alpha alone does
+ * not make a surface transparent while the `.tres` one forced transparency, and
+ * fifteen features existed on one side only.
+ *
+ * Pure and renderer-free: no `three`, no React, no I/O. Texture references stop
+ * at their raw string, because resolving one needs the tables of whichever file
+ * the material arrived in, which is knowledge this function does not have.
+ *
+ * Every value goes through the shared Value decoders (`parser/valueParsers`,
+ * `parser/vectors`, `utils/colorParser`) rather than a private scanner.
+ */
+
+import { parseColorOrUndefined } from '../../../utils/colorParser';
+import { sRGBToLinearRGB } from '../../../utils/colorSpace';
+import { boolOr, enumOr, floatOr, intOr } from '../../../parser/valueParsers';
+import { parseVector3 } from '../../../parser/vectors';
+import { emissionScalars } from './emission';
+import {
+  BlendMode,
+  CullMode,
+  DepthDrawMode,
+  TEXTURE_SLOTS,
+  Transparency,
+  type MaterialVec2,
+  type StandardMaterial3DData,
+  type TextureSlot,
+  type TextureSlotReferences,
+} from './types';
+
+const CONTEXT = 'StandardMaterial3D';
+
+/**
+ * `BaseMaterial3D::texture_filter` default, `TEXTURE_FILTER_LINEAR_WITH_MIPMAPS`
+ * (= 3). Restated here rather than imported from
+ * `resources/textures/godotTextureFilter.ts`, which value-imports `three` and
+ * would drag a renderer into this module's THREE-free closure.
+ */
+const TEXTURE_FILTER_DEFAULT = 3;
+
+const TRANSPARENCY_MODES = [
+  Transparency.DISABLED,
+  Transparency.ALPHA,
+  Transparency.ALPHA_SCISSOR,
+  Transparency.ALPHA_HASH,
+  Transparency.ALPHA_DEPTH_PRE_PASS,
+] as const;
+
+const BLEND_MODES = [
+  BlendMode.MIX,
+  BlendMode.ADD,
+  BlendMode.SUB,
+  BlendMode.MUL,
+  BlendMode.PREMULT_ALPHA,
+] as const;
+
+const CULL_MODES = [CullMode.BACK, CullMode.FRONT, CullMode.DISABLED] as const;
+
+const DEPTH_DRAW_MODES = [
+  DepthDrawMode.OPAQUE_ONLY,
+  DepthDrawMode.ALWAYS,
+  DepthDrawMode.DISABLED,
+] as const;
+
+/** Godot `BaseMaterial3D.DistanceFadeMode`; only PIXEL_ALPHA writes ALPHA. */
+const DISTANCE_FADE_PIXEL_ALPHA = 1;
+
+/**
+ * Texture slots and the feature flag Godot gates each one behind. An ungated
+ * slot (albedo, metallic, roughness) is applied whenever it is authored; a gated
+ * one only when its `FEATURE_*` flag is on, exactly as `_update_shader` emits
+ * the sampler only inside the corresponding `if (features[…])` branch.
+ */
+const SLOT_GATES: Readonly<Record<TextureSlot, string | null>> = {
+  albedo_texture: null,
+  normal_texture: 'normal_enabled',
+  roughness_texture: null,
+  metallic_texture: null,
+  emission_texture: 'emission_enabled',
+  ao_texture: 'ao_enabled',
+  heightmap_texture: 'heightmap_enabled',
+  anisotropy_flowmap: 'anisotropy_enabled',
+};
+
+export function decodeStandardMaterial3D(
+  properties: Record<string, string>
+): StandardMaterial3DData {
+  const albedo = parseColorOrUndefined(properties['albedo_color']);
+  // Godot encodes colours in sRGB and uploads albedo through a `source_color`
+  // uniform, so the conversion happens BEFORE the shader sees it. three's
+  // `color` prop takes LINEAR values, so converting here is what stops mid-tone
+  // reds from rendering as bright pink (the renderer's sRGB output transform
+  // would otherwise re-apply the gamma curve to already-sRGB values).
+  //
+  // NOT clamped: `albedo_color` carries no range hint, `Color::srgb_to_linear`
+  // extrapolates past 1, and the corpus authors HDR albedos on purpose (a
+  // tracer bullet at `Color(2.33575, 3.29442, 3.29442, 1)`) to cross the glow
+  // bright-pass.
+  const albedoLinear = albedo ? sRGBToLinearRGB(albedo.r, albedo.g, albedo.b) : null;
+
+  const emissionEnabled = boolOr(properties['emission_enabled'], false, CONTEXT);
+  const emission = emissionScalars(
+    parseColorOrUndefined(properties['emission']),
+    floatOr(properties['emission_energy_multiplier'], 1, CONTEXT),
+    emissionEnabled
+  );
+
+  // Godot's flag-gated features. Each scalar defaults to the value the engine
+  // constructor sets — which is what an authored-but-omitted property means,
+  // since Godot never serialises a default — and reads as its three OFF-state
+  // (0) when the flag is off, so a coat/rim/anisotropy the author never enabled
+  // cannot leak onto the surface. Refraction is read first: it rewrites the
+  // depth-draw mode and the alpha, so the pass decision below depends on it.
+  const clearcoatEnabled = boolOr(properties['clearcoat_enabled'], false, CONTEXT);
+  const rimEnabled = boolOr(properties['rim_enabled'], false, CONTEXT);
+  const heightmapEnabled = boolOr(properties['heightmap_enabled'], false, CONTEXT);
+  const anisotropyEnabled = boolOr(properties['anisotropy_enabled'], false, CONTEXT);
+  const refractionEnabled = boolOr(properties['refraction_enabled'], false, CONTEXT);
+
+  // Godot Transparency: 0 DISABLED, 1 ALPHA, 2 ALPHA_SCISSOR, 3 ALPHA_HASH,
+  // 4 DEPTH_PRE_PASS.
+  //
+  // The load-bearing rule: `_update_shader` emits `ALPHA *= albedo.a *
+  // albedo_tex.a` ONLY when `transparency != TRANSPARENCY_DISABLED` (or
+  // shadow-to-opacity / pixel-alpha distance fade / proximity fade is on), so
+  // albedo alpha < 1 with transparency DISABLED renders fully OPAQUE in Godot.
+  // Forcing transparency from the alpha channel is the bug this decode retires.
+  const transparency = enumOr(
+    properties['transparency'],
+    Transparency.DISABLED,
+    TRANSPARENCY_MODES,
+    `${CONTEXT}.transparency`
+  );
+  const blendMode = enumOr(
+    properties['blend_mode'],
+    BlendMode.MIX,
+    BLEND_MODES,
+    `${CONTEXT}.blend_mode`
+  );
+
+  // Which of Godot's two render lists this surface joins, and whether its
+  // fragments reach the depth buffer. `transparency` is only ONE of the inputs —
+  // see `rendersInAlphaPass`.
+  const depthTest = !boolOr(properties['no_depth_test'], false, CONTEXT);
+  // `_update_shader`: `DepthDrawMode ddm = depth_draw_mode; if
+  // (features[FEATURE_REFRACTION]) { ddm = DEPTH_DRAW_ALWAYS; }` — a refractive
+  // surface draws depth wherever it lands.
+  const depthDrawMode = refractionEnabled
+    ? DepthDrawMode.ALWAYS
+    : enumOr(
+        properties['depth_draw_mode'],
+        DepthDrawMode.OPAQUE_ONLY,
+        DEPTH_DRAW_MODES,
+        `${CONTEXT}.depth_draw_mode`
+      );
+  const alphaPass = rendersInAlphaPass(properties, {
+    transparency,
+    blendMode,
+    refractionEnabled,
+    depthDrawMode,
+    depthTest,
+  });
+  // PARITY DEVIATION, deliberate: Godot classifies ALPHA_HASH as an alpha CLIP
+  // and keeps it in the opaque pass, dithering a discard so the surface averages
+  // to its alpha. three has no stochastic clip, so a literal port would render it
+  // FULLY OPAQUE — further from Godot's appearance than alpha blending is. The
+  // depth write follows the opaque-pass classification, which is exact.
+  const transparent = alphaPass || transparency === Transparency.ALPHA_HASH;
+
+  const normalScale = floatOr(properties['normal_scale'], 1, CONTEXT);
+
+  // `anisotropy` is −1..1 where the SIGN is tangent DIRECTION; three splits that
+  // into a 0..1 magnitude plus a rotation, so a negative value keeps its
+  // strength and turns the highlight 90° instead of vanishing.
+  const anisotropyRaw = floatOr(properties['anisotropy'], 0, CONTEXT);
+
+  return {
+    albedo: albedoLinear ?? [1, 1, 1],
+    // FEATURE_REFRACTION replaces the `ALPHA *= albedo.a * albedo_tex.a` line
+    // with a flat `ALPHA = 1.0` ("Force transparency on the material (required
+    // for refraction)"), so a refractive surface is fully opaque however low its
+    // authored alpha — `glass.tres` does not fade in Godot.
+    alpha: refractionEnabled ? 1 : albedo ? clamp01(albedo.a) : 1,
+    metallic: clamp01(floatOr(properties['metallic'], 0, CONTEXT)),
+    roughness: clamp01(floatOr(properties['roughness'], 1, CONTEXT)),
+    emission,
+    emissionOperator: intOr(properties['emission_operator'], 0, CONTEXT),
+    textureFilter: intOr(properties['texture_filter'], TEXTURE_FILTER_DEFAULT, CONTEXT),
+    textureRepeat: boolOr(properties['texture_repeat'], true, CONTEXT),
+    uv1Scale: vec2FromVector3(properties['uv1_scale'], { x: 1, y: 1 }),
+    uv1Offset: vec2FromVector3(properties['uv1_offset'], { x: 0, y: 0 }),
+    transparency,
+    transparent,
+    // `alpha_scissor_threshold` hint is "0,1,0.001"; 0 means "no cutout" to
+    // three, which is also what every non-scissor mode wants.
+    alphaTest:
+      transparency === Transparency.ALPHA_SCISSOR
+        ? clamp01(floatOr(properties['alpha_scissor_threshold'], 0.5, CONTEXT))
+        : 0,
+    depthDrawMode,
+    depthWrite: godotDepthWrite(alphaPass, transparency, depthDrawMode, depthTest),
+    depthTest,
+    blendMode,
+    cullMode: enumOr(
+      properties['cull_mode'],
+      CullMode.BACK,
+      CULL_MODES,
+      `${CONTEXT}.cull_mode`
+    ),
+    cullModeExplicit: properties['cull_mode'] !== undefined,
+    shadingMode: properties['shading_mode'] === '0' ? 'unshaded' : 'per_pixel',
+    useVertexColors: boolOr(properties['vertex_color_use_as_albedo'], false, CONTEXT),
+    aoEnabled: boolOr(properties['ao_enabled'], false, CONTEXT),
+    normalEnabled: boolOr(properties['normal_enabled'], false, CONTEXT),
+    normalScale: { x: normalScale, y: normalScale },
+    triplanar:
+      boolOr(properties['uv1_triplanar'], false, CONTEXT) ||
+      boolOr(properties['uv1_world_triplanar'], false, CONTEXT),
+    clearcoat: clearcoatEnabled ? clamp01(floatOr(properties['clearcoat'], 1, CONTEXT)) : 0,
+    clearcoatRoughness: clearcoatEnabled
+      ? clamp01(floatOr(properties['clearcoat_roughness'], 0.5, CONTEXT))
+      : 0,
+    rim: rimEnabled ? clamp01(floatOr(properties['rim'], 1, CONTEXT)) : 0,
+    rimTint: rimEnabled ? clamp01(floatOr(properties['rim_tint'], 0.5, CONTEXT)) : 0,
+    heightmapScale: heightmapEnabled ? floatOr(properties['heightmap_scale'], 5, CONTEXT) : 0,
+    billboardMode: intOr(properties['billboard_mode'], 0, CONTEXT),
+    billboardKeepScale: boolOr(properties['billboard_keep_scale'], false, CONTEXT),
+    anisotropy: anisotropyEnabled ? clamp01(Math.abs(anisotropyRaw)) : 0,
+    anisotropyRotation: anisotropyEnabled && anisotropyRaw < 0 ? Math.PI / 2 : 0,
+    // Godot refraction is a screen-space distortion; three models the same
+    // "see the background through this surface" effect volumetrically, so
+    // `refraction_scale` drives `thickness` and cannot go negative there.
+    transmission: refractionEnabled ? 1 : 0,
+    refractionThickness: refractionEnabled
+      ? Math.max(0, floatOr(properties['refraction_scale'], 0.05, CONTEXT))
+      : 0,
+    textureSlots: decodeTextureSlots(properties),
+  };
+}
+
+interface PassInputs {
+  transparency: Transparency;
+  blendMode: BlendMode;
+  refractionEnabled: boolean;
+  depthDrawMode: DepthDrawMode;
+  depthTest: boolean;
+}
+
+/**
+ * Godot's `ShaderData::uses_alpha_pass()`
+ * (`servers/rendering/renderer_rd/forward_clustered/scene_shader_forward_clustered.h`),
+ * transcribed with its own variable names so the two can be diffed line by line:
+ *
+ *     has_read_screen_alpha = uses_screen_texture || uses_depth_texture || uses_normal_texture
+ *     has_base_alpha = (uses_alpha && (!uses_alpha_clip || uses_alpha_antialiasing)) || has_read_screen_alpha
+ *     has_alpha = has_base_alpha || uses_blend_alpha
+ *     return has_alpha || has_read_screen_alpha || no_depth_draw || no_depth_test
+ *
+ * The shader flags come from what `BaseMaterial3D::_update_shader` actually
+ * emits, which is why `transparency` alone never decided this:
+ *
+ *  - `uses_alpha` — the shader writes ALPHA. Emitted for a transparency mode, for
+ *    refraction (`ALPHA = 1.0`), and for `shadow_to_opacity` / proximity fade /
+ *    PIXEL_ALPHA distance fade, which share the one `else if`.
+ *  - `uses_alpha_clip` — the shader writes ALPHA_SCISSOR_THRESHOLD or
+ *    ALPHA_HASH_SCALE, i.e. the two CUTOUT modes. A cutout discards instead of
+ *    blending, so it stays OPAQUE — which is why the scissor mode never joined
+ *    the alpha pass and must not start now.
+ *  - `uses_alpha_antialiasing` — `alpha_antialiasing_mode != OFF`, which Godot
+ *    only honours alongside a cutout mode. It re-admits the cutout to the alpha
+ *    pass (alpha-to-coverage).
+ *  - `uses_blend_alpha` — `blend_mode_uses_blend_alpha`: true for ADD, SUB, MUL
+ *    and PREMULT_ALPHA. THIS is the rule that puts an additive material in the
+ *    alpha pass whatever its `transparency` says.
+ *  - `has_read_screen_alpha` — refraction samples `screen_texture`, and
+ *    refraction OR proximity fade samples `depth_texture`.
+ */
+function rendersInAlphaPass(properties: Record<string, string>, inputs: PassInputs): boolean {
+  const { transparency, blendMode, refractionEnabled, depthDrawMode, depthTest } = inputs;
+
+  const proximityFade = boolOr(properties['proximity_fade_enabled'], false, CONTEXT);
+  const distanceFadeMode = intOr(properties['distance_fade_mode'], 0, CONTEXT);
+  const shadowToOpacity = boolOr(properties['shadow_to_opacity'], false, CONTEXT);
+  const alphaAntialiasing = intOr(properties['alpha_antialiasing_mode'], 0, CONTEXT) !== 0;
+
+  const usesAlpha =
+    refractionEnabled ||
+    transparency !== Transparency.DISABLED ||
+    shadowToOpacity ||
+    distanceFadeMode === DISTANCE_FADE_PIXEL_ALPHA ||
+    proximityFade;
+  const usesAlphaClip =
+    transparency === Transparency.ALPHA_SCISSOR || transparency === Transparency.ALPHA_HASH;
+
+  const hasReadScreenAlpha = refractionEnabled || proximityFade;
+  const hasBaseAlpha =
+    (usesAlpha && (!usesAlphaClip || alphaAntialiasing)) || hasReadScreenAlpha;
+  const hasAlpha = hasBaseAlpha || blendMode !== BlendMode.MIX;
+
+  return (
+    hasAlpha ||
+    hasReadScreenAlpha ||
+    depthDrawMode === DepthDrawMode.DISABLED ||
+    !depthTest
+  );
+}
+
+/**
+ * The colour pass's `enable_depth_write`
+ * (`scene_shader_forward_clustered.cpp` `_create_pipeline`): the depth-draw mode
+ * decides it, and then the TRANSPARENT pipeline overrides OPAQUE_ONLY to false —
+ * "alpha does not draw depth". A disabled depth TEST leaves the whole depth
+ * state at its default, which writes nothing.
+ *
+ * The one liberty: TRANSPARENCY_ALPHA_DEPTH_PRE_PASS reports true. Its colour
+ * pipeline writes no depth either, but `uses_depth_in_alpha_pass()` puts the
+ * surface in the depth PREPASS, so its depth is in the buffer by the time
+ * anything reads it. A single-pass renderer spells that as writing depth.
+ */
+function godotDepthWrite(
+  alphaPass: boolean,
+  transparency: Transparency,
+  depthDrawMode: DepthDrawMode,
+  depthTest: boolean
+): boolean {
+  if (!depthTest || depthDrawMode === DepthDrawMode.DISABLED) return false;
+  if (!alphaPass) return true;
+  if (transparency === Transparency.ALPHA_DEPTH_PRE_PASS) return true;
+  return depthDrawMode !== DepthDrawMode.OPAQUE_ONLY;
+}
+
+/**
+ * The authored texture references, minus every slot whose feature flag is off.
+ * Gating HERE rather than at each arrival path is what fixes the old split:
+ * `normal_texture` was gated only on the `.tres` path and `ao_texture` only on
+ * the inline one, so the same material grew or lost a map depending on how it
+ * was referenced.
+ */
+function decodeTextureSlots(properties: Record<string, string>): TextureSlotReferences {
+  const slots: Partial<Record<TextureSlot, string>> = {};
+  for (const slot of TEXTURE_SLOTS) {
+    const reference = properties[slot];
+    if (reference === undefined) continue;
+    const gate = SLOT_GATES[slot];
+    if (gate !== null && !boolOr(properties[gate], false, CONTEXT)) continue;
+    slots[slot] = reference;
+  }
+  return slots;
+}
+
+/**
+ * Godot writes UV transforms as `Vector3`; only x and y reach a 2D UV. Wraps the
+ * canonical (throwing) `parseVector3` scanner so the float grammar — scientific
+ * notation included — is the shared one.
+ */
+function vec2FromVector3(raw: string | undefined, fallback: MaterialVec2): MaterialVec2 {
+  if (!raw) return fallback;
+  try {
+    const { x, y } = parseVector3(raw);
+    return { x, y };
+  } catch {
+    return fallback;
+  }
+}
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}

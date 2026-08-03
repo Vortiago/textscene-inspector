@@ -49,8 +49,8 @@ describe('<MeshInstance3D>', () => {
     it('renders a magenta wireframe placeholder when no mesh property is set', async () => {
       const renderer = await render(makeNode());
       const mesh = renderer.scene.findByType('Mesh');
-      expect(mesh.instance.geometry.type).toBe('BoxGeometry');
-      const material = mesh.instance.material as { color: { getHex(): number }; wireframe: boolean };
+      expect((mesh.instance as THREE.Mesh).geometry.type).toBe('BoxGeometry');
+      const material = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
       expect(material.wireframe).toBe(true);
       expect(material.color.getHex()).toBe(0xff00ff);
     });
@@ -59,8 +59,8 @@ describe('<MeshInstance3D>', () => {
       const node = makeNode({ mesh: 'SubResource("MissingId")' });
       const renderer = await render(node, []);
       const mesh = renderer.scene.findByType('Mesh');
-      expect(mesh.instance.geometry.type).toBe('BoxGeometry');
-      const material = mesh.instance.material as { wireframe: boolean };
+      expect((mesh.instance as THREE.Mesh).geometry.type).toBe('BoxGeometry');
+      const material = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
       expect(material.wireframe).toBe(true);
     });
 
@@ -68,7 +68,7 @@ describe('<MeshInstance3D>', () => {
       const node = makeNode({ mesh: 'ExtResource("1_glb")' });
       const renderer = await render(node, []);
       const mesh = renderer.scene.findByType('Mesh');
-      const material = mesh.instance.material as { wireframe: boolean };
+      const material = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
       expect(material.wireframe).toBe(true);
     });
   });
@@ -79,8 +79,9 @@ describe('<MeshInstance3D>', () => {
       const resource = meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(2, 3, 4)' });
       const renderer = await render(node, [resource]);
       const mesh = renderer.scene.findByType('Mesh');
-      expect(mesh.instance.geometry.type).toBe('BoxGeometry');
-      const params = (mesh.instance.geometry as unknown as { parameters: { width: number; height: number; depth: number } }).parameters;
+      expect((mesh.instance as THREE.Mesh).geometry.type).toBe('BoxGeometry');
+      const params = ((mesh.instance as THREE.Mesh).geometry as THREE.BoxGeometry)
+        .parameters;
       expect(params.width).toBe(2);
       expect(params.height).toBe(3);
       expect(params.depth).toBe(4);
@@ -90,7 +91,7 @@ describe('<MeshInstance3D>', () => {
       const node = makeNode({ mesh: 'SubResource("Sphere_1")' });
       const resource = meshSubResource('SphereMesh', 'Sphere_1', { radius: '1.5' });
       const renderer = await render(node, [resource]);
-      const geometry = renderer.scene.findByType('Mesh').instance.geometry as unknown as {
+      const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
         type: string;
         parameters: { radius: number };
       };
@@ -102,7 +103,7 @@ describe('<MeshInstance3D>', () => {
       const node = makeNode({ mesh: 'SubResource("Plane_1")' });
       const resource = meshSubResource('PlaneMesh', 'Plane_1', { size: 'Vector2(4, 6)' });
       const renderer = await render(node, [resource]);
-      const geometry = renderer.scene.findByType('Mesh').instance.geometry as unknown as {
+      const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
         type: string;
         parameters: { width: number; height: number };
       };
@@ -119,7 +120,7 @@ describe('<MeshInstance3D>', () => {
         height: '3.0',
       });
       const renderer = await render(node, [resource]);
-      const geometry = renderer.scene.findByType('Mesh').instance.geometry as unknown as {
+      const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
         type: string;
         parameters: { radiusTop: number; radiusBottom: number; height: number };
       };
@@ -136,7 +137,7 @@ describe('<MeshInstance3D>', () => {
         height: '2.0',
       });
       const renderer = await render(node, [resource]);
-      const geometry = renderer.scene.findByType('Mesh').instance.geometry as unknown as {
+      const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
         type: string;
         parameters: { radius: number; height: number };
       };
@@ -153,7 +154,7 @@ describe('<MeshInstance3D>', () => {
         outer_radius: '1.5',
       });
       const renderer = await render(node, [resource]);
-      const geometry = renderer.scene.findByType('Mesh').instance.geometry as unknown as {
+      const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
         type: string;
         parameters: { radius: number; tube: number };
       };
@@ -163,16 +164,14 @@ describe('<MeshInstance3D>', () => {
       expect(geometry.parameters.tube).toBe(0.5);
     });
 
-    it('renders CylinderGeometry with 3 radial segments for PrismMesh', async () => {
+    it('renders Godot\'s triangular prism for PrismMesh', async () => {
       const node = makeNode({ mesh: 'SubResource("Pri_1")' });
       const resource = meshSubResource('PrismMesh', 'Pri_1', { size: 'Vector3(2, 2, 2)' });
       const renderer = await render(node, [resource]);
-      const geometry = renderer.scene.findByType('Mesh').instance.geometry as unknown as {
-        type: string;
-        parameters: { radialSegments: number };
-      };
-      expect(geometry.type).toBe('CylinderGeometry');
-      expect(geometry.parameters.radialSegments).toBe(3);
+      const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
+      // 8 triangles: two triangular caps, two slanted sides, one base.
+      expect(geometry.getIndex()!.count).toBe(24);
+      expect(geometry.getAttribute('position').count).toBe(20);
     });
   });
 
@@ -191,12 +190,8 @@ describe('<MeshInstance3D>', () => {
         }),
       ];
       const renderer = await render(node, resources);
-      const material = renderer.scene.findByType('Mesh').instance.material as {
-        color: { r: number; g: number; b: number };
-        metalness: number;
-        roughness: number;
-        transparent: boolean;
-      };
+      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+        .material as THREE.MeshStandardMaterial;
       expect(material.color.r).toBe(1);
       expect(material.color.g).toBe(0);
       expect(material.color.b).toBe(0);
@@ -219,7 +214,7 @@ describe('<MeshInstance3D>', () => {
         }),
       ];
       const renderer = await render(node, resources);
-      const material = renderer.scene.findByType('Mesh').instance.material as {
+      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as {
         opacity: number;
         transparent: boolean;
       };
@@ -233,7 +228,7 @@ describe('<MeshInstance3D>', () => {
         meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
       ];
       const renderer = await render(node, resources);
-      const material = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
       // Godot binds a hardcoded shader for an unmaterialed mesh —
       // `ALBEDO = vec3(0.6); ROUGHNESS = 0.8; METALLIC = 0.2;` — rather than
       // instantiating a StandardMaterial3D, so this is mid-grey and slightly
@@ -261,9 +256,8 @@ describe('<MeshInstance3D>', () => {
         meshSubResource('StandardMaterial3D', 'Surf_0', { albedo_color: 'Color(0, 1, 0, 1)' }),
       ];
       const renderer = await render(node, resources);
-      const material = renderer.scene.findByType('Mesh').instance.material as {
-        color: { r: number; g: number; b: number };
-      };
+      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+        .material as THREE.MeshStandardMaterial;
       expect(material.color.r).toBe(0);
       expect(material.color.g).toBe(1);
     });

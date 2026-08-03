@@ -17,7 +17,7 @@ import {
   parseCurve2DPoints,
   tessellateCurve2D,
   type Curve2DSampler,
-} from '../../../resources/shapes/curve2d';
+} from '../../../resources/curves/curve2d';
 
 // Straight horizontal curve (0,0) → (100,0), length 100.
 const STRAIGHT: Curve2DSampler = tessellateCurve2D(

@@ -156,7 +156,7 @@ describe('AudioStreamPlayer2D Linter', () => {
       it('should error when stream is missing', () => {
         expectDiagnostic(bare({ volume_db: 0.0, pitch_scale: 1.0 }), {
           ruleName: 'audiostreamplayer2d-missing-stream',
-          severity: 'error',
+          severity: 'warning',
           nodeType: 'AudioStreamPlayer2D',
           contains: ['requires', 'audio'],
         });

@@ -42,7 +42,7 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
   // ERROR: stream is missing (REQUIRED - no sound without this)
   if (rawProps.stream === undefined) {
     diagnostics.push({
-      severity: 'error',
+      severity: 'warning',
       message: `AudioStreamPlayer3D requires 'stream' property to function. This defines what audio to play.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -148,7 +148,7 @@ const audioStreamPlayer3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer3D'],
     emits: [
-      { ruleName: 'audiostreamplayer3d-missing-stream', severity: 'error' },
+      { ruleName: 'audiostreamplayer3d-missing-stream', severity: 'warning' },
       { ruleName: 'audiostreamplayer3d-missing-stream-resource', severity: 'error' },
       { ruleName: 'audiostreamplayer3d-invalid-unit-size', severity: 'error' },
       { ruleName: 'audiostreamplayer3d-invalid-max-distance', severity: 'error' },

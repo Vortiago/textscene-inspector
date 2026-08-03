@@ -53,10 +53,8 @@ async function render(properties: Partial<MeshInstance3DProperties>) {
 }
 
 function meshOf(renderer: Awaited<ReturnType<typeof render>>) {
-  return renderer.scene.findByType('Mesh').instance as unknown as THREE.Mesh & {
-    visible: boolean;
-    castShadow: boolean;
-  };
+  // Object3D already declares `visible` / `castShadow`.
+  return renderer.scene.findByType('Mesh').instance as THREE.Mesh;
 }
 
 /**
@@ -67,7 +65,7 @@ function meshOf(renderer: Awaited<ReturnType<typeof render>>) {
 function childIsRendered(renderer: Awaited<ReturnType<typeof render>>) {
   const child = renderer.scene
     .findAllByType('Group')
-    .map((g) => g.instance as unknown as THREE.Object3D)
+    .map((g) => g.instance as THREE.Object3D)
     .find((g) => g.name === '__child__');
   if (!child) return false;
   for (let o: THREE.Object3D | null = child; o; o = o.parent) {

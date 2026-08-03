@@ -34,8 +34,10 @@ export interface ToneMappingSettings {
   mode: number;
   /** Godot `tonemap_exposure`, default 1.0. */
   exposure?: number;
-  /** Godot `tonemap_white`, default 1.0 — the value the curve maps to 1.0. */
+  /** Godot's `env->white` — the value the curve maps to 1.0. Default 1.0. */
   white?: number;
+  /** Godot `tonemap_agx_contrast`, default 1.25. Read only under AGX. */
+  agxContrast?: number;
 }
 
 /** The chunk name three expands into every material's fragment shader. */
@@ -75,7 +77,10 @@ export function applyToneMapping(
     // The white normalisation is a constant per environment, so it is baked
     // into the chunk rather than plumbed through as a uniform every material
     // would have to declare.
-    THREE.ShaderChunk[TONEMAP_CHUNK] = toneMappingShaderChunk(settings.mode).replace(
+    THREE.ShaderChunk[TONEMAP_CHUNK] = toneMappingShaderChunk(
+      settings.mode,
+      settings.agxContrast
+    ).replace(
       'uniform float godotToneMapWhite;',
       `const float godotToneMapWhite = ${glslFloat(
         toneMappingWhiteParam(settings.mode, settings.white ?? 1)

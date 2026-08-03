@@ -7,10 +7,10 @@
  */
 
 import { useMemo } from 'react';
-import type { ParsedTresFile } from '../parser/tresParser';
+import type { ParsedResource } from '../parser/parsedResource';
 import { resolveExtResourcePath } from '../resources/SubResourceResolver';
-import { meshLibraryFromTres } from '../resources/meshlibrary/resolveMeshLibrary';
-import type { MeshLibraryModel } from '../resources/meshlibrary/meshLibraryModel';
+import { meshLibraryFromTres } from '../resources/meshlibrary/decode';
+import type { MeshLibraryModel } from '../resources/meshlibrary/types';
 import { useResource } from '../resources/useResource';
 import { useSceneResources } from './SceneResourcesContext';
 
@@ -27,7 +27,7 @@ export function useMeshLibraryModel(meshLibraryRef: string | undefined): MeshLib
     : null;
   // Only text resources parse; a binary `.res` MeshLibrary would park forever.
   const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
-  const tresResult = useResource<ParsedTresFile>(tresPath ?? '', 'Resource');
+  const tresResult = useResource<ParsedResource>(tresPath ?? '', 'Resource');
 
   return useMemo((): MeshLibraryModelResult => {
     if (!meshLibraryRef || !tresPath) return { model: null, status: 'unavailable' };

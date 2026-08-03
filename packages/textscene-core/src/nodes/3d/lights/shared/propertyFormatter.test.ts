@@ -261,10 +261,10 @@ describe('Base Light Property Formatter', () => {
       const section = formatShadowSectionWithNormalBias(properties);
 
       expect(section.items).toHaveLength(4);
-      expect(section.items[0].label).toBe('Enabled');
-      expect(section.items[1].label).toBe('Bias');
-      expect(section.items[2].label).toBe('Normal Bias');
-      expect(section.items[3].label).toBe('Blur');
+      expect(section.items[0]!.label).toBe('Enabled');
+      expect(section.items[1]!.label).toBe('Bias');
+      expect(section.items[2]!.label).toBe('Normal Bias');
+      expect(section.items[3]!.label).toBe('Blur');
     });
 
     it('should not include normal bias when undefined', () => {

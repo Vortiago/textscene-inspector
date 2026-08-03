@@ -49,6 +49,11 @@ validatorRegistry.registerAll('Environment', {
     4: 'AGX',
   }),
   tonemap_white: v.nonNegativeFloat('tonemap_white'),
+  // AgX's own white reference — a separate property Godot reads INSTEAD of
+  // `tonemap_white` under TONE_MAPPER_AGX, so a typo in it is invisible in the
+  // other one.
+  tonemap_agx_white: v.nonNegativeFloat('tonemap_agx_white'),
+  tonemap_agx_contrast: v.nonNegativeFloat('tonemap_agx_contrast'),
   tonemap_exposure: v.nonNegativeFloat('tonemap_exposure'),
 
   volumetric_fog_enabled: v.boolean('volumetric_fog_enabled'),

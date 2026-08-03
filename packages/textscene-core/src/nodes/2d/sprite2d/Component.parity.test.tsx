@@ -11,7 +11,8 @@ import { Sprite2D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import type { TscnNode } from '../../../parser/types';
+import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import { isMesh, isBasicMaterial } from '../../../r3f/testing/threeNarrow';
 
 const heading = { type: 'node', attributes: { type: 'Sprite2D', name: 'S' } };
 const TEX = 'res://sprite.png';
@@ -29,7 +30,7 @@ function srgbToLinear(c: number): number {
   return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
 
-async function render(rootNode: TscnNode) {
+async function render(rootNode: TscnNode, internalResources: TscnInternalResource[] = []) {
   const fake = createFakeResourceLoader();
   const tex = new THREE.Texture();
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 100, height: 50 };
@@ -40,11 +41,21 @@ async function render(rootNode: TscnNode) {
   );
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
+      <SceneResourcesProvider internalResources={internalResources} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
         {renderNode(rootNode)}
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+}
+
+/** The basic material a drawn mesh carries. */
+function basicMaterial(instance: THREE.Object3D): THREE.MeshBasicMaterial {
+  if (!isMesh(instance)) throw new Error('scene-graph instance is not a Mesh');
+  const material = instance.material;
+  if (Array.isArray(material) || !isBasicMaterial(material)) {
+    throw new Error('mesh material is not a MeshBasicMaterial');
+  }
+  return material;
 }
 
 describe('Sprite2D parser parity', () => {
@@ -61,13 +72,13 @@ describe('Sprite2D parser parity', () => {
 describe('Sprite2D render parity', () => {
   it('modulate is converted sRGB→linear before reaching the material', async () => {
     const r = await render(node({ modulate: 'Color(0.5, 0.5, 0.5, 1)' }));
-    const color = (r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial).color;
+    const color = basicMaterial(r.scene.findByType('Mesh').instance).color;
     expect(color.r).toBeCloseTo(srgbToLinear(0.5), 4); // ≈ 0.214, not 0.5
   });
 
   it('self_modulate multiplies onto own pixels', async () => {
     const r = await render(node({ self_modulate: 'Color(0, 0, 0, 1)' }));
-    const color = (r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial).color;
+    const color = basicMaterial(r.scene.findByType('Mesh').instance).color;
     expect(color.r).toBeCloseTo(0, 5);
   });
 
@@ -76,10 +87,42 @@ describe('Sprite2D render parity', () => {
     const parent = node({ self_modulate: 'Color(0, 0, 0, 1)' }, [child]);
     const r = await render(parent);
     const meshes = r.scene.findAllByType('Mesh');
-    const parentColor = (meshes[0]!.instance.material as THREE.MeshBasicMaterial).color;
-    const childColor = (meshes[1]!.instance.material as THREE.MeshBasicMaterial).color;
+    const parentColor = basicMaterial(meshes[0]!.instance).color;
+    const childColor = basicMaterial(meshes[1]!.instance).color;
     expect(parentColor.r).toBeCloseTo(0, 5); // parent's own pixels darkened
     expect(childColor.r).toBeCloseTo(1, 5); // child unaffected by parent self_modulate
+  });
+
+  it('renders a procedural SubResource texture instead of the placeholder', async () => {
+    // A GradientTexture2D (and NoiseTexture2D, same machinery) is described
+    // entirely by the scene — no file exists to load, so the path-based arm
+    // resolves nothing and the sprite must ride the procedural rasteriser.
+    // The regression this pins: the noise golden captured an EMPTY stage.
+    const internal: TscnInternalResource[] = [
+      {
+        id: 'Gradient_g',
+        type: 'Gradient',
+        data: { colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)' },
+      },
+      {
+        id: 'GradientTexture2D_t',
+        type: 'GradientTexture2D',
+        data: { gradient: 'SubResource("Gradient_g")', width: '8', height: '4' },
+      },
+    ];
+    const r = await render(node({ texture: 'SubResource("GradientTexture2D_t")' }), internal);
+    const material = basicMaterial(r.scene.findByType('Mesh').instance);
+    expect((material.map as Partial<THREE.DataTexture> | null)?.isDataTexture).toBe(true);
+  });
+
+  it('draws a whole-image sprite with the shared texture itself, not a clone', async () => {
+    // Cloning marks needsUpdate on the shared Source, forcing a GPU re-upload
+    // of pixels the loader/procedural cache already paid for; with no region
+    // and no frame grid the borrowed texture is drawn directly.
+    const r = await render(node());
+    const material = basicMaterial(r.scene.findByType('Mesh').instance);
+    expect(material.map?.image).toEqual({ width: 100, height: 50 });
+    expect((material.map as THREE.Texture & { version: number }).version).toBe(0);
   });
 
   it('region_rect + hframes subdivide the region (not the full image)', async () => {

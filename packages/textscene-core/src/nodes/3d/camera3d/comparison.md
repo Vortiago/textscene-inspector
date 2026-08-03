@@ -50,8 +50,7 @@ Strict parsing format-checks these `Camera3D` properties, plus 16 inherited from
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
-| `valid-camera3d-properties` | `camera3d-missing-fov` | error |
-|  | `camera3d-invalid-clipping-planes` | error |
+| `valid-camera3d-properties` | `camera3d-invalid-clipping-planes` | error |
 |  | `camera3d-small-near-plane` | warning |
 |  | `camera3d-large-far-plane` | warning |
 |  | `camera3d-extreme-fov` | warning |

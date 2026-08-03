@@ -13,7 +13,7 @@
  */
 
 import { createContext, useContext } from 'react';
-import type { Curve2DSampler } from '../../resources/shapes/curve2d';
+import type { Curve2DSampler } from '../../resources/curves/curve2d';
 
 const Path2DCurveContext = createContext<Curve2DSampler | null>(null);
 Path2DCurveContext.displayName = 'Path2DCurveContext';

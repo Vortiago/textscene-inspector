@@ -1,0 +1,27 @@
+[gd_scene load_steps=4 format=3]
+
+[sub_resource type="Gradient" id="Gradient_ramp"]
+offsets = PackedFloat32Array(0, 0.55, 1)
+colors = PackedColorArray(0.1, 0.15, 0.4, 1, 0.55, 0.75, 0.9, 1, 1, 1, 1, 1)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_n"]
+seed = 7
+frequency = 0.008
+fractal_type = 2
+fractal_octaves = 6
+fractal_lacunarity = 2.2
+fractal_gain = 0.6
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_t"]
+width = 256
+height = 256
+seamless = true
+color_ramp = SubResource("Gradient_ramp")
+noise = SubResource("FastNoiseLite_n")
+
+[node name="World" type="Node2D"]
+position = Vector2(576, 324)
+
+[node name="Noise" type="Sprite2D" parent="."]
+texture = SubResource("NoiseTexture2D_t")
+scale = Vector2(2, 2)

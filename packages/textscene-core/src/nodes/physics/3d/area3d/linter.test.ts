@@ -74,10 +74,11 @@ describe('Area3D Linter', () => {
       },
       {
         prop: 'gravity_point_unit_distance',
-        valid: [10.5],
+        // 0 is the default and legal: constant point gravity (range hint
+        // "0,1024,0.001,or_greater").
+        valid: [10.5, 0],
         invalid: [
-          { value: 0, contains: ['greater than 0'] },
-          { value: -5.0, contains: ['greater than 0'] },
+          { value: -5.0, contains: ['at least 0'] },
           { value: '"far"' },
         ],
       },
@@ -192,17 +193,18 @@ describe('Area3D Linter', () => {
   });
 
   describe('Semantic Validation (Point Gravity)', () => {
-    it('should error when gravity_point is true but gravity_point_unit_distance is not set', () => {
-      expectDiagnostic(scene(node('Area3D', { gravity_point: true }), collisionShape3d), {
-        ruleName: 'area3d-point-gravity-missing-distance',
-        severity: 'error',
-        nodeType: 'Area3D',
-        contains: ['gravity_point_unit_distance', 'required'],
-      });
+    it('should NOT error when gravity_point is true and the unit distance is absent (Godot omits the 0.0 default)', () => {
+      // 0.0 means constant point gravity with no distance falloff, and the
+      // serializer omits default values — absence is the editor's own output.
+      expectClean(scene(node('Area3D', { gravity_point: true }), collisionShape3d));
     });
 
     it('should pass when gravity_point is true and gravity_point_unit_distance is set', () => {
       expectClean(scene(node('Area3D', { gravity_point: true, gravity_point_unit_distance: 10.0 }), collisionShape3d));
+    });
+
+    it('should pass an explicit 0.0 unit distance (the default, constant gravity)', () => {
+      expectClean(scene(node('Area3D', { gravity_point: true, gravity_point_unit_distance: 0.0 }), collisionShape3d));
     });
 
     it('should not check gravity_point_unit_distance when gravity_point is false', () => {
@@ -314,7 +316,7 @@ describe('Area3D Linter', () => {
       const diagnostics = lint(scene(node('Area3D')));
       // Should only have warning about missing CollisionShape3D
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0].ruleName).toBe('area3d-needs-collision-shape');
+      expect(diagnostics[0]!.ruleName).toBe('area3d-needs-collision-shape');
     });
 
     it('should handle scientific notation in numeric values', () => {

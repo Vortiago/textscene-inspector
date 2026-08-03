@@ -58,8 +58,6 @@ Strict parsing format-checks these `Area3D` properties, plus 16 inherited from N
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 | `valid-area3d` | `area3d-needs-collision-shape` | warning |
 |  | `area3d-inactive` | warning |
-|  | `area3d-point-gravity-missing-distance` | error |
-|  | `area3d-point-gravity-invalid-distance` | error |
 |  | `area3d-monitoring-zero-layer` | warning |
 |  | `area3d-monitoring-zero-mask` | warning |
 |  | `area3d-monitoring-no-collision` | warning |

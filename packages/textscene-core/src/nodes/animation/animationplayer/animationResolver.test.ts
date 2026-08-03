@@ -46,7 +46,7 @@ describe('resolveAnimations — animation scalars (B2)', () => {
       res('Lib', 'AnimationLibrary', { _data: '{\n"idle": SubResource("A")\n}' }),
       res('A', 'Animation', { length: '2.5', loop_mode: '1', step: '0.05' }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim).toMatchObject({ name: 'idle', length: 2.5, loopMode: 1, step: 0.05 });
   });
 
@@ -55,7 +55,7 @@ describe('resolveAnimations — animation scalars (B2)', () => {
       res('Lib', 'AnimationLibrary', { _data: '{\n"idle": SubResource("A")\n}' }),
       res('A', 'Animation', {}),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim).toMatchObject({ length: 1.0, loopMode: 0, step: 0.1 });
   });
 });
@@ -73,9 +73,9 @@ describe('resolveAnimations — value track parsing (B3)', () => {
           '{\n"times": PackedFloat32Array(0, 0.5, 1),\n"transitions": PackedFloat32Array(1, 1, 1),\n"update": 0,\n"values": [Vector3(0, 0, 0), Vector3(0, 1.5, 0), Vector3(0, 3, 0)]\n}',
       }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim.tracks).toHaveLength(1);
-    const t = anim.tracks[0];
+    const t = anim.tracks[0]!;
     expect(t).toMatchObject({ type: 'value', targetPath: 'Circle', property: 'rotation', interp: 1 });
     expect(t.keys.map((k) => k.time)).toEqual([0, 0.5, 1]);
     expect(t.keys.map((k) => k.transition)).toEqual([1, 1, 1]);
@@ -93,8 +93,8 @@ describe('resolveAnimations — keyframe values (B4)', () => {
           '{\n"times": PackedFloat32Array(0, 1),\n"values": [Vector3(1, 2, 3), Vector3(4, 5, 6)]\n}',
       }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
-    expect(anim.tracks[0].keys.map((k) => k.value)).toEqual([[1, 2, 3], [4, 5, 6]]);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks[0]!.keys.map((k) => k.value)).toEqual([[1, 2, 3], [4, 5, 6]]);
   });
 
   it('decodes Vector2 and scalar float keyframe values', () => {
@@ -109,9 +109,9 @@ describe('resolveAnimations — keyframe values (B4)', () => {
         'tracks/1/keys': '{\n"times": PackedFloat32Array(0),\n"values": [1.5708]\n}',
       }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
-    expect(anim.tracks[0].keys[0].value).toEqual([7, -8]);
-    expect(anim.tracks[1].keys[0].value).toBe(1.5708);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks[0]!.keys[0]!.value).toEqual([7, -8]);
+    expect(anim.tracks[1]!.keys[0]!.value).toBe(1.5708);
   });
 
   it('decodes Color keyframe values to RGBA quadruples (modulate fade — ADR-0017)', () => {
@@ -124,8 +124,8 @@ describe('resolveAnimations — keyframe values (B4)', () => {
           '{\n"times": PackedFloat32Array(0, 1),\n"values": [Color(1, 1, 1, 1), Color(1, 0.5, 0.25, 0)]\n}',
       }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
-    expect(anim.tracks[0].keys.map((k) => k.value)).toEqual([
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks[0]!.keys.map((k) => k.value)).toEqual([
       [1, 1, 1, 1],
       [1, 0.5, 0.25, 0],
     ]);
@@ -146,7 +146,7 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
         'tracks/1/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3(0, 0, 0)]\n}',
       }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim.tracks.map((t) => t.targetPath)).toEqual(['Good']);
   });
 
@@ -159,7 +159,7 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
         'tracks/0/path': 'NodePath(".")',
       }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim.tracks).toEqual([]);
   });
 
@@ -180,7 +180,7 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
           '{\n"times": PackedFloat32Array(0, 1),\n"values": [Vector3(0, 0, 0), Vector3(0, 2, 0)]\n}',
       }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim.tracks).toHaveLength(1);
     expect(anim.tracks[0]).toMatchObject({ type: 'value', targetPath: 'Mesh', property: 'position' });
   });
@@ -202,9 +202,9 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
         'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, 0, 0, 0.5, 1, 1, 2, 3)',
       }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim.tracks).toHaveLength(1);
-    const t = anim.tracks[0];
+    const t = anim.tracks[0]!;
     expect(t).toMatchObject({ type: 'position_3d', targetPath: 'Mesh', property: 'position', interp: 1 });
     expect(t.keys.map((k) => k.time)).toEqual([0, 0.5]);
     expect(t.keys.map((k) => k.value)).toEqual([[0, 0, 0], [1, 2, 3]]);
@@ -219,9 +219,9 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
         'tracks/0/keys': 'PackedFloat32Array(0, 1, 2, 2, 2)',
       }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim.tracks[0]).toMatchObject({ type: 'scale_3d', property: 'scale' });
-    expect(anim.tracks[0].keys[0].value).toEqual([2, 2, 2]);
+    expect(anim.tracks[0]!.keys[0]!.value).toEqual([2, 2, 2]);
   });
 
   it('decodes a rotation_3d flat key array to quaternion (4-component) values', () => {
@@ -234,9 +234,9 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
         'tracks/0/keys': 'PackedFloat32Array(0, 1, 0.707107, 0, 0, 0.707107)',
       }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim.tracks[0]).toMatchObject({ type: 'rotation_3d', property: 'quaternion' });
-    expect(anim.tracks[0].keys[0].value).toEqual([0.707107, 0, 0, 0.707107]);
+    expect(anim.tracks[0]!.keys[0]!.value).toEqual([0.707107, 0, 0, 0.707107]);
   });
 
   it('reads the per-key transition from the flat array (second component)', () => {
@@ -248,8 +248,8 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
         'tracks/0/keys': 'PackedFloat32Array(0, 0.25, 1, 1, 1)',
       }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
-    expect(anim.tracks[0].keys[0].transition).toBe(0.25);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks[0]!.keys[0]!.transition).toBe(0.25);
   });
 
   it('skips skeletal bone sub-path tracks (Node:bone) but keeps plain-node tracks', () => {
@@ -264,7 +264,7 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
         'tracks/1/keys': 'PackedFloat32Array(0, 1, 1, 2, 3)',
       }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim.tracks.map((t) => t.targetPath)).toEqual(['Mesh']);
   });
 
@@ -277,7 +277,7 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
         'tracks/0/keys': 'PackedFloat32Array(0, 1, 1, 2, 3)',
       }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim.tracks).toEqual([]);
   });
 
@@ -290,7 +290,7 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
         'tracks/0/keys': 'PackedFloat32Array(0, 1)', // missing the 3 components
       }),
     ];
-    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim.tracks).toEqual([]);
   });
 });

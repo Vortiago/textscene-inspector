@@ -13,6 +13,7 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
+import { isMesh, isBasicMaterial } from '../../../../r3f/testing/threeNarrow';
 
 const heading = { type: 'node', attributes: { type: 'TileMap', name: 'Map' } };
 const TEX = 'res://tiles.png';
@@ -48,6 +49,16 @@ async function render(node: TscnNode) {
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+}
+
+/** The basic material a drawn mesh carries. */
+function basicMaterial(instance: THREE.Object3D): THREE.MeshBasicMaterial {
+  if (!isMesh(instance)) throw new Error('scene-graph instance is not a Mesh');
+  const material = instance.material;
+  if (Array.isArray(material) || !isBasicMaterial(material)) {
+    throw new Error('mesh material is not a MeshBasicMaterial');
+  }
+  return material;
 }
 
 describe('TileMap render parity', () => {
@@ -92,7 +103,7 @@ describe('TileMap render parity', () => {
         'layer_0/modulate': 'Color(0.5, 0.5, 0.5, 0.5)',
       })
     );
-    const material = r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const material = basicMaterial(r.scene.findByType('Mesh').instance);
     const srgbToLinear = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
     expect(material.color.r).toBeCloseTo(srgbToLinear(0.5), 4);
     expect(material.opacity).toBeCloseTo(0.5, 5);

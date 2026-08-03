@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseNode2D } from '../../nodes/base/node2d/parser';
+import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import type { TscnNode } from '../../parser/types';
 import { CanvasItem2D } from './CanvasItem2D';
 
@@ -17,7 +18,9 @@ function srgbToLinear(c: number): number {
   return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
 
-function makeNode(raw: Record<string, string> = {}): TscnNode {
+function makeNode(
+  raw: Record<string, string> = {}
+): TscnNode & { properties: Node2DProperties } {
   return {
     name: 'CI',
     type: 'Node2D',
@@ -68,8 +71,10 @@ describe('CanvasItem2D', () => {
       </CanvasItem2D>
     );
     const meshes = r.scene.findAllByType('Mesh');
-    const parentColor = (meshes[0]!.instance.material as THREE.MeshBasicMaterial).color;
-    const childColor = (meshes[1]!.instance.material as THREE.MeshBasicMaterial).color;
+    const parentColor = ((meshes[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
+      .color;
+    const childColor = ((meshes[1]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
+      .color;
     expect(parentColor.r).toBeCloseTo(0, 5); // own pixels: modulate × self_modulate(0)
     expect(childColor.r).toBeCloseTo(srgbToLinear(0.5), 4); // inherits modulate, not self_modulate
   });

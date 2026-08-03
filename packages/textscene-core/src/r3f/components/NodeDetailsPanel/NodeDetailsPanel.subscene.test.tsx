@@ -72,7 +72,6 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
       typeName: LAMP_MESH_TYPE,
       typeGuard: () => false,
       parser: () => ({}),
-      renderer: () => null as never,
     });
 
     const { loader, scenes } = createFakeResourceLoader();
@@ -135,7 +134,6 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
       typeName: LAMP_MESH_TYPE,
       typeGuard: () => false,
       parser: () => ({}),
-      renderer: () => null as never,
     });
 
     // The cache is intentionally EMPTY at selection time — unlike the test
@@ -201,7 +199,6 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
       typeName: LAMP_MESH_TYPE,
       typeGuard: () => false,
       parser: () => ({}),
-      renderer: () => null as never,
     });
 
     const { loader } = createFakeResourceLoader();
@@ -232,7 +229,6 @@ describe('<NodeDetailsPanel> BUG 2 — instance root shows the collapsed identit
       typeName: COIN_ROOT_TYPE,
       typeGuard: () => false,
       parser: () => ({}),
-      renderer: () => null as never,
     });
 
     const { loader, scenes } = createFakeResourceLoader();

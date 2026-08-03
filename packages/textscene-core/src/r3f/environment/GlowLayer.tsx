@@ -20,7 +20,7 @@ import { useThree } from '@react-three/fiber';
 import { EffectComposer } from '@react-three/postprocessing';
 import type { Effect } from 'postprocessing';
 import type { GlowParams } from '../../resources/environment/godotGlow';
-import type { EnvironmentSettings } from '../../resources/environment/renderer';
+import type { EnvironmentSettings } from '../../resources/environment/types';
 import { GodotGlowEffect } from './GodotGlowEffect';
 
 export interface GlowLayerProps {
@@ -47,7 +47,7 @@ function hasRealGlContext(gl: { getContext?: () => unknown }): boolean {
 export function GlowLayer({ glow, toneMapping }: GlowLayerProps) {
   const gl = useThree((s) => s.gl);
   const glReady = useMemo(() => hasRealGlContext(gl), [gl]);
-  const { mode, white } = toneMapping;
+  const { mode, white, agxContrast } = toneMapping;
 
   // Typed as the base `Effect`: with the library's `declaration: true`, a class
   // extending postprocessing's `Effect` does not carry its inherited members
@@ -59,8 +59,9 @@ export function GlowLayer({ glow, toneMapping }: GlowLayerProps) {
         glow,
         toneMapMode: mode,
         toneMapWhite: white,
+        toneMapAgxContrast: agxContrast,
       }) as Effect,
-    [glow, mode, white]
+    [glow, mode, white, agxContrast]
   );
   useEffect(() => () => glowEffect.dispose(), [glowEffect]);
 

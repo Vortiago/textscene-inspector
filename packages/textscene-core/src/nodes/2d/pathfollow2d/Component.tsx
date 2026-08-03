@@ -27,7 +27,7 @@ import {
   multiplyModulate,
   useParentModulate,
 } from '../../../r3f/canvasItemModulate';
-import type { Curve2DSampler } from '../../../resources/shapes/curve2d';
+import type { Curve2DSampler } from '../../../resources/curves/curve2d';
 import type { PathFollow2DProperties } from './types';
 
 /** Godot editor path-follow handle color (orange). */

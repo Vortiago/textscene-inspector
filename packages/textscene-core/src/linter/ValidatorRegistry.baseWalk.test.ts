@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, type Dirent } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ValidatorRegistry, validatorRegistry } from './ValidatorRegistry.js';
@@ -94,7 +94,7 @@ const INTENTIONAL_OVERRIDES = new Set<string>([]);
 /** Walk the filesystem for all linterParser.ts source files. */
 function walkLinterParsers(dir: string): string[] {
   const results: string[] = [];
-  let entries: ReturnType<typeof readdirSync>;
+  let entries: Dirent[];
   try {
     entries = readdirSync(dir, { withFileTypes: true });
   } catch {

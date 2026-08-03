@@ -43,25 +43,22 @@ import { createTresResourceProcessor } from './processors/createTresResourceProc
 import { createArrayMeshProcessor, type ArrayMeshResource } from './processors/createArrayMeshProcessor';
 import { runClearCachesSequence } from './clearCachesSequence';
 import { resourceFilePath } from './subResourcePath';
-import type { ParsedTresFile } from '../parser/tresParser';
+import { resourceSliceRegistry } from './sliceRegistration';
+import './sliceRegistrations.js';
+import type { ParsedResource } from '../parser/parsedResource';
 import type { ResourceProcessor } from './createResourceProcessor';
 import * as logger from '../logger';
 
 /**
- * Returns the canonical ResourceType bus tag for a TSCN resource-type
- * string. PackedScene → 'scene', StandardMaterial3D → 'material', etc.
- * Used by `provideFile` to route a re-request through the right
- * processor (exported so the test fake mirrors the same routing).
+ * The bus tag a TSCN resource-type string routes to, answered by the slice
+ * claim table (ADR-0031) — never by name sniffing. Null means either a type
+ * no slice claims, or a claimed type the loader never serves (ViewportTexture
+ * resolves by NodePath); `provideFile` tells the two apart via `byTypeName`.
+ * Exported so the test fake mirrors the same routing.
  */
 export function busTypeFor(resourceType: string | undefined): ResourceType | null {
   if (!resourceType) return null;
-  if (resourceType.includes('Texture')) return 'texture';
-  if (resourceType.includes('Material')) return 'material';
-  if (resourceType === 'PackedScene') return 'scene';
-  if (resourceType === 'GLB' || resourceType === 'GLTF' || resourceType === 'GLBMesh') return 'glb';
-  if (resourceType === 'ArrayMesh') return 'arraymesh';
-  if (resourceType === 'TileSet' || resourceType === 'MeshLibrary') return 'resource';
-  return null;
+  return resourceSliceRegistry.busTypeFor(resourceType);
 }
 
 export class ResourceLoader {
@@ -71,8 +68,8 @@ export class ResourceLoader {
   readonly materials: ResourceProcessor<THREE.Material>;
   readonly glbMeshes: ResourceProcessor<THREE.Object3D>;
   readonly scenes: ResourceProcessor<TscnScene>;
-  /** Generic .tres files (currently TileSet) parsed as ParsedTresFile. */
-  readonly resources: ResourceProcessor<ParsedTresFile>;
+  /** Generic .tres files (currently TileSet) parsed as ParsedResource. */
+  readonly resources: ResourceProcessor<ParsedResource>;
   /** ArrayMesh .tres decoded into geometry + per-surface material paths. */
   readonly arrayMeshes: ResourceProcessor<ArrayMeshResource>;
 
@@ -360,7 +357,8 @@ export class ResourceLoader {
     this.clearCache(path);
 
     const metadata = this.metadata.get(path);
-    const busType = busTypeFor(metadata?.type);
+    const registration = metadata?.type ? resourceSliceRegistry.byTypeName(metadata.type) : null;
+    const busType = registration?.busType ?? null;
 
     logger.info(
       `[ResourceLoader] provideFile: ${path}` +
@@ -369,6 +367,11 @@ export class ResourceLoader {
 
     if (busType) {
       this.request(busType, path);
+    } else if (registration) {
+      // A claimed type the loader never serves (busType null, e.g.
+      // ViewportTexture): nothing to re-request, and fanning out would ask
+      // processors that must refuse it.
+      logger.info(`[ResourceLoader] provideFile: ${metadata?.type} is not loader-served; skipping`);
     } else if (path.endsWith('.tres')) {
       // Unregistered .tres — a raw `res://…tres` reference (e.g. a
       // `tile_set` path with no ExtResource declaration). Both .tres

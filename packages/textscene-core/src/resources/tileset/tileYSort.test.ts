@@ -3,7 +3,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import { groupBySortY } from './tileYSort';
-import type { TileGrid, PlacedCell } from './tileSetModel';
+import type { TileGrid } from './types';
+import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
 
 const squareGrid: TileGrid = {
   shape: 0, // square

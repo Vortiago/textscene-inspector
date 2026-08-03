@@ -60,13 +60,13 @@ describe('Sprite3D parser parity', () => {
 describe('Sprite3D render parity', () => {
   it('flip_h mirrors the texture horizontally (negative repeat.x)', async () => {
     const r = await render({ flip_h: 'true' });
-    const map = (r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial).map!;
+    const map = ((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial).map!;
     expect(map.repeat.x).toBeLessThan(0);
   });
 
   it('flip_v mirrors the texture vertically (negative repeat.y) (#18)', async () => {
     const r = await render({ flip_v: 'true' });
-    const map = (r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial).map!;
+    const map = ((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial).map!;
     expect(map.repeat.y).toBeLessThan(0);
   });
 
@@ -74,7 +74,7 @@ describe('Sprite3D render parity', () => {
     // image 100×50, pixel_size 0.01, offset (50, 20) → geometry center at
     // +offset.x*pixel_size = 0.5, -offset.y*pixel_size = -0.2.
     const r = await render({ offset: 'Vector2(50, 20)' });
-    const geom = r.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geom = (r.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     geom.computeBoundingBox();
     const c = geom.boundingBox!.getCenter(new THREE.Vector3());
     expect(c.x).toBeCloseTo(0.5, 5);
@@ -83,7 +83,7 @@ describe('Sprite3D render parity', () => {
 
   it('modulate is converted sRGB→linear before the material (#6 parity with Sprite2D)', async () => {
     const r = await render({ modulate: 'Color(0.5, 0.5, 0.5, 1)' });
-    const color = (r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial).color;
+    const color = ((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color;
     expect(color.r).toBeCloseTo(srgbToLinear(0.5), 4); // ≈ 0.214, not 0.5
   });
 
@@ -106,24 +106,24 @@ describe('Sprite3D render parity', () => {
 
   it('double_sided=false → FrontSide material', async () => {
     const r = await render({ double_sided: 'false' });
-    expect((r.scene.findByType('Mesh').instance.material as THREE.Material).side).toBe(THREE.FrontSide);
+    expect(((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).side).toBe(THREE.FrontSide);
   });
 
   it('transparent=false → material.transparent === false', async () => {
     const r = await render({ transparent: 'false' });
-    expect((r.scene.findByType('Mesh').instance.material as THREE.Material).transparent).toBe(false);
+    expect(((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).transparent).toBe(false);
   });
 
   it('opaque sprite (transparent=false, alpha_cut DISABLED) writes depth', async () => {
     // An opaque quad must write depth so it sorts/occludes correctly against
     // other opaque geometry — the DISABLED alpha-cut otherwise leaves it false.
     const r = await render({ transparent: 'false' });
-    expect((r.scene.findByType('Mesh').instance.material as THREE.Material).depthWrite).toBe(true);
+    expect(((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).depthWrite).toBe(true);
   });
 
   it('default (transparent) sprite keeps depthWrite=false on the blended path', async () => {
     const r = await render({ modulate: 'Color(1, 1, 1, 0.5)' }); // opacity < 1 → blended
-    expect((r.scene.findByType('Mesh').instance.material as THREE.Material).depthWrite).toBe(false);
+    expect(((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).depthWrite).toBe(false);
   });
 
   it('centered=false shifts the quad by half its size (offset origin top-left)', async () => {
@@ -131,7 +131,7 @@ describe('Sprite3D render parity', () => {
     // +width/2, -height/2 translate into the geometry so the node origin sits at
     // the quad's top-left corner.
     const r = await render({ centered: 'false' });
-    const geom = r.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geom = (r.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     geom.computeBoundingBox();
     const center = geom.boundingBox!.getCenter(new THREE.Vector3());
     expect(center.x).toBeCloseTo(0.5, 5);

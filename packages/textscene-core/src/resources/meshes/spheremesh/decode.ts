@@ -1,0 +1,22 @@
+/**
+ * SphereMesh decode — property bag in, radius/height/segment counts out.
+ *
+ * Defaults from Godot `primitive_meshes.h:339-343`. `set_radial_segments`
+ * (`primitive_meshes.cpp:2141`) floors at 4; `set_rings` (:2153) ERR_FAILs below
+ * 1, so a smaller count keeps the default. Radius and height are independent
+ * (:2111, :2124) — a squashed sphere is legal.
+ */
+
+import { floatOr } from '../../../parser/valueParsers';
+import { countAtLeast, flooredCount } from '../meshCounts';
+import type { SphereMeshProperties } from './types';
+
+export function decodeSphereMesh(properties: Record<string, string>): SphereMeshProperties {
+  return {
+    radius: floatOr(properties.radius, 0.5, 'SphereMesh radius'),
+    height: floatOr(properties.height, 1.0, 'SphereMesh height'),
+    radial_segments: flooredCount(properties.radial_segments, 4, 64, 'SphereMesh radial_segments'),
+    rings: countAtLeast(properties.rings, 1, 32, 'SphereMesh rings'),
+    isHemisphere: properties.is_hemisphere === 'true',
+  };
+}

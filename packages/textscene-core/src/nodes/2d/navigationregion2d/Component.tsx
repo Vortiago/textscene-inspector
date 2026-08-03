@@ -13,7 +13,7 @@ import { Node2D } from '../../base/node2d/Component';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
-import { parsePackedVector2Array, parsePackedInt32Arrays } from '../../../resources/shapes/packedArray';
+import { decodeNavigationPolygon } from '../../../resources/navigation/navigationpolygon';
 import {
   buildNavFaceGeometry,
   buildNavEdgeGeometry,
@@ -36,14 +36,13 @@ export function NavigationRegion2D({ node, children }: NodeComponentProps) {
   );
 
   const overlay = useMemo(() => {
-    const props = resource?.data as Record<string, string> | undefined;
-    if (!props || !props['vertices'] || !props['polygons']) return null;
-    const positions = vector2ToPositions(parsePackedVector2Array(props['vertices']));
-    const polygons = parsePackedInt32Arrays(props['polygons']);
-    if (positions.length === 0 || polygons.length === 0) return null;
+    const polygon = resource ? decodeNavigationPolygon(resource.data) : null;
+    if (!polygon) return null;
+    // Godot 2D vertices are +Y down; the lift to 3D positions negates Y.
+    const positions = vector2ToPositions(polygon.vertices);
     return {
-      faces: buildNavFaceGeometry(positions, polygons),
-      edges: buildNavEdgeGeometry(positions, polygons),
+      faces: buildNavFaceGeometry(positions, polygon.polygons),
+      edges: buildNavEdgeGeometry(positions, polygon.polygons),
     };
   }, [resource]);
 

@@ -1,6 +1,7 @@
 /**
- * Factory for creating GLB mesh processors.
- * Uses createResourceProcessor with GLB-specific processing logic.
+ * Factory for creating GLB mesh processors — the GLB slice's loader-facing
+ * adapter (`resources/formats/glb/`, ADR-0031). Stays here because the
+ * `ResourceLoader` constructs it alongside its peer factories.
  */
 
 import * as THREE from 'three';
@@ -12,8 +13,8 @@ import {
   disposeMeshMaterials,
   gltfResourceDir,
   isGLBPath,
-} from '../processing/glbProcessing';
-import { applyRootScale } from '../processing/rootScale';
+} from '../formats/glb/glbProcessing';
+import { applyRootScale } from '../formats/glb/rootScale';
 import { importRootScale, parseImportFile } from '../../parser/importParser';
 import * as logger from '../../logger';
 

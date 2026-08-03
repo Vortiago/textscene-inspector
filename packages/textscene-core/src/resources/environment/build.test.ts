@@ -1,0 +1,211 @@
+/**
+ * Environment slice BUILD tests — `EnvironmentProperties` in, the settings the
+ * render layer applies out.
+ *
+ * The factory below is a COMPLETE property bag, every field at the value Godot's
+ * own `Environment` constructor installs. Test files are outside `tsc`'s reach
+ * (the package tsconfig excludes them), so a partial literal here type-checks
+ * and then hands the build `undefined` where it expects a number — arithmetic
+ * that quietly produces NaN instead of failing.
+ */
+
+import { describe, it, expect } from 'vitest';
+import { createEnvironmentSettings } from './build';
+import { BackgroundMode } from './types';
+import type { EnvironmentProperties } from './types';
+
+function base(over: Partial<EnvironmentProperties> = {}): EnvironmentProperties {
+  return {
+    background_mode: BackgroundMode.BG_COLOR,
+    background_color: { r: 0, g: 0, b: 0, a: 1 },
+    background_energy_multiplier: 1.0,
+    tonemap_mode: 0,
+    tonemap_white: 1.0,
+    tonemap_agx_white: 16.29,
+    tonemap_agx_contrast: 1.25,
+    tonemap_exposure: 1.0,
+    ambient_light_source: 0,
+    ambient_light_color: { r: 0, g: 0, b: 0, a: 1 },
+    ambient_light_energy: 1.0,
+    ambient_light_sky_contribution: 1.0,
+    fog_enabled: false,
+    fog_density: 0.01,
+    fog_light_color: { r: 0.518, g: 0.553, b: 0.608, a: 1 },
+    fog_mode: 0,
+    volumetric_fog_enabled: false,
+    volumetric_fog_density: 0.05,
+    volumetric_fog_albedo: { r: 1, g: 1, b: 1, a: 1 },
+    volumetric_fog_emission: { r: 0, g: 0, b: 0, a: 1 },
+    glow_enabled: false,
+    glow_levels: [0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0],
+    glow_normalized: false,
+    glow_intensity: 0.3,
+    glow_strength: 1.0,
+    glow_mix: 0.05,
+    glow_bloom: 0.0,
+    glow_blend_mode: 1,
+    glow_hdr_threshold: 1.0,
+    glow_hdr_scale: 2.0,
+    glow_hdr_luminance_cap: 12.0,
+    glow_map_strength: 0.8,
+    adjustment_enabled: false,
+    adjustment_brightness: 1.0,
+    adjustment_contrast: 1.0,
+    adjustment_saturation: 1.0,
+    ssr_enabled: false,
+    ...over,
+  };
+}
+
+describe('createEnvironmentSettings', () => {
+  it('should create settings with background only', () => {
+    const settings = createEnvironmentSettings(
+      base({ background_color: { r: 0.15, g: 0.12, b: 0.1, a: 1 } })
+    );
+
+    expect(settings.background.mode).toBe(BackgroundMode.BG_COLOR);
+    expect(settings.background.color).toEqual({ r: 0.15, g: 0.12, b: 0.1, a: 1 });
+    expect(settings.background.energyMultiplier).toBe(1.0);
+    expect(settings.fog).toBeNull();
+    expect(settings.adjustments).toBeNull();
+    expect(settings.ssr).toBeNull();
+  });
+
+  it('should create fog from Godot screen-space fog (fog_enabled)', () => {
+    const settings = createEnvironmentSettings(
+      base({ fog_enabled: true, fog_density: 0.001, fog_light_color: { r: 0.8, g: 0.8, b: 0.9, a: 1 }, fog_mode: 1 })
+    );
+
+    expect(settings.fog).not.toBeNull();
+    expect(settings.fog?.density).toBe(0.001);
+    expect(settings.fog?.color).toEqual({ r: 0.8, g: 0.8, b: 0.9, a: 1 });
+    expect(settings.fog?.mode).toBe(1);
+  });
+
+  it('does NOT drive scene fog from volumetric_fog (no THREE equivalent)', () => {
+    const settings = createEnvironmentSettings(base({ volumetric_fog_enabled: true }));
+    expect(settings.fog).toBeNull();
+  });
+
+  it('gates flat ambient on ambient_light_source', () => {
+    // `base()` is BG source (0) with BG_COLOR (1), so the ambient is the
+    // background colour — black here, but present rather than null.
+    expect(createEnvironmentSettings(base()).ambient).toEqual({
+      color: { r: 0, g: 0, b: 0, a: 1 },
+      energy: 1,
+    });
+    expect(createEnvironmentSettings(base({ ambient_light_source: 1 })).ambient).toBeNull(); // DISABLED
+    const colored = createEnvironmentSettings(
+      base({ ambient_light_source: 2, ambient_light_color: { r: 0.2, g: 0.2, b: 0.2, a: 1 }, ambient_light_energy: 0.5 })
+    );
+    expect(colored.ambient?.color).toEqual({ r: 0.2, g: 0.2, b: 0.2, a: 1 });
+    expect(colored.ambient?.energy).toBe(0.5);
+  });
+
+  it('should create settings with adjustments enabled', () => {
+    const settings = createEnvironmentSettings(
+      base({ adjustment_enabled: true, adjustment_brightness: 1.05, adjustment_contrast: 1.1, adjustment_saturation: 1.2 })
+    );
+
+    expect(settings.adjustments).not.toBeNull();
+    expect(settings.adjustments?.brightness).toBe(1.05);
+    expect(settings.adjustments?.contrast).toBe(1.1);
+    expect(settings.adjustments?.saturation).toBe(1.2);
+  });
+
+  it('should create settings with SSR enabled', () => {
+    const settings = createEnvironmentSettings(base({ ssr_enabled: true }));
+    expect(settings.ssr).not.toBeNull();
+    expect(settings.ssr?.enabled).toBe(true);
+  });
+
+  it('should create settings with all features enabled', () => {
+    const settings = createEnvironmentSettings(
+      base({
+        background_color: { r: 0.2, g: 0.3, b: 0.4, a: 1 },
+        background_energy_multiplier: 1.5,
+        fog_enabled: true,
+        fog_density: 0.002,
+        fog_light_color: { r: 0.9, g: 0.9, b: 1.0, a: 1 },
+        adjustment_enabled: true,
+        adjustment_brightness: 1.15,
+        ssr_enabled: true,
+      })
+    );
+
+    expect(settings.background.color).toEqual({ r: 0.2, g: 0.3, b: 0.4, a: 1 });
+    expect(settings.background.energyMultiplier).toBe(1.5);
+    expect(settings.fog?.density).toBe(0.002);
+    expect(settings.fog?.color).toEqual({ r: 0.9, g: 0.9, b: 1.0, a: 1 });
+    expect(settings.adjustments?.brightness).toBe(1.15);
+    expect(settings.ssr).not.toBeNull();
+  });
+});
+
+describe('createEnvironmentSettings — which white the tonemapper is handed', () => {
+  it('gives every non-AgX curve tonemap_white (happy path)', () => {
+    // `Environment::_update_tonemap` picks between the two properties by mode.
+    for (const mode of [0, 1, 2, 3]) {
+      const settings = createEnvironmentSettings(
+        base({ tonemap_mode: mode, tonemap_white: 6, tonemap_agx_white: 16.29 })
+      );
+      expect(settings.toneMapping.white, `mode ${mode}`).toBe(6);
+    }
+  });
+
+  it('gives AGX its own tonemap_agx_white instead (regression)', () => {
+    // Reading `tonemap_white` here would hand AgX a high clip of 1 (floored to
+    // 2) rather than Blender's 16.29 — the shoulder would then saturate every
+    // linear input at or above 2.0 that should still be resolving.
+    const settings = createEnvironmentSettings(
+      base({ tonemap_mode: 4, tonemap_white: 1, tonemap_agx_white: 16.29 })
+    );
+    expect(settings.toneMapping.white).toBeCloseTo(16.29, 6);
+  });
+
+  it('honours an authored tonemap_agx_white under AGX', () => {
+    const settings = createEnvironmentSettings(base({ tonemap_mode: 4, tonemap_agx_white: 6 }));
+    expect(settings.toneMapping.white).toBe(6);
+  });
+
+  it('leaves the per-curve floor to the curve, not to the settings (edge case)', () => {
+    // `resolvedWhite` applies `environment_get_white`'s floors where the shader
+    // is built; the settings carry the authored value unclamped, so a consumer
+    // that needs it still has it.
+    expect(
+      createEnvironmentSettings(base({ tonemap_mode: 2, tonemap_white: 0.5 })).toneMapping.white
+    ).toBe(0.5);
+  });
+
+  it('carries the AgX contrast whatever the mode — only the curve reads it', () => {
+    expect(createEnvironmentSettings(base()).toneMapping.agxContrast).toBe(1.25);
+    expect(
+      createEnvironmentSettings(base({ tonemap_mode: 4, tonemap_agx_contrast: 1.8 })).toneMapping
+        .agxContrast
+    ).toBe(1.8);
+    // Carried under FILMIC too: the settings describe the Environment, and the
+    // mode gate lives in the curve rather than in what gets carried.
+    expect(
+      createEnvironmentSettings(base({ tonemap_mode: 2, tonemap_agx_contrast: 1.8 })).toneMapping
+        .agxContrast
+    ).toBe(1.8);
+  });
+});
+
+describe('AgX white end to end — select, then floor', () => {
+  it('composes _update_tonemap’s pick with environment_get_white’s floor', async () => {
+    // The two halves are right in isolation elsewhere; this is the composition.
+    // A bare `tonemap_mode = 4` scene must reach the shader at Godot's 16.29,
+    // not at the 2.0 that flooring `tonemap_white` would produce.
+    const { decodeEnvironment } = await import('./decode');
+    const { toneMappingWhiteParam } = await import('./godotToneMapping');
+    const settings = createEnvironmentSettings(decodeEnvironment({ tonemap_mode: '4' }));
+    expect(toneMappingWhiteParam(4, settings.toneMapping.white)).toBeCloseTo(16.29, 6);
+
+    // ...and a scene that authors an AgX white BELOW Godot's floor still gets it.
+    const floored = createEnvironmentSettings(
+      decodeEnvironment({ tonemap_mode: '4', tonemap_agx_white: '0.5' })
+    );
+    expect(toneMappingWhiteParam(4, floored.toneMapping.white)).toBe(2);
+  });
+});

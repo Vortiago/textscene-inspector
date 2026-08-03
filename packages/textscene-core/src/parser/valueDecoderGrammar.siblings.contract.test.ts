@@ -28,8 +28,8 @@ import { heading } from './testing/parserKit';
 import { parseSpotLight3D } from '../nodes/3d/lights/spotlight3d/parser';
 import { parseOmniLight3D } from '../nodes/3d/lights/omnilight3d/parser';
 import { parseLabel3D } from '../nodes/3d/label3d/parser';
-import { parseEnvironment } from '../resources/environment/parser';
-import { parseBoxShape3D } from '../resources/shapes/boxshape3d/parser';
+import { decodeEnvironment } from '../resources/environment/decode';
+import { decodeBoxShape3D as parseBoxShape3D } from '../resources/shapes/boxshape3d';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -137,7 +137,7 @@ describe('#175 label3d — pixel_size / outline_size stop leaking NaN', () => {
 // ---------------------------------------------------------------------------------------------
 describe('#175 environment — scalar reads stop leaking NaN', () => {
   it('honours authored values', () => {
-    const r = parseEnvironment({
+    const r = decodeEnvironment({
       background_energy_multiplier: '2.5',
       tonemap_white: '3',
       fog_density: '0.2',
@@ -152,7 +152,7 @@ describe('#175 environment — scalar reads stop leaking NaN', () => {
   });
 
   it('float scalars fall back to their default on garbage (never NaN) and warn', () => {
-    const r = parseEnvironment({
+    const r = decodeEnvironment({
       background_energy_multiplier: 'garbage',
       fog_density: 'garbage',
       ambient_light_energy: 'garbage',
@@ -167,7 +167,7 @@ describe('#175 environment — scalar reads stop leaking NaN', () => {
   });
 
   it('int scalars fall back to their default on garbage (never NaN)', () => {
-    const r = parseEnvironment({
+    const r = decodeEnvironment({
       background_mode: 'garbage',
       tonemap_mode: 'garbage',
       fog_mode: 'garbage',
@@ -181,15 +181,15 @@ describe('#175 environment — scalar reads stop leaking NaN', () => {
 
 describe('#175 environment — a malformed color must NOT crash the whole parse', () => {
   it('honours a valid color', () => {
-    const r = parseEnvironment({ background_color: 'Color(1, 0, 0, 1)' });
+    const r = decodeEnvironment({ background_color: 'Color(1, 0, 0, 1)' });
     expect(r.background_color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 
   it('a present-but-malformed color falls back to that field OWN default (no throw)', () => {
     // Currently routes through the THROWING parseColor with no catch -> the whole
-    // parseEnvironment throws on a malformed color. It must fall back instead.
-    expect(() => parseEnvironment({ background_color: 'Color(oops)' })).not.toThrow();
-    const r = parseEnvironment({ background_color: 'Color(oops)', ambient_light_color: 'nope' });
+    // decodeEnvironment throws on a malformed color. It must fall back instead.
+    expect(() => decodeEnvironment({ background_color: 'Color(oops)' })).not.toThrow();
+    const r = decodeEnvironment({ background_color: 'Color(oops)', ambient_light_color: 'nope' });
     // background_color default is black; ambient_light_color default is black too.
     expect(r.background_color).toEqual({ r: 0, g: 0, b: 0, a: 1 });
     expect(r.ambient_light_color).toEqual({ r: 0, g: 0, b: 0, a: 1 });
@@ -198,7 +198,7 @@ describe('#175 environment — a malformed color must NOT crash the whole parse'
   it('preserves each color field its own (non-black) default when malformed', () => {
     // fog_light_color's Godot default is a bluish grey — the fallback must be per-field,
     // not a generic white/black.
-    const r = parseEnvironment({ fog_light_color: 'garbage' });
+    const r = decodeEnvironment({ fog_light_color: 'garbage' });
     expect(r.fog_light_color).toEqual({ r: 0.518, g: 0.553, b: 0.608, a: 1 });
   });
 });

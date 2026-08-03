@@ -105,7 +105,7 @@ describe('<NodeDispatcher>', () => {
 });
 
 describe('<NodeDispatcher> per-node error boundary (#216)', () => {
-  function Bomb(_: NodeComponentProps) {
+  function Bomb(_: NodeComponentProps): never {
     throw new Error('node render exploded');
   }
   nodeComponentRegistry.register({ typeName: 'Bomb', Component: Bomb });
@@ -129,7 +129,7 @@ describe('<NodeDispatcher> per-node error boundary (#216)', () => {
     // visual language as a missing resource) instead of vanishing outright.
     const meshes = renderer.scene.findAllByType('Mesh');
     const placeholder = meshes.find((m) => {
-      const mat = m.instance.material as { color?: THREE.Color };
+      const mat = (m.instance as THREE.Mesh).material as { color?: THREE.Color };
       return mat.color && mat.color.r > 0.9 && mat.color.g < 0.1 && mat.color.b > 0.9;
     });
     expect(placeholder).toBeDefined();
@@ -152,7 +152,7 @@ describe('<NodeDispatcher> per-node error boundary (#216)', () => {
     // `transform`) — reading `.transform` off them is always undefined, so
     // the FALLBACK must route through the 2D transform math (node2dGroupProps)
     // instead of silently collapsing to the origin.
-    function Bomb2D(_: NodeComponentProps) {
+    function Bomb2D(_: NodeComponentProps): never {
       throw new Error('2D node render exploded');
     }
     nodeComponentRegistry.register({ typeName: 'Bomb2D', Component: Bomb2D, canvasItem: true });
@@ -184,7 +184,7 @@ describe('<NodeDispatcher> per-node error boundary (#216)', () => {
 
     const meshes = renderer.scene.findAllByType('Mesh');
     const placeholder = meshes.find((m) => {
-      const mat = m.instance.material as { color?: THREE.Color };
+      const mat = (m.instance as THREE.Mesh).material as { color?: THREE.Color };
       return mat.color && mat.color.r > 0.9 && mat.color.g < 0.1 && mat.color.b > 0.9;
     });
     expect(placeholder).toBeDefined();

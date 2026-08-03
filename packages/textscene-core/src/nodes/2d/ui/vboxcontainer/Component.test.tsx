@@ -58,7 +58,8 @@ describe('<VBoxContainer>', () => {
   });
 
   it('packs children from the start by default and for an explicit ALIGNMENT_BEGIN', () => {
-    for (const raw of [{}, { alignment: '0' }]) {
+    const begins: Array<Record<string, string>> = [{}, { alignment: '0' }];
+    for (const raw of begins) {
       const { container } = render(<VBoxContainer node={node(raw)} />);
       const div = container.querySelector('[data-control-type="VBoxContainer"]') as HTMLElement;
       expect(div.style.justifyContent).toBe('flex-start');

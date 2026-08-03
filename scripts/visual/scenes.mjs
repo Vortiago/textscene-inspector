@@ -496,6 +496,17 @@ export const GOLDEN_SCENES = [
   // relaxed threshold.
   { name: 'coin-glow', file: 'unit-coin-glow.tscn', maxDiffPct: 0.5 },
 
+  // The colour-ramp noise golden: pins the rasterisation pipeline (seeded
+  // FastNoiseLite ridged fBm → normalize → seamless blend skirt → Gradient
+  // ramp) on a Sprite2D. Besides these two, no other scene carries any noise
+  // texture, so a generator/default drift or a broken skirt is invisible in
+  // every other golden.
+  { name: 'noisetexture2d', file: 'unit-noisetexture2d.tscn' },
+  // The as_normal_map arm under lighting: bump_to_normal_map's sign/packing
+  // and the NoColorSpace tagging only surface when a lit material perturbs
+  // its normals with the result — the ramp golden above is unlit 2D.
+  { name: 'noisetexture2d-normal', file: 'unit-noisetexture2d-normal.tscn' },
+
   // --- Sprite2D/Sprite3D + 3D physics-body roundout ---
   { name: 'sprite2d', file: 'unit-sprite2d.tscn' },
   { name: 'sprite3d', file: 'unit-sprite3d.tscn' },

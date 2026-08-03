@@ -14,6 +14,7 @@ import { CsgPrimitive } from './CsgPrimitive';
 // test has to have its slice wired.
 import './csgbox3d/index.r3f';
 import { parseCSGBox3D } from './csgbox3d/parser';
+import type { CSGBox3DProperties } from './csgbox3d/types';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -27,7 +28,9 @@ const INTERNALS: readonly TscnInternalResource[] = [
   { id: 'Mat_inline', type: 'StandardMaterial3D', data: { albedo_color: 'Color(0, 1, 0, 1)' } },
 ];
 
-function makeNode(material: string | undefined): TscnNode {
+function makeNode(material: string | undefined): TscnNode & {
+  properties: CSGBox3DProperties;
+} {
   const properties = parseCSGBox3D(
     { type: 'node', attributes: { type: 'CSGBox3D', name: 'Box' } },
     material ? { material } : {}
@@ -49,7 +52,8 @@ async function render(material: string | undefined, seed?: THREE.Material) {
 }
 
 function materialOf(renderer: Awaited<ReturnType<typeof render>>) {
-  return renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+    .material as THREE.MeshStandardMaterial;
 }
 
 describe('<CsgPrimitive> material resolution', () => {

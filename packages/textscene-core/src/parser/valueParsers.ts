@@ -7,6 +7,12 @@
  * scene surfaces in the log while still rendering). The strict linter path
  * validates separately and is unaffected.
  *
+ * `settableNonNegative` / `nonNegativeOr` / `nonNegativeSizeOr` add the guard
+ * Godot's own setters apply: a negative argument is REFUSED (`ERR_FAIL_COND_MSG`
+ * returns before assigning), so the property keeps its default rather than
+ * storing a value Godot never holds. The `settable` variant reports `undefined`
+ * for refused-or-absent, for callers that must know whether a property was set.
+ *
  * `intOr` / `floatOr` / `boolOr` / `enumOr` / `vec2Or` take a fallback and
  * always return a value. The `parseOptional*` family (`parseOptionalInt` /
  * `parseOptionalFloat` / `parseOptionalBool` / `parseOptionalVector2`) are the
@@ -20,9 +26,11 @@
  *
  * Pure `.ts` — importable by `linterParser` slices; never pulls in THREE.
  * These wrap the canonical leaf scanners (`parseVector2` in `parser/vectors.ts`);
- * genuinely one-off structured literals (`Rect2`, StyleBox shapes) stay inline in
+ * genuinely one-off structured literals (StyleBox shapes) stay inline in
  * their node slice, and the throwing `parseColor` in `standardmaterial3d` keeps
- * its own contract. `Vector2i` was such a one-off until a third slice needed it
+ * its own contract. `Rect2` graduated the same way `Vector2i` did: a second
+ * slice's hand-rolled grammar accepted `1.2.3` and stored a NaN region — an
+ * invisible frame — so the canonical-grammar reader lives here now. `Vector2i` was such a one-off until a third slice needed it
  * (`SubViewport.size`/`size_2d_override`, after `Sprite2D`/`Sprite3D`
  * `frame_coords`); it has its own integer grammar — `parseVector2`'s float
  * scanner would accept `Vector2i(1.5, 2)` — so it lives here as its own pair
@@ -30,7 +38,42 @@
  */
 
 import { warn } from '../logger';
-import { parseVector2, type Vector2 } from './vectors';
+import { FLOAT_PATTERN_SOURCE, parseVector2, type Vector2 } from './vectors';
+
+export interface Rect2Value {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const RECT2_PATTERN = new RegExp(
+  String.raw`^Rect2\s*\(\s*(${FLOAT_PATTERN_SOURCE})\s*,\s*(${FLOAT_PATTERN_SOURCE})\s*,\s*(${FLOAT_PATTERN_SOURCE})\s*,\s*(${FLOAT_PATTERN_SOURCE})\s*\)$`
+);
+
+/**
+ * `Rect2(x, y, w, h)` → a rect; undefined when absent (silently) or present
+ * but malformed (warn-then-unset). Built on the canonical float grammar:
+ * each component must parse whole, so `1.2.3` and `--1` are refused outright
+ * instead of truncating or landing as NaN.
+ */
+export function parseOptionalRect2(
+  value: string | undefined,
+  context = 'value'
+): Rect2Value | undefined {
+  if (value === undefined) return undefined;
+  const m = RECT2_PATTERN.exec(value);
+  if (!m) {
+    warn(`${context}: invalid Rect2 "${value}", treating as unset`);
+    return undefined;
+  }
+  return {
+    x: parseFloat(m[1]!),
+    y: parseFloat(m[2]!),
+    width: parseFloat(m[3]!),
+    height: parseFloat(m[4]!),
+  };
+}
 
 export function floatOr(value: string | undefined, fallback: number, context = 'value'): number {
   if (value === undefined) return fallback;
@@ -59,6 +102,64 @@ export function boolOr(value: string | undefined, fallback: boolean, context = '
   if (v === 'false' || v === '0') return false;
   warn(`${context}: invalid bool "${value}", using ${fallback}`);
   return fallback;
+}
+
+/**
+ * Reader for a property whose Godot setter REFUSES a negative argument
+ * (`ERR_FAIL_COND_MSG`, e.g. `sphere_shape_3d.cpp:86`, `circle_shape_2d.cpp:46`,
+ * both capsule shapes): the setter returns before assigning, so the property
+ * keeps the value it held — at load time, its default.
+ *
+ * Returns `undefined` for an absent, unparseable OR negative value, so a caller
+ * that must know whether the property was SET can tell — the linked capsule
+ * radius/height pair clamps each other only for values the setter accepted.
+ * Silent when absent, warns for the two authored-but-refused cases.
+ */
+export function settableNonNegative(
+  value: string | undefined,
+  context = 'value'
+): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = parseFloat(value);
+  if (Number.isNaN(parsed)) {
+    warn(`${context}: invalid float "${value}", keeping the Godot default`);
+    return undefined;
+  }
+  if (parsed < 0) {
+    warn(`${context}: Godot refuses the negative value "${value}", keeping the default`);
+    return undefined;
+  }
+  return parsed;
+}
+
+/** {@link settableNonNegative} with a concrete default — the common case. */
+export function nonNegativeOr(
+  value: string | undefined,
+  fallback: number,
+  context = 'value'
+): number {
+  return settableNonNegative(value, context) ?? fallback;
+}
+
+/**
+ * A size whose Godot setter ERR_FAILs when ANY component is negative
+ * (`box_shape_3d.cpp:100`, `rectangle_shape_2d.cpp:61`). The whole assignment is
+ * refused, not clamped per component, so the property keeps its default; a
+ * per-component clamp would invent a size Godot never stores.
+ *
+ * Takes an already-decoded vector: the grammar belongs to `parseVector2` /
+ * `parseVector3`, this only applies the setter's guard.
+ */
+export function nonNegativeSizeOr<T extends { x: number; y: number; z?: number }>(
+  size: T,
+  fallback: T,
+  context = 'value'
+): T {
+  if (size.x < 0 || size.y < 0 || (size.z ?? 0) < 0) {
+    warn(`${context}: Godot refuses a size with a negative component, using the default`);
+    return fallback;
+  }
+  return size;
 }
 
 export function enumOr<T extends number>(

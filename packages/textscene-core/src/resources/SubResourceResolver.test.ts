@@ -12,6 +12,7 @@ import {
   parseResourceReference,
   resolveInstancePath,
   resolveSubResourceRef,
+  resolveTexture2DSource,
   resolveTexture2DPath,
 } from './SubResourceResolver';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
@@ -126,7 +127,34 @@ describe('resolveTexture2DPath', () => {
       },
     },
     { id: 'Plain_1', type: 'PlaceholderTexture2D', data: {} },
+    {
+      id: 'AtlasTexture_coin',
+      type: 'AtlasTexture',
+      data: { atlas: 'ExtResource("5")', region: 'Rect2(20, 16, 40, 32)' },
+    },
+    {
+      id: 'AtlasTexture_empty',
+      type: 'AtlasTexture',
+      data: { atlas: 'ExtResource("5")', region: 'Rect2(0, 0, 0, 32)' },
+    },
   ];
+
+  it('unwraps an AtlasTexture SubResource to its sheet plus the region', () => {
+    expect(resolveTexture2DSource('SubResource("AtlasTexture_coin")', externals, internals)).toEqual({
+      path: 'res://godot.png',
+      region: { x: 20, y: 16, width: 40, height: 32 },
+    });
+    // The path half alone keeps the old contract for path-only consumers.
+    expect(resolveTexture2DPath('SubResource("AtlasTexture_coin")', externals, internals)).toBe(
+      'res://godot.png'
+    );
+  });
+
+  it('drops an empty AtlasTexture region — Godot samples the whole sheet', () => {
+    expect(resolveTexture2DSource('SubResource("AtlasTexture_empty")', externals, internals)).toEqual({
+      path: 'res://godot.png',
+    });
+  });
 
   it('passes a raw res:// path through', () => {
     expect(resolveTexture2DPath('res://icon.png', externals, internals)).toBe('res://icon.png');

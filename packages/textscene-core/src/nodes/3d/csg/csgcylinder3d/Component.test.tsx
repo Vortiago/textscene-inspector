@@ -32,7 +32,7 @@ async function render(node: TscnNode, internalResources: TscnInternalResource[] 
 
 async function geometryOf(node: TscnNode) {
   const renderer = await render(node);
-  return renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
 }
 
 /**

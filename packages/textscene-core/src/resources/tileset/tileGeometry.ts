@@ -12,7 +12,7 @@
  */
 
 import { mapToLocalPx } from './tilePlacement';
-import { tileDrawInfo, type AtlasSourceModel, type TileGrid, type Vec2i } from './tileSetModel';
+import { tileDrawInfo, type AtlasSourceModel, type TileGrid, type Vec2i } from './types';
 
 /** The slice of a placed cell the builder needs (structurally matches PlacedCell). */
 export interface DrawableCell {

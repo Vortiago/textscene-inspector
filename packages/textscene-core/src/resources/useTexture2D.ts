@@ -20,12 +20,16 @@
  * status explaining why not).
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
-import { resolveTexture2DPath } from './SubResourceResolver.js';
+import { composeFrameTexture, type SpriteRect } from '../r3f/spriteFrame.js';
+import { resolveTexture2DSource } from './SubResourceResolver.js';
 import { useProceduralTexture } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
+
+/** No frame grid and no authored region — the atlas cell is the whole window. */
+const WHOLE_IMAGE = { region_enabled: false, hframes: 1, vframes: 1, frame: 0 } as const;
 
 export interface Texture2DResult {
   /** The resolved texture, or null while loading / when there is nothing to show. */
@@ -34,25 +38,78 @@ export interface Texture2DResult {
   missing: boolean;
 }
 
-export function useTexture2D(
+/**
+ * The pre-composition half of {@link useTexture2D}: what the slot resolves TO,
+ * before any windowing. Frame hosts (Sprite2D/Sprite3D/AnimatedSprite2D) need
+ * this half because they compose region + hframes/vframes themselves —
+ * windowing here as well would window twice.
+ */
+export interface Texture2DSourceResult {
+  /**
+   * The source texture — procedural or loaded — or null while loading / when
+   * there is nothing to show. BORROWED whenever it is shared (procedural cache,
+   * `useResource`): callers never dispose it, only clones they make of it.
+   */
+  texture: THREE.Texture | null;
+  /** The AtlasTexture cell the reference windows to, in sheet pixels. */
+  region?: SpriteRect;
+  /** True when the reference names something this renderer cannot resolve. */
+  missing: boolean;
+}
+
+export function useTexture2DSource(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[]
-): Texture2DResult {
+): Texture2DSourceResult {
   // Procedural first: it is described entirely by the scene, so it needs no
   // file and resolves in the same tick the property is read. Shared and owned
   // by the procedural cache, like any loader-supplied texture — borrowed here
   // (pinned by the hook while mounted), never disposed.
   const procedural = useProceduralTexture(ref, internalResources);
 
-  const path = useMemo(
-    () => (procedural ? null : resolveTexture2DPath(ref, externalResources, internalResources)),
+  const source = useMemo(
+    () =>
+      procedural
+        ? { path: null }
+        : resolveTexture2DSource(ref, externalResources, internalResources),
     [procedural, ref, externalResources, internalResources]
   );
+  const path = source.path;
   const loaded = useResource<THREE.Texture>(path ?? '', 'Texture2D');
 
   if (procedural) return { texture: procedural, missing: false };
   if (!ref) return { texture: null, missing: false };
   if (!path) return { texture: null, missing: true };
-  return { texture: loaded.value ?? null, missing: loaded.status === 'unavailable' };
+  return {
+    texture: loaded.value ?? null,
+    region: source.region,
+    missing: loaded.status === 'unavailable',
+  };
+}
+
+export function useTexture2D(
+  ref: string | undefined,
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[]
+): Texture2DResult {
+  const source = useTexture2DSource(ref, externalResources, internalResources);
+
+  // An AtlasTexture slot loads the SHEET, so the cell has to be windowed before
+  // the caller sees it — otherwise every such consumer would draw the whole
+  // sprite sheet. The window is a CLONE (the cached texture is shared by every
+  // consumer of that path, the identity-equality contract), so this hook owns it
+  // and disposes it on change/unmount; callers still just receive a texture.
+  const region = source.region;
+  const windowed = useMemo(
+    () =>
+      region
+        ? (composeFrameTexture(source.texture ?? undefined, WHOLE_IMAGE, 'clamp', region) ?? null)
+        : null,
+    [source.texture, region]
+  );
+  useEffect(() => () => windowed?.dispose(), [windowed]);
+
+  if (region) return { texture: windowed, missing: source.missing };
+  return { texture: source.texture, missing: source.missing };
 }

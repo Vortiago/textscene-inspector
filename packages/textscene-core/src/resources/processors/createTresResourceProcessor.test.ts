@@ -1,11 +1,11 @@
 /**
  * Generic .tres processor — fetches a Godot resource file through the
- * FileEventBus and parses it into a ParsedTresFile on the 'resource' bus slot.
+ * FileEventBus and parses it into a ParsedResource on the 'resource' bus slot.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { ResourceEventBus } from '../ResourceEventBus';
 import type { FileEventBus, FileData } from '../FileEventBus';
-import type { ParsedTresFile } from '../../parser/tresParser';
+import type { ParsedResource } from '../../parser/parsedResource';
 import { createTresResourceProcessor } from './createTresResourceProcessor';
 
 const TILESET_TRES = `[gd_resource type="TileSet" format=3]
@@ -34,12 +34,12 @@ function mockFileBus() {
 }
 
 describe('createTresResourceProcessor', () => {
-  it('parses a requested .tres file and emits resource:loaded with the ParsedTresFile', async () => {
+  it('parses a requested .tres file and emits resource:loaded with the ParsedResource', async () => {
     const file = mockFileBus();
     const eventBus = new ResourceEventBus();
     const processor = createTresResourceProcessor(file.bus, eventBus);
 
-    const loaded = eventBus.once<ParsedTresFile>('resource', 'loaded', 'res://t.tres', 1000);
+    const loaded = eventBus.once<ParsedResource>('resource', 'loaded', 'res://t.tres', 1000);
     processor.request('res://t.tres');
     expect(file.request).toHaveBeenCalledWith('res://t.tres');
     file.emitLoaded('res://t.tres', TILESET_TRES);

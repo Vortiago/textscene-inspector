@@ -30,11 +30,10 @@ export function checkResourceExists(scene: TscnScene, resourceRef: string): bool
   const [, resourceType, resourceId] = match;
 
   if (resourceType === 'SubResource') {
-    // SubResource ID is stored in data.id (string), not top-level id (number)
-    return scene.internalResources?.some((r: TscnInternalResource) => r.data?.id === resourceId) ?? false;
+    // The parser mirrors the heading id into data.id; the checker keys off it there.
+    return scene.internalResources.some((r: TscnInternalResource) => r.data.id === resourceId);
   } else if (resourceType === 'ExtResource') {
-    // ExtResource ID is stored in id property
-    return scene.externalResources?.some((r: TscnExternalResource) => r.id === resourceId) ?? false;
+    return scene.externalResources.some((r: TscnExternalResource) => r.id === resourceId);
   }
 
   return false;

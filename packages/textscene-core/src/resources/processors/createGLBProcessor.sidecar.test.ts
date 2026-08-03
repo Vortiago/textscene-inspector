@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import { createGLBProcessor } from './createGLBProcessor';
-import { initGlbModules } from '../processing/glbProcessing';
+import { initGlbModules } from '../formats/glb/glbProcessing';
 
 const GLTF_PATH = 'res://town/tree/scene.gltf';
 

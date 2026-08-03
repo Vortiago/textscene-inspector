@@ -27,8 +27,8 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Root');
-      expect(result[0].children).toHaveLength(0);
+      expect(result[0]!.name).toBe('Root');
+      expect(result[0]!.children).toHaveLength(0);
     });
 
     it('should handle single root node without parent attribute', () => {
@@ -44,7 +44,7 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Root');
+      expect(result[0]!.name).toBe('Root');
     });
   });
 
@@ -69,9 +69,9 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Root');
-      expect(result[0].children).toHaveLength(1);
-      expect(result[0].children[0].name).toBe('Child');
+      expect(result[0]!.name).toBe('Root');
+      expect(result[0]!.children).toHaveLength(1);
+      expect(result[0]!.children[0]!.name).toBe('Child');
     });
 
     it('should attach multiple children with parent="." to root', () => {
@@ -101,8 +101,8 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       expect(result).toHaveLength(1);
-      expect(result[0].children).toHaveLength(2);
-      const childNames = result[0].children.map(c => c.name).sort();
+      expect(result[0]!.children).toHaveLength(2);
+      const childNames = result[0]!.children.map(c => c.name).sort();
       expect(childNames).toEqual(['Child1', 'Child2']);
     });
   });
@@ -135,11 +135,11 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Root');
-      expect(result[0].children).toHaveLength(1);
-      expect(result[0].children[0].name).toBe('Child');
-      expect(result[0].children[0].children).toHaveLength(1);
-      expect(result[0].children[0].children[0].name).toBe('GrandChild');
+      expect(result[0]!.name).toBe('Root');
+      expect(result[0]!.children).toHaveLength(1);
+      expect(result[0]!.children[0]!.name).toBe('Child');
+      expect(result[0]!.children[0]!.children).toHaveLength(1);
+      expect(result[0]!.children[0]!.children[0]!.name).toBe('GrandChild');
     });
 
     it('should build complex multi-level hierarchy', () => {
@@ -183,7 +183,7 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       expect(result).toHaveLength(1);
-      const root = result[0];
+      const root = result[0]!;
       expect(root.children).toHaveLength(2);
 
       const child1 = root.children.find(c => c.name === 'Child1');
@@ -192,9 +192,9 @@ describe('buildSceneTree', () => {
       expect(child1).toBeDefined();
       expect(child2).toBeDefined();
       expect(child1!.children).toHaveLength(1);
-      expect(child1!.children[0].name).toBe('GrandChild1');
+      expect(child1!.children[0]!.name).toBe('GrandChild1');
       expect(child2!.children).toHaveLength(1);
-      expect(child2!.children[0].name).toBe('GrandChild2');
+      expect(child2!.children[0]!.name).toBe('GrandChild2');
     });
   });
 
@@ -232,12 +232,12 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       // Traverse down to verify depth
-      let currentNode = result[0];
+      let currentNode = result[0]!;
       for (let i = 0; i < 10; i++) {
         expect(currentNode.name).toBe(`Level${i}`);
         if (i < 10) {
           expect(currentNode.children).toHaveLength(1);
-          currentNode = currentNode.children[0];
+          currentNode = currentNode.children[0]!;
         }
       }
     });
@@ -393,7 +393,7 @@ describe('buildSceneTree', () => {
       );
       // Orphaned nodes are dropped (not added as roots)
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Root');
+      expect(result[0]!.name).toBe('Root');
 
       loggerWarnSpy.mockRestore();
     });
@@ -455,11 +455,11 @@ describe('buildSceneTree', () => {
       const result = buildSceneTree(nodes);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Root');
-      expect(result[0].children).toHaveLength(1);
-      expect(result[0].children[0].name).toBe('Child1');
-      expect(result[0].children[0].children).toHaveLength(1);
-      expect(result[0].children[0].children[0].name).toBe('Child2');
+      expect(result[0]!.name).toBe('Root');
+      expect(result[0]!.children).toHaveLength(1);
+      expect(result[0]!.children[0]!.name).toBe('Child1');
+      expect(result[0]!.children[0]!.children).toHaveLength(1);
+      expect(result[0]!.children[0]!.children[0]!.name).toBe('Child2');
     });
 
     it('should preserve node properties during tree building', () => {
@@ -481,8 +481,8 @@ describe('buildSceneTree', () => {
 
       const result = buildSceneTree(nodes);
 
-      expect(result[0].properties).toHaveProperty('customProp', 'value');
-      expect(result[0].children[0].properties).toHaveProperty('anotherProp', 'test');
+      expect(result[0]!.properties).toHaveProperty('customProp', 'value');
+      expect(result[0]!.children[0]!.properties).toHaveProperty('anotherProp', 'test');
     });
 
     it('should preserve node type during tree building', () => {
@@ -504,8 +504,8 @@ describe('buildSceneTree', () => {
 
       const result = buildSceneTree(nodes);
 
-      expect(result[0].type).toBe('Node3D');
-      expect(result[0].children[0].type).toBe('MeshInstance3D');
+      expect(result[0]!.type).toBe('Node3D');
+      expect(result[0]!.children[0]!.type).toBe('MeshInstance3D');
     });
   });
 });

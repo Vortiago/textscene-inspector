@@ -47,7 +47,7 @@ async function renderFloor(
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
-  return renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
 }
 
 describe('MeshInstance3D — triplanar planar tiling (WI-HALL-5)', () => {

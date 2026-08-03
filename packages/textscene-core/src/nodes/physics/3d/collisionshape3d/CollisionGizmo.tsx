@@ -12,12 +12,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { TscnInternalResource } from '../../../../parser/types';
-import { parseBoxShape3D } from '../../../../resources/shapes/boxshape3d/parser';
-import { parseConvexPolygonShape3D } from '../../../../resources/shapes/convexpolygonshape3d/parser';
-import { parseConcavePolygonShape3D } from '../../../../resources/shapes/concavepolygonshape3d/parser';
-import { parseCapsuleShape3D } from '../../../../resources/shapes/capsuleshape3d/parser';
-import { parseSphereShape3D } from '../../../../resources/shapes/sphereshape3d/parser';
-import { parseCylinderShape3D } from '../../../../resources/shapes/cylindershape3d/parser';
+import { decodeBoxShape3D } from '../../../../resources/shapes/boxshape3d';
+import { decodeConvexPolygonShape3D } from '../../../../resources/shapes/convexpolygonshape3d';
+import { decodeConcavePolygonShape3D } from '../../../../resources/shapes/concavepolygonshape3d';
+import { decodeCapsuleShape3D } from '../../../../resources/shapes/capsuleshape3d';
+import { decodeSphereShape3D } from '../../../../resources/shapes/sphereshape3d';
+import { decodeCylinderShape3D } from '../../../../resources/shapes/cylindershape3d';
 import { warn } from '../../../../logger';
 
 interface CollisionGizmoProps {
@@ -30,7 +30,7 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
   const data = shape.data as Record<string, string>;
   switch (shape.type) {
     case 'BoxShape3D': {
-      const { size } = parseBoxShape3D(data);
+      const { size } = decodeBoxShape3D(data);
       return (
         <mesh>
           <boxGeometry args={[size.x, size.y, size.z]} />
@@ -39,7 +39,7 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
       );
     }
     case 'CapsuleShape3D': {
-      const { radius, height } = parseCapsuleShape3D(data);
+      const { radius, height } = decodeCapsuleShape3D(data);
       return (
         <mesh>
           {/* Godot's `height` spans the whole capsule; three's `length` is only
@@ -52,12 +52,12 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
     case 'SphereShape3D':
       return (
         <mesh>
-          <sphereGeometry args={[parseSphereShape3D(data).radius, 16, 12]} />
+          <sphereGeometry args={[decodeSphereShape3D(data).radius, 16, 12]} />
           <meshBasicMaterial color={color} wireframe />
         </mesh>
       );
     case 'CylinderShape3D': {
-      const { radius, height } = parseCylinderShape3D(data);
+      const { radius, height } = decodeCylinderShape3D(data);
       return (
         <mesh>
           <cylinderGeometry args={[radius, radius, height, 16]} />
@@ -66,9 +66,9 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
       );
     }
     case 'ConcavePolygonShape3D':
-      return <TriangleSoupWire data={parseConcavePolygonShape3D(data).data} color={color} />;
+      return <TriangleSoupWire data={decodeConcavePolygonShape3D(data).data} color={color} />;
     case 'ConvexPolygonShape3D':
-      return <ConvexHullWire points={parseConvexPolygonShape3D(data).points} color={color} />;
+      return <ConvexHullWire points={decodeConvexPolygonShape3D(data).points} color={color} />;
     default:
       warn(`[CollisionShape3D] Unsupported shape type "${shape.type}" — drawing a unit wireframe box.`);
       return (

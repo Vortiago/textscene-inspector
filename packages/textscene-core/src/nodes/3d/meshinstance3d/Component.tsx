@@ -31,25 +31,26 @@ import {
   useSceneResources,
 } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
-import { resolveGradientTexture2D } from '../../../resources/textures/gradienttexture2d/resolveGradientTexture';
+import { resolveProceduralTexture } from '../../../resources/textures/resolveProceduralTexture';
 import { useViewportTextureSlot } from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { useProceduralTexturePins } from '../../../resources/useProceduralTexture';
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
 import { resolveEmission } from '../../../resources/materials/standardmaterial3d/emission';
-import { parseStandardMaterial3DScalars } from '../../../r3f/materials/standardMaterialScalars';
+import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
+import { materialBlendProps } from '../../../resources/materials/standardmaterial3d/build';
 import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
 import { warn } from '../../../logger';
-import { decodeSceneArrayMesh } from '../../../resources/meshes/arrayMeshDecode';
-import { buildArrayMeshGeometry } from '../../../resources/meshes/arrayMeshGeometry';
+import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode';
+import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import { applyTextureState, type TextureState } from '../../../resources/textures/applyTextureState';
 import { GODOT_TEXTURE_FILTER_DEFAULT } from '../../../resources/textures/godotTextureFilter';
-import { repackAnisotropyFlowmap } from './repackFlowmap';
+import { repackAnisotropyFlowmap } from '../../../resources/textures/repackFlowmap';
 import { triplanarPlaneScale } from './triplanarScale';
 
 /** Texture slots StandardMaterial3D exposes — checked in this order. */
@@ -626,7 +627,8 @@ function SecondarySurfaceMaterial({
       roughness={scalars.roughness}
       transparent={scalars.transparent}
       opacity={scalars.opacity}
-      blending={scalars.blending}
+      {...materialBlendProps(scalars)}
+      depthTest={scalars.depthTest}
       side={scalars.side}
       shadowSide={shadowSide ?? null}
       emissive={emission.emissive}
@@ -689,7 +691,7 @@ function resolveProceduralTextures(
   for (const slot of TEXTURE_PROPERTIES) {
     const raw = data[slot];
     if (typeof raw !== 'string') continue;
-    const resolved = resolveGradientTexture2D(raw, internalResources);
+    const resolved = resolveProceduralTexture(raw, internalResources);
     if (resolved) {
       out.textures[slot] = resolved.texture;
       out.keys.push(resolved.key);

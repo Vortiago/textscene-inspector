@@ -88,8 +88,9 @@ describe('useTexture2D — procedural cookies reach 2D canvas items', () => {
     // quad samples the rasterised gradient.
     const cookie = cookieOf(meshes[0]!.instance);
     expect(cookie).toBeInstanceOf(THREE.DataTexture);
-    expect(cookie!.image.width).toBe(64);
-    expect(cookie!.image.height).toBe(64);
+    const cookieImage = cookie!.image as { width: number; height: number };
+    expect(cookieImage.width).toBe(64);
+    expect(cookieImage.height).toBe(64);
   });
 
   it('rasterises ONE texture for every node pointing at the same gradient', async () => {
@@ -205,7 +206,7 @@ describe('useTexture2D — reference forms', () => {
     );
 
     expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
-    expect(result.current.texture!.image.width).toBe(16);
+    expect((result.current.texture!.image as { width: number }).width).toBe(16);
     expect(result.current.missing).toBe(false);
   });
 
@@ -241,5 +242,92 @@ describe('useTexture2D — reference forms', () => {
 
     expect(result.current.texture).toBeNull();
     expect(result.current.missing).toBe(false);
+  });
+
+  describe('AtlasTexture slot', () => {
+    const atlasResources: TscnInternalResource[] = [
+      {
+        id: 'AtlasTexture_a',
+        type: 'AtlasTexture',
+        data: { atlas: 'ExtResource("1")', region: 'Rect2(16, 0, 16, 32)' },
+      },
+      {
+        id: 'AtlasTexture_whole',
+        type: 'AtlasTexture',
+        data: { atlas: 'ExtResource("1")' },
+      },
+    ];
+    const externalResources: TscnExternalResource[] = [
+      { id: '1', type: 'Texture2D', path: 'res://sheet.png' },
+    ];
+
+    /** A loaded sheet with real dimensions — the UV window needs them. */
+    function sheet(): THREE.Texture {
+      const texture = new THREE.Texture();
+      (texture as unknown as { image: { width: number; height: number } }).image = {
+        width: 64,
+        height: 32,
+      };
+      return texture;
+    }
+
+    it('windows the sheet to the cell instead of handing back the whole image', () => {
+      const image = sheet();
+      const { result } = renderHook(
+        () => useTexture2D('SubResource("AtlasTexture_a")', externalResources, atlasResources),
+        { wrapper: withLoader({ path: 'res://sheet.png', texture: image }) }
+      );
+
+      const windowed = result.current.texture!;
+      expect(result.current.missing).toBe(false);
+      // A clone, never the shared cache entry — other consumers of the sheet
+      // must not inherit this slot's UV window.
+      expect(windowed).not.toBe(image);
+      expect(windowed.repeat.x).toBeCloseTo(16 / 64, 6);
+      expect(windowed.repeat.y).toBeCloseTo(32 / 32, 6);
+      expect(windowed.offset.x).toBeCloseTo(16 / 64, 6);
+      expect(windowed.offset.y).toBeCloseTo(0, 6);
+    });
+
+    it('hands back the shared sheet when the cell covers the whole image', () => {
+      const image = sheet();
+      const { result } = renderHook(
+        () => useTexture2D('SubResource("AtlasTexture_whole")', externalResources, atlasResources),
+        { wrapper: withLoader({ path: 'res://sheet.png', texture: image }) }
+      );
+
+      // No region decoded → nothing to window → the identity-equality contract
+      // still holds for the ordinary case.
+      expect(result.current.texture).toBe(image);
+    });
+
+    it('disposes the window it owns on unmount', () => {
+      const image = sheet();
+      const { result, unmount } = renderHook(
+        () => useTexture2D('SubResource("AtlasTexture_a")', externalResources, atlasResources),
+        { wrapper: withLoader({ path: 'res://sheet.png', texture: image }) }
+      );
+      const windowed = result.current.texture!;
+      let disposed = false;
+      windowed.addEventListener('dispose', () => {
+        disposed = true;
+      });
+
+      unmount();
+      expect(disposed).toBe(true);
+    });
+
+    it('reports an atlas whose sheet is unresolvable as missing', () => {
+      const orphan: TscnInternalResource[] = [
+        { id: 'AtlasTexture_x', type: 'AtlasTexture', data: { region: 'Rect2(0, 0, 8, 8)' } },
+      ];
+      const { result } = renderHook(
+        () => useTexture2D('SubResource("AtlasTexture_x")', [], orphan),
+        { wrapper: withLoader() }
+      );
+
+      expect(result.current.texture).toBeNull();
+      expect(result.current.missing).toBe(true);
+    });
   });
 });

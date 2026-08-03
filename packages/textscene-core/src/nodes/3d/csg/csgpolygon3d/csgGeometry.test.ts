@@ -98,8 +98,8 @@ describe('csgPolygon3DGeometryKey', () => {
   });
 
   it("changes when only a control point's out handle moves", () => {
-    // tessellateCurve3D reads a.out for the cubic-Bézier span (curve3d.ts:172-175), so a
-    // dragged tangent handle is a shape change with every position left untouched.
+    // tessellateCurve3D's cubic-Bézier span reads a.out (resources/curves/curve3d/decode.ts),
+    // so a dragged tangent handle is a shape change with every position left untouched.
     const curved = straightCurve();
     curved[0]!.out = { x: 3, y: 0, z: 0 };
     expectShapeAndKeyDiffer(pathProperties(), withCurve(curved));
