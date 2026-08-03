@@ -51,31 +51,13 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
-    // Error: gravity_point is true but gravity_point_unit_distance is not set or <= 0
-    const gravityPoint = rawProps.gravity_point === 'true';
-    const gravityPointUnitDistance = rawProps.gravity_point_unit_distance;
-    if (gravityPoint) {
-      if (!gravityPointUnitDistance) {
-        diagnostics.push({
-          severity: 'error',
-          message: `${type} '${node.name}' has 'gravity_point' enabled but 'gravity_point_unit_distance' is not set. This property is required for point gravity calculations.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-point-gravity-missing-distance`,
-        });
-      } else {
-        const distance = parseFloat(gravityPointUnitDistance);
-        if (!isNaN(distance) && distance <= 0) {
-          diagnostics.push({
-            severity: 'error',
-            message: `${type} '${node.name}' has 'gravity_point' enabled but 'gravity_point_unit_distance' is ${distance}. This value must be greater than 0 for point gravity to work.`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: `${prefix}-point-gravity-invalid-distance`,
-          });
-        }
-      }
-    }
+    // No point-gravity distance rules: `gravity_point_unit_distance` defaults
+    // to 0.0, which is a documented, meaningful configuration ("gravity will
+    // be constant regardless of distance", Area3D.xml) — and Godot's
+    // serializer omits default-valued properties, so absence is the normal
+    // form. Negative explicit values are outside the property's range hint
+    // ("0,1024,0.001,or_greater") and are rejected by each slice's format
+    // validator instead.
 
     // Warning: collision_layer is 0 and monitoring is true (won't detect on any layer)
     const collisionLayer = rawProps.collision_layer;
@@ -147,8 +129,6 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
       emits: [
         { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
         { ruleName: `${prefix}-inactive`, severity: 'warning' },
-        { ruleName: `${prefix}-point-gravity-missing-distance`, severity: 'error' },
-        { ruleName: `${prefix}-point-gravity-invalid-distance`, severity: 'error' },
         { ruleName: `${prefix}-monitoring-zero-layer`, severity: 'warning' },
         { ruleName: `${prefix}-monitoring-zero-mask`, severity: 'warning' },
         { ruleName: `${prefix}-monitoring-no-collision`, severity: 'warning' },

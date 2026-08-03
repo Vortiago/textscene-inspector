@@ -65,8 +65,6 @@ Strict parsing format-checks these `Area2D` properties, plus 18 inherited from N
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-area2d` | `area2d-needs-collision-shape` | warning |
 |  | `area2d-inactive` | warning |
-|  | `area2d-point-gravity-missing-distance` | error |
-|  | `area2d-point-gravity-invalid-distance` | error |
 |  | `area2d-monitoring-zero-layer` | warning |
 |  | `area2d-monitoring-zero-mask` | warning |
 |  | `area2d-monitoring-no-collision` | warning |
