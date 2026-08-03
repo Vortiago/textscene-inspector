@@ -28,7 +28,13 @@ export function createEnumValidator(
   max: number,
   enumValues: Record<number, string>,
   errorCodeFormat: string = 'INVALID_FORMAT',
-  errorCodeValue: string = 'INVALID_VALUE'
+  errorCodeValue: string = 'INVALID_VALUE',
+  /**
+   * Severity of the RANGE branch (ADR-0032). The FORMAT branch below stays an
+   * error unconditionally: an unparseable value is malformed whatever the
+   * engine does with it.
+   */
+  valueSeverity: ParseError['severity'] = 'error'
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
     const num = parseInt(value, 10);
@@ -39,7 +45,7 @@ export function createEnumValidator(
       const validValuesStr = Object.entries(enumValues)
         .map(([val, name]) => `${val}=${name}`)
         .join(', ');
-      return propertyError(key, line, `Property '${propertyName}' must be ${min}-${max} (got ${num}). Valid values: ${validValuesStr}`, errorCodeValue);
+      return propertyError(key, line, `Property '${propertyName}' must be ${min}-${max} (got ${num}). Valid values: ${validValuesStr}`, errorCodeValue, valueSeverity);
     }
     return null;
   };
@@ -55,7 +61,9 @@ export function createNumericRangeValidator(
   parseAsInt: boolean = false,
   customMessage?: string,
   errorCodeFormat: string = 'INVALID_FORMAT',
-  errorCodeValue: string = 'INVALID_VALUE'
+  errorCodeValue: string = 'INVALID_VALUE',
+  /** Severity of the RANGE branch; the FORMAT branch stays an error. */
+  valueSeverity: ParseError['severity'] = 'error'
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
     const num = parseAsInt ? parseInt(value, 10) : parseFloat(value);
@@ -77,7 +85,7 @@ export function createNumericRangeValidator(
       } else {
         defaultMsg = `Property '${propertyName}' must be >= ${min}, got: ${num}`;
       }
-      return propertyError(key, line, customMessage || defaultMsg, errorCodeValue);
+      return propertyError(key, line, customMessage || defaultMsg, errorCodeValue, valueSeverity);
     }
 
     // Check max constraint
@@ -86,7 +94,7 @@ export function createNumericRangeValidator(
         min !== null
           ? `Property '${propertyName}' must be between ${min} and ${max} (got ${num})`
           : `Property '${propertyName}' must be <= ${max}, got: ${num}`;
-      return propertyError(key, line, customMessage || defaultMsg, errorCodeValue);
+      return propertyError(key, line, customMessage || defaultMsg, errorCodeValue, valueSeverity);
     }
 
     return null;
@@ -101,7 +109,9 @@ export function createPositiveIntegerValidator(
   propertyName: string,
   errorMessage?: string,
   errorCodeFormat: string = 'INVALID_FORMAT',
-  errorCodeValue: string = 'INVALID_VALUE'
+  errorCodeValue: string = 'INVALID_VALUE',
+  /** Severity of the RANGE branch; the FORMAT branch stays an error. */
+  valueSeverity: ParseError['severity'] = 'error'
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
     const num = parseInt(value, 10);
@@ -110,7 +120,7 @@ export function createPositiveIntegerValidator(
     }
     if (num <= 0) {
       const defaultMsg = `Property '${propertyName}' must be greater than 0 (got ${num}). Zero or negative values cause division by zero.`;
-      return propertyError(key, line, errorMessage || defaultMsg, errorCodeValue);
+      return propertyError(key, line, errorMessage || defaultMsg, errorCodeValue, valueSeverity);
     }
     return null;
   };

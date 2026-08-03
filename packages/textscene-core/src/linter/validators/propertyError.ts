@@ -11,10 +11,11 @@ export function propertyError(
   key: string,
   line: number,
   message: string,
-  code: string
+  code: string,
+  severity: ParseError['severity'] = 'error'
 ): ParseError {
   return {
-    severity: 'error',
+    severity,
     message,
     line,
     column: key.length + 3,

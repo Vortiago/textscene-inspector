@@ -47,8 +47,16 @@ export interface Diagnostic {
  * Parse error from strict parser (syntax/format issues)
  */
 export interface ParseError {
-  /** Severity level (always 'error' for parse errors) */
-  severity: 'error';
+  /**
+   * Severity of the finding.
+   *
+   * A FORMAT failure is always an error: the value cannot be parsed, so the
+   * file is malformed whatever the engine would do with it. A RANGE failure
+   * depends on the engine (ADR-0032): an error only where the setter refuses
+   * or alters the value, a warning where the value merely sits outside the
+   * property's PROPERTY_HINT_RANGE.
+   */
+  severity: Severity;
   /** Human-readable error message */
   message: string;
   /** Line number where error occurred */
@@ -65,7 +73,13 @@ export interface ParseError {
 export interface StrictParseResult {
   /** Parse errors found during strict parsing */
   errors: ParseError[];
-  /** Parsed scene (only present if no errors) */
+  /**
+   * The parsed scene. Present whenever the scanner produced one, INCLUDING
+   * when `errors` is non-empty: a bad property value does not invalidate the
+   * tree, and withholding it made `Linter` skip its whole rule phase, so one
+   * bad value silenced every semantic rule in the file. Absent only if the
+   * scanner could not run at all.
+   */
   scene?: TscnScene;
 }
 

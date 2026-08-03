@@ -29,6 +29,21 @@ export type PropertyValidator = ((
    * blank rather than being guessed at.
    */
   accepts?: string;
+
+  /**
+   * True when this validator enforces a numeric or enum BOUND, as opposed to a
+   * pure shape check. `boundGrounding.test.ts` sweeps for bounded validators
+   * that carry no `grounding`.
+   */
+  bounded?: boolean;
+
+  /**
+   * Why the bound is the bound (ADR-0032), with the governing `file:line`.
+   * `enforced` = Godot's setter refuses or alters the value, so out of range is
+   * an error. `hinted` = only the PROPERTY_HINT_RANGE says so, so it is a
+   * warning. Absent means the bound has not been audited yet.
+   */
+  grounding?: { kind: 'enforced' | 'hinted'; cite: string };
 };
 
 /**

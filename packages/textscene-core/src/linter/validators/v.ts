@@ -20,6 +20,7 @@
  */
 
 import type { PropertyValidator } from '../ValidatorRegistry.js';
+import type { Severity } from '../types.js';
 import { propertyError } from './propertyError.js';
 import { VECTOR3_REGEX } from './vectorValidators.js';
 import { floatTupleValidator } from './floatTupleValidator.js';
@@ -60,7 +61,29 @@ function valueCode(name: string): string {
   return formatCode(name, 'VALUE');
 }
 
-export interface FloatOpts {
+/**
+ * Where a bound's authority comes from (ADR-0032). Exactly one of these belongs
+ * on any validator carrying a numeric or enum bound, and each takes the
+ * governing `file:line` so the claim is checkable.
+ *
+ * `enforced` — Godot's setter refuses or alters the value (`ERR_FAIL*`, a clamp,
+ * a silently dropped write). Out of range is an ERROR.
+ *
+ * `hinted` — the property's `PROPERTY_HINT_RANGE` states the bound but the
+ * setter assigns straight through. The hint constrains the inspector widget,
+ * not the engine, so out of range is a WARNING.
+ *
+ * Neither is the un-audited legacy state: the bound behaves as an error and is
+ * counted by `boundGrounding.test.ts`, whose ratchet only goes down.
+ */
+export interface Grounding {
+  /** `file:line` of the setter guard that refuses or alters the value. */
+  enforced?: string;
+  /** `file:line` of the ADD_PROPERTY whose PROPERTY_HINT_RANGE states the bound. */
+  hinted?: string;
+}
+
+export interface FloatOpts extends Grounding {
   /** Inclusive minimum. Omit for no lower bound. */
   min?: number;
   /** Inclusive maximum. Omit for no upper bound. */
@@ -72,7 +95,7 @@ export interface FloatOpts {
 /** Same shape as `FloatOpts`; named separately for documentation symmetry. */
 export type IntOpts = FloatOpts;
 
-export interface EnumOpts {
+export interface EnumOpts extends Grounding {
   /** Per-value display labels, e.g. `{0:'OFF', 1:'ON', 2:'DOUBLE_SIDED', 3:'SHADOWS_ONLY'}`. */
   labels: Record<number, string>;
 }
@@ -104,6 +127,25 @@ export function accepts(validator: PropertyValidator, description: string): Prop
   return validator;
 }
 
+/**
+ * Severity of a bound's range branch, and the tag that records why.
+ *
+ * A validator is tagged with its grounding so `boundGrounding.test.ts` can
+ * sweep the live registry: a bound with neither `enforced` nor `hinted` is
+ * un-audited, behaves as it always has, and is counted by the ratchet.
+ */
+function ground(validator: PropertyValidator, opts: Grounding): PropertyValidator {
+  if (opts.enforced) validator.grounding = { kind: 'enforced', cite: opts.enforced };
+  else if (opts.hinted) validator.grounding = { kind: 'hinted', cite: opts.hinted };
+  validator.bounded = true;
+  return validator;
+}
+
+/** `warning` for a hint-only bound, `error` otherwise (ADR-0032). */
+function boundSeverity(opts: Grounding): Severity {
+  return opts.hinted && !opts.enforced ? 'warning' : 'error';
+}
+
 /** `float 0-1` / `float >= 0` / `integer 1-256` / `float`, from the bounds. */
 function numericRange(kind: 'float' | 'integer', min?: number, max?: number): string {
   if (min !== undefined && max !== undefined) return `${kind} ${min}-${max}`;
@@ -121,17 +163,21 @@ export const v = {
    * Default `min = null` (no lower bound), `max = null` (no upper bound).
    */
   float(name: string, opts: FloatOpts = {}): PropertyValidator {
-    return accepts(
-      createNumericRangeValidator(
-      name,
-      opts.min ?? null,
-      opts.max ?? null,
-      false,
-        opts.message,
-        formatCode(name),
-        valueCode(name)
+    return ground(
+      accepts(
+        createNumericRangeValidator(
+          name,
+          opts.min ?? null,
+          opts.max ?? null,
+          false,
+          opts.message,
+          formatCode(name),
+          valueCode(name),
+          boundSeverity(opts)
+        ),
+        numericRange('float', opts.min, opts.max)
       ),
-      numericRange('float', opts.min, opts.max)
+      opts
     );
   },
 
@@ -196,17 +242,21 @@ export const v = {
 
   /** Integer in a range, parsed as base 10. */
   int(name: string, opts: IntOpts = {}): PropertyValidator {
-    return accepts(
-      createNumericRangeValidator(
-        name,
-        opts.min ?? null,
-        opts.max ?? null,
-        true,
-        opts.message,
-        formatCode(name),
-        valueCode(name)
+    return ground(
+      accepts(
+        createNumericRangeValidator(
+          name,
+          opts.min ?? null,
+          opts.max ?? null,
+          true,
+          opts.message,
+          formatCode(name),
+          valueCode(name),
+          boundSeverity(opts)
+        ),
+        numericRange('integer', opts.min, opts.max)
       ),
-      numericRange('integer', opts.min, opts.max)
+      opts
     );
   },
 
@@ -223,15 +273,27 @@ export const v = {
     name: string,
     min: number,
     max: number,
-    labels: Record<number, string>
+    labels: Record<number, string>,
+    opts: Grounding = {}
   ): PropertyValidator {
     // The labels are the point: `enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY)`
     // tells a reader what each number means without opening Godot's docs.
     // Integer-like keys already iterate ascending, so no sort is needed.
     const names = Object.values(labels).join('/');
-    return accepts(
-      createEnumValidator(name, min, max, labels, formatCode(name), valueCode(name)),
-      `enum ${min}-${max} (${names})`
+    return ground(
+      accepts(
+        createEnumValidator(
+          name,
+          min,
+          max,
+          labels,
+          formatCode(name),
+          valueCode(name),
+          boundSeverity(opts)
+        ),
+        `enum ${min}-${max} (${names})`
+      ),
+      opts
     );
   },
 
