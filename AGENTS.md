@@ -80,6 +80,14 @@ real parser instead of the decode/build split. Conformance:
 - Two parsers, one scanning loop (`TscnParserCore`, `ParseObserver` seam): lenient
   `TscnParser` renders what it can; `StrictTscnParser` lints and reports everything.
   Depth: ARCHITECTURE.md.
+- Every diagnostic is grounded in the engine source, in one of three tiers (ADR-0032).
+  **error** = the setter refuses or alters the value (`ERR_FAIL*`, a clamp).
+  **warning** = outside the `PROPERTY_HINT_RANGE` in the property's `ADD_PROPERTY`,
+  where `,or_greater` opens the max end and `,or_less` opens the min end and an open
+  end never warns. **nothing** = `PROPERTY_HINT_NONE`, both ends open, or a bound that
+  only exists in the class-reference prose. A hint constrains the inspector widget, not
+  the engine, so it warns and never errors. Cite the `file:line` beside each bound; a
+  constant named `EXTREME_*` / `LARGE_*` / `*_RECOMMENDED` without one is a defect.
 - Advisory linter conditions are WARNINGS, not errors — an error rule on a condition an
   existing positive fixture carries breaks fixtureLint.
 - Web tests run under happy-dom: no CSS cascade, no layout — never assert rendered

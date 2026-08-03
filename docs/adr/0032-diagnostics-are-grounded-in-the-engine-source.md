@@ -1,0 +1,73 @@
+# Diagnostics are grounded in the engine source, never in the class reference
+
+- Status: Accepted (2026-08-03)
+- Related: ADR-0001 (two parsers, one scanning loop), `linter/rangeAdvisory.ts`,
+  `linter/validators/v.ts`.
+
+## Context
+
+The linter accumulated a family of magnitude thresholds written from intuition or
+from a sentence in Godot's class reference, under names like
+`EXTREME_LIGHT_ENERGY_MAX`, `LARGE_OMNI_RANGE` and `MIN_RECOMMENDED_TRAVEL`. None
+cited a source line, and several were narrower than what the engine itself accepts.
+
+They were measurably wrong, not merely unproven. `VehicleWheel3D.suspension_travel`
+was bounded to `0.1-0.3` because `doc/classes/VehicleWheel3D.xml` says "Try a value
+between 0.1 and 0.3 depending on the type of car." The `.cpp` binds that property
+`PROPERTY_HINT_NONE` and `set_suspension_travel` assigns without a clamp, so the
+engine states no range at all — and Godot's own `truck_town` demo, the canonical
+VehicleBody3D example, ships `2.0` on all eight of its wheels. The advisory fired
+eight times out of eight on the reference implementation of the node it was
+policing, and the slice's own test had encoded the wrong band, asserting a warning
+for exactly the value the demo uses.
+
+`spot_attenuation` and `omni_attenuation` were bounded `0.1-5` while the engine hints
+`"-10,10,…,or_greater,or_less"`. Across the vendored corpus, roughly 25 of 136
+warnings came from thresholds of this kind firing on official Godot demo projects.
+
+A separate error was made while correcting this: hint bounds were briefly treated as
+grounds for an ERROR. They are not. A `PROPERTY_HINT_RANGE` constrains the editor's
+inspector widget; a `.tscn` carrying a value outside it still loads and runs.
+`set_volume_db` only `ERR_FAIL`s on NaN, and `Light3D::set_param`'s `ERR_FAIL_INDEX`
+guards the parameter INDEX rather than the value — both read like enforcement and
+enforce nothing.
+
+## Decision
+
+A diagnostic may exist in exactly one of three tiers, decided by the engine source.
+
+| Tier | Grounding | Verdict |
+| --- | --- | --- |
+| **error** | The setter refuses or alters the value: an `ERR_FAIL*`, or a clamp/mask that silently changes what was written. | error |
+| **warning** | The value lies outside the `PROPERTY_HINT_RANGE` in the property's `ADD_PROPERTY`. | warning |
+| **nothing** | `PROPERTY_HINT_NONE`, no hint, both hint ends open, or a bound that exists only in the class-reference prose. | no rule |
+
+Three rules govern reading the hint:
+
+- **`,or_greater` opens the MAX end and `,or_less` opens the MIN end.** An open end
+  can never produce a diagnostic. Both open means the property gets none at all.
+- **The hint is source, not prose.** It lives in the `.cpp` and states what the
+  editor UI permits, which is reliable enough to warn on. The class reference's
+  narrative advice is not, and never grounds a diagnostic on its own.
+- **A hint is not enforcement.** It yields a warning, never an error. Only the
+  setter's own behaviour can justify an error.
+
+Every surviving threshold carries the governing `file:line` in a comment beside it.
+A constant named for a feeling rather than a source — `EXTREME_*`, `LARGE_*`,
+`SMALL_*`, `*_RECOMMENDED` — does not pass review without that citation.
+
+## Consequences
+
+- Rules that only restated a preference are deleted rather than widened. A rule left
+  with no check at all loses its `linter.ts`, its test and its barrel import: a
+  speculative rule is worse than none.
+- The vendored corpus is the acceptance test for this ADR. These are official Godot
+  demo projects, so a diagnostic they trigger is evidence against the rule until the
+  source says otherwise. Errors stay confined to the deliberate `edge-*` negative
+  fixtures.
+- Some properties become quieter than a scene author might like. That is the point:
+  a warning that fires on the engine's own demos trains people to ignore warnings.
+- The tests are part of the blast radius. Where a slice test disagrees with the
+  source it is the test that is wrong, because a threshold and the test asserting it
+  are written from the same misreading — five separate tests had already locked in
+  bounds this repo later found to be wrong.
