@@ -22,6 +22,7 @@ import {
   expectNoDiagnostic,
   node,
   scene,
+  type PropValue,
 } from '../testing/testkit.js';
 import { makeCastLinterRule } from './castLinterRule.js';
 import type { PhysicsDim } from './dim.js';
@@ -43,7 +44,10 @@ describe.each(CASTS)('%s semantic rules', (type) => {
   // A shape cast needs a resolvable shape before any other check is reachable.
   const prelude =
     kindOf(type) === 'Shape' ? [`[sub_resource type="BoxShape${dimOf(type)}" id="Box_1"]`] : [];
-  const shapeProp = kindOf(type) === 'Shape' ? { shape: 'SubResource("Box_1")' } : {};
+  // Annotated, not inferred: the ternary would otherwise widen to a union whose
+  // empty branch carries `shape?: undefined`, which `PropValue` excludes.
+  const shapeProp: Record<string, PropValue> =
+    kindOf(type) === 'Shape' ? { shape: 'SubResource("Box_1")' } : {};
   const cast = (props: Record<string, string | number | boolean> = {}) =>
     scene(...prelude, node(type, { ...LIVE, ...shapeProp, ...props }));
 

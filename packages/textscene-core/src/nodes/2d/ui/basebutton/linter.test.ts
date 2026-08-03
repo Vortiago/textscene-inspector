@@ -35,7 +35,7 @@ ${props}
   it('warns on a grouped Button that is not a toggle', () => {
     const found = groupWarnings(scene('Button', 'button_group = SubResource("ButtonGroup_1")'));
     expect(found).toHaveLength(1);
-    expect(found[0].severity).toBe('warning');
+    expect(found[0]?.severity).toBe('warning');
   });
 
   it('stays silent once that Button opts into toggle_mode', () => {
