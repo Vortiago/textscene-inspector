@@ -485,4 +485,36 @@ describe('validator coverage meta-guard', () => {
     }
     expect(untested).toEqual([]);
   });
+
+  it('uses a matcher, not an exact list, for a type Godot gives subclasses', () => {
+    // `RuleRegistry` matches `applicableNodeTypes` by exact name, so a rule
+    // naming a type that HAS descendants goes silent on every one of them: the
+    // subclass inherits the engine's configuration warning but not ours. Nine
+    // rules were migrated to `applicableNodeTypeMatcher` by hand after that was
+    // found; this is the check that keeps the tenth from being written.
+    //
+    // Driven by the committed catalog, so a rule targeting a childless leaf
+    // (the common case) stays free to use the simpler exact list.
+    const catalog = JSON.parse(
+      readFileSync(resolve(here, '../../../../scripts/compare-docs/node-catalog.json'), 'utf8')
+    ) as { nodes: { name: string; chain: string[] }[] };
+
+    const descendants = new Map<string, string[]>();
+    for (const n of catalog.nodes) {
+      for (const ancestor of n.chain) {
+        if (ancestor !== n.name) descendants.set(ancestor, [...(descendants.get(ancestor) ?? []), n.name]);
+      }
+    }
+
+    const unreachable = ruleRegistry
+      .getRules()
+      .filter((r) => !r.meta.applicableNodeTypeMatcher)
+      .flatMap((r) =>
+        (r.meta.applicableNodeTypes ?? [])
+          .filter((t) => (descendants.get(t) ?? []).length > 0)
+          .map((t) => `${r.meta.name}: ${t} misses ${descendants.get(t)!.join(', ')}`)
+      );
+
+    expect(unreachable.sort()).toEqual([]);
+  });
 });

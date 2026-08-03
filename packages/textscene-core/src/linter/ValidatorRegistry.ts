@@ -86,22 +86,6 @@ export class ValidatorRegistry {
     Object.assign(this.unavailable.get(nodeType)!, removals);
   }
 
-  /** Why `nodeType` cannot carry `propertyKey`, or undefined if it can. */
-  findUnavailable(nodeType: string, propertyKey: string): string | undefined {
-    const visited = new Set<string>();
-    let type: string | undefined = nodeType;
-    while (type && !visited.has(type)) {
-      visited.add(type);
-      const reason = this.unavailable.get(type)?.[propertyKey];
-      if (reason !== undefined) return reason;
-      // A removal is not inherited past a descendant that re-declares the key:
-      // if some type between here and the remover validates it again, the key
-      // is available. Stop at the first owner either way.
-      if (this.findOwnValidator(type, propertyKey)) return undefined;
-      type = this.baseTypes[type];
-    }
-    return undefined;
-  }
 
   /** Keys `nodeType` removes, whether declared here or inherited. */
   getUnavailableKeys(nodeType: string): string[] {
@@ -130,18 +114,25 @@ export class ValidatorRegistry {
    * @returns Validator function or null if neither the type nor its bases match
    */
   findValidator(nodeType: string, propertyKey: string): PropertyValidator | null {
-    const removed = this.findUnavailable(nodeType, propertyKey);
-    if (removed !== undefined) {
-      return unavailableValidator(nodeType, removed);
-    }
     const visited = new Set<string>();
     let type: string | undefined = nodeType;
     while (type && !visited.has(type)) {
       visited.add(type);
+
+      // Removals and validators are resolved in ONE walk. They used to be two
+      // identical passes over the same chain — the removal pass already called
+      // findOwnValidator at every hop to decide whether a descendant had
+      // re-declared the key, and then the validator pass repeated it. This is
+      // the hottest path in the linter, reached for every property of every
+      // node, so the duplicate walk and its second Set cost real time.
+      const reason = this.unavailable.get(type)?.[propertyKey];
+      if (reason !== undefined) return unavailableValidator(nodeType, reason);
+
+      // Checked after the removal at the SAME hop, and before moving up: a
+      // removal is not inherited past a descendant that re-declares the key.
       const validator = this.findOwnValidator(type, propertyKey);
-      if (validator) {
-        return validator;
-      }
+      if (validator) return validator;
+
       type = this.baseTypes[type];
     }
     return null;
