@@ -77,7 +77,10 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // ERROR: pitch_scale = 0 (already caught by format validator, but add semantic context)
+  // ERROR: pitch_scale = 0. audio_stream_player_internal.cpp:314,
+  // ERR_FAIL_COND(p_pitch_scale <= 0.0) — the setter refuses, so the write never
+  // lands. linterParser.ts reports the whole <= 0 range; this adds the semantic
+  // wording for the zero case.
   if (rawProps.pitch_scale !== undefined) {
     const pitchScale = parseFloat(rawProps.pitch_scale);
     if (!isNaN(pitchScale) && pitchScale === 0) {
