@@ -131,6 +131,30 @@ describe('ValidatorRegistry.registerUnavailable', () => {
     expect(r.findValidator('Mid', 'vertical')?.accepts).toBe('not available on this type');
   });
 
+  it('reports the same reach through getUnavailableKeys as through findValidator', () => {
+    // The two answer one question, for the linter and for the generated sheet.
+    // While they disagreed, a key re-declared by a descendant was still listed
+    // as unavailable in that descendant's sheet, contradicting the linter that
+    // had just accepted it.
+    const r = new ValidatorRegistry(CHAIN);
+    r.registerAll('Root', { vertical: ok });
+    r.registerUnavailable('Mid', { vertical: 'fixed' });
+    r.registerAll('Leaf', { vertical: ok });
+    expect(r.getUnavailableKeys('Leaf')).toEqual([]);
+    expect(r.getUnavailableKeys('Mid')).toEqual(['vertical']);
+  });
+
+  it('keeps a key removed by the same type that declares it', () => {
+    // Ordering within a hop: findValidator checks the removal first, so a type
+    // both removing and declaring a key reports it removed. getUnavailableKeys
+    // must agree rather than letting the declaration cancel the removal.
+    const r = new ValidatorRegistry(CHAIN);
+    r.registerAll('Leaf', { vertical: ok });
+    r.registerUnavailable('Leaf', { vertical: 'fixed' });
+    expect(r.findValidator('Leaf', 'vertical')?.accepts).toBe('not available on this type');
+    expect(r.getUnavailableKeys('Leaf')).toEqual(['vertical']);
+  });
+
   it('is cleared with the validators', () => {
     const r = new ValidatorRegistry(CHAIN);
     r.registerUnavailable('Leaf', { vertical: 'fixed' });

@@ -86,14 +86,27 @@ export class ValidatorRegistry {
     Object.assign(this.unavailable.get(nodeType)!, removals);
   }
 
-  /** Keys `nodeType` removes, whether declared here or inherited. */
+  /**
+   * Keys `nodeType` removes, whether declared here or inherited.
+   *
+   * Resolved the same way `findValidator` resolves them, because the two answer
+   * one question and a disagreement would put a key in a sheet's "unavailable"
+   * list while the linter still accepted it: a removal wins at the hop that
+   * declares it, but a NEARER type re-declaring the key takes it back.
+   */
   getUnavailableKeys(nodeType: string): string[] {
     const keys = new Set<string>();
+    const reDeclared = new Set<string>();
     const visited = new Set<string>();
     let type: string | undefined = nodeType;
     while (type && !visited.has(type)) {
       visited.add(type);
-      for (const key of Object.keys(this.unavailable.get(type) ?? {})) keys.add(key);
+      for (const key of Object.keys(this.unavailable.get(type) ?? {})) {
+        if (!reDeclared.has(key)) keys.add(key);
+      }
+      // Added after this hop's removals, so a type that both removes and
+      // declares a key still reports it removed, as findValidator does.
+      for (const key of Object.keys(this.validators.get(type) ?? {})) reDeclared.add(key);
       type = this.baseTypes[type];
     }
     return [...keys];
