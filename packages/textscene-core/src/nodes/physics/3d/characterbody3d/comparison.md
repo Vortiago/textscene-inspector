@@ -43,7 +43,7 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | `platform_floor_layers` | integer 0-4294967295 |
 | `platform_on_leave` | enum 0-2 (ADD_VELOCITY/ADD_UPWARD_VELOCITY/DO_NOTHING) |
 | `platform_wall_layers` | integer 0-4294967295 |
-| `safe_margin` | float >= 0 |
+| `safe_margin` | float |
 | `up_direction` | Vector3(x, y, z) |
 | `velocity` | Vector3(x, y, z) |
 | `wall_min_slide_angle` | radians, 0° to 180° |
@@ -53,13 +53,11 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 | `valid-characterbody3d` | `characterbody3d-needs-collision-shape` | warning |
-|  | `characterbody3d-floor-snap-too-small` | warning |
-|  | `characterbody3d-floor-snap-too-large` | warning |
 |  | `characterbody3d-floor-props-in-floating-mode` | warning |
 |  | `characterbody3d-zero-collision-layer` | warning |
 |  | `characterbody3d-zero-collision-mask` | warning |
 |  | `characterbody3d-non-standard-up-direction` | warning |
-|  | `characterbody3d-max-slides-too-low` | warning |
+|  | `characterbody3d-safe-margin-too-small` | warning |
 |  | `characterbody3d-safe-margin-too-large` | warning |
 <!-- lint:end -->
 

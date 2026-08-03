@@ -10,36 +10,19 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { rangeAdvisories } from '../../../../linter/rangeAdvisory.js';
 import { lightEnergyArms, lightRangeArms } from '../shared/linterChecks.js';
 
-// Thresholds for warnings
-const LARGE_OMNI_RANGE = 1000;
-const SMALL_OMNI_RANGE = 0.1;
-const EXTREME_OMNI_ATTENUATION_MIN = 0.1;
-const EXTREME_OMNI_ATTENUATION_MAX = 5;
-
 /**
  * Validate OmniLight3D semantic rules
+ *
+ * `omni_attenuation` carries no advisory: light_3d.cpp:640 hints
+ * "-10,10,0.001,or_greater,or_less", so BOTH ends are open and no value is out
+ * of band.
  */
 function checkOmniLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
-
   return rangeAdvisories(node, {
     light_energy: lightEnergyArms('omnilight3d'),
-    omni_range: lightRangeArms('omnilight3d', LARGE_OMNI_RANGE, SMALL_OMNI_RANGE),
-    omni_attenuation: [
-      {
-        under: EXTREME_OMNI_ATTENUATION_MIN,
-        ruleName: 'omnilight3d-extreme-attenuation',
-        message: (attenuation) =>
-          `Light attenuation is very low (${attenuation}). Values below ${EXTREME_OMNI_ATTENUATION_MIN} result in very slow falloff.`,
-      },
-      {
-        over: EXTREME_OMNI_ATTENUATION_MAX,
-        ruleName: 'omnilight3d-extreme-attenuation',
-        message: (attenuation) =>
-          `Light attenuation is very high (${attenuation}). Values above ${EXTREME_OMNI_ATTENUATION_MAX} can impact performance if range is also large.`,
-      },
-    ],
+    omni_range: lightRangeArms('omnilight3d'),
   });
 }
 
@@ -49,14 +32,12 @@ function checkOmniLight3D(context: RuleContext): Diagnostic[] {
 const omniLight3DValidationRule: LintRule = {
   meta: {
     name: 'valid-omnilight3d-properties',
-    description: 'Validates OmniLight3D property values, required properties, and performance considerations',
+    description: 'Validates OmniLight3D property values against the ranges the editor accepts',
     category: 'validation',
     applicableNodeTypes: ['OmniLight3D'],
     emits: [
-      { ruleName: 'omnilight3d-extreme-energy', severity: 'warning' },
-      { ruleName: 'omnilight3d-large-range', severity: 'warning' },
-      { ruleName: 'omnilight3d-small-range', severity: 'warning' },
-      { ruleName: 'omnilight3d-extreme-attenuation', severity: 'warning' },
+      { ruleName: 'omnilight3d-negative-energy', severity: 'warning' },
+      { ruleName: 'omnilight3d-negative-range', severity: 'warning' },
     ],
   },
   check: checkOmniLight3D,

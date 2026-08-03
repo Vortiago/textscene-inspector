@@ -11,8 +11,13 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import { unquoteString } from '../../../parser/utils.js';
 
-// Thresholds for warnings
-const MAX_NORMAL_PIXEL_SIZE = 1.0;
+/**
+ * `pixel_size` hint, label_3d.cpp:131 — PROPERTY_HINT_RANGE
+ * "0.0001,128,0.0001,suffix:m". Neither end is open and `set_pixel_size` (:954)
+ * only compares before assigning, so both ends are advisory.
+ */
+const PIXEL_SIZE_HINT_MIN = 0.0001;
+const PIXEL_SIZE_HINT_MAX = 128;
 
 /**
  * Validate Label3D semantic rules
@@ -43,15 +48,21 @@ function checkLabel3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Range advisory: very large pixel_size (likely unintentional).
+  // Range advisory: pixel_size outside the range the inspector offers.
   diagnostics.push(
     ...rangeAdvisories(node, {
       pixel_size: [
         {
-          over: MAX_NORMAL_PIXEL_SIZE,
+          under: PIXEL_SIZE_HINT_MIN,
+          ruleName: 'label3d-small-pixel-size',
+          message: (pixelSize) =>
+            `Label3D pixel_size is ${pixelSize}. The editor range starts at ${PIXEL_SIZE_HINT_MIN}.`,
+        },
+        {
+          over: PIXEL_SIZE_HINT_MAX,
           ruleName: 'label3d-large-pixel-size',
           message: (pixelSize) =>
-            `Label3D pixel_size is very large (${pixelSize}). Values above ${MAX_NORMAL_PIXEL_SIZE} may create unexpectedly large text in the scene.`,
+            `Label3D pixel_size is ${pixelSize}. The editor range stops at ${PIXEL_SIZE_HINT_MAX}.`,
         },
       ],
     })
@@ -70,6 +81,7 @@ const label3DValidationRule: LintRule = {
     category: 'validation',
     emits: [
       { ruleName: 'label3d-empty-text', severity: 'warning' },
+      { ruleName: 'label3d-small-pixel-size', severity: 'warning' },
       { ruleName: 'label3d-large-pixel-size', severity: 'warning' },
     ],
     applicableNodeTypes: ['Label3D'],

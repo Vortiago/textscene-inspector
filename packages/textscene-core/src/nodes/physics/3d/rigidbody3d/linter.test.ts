@@ -87,8 +87,10 @@ custom_integrator = false
         invalid: [{ value: 3, contains: ['0-1'] }],
       },
       {
+        // rigid_body_3d.cpp:444, ERR_FAIL_COND(p_linear_damp < 0.0); hint :785
+        // ends in `or_greater`, so a large damp is in band.
         prop: 'linear_damp',
-        valid: [0.0, 0.5, 5.0],
+        valid: [0.0, 0.5, 5.0, 20.0],
         invalid: [{ value: -1.0, contains: ['>= 0'] }],
       },
       {
@@ -97,8 +99,10 @@ custom_integrator = false
         invalid: [{ value: 2, contains: ['0-1'] }],
       },
       {
+        // rigid_body_3d.cpp:454, ERR_FAIL_COND(p_angular_damp < 0.0); hint :789
+        // ends in `or_greater`.
         prop: 'angular_damp',
-        valid: [0.0, 0.5, 5.0],
+        valid: [0.0, 0.5, 5.0, 15.0],
         invalid: [{ value: -0.5, contains: ['>= 0'] }],
       },
       {
@@ -181,36 +185,27 @@ physics_material_override = SubResource("mat_1")
   });
 
   describe('Semantic Validation (Mass and Damping)', () => {
-    it('should warn about very low mass', () => {
-      expectDiagnostic(scene(node('RigidBody3D', { mass: 0.001 }), collisionShape3d), {
+    // rigid_body_3d.cpp:764 hints "0.001,1000,0.001,or_greater": the high end is
+    // open, so only the gap between the setter's ERR_FAIL (mass <= 0, :334) and
+    // the hint's 0.001 is advisory.
+    it('should warn about mass below the hint', () => {
+      expectDiagnostic(scene(node('RigidBody3D', { mass: 0.0005 }), collisionShape3d), {
         ruleName: 'rigidbody3d-mass-too-low',
         severity: 'warning',
-        contains: ['very low mass'],
+        contains: ['0.0005', '0.001'],
       });
     });
 
-    it('should warn about very high mass', () => {
-      expectDiagnostic(scene(node('RigidBody3D', { mass: 50000 }), collisionShape3d), {
-        ruleName: 'rigidbody3d-mass-too-high',
-        severity: 'warning',
-        contains: ['very high mass'],
-      });
+    it.each([0.001, 1.0, 50000])('says nothing about mass %s', (mass) => {
+      expectClean(scene(node('RigidBody3D', { mass }), collisionShape3d));
     });
 
-    it('should warn about excessive linear_damp', () => {
-      expectDiagnostic(scene(node('RigidBody3D', { mass: 1.0, linear_damp: 20.0 }), collisionShape3d), {
-        ruleName: 'rigidbody3d-excessive-linear-damp',
-        severity: 'warning',
-        contains: ['stop too quickly'],
-      });
-    });
-
-    it('should warn about excessive angular_damp', () => {
-      expectDiagnostic(scene(node('RigidBody3D', { mass: 1.0, angular_damp: 15.0 }), collisionShape3d), {
-        ruleName: 'rigidbody3d-excessive-angular-damp',
-        severity: 'warning',
-        contains: ['stop rotating too quickly'],
-      });
+    // rigid_body_3d.cpp:785/:789 both hint "0,100,0.001,or_greater", so the high
+    // end is open and a large damp is in band.
+    it.each([20.0, 15.0, 500.0])('says nothing about damping %s', (damp) => {
+      expectClean(
+        scene(node('RigidBody3D', { mass: 1.0, linear_damp: damp, angular_damp: damp }), collisionShape3d)
+      );
     });
   });
 
@@ -430,10 +425,14 @@ custom_integrator = false
           collisionShape3d
         )
       );
-      // Should have warnings: low mass, excessive damping, zero collision_layer, max_contacts without monitor
-      expect(diagnostics.length).toBeGreaterThanOrEqual(3);
-      const warnings = diagnostics.filter(d => d.severity === 'warning');
-      expect(warnings.length).toBeGreaterThan(0);
+      // Warnings: zero collision_layer and max_contacts without monitor. mass
+      // 0.001 sits exactly on the hint's bottom (:764) and linear_damp 20 is under
+      // its open top (:785), so neither of those contributes any more.
+      expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
+        'rigidbody3d-max-contacts-without-monitor',
+        'rigidbody3d-zero-collision-layer',
+      ]);
+      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
     });
   });
 });

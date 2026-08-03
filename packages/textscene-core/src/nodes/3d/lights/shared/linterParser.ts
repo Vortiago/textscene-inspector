@@ -13,7 +13,11 @@ import { layerBitmask, v } from '../../../../linter/validators/index.js';
 const LIGHT_BAKE_MODE = { 0: 'DISABLED', 1: 'STATIC', 2: 'DYNAMIC' };
 
 validatorRegistry.registerAll('Light3D', {
-  light_energy: v.nonNegativeFloat('light_energy'),
+  // light_3d.cpp:389, PROPERTY_HINT_RANGE "0,16,0.001,or_greater". A hint is not
+  // enforcement — Light3D::set_param:36 guards the param INDEX, not the value —
+  // so a negative energy loads and runs. The advisory is the light's
+  // `<prefix>-negative-energy` warning, not an error here.
+  light_energy: v.float('light_energy'),
   light_color: v.color('light_color'),
   light_indirect_energy: v.nonNegativeFloat('light_indirect_energy'),
   light_volumetric_fog_energy: v.nonNegativeFloat('light_volumetric_fog_energy'),

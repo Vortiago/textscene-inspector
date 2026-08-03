@@ -11,13 +11,6 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 
-// Thresholds for warnings
-const MIN_NEAR_CLIPPING_WARNING = 0.01;
-const MAX_FAR_CLIPPING_WARNING = 10000;
-const MIN_NORMAL_FOV = 20;
-const MAX_NORMAL_FOV = 120;
-
-
 /**
  * Validate Camera3D semantic rules
  */
@@ -55,37 +48,28 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Range advisories: tiny near plane, huge far plane, extreme fov.
+  // Range advisories: clipping planes below the range the editor offers. Both
+  // hints end in `or_greater`, so neither has a high bound, and `fov` needs none
+  // here — Camera3D::set_fov ERR_FAILs outside 1-179, which linterParser.ts
+  // reports as an error.
   diagnostics.push(
     ...rangeAdvisories(node, {
       near: [
         {
-          under: MIN_NEAR_CLIPPING_WARNING,
+          // camera_3d.cpp:685 — near PROPERTY_HINT_RANGE "0.001,10,0.001,or_greater,exp,suffix:m"
+          under: 0.001,
           ruleName: 'camera3d-small-near-plane',
           message: (near) =>
-            `Camera3D 'near' clipping plane is very small (${near}). Values below ${MIN_NEAR_CLIPPING_WARNING} can cause z-fighting and depth precision issues.`,
+            `Camera3D 'near' clipping plane is ${near}. The editor range for 'near' starts at 0.001; below that, depth precision degrades.`,
         },
       ],
       far: [
         {
-          over: MAX_FAR_CLIPPING_WARNING,
-          ruleName: 'camera3d-large-far-plane',
+          // camera_3d.cpp:686 — far PROPERTY_HINT_RANGE "0.01,4000,0.01,or_greater,exp,suffix:m"
+          under: 0.01,
+          ruleName: 'camera3d-small-far-plane',
           message: (far) =>
-            `Camera3D 'far' clipping plane is very large (${far}). Values above ${MAX_FAR_CLIPPING_WARNING} can cause depth precision issues and reduce rendering quality.`,
-        },
-      ],
-      fov: [
-        {
-          under: MIN_NORMAL_FOV,
-          ruleName: 'camera3d-extreme-fov',
-          message: (fov) =>
-            `Camera3D field of view is very narrow (${fov} degrees). Values below ${MIN_NORMAL_FOV} degrees are unusual for games and may create a 'tunnel vision' effect.`,
-        },
-        {
-          over: MAX_NORMAL_FOV,
-          ruleName: 'camera3d-extreme-fov',
-          message: (fov) =>
-            `Camera3D field of view is very wide (${fov} degrees). Values above ${MAX_NORMAL_FOV} degrees are unusual for games and may cause distortion at screen edges.`,
+            `Camera3D 'far' clipping plane is ${far}. The editor range for 'far' starts at 0.01.`,
         },
       ],
     })
@@ -105,8 +89,7 @@ const camera3DValidationRule: LintRule = {
     emits: [
       { ruleName: 'camera3d-invalid-clipping-planes', severity: 'error' },
       { ruleName: 'camera3d-small-near-plane', severity: 'warning' },
-      { ruleName: 'camera3d-large-far-plane', severity: 'warning' },
-      { ruleName: 'camera3d-extreme-fov', severity: 'warning' },
+      { ruleName: 'camera3d-small-far-plane', severity: 'warning' },
     ],
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Camera3D'),
   },

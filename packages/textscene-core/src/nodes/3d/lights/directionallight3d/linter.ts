@@ -11,25 +11,21 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { rangeAdvisories } from '../../../../linter/rangeAdvisory.js';
 import { lightEnergyArms } from '../shared/linterChecks.js';
 
-// Thresholds for warnings
-const LARGE_SHADOW_MAX_DISTANCE = 10000;
-
 /**
  * Validate DirectionalLight3D semantic rules
  */
 function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
-
-  // Range advisories: light energy + very large shadow distance.
   const diagnostics = rangeAdvisories(node, {
     light_energy: lightEnergyArms('directionallight3d'),
     directional_shadow_max_distance: [
       {
-        over: LARGE_SHADOW_MAX_DISTANCE,
-        ruleName: 'directionallight3d-large-shadow-distance',
+        // light_3d.cpp:584 — PROPERTY_HINT_RANGE "0,8192,0.1,or_greater": high end open, low end 0
+        under: 0,
+        ruleName: 'directionallight3d-negative-shadow-distance',
         message: (maxDistance) =>
-          `Shadow max distance is very large (${maxDistance}). Values above ${LARGE_SHADOW_MAX_DISTANCE} can impact performance significantly.`,
+          `Shadow max distance is negative (${maxDistance}). The editor range for directional_shadow_max_distance starts at 0.`,
       },
     ],
   });
@@ -131,8 +127,8 @@ const directionalLight3DValidationRule: LintRule = {
     applicableNodeTypes: ['DirectionalLight3D'],
     emits: [
       // via lightEnergyArms('directionallight3d')
-      { ruleName: 'directionallight3d-extreme-energy', severity: 'warning' },
-      { ruleName: 'directionallight3d-large-shadow-distance', severity: 'warning' },
+      { ruleName: 'directionallight3d-negative-energy', severity: 'warning' },
+      { ruleName: 'directionallight3d-negative-shadow-distance', severity: 'warning' },
       { ruleName: 'directionallight3d-shadow-split-order', severity: 'error' },
       { ruleName: 'directionallight3d-unused-splits', severity: 'warning' },
     ],

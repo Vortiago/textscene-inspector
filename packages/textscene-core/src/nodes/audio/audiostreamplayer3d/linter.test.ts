@@ -71,16 +71,18 @@ describe('AudioStreamPlayer3D Linter', () => {
           invalid: [{ value: 'invalid', contains: ['volume_db', 'must be a number'] }],
         },
         {
-          // Extreme-but-valid volume legitimately warns — assert no errors only.
+          // audio_stream_player_3d.cpp:883 hints "-80,80,suffix:dB" — wider than the
+          // 2D/base players — and set_volume_db (:552) only refuses NaN.
           prop: 'volume_db',
           acceptMode: 'no-error',
-          valid: [-80.0],
+          valid: [-80.0, 80, -90, 100],
         },
         {
-          // 0.5/2.0 sit at the unusual-pitch warning edge — assert no errors only.
+          // audio_stream_player_internal.cpp:314 refuses <= 0; hint :887 is
+          // "0.01,4,0.01,or_greater", so the top end is open.
           prop: 'pitch_scale',
           acceptMode: 'no-error',
-          valid: [0.5, 1.0, 1.5, 2.0],
+          valid: [0.01, 0.5, 1.0, 1.5, 2.0, 3.0],
           invalid: [
             { value: 0, contains: ['pitch_scale', 'greater than 0'] },
             { value: -1.0, contains: ['pitch_scale', 'greater than 0'] },
@@ -109,13 +111,16 @@ describe('AudioStreamPlayer3D Linter', () => {
           ],
         },
         {
+          // audio_stream_player_3d.cpp:569 is a bare assignment, so the hint at
+          // :885 ("0.1,100,0.01,or_greater") only warns: 0 and -5 load fine.
           prop: 'unit_size',
-          valid: [10.0],
-          invalid: [
-            { value: 0, contains: ['unit_size', 'greater than 0'] },
-            { value: -5.0, contains: ['unit_size', 'greater than 0'] },
-            { value: 'invalid', contains: ['unit_size', 'must be a number'] },
-          ],
+          valid: [0.1, 10.0, 500],
+          invalid: [{ value: 'invalid', contains: ['unit_size', 'must be a number'] }],
+        },
+        {
+          prop: 'unit_size',
+          valid: [0, -5.0],
+          acceptMode: 'no-error',
         },
         {
           // 0 = unlimited
@@ -273,54 +278,66 @@ describe('AudioStreamPlayer3D Linter', () => {
       });
     });
 
+    // audio_stream_player_3d.cpp:883 — volume_db PROPERTY_HINT_RANGE "-80,80,suffix:dB".
     describe('volume_db warnings', () => {
-      it('should warn on very low volume_db', () => {
-        expectDiagnostic(withStream({ volume_db: -50 }), {
+      it('should warn below the hint', () => {
+        expectDiagnostic(withStream({ volume_db: -90 }), {
           ruleName: 'audiostreamplayer3d-extreme-volume',
           severity: 'warning',
           nodeType: 'AudioStreamPlayer3D',
-          contains: ['very low', '-50'],
+          contains: ['-90', '-80'],
         });
       });
 
-      it('should warn on very high volume_db', () => {
-        expectDiagnostic(withStream({ volume_db: 10 }), {
+      it('should warn above the hint', () => {
+        expectDiagnostic(withStream({ volume_db: 100 }), {
           ruleName: 'audiostreamplayer3d-extreme-volume',
           severity: 'warning',
           nodeType: 'AudioStreamPlayer3D',
-          contains: ['very high', '10'],
+          contains: ['100', '80'],
         });
       });
 
-      it('should not warn on normal volume_db values', () => {
-        const volumeWarning = lint(withStream({ volume_db: -6.0 })).find(d =>
+      it.each([-80, -50, -6.0, 10, 80])('says nothing about volume_db %s', (volumeDb) => {
+        const volumeWarning = lint(withStream({ volume_db: volumeDb })).find(d =>
           d.message.includes('Volume')
         );
         expect(volumeWarning).toBeUndefined();
       });
     });
 
+    // audio_stream_player_3d.cpp:885 — unit_size PROPERTY_HINT_RANGE
+    // "0.1,100,0.01,or_greater": the top end is open, and set_unit_size (:569) is a
+    // bare assignment, so a non-positive unit size warns rather than erroring.
+    describe('unit_size warnings', () => {
+      it('should warn, not error, below the hint', () => {
+        expectDiagnostic(withStream({ unit_size: 0 }), {
+          ruleName: 'audiostreamplayer3d-small-unit-size',
+          severity: 'warning',
+          nodeType: 'AudioStreamPlayer3D',
+          contains: ['unit_size', '0.1'],
+        });
+      });
+
+      it.each([0.1, 10.0, 500])('says nothing about unit_size %s', (unitSize) => {
+        expectClean(withStream({ unit_size: unitSize }));
+      });
+    });
+
+    // pitch_scale: refused at <= 0 (audio_stream_player_internal.cpp:314), hinted
+    // "0.01,4,0.01,or_greater" (:887), so only 0 < x < 0.01 warns.
     describe('pitch_scale warnings', () => {
-      it('should warn on very low pitch_scale', () => {
-        expectDiagnostic(withStream({ pitch_scale: 0.3 }), {
+      it('should warn below the hint', () => {
+        expectDiagnostic(withStream({ pitch_scale: 0.005 }), {
           ruleName: 'audiostreamplayer3d-unusual-pitch',
           severity: 'warning',
           nodeType: 'AudioStreamPlayer3D',
-          contains: ['very low', '0.3'],
+          contains: ['0.005', '0.01'],
         });
       });
 
-      it('should warn on very high pitch_scale', () => {
-        expectDiagnostic(withStream({ pitch_scale: 3.0 }), {
-          ruleName: 'audiostreamplayer3d-unusual-pitch',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer3D',
-          contains: ['very high', '3'],
-        });
-      });
-
-      it('should not warn on normal pitch_scale values', () => {
-        const pitchWarning = lint(withStream({ pitch_scale: 1.2 })).find(d =>
+      it.each([0.01, 0.3, 1.2, 3.0])('says nothing about pitch_scale %s', (pitchScale) => {
+        const pitchWarning = lint(withStream({ pitch_scale: pitchScale })).find(d =>
           d.message.includes('Pitch scale')
         );
         expect(pitchWarning).toBeUndefined();
@@ -365,13 +382,12 @@ describe('AudioStreamPlayer3D Linter', () => {
 
     it('should handle multiple validation errors', () => {
       const diagnostics = lint(bare({ pitch_scale: 0, unit_size: -5.0, max_polyphony: 0 }));
-      expect(diagnostics.length).toBeGreaterThan(2);
-      // Should have errors for: pitch_scale, unit_size, max_polyphony, missing stream
-      const hasPitchError = diagnostics.some(d => d.message.includes('pitch_scale'));
-      const hasUnitError = diagnostics.some(d => d.message.includes('unit_size'));
-      const hasPolyphonyError = diagnostics.some(d => d.message.includes('max_polyphony'));
-      const hasStreamError = diagnostics.some(d => d.message.includes('stream'));
-      expect(hasPitchError || hasUnitError || hasPolyphonyError || hasStreamError).toBe(true);
+      // pitch_scale and max_polyphony are refused by the engine, so they error;
+      // unit_size = -5 only warns now (audio_stream_player_3d.cpp:569 is a bare
+      // assignment).
+      expect(diagnostics.some(d => d.severity === 'error' && d.message.includes('pitch_scale'))).toBe(true);
+      expect(diagnostics.some(d => d.severity === 'error' && d.message.includes('max_polyphony'))).toBe(true);
+      expect(diagnostics.some(d => d.severity === 'error' && d.message.includes('unit_size'))).toBe(false);
     });
 
     it('should handle scientific notation in numeric values', () => {
@@ -386,11 +402,10 @@ describe('AudioStreamPlayer3D Linter', () => {
     });
 
     it('should validate mixed warnings and errors', () => {
-      const diagnostics = lint(withStream({ volume_db: -50, pitch_scale: 0.3 }));
-      expect(diagnostics.length).toBeGreaterThan(0);
-      // Should have warnings for extreme volume_db and pitch_scale
-      const hasWarnings = diagnostics.some(d => d.severity === 'warning');
-      expect(hasWarnings).toBe(true);
+      const diagnostics = lint(withStream({ volume_db: -90, pitch_scale: 0.005 }));
+      // Both sit below their hints.
+      expect(diagnostics).toHaveLength(2);
+      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
     });
 
     it('should handle SubResource references', () => {
@@ -412,22 +427,13 @@ describe('AudioStreamPlayer3D Linter', () => {
 
     it('should handle extreme combinations', () => {
       const diagnostics = lint(
-        withStream({ volume_db: -50, pitch_scale: 0.3, emission_angle_degrees: 45.0 })
+        withStream({ volume_db: -90, pitch_scale: 0.005, emission_angle_degrees: 45.0 })
       );
-      expect(diagnostics.length).toBeGreaterThan(2);
-      // Should have warnings for volume, pitch, and emission_angle_degrees without enabled
-      const volumeWarning = diagnostics.find(
-        d => d.message.includes('Volume') && d.message.includes('very low')
-      );
-      const pitchWarning = diagnostics.find(
-        d => d.message.includes('Pitch scale') && d.message.includes('very low')
-      );
-      const emissionWarning = diagnostics.find(
-        d => d.message.includes('emission_angle_degrees') && d.message.includes('not true')
-      );
-      expect(volumeWarning).toBeDefined();
-      expect(pitchWarning).toBeDefined();
-      expect(emissionWarning).toBeDefined();
+      expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
+        'audiostreamplayer3d-emission-angle-not-enabled',
+        'audiostreamplayer3d-extreme-volume',
+        'audiostreamplayer3d-unusual-pitch',
+      ]);
     });
   });
 });

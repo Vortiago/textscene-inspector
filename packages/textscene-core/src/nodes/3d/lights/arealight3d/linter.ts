@@ -31,7 +31,7 @@ const areaLight3DValidationRule: LintRule = {
     description: 'Validates AreaLight3D property values and required properties',
     category: 'validation',
     applicableNodeTypes: ['AreaLight3D'],
-    emits: [{ ruleName: 'arealight3d-extreme-energy', severity: 'warning' }],
+    emits: [{ ruleName: 'arealight3d-negative-energy', severity: 'warning' }],
   },
   check: checkAreaLight3D,
 };

@@ -94,8 +94,10 @@ describe('CharacterBody2D Linter', () => {
         ],
       },
       {
+        // character_body_2d.cpp:631, ERR_FAIL_COND(p_floor_snap_length < 0). The
+        // hint at :749 ends in `or_greater`, so nothing above 0 is out of band.
         prop: 'floor_snap_length',
-        valid: [0, 0.001, 0.1, 1.0, 5.0],
+        valid: [0, 0.001, 0.1, 1.0, 5.0, 50],
         invalid: [{ value: -0.5, contains: ['>= 0'] }],
       },
       {
@@ -118,9 +120,12 @@ describe('CharacterBody2D Linter', () => {
         valid: [0, 1, 65535, 4294967295],
       },
       {
+        // character_body_2d.cpp:537 is a bare assignment, so the hint at :757
+        // ("0.001,256,0.001") only warns; 0 and -0.5 load fine.
         prop: 'safe_margin',
-        valid: [0, 0.001, 0.01, 0.1],
-        invalid: [{ value: -0.5, contains: ['>= 0'] }],
+        valid: [0.001, 0.01, 0.1, 256, 0, -0.5],
+        acceptMode: 'no-error',
+        invalid: [{ value: '"wide"', contains: ['must be a number'] }],
       },
       {
         prop: 'collision_priority',
@@ -167,48 +172,43 @@ describe('CharacterBody2D Linter', () => {
       );
     });
 
-    it('should warn about very small floor_snap_length', () => {
-      expectDiagnostic(
-        scene(node('CharacterBody2D', { floor_snap_length: 0.0001 }), collisionShape2d),
-        {
-          ruleName: 'characterbody2d-floor-snap-too-small',
-          severity: 'warning',
-          contains: ['may not work reliably'],
-        }
-      );
+    // character_body_2d.cpp:749 hints "0,32,0.1,or_greater" — the high end is open
+    // and the low end is the setter's own ERR_FAIL — so no advisory survives.
+    it.each([0.0001, 5, 50, 500])('says nothing about floor_snap_length %s', (snap) => {
+      expectClean(scene(node('CharacterBody2D', { floor_snap_length: snap }), collisionShape2d));
     });
 
-    it('should warn about very large floor_snap_length', () => {
-      expectDiagnostic(
-        scene(node('CharacterBody2D', { floor_snap_length: 50 }), collisionShape2d),
-        {
-          ruleName: 'characterbody2d-floor-snap-too-large',
-          severity: 'warning',
-          contains: ['glitchy behavior'],
-        }
-      );
+    // character_body_2d.cpp:741 declares max_slides PROPERTY_HINT_NONE with
+    // PROPERTY_USAGE_NO_EDITOR, so there is no band to be low in.
+    it.each([1, 2, 3])('says nothing about max_slides %s', (slides) => {
+      expectClean(scene(node('CharacterBody2D', { max_slides: slides }), collisionShape2d));
     });
 
-    it('should warn about very large safe_margin', () => {
+    // character_body_2d.cpp:757 hints "0.001,256,0.001", closed at both ends.
+    it('should warn about safe_margin above the hint', () => {
       expectDiagnostic(
-        scene(node('CharacterBody2D', { safe_margin: 0.5 }), collisionShape2d),
+        scene(node('CharacterBody2D', { safe_margin: 300 }), collisionShape2d),
         {
           ruleName: 'characterbody2d-safe-margin-too-large',
           severity: 'warning',
-          contains: ['collision detection issues'],
+          contains: ['300', '256'],
         }
       );
     });
 
-    it('should warn about low max_slides', () => {
+    it('should warn about safe_margin below the hint', () => {
       expectDiagnostic(
-        scene(node('CharacterBody2D', { max_slides: 2 }), collisionShape2d),
+        scene(node('CharacterBody2D', { safe_margin: 0.0001 }), collisionShape2d),
         {
-          ruleName: 'characterbody2d-max-slides-too-low',
+          ruleName: 'characterbody2d-safe-margin-too-small',
           severity: 'warning',
-          contains: ['jittery movement'],
+          contains: ['0.0001', '0.001'],
         }
       );
+    });
+
+    it.each([0.001, 0.2, 0.5, 256])('says nothing about safe_margin %s', (margin) => {
+      expectClean(scene(node('CharacterBody2D', { safe_margin: margin }), collisionShape2d));
     });
   });
 

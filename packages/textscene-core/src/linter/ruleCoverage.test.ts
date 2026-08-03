@@ -157,8 +157,8 @@ const normalize = (name: string) => name.replace(/\$\{[^}]+\}/g, '*');
 /**
  * Does a SCRAPED name cover a DECLARED one? Only the scraped side can hold a `*`
  * (normalize() runs on source text; `meta.emits` values are runtime strings), so
- * the match is one-directional: `*-extreme-energy` covers the declared literal
- * `omnilight3d-extreme-energy`.
+ * the match is one-directional: `*-negative-energy` covers the declared literal
+ * `omnilight3d-negative-energy`.
  */
 function pairMatches(scraped: string, declared: string): boolean {
   if (scraped === declared) return true;
@@ -263,8 +263,8 @@ describe('rule emits meta-guard', () => {
 
   /**
    * The global cross-check. Per-file equality cannot work: a slice declares
-   * `omnilight3d-extreme-energy` while the name is built in a shared arm builder
-   * as `${rulePrefix}-extreme-energy`, and the physics factories live outside
+   * `omnilight3d-negative-energy` while the name is built in a shared arm builder
+   * as `${rulePrefix}-negative-energy`, and the physics factories live outside
    * `src/nodes` entirely. Comparing the whole tree at once — with `${…}` treated
    * as a wildcard — covers both without a skip list, and checks severity, which
    * nothing else did.
@@ -369,7 +369,7 @@ describe('rule emits meta-guard', () => {
    * `rangeAdvisories(node, { light_energy: lightEnergyArms('arealight3d') })` and
    * every name is interpolated inside the builder. The checks above are all
    * satisfied by that shape — nothing to scrape locally, declared is a subset of
-   * reachable, and the global check matches the builder's `*-extreme-energy`
+   * reachable, and the global check matches the builder's `*-negative-energy`
    * template against some OTHER light's already-declared name. So adding a second
    * arm builder to such a slice used to change what it reports with every test
    * still green. Resolving the call site pins the names to the calling rule.

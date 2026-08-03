@@ -52,20 +52,19 @@ describe('AnimationPlayer Linter', () => {
       { nodeType: 'AnimationPlayer', acceptMode: 'no-error' },
       [
         {
+          // animation_player.cpp:1048 hints "-4,4,0.001,or_less,or_greater" — BOTH
+          // ends open — and set_speed_scale (:648) is a bare assignment, so no
+          // magnitude is out of band and 0 is legal (it pauses playback).
           prop: 'speed_scale',
-          valid: [0.001, 0.5, 1.0, 2.0, 10.0, 100.0, -1.0],
-          invalid: [
-            { value: 0, contains: ['speed_scale', 'cannot be 0'] },
-            { value: 0.00001, contains: ['speed_scale', 'too small'] },
-            { value: 10000, contains: ['speed_scale', 'too large'] },
-            { value: 'fast', contains: ['speed_scale', 'must be a number'] },
-          ],
+          valid: [0.001, 0.5, 1.0, 2.0, 10.0, 100.0, -1.0, 0, 0.00001, 10000],
+          invalid: [{ value: 'fast', contains: ['speed_scale', 'must be a number'] }],
         },
         {
+          // animation_player.cpp:822 is a bare assignment, so the hint at :1046
+          // ("0,4096,0.01") only warns.
           prop: 'playback_default_blend_time',
-          valid: [0, 0.1, 0.5, 1.0, 2.0],
+          valid: [0, 0.1, 0.5, 1.0, 2.0, 3.0, 4096, -0.5, 5000],
           invalid: [
-            { value: -0.5, contains: ['playback_default_blend_time', 'must be >= 0'] },
             { value: 'instant', contains: ['playback_default_blend_time', 'must be a number'] },
           ],
         },
@@ -122,34 +121,17 @@ describe('AnimationPlayer Linter', () => {
   });
 
   describe('Semantic Validation', () => {
-    describe('speed_scale warnings', () => {
-      it('should warn when speed_scale is very slow', () => {
-        expectDiagnostic(scene(node('AnimationPlayer', { speed_scale: 0.05 })), {
-          prop: 'speed_scale',
-          severity: 'warning',
-          contains: ['speed_scale', 'very slow', '0.05'],
-        });
-      });
-
-      it('should warn when speed_scale is very fast', () => {
-        expectDiagnostic(scene(node('AnimationPlayer', { speed_scale: 50 })), {
-          prop: 'speed_scale',
-          severity: 'warning',
-          contains: ['speed_scale', 'very fast', '50'],
-        });
-      });
-
-      it('should not warn for normal speed_scale values', () => {
-        for (const speed of [0.5, 1.0, 2.0, 5.0]) {
-          expectNoDiagnostic(scene(node('AnimationPlayer', { speed_scale: speed })), { prop: 'speed_scale' });
+    // animation_player.cpp:1048 — speed_scale PROPERTY_HINT_RANGE
+    // "-4,4,0.001,or_less,or_greater": both ends open, so no speed is out of band.
+    describe('speed_scale carries no advisory', () => {
+      it.each([0.05, 0.5, 1.0, 2.0, 5.0, 50, -2.0, 0])(
+        'says nothing about speed_scale %s',
+        (speed) => {
+          expectNoDiagnostic(scene(node('AnimationPlayer', { speed_scale: speed })), {
+            prop: 'speed_scale',
+          });
         }
-      });
-
-      it('should not flag negative speed_scale (reverse playback is valid)', () => {
-        expectNoDiagnostic(scene(node('AnimationPlayer', { speed_scale: -2.0 })), {
-          prop: 'negative',
-        });
-      });
+      );
     });
 
     describe('missing animations warnings', () => {
@@ -255,21 +237,29 @@ describe('AnimationPlayer Linter', () => {
       });
     });
 
+    // animation_player.cpp:1046 — playback_default_blend_time PROPERTY_HINT_RANGE
+    // "0,4096,0.01,suffix:s", closed at both ends and enforced at neither.
     describe('blend time warnings', () => {
-      it('should warn when blend time is large', () => {
-        expectDiagnostic(scene(node('AnimationPlayer', { playback_default_blend_time: 3.0 })), {
-          prop: 'playback_default_blend_time',
+      it('should warn when blend time is above the hint', () => {
+        expectDiagnostic(scene(node('AnimationPlayer', { playback_default_blend_time: 5000 })), {
+          ruleName: 'animationplayer-large-blend-time',
           severity: 'warning',
-          contains: ['playback_default_blend_time', 'large', '3'],
+          contains: ['playback_default_blend_time', '5000', '4096'],
         });
       });
 
-      it('should not warn for normal blend times', () => {
-        for (const time of [0, 0.1, 0.5, 1.0]) {
-          expectNoDiagnostic(scene(node('AnimationPlayer', { playback_default_blend_time: time })), {
-            prop: 'playback_default_blend_time',
-          });
-        }
+      it('should warn, not error, on a negative blend time', () => {
+        expectDiagnostic(scene(node('AnimationPlayer', { playback_default_blend_time: -0.5 })), {
+          ruleName: 'animationplayer-negative-blend-time',
+          severity: 'warning',
+          contains: ['playback_default_blend_time', '-0.5'],
+        });
+      });
+
+      it.each([0, 0.1, 0.5, 1.0, 3.0, 4096])('says nothing about blend time %s', (time) => {
+        expectNoDiagnostic(scene(node('AnimationPlayer', { playback_default_blend_time: time })), {
+          prop: 'playback_default_blend_time',
+        });
       });
     });
 
@@ -343,14 +333,16 @@ describe('AnimationPlayer Linter', () => {
           })
         )
       );
-      expect(diagnostics.length).toBeGreaterThan(4);
-      // Should have errors for: speed_scale, blend_time, process_mode, method_call_mode, playback_active
-      const hasSpeedError = diagnostics.some(d => d.message.includes('speed_scale'));
-      const hasBlendError = diagnostics.some(d => d.message.includes('playback_default_blend_time'));
-      const hasProcessError = diagnostics.some(d => d.message.includes('playback_process_mode'));
-      const hasMethodError = diagnostics.some(d => d.message.includes('method_call_mode'));
-      const hasActiveError = diagnostics.some(d => d.message.includes('playback_active'));
-      expect(hasSpeedError && hasBlendError && hasProcessError && hasMethodError && hasActiveError).toBe(true);
+      // Errors for the three enum/boolean properties. speed_scale = 0 and a
+      // negative blend time are no longer errors: their setters (:648 / :822) are
+      // bare assignments, so the blend time only warns and speed_scale is silent.
+      expect(diagnostics.length).toBeGreaterThan(2);
+      expect(diagnostics.some(d => d.message.includes('playback_process_mode'))).toBe(true);
+      expect(diagnostics.some(d => d.message.includes('method_call_mode'))).toBe(true);
+      expect(diagnostics.some(d => d.message.includes('playback_active'))).toBe(true);
+      expect(
+        diagnostics.some(d => d.severity === 'error' && d.message.includes('speed_scale'))
+      ).toBe(false);
     });
 
     it('should handle scientific notation in numeric values', () => {
@@ -403,24 +395,24 @@ describe('AnimationPlayer Linter', () => {
     });
 
     it('should handle mixed warnings and errors', () => {
-      // Extreme speed (warning) + zero blend time (valid)
+      // Out-of-hint blend time (warning) + a valid speed_scale
       expectSeverity(
         scene(
           node('AnimationPlayer', {
             speed_scale: 0.05,
-            playback_default_blend_time: 0,
+            playback_default_blend_time: 5000,
             'anims/idle': 'SubResource("Animation_1")',
           })
         ),
         'warning'
       );
 
-      // Invalid process mode (error) + large blend time (warning)
+      // Invalid process mode (error) + out-of-hint blend time (warning)
       expectSeverity(
         scene(
           node('AnimationPlayer', {
             playback_process_mode: 5,
-            playback_default_blend_time: 5.0,
+            playback_default_blend_time: 5000,
           })
         ),
         'error'

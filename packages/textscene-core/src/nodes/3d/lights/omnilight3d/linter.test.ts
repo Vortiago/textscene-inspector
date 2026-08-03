@@ -35,12 +35,13 @@ describe('OmniLight3D Linter', () => {
 
     runPropertyValidation({ nodeType: 'OmniLight3D' }, [
       {
+        // light_3d.cpp:389 hints "0,16,0.001,or_greater" and Light3D::set_param:36
+        // guards the param index, not the value, so a negative energy loads: it
+        // warns rather than erroring.
         prop: 'light_energy',
-        valid: [2.5],
-        invalid: [
-          { value: -1.0, contains: ['non-negative'] },
-          { value: 'invalid', contains: ['must be a number'] },
-        ],
+        valid: [2.5, 0, -1.0],
+        acceptMode: 'no-error',
+        invalid: [{ value: 'invalid', contains: ['must be a number'] }],
       },
       {
         prop: 'light_color',
@@ -109,13 +110,12 @@ describe('OmniLight3D Linter', () => {
           ],
         },
       {
+        // light_3d.cpp:639 hints "0,4096,0.001,or_greater", unenforced, so 0 is
+        // legal and a negative only warns.
         prop: 'omni_range',
-        valid: [10.0],
-        invalid: [
-          { value: 0, contains: ['greater than 0'] },
-          { value: -5.0, contains: ['greater than 0'] },
-          { value: 'invalid', contains: ['must be a number'] },
-        ],
+        valid: [10.0, 0, -5.0],
+        acceptMode: 'no-error',
+        invalid: [{ value: 'invalid', contains: ['must be a number'] }],
       },
       {
         // light_3d.cpp:640 hints "-10,10,0.001,or_greater,or_less": the range
@@ -158,71 +158,54 @@ describe('OmniLight3D Linter', () => {
       });
     });
 
+    // light_3d.cpp:389 — light_energy PROPERTY_HINT_RANGE "0,16,0.001,or_greater".
+    // The high end is open, so only a negative is out of band.
     describe('light energy warnings', () => {
-      it('should warn on very low light_energy', () => {
-        expectDiagnostic(scene(node('OmniLight3D', { light_energy: 0.005, omni_range: 5.0 })), {
+      it('should warn on negative light_energy', () => {
+        expectDiagnostic(scene(node('OmniLight3D', { light_energy: -1, omni_range: 5.0 })), {
           prop: 'Light energy',
           severity: 'warning',
-          contains: ['very low', '0.005'],
+          contains: ['negative', '-1'],
         });
       });
 
-      it('should warn on very high light_energy', () => {
-        expectDiagnostic(scene(node('OmniLight3D', { light_energy: 150, omni_range: 5.0 })), {
+      it('should not warn at the bottom of the hint (0)', () => {
+        expectNoDiagnostic(scene(node('OmniLight3D', { light_energy: 0, omni_range: 5.0 })), {
           prop: 'Light energy',
-          severity: 'warning',
-          contains: ['very high', '150'],
         });
       });
 
-      it('should not warn on normal light_energy values', () => {
-        expectNoDiagnostic(scene(node('OmniLight3D', { light_energy: 1.5, omni_range: 5.0 })), {
+      it('should not warn above the open top of the hint', () => {
+        expectNoDiagnostic(scene(node('OmniLight3D', { light_energy: 150, omni_range: 5.0 })), {
           prop: 'Light energy',
         });
       });
     });
 
+    // light_3d.cpp:639 — omni_range PROPERTY_HINT_RANGE "0,4096,0.001,or_greater".
     describe('omni_range warnings', () => {
-      it('should warn on very large omni_range', () => {
-        expectDiagnostic(scene(node('OmniLight3D', { omni_range: 1500 })), {
+      it('should warn on negative omni_range', () => {
+        expectDiagnostic(scene(node('OmniLight3D', { omni_range: -0.5 })), {
           prop: 'Light range',
           severity: 'warning',
-          contains: ['very large', '1500', 'performance'],
+          contains: ['negative', '-0.5'],
         });
       });
 
-      it('should warn on very small omni_range', () => {
-        expectDiagnostic(scene(node('OmniLight3D', { omni_range: 0.05 })), {
-          prop: 'Light range',
-          severity: 'warning',
-          contains: ['very small', '0.05', 'might not be visible'],
-        });
+      it('should not warn on a tiny but non-negative omni_range', () => {
+        expectNoDiagnostic(scene(node('OmniLight3D', { omni_range: 0.05 })), { prop: 'Light range' });
       });
 
-      it('should not warn on normal omni_range values', () => {
-        expectNoDiagnostic(scene(node('OmniLight3D', { omni_range: 10.0 })), { prop: 'Light range' });
+      it('should not warn above the open top of the hint', () => {
+        expectNoDiagnostic(scene(node('OmniLight3D', { omni_range: 1500 })), { prop: 'Light range' });
       });
     });
 
-    describe('omni_attenuation warnings', () => {
-      it('should warn on very low omni_attenuation', () => {
-        expectDiagnostic(scene(node('OmniLight3D', { omni_attenuation: 0.05, omni_range: 5.0 })), {
-          prop: 'attenuation',
-          severity: 'warning',
-          contains: ['very low', '0.05', 'slow falloff'],
-        });
-      });
-
-      it('should warn on very high omni_attenuation', () => {
-        expectDiagnostic(scene(node('OmniLight3D', { omni_attenuation: 7.0, omni_range: 5.0 })), {
-          prop: 'attenuation',
-          severity: 'warning',
-          contains: ['very high', '7', 'performance'],
-        });
-      });
-
-      it('should not warn on normal omni_attenuation values', () => {
-        expectNoDiagnostic(scene(node('OmniLight3D', { omni_attenuation: 1.5, omni_range: 5.0 })), {
+    // light_3d.cpp:640 — omni_attenuation PROPERTY_HINT_RANGE
+    // "-10,10,0.001,or_greater,or_less": BOTH ends open, so no value is out of band.
+    describe('omni_attenuation carries no advisory', () => {
+      it.each([0.05, 1.5, 7.0, -2])('says nothing about omni_attenuation %s', (attenuation) => {
+        expectNoDiagnostic(scene(node('OmniLight3D', { omni_attenuation: attenuation, omni_range: 5.0 })), {
           prop: 'attenuation',
         });
       });
@@ -309,32 +292,29 @@ describe('OmniLight3D Linter', () => {
     });
 
     it('should handle boundary values for omni_range', () => {
-      const diagnostics = lint(scene(node('OmniLight3D', { omni_range: 0.09 })));
-      // Should have a warning for very small range (below 0.1)
+      // 0 is the bottom of the hint (light_3d.cpp:639) and therefore in band.
+      expectClean(scene(node('OmniLight3D', { omni_range: 0 })));
+      const diagnostics = lint(scene(node('OmniLight3D', { omni_range: -0.01 })));
       const warning = diagnostics.find(
-        d => d.severity === 'warning' && d.message.includes('very small')
+        d => d.severity === 'warning' && d.message.includes('Light range is negative')
       );
       expect(warning).toBeDefined();
     });
 
     it('should handle extreme combinations', () => {
       const diagnostics = lint(
-        scene(node('OmniLight3D', { light_energy: 0.005, omni_range: 1500, omni_attenuation: 7.0 }))
+        scene(node('OmniLight3D', { light_energy: -0.005, omni_range: -1500, omni_attenuation: 7.0 }))
       );
-      expect(diagnostics.length).toBeGreaterThan(2);
-      // Should have warnings for all three extreme values
-      const energyWarning = diagnostics.find(
-        d => d.message.includes('Light energy') && d.message.includes('very low')
+      // Two out-of-band properties, two warnings: omni_attenuation's hint is open
+      // at both ends (light_3d.cpp:640), so 7.0 contributes nothing.
+      expect(diagnostics).toHaveLength(2);
+      const energyWarning = diagnostics.find(d =>
+        d.message.includes('Light energy is negative')
       );
-      const rangeWarning = diagnostics.find(
-        d => d.message.includes('Light range') && d.message.includes('very large')
-      );
-      const attenuationWarning = diagnostics.find(
-        d => d.message.includes('attenuation') && d.message.includes('very high')
-      );
+      const rangeWarning = diagnostics.find(d => d.message.includes('Light range is negative'));
       expect(energyWarning).toBeDefined();
       expect(rangeWarning).toBeDefined();
-      expect(attenuationWarning).toBeDefined();
+      expect(diagnostics.some(d => d.message.includes('attenuation'))).toBe(false);
     });
   });
 });

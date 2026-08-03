@@ -13,12 +13,16 @@ import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
 import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
+import { rangeAdvisories } from '../rangeAdvisory.js';
 
-/** Minimum recommended floor_snap_length (below this, floor snapping may not work well) */
-const MIN_RECOMMENDED_FLOOR_SNAP = 0.001;
-
-/** Maximum recommended floor_snap_length (above this can cause glitchy behavior) */
-const MAX_RECOMMENDED_FLOOR_SNAP = 10;
+/**
+ * `safe_margin` hint, character_body_2d.cpp:757 / character_body_3d.cpp:942 —
+ * PROPERTY_HINT_RANGE "0.001,256,0.001". Neither end carries `or_greater` /
+ * `or_less`, and both setters (:537 / :636) are bare assignments, so the two
+ * ends are advisory bounds rather than enforced ones.
+ */
+const SAFE_MARGIN_HINT_MIN = 0.001;
+const SAFE_MARGIN_HINT_MAX = 256;
 
 export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `CharacterBody${dim}`;
@@ -48,30 +52,10 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
-    // Warning: Extreme floor_snap_length values
-    if (rawProps.floor_snap_length !== undefined) {
-      const snapLength = parseFloat(rawProps.floor_snap_length);
-      if (!isNaN(snapLength)) {
-        if (snapLength > 0 && snapLength < MIN_RECOMMENDED_FLOOR_SNAP) {
-          diagnostics.push({
-            severity: 'warning',
-            message: `${type} '${node.name}' has very small floor_snap_length (${snapLength}). Values below ${MIN_RECOMMENDED_FLOOR_SNAP} may not work reliably for floor snapping.`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: `${prefix}-floor-snap-too-small`,
-          });
-        }
-        if (snapLength > MAX_RECOMMENDED_FLOOR_SNAP) {
-          diagnostics.push({
-            severity: 'warning',
-            message: `${type} '${node.name}' has very large floor_snap_length (${snapLength}). Values above ${MAX_RECOMMENDED_FLOOR_SNAP} can cause glitchy behavior or unwanted floor attachment.`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: `${prefix}-floor-snap-too-large`,
-          });
-        }
-      }
-    }
+    // `floor_snap_length` gets no advisory: its hint (character_body_2d.cpp:749,
+    // character_body_3d.cpp:934) ends in `or_greater`, so the high end is open,
+    // and the low end coincides with the ERR_FAIL_COND(< 0) in the setter
+    // (:631 / :831) that linterParser.ts already reports as an error.
 
     // Warning: Floor-specific properties set but motion_mode is FLOATING (1)
     const motionMode = rawProps.motion_mode !== undefined ? parseInt(rawProps.motion_mode, 10) : 0;
@@ -121,33 +105,30 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
       }
     }
 
-    // Warning: max_slides too low (may cause jittery movement)
-    if (rawProps.max_slides !== undefined) {
-      const maxSlides = parseInt(rawProps.max_slides, 10);
-      if (!isNaN(maxSlides) && maxSlides > 0 && maxSlides < 4) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `${type} '${node.name}' has max_slides=${maxSlides}. Values below 4 may cause jittery movement on complex geometry. Recommended: 4-6.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-max-slides-too-low`,
-        });
-      }
-    }
+    // `max_slides` gets no advisory: character_body_2d.cpp:741 /
+    // character_body_3d.cpp:926 declare it PROPERTY_HINT_NONE with
+    // PROPERTY_USAGE_NO_EDITOR, so no range is stated. The setter's
+    // ERR_FAIL_COND(< 1) (:613 / :813) is an error in linterParser.ts.
 
-    // Warning: Very large safe_margin can cause tunneling or unwanted collisions
-    if (rawProps.safe_margin !== undefined) {
-      const safeMargin = parseFloat(rawProps.safe_margin);
-      if (!isNaN(safeMargin) && safeMargin > 0.1) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `${type} '${node.name}' has large safe_margin (${safeMargin}). Values above 0.1 may cause collision detection issues. Typical range: 0.001-0.1.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-safe-margin-too-large`,
-        });
-      }
-    }
+    // Warnings: safe_margin outside the range the inspector offers.
+    diagnostics.push(
+      ...rangeAdvisories(node, {
+        safe_margin: [
+          {
+            under: SAFE_MARGIN_HINT_MIN,
+            ruleName: `${prefix}-safe-margin-too-small`,
+            message: (safeMargin) =>
+              `${type} '${node.name}' has safe_margin ${safeMargin}. The editor range starts at ${SAFE_MARGIN_HINT_MIN}.`,
+          },
+          {
+            over: SAFE_MARGIN_HINT_MAX,
+            ruleName: `${prefix}-safe-margin-too-large`,
+            message: (safeMargin) =>
+              `${type} '${node.name}' has safe_margin ${safeMargin}. The editor range stops at ${SAFE_MARGIN_HINT_MAX}.`,
+          },
+        ],
+      })
+    );
 
     return diagnostics;
   }
@@ -160,13 +141,11 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
       applicableNodeTypes: [type],
       emits: [
         { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
-        { ruleName: `${prefix}-floor-snap-too-small`, severity: 'warning' },
-        { ruleName: `${prefix}-floor-snap-too-large`, severity: 'warning' },
         { ruleName: `${prefix}-floor-props-in-floating-mode`, severity: 'warning' },
         { ruleName: `${prefix}-zero-collision-layer`, severity: 'warning' },
         { ruleName: `${prefix}-zero-collision-mask`, severity: 'warning' },
         { ruleName: `${prefix}-non-standard-up-direction`, severity: 'warning' },
-        { ruleName: `${prefix}-max-slides-too-low`, severity: 'warning' },
+        { ruleName: `${prefix}-safe-margin-too-small`, severity: 'warning' },
         { ruleName: `${prefix}-safe-margin-too-large`, severity: 'warning' },
       ],
     },

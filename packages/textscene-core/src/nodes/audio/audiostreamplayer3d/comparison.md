@@ -56,7 +56,7 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 16 inh
 | `playing` | true or false |
 | `stream` | SubResource("id") or ExtResource("id") |
 | `stream_paused` | true or false |
-| `unit_size` | float > 0 |
+| `unit_size` | float |
 | `volume_db` | float |
 
 | Rule | Reports | Severity |
@@ -65,7 +65,7 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 16 inh
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 | `valid-audiostreamplayer3d-properties` | `audiostreamplayer3d-missing-stream` | warning |
 |  | `audiostreamplayer3d-missing-stream-resource` | error |
-|  | `audiostreamplayer3d-invalid-unit-size` | error |
+|  | `audiostreamplayer3d-small-unit-size` | warning |
 |  | `audiostreamplayer3d-invalid-max-distance` | error |
 |  | `audiostreamplayer3d-invalid-pitch-scale` | error |
 |  | `audiostreamplayer3d-emission-angle-not-enabled` | warning |
@@ -77,7 +77,8 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 16 inh
 
 Beyond the shared audio-base fallbacks, every numeric property here defaults via
 `floatOr` without reproducing strict's range checks: unit_size falls back to 10
-with no positivity check, max_distance to 0 with no non-negativity check,
+(strict only warns below the hint's 0.1, since the setter is a bare assignment),
+max_distance to 0 with no non-negativity check,
 attenuation_filter_cutoff_hz to 5000 with no 1 Hz floor, and
 panning_strength/emission_angle_degrees to 1 and 45 with no 0-1/0-90 clamp.
 attenuation_model and doppler_tracking are the two enums: `enumOr` does enforce

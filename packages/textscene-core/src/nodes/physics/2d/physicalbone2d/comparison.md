@@ -46,9 +46,6 @@ Strict parsing format-checks these `PhysicalBone2D` properties, plus 14 inherite
 | `valid-rigidbody2d` (type-family match) | `valid-rigidbody2d-resources` | error |
 |  | `rigidbody2d-needs-collision-shape` | warning |
 |  | `rigidbody2d-mass-too-low` | warning |
-|  | `rigidbody2d-mass-too-high` | warning |
-|  | `rigidbody2d-excessive-linear-damp` | warning |
-|  | `rigidbody2d-excessive-angular-damp` | warning |
 |  | `rigidbody2d-max-contacts-without-monitor` | warning |
 |  | `rigidbody2d-zero-collision-layer` | warning |
 |  | `rigidbody2d-zero-collision-mask` | warning |

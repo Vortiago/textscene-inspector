@@ -51,18 +51,6 @@ const UNIT_FIXTURE_WARNINGS: Readonly<Record<string, { rules: readonly string[];
     ],
     reason: 'named for the two advisories it carries; they are the fixture',
   },
-  'unit-light-transport-ambient.tscn': {
-    rules: ['directionallight3d-extreme-energy'],
-    reason: 'the sun is named DarkSun and has energy 0, which is the ambient-only variable under test',
-  },
-  'unit-light-transport-sky.tscn': {
-    rules: ['directionallight3d-extreme-energy'],
-    reason: 'the sun is named DarkSun and has energy 0, which is the sky-only variable under test',
-  },
-  'unit-light-transport-sky-graded.tscn': {
-    rules: ['directionallight3d-extreme-energy'],
-    reason: 'the sun is named DarkSun and has energy 0, which is the sky-only variable under test',
-  },
   'unit-path3d.tscn': {
     rules: ['path3d-unused'],
     reason: 'a Path3D with no follower is exactly what this fixture demonstrates',

@@ -10,60 +10,33 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { rangeAdvisories } from '../../../../linter/rangeAdvisory.js';
 import { lightEnergyArms, lightRangeArms } from '../shared/linterChecks.js';
 
-// Thresholds for warnings
-const LARGE_SPOT_RANGE = 1000;
-const SMALL_SPOT_RANGE = 0.1;
-const EXTREME_SPOT_ATTENUATION_MIN = 0.1;
-const EXTREME_SPOT_ATTENUATION_MAX = 5;
-const EXTREME_SPOT_ANGLE_ATTENUATION_MIN = 0.1;
-const EXTREME_SPOT_ANGLE_ATTENUATION_MAX = 5;
-const SMALL_SPOT_ANGLE = 1;
-
 /**
  * Validate SpotLight3D semantic rules
+ *
+ * Two SpotLight3D properties deliberately carry no advisory: `spot_attenuation`
+ * hints "-10,10,0.01,or_greater,or_less" (light_3d.cpp:673) so both ends are
+ * open, and `spot_angle_attenuation` is PROPERTY_HINT_EXP_EASING (:675), which
+ * states no range at all.
  */
 function checkSpotLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
-
   return rangeAdvisories(node, {
     light_energy: lightEnergyArms('spotlight3d'),
-    spot_range: lightRangeArms('spotlight3d', LARGE_SPOT_RANGE, SMALL_SPOT_RANGE),
-    spot_attenuation: [
-      {
-        under: EXTREME_SPOT_ATTENUATION_MIN,
-        ruleName: 'spotlight3d-extreme-attenuation',
-        message: (attenuation) =>
-          `Light attenuation is very low (${attenuation}). Values below ${EXTREME_SPOT_ATTENUATION_MIN} result in very slow falloff.`,
-      },
-      {
-        over: EXTREME_SPOT_ATTENUATION_MAX,
-        ruleName: 'spotlight3d-extreme-attenuation',
-        message: (attenuation) =>
-          `Light attenuation is very high (${attenuation}). Values above ${EXTREME_SPOT_ATTENUATION_MAX} result in very fast falloff.`,
-      },
-    ],
-    spot_angle_attenuation: [
-      {
-        under: EXTREME_SPOT_ANGLE_ATTENUATION_MIN,
-        ruleName: 'spotlight3d-extreme-angle-attenuation',
-        message: (angleAttenuation) =>
-          `Angular attenuation is very low (${angleAttenuation}). Values below ${EXTREME_SPOT_ANGLE_ATTENUATION_MIN} result in very soft edges.`,
-      },
-      {
-        over: EXTREME_SPOT_ANGLE_ATTENUATION_MAX,
-        ruleName: 'spotlight3d-extreme-angle-attenuation',
-        message: (angleAttenuation) =>
-          `Angular attenuation is very high (${angleAttenuation}). Values above ${EXTREME_SPOT_ANGLE_ATTENUATION_MAX} result in very sharp edges.`,
-      },
-    ],
+    spot_range: lightRangeArms('spotlight3d'),
     spot_angle: [
       {
-        under: SMALL_SPOT_ANGLE,
-        floor: 0,
-        ruleName: 'spotlight3d-small-angle',
+        // light_3d.cpp:674 — spot_angle PROPERTY_HINT_RANGE "0,180,0.01,degrees", both ends closed
+        under: 0,
+        ruleName: 'spotlight3d-spot-angle-out-of-range',
         message: (angle) =>
-          `Spot angle is very small (${angle} degrees). Values below ${SMALL_SPOT_ANGLE} degree might not be visible.`,
+          `Spot angle is negative (${angle} degrees). The editor range for spot_angle is 0 to 180 degrees.`,
+      },
+      {
+        over: 180,
+        ruleName: 'spotlight3d-spot-angle-out-of-range',
+        message: (angle) =>
+          `Spot angle is ${angle} degrees. The editor range for spot_angle stops at 180 degrees.`,
       },
     ],
   });
@@ -75,16 +48,13 @@ function checkSpotLight3D(context: RuleContext): Diagnostic[] {
 const spotLight3DValidationRule: LintRule = {
   meta: {
     name: 'valid-spotlight3d-properties',
-    description: 'Validates SpotLight3D property values, required properties, and performance considerations',
+    description: 'Validates SpotLight3D property values against the ranges the editor accepts',
     category: 'validation',
     applicableNodeTypes: ['SpotLight3D'],
     emits: [
-      { ruleName: 'spotlight3d-extreme-energy', severity: 'warning' },
-      { ruleName: 'spotlight3d-large-range', severity: 'warning' },
-      { ruleName: 'spotlight3d-small-range', severity: 'warning' },
-      { ruleName: 'spotlight3d-extreme-attenuation', severity: 'warning' },
-      { ruleName: 'spotlight3d-extreme-angle-attenuation', severity: 'warning' },
-      { ruleName: 'spotlight3d-small-angle', severity: 'warning' },
+      { ruleName: 'spotlight3d-negative-energy', severity: 'warning' },
+      { ruleName: 'spotlight3d-negative-range', severity: 'warning' },
+      { ruleName: 'spotlight3d-spot-angle-out-of-range', severity: 'warning' },
     ],
   },
   check: checkSpotLight3D,

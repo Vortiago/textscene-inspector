@@ -50,7 +50,7 @@ Strict parsing format-checks these `Label3D` properties, plus 17 inherited from 
 | `no_depth_test` | true or false |
 | `outline_modulate` | Color(r, g, b, a) |
 | `outline_size` | float >= 0 |
-| `pixel_size` | float > 0 |
+| `pixel_size` | float |
 | `text` | quoted string |
 
 | Rule | Reports | Severity |
@@ -58,6 +58,7 @@ Strict parsing format-checks these `Label3D` properties, plus 17 inherited from 
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 | `valid-label3d-properties` | `label3d-empty-text` | warning |
+|  | `label3d-small-pixel-size` | warning |
 |  | `label3d-large-pixel-size` | warning |
 | `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
 |  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |

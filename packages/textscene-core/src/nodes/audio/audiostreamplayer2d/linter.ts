@@ -16,13 +16,16 @@ import {
   checkInvalidMaxPolyphony,
 } from '../sharedLinterChecks.js';
 
-// Thresholds for warnings
-const EXTREME_VOLUME_DB_MIN = -60;
-const EXTREME_VOLUME_DB_MAX = 20;
-const MIN_MAX_DISTANCE_2D = 10;
-const MAX_MAX_DISTANCE_2D = 10000;
-const MIN_ATTENUATION = 0.1;
-const MAX_ATTENUATION = 10;
+// audio_stream_player_2d.cpp:430, volume_db PROPERTY_HINT_RANGE "-80,24,suffix:dB":
+// both ends closed, and set_volume_db (:209) only ERR_FAILs on NaN.
+const VOLUME_DB_HINT_MIN = -80;
+const VOLUME_DB_HINT_MAX = 24;
+
+// audio_stream_player_2d.cpp:436, max_distance PROPERTY_HINT_RANGE
+// "1,4096,1,or_greater,exp,suffix:px": the top end is open, so only the bottom
+// is advisory. set_max_distance (:299) ERR_FAILs at <= 0, which linterParser.ts
+// reports as an error, so the advisory floors at 0.
+const MAX_DISTANCE_HINT_MIN = 1;
 
 /**
  * Validate AudioStreamPlayer2D semantic rules
@@ -88,38 +91,21 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Range advisories: distance / attenuation / volume / pitch bands.
+  // Range advisories: distance / volume / pitch bands. `attenuation` carries
+  // none: audio_stream_player_2d.cpp:437 declares it PROPERTY_HINT_EXP_EASING,
+  // which states no range, and set_attenuation (:308) is a bare assignment.
   diagnostics.push(
     ...rangeAdvisories(node, {
       max_distance: [
         {
-          under: MIN_MAX_DISTANCE_2D,
+          under: MAX_DISTANCE_HINT_MIN,
+          floor: 0,
           ruleName: 'audiostreamplayer2d-small-max-distance',
           message: (maxDistance) =>
-            `Property 'max_distance' is very small (${maxDistance}). Values below ${MIN_MAX_DISTANCE_2D} may cause audio to cut off too quickly in 2D games.`,
-        },
-        {
-          over: MAX_MAX_DISTANCE_2D,
-          ruleName: 'audiostreamplayer2d-large-max-distance',
-          message: (maxDistance) =>
-            `Property 'max_distance' is very large (${maxDistance}). Values above ${MAX_MAX_DISTANCE_2D} may cause audio to be heard from too far away in 2D games.`,
+            `Property 'max_distance' is ${maxDistance}. The editor range starts at ${MAX_DISTANCE_HINT_MIN} px.`,
         },
       ],
-      attenuation: [
-        {
-          under: MIN_ATTENUATION,
-          ruleName: 'audiostreamplayer2d-flat-attenuation',
-          message: (attenuation) =>
-            `Property 'attenuation' is very flat (${attenuation}). Values below ${MIN_ATTENUATION} cause very slow distance falloff.`,
-        },
-        {
-          over: MAX_ATTENUATION,
-          ruleName: 'audiostreamplayer2d-steep-attenuation',
-          message: (attenuation) =>
-            `Property 'attenuation' is very steep (${attenuation}). Values above ${MAX_ATTENUATION} cause very rapid distance falloff.`,
-        },
-      ],
-      volume_db: extremeVolumeArms('audiostreamplayer2d', EXTREME_VOLUME_DB_MIN, EXTREME_VOLUME_DB_MAX),
+      volume_db: extremeVolumeArms('audiostreamplayer2d', VOLUME_DB_HINT_MIN, VOLUME_DB_HINT_MAX),
       pitch_scale: unusualPitchArms('audiostreamplayer2d'),
     })
   );
@@ -144,9 +130,6 @@ const audioStreamPlayer2DValidationRule: LintRule = {
       { ruleName: 'audiostreamplayer2d-autoplay-without-stream', severity: 'warning' },
       { ruleName: 'audiostreamplayer2d-zero-pitch-scale', severity: 'error' },
       { ruleName: 'audiostreamplayer2d-small-max-distance', severity: 'warning' },
-      { ruleName: 'audiostreamplayer2d-large-max-distance', severity: 'warning' },
-      { ruleName: 'audiostreamplayer2d-flat-attenuation', severity: 'warning' },
-      { ruleName: 'audiostreamplayer2d-steep-attenuation', severity: 'warning' },
       { ruleName: 'audiostreamplayer2d-extreme-volume', severity: 'warning' },
       { ruleName: 'audiostreamplayer2d-unusual-pitch', severity: 'warning' },
       { ruleName: 'audiostreamplayer2d-invalid-max-polyphony', severity: 'error' },

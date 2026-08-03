@@ -14,12 +14,6 @@ import { checkResourceExists } from '../../../linter/resourceChecker.js';
 import { extractNodePath, resolveNodePathTarget } from '../../../linter/linterUtils.js';
 
 /**
- * Threshold for warning about unusually high surface indices.
- * Most meshes have 1-8 surfaces; indices above this may indicate an issue.
- */
-const SURFACE_INDEX_WARNING_THRESHOLD = 32;
-
-/**
  * Check if properties are valid MeshInstance3D properties
  */
 function isMeshInstance3DProperties(props: unknown): props is MeshInstance3DProperties {
@@ -98,22 +92,14 @@ function checkMeshInstance3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Check if surface material override resources exist and validate indices
+  // Check that each surface material override resource exists. The index gets no
+  // bound: mesh_instance_3d.cpp:367 guards it with
+  // ERR_FAIL_INDEX(p_surface, surface_override_materials.size()), so the ceiling
+  // is the mesh's own surface count, which is not knowable from the .tscn.
   for (const [key, value] of Object.entries(rawProps)) {
     const match = key.match(/^surface_material_override\/(\d+)$/);
     if (match) {
       const surfaceIndex = parseInt(match[1]!, 10);
-
-      // Warn on unusually high indices (may indicate a problem)
-      if (surfaceIndex > SURFACE_INDEX_WARNING_THRESHOLD) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Surface material override index ${surfaceIndex} is unusually high (most meshes have < 32 surfaces), may indicate an error or impact performance`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'valid-meshinstance3d-surface-index',
-        });
-      }
 
       // Check if resource exists
       const resourceExists = checkResourceExists(scene, value);
@@ -189,7 +175,6 @@ const meshInstance3DValidationRule: LintRule = {
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'MeshInstance3D'),
     emits: [
       { ruleName: 'valid-meshinstance3d-resources', severity: 'error' },
-      { ruleName: 'valid-meshinstance3d-surface-index', severity: 'warning' },
       { ruleName: 'valid-meshinstance3d-visibility-range', severity: 'error' },
       { ruleName: 'valid-meshinstance3d-skeleton', severity: 'error' },
     ],

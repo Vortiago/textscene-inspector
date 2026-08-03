@@ -32,12 +32,12 @@ describe('AreaLight3D Linter', () => {
 
     runPropertyValidation({ nodeType: 'AreaLight3D' }, [
       {
+        // light_3d.cpp:389 hints "0,16,0.001,or_greater" and Light3D::set_param:36
+        // guards the param index, not the value, so a negative energy warns.
         prop: 'light_energy',
-        valid: [2.5],
-        invalid: [
-          { value: -1.0, contains: ['non-negative'] },
-          { value: 'invalid', contains: ['must be a number'] },
-        ],
+        valid: [2.5, 0, -1.0],
+        acceptMode: 'no-error',
+        invalid: [{ value: 'invalid', contains: ['must be a number'] }],
       },
       {
         prop: 'light_color',
@@ -75,24 +75,29 @@ describe('AreaLight3D Linter', () => {
     ]);
 
     it('should accept zero light_energy', () => {
-      expectNoErrors(scene(node('AreaLight3D', { light_energy: 0, area_range: 2.0 })));
+      expectClean(scene(node('AreaLight3D', { light_energy: 0, area_range: 2.0 })));
     });
   });
 
   describe('Semantic Validation', () => {
+    // light_3d.cpp:389 — light_energy PROPERTY_HINT_RANGE "0,16,0.001,or_greater":
+    // the high end is open, so only a negative is out of band.
     describe('light energy warnings', () => {
-      it('should warn on very low light_energy', () => {
-        const diagnostics = lint(scene(node('AreaLight3D', { light_energy: 0.005, area_range: 2.0 })));
-        expect(diagnostics.some(d => d.severity === 'warning' && d.message.includes('very low'))).toBe(true);
+      it('should warn on negative light_energy', () => {
+        const diagnostics = lint(
+          scene(node('AreaLight3D', { light_energy: -0.005, area_range: 2.0 }))
+        );
+        expect(
+          diagnostics.some(
+            d => d.severity === 'warning' && d.ruleName === 'arealight3d-negative-energy'
+          )
+        ).toBe(true);
       });
 
-      it('should warn on very high light_energy', () => {
-        const diagnostics = lint(scene(node('AreaLight3D', { light_energy: 150, area_range: 2.0 })));
-        expect(diagnostics.some(d => d.severity === 'warning' && d.message.includes('very high'))).toBe(true);
-      });
-
-      it('should not warn on normal light_energy values', () => {
-        const diagnostics = lint(scene(node('AreaLight3D', { light_energy: 1.5, area_range: 2.0 })));
+      it.each([0.005, 1.5, 150])('says nothing about light_energy %s', (energy) => {
+        const diagnostics = lint(
+          scene(node('AreaLight3D', { light_energy: energy, area_range: 2.0 }))
+        );
         expect(diagnostics.some(d => d.severity === 'warning')).toBe(false);
       });
     });

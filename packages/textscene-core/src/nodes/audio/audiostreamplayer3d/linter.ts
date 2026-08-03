@@ -16,9 +16,16 @@ import {
   checkInvalidMaxPolyphony,
 } from '../sharedLinterChecks.js';
 
-// 3D tolerates a narrower volume range than the 2D/base players
-const EXTREME_VOLUME_DB_MIN = -40;
-const EXTREME_VOLUME_DB_MAX = 6;
+// audio_stream_player_3d.cpp:883, volume_db PROPERTY_HINT_RANGE "-80,80,suffix:dB":
+// both ends closed, and wider than the 2D/base players' "-80,24". set_volume_db
+// (:552) only ERR_FAILs on NaN, so the band is advisory.
+const VOLUME_DB_HINT_MIN = -80;
+const VOLUME_DB_HINT_MAX = 80;
+
+// audio_stream_player_3d.cpp:885, unit_size PROPERTY_HINT_RANGE
+// "0.1,100,0.01,or_greater": top end open, and set_unit_size (:569) is a bare
+// assignment, so the bottom is a warning rather than an error.
+const UNIT_SIZE_HINT_MIN = 0.1;
 
 /**
  * Validate AudioStreamPlayer3D semantic rules
@@ -59,21 +66,8 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // ERROR: unit_size must be > 0
-  if (rawProps.unit_size !== undefined) {
-    const unitSize = parseFloat(rawProps.unit_size);
-    if (!isNaN(unitSize) && unitSize <= 0) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Property 'unit_size' must be greater than 0 (got ${unitSize}). This property controls attenuation range.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'audiostreamplayer3d-invalid-unit-size',
-      });
-    }
-  }
-
-  // ERROR: max_distance must be >= 0
+  // ERROR: max_distance must be >= 0 (audio_stream_player_3d.cpp:660,
+  // ERR_FAIL_COND(p_metres < 0.0))
   if (rawProps.max_distance !== undefined) {
     const maxDistance = parseFloat(rawProps.max_distance);
     if (!isNaN(maxDistance) && maxDistance < 0) {
@@ -87,7 +81,8 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // ERROR: pitch_scale must be > 0
+  // ERROR: pitch_scale must be > 0 (audio_stream_player_internal.cpp:314,
+  // ERR_FAIL_COND(p_pitch_scale <= 0.0); all three players route through it)
   if (rawProps.pitch_scale !== undefined) {
     const pitchScale = parseFloat(rawProps.pitch_scale);
     if (!isNaN(pitchScale) && pitchScale <= 0) {
@@ -123,10 +118,18 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Range advisories: volume + pitch bands.
+  // Range advisories: volume, unit size and pitch bands.
   diagnostics.push(
     ...rangeAdvisories(node, {
-      volume_db: extremeVolumeArms('audiostreamplayer3d', EXTREME_VOLUME_DB_MIN, EXTREME_VOLUME_DB_MAX),
+      volume_db: extremeVolumeArms('audiostreamplayer3d', VOLUME_DB_HINT_MIN, VOLUME_DB_HINT_MAX),
+      unit_size: [
+        {
+          under: UNIT_SIZE_HINT_MIN,
+          ruleName: 'audiostreamplayer3d-small-unit-size',
+          message: (unitSize) =>
+            `Property 'unit_size' is ${unitSize}. The editor range starts at ${UNIT_SIZE_HINT_MIN}.`,
+        },
+      ],
       pitch_scale: unusualPitchArms('audiostreamplayer3d'),
     })
   );
@@ -148,7 +151,7 @@ const audioStreamPlayer3DValidationRule: LintRule = {
     emits: [
       { ruleName: 'audiostreamplayer3d-missing-stream', severity: 'warning' },
       { ruleName: 'audiostreamplayer3d-missing-stream-resource', severity: 'error' },
-      { ruleName: 'audiostreamplayer3d-invalid-unit-size', severity: 'error' },
+      { ruleName: 'audiostreamplayer3d-small-unit-size', severity: 'warning' },
       { ruleName: 'audiostreamplayer3d-invalid-max-distance', severity: 'error' },
       { ruleName: 'audiostreamplayer3d-invalid-pitch-scale', severity: 'error' },
       { ruleName: 'audiostreamplayer3d-emission-angle-not-enabled', severity: 'warning' },

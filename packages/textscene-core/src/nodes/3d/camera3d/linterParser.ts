@@ -12,16 +12,21 @@ const DOPPLER_TRACKING = { 0: 'DISABLED', 1: 'IDLE_STEP', 2: 'PHYSICS_STEP' };
 
 validatorRegistry.registerAll('Camera3D', {
   projection: v.enumInt('projection', 0, 2, PROJECTION),
-  // Custom message keeps the "degrees" qualifier that the per-node test asserts.
+  // camera_3d.cpp:725, ERR_FAIL_COND(p_fov < 1 || p_fov > 179): the setter
+  // refuses, so this is an error rather than an advisory. Custom message keeps
+  // the "degrees" qualifier that the per-node test asserts.
   fov: v.float('fov', {
     min: 1,
     max: 179,
     message: "Property 'fov' must be between 1 and 179 degrees",
   }),
+  // camera_3d.cpp:731, ERR_FAIL_COND(p_size <= CMP_EPSILON).
   size: v.positiveFloat('size'),
   frustum_offset: v.vector2('frustum_offset'),
-  near: v.positiveFloat('near'),
-  far: v.positiveFloat('far'),
+  // set_near:736 / set_far:746 are bare assignments; their hints (:685/:686)
+  // are advisory, so the low ends are warnings in linter.ts, not errors.
+  near: v.float('near'),
+  far: v.float('far'),
   keep_aspect: v.enumInt('keep_aspect', 0, 2, KEEP_ASPECT),
   cull_mask: layerBitmask('cull_mask'),
   doppler_tracking: v.enumInt('doppler_tracking', 0, 2, DOPPLER_TRACKING),

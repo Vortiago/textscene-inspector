@@ -54,7 +54,6 @@ Strict parsing format-checks these `MeshInstance3D` properties, plus 17 inherite
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 | `valid-meshinstance3d-resources` (type-family match) | `valid-meshinstance3d-resources` | error |
-|  | `valid-meshinstance3d-surface-index` | warning |
 |  | `valid-meshinstance3d-visibility-range` | error |
 |  | `valid-meshinstance3d-skeleton` | error |
 | `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |

@@ -32,7 +32,9 @@ validatorRegistry.registerAll('DirectionalLight3D', {
     min: 0,
     max: 1,
   }),
-  directional_shadow_max_distance: v.nonNegativeFloat('directional_shadow_max_distance'),
+  // light_3d.cpp:584, PROPERTY_HINT_RANGE "0,8192,0.1,or_greater" — unenforced
+  // (Light3D::set_param:36 guards the index), so the low end is a warning.
+  directional_shadow_max_distance: v.float('directional_shadow_max_distance'),
   directional_shadow_pancake_size: v.nonNegativeFloat('directional_shadow_pancake_size'),
   directional_shadow_blend_splits: v.boolean('directional_shadow_blend_splits'),
   sky_mode: v.enumInt('sky_mode', 0, 2, SKY_MODE),

@@ -45,26 +45,25 @@ Strict parsing format-checks these `SpotLight3D` properties, plus 15 inherited f
 
 | Property | Accepts |
 | --- | --- |
-| `spot_angle` | float 0-90 |
-| `spot_angle_attenuation` | float >= 0 |
+| `spot_angle` | float |
+| `spot_angle_attenuation` | float |
 | `spot_attenuation` | float |
-| `spot_range` | float > 0 |
+| `spot_range` | float |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
-| `valid-spotlight3d-properties` | `spotlight3d-extreme-energy` | warning |
-|  | `spotlight3d-large-range` | warning |
-|  | `spotlight3d-small-range` | warning |
-|  | `spotlight3d-extreme-attenuation` | warning |
-|  | `spotlight3d-extreme-angle-attenuation` | warning |
-|  | `spotlight3d-small-angle` | warning |
+| `valid-spotlight3d-properties` | `spotlight3d-negative-energy` | warning |
+|  | `spotlight3d-negative-range` | warning |
+|  | `spotlight3d-spot-angle-out-of-range` | warning |
 <!-- lint:end -->
 
-Strict rejects a non-positive `spot_range`, a negative `spot_attenuation` or
-`spot_angle_attenuation`, or a `spot_angle` outside 0-90 degrees as errors. The lenient
-parser instead falls back silently when a property is absent, or warns and falls back
+None of the four spot properties is enforced by Godot (`Light3D::set_param` guards the
+param index, not the value), so strict reports no errors for them: a negative
+`spot_range` and a `spot_angle` outside 0-180 degrees warn, and the two attenuations
+have no stated range to fall outside. The lenient
+parser falls back silently when a property is absent, or warns and falls back
 when present but unparseable: `spot_range` to `5.0`, `spot_angle` to `45.0`,
 `spot_attenuation` to `1.0`, `spot_angle_attenuation` to `1.0`.
 

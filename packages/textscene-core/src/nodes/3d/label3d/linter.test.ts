@@ -8,6 +8,7 @@ import {
   scene,
   expectClean,
   expectNoErrors,
+  expectNoDiagnostic,
   expectDiagnostic,
   runPropertyValidation,
 } from '../../../linter/testing/testkit';
@@ -48,13 +49,16 @@ describe('Label3D Linter', () => {
 
     runPropertyValidation({ nodeType: 'Label3D' }, [
       {
+        // label_3d.cpp:954 is a bare assignment, so the hint at :131
+        // ("0.0001,128,0.0001") only warns: 0 and -0.5 load, they do not error.
         prop: 'pixel_size',
-        valid: [0.01],
-        invalid: [
-          { value: 'invalid', contains: ['must be a number'] },
-          { value: -0.5, contains: ['greater than 0'] },
-          { value: 0, contains: ['greater than 0'] },
-        ],
+        valid: [0.01, 0.0001, 128],
+        invalid: [{ value: 'invalid', contains: ['must be a number'] }],
+      },
+      {
+        prop: 'pixel_size',
+        valid: [0, -0.5, 200],
+        acceptMode: 'no-error',
       },
       {
         prop: 'billboard',
@@ -96,12 +100,29 @@ describe('Label3D Linter', () => {
       });
     });
 
-    it('should warn when pixel_size is very large', () => {
-      expectDiagnostic(scene(node('Label3D', { text: '"Test"', pixel_size: 2.0 })), {
+    // label_3d.cpp:131 — pixel_size PROPERTY_HINT_RANGE "0.0001,128,0.0001", closed
+    // at both ends and enforced at neither.
+    it('should warn when pixel_size is above the hint', () => {
+      expectDiagnostic(scene(node('Label3D', { text: '"Test"', pixel_size: 200 })), {
         ruleName: 'label3d-large-pixel-size',
         severity: 'warning',
         nodeType: 'Label3D',
-        contains: ['pixel_size', 'very large'],
+        contains: ['pixel_size', '200', '128'],
+      });
+    });
+
+    it('should warn when pixel_size is below the hint', () => {
+      expectDiagnostic(scene(node('Label3D', { text: '"Test"', pixel_size: 0.00001 })), {
+        ruleName: 'label3d-small-pixel-size',
+        severity: 'warning',
+        nodeType: 'Label3D',
+        contains: ['pixel_size', '0.0001'],
+      });
+    });
+
+    it.each([0.0001, 2.0, 128])('says nothing about pixel_size %s', (pixelSize) => {
+      expectNoDiagnostic(scene(node('Label3D', { text: '"Test"', pixel_size: pixelSize })), {
+        prop: 'pixel_size',
       });
     });
   });

@@ -43,21 +43,21 @@ Strict parsing format-checks these `OmniLight3D` properties, plus 15 inherited f
 | Property | Accepts |
 | --- | --- |
 | `omni_attenuation` | float |
-| `omni_range` | float > 0 |
+| `omni_range` | float |
 | `omni_shadow_mode` | enum 0-1 (DUAL_PARABOLOID/CUBE) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
-| `valid-omnilight3d-properties` | `omnilight3d-extreme-energy` | warning |
-|  | `omnilight3d-large-range` | warning |
-|  | `omnilight3d-small-range` | warning |
-|  | `omnilight3d-extreme-attenuation` | warning |
+| `valid-omnilight3d-properties` | `omnilight3d-negative-energy` | warning |
+|  | `omnilight3d-negative-range` | warning |
 <!-- lint:end -->
 
-Strict rejects a non-positive `omni_range`, a negative `omni_attenuation`, or an
-`omni_shadow_mode` outside 0-1 as errors. The lenient parser falls back silently when
+Strict rejects only an `omni_shadow_mode` outside 0-1 as an error; `omni_range` and
+`omni_attenuation` are unenforced in Godot (`Light3D::set_param` guards the param index,
+not the value), so a negative range is a warning and any attenuation is legal. The
+lenient parser falls back silently when
 `omni_range`/`omni_attenuation` are absent, or warns and falls back (to `5.0` and `1.0`
 respectively) when present but unparseable; `omni_shadow_mode` instead goes through
 `parseOptionalInt`, so an absent or invalid value quietly becomes `undefined` with no

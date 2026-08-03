@@ -1,11 +1,7 @@
 [gd_scene format=3 uid="uid://edge_omni_light_no_range"]
 
-; `omni_range` omitted entirely — current-behavior corpus (cross-ref #146/
-; #149): the large/small-range warnings only fire `if (rawProps.omni_range
-; !== undefined)`, so an OMITTED range produces ZERO diagnostics today (not
-; asserting this is correct — Godot's own default range of 1.0 might warrant
-; a nudge, but nothing currently checks for "never configured"). Renders with
-; Godot's default range.
+; `omni_range` omitted entirely: nothing checks for "never configured", so an
+; omitted range produces zero diagnostics. Renders with Godot's default range.
 
 [node name="Scene" type="Node3D"]
 

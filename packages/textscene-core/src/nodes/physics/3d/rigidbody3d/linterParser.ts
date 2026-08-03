@@ -12,6 +12,7 @@ const DAMP_MODE = { 0: 'COMBINE', 1: 'REPLACE' };
 const FREEZE_MODE = { 0: 'STATIC', 1: 'KINEMATIC' };
 
 validatorRegistry.registerAll('RigidBody3D', {
+  // rigid_body_3d.cpp:334, ERR_FAIL_COND(p_mass <= 0): the setter refuses.
   mass: v.float('mass', {
     min: Number.MIN_VALUE,
     message:
@@ -25,11 +26,13 @@ validatorRegistry.registerAll('RigidBody3D', {
   // bound is only that no component is negative.
   inertia: v.boundedVector3('inertia', { min: 0 }),
   linear_damp_mode: v.enumInt('linear_damp_mode', 0, 1, DAMP_MODE),
+  // rigid_body_3d.cpp:444, ERR_FAIL_COND(p_linear_damp < 0.0).
   linear_damp: v.float('linear_damp', {
     min: 0,
     message: "Property 'linear_damp' must be >= 0. Damping cannot be negative.",
   }),
   angular_damp_mode: v.enumInt('angular_damp_mode', 0, 1, DAMP_MODE),
+  // rigid_body_3d.cpp:454, ERR_FAIL_COND(p_angular_damp < 0.0).
   angular_damp: v.float('angular_damp', {
     min: 0,
     message: "Property 'angular_damp' must be >= 0. Damping cannot be negative.",

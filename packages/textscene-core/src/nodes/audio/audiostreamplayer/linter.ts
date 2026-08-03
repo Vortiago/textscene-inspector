@@ -12,9 +12,11 @@ import { checkResourceExists } from '../../../linter/resourceChecker.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import { extremeVolumeArms } from '../sharedLinterChecks.js';
 
-// Thresholds for extreme-volume warning (same as AudioStreamPlayer2D)
-const EXTREME_VOLUME_DB_MIN = -60;
-const EXTREME_VOLUME_DB_MAX = 20;
+// audio_stream_player.cpp:282, volume_db PROPERTY_HINT_RANGE "-80,24,suffix:dB":
+// both ends closed. set_volume_db (:69) only ERR_FAILs on NaN, so the band is
+// advisory, not enforced.
+const VOLUME_DB_HINT_MIN = -80;
+const VOLUME_DB_HINT_MAX = 24;
 
 function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -51,7 +53,7 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
 
   diagnostics.push(
     ...rangeAdvisories(node, {
-      volume_db: extremeVolumeArms('audiostreamplayer', EXTREME_VOLUME_DB_MIN, EXTREME_VOLUME_DB_MAX),
+      volume_db: extremeVolumeArms('audiostreamplayer', VOLUME_DB_HINT_MIN, VOLUME_DB_HINT_MAX),
     })
   );
 

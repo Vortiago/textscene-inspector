@@ -36,12 +36,12 @@ Strict parsing format-checks these `Camera3D` properties, plus 16 inherited from
 | `cull_mask` | 32-bit layer mask (layers 1-32) |
 | `current` | true or false |
 | `doppler_tracking` | enum 0-2 (DISABLED/IDLE_STEP/PHYSICS_STEP) |
-| `far` | float > 0 |
+| `far` | float |
 | `fov` | float 1-179 |
 | `frustum_offset` | Vector2(x, y) |
 | `h_offset` | float |
 | `keep_aspect` | enum 0-2 (KEEP_WIDTH/KEEP_HEIGHT/KEEP_ASPECT_DISABLED) |
-| `near` | float > 0 |
+| `near` | float |
 | `projection` | enum 0-2 (PERSPECTIVE/ORTHOGONAL/FRUSTUM) |
 | `size` | float > 0 |
 | `v_offset` | float |
@@ -52,8 +52,7 @@ Strict parsing format-checks these `Camera3D` properties, plus 16 inherited from
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 | `valid-camera3d-properties` (type-family match) | `camera3d-invalid-clipping-planes` | error |
 |  | `camera3d-small-near-plane` | warning |
-|  | `camera3d-large-far-plane` | warning |
-|  | `camera3d-extreme-fov` | warning |
+|  | `camera3d-small-far-plane` | warning |
 <!-- lint:end -->
 
 Numeric fields (`fov`, `size`, `near`, `far`, `h_offset`, `v_offset`, `frustum_offset`) fall back through `floatOr`/`vec2Or`, warning and substituting Godot's defaults (75° fov, size 1, near 0.05, far 4000, zero offsets) on a malformed value; `cull_mask` and `doppler_tracking` fall back the same way to 1048575 and 0. `projection` and `keep_aspect` bypass that contract: any value other than the recognized ints (1/2 for projection, 0/2 for keep_aspect) is silently treated as the default (PERSPECTIVE, KEEP_HEIGHT) with no warning logged. `current` reads via plain string equality (`=== 'true'`) rather than `boolOr`, so anything but the literal string "true", including "1", renders the camera inactive without comment.

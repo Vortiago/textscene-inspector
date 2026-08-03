@@ -35,7 +35,7 @@ Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inh
 | Property | Accepts |
 | --- | --- |
 | `area_mask` | 32-bit layer mask (layers 1-32) |
-| `attenuation` | float > 0 |
+| `attenuation` | float |
 | `autoplay` | true or false |
 | `bus` | quoted string or &"name" |
 | `max_distance` | float > 0 |
@@ -56,9 +56,6 @@ Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inh
 |  | `audiostreamplayer2d-autoplay-without-stream` | warning |
 |  | `audiostreamplayer2d-zero-pitch-scale` | error |
 |  | `audiostreamplayer2d-small-max-distance` | warning |
-|  | `audiostreamplayer2d-large-max-distance` | warning |
-|  | `audiostreamplayer2d-flat-attenuation` | warning |
-|  | `audiostreamplayer2d-steep-attenuation` | warning |
 |  | `audiostreamplayer2d-extreme-volume` | warning |
 |  | `audiostreamplayer2d-unusual-pitch` | warning |
 |  | `audiostreamplayer2d-invalid-max-polyphony` | error |
@@ -68,8 +65,9 @@ Beyond the shared audio-base fallbacks (pitch_scale, volume_db, bus, and the
 playing/autoplay/stream_paused flags, as in AudioStreamPlayer), max_distance
 defaults to 2000, attenuation to 1, and panning_strength to 1 when absent,
 warning and reusing those defaults only if the value fails to parse as a float;
-strict's positive-only and 0-1 range checks on these three have no lenient
-counterpart. area_mask defaults to 1 the same way; strict's bitmask validation
+strict's positive-only `max_distance` check and 0-1 `panning_strength` range have
+no lenient counterpart, and `attenuation` is bounded in neither (its hint is
+PROPERTY_HINT_EXP_EASING, which states no range). area_mask defaults to 1 the same way; strict's bitmask validation
 is not reproduced, so any parseable int is accepted. playback_type is the one
 enum-shaped property here: unlike the plain floats, enumOr does enforce the
 strict 0/1/2 membership check, falling back to `DEFAULT` (0) with a warning for

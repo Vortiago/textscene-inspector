@@ -30,12 +30,13 @@ describe('Light3D shared validators', () => {
 
     runPropertyValidation({ nodeType: 'DirectionalLight3D' }, [
       {
+        // light_3d.cpp:389 hints "0,16,0.001,or_greater", and Light3D::set_param:36
+        // guards the param INDEX rather than the value, so a negative energy is
+        // loaded as written: it warns in the slice rule, it does not error here.
         prop: 'light_energy',
-        valid: [1.0],
-        invalid: [
-          { value: '-0.5', contains: ['non-negative'] },
-          { value: 'bad', contains: ['must be a number'] },
-        ],
+        valid: [1.0, '-0.5'],
+        acceptMode: 'no-error',
+        invalid: [{ value: 'bad', contains: ['must be a number'] }],
       },
       {
         prop: 'light_color',

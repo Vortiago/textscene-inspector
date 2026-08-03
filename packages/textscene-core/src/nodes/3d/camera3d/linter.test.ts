@@ -64,12 +64,11 @@ describe('Camera3D Linter', () => {
           ],
         },
         {
-          // fov accept values include extreme degrees (1, 179) that fire a
-          // separate "field of view" warning, so accept asserts only the
-          // absence of *errors* (acceptMode 'no-error') rather than a clean scene.
+          // camera_3d.cpp:725, ERR_FAIL_COND(p_fov < 1 || p_fov > 179): the setter
+          // refuses, and the hint at :682 states the same 1-179, so there is no
+          // advisory band left around it — every legal fov is silent.
           prop: 'fov',
-          acceptMode: 'no-error',
-          valid: [1, 45, 75, 90, 120, 179],
+          valid: [1, 10, 45, 75, 90, 120, 150, 179],
           invalid: [
             { value: 0.5, contains: ['fov', 'between 1 and 179'] },
             { value: 180, contains: ['fov', 'between 1 and 179'] },
@@ -96,22 +95,29 @@ describe('Camera3D Linter', () => {
           ],
         },
         {
+          // camera_3d.cpp:736 is a bare assignment, so the hint at :685
+          // ("0.001,10,0.001,or_greater") only warns. `with` keeps `far` clear of
+          // the cross-field near-must-be-below-far check.
           prop: 'near',
-          valid: [0.1],
-          invalid: [
-            { value: 0, contains: ['greater than 0'] },
-            { value: -0.1, contains: ['greater than 0'] },
-            { value: 'invalid', contains: ['must be a number'] },
-          ],
+          valid: [0.1, 0.001],
+          invalid: [{ value: 'invalid', contains: ['must be a number'] }],
+        },
+        {
+          prop: 'near',
+          valid: [5000],
+          with: { far: 100000 },
+        },
+        {
+          // camera_3d.cpp:746 is a bare assignment; hint :686 is
+          // "0.01,4000,0.01,or_greater", so the top end is open.
+          prop: 'far',
+          valid: [100.0, 15000],
+          invalid: [{ value: 'invalid', contains: ['must be a number'] }],
         },
         {
           prop: 'far',
-          valid: [100.0],
-          invalid: [
-            { value: 0, contains: ['greater than 0'] },
-            { value: -100.0, contains: ['greater than 0'] },
-            { value: 'invalid', contains: ['must be a number'] },
-          ],
+          valid: [0.01],
+          with: { near: 0.001 },
         },
         {
           prop: 'keep_aspect',
@@ -216,79 +222,75 @@ describe('Camera3D Linter', () => {
 
     describe('near clipping plane warnings', () => {
       it('should warn when near is very small', () => {
+        // camera_3d.cpp:685 — near PROPERTY_HINT_RANGE "0.001,10,0.001,or_greater".
         expectDiagnostic(
-          scene(node('Camera3D', { projection: 0, fov: 75.0, near: 0.005, far: 100.0 })),
+          scene(node('Camera3D', { projection: 0, fov: 75.0, near: 0.0005, far: 100.0 })),
           {
             prop: 'near',
             severity: 'warning',
             nodeType: 'Camera3D',
-            contains: ['very small', '0.005', 'z-fighting'],
+            contains: ['0.0005', '0.001'],
           }
         );
       });
 
-      it('should not warn for normal near values', () => {
+      it.each([0.001, 0.1, 5000])('says nothing about near %s', (near) => {
         expectNoDiagnostic(
-          scene(node('Camera3D', { projection: 0, fov: 75.0, near: 0.1, far: 100.0 })),
+          scene(node('Camera3D', { projection: 0, fov: 75.0, near, far: 100000 })),
           { prop: 'near' }
         );
       });
     });
 
     describe('far clipping plane warnings', () => {
-      it('should warn when far is very large', () => {
+      // camera_3d.cpp:686 — far PROPERTY_HINT_RANGE "0.01,4000,0.01,or_greater":
+      // the top end is open, so only a far below 0.01 is out of band.
+      it('should warn when far is below the hint', () => {
         expectDiagnostic(
-          scene(node('Camera3D', { projection: 0, fov: 75.0, near: 0.1, far: 15000 })),
+          scene(node('Camera3D', { projection: 0, fov: 75.0, near: 0.001, far: 0.005 })),
           {
             prop: 'far',
             severity: 'warning',
             nodeType: 'Camera3D',
-            contains: ['very large', '15000', 'precision'],
+            contains: ['0.005', '0.01'],
           }
         );
       });
 
-      it('should not warn for normal far values', () => {
+      it.each([0.01, 1000, 15000])('says nothing about far %s', (far) => {
         expectNoDiagnostic(
-          scene(node('Camera3D', { projection: 0, fov: 75.0, near: 0.1, far: 1000 })),
+          scene(node('Camera3D', { projection: 0, fov: 75.0, near: 0.001, far })),
           { prop: 'far' }
         );
       });
     });
 
-    describe('fov warnings', () => {
-      it('should warn when fov is very narrow', () => {
-        expectDiagnostic(
-          scene(node('Camera3D', { projection: 0, fov: 10, near: 0.1, far: 100.0 })),
-          {
-            prop: 'field of view',
-            severity: 'warning',
-            nodeType: 'Camera3D',
-            contains: ['very narrow', '10', 'tunnel vision'],
-          }
-        );
+    // Neither plane's setter refuses anything, so a zero or negative plane loads
+    // and only warns (the cross-field near < far error is a separate rule).
+    describe('non-positive clipping planes warn rather than error', () => {
+      it('should warn, not error, on near = 0', () => {
+        expectDiagnostic(scene(node('Camera3D', { near: 0, far: 100.0 })), {
+          ruleName: 'camera3d-small-near-plane',
+          severity: 'warning',
+        });
       });
 
-      it('should warn when fov is very wide', () => {
-        expectDiagnostic(
-          scene(node('Camera3D', { projection: 0, fov: 150, near: 0.1, far: 100.0 })),
-          {
-            prop: 'field of view',
-            severity: 'warning',
-            nodeType: 'Camera3D',
-            contains: ['very wide', '150', 'distortion'],
-          }
-        );
+      it('should warn, not error, on a negative far', () => {
+        expectDiagnostic(scene(node('Camera3D', { near: -200, far: -100.0 })), {
+          ruleName: 'camera3d-small-far-plane',
+          severity: 'warning',
+        });
       });
+    });
 
-      it('should not warn for normal fov values', () => {
-        const validFovs = [45, 60, 75, 90];
-        for (const fov of validFovs) {
-          expectNoDiagnostic(
-            scene(node('Camera3D', { projection: 0, fov, near: 0.1, far: 100.0 })),
-            { prop: 'field of view' }
-          );
-        }
+    describe('fov carries no advisory', () => {
+      // camera_3d.cpp:725 ERR_FAILs outside 1-179 and the hint at :682 states the
+      // same bounds, so the only fov diagnostic is that error — no warning band.
+      it.each([1, 10, 45, 75, 90, 150, 179])('says nothing about fov %s', (fov) => {
+        expectNoDiagnostic(
+          scene(node('Camera3D', { projection: 0, fov, near: 0.1, far: 100.0 })),
+          { prop: 'field of view' }
+        );
       });
     });
   });
@@ -333,13 +335,12 @@ describe('Camera3D Linter', () => {
           })
         )
       );
-      expect(diagnostics.length).toBeGreaterThan(5);
-      // Should have errors for: projection, fov, near, far, keep_aspect, cull_mask, doppler_tracking
-      const hasProjectionError = diagnostics.some(d => d.message.includes('projection'));
-      const hasFovError = diagnostics.some(d => d.message.includes('fov'));
-      const hasNearError = diagnostics.some(d => d.message.includes('near'));
-      const hasFarError = diagnostics.some(d => d.message.includes('far'));
-      expect(hasProjectionError || hasFovError || hasNearError || hasFarError).toBe(true);
+      // Errors for projection, fov, keep_aspect and doppler_tracking; near = -0.1
+      // and far = 0 are now warnings rather than errors (their setters are bare
+      // assignments, camera_3d.cpp:736/:746).
+      expect(diagnostics.length).toBeGreaterThan(3);
+      expect(diagnostics.some(d => d.message.includes('projection'))).toBe(true);
+      expect(diagnostics.some(d => d.message.includes('fov'))).toBe(true);
     });
 
     it('should handle scientific notation in numeric values', () => {
@@ -358,9 +359,9 @@ describe('Camera3D Linter', () => {
     });
 
     it('should validate mixed warnings and errors', () => {
-      // Test case 1: Only warnings (extreme values)
+      // Test case 1: Only warnings (values below their hints)
       let diagnostics = lint(
-        scene(node('Camera3D', { projection: 0, fov: 10, near: 0.005, far: 15000 }))
+        scene(node('Camera3D', { projection: 0, fov: 10, near: 0.0005, far: 0.005 }))
       );
       expect(diagnostics.length).toBeGreaterThan(0);
       const hasWarnings = diagnostics.some(d => d.severity === 'warning');
@@ -376,6 +377,7 @@ describe('Camera3D Linter', () => {
     });
 
     it('should handle boundary values for fov', () => {
+      // camera_3d.cpp:725 accepts exactly 1 and 179.
       const boundaryValues = [1, 179];
       for (const fov of boundaryValues) {
         expectNoDiagnostic(
@@ -401,16 +403,14 @@ describe('Camera3D Linter', () => {
 
     it('should handle extreme combinations', () => {
       const diagnostics = lint(
-        scene(node('Camera3D', { projection: 0, fov: 10, near: 0.005, far: 15000 }))
+        scene(node('Camera3D', { projection: 0, fov: 10, near: 0.0005, far: 0.005 }))
       );
-      expect(diagnostics.length).toBeGreaterThan(2);
-      // Should have warnings for all extreme values
-      const fovWarning = diagnostics.find(d => d.message.includes('field of view') && d.message.includes('narrow'));
-      const nearWarning = diagnostics.find(d => d.message.includes('near') && d.message.includes('small'));
-      const farWarning = diagnostics.find(d => d.message.includes('far') && d.message.includes('large'));
-      expect(fovWarning).toBeDefined();
-      expect(nearWarning).toBeDefined();
-      expect(farWarning).toBeDefined();
+      // Both clipping planes sit below their hints; fov 10 is legal and silent.
+      expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
+        'camera3d-small-far-plane',
+        'camera3d-small-near-plane',
+      ]);
+      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
     });
 
     it('should handle clipping planes at exact boundary (near = far boundary)', () => {

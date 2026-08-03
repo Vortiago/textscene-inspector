@@ -12,9 +12,12 @@ import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import { extractLibraries, stripQuotes } from './parser.js';
 import { resolveAnimations } from './animationResolver.js';
 
-// Thresholds for warnings
-const EXTREME_SLOW_SPEED = 0.1;
-const EXTREME_FAST_SPEED = 10;
+/**
+ * Top of the `playback_default_blend_time` hint, animation_player.cpp:1046 —
+ * PROPERTY_HINT_RANGE "0,4096,0.01,suffix:s". Neither end is open and
+ * `set_default_blend_time` (:822) is a bare assignment, so both are advisory.
+ */
+const BLEND_TIME_HINT_MAX = 4096;
 
 /**
  * Validate AnimationPlayer semantic rules
@@ -31,32 +34,9 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // WARNING: speed_scale extreme values (very slow or very fast)
-  if (rawProps.speed_scale !== undefined) {
-    const speed = parseFloat(rawProps.speed_scale);
-    if (!isNaN(speed)) {
-      const absSpeed = Math.abs(speed);
-      if (absSpeed > 0 && absSpeed < EXTREME_SLOW_SPEED) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `AnimationPlayer 'speed_scale' is very slow (${speed}). Values below ${EXTREME_SLOW_SPEED} may cause imperceptible animation playback.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animationplayer-extreme-speed',
-        });
-      } else if (absSpeed > EXTREME_FAST_SPEED) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `AnimationPlayer 'speed_scale' is very fast (${speed}). Values above ${EXTREME_FAST_SPEED} may cause animation to appear too rapid.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animationplayer-extreme-speed',
-        });
-      }
-    }
-  }
-
-  // Negative speed_scale is valid for reverse playback — no diagnostic
+  // `speed_scale` gets no diagnostic at all: animation_player.cpp:1048 hints
+  // "-4,4,0.001,or_less,or_greater", so BOTH ends are open, and set_speed_scale
+  // (:648) is a bare assignment. Negative is reverse playback; 0 pauses.
 
   // WARNING: No animations defined (AnimationPlayer without animations is useless)
   // Note: In TSCN format, animations are typically stored in the anims/ section
@@ -137,15 +117,21 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: Large blend time (range advisory)
+  // WARNING: blend time outside the range the inspector offers (range advisory)
   diagnostics.push(
     ...rangeAdvisories(node, {
       playback_default_blend_time: [
         {
-          over: 2.0,
+          under: 0,
+          ruleName: 'animationplayer-negative-blend-time',
+          message: (blendTime) =>
+            `AnimationPlayer 'playback_default_blend_time' is ${blendTime} seconds. The editor range starts at 0.`,
+        },
+        {
+          over: BLEND_TIME_HINT_MAX,
           ruleName: 'animationplayer-large-blend-time',
           message: (blendTime) =>
-            `AnimationPlayer 'playback_default_blend_time' is large (${blendTime} seconds). Long blend times may cause noticeable delays between animation transitions.`,
+            `AnimationPlayer 'playback_default_blend_time' is ${blendTime} seconds. The editor range stops at ${BLEND_TIME_HINT_MAX}.`,
         },
       ],
     })
@@ -195,10 +181,10 @@ const animationPlayerValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['AnimationPlayer'],
     emits: [
-      { ruleName: 'animationplayer-extreme-speed', severity: 'warning' },
       { ruleName: 'animationplayer-no-animations', severity: 'warning' },
       { ruleName: 'animationplayer-autoplay-missing', severity: 'warning' },
       { ruleName: 'animationplayer-current-animation-missing', severity: 'warning' },
+      { ruleName: 'animationplayer-negative-blend-time', severity: 'warning' },
       { ruleName: 'animationplayer-large-blend-time', severity: 'warning' },
       { ruleName: 'animationplayer-inactive', severity: 'warning' },
       { ruleName: 'animationplayer-invalid-root-path', severity: 'warning' },

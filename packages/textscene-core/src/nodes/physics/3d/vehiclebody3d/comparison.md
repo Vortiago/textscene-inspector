@@ -54,9 +54,6 @@ Strict parsing format-checks these `VehicleBody3D` properties, plus 19 inherited
 | `valid-rigidbody3d` (type-family match) | `valid-rigidbody3d-resources` | error |
 |  | `rigidbody3d-needs-collision-shape` | warning |
 |  | `rigidbody3d-mass-too-low` | warning |
-|  | `rigidbody3d-mass-too-high` | warning |
-|  | `rigidbody3d-excessive-linear-damp` | warning |
-|  | `rigidbody3d-excessive-angular-damp` | warning |
 |  | `rigidbody3d-max-contacts-without-monitor` | warning |
 |  | `rigidbody3d-zero-collision-layer` | warning |
 |  | `rigidbody3d-zero-collision-mask` | warning |

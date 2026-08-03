@@ -23,6 +23,7 @@ validatorRegistry.registerAll('CharacterBody2D', {
   // character_body_2d.cpp:742/748, PROPERTY_HINT_RANGE "0,180,0.1,radians_as_degrees", no or_greater;
   // the setters are bare assignments, so PI is the hard bound.
   floor_max_angle: v.radians('floor_max_angle', { maxDeg: 180 }),
+  // character_body_2d.cpp:631, ERR_FAIL_COND(p_floor_snap_length < 0): the setter refuses.
   floor_snap_length: v.float('floor_snap_length', {
     min: 0,
     message: "Property 'floor_snap_length' must be >= 0",
@@ -41,10 +42,10 @@ validatorRegistry.registerAll('CharacterBody2D', {
     message:
       "Property 'platform_wall_layers' must be between 0 and 4294967295. Valid range: 32-bit bitmask",
   }),
-  safe_margin: v.float('safe_margin', {
-    min: 0,
-    message: "Property 'safe_margin' must be >= 0",
-  }),
+  // character_body_2d.cpp:537 is a bare assignment, so the hint at
+  // :757 ("0.001,256,0.001") is advisory: out-of-range is a warning, not an error.
+  safe_margin: v.float('safe_margin'),
+  // character_body_2d.cpp:613, ERR_FAIL_COND(p_max_slides < 1): the setter refuses.
   max_slides: v.positiveInt(
     'max_slides',
     "Property 'max_slides' must be greater than 0. Character needs at least 1 slide iteration to function."

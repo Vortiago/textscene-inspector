@@ -4,54 +4,43 @@
  * (architecture review S-3) — only the rule-name prefix differed — so the bounds
  * and messages live here once and flow through the shared `rangeAdvisories`
  * combinator.
+ *
+ * Both bands are one-sided: every Light3D range hint ends in `or_greater`, so
+ * the high end is open and only a negative value is out of band. `Light3D::set_param`
+ * guards the param INDEX, not the value, so neither end is enforced.
  */
 
 import type { RangeArm } from '../../../../linter/rangeAdvisory.js';
 
-const EXTREME_LIGHT_ENERGY_MIN = 0.01;
-const EXTREME_LIGHT_ENERGY_MAX = 100;
-
 /**
- * The two `light_energy` **Range advisory** arms — implausibly low or high.
- * `rulePrefix` is the node-type slug (e.g. 'spotlight3d') so each light keeps its
- * own `<prefix>-extreme-energy` rule name.
+ * The `light_energy` **Range advisory**. `rulePrefix` is the node-type slug
+ * (e.g. 'spotlight3d') so each light keeps its own `<prefix>-negative-energy`
+ * rule name.
  */
 export function lightEnergyArms(rulePrefix: string): RangeArm[] {
   return [
     {
-      under: EXTREME_LIGHT_ENERGY_MIN,
-      ruleName: `${rulePrefix}-extreme-energy`,
+      // light_3d.cpp:389 — light_energy PROPERTY_HINT_RANGE "0,16,0.001,or_greater"
+      under: 0,
+      ruleName: `${rulePrefix}-negative-energy`,
       message: (energy) =>
-        `Light energy is very low (${energy}). Values below ${EXTREME_LIGHT_ENERGY_MIN} may be barely visible.`,
-    },
-    {
-      over: EXTREME_LIGHT_ENERGY_MAX,
-      ruleName: `${rulePrefix}-extreme-energy`,
-      message: (energy) =>
-        `Light energy is very high (${energy}). Values above ${EXTREME_LIGHT_ENERGY_MAX} may cause overexposure.`,
+        `Light energy is negative (${energy}). The editor range for light_energy starts at 0.`,
     },
   ];
 }
 
 /**
- * The two `<prop>_range` **Range advisory** arms shared by point/spot lights — a
- * very large range (performance) or very small range (invisible). Same message
- * text across those lights; only the rule-name prefix (`<prefix>-large-range` /
- * `<prefix>-small-range`) and the bounds vary.
+ * The `<prop>_range` **Range advisory** shared by point/spot lights, whose two
+ * hints are identical apart from the property name.
  */
-export function lightRangeArms(rulePrefix: string, large: number, small: number): RangeArm[] {
+export function lightRangeArms(rulePrefix: string): RangeArm[] {
   return [
     {
-      over: large,
-      ruleName: `${rulePrefix}-large-range`,
+      // light_3d.cpp:639 (omni_range) / :672 (spot_range) — PROPERTY_HINT_RANGE "0,4096,0.001,or_greater"
+      under: 0,
+      ruleName: `${rulePrefix}-negative-range`,
       message: (range) =>
-        `Light range is very large (${range}). Values above ${large} can impact performance significantly.`,
-    },
-    {
-      under: small,
-      ruleName: `${rulePrefix}-small-range`,
-      message: (range) =>
-        `Light range is very small (${range}). Values below ${small} might not be visible.`,
+        `Light range is negative (${range}). The editor range for this property starts at 0.`,
     },
   ];
 }

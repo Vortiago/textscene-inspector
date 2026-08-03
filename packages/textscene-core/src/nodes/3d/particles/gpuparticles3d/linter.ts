@@ -11,6 +11,9 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../../linter/resourceChecker.js';
 import { extractNodePath, resolveNodePathTarget } from '../../../../linter/linterUtils.js';
 
+/** Top of the `amount` hint, gpu_particles_3d.cpp:821 — "1,1000000,1,exp". */
+const MAX_HINTED_PARTICLE_AMOUNT = 1000000;
+
 /**
  * Validate GPUParticles3D semantic rules (resource references, trail config, etc.)
  */
@@ -104,37 +107,19 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Performance warning: Check for excessive particle count
+  // Warning: amount above the ceiling the inspector offers. gpu_particles_3d.cpp:821
+  // hints "1,1000000,1,exp" — no `or_greater`, so 1,000,000 is a real top end —
+  // but set_amount (:76) only refuses values below 1, so exceeding it is advisory.
   if (rawProps.amount) {
     const amount = parseInt(rawProps.amount, 10);
-    if (!isNaN(amount) && amount > 50000 && amount <= 100000) {
+    if (!isNaN(amount) && amount > MAX_HINTED_PARTICLE_AMOUNT) {
       diagnostics.push({
         severity: 'warning',
-        message: `Particle amount is ${amount}. This may cause performance issues on lower-end devices. Consider reducing particle count or using LOD`,
+        message: `Particle amount is ${amount}. The editor range for 'amount' stops at ${MAX_HINTED_PARTICLE_AMOUNT}; counts this high are a severe performance risk`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'gpuparticles3d-performance',
       });
-    }
-  }
-
-  // Validate speed_scale in context with lifetime
-  if (rawProps.speed_scale && rawProps.lifetime) {
-    const speedScale = parseFloat(rawProps.speed_scale);
-    const lifetime = parseFloat(rawProps.lifetime);
-
-    if (!isNaN(speedScale) && !isNaN(lifetime)) {
-      // Warn if effective lifetime is very long (may cause memory issues)
-      const effectiveLifetime = lifetime / speedScale;
-      if (effectiveLifetime > 60) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Effective particle lifetime is ${effectiveLifetime.toFixed(1)} seconds (lifetime ${lifetime} / speed_scale ${speedScale}). Very long lifetimes may cause memory issues`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'gpuparticles3d-performance',
-        });
-      }
     }
   }
 

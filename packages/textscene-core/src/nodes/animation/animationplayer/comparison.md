@@ -59,28 +59,28 @@ Strict parsing format-checks these `AnimationPlayer` properties, plus 10 inherit
 | `current_animation_position` | float >= 0 |
 | `method_call_mode` | enum 0-1 (DEFERRED/IMMEDIATE) |
 | `playback_active` | true or false |
-| `playback_default_blend_time` | float >= 0 |
+| `playback_default_blend_time` | float |
 | `playback_process_mode` | enum 0-2 (PHYSICS/IDLE/MANUAL) |
 | `root_node` | non-empty quoted string |
-| `speed_scale` | float, non-zero |
+| `speed_scale` | float |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-animationplayer-properties` | `animationplayer-extreme-speed` | warning |
-|  | `animationplayer-no-animations` | warning |
+| `valid-animationplayer-properties` | `animationplayer-no-animations` | warning |
 |  | `animationplayer-autoplay-missing` | warning |
 |  | `animationplayer-current-animation-missing` | warning |
+|  | `animationplayer-negative-blend-time` | warning |
 |  | `animationplayer-large-blend-time` | warning |
 |  | `animationplayer-inactive` | warning |
 |  | `animationplayer-invalid-root-path` | warning |
 <!-- lint:end -->
 
 `speed_scale` warns and falls back to `1.0` only when the value fails to parse
-as a float; strict's zero-prohibition and `0.0001`-`1000` magnitude bounds have
-no lenient counterpart, so `0` or an extreme speed plays through unchanged.
-`playback_default_blend_time` falls back to `0.0` the same way, with no
-negative-value check reproduced. `playback_process_mode` and
+as a float, which is all strict checks too: the hint is open at both ends and the
+setter is a bare assignment, so `0` and an extreme speed are both legal.
+`playback_default_blend_time` falls back to `0.0` the same way; strict warns
+rather than errors when it sits outside 0-4096. `playback_process_mode` and
 `method_call_mode` do re-enforce strict's enum membership via `enumOr`,
 warning and substituting `IDLE` (1) or `DEFERRED` (0) for any value outside
 `0`-`2`/`0`-`1`; `playback_active` falls back to `true`. `autoplay` and

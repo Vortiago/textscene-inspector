@@ -82,9 +82,11 @@ max_contacts_reported = 10
         invalid: [{ value: 3, contains: ['0-1'] }],
       },
       {
+        // rigid_body_2d.cpp:425, ERR_FAIL_COND(p_linear_damp < -1): -1 is the
+        // "use the project default" sentinel in 2D, and hint :763 starts there.
         prop: 'linear_damp',
-        valid: [0.0, 0.5, 5.0],
-        invalid: [{ value: -1.0, contains: ['>= 0'] }],
+        valid: [0.0, 0.5, 5.0, 20.0, -1.0],
+        invalid: [{ value: -1.5, contains: ['>= -1'] }],
       },
       {
         prop: 'angular_damp_mode',
@@ -92,9 +94,11 @@ max_contacts_reported = 10
         invalid: [{ value: 2, contains: ['0-1'] }],
       },
       {
+        // rigid_body_2d.cpp:435, ERR_FAIL_COND(p_angular_damp < -1); hint :767
+        // starts at -1 too.
         prop: 'angular_damp',
-        valid: [0.0, 0.5, 5.0],
-        invalid: [{ value: -0.5, contains: ['>= 0'] }],
+        valid: [0.0, 0.5, 5.0, 15.0, -0.5, -1.0],
+        invalid: [{ value: -1.5, contains: ['>= -1'] }],
       },
       { prop: 'lock_rotation', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
       { prop: 'freeze', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
@@ -150,36 +154,27 @@ physics_material_override = SubResource("mat_1")
   });
 
   describe('Semantic Validation (Mass and Damping Warnings)', () => {
-    it('should warn about very low mass', () => {
-      expectDiagnostic(scene(node('RigidBody2D', { mass: '0.001' }), collisionShape2d), {
+    // rigid_body_2d.cpp:742 hints "0.001,1000,0.001,or_greater": the high end is
+    // open, so only the gap between the setter's ERR_FAIL (mass <= 0, :318) and
+    // the hint's 0.001 is advisory.
+    it('should warn about mass below the hint', () => {
+      expectDiagnostic(scene(node('RigidBody2D', { mass: '0.0005' }), collisionShape2d), {
         ruleName: 'rigidbody2d-mass-too-low',
         severity: 'warning',
-        contains: ['very low mass'],
+        contains: ['0.0005', '0.001'],
       });
     });
 
-    it('should warn about very high mass', () => {
-      expectDiagnostic(scene(node('RigidBody2D', { mass: 50000 }), collisionShape2d), {
-        ruleName: 'rigidbody2d-mass-too-high',
-        severity: 'warning',
-        contains: ['very high mass'],
-      });
+    it.each(['0.001', 1.0, 50000])('says nothing about mass %s', (mass) => {
+      expectClean(scene(node('RigidBody2D', { mass }), collisionShape2d));
     });
 
-    it('should warn about excessive linear_damp', () => {
-      expectDiagnostic(scene(node('RigidBody2D', { mass: 1.0, linear_damp: '20.0' }), collisionShape2d), {
-        ruleName: 'rigidbody2d-excessive-linear-damp',
-        severity: 'warning',
-        contains: ['stop too quickly'],
-      });
-    });
-
-    it('should warn about excessive angular_damp', () => {
-      expectDiagnostic(scene(node('RigidBody2D', { mass: 1.0, angular_damp: '15.0' }), collisionShape2d), {
-        ruleName: 'rigidbody2d-excessive-angular-damp',
-        severity: 'warning',
-        contains: ['stop rotating too quickly'],
-      });
+    // rigid_body_2d.cpp:763/:767 both hint "-1,100,0.001,or_greater", so the high
+    // end is open and a large damp is in band.
+    it.each(['20.0', '15.0', '500.0'])('says nothing about damping %s', (damp) => {
+      expectClean(
+        scene(node('RigidBody2D', { mass: 1.0, linear_damp: damp, angular_damp: damp }), collisionShape2d)
+      );
     });
   });
 
@@ -325,8 +320,12 @@ physics_material_override = ExtResource("ext_mat_1")
           })
         )
       );
-      // Should have multiple errors: mass, collision_layer, physics_material_override, linear_damp
-      expect(diagnostics.length).toBeGreaterThanOrEqual(3);
+      // Two strict-parser errors: mass <= 0 (rigid_body_2d.cpp:318) and
+      // collision_layer outside the 32-bit mask. linear_damp = -1 is legal in 2D
+      // (:425 rejects only < -1), so it contributes nothing.
+      expect(diagnostics).toHaveLength(2);
+      expect(diagnostics.every(d => d.severity === 'error')).toBe(true);
+      expect(diagnostics.some(d => d.message.includes('linear_damp'))).toBe(false);
     });
 
     it('should handle all properties together', () => {
@@ -392,10 +391,14 @@ max_contacts_reported = 10
           collisionShape2d
         )
       );
-      // Should have warnings: low mass, excessive damping, zero collision_layer, max_contacts without monitor
-      expect(diagnostics.length).toBeGreaterThanOrEqual(3);
-      const warnings = diagnostics.filter(d => d.severity === 'warning');
-      expect(warnings.length).toBeGreaterThan(0);
+      // Warnings: zero collision_layer and max_contacts without monitor. mass
+      // 0.001 sits exactly on the hint's bottom (:742) and linear_damp 20 is under
+      // its open top (:763), so neither of those contributes any more.
+      expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
+        'rigidbody2d-max-contacts-without-monitor',
+        'rigidbody2d-zero-collision-layer',
+      ]);
+      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
     });
   });
 });

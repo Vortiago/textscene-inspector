@@ -359,14 +359,16 @@ skeleton = NodePath("Armature/Skeleton3D")
     });
   });
 
+  // mesh_instance_3d.cpp:367 bounds the surface index with
+  // ERR_FAIL_INDEX(p_surface, surface_override_materials.size()) — the mesh's own
+  // surface count, which a .tscn does not state — so no fixed index is out of range.
   describe('Semantic Validation (Surface Index Range)', () => {
-    it('should warn about unusually high surface index but accept it', () => {
-      expectDiagnostic(
+    it.each([0, 31, 256, 999])('accepts surface index %s', (index) => {
+      expectClean(
         scene(
           '[sub_resource type="StandardMaterial3D" id="mat_1"]',
-          node('MeshInstance3D', { 'surface_material_override/256': 'SubResource("mat_1")' }, { name: 'ExcessiveIndex' })
-        ),
-        { ruleName: 'valid-meshinstance3d-surface-index', severity: 'warning', contains: ['unusually high'] }
+          node('MeshInstance3D', { [`surface_material_override/${index}`]: 'SubResource("mat_1")' }, { name: 'AnyIndex' })
+        )
       );
     });
 
@@ -388,7 +390,7 @@ skeleton = NodePath("Armature/Skeleton3D")
       );
     });
 
-    it('should warn about high index and check resource existence', () => {
+    it('should check resource existence at any index', () => {
       const diagnostics = lint(
         scene(
           node(
@@ -398,17 +400,10 @@ skeleton = NodePath("Armature/Skeleton3D")
           )
         )
       );
-      expect(diagnostics.length).toBeGreaterThan(0);
-      // Should warn about high index
-      const indexWarning = diagnostics.find(d => d.ruleName === 'valid-meshinstance3d-surface-index');
-      expect(indexWarning).toBeDefined();
-      expect(indexWarning?.severity).toBe('warning');
-      expect(indexWarning?.message).toContain('unusually high');
-
-      // Should also report resource not found
-      const resourceError = diagnostics.find(d => d.message.includes('resource not found'));
-      expect(resourceError).toBeDefined();
-      expect(resourceError?.severity).toBe('error');
+      // The missing resource is the only complaint: the index itself is unbounded.
+      expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.message).toContain('resource not found');
     });
   });
 

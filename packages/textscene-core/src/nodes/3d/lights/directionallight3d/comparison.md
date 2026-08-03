@@ -41,7 +41,7 @@ Strict parsing format-checks these `DirectionalLight3D` properties, plus 15 inhe
 | --- | --- |
 | `directional_shadow_blend_splits` | true or false |
 | `directional_shadow_fade_start` | float 0-1 |
-| `directional_shadow_max_distance` | float >= 0 |
+| `directional_shadow_max_distance` | float |
 | `directional_shadow_mode` | enum 0-2 (ORTHOGONAL/PARALLEL_2_SPLITS/PARALLEL_4_SPLITS) |
 | `directional_shadow_pancake_size` | float >= 0 |
 | `directional_shadow_split_1` | float 0-1 |
@@ -53,8 +53,8 @@ Strict parsing format-checks these `DirectionalLight3D` properties, plus 15 inhe
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
-| `valid-directionallight3d-properties` | `directionallight3d-extreme-energy` | warning |
-|  | `directionallight3d-large-shadow-distance` | warning |
+| `valid-directionallight3d-properties` | `directionallight3d-negative-energy` | warning |
+|  | `directionallight3d-negative-shadow-distance` | warning |
 |  | `directionallight3d-shadow-split-order` | error |
 |  | `directionallight3d-unused-splits` | warning |
 <!-- lint:end -->

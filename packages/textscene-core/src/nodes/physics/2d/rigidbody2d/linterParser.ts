@@ -25,6 +25,7 @@ const inertia2d: PropertyValidator = (key, value, line) => {
 };
 
 validatorRegistry.registerAll('RigidBody2D', {
+  // rigid_body_2d.cpp:318, ERR_FAIL_COND(p_mass <= 0): the setter refuses.
   mass: v.float('mass', {
     min: Number.MIN_VALUE,
     message:
@@ -36,14 +37,17 @@ validatorRegistry.registerAll('RigidBody2D', {
   center_of_mass: v.vector2('center_of_mass'),
   inertia: inertia2d,
   linear_damp_mode: v.enumInt('linear_damp_mode', 0, 1, DAMP_MODE),
+  // rigid_body_2d.cpp:425, ERR_FAIL_COND(p_linear_damp < -1). -1 is legal in 2D
+  // and means "use the default"; the hint at :763 starts there too.
   linear_damp: v.float('linear_damp', {
-    min: 0,
-    message: "Property 'linear_damp' must be >= 0. Damping cannot be negative.",
+    min: -1,
+    message: "Property 'linear_damp' must be >= -1. Use -1 for the project default.",
   }),
   angular_damp_mode: v.enumInt('angular_damp_mode', 0, 1, DAMP_MODE),
+  // rigid_body_2d.cpp:435, ERR_FAIL_COND(p_angular_damp < -1); hint :767 starts at -1.
   angular_damp: v.float('angular_damp', {
-    min: 0,
-    message: "Property 'angular_damp' must be >= 0. Damping cannot be negative.",
+    min: -1,
+    message: "Property 'angular_damp' must be >= -1. Use -1 for the project default.",
   }),
   lock_rotation: v.boolean('lock_rotation'),
   freeze: v.boolean('freeze'),

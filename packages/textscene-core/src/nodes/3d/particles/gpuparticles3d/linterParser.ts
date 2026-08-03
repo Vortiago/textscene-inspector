@@ -13,7 +13,6 @@ import { propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME', 2: 'VIEW_DEPTH' };
-const MAX_RECOMMENDED_PARTICLES = 100000;
 
 // Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
 // v.aabb and the renderer.
@@ -24,12 +23,12 @@ const amountValidator: PropertyValidator = (key, value, line) => {
   if (isNaN(num)) {
     return propertyError(key, line, `Property 'amount' must be an integer, got: "${value}"`, 'INVALID_AMOUNT_FORMAT');
   }
-  if (num <= 0) {
+  // gpu_particles_3d.cpp:76, ERR_FAIL_COND_MSG(p_amount < 1): the setter refuses.
+  if (num < 1) {
     return propertyError(key, line, `Property 'amount' must be greater than 0 (got ${num}). Particles need a positive amount to render`, 'INVALID_AMOUNT_VALUE');
   }
-  if (num > MAX_RECOMMENDED_PARTICLES) {
-    return propertyError(key, line, `Property 'amount' is ${num}, which exceeds recommended maximum of ${MAX_RECOMMENDED_PARTICLES}. This may cause severe performance issues`, 'EXCESSIVE_AMOUNT_VALUE');
-  }
+  // The hint's ceiling (:821, "1,1000000,1,exp") is not enforced, so exceeding it
+  // is the rule's `gpuparticles3d-performance` warning rather than an error here.
   return null;
 };
 

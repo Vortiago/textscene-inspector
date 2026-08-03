@@ -129,20 +129,10 @@ describe('CharacterBody3D Linter', () => {
         });
       });
 
-      it('should warn about very small floor_snap_length', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { floor_snap_length: 0.0001 }), collisionShape3d), {
-          ruleName: 'characterbody3d-floor-snap-too-small',
-          severity: 'warning',
-          contains: ['may not work reliably'],
-        });
-      });
-
-      it('should warn about very large floor_snap_length', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { floor_snap_length: 50 }), collisionShape3d), {
-          ruleName: 'characterbody3d-floor-snap-too-large',
-          severity: 'warning',
-          contains: ['glitchy behavior'],
-        });
+      // character_body_3d.cpp:934 hints "0,1,0.01,or_greater" — the high end is
+      // open and the low end is the setter's own ERR_FAIL — so no advisory survives.
+      it.each([0.0001, 5, 50, 500])('says nothing about floor_snap_length %s', (snap) => {
+        expectClean(scene(node('CharacterBody3D', { floor_snap_length: snap }), collisionShape3d));
       });
     });
 
@@ -154,20 +144,26 @@ describe('CharacterBody3D Linter', () => {
         }
       });
 
-      it('should reject negative safe_margin', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { safe_margin: -0.5 })), {
-          prop: 'safe_margin',
-          severity: 'error',
-          contains: ['>= 0'],
+      // character_body_3d.cpp:636 is a bare assignment, so the hint at :942
+      // ("0.001,256,0.001") only warns — a negative is no longer an error.
+      it('should warn, not error, on negative safe_margin', () => {
+        expectDiagnostic(scene(node('CharacterBody3D', { safe_margin: -0.5 }), collisionShape3d), {
+          ruleName: 'characterbody3d-safe-margin-too-small',
+          severity: 'warning',
+          contains: ['-0.5', '0.001'],
         });
       });
 
-      it('should warn about very large safe_margin', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { safe_margin: 0.5 }), collisionShape3d), {
+      it('should warn about safe_margin above the hint', () => {
+        expectDiagnostic(scene(node('CharacterBody3D', { safe_margin: 300 }), collisionShape3d), {
           ruleName: 'characterbody3d-safe-margin-too-large',
           severity: 'warning',
-          contains: ['collision detection issues'],
+          contains: ['300', '256'],
         });
+      });
+
+      it.each([0.001, 0.5, 256])('says nothing about safe_margin %s', (margin) => {
+        expectClean(scene(node('CharacterBody3D', { safe_margin: margin }), collisionShape3d));
       });
     });
 
@@ -235,12 +231,10 @@ describe('CharacterBody3D Linter', () => {
         });
       });
 
-      it('should warn about low max_slides', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { max_slides: 2 }), collisionShape3d), {
-          ruleName: 'characterbody3d-max-slides-too-low',
-          severity: 'warning',
-          contains: ['jittery movement'],
-        });
+      // character_body_3d.cpp:926 declares max_slides PROPERTY_HINT_NONE with
+      // PROPERTY_USAGE_NO_EDITOR, so there is no band to be low in.
+      it.each([1, 2, 3])('says nothing about max_slides %s', (slides) => {
+        expectClean(scene(node('CharacterBody3D', { max_slides: slides }), collisionShape3d));
       });
     });
   });

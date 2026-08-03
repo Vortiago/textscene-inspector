@@ -11,7 +11,9 @@ const HORIZONTAL_ALIGNMENT = { 0: 'LEFT', 1: 'CENTER', 2: 'RIGHT', 3: 'FILL' };
 
 validatorRegistry.registerAll('Label3D', {
   text: v.quotedString('text'),
-  pixel_size: v.positiveFloat('pixel_size'),
+  // label_3d.cpp:954 is a bare assignment, so the hint at :131
+  // ("0.0001,128,0.0001") is advisory: out-of-range is a warning, not an error.
+  pixel_size: v.float('pixel_size'),
   billboard: v.enumInt('billboard', 0, 2, BILLBOARD),
   modulate: v.color('modulate'),
   outline_size: v.float('outline_size', {

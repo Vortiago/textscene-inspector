@@ -64,12 +64,13 @@ describe('GPUParticles3D Linter', () => {
         invalid: [{ value: 1, contains: ['boolean'] }],
       },
       {
+        // gpu_particles_3d.cpp:76, ERR_FAIL_COND_MSG(p_amount < 1): only the floor
+        // is enforced. The hint's ceiling at :821 ("1,1000000,1,exp") warns.
         prop: 'amount',
-        valid: [1, 100, 1000, 10000, 50000],
+        valid: [1, 100, 1000, 10000, 50000, 150000, 1000000],
         invalid: [
           { value: 0, contains: ['greater than 0'] },
           { value: -100, contains: ['greater than 0'] },
-          { value: 150000, contains: ['exceeds recommended maximum'] },
           { value: '"many"', contains: ['integer'] },
         ],
       },
@@ -461,7 +462,10 @@ sub_emitter = NodePath("Emitter")
   });
 
   describe('Performance Warnings', () => {
-    it('should warn for high particle count (50000-100000)', () => {
+    // gpu_particles_3d.cpp:821 — amount PROPERTY_HINT_RANGE "1,1000000,1,exp": no
+    // `or_greater`, so 1,000,000 is a real ceiling, but set_amount (:76) refuses
+    // only values below 1, which makes exceeding it a warning.
+    it('should warn for a particle count above the hint', () => {
       expectDiagnostic(
         `[gd_scene format=3]
 
@@ -469,15 +473,27 @@ sub_emitter = NodePath("Emitter")
 
 [node name="HighParticleCount" type="GPUParticles3D"]
 process_material = SubResource("process_1")
-amount = 75000
+amount = 1500000
 `,
-        { prop: 'performance', severity: 'warning', contains: ['75000'] }
+        { prop: 'performance', severity: 'warning', contains: ['1500000', '1000000'] }
       );
     });
 
-    it('should warn for very long effective lifetime', () => {
-      expectDiagnostic(
-        `[gd_scene format=3]
+    it.each([75000, 1000000])('says nothing about amount %s', (amount) => {
+      expectClean(`[gd_scene format=3]
+
+[sub_resource type="ParticleProcessMaterial" id="process_1"]
+
+[node name="InBandCount" type="GPUParticles3D"]
+process_material = SubResource("process_1")
+amount = ${amount}
+`);
+    });
+
+    // lifetime / speed_scale carry no combined advisory: gpu_particles_3d.cpp
+    // states no bound on their ratio, and neither setter looks at the other.
+    it('says nothing about a long effective lifetime', () => {
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="ParticleProcessMaterial" id="process_1"]
 
@@ -485,9 +501,7 @@ amount = 75000
 process_material = SubResource("process_1")
 lifetime = 100.0
 speed_scale = 0.5
-`,
-        { prop: 'Effective particle lifetime', severity: 'warning', contains: ['200'] }
-      );
+`);
     });
 
     it('should not warn for reasonable particle count', () => {

@@ -21641,7 +21641,7 @@
         {
           "property": "far",
           "declaredOn": "Camera3D",
-          "accepts": "float > 0"
+          "accepts": "float"
         },
         {
           "property": "fov",
@@ -21666,7 +21666,7 @@
         {
           "property": "near",
           "declaredOn": "Camera3D",
-          "accepts": "float > 0"
+          "accepts": "float"
         },
         {
           "property": "projection",
@@ -21858,11 +21858,7 @@
               "severity": "warning"
             },
             {
-              "ruleName": "camera3d-large-far-plane",
-              "severity": "warning"
-            },
-            {
-              "ruleName": "camera3d-extreme-fov",
+              "ruleName": "camera3d-small-far-plane",
               "severity": "warning"
             }
           ]
