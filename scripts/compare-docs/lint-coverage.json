@@ -106,7 +106,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -360,7 +360,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -669,7 +669,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -872,7 +872,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -1020,7 +1020,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -1239,7 +1239,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -1442,7 +1442,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -1590,7 +1590,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -1764,7 +1764,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -1983,7 +1983,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -2141,7 +2141,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -2665,7 +2665,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -2868,7 +2868,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -3016,7 +3016,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -3316,7 +3316,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -3704,7 +3704,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -3874,7 +3874,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -4048,7 +4048,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -4267,7 +4267,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -4425,7 +4425,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -4809,7 +4809,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -4974,7 +4974,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -5263,7 +5263,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -5536,7 +5536,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -5839,7 +5839,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -6154,7 +6154,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -6459,7 +6459,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -6777,7 +6777,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -7062,7 +7062,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -7130,7 +7130,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -7278,7 +7278,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -7567,7 +7567,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -7725,7 +7725,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -7894,7 +7894,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -8058,7 +8058,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -8232,7 +8232,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -8571,7 +8571,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -8741,7 +8741,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -9030,7 +9030,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -9418,7 +9418,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -9633,7 +9633,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -9791,7 +9791,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -10010,7 +10010,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -10248,7 +10248,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -10352,7 +10352,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -10420,7 +10420,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -10488,7 +10488,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -10691,7 +10691,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -10839,7 +10839,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -11058,7 +11058,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -11331,7 +11331,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -11484,7 +11484,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -11773,7 +11773,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -11921,7 +11921,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -12085,7 +12085,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -12249,7 +12249,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -12413,7 +12413,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -12713,7 +12713,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -12861,7 +12861,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -13025,7 +13025,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -13194,7 +13194,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -13413,7 +13413,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -13571,7 +13571,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -13925,7 +13925,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -14275,7 +14275,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -14605,7 +14605,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -14890,7 +14890,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -15043,7 +15043,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -15127,7 +15127,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -15285,7 +15285,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -15454,7 +15454,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -15838,7 +15838,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -15918,7 +15918,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -16121,7 +16121,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -16279,7 +16279,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -16613,7 +16613,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -16783,7 +16783,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -16967,7 +16967,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -17163,7 +17163,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -17359,7 +17359,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -17545,7 +17545,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -17629,7 +17629,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -17902,7 +17902,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -18175,7 +18175,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -18498,7 +18498,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -18828,7 +18828,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -19043,7 +19043,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -19316,7 +19316,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -19474,7 +19474,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -19783,7 +19783,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -20056,7 +20056,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -20269,7 +20269,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -20427,7 +20427,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -20596,7 +20596,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -20930,7 +20930,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -21215,7 +21215,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -21378,7 +21378,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -21552,7 +21552,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -21776,7 +21776,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -21979,7 +21979,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -22143,7 +22143,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -22317,7 +22317,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",
@@ -22481,7 +22481,7 @@
         {
           "property": "physics_interpolation_mode",
           "declaredOn": "Node",
-          "accepts": "enum 0-2 (INHERIT/ON/OFF)"
+          "accepts": "enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF)"
         },
         {
           "property": "process_mode",

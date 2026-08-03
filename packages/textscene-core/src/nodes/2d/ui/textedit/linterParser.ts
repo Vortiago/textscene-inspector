@@ -21,6 +21,7 @@
 import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
+import { AUTOWRAP_MODE, TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
 
 /**
  * `structured_text_bidi_override_options` is a plain Godot `Array`
@@ -74,12 +75,7 @@ validatorRegistry.registerAll('TextEdit', {
   // has no CLAMP or ERR_FAIL on the value (text_edit.cpp:6354-6360) — same call
   // as BaseButton's button_mask: an editor-hint width is an authoring aid, not
   // a validity bound, so 0 is accepted alongside the 3 offered values.
-  autowrap_mode: v.enumInt('autowrap_mode', 0, 3, {
-    0: 'AUTOWRAP_OFF',
-    1: 'AUTOWRAP_ARBITRARY',
-    2: 'AUTOWRAP_WORD',
-    3: 'AUTOWRAP_WORD_SMART',
-  }),
+  autowrap_mode: v.enumInt('autowrap_mode', 0, 3, AUTOWRAP_MODE),
   // text_edit.cpp:7560
   indent_wrapped_lines: v.boolean('indent_wrapped_lines'),
   // text_edit.cpp:7561
@@ -154,12 +150,7 @@ validatorRegistry.registerAll('TextEdit', {
   // BIND_ENUM_CONSTANT TEXT_DIRECTION_AUTO=0, _LTR=1, _RTL=2, _INHERITED=3
   // (scene/gui/control.cpp:4415-4418, enum declared control.h:166-171, mirroring
   // TextServer::Direction servers/text/text_server.h:66-71).
-  text_direction: v.enumInt('text_direction', 0, 3, {
-    0: 'TEXT_DIRECTION_AUTO',
-    1: 'TEXT_DIRECTION_LTR',
-    2: 'TEXT_DIRECTION_RTL',
-    3: 'TEXT_DIRECTION_INHERITED',
-  }),
+  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION),
   // text_edit.cpp:7606 — Variant::STRING, PROPERTY_HINT_LOCALE_ID.
   language: v.quotedString('language'),
   // text_edit.cpp:7607 — PROPERTY_HINT_ENUM "Default,URI,File,Email,List,None,Custom";

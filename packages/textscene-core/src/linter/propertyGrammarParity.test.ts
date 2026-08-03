@@ -131,8 +131,12 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       // `parseNode` (node/parser.ts) reads `transform` for every node, but a
       // plain Node is not spatial and registers no spatial validator, so the
       // key is parser-only on Node and on every non-spatial type below it.
+      // Control is the same case for a different reason: Godot sometimes emits
+      // a Transform2D there and the parser reads it for compatibility, but it
+      // conflicts with the anchor/offset layout model so no validator exists.
       // One entry here replaces the identical per-type entries NavigationAgent3D,
-      // WorldEnvironment, Timer and SubViewport each used to carry.
+      // WorldEnvironment, Timer, SubViewport, AnimationPlayer, AnimationTree,
+      // AudioStreamPlayer and Control each used to carry.
       'transform',
     ],
     linterOnly: [
@@ -187,12 +191,6 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   Control: {
-    parserOnly: [
-      // Control.transform in TSCN is a Transform2D that Godot sometimes
-      // emits; the parser reads it for compatibility but there is no
-      // linter validator (it conflicts with the anchor/offset layout model).
-      'transform',
-    ],
     linterOnly: [
       // Inherited from the CanvasItem tier and genuinely unread on this side:
       // the UI overlay is DOM (ADR-0003), where 2D canvas draw-order and
@@ -485,32 +483,16 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       // Complex multi-form dictionary: parsed by extractLibraries via
       // Object.keys loop and dict matching; no linter validator exists.
       'libraries',
-      // AnimationPlayer parser calls parseNode3D (reads transform/visible)
-      // but NODE_BASE_TYPES maps it to Node (no Node3D validators).
-      'transform',
     ],
-    reason: 'AnimationPlayer.libraries uses a bespoke dictionary decoder; parser calls parseNode3D for transform but NODE_BASE_TYPES declares it a plain Node with no spatial validators.',
+    reason: 'AnimationPlayer.libraries uses a bespoke dictionary decoder that the properties.X scrape cannot see.',
   },
 
-  AnimationTree: {
-    parserOnly: [
-      // AnimationTree parser calls parseNode3D but NODE_BASE_TYPES maps it
-      // to Node (same pattern as AnimationPlayer).
-      'transform',
-    ],
-    reason: 'AnimationTree parser calls parseNode3D but NODE_BASE_TYPES declares it a plain Node; transform is parser-only.',
-  },
 
   // -------------------------------------------------------------------------
   // Audio (parseAudioBase shared-helper pattern)
   // -------------------------------------------------------------------------
 
   AudioStreamPlayer: {
-    parserOnly: [
-      // AudioStreamPlayer parser calls parseNode (reads transform) but
-      // NODE_BASE_TYPES maps it to Node with no spatial validators.
-      'transform',
-    ],
     linterOnly: AUDIO_BASE_KEYS,
     reason: 'AudioStreamPlayer reads audio properties via parseAudioBase shared helper (not visible to per-file scrape); linter registers them explicitly. parser/parser.ts delegates entirely to helpers.',
   },

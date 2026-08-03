@@ -19,9 +19,6 @@
 import { validatorRegistry } from '../../linter/ValidatorRegistry.js';
 import { v } from '../../linter/validators/index.js';
 
-/** Inherit / on / off, the shape Godot reuses for per-node mode toggles. */
-const INHERIT_ON_OFF = { 0: 'INHERIT', 1: 'ON', 2: 'OFF' };
-
 validatorRegistry.registerAll('Node', {
   // node.cpp:4050 — PROPERTY_USAGE_NO_EDITOR, still serialised.
   unique_name_in_owner: v.boolean('unique_name_in_owner'),
@@ -52,7 +49,11 @@ validatorRegistry.registerAll('Node', {
   // so the hint names bit positions rather than a range.
   process_thread_messages: v.int('process_thread_messages', { min: 0 }),
   // node.cpp:4066 — PROPERTY_HINT_ENUM "Inherit,On,Off".
-  physics_interpolation_mode: v.enumInt('physics_interpolation_mode', 0, 2, INHERIT_ON_OFF),
+  physics_interpolation_mode: v.enumInt('physics_interpolation_mode', 0, 2, {
+    0: 'PHYSICS_INTERPOLATION_MODE_INHERIT',
+    1: 'PHYSICS_INTERPOLATION_MODE_ON',
+    2: 'PHYSICS_INTERPOLATION_MODE_OFF',
+  }),
   // node.cpp:4069 — PROPERTY_HINT_ENUM "Inherit,Always,Disabled".
   auto_translate_mode: v.enumInt('auto_translate_mode', 0, 2, {
     0: 'AUTO_TRANSLATE_MODE_INHERIT',

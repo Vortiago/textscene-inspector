@@ -80,10 +80,16 @@ ${props}
     expect(groupWarnings(scene('Label', 'text = "Not a button"'))).toEqual([]);
   });
 
-  it('reaches a subclass through the base chain rather than an exact type list', () => {
-    // LinkButton defaults toggle_mode to false and declares nothing itself.
-    expect(
-      groupWarnings(scene('LinkButton', 'button_group = SubResource("ButtonGroup_1")'))
-    ).toHaveLength(1);
-  });
+  it.each(['LinkButton', 'TextureButton'])(
+    'reaches %s through the base chain rather than an exact type list',
+    (type) => {
+      // The catalog lists eight BaseButton descendants: the five that default
+      // toggle_mode true, plus Button and these two, which do not. Covering
+      // both here makes the five-name set above complete against the catalog
+      // rather than merely correct today.
+      expect(
+        groupWarnings(scene(type, 'button_group = SubResource("ButtonGroup_1")'))
+      ).toHaveLength(1);
+    }
+  );
 });

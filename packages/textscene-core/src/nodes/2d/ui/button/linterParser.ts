@@ -17,6 +17,7 @@
 import '../basebutton/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { AUTOWRAP_MODE, TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
 
 const HORIZONTAL_ALIGNMENT = {
   0: 'HORIZONTAL_ALIGNMENT_LEFT',
@@ -45,15 +46,9 @@ validatorRegistry.registerAll('Button', {
     5: 'OVERRUN_TRIM_ELLIPSIS_FORCE',
     6: 'OVERRUN_TRIM_WORD_ELLIPSIS_FORCE',
   }),
-  // button.cpp:816 — PROPERTY_HINT_ENUM "Off,Arbitrary,Word,Word (Smart)";
-  // TextServer::AutowrapMode AUTOWRAP_OFF=0 … AUTOWRAP_WORD_SMART=3
-  // (servers/text/text_server.h:99-102).
-  autowrap_mode: v.enumInt('autowrap_mode', 0, 3, {
-    0: 'AUTOWRAP_OFF',
-    1: 'AUTOWRAP_ARBITRARY',
-    2: 'AUTOWRAP_WORD',
-    3: 'AUTOWRAP_WORD_SMART',
-  }),
+  // button.cpp:816 — PROPERTY_HINT_ENUM "Off,Arbitrary,Word,Word (Smart)", so
+  // Button offers the whole enum and the bound is the hint's own width.
+  autowrap_mode: v.enumInt('autowrap_mode', 0, 3, AUTOWRAP_MODE),
   // button.cpp:817 — PROPERTY_HINT_FLAGS naming two bits, but
   // set_autowrap_trim_flags (button.cpp:624) masks the incoming BitField with
   // BREAK_TRIM_MASK rather than rejecting it, so no value is invalid. Same call
@@ -76,12 +71,7 @@ validatorRegistry.registerAll('Button', {
   // (scene/gui/control.h:166-171). set_text_direction (button.cpp:637) also
   // ERR_FAIL_CONDs outside -1..3, the -1 being a legacy inherited spelling that
   // maps to no named constant.
-  text_direction: v.enumInt('text_direction', 0, 3, {
-    0: 'TEXT_DIRECTION_AUTO',
-    1: 'TEXT_DIRECTION_LTR',
-    2: 'TEXT_DIRECTION_RTL',
-    3: 'TEXT_DIRECTION_INHERITED',
-  }),
+  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION),
   // button.cpp:827 — PROPERTY_HINT_LOCALE_ID; any locale string parses.
   language: v.quotedString('language'),
 });

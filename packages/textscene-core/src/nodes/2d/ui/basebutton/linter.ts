@@ -33,7 +33,7 @@ const TOGGLE_MODE_ON_BY_DEFAULT = new Set([
 ]);
 
 function isButton(nodeType: string): boolean {
-  return nodeType === 'BaseButton' || descendsFrom(nodeType, 'BaseButton');
+  return descendsFrom(nodeType, 'BaseButton');
 }
 
 function checkButtonGroup(context: RuleContext): Diagnostic[] {

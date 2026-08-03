@@ -25,7 +25,7 @@ Strict parsing format-checks these `Node` properties. Every validator failure is
 | --- | --- |
 | `auto_translate_mode` | enum 0-2 (AUTO_TRANSLATE_MODE_INHERIT/AUTO_TRANSLATE_MODE_ALWAYS/AUTO_TRANSLATE_MODE_DISABLED) |
 | `editor_description` | quoted string |
-| `physics_interpolation_mode` | enum 0-2 (INHERIT/ON/OFF) |
+| `physics_interpolation_mode` | enum 0-2 (PHYSICS_INTERPOLATION_MODE_INHERIT/PHYSICS_INTERPOLATION_MODE_ON/PHYSICS_INTERPOLATION_MODE_OFF) |
 | `process_mode` | enum 0-4 (PROCESS_MODE_INHERIT/PROCESS_MODE_PAUSABLE/PROCESS_MODE_WHEN_PAUSED/PROCESS_MODE_ALWAYS/PROCESS_MODE_DISABLED) |
 | `process_physics_priority` | integer |
 | `process_priority` | integer |

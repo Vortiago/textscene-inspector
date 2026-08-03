@@ -136,6 +136,32 @@ const NODE2D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and t
   });`;
 
 /**
+ * The lenient-parser round trip, emitted into every registration test.
+ *
+ * A slice can register a parser and still be invisible to `TscnParser` if the
+ * aggregation import is missing, in which case `parseNodeWithRegistry` quietly
+ * falls back to Node and logs `Unsupported node type`. Asserting the absence of
+ * that warning is the only check that catches it. 31 slices hand-wrote this
+ * block before the template carried it, so it is generated now rather than
+ * left to whoever remembers.
+ */
+const LENIENT_TREE_TEST_CASE = (typeName, rootType) =>
+  `  it('lands in the lenient parser tree with its type preserved and no fallback warning', () => {
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+
+    const scene = new TscnParser().parse(
+      '[gd_scene format=3]\\n\\n[node name="Root" type="${rootType}"]\\n\\n' +
+        '[node name="My${typeName}" type="${typeName}" parent="."]\\n'
+    );
+
+    const node = scene.nodes[0]?.children[0];
+    expect(node?.type).toBe('${typeName}');
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('Unsupported node type'));
+
+    warnSpy.mockRestore();
+  });`;
+
+/**
  * `hasLinterParser` drives the side-effect import a generated `linterParser.ts`
  * puts at the top. Without it the module registers only its OWN keys, so a test
  * that imports `./linterParser` directly sees `findValidator` return null for
@@ -184,8 +210,9 @@ const BASES = {
     // wherever they belong.
     workspaceFlag: 'container: true,',
     parserTestCases: NODE3D_PARSER_TEST_CASES,
-    // `nodes/node/` registers no validators, so there is nothing to import.
-    hasLinterParser: false,
+    // `nodes/node/` registers the ten process/threading/editor keys every type
+    // inherits, so a leaf must import it like any other base.
+    hasLinterParser: true,
   },
 };
 
@@ -458,10 +485,20 @@ function wireImport(filePath, importLine, categoryNeedle) {
  */
 function scaffoldTier({ typeName, category, rule, dryRun }) {
   const heirs = checkTier(typeName);
-  const sliceRel = `nodes/${category}/shared`;
+
+  // `<category>/shared` is the home when the category has exactly one tier, as
+  // 3d/lights and canvasitem do. It does not generalise: 2d/ui/shared already
+  // holds parser helpers for four different bases, so a `linterParser.ts`
+  // dropped in there would speak for one of them with nothing saying which, and
+  // the next tier in the category would have nowhere to go. When the directory
+  // is taken, the tier gets one named after the class instead — unambiguous,
+  // and as many tiers per category as Godot has abstract classes.
+  const sharedRel = `nodes/${category}/shared`;
+  const taken = existsSync(join(CORE_SRC, sharedRel));
+  const sliceRel = taken ? `nodes/${category}/${typeName.toLowerCase()}` : sharedRel;
   const sliceDir = join(CORE_SRC, sliceRel);
   if (!dryRun && existsSync(sliceDir)) fail(`tier already exists: ${sliceDir}`);
-  const toSrc = '../'.repeat(category.split('/').length + 2);
+  const toSrc = '../'.repeat(sliceRel.split('/').length);
 
   const files = new Map();
   files.set(
@@ -702,9 +739,11 @@ ${base.workspaceFlag ? `  ${base.workspaceFlag}\n` : ''}  renderIntent: 'transfo
  * (ADR-0008) rather than for want of an implementation.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { nodeRegistry } from '${toSrc}core/NodeRegistry';
 import { nodeComponentRegistry } from '${toSrc}r3f/NodeComponentRegistry';
+import { TscnParser } from '${toSrc}parser/TscnParser';
+import * as logger from '${toSrc}logger';
 import { ${reusedParser.fn} } from '${reusedParser.importPath}';
 import { ${base.component} } from '${toBase}/Component';
 import './index';
@@ -724,6 +763,8 @@ describe('${typeName} registration', () => {
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
     expect(nodeComponentRegistry.isTransformOnly('${typeName}')).toBe(true);
   });
+
+${LENIENT_TREE_TEST_CASE(typeName, base.component)}
 });
 `
         : `/**
@@ -734,9 +775,11 @@ describe('${typeName} registration', () => {
  * tree and inspector keep saying so until someone draws it.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { nodeRegistry } from '${toSrc}core/NodeRegistry';
 import { nodeComponentRegistry } from '${toSrc}r3f/NodeComponentRegistry';
+import { TscnParser } from '${toSrc}parser/TscnParser';
+import * as logger from '${toSrc}logger';
 import { ${reusedParser.fn} } from '${reusedParser.importPath}';
 import './index';
 
@@ -750,6 +793,8 @@ describe('${typeName} registration', () => {
   it('registers no render component, so it still reads as not implemented', () => {
     expect(nodeComponentRegistry.get('${typeName}')).toBeUndefined();
   });
+
+${LENIENT_TREE_TEST_CASE(typeName, base.component)}
 });
 `
     );
