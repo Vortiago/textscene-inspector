@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { parseTresFile } from '../../../parser/parsedResource';
 import { clearProceduralTextureCache } from '../proceduralTextureCache';
-import { resolveNoiseTexture2D, resolveNoiseTexture2DFromResource } from './resolveNoiseTexture';
+import { resolveNoiseTexture2D } from './resolveNoiseTexture';
 
 const ICE = `[gd_resource type="StandardMaterial3D" format=3]
 
@@ -129,28 +129,5 @@ noise = SubResource("missing")
 `);
     expect(resolveNoiseTexture2D('SubResource("no_noise")', broken.subResources)).toBeNull();
     expect(resolveNoiseTexture2D('SubResource("dangling")', broken.subResources)).toBeNull();
-  });
-});
-
-describe('resolveNoiseTexture2DFromResource — a standalone NoiseTexture2D.tres', () => {
-  const standalone = parseTresFile(`[gd_resource type="NoiseTexture2D" format=3]
-
-[sub_resource type="FastNoiseLite" id="FastNoiseLite_1"]
-frequency = 0.02
-
-[resource]
-width = 16
-height = 16
-noise = SubResource("FastNoiseLite_1")
-`);
-
-  it('rasterises the [resource] body against the file\'s own table', () => {
-    const resolved = resolveNoiseTexture2DFromResource(standalone)!;
-    expect(resolved.texture.image.width).toBe(16);
-    expect(resolved.key).toContain('[resource]');
-  });
-
-  it('declines a file of another type', () => {
-    expect(resolveNoiseTexture2DFromResource(ice)).toBeNull();
   });
 });

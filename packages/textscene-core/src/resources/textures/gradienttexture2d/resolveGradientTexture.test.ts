@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import {
-  resolveGradientTexture2D,
-  resolveGradientTexture2DFromResource,
-} from './resolveGradientTexture';
+import { resolveGradientTexture2D } from './resolveGradientTexture';
 import { proceduralTextureKey } from '../proceduralTextureCache';
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -89,26 +86,19 @@ describe('resolveGradientTexture2D', () => {
   });
 });
 
-/** The gradient block both arrival paths carry, as `.tres` section text. */
+/** The gradient block, as `.tres` section text. */
 const GRADIENT_SECTION = `[sub_resource type="Gradient" id="Gradient_cd1ha"]
 interpolation_mode = 2
 offsets = PackedFloat32Array(0, 0.642276, 1)
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)
 `;
 
-/** The texture's own properties, identical in both arrivals. */
+/** The texture's own properties, identical to the inline scene form's. */
 const TEXTURE_PROPERTIES = `gradient = SubResource("Gradient_cd1ha")
 fill = 1
 fill_from = Vector2(0.5, 0.5)
 fill_to = Vector2(0.5, 0.01)
 `;
-
-/** A standalone `GradientTexture2D.tres`: the `[resource]` body IS the texture. */
-const TEXTURE_FILE = `[gd_resource type="GradientTexture2D" load_steps=2 format=3 uid="uid://cgt2d00"]
-
-${GRADIENT_SECTION}
-[resource]
-${TEXTURE_PROPERTIES}`;
 
 /**
  * A material `.tres` carrying the same texture as a `[sub_resource]` — the
@@ -130,54 +120,6 @@ function pixels(texture: THREE.DataTexture): Uint8Array {
   return texture.image.data as Uint8Array;
 }
 
-describe('resolveGradientTexture2DFromResource', () => {
-  it('rasterises a standalone .tres identically to the same texture inline', () => {
-    // One property set, two serializations: the external file's [resource] body
-    // and the inline [sub_resource] must produce the same pixels, or a shipped
-    // gradient would render differently depending on how it was saved.
-    const external = resolveGradientTexture2DFromResource(parseTresFile(TEXTURE_FILE));
-    const inline = resolveGradientTexture2D(
-      'SubResource("GradientTexture2D_qhu5r")',
-      coinResources
-    );
-
-    expect(external!.texture).toBeInstanceOf(THREE.DataTexture);
-    expect(external!.texture.image.width).toBe(64);
-    expect(pixels(external!.texture)).toEqual(pixels(inline!.texture));
-  });
-
-  it('pairs the texture with the key that holds it, one entry per loaded file', () => {
-    const parsed = parseTresFile(TEXTURE_FILE);
-    const first = resolveGradientTexture2DFromResource(parsed);
-    const again = resolveGradientTexture2DFromResource(parsed);
-
-    expect(first!.key).toBe(proceduralTextureKey(parsed.subResources, '[resource]'));
-    expect(again!.texture).toBe(first!.texture);
-    // A re-parse is a different load: new table identity, new entry, new key.
-    const reparsed = resolveGradientTexture2DFromResource(parseTresFile(TEXTURE_FILE));
-    expect(reparsed!.key).not.toBe(first!.key);
-  });
-
-  it('returns null for a .tres of another resource type (error path)', () => {
-    expect(resolveGradientTexture2DFromResource(parseTresFile(MATERIAL_FILE))).toBeNull();
-  });
-
-  it('returns null when the gradient is an ExtResource or missing (edge case)', () => {
-    // A separate Gradient.tres would have to be fetched first; the synchronous
-    // path declines rather than rasterising a stopless gradient.
-    const external = `[gd_resource type="GradientTexture2D" format=3]
-
-[ext_resource type="Gradient" path="res://ramp.tres" id="1_abc"]
-
-[resource]
-gradient = ExtResource("1_abc")
-`;
-    expect(resolveGradientTexture2DFromResource(parseTresFile(external))).toBeNull();
-    const bare = '[gd_resource type="GradientTexture2D" format=3]\n\n[resource]\n';
-    expect(resolveGradientTexture2DFromResource(parseTresFile(bare))).toBeNull();
-  });
-});
-
 describe('a GradientTexture2D inside a material .tres', () => {
   it('resolves against the material file’s own sub-resource table', () => {
     // The procedural-material shape: the texture never appears in any scene's
@@ -194,14 +136,20 @@ describe('a GradientTexture2D inside a material .tres', () => {
     );
   });
 
-  it('rasterises the same pixels the standalone .tres and the inline form do', () => {
+  it('rasterises the same pixels the inline scene form does', () => {
+    // One property set, two homes: the material file's [sub_resource] and the
+    // scene's inline [sub_resource] must produce the same pixels, or a shipped
+    // gradient would render differently depending on where it was saved.
     const parsed = parseTresFile(MATERIAL_FILE);
     const inMaterial = resolveGradientTexture2D(
       parsed.properties.albedo_texture,
       parsed.subResources
     );
-    const standalone = resolveGradientTexture2DFromResource(parseTresFile(TEXTURE_FILE));
+    const inline = resolveGradientTexture2D(
+      'SubResource("GradientTexture2D_qhu5r")',
+      coinResources
+    );
 
-    expect(pixels(inMaterial!.texture)).toEqual(pixels(standalone!.texture));
+    expect(pixels(inMaterial!.texture)).toEqual(pixels(inline!.texture));
   });
 });

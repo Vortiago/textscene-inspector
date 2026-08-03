@@ -7,7 +7,8 @@
  * already-parsed section.
  *
  * THREE-free and React-free: no `./build`, no r3f import. Its hosts window the
- * loaded atlas image themselves (`nodes/2d/animatedsprite2d/frameTexture.ts`).
+ * loaded atlas image themselves (`resolveTexture2DSource` + the spriteFrame
+ * compositor).
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';

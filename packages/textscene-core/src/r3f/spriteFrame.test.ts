@@ -2,7 +2,12 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { composeFrameTexture, frameSizePx, type SpriteFrameProps } from './spriteFrame';
+import {
+  composeFrameTexture,
+  frameSizePx,
+  needsFrameComposition,
+  type SpriteFrameProps,
+} from './spriteFrame';
 
 function makeTexture(width = 100, height = 80): THREE.Texture {
   const texture = new THREE.Texture();
@@ -312,5 +317,26 @@ describe('frameSizePx', () => {
       })
     );
     expect(size).toEqual({ width: 20, height: 20 });
+  });
+});
+
+describe('needsFrameComposition', () => {
+  it('is false for a whole-image sprite (nothing to window)', () => {
+    expect(needsFrameComposition(baseProps())).toBe(false);
+  });
+
+  it('is false for region_enabled without a region_rect (nothing to apply)', () => {
+    expect(needsFrameComposition(baseProps({ region_enabled: true }))).toBe(false);
+  });
+
+  it('is true for a region, a frame grid, or an atlas cell', () => {
+    expect(
+      needsFrameComposition(
+        baseProps({ region_enabled: true, region_rect: { x: 0, y: 0, width: 10, height: 10 } })
+      )
+    ).toBe(true);
+    expect(needsFrameComposition(baseProps({ hframes: 2 }))).toBe(true);
+    expect(needsFrameComposition(baseProps({ vframes: 3 }))).toBe(true);
+    expect(needsFrameComposition(baseProps(), { x: 0, y: 0, width: 8, height: 8 })).toBe(true);
   });
 });

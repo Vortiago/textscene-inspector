@@ -124,7 +124,4 @@ describe('decodeFastNoiseLite', () => {
     expect(decoded.offset).toEqual({ x: 0, y: 0, z: 0 });
   });
 
-  it('ignores non-string property values (a mis-typed property bag)', () => {
-    expect(decodeFastNoiseLite({ frequency: 0.5, noise_type: 3 }).frequency).toBe(0.01);
-  });
 });

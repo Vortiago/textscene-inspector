@@ -4,8 +4,10 @@
  * Every expected number below came out of `godot --headless --script` calling
  * `FastNoiseLite.get_noise_2d` on the engine's own vendored copy of the library.
  * The dependency is the official JS port of that same upstream library, so the
- * fields agree to float32 rounding (~1e-7 here) — but ONLY when every parameter
- * is set explicitly.
+ * fields agree to float32 rounding — which is why every case asserts 6 decimal
+ * digits (|diff| < 5e-7): a drift to a different generator jumps by orders of
+ * magnitude and cannot hide. But they agree ONLY when every parameter is set
+ * explicitly.
  *
  * That caveat is the whole reason this file exists. The raw library's defaults
  * are NOT Godot's: upstream starts at 3 fractal octaves where Godot starts at 5,
@@ -18,9 +20,6 @@
 import { describe, expect, it } from 'vitest';
 import { noiseSampler } from './build';
 import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
-
-/** Godot writes `real_t` floats; the port computes in doubles. */
-const TOLERANCE = 1e-6;
 
 describe('FastNoiseLite parity with Godot 4.6.3', () => {
   it('matches the engine for a resource that authors nothing (pure defaults)', () => {
@@ -88,14 +87,5 @@ describe('FastNoiseLite parity with Godot 4.6.3', () => {
     );
     expect(sample(0, 0)).toBeCloseTo(0.1600944102, 6);
     expect(sample(9, 9)).toBeCloseTo(0.1846490502, 6);
-  });
-
-  it('agrees with the engine within float32 rounding, not merely "closely"', () => {
-    // Guards the tolerance itself: if the mapping ever drifts to a different
-    // generator the error jumps by orders of magnitude, so a loose assertion
-    // would keep passing.
-    const sample = noiseSampler(decodeFastNoiseLite({}));
-    expect(Math.abs(sample(3, 7) - 0.1378282607)).toBeLessThan(TOLERANCE);
-    expect(Math.abs(sample(255, 128) - -0.0370155945)).toBeLessThan(TOLERANCE);
   });
 });

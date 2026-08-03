@@ -25,7 +25,7 @@ import {
   type SelectionContextValue,
 } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import type { TscnNode } from '../../../parser/types';
+import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import { isMesh, isBasicMaterial } from '../../../r3f/testing/threeNarrow';
 
 const heading = { type: 'node', attributes: { type: 'AnimatedSprite2D', name: 'A' } };
@@ -74,6 +74,33 @@ async function render(rootNode: TscnNode) {
 function meshOf(instance: THREE.Object3D): THREE.Mesh {
   if (!isMesh(instance)) throw new Error('scene-graph instance is not a Mesh');
   return instance;
+}
+
+/** Like `render`, but the SpriteFrames' single frame is a procedural texture. */
+async function renderProceduralFrame(rootNode: TscnNode) {
+  const fake = createFakeResourceLoader();
+  const animations =
+    '[{"frames": [{"duration": 1.0, "texture": SubResource("GradientTexture2D_t")}], "loop": true, "name": &"glow", "speed": 5.0}]';
+  const internals: TscnInternalResource[] = [
+    { id: 'sf', type: 'SpriteFrames', data: { animations, id: 'sf' } },
+    {
+      id: 'Gradient_g',
+      type: 'Gradient',
+      data: { colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)' },
+    },
+    {
+      id: 'GradientTexture2D_t',
+      type: 'GradientTexture2D',
+      data: { gradient: 'SubResource("Gradient_g")', width: '8', height: '4' },
+    },
+  ];
+  return ReactThreeTestRenderer.create(
+    <ResourceLoaderProvider loader={fake.loader}>
+      <SceneResourcesProvider internalResources={internals} externalResources={[]}>
+        <AnimatedSprite2D node={rootNode} />
+      </SceneResourcesProvider>
+    </ResourceLoaderProvider>
+  );
 }
 
 /** The basic material a drawn mesh carries. */
@@ -496,5 +523,23 @@ animations = [{
       </ResourceLoaderProvider>
     );
     expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+});
+
+describe('AnimatedSprite2D procedural frames', () => {
+  it('renders a frame that is a procedural SubResource texture', async () => {
+    // A SpriteFrames frame may name a GradientTexture2D/NoiseTexture2D of the
+    // same file — no image to load, so the frame must ride the shared
+    // procedural rasteriser rather than falling to the placeholder.
+    const renderer = await renderProceduralFrame(
+      makeNode({ sprite_frames: 'SubResource("sf")', animation: '&"glow"' })
+    );
+    const material = basicMaterial(renderer.scene.findByType('Mesh').instance);
+    expect((material.map as Partial<THREE.DataTexture> | null)?.isDataTexture).toBe(true);
+    // Whole-image frame: the borrowed cache texture is drawn directly, not a
+    // clone (a clone would re-upload the shared pixels on every frame advance).
+    // The rasteriser leaves the original at version 1; composing a clone would
+    // bump it to 2.
+    expect((material.map as THREE.Texture).version).toBe(1);
   });
 });

@@ -119,7 +119,7 @@ describe('bumpMapToNormalMap', () => {
     // image.cpp:4083-4128 — every neighbour difference is zero, so the normal is
     // (0, 0, 1), packed as 127.5 + n * 127.5.
     const flat = grayToRgba(new Uint8Array([128, 128, 128, 128]));
-    const normals = bumpMapToNormalMap(flat, 2, 2, 8);
+    const normals = bumpMapToNormalMap(flat, 4, 2, 2, 8);
     expect([...normals.slice(0, 4)]).toEqual([127, 127, 255, 255]);
   });
 
@@ -127,7 +127,7 @@ describe('bumpMapToNormalMap', () => {
     // A step up to the right: `across.z` is positive, so the packed X drops
     // below the 127.5 midpoint.
     const ramp = grayToRgba(new Uint8Array([0, 255, 0, 255]));
-    const normals = bumpMapToNormalMap(ramp, 2, 2, 1);
+    const normals = bumpMapToNormalMap(ramp, 4, 2, 2, 1);
     expect(normals[0]!).toBeLessThan(127);
     const [nx = 0, ny = 0, nz = 0] = [normals[0]!, normals[1]!, normals[2]!].map((v) => v / 127.5 - 1);
     expect(Math.hypot(nx, ny, nz)).toBeCloseTo(1, 1);
@@ -139,8 +139,18 @@ describe('bumpMapToNormalMap', () => {
     // Two images that differ ONLY in green/blue must produce the same normals.
     const redOnly = new Uint8Array([10, 200, 200, 255, 250, 200, 200, 255]);
     const redSameOtherChannelsDifferent = new Uint8Array([10, 0, 0, 255, 250, 90, 90, 255]);
-    expect([...bumpMapToNormalMap(redOnly, 2, 1, 4)]).toEqual([
-      ...bumpMapToNormalMap(redSameOtherChannelsDifferent, 2, 1, 4),
+    expect([...bumpMapToNormalMap(redOnly, 4, 2, 1, 4)]).toEqual([
+      ...bumpMapToNormalMap(redSameOtherChannelsDifferent, 4, 2, 1, 4),
+    ]);
+  });
+
+
+  it('reads a raw grayscale field at stride 1 identically to its RGBA expansion', () => {
+    // The no-ramp path skips grayToRgba entirely; the stride keeps the two
+    // representations of the same height field byte-identical as normals.
+    const gray = new Uint8Array([0, 60, 200, 255, 128, 90]);
+    expect([...bumpMapToNormalMap(gray, 1, 3, 2, 8)]).toEqual([
+      ...bumpMapToNormalMap(grayToRgba(gray), 4, 3, 2, 8),
     ]);
   });
 
@@ -149,7 +159,7 @@ describe('bumpMapToNormalMap', () => {
     // last column is the first column, which is what keeps a seamless height
     // field seamless as a normal map.
     const row = grayToRgba(new Uint8Array([0, 128, 255]));
-    const normals = bumpMapToNormalMap(row, 3, 1, 2);
+    const normals = bumpMapToNormalMap(row, 4, 3, 1, 2);
     // Last texel's slope is (first - last), i.e. strongly negative → packed X
     // above the midpoint, the mirror of the interior's downhill slope.
     expect(normals[(2 << 2) + 0]!).toBeGreaterThan(127);

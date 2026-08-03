@@ -69,10 +69,4 @@ describe('decodeNoiseTexture2D', () => {
     expect(decoded.bumpStrength).toBe(8);
   });
 
-  it('ignores non-string property values (a mis-typed property bag)', () => {
-    expect(decodeNoiseTexture2D({ noise: 42, width: 64 })).toMatchObject({
-      noise: null,
-      width: 512,
-    });
-  });
 });

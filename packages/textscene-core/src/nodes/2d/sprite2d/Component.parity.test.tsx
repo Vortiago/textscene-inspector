@@ -115,6 +115,16 @@ describe('Sprite2D render parity', () => {
     expect((material.map as Partial<THREE.DataTexture> | null)?.isDataTexture).toBe(true);
   });
 
+  it('draws a whole-image sprite with the shared texture itself, not a clone', async () => {
+    // Cloning marks needsUpdate on the shared Source, forcing a GPU re-upload
+    // of pixels the loader/procedural cache already paid for; with no region
+    // and no frame grid the borrowed texture is drawn directly.
+    const r = await render(node());
+    const material = basicMaterial(r.scene.findByType('Mesh').instance);
+    expect(material.map?.image).toEqual({ width: 100, height: 50 });
+    expect((material.map as THREE.Texture & { version: number }).version).toBe(0);
+  });
+
   it('region_rect + hframes subdivide the region (not the full image)', async () => {
     // image 100×50, region (0,0,40,20), hframes=2 → frame UV width = (40/100)/2 = 0.2;
     // quad width = 40/2 = 20.

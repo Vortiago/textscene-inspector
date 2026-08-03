@@ -18,6 +18,7 @@
 import type { CSSProperties } from 'react';
 import type { Color } from '../../../utils/colorParser';
 import type { StyleBoxData } from './types';
+import { channelToByte } from '../../../utils/colorSpace';
 
 /**
  * Format a decoded Color as a CSS `rgba()` string. Godot allows overbright (HDR)
@@ -26,9 +27,8 @@ import type { StyleBoxData } from './types';
  * `parseColorToHex`'s 0..1 clamp on the 3D path.
  */
 export function controlColorToCss(c: Color): string {
-  const ch = (v: number) => Math.max(0, Math.min(255, Math.round(v * 255)));
   const alpha = Math.max(0, Math.min(1, c.a));
-  return `rgba(${ch(c.r)}, ${ch(c.g)}, ${ch(c.b)}, ${alpha})`;
+  return `rgba(${channelToByte(c.r)}, ${channelToByte(c.g)}, ${channelToByte(c.b)}, ${alpha})`;
 }
 
 /** What a box paints instead of a fill, and what an absent fill must never be. */

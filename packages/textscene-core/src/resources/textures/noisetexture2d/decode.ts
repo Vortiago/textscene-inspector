@@ -10,22 +10,17 @@
 import { boolOr, floatOr, intOr } from '../../../parser/valueParsers';
 import type { NoiseTexture2DData } from './types';
 
-export function decodeNoiseTexture2D(properties: Record<string, unknown>): NoiseTexture2DData {
-  const read = (key: string): string | undefined => {
-    const value = properties[key];
-    return typeof value === 'string' ? value : undefined;
-  };
-
+export function decodeNoiseTexture2D(properties: Record<string, string>): NoiseTexture2DData {
   return {
-    width: intOr(read('width'), 512, 'NoiseTexture2D width'),
-    height: intOr(read('height'), 512, 'NoiseTexture2D height'),
-    invert: boolOr(read('invert'), false, 'NoiseTexture2D invert'),
-    normalize: boolOr(read('normalize'), true, 'NoiseTexture2D normalize'),
-    seamless: boolOr(read('seamless'), false, 'NoiseTexture2D seamless'),
-    seamlessBlendSkirt: floatOr(read('seamless_blend_skirt'), 0.1, 'NoiseTexture2D seamless_blend_skirt'),
-    asNormalMap: boolOr(read('as_normal_map'), false, 'NoiseTexture2D as_normal_map'),
-    bumpStrength: floatOr(read('bump_strength'), 8, 'NoiseTexture2D bump_strength'),
-    noise: read('noise') ?? null,
-    colorRamp: read('color_ramp') ?? null,
+    width: intOr(properties.width, 512, 'NoiseTexture2D width'),
+    height: intOr(properties.height, 512, 'NoiseTexture2D height'),
+    invert: boolOr(properties.invert, false, 'NoiseTexture2D invert'),
+    normalize: boolOr(properties.normalize, true, 'NoiseTexture2D normalize'),
+    seamless: boolOr(properties.seamless, false, 'NoiseTexture2D seamless'),
+    seamlessBlendSkirt: floatOr(properties.seamless_blend_skirt, 0.1, 'NoiseTexture2D seamless_blend_skirt'),
+    asNormalMap: boolOr(properties.as_normal_map, false, 'NoiseTexture2D as_normal_map'),
+    bumpStrength: floatOr(properties.bump_strength, 8, 'NoiseTexture2D bump_strength'),
+    noise: properties.noise ?? null,
+    colorRamp: properties.color_ramp ?? null,
   };
 }

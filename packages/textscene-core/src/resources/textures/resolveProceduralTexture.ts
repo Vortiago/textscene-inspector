@@ -16,16 +16,12 @@
  * it, and must pin `key` for as long as they hold `texture`.
  */
 
-import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../parser/types.js';
 import { resolveGradientTexture2D } from './gradienttexture2d/resolveGradientTexture.js';
 import { resolveNoiseTexture2D } from './noisetexture2d/resolveNoiseTexture.js';
+import type { ProceduralTextureResolution } from './resolveProceduralSubResource.js';
 
-export interface ProceduralTextureResolution {
-  texture: THREE.Texture;
-  /** Pinned for as long as a consumer holds `texture`. */
-  key: string;
-}
+export type { ProceduralTextureResolution } from './resolveProceduralSubResource.js';
 
 export function resolveProceduralTexture(
   ref: string | undefined,

@@ -70,6 +70,31 @@ export interface SpriteFrameProps {
 }
 
 /**
+ * Whether {@link composeFrameTexture} would window anything for these props —
+ * false when the frame is the whole image (no region, no atlas cell, no
+ * sprite-sheet grid).
+ *
+ * Callers use this to skip composition and draw the source texture directly:
+ * cloning is not free even though it shares the pixel `Source`, because
+ * `Texture.copy` marks `needsUpdate`, which bumps the shared Source's version
+ * and forces the GPU to re-upload the pixel buffer — per mount, and per
+ * keyframe when an animation drives the frame. For a cached procedural texture
+ * that re-upload is exactly what `proceduralTextureCache` exists to prevent.
+ * A borrowed texture keeps its own wrap mode where composition would set the
+ * sampler's; with the whole image mapped, UVs stay inside [0, 1] and wrap
+ * never applies, so nothing observable differs. Callers that mutate the
+ * result (Sprite3D's UV flips) must still clone.
+ */
+export function needsFrameComposition(props: SpriteFrameProps, atlasRegion?: SpriteRect): boolean {
+  return (
+    atlasRegion !== undefined ||
+    Boolean(props.region_enabled && props.region_rect) ||
+    props.hframes > 1 ||
+    props.vframes > 1
+  );
+}
+
+/**
  * Clone the loaded texture and window its UVs to the current frame
  * (region_rect and/or sprite-sheet grid). The clone is essential: `useResource`
  * returns the same THREE.Texture reference to every consumer of a given path,

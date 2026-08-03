@@ -16,6 +16,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type {
   TscnExternalResource,
+  TscnInternalResource,
   TscnNode,
 } from '../../../parser/types';
 import type { Sprite3DProperties } from './types';
@@ -71,6 +72,7 @@ function extRef(id: string, path: string): TscnExternalResource {
 async function render(opts: {
   node: TscnNode;
   externals?: TscnExternalResource[];
+  internals?: TscnInternalResource[];
   cached?: Array<{ path: string; texture: THREE.Texture | 'missing' }>;
 }) {
   const fake = createFakeResourceLoader();
@@ -79,7 +81,10 @@ async function render(opts: {
   }
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider externalResources={opts.externals ?? []}>
+      <SceneResourcesProvider
+        externalResources={opts.externals ?? []}
+        internalResources={opts.internals ?? []}
+      >
         <Sprite3D node={opts.node} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
@@ -302,5 +307,73 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(mesh.instance.renderOrder).toBe(7);
     expect(mesh.instance.position.x).toBe(3);
     expect(mesh.instance.position.z).toBe(-1);
+  });
+});
+
+describe('<Sprite3D> texture sources through the shared seam', () => {
+  it('renders a procedural SubResource texture instead of the placeholder', async () => {
+    // A GradientTexture2D (and NoiseTexture2D, same machinery) is described
+    // entirely by the scene, so no file exists to load; the sprite must ride
+    // the shared procedural rasteriser exactly as Sprite2D does.
+    const internals: TscnInternalResource[] = [
+      {
+        id: 'Gradient_g',
+        type: 'Gradient',
+        data: { colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)' },
+      },
+      {
+        id: 'GradientTexture2D_t',
+        type: 'GradientTexture2D',
+        data: { gradient: 'SubResource("Gradient_g")', width: '8', height: '4' },
+      },
+    ];
+    const renderer = await render({
+      node: makeNode({ texture: 'SubResource("GradientTexture2D_t")' }),
+      internals,
+    });
+    const mesh = renderer.scene.findByType('Mesh');
+    const mat = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect((mat.map as Partial<THREE.DataTexture> | null)?.isDataTexture).toBe(true);
+  });
+
+  it('windows an AtlasTexture reference to its cell', async () => {
+    // The atlas cell arrives as the source's region; the quad takes the cell
+    // size and the map is windowed to it. Before the seam, Sprite3D resolved
+    // the path only and drew the whole sheet.
+    const tex = makeTexture(100, 50);
+    const internals: TscnInternalResource[] = [
+      {
+        id: 'AtlasTexture_a',
+        type: 'AtlasTexture',
+        data: { atlas: 'ExtResource("1_tex")', region: 'Rect2(10, 5, 40, 20)' },
+      },
+    ];
+    const renderer = await render({
+      node: makeNode({ texture: 'SubResource("AtlasTexture_a")', pixel_size: 1 }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      internals,
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const geom = mesh.geometry as THREE.PlaneGeometry;
+    expect(geom.parameters.width).toBeCloseTo(40, 5);
+    expect(geom.parameters.height).toBeCloseTo(20, 5);
+    const map = (mesh.material as THREE.MeshBasicMaterial).map!;
+    expect(map.repeat.x).toBeCloseTo(0.4, 5);
+  });
+
+  it('draws a whole-image, unflipped sprite with the shared texture itself, not a clone', async () => {
+    // Cloning marks needsUpdate on the shared Source, which forces a GPU
+    // re-upload of pixels the cache already paid for; with nothing to window
+    // the borrowed texture is drawn directly.
+    const tex = makeTexture(64, 64);
+    const renderer = await render({
+      node: makeNode({ texture: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mesh = renderer.scene.findByType('Mesh');
+    const mat = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(mat.map).toBe(tex);
   });
 });

@@ -24,6 +24,7 @@
 
 import * as THREE from 'three';
 import FastNoiseLite from 'fastnoise-lite';
+import { channelToByte } from '../../../utils/colorSpace';
 import type { Gradient } from '../gradienttexture2d/types';
 import { sampleGradientColor } from '../gradienttexture2d/sample';
 import {
@@ -243,13 +244,25 @@ export function seamlessNoiseImage(
  * the byte maps straight to the 0..1 ramp offset.
  */
 export function modulateWithGradient(gray: Uint8Array, gradient: Gradient): Uint8Array {
+  // The offset domain is a byte / 255 — 256 distinct values — so the ramp is
+  // evaluated once per value, not once per pixel (a megapixel field would
+  // otherwise pay a binary search and a colour allocation per pixel).
+  const lut = new Uint8Array(256 * 4);
+  for (let v = 0; v < 256; v++) {
+    const color = sampleGradientColor(gradient, v / 255);
+    lut[v * 4] = channelToByte(color.r);
+    lut[v * 4 + 1] = channelToByte(color.g);
+    lut[v * 4 + 2] = channelToByte(color.b);
+    lut[v * 4 + 3] = channelToByte(color.a);
+  }
+
   const rgba = new Uint8Array(gray.length * 4);
   for (let i = 0; i < gray.length; i++) {
-    const color = sampleGradientColor(gradient, gray[i]! / 255);
-    rgba[i * 4] = to8(color.r);
-    rgba[i * 4 + 1] = to8(color.g);
-    rgba[i * 4 + 2] = to8(color.b);
-    rgba[i * 4 + 3] = to8(color.a);
+    const entry = gray[i]! * 4;
+    rgba[i * 4] = lut[entry]!;
+    rgba[i * 4 + 1] = lut[entry + 1]!;
+    rgba[i * 4 + 2] = lut[entry + 2]!;
+    rgba[i * 4 + 3] = lut[entry + 3]!;
   }
   return rgba;
 }
@@ -271,17 +284,21 @@ export function grayToRgba(gray: Uint8Array): Uint8Array {
  *
  * Godot converts the image to `FORMAT_RF` first, which keeps only the RED
  * channel — so after a `color_ramp` the height field is the ramp's red, not its
- * luminance. Neighbours wrap at the edges, and the normal is
- * `across x up` normalised, packed as `127.5 + n * 127.5`.
+ * luminance. `stride` names where that channel sits: 4 for an RGBA field (the
+ * ramped path), 1 for a raw grayscale field, which spares the no-ramp path a
+ * full RGBA expansion it would read one byte in four of. Neighbours wrap at the
+ * edges, and the normal is `across x up` normalised, packed as
+ * `127.5 + n * 127.5`.
  */
 export function bumpMapToNormalMap(
-  rgba: Uint8Array,
+  heights: Uint8Array,
+  stride: number,
   width: number,
   height: number,
   bumpScale: number
 ): Uint8Array {
   const out = new Uint8Array(width * height * 4);
-  const red = (x: number, y: number): number => rgba[(y * width + x) * 4]! / 255;
+  const red = (x: number, y: number): number => heights[(y * width + x) * stride]! / 255;
 
   for (let ty = 0; ty < height; ty++) {
     let py = ty + 1;
@@ -333,11 +350,19 @@ export function rasterizeNoiseTexture2D(
   const sample = noiseSampler(noise);
 
   const gray = tex.seamless
-    ? seamlessNoiseImage(sample, width, height, tex.invert, tex.normalize, Math.max(0, tex.seamlessBlendSkirt))
+    ? seamlessNoiseImage(sample, width, height, tex.invert, tex.normalize, tex.seamlessBlendSkirt)
     : noiseImage(sample, width, height, tex.invert, tex.normalize);
 
-  let rgba = colorRamp ? modulateWithGradient(gray, colorRamp) : grayToRgba(gray);
-  if (tex.asNormalMap) rgba = bumpMapToNormalMap(rgba, width, height, tex.bumpStrength);
+  let rgba: Uint8Array;
+  if (tex.asNormalMap) {
+    // The bump conversion reads only the red channel, so the no-ramp path feeds
+    // it the grayscale field directly instead of expanding to RGBA first.
+    rgba = colorRamp
+      ? bumpMapToNormalMap(modulateWithGradient(gray, colorRamp), 4, width, height, tex.bumpStrength)
+      : bumpMapToNormalMap(gray, 1, width, height, tex.bumpStrength);
+  } else {
+    rgba = colorRamp ? modulateWithGradient(gray, colorRamp) : grayToRgba(gray);
+  }
 
   const flipped = new Uint8Array(rgba.length);
   const rowBytes = width * 4;
@@ -377,9 +402,4 @@ function alphaBlend(background: number, foreground: number, alpha: number): numb
 
 function clamp8(value: number): number {
   return Math.min(255, Math.max(0, Math.trunc(value)));
-}
-
-/** Godot's `Color::get_r8()`: round to 8-bit, clamped. */
-function to8(channel: number): number {
-  return Math.min(255, Math.max(0, Math.round(channel * 255)));
 }

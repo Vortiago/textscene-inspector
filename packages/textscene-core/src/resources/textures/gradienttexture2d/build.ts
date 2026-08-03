@@ -12,6 +12,7 @@
  */
 
 import * as THREE from 'three';
+import { channelToByte } from '../../../utils/colorSpace';
 import { gradientOffsetAt, sampleGradientColor } from './sample';
 import type { Gradient, GradientTexture2D } from './types';
 
@@ -47,10 +48,10 @@ export function rasterizeGradientTexture2D(
       // gradient sampled here renders upside-down against the same gradient
       // shipped as a PNG.
       const i = (x + (height - 1 - y) * width) * 4;
-      data[i] = to8(color.r);
-      data[i + 1] = to8(color.g);
-      data[i + 2] = to8(color.b);
-      data[i + 3] = to8(color.a);
+      data[i] = channelToByte(color.r);
+      data[i + 1] = channelToByte(color.g);
+      data[i + 2] = channelToByte(color.b);
+      data[i + 3] = channelToByte(color.a);
     }
   }
 
@@ -62,9 +63,4 @@ export function rasterizeGradientTexture2D(
   texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.needsUpdate = true;
   return texture;
-}
-
-/** Godot's `Color::get_r8()`: round to 8-bit, clamped to 0..255. */
-function to8(channel: number): number {
-  return Math.min(255, Math.max(0, Math.round(channel * 255)));
 }

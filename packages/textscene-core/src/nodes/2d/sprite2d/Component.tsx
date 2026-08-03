@@ -27,16 +27,14 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { canvasItemBlendState, type CanvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
 import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
 import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
-import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
+import { composeFrameTexture, frameSizePx, needsFrameComposition } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
-import { resolveTexture2DSource } from '../../../resources/SubResourceResolver';
 import {
   isViewportTextureRef,
   useViewportTextureSlot,
 } from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
-import { useProceduralTexture } from '../../../resources/useProceduralTexture';
-import { useResource } from '../../../resources/useResource';
+import { useTexture2DSource } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { Sprite2DProperties } from './types';
 
@@ -51,70 +49,55 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
 
   // `texture = SubResource(ViewportTexture)` names a `<SubViewport>` rather
   // than a file — the live target a sub-viewport published, which is the whole
-  // of Godot's "3D in 2D" demo. It bypasses the loader AND the frame compositor
-  // below: a viewport target owns its GPU texture, so cloning per frame and
-  // disposing the clone would tear down the publisher's own render target.
+  // of Godot's "3D in 2D" demo. It bypasses the source hook AND the frame
+  // compositor below: a viewport target owns its GPU texture, so cloning per
+  // frame and disposing the clone would tear down the publisher's own render
+  // target.
   const isViewportSlot = isViewportTextureRef(props.texture, internalResources);
   const viewportTexture = useViewportTextureSlot(props.texture, internalResources);
 
-  // A procedural texture (GradientTexture2D, NoiseTexture2D) is described
-  // entirely by the scene — no file exists, so the path arm below resolves
-  // nothing for it. Borrowed from the procedural cache; frame composition
-  // clones it like any loaded texture.
-  const proceduralTexture = useProceduralTexture(props.texture, internalResources);
-
-  const resolvedTexture = useMemo(
-    () =>
-      isViewportSlot
-        ? { path: null }
-        : resolveTexture2DSource(props.texture, externalResources, internalResources),
-    [isViewportSlot, props.texture, externalResources, internalResources]
+  // Everything else — procedural (GradientTexture2D, NoiseTexture2D), atlas
+  // cell, or loaded file — arrives through the shared source hook.
+  const source = useTexture2DSource(
+    isViewportSlot ? undefined : props.texture,
+    externalResources,
+    internalResources
   );
-  const texturePath = resolvedTexture.path;
-  const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
+  const sourceTexture = source.texture ?? undefined;
 
   // A driven `frame` overrides the authored `frame` AND any authored
   // `frame_coords` (in Godot the two are the same value), so the animation wins.
   const composedTexture = useMemo(() => {
     const frameProps =
       animatedFrame !== null ? { ...props, frame: animatedFrame, frame_coords: undefined } : props;
+    // Whole-image sprite: draw the borrowed source directly — a clone would
+    // force a GPU re-upload of the shared pixels (see needsFrameComposition).
+    if (!needsFrameComposition(frameProps, source.region)) return sourceTexture;
     // 'clamp': the 2D canvas samples with texture-repeat DISABLED, so a
     // region_rect overrunning the texture stretches its edge texels rather
     // than tiling.
-    return composeFrameTexture(
-      proceduralTexture ?? texResult.value,
-      frameProps,
-      'clamp',
-      resolvedTexture.region
-    );
-  }, [proceduralTexture, texResult.value, props, animatedFrame, resolvedTexture.region]);
-  // composeFrameTexture clones the texture per frame; dispose the prior clone
-  // when the frame advances (and on unmount) so playback doesn't leak GPU
-  // textures (~one per keyframe otherwise).
-  useEffect(() => () => composedTexture?.dispose(), [composedTexture]);
+    return composeFrameTexture(sourceTexture, frameProps, 'clamp', source.region);
+  }, [sourceTexture, props, animatedFrame, source.region]);
+  // When composition cloned, this component owns the clone: dispose the prior
+  // one when the frame advances (and on unmount) so playback doesn't leak GPU
+  // textures (~one per keyframe otherwise). A borrowed source is never disposed.
+  const ownedTexture = composedTexture !== sourceTexture ? composedTexture : undefined;
+  useEffect(() => () => ownedTexture?.dispose(), [ownedTexture]);
 
   const displayedTexture = viewportTexture ?? composedTexture;
   // Quad size in pixels (1 px = 1 world unit in the 2D canvas). A render
   // target reports its rect through the same `image` shape a loaded texture
   // uses, so the sizing path is shared.
   const { width, height } = useMemo(
-    () =>
-      frameSizePx(
-        viewportTexture ?? proceduralTexture ?? texResult.value,
-        props,
-        resolvedTexture.region
-      ),
-    [viewportTexture, proceduralTexture, texResult.value, props, resolvedTexture.region]
+    () => frameSizePx(viewportTexture ?? sourceTexture, props, source.region),
+    [viewportTexture, sourceTexture, props, source.region]
   );
 
-  // Placeholder when no texture is referenced or it failed to load. A
+  // Placeholder when no texture is referenced or it cannot resolve/load. A
   // ViewportTexture that has not published yet is NOT missing — the sub-viewport
   // is there and simply has not rendered, so the sprite draws nothing until it
   // does rather than flashing a placeholder.
-  const showPlaceholder =
-    !isViewportSlot &&
-    !proceduralTexture &&
-    (!texturePath || texResult.status === 'unavailable');
+  const showPlaceholder = !isViewportSlot && (!props.texture || source.missing);
 
   return (
     <CanvasItem2D
