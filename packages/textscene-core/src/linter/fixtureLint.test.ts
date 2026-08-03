@@ -5,7 +5,7 @@
  * scenes/examples/*.tscn` sweep into an always-on test. Positive fixtures
  * and examples must produce zero error-severity diagnostics (warnings are
  * allowed — some scenes intentionally carry advisory warnings). Negative
- * `edge-*` fixtures listed in EDGE_FIXTURES_WITH_ERRORS must produce at
+ * `edge-*` fixtures listed in INTEGRATION_FIXTURES_WITH_ERRORS must produce at
  * least one error, pinning that the rules they exist to trigger actually
  * fire — the gap class where a rule exists but its fixture silently stops
  * exercising it.
@@ -74,16 +74,27 @@ const UNIT_FIXTURE_WARNINGS: Readonly<Record<string, { rules: readonly string[];
 };
 
 /**
- * Negative lint fixtures: each must produce ≥1 error. Other `edge-*` files
- * are rendering edge cases (lenient-parser recovery, transform corner
- * cases) and must lint clean like every positive fixture. Adding a new
- * negative fixture? Add it here, or this guard fails it as a positive.
+ * Fixtures that must produce >=1 error, and are NOT linter red tests.
+ *
+ * Each is an app-shell or extension INTEGRATION fixture: a selectable, really
+ * broken file the VS Code integration suite opens, and that
+ * `docs/user-guide-web.md` walks a user through to demonstrate the parse-error
+ * banner and the recovery from it. A unit test cannot stand in for them,
+ * because the thing under test is the host reacting to a file a user picked.
+ *
+ * A linter red test does NOT belong here: assert the validator or the rule
+ * directly, which is faster and localises the failure. `edge-tilemap-bad-tile-data`
+ * was the last one that did, and it went once its two rules were confirmed
+ * unit-covered; `edge-invalid-transform`'s validator is now pinned in
+ * `nodes/base/node3d/linterParser.test.ts`.
+ *
+ * The other `edge-*` files are rendering edge cases (lenient-parser recovery,
+ * transform corner cases) and must lint clean like every positive fixture.
  */
-const EDGE_FIXTURES_WITH_ERRORS = new Set([
+const INTEGRATION_FIXTURES_WITH_ERRORS = new Set([
   'edge-invalid-cast-shadow.tscn',
   'edge-invalid-transform.tscn',
   'edge-malformed-bracket.tscn',
-  'edge-tilemap-bad-tile-data.tscn',
 ]);
 
 function tscnFiles(dir: string): string[] {
@@ -160,7 +171,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
   it('every positive fixture produces zero error diagnostics', () => {
     const failures: string[] = [];
     for (const file of tscnFiles(fixturesDir)) {
-      if (EDGE_FIXTURES_WITH_ERRORS.has(file)) continue;
+      if (INTEGRATION_FIXTURES_WITH_ERRORS.has(file)) continue;
       failures.push(...lintFile(fixturesDir, file).messages);
     }
     expect(failures).toEqual([]);
@@ -176,7 +187,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
 
   it('every negative edge fixture still produces at least one error (rules fire)', () => {
     const silent: string[] = [];
-    for (const file of EDGE_FIXTURES_WITH_ERRORS) {
+    for (const file of INTEGRATION_FIXTURES_WITH_ERRORS) {
       if (lintFile(fixturesDir, file).errors === 0) {
         silent.push(file);
       }
@@ -184,9 +195,9 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
     expect(silent).toEqual([]);
   });
 
-  it('EDGE_FIXTURES_WITH_ERRORS only lists files that exist', () => {
+  it('INTEGRATION_FIXTURES_WITH_ERRORS only lists files that exist', () => {
     const existing = new Set(tscnFiles(fixturesDir));
-    const stale = [...EDGE_FIXTURES_WITH_ERRORS].filter((f) => !existing.has(f));
+    const stale = [...INTEGRATION_FIXTURES_WITH_ERRORS].filter((f) => !existing.has(f));
     expect(stale).toEqual([]);
   });
 });
