@@ -423,10 +423,20 @@ describe('DirectionalLight3D Linter', () => {
           })
         )
       );
-      expect(diagnostics).toHaveLength(2);
-      // Should have errors for: shadow_mode, shadow_opacity; light_energy=0 is valid; splits ignored because mode defaults to ORTHOGONAL
-      const hasModeError = diagnostics.some(d => d.message.includes('directional_shadow_mode'));
-      const hasOpacityError = diagnostics.some(d => d.message.includes('shadow_opacity'));
+      // Errors for shadow_mode and shadow_opacity; light_energy = 0 is valid.
+      // Semantic rules now run alongside the errors instead of being suppressed
+      // by them, so assert the error set rather than the whole diagnostic list.
+      const errors = diagnostics.filter((d) => d.severity === 'error');
+      expect(errors).toHaveLength(3);
+      // The third is the split ordering (0.5 must be below 0.3). The comment
+      // here used to claim the splits were "ignored because mode defaults to
+      // ORTHOGONAL"; in fact the shadow_mode error was suppressing the entire
+      // rule phase, so the rule never ran at all.
+      expect(errors.some((d) => d.ruleName === 'directionallight3d-shadow-split-order')).toBe(
+        true
+      );
+      const hasModeError = errors.some(d => d.message.includes('directional_shadow_mode'));
+      const hasOpacityError = errors.some(d => d.message.includes('shadow_opacity'));
       expect(hasModeError && hasOpacityError).toBe(true);
     });
 

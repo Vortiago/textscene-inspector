@@ -323,9 +323,20 @@ physics_material_override = ExtResource("ext_mat_1")
       // Two strict-parser errors: mass <= 0 (rigid_body_2d.cpp:318) and
       // collision_layer outside the 32-bit mask. linear_damp = -1 is legal in 2D
       // (:425 rejects only < -1), so it contributes nothing.
-      expect(diagnostics).toHaveLength(2);
-      expect(diagnostics.every(d => d.severity === 'error')).toBe(true);
+      const errors = diagnostics.filter((d) => d.severity === 'error');
+      expect(errors).toHaveLength(3);
+      // The third is the missing physics material. It was invisible until the
+      // strict parser stopped withholding the scene: the mass error suppressed
+      // the whole rule phase, so a broken resource reference went unreported
+      // because an unrelated property had a bad value.
+      expect(errors.some((d) => d.ruleName === 'valid-rigidbody2d-resources')).toBe(true);
       expect(diagnostics.some(d => d.message.includes('linear_damp'))).toBe(false);
+      // The body's semantic warnings arrive alongside those errors. They used to
+      // be suppressed: a validator error withheld the scene and the rule phase
+      // never ran, which is what made this body look like an errors-only case.
+      expect(diagnostics.some((d) => d.ruleName === 'rigidbody2d-needs-collision-shape')).toBe(
+        true
+      );
     });
 
     it('should handle all properties together', () => {

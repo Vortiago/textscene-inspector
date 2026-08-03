@@ -116,11 +116,15 @@ export class StrictTscnParser {
 
     const scene = this.core.parse(content, createSimpleNode, observer);
 
-    // If errors found, return them without the scene
-    if (errors.length > 0) {
-      return { errors };
-    }
+    // The scene comes back even when a property failed, because a bad value
+    // does not invalidate the tree: the scanner still produced every node with
+    // its name, type and parent. Withholding it made `Linter` skip the whole
+    // rule phase, so ONE out-of-range property anywhere in a file silenced
+    // every semantic rule in it - a missing CollisionShape2D on an unrelated
+    // node included. It also made any rule whose condition a validator already
+    // rejects permanently unreachable, since the validator's error suppressed
+    // the phase that would have run the rule.
 
-    return { errors: [], scene };
+    return { errors, scene };
   }
 }

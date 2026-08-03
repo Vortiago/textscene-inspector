@@ -164,7 +164,9 @@ visible = true
       expect(result.errors[0]!.code).toBe('INVALID_HEADING_FORMAT');
       expect(result.errors[0]!.line).toBe(3);
       expect(result.errors[0]!.message).toContain('Invalid heading format');
-      expect(result.scene).toBeUndefined();
+      // The scene comes back, but a heading that cannot be parsed yields no
+      // node, so the rule phase has nothing to walk.
+      expect(result.scene?.nodes).toEqual([]);
     });
 
     it('should report every malformed heading (edge-malformed-bracket fixture shape)', () => {
@@ -183,7 +185,8 @@ visible = true
       expect(result.errors[0]!.line).toBe(1);
       expect(result.errors[1]!.code).toBe('INVALID_HEADING_FORMAT');
       expect(result.errors[1]!.line).toBe(3);
-      expect(result.scene).toBeUndefined();
+      // Every heading was unparseable, so the scene comes back empty.
+      expect(result.scene?.nodes).toEqual([]);
     });
 
     it('does not flag bracket-opening lines inside a multi-line value', () => {
@@ -582,7 +585,10 @@ invalidproperty
       // Should have errors for: missing identifier (Root), missing name, missing identifier (Invalid), invalid property
     });
 
-    it('should not return scene when errors found', () => {
+    it('still returns the scene when errors were found, so the rule phase can run', () => {
+      // A bad value does not invalidate the tree. Withholding the scene made
+      // `Linter` skip Phase 2 entirely, so one bad property anywhere silenced
+      // every semantic rule in the file.
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Root"]
@@ -591,7 +597,7 @@ invalidproperty
       const result = parser.parse(content);
 
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.scene).toBeUndefined();
+      expect(result.scene).toBeDefined();
     });
   });
 

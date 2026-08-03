@@ -708,9 +708,10 @@ invalidproperty
 
       const diagnostics = linter.lint(content);
 
-      // Should have multiple parse errors (at least 3)
-      expect(diagnostics.length).toBeGreaterThanOrEqual(3);
-      expect(diagnostics.every(d => d.severity === 'error')).toBe(true);
+      // Should have multiple parse errors (at least 3). Semantic rules now run
+      // alongside them rather than being suppressed by the first error, so the
+      // set is no longer errors-only.
+      expect(diagnostics.filter((d) => d.severity === 'error').length).toBeGreaterThanOrEqual(3);
     });
 
     it('should integrate StrictTscnParser and RuleRegistry correctly', () => {
