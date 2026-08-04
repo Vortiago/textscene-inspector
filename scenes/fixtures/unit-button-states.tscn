@@ -1,0 +1,117 @@
+; Button's composite paint: a StyleBox under a text run, per draw state.
+;
+; The one variable: what a Button assembles for itself. Six buttons of the SAME
+; 300x72 rect on the same grid, differing only in the fields that pick or
+; suppress a piece of that assembly — so a missing layer, a wrong stylebox or a
+; mis-placed glyph run can only be the painter.
+;
+; Normal is the control: the default theme's `normal` box under centred text.
+; Disabled changes only `disabled = true`, which swaps BOTH layers at once —
+; the `disabled` stylebox (the same fill at half alpha, so it reads as a
+; fainter plate against the same backdrop) and `font_disabled_color` over the
+; text. Two layers is the point: a painter that dimmed only the box, or only
+; the glyphs, still produces a believable "disabled" button, and this is the
+; only pane where those two can be told apart.
+;
+; Themed replaces `theme_override_styles/normal` with a box whose fill, corner
+; radii and content margins are all authored away from the theme's. Flat sets
+; `flat = true`, which suppresses the box entirely and leaves the glyph run
+; alone over the backdrop — the one pane that proves the text is a layer of its
+; own rather than something baked into the plate.
+;
+; Left and Right carry the SAME authored box as Themed and differ from it only
+; in `alignment`. The box has a 24 px horizontal content margin, so the two
+; place their glyph runs against that inset rather than against the raw rect
+; edge; a painter that aligned to the rect would sit 24 px out on both, in
+; opposite directions, while the centred panes above stayed perfect.
+;
+; No other golden draws a Button, a themed widget stylebox, or a disabled
+; state, so all of the above is unguarded elsewhere.
+;
+; Measured against Godot 4.6.3 at `--mode 2d`: every plate colour is exact —
+; rgb(28, 29, 32) for `normal` over this backdrop, rgb(30, 31, 37) for
+; `disabled`, rgb(51, 128, 89) for the authored box, and the backdrop itself
+; where Flat draws no box at all. Each pane's glyph run sits within one pixel of
+; the engine's in both axes, Left's at x 745 and Right's ending at x 994 —
+; i.e. inset by the authored 24 px content margin on both sides, not by the rect
+; edge. What remains is stem antialiasing from the MSDF atlas, about 300 px per
+; pane, and it is confined to the button rects: the backdrop matches exactly.
+
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_themed"]
+bg_color = Color(0.2, 0.5, 0.35, 1)
+content_margin_left = 24.0
+content_margin_top = 10.0
+content_margin_right = 24.0
+content_margin_bottom = 10.0
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.13, 0.16, 1)
+
+[node name="Normal" type="Button" parent="."]
+anchors_preset = 0
+offset_left = 130.0
+offset_top = 90.0
+offset_right = 430.0
+offset_bottom = 162.0
+text = "Normal"
+
+[node name="Disabled" type="Button" parent="."]
+anchors_preset = 0
+offset_left = 130.0
+offset_top = 288.0
+offset_right = 430.0
+offset_bottom = 360.0
+disabled = true
+text = "Disabled"
+
+[node name="Flat" type="Button" parent="."]
+anchors_preset = 0
+offset_left = 130.0
+offset_top = 486.0
+offset_right = 430.0
+offset_bottom = 558.0
+flat = true
+text = "Flat"
+
+[node name="Themed" type="Button" parent="."]
+anchors_preset = 0
+offset_left = 720.0
+offset_top = 90.0
+offset_right = 1020.0
+offset_bottom = 162.0
+text = "Themed"
+theme_override_styles/normal = SubResource("StyleBoxFlat_themed")
+
+[node name="Left" type="Button" parent="."]
+anchors_preset = 0
+offset_left = 720.0
+offset_top = 288.0
+offset_right = 1020.0
+offset_bottom = 360.0
+text = "Left"
+alignment = 0
+theme_override_styles/normal = SubResource("StyleBoxFlat_themed")
+
+[node name="Right" type="Button" parent="."]
+anchors_preset = 0
+offset_left = 720.0
+offset_top = 486.0
+offset_right = 1020.0
+offset_bottom = 558.0
+text = "Right"
+alignment = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_themed")

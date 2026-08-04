@@ -30,7 +30,11 @@
  * `createCaptureContext` in `previewServer.mjs`). Every Node2D/Control-rooted
  * golden carries it — before it existed, these captured the WHOLE 2D
  * viewport instead, chrome and all, which is why their `maxDiffPct` was
- * relaxed regardless of what content they carry.
+ * relaxed regardless of what content they carry. Goldens added SINCE the
+ * parity capture keep the strict 0.1% default instead: a 1:1 frame at zoom 1
+ * over integer pixels has no camera fit and no resampling to absorb, so a
+ * relaxed threshold there would only be slack for a real regression to hide
+ * in. The relaxed values above are historical, not a rule for 2D.
  */
 
 export const DEFAULT_MAX_DIFF_PCT = 0.1;
@@ -558,4 +562,39 @@ export const GOLDEN_SCENES = [
   // in the main pass exactly once. Probe-verified against Godot 4.6.3 to
   // within 1% linear per sample.
   { name: 'sub-viewport-texture', file: 'unit-sub-viewport-texture.tscn' },
+
+  // --- Native Control rendering (ADR-0030) ---
+  // Controls draw into the WebGL canvas like every other 2D item, so for the
+  // first time they can be golden-gated at all. Each scene below moves ONE
+  // piece of that renderer and its fixture header says which; between them
+  // they cover the container solve, the StyleBoxFlat raster, the text engine,
+  // a composite widget, clipping, and a viewport surface. All hold the strict
+  // default threshold — the parity capture is a 1:1 frame with no camera fit,
+  // and these draw flat fills and glyphs rather than shaded geometry.
+  //
+  // Every scene's layout was measured through Godot 4.6.3 at `--mode 2d`
+  // before its baseline was written; the fixtures record the probes.
+  { name: 'vbox-container-pitch', file: 'unit-vbox-container-pitch.tscn', mode: '2d' },
+  { name: 'panel-styleboxes', file: 'unit-panel-styleboxes.tscn', mode: '2d' },
+  { name: 'label-wrap', file: 'unit-label-2d-wrap.tscn', mode: '2d' },
+  { name: 'button-states', file: 'unit-button-states.tscn', mode: '2d' },
+  { name: 'scroll-container-clip', file: 'unit-scroll-container-clip.tscn', mode: '2d' },
+  // The two SubViewportContainer surfaces. `sub-viewport-texture` above is a
+  // SubViewport sampled by a MESH, which is a different consumer entirely — it
+  // passed at 0 px throughout a window in which the container path drew nothing
+  // at all, so a golden on the mesh side can say nothing about this one.
+  // `-controls` holds Controls, which the container mounts and draws live;
+  // `-2d-content` holds Polygon2Ds, which only reach it as the offscreen pass
+  // driver's published texture. Neither substitutes for the other: the live arm
+  // renders whether or not a single pixel ever leaves a render target.
+  // Both were measured against Godot 4.6.3 at `--mode 2d` before their
+  // baselines were written: `-controls` is pixel-identical to the engine over
+  // the whole frame, and `-2d-content` is within 1/255 everywhere — the 8-bit
+  // linear intermediate the SubViewportContainer sheet already documents.
+  { name: 'sub-viewport-container-controls', file: 'unit-sub-viewport-container.tscn', mode: '2d' },
+  {
+    name: 'sub-viewport-container-2d-content',
+    file: 'unit-sub-viewport-container-2d-content.tscn',
+    mode: '2d',
+  },
 ];
