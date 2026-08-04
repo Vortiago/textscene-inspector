@@ -23,7 +23,7 @@ primitive nodes.*
 
 ## What it renders
 
-Around 151 node types, each a self-registering vertical slice.
+Around 158 node types, each a self-registering vertical slice.
 
 Coverage is broader than what draws: some node types are parsed and fully
 lint-checked while drawing nothing — either because that is correct (a Timer, a

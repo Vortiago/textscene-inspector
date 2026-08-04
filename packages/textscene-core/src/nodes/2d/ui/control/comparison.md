@@ -58,6 +58,7 @@ Strict parsing format-checks these `Control` properties, plus 15 inherited from 
 | `anchor_top` | float |
 | `anchors_preset` | integer -1-15 |
 | `custom_minimum_size` | Vector2(x, y) |
+| `focus_mode` | enum 0-3 (NONE/CLICK/ALL/ACCESSIBILITY) |
 | `grow_horizontal` | integer 0-2 |
 | `grow_vertical` | integer 0-2 |
 | `layout_mode` | integer 0-3 |

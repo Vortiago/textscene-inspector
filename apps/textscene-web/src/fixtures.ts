@@ -438,6 +438,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "H Scroll Bar",
+    "file": "unit-h-scroll-bar.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "H Separator",
+    "file": "unit-h-separator.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Hinge Joint 3d",
     "file": "unit-hinge-joint-3d.tscn",
     "category": "Other"
@@ -688,6 +698,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Progress Bar",
+    "file": "unit-progress-bar.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Range",
     "file": "unit-range.tscn",
     "category": "Other"
@@ -788,6 +803,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Spin Box",
+    "file": "unit-spin-box.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Split Container Vertical",
     "file": "unit-split-container-vertical.tscn",
     "category": "Other"
@@ -853,6 +873,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Texture Progress Bar",
+    "file": "unit-texture-progress-bar.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Timer",
     "file": "unit-timer.tscn",
     "category": "Other"
@@ -875,6 +900,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "V Flow Container",
     "file": "unit-v-flow-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "V Scroll Bar",
+    "file": "unit-v-scroll-bar.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "V Separator",
+    "file": "unit-v-separator.tscn",
     "category": "Other"
   },
   {

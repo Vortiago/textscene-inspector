@@ -211,6 +211,13 @@ reproduced:
 - [HFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/hflowcontainer/comparison.md) — nothing yet; a FlowContainer fixed to wrap in rows
 - [TabContainer](../../packages/textscene-core/src/nodes/2d/ui/tabcontainer/comparison.md) — nothing yet; shows one child at a time behind a tab strip
 - [VFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/vflowcontainer/comparison.md) — nothing yet; a FlowContainer fixed to wrap in columns
+- [HScrollBar](../../packages/textscene-core/src/nodes/2d/ui/hscrollbar/comparison.md) — nothing yet; a horizontal scroll track
+- [HSeparator](../../packages/textscene-core/src/nodes/2d/ui/hseparator/comparison.md) — nothing yet; a themed horizontal divider
+- [ProgressBar](../../packages/textscene-core/src/nodes/2d/ui/progressbar/comparison.md) — nothing yet; a filled bar over a Range
+- [SpinBox](../../packages/textscene-core/src/nodes/2d/ui/spinbox/comparison.md) — nothing yet; a numeric field with stepper arrows
+- [TextureProgressBar](../../packages/textscene-core/src/nodes/2d/ui/textureprogressbar/comparison.md) — nothing yet; a textured progress bar, linear or radial
+- [VScrollBar](../../packages/textscene-core/src/nodes/2d/ui/vscrollbar/comparison.md) — nothing yet; a vertical scroll track
+- [VSeparator](../../packages/textscene-core/src/nodes/2d/ui/vseparator/comparison.md) — nothing yet; a themed vertical divider
 - [ColorPicker](../../packages/textscene-core/src/nodes/2d/ui/colorpicker/comparison.md) — nothing yet; the full colour-selection panel
 - [GraphFrame](../../packages/textscene-core/src/nodes/2d/ui/graphframe/comparison.md) — nothing yet; a titled frame grouping graph nodes
 - [GraphNode](../../packages/textscene-core/src/nodes/2d/ui/graphnode/comparison.md) — nothing yet; a graph node with per-child connection slots

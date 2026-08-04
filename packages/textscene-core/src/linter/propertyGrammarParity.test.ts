@@ -207,6 +207,11 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'theme_override_colors/*', 'theme_override_constants/*',
       'theme_override_font_sizes/*', 'theme_override_styles/*',
       'theme_override_fonts/*', 'theme_override_icons/*',
+      // Focus is an input concern with no render surface at all: nothing about
+      // which control takes keyboard focus changes a pixel, so no parser reads
+      // it while the linter still checks the value Godot enforces
+      // (control.cpp:2267). One entry here covers every Control descendant.
+      'focus_mode',
     ],
     reason: 'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare.',
   },

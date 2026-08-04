@@ -30,7 +30,7 @@ Not captured yet — nothing renders, so there is nothing to compare pixels agai
 ## Linting
 
 <!-- lint:begin BoxContainer -->
-Strict parsing format-checks these `BoxContainer` properties, plus 26 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `BoxContainer` properties, plus 27 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

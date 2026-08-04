@@ -48,6 +48,8 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
   Container: 'layout behaviour only, driven entirely by Control keys',
   HBoxContainer: "orientation only; the box keys are BoxContainer's",
   HFlowContainer: "orientation only; the flow keys are FlowContainer's",
+  HScrollBar: "orientation only; the scrollbar keys are ScrollBar's",
+  HSeparator: 'a themed Separator; its constructor only sets a protected orientation field, not a property',
   HSlider: "orientation only; the slider keys are Slider's",
   HSplitContainer: "orientation only; the split keys are SplitContainer's",
   MarginContainer: 'margins are theme constants, not properties',
@@ -56,6 +58,8 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
   OpenXRInteractionProfileEditor:
     'editor-only (TOOLS_ENABLED); _bind_methods binds methods only, and its abstract base declares nothing either',
   PopupPanel: 'a themed Popup; its panel stylebox is a ThemeDB binding, not an ADD_PROPERTY',
+  Separator:
+    'abstract separator base; binds zero ADD_PROPERTY, only the separation constant and separator StyleBox as theme items (separator.cpp:61-62)',
   ScriptCreateDialog:
     'editor-only (TOOLS_ENABLED); binds no ADD_PROPERTY and overrides no _get_property_list, so its 3 documented members are all overrides= default changes',
   OpenXRInteractionProfileEditorBase:
@@ -66,6 +70,8 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
   Popup: "popup behaviour only; the geometry keys are Window's",
   VBoxContainer: "orientation only; the box keys are BoxContainer's",
   VFlowContainer: "orientation only; the flow keys are FlowContainer's",
+  VScrollBar: "orientation only; the scrollbar keys are ScrollBar's",
+  VSeparator: 'a themed Separator; its constructor only sets a protected orientation field, not a property',
   VSlider: "orientation only; the slider keys are Slider's",
   VSplitContainer: "orientation only; the split keys are SplitContainer's",
 };

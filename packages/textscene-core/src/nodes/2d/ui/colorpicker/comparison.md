@@ -39,7 +39,7 @@ Not captured yet: nothing renders, so there is nothing to compare pixels against
 ## Linting
 
 <!-- lint:begin ColorPicker -->
-Strict parsing format-checks these `ColorPicker` properties, plus 1 inherited from BoxContainer, 26 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**. `ColorPicker` also REFUSES `vertical`, which its base declares but this class cannot carry.
+Strict parsing format-checks these `ColorPicker` properties, plus 1 inherited from BoxContainer, 27 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**. `ColorPicker` also REFUSES `vertical`, which its base declares but this class cannot carry.
 
 | Property | Accepts |
 | --- | --- |

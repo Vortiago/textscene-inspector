@@ -70,6 +70,21 @@ validatorRegistry.registerAll('Control', {
   }),
   custom_minimum_size: v.vector2('custom_minimum_size'),
 
+  // control.cpp:4297, ENUM "None,Click,All,Accessibility" (FocusMode 0-3,
+  // control.h:65-70). set_focus_mode (control.cpp:2267) is
+  // `ERR_FAIL_INDEX((int)p_focus_mode, 4)`: genuinely enforced, so out of range
+  // is an error rather than a hint warning. Every Control descendant accepted
+  // any value until this existed, including the ones whose own subclass bound is
+  // narrower (GraphNode.slots_focus_mode enforces 1-3, TabContainer's
+  // tab_focus_mode is only hinted 0-2 because it delegates to this same guard).
+  focus_mode: v.enumInt(
+    'focus_mode',
+    0,
+    3,
+    { 0: 'NONE', 1: 'CLICK', 2: 'ALL', 3: 'ACCESSIBILITY' },
+    { enforced: 'control.cpp:2267' }
+  ),
+
   // Shared with Window — Godot emits this family from both, identically
   // (control.cpp:432/446 state the same two hints as window.cpp:183/207).
   // Grounding for these two lives in linter/validators/themeOverrides.ts,

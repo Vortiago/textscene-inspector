@@ -33,7 +33,7 @@ The box fill (dark charcoal ~rgb(46,46,46)), corner radius, padding, font, and t
 ## Linting
 
 <!-- lint:begin OptionButton -->
-Strict parsing format-checks the inherited set (13 inherited from Button, 10 inherited from BaseButton, 26 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `OptionButton` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (13 inherited from Button, 10 inherited from BaseButton, 27 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `OptionButton` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

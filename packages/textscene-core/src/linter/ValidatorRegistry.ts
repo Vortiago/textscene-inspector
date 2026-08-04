@@ -139,11 +139,17 @@ export class ValidatorRegistry {
    * The base-walk can only ever widen what a leaf accepts, so a class that
    * takes strictly less than its parent cannot be expressed by registering a
    * validator: whatever it registers still reads as "this key is allowed here".
-   * Godot has a whole category of these. `HBoxContainer` inherits `vertical`
-   * from `BoxContainer` and then fixes the orientation, so `set_vertical` is
-   * `ERR_FAIL_COND_MSG(is_fixed, …)` and `_validate_property` clears the key to
-   * `PROPERTY_USAGE_NONE`; `SpinBox` removes `exp_edit`, `OptionButton` removes
-   * `text` and `icon`, `Parallax2D` removes `position`.
+   * `HBoxContainer` inherits `vertical` from `BoxContainer` and then fixes the
+   * orientation, so `set_vertical` is `ERR_FAIL_COND_MSG(is_fixed, …)` AND
+   * `_validate_property` clears the key to `PROPERTY_USAGE_NONE`.
+   *
+   * The setter guard is what makes it a removal. `_validate_property` alone is
+   * not: it hides a key from the inspector and the saver while the setter still
+   * accepts the write, so the value is inert rather than invalid and the key
+   * stays inherited. `SpinBox.exp_edit` (spin_box.cpp:648, against
+   * `Range::set_exp_ratio`'s unconditional assign at range.cpp:433) and
+   * `FileDialog.dialog_text` are both that second shape, and neither is
+   * registered as a removal.
    *
    * Modelling it as removal rather than as a rejecting validator is what lets
    * `getOwnKeys` leave the key out (it is not a declaration), the generated

@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+; ProgressBar exercising fill_mode, show_percentage, indeterminate and editor_preview_indeterminate at valid values.
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyProgressBar" type="ProgressBar" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 108.0
+offset_bottom = 40.0
+fill_mode = 2
+show_percentage = false
+indeterminate = true
+editor_preview_indeterminate = true

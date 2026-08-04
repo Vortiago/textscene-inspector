@@ -1306,7 +1306,7 @@
       "name": "HScrollBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "ScrollBar",
         "Range",
@@ -1322,7 +1322,7 @@
       "name": "HSeparator",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Separator",
         "Control",
@@ -2335,7 +2335,7 @@
       "name": "ProgressBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Range",
         "Control",
@@ -2685,7 +2685,7 @@
       "name": "SpinBox",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Range",
         "Control",
@@ -2987,7 +2987,7 @@
       "name": "TextureProgressBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Range",
         "Control",
@@ -3259,7 +3259,7 @@
       "name": "VScrollBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "ScrollBar",
         "Range",
@@ -3275,7 +3275,7 @@
       "name": "VSeparator",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Separator",
         "Control",
