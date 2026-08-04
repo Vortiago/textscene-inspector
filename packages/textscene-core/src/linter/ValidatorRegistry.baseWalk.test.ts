@@ -12,6 +12,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ValidatorRegistry, validatorRegistry } from './ValidatorRegistry.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
+import { v } from './validators/v.js';
+import { propertyError } from './validators/propertyError.js';
 import { baseChain } from './nodeBaseTypes.js';
 import './index.js'; // trigger all validator registrations
 
@@ -379,5 +381,77 @@ describe('ValidatorRegistry meta-guard: no shadow copies', () => {
         ).not.toBeNull();
       }
     }
+  });
+});
+
+describe('indexed wildcard routing mirrors the engine', () => {
+  /**
+   * Godot tests `is_valid_int()` BEFORE it looks at the value
+   * (property_list_helper.cpp:52-58), so a signed index is a well-formed key that
+   * the helper then refuses to resolve. Routing has to agree, or the dispatcher
+   * that owns the negative-index diagnostic never runs and a key the engine
+   * silently drops reads as clean.
+   */
+  function registryWithItems() {
+    const r = new ValidatorRegistry();
+    const seen: string[] = [];
+    const dispatcher: PropertyValidator = (key, _value, line) => {
+      seen.push(key);
+      return propertyError(key, line, `dispatched ${key}`, 'DISPATCHED');
+    };
+    r.registerAll('Menu', { 'item_#/*': dispatcher });
+    return { r, seen };
+  }
+
+  it('routes a NEGATIVE index to the dispatcher rather than dropping the key', () => {
+    const { r, seen } = registryWithItems();
+    expect(r.findValidator('Menu', 'item_-1/text')).not.toBeNull();
+    r.findValidator('Menu', 'item_-1/text')!('item_-1/text', '"x"', 1);
+    expect(seen).toContain('item_-1/text');
+  });
+
+  it('routes an explicitly POSITIVE index too, which is_valid_int also accepts', () => {
+    const { r } = registryWithItems();
+    expect(r.findValidator('Menu', 'item_+2/text')).not.toBeNull();
+  });
+
+  it('still refuses a sign with no digits, and a non-numeric index', () => {
+    const { r } = registryWithItems();
+    expect(r.findValidator('Menu', 'item_-/text')).toBeNull();
+    expect(r.findValidator('Menu', 'item_x/text')).toBeNull();
+    expect(r.findValidator('Menu', 'item_/text')).toBeNull();
+  });
+});
+
+describe('an inherited member name is not a validator', () => {
+  it('does not resolve Object.prototype members as registered keys', () => {
+    // A node carrying `toString = 5` used to resolve Object.prototype.toString,
+    // which is truthy, and the caller pushed its return value into the
+    // diagnostic list in place of a ParseError.
+    const r = new ValidatorRegistry();
+    r.registerAll('Thing', { real: v.boolean('real') });
+    for (const inherited of ['toString', 'constructor', 'valueOf', 'hasOwnProperty']) {
+      expect(r.findValidator('Thing', inherited), inherited).toBeNull();
+    }
+    expect(r.findValidator('Thing', 'real')).not.toBeNull();
+  });
+
+  it('memoises a removal per citation, not just per reason', () => {
+    // Two keys on one type can share wording and cite different guards; the
+    // cached validator must not report the first one's file:line for both.
+    const r = new ValidatorRegistry();
+    r.registerUnavailable('Thing', {
+      a: { reason: 'fixed by the class', cite: 'f.cpp:1' },
+      b: { reason: 'fixed by the class', cite: 'f.cpp:2' },
+    });
+    expect(r.findValidator('Thing', 'a')?.grounding?.cite).toBe('f.cpp:1');
+    expect(r.findValidator('Thing', 'b')?.grounding?.cite).toBe('f.cpp:2');
+  });
+
+  it('does not resolve them through a removal map either', () => {
+    const r = new ValidatorRegistry();
+    r.registerUnavailable('Thing', { gone: { reason: 'fixed by the class', cite: 'f.cpp:1' } });
+    expect(r.findValidator('Thing', 'toString')).toBeNull();
+    expect(r.findValidator('Thing', 'gone')).not.toBeNull();
   });
 });

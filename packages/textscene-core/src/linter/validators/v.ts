@@ -172,8 +172,19 @@ function ground(
 ): PropertyValidator {
   const enforced = citeFor(opts.enforced, 'min') ?? citeFor(opts.enforced, 'max');
   const hinted = citeFor(opts.hinted, 'min') ?? citeFor(opts.hinted, 'max');
-  if (enforced) validator.grounding = { kind: 'enforced', cite: enforced };
-  else if (hinted) validator.grounding = { kind: 'hinted', cite: hinted };
+  if (enforced) {
+    // BOTH citations when the ends are grounded differently. Recording only the
+    // enforced one discarded the hinted end's `file:line` entirely, so the
+    // citation sweep could never see it and a wrong or malformed second-end
+    // citation was unobservable. `extra_cull_margin` (an enforced floor and a
+    // hinted ceiling) is the live shape.
+    validator.grounding = {
+      kind: 'enforced',
+      cite: hinted && hinted !== enforced ? `${enforced}, ${hinted}` : enforced,
+    };
+  } else if (hinted) {
+    validator.grounding = { kind: 'hinted', cite: hinted };
+  }
   // An unbounded numeric combinator rejects only what is not a number, which
   // is the same class of rejection every `shape` makes.
   if (!isBounded) validator.formatOnly = true;
@@ -188,13 +199,6 @@ function ground(
 function endSeverity(opts: Grounding, end: 'min' | 'max'): Severity {
   if (citeFor(opts.enforced, end)) return 'error';
   return citeFor(opts.hinted, end) ? 'warning' : 'error';
-}
-
-/** Single severity, for validators whose bound has only one range (enums). */
-function boundSeverity(opts: Grounding): Severity {
-  return endSeverity(opts, 'min') === 'warning' && endSeverity(opts, 'max') === 'warning'
-    ? 'warning'
-    : 'error';
 }
 
 /** `float 0-1` / `float >= 0` / `integer 1-256` / `float`, from the bounds. */
@@ -374,7 +378,8 @@ export const v = {
           labels,
           formatCode(name),
           valueCode(name),
-          boundSeverity(opts)
+          endSeverity(opts, 'min'),
+          endSeverity(opts, 'max')
         ),
         `enum ${min}-${max} (${names})`
       ),
@@ -501,8 +506,12 @@ export const v = {
     opts: { min?: number; max?: number } & Grounding = {}
   ): PropertyValidator {
     const { min, max } = opts;
-    // One severity: a component bound states a single range for all three.
-    const severity = boundSeverity(opts);
+    // Per END, not per bound. The three components share one RANGE, but the two
+    // ends of that range can have different authority: GPUParticlesCollision's
+    // `size` has an enforced floor and a merely hinted ceiling. Collapsing them
+    // reported an ERROR for a value only the inspector hint excludes.
+    const minSeverity = endSeverity(opts, 'min');
+    const maxSeverity = endSeverity(opts, 'max');
     return ground(accepts((key, value, line) => {
       const match = VECTOR3_REGEX.exec(value);
       if (!match) {
@@ -514,10 +523,9 @@ export const v = {
         );
       }
       const parts = [match[1], match[2], match[3]].map((c) => parseFloat(c ?? '0'));
-      const offending = parts.some(
-        (c) => (min !== undefined && c < min) || (max !== undefined && c > max)
-      );
-      if (offending) {
+      const belowMin = min !== undefined && parts.some((c) => c < min);
+      const aboveMax = max !== undefined && parts.some((c) => c > max);
+      if (belowMin || aboveMax) {
         const bound =
           min !== undefined && max !== undefined
             ? `between ${min} and ${max}`
@@ -529,7 +537,9 @@ export const v = {
           line,
           `Property '${name}' components must be ${bound}, got: Vector3(${parts.join(', ')})`,
           valueCode(name),
-          severity
+          // A component under the floor is the stronger claim when the two ends
+          // disagree, so it wins.
+          belowMin ? minSeverity : maxSeverity
         );
       }
       return null;

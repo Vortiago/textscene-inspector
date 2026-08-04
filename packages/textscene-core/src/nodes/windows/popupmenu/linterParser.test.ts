@@ -184,7 +184,14 @@ describe('PopupMenu strict validators', () => {
       // property_list_helper.cpp:53 requires is_valid_int() on the trimmed
       // prefix, so these are not keys Godot would read either.
       expect(validatorRegistry.findValidator('PopupMenu', 'item_x/text')).toBeNull();
-      expect(validatorRegistry.findValidator('PopupMenu', 'item_-1/text')).toBeNull();
+      // A NEGATIVE index is a well-formed key Godot resolves and then refuses
+      // (is_valid_int accepts the sign, property_list_helper.cpp:52, and the
+      // index < 0 guard rejects it at :57). It must reach the dispatcher so the
+      // diagnostic fires; returning null here meant a key the engine silently
+      // drops read as clean.
+      const negative = validatorRegistry.findValidator('PopupMenu', 'item_-1/text');
+      expect(negative).not.toBeNull();
+      expect(negative!('item_-1/text', '"x"', 1)?.code).toBe('INVALID_ITEM_INDEX');
       expect(validatorRegistry.findValidator('PopupMenu', 'item_/text')).toBeNull();
     });
 

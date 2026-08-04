@@ -65,7 +65,8 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
       propertyError(key, line, `Unknown ${describes} property: "${key}"`, unknownCode);
 
     if (!key.startsWith(prefix) || indexText === '' || leafName === '') return unknown();
-    if (!/^-?\d+$/.test(indexText)) return unknown();
+    // `[+-]?`, matching `String::is_valid_int()` (property_list_helper.cpp:52).
+    if (!/^[+-]?\d+$/.test(indexText)) return unknown();
 
     const index = Number(indexText);
     if (index < 0) {
@@ -75,6 +76,9 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
       return propertyError(key, line, negativeIndex.message(index), negativeIndex.code);
     }
 
+    // hasOwnProperty, so a leaf named `toString` cannot resolve an inherited
+    // function and get called as a validator.
+    if (!Object.prototype.hasOwnProperty.call(leaves, leafName)) return unknown();
     const leaf = leaves[leafName];
     if (!leaf) return unknown();
     return leaf(key, value, line);

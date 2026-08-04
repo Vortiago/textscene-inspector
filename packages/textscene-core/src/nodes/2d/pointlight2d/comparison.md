@@ -294,7 +294,7 @@ Strict parsing format-checks these `PointLight2D` properties, plus 12 inherited 
 | `shadow_filter_smooth` | float 0-64 |
 | `shadow_item_cull_mask` | 32-bit layer mask (layers 1-32) |
 | `texture` | SubResource("id") or ExtResource("id") |
-| `texture_scale` | float >= 0 |
+| `texture_scale` | float 0.01-50, never exactly 0 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -164,7 +164,14 @@ describe('OptionButton strict validators', () => {
 
     it('does not resolve a key whose index is not an integer, as the engine does not address one either', () => {
       expect(validatorRegistry.findValidator('OptionButton', 'popup/item_x/text')).toBeNull();
-      expect(validatorRegistry.findValidator('OptionButton', 'popup/item_-1/text')).toBeNull();
+      // A NEGATIVE index is a well-formed key Godot resolves and then refuses
+      // (is_valid_int accepts the sign, property_list_helper.cpp:52, and the
+      // index < 0 guard rejects it at :57). It must reach the dispatcher so the
+      // diagnostic fires; returning null here meant a key the engine silently
+      // drops read as clean.
+      const negative = validatorRegistry.findValidator('OptionButton', 'popup/item_-1/text');
+      expect(negative).not.toBeNull();
+      expect(negative!('popup/item_-1/text', '"x"', 1)?.code).toBe('INVALID_ITEM_INDEX');
       expect(validatorRegistry.findValidator('OptionButton', 'popup/item_/text')).toBeNull();
     });
 

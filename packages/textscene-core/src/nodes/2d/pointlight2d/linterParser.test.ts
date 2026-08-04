@@ -71,10 +71,32 @@ describe('PointLight2D linterParser validators', () => {
     expect(lintErrors(`[gd_scene format=3]\n[node name="L" type="PointLight2D"]\ntexture = ExtResource("1")`)).toBe(0);
   });
 
-  it('warns (not errors) on negative texture_scale (light_2d.cpp:441-447 only special-cases exact 0)', () => {
-    const scene = `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\ntexture_scale = -1`;
-    expect(lintWarnings(scene)).toBeGreaterThan(0);
-    expect(lintErrors(scene)).toBe(0);
+  const withScale = (value: string) =>
+    `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\ntexture_scale = ${value}`;
+
+  it('errors on texture_scale exactly 0, the one value set_texture_scale alters', () => {
+    // light_2d.cpp:444-446 replaces 0 with CMP_EPSILON, so the value in the file
+    // is not the value the engine runs: the error tier under ADR-0032.
+    expect(lintErrors(withScale('0.0'))).toBe(1);
+  });
+
+  it('only WARNS on a negative texture_scale, which Godot keeps unclamped', () => {
+    // The setter special-cases exactly 0 and nothing else, so a negative value
+    // reaches the engine intact and only the hint (light_2d.cpp:479) excludes it.
+    expect(lintErrors(withScale('-2.0'))).toBe(0);
+    expect(lintWarnings(withScale('-2.0'))).toBe(1);
+  });
+
+  it('warns past the hint ceiling of 50, also unclamped by the setter', () => {
+    expect(lintErrors(withScale('75'))).toBe(0);
+    expect(lintWarnings(withScale('75'))).toBe(1);
+  });
+
+  it('accepts both ends of the hint band', () => {
+    for (const value of ['0.01', '50', '1.5']) {
+      expect(lintErrors(withScale(value)), value).toBe(0);
+      expect(lintWarnings(withScale(value)), value).toBe(0);
+    }
   });
 
   it('accepts valid texture_scale', () => {

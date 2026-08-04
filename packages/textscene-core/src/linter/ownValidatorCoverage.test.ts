@@ -148,7 +148,7 @@ describe('own-validator coverage', () => {
   it('never lets the undeclared list grow', () => {
     // The ratchet: a new gap cannot be waved through by appending to the list.
     // Each decrement is a type whose properties stopped being silently accepted.
-    expect(UNDECLARED.length).toBeLessThanOrEqual(16);
+    expect(UNDECLARED.length).toBeLessThanOrEqual(12);
   });
 
   it('declares validators for Button, whose 13 members were the trigger', () => {

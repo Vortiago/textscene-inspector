@@ -34,7 +34,15 @@ export function createEnumValidator(
    * error unconditionally: an unparseable value is malformed whatever the
    * engine does with it.
    */
-  valueSeverity: ParseError['severity'] = 'error'
+  valueSeverity: ParseError['severity'] = 'error',
+  /**
+   * Severity of the MAX branch, defaulting to the min's. Separate for the same
+   * reason `createNumericRangeValidator` splits them: an enum can have an
+   * enforced floor and a merely hinted ceiling, and collapsing the two to a
+   * single severity reported an ERROR for a value only the inspector hint
+   * excludes.
+   */
+  maxSeverity: ParseError['severity'] = valueSeverity
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
     const num = parseInt(value, 10);
@@ -45,7 +53,13 @@ export function createEnumValidator(
       const validValuesStr = Object.entries(enumValues)
         .map(([val, name]) => `${val}=${name}`)
         .join(', ');
-      return propertyError(key, line, `Property '${propertyName}' must be ${min}-${max} (got ${num}). Valid values: ${validValuesStr}`, errorCodeValue, valueSeverity);
+      return propertyError(
+        key,
+        line,
+        `Property '${propertyName}' must be ${min}-${max} (got ${num}). Valid values: ${validValuesStr}`,
+        errorCodeValue,
+        num < min ? valueSeverity : maxSeverity
+      );
     }
     return null;
   };

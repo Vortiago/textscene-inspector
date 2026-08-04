@@ -126,7 +126,18 @@ function matchesIndexedKey(key: string, prefix: string): boolean {
   const slash = key.lastIndexOf('/');
   // The leaf must be non-empty, and the index must sit between the two.
   if (slash <= prefix.length || slash === key.length - 1) return false;
-  for (let i = prefix.length; i < slash; i++) {
+
+  // A LEADING SIGN IS PART OF THE INDEX, matching `String::is_valid_int()`,
+  // which is what the engine tests before it looks at the value
+  // (property_list_helper.cpp:52-58: `is_valid_int()` first, THEN `index < 0`).
+  // Rejecting the sign here instead routed `item_-1/text` to no validator at
+  // all, so the dispatcher's negative-index diagnostic could never fire and a
+  // key Godot silently drops was reported clean.
+  let i = prefix.length;
+  const first = key.charCodeAt(i);
+  if (first === 45 || first === 43) i++;
+  if (i === slash) return false; // a sign with no digits is not an int
+  for (; i < slash; i++) {
     const code = key.charCodeAt(i);
     if (code < 48 || code > 57) return false;
   }
@@ -277,7 +288,11 @@ export class ValidatorRegistry {
 
       // Removals and validators resolve in ONE walk: this is the hottest path
       // in the linter, reached for every property of every node.
-      const removal = this.unavailable.get(type)?.[propertyKey];
+      const removals = this.unavailable.get(type);
+      const removal =
+        removals && Object.prototype.hasOwnProperty.call(removals, propertyKey)
+          ? removals[propertyKey]
+          : undefined;
       if (removal !== undefined) return unavailableValidator(nodeType, removal);
 
       // Checked after the removal at the SAME hop, and before moving up: a
@@ -308,9 +323,13 @@ export class ValidatorRegistry {
       return null;
     }
 
-    // Try exact match first
-    if (nodeValidators[propertyKey]) {
-      return nodeValidators[propertyKey];
+    // Exact match first. `hasOwnProperty`, not a bare index: a node carrying
+    // `toString = 5` would otherwise resolve `Object.prototype.toString`, which
+    // is truthy, and the caller would push its return value into the diagnostic
+    // list in place of a ParseError.
+    if (Object.prototype.hasOwnProperty.call(nodeValidators, propertyKey)) {
+      const exact = nodeValidators[propertyKey];
+      if (exact) return exact;
     }
 
     // Then the wildcards, over a list that holds ONLY wildcards with their
@@ -363,7 +382,11 @@ export class ValidatorRegistry {
 const unavailableValidators = new Map<string, PropertyValidator>();
 
 function unavailableValidator(nodeType: string, removal: Removal): PropertyValidator {
-  const cacheKey = `${nodeType}\u0000${removal.reason}`;
+  // The CITE is part of the identity, not just the reason: the validator now
+  // records `grounding.cite`, so two removals on one type sharing a reason but
+  // citing different lines would otherwise both get whichever was memoised
+  // first, and the second would report a citation for the wrong guard.
+  const cacheKey = `${nodeType}\u0000${removal.reason}\u0000${removal.cite}`;
   const cached = unavailableValidators.get(cacheKey);
   if (cached) return cached;
   const validator: PropertyValidator = (key, _value, line) =>

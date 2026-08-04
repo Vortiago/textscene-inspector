@@ -225,6 +225,44 @@ describe('per-end grounding', () => {
     expect(intV('sides', '2', 1)?.severity).toBe('error');
     expect(intV('sides', '65', 1)?.severity).toBe('warning');
   });
+
+  it('splits enumInt per end too, which used to collapse to error', () => {
+    // `boundSeverity` returned 'warning' only when BOTH ends were hinted, so an
+    // enforced floor made the whole bound error, ceiling included.
+    const split = v.enumInt(
+      'mode',
+      1,
+      3,
+      { 1: 'A', 2: 'B', 3: 'C' },
+      { enforced: { min: 'x.cpp:10' }, hinted: { max: 'x.cpp:11' } }
+    );
+    expect(split('mode', '0', 1)?.severity).toBe('error');
+    expect(split('mode', '4', 1)?.severity).toBe('warning');
+  });
+
+  it('splits boundedVector3 per end too', () => {
+    const split = v.boundedVector3('size', {
+      min: 0.01,
+      max: 1024,
+      enforced: { min: 'gpu_particles_collision_3d.cpp:97' },
+      hinted: { max: 'gpu_particles_collision_3d.cpp:101' },
+    });
+    expect(split('size', 'Vector3(0, 1, 1)', 1)?.severity).toBe('error');
+    expect(split('size', 'Vector3(2048, 1, 1)', 1)?.severity).toBe('warning');
+  });
+
+  it('keeps BOTH citations when the ends are grounded differently', () => {
+    // Recording only the enforced one discarded the hinted end's file:line, so
+    // the citation sweep could never check it.
+    const split = v.float('extra_cull_margin', {
+      min: 0,
+      max: 16384,
+      enforced: { min: 'visual_instance_3d.cpp:377' },
+      hinted: { max: 'visual_instance_3d.cpp:602' },
+    });
+    expect(split.grounding?.cite).toContain('visual_instance_3d.cpp:377');
+    expect(split.grounding?.cite).toContain('visual_instance_3d.cpp:602');
+  });
 });
 
 describe('the classification guard bites', () => {
