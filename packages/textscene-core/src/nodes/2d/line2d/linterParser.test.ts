@@ -53,4 +53,24 @@ width = wide
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]!.message).toContain('width');
   });
+
+  describe('ADR-0032 tiering', () => {
+    it('errors below the enforced round_precision floor (line_2d.cpp:255-256)', () => {
+      const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\nround_precision = 0\n`;
+      const found = linter.lint(content).find((d) => d.message.includes('round_precision'));
+      expect(found?.severity).toBe('error');
+    });
+
+    it('warns above the hinted round_precision ceiling (line_2d.cpp:409)', () => {
+      const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\nround_precision = 64\n`;
+      const found = linter.lint(content).find((d) => d.message.includes('round_precision'));
+      expect(found?.severity).toBe('warning');
+    });
+
+    it('warns on an out-of-range joint_mode (line_2d.cpp:404, no ERR_FAIL_INDEX)', () => {
+      const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\njoint_mode = 9\n`;
+      const found = linter.lint(content).find((d) => d.message.includes('joint_mode'));
+      expect(found?.severity).toBe('warning');
+    });
+  });
 });

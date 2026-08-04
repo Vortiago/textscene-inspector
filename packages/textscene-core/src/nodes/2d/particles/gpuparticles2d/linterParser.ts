@@ -9,6 +9,16 @@
  * Every `ADD_PROPERTY` in `gpu_particles_2d.cpp`'s `_bind_methods` has a
  * non-empty setter and no `PROPERTY_USAGE_NONE`, so all 26 of GPUParticles2D's
  * own members get a validator here except `draw_order` (see its comment below).
+ *
+ * Per ADR-0032, the setter decides whether an out-of-range value is an ERROR
+ * (it `ERR_FAIL`s, clamps, or otherwise refuses the write) or a WARNING (the
+ * hint states a range but the setter assigns straight through). An earlier
+ * version of this file's comments read the opposite priority — "the hint's own
+ * floor governs, not the looser setter" — which is why `lifetime` and
+ * `amount`'s ceiling were wrong: `lifetime` rejected `(0, 0.01)`, a range
+ * Godot's own setter accepts, and `amount`'s 1000000 ceiling was coded as a
+ * hard error though nothing enforces it engine-side. Every bound below is
+ * grounded against the setter, not the hint, and cites its `file:line`.
  */
 
 import '../../../base/node2d/linterParser.js';
@@ -19,13 +29,21 @@ validatorRegistry.registerAll('GPUParticles2D', {
   emitting: v.boolean('emitting'),
 
   // gpu_particles_2d.cpp:942 hints "1,1000000,1,exp" — no `or_greater`/`or_less`,
-  // so both ends are hard. set_amount (gpu_particles_2d.cpp:72) only
-  // ERR_FAILs below 1; the upper bound is hint-only, never setter-enforced.
-  amount: v.int('amount', { min: 1, max: 1000000 }),
+  // so the hint is hard both ends. set_amount (gpu_particles_2d.cpp:71-72) only
+  // ERR_FAILs below 1; the 1000000 ceiling is never setter-enforced, so it is
+  // a warning, not an error. `strictInt` (not `int`) because only it wires a
+  // per-end severity through to the underlying validator.
+  amount: v.strictInt('amount', {
+    min: 1,
+    max: 1000000,
+    enforced: { min: 'gpu_particles_2d.cpp:71' },
+    hinted: { max: 'gpu_particles_2d.cpp:942' },
+  }),
 
   // gpu_particles_2d.cpp:943 hints "0,1,0.0001" — no `or_greater`/`or_less`,
-  // hard both ends. set_amount_ratio (line 484) assigns unconditionally.
-  amount_ratio: v.float('amount_ratio', { min: 0, max: 1 }),
+  // hard both ends. set_amount_ratio (gpu_particles_2d.cpp:484-486) assigns
+  // unconditionally, so out of range is a warning.
+  amount_ratio: v.float('amount_ratio', { min: 0, max: 1, hinted: 'gpu_particles_2d.cpp:943' }),
 
   // gpu_particles_2d.cpp:944, PROPERTY_HINT_NODE_PATH_VALID_TYPES restricts
   // the target to GPUParticles2D, but that needs the live scene tree to check
@@ -36,51 +54,58 @@ validatorRegistry.registerAll('GPUParticles2D', {
   // gpu_particles_2d.cpp:945, PROPERTY_HINT_RESOURCE_TYPE "Texture2D".
   texture: v.resourceReference('texture'),
 
-  // gpu_particles_2d.cpp:947 hints "0.01,600.0,0.01,or_greater,exp,suffix:s" —
-  // `or_greater` makes 600 a soft editor ceiling (not capped); 0.01 has no
-  // `or_less`, so it's the hard floor. set_lifetime (line 77) only
-  // ERR_FAILs at <= 0, but the hint's own floor governs per the mechanical
-  // rule, not the looser setter.
-  lifetime: v.float('lifetime', { min: 0.01 }),
+  // gpu_particles_2d.cpp:947 hints "0.01,600.0,0.01,or_greater,exp,suffix:s",
+  // but set_lifetime (gpu_particles_2d.cpp:77-78) ERR_FAILs at `<= 0`, not at
+  // the hint's 0.01 — the setter governs, so the real floor is `> 0`.
+  lifetime: v.positiveFloat('lifetime', undefined, { enforced: 'gpu_particles_2d.cpp:77' }),
 
   // gpu_particles_2d.cpp:948 hints "0.00,1.0,0.001" — no `or_greater`/`or_less`,
-  // hard both ends. set_interp_to_end (line 210) CLAMPs to [0, 1], confirming it.
-  interp_to_end: v.float('interp_to_end', { min: 0, max: 1 }),
+  // hard both ends. set_interp_to_end (gpu_particles_2d.cpp:210-211) CLAMPs to
+  // [0, 1], confirming it as an enforced error.
+  interp_to_end: v.float('interp_to_end', { min: 0, max: 1, enforced: 'gpu_particles_2d.cpp:210' }),
 
   one_shot: v.boolean('one_shot'),
 
   // gpu_particles_2d.cpp:950 hints "0.00,10.0,0.01,or_greater,exp,suffix:s" —
-  // `or_greater` makes 10 a soft ceiling; 0.00 is the hard floor.
-  // set_pre_process_time (line 99) assigns unconditionally.
-  preprocess: v.nonNegativeFloat('preprocess'),
+  // `or_greater` makes 10 a soft ceiling, so only the 0.00 floor is checked;
+  // set_pre_process_time (gpu_particles_2d.cpp:99-101) assigns unconditionally.
+  preprocess: v.nonNegativeFloat('preprocess', { hinted: 'gpu_particles_2d.cpp:950' }),
 
   // gpu_particles_2d.cpp:951 hints "0,64,0.01" — no `or_greater`/`or_less`,
-  // hard both ends. set_speed_scale (line 252) assigns unconditionally.
-  speed_scale: v.float('speed_scale', { min: 0, max: 64 }),
+  // hard both ends. set_speed_scale (gpu_particles_2d.cpp:252-254) assigns
+  // unconditionally.
+  speed_scale: v.float('speed_scale', { min: 0, max: 64, hinted: 'gpu_particles_2d.cpp:951' }),
 
-  // gpu_particles_2d.cpp:952 hints "0,1,0.01" — hard both ends.
-  explosiveness: v.float('explosiveness', { min: 0, max: 1 }),
+  // gpu_particles_2d.cpp:952 hints "0,1,0.01" — hard both ends;
+  // set_explosiveness_ratio (gpu_particles_2d.cpp:104-106) assigns unconditionally.
+  explosiveness: v.float('explosiveness', { min: 0, max: 1, hinted: 'gpu_particles_2d.cpp:952' }),
 
-  // gpu_particles_2d.cpp:953 hints "0,1,0.01" — hard both ends.
-  randomness: v.float('randomness', { min: 0, max: 1 }),
+  // gpu_particles_2d.cpp:953 hints "0,1,0.01" — hard both ends;
+  // set_randomness_ratio (gpu_particles_2d.cpp:109-111) assigns unconditionally.
+  randomness: v.float('randomness', { min: 0, max: 1, hinted: 'gpu_particles_2d.cpp:953' }),
 
   use_fixed_seed: v.boolean('use_fixed_seed'),
 
   // gpu_particles_2d.cpp:955 hints "0," + UINT32_MAX + ",1" = "0,4294967295,1" —
-  // no `or_greater`/`or_less`, hard both ends (matches the uint32_t storage).
-  seed: v.int('seed', { min: 0, max: 4294967295 }),
+  // no `or_greater`/`or_less`, hard both ends. set_seed
+  // (gpu_particles_2d.cpp:360-362) assigns unconditionally — the uint32_t
+  // param coerces an out-of-range value rather than rejecting it, so this is
+  // hinted, not enforced.
+  seed: v.int('seed', { min: 0, max: 4294967295, hinted: 'gpu_particles_2d.cpp:955' }),
 
   // gpu_particles_2d.cpp:956 hints "0,1000,1,suffix:FPS" — no
-  // `or_greater`/`or_less`, hard both ends. set_fixed_fps (line 317) assigns
-  // unconditionally; the hint alone governs.
-  fixed_fps: v.int('fixed_fps', { min: 0, max: 1000 }),
+  // `or_greater`/`or_less`, hard both ends. set_fixed_fps
+  // (gpu_particles_2d.cpp:317-319) assigns unconditionally.
+  fixed_fps: v.int('fixed_fps', { min: 0, max: 1000, hinted: 'gpu_particles_2d.cpp:956' }),
 
   interpolate: v.boolean('interpolate'),
   fract_delta: v.boolean('fract_delta'),
 
   // gpu_particles_2d.cpp:960 hints "0,128,0.01,or_greater" — `or_greater`
-  // makes 128 a soft ceiling; 0 is the hard floor.
-  collision_base_size: v.nonNegativeFloat('collision_base_size'),
+  // makes 128 a soft ceiling, so only the 0 floor is checked;
+  // set_collision_base_size (gpu_particles_2d.cpp:243-246) assigns
+  // unconditionally.
+  collision_base_size: v.nonNegativeFloat('collision_base_size', { hinted: 'gpu_particles_2d.cpp:960' }),
 
   // gpu_particles_2d.cpp:962, PROPERTY_HINT_NONE ("suffix:px" only) — per the
   // brief, HINT_NONE carries no range at all, so only the Rect2(...) shape
@@ -105,19 +130,23 @@ validatorRegistry.registerAll('GPUParticles2D', {
 
   // gpu_particles_2d.cpp:967 hints "0.01,10,0.01,or_greater,suffix:s" —
   // `or_greater` makes 10 a soft ceiling; 0.01 is the hard floor.
-  // set_trail_lifetime (line 187) ERR_FAILs below `0.01 - CMP_EPSILON`,
-  // confirming the floor.
-  trail_lifetime: v.float('trail_lifetime', { min: 0.01 }),
+  // set_trail_lifetime (gpu_particles_2d.cpp:187-188) ERR_FAILs below
+  // `0.01 - CMP_EPSILON`, confirming the floor as an enforced error.
+  trail_lifetime: v.float('trail_lifetime', { min: 0.01, enforced: 'gpu_particles_2d.cpp:187' }),
 
   // gpu_particles_2d.cpp:968 hints "2,128,1" — no `or_greater`/`or_less`.
-  // set_trail_sections (line 194) ERR_FAILs outside [2, 128], confirming both
-  // ends are hard.
-  trail_sections: v.int('trail_sections', { min: 2, max: 128 }),
+  // set_trail_sections (gpu_particles_2d.cpp:194-197) ERR_FAILs outside
+  // [2, 128], confirming both ends are enforced errors.
+  trail_sections: v.int('trail_sections', { min: 2, max: 128, enforced: 'gpu_particles_2d.cpp:194' }),
 
   // gpu_particles_2d.cpp:969 hints "1,1024,1" — no `or_greater`/`or_less`.
-  // set_trail_section_subdivisions (line 202) ERR_FAILs outside [1, 1024],
-  // confirming both ends are hard.
-  trail_section_subdivisions: v.int('trail_section_subdivisions', { min: 1, max: 1024 }),
+  // set_trail_section_subdivisions (gpu_particles_2d.cpp:202-205) ERR_FAILs
+  // outside [1, 1024], confirming both ends are enforced errors.
+  trail_section_subdivisions: v.int('trail_section_subdivisions', {
+    min: 1,
+    max: 1024,
+    enforced: 'gpu_particles_2d.cpp:202',
+  }),
 
   // gpu_particles_2d.cpp:971, PROPERTY_HINT_RESOURCE_TYPE
   // "ParticleProcessMaterial,ShaderMaterial".

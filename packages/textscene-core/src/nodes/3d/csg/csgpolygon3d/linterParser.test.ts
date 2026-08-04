@@ -10,6 +10,10 @@ function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
   return diagnostics.filter((d) => d.severity === 'error');
 }
 
+function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
+  return diagnostics.filter((d) => d.severity === 'warning');
+}
+
 function scene(body: string): string {
   return `[gd_scene format=3]\n\n[node name="P" type="CSGPolygon3D"]\n${body}\n`;
 }
@@ -67,21 +71,42 @@ describe('CSGPolygon3D strict validators', () => {
   });
 
   it.each([
-    ['mode = 3', 'mode'],
+    // csg_shape.cpp:2651, ERR_FAIL_COND(p_depth < 0.001): enforced floor.
     ['depth = 0', 'depth'],
+    // csg_shape.cpp:2681, ERR_FAIL_COND(p_spin_degrees < 0.01 || > 360):
+    // enforced both ends.
     ['spin_degrees = 0', 'spin_degrees'],
     ['spin_degrees = 361', 'spin_degrees'],
+    // csg_shape.cpp:2692, ERR_FAIL_COND(p_spin_sides < 3): enforced floor.
     ['spin_sides = 2', 'spin_sides'],
-    ['path_rotation = 3', 'path_rotation'],
-    ['path_interval_type = 2', 'path_interval_type'],
-    ['path_simplify_angle = 181', 'path_simplify_angle'],
     ['path_node = "notapath"', 'path_node'],
-    ['operation = 5', 'operation'],
     ['material = "not-a-resource"', 'material'],
   ])('rejects %s', (line, property) => {
     const errors = errorsOf(linter.lint(scene(line)));
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.some((e) => e.message.includes(property))).toBe(true);
+  });
+
+  it.each([
+    // set_mode:2639-2645 is a bare assignment; the hint (:2600) is advisory.
+    ['mode = 3', 'mode'],
+    // set_path_rotation:2743-2748 is a bare assignment; the hint (:2608) is
+    // advisory.
+    ['path_rotation = 3', 'path_rotation'],
+    // set_path_interval_type:2711-2714 is a bare assignment; the hint (:2605)
+    // is advisory.
+    ['path_interval_type = 2', 'path_interval_type'],
+    // set_path_simplify_angle:2728-2732 is a bare assignment; the hint
+    // (:2607) is advisory.
+    ['path_simplify_angle = 181', 'path_simplify_angle'],
+    // csg_shape.cpp:1040 hints the operation enum but set_operation:933-937
+    // is a bare assignment.
+    ['operation = 5', 'operation'],
+  ])('warns (not errors) on %s', (line, property) => {
+    const content = scene(line);
+    expect(errorsOf(linter.lint(content))).toEqual([]);
+    const warnings = warningsOf(linter.lint(content));
+    expect(warnings.some((w) => w.message.includes(property))).toBe(true);
   });
 
   it('accepts path_u_distance = 0, which Godot allows and means no U scaling', () => {

@@ -62,8 +62,10 @@ describe('PhysicalBone3D strict validators', () => {
       expect(check('joint_type', String(n))).toBeNull();
     });
 
-    it('rejects a value past the last constant', () => {
-      expect(check('joint_type', '6')?.code).toBe('INVALID_JOINT_TYPE_VALUE');
+    it('warns past the last constant rather than erroring (set_joint_type has no ERR_FAIL)', () => {
+      const error = check('joint_type', '6');
+      expect(error?.code).toBe('INVALID_JOINT_TYPE_VALUE');
+      expect(error?.severity).toBe('warning');
     });
 
     it('rejects a non-numeric value', () => {
@@ -168,9 +170,14 @@ describe('PhysicalBone3D strict validators', () => {
       expect(check(prop, '1')).toBeNull();
     });
 
-    it.each(['linear_damp_mode', 'angular_damp_mode'])('rejects a value past the last constant for %s', (prop) => {
-      expect(check(prop, '2')?.code).toBe(`INVALID_${prop.toUpperCase()}_VALUE`);
-    });
+    it.each(['linear_damp_mode', 'angular_damp_mode'])(
+      'warns past the last constant for %s rather than erroring (bare assignment)',
+      (prop) => {
+        const error = check(prop, '2');
+        expect(error?.code).toBe(`INVALID_${prop.toUpperCase()}_VALUE`);
+        expect(error?.severity).toBe('warning');
+      }
+    );
   });
 
   describe('linear_damp / angular_damp', () => {
@@ -196,16 +203,24 @@ describe('PhysicalBone3D strict validators', () => {
     });
   });
 
+  // Every JointData subclass's _set stores the value unconditionally (only
+  // the PhysicsServer3D forwarding call is gated on the live joint type), so
+  // every bound in this describe block is hinted, not enforced: out-of-range
+  // warns rather than errors.
   describe('joint_constraints/* — flat leaves (Pin/Cone/Hinge/Slider)', () => {
     // PinJointData::_get_property_list — physical_bone_3d.cpp:160-162
-    it('accepts and bounds damping (Pin: 0.01-8.0)', () => {
+    it('warns past damping 0.01-8.0 (Pin) rather than erroring', () => {
       expect(check('joint_constraints/damping', '1.0')).toBeNull();
-      expect(check('joint_constraints/damping', '9')?.code).toBe('INVALID_DAMPING_VALUE');
+      const error = check('joint_constraints/damping', '9');
+      expect(error?.code).toBe('INVALID_DAMPING_VALUE');
+      expect(error?.severity).toBe('warning');
     });
 
-    it('accepts and bounds impulse_clamp (Pin: 0.0-64.0)', () => {
+    it('warns past impulse_clamp 0.0-64.0 (Pin) rather than erroring', () => {
       expect(check('joint_constraints/impulse_clamp', '0')).toBeNull();
-      expect(check('joint_constraints/impulse_clamp', '65')?.code).toBe('INVALID_IMPULSE_CLAMP_VALUE');
+      const error = check('joint_constraints/impulse_clamp', '65');
+      expect(error?.code).toBe('INVALID_IMPULSE_CLAMP_VALUE');
+      expect(error?.severity).toBe('warning');
     });
 
     // bias is registered by both PinJointData (0.01-0.99, line 160) and
@@ -215,41 +230,49 @@ describe('PhysicalBone3D strict validators', () => {
       expect(check('joint_constraints/bias', '5.0')).toBeNull();
     });
 
-    it('rejects a bias value below either bound', () => {
-      expect(check('joint_constraints/bias', '0')?.code).toBe('INVALID_BIAS_VALUE');
+    it('warns on a bias value below either bound rather than erroring', () => {
+      const error = check('joint_constraints/bias', '0');
+      expect(error?.code).toBe('INVALID_BIAS_VALUE');
+      expect(error?.severity).toBe('warning');
     });
 
     // ConeJointData::_get_property_list — physical_bone_3d.cpp:233-237
-    it('accepts and bounds swing_span (-180 to 180)', () => {
+    it('warns past swing_span -180 to 180 rather than erroring', () => {
       expect(check('joint_constraints/swing_span', '19.999992')).toBeNull();
-      expect(check('joint_constraints/swing_span', '200')?.code).toBe('INVALID_SWING_SPAN_VALUE');
+      const error = check('joint_constraints/swing_span', '200');
+      expect(error?.code).toBe('INVALID_SWING_SPAN_VALUE');
+      expect(error?.severity).toBe('warning');
     });
 
     it('accepts twist_span past its soft-bounded range (both or_less and or_greater)', () => {
       expect(check('joint_constraints/twist_span', '50000')).toBeNull();
     });
 
-    it('accepts and bounds softness and relaxation (0.01-16.0)', () => {
+    it('warns past softness and relaxation 0.01-16.0 rather than erroring', () => {
       expect(check('joint_constraints/softness', '0.8')).toBeNull();
-      expect(check('joint_constraints/softness', '17')?.code).toBe('INVALID_SOFTNESS_VALUE');
+      const softness = check('joint_constraints/softness', '17');
+      expect(softness?.code).toBe('INVALID_SOFTNESS_VALUE');
+      expect(softness?.severity).toBe('warning');
       expect(check('joint_constraints/relaxation', '1.0')).toBeNull();
-      expect(check('joint_constraints/relaxation', '17')?.code).toBe('INVALID_RELAXATION_VALUE');
+      const relaxation = check('joint_constraints/relaxation', '17');
+      expect(relaxation?.code).toBe('INVALID_RELAXATION_VALUE');
+      expect(relaxation?.severity).toBe('warning');
     });
 
     // HingeJointData::_get_property_list — physical_bone_3d.cpp:316-321
-    it('accepts and bounds the hinge angular_limit_* leaves', () => {
+    it('warns past the hinge angular_limit_* bounds rather than erroring', () => {
       expect(check('joint_constraints/angular_limit_enabled', 'true')).toBeNull();
       expect(check('joint_constraints/angular_limit_enabled', 'yes')?.code).toBe(
         'INVALID_ANGULAR_LIMIT_ENABLED_FORMAT'
       );
       expect(check('joint_constraints/angular_limit_upper', '90')).toBeNull();
-      expect(check('joint_constraints/angular_limit_upper', '181')?.code).toBe(
-        'INVALID_ANGULAR_LIMIT_UPPER_VALUE'
-      );
+      const upper = check('joint_constraints/angular_limit_upper', '181');
+      expect(upper?.code).toBe('INVALID_ANGULAR_LIMIT_UPPER_VALUE');
+      expect(upper?.severity).toBe('warning');
       expect(check('joint_constraints/angular_limit_bias', '0.3')).toBeNull();
-      expect(check('joint_constraints/angular_limit_bias', '1.0')?.code).toBe(
-        'INVALID_ANGULAR_LIMIT_BIAS_VALUE'
-      );
+      const bias = check('joint_constraints/angular_limit_bias', '1.0');
+      expect(bias?.code).toBe('INVALID_ANGULAR_LIMIT_BIAS_VALUE');
+      expect(bias?.severity).toBe('warning');
     });
 
     // SliderJointData::_get_property_list — physical_bone_3d.cpp:432-442
@@ -258,15 +281,15 @@ describe('PhysicalBone3D strict validators', () => {
       expect(check('joint_constraints/linear_limit_lower', '-99999')).toBeNull();
     });
 
-    it('accepts and bounds linear_limit_damping / angular_limit_damping (0-16.0)', () => {
+    it('warns past linear_limit_damping / angular_limit_damping 0-16.0 rather than erroring', () => {
       expect(check('joint_constraints/linear_limit_damping', '0')).toBeNull();
-      expect(check('joint_constraints/linear_limit_damping', '17')?.code).toBe(
-        'INVALID_LINEAR_LIMIT_DAMPING_VALUE'
-      );
+      const linear = check('joint_constraints/linear_limit_damping', '17');
+      expect(linear?.code).toBe('INVALID_LINEAR_LIMIT_DAMPING_VALUE');
+      expect(linear?.severity).toBe('warning');
       expect(check('joint_constraints/angular_limit_damping', '16')).toBeNull();
-      expect(check('joint_constraints/angular_limit_damping', '-1')?.code).toBe(
-        'INVALID_ANGULAR_LIMIT_DAMPING_VALUE'
-      );
+      const angular = check('joint_constraints/angular_limit_damping', '-1');
+      expect(angular?.code).toBe('INVALID_ANGULAR_LIMIT_DAMPING_VALUE');
+      expect(angular?.severity).toBe('warning');
     });
   });
 
@@ -288,11 +311,11 @@ describe('PhysicalBone3D strict validators', () => {
       expect(check('joint_constraints/z/erp', '-99999')).toBeNull();
     });
 
-    it('bounds axis-prefixed angular_limit_upper the same as the flat Hinge leaf', () => {
+    it('bounds axis-prefixed angular_limit_upper the same as the flat Hinge leaf, and warns rather than errors', () => {
       expect(check('joint_constraints/x/angular_limit_upper', '90')).toBeNull();
-      expect(check('joint_constraints/x/angular_limit_upper', '181')?.code).toBe(
-        'INVALID_ANGULAR_LIMIT_UPPER_VALUE'
-      );
+      const error = check('joint_constraints/x/angular_limit_upper', '181');
+      expect(error?.code).toBe('INVALID_ANGULAR_LIMIT_UPPER_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 

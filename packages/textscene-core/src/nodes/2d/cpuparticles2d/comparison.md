@@ -126,8 +126,8 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `emission_normals` | PackedVector2Array(x, y, …) — even count |
 | `emission_points` | PackedVector2Array(x, y, …) — even count |
 | `emission_rect_extents` | Vector2(x, y) |
-| `emission_ring_inner_radius` | float >= 0 |
-| `emission_ring_radius` | float >= 0 |
+| `emission_ring_inner_radius` | float |
+| `emission_ring_radius` | float |
 | `emission_shape` | enum 0-6 (POINT/SPHERE/SPHERE_SURFACE/RECTANGLE/POINTS/DIRECTED_POINTS/RING) |
 | `emission_sphere_radius` | float >= 0 |
 | `emitting` | true or false |

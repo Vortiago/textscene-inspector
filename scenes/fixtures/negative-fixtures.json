@@ -1,0 +1,8 @@
+{
+  "comment": "Fixtures that MUST produce at least one lint error. Each is an app-shell or extension integration fixture: a really broken file the VS Code integration suite opens, and that docs/user-guide-web.md walks a user through to demonstrate the parse-error banner. Read by linter/fixtureLint.test.ts (which asserts they DO error) and by lint-staged.config.mjs (which must not fail the commit when they do). A linter red test does not belong here: assert the validator or rule directly.",
+  "files": [
+    "edge-invalid-cast-shadow.tscn",
+    "edge-invalid-transform.tscn",
+    "edge-malformed-bracket.tscn"
+  ]
+}

@@ -19,10 +19,16 @@ validatorRegistry.registerAll('GPUParticlesAttractor3D', {
   // "-128,128,0.01,or_greater,or_less": both ends soft, so no bound. A negative
   // strength repels rather than attracts.
   strength: v.float('strength'),
-  // :901, PROPERTY_HINT_EXP_EASING. An easing-curve editor carries no range.
-  attenuation: v.nonNegativeFloat('attenuation'),
+  // :901, PROPERTY_HINT_EXP_EASING "0,8,0.01". set_attenuation:868-871 is a
+  // bare assignment.
+  attenuation: v.nonNegativeFloat('attenuation', { hinted: 'gpu_particles_collision_3d.cpp:901' }),
   // :902, PROPERTY_HINT_RANGE "0,1,0.01", no or_greater: a hard 0-1.
-  directionality: v.float('directionality', { min: 0, max: 1 }),
+  // set_directionality:877-881 is a bare assignment.
+  directionality: v.float('directionality', {
+    min: 0,
+    max: 1,
+    hinted: 'gpu_particles_collision_3d.cpp:902',
+  }),
   // :903, PROPERTY_HINT_LAYERS_3D_RENDER.
-  cull_mask: layerBitmask('cull_mask'),
+  cull_mask: layerBitmask('cull_mask', { hinted: 'gpu_particles_collision_3d.cpp:51' }),
 });

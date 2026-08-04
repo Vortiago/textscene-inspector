@@ -45,7 +45,7 @@ Strict parsing format-checks these `TileMap` properties, plus 12 inherited from 
 
 | Property | Accepts |
 | --- | --- |
-| `format` | integer >= 0 |
+| `format` | integer |
 | `tile_set` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |

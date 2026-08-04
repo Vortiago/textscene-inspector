@@ -36,10 +36,13 @@ describe('NavigationAgent3D strict validators', () => {
     });
   });
 
-  it('rejects a negative max_neighbors', () => {
+  it('warns on a negative max_neighbors', () => {
+    // navigation_agent_3d.cpp:655-663 is a bare assignment (no ERR_FAIL), and the
+    // hint's floor (1,10000,1,or_greater at :176) is advisory only, so this is a
+    // warning rather than an error.
     expectDiagnostic(scene(node('NavigationAgent3D', { max_neighbors: -1 })), {
       prop: 'max_neighbors',
-      severity: 'error',
+      severity: 'warning',
     });
   });
 });

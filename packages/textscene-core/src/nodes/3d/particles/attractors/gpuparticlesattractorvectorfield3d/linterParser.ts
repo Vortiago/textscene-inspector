@@ -14,9 +14,9 @@ import { v } from '../../../../../linter/validators/index.js';
 validatorRegistry.registerAll('GPUParticlesAttractorVectorField3D', {
   // gpu_particles_collision_3d.cpp:1003, PROPERTY_HINT_RANGE
   // "0.01,1024,0.01,or_greater,suffix:m": `or_greater` softens only the stated
-  // max, so 1024 is not a cap; the min carries no `or_less`, so 0.01 is a hard
-  // floor on every component.
-  size: v.boundedVector3('size', { min: 0.01 }),
+  // max, so 1024 is not a cap; the min carries no `or_less`, so 0.01 is the
+  // hint's floor. set_size:1025-1029 is a bare assignment, so it is a warning.
+  size: v.boundedVector3('size', { min: 0.01, hinted: 'gpu_particles_collision_3d.cpp:1003' }),
   // :1004, PROPERTY_HINT_RESOURCE_TYPE "Texture3D": a resource reference, not a
   // numeric hint, so the check is format-only.
   texture: v.resourceReference('texture'),

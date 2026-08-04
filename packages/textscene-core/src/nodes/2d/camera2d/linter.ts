@@ -9,11 +9,6 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { makeFloatTupleRegex } from '../../../linter/validators/index.js';
-
-// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
-// the Camera2D linterParser and the renderer.
-const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 
 /**
  * Count enabled Camera2D nodes in the scene
@@ -75,26 +70,6 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
   // Type guard for remaining validations (skip if no properties)
   if (!isValidProperties(node.properties)) {
     return diagnostics;
-  }
-
-  // Validate zoom components (parsed value check for semantic validation)
-  if (rawProps.zoom !== undefined) {
-    const match = rawProps.zoom.match(VECTOR2_REGEX);
-    if (match && match[1] && match[2]) {
-      const x = parseFloat(match[1]);
-      const y = parseFloat(match[2]);
-
-      // Already checked in linterParser, but double-check for semantic context
-      if (x <= 0 || y <= 0) {
-        diagnostics.push({
-          severity: 'error',
-          message: `Camera2D 'zoom' components must be positive (got Vector2(${x}, ${y})). Zero or negative zoom will cause rendering issues.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'camera2d-invalid-zoom',
-        });
-      }
-    }
   }
 
   // Validate limit consistency
@@ -235,7 +210,6 @@ const camera2DValidationRule: LintRule = {
     applicableNodeTypes: ['Camera2D'],
     emits: [
       { ruleName: 'camera2d-multiple-enabled', severity: 'warning' },
-      { ruleName: 'camera2d-invalid-zoom', severity: 'error' },
       { ruleName: 'camera2d-invalid-horizontal-limits', severity: 'warning' },
       { ruleName: 'camera2d-invalid-vertical-limits', severity: 'warning' },
       { ruleName: 'camera2d-smoothing-speed-missing', severity: 'warning' },

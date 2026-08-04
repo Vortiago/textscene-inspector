@@ -73,18 +73,23 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
 };
 
 validatorRegistry.registerAll('Skeleton3D', {
+  // skeleton_3d.cpp:585-590: `if (p_motion_scale <= 0) { motion_scale = 1; ERR_FAIL_MSG(...); }`.
   motion_scale: v.float('motion_scale', {
     min: Number.MIN_VALUE,
     message:
       "Property 'motion_scale' must be greater than 0. A value of 0 or less prevents animations from applying.",
+    enforced: 'skeleton_3d.cpp:585',
   }),
   show_rest_only: legacyBoolean('show_rest_only'),
   animate_physical_bones: legacyBoolean('animate_physical_bones'),
+  // skeleton_3d.cpp:435-441 is a bare assignment (only an equal-check early
+  // return); no engine-side range check on the raw int.
   modifier_callback_mode_process: v.enumInt(
     'modifier_callback_mode_process',
     0,
     2,
-    MODIFIER_CALLBACK_MODE
+    MODIFIER_CALLBACK_MODE,
+    { hinted: 'skeleton_3d.cpp:1297' }
   ),
   'bones/*': bonesValidator,
 });

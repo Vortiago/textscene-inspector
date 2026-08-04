@@ -38,12 +38,12 @@ Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inher
 | `avoidance_layers` | 32-bit layer mask (layers 1-32) |
 | `avoidance_mask` | 32-bit layer mask (layers 1-32) |
 | `height` | float >= 0 |
-| `max_neighbors` | integer >= 0 |
+| `max_neighbors` | integer >= 1 |
 | `max_speed` | float >= 0 |
 | `navigation_layers` | 32-bit layer mask (layers 1-32) |
-| `path_desired_distance` | float >= 0 |
+| `path_desired_distance` | float >= 0.1 |
 | `radius` | float >= 0 |
-| `target_desired_distance` | float >= 0 |
+| `target_desired_distance` | float >= 0.1 |
 | `target_position` | Vector3(x, y, z) |
 
 | Rule | Reports | Severity |

@@ -26,20 +26,29 @@ validatorRegistry.registerAll('BaseButton', {
   button_pressed: v.boolean('button_pressed'),
   // base_button.cpp:570 — PROPERTY_HINT_ENUM "Button Press,Button Release";
   // BIND_ENUM_CONSTANT ACTION_MODE_BUTTON_PRESS=0, ACTION_MODE_BUTTON_RELEASE=1
-  // (base_button.cpp:586-587).
-  action_mode: v.enumInt('action_mode', 0, 1, {
-    0: 'ACTION_MODE_BUTTON_PRESS',
-    1: 'ACTION_MODE_BUTTON_RELEASE',
-  }),
+  // (base_button.cpp:586-587). set_action_mode (base_button.cpp:386-387)
+  // assigns unconditionally, no ERR_FAIL.
+  action_mode: v.enumInt(
+    'action_mode',
+    0,
+    1,
+    {
+      0: 'ACTION_MODE_BUTTON_PRESS',
+      1: 'ACTION_MODE_BUTTON_RELEASE',
+    },
+    { hinted: 'base_button.cpp:570' }
+  ),
   // base_button.cpp:571 — PROPERTY_HINT_FLAGS "Mouse Left, Mouse Right, Mouse
   // Middle" only names 3 bits (1, 2, 4) for the editor's checkbox UI, but
   // `BaseButton::set_button_mask` (base_button.cpp:394-396) assigns the
   // BitField straight through with no CLAMP, and MouseButtonMask itself
   // extends further (MOUSE_BUTTON_MASK_MB_XBUTTON1/2 = 128/256,
   // doc/classes/@GlobalScope.xml) — a wider mask than the hint parses fine in
-  // the engine. Same call as layerBitmask.ts and PointLight2D's range_z_*:
-  // an editor-hint width is an authoring aid, not a validity bound.
-  button_mask: v.int('button_mask', { min: 0 }),
+  // the engine. PROPERTY_HINT_FLAGS is not a PROPERTY_HINT_RANGE either, so no
+  // Godot statement backs the previous `min: 0` floor — deleted, format-only
+  // (any integer) now. Same call as layerBitmask.ts and PointLight2D's
+  // range_z_*: an editor-hint width is an authoring aid, not a validity bound.
+  button_mask: v.int('button_mask'),
   // base_button.cpp:572
   keep_pressed_outside: v.boolean('keep_pressed_outside'),
   // base_button.cpp:573 — ButtonGroup resource.

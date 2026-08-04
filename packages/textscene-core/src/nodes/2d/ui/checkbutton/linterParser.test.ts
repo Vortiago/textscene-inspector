@@ -30,7 +30,10 @@ describe('CheckButton strict validators', () => {
     // is to import the nearest ancestor that registers, and Button declares 13
     // members. Importing past it would leave these unresolved in this graph.
     expect(check('alignment', '1')).toBeNull();
-    expect(check('alignment', '3')?.code).toBe('INVALID_ALIGNMENT_VALUE');
+    // 3 (FILL) is in-range since button.cpp:737-741 bare-assigns with no
+    // ERR_FAIL; -1 stays out of range, so it is the one that still proves the
+    // base-walk delivers Button's real bound rather than a bare format check.
+    expect(check('alignment', '-1')?.code).toBe('INVALID_ALIGNMENT_VALUE');
     expect(check('text', '"Sound"')).toBeNull();
   });
 

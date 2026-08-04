@@ -49,7 +49,6 @@ Strict parsing format-checks these `Area3D` properties, plus 6 inherited from Co
 | `monitorable` | true or false |
 | `monitoring` | true or false |
 | `priority` | float |
-| `space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
@@ -65,7 +64,7 @@ Strict parsing format-checks these `Area3D` properties, plus 6 inherited from Co
 
 Area3D has no `parser.ts`: the lenient path reuses `parseNode3D` unmodified,
 so none of the Area3D-specific properties the strict validators cover
-(`monitoring`, `space_override`, the gravity and damp settings,
+(`monitoring`, the gravity and damp settings,
 `collision_layer`/`collision_mask`, `audio_bus_name`, `priority`) are ever
 read. The transform-only render needs none of them, so there is nothing to
 substitute.

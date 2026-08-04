@@ -145,12 +145,22 @@ export function accepts(validator: PropertyValidator, description: string): Prop
  * sweep the live registry: a bound with neither `enforced` nor `hinted` is
  * un-audited, behaves as it always has, and is counted by the ratchet.
  */
-function ground(validator: PropertyValidator, opts: Grounding): PropertyValidator {
+function ground(
+  validator: PropertyValidator,
+  opts: Grounding,
+  /**
+   * Whether this validator actually constrains a range. `v.float('width')` with
+   * no min or max is a format check, so it needs no grounding and must not be
+   * counted by the ratchet: marking every validator bounded inflated the count
+   * with properties that have nothing to ground.
+   */
+  isBounded = true
+): PropertyValidator {
   const enforced = citeFor(opts.enforced, 'min') ?? citeFor(opts.enforced, 'max');
   const hinted = citeFor(opts.hinted, 'min') ?? citeFor(opts.hinted, 'max');
   if (enforced) validator.grounding = { kind: 'enforced', cite: enforced };
   else if (hinted) validator.grounding = { kind: 'hinted', cite: hinted };
-  validator.bounded = true;
+  if (isBounded) validator.bounded = true;
   return validator;
 }
 
@@ -198,11 +208,13 @@ export const v = {
           opts.message,
           formatCode(name),
           valueCode(name),
-          boundSeverity(opts)
+          endSeverity(opts, 'min'),
+          endSeverity(opts, 'max')
         ),
         numericRange('float', opts.min, opts.max)
       ),
-      opts
+      opts,
+      opts.min !== undefined || opts.max !== undefined
     );
   },
 
@@ -298,11 +310,13 @@ export const v = {
           opts.message,
           formatCode(name),
           valueCode(name),
-          boundSeverity(opts)
+          endSeverity(opts, 'min'),
+          endSeverity(opts, 'max')
         ),
         numericRange('integer', opts.min, opts.max)
       ),
-      opts
+      opts,
+      opts.min !== undefined || opts.max !== undefined
     );
   },
 
@@ -493,7 +507,7 @@ export const v = {
         );
       }
       return null;
-    }, `Vector3(x, y, z), each ${numericRange('float', min, max)}`), opts);
+    }, `Vector3(x, y, z), each ${numericRange('float', min, max)}`), opts, min !== undefined || max !== undefined);
   },
 
   /** `Rect2(x, y, w, h)` format. */
@@ -608,7 +622,7 @@ export const v = {
         );
       }
       return null;
-    }, numericRange('integer', min, max)), opts);
+    }, numericRange('integer', min, max)), opts, min !== undefined || max !== undefined);
   },
 
   /**

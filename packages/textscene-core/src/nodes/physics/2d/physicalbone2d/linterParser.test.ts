@@ -49,9 +49,14 @@ describe('PhysicalBone2D strict validators', () => {
   });
 
   // scene/2d/physics/physical_bone_2d.cpp:283 — PROPERTY_HINT_RANGE "-1, 1000, 1".
+  // The hint's -1 is only the in-memory default before any property assignment
+  // (physical_bone_2d.h:47); set_bone2d_index (:228-229) is
+  // `ERR_FAIL_COND_MSG(p_bone_idx < 0, ...)`, so the real floor is 0 and -1 is
+  // rejected. The 1000 ceiling is never checked at scene-load time (the only
+  // index check, :237, needs is_inside_tree()), so it only warns.
   describe('bone2d_index', () => {
-    it('accepts the unassigned sentinel -1', () => {
-      expect(check('bone2d_index', '-1')).toBeNull();
+    it('accepts 0', () => {
+      expect(check('bone2d_index', '0')).toBeNull();
     });
 
     it('accepts a positive index', () => {
@@ -67,14 +72,22 @@ describe('PhysicalBone2D strict validators', () => {
       expect(error?.code).toBe('INVALID_BONE2D_INDEX_FORMAT');
     });
 
-    it('rejects below the -1 sentinel', () => {
-      const error = check('bone2d_index', '-2');
+    it('rejects the unassigned sentinel -1 as an error (set_bone2d_index refuses)', () => {
+      const error = check('bone2d_index', '-1');
       expect(error?.code).toBe('INVALID_BONE2D_INDEX_VALUE');
+      expect(error?.severity).toBe('error');
     });
 
-    it('rejects above the 1000 cap', () => {
+    it('rejects below 0 as an error', () => {
+      const error = check('bone2d_index', '-2');
+      expect(error?.code).toBe('INVALID_BONE2D_INDEX_VALUE');
+      expect(error?.severity).toBe('error');
+    });
+
+    it('warns above the 1000 cap rather than erroring', () => {
       const error = check('bone2d_index', '1001');
       expect(error?.code).toBe('INVALID_BONE2D_INDEX_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 

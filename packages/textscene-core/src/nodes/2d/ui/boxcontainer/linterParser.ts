@@ -20,11 +20,11 @@ import { CONTAINER_ALIGNMENT } from '../../../../linter/validators/containerAlig
 import { v } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('BoxContainer', {
-  // box_container.cpp _bind_methods: BIND_ENUM_CONSTANT ALIGNMENT_BEGIN=0,
-  // ALIGNMENT_CENTER=1, ALIGNMENT_END=2 is the authoritative range — the
-  // ADD_PROPERTY PROPERTY_HINT_ENUM string "Begin,Center,End" is only the
-  // editor dropdown label text, not a bound of its own.
-  alignment: v.enumInt('alignment', 0, 2, CONTAINER_ALIGNMENT),
+  // box_container.cpp:379 — ADD_PROPERTY PROPERTY_HINT_ENUM "Begin,Center,End",
+  // matching BIND_ENUM_CONSTANT ALIGNMENT_BEGIN=0, ALIGNMENT_CENTER=1,
+  // ALIGNMENT_END=2. set_alignment (box_container.cpp:299-305) assigns
+  // unconditionally, no ERR_FAIL.
+  alignment: v.enumInt('alignment', 0, 2, CONTAINER_ALIGNMENT, { hinted: 'box_container.cpp:379' }),
   // box_container.cpp _bind_methods: ADD_PROPERTY(PropertyInfo(Variant::BOOL,
   // "vertical"), ...). See the file header for why this reaches a plain
   // BoxContainer instance at all.

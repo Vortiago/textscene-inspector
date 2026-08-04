@@ -61,4 +61,18 @@ occluder = SubResource("999")
   it('does not flag an absent occluder', () => {
     expectNoDiagnostic(scene(node('LightOccluder2D', {}, { name: 'Occ' })), {});
   });
+
+  it('warns on an occluder_light_mask outside the 32-bit width', () => {
+    // light_occluder_2d.cpp:300 hints PROPERTY_HINT_LAYERS_2D_RENDER, a
+    // 32-checkbox widget, so the width is the UI's and a value outside it
+    // warns. set_occluder_light_mask (:257-260) assigns unconditionally, so it
+    // is not an error.
+    for (const value of ['4294967296', '-1']) {
+      const found = new Linter()
+        .lint(scene(node('LightOccluder2D', { occluder_light_mask: value }, { name: 'Occ' })))
+        .filter((d) => d.message.includes('occluder_light_mask'));
+      expect(found).toHaveLength(1);
+      expect(found[0]!.severity).toBe('warning');
+    }
+  });
 });

@@ -10,6 +10,10 @@ function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
   return diagnostics.filter((d) => d.severity === 'error');
 }
 
+function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
+  return diagnostics.filter((d) => d.severity === 'warning');
+}
+
 describe('CSGCylinder3D strict validators', () => {
   let linter: Linter;
 
@@ -32,16 +36,19 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
     expect(errorsOf(linter.lint(content))).toEqual([]);
   });
 
-  it('rejects a non-positive radius', () => {
+  it('warns (not errors) on a non-positive radius', () => {
+    // csg_shape.cpp:1855-1859 (set_radius) is a bare assignment; the hint
+    // (:1847) is advisory only, so this is a warning, not an error (ADR-0032).
     const content = `[gd_scene format=3]
 
 [node name="Cylinder" type="CSGCylinder3D"]
 radius = -1.0
 `;
 
-    const errors = errorsOf(linter.lint(content));
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]!.message).toContain('radius');
+    expect(errorsOf(linter.lint(content))).toEqual([]);
+    const warnings = warningsOf(linter.lint(content));
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0]!.message).toContain('radius');
   });
 
   it('rejects sides outside the 3-64 range', () => {

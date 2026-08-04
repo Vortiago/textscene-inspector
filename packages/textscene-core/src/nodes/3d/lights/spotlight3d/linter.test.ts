@@ -108,11 +108,13 @@ describe('SpotLight3D Linter', () => {
         invalid: [{ value: -1.0, contains: ['non-negative'] }],
       },
       {
+        // light_3d.cpp:406 hints "-16,16,0.001" (both ends closed), warning-only
+        // since set_param:36 only guards the param index.
         prop: 'shadow_transmittance_bias',
-        valid: [-10, -5, 0, 5, 10],
+        valid: [-16, -5, 0, 5, 16],
         invalid: [
-          { value: -11, contains: ['between -10 and 10'] },
-          { value: 11, contains: ['between -10 and 10'] },
+          { value: -17, contains: ['between -16 and 16'] },
+          { value: 17, contains: ['between -16 and 16'] },
         ],
       },
       {
@@ -124,9 +126,11 @@ describe('SpotLight3D Linter', () => {
         ],
       },
       {
+        // light_3d.cpp:397 hints "0,16,0.001,or_greater": 2.0 is a legal
+        // stylised boost. Only the 0 floor is a real, warning-only bound.
         prop: 'light_specular',
-        valid: [0, 0.5, 1],
-        invalid: [{ value: 2.0, contains: ['between 0 and 1'] }],
+        valid: [0, 0.5, 1, 2.0],
+        invalid: [{ value: -1.0, contains: ['non-negative'] }],
       },
       {
         prop: 'light_bake_mode',
@@ -334,7 +338,7 @@ describe('SpotLight3D Linter', () => {
       );
     });
 
-    it('should validate mixed warnings and errors', () => {
+    it('treats every extreme value here as a warning, none as an error', () => {
       const diagnostics = lint(
         scene(
           node('SpotLight3D', {
@@ -347,9 +351,10 @@ describe('SpotLight3D Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThan(0);
-      // Should have warnings for extreme values and errors for invalid shadow_opacity
-      const hasErrors = diagnostics.some(d => d.severity === 'error');
-      expect(hasErrors).toBe(true);
+      // shadow_opacity (light_3d.cpp:407) is a hint behind Light3D::set_param's
+      // index-only guard, same as every other bound here, so nothing in this
+      // scene can be an error (ADR-0032).
+      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
     });
 
     it('should handle only spot-specific properties', () => {

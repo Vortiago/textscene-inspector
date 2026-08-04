@@ -12,6 +12,7 @@ import { v } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('SkeletonModifier3D', {
   active: v.boolean('active'),
-  // scene/3d/skeleton_modifier_3d.cpp: ADD_PROPERTY(..., "influence", PROPERTY_HINT_RANGE, "0,1,0.001")
-  influence: v.float('influence', { min: 0, max: 1 }),
+  // scene/3d/skeleton_modifier_3d.cpp:161, ADD_PROPERTY(..., "influence",
+  // PROPERTY_HINT_RANGE, "0,1,0.001"); set_influence (:111) is a bare assignment.
+  influence: v.float('influence', { min: 0, max: 1, hinted: 'skeleton_modifier_3d.cpp:161' }),
 });

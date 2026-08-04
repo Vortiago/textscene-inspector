@@ -119,8 +119,8 @@ describe('BaseButton strict validators', () => {
       expect(check('button_mask', '128')).toBeNull();
     });
 
-    it('rejects a negative value', () => {
-      expect(check('button_mask', '-1')).not.toBeNull();
+    it('accepts a negative value — the mask carries no PROPERTY_HINT_RANGE, and base_button.cpp:394-396 bare-assigns, so no Godot statement backs a floor', () => {
+      expect(check('button_mask', '-1')).toBeNull();
     });
 
     it('rejects a non-numeric value', () => {

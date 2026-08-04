@@ -127,12 +127,14 @@ custom_integrator = false
       { prop: 'sleeping', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
       { prop: 'custom_integrator', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
       {
+        // rigid_body_3d.cpp:524, ERR_FAIL_INDEX_MSG(p_amount,
+        // MAX_CONTACTS_REPORTED_3D_MAX=4096): the engine enforces [0, 4095].
         prop: 'max_contacts_reported',
-        valid: [1, 10, 100],
+        valid: [0, 1, 10, 100, 4095],
         with: { contact_monitor: true },
         invalid: [
-          { value: 0, contains: ['greater than 0'] },
-          { value: -5, contains: ['greater than 0'] },
+          { value: -5, contains: ['between 0 and 4095'] },
+          { value: 4096, contains: ['between 0 and 4095'] },
         ],
       },
       {

@@ -184,8 +184,8 @@ describe('RayCast3D strict validators', () => {
   });
 
   describe('debug_shape_thickness', () => {
-    // scene/3d/physics/ray_cast_3d.cpp:390: PROPERTY_HINT_RANGE, "1,5" — a hard
-    // bound (no `,or_greater`), so both ends are enforceable.
+    // scene/3d/physics/ray_cast_3d.cpp:390: PROPERTY_HINT_RANGE, "1,5", no
+    // `,or_greater`, but the setter is a bare assignment, so out-of-range warns.
     it('accepts the default 2', () => {
       expect(check('debug_shape_thickness', '2')).toBeNull();
     });
@@ -198,9 +198,13 @@ describe('RayCast3D strict validators', () => {
       expect(check('debug_shape_thickness', '5')).toBeNull();
     });
 
-    it('rejects 0 and 6 as out of range, not malformed', () => {
-      expect(check('debug_shape_thickness', '0')?.code).toBe('INVALID_DEBUG_SHAPE_THICKNESS_VALUE');
-      expect(check('debug_shape_thickness', '6')?.code).toBe('INVALID_DEBUG_SHAPE_THICKNESS_VALUE');
+    it('warns on 0 and 6 as out of range, not malformed, and not erroring', () => {
+      const low = check('debug_shape_thickness', '0');
+      const high = check('debug_shape_thickness', '6');
+      expect(low?.code).toBe('INVALID_DEBUG_SHAPE_THICKNESS_VALUE');
+      expect(low?.severity).toBe('warning');
+      expect(high?.code).toBe('INVALID_DEBUG_SHAPE_THICKNESS_VALUE');
+      expect(high?.severity).toBe('warning');
     });
 
     it('rejects a non-numeric value as malformed', () => {

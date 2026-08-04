@@ -52,7 +52,7 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited fr
 | `linear_damp_mode` | enum 0-1 (COMBINE/REPLACE) |
 | `lock_rotation` | true or false |
 | `mass` | float >= 5e-324 |
-| `max_contacts_reported` | integer > 0 |
+| `max_contacts_reported` | integer 0-4095 |
 | `physics_material_override` | SubResource("id") or ExtResource("id") |
 | `sleeping` | true or false |
 

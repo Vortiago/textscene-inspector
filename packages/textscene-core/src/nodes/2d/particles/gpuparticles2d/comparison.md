@@ -60,7 +60,7 @@ Strict parsing format-checks these `GPUParticles2D` properties, plus 12 inherite
 | `fract_delta` | true or false |
 | `interp_to_end` | float 0-1 |
 | `interpolate` | true or false |
-| `lifetime` | float >= 0.01 |
+| `lifetime` | float > 0 |
 | `local_coords` | true or false |
 | `one_shot` | true or false |
 | `preprocess` | float >= 0 |

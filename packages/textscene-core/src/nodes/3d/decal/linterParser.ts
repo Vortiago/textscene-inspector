@@ -13,20 +13,27 @@ validatorRegistry.registerAll('Decal', {
   texture_emission: v.resourceReference('texture_emission'),
   size: v.vector3('size'),
   modulate: v.color('modulate'),
-  albedo_mix: v.float('albedo_mix', { min: 0, max: 1 }),
-  emission_energy: v.nonNegativeFloat('emission_energy'),
-  normal_fade: v.float('normal_fade', { min: 0, max: 1 }),
+  // decal.cpp:248, "0,1,0.01"; set_albedo_mix (:79-83) is a bare assignment.
+  albedo_mix: v.float('albedo_mix', { min: 0, max: 1, hinted: 'decal.cpp:248' }),
+  // decal.cpp:246, "0,16,0.01,or_greater"; set_emission_energy (:70-73) is a
+  // bare assignment.
+  emission_energy: v.nonNegativeFloat('emission_energy', { hinted: 'decal.cpp:246' }),
+  // decal.cpp:251, "0,0.999,0.001"; set_normal_fade (:106-109) is a bare
+  // assignment.
+  normal_fade: v.float('normal_fade', { min: 0, max: 1, hinted: 'decal.cpp:251' }),
   // decal.cpp:254-255 hint these PROPERTY_HINT_EXP_EASING with NO range: an
-  // easing-curve editor, not a 0-1 bound. The setters clamp the low end only
-  // (`upper_fade = MAX(p_fade, 0.0)`, :89), so min 0 and no maximum.
-  upper_fade: v.nonNegativeFloat('upper_fade'),
-  lower_fade: v.nonNegativeFloat('lower_fade'),
-  cull_mask: layerBitmask('cull_mask'),
+  // easing-curve editor, not a 0-1 bound. The setters DO clamp the low end
+  // (`upper_fade = MAX(p_fade, 0.0)`, :89; `lower_fade = MAX(p_fade, 0.0)`,
+  // :98), so min 0 is a real, enforced floor and there is no maximum.
+  upper_fade: v.nonNegativeFloat('upper_fade', { enforced: 'decal.cpp:89' }),
+  lower_fade: v.nonNegativeFloat('lower_fade', { enforced: 'decal.cpp:98' }),
+  cull_mask: layerBitmask('cull_mask', { hinted: 'decal.cpp:263' }),
   // decal.cpp:258-260. `or_greater` with no `or_less`, so the 0 floor is a real
-  // bound and 4096 is only the slider extent.
+  // bound and 4096 is only the slider extent. Both setters (:134-146) are bare
+  // assignments.
   distance_fade_enabled: v.boolean('distance_fade_enabled'),
-  distance_fade_begin: v.nonNegativeFloat('distance_fade_begin'),
-  distance_fade_length: v.nonNegativeFloat('distance_fade_length'),
+  distance_fade_begin: v.nonNegativeFloat('distance_fade_begin', { hinted: 'decal.cpp:259' }),
+  distance_fade_length: v.nonNegativeFloat('distance_fade_length', { hinted: 'decal.cpp:260' }),
   // VisualInstance3D declares `sorting_offset` PROPERTY_USAGE_NONE, so most of
   // its subclasses never serialise it — but `Decal::_validate_property`
   // (scene/3d/decal.cpp:169) restores PROPERTY_USAGE_DEFAULT for this one

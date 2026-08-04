@@ -36,13 +36,16 @@ describe('MeshInstance3D Linter', () => {
     });
 
     describe('cast_shadow validation', () => {
-      it('should detect invalid cast_shadow value', () => {
+      it('should detect an invalid cast_shadow value as a warning', () => {
+        // visual_instance_3d.cpp:601 hints the enum but set_cast_shadows_setting
+        // (:366-370) is a bare assignment, so out-of-range is a warning, not an
+        // error (ADR-0032).
         const diagnostics = lint(
           scene(node('MeshInstance3D', { cast_shadow: 99 }, { name: 'InvalidShadow' }))
         );
         expect(diagnostics).toHaveLength(1);
         expect(diagnostics[0]).toMatchObject({
-          severity: 'error',
+          severity: 'warning',
           ruleName: 'strict-parser',
         });
         expect(diagnostics[0]!.message).toContain('cast_shadow');

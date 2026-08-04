@@ -33,21 +33,6 @@ function resourceRef(name: string, code: string): PropertyValidator {
   return validator;
 }
 
-/** Two-bound int with distinct messages on each branch (legacy wording). */
-const audioMaxPolyphony: PropertyValidator = (key, value, line) => {
-  const num = parseInt(value, 10);
-  if (isNaN(num)) {
-    return propertyError(key, line, `Property 'audio_max_polyphony' must be a number, got: "${value}"`, 'INVALID_AUDIO_MAX_POLYPHONY_FORMAT');
-  }
-  if (num < 1) {
-    return propertyError(key, line, `Property 'audio_max_polyphony' must be >= 1 (got ${num}). Values below 1 cause runtime errors.`, 'INVALID_AUDIO_MAX_POLYPHONY_TOO_SMALL');
-  }
-  if (num > 512) {
-    return propertyError(key, line, `Property 'audio_max_polyphony' is impractically large (${num}). Consider values below 512.`, 'INVALID_AUDIO_MAX_POLYPHONY_TOO_LARGE');
-  }
-  return null;
-};
-
 function nodePath(name: string, code: string): PropertyValidator {
   const validator: PropertyValidator = (key, value, line) => {
     if (!NODEPATH_REGEX.test(value.trim())) {
@@ -63,21 +48,36 @@ validatorRegistry.registerAll('AnimationTree', {
   tree_root: resourceRef('tree_root', 'INVALID_TREE_ROOT_FORMAT'),
   anim_player: nodePath('anim_player', 'INVALID_ANIM_PLAYER_FORMAT'),
   active: v.boolean('active'),
-  process_callback: v.enumInt('process_callback', 0, 2, PROCESS_MODE),
-  callback_mode_process: v.enumInt('callback_mode_process', 0, 2, PROCESS_MODE),
-  callback_mode_method: v.enumInt('callback_mode_method', 0, 1, METHOD_CALL_MODE),
-  callback_mode_discrete: v.enumInt('callback_mode_discrete', 0, 2, DISCRETE_MODE),
+  // animation_player.cpp:57-58, redirected through AnimationMixer's
+  // callback_mode_process (animation_mixer.cpp:501-509): a bare assignment,
+  // no engine-side range check on the raw int.
+  process_callback: v.enumInt('process_callback', 0, 2, PROCESS_MODE, {
+    hinted: 'animation_mixer.cpp:2471',
+  }),
+  callback_mode_process: v.enumInt('callback_mode_process', 0, 2, PROCESS_MODE, {
+    hinted: 'animation_mixer.cpp:2471',
+  }),
+  callback_mode_method: v.enumInt('callback_mode_method', 0, 1, METHOD_CALL_MODE, {
+    hinted: 'animation_mixer.cpp:2472',
+  }),
+  callback_mode_discrete: v.enumInt('callback_mode_discrete', 0, 2, DISCRETE_MODE, {
+    hinted: 'animation_mixer.cpp:2473',
+  }),
   root_motion_track: nodePath('root_motion_track', 'INVALID_ROOT_MOTION_TRACK_FORMAT'),
   advance_expression_base_node: nodePath(
     'advance_expression_base_node',
     'INVALID_ADVANCE_EXPRESSION_BASE_NODE_FORMAT'
   ),
-  audio_max_polyphony: audioMaxPolyphony,
+  // animation_mixer.cpp:542, ERR_FAIL_COND(p_audio_max_polyphony < 0 || ... > 128).
+  // A prior 1..512 range rejected the legal value 0 and silently passed 129-511,
+  // which the engine itself rejects.
+  audio_max_polyphony: v.int('audio_max_polyphony', {
+    min: 0,
+    max: 128,
+    enforced: 'animation_mixer.cpp:542',
+  }),
   root_node: nodePath('root_node', 'INVALID_ROOT_NODE_FORMAT'),
   deterministic: v.boolean('deterministic'),
   reset_on_save: v.boolean('reset_on_save'),
   root_motion_local: v.boolean('root_motion_local'),
 });
-
-// Shown in the generated `## Linting` table of this node's sheet.
-audioMaxPolyphony.accepts = 'integer >= 0';

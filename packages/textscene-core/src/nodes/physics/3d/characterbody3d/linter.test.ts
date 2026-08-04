@@ -175,18 +175,21 @@ describe('CharacterBody3D Linter', () => {
         }
       });
 
-      it('should reject negative collision_layer', () => {
+      // collision_object_3d.cpp:506 hints PROPERTY_HINT_LAYERS_3D_PHYSICS, a
+      // 32-checkbox widget, and the setter assigns unconditionally: the width
+      // is the inspector's, so out of range warns rather than erroring.
+      it('should warn on negative collision_layer', () => {
         expectDiagnostic(scene(node('CharacterBody3D', { collision_layer: -1 })), {
           prop: 'collision_layer',
-          severity: 'error',
+          severity: 'warning',
           contains: ['between 0 and 4294967295'],
         });
       });
 
-      it('should reject collision_layer exceeding the 32-bit maximum', () => {
+      it('should warn on collision_layer exceeding the 32-bit maximum', () => {
         expectDiagnostic(scene(node('CharacterBody3D', { collision_layer: 4294967296 })), {
           prop: 'collision_layer',
-          severity: 'error',
+          severity: 'warning',
           contains: ['between 0 and 4294967295'],
         });
       });
@@ -200,10 +203,10 @@ describe('CharacterBody3D Linter', () => {
         }
       });
 
-      it('should reject negative collision_mask', () => {
+      it('should warn on negative collision_mask', () => {
         expectDiagnostic(scene(node('CharacterBody3D', { collision_mask: -5 })), {
           prop: 'collision_mask',
-          severity: 'error',
+          severity: 'warning',
         });
       });
     });
@@ -431,21 +434,29 @@ describe('CharacterBody3D Linter', () => {
       const diagnostics = lint(
         scene(
           node('CharacterBody3D', {
+            // character_body_3d.cpp:922 hints "Grounded,Floating" but
+            // set_motion_mode is a bare assignment, so out-of-range warns
+            // rather than errors.
             motion_mode: 10,
             floor_snap_length: 50,
-            collision_layer: 0,
-            max_slides: 2,
+            // collision_layer warns rather than errors now: its width comes
+            // from the 32-checkbox widget, not the engine. max_slides carries
+            // the error, since set_max_slides ERR_FAILs below 1 (character_body_3d.cpp:813).
+            collision_layer: -5,
+            max_slides: 0,
           }),
           collisionShape3d
         )
       );
-      // Should have at least one error (motion_mode=10 is invalid)
-      expect(diagnostics.length).toBeGreaterThanOrEqual(1);
+      expect(diagnostics.length).toBeGreaterThanOrEqual(2);
       const errors = diagnostics.filter(d => d.severity === 'error');
       expect(errors.length).toBeGreaterThan(0);
-      // Check that the motion_mode error is present
-      const motionModeError = diagnostics.find(d => d.message.includes('motion_mode'));
-      expect(motionModeError).toBeDefined();
+      expect(errors.some(d => d.message.includes('max_slides'))).toBe(true);
+      const layerDiagnostic = diagnostics.find(d => d.message.includes('collision_layer'));
+      expect(layerDiagnostic?.severity).toBe('warning');
+      const motionModeDiagnostic = diagnostics.find(d => d.message.includes('motion_mode'));
+      expect(motionModeDiagnostic).toBeDefined();
+      expect(motionModeDiagnostic?.severity).toBe('warning');
     });
 
     it('should handle zero values correctly', () => {

@@ -17,32 +17,59 @@ validatorRegistry.registerAll('RigidBody3D', {
     min: Number.MIN_VALUE,
     message:
       "Property 'mass' must be greater than 0. Physics bodies require positive mass.",
+    enforced: 'rigid_body_3d.cpp:334',
   }),
   physics_material_override: v.resourceReference('physics_material_override'),
   gravity_scale: v.float('gravity_scale'),
-  center_of_mass_mode: v.enumInt('center_of_mass_mode', 0, 1, CENTER_OF_MASS_MODE),
+  // rigid_body_3d.cpp:768 "Auto,Custom". set_center_of_mass_mode (:356-377) is a
+  // bare assignment, so out-of-range warns.
+  center_of_mass_mode: v.enumInt('center_of_mass_mode', 0, 1, CENTER_OF_MASS_MODE, {
+    hinted: 'rigid_body_3d.cpp:768',
+  }),
   center_of_mass: v.vector3('center_of_mass'),
   // Vector3(0, 0, 0) means "compute automatically", so zero is legal and the
-  // bound is only that no component is negative.
-  inertia: v.boundedVector3('inertia', { min: 0 }),
-  linear_damp_mode: v.enumInt('linear_damp_mode', 0, 1, DAMP_MODE),
+  // bound is only that no component is negative. rigid_body_3d.cpp:344-346,
+  // three ERR_FAIL_COND(p_inertia.{x,y,z} < 0): the setter refuses.
+  inertia: v.boundedVector3('inertia', { min: 0, enforced: 'rigid_body_3d.cpp:344' }),
+  // rigid_body_3d.cpp:784 "Combine,Replace". set_linear_damp_mode (:425-428) is
+  // a bare assignment, so out-of-range warns.
+  linear_damp_mode: v.enumInt('linear_damp_mode', 0, 1, DAMP_MODE, {
+    hinted: 'rigid_body_3d.cpp:784',
+  }),
   // rigid_body_3d.cpp:444, ERR_FAIL_COND(p_linear_damp < 0.0).
   linear_damp: v.float('linear_damp', {
     min: 0,
     message: "Property 'linear_damp' must be >= 0. Damping cannot be negative.",
+    enforced: 'rigid_body_3d.cpp:444',
   }),
-  angular_damp_mode: v.enumInt('angular_damp_mode', 0, 1, DAMP_MODE),
+  // rigid_body_3d.cpp:788 "Combine,Replace". set_angular_damp_mode (:434-437) is
+  // a bare assignment, so out-of-range warns.
+  angular_damp_mode: v.enumInt('angular_damp_mode', 0, 1, DAMP_MODE, {
+    hinted: 'rigid_body_3d.cpp:788',
+  }),
   // rigid_body_3d.cpp:454, ERR_FAIL_COND(p_angular_damp < 0.0).
   angular_damp: v.float('angular_damp', {
     min: 0,
     message: "Property 'angular_damp' must be >= 0. Damping cannot be negative.",
+    enforced: 'rigid_body_3d.cpp:454',
   }),
   lock_rotation: v.boolean('lock_rotation'),
-  freeze_mode: v.enumInt('freeze_mode', 0, 1, FREEZE_MODE),
+  // rigid_body_3d.cpp:776 "Static,Kinematic". set_freeze_mode (:320-326) is a
+  // bare assignment (only an early-return-if-unchanged guard), so out-of-range
+  // warns.
+  freeze_mode: v.enumInt('freeze_mode', 0, 1, FREEZE_MODE, { hinted: 'rigid_body_3d.cpp:776' }),
   freeze: v.boolean('freeze'),
   continuous_cd: v.boolean('continuous_cd'),
   contact_monitor: v.boolean('contact_monitor'),
-  max_contacts_reported: v.positiveInt('max_contacts_reported'),
+  // rigid_body_3d.cpp:781 hints "0,64,1,or_greater" (min 0 stated, max open),
+  // but the real bound comes from the setter: rigid_body_3d.cpp:524,
+  // ERR_FAIL_INDEX_MSG(p_amount, MAX_CONTACTS_REPORTED_3D_MAX) where the
+  // constant is 4096, so the engine enforces [0, 4095] on both ends.
+  max_contacts_reported: v.int('max_contacts_reported', {
+    min: 0,
+    max: 4095,
+    enforced: 'rigid_body_3d.cpp:524',
+  }),
   can_sleep: v.boolean('can_sleep'),
   sleeping: v.boolean('sleeping'),
   custom_integrator: v.boolean('custom_integrator'),

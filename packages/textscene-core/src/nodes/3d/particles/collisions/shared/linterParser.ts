@@ -17,5 +17,5 @@ import { layerBitmask } from '../../../../../linter/validators/index.js';
 validatorRegistry.registerAll('GPUParticlesCollision3D', {
   // gpu_particles_collision_3d.cpp:51, PROPERTY_HINT_LAYERS_3D_RENDER. The only
   // member the base binds; every shape property belongs to a leaf.
-  cull_mask: layerBitmask('cull_mask'),
+  cull_mask: layerBitmask('cull_mask', { hinted: 'gpu_particles_collision_3d.cpp:903' }),
 });

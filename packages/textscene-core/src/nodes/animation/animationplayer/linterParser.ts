@@ -39,8 +39,15 @@ validatorRegistry.registerAll('AnimationPlayer', {
   // animation_player.cpp:822 is a bare assignment, so the hint at :1046
   // ("0,4096,0.01") is advisory: out-of-range is a warning in linter.ts.
   playback_default_blend_time: v.float('playback_default_blend_time'),
-  playback_process_mode: v.enumInt('playback_process_mode', 0, 2, PROCESS_MODE),
-  method_call_mode: v.enumInt('method_call_mode', 0, 1, METHOD_CALL_MODE),
+  // animation_player.cpp:1035/:57-59, redirected through AnimationMixer's
+  // callback_mode_process/method (animation_mixer.cpp:501-509,522-525): both
+  // bare assignments, no engine-side range check on the raw int.
+  playback_process_mode: v.enumInt('playback_process_mode', 0, 2, PROCESS_MODE, {
+    hinted: 'animation_mixer.cpp:2471',
+  }),
+  method_call_mode: v.enumInt('method_call_mode', 0, 1, METHOD_CALL_MODE, {
+    hinted: 'animation_mixer.cpp:2472',
+  }),
   playback_active: v.boolean('playback_active'),
   autoplay: nonEmptyQuotedString(
     'autoplay',
@@ -53,12 +60,8 @@ validatorRegistry.registerAll('AnimationPlayer', {
     "Property 'root_node' cannot be empty. Specify a valid NodePath.",
     'INVALID_ROOT_NODE_EMPTY'
   ),
-  current_animation_length: v.float('current_animation_length', {
-    min: 0,
-    message: "Property 'current_animation_length' must be >= 0",
-  }),
-  current_animation_position: v.float('current_animation_position', {
-    min: 0,
-    message: "Property 'current_animation_position' must be >= 0",
-  }),
+  // current_animation_length/current_animation_position (animation_player.cpp:1038-1039)
+  // are PROPERTY_HINT_NONE + PROPERTY_USAGE_NONE with an empty setter method name
+  // ("", "get_current_animation_length"/"get_current_animation_position"): getter-only
+  // and never serialised, so they can never appear in a real .tscn. No validator to carry.
 });

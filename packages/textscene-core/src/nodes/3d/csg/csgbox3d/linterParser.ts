@@ -10,5 +10,7 @@ validatorRegistry.registerAll('CSGBox3D', {
   size: v.vector3('size'),
   flip_faces: v.boolean('flip_faces'),
   material: v.resourceReference('material'),
-  operation: v.enumInt('operation', 0, 2, OPERATION),
+  // csg_shape.cpp:1040 hints "Union,Intersection,Subtraction";
+  // CSGShape3D::set_operation:933-937 is a bare assignment.
+  operation: v.enumInt('operation', 0, 2, OPERATION, { hinted: 'csg_shape.cpp:1040' }),
 });

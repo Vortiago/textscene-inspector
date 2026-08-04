@@ -48,9 +48,10 @@ describe('HingeJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_PARAMS/BIAS_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring (set_param index-guards only)', () => {
       const error = check('params/bias', '1.0');
       expect(error?.code).toBe('INVALID_PARAMS/BIAS_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -91,9 +92,10 @@ describe('HingeJoint3D strict validators', () => {
     // reader of the hint's raw degree numbers would expect as the bound, yet
     // it is well past the REAL bound once the hint's degrees are converted to
     // the radians the value is actually serialised in.
-    it('rejects a value past ±π radians (the ±180 degree bound converted to radians)', () => {
+    it('warns past ±π radians (the ±180 degree bound converted) rather than erroring', () => {
       const error = check('angular_limit/upper', '4.0');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/UPPER_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -113,9 +115,10 @@ describe('HingeJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/LOWER_FORMAT');
     });
 
-    it('rejects a value past ±π radians (the ±180 degree bound converted to radians)', () => {
+    it('warns past ±π radians (the ±180 degree bound converted) rather than erroring', () => {
       const error = check('angular_limit/lower', '-4.0');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/LOWER_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -135,9 +138,10 @@ describe('HingeJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/BIAS_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('angular_limit/bias', '1.0');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/BIAS_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -159,9 +163,10 @@ describe('HingeJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/SOFTNESS_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('angular_limit/softness', '16.5');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/SOFTNESS_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -181,9 +186,10 @@ describe('HingeJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/RELAXATION_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('angular_limit/relaxation', '16.5');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/RELAXATION_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -236,9 +242,10 @@ describe('HingeJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_MOTOR/MAX_IMPULSE_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('motor/max_impulse', '1024.5');
       expect(error?.code).toBe('INVALID_MOTOR/MAX_IMPULSE_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 });

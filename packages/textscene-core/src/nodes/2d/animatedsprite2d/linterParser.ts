@@ -15,7 +15,10 @@ import { v } from '../../../linter/validators/index.js';
 validatorRegistry.registerAll('AnimatedSprite2D', {
   sprite_frames: v.resourceReference('sprite_frames'),
   animation: v.any(),
-  frame: v.strictNonNegativeInt('frame'),
+  // animated_sprite_2d.cpp:674 carries no hint at all; set_frame_and_progress
+  // (animated_sprite_2d.cpp:368-369) clamps a negative frame to 0, which
+  // `enforced` treats the same as an ERR_FAIL (a silently-corrected write).
+  frame: v.strictNonNegativeInt('frame', { enforced: 'animated_sprite_2d.cpp:368' }),
   speed_scale: v.float('speed_scale'),
   centered: v.boolean('centered'),
   offset: v.vector2('offset'),

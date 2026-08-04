@@ -66,11 +66,14 @@ describe('Camera2D Linter', () => {
         ],
       },
       {
+        // camera_2d.cpp:103-105: set_zoom only rejects a (near-)zero component
+        // ("Zoom level must be different from 0 (can be negative)."), so a
+        // negative zoom is legal — it flips the view.
         prop: 'zoom',
-        valid: ['Vector2(2, 2)', 'Vector2(0.5, 0.5)'],
+        valid: ['Vector2(2, 2)', 'Vector2(0.5, 0.5)', 'Vector2(1, -1)', 'Vector2(-2, -2)'],
         invalid: [
-          { value: 'Vector2(0, 1)', contains: ['zoom', 'greater than 0'] },
-          { value: 'Vector2(1, -1)', contains: ['zoom', 'greater than 0'] },
+          { value: 'Vector2(0, 1)', contains: ['zoom', 'non-zero'] },
+          { value: 'Vector2(1, 0.000001)', contains: ['zoom', 'non-zero'] },
           { value: '(2, 2)', contains: ['zoom', 'Vector2'] },
         ],
       },
@@ -110,11 +113,13 @@ describe('Camera2D Linter', () => {
         with: { position_smoothing_speed: 5.0 },
       },
       {
+        // camera_2d.cpp:703: set_position_smoothing_speed does
+        // `position_smoothing_speed = MAX(0, p_speed)` — 0 is a legal value
+        // (it disables smoothing), only negative is out of range.
         prop: 'position_smoothing_speed',
-        valid: [10.5],
+        valid: [10.5, 0],
         invalid: [
-          { value: 0, contains: ['position_smoothing_speed', 'greater than 0'] },
-          { value: '-5.0', contains: ['position_smoothing_speed', 'greater than 0'] },
+          { value: '-5.0', contains: ['position_smoothing_speed', 'non-negative'] },
           { value: 'fast', contains: ['position_smoothing_speed', 'must be a number'] },
         ],
       },
@@ -124,12 +129,11 @@ describe('Camera2D Linter', () => {
         with: { rotation_smoothing_speed: 5.0 },
       },
       {
+        // camera_2d.cpp:715: set_rotation_smoothing_speed does the same
+        // `MAX(0, p_speed)` clamp — 0 is legal, only negative is out of range.
         prop: 'rotation_smoothing_speed',
-        valid: [10.5],
-        invalid: [
-          { value: 0, contains: ['rotation_smoothing_speed', 'greater than 0'] },
-          { value: '-5.0', contains: ['rotation_smoothing_speed', 'greater than 0'] },
-        ],
+        valid: [10.5, 0],
+        invalid: [{ value: '-5.0', contains: ['rotation_smoothing_speed', 'non-negative'] }],
       },
       {
         prop: 'drag_horizontal_enabled',
@@ -189,6 +193,50 @@ describe('Camera2D Linter', () => {
         invalid: [{ value: 0, contains: ['editor_draw_drag_margin', 'boolean'] }],
       },
     ]);
+
+    describe('ADR-0032 tiering', () => {
+      it('zoom near-zero is an enforced error (camera_2d.cpp:103-105)', () => {
+        expectDiagnostic(scene(node('Camera2D', { zoom: 'Vector2(0, 1)' })), {
+          prop: 'zoom',
+          severity: 'error',
+        });
+      });
+
+      it('anchor_mode out of range is a hinted warning (camera_2d.cpp:961)', () => {
+        expectDiagnostic(scene(node('Camera2D', { anchor_mode: 5 })), {
+          prop: 'anchor_mode',
+          severity: 'warning',
+        });
+      });
+
+      it('process_callback out of range is a hinted warning (camera_2d.cpp:966)', () => {
+        expectDiagnostic(scene(node('Camera2D', { process_callback: 5 })), {
+          prop: 'process_callback',
+          severity: 'warning',
+        });
+      });
+
+      it('drag_horizontal_offset out of range is a hinted warning (camera_2d.cpp:987)', () => {
+        expectDiagnostic(scene(node('Camera2D', { drag_horizontal_offset: 1.5 })), {
+          prop: 'drag_horizontal_offset',
+          severity: 'warning',
+        });
+      });
+
+      it('drag_left_margin out of range is a hinted warning (camera_2d.cpp:989)', () => {
+        expectDiagnostic(scene(node('Camera2D', { drag_left_margin: 1.5 })), {
+          prop: 'drag_left_margin',
+          severity: 'warning',
+        });
+      });
+
+      it('position_smoothing_speed negative is an enforced error (camera_2d.cpp:703)', () => {
+        expectDiagnostic(scene(node('Camera2D', { position_smoothing_speed: -5 })), {
+          prop: 'position_smoothing_speed',
+          severity: 'error',
+        });
+      });
+    });
   });
 
   describe('Semantic Validation', () => {
@@ -271,11 +319,13 @@ describe('Camera2D Linter', () => {
         });
       });
 
-      it('should error when position_smoothing_speed is zero (format error)', () => {
-        // Caught by format validation (linterParser) as an error.
+      it('should warn (not format-error) when position_smoothing_speed is zero', () => {
+        // camera_2d.cpp:703 clamps to MAX(0, p_speed), so 0 is a legal value at
+        // the format level; only the semantic "won't smooth" advisory fires.
         expectDiagnostic(scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: 0 })), {
-          prop: 'position_smoothing_speed',
-          severity: 'error',
+          ruleName: 'camera2d-smoothing-speed-invalid',
+          severity: 'warning',
+          contains: ['position_smoothing_speed'],
         });
       });
 
@@ -294,11 +344,13 @@ describe('Camera2D Linter', () => {
         });
       });
 
-      it('should error when rotation_smoothing_speed is zero (format error)', () => {
-        // Caught by format validation (linterParser) as an error.
+      it('should warn (not format-error) when rotation_smoothing_speed is zero', () => {
+        // camera_2d.cpp:715 clamps to MAX(0, p_speed), so 0 is a legal value at
+        // the format level; only the semantic "won't smooth" advisory fires.
         expectDiagnostic(scene(node('Camera2D', { rotation_smoothing_enabled: true, rotation_smoothing_speed: 0 })), {
-          prop: 'rotation_smoothing_speed',
-          severity: 'error',
+          ruleName: 'camera2d-rotation-smoothing-speed-invalid',
+          severity: 'warning',
+          contains: ['rotation_smoothing_speed'],
         });
       });
 

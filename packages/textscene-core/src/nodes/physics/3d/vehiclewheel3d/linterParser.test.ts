@@ -93,9 +93,10 @@ describe('VehicleWheel3D strict validators', () => {
       expect(error?.code).toBe('INVALID_STEERING_FORMAT');
     });
 
-    it('rejects a value past ±π radians (the ±180 degree bound converted to radians)', () => {
+    it('warns past ±π radians (the ±180 degree bound converted) rather than erroring', () => {
       const error = check('steering', '4.0');
       expect(error?.code).toBe('INVALID_STEERING_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 

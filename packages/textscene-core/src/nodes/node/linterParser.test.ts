@@ -90,8 +90,10 @@ describe('Node strict validators', () => {
       expect(check('process_thread_messages', '3')).toBeNull();
     });
 
-    it('rejects a negative mask', () => {
-      expect(check('process_thread_messages', '-1')).not.toBeNull();
+    it('carries no range bound: node.cpp:4063 is PROPERTY_HINT_FLAGS, a 2-bit ' +
+      'bitmask rather than a linear range, and set_process_thread_messages ' +
+      '(node.cpp:1233-1239) is a bare BitField assignment', () => {
+      expect(check('process_thread_messages', '-1')).toBeNull();
     });
   });
 

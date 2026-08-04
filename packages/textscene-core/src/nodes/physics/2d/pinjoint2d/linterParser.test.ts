@@ -35,7 +35,8 @@ describe('PinJoint2D strict validators', () => {
     expect(accepted).toEqual([]);
   });
 
-  // pin_joint_2d.cpp:166, PROPERTY_HINT_RANGE "0.00,16,0.01,exp", no or_greater: both bounds hard.
+  // pin_joint_2d.cpp:166, PROPERTY_HINT_RANGE "0.00,16,0.01,exp", no or_greater.
+  // set_softness is a bare assignment, so out-of-range warns, not errors.
   describe('softness', () => {
     it('accepts a value inside 0-16', () => {
       expect(check('softness', '4.5')).toBeNull();
@@ -51,9 +52,10 @@ describe('PinJoint2D strict validators', () => {
       expect(error?.code).toBe('INVALID_SOFTNESS_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('softness', '16.5');
       expect(error?.code).toBe('INVALID_SOFTNESS_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -71,7 +73,8 @@ describe('PinJoint2D strict validators', () => {
   });
 
   // pin_joint_2d.cpp:169, PROPERTY_HINT_RANGE "-180,180,0.1,radians_as_degrees",
-  // no or_greater/or_less: hard bound of +/-pi radians once converted.
+  // no or_greater/or_less. The named setter is a bare assignment, so
+  // out-of-range warns, not errors.
   describe('angular_limit_lower', () => {
     it('accepts a value inside +/-pi radians', () => {
       expect(check('angular_limit_lower', '-0.5')).toBeNull();
@@ -87,9 +90,10 @@ describe('PinJoint2D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT_LOWER_FORMAT');
     });
 
-    it('rejects a value past +/-pi radians (the +/-180 degree bound converted to radians)', () => {
+    it('warns past +/-pi radians (the +/-180 degree bound converted) rather than erroring', () => {
       const error = check('angular_limit_lower', '4.0');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT_LOWER_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -109,9 +113,10 @@ describe('PinJoint2D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT_UPPER_FORMAT');
     });
 
-    it('rejects a value past +/-pi radians (the +/-180 degree bound converted to radians)', () => {
+    it('warns past +/-pi radians (the +/-180 degree bound converted) rather than erroring', () => {
       const error = check('angular_limit_upper', '-4.0');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT_UPPER_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 

@@ -18,22 +18,38 @@ validatorRegistry.registerAll('AudioStreamPlayer2D', {
     min: Number.MIN_VALUE,
     message:
       "Property 'pitch_scale' must be greater than 0. Zero or negative pitch breaks audio playback.",
+    enforced: 'audio_stream_player_internal.cpp:314',
   }),
   playing: v.boolean('playing'),
   autoplay: v.boolean('autoplay'),
   stream_paused: v.boolean('stream_paused'),
   // audio_stream_player_2d.cpp:300, ERR_FAIL_COND(p_pixels <= 0.0).
-  max_distance: v.positiveFloat('max_distance'),
+  max_distance: v.positiveFloat('max_distance', undefined, {
+    enforced: 'audio_stream_player_2d.cpp:300',
+  }),
   // audio_stream_player_2d.cpp:437 is PROPERTY_HINT_EXP_EASING (no range) and
   // set_attenuation (:308) is a bare assignment, so there is no bound to check.
   attenuation: v.float('attenuation'),
-  panning_strength: v.float('panning_strength', { min: 0, max: 1 }),
-  area_mask: layerBitmask('area_mask'),
-  playback_type: v.enumInt('playback_type', 0, 2, PLAYBACK_TYPE),
+  // audio_stream_player_2d.cpp:349, ERR_FAIL_COND_MSG(p_panning_strength < 0, ...)
+  // enforces the floor only. The hint (:439) is "0,3,0.01,or_greater": or_greater
+  // opens the ceiling, so there is no upper bound to check; a prior max:1 here
+  // rejected legal values above 1.
+  panning_strength: v.float('panning_strength', {
+    min: 0,
+    enforced: { min: 'audio_stream_player_2d.cpp:349' },
+  }),
+  // Bare uint32_t assignment (:316): the parameter type is the only ceiling, so
+  // the citation is the setter signature rather than an ERR_FAIL.
+  area_mask: layerBitmask('area_mask', { hinted: 'audio_stream_player_2d.cpp:441' }),
+  // audio_stream_player_internal.cpp:337 is a bare assignment; no engine-side range check.
+  playback_type: v.enumInt('playback_type', 0, 2, PLAYBACK_TYPE, {
+    hinted: 'audio_stream_player_2d.cpp:442',
+  }),
   bus: busValidator,
   // audio_stream_player_internal.cpp:322 drops the write when <= 0.
   max_polyphony: v.int('max_polyphony', {
     min: 1,
     message: "Property 'max_polyphony' must be at least 1. Values below 1 cause errors.",
+    enforced: 'audio_stream_player_internal.cpp:322',
   }),
 });

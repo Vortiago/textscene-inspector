@@ -84,11 +84,18 @@ validatorRegistry.registerAll('SplitContainer', {
   // split_container.cpp:1298 — ADD_PROPERTY(PropertyInfo(Variant::INT, "dragger_visibility",
   // PROPERTY_HINT_ENUM, "Visible,Hidden,Hidden and Collapsed"), ...); BIND_ENUM_CONSTANT
   // DRAGGER_VISIBLE=0, DRAGGER_HIDDEN=1, DRAGGER_HIDDEN_COLLAPSED=2 (cpp:1308-1310).
-  dragger_visibility: v.enumInt('dragger_visibility', 0, 2, {
-    0: 'DRAGGER_VISIBLE',
-    1: 'DRAGGER_HIDDEN',
-    2: 'DRAGGER_HIDDEN_COLLAPSED',
-  }),
+  // set_dragger_visibility (split_container.cpp:1103-1109) assigns unconditionally.
+  dragger_visibility: v.enumInt(
+    'dragger_visibility',
+    0,
+    2,
+    {
+      0: 'DRAGGER_VISIBLE',
+      1: 'DRAGGER_HIDDEN',
+      2: 'DRAGGER_HIDDEN_COLLAPSED',
+    },
+    { hinted: 'split_container.cpp:1298' }
+  ),
   // split_container.cpp:1299 — ADD_PROPERTY(PropertyInfo(Variant::BOOL, "vertical"), ...)
   vertical: v.boolean('vertical'),
   // split_container.cpp:1300 — ADD_PROPERTY(PropertyInfo(Variant::BOOL, "touch_dragger_enabled"), ...)

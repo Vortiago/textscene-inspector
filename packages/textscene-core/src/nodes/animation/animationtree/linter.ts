@@ -158,29 +158,11 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
 
   // root_motion_track set — purely informational; no diagnostic
 
-  // WARNING: audio_max_polyphony unusually low or high
-  if (rawProps.audio_max_polyphony) {
-    const polyphony = parseInt(rawProps.audio_max_polyphony, 10);
-    if (!isNaN(polyphony)) {
-      if (polyphony < 8) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `AnimationTree 'audio_max_polyphony' is very low (${polyphony}). This may cause audio clipping if multiple audio tracks play simultaneously.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animationtree-low-audio-polyphony',
-        });
-      } else if (polyphony > 128) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `AnimationTree 'audio_max_polyphony' is very high (${polyphony}). This may impact performance. Default is 32.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animationtree-high-audio-polyphony',
-        });
-      }
-    }
-  }
+  // audio_max_polyphony carries no advisory. The old "very low" arm (< 8) was
+  // an invented threshold with nothing in the source behind it, and the "very
+  // high" arm (> 128) has become a second report of the validator's own error:
+  // animation_mixer.cpp:542 ERR_FAILs above 128, so the value is already
+  // rejected before this rule could add anything.
 
   // advance_expression_base_node — purely informational; no diagnostic
 
@@ -204,8 +186,6 @@ const animationTreeValidationRule: LintRule = {
       { ruleName: 'animationtree-anim-player-wrong-type', severity: 'warning' },
       { ruleName: 'animationtree-active-but-incomplete', severity: 'warning' },
       { ruleName: 'animationtree-inactive', severity: 'warning' },
-      { ruleName: 'animationtree-low-audio-polyphony', severity: 'warning' },
-      { ruleName: 'animationtree-high-audio-polyphony', severity: 'warning' },
     ],
   },
   check: checkAnimationTree,

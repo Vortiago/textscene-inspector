@@ -102,22 +102,24 @@ describe('AnimationPlayer Linter', () => {
           valid: ['NodePath("..")', 'NodePath(".")', 'NodePath("/root/Node")'],
           invalid: [{ value: '""', contains: ['root_node', 'cannot be empty'] }],
         },
-        {
-          prop: 'current_animation_length',
-          acceptMode: 'clean',
-          valid: [2.5],
-          with: { 'anims/test': 'SubResource("Animation_1")' },
-          invalid: [{ value: -1.0, contains: ['current_animation_length', 'must be >= 0'] }],
-        },
-        {
-          prop: 'current_animation_position',
-          acceptMode: 'clean',
-          valid: [1.5],
-          with: { 'anims/test': 'SubResource("Animation_1")' },
-          invalid: [{ value: -0.5, contains: ['current_animation_position', 'must be >= 0'] }],
-        },
       ]
     );
+
+    // animation_player.cpp:1038-1039: current_animation_length/current_animation_position
+    // are PROPERTY_HINT_NONE + PROPERTY_USAGE_NONE with an empty setter method name, so
+    // Godot never serialises them into a .tscn. No validator is registered for either, so
+    // a scene carrying one anyway (malformed or hand-edited) is passed through untouched.
+    it('carries no validator for the getter-only current_animation_length/_position', () => {
+      expectClean(
+        scene(
+          node('AnimationPlayer', {
+            'anims/test': 'SubResource("Animation_1")',
+            current_animation_length: -1.0,
+            current_animation_position: -0.5,
+          })
+        )
+      );
+    });
   });
 
   describe('Semantic Validation', () => {
@@ -407,11 +409,14 @@ describe('AnimationPlayer Linter', () => {
         'warning'
       );
 
-      // Invalid process mode (error) + out-of-hint blend time (warning)
+      // Empty root_node (error, nonEmptyQuotedString) + out-of-hint blend time
+      // (warning). playback_process_mode/method_call_mode no longer produce an
+      // error out of range: animation_mixer.cpp:501-525 is a bare assignment for
+      // both, so out-of-range is a warning (ADR-0032), not an error.
       expectSeverity(
         scene(
           node('AnimationPlayer', {
-            playback_process_mode: 5,
+            root_node: '""',
             playback_default_blend_time: 5000,
           })
         ),

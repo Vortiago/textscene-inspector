@@ -81,11 +81,14 @@ describe('DirectionalLight3D Linter', () => {
         invalid: [{ value: '-1.0', contains: ['non-negative'] }],
       },
       {
+        // light_3d.cpp:406 hints "-16,16,0.001" (both ends closed, no
+        // or_greater/or_less), so 16 is a real bound; still a warning, since
+        // set_param:36 only guards the param index.
         prop: 'shadow_transmittance_bias',
-        valid: [-10, -5, 0, 5, 10],
+        valid: [-16, -5, 0, 5, 16],
         invalid: [
-          { value: -11, contains: ['between -10 and 10'] },
-          { value: 11, contains: ['between -10 and 10'] },
+          { value: -17, contains: ['between -16 and 16'] },
+          { value: 17, contains: ['between -16 and 16'] },
         ],
       },
       {
@@ -135,9 +138,13 @@ describe('DirectionalLight3D Linter', () => {
         invalid: [{ value: '-5.0', contains: ['non-negative'] }],
       },
       {
+        // light_3d.cpp:397 hints "0,16,0.001,or_greater": or_greater softens the
+        // 16, so 2.0 is a legal stylised boost, not an error. Only the 0 floor
+        // is a real bound, and set_param:36 (index-only guard) makes it a
+        // warning rather than an error.
         prop: 'light_specular',
-        valid: [0, 0.5, 1],
-        invalid: [{ value: '2.0', contains: ['between 0 and 1'] }],
+        valid: [0, 0.5, 1, 2.0],
+        invalid: [{ value: -1.0, contains: ['non-negative'] }],
       },
       {
         prop: 'light_bake_mode',
@@ -423,21 +430,18 @@ describe('DirectionalLight3D Linter', () => {
           })
         )
       );
-      // Errors for shadow_mode and shadow_opacity; light_energy = 0 is valid.
-      // Semantic rules now run alongside the errors instead of being suppressed
-      // by them, so assert the error set rather than the whole diagnostic list.
+      // light_energy = 0 is valid. directional_shadow_mode (light_3d.cpp:578)
+      // and shadow_opacity (light_3d.cpp:407, via Light3D::set_param's
+      // index-only guard) are both hints, not enforcement (ADR-0032), so the
+      // out-of-range mode and opacity now WARN instead of erroring; only the
+      // split-order semantic rule stays an error.
       const errors = diagnostics.filter((d) => d.severity === 'error');
-      expect(errors).toHaveLength(3);
-      // The third is the split ordering (0.5 must be below 0.3). The comment
-      // here used to claim the splits were "ignored because mode defaults to
-      // ORTHOGONAL"; in fact the shadow_mode error was suppressing the entire
-      // rule phase, so the rule never ran at all.
-      expect(errors.some((d) => d.ruleName === 'directionallight3d-shadow-split-order')).toBe(
-        true
-      );
-      const hasModeError = errors.some(d => d.message.includes('directional_shadow_mode'));
-      const hasOpacityError = errors.some(d => d.message.includes('shadow_opacity'));
-      expect(hasModeError && hasOpacityError).toBe(true);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]?.ruleName).toBe('directionallight3d-shadow-split-order');
+      const warnings = diagnostics.filter((d) => d.severity === 'warning');
+      const hasModeWarning = warnings.some(d => d.message.includes('directional_shadow_mode'));
+      const hasOpacityWarning = warnings.some(d => d.message.includes('shadow_opacity'));
+      expect(hasModeWarning && hasOpacityWarning).toBe(true);
     });
 
     it('should handle scientific notation in numeric values', () => {

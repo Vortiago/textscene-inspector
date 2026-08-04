@@ -135,16 +135,23 @@ describe('CPUParticles2D strict validators', () => {
     expect(errors[0]!.message).toContain('amount');
   });
 
-  it('rejects an out-of-range explosiveness', () => {
-    const errors = errorsOf(scene('explosiveness = 4.0\n'));
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]!.message).toContain('explosiveness');
+  it('warns (not errors) on an out-of-range explosiveness', () => {
+    // cpu_particles_2d.cpp:1499 hints "0,1,0.01" but set_explosiveness_ratio
+    // (cpu_particles_2d.cpp:98-100) assigns unconditionally — hint-only, so
+    // out of range is a warning, not an error.
+    const diagnostics = linter.lint(scene('explosiveness = 4.0\n'));
+    expect(errorsOf(scene('explosiveness = 4.0\n'))).toEqual([]);
+    const warning = diagnostics.find((d) => d.message.includes('explosiveness'));
+    expect(warning?.severity).toBe('warning');
   });
 
-  it('rejects a spread beyond 180 degrees', () => {
-    const errors = errorsOf(scene('spread = 400.0\n'));
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]!.message).toContain('spread');
+  it('warns (not errors) on a spread beyond 180 degrees', () => {
+    // cpu_particles_2d.cpp:1598 hints "0,180,0.01" but set_spread
+    // (cpu_particles_2d.cpp:344-348) assigns unconditionally — hint-only.
+    const diagnostics = linter.lint(scene('spread = 400.0\n'));
+    expect(errorsOf(scene('spread = 400.0\n'))).toEqual([]);
+    const warning = diagnostics.find((d) => d.message.includes('spread'));
+    expect(warning?.severity).toBe('warning');
   });
 
   it('rejects an emission_shape outside the enum', () => {
@@ -163,5 +170,20 @@ describe('CPUParticles2D strict validators', () => {
     // Godot's setter takes any int and reads anything but 1 as Index, so an
     // error here would fail a scene the engine opens without complaint.
     expect(errorsOf(scene('draw_order = 215832976\n'))).toEqual([]);
+  });
+
+  it('accepts a negative emission_ring_radius (cpu_particles_2d.cpp:1593 has no hint at all)', () => {
+    // set_emission_ring_radius (cpu_particles_2d.cpp:531-533) assigns
+    // unconditionally; the property was never bounded on the Godot side.
+    expect(errorsOf(scene('emission_ring_radius = -5.0\n'))).toEqual([]);
+  });
+
+  it('accepts a negative emission_ring_inner_radius (cpu_particles_2d.cpp:1592 has no hint at all)', () => {
+    expect(errorsOf(scene('emission_ring_inner_radius = -5.0\n'))).toEqual([]);
+  });
+
+  it('still rejects `amount = 0` as an error (enforced: cpu_particles_2d.cpp:67)', () => {
+    const errors = errorsOf(scene('amount = 0\n'));
+    expect(errors.length).toBeGreaterThan(0);
   });
 });

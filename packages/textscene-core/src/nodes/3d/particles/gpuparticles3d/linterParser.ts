@@ -12,7 +12,11 @@ import { v, makeFloatTupleRegex } from '../../../../linter/validators/index.js';
 import { propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
-const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME', 2: 'VIEW_DEPTH' };
+// gpu_particles_3d.cpp:843 hints 4 labels ("Index,Lifetime,Reverse
+// Lifetime,View Depth"); BIND_ENUM_CONSTANT binds all 4 (:857-860). The
+// previous 3-label map both dropped REVERSE_LIFETIME and mislabelled index 2
+// as VIEW_DEPTH (Godot's own index 2 is REVERSE_LIFETIME; VIEW_DEPTH is 3).
+const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME', 2: 'REVERSE_LIFETIME', 3: 'VIEW_DEPTH' };
 
 // Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
 // v.aabb and the renderer.
@@ -31,6 +35,10 @@ const amountValidator: PropertyValidator = (key, value, line) => {
   // is the rule's `gpuparticles3d-performance` warning rather than an error here.
   return null;
 };
+// Tagged by hand (not built through `v`) so `boundGrounding.test.ts`'s sweep
+// sees this bound too.
+amountValidator.bounded = true;
+amountValidator.grounding = { kind: 'enforced', cite: 'gpu_particles_3d.cpp:76' };
 
 const visibilityAabbValidator: PropertyValidator = (key, value, line) => {
   if (!AABB_REGEX.test(value)) {
@@ -54,33 +62,63 @@ const visibilityAabbValidator: PropertyValidator = (key, value, line) => {
 validatorRegistry.registerAll('GPUParticles3D', {
   emitting: v.boolean('emitting'),
   amount: amountValidator,
-  lifetime: v.positiveFloat('lifetime'),
+  // gpu_particles_3d.cpp:81-84, ERR_FAIL_COND_MSG(p_lifetime <= 0, ...): the
+  // setter refuses.
+  lifetime: v.positiveFloat('lifetime', undefined, { enforced: 'gpu_particles_3d.cpp:82' }),
   one_shot: v.boolean('one_shot'),
-  preprocess: v.nonNegativeFloat('preprocess'),
-  speed_scale: v.float('speed_scale', {
-    min: Number.MIN_VALUE,
-    message:
-      "Property 'speed_scale' must be greater than 0. Zero or negative values stop particle time",
+  // gpu_particles_3d.cpp:828 hints "0.00,10.0,0.01,or_greater,exp";
+  // set_pre_process_time:124-127 is a bare assignment.
+  preprocess: v.nonNegativeFloat('preprocess', { hinted: 'gpu_particles_3d.cpp:828' }),
+  // gpu_particles_3d.cpp:829 hints "0,64,0.01" (closed both ends, 0 is legal);
+  // set_speed_scale:174-177 is a bare assignment with no check at all — the
+  // previous >0 bound rejected the hint-legal, unenforced value 0 (which
+  // simply pauses particle time).
+  speed_scale: v.float('speed_scale', { min: 0, max: 64, hinted: 'gpu_particles_3d.cpp:829' }),
+  explosiveness: v.float('explosiveness', {
+    min: 0,
+    max: 1,
+    hinted: 'gpu_particles_3d.cpp:830',
   }),
-  explosiveness: v.float('explosiveness', { min: 0, max: 1 }),
-  randomness: v.float('randomness', { min: 0, max: 1 }),
+  randomness: v.float('randomness', { min: 0, max: 1, hinted: 'gpu_particles_3d.cpp:831' }),
+  // gpu_particles_3d.cpp:834 hints "0,1000,1,suffix:FPS" (closed, ceiling
+  // 1000, not the previous 120); set_fixed_fps:309-312 is a bare assignment.
   fixed_fps: v.int('fixed_fps', {
     min: 0,
-    max: 120,
+    max: 1000,
     message:
-      "Property 'fixed_fps' must be between 0 and 120. Valid range: 0=automatic, 1-120=fixed simulation rate",
+      "Property 'fixed_fps' must be between 0 and 1000. Valid range: 0=automatic, 1-1000=fixed simulation rate",
+    hinted: 'gpu_particles_3d.cpp:834',
   }),
   fract_delta: v.boolean('fract_delta'),
   process_material: v.resourceReference('process_material'),
   draw_pass_1: v.resourceReference('draw_pass_1'),
   visibility_aabb: visibilityAabbValidator,
   local_coords: v.boolean('local_coords'),
-  draw_order: v.enumInt('draw_order', 0, 2, DRAW_ORDER),
+  // gpu_particles_3d.cpp:236-239, set_draw_order is a bare assignment.
+  draw_order: v.enumInt('draw_order', 0, 3, DRAW_ORDER, { hinted: 'gpu_particles_3d.cpp:843' }),
   trail_enabled: v.boolean('trail_enabled'),
-  trail_lifetime: v.positiveFloat('trail_lifetime'),
-  collision_base_size: v.positiveFloat('collision_base_size'),
+  // gpu_particles_3d.cpp:247-250, ERR_FAIL_COND(p_seconds < 0.01 -
+  // CMP_EPSILON): the real enforced floor is 0.01, not the ~0 `positiveFloat`
+  // previously used here.
+  trail_lifetime: v.float('trail_lifetime', {
+    min: 0.01,
+    enforced: 'gpu_particles_3d.cpp:248',
+  }),
+  // gpu_particles_3d.cpp:839 hints "0,128,0.01,or_greater" (0 is legal, means
+  // no collision radius); set_collision_base_size:179-182 is a bare
+  // assignment with no check at all — the previous >0 bound rejected the
+  // hint-legal, unenforced value 0.
+  collision_base_size: v.nonNegativeFloat('collision_base_size', {
+    hinted: 'gpu_particles_3d.cpp:839',
+  }),
   sub_emitter: v.nodePath('sub_emitter'),
-  interp_to_end: v.float('interp_to_end', { min: 0, max: 1 }),
+  // gpu_particles_3d.cpp:87-90, `interp_to_end_factor = CLAMP(p_interp, 0.0,
+  // 1.0)`: both ends enforced.
+  interp_to_end: v.float('interp_to_end', {
+    min: 0,
+    max: 1,
+    enforced: 'gpu_particles_3d.cpp:88',
+  }),
 });
 
 // Shown in the generated `## Linting` table of this node's sheet.

@@ -114,31 +114,55 @@ function packedColorArray(name: string): PropertyValidator {
 validatorRegistry.registerAll('CPUParticles3D', {
   // cpu_particles_3d.cpp:1555 — PROPERTY_HINT_ONESHOT is an editor icon hint, not a range.
   emitting: v.boolean('emitting'),
-  // cpu_particles_3d.cpp:1556 — PROPERTY_HINT_RANGE "1,1000000,1,exp", no or_greater/or_less: hard both ends.
-  amount: v.int('amount', { min: 1, max: 1000000 }),
+  // cpu_particles_3d.cpp:1556 — PROPERTY_HINT_RANGE "1,1000000,1,exp", no or_greater/or_less.
+  // set_amount:71-74 ERR_FAIL_COND_MSG(p_amount < 1) enforces the floor; the ceiling is
+  // never checked by the setter, so it is a warning despite the hint being closed.
+  amount: v.int('amount', {
+    min: 1,
+    max: 1000000,
+    enforced: { min: 'cpu_particles_3d.cpp:72' },
+    hinted: { max: 'cpu_particles_3d.cpp:1556' },
+  }),
 
   // ADD_GROUP("Time", "") — cpu_particles_3d.cpp:1557.
-  // cpu_particles_3d.cpp:1558 — "0.01,600.0,0.01,or_greater,exp,suffix:s": or_greater lifts the 600 ceiling; 0.01 floor is hard.
-  lifetime: v.float('lifetime', { min: 0.01 }),
+  // cpu_particles_3d.cpp:1558 — "0.01,600.0,0.01,or_greater,exp,suffix:s": or_greater lifts
+  // the 600 ceiling. set_lifetime:91-94 ERR_FAIL_COND_MSG(p_lifetime <= 0) enforces a floor
+  // of "> 0", not the hint's 0.01 (which is only the slider's displayed minimum) — a value
+  // like 0.005 loaded here but was refused by Godot.
+  lifetime: v.positiveFloat('lifetime', undefined, { enforced: 'cpu_particles_3d.cpp:92' }),
   // cpu_particles_3d.cpp:1559 — plain BOOL, no hint.
   one_shot: v.boolean('one_shot'),
-  // cpu_particles_3d.cpp:1560 — "0.00,10.0,0.01,or_greater,exp,suffix:s": or_greater lifts the 10 ceiling; 0 floor hard.
-  preprocess: v.nonNegativeFloat('preprocess'),
+  // cpu_particles_3d.cpp:1560 — "0.00,10.0,0.01,or_greater,exp,suffix:s": or_greater lifts
+  // the 10 ceiling. set_pre_process_time:100-103 is a bare assignment.
+  preprocess: v.nonNegativeFloat('preprocess', { hinted: 'cpu_particles_3d.cpp:1560' }),
 
-  // cpu_particles_3d.cpp:1562 — "0,64,0.01", no or_greater/or_less: hard both ends.
-  speed_scale: v.float('speed_scale', { min: 0, max: 64 }),
-  // cpu_particles_3d.cpp:1563 — "0,1,0.01": hard both ends.
-  explosiveness: v.float('explosiveness', { min: 0, max: 1 }),
-  // cpu_particles_3d.cpp:1564 — "0,1,0.01": hard both ends.
-  randomness: v.float('randomness', { min: 0, max: 1 }),
+  // cpu_particles_3d.cpp:1562 — "0,64,0.01", no or_greater/or_less: hard both ends per the
+  // hint. set_speed_scale:126-128 is a bare assignment, so it is a warning.
+  speed_scale: v.float('speed_scale', { min: 0, max: 64, hinted: 'cpu_particles_3d.cpp:1562' }),
+  // cpu_particles_3d.cpp:1563 — "0,1,0.01". set_explosiveness_ratio:104-107 is bare.
+  explosiveness: v.float('explosiveness', {
+    min: 0,
+    max: 1,
+    hinted: 'cpu_particles_3d.cpp:1563',
+  }),
+  // cpu_particles_3d.cpp:1564 — "0,1,0.01". set_randomness_ratio:108-111 is bare.
+  randomness: v.float('randomness', { min: 0, max: 1, hinted: 'cpu_particles_3d.cpp:1564' }),
   // cpu_particles_3d.cpp:1565 — plain BOOL, no hint.
   use_fixed_seed: v.boolean('use_fixed_seed'),
-  // cpu_particles_3d.cpp:1566 — "0,"+UINT32_MAX+",1": hard both ends (uint32_t setter param).
-  seed: v.int('seed', { min: 0, max: 4294967295 }),
-  // cpu_particles_3d.cpp:1567 — "0,1,0.01": hard both ends.
-  lifetime_randomness: v.float('lifetime_randomness', { min: 0, max: 1 }),
-  // cpu_particles_3d.cpp:1568 — "0,1000,1,suffix:FPS", no or_greater/or_less: hard both ends.
-  fixed_fps: v.int('fixed_fps', { min: 0, max: 1000 }),
+  // cpu_particles_3d.cpp:1566 — a real PROPERTY_HINT_RANGE, "0,"+UINT32_MAX+",1",
+  // so unlike `layerBitmask` (whose LAYERS hint states no numbers) this one is
+  // spelled out by the hint itself. set_seed:578-580 is a bare assignment, so
+  // it warns rather than errors.
+  seed: v.int('seed', { min: 0, max: 4294967295, hinted: 'cpu_particles_3d.cpp:1566' }),
+  // cpu_particles_3d.cpp:1567 — "0,1,0.01". set_lifetime_randomness:118-121 is bare.
+  lifetime_randomness: v.float('lifetime_randomness', {
+    min: 0,
+    max: 1,
+    hinted: 'cpu_particles_3d.cpp:1567',
+  }),
+  // cpu_particles_3d.cpp:1568 — "0,1000,1,suffix:FPS", no or_greater/or_less: hard both ends
+  // per the hint. set_fixed_fps:198-200 is a bare assignment, so it is a warning.
+  fixed_fps: v.int('fixed_fps', { min: 0, max: 1000, hinted: 'cpu_particles_3d.cpp:1568' }),
   // cpu_particles_3d.cpp:1569 — plain BOOL, no hint.
   fract_delta: v.boolean('fract_delta'),
 
@@ -148,17 +172,25 @@ validatorRegistry.registerAll('CPUParticles3D', {
   // cpu_particles_3d.cpp:1572 — plain BOOL, no hint.
   local_coords: v.boolean('local_coords'),
   // cpu_particles_3d.cpp:1573 — PROPERTY_HINT_ENUM "Index,Lifetime,View Depth"; set_draw_order
-  // (cpu_particles_3d.cpp:174-177) ERR_FAIL_INDEXes outside 0-2, so the bound is hard here
+  // (cpu_particles_3d.cpp:175) ERR_FAIL_INDEXes outside 0-2, so the bound is enforced here
   // (contrast CPUParticles2D::set_draw_order, which takes any int unconditionally).
-  draw_order: v.enumInt('draw_order', 0, 2, DRAW_ORDER),
+  draw_order: v.enumInt('draw_order', 0, 2, DRAW_ORDER, { enforced: 'cpu_particles_3d.cpp:175' }),
   // cpu_particles_3d.cpp:1574 — PROPERTY_HINT_RESOURCE_TYPE "Mesh".
   mesh: v.resourceReference('mesh'),
 
   // ADD_GROUP("Emission Shape", "emission_") — cpu_particles_3d.cpp:1666.
-  // cpu_particles_3d.cpp:1667 — PROPERTY_HINT_ENUM, 7 values (Point..Ring).
-  emission_shape: v.enumInt('emission_shape', 0, 6, EMISSION_SHAPE),
-  // cpu_particles_3d.cpp:1668 — "0.01,128,0.01", no or_greater/or_less: hard both ends.
-  emission_sphere_radius: v.float('emission_sphere_radius', { min: 0.01, max: 128 }),
+  // cpu_particles_3d.cpp:1667 — PROPERTY_HINT_ENUM, 7 values (Point..Ring). set_emission_shape
+  // :423-426 ERR_FAIL_INDEX(p_shape, EMISSION_SHAPE_MAX): the setter refuses.
+  emission_shape: v.enumInt('emission_shape', 0, 6, EMISSION_SHAPE, {
+    enforced: 'cpu_particles_3d.cpp:424',
+  }),
+  // cpu_particles_3d.cpp:1668 — "0.01,128,0.01", no or_greater/or_less: hard both ends per the
+  // hint. set_emission_sphere_radius:429-432 is a bare assignment, so it is a warning.
+  emission_sphere_radius: v.float('emission_sphere_radius', {
+    min: 0.01,
+    max: 128,
+    hinted: 'cpu_particles_3d.cpp:1668',
+  }),
   // cpu_particles_3d.cpp:1669 — VECTOR3, no hint.
   emission_box_extents: v.vector3('emission_box_extents'),
   // cpu_particles_3d.cpp:1670 — PACKED_VECTOR3_ARRAY, no hint.
@@ -169,16 +201,30 @@ validatorRegistry.registerAll('CPUParticles3D', {
   emission_colors: packedColorArray('emission_colors'),
   // cpu_particles_3d.cpp:1673 — VECTOR3, no hint.
   emission_ring_axis: v.vector3('emission_ring_axis'),
-  // cpu_particles_3d.cpp:1674 — "0,1000,0.01,or_greater": or_greater lifts the ceiling; 0 floor hard.
-  emission_ring_height: v.nonNegativeFloat('emission_ring_height'),
-  // cpu_particles_3d.cpp:1675 — "0,1000,0.01,or_greater": or_greater lifts the ceiling; 0 floor hard.
-  emission_ring_radius: v.nonNegativeFloat('emission_ring_radius'),
-  // cpu_particles_3d.cpp:1676 — "0,1000,0.01,or_greater": or_greater lifts the ceiling; 0 floor hard.
-  emission_ring_inner_radius: v.nonNegativeFloat('emission_ring_inner_radius'),
-  // cpu_particles_3d.cpp:1677 — "0,90,0.01,degrees", no or_greater/or_less: hard both ends. The
-  // "degrees" token here is a plain unit label (the process code reads the value directly as
-  // degrees, see file header), not `radians_as_degrees`, so no v.radians conversion applies.
-  emission_ring_cone_angle: v.float('emission_ring_cone_angle', { min: 0, max: 90 }),
+  // cpu_particles_3d.cpp:1674 — "0,1000,0.01,or_greater": or_greater lifts the ceiling.
+  // set_emission_ring_height:456-459 is a bare assignment.
+  emission_ring_height: v.nonNegativeFloat('emission_ring_height', {
+    hinted: 'cpu_particles_3d.cpp:1674',
+  }),
+  // cpu_particles_3d.cpp:1675 — "0,1000,0.01,or_greater": or_greater lifts the ceiling.
+  // set_emission_ring_radius:461-464 is a bare assignment.
+  emission_ring_radius: v.nonNegativeFloat('emission_ring_radius', {
+    hinted: 'cpu_particles_3d.cpp:1675',
+  }),
+  // cpu_particles_3d.cpp:1676 — "0,1000,0.01,or_greater": or_greater lifts the ceiling.
+  // set_emission_ring_inner_radius:466-469 is a bare assignment.
+  emission_ring_inner_radius: v.nonNegativeFloat('emission_ring_inner_radius', {
+    hinted: 'cpu_particles_3d.cpp:1676',
+  }),
+  // cpu_particles_3d.cpp:1677 — "0,90,0.01,degrees", no or_greater/or_less: hard both ends
+  // per the hint. The "degrees" token here is a plain unit label (the process code reads the
+  // value directly as degrees, see file header), not `radians_as_degrees`, so no `v.radians`
+  // unit conversion applies. set_emission_ring_cone_angle:471-474 is a bare assignment.
+  emission_ring_cone_angle: v.float('emission_ring_cone_angle', {
+    min: 0,
+    max: 90,
+    hinted: 'cpu_particles_3d.cpp:1677',
+  }),
 
   // ADD_GROUP("Particle Flags", "particle_flag_") — cpu_particles_3d.cpp:1678.
   // cpu_particles_3d.cpp:1679-1681 — plain BOOL, no hint, each.
@@ -189,19 +235,27 @@ validatorRegistry.registerAll('CPUParticles3D', {
   // ADD_GROUP("Direction", "") — cpu_particles_3d.cpp:1682.
   // cpu_particles_3d.cpp:1683 — VECTOR3, no hint.
   direction: v.vector3('direction'),
-  // cpu_particles_3d.cpp:1684 — "0,180,0.01": hard both ends.
-  spread: v.float('spread', { min: 0, max: 180 }),
-  // cpu_particles_3d.cpp:1685 — "0,1,0.01": hard both ends.
-  flatness: v.float('flatness', { min: 0, max: 1 }),
+  // cpu_particles_3d.cpp:1684 — "0,180,0.01": hard both ends per the hint.
+  // set_spread:274-277 is a bare assignment, so it is a warning.
+  spread: v.float('spread', { min: 0, max: 180, hinted: 'cpu_particles_3d.cpp:1684' }),
+  // cpu_particles_3d.cpp:1685 — "0,1,0.01". set_flatness:282-285 is a bare assignment.
+  flatness: v.float('flatness', { min: 0, max: 1, hinted: 'cpu_particles_3d.cpp:1685' }),
 
   // ADD_GROUP("Gravity", "") — cpu_particles_3d.cpp:1686.
   // cpu_particles_3d.cpp:1687 — VECTOR3, no hint.
   gravity: v.vector3('gravity'),
 
   // ADD_GROUP("Initial Velocity", "initial_") — cpu_particles_3d.cpp:1688.
-  // cpu_particles_3d.cpp:1689-1690 — "0,1000,0.01,or_greater": or_greater lifts the ceiling; 0 floor hard.
-  initial_velocity_min: v.nonNegativeFloat('initial_velocity_min'),
-  initial_velocity_max: v.nonNegativeFloat('initial_velocity_max'),
+  // cpu_particles_3d.cpp:1689-1690 — "0,1000,0.01,or_greater": or_greater lifts the ceiling.
+  // Routed through set_param_min/set_param_max (cpu_particles_3d.cpp:290-315), whose
+  // ERR_FAIL_INDEX(p_param, PARAM_MAX) guards the PARAM INDEX, not the value — the same
+  // trap as Light3D::set_param — so the value itself is never checked at all.
+  initial_velocity_min: v.nonNegativeFloat('initial_velocity_min', {
+    hinted: 'cpu_particles_3d.cpp:1689',
+  }),
+  initial_velocity_max: v.nonNegativeFloat('initial_velocity_max', {
+    hinted: 'cpu_particles_3d.cpp:1690',
+  }),
 
   // ADD_GROUP("Angular Velocity", "angular_") — cpu_particles_3d.cpp:1691.
   // cpu_particles_3d.cpp:1692-1693 — "-720,720,0.01,or_less,or_greater": BOTH sides soft, fully unbounded.
@@ -239,9 +293,11 @@ validatorRegistry.registerAll('CPUParticles3D', {
   tangential_accel_curve: v.resourceReference('tangential_accel_curve'),
 
   // ADD_GROUP("Damping", "") — cpu_particles_3d.cpp:1711.
-  // cpu_particles_3d.cpp:1712-1713 — "0,100,0.001,or_greater": or_greater lifts the ceiling; 0 floor hard.
-  damping_min: v.nonNegativeFloat('damping_min'),
-  damping_max: v.nonNegativeFloat('damping_max'),
+  // cpu_particles_3d.cpp:1712-1713 — "0,100,0.001,or_greater": or_greater lifts the ceiling.
+  // Routed through set_param_min/set_param_max, whose index-only guard never checks the
+  // value (see initial_velocity_min above).
+  damping_min: v.nonNegativeFloat('damping_min', { hinted: 'cpu_particles_3d.cpp:1712' }),
+  damping_max: v.nonNegativeFloat('damping_max', { hinted: 'cpu_particles_3d.cpp:1713' }),
   // cpu_particles_3d.cpp:1714 — PROPERTY_HINT_RESOURCE_TYPE "Curve".
   damping_curve: v.resourceReference('damping_curve'),
 
@@ -253,9 +309,15 @@ validatorRegistry.registerAll('CPUParticles3D', {
   angle_curve: v.resourceReference('angle_curve'),
 
   // ADD_GROUP("Scale", "") — cpu_particles_3d.cpp:1719.
-  // cpu_particles_3d.cpp:1720-1721 — "0,1000,0.01,or_greater": or_greater lifts the ceiling; 0 floor hard.
-  scale_amount_min: v.nonNegativeFloat('scale_amount_min'),
-  scale_amount_max: v.nonNegativeFloat('scale_amount_max'),
+  // cpu_particles_3d.cpp:1720-1721 — "0,1000,0.01,or_greater": or_greater lifts the ceiling.
+  // Routed through set_param_min/set_param_max's index-only guard (see
+  // initial_velocity_min above).
+  scale_amount_min: v.nonNegativeFloat('scale_amount_min', {
+    hinted: 'cpu_particles_3d.cpp:1720',
+  }),
+  scale_amount_max: v.nonNegativeFloat('scale_amount_max', {
+    hinted: 'cpu_particles_3d.cpp:1721',
+  }),
   // cpu_particles_3d.cpp:1722 — PROPERTY_HINT_RESOURCE_TYPE "Curve".
   scale_amount_curve: v.resourceReference('scale_amount_curve'),
   // cpu_particles_3d.cpp:1723 — plain BOOL, no hint.
@@ -273,9 +335,20 @@ validatorRegistry.registerAll('CPUParticles3D', {
   color_initial_ramp: v.resourceReference('color_initial_ramp'),
 
   // ADD_GROUP("Hue Variation", "hue_") — cpu_particles_3d.cpp:1732.
-  // cpu_particles_3d.cpp:1733-1734 — "-1,1,0.01", no or_greater/or_less: hard both ends.
-  hue_variation_min: v.float('hue_variation_min', { min: -1, max: 1 }),
-  hue_variation_max: v.float('hue_variation_max', { min: -1, max: 1 }),
+  // cpu_particles_3d.cpp:1733-1734 — "-1,1,0.01", no or_greater/or_less: hard both ends per
+  // the hint. Routed through set_param_min/set_param_max's index-only guard (see
+  // initial_velocity_min above), so the value itself is never checked at all — this is a
+  // warning, not an error, despite the hint being closed.
+  hue_variation_min: v.float('hue_variation_min', {
+    min: -1,
+    max: 1,
+    hinted: 'cpu_particles_3d.cpp:1733',
+  }),
+  hue_variation_max: v.float('hue_variation_max', {
+    min: -1,
+    max: 1,
+    hinted: 'cpu_particles_3d.cpp:1734',
+  }),
   // cpu_particles_3d.cpp:1735 — PROPERTY_HINT_RESOURCE_TYPE "Curve".
   hue_variation_curve: v.resourceReference('hue_variation_curve'),
 
@@ -285,9 +358,19 @@ validatorRegistry.registerAll('CPUParticles3D', {
   anim_speed_max: v.float('anim_speed_max'),
   // cpu_particles_3d.cpp:1739 — PROPERTY_HINT_RESOURCE_TYPE "Curve".
   anim_speed_curve: v.resourceReference('anim_speed_curve'),
-  // cpu_particles_3d.cpp:1740-1741 — "0,1,0.0001", no or_greater/or_less: hard both ends.
-  anim_offset_min: v.float('anim_offset_min', { min: 0, max: 1 }),
-  anim_offset_max: v.float('anim_offset_max', { min: 0, max: 1 }),
+  // cpu_particles_3d.cpp:1740-1741 — "0,1,0.0001", no or_greater/or_less: hard both ends per
+  // the hint, but routed through set_param_min/set_param_max's index-only guard (see
+  // initial_velocity_min above), so it is a warning, not an error.
+  anim_offset_min: v.float('anim_offset_min', {
+    min: 0,
+    max: 1,
+    hinted: 'cpu_particles_3d.cpp:1740',
+  }),
+  anim_offset_max: v.float('anim_offset_max', {
+    min: 0,
+    max: 1,
+    hinted: 'cpu_particles_3d.cpp:1741',
+  }),
   // cpu_particles_3d.cpp:1742 — PROPERTY_HINT_RESOURCE_TYPE "Curve".
   anim_offset_curve: v.resourceReference('anim_offset_curve'),
 });

@@ -39,7 +39,7 @@ Strict parsing format-checks these `BaseButton` properties, plus 26 inherited fr
 | --- | --- |
 | `action_mode` | enum 0-1 (ACTION_MODE_BUTTON_PRESS/ACTION_MODE_BUTTON_RELEASE) |
 | `button_group` | SubResource("id") or ExtResource("id") |
-| `button_mask` | integer >= 0 |
+| `button_mask` | integer |
 | `button_pressed` | true or false |
 | `disabled` | true or false |
 | `keep_pressed_outside` | true or false |

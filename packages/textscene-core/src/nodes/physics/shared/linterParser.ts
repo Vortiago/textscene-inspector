@@ -25,28 +25,39 @@ import { layerBitmask, v } from '../../../linter/validators/index.js';
 
 /**
  * scene/2d/physics/collision_object_2d.cpp:652-654 and its 3D twin at :514-516
- * bind the same three constants; :642 hints them "Remove,Make Static,Keep Active".
+ * bind the same three constants; the 2D hint lives at :642, the 3D one at
+ * :503, both "Remove,Make Static,Keep Active". Neither setter guards the
+ * value (bare assignment), so out-of-range is hinted, not enforced.
  */
 const DISABLE_MODE = { 0: 'REMOVE', 1: 'MAKE_STATIC', 2: 'KEEP_ACTIVE' };
 
-/** The four keys both dimensions declare identically. */
-const shared = () => ({
-  disable_mode: v.enumInt('disable_mode', 0, 2, DISABLE_MODE),
-  // PROPERTY_HINT_LAYERS_2D_PHYSICS / _3D_PHYSICS — collision_object_2d.cpp:645.
-  collision_layer: layerBitmask('collision_layer'),
-  collision_mask: layerBitmask('collision_mask'),
+/**
+ * The four keys both dimensions declare identically, minus the per-dimension
+ * disable_mode hint.
+ *
+ * `collision_layer`/`collision_mask` go through the shared `layerBitmask()`
+ * factory. No setter guards the value (collision_object_2d.cpp:142-161,
+ * collision_object_3d.cpp:140-158), so the 32-bit width is the inspector's
+ * checkbox grid rather than an engine limit: out of range is a warning.
+ */
+const shared = (disableModeHint: string, layerHint: string, maskHint: string) => ({
+  disable_mode: v.enumInt('disable_mode', 0, 2, DISABLE_MODE, { hinted: disableModeHint }),
+  // PROPERTY_HINT_LAYERS_{2D,3D}_PHYSICS: a 32-checkbox widget, so the width is
+  // a UI-control hint and an out-of-range mask warns rather than errors.
+  collision_layer: layerBitmask('collision_layer', { hinted: layerHint }),
+  collision_mask: layerBitmask('collision_mask', { hinted: maskHint }),
   // collision_object_2d.cpp:647 — a plain FLOAT, no range hint, so no bound.
   collision_priority: v.float('collision_priority'),
 });
 
 validatorRegistry.registerAll('CollisionObject2D', {
-  ...shared(),
+  ...shared('collision_object_2d.cpp:642', 'collision_object_2d.cpp:645', 'collision_object_2d.cpp:646'),
   // collision_object_2d.cpp:650. The 3D twin spells it `input_ray_pickable`.
   input_pickable: v.boolean('input_pickable'),
 });
 
 validatorRegistry.registerAll('CollisionObject3D', {
-  ...shared(),
+  ...shared('collision_object_3d.cpp:503', 'collision_object_3d.cpp:506', 'collision_object_3d.cpp:507'),
   // collision_object_3d.cpp:511-512. `input_capture_on_drag` is 3D-only.
   input_ray_pickable: v.boolean('input_ray_pickable'),
   input_capture_on_drag: v.boolean('input_capture_on_drag'),

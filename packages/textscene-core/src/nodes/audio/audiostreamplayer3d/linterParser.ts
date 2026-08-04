@@ -29,33 +29,57 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
     min: Number.MIN_VALUE,
     message:
       "Property 'pitch_scale' must be greater than 0. Zero or negative pitch breaks audio playback.",
+    enforced: 'audio_stream_player_internal.cpp:314',
   }),
   playing: v.boolean('playing'),
   autoplay: v.boolean('autoplay'),
   stream_paused: v.boolean('stream_paused'),
-  attenuation_model: v.enumInt('attenuation_model', 0, 3, ATTENUATION_MODEL),
+  // audio_stream_player_3d.cpp:721, ERR_FAIL_INDEX((int)p_model, 4).
+  attenuation_model: v.enumInt('attenuation_model', 0, 3, ATTENUATION_MODEL, {
+    enforced: 'audio_stream_player_3d.cpp:721',
+  }),
   // audio_stream_player_3d.cpp:569 is a bare assignment, so the hint at :885
   // ("0.1,100,0.01,or_greater") is advisory: below 0.1 is a warning in linter.ts.
   unit_size: v.float('unit_size'),
   // audio_stream_player_3d.cpp:660, ERR_FAIL_COND(p_metres < 0.0).
-  max_distance: v.nonNegativeFloat('max_distance'),
+  max_distance: v.nonNegativeFloat('max_distance', { enforced: 'audio_stream_player_3d.cpp:660' }),
   max_db: v.float('max_db'),
+  // audio_stream_player_3d.cpp:704 is a bare assignment; the hint at :902
+  // ("1,20500,1,suffix:Hz") is advisory only.
   attenuation_filter_cutoff_hz: v.float('attenuation_filter_cutoff_hz', {
     min: 1,
     message: "Property 'attenuation_filter_cutoff_hz' must be at least 1 Hz",
+    hinted: 'audio_stream_player_3d.cpp:902',
   }),
   attenuation_filter_db: v.float('attenuation_filter_db'),
-  doppler_tracking: v.enumInt('doppler_tracking', 0, 2, DOPPLER_TRACKING),
-  panning_strength: v.float('panning_strength', { min: 0, max: 1 }),
-  area_mask: layerBitmask('area_mask'),
+  // audio_stream_player_3d.cpp:730 is a bare assignment (only an equal-check early
+  // return); no engine-side range check on the raw int.
+  doppler_tracking: v.enumInt('doppler_tracking', 0, 2, DOPPLER_TRACKING, {
+    hinted: 'audio_stream_player_3d.cpp:905',
+  }),
+  // audio_stream_player_3d.cpp:777, ERR_FAIL_COND_MSG(p_panning_strength < 0, ...)
+  // enforces the floor only. The hint (:893) is "0,3,0.01,or_greater": or_greater
+  // opens the ceiling, so a prior max:1 here rejected legal values above 1.
+  panning_strength: v.float('panning_strength', {
+    min: 0,
+    enforced: { min: 'audio_stream_player_3d.cpp:777' },
+  }),
+  // Bare uint32_t assignment (:669): the parameter type is the ceiling.
+  area_mask: layerBitmask('area_mask', { hinted: 'audio_stream_player_3d.cpp:895' }),
   emission_angle_enabled: v.boolean('emission_angle_enabled'),
-  // audio_stream_player_3d.cpp:899, PROPERTY_HINT_RANGE "0.1,90,0.1,degrees".
-  emission_angle_degrees: v.float('emission_angle_degrees', { min: 0, max: 90 }),
+  // audio_stream_player_3d.cpp:687, ERR_FAIL_COND(p_angle < 0 || p_angle > 90); the
+  // hint at :899 is degrees (not radians_as_degrees), so no conversion applies.
+  emission_angle_degrees: v.float('emission_angle_degrees', {
+    min: 0,
+    max: 90,
+    enforced: 'audio_stream_player_3d.cpp:687',
+  }),
   emission_angle_filter_attenuation_db: v.float('emission_angle_filter_attenuation_db'),
   bus: busValidator,
   // audio_stream_player_internal.cpp:322 drops the write when <= 0.
   max_polyphony: v.int('max_polyphony', {
     min: 1,
     message: "Property 'max_polyphony' must be at least 1. Values below 1 cause errors.",
+    enforced: 'audio_stream_player_internal.cpp:322',
   }),
 });

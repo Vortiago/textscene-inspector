@@ -31,37 +31,58 @@ const VISIBILITY_RANGE_FADE_MODE = { 0: 'DISABLED', 1: 'SELF', 2: 'DEPENDENCIES'
 
 validatorRegistry.registerAll('GeometryInstance3D', {
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::INT, "cast_shadow",
-  // PROPERTY_HINT_ENUM, "Off,On,Double-Sided,Shadows Only"), ...)
-  cast_shadow: v.enumInt('cast_shadow', 0, 3, CAST_SHADOW),
+  // PROPERTY_HINT_ENUM, "Off,On,Double-Sided,Shadows Only"), ...). set_cast_shadows_setting
+  // (:366-370) is a bare assignment.
+  cast_shadow: v.enumInt('cast_shadow', 0, 3, CAST_SHADOW, {
+    hinted: 'visual_instance_3d.cpp:601',
+  }),
 
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::AABB, "custom_aabb",
   // PROPERTY_HINT_NONE, "suffix:m"), ...) — no range hint, just the AABB(...) shape.
   custom_aabb: v.aabb('custom_aabb'),
 
-  // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "extra_cull_margin", PROPERTY_HINT_RANGE,
-  // "0,16384,0.01,suffix:m"); setter mirrors the floor: ERR_FAIL_COND(p_margin < 0).
-  extra_cull_margin: v.float('extra_cull_margin', { min: 0, max: 16384 }),
+  // scene/3d/visual_instance_3d.cpp:602, ADD_PROPERTY(..., "extra_cull_margin",
+  // PROPERTY_HINT_RANGE, "0,16384,0.01,suffix:m"); set_extra_cull_margin:376-380
+  // ERR_FAIL_COND(p_margin < 0) enforces the floor. The hint's ceiling is closed
+  // (no or_greater) but never checked by the setter, so it is a warning.
+  extra_cull_margin: v.float('extra_cull_margin', {
+    min: 0,
+    max: 16384,
+    enforced: { min: 'visual_instance_3d.cpp:377' },
+    hinted: { max: 'visual_instance_3d.cpp:602' },
+  }),
 
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "gi_lightmap_texel_scale",
   // PROPERTY_HINT_RANGE, "0.01,10,0.0001,or_greater") — `or_greater`: the 10 is a soft
-  // editor bound only, so no max is enforced here.
-  gi_lightmap_texel_scale: v.float('gi_lightmap_texel_scale', { min: 0.01 }),
+  // editor bound only, so no max is enforced here. set_lightmap_texel_scale:429-431 is
+  // a bare assignment.
+  gi_lightmap_texel_scale: v.float('gi_lightmap_texel_scale', {
+    min: 0.01,
+    hinted: 'visual_instance_3d.cpp:609',
+  }),
 
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "gi_mode", PROPERTY_HINT_ENUM,
-  // "Disabled,Static,Dynamic")
-  gi_mode: v.enumInt('gi_mode', 0, 2, GI_MODE),
+  // "Disabled,Static,Dynamic"). set_gi_mode:472-489 switches on 3 known cases then
+  // assigns unconditionally afterward, so an out-of-range value is not dropped.
+  gi_mode: v.enumInt('gi_mode', 0, 2, GI_MODE, { hinted: 'visual_instance_3d.cpp:608' }),
 
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::BOOL,
   // "ignore_occlusion_culling"), ...)
   ignore_occlusion_culling: v.boolean('ignore_occlusion_culling'),
 
-  // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "lod_bias", PROPERTY_HINT_RANGE,
+  // scene/3d/visual_instance_3d.cpp:604, ADD_PROPERTY(..., "lod_bias", PROPERTY_HINT_RANGE,
   // "0.001,128,0.001"). The hint's 0.001 floor is an editor-slider convenience, not the
   // documented validity floor: doc/classes/GeometryInstance3D.xml says "A value of 0 will
   // force the mesh to its lowest level of detail" (0 is a meaningful, intentional value,
-  // not an error), and the setter only rejects negative: ERR_FAIL_COND(p_bias < 0.0). The
-  // validator follows the setter/doc floor (0), not the slider's.
-  lod_bias: v.float('lod_bias', { min: 0, max: 128 }),
+  // not an error), and set_lod_bias:386-390 ERR_FAIL_COND(p_bias < 0.0) enforces exactly
+  // that floor. The hint's 128 ceiling is closed (no or_greater) but never checked by the
+  // setter, so it is a warning.
+  lod_bias: v.float('lod_bias', {
+    min: 0,
+    max: 128,
+    enforced: { min: 'visual_instance_3d.cpp:387' },
+    hinted: { max: 'visual_instance_3d.cpp:604' },
+  }),
 
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::OBJECT,
   // "material_overlay", PROPERTY_HINT_RESOURCE_TYPE, "BaseMaterial3D,ShaderMaterial",
@@ -73,33 +94,48 @@ validatorRegistry.registerAll('GeometryInstance3D', {
   // PROPERTY_USAGE_DEFAULT), ...)
   material_override: v.resourceReference('material_override'),
 
-  // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "transparency", PROPERTY_HINT_RANGE,
-  // "0.0,1.0,0.01")
-  transparency: v.float('transparency', { min: 0, max: 1 }),
+  // scene/3d/visual_instance_3d.cpp:600, ADD_PROPERTY(..., "transparency", PROPERTY_HINT_RANGE,
+  // "0.0,1.0,0.01"). set_transparency:235-238 `transparency = CLAMP(p_transparency, 0.0f,
+  // 1.0f)` enforces both ends.
+  transparency: v.float('transparency', { min: 0, max: 1, enforced: 'visual_instance_3d.cpp:236' }),
 
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "visibility_range_begin",
   // PROPERTY_HINT_RANGE, "0.0,4096.0,0.01,or_greater,suffix:m") — `or_greater`: no cap.
-  visibility_range_begin: v.nonNegativeFloat('visibility_range_begin'),
+  // set_visibility_range_begin:245-249 is a bare assignment.
+  visibility_range_begin: v.nonNegativeFloat('visibility_range_begin', {
+    hinted: 'visual_instance_3d.cpp:615',
+  }),
 
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "visibility_range_begin_margin",
   // PROPERTY_HINT_RANGE, "0.0,4096.0,0.01,or_greater,suffix:m") — `or_greater`: no cap.
-  visibility_range_begin_margin: v.nonNegativeFloat('visibility_range_begin_margin'),
+  // set_visibility_range_begin_margin:265-269 is a bare assignment.
+  visibility_range_begin_margin: v.nonNegativeFloat('visibility_range_begin_margin', {
+    hinted: 'visual_instance_3d.cpp:616',
+  }),
 
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "visibility_range_end",
   // PROPERTY_HINT_RANGE, "0.0,4096.0,0.01,or_greater,suffix:m") — `or_greater`: no cap.
-  visibility_range_end: v.nonNegativeFloat('visibility_range_end'),
+  // set_visibility_range_end:255-259 is a bare assignment.
+  visibility_range_end: v.nonNegativeFloat('visibility_range_end', {
+    hinted: 'visual_instance_3d.cpp:617',
+  }),
 
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "visibility_range_end_margin",
   // PROPERTY_HINT_RANGE, "0.0,4096.0,0.01,or_greater,suffix:m") — `or_greater`: no cap.
-  visibility_range_end_margin: v.nonNegativeFloat('visibility_range_end_margin'),
+  // set_visibility_range_end_margin:275-279 is a bare assignment.
+  visibility_range_end_margin: v.nonNegativeFloat('visibility_range_end_margin', {
+    hinted: 'visual_instance_3d.cpp:618',
+  }),
 
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "visibility_range_fade_mode",
-  // PROPERTY_HINT_ENUM, "Disabled,Self,Dependencies")
+  // PROPERTY_HINT_ENUM, "Disabled,Self,Dependencies"). set_visibility_range_fade_mode:285-289
+  // is a bare assignment.
   visibility_range_fade_mode: v.enumInt(
     'visibility_range_fade_mode',
     0,
     2,
-    VISIBILITY_RANGE_FADE_MODE
+    VISIBILITY_RANGE_FADE_MODE,
+    { hinted: 'visual_instance_3d.cpp:619' }
   ),
 
   // scene/3d/visual_instance_3d.cpp: VisualInstance3D's own ADD_PROPERTY gives

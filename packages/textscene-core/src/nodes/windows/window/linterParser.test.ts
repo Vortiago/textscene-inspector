@@ -204,14 +204,23 @@ describe('Window strict validators', () => {
       expect(check('content_scale_stretch', '2')?.message).toContain('0-1');
     });
 
-    it('accepts content_scale_factor at both hard bounds', () => {
+    it('accepts content_scale_factor inside the hint, and below its floor too', () => {
+      // The hint's 0.5 floor is not enforced by anything: 0.1 loads and runs,
+      // so it is not diagnosed at all.
       expect(check('content_scale_factor', '0.5')).toBeNull();
       expect(check('content_scale_factor', '8.0')).toBeNull();
+      expect(check('content_scale_factor', '0.1')).toBeNull();
     });
 
-    it('rejects content_scale_factor outside 0.5-8.0 (both bounds are hard, no or_greater)', () => {
-      expect(check('content_scale_factor', '0.4')?.message).toContain('between 0.5 and 8');
-      expect(check('content_scale_factor', '8.1')?.message).toContain('between 0.5 and 8');
+    it('warns above the hinted 8.0 ceiling rather than erroring', () => {
+      // window.cpp:3466 states the ceiling and set_content_scale_factor never
+      // checks it, so it is the inspector's limit, not the engine's.
+      expect(check('content_scale_factor', '20')?.severity).toBe('warning');
+    });
+
+    it('rejects content_scale_factor at or below 0 — the one bound set_content_scale_factor (window.cpp:1774) actually enforces', () => {
+      expect(check('content_scale_factor', '0')?.severity).toBe('error');
+      expect(check('content_scale_factor', '-1')?.severity).toBe('error');
     });
   });
 

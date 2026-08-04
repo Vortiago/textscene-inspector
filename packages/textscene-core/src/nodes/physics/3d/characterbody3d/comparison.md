@@ -40,9 +40,9 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | `floor_stop_on_slope` | true or false |
 | `max_slides` | integer > 0 |
 | `motion_mode` | enum 0-1 (GROUNDED/FLOATING) |
-| `platform_floor_layers` | integer 0-4294967295 |
+| `platform_floor_layers` | 32-bit layer mask (layers 1-32) |
 | `platform_on_leave` | enum 0-2 (ADD_VELOCITY/ADD_UPWARD_VELOCITY/DO_NOTHING) |
-| `platform_wall_layers` | integer 0-4294967295 |
+| `platform_wall_layers` | 32-bit layer mask (layers 1-32) |
 | `safe_margin` | float |
 | `up_direction` | Vector3(x, y, z) |
 | `velocity` | Vector3(x, y, z) |

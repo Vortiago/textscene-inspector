@@ -35,18 +35,24 @@ import { v, accepts, propertyError } from '../../../../linter/validators/index.j
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 // generic_6dof_joint_3d.cpp:52-73 — ADD_GROUP("Linear Limit", "linear_limit_"),
-// identical PropertyInfo per leaf on the x/y/z ADD_PROPERTYI trio.
+// identical PropertyInfo per leaf on the x/y/z ADD_PROPERTYI trio, dispatched
+// through set_param_x/y/z (:199-206 etc.), each `ERR_FAIL_INDEX(p_param,
+// PARAM_MAX)` guarding the Param enum index only, then a bare
+// `params_x[p_param] = p_value` — so every bound below is hinted.
 const LINEAR_LIMIT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   enabled: v.boolean('enabled'),
   // upper_distance/lower_distance: PROPERTY_HINT_NONE, "suffix:m" — no
   // PROPERTY_HINT_RANGE at all, so unbounded.
   upper_distance: v.float('upper_distance'),
   lower_distance: v.float('lower_distance'),
-  // softness/restitution/damping: PROPERTY_HINT_RANGE "0.01,16,0.01" — no
-  // or_less/or_greater, so both ends are the hard bound.
-  softness: v.float('softness', { min: 0.01, max: 16 }),
-  restitution: v.float('restitution', { min: 0.01, max: 16 }),
-  damping: v.float('damping', { min: 0.01, max: 16 }),
+  // softness/restitution/damping: PROPERTY_HINT_RANGE "0.01,16,0.01" (:57-59).
+  softness: v.float('softness', { min: 0.01, max: 16, hinted: 'generic_6dof_joint_3d.cpp:57' }),
+  restitution: v.float('restitution', {
+    min: 0.01,
+    max: 16,
+    hinted: 'generic_6dof_joint_3d.cpp:58',
+  }),
+  damping: v.float('damping', { min: 0.01, max: 16, hinted: 'generic_6dof_joint_3d.cpp:59' }),
 };
 
 // generic_6dof_joint_3d.cpp:75-87 — ADD_GROUP("Linear Motor", "linear_motor_").
@@ -72,14 +78,27 @@ const LINEAR_SPRING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 const ANGULAR_LIMIT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   enabled: v.boolean('enabled'),
   // upper_angle/lower_angle: PROPERTY_HINT_RANGE "-180,180,0.01,radians_as_degrees"
-  // — no or_less/or_greater, so ±180° is the hard bound; the .tscn value is
-  // radians, hence the combinator rather than a bare ±180 literal.
-  upper_angle: v.radians('upper_angle', { minDeg: -180, maxDeg: 180 }),
-  lower_angle: v.radians('lower_angle', { minDeg: -180, maxDeg: 180 }),
-  // softness/restitution/damping: PROPERTY_HINT_RANGE "0.01,16,0.01" — hard bound.
-  softness: v.float('softness', { min: 0.01, max: 16 }),
-  restitution: v.float('restitution', { min: 0.01, max: 16 }),
-  damping: v.float('damping', { min: 0.01, max: 16 }),
+  // (:109-110) — no or_less/or_greater; the .tscn value is radians, hence the
+  // combinator rather than a bare ±180 literal. set_param_x/y/z is index-only,
+  // so this is hinted.
+  upper_angle: v.radians('upper_angle', {
+    minDeg: -180,
+    maxDeg: 180,
+    hinted: 'generic_6dof_joint_3d.cpp:109',
+  }),
+  lower_angle: v.radians('lower_angle', {
+    minDeg: -180,
+    maxDeg: 180,
+    hinted: 'generic_6dof_joint_3d.cpp:110',
+  }),
+  // softness/restitution/damping: PROPERTY_HINT_RANGE "0.01,16,0.01" (:111-113).
+  softness: v.float('softness', { min: 0.01, max: 16, hinted: 'generic_6dof_joint_3d.cpp:111' }),
+  restitution: v.float('restitution', {
+    min: 0.01,
+    max: 16,
+    hinted: 'generic_6dof_joint_3d.cpp:112',
+  }),
+  damping: v.float('damping', { min: 0.01, max: 16, hinted: 'generic_6dof_joint_3d.cpp:113' }),
   // force_limit: PROPERTY_HINT_NONE, "suffix:kg⋅m²/s² (Nm)" — unbounded.
   force_limit: v.float('force_limit'),
   // erp: no hint at all — unbounded.
@@ -104,8 +123,13 @@ const ANGULAR_SPRING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   stiffness: v.float('stiffness'),
   damping: v.float('damping'),
   // equilibrium_point: PROPERTY_HINT_RANGE "-180,180,0.01,radians_as_degrees"
-  // — same hard ±180° bound as the angular_limit angles, radian-converted.
-  equilibrium_point: v.radians('equilibrium_point', { minDeg: -180, maxDeg: 180 }),
+  // (:154 for the x axis) — same ±180° bound as the angular_limit angles,
+  // radian-converted; set_param_x/y/z is index-only, so this is hinted.
+  equilibrium_point: v.radians('equilibrium_point', {
+    minDeg: -180,
+    maxDeg: 180,
+    hinted: 'generic_6dof_joint_3d.cpp:154',
+  }),
 };
 
 /** Strips the leading `<group>_<axis>/` segment, leaving the bare leaf name. */

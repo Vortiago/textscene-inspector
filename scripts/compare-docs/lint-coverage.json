@@ -136,7 +136,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -390,7 +390,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -539,7 +539,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -549,7 +549,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -699,7 +699,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -902,7 +902,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -1050,7 +1050,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -1269,7 +1269,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -1472,7 +1472,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -1620,7 +1620,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -1794,7 +1794,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -2013,7 +2013,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -2171,7 +2171,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -2420,7 +2420,7 @@
         {
           "property": "text_direction",
           "declaredOn": "TextEdit",
-          "accepts": "enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED)"
+          "accepts": "enum -1-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED)"
         },
         {
           "property": "use_custom_word_separators",
@@ -2535,7 +2535,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -2545,7 +2545,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -2695,7 +2695,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -2898,7 +2898,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -3046,7 +3046,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -3186,7 +3186,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -3196,7 +3196,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -3346,7 +3346,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -3374,7 +3374,7 @@
         {
           "property": "alignment",
           "declaredOn": "Button",
-          "accepts": "enum 0-2 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT)"
+          "accepts": "enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL)"
         },
         {
           "property": "autowrap_mode",
@@ -3384,7 +3384,7 @@
         {
           "property": "autowrap_trim_flags",
           "declaredOn": "Button",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "clip_text",
@@ -3409,7 +3409,7 @@
         {
           "property": "icon_alignment",
           "declaredOn": "Button",
-          "accepts": "enum 0-2 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT)"
+          "accepts": "enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL)"
         },
         {
           "property": "language",
@@ -3424,7 +3424,7 @@
         {
           "property": "text_direction",
           "declaredOn": "Button",
-          "accepts": "enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED)"
+          "accepts": "enum -1-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED)"
         },
         {
           "property": "text_overrun_behavior",
@@ -3434,7 +3434,7 @@
         {
           "property": "vertical_icon_alignment",
           "declaredOn": "Button",
-          "accepts": "enum 0-2 (VERTICAL_ALIGNMENT_TOP/VERTICAL_ALIGNMENT_CENTER/VERTICAL_ALIGNMENT_BOTTOM)"
+          "accepts": "enum 0-3 (VERTICAL_ALIGNMENT_TOP/VERTICAL_ALIGNMENT_CENTER/VERTICAL_ALIGNMENT_BOTTOM/VERTICAL_ALIGNMENT_FILL)"
         },
         {
           "property": "action_mode",
@@ -3449,7 +3449,7 @@
         {
           "property": "button_mask",
           "declaredOn": "BaseButton",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "button_pressed",
@@ -3574,7 +3574,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -3584,7 +3584,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -3734,7 +3734,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -3904,7 +3904,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -4078,7 +4078,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -4297,7 +4297,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -4455,7 +4455,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -4554,7 +4554,7 @@
         {
           "property": "content_scale_factor",
           "declaredOn": "Window",
-          "accepts": "float 0.5-8"
+          "accepts": "float 5e-324-8"
         },
         {
           "property": "content_scale_mode",
@@ -4759,7 +4759,7 @@
         {
           "property": "canvas_item_default_texture_filter",
           "declaredOn": "Viewport",
-          "accepts": "enum 0-3 (NEAREST/LINEAR/NEAREST_WITH_MIPMAPS/LINEAR_WITH_MIPMAPS)"
+          "accepts": "enum 0-3 (NEAREST/LINEAR/LINEAR_WITH_MIPMAPS/NEAREST_WITH_MIPMAPS)"
         },
         {
           "property": "disable_3d",
@@ -4839,7 +4839,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -5004,7 +5004,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -5133,7 +5133,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -5143,7 +5143,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -5293,7 +5293,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -5406,7 +5406,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -5416,7 +5416,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -5566,7 +5566,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -5709,7 +5709,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -5719,7 +5719,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -5869,7 +5869,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -6024,7 +6024,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -6034,7 +6034,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -6184,7 +6184,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -6329,7 +6329,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -6339,7 +6339,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -6489,7 +6489,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -6647,7 +6647,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -6657,7 +6657,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -6807,7 +6807,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -6932,7 +6932,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -6942,7 +6942,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -7092,7 +7092,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -7160,7 +7160,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -7308,7 +7308,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -7437,7 +7437,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -7447,7 +7447,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -7597,7 +7597,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -7755,7 +7755,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -7924,7 +7924,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -8088,7 +8088,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -8262,7 +8262,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -8316,7 +8316,7 @@
         {
           "property": "button_mask",
           "declaredOn": "BaseButton",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "button_pressed",
@@ -8441,7 +8441,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -8451,7 +8451,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -8601,7 +8601,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -8771,7 +8771,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -8900,7 +8900,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -8910,7 +8910,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -9060,7 +9060,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -9088,7 +9088,7 @@
         {
           "property": "alignment",
           "declaredOn": "Button",
-          "accepts": "enum 0-2 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT)"
+          "accepts": "enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL)"
         },
         {
           "property": "autowrap_mode",
@@ -9098,7 +9098,7 @@
         {
           "property": "autowrap_trim_flags",
           "declaredOn": "Button",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "clip_text",
@@ -9123,7 +9123,7 @@
         {
           "property": "icon_alignment",
           "declaredOn": "Button",
-          "accepts": "enum 0-2 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT)"
+          "accepts": "enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL)"
         },
         {
           "property": "language",
@@ -9138,7 +9138,7 @@
         {
           "property": "text_direction",
           "declaredOn": "Button",
-          "accepts": "enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED)"
+          "accepts": "enum -1-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED)"
         },
         {
           "property": "text_overrun_behavior",
@@ -9148,7 +9148,7 @@
         {
           "property": "vertical_icon_alignment",
           "declaredOn": "Button",
-          "accepts": "enum 0-2 (VERTICAL_ALIGNMENT_TOP/VERTICAL_ALIGNMENT_CENTER/VERTICAL_ALIGNMENT_BOTTOM)"
+          "accepts": "enum 0-3 (VERTICAL_ALIGNMENT_TOP/VERTICAL_ALIGNMENT_CENTER/VERTICAL_ALIGNMENT_BOTTOM/VERTICAL_ALIGNMENT_FILL)"
         },
         {
           "property": "action_mode",
@@ -9163,7 +9163,7 @@
         {
           "property": "button_mask",
           "declaredOn": "BaseButton",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "button_pressed",
@@ -9288,7 +9288,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -9298,7 +9298,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -9448,7 +9448,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -9663,7 +9663,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -9821,7 +9821,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -10040,7 +10040,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -10278,7 +10278,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -10382,7 +10382,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -10450,7 +10450,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -10518,7 +10518,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -10721,7 +10721,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -10869,7 +10869,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -11088,7 +11088,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -11201,7 +11201,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -11211,7 +11211,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -11361,7 +11361,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -11514,7 +11514,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -11643,7 +11643,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -11653,7 +11653,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -11803,7 +11803,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -11951,7 +11951,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -12115,7 +12115,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -12279,7 +12279,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -12443,7 +12443,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -12583,7 +12583,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -12593,7 +12593,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -12743,7 +12743,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -12891,7 +12891,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -13055,7 +13055,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -13224,7 +13224,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -13443,7 +13443,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -13601,7 +13601,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -13670,7 +13670,7 @@
         {
           "property": "content_scale_factor",
           "declaredOn": "Window",
-          "accepts": "float 0.5-8"
+          "accepts": "float 5e-324-8"
         },
         {
           "property": "content_scale_mode",
@@ -13875,7 +13875,7 @@
         {
           "property": "canvas_item_default_texture_filter",
           "declaredOn": "Viewport",
-          "accepts": "enum 0-3 (NEAREST/LINEAR/NEAREST_WITH_MIPMAPS/LINEAR_WITH_MIPMAPS)"
+          "accepts": "enum 0-3 (NEAREST/LINEAR/LINEAR_WITH_MIPMAPS/NEAREST_WITH_MIPMAPS)"
         },
         {
           "property": "disable_3d",
@@ -13955,7 +13955,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -14020,7 +14020,7 @@
         {
           "property": "content_scale_factor",
           "declaredOn": "Window",
-          "accepts": "float 0.5-8"
+          "accepts": "float 5e-324-8"
         },
         {
           "property": "content_scale_mode",
@@ -14225,7 +14225,7 @@
         {
           "property": "canvas_item_default_texture_filter",
           "declaredOn": "Viewport",
-          "accepts": "enum 0-3 (NEAREST/LINEAR/NEAREST_WITH_MIPMAPS/LINEAR_WITH_MIPMAPS)"
+          "accepts": "enum 0-3 (NEAREST/LINEAR/LINEAR_WITH_MIPMAPS/NEAREST_WITH_MIPMAPS)"
         },
         {
           "property": "disable_3d",
@@ -14305,7 +14305,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -14475,7 +14475,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -14485,7 +14485,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -14635,7 +14635,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -14760,7 +14760,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -14770,7 +14770,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -14920,7 +14920,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -15073,7 +15073,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -15157,7 +15157,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -15315,7 +15315,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -15484,7 +15484,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -15583,7 +15583,7 @@
         {
           "property": "content_scale_factor",
           "declaredOn": "Window",
-          "accepts": "float 0.5-8"
+          "accepts": "float 5e-324-8"
         },
         {
           "property": "content_scale_mode",
@@ -15788,7 +15788,7 @@
         {
           "property": "canvas_item_default_texture_filter",
           "declaredOn": "Viewport",
-          "accepts": "enum 0-3 (NEAREST/LINEAR/NEAREST_WITH_MIPMAPS/LINEAR_WITH_MIPMAPS)"
+          "accepts": "enum 0-3 (NEAREST/LINEAR/LINEAR_WITH_MIPMAPS/NEAREST_WITH_MIPMAPS)"
         },
         {
           "property": "disable_3d",
@@ -15868,7 +15868,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -15948,7 +15948,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -16151,7 +16151,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -16309,7 +16309,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -16483,7 +16483,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -16493,7 +16493,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -16643,7 +16643,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -16813,7 +16813,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -16997,7 +16997,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -17193,7 +17193,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -17389,7 +17389,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -17575,7 +17575,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -17659,7 +17659,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -17772,7 +17772,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -17782,7 +17782,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -17932,7 +17932,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -18045,7 +18045,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -18055,7 +18055,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -18205,7 +18205,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -18243,7 +18243,7 @@
         {
           "property": "button_mask",
           "declaredOn": "BaseButton",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "button_pressed",
@@ -18368,7 +18368,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -18378,7 +18378,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -18528,7 +18528,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -18698,7 +18698,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -18708,7 +18708,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -18858,7 +18858,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -19073,7 +19073,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -19186,7 +19186,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -19196,7 +19196,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -19346,7 +19346,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -19504,7 +19504,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -19653,7 +19653,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -19663,7 +19663,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -19813,7 +19813,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -19926,7 +19926,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -19936,7 +19936,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -20086,7 +20086,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -20299,7 +20299,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -20457,7 +20457,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -20626,7 +20626,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -20800,7 +20800,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -20810,7 +20810,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -20960,7 +20960,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -21085,7 +21085,7 @@
         {
           "property": "size_flags_horizontal",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "size_flags_stretch_ratio",
@@ -21095,7 +21095,7 @@
         {
           "property": "size_flags_vertical",
           "declaredOn": "Control",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "theme_override_colors/*",
@@ -21245,7 +21245,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -21408,7 +21408,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -21582,7 +21582,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -21661,7 +21661,7 @@
         {
           "property": "keep_aspect",
           "declaredOn": "Camera3D",
-          "accepts": "enum 0-2 (KEEP_WIDTH/KEEP_HEIGHT/KEEP_ASPECT_DISABLED)"
+          "accepts": "enum 0-1 (KEEP_WIDTH/KEEP_HEIGHT)"
         },
         {
           "property": "near",
@@ -21806,7 +21806,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -22005,7 +22005,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -22169,7 +22169,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -22343,7 +22343,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",
@@ -22507,7 +22507,7 @@
         {
           "property": "process_thread_messages",
           "declaredOn": "Node",
-          "accepts": "integer >= 0"
+          "accepts": "integer"
         },
         {
           "property": "unique_name_in_owner",

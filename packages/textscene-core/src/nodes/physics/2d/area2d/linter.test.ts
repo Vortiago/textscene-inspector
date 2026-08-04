@@ -23,7 +23,6 @@ describe('Area2D Linter', () => {
           node('Area2D', {
             monitoring: true,
             monitorable: true,
-            space_override: 0,
             gravity_space_override: 0,
             gravity_point: false,
             gravity_point_center: 'Vector2(0, 0)',
@@ -49,11 +48,6 @@ describe('Area2D Linter', () => {
     runPropertyValidation({ nodeType: 'Area2D', acceptChild: collisionShape2d }, [
       { prop: 'monitoring', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
       { prop: 'monitorable', valid: [true, false], invalid: [{ value: '"yes"', contains: ['boolean'] }] },
-      {
-        prop: 'space_override',
-        valid: [0, 1, 2, 3, 4],
-        invalid: [{ value: 5, contains: ['0-4', 'DISABLED'] }, { value: -1 }],
-      },
       {
         prop: 'gravity_space_override',
         valid: [0, 1, 2, 3, 4],
@@ -280,7 +274,7 @@ describe('Area2D Linter', () => {
       const diagnostics = lint(
         scene(
           node('Area2D', {
-            space_override: 10,
+            gravity_space_override: 10,
             gravity_point_unit_distance: -5,
             collision_layer: -1,
             monitoring: '"invalid"',
@@ -296,7 +290,6 @@ describe('Area2D Linter', () => {
           node('Area2D', {
             monitoring: true,
             monitorable: true,
-            space_override: 3,
             gravity_space_override: 3,
             gravity_point: true,
             gravity_point_center: 'Vector2(0, 0)',

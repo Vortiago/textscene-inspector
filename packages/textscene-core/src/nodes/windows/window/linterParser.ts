@@ -26,31 +26,47 @@ import { THEME_OVERRIDE_VALIDATORS } from '../../../linter/validators/themeOverr
 // casts to StringName on the setter) — same leniency as the shared `busValidator`.
 
 validatorRegistry.registerAll('Window', {
-  // scene/main/window.cpp: ADD_PROPERTY(..., "mode", PROPERTY_HINT_ENUM, "Windowed,Minimized,Maximized,Fullscreen,Exclusive Fullscreen")
-  mode: v.enumInt('mode', 0, 4, {
-    0: 'WINDOWED',
-    1: 'MINIMIZED',
-    2: 'MAXIMIZED',
-    3: 'FULLSCREEN',
-    4: 'EXCLUSIVE_FULLSCREEN',
-  }),
+  // window.cpp:3422 — PROPERTY_HINT_ENUM "Windowed,Minimized,Maximized,Fullscreen,Exclusive Fullscreen".
+  // set_mode (window.cpp:523-531) assigns unconditionally, no ERR_FAIL.
+  mode: v.enumInt(
+    'mode',
+    0,
+    4,
+    {
+      0: 'WINDOWED',
+      1: 'MINIMIZED',
+      2: 'MAXIMIZED',
+      3: 'FULLSCREEN',
+      4: 'EXCLUSIVE_FULLSCREEN',
+    },
+    { hinted: 'window.cpp:3422' }
+  ),
   title: v.quotedString('title'),
-  // scene/main/window.cpp: ADD_PROPERTY(..., "initial_position", PROPERTY_HINT_ENUM, "Absolute,Center of Primary Screen,Center of Main Window Screen,Center of Other Screen,Center of Screen With Mouse Pointer,Center of Screen With Keyboard Focus")
-  initial_position: v.enumInt('initial_position', 0, 5, {
-    0: 'ABSOLUTE',
-    1: 'CENTER_PRIMARY_SCREEN',
-    2: 'CENTER_MAIN_WINDOW_SCREEN',
-    3: 'CENTER_OTHER_SCREEN',
-    4: 'CENTER_SCREEN_WITH_MOUSE_FOCUS',
-    5: 'CENTER_SCREEN_WITH_KEYBOARD_FOCUS',
-  }),
+  // window.cpp:3427 — PROPERTY_HINT_ENUM, 6 labels. set_initial_position
+  // (window.cpp:331-337) assigns unconditionally, no ERR_FAIL.
+  initial_position: v.enumInt(
+    'initial_position',
+    0,
+    5,
+    {
+      0: 'ABSOLUTE',
+      1: 'CENTER_PRIMARY_SCREEN',
+      2: 'CENTER_MAIN_WINDOW_SCREEN',
+      3: 'CENTER_OTHER_SCREEN',
+      4: 'CENTER_SCREEN_WITH_MOUSE_FOCUS',
+      5: 'CENTER_SCREEN_WITH_KEYBOARD_FOCUS',
+    },
+    { hinted: 'window.cpp:3427' }
+  ),
   position: v.vector2i('position'),
   // scene/main/window.cpp: _update_window_size(): `size = size.max(size_limit)`, and
   // size_limit derives from min_size (itself floor-clamped to 0 by _clamp_limit_size),
   // so a negative size set via the .tscn setter is immediately clamped back to >= 0
   size: v.vector2i('size', true),
-  // scene/main/window.cpp: ADD_PROPERTY(..., "current_screen", PROPERTY_HINT_RANGE, "0,64,1,or_greater") — or_greater: 64 is a soft editor bound
-  current_screen: v.int('current_screen', { min: 0 }),
+  // window.cpp:3430 — PROPERTY_HINT_RANGE "0,64,1,or_greater": 64 is a soft
+  // editor bound (or_greater), so only the 0 floor is closed. set_current_screen
+  // (window.cpp:344-351) assigns unconditionally, no clamp.
+  current_screen: v.int('current_screen', { min: 0, hinted: 'window.cpp:3430' }),
   nonclient_area: v.rect2i('nonclient_area'),
   mouse_passthrough_polygon: v.packedVector2Array('mouse_passthrough_polygon'),
 
@@ -82,24 +98,66 @@ validatorRegistry.registerAll('Window', {
 
   // "Content Scale" group.
   content_scale_size: v.vector2i('content_scale_size', true), // set_content_scale_size: ERR_FAIL_COND on either component < 0
-  content_scale_mode: v.enumInt('content_scale_mode', 0, 2, {
-    0: 'DISABLED',
-    1: 'CANVAS_ITEMS',
-    2: 'VIEWPORT',
+  // window.cpp:3463 — PROPERTY_HINT_ENUM, 3 labels. set_content_scale_mode
+  // (window.cpp:1727-1731) assigns unconditionally, no ERR_FAIL.
+  content_scale_mode: v.enumInt(
+    'content_scale_mode',
+    0,
+    2,
+    {
+      0: 'DISABLED',
+      1: 'CANVAS_ITEMS',
+      2: 'VIEWPORT',
+    },
+    { hinted: 'window.cpp:3463' }
+  ),
+  // window.cpp:3464 — PROPERTY_HINT_ENUM, 5 labels. set_content_scale_aspect
+  // (window.cpp:1738-1742) assigns unconditionally, no ERR_FAIL.
+  content_scale_aspect: v.enumInt(
+    'content_scale_aspect',
+    0,
+    4,
+    {
+      0: 'IGNORE',
+      1: 'KEEP',
+      2: 'KEEP_WIDTH',
+      3: 'KEEP_HEIGHT',
+      4: 'EXPAND',
+    },
+    { hinted: 'window.cpp:3464' }
+  ),
+  // window.cpp:3465 — PROPERTY_HINT_ENUM, 2 labels. set_content_scale_stretch
+  // (window.cpp:1749-1752) assigns unconditionally, no ERR_FAIL.
+  content_scale_stretch: v.enumInt(
+    'content_scale_stretch',
+    0,
+    1,
+    {
+      0: 'FRACTIONAL',
+      1: 'INTEGER',
+    },
+    { hinted: 'window.cpp:3465' }
+  ),
+  // window.cpp:3466 — PROPERTY_HINT_RANGE "0.5,8.0,0.01" reads as both bounds
+  // hard (no or_greater/or_less token), but that is the hint's own syntax, not
+  // enforcement: set_content_scale_factor (window.cpp:1772-1776) only does
+  // `ERR_FAIL_COND(p_factor <= 0)` (window.cpp:1774) — the 0.5 floor and the
+  // 8.0 ceiling are never checked. The one place content_scale_factor gets
+  // altered afterward is `_update_viewport_size` (window.cpp:1240-1247)
+  // flooring it to >= 1, and only when content_scale_stretch is INTEGER — an
+  // unrelated, conditional side effect, not a bound on this property.
+  //
+  // So the ends carry different authority: the floor is the setter's own
+  // `> 0` and errors, while the 8.0 ceiling is stated by nothing but the hint
+  // and warns. The hint's 0.5 floor is not represented, because one `min`
+  // cannot hold both an enforced `> 0` and a hinted `>= 0.5`, and the enforced
+  // one is the value the engine actually refuses.
+  content_scale_factor: v.float('content_scale_factor', {
+    min: Number.MIN_VALUE,
+    max: 8.0,
+    enforced: { min: 'window.cpp:1774' },
+    hinted: { max: 'window.cpp:3466' },
   }),
-  content_scale_aspect: v.enumInt('content_scale_aspect', 0, 4, {
-    0: 'IGNORE',
-    1: 'KEEP',
-    2: 'KEEP_WIDTH',
-    3: 'KEEP_HEIGHT',
-    4: 'EXPAND',
-  }),
-  content_scale_stretch: v.enumInt('content_scale_stretch', 0, 1, {
-    0: 'FRACTIONAL',
-    1: 'INTEGER',
-  }),
-  // scene/main/window.cpp: ADD_PROPERTY(..., "content_scale_factor", PROPERTY_HINT_RANGE, "0.5,8.0,0.01") — both bounds hard, no or_greater
-  content_scale_factor: v.float('content_scale_factor', { min: 0.5, max: 8.0 }),
 
   // "Accessibility" group.
   accessibility_name: v.quotedString('accessibility_name'),

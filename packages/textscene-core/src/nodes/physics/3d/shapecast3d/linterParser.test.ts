@@ -86,7 +86,8 @@ describe('ShapeCast3D strict validators', () => {
   });
 
   describe('margin', () => {
-    // scene/3d/physics/shape_cast_3d.cpp:169 — PROPERTY_HINT_RANGE, "0,100,0.01,suffix:m"
+    // scene/3d/physics/shape_cast_3d.cpp:169 — PROPERTY_HINT_RANGE, "0,100,0.01,suffix:m".
+    // set_margin is a bare assignment, so out-of-range warns rather than errors.
     it('accepts the minimum bound', () => {
       expect(check('margin', '0')).toBeNull();
     });
@@ -105,16 +106,18 @@ describe('ShapeCast3D strict validators', () => {
       expect(error!.code).toBe('INVALID_MARGIN_FORMAT');
     });
 
-    it('rejects a negative value', () => {
+    it('warns on a negative value rather than erroring', () => {
       const error = check('margin', '-0.01');
       expect(error).not.toBeNull();
       expect(error!.code).toBe('INVALID_MARGIN_VALUE');
+      expect(error!.severity).toBe('warning');
     });
 
-    it('rejects a value beyond the 100 cap (no or_greater on this hint)', () => {
+    it('warns beyond the 100 cap (no or_greater on this hint) rather than erroring', () => {
       const error = check('margin', '100.01');
       expect(error).not.toBeNull();
       expect(error!.code).toBe('INVALID_MARGIN_VALUE');
+      expect(error!.severity).toBe('warning');
     });
   });
 

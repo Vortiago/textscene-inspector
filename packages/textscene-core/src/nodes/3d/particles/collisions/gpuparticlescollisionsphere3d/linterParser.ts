@@ -14,7 +14,8 @@ import { v } from '../../../../../linter/validators/index.js';
 validatorRegistry.registerAll('GPUParticlesCollisionSphere3D', {
   // gpu_particles_collision_3d.cpp:71, PROPERTY_HINT_RANGE
   // "0.01,1024,0.01,or_greater,suffix:m": `or_greater` with no matching
-  // `or_less` means the lower bound (0.01) is hard and the upper bound (1024)
-  // is only the editor slider's soft extent, so it is not capped here.
-  radius: v.float('radius', { min: 0.01 }),
+  // `or_less` means the lower bound (0.01) is the hint's floor and the upper
+  // bound (1024) is only the editor slider's soft extent, so it is not capped
+  // here. set_radius:74-78 is a bare assignment, so it is a warning.
+  radius: v.float('radius', { min: 0.01, hinted: 'gpu_particles_collision_3d.cpp:71' }),
 });

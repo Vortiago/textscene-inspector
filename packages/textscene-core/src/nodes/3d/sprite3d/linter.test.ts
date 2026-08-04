@@ -42,17 +42,23 @@ pixel_size = 0.01
         invalid: [{ value: '"invalid_format"', contains: ['texture', 'resource reference'] }],
       },
       {
+        // sprite_3d.cpp:685 hints only 3 labels, and set_billboard_mode:598
+        // ERR_FAIL_INDEX(p_mode, 3) explicitly excludes BILLBOARD_PARTICLES
+        // (StandardMaterial3D's 4th value) — 3 is not a legal Sprite3D value.
         prop: 'billboard',
-        valid: [0, 1, 2, 3],
+        valid: [0, 1, 2],
         invalid: [
-          { value: 99, contains: ['billboard', '0-3'] },
+          { value: 3, contains: ['billboard', '0-2'] },
+          { value: 99, contains: ['billboard', '0-2'] },
           { value: -1, contains: ['billboard'] },
         ],
       },
       {
+        // sprite_3d.cpp:691 hints 4 labels; ALPHA_CUT_HASH=3 is real and
+        // enforced-accepted (ERR_FAIL_INDEX(p_mode, ALPHA_CUT_MAX), :531).
         prop: 'alpha_cut',
-        valid: [0, 1, 2],
-        invalid: [{ value: 5, contains: ['alpha_cut', '0-2'] }],
+        valid: [0, 1, 2, 3],
+        invalid: [{ value: 5, contains: ['alpha_cut', '0-3'] }],
       },
       {
         prop: 'axis',

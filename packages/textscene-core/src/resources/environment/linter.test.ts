@@ -18,24 +18,26 @@ describe('Environment Linter Validators', () => {
       }
     });
 
-    it('should reject invalid mode 99', () => {
+    it('should warn on invalid mode 99', () => {
+      // environment.cpp:1237, set_background (:43-49) is a bare assignment: no
+      // ERR_FAIL_INDEX, so out-of-range is a warning, not an error (ADR-0032).
       const validator = validatorRegistry.findValidator('Environment', 'background_mode');
       const result = validator!('background_mode', '99', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result!.severity).toBe('warning');
       expect(result!.message).toContain('must be 0-5 (got 99)');
       // The combinators name Godot's own constants rather than printing a bare range.
       expect(result!.message).toContain('0=BG_CLEAR_COLOR');
       expect(result!.code).toBe('INVALID_BACKGROUND_MODE_VALUE');
     });
 
-    it('should reject negative mode', () => {
+    it('should warn on negative mode', () => {
       const validator = validatorRegistry.findValidator('Environment', 'background_mode');
       const result = validator!('background_mode', '-1', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result!.severity).toBe('warning');
     });
 
     it('should reject non-numeric mode', () => {
@@ -146,12 +148,14 @@ describe('Environment Linter Validators', () => {
       expect(result).toBeNull();
     });
 
-    it('should reject negative density', () => {
+    it('should warn on negative density', () => {
+      // environment.cpp:1536 ("0,1,0.0001,or_greater"), set_volumetric_fog_density
+      // (:939-942) is a bare assignment: warning, not error (ADR-0032).
       const validator = validatorRegistry.findValidator('Environment', 'volumetric_fog_density');
       const result = validator!('volumetric_fog_density', '-0.5', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result!.severity).toBe('warning');
       expect(result!.message).toContain('must be non-negative');
       expect(result!.code).toBe('INVALID_VOLUMETRIC_FOG_DENSITY_VALUE');
     });
@@ -198,12 +202,14 @@ describe('Environment Linter Validators', () => {
       expect(result).toBeNull();
     });
 
-    it('should reject negative brightness', () => {
+    it('should warn on negative brightness', () => {
+      // environment.cpp:1565 ("0.0,2.0,0.01,or_greater"), set_adjustment_brightness
+      // (:1041-1044) is a bare assignment: warning, not error (ADR-0032).
       const validator = validatorRegistry.findValidator('Environment', 'adjustment_brightness');
       const result = validator!('adjustment_brightness', '-0.5', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result!.severity).toBe('warning');
       expect(result!.message).toContain('must be non-negative');
       expect(result!.code).toBe('INVALID_ADJUSTMENT_BRIGHTNESS_VALUE');
     });
@@ -262,11 +268,12 @@ describe('Environment Linter Validators', () => {
       }
     });
 
-    it('should reject source 4', () => {
+    it('should warn on source 4', () => {
+      // environment.cpp:1264, set_ambient_source (:151-155) is a bare assignment.
       const validator = validatorRegistry.findValidator('Environment', 'ambient_light_source');
       const result = validator!('ambient_light_source', '4', 1);
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result!.severity).toBe('warning');
     });
   });
 
@@ -312,11 +319,13 @@ describe('Environment Linter Validators', () => {
       expect(validator!('fog_density', '0.02', 1)).toBeNull();
     });
 
-    it('should reject negative density (the witnessed fog_density = -5)', () => {
+    it('should warn on negative density (the witnessed fog_density = -5)', () => {
+      // environment.cpp:1497 ("0,1,0.0001,or_greater"), set_fog_density (:814-817)
+      // is a bare assignment: warning, not error (ADR-0032).
       const validator = validatorRegistry.findValidator('Environment', 'fog_density');
       const result = validator!('fog_density', '-5', 1);
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result!.severity).toBe('warning');
     });
   });
 
@@ -356,11 +365,12 @@ describe('Environment Linter Validators', () => {
       }
     });
 
-    it('should reject mode 5', () => {
+    it('should warn on mode 5', () => {
+      // environment.cpp:1286, set_tonemapper (:202-206) is a bare assignment.
       const validator = validatorRegistry.findValidator('Environment', 'tonemap_mode');
       const result = validator!('tonemap_mode', '5', 1);
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result!.severity).toBe('warning');
     });
 
     it('should reject non-numeric mode', () => {

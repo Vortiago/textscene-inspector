@@ -77,11 +77,13 @@ describe('OmniLight3D Linter', () => {
         invalid: [{ value: -1.0, contains: ['non-negative'] }],
       },
       {
+        // light_3d.cpp:406 hints "-16,16,0.001" (both ends closed), warning-only
+        // since set_param:36 only guards the param index.
         prop: 'shadow_transmittance_bias',
-        valid: [-10, -5, 0, 5, 10],
+        valid: [-16, -5, 0, 5, 16],
         invalid: [
-          { value: -11, contains: ['between -10 and 10'] },
-          { value: 11, contains: ['between -10 and 10'] },
+          { value: -17, contains: ['between -16 and 16'] },
+          { value: 17, contains: ['between -16 and 16'] },
         ],
       },
       {
@@ -93,9 +95,12 @@ describe('OmniLight3D Linter', () => {
         ],
       },
       {
+        // light_3d.cpp:397 hints "0,16,0.001,or_greater": 2.0 is a legal
+        // stylised boost. Only the 0 floor is a real, warning-only bound
+        // (set_param:36 guards the index, not the value).
         prop: 'light_specular',
-        valid: [0, 0.5, 1],
-        invalid: [{ value: 2.0, contains: ['between 0 and 1'] }],
+        valid: [0, 0.5, 1, 2.0],
+        invalid: [{ value: -1.0, contains: ['non-negative'] }],
       },
       {
         prop: 'light_bake_mode',
@@ -244,15 +249,19 @@ describe('OmniLight3D Linter', () => {
       );
     });
 
-    it('should handle multiple validation errors', () => {
+    it('should handle multiple out-of-hint values as warnings', () => {
       const diagnostics = lint(
         scene(node('OmniLight3D', { light_energy: 0, omni_shadow_mode: 10, shadow_opacity: 2.0 }))
       );
       expect(diagnostics).toHaveLength(2);
-      // Should have errors for: omni_shadow_mode, shadow_opacity; light_energy=0 is now valid
-      const hasModeError = diagnostics.some(d => d.message.includes('omni_shadow_mode'));
-      const hasOpacityError = diagnostics.some(d => d.message.includes('shadow_opacity'));
-      expect(hasModeError && hasOpacityError).toBe(true);
+      // omni_shadow_mode (light_3d.cpp:641) and shadow_opacity (light_3d.cpp:407,
+      // via Light3D::set_param's index-only guard) are both hints, not
+      // enforcement, so both diagnose as warnings, not errors. light_energy=0
+      // is valid.
+      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
+      const hasModeWarning = diagnostics.some(d => d.message.includes('omni_shadow_mode'));
+      const hasOpacityWarning = diagnostics.some(d => d.message.includes('shadow_opacity'));
+      expect(hasModeWarning && hasOpacityWarning).toBe(true);
     });
 
     it('should handle scientific notation in numeric values', () => {
@@ -268,7 +277,7 @@ describe('OmniLight3D Linter', () => {
       );
     });
 
-    it('should validate mixed warnings and errors', () => {
+    it('treats every extreme value here as a warning, none as an error', () => {
       const diagnostics = lint(
         scene(
           node('OmniLight3D', {
@@ -280,9 +289,10 @@ describe('OmniLight3D Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThan(0);
-      // Should have warnings for extreme values and errors for invalid shadow_opacity
-      const hasErrors = diagnostics.some(d => d.severity === 'error');
-      expect(hasErrors).toBe(true);
+      // None of OmniLight3D's bounds are Godot-enforced (light_3d.cpp:389/639/
+      // 640/407 are all PROPERTY_HINT_RANGE behind Light3D::set_param's
+      // index-only guard), so nothing here can be an error.
+      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
     });
 
     it('should handle only omni-specific properties', () => {

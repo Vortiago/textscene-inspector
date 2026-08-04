@@ -43,19 +43,41 @@ validatorRegistry.registerAll('StandardMaterial3D', {
   // Emission's colour and energy reach the renderer, so a malformed one should
   // be reported rather than silently dropped back to Godot's default.
   emission: v.color('emission'),
-  // `or_greater` in Godot, so there is no upper bound to check.
-  emission_energy_multiplier: v.nonNegativeFloat('emission_energy_multiplier'),
-  emission_operator: v.enumInt('emission_operator', 0, 1, { 0: 'ADD', 1: 'MULTIPLY' }),
-  texture_filter: v.enumInt('texture_filter', 0, 5, {
-    0: 'NEAREST',
-    1: 'LINEAR',
-    2: 'NEAREST_WITH_MIPMAPS',
-    3: 'LINEAR_WITH_MIPMAPS',
-    4: 'NEAREST_WITH_MIPMAPS_ANISOTROPIC',
-    5: 'LINEAR_WITH_MIPMAPS_ANISOTROPIC',
+  // material.cpp:3634 ("0,16,0.01,or_greater"); set_emission_energy_multiplier
+  // (material.cpp:2196-2203) is a bare assignment: `or_greater` opens the
+  // ceiling, so there is no upper bound to check.
+  emission_energy_multiplier: v.nonNegativeFloat('emission_energy_multiplier', {
+    hinted: 'material.cpp:3634',
   }),
+  // material.cpp:3637, set_emission_operator (:3141-3146) is a bare assignment
+  // (only an equal-check early return); no engine-side range check.
+  emission_operator: v.enumInt(
+    'emission_operator',
+    0,
+    1,
+    { 0: 'ADD', 1: 'MULTIPLY' },
+    { hinted: 'material.cpp:3637' }
+  ),
+  // material.cpp:3732, set_texture_filter (:2567-2570) is a bare assignment.
+  texture_filter: v.enumInt(
+    'texture_filter',
+    0,
+    5,
+    {
+      0: 'NEAREST',
+      1: 'LINEAR',
+      2: 'NEAREST_WITH_MIPMAPS',
+      3: 'LINEAR_WITH_MIPMAPS',
+      4: 'NEAREST_WITH_MIPMAPS_ANISOTROPIC',
+      5: 'LINEAR_WITH_MIPMAPS_ANISOTROPIC',
+    },
+    { hinted: 'material.cpp:3732' }
+  ),
   // Validated but not rendered (see the sheet's limitations): a malformed value
   // is still worth reporting, since the scene is wrong in Godot either way.
   emission_on_uv2: v.boolean('emission_on_uv2'),
-  emission_intensity: v.nonNegativeFloat('emission_intensity'),
+  // material.cpp:3635 ("0,100000.0,0.01,or_greater,suffix:nt"); set_emission_intensity
+  // (material.cpp:2210-2214) gates on a PROJECT SETTING (physical light units), not
+  // on the value, so the value itself is unguarded: `or_greater` also opens the ceiling.
+  emission_intensity: v.nonNegativeFloat('emission_intensity', { hinted: 'material.cpp:3635' }),
 });

@@ -10,6 +10,10 @@ function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
   return diagnostics.filter((d) => d.severity === 'error');
 }
 
+function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
+  return diagnostics.filter((d) => d.severity === 'warning');
+}
+
 describe('CSGSphere3D strict validators', () => {
   let linter: Linter;
 
@@ -43,16 +47,19 @@ radius = 0
     expect(errors[0]!.message).toContain('radius');
   });
 
-  it('rejects an out-of-range operation enum', () => {
+  it('warns (not errors) on an out-of-range operation enum', () => {
+    // csg_shape.cpp:1040 hints the enum but set_operation:933-937 is a bare
+    // assignment, so out-of-range is a warning, not an error (ADR-0032).
     const content = `[gd_scene format=3]
 
 [node name="Sphere" type="CSGSphere3D"]
 operation = 5
 `;
 
-    const errors = errorsOf(linter.lint(content));
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]!.message).toContain('operation');
+    expect(errorsOf(linter.lint(content))).toEqual([]);
+    const warnings = warningsOf(linter.lint(content));
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0]!.message).toContain('operation');
   });
 
   it('rejects a malformed material resource reference', () => {

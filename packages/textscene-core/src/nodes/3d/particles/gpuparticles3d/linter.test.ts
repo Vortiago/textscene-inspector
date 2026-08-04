@@ -94,12 +94,11 @@ describe('GPUParticles3D Linter', () => {
         invalid: [{ value: '-1.0', contains: ['non-negative'] }],
       },
       {
+        // gpu_particles_3d.cpp:829 hints "0,64,0.01" (0 is legal, pauses
+        // particle time); set_speed_scale:174-177 is a bare assignment.
         prop: 'speed_scale',
-        valid: [0.1, 0.5, 1.0, 2.0, 5.0],
-        invalid: [
-          { value: '0.0', contains: ['greater than 0'] },
-          { value: '-1.0', contains: ['greater than 0'] },
-        ],
+        valid: [0.0, 0.1, 0.5, 1.0, 2.0, 5.0, 64],
+        invalid: [{ value: '-1.0', contains: ['between 0 and 64'] }],
       },
       {
         prop: 'explosiveness',
@@ -118,12 +117,11 @@ describe('GPUParticles3D Linter', () => {
         ],
       },
       {
+        // gpu_particles_3d.cpp:834 hints "0,1000,1,suffix:FPS" (closed
+        // ceiling 1000, not 120); set_fixed_fps:309-312 is a bare assignment.
         prop: 'fixed_fps',
-        valid: [0, 30, 60, 90, 120],
-        invalid: [
-          { value: -1, contains: ['between 0 and 120'] },
-          { value: 150, contains: ['between 0 and 120'] },
-        ],
+        valid: [0, 30, 60, 90, 120, 150, 1000],
+        invalid: [{ value: -1, contains: ['between 0 and 1000'] }],
       },
       {
         prop: 'fract_delta',
@@ -145,11 +143,13 @@ describe('GPUParticles3D Linter', () => {
         invalid: [{ value: 1, contains: ['boolean'] }],
       },
       {
+        // gpu_particles_3d.cpp:843 hints 4 labels (Index/Lifetime/Reverse
+        // Lifetime/View Depth); set_draw_order:236-239 is a bare assignment.
         prop: 'draw_order',
-        valid: [0, 1, 2],
+        valid: [0, 1, 2, 3],
         invalid: [
-          { value: 5, contains: ['0-2'] },
-          { value: -1, contains: ['0-2'] },
+          { value: 5, contains: ['0-3'] },
+          { value: -1, contains: ['0-3'] },
         ],
       },
       {
@@ -158,21 +158,23 @@ describe('GPUParticles3D Linter', () => {
         invalid: [{ value: 1, contains: ['boolean'] }],
       },
       {
+        // gpu_particles_3d.cpp:247-250, ERR_FAIL_COND(p_seconds < 0.01 -
+        // CMP_EPSILON): the enforced floor is 0.01, not the previous ~0.
         prop: 'trail_lifetime',
-        valid: [0.1, 0.5, 1.0, 2.0],
+        valid: [0.01, 0.1, 0.5, 1.0, 2.0],
         with: { trail_enabled: true },
         invalid: [
-          { value: '0.0', contains: ['greater than 0'] },
-          { value: '-1.0', contains: ['greater than 0'] },
+          { value: '0.0', contains: ['>= 0.01'] },
+          { value: '-1.0', contains: ['>= 0.01'] },
         ],
       },
       {
+        // gpu_particles_3d.cpp:839 hints "0,128,0.01,or_greater" (0 is
+        // legal, means no collision radius); set_collision_base_size:179-182
+        // is a bare assignment with no check at all.
         prop: 'collision_base_size',
-        valid: [0.1, 0.5, 1.0, 2.0],
-        invalid: [
-          { value: '0.0', contains: ['greater than 0'] },
-          { value: '-1.0', contains: ['greater than 0'] },
-        ],
+        valid: [0.0, 0.1, 0.5, 1.0, 2.0],
+        invalid: [{ value: '-1.0', contains: ['non-negative'] }],
       },
       {
         prop: 'interp_to_end',

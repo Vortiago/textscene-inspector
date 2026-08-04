@@ -23,17 +23,25 @@ validatorRegistry.registerAll('Slider', {
   // slider.cpp:466
   scrollable: v.boolean('scrollable'),
   // slider.cpp:467 — PROPERTY_HINT_RANGE "0,4096,1", neither end softened by
-  // `or_greater`/`or_less`, so both are hard bounds.
-  tick_count: v.int('tick_count', { min: 0, max: 4096 }),
+  // `or_greater`/`or_less`, so both are hard bounds. set_ticks (slider.cpp:386-392)
+  // assigns unconditionally, no ERR_FAIL.
+  tick_count: v.int('tick_count', { min: 0, max: 4096, hinted: 'slider.cpp:467' }),
   // slider.cpp:468
   ticks_on_borders: v.boolean('ticks_on_borders'),
   // slider.cpp:469 — PROPERTY_HINT_ENUM carries no hint string, so the four
   // BIND_ENUM_CONSTANT lines (slider.cpp:471-474, values from slider.h:39-44)
-  // are the only statement of the range.
-  ticks_position: v.enumInt('ticks_position', 0, 3, {
-    0: 'TICK_POSITION_BOTTOM_RIGHT',
-    1: 'TICK_POSITION_TOP_LEFT',
-    2: 'TICK_POSITION_BOTH',
-    3: 'TICK_POSITION_CENTER',
-  }),
+  // are the only statement of the range. set_ticks_position (slider.cpp:416-422)
+  // assigns unconditionally, no ERR_FAIL.
+  ticks_position: v.enumInt(
+    'ticks_position',
+    0,
+    3,
+    {
+      0: 'TICK_POSITION_BOTTOM_RIGHT',
+      1: 'TICK_POSITION_TOP_LEFT',
+      2: 'TICK_POSITION_BOTH',
+      3: 'TICK_POSITION_CENTER',
+    },
+    { hinted: 'slider.cpp:469' }
+  ),
 });

@@ -40,7 +40,7 @@ Strict parsing format-checks these `Line2D` properties, plus 12 inherited from N
 | `closed` | true or false |
 | `default_color` | Color(r, g, b, a) |
 | `joint_mode` | enum 0-2 (SHARP/BEVEL/ROUND) |
-| `round_precision` | integer >= 1 |
+| `round_precision` | integer 1-32 |
 | `sharp_limit` | float >= 0 |
 | `width` | float |
 

@@ -30,12 +30,12 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin PhysicalBone2D -->
-Strict parsing format-checks these `PhysicalBone2D` properties, plus 14 inherited from RigidBody2D, 5 inherited from CollisionObject2D, 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `PhysicalBone2D` properties, plus 15 inherited from RigidBody2D, 5 inherited from CollisionObject2D, 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
 | `auto_configure_joint` | true or false |
-| `bone2d_index` | integer -1-1000 |
+| `bone2d_index` | integer 0-1000 |
 | `bone2d_nodepath` | NodePath("path/to/node") |
 | `follow_bone_when_simulating` | true or false |
 | `simulate_physics` | true or false |

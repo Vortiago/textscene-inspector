@@ -69,7 +69,7 @@ describe('Button strict validators', () => {
   });
 
   describe('alignment', () => {
-    // button.cpp:814 — PROPERTY_HINT_ENUM "Left,Center,Right", so 0-2.
+    // button.cpp:814 — PROPERTY_HINT_ENUM "Left,Center,Right" only labels 0-2.
     it('accepts 1 (CENTER), the value the corpus uses most', () => {
       expect(check('alignment', '1')).toBeNull();
     });
@@ -78,10 +78,8 @@ describe('Button strict validators', () => {
       expect(check('alignment', '2')).toBeNull();
     });
 
-    it('rejects HORIZONTAL_ALIGNMENT_FILL (3), which Button does not offer', () => {
-      // The constant exists on HorizontalAlignment, but Button's hint stops at
-      // Right and its draw path has no FILL arm.
-      expect(check('alignment', '3')).not.toBeNull();
+    it('accepts HORIZONTAL_ALIGNMENT_FILL (3) — set_text_alignment (button.cpp:737-741) bare-assigns with no ERR_FAIL, so a value the hint does not offer still reaches the engine', () => {
+      expect(check('alignment', '3')).toBeNull();
     });
 
     it('rejects a negative value', () => {
@@ -128,8 +126,8 @@ describe('Button strict validators', () => {
       expect(check('autowrap_trim_flags', '64')).toBeNull();
     });
 
-    it('rejects a negative value', () => {
-      expect(check('autowrap_trim_flags', '-1')).not.toBeNull();
+    it('accepts a negative value — the mask coerces rather than rejects, so no value is invalid', () => {
+      expect(check('autowrap_trim_flags', '-1')).toBeNull();
     });
   });
 
@@ -148,8 +146,8 @@ describe('Button strict validators', () => {
       expect(check('icon_alignment', '2')).toBeNull();
     });
 
-    it('rejects 3, which the hint does not name', () => {
-      expect(check('icon_alignment', '3')).not.toBeNull();
+    it('accepts 3 (FILL) — set_icon_alignment (button.cpp:749-756) bare-assigns with no ERR_FAIL, even though the hint does not name it', () => {
+      expect(check('icon_alignment', '3')).toBeNull();
     });
   });
 
@@ -162,8 +160,8 @@ describe('Button strict validators', () => {
       expect(check('vertical_icon_alignment', '2')).toBeNull();
     });
 
-    it('rejects 3, which the hint does not name', () => {
-      expect(check('vertical_icon_alignment', '3')).not.toBeNull();
+    it('accepts 3 (FILL) — set_vertical_icon_alignment (button.cpp:759-770) bare-assigns with no ERR_FAIL, even though the hint does not name it', () => {
+      expect(check('vertical_icon_alignment', '3')).toBeNull();
     });
   });
 
@@ -188,9 +186,18 @@ describe('Button strict validators', () => {
       expect(check('text_direction', '3')).toBeNull();
     });
 
+    it('accepts -1, a legacy value with no named constant that the ERR_FAIL_COND still allows', () => {
+      // button.cpp:637 fails outside -1..3, so -1 itself is engine-legal.
+      expect(check('text_direction', '-1')).toBeNull();
+    });
+
     it('rejects 4, past the ERR_FAIL_COND the setter enforces', () => {
       // button.cpp:637 fails outside -1..3.
       expect(check('text_direction', '4')).not.toBeNull();
+    });
+
+    it('rejects -2, past the ERR_FAIL_COND on the other side', () => {
+      expect(check('text_direction', '-2')).not.toBeNull();
     });
   });
 

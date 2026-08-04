@@ -25,16 +25,26 @@ validatorRegistry.registerAll('FlowContainer', {
   // flow_container.cpp:418 — PROPERTY_HINT_ENUM "Begin,Center,End";
   // BIND_ENUM_CONSTANT ALIGNMENT_BEGIN=0, ALIGNMENT_CENTER=1, ALIGNMENT_END=2
   // (flow_container.cpp:410-412). Default 0 (doc/classes/FlowContainer.xml).
-  alignment: v.enumInt('alignment', 0, 2, CONTAINER_ALIGNMENT),
+  // set_alignment (flow_container.cpp:347-353) assigns unconditionally.
+  alignment: v.enumInt('alignment', 0, 2, CONTAINER_ALIGNMENT, {
+    hinted: 'flow_container.cpp:418',
+  }),
   // flow_container.cpp:419 — PROPERTY_HINT_ENUM "Inherit,Begin,Center,End";
   // BIND_ENUM_CONSTANT LAST_WRAP_ALIGNMENT_INHERIT=0, _BEGIN=1, _CENTER=2, _END=3
   // (flow_container.cpp:413-416). Default 0 (doc/classes/FlowContainer.xml).
-  last_wrap_alignment: v.enumInt('last_wrap_alignment', 0, 3, {
-    0: 'LAST_WRAP_ALIGNMENT_INHERIT',
-    1: 'LAST_WRAP_ALIGNMENT_BEGIN',
-    2: 'LAST_WRAP_ALIGNMENT_CENTER',
-    3: 'LAST_WRAP_ALIGNMENT_END',
-  }),
+  // set_last_wrap_alignment (flow_container.cpp:359-365) assigns unconditionally.
+  last_wrap_alignment: v.enumInt(
+    'last_wrap_alignment',
+    0,
+    3,
+    {
+      0: 'LAST_WRAP_ALIGNMENT_INHERIT',
+      1: 'LAST_WRAP_ALIGNMENT_BEGIN',
+      2: 'LAST_WRAP_ALIGNMENT_CENTER',
+      3: 'LAST_WRAP_ALIGNMENT_END',
+    },
+    { hinted: 'flow_container.cpp:419' }
+  ),
   // flow_container.cpp:420 — always serialised on a plain FlowContainer; see
   // the file-level comment above for why the leaf subclasses' hiding of this
   // property does not apply here.

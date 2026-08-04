@@ -104,12 +104,14 @@ max_contacts_reported = 10
       { prop: 'freeze', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
       { prop: 'contact_monitor', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
       {
+        // rigid_body_2d.cpp:501, ERR_FAIL_INDEX_MSG(p_amount,
+        // MAX_CONTACTS_REPORTED_2D_MAX=4096): the engine enforces [0, 4095].
         prop: 'max_contacts_reported',
-        valid: [1, 10, 100],
+        valid: [0, 1, 10, 100, 4095],
         with: { contact_monitor: true },
         invalid: [
-          { value: 0, contains: ['greater than 0'] },
-          { value: -5, contains: ['greater than 0'] },
+          { value: -5, contains: ['between 0 and 4095'] },
+          { value: 4096, contains: ['between 0 and 4095'] },
         ],
       },
     ]);
@@ -320,11 +322,15 @@ physics_material_override = ExtResource("ext_mat_1")
           })
         )
       );
-      // Two strict-parser errors: mass <= 0 (rigid_body_2d.cpp:318) and
-      // collision_layer outside the 32-bit mask. linear_damp = -1 is legal in 2D
-      // (:425 rejects only < -1), so it contributes nothing.
+      // One strict-parser error, mass <= 0 (rigid_body_2d.cpp:318). linear_damp
+      // = -1 is legal in 2D (:425 rejects only < -1), and collision_layer = -5
+      // is now a warning: its 32-bit width is the inspector's checkbox grid,
+      // not an engine bound.
       const errors = diagnostics.filter((d) => d.severity === 'error');
-      expect(errors).toHaveLength(3);
+      expect(errors).toHaveLength(2);
+      expect(
+        diagnostics.find((d) => d.message.includes('collision_layer'))?.severity
+      ).toBe('warning');
       // The third is the missing physics material. It was invisible until the
       // strict parser stopped withholding the scene: the mass error suppressed
       // the whole rule phase, so a broken resource reference went unreported

@@ -193,6 +193,78 @@ describe('StandardMaterial3D Linter Validators', () => {
     });
   });
 
+  describe('emission_energy_multiplier validator', () => {
+    it('should accept a non-negative value', () => {
+      const validator = validatorRegistry.findValidator(
+        'StandardMaterial3D',
+        'emission_energy_multiplier'
+      );
+      expect(validator).not.toBeNull();
+      expect(validator!('emission_energy_multiplier', '2.5', 1)).toBeNull();
+    });
+
+    it('should warn on a negative value', () => {
+      // material.cpp:3634 ("0,16,0.01,or_greater"); set_emission_energy_multiplier
+      // (:2196-2203) is a bare assignment, so out-of-range is a warning (ADR-0032).
+      const validator = validatorRegistry.findValidator(
+        'StandardMaterial3D',
+        'emission_energy_multiplier'
+      );
+      const result = validator!('emission_energy_multiplier', '-1', 1);
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('warning');
+    });
+  });
+
+  describe('emission_operator validator', () => {
+    it('should accept 0 (ADD) and 1 (MULTIPLY)', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'emission_operator');
+      expect(validator!('emission_operator', '0', 1)).toBeNull();
+      expect(validator!('emission_operator', '1', 1)).toBeNull();
+    });
+
+    it('should warn on 2', () => {
+      // material.cpp:3637, set_emission_operator (:3141-3146) is a bare assignment.
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'emission_operator');
+      const result = validator!('emission_operator', '2', 1);
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('warning');
+    });
+  });
+
+  describe('texture_filter validator', () => {
+    it('should accept modes 0-5', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'texture_filter');
+      for (let mode = 0; mode <= 5; mode++) {
+        expect(validator!('texture_filter', String(mode), 1)).toBeNull();
+      }
+    });
+
+    it('should warn on mode 6', () => {
+      // material.cpp:3732, set_texture_filter (:2567-2570) is a bare assignment.
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'texture_filter');
+      const result = validator!('texture_filter', '6', 1);
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('warning');
+    });
+  });
+
+  describe('emission_intensity validator', () => {
+    it('should accept a non-negative value', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'emission_intensity');
+      expect(validator!('emission_intensity', '5000', 1)).toBeNull();
+    });
+
+    it('should warn on a negative value', () => {
+      // material.cpp:3635 ("0,100000.0,0.01,or_greater,suffix:nt"); set_emission_intensity
+      // (:2210-2214) gates on a project setting, not the value, so out-of-range warns.
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'emission_intensity');
+      const result = validator!('emission_intensity', '-1', 1);
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('warning');
+    });
+  });
+
   describe('uv1_scale validator', () => {
     it('should accept valid Vector3 format', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'uv1_scale');

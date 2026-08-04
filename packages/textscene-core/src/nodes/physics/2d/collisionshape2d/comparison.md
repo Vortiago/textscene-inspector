@@ -34,7 +34,7 @@ Strict parsing format-checks these `CollisionShape2D` properties, plus 12 inheri
 | `debug_color` | Color(r, g, b, a) |
 | `disabled` | true or false |
 | `one_way_collision` | true or false |
-| `one_way_collision_margin` | float >= 0 |
+| `one_way_collision_margin` | float 0-128 |
 | `shape` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |

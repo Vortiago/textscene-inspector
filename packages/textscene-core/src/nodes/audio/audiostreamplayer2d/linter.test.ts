@@ -114,12 +114,12 @@ describe('AudioStreamPlayer2D Linter', () => {
           invalid: [{ value: 'invalid', contains: ['attenuation', 'must be a number'] }],
         },
         {
+          // audio_stream_player_2d.cpp:349 enforces the floor only
+          // (ERR_FAIL_COND_MSG(p_panning_strength < 0, ...)); the hint's ceiling
+          // (:439, "0,3,0.01,or_greater") is open, so values above 1 are legal.
           prop: 'panning_strength',
-          valid: [0, 0.5, 1],
-          invalid: [
-            { value: -0.1, contains: ['panning_strength', 'between 0 and 1'] },
-            { value: 1.5, contains: ['panning_strength', 'between 0 and 1'] },
-          ],
+          valid: [0, 0.5, 1, 1.5, 3, 10],
+          invalid: [{ value: -0.1, contains: ['panning_strength', 'must be non-negative'] }],
         },
         {
           prop: 'area_mask',

@@ -14,7 +14,6 @@
 
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
-import { MAX_LAYER_BITMASK } from '../../../../linter/validators/index';
 import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
@@ -48,11 +47,14 @@ describe('SoftBody3D strict validators', () => {
     });
 
     it('accepts the full 32-bit mask (soft_body_3d.cpp:381, PROPERTY_HINT_LAYERS_3D_PHYSICS)', () => {
-      expect(check('collision_layer', String(MAX_LAYER_BITMASK))).toBeNull();
+      expect(check('collision_layer', '4294967295')).toBeNull();
     });
 
-    it('rejects a negative value', () => {
-      expect(check('collision_layer', '-1')?.code).toBe('INVALID_COLLISION_LAYER_VALUE');
+    it('warns on a negative value rather than erroring', () => {
+      // soft_body_3d.cpp:381 hints PROPERTY_HINT_LAYERS_3D_PHYSICS, a
+      // 32-checkbox widget that cannot express -1, so the width is a UI bound.
+      // The setter is a bare assignment, so the engine itself accepts it.
+      expect(check('collision_layer', '-1')?.severity).toBe('warning');
     });
   });
 
@@ -66,11 +68,14 @@ describe('SoftBody3D strict validators', () => {
     });
 
     it('accepts the full 32-bit mask (soft_body_3d.cpp:382, PROPERTY_HINT_LAYERS_3D_PHYSICS)', () => {
-      expect(check('collision_mask', String(MAX_LAYER_BITMASK))).toBeNull();
+      expect(check('collision_mask', '4294967295')).toBeNull();
     });
 
-    it('rejects a negative value', () => {
-      expect(check('collision_mask', '-1')?.code).toBe('INVALID_COLLISION_MASK_VALUE');
+    it('warns on a negative value rather than erroring', () => {
+      // soft_body_3d.cpp:382 hints PROPERTY_HINT_LAYERS_3D_PHYSICS, a
+      // 32-checkbox widget that cannot express -1, so the width is a UI bound.
+      // The setter is a bare assignment, so the engine itself accepts it.
+      expect(check('collision_mask', '-1')?.severity).toBe('warning');
     });
   });
 
@@ -83,8 +88,10 @@ describe('SoftBody3D strict validators', () => {
       expect(check('damping_coefficient', 'abc')?.code).toBe('INVALID_DAMPING_COEFFICIENT_FORMAT');
     });
 
-    it('rejects a negative value (soft_body_3d.cpp:390, or_greater keeps 0 the only enforced bound)', () => {
-      expect(check('damping_coefficient', '-0.1')?.code).toBe('INVALID_DAMPING_COEFFICIENT_VALUE');
+    it('warns on a negative value rather than erroring (set_damping_coefficient has no guard)', () => {
+      const error = check('damping_coefficient', '-0.1');
+      expect(error?.code).toBe('INVALID_DAMPING_COEFFICIENT_VALUE');
+      expect(error?.severity).toBe('warning');
     });
 
     it('accepts a value far beyond the editor slider extent (or_greater)', () => {
@@ -105,8 +112,10 @@ describe('SoftBody3D strict validators', () => {
       expect(check('disable_mode', 'abc')?.code).toBe('INVALID_DISABLE_MODE_FORMAT');
     });
 
-    it('rejects a value outside SoftBody3D.DisableMode (soft_body_3d.cpp:397-398, only 2 constants)', () => {
-      expect(check('disable_mode', '2')?.code).toBe('INVALID_DISABLE_MODE_VALUE');
+    it('warns on a value outside SoftBody3D.DisableMode rather than erroring (bare assignment)', () => {
+      const error = check('disable_mode', '2');
+      expect(error?.code).toBe('INVALID_DISABLE_MODE_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -123,8 +132,10 @@ describe('SoftBody3D strict validators', () => {
       expect(check('drag_coefficient', '1')).toBeNull();
     });
 
-    it('rejects a value above 1', () => {
-      expect(check('drag_coefficient', '1.1')?.code).toBe('INVALID_DRAG_COEFFICIENT_VALUE');
+    it('warns above 1 rather than erroring (set_drag_coefficient has no guard)', () => {
+      const error = check('drag_coefficient', '1.1');
+      expect(error?.code).toBe('INVALID_DRAG_COEFFICIENT_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -141,8 +152,10 @@ describe('SoftBody3D strict validators', () => {
       expect(check('linear_stiffness', '1')).toBeNull();
     });
 
-    it('rejects a value above 1', () => {
-      expect(check('linear_stiffness', '1.1')?.code).toBe('INVALID_LINEAR_STIFFNESS_VALUE');
+    it('warns above 1 rather than erroring (set_linear_stiffness has no guard)', () => {
+      const error = check('linear_stiffness', '1.1');
+      expect(error?.code).toBe('INVALID_LINEAR_STIFFNESS_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -214,12 +227,16 @@ describe('SoftBody3D strict validators', () => {
       expect(check('simulation_precision', 'abc')?.code).toBe('INVALID_SIMULATION_PRECISION_FORMAT');
     });
 
-    it('rejects 0, below the lower bound (soft_body_3d.cpp:385, hard bound "1,100,1")', () => {
-      expect(check('simulation_precision', '0')?.code).toBe('INVALID_SIMULATION_PRECISION_VALUE');
+    it('warns on 0, below the lower bound, rather than erroring (set_simulation_precision has no guard)', () => {
+      const error = check('simulation_precision', '0');
+      expect(error?.code).toBe('INVALID_SIMULATION_PRECISION_VALUE');
+      expect(error?.severity).toBe('warning');
     });
 
-    it('rejects a value above 100', () => {
-      expect(check('simulation_precision', '101')?.code).toBe('INVALID_SIMULATION_PRECISION_VALUE');
+    it('warns above 100 rather than erroring', () => {
+      const error = check('simulation_precision', '101');
+      expect(error?.code).toBe('INVALID_SIMULATION_PRECISION_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -232,8 +249,10 @@ describe('SoftBody3D strict validators', () => {
       expect(check('total_mass', 'abc')?.code).toBe('INVALID_TOTAL_MASS_FORMAT');
     });
 
-    it('rejects a negative value (soft_body_3d.cpp:386, or_greater keeps 0 the only enforced bound)', () => {
-      expect(check('total_mass', '-0.1')?.code).toBe('INVALID_TOTAL_MASS_VALUE');
+    it('warns on a negative value rather than erroring (set_total_mass has no guard)', () => {
+      const error = check('total_mass', '-0.1');
+      expect(error?.code).toBe('INVALID_TOTAL_MASS_VALUE');
+      expect(error?.severity).toBe('warning');
     });
 
     it('accepts a value far beyond the editor slider extent (or_greater)', () => {

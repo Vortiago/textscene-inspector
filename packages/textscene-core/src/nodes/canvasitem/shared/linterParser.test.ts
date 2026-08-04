@@ -78,6 +78,17 @@ describe('CanvasItem shared validators', () => {
     expect(validator('z_index', '5000', 1)).not.toBeNull();
   });
 
+  it('warns on light_mask and visibility_layer outside the 32-bit width', () => {
+    // canvas_item.cpp:1477/:1478 hint PROPERTY_HINT_LAYERS_2D_RENDER, a
+    // 32-checkbox widget, so the width is stated by the UI. Both setters
+    // (:589-596, :1598-1602) assign unconditionally, so it warns, not errors.
+    const lightMask = validatorRegistry.findValidator('Sprite2D', 'light_mask')!;
+    const visibilityLayer = validatorRegistry.findValidator('Sprite2D', 'visibility_layer')!;
+    expect(lightMask('light_mask', '4294967296', 1)?.severity).toBe('warning');
+    expect(lightMask('light_mask', '-1', 1)?.severity).toBe('warning');
+    expect(visibilityLayer('visibility_layer', '4294967296', 1)?.severity).toBe('warning');
+  });
+
   it('leaves each family its own keys', () => {
     // Node2D keeps the 2D transform; Control keeps anchors. Neither should have
     // absorbed the other's, and neither keeps a CanvasItem key of its own.

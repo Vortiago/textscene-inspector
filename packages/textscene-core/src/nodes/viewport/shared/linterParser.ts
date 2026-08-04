@@ -20,11 +20,18 @@ import { v } from '../../../linter/validators/index.js';
 
 const MSAA = { 0: 'DISABLED', 1: '2X', 2: '4X', 3: '8X' };
 
+/**
+ * scene/main/viewport.h:188-193. LINEAR_WITH_MIPMAPS is 2 and
+ * NEAREST_WITH_MIPMAPS is 3, which is the opposite of the order the two names
+ * suggest and the opposite of what this map used to say. The numeric range was
+ * right, so nothing rejected a legal value: the labels simply told a reader the
+ * wrong thing about their own scene.
+ */
 const TEXTURE_FILTER = {
   0: 'NEAREST',
   1: 'LINEAR',
-  2: 'NEAREST_WITH_MIPMAPS',
-  3: 'LINEAR_WITH_MIPMAPS',
+  2: 'LINEAR_WITH_MIPMAPS',
+  3: 'NEAREST_WITH_MIPMAPS',
 };
 
 validatorRegistry.registerAll('Viewport', {
@@ -35,11 +42,18 @@ validatorRegistry.registerAll('Viewport', {
   use_debanding: v.boolean('use_debanding'),
   audio_listener_enable_2d: v.boolean('audio_listener_enable_2d'),
   gui_embed_subwindows: v.boolean('gui_embed_subwindows'),
-  msaa_3d: v.enumInt('msaa_3d', 0, 3, MSAA),
+  // viewport.cpp:5166 — PROPERTY_HINT_ENUM, 4 labels. set_msaa_3d
+  // (viewport.cpp:3763): `ERR_FAIL_INDEX(p_msaa, MSAA_MAX)` — genuinely
+  // enforced, MSAA_MAX=4 (scene/main/viewport.h:119-125).
+  msaa_3d: v.enumInt('msaa_3d', 0, 3, MSAA, { enforced: 'viewport.cpp:3763' }),
+  // viewport.cpp:5188 — PROPERTY_HINT_ENUM, 4 labels. set_default_canvas_item_texture_filter
+  // (viewport.cpp:3968): `ERR_FAIL_INDEX(p_filter, DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX)` —
+  // genuinely enforced, MAX=4 (scene/main/viewport.h:188-194).
   canvas_item_default_texture_filter: v.enumInt(
     'canvas_item_default_texture_filter',
     0,
     3,
-    TEXTURE_FILTER
+    TEXTURE_FILTER,
+    { enforced: 'viewport.cpp:3968' }
   ),
 });

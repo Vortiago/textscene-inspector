@@ -55,8 +55,6 @@ Strict parsing format-checks these `AnimationPlayer` properties, plus 10 inherit
 | --- | --- |
 | `autoplay` | non-empty quoted string |
 | `current_animation` | any value (no format constraint) |
-| `current_animation_length` | float >= 0 |
-| `current_animation_position` | float >= 0 |
 | `method_call_mode` | enum 0-1 (DEFERRED/IMMEDIATE) |
 | `playback_active` | true or false |
 | `playback_default_blend_time` | float |
@@ -91,5 +89,7 @@ that helper entirely: absent, it defaults to the literal `NodePath("..")`;
 present, the raw string is stored verbatim with no quote-stripping and no
 empty-string check, unlike strict's `nonEmptyQuotedString` validator.
 `current_animation_length` and `current_animation_position` fall back to
-`0.0` on a parse failure but accept a negative value with no warning, unlike
-strict's `>= 0` check.
+`0.0` on a parse failure and accept any value, including negative, matching
+strict, which carries no validator for either: both are getter-only and
+`PROPERTY_USAGE_NONE` in Godot (animation_player.cpp:1038-1039), so neither can
+appear in a real `.tscn` and there is nothing to check.

@@ -74,7 +74,7 @@ const UNIT_FIXTURE_WARNINGS: Readonly<Record<string, { rules: readonly string[];
 };
 
 /**
- * Fixtures that must produce >=1 error, and are NOT linter red tests.
+ * Fixtures that must produce >=1 error, read from the one file that lists them.
  *
  * Each is an app-shell or extension INTEGRATION fixture: a selectable, really
  * broken file the VS Code integration suite opens, and that
@@ -82,20 +82,20 @@ const UNIT_FIXTURE_WARNINGS: Readonly<Record<string, { rules: readonly string[];
  * banner and the recovery from it. A unit test cannot stand in for them,
  * because the thing under test is the host reacting to a file a user picked.
  *
- * A linter red test does NOT belong here: assert the validator or the rule
- * directly, which is faster and localises the failure. `edge-tilemap-bad-tile-data`
- * was the last one that did, and it went once its two rules were confirmed
- * unit-covered; `edge-invalid-transform`'s validator is now pinned in
- * `nodes/base/node3d/linterParser.test.ts`.
+ * `lint-staged.config.mjs` reads the same JSON to skip them in the pre-commit
+ * hook, which would otherwise fail on every commit touching one. Sharing the
+ * list is what keeps "must error" and "do not lint" from disagreeing.
  *
- * The other `edge-*` files are rendering edge cases (lenient-parser recovery,
- * transform corner cases) and must lint clean like every positive fixture.
+ * A linter red test does NOT belong here: assert the validator or the rule
+ * directly, which is faster and localises the failure.
  */
-const INTEGRATION_FIXTURES_WITH_ERRORS = new Set([
-  'edge-invalid-cast-shadow.tscn',
-  'edge-invalid-transform.tscn',
-  'edge-malformed-bracket.tscn',
-]);
+const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
+  (
+    JSON.parse(
+      readFileSync(join(scenesRoot, 'fixtures', 'negative-fixtures.json'), 'utf8')
+    ) as { files: string[] }
+  ).files
+);
 
 function tscnFiles(dir: string): string[] {
   return readdirSync(dir)

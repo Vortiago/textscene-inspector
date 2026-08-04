@@ -43,12 +43,12 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 17 inherite
 | Property | Accepts |
 | --- | --- |
 | `amount` | integer > 0 |
-| `collision_base_size` | float > 0 |
-| `draw_order` | enum 0-2 (INDEX/LIFETIME/VIEW_DEPTH) |
+| `collision_base_size` | float >= 0 |
+| `draw_order` | enum 0-3 (INDEX/LIFETIME/REVERSE_LIFETIME/VIEW_DEPTH) |
 | `draw_pass_1` | SubResource("id") or ExtResource("id") |
 | `emitting` | true or false |
 | `explosiveness` | float 0-1 |
-| `fixed_fps` | integer 0-120 |
+| `fixed_fps` | integer 0-1000 |
 | `fract_delta` | true or false |
 | `interp_to_end` | float 0-1 |
 | `lifetime` | float > 0 |
@@ -57,10 +57,10 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 17 inherite
 | `preprocess` | float >= 0 |
 | `process_material` | SubResource("id") or ExtResource("id") |
 | `randomness` | float 0-1 |
-| `speed_scale` | float >= 5e-324 |
+| `speed_scale` | float 0-64 |
 | `sub_emitter` | NodePath("path/to/node") |
 | `trail_enabled` | true or false |
-| `trail_lifetime` | float > 0 |
+| `trail_lifetime` | float >= 0.01 |
 | `visibility_aabb` | AABB(12 floats) |
 
 | Rule | Reports | Severity |

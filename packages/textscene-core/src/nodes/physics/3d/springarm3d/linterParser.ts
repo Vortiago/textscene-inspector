@@ -13,7 +13,7 @@ import { layerBitmask, v } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('SpringArm3D', {
   // scene/3d/physics/spring_arm_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::INT, "collision_mask", PROPERTY_HINT_LAYERS_3D_PHYSICS), ...)
-  collision_mask: layerBitmask('collision_mask'),
+  collision_mask: layerBitmask('collision_mask', { hinted: 'spring_arm_3d.cpp:75' }),
   // scene/3d/physics/spring_arm_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "shape", PROPERTY_HINT_RESOURCE_TYPE, "Shape3D"), ...)
   shape: v.resourceReference('shape'),
   // scene/3d/physics/spring_arm_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "spring_length", PROPERTY_HINT_NONE, "suffix:m"), ...) — no PROPERTY_HINT_RANGE, so no bound

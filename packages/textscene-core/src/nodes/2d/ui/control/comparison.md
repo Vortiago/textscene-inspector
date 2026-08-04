@@ -69,9 +69,9 @@ Strict parsing format-checks these `Control` properties, plus 15 inherited from 
 | `pivot_offset_ratio` | Vector2(x, y) |
 | `rotation` | float |
 | `scale` | Vector2(x, y) |
-| `size_flags_horizontal` | integer >= 0 |
+| `size_flags_horizontal` | integer |
 | `size_flags_stretch_ratio` | float >= 0 |
-| `size_flags_vertical` | integer >= 0 |
+| `size_flags_vertical` | integer |
 | `theme_override_colors/*` | Color(r, g, b, a) |
 | `theme_override_constants/*` | integer -16384-16384 |
 | `theme_override_font_sizes/*` | integer >= 1 |

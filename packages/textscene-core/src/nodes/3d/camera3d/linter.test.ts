@@ -120,9 +120,16 @@ describe('Camera3D Linter', () => {
           with: { near: 0.001 },
         },
         {
+          // camera_3d.h:50-52: `KeepAspect` has exactly 2 members. "2" used to
+          // be accepted as a bogus "KEEP_ASPECT_DISABLED" that does not exist
+          // in Godot 4.6.3; it is now a warning (camera_3d.cpp:672's hint is
+          // unenforced — set_keep_aspect_mode is a bare assignment).
           prop: 'keep_aspect',
-          valid: [0, 1, 2],
-          invalid: [{ value: 5, contains: ['0-2'] }],
+          valid: [0, 1],
+          invalid: [
+            { value: 2, contains: ['0-1'] },
+            { value: 5, contains: ['0-1'] },
+          ],
         },
         {
           prop: 'cull_mask',
@@ -335,9 +342,10 @@ describe('Camera3D Linter', () => {
           })
         )
       );
-      // Errors for projection, fov, keep_aspect and doppler_tracking; near = -0.1
-      // and far = 0 are now warnings rather than errors (their setters are bare
-      // assignments, camera_3d.cpp:736/:746).
+      // Errors for projection (silently-dropped write, camera_3d.cpp:341) and
+      // fov (ERR_FAIL_COND, :725). near = -0.1, far = 0, keep_aspect = 10 and
+      // doppler_tracking = 5 are all warnings: their setters are bare
+      // assignments (camera_3d.cpp:736/:746/:586-591/:597-605).
       expect(diagnostics.length).toBeGreaterThan(3);
       expect(diagnostics.some(d => d.message.includes('projection'))).toBe(true);
       expect(diagnostics.some(d => d.message.includes('fov'))).toBe(true);

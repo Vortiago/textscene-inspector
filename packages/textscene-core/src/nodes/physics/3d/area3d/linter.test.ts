@@ -23,7 +23,6 @@ describe('Area3D Linter', () => {
           node('Area3D', {
             monitoring: true,
             monitorable: true,
-            space_override: 0,
             gravity_space_override: 0,
             gravity_point: false,
             gravity_point_center: 'Vector3(0, 0, 0)',
@@ -48,11 +47,6 @@ describe('Area3D Linter', () => {
     runPropertyValidation({ nodeType: 'Area3D', acceptChild: collisionShape3d }, [
       { prop: 'monitoring', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
       { prop: 'monitorable', valid: [true, false], invalid: [{ value: '"yes"', contains: ['boolean'] }] },
-      {
-        prop: 'space_override',
-        valid: [0, 1, 2, 3, 4],
-        invalid: [{ value: 5, contains: ['0-4', 'DISABLED'] }, { value: -1 }],
-      },
       {
         prop: 'gravity_space_override',
         valid: [0, 1, 2, 3, 4],
@@ -273,7 +267,7 @@ describe('Area3D Linter', () => {
       const diagnostics = lint(
         scene(
           node('Area3D', {
-            space_override: 10,
+            gravity_space_override: 10,
             gravity_point_unit_distance: -5,
             collision_layer: -1,
             monitoring: '"invalid"',
@@ -290,7 +284,6 @@ describe('Area3D Linter', () => {
           node('Area3D', {
             monitoring: true,
             monitorable: true,
-            space_override: 3,
             gravity_space_override: 3,
             gravity_point: true,
             gravity_point_center: 'Vector3(0, 0, 0)',

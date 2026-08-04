@@ -11,5 +11,7 @@ validatorRegistry.registerAll('CSGMesh3D', {
   mesh: v.resourceReference('mesh'),
   material: v.resourceReference('material'),
   flip_faces: v.boolean('flip_faces'),
-  operation: v.enumInt('operation', 0, 2, OPERATION),
+  // csg_shape.cpp:1040 hints "Union,Intersection,Subtraction";
+  // CSGShape3D::set_operation:933-937 is a bare assignment.
+  operation: v.enumInt('operation', 0, 2, OPERATION, { hinted: 'csg_shape.cpp:1040' }),
 });

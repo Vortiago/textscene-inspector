@@ -15,7 +15,7 @@ import { v } from '../../../../../linter/validators/index.js';
 validatorRegistry.registerAll('GPUParticlesAttractorBox3D', {
   // gpu_particles_collision_3d.cpp:952, PROPERTY_HINT_RANGE
   // "0.01,1024,0.01,or_greater,suffix:m": `or_greater` softens only the stated
-  // max, so 1024 is not a cap; the min carries no `or_less`, so 0.01 is a hard
-  // floor on every component.
-  size: v.boundedVector3('size', { min: 0.01 }),
+  // max, so 1024 is not a cap; the min carries no `or_less`, so 0.01 is the
+  // hint's floor. set_size:973-977 is a bare assignment, so it is a warning.
+  size: v.boundedVector3('size', { min: 0.01, hinted: 'gpu_particles_collision_3d.cpp:952' }),
 });

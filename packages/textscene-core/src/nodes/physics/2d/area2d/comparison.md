@@ -56,7 +56,6 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 | `monitorable` | true or false |
 | `monitoring` | true or false |
 | `priority` | float |
-| `space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
@@ -73,7 +72,7 @@ The lenient parser only reads `monitoring`, `monitorable`, `collision_layer`, an
 `collision_mask`, via `parseOptionalBool`/`parseOptionalInt`: an absent or
 unparseable value returns `undefined` and the property is simply omitted from
 the parsed node, with no warning. Every other Area2D property the strict
-validators cover (`space_override`, `gravity`, the damp settings, `priority`,
+validators cover (`gravity`, the damp settings, `priority`,
 `audio_bus_name`, `disable_mode`) is never read by the lenient parser at all,
 since the node renders as a transform-only group and none of them touch a
 pixel.

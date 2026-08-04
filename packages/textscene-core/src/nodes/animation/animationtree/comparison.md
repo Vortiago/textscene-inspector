@@ -57,7 +57,7 @@ Strict parsing format-checks these `AnimationTree` properties, plus 10 inherited
 | `active` | true or false |
 | `advance_expression_base_node` | NodePath("path/to/node") |
 | `anim_player` | NodePath("path/to/node") |
-| `audio_max_polyphony` | integer >= 0 |
+| `audio_max_polyphony` | integer 0-128 |
 | `callback_mode_discrete` | enum 0-2 (DOMINANT/RECESSIVE/FORCE_CONTINUOUS) |
 | `callback_mode_method` | enum 0-1 (DEFERRED/IMMEDIATE) |
 | `callback_mode_process` | enum 0-2 (PHYSICS/IDLE/MANUAL) |
@@ -79,8 +79,6 @@ Strict parsing format-checks these `AnimationTree` properties, plus 10 inherited
 |  | `animationtree-anim-player-wrong-type` | warning |
 |  | `animationtree-active-but-incomplete` | warning |
 |  | `animationtree-inactive` | warning |
-|  | `animationtree-low-audio-polyphony` | warning |
-|  | `animationtree-high-audio-polyphony` | warning |
 <!-- lint:end -->
 
 `active`, `deterministic`, and `reset_on_save` fall back to `true` on an
@@ -90,7 +88,8 @@ and `callback_mode_discrete` are the enums: `enumOr` re-checks strict's
 membership, warning and substituting `IDLE` (1), `IDLE` (1), `DEFERRED` (0),
 and `FORCE_CONTINUOUS` (2) respectively for any out-of-range value.
 `audio_max_polyphony` falls back to `32` on a parse failure, but strict's
-`1`-`512` bounds have no lenient counterpart, so an out-of-range integer
+`0`-`128` bound (animation_mixer.cpp:542, `ERR_FAIL_COND(p_audio_max_polyphony
+< 0 || ... > 128)`) has no lenient counterpart, so an out-of-range integer
 passes through unwarned. `anim_player`, `root_motion_track`,
 `advance_expression_base_node`, and `root_node` default to fixed `NodePath`
 literals when absent, but when present the raw string is stored verbatim with

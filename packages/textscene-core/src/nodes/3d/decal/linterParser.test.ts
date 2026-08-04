@@ -10,6 +10,10 @@ function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
   return diagnostics.filter((d) => d.severity === 'error');
 }
 
+function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
+  return diagnostics.filter((d) => d.severity === 'warning');
+}
+
 describe('Decal strict validators', () => {
   let linter: Linter;
 
@@ -58,16 +62,19 @@ size = Vector3(1, 2)
     expect(errors[0]!.message).toContain('size');
   });
 
-  it('rejects an albedo_mix outside 0..1', () => {
+  it('warns (not errors) on an albedo_mix outside 0..1', () => {
+    // decal.cpp:248 hints "0,1,0.01" but set_albedo_mix (:79-83) is a bare
+    // assignment, so out-of-range is a warning, not an error (ADR-0032).
     const content = `[gd_scene format=3]
 
 [node name="X" type="Decal"]
 albedo_mix = 1.5
 `;
 
-    const errors = errorsOf(linter.lint(content));
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]!.message).toContain('albedo_mix');
+    expect(errorsOf(linter.lint(content))).toEqual([]);
+    const warnings = warningsOf(linter.lint(content));
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0]!.message).toContain('albedo_mix');
   });
 
   it('accepts an upper_fade/lower_fade above 1 — they are curve exponents, not ratios', () => {
@@ -97,19 +104,19 @@ upper_fade = -0.5
     expect(errors[0]!.message).toContain('upper_fade');
   });
 
-  it('rejects a cull_mask outside the 32-bit layer range', () => {
-    // 0 is legal (renders nothing); 2^32 is not. class_camera3d.html's 1048575
-    // is the DEFAULT — the 20 editor-visible layers — never the bound.
+  it('warns on a cull_mask outside the 32-bit layer range', () => {
+    // decal.cpp:263 hints PROPERTY_HINT_LAYERS_3D_RENDER, a 32-checkbox widget,
+    // so the width is the UI's and the setter never rejects: a warning, not an
+    // error. 1048575 is Camera3D's DEFAULT, never a bound.
     const content = `[gd_scene format=3]
 
 [node name="X" type="Decal"]
 cull_mask = 4294967296
 `;
 
-    const errors = errorsOf(linter.lint(content));
-    expect(errors.length).toBeGreaterThan(0);
-
-    expect(errors[0]!.message).toContain('cull_mask');
+    const found = linter.lint(content).filter((x) => x.message.includes('cull_mask'));
+    expect(found).toHaveLength(1);
+    expect(found[0]!.severity).toBe('warning');
   });
 
   it('rejects an invalid texture_albedo reference format', () => {

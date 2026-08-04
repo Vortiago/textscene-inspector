@@ -48,9 +48,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_LINEAR_LIMIT/UPPER_DISTANCE_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('linear_limit/upper_distance', '1024.5');
       expect(error?.code).toBe('INVALID_LINEAR_LIMIT/UPPER_DISTANCE_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -70,9 +71,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_LINEAR_LIMIT/LOWER_DISTANCE_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('linear_limit/lower_distance', '-1024.5');
       expect(error?.code).toBe('INVALID_LINEAR_LIMIT/LOWER_DISTANCE_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -92,9 +94,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_LINEAR_LIMIT/SOFTNESS_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('linear_limit/softness', '16.5');
       expect(error?.code).toBe('INVALID_LINEAR_LIMIT/SOFTNESS_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -114,9 +117,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_LINEAR_LIMIT/RESTITUTION_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('linear_limit/restitution', '16.5');
       expect(error?.code).toBe('INVALID_LINEAR_LIMIT/RESTITUTION_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -136,9 +140,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_LINEAR_LIMIT/DAMPING_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('linear_limit/damping', '-0.5');
       expect(error?.code).toBe('INVALID_LINEAR_LIMIT/DAMPING_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -158,9 +163,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_LINEAR_MOTION/SOFTNESS_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('linear_motion/softness', '0.0');
       expect(error?.code).toBe('INVALID_LINEAR_MOTION/SOFTNESS_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -180,9 +186,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_LINEAR_MOTION/RESTITUTION_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('linear_motion/restitution', '16.5');
       expect(error?.code).toBe('INVALID_LINEAR_MOTION/RESTITUTION_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -202,9 +209,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_LINEAR_MOTION/DAMPING_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('linear_motion/damping', '16.1');
       expect(error?.code).toBe('INVALID_LINEAR_MOTION/DAMPING_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -224,9 +232,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_LINEAR_ORTHO/SOFTNESS_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('linear_ortho/softness', '16.5');
       expect(error?.code).toBe('INVALID_LINEAR_ORTHO/SOFTNESS_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -246,9 +255,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_LINEAR_ORTHO/RESTITUTION_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('linear_ortho/restitution', '16.5');
       expect(error?.code).toBe('INVALID_LINEAR_ORTHO/RESTITUTION_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -268,9 +278,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_LINEAR_ORTHO/DAMPING_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('linear_ortho/damping', '-0.1');
       expect(error?.code).toBe('INVALID_LINEAR_ORTHO/DAMPING_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -297,9 +308,10 @@ describe('SliderJoint3D strict validators', () => {
     // reader of the hint's raw degree numbers would expect as the bound, yet
     // it is well past the REAL bound once the hint's degrees are converted to
     // the radians the value is actually serialised in.
-    it('rejects a value past ±π radians (the ±180 degree bound converted to radians)', () => {
+    it('warns past ±π radians (the ±180 degree bound converted) rather than erroring', () => {
       const error = check('angular_limit/upper_angle', '4.0');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/UPPER_ANGLE_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -319,9 +331,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/LOWER_ANGLE_FORMAT');
     });
 
-    it('rejects a value past ±π radians (the ±180 degree bound converted to radians)', () => {
+    it('warns past ±π radians (the ±180 degree bound converted) rather than erroring', () => {
       const error = check('angular_limit/lower_angle', '-4.0');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/LOWER_ANGLE_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -341,9 +354,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/SOFTNESS_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('angular_limit/softness', '16.5');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/SOFTNESS_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -363,9 +377,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/RESTITUTION_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('angular_limit/restitution', '16.5');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/RESTITUTION_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -385,9 +400,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/DAMPING_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('angular_limit/damping', '16.1');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/DAMPING_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -407,9 +423,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_MOTION/SOFTNESS_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('angular_motion/softness', '0.0');
       expect(error?.code).toBe('INVALID_ANGULAR_MOTION/SOFTNESS_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -429,9 +446,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_MOTION/RESTITUTION_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('angular_motion/restitution', '16.5');
       expect(error?.code).toBe('INVALID_ANGULAR_MOTION/RESTITUTION_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -451,9 +469,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_MOTION/DAMPING_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('angular_motion/damping', '-0.5');
       expect(error?.code).toBe('INVALID_ANGULAR_MOTION/DAMPING_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -473,9 +492,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_ORTHO/SOFTNESS_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('angular_ortho/softness', '16.5');
       expect(error?.code).toBe('INVALID_ANGULAR_ORTHO/SOFTNESS_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -495,9 +515,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_ORTHO/RESTITUTION_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('angular_ortho/restitution', '16.5');
       expect(error?.code).toBe('INVALID_ANGULAR_ORTHO/RESTITUTION_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -517,9 +538,10 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_ORTHO/DAMPING_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring', () => {
       const error = check('angular_ortho/damping', '-0.1');
       expect(error?.code).toBe('INVALID_ANGULAR_ORTHO/DAMPING_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 });

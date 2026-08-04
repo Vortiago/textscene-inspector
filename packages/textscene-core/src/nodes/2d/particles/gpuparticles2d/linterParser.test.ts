@@ -60,7 +60,10 @@ describe('GPUParticles2D strict validators', () => {
   });
 
   describe('amount', () => {
-    // gpu_particles_2d.cpp:942 hints "1,1000000,1,exp" — hard 1..1000000.
+    // gpu_particles_2d.cpp:942 hints "1,1000000,1,exp"; set_amount
+    // (gpu_particles_2d.cpp:71-72) ERR_FAILs below 1, enforcing the floor as
+    // an error, but never enforces the 1000000 ceiling — that end is a
+    // hint-only warning (ADR-0032).
     it('accepts a mid-range value', () => {
       expect(check('amount', '64')).toBeNull();
     });
@@ -74,16 +77,23 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('amount', 'lots')?.code).toBe('INVALID_AMOUNT_FORMAT');
     });
 
-    it('rejects 0, which set_amount ERR_FAILs', () => {
-      expect(check('amount', '0')?.code).toBe('INVALID_AMOUNT_VALUE');
+    it('rejects 0 as an error, which set_amount ERR_FAILs', () => {
+      const error = check('amount', '0');
+      expect(error?.code).toBe('INVALID_AMOUNT_VALUE');
+      expect(error?.severity).toBe('error');
     });
 
-    it('rejects above the hint ceiling', () => {
-      expect(check('amount', '1000001')?.code).toBe('INVALID_AMOUNT_VALUE');
+    it('warns (not errors) above the hint-only ceiling', () => {
+      const warning = check('amount', '1000001');
+      expect(warning?.code).toBe('INVALID_AMOUNT_VALUE');
+      expect(warning?.severity).toBe('warning');
     });
   });
 
   describe('amount_ratio', () => {
+    // gpu_particles_2d.cpp:943 hints "0,1,0.0001"; set_amount_ratio
+    // (gpu_particles_2d.cpp:484-486) assigns unconditionally, so out of
+    // range is a warning, not an error (ADR-0032).
     it('accepts values within 0..1', () => {
       expect(check('amount_ratio', '0.8')).toBeNull();
     });
@@ -97,12 +107,14 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('amount_ratio', 'nope')?.code).toBe('INVALID_AMOUNT_RATIO_FORMAT');
     });
 
-    it('rejects a value above 1', () => {
-      expect(check('amount_ratio', '1.5')?.code).toBe('INVALID_AMOUNT_RATIO_VALUE');
+    it('warns (not errors) above 1', () => {
+      const warning = check('amount_ratio', '1.5');
+      expect(warning?.code).toBe('INVALID_AMOUNT_RATIO_VALUE');
+      expect(warning?.severity).toBe('warning');
     });
 
-    it('rejects a negative value', () => {
-      expect(check('amount_ratio', '-0.1')?.code).toBe('INVALID_AMOUNT_RATIO_VALUE');
+    it('warns (not errors) on a negative value', () => {
+      expect(check('amount_ratio', '-0.1')?.severity).toBe('warning');
     });
   });
 
@@ -135,8 +147,9 @@ describe('GPUParticles2D strict validators', () => {
   });
 
   describe('lifetime', () => {
-    // gpu_particles_2d.cpp:947 hints "0.01,600.0,0.01,or_greater,…" — 0.01 is
-    // the hard floor, 600 is a soft `or_greater` ceiling (not capped).
+    // gpu_particles_2d.cpp:947 hints "0.01,600.0,0.01,or_greater,…", but
+    // set_lifetime (gpu_particles_2d.cpp:77-78) ERR_FAILs only at `<= 0` —
+    // the setter, not the hint, governs (ADR-0032), so 0.001 is legal.
     it('accepts a typical value', () => {
       expect(check('lifetime', '2.0')).toBeNull();
     });
@@ -145,20 +158,26 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('lifetime', '10000')).toBeNull();
     });
 
-    it('accepts the floor value 0.01', () => {
+    it('accepts the hint floor value 0.01', () => {
       expect(check('lifetime', '0.01')).toBeNull();
+    });
+
+    it('accepts below the hint floor, which the setter does not reject', () => {
+      expect(check('lifetime', '0.001')).toBeNull();
     });
 
     it('rejects a non-numeric value', () => {
       expect(check('lifetime', 'forever')?.code).toBe('INVALID_LIFETIME_FORMAT');
     });
 
-    it('rejects below the hard floor', () => {
-      expect(check('lifetime', '0.001')?.code).toBe('INVALID_LIFETIME_VALUE');
+    it('rejects zero as an error, which set_lifetime ERR_FAILs', () => {
+      const error = check('lifetime', '0');
+      expect(error?.code).toBe('INVALID_LIFETIME_VALUE');
+      expect(error?.severity).toBe('error');
     });
 
-    it('rejects zero', () => {
-      expect(check('lifetime', '0')?.code).toBe('INVALID_LIFETIME_VALUE');
+    it('rejects a negative value as an error', () => {
+      expect(check('lifetime', '-1')?.code).toBe('INVALID_LIFETIME_VALUE');
     });
   });
 
@@ -176,14 +195,18 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('interp_to_end', 'x')?.code).toBe('INVALID_INTERP_TO_END_FORMAT');
     });
 
-    it('rejects above 1', () => {
-      expect(check('interp_to_end', '1.5')?.code).toBe('INVALID_INTERP_TO_END_VALUE');
+    it('rejects above 1 as an error, which set_interp_to_end CLAMPs (gpu_particles_2d.cpp:210-211)', () => {
+      const error = check('interp_to_end', '1.5');
+      expect(error?.code).toBe('INVALID_INTERP_TO_END_VALUE');
+      expect(error?.severity).toBe('error');
     });
   });
 
   describe('preprocess', () => {
     // gpu_particles_2d.cpp:950 hints "0.00,10.0,0.01,or_greater,…" — 0 is the
-    // hard floor, 10 is a soft `or_greater` ceiling.
+    // hard floor, 10 is a soft `or_greater` ceiling. set_pre_process_time
+    // (gpu_particles_2d.cpp:99-101) assigns unconditionally, so the floor is
+    // a warning (ADR-0032).
     it('accepts a typical value', () => {
       expect(check('preprocess', '1.2')).toBeNull();
     });
@@ -197,14 +220,17 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('preprocess', 'y')?.code).toBe('INVALID_PREPROCESS_FORMAT');
     });
 
-    it('rejects a negative value', () => {
-      expect(check('preprocess', '-1')?.code).toBe('INVALID_PREPROCESS_VALUE');
+    it('warns (not errors) on a negative value', () => {
+      const warning = check('preprocess', '-1');
+      expect(warning?.code).toBe('INVALID_PREPROCESS_VALUE');
+      expect(warning?.severity).toBe('warning');
     });
   });
 
   describe('speed_scale', () => {
     // gpu_particles_2d.cpp:951 hints "0,64,0.01" — no or_greater/or_less, hard
-    // both ends.
+    // both ends. set_speed_scale (gpu_particles_2d.cpp:252-254) assigns
+    // unconditionally, so out of range is a warning (ADR-0032).
     it('accepts a typical value', () => {
       expect(check('speed_scale', '1.0')).toBeNull();
     });
@@ -218,27 +244,37 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('speed_scale', 'z')?.code).toBe('INVALID_SPEED_SCALE_FORMAT');
     });
 
-    it('rejects above the hard ceiling', () => {
-      expect(check('speed_scale', '64.5')?.code).toBe('INVALID_SPEED_SCALE_VALUE');
+    it('warns (not errors) above the hint ceiling', () => {
+      const warning = check('speed_scale', '64.5');
+      expect(warning?.code).toBe('INVALID_SPEED_SCALE_VALUE');
+      expect(warning?.severity).toBe('warning');
     });
 
-    it('rejects a negative value', () => {
-      expect(check('speed_scale', '-1')?.code).toBe('INVALID_SPEED_SCALE_VALUE');
+    it('warns (not errors) on a negative value', () => {
+      expect(check('speed_scale', '-1')?.severity).toBe('warning');
     });
   });
 
   describe('explosiveness and randomness', () => {
-    it.each(['explosiveness', 'randomness'])('%s accepts 0..1 and rejects outside it', (property) => {
+    // gpu_particles_2d.cpp:952-953 hint "0,1,0.01"; set_explosiveness_ratio
+    // (gpu_particles_2d.cpp:104-106) and set_randomness_ratio
+    // (gpu_particles_2d.cpp:109-111) both assign unconditionally, so out of
+    // range is a warning.
+    it.each(['explosiveness', 'randomness'])('%s accepts 0..1 and warns outside it', (property) => {
       expect(check(property, '0.5')).toBeNull();
       expect(check(property, '0')).toBeNull();
       expect(check(property, '1')).toBeNull();
       expect(check(property, 'n')?.code).toBe(`INVALID_${property.toUpperCase()}_FORMAT`);
-      expect(check(property, '1.1')?.code).toBe(`INVALID_${property.toUpperCase()}_VALUE`);
+      const outOfRange = check(property, '1.1');
+      expect(outOfRange?.code).toBe(`INVALID_${property.toUpperCase()}_VALUE`);
+      expect(outOfRange?.severity).toBe('warning');
     });
   });
 
   describe('seed', () => {
-    // gpu_particles_2d.cpp:955 hints "0,4294967295,1" (0..UINT32_MAX).
+    // gpu_particles_2d.cpp:955 hints "0,4294967295,1" (0..UINT32_MAX); set_seed
+    // (gpu_particles_2d.cpp:360-362) assigns unconditionally — the uint32_t
+    // param coerces rather than rejects, so out of range is a warning.
     it('accepts a typical value', () => {
       expect(check('seed', '4242')).toBeNull();
     });
@@ -252,17 +288,21 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('seed', 'random')?.code).toBe('INVALID_SEED_FORMAT');
     });
 
-    it('rejects a negative value', () => {
-      expect(check('seed', '-1')?.code).toBe('INVALID_SEED_VALUE');
+    it('warns (not errors) on a negative value', () => {
+      expect(check('seed', '-1')?.severity).toBe('warning');
     });
 
-    it('rejects above UINT32_MAX', () => {
-      expect(check('seed', '4294967296')?.code).toBe('INVALID_SEED_VALUE');
+    it('warns (not errors) above UINT32_MAX', () => {
+      const warning = check('seed', '4294967296');
+      expect(warning?.code).toBe('INVALID_SEED_VALUE');
+      expect(warning?.severity).toBe('warning');
     });
   });
 
   describe('fixed_fps', () => {
     // gpu_particles_2d.cpp:956 hints "0,1000,1,suffix:FPS" — hard both ends.
+    // set_fixed_fps (gpu_particles_2d.cpp:317-319) assigns unconditionally,
+    // so out of range is a warning.
     it('accepts a typical value', () => {
       expect(check('fixed_fps', '30')).toBeNull();
     });
@@ -276,14 +316,18 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('fixed_fps', 'fast')?.code).toBe('INVALID_FIXED_FPS_FORMAT');
     });
 
-    it('rejects above the hard ceiling', () => {
-      expect(check('fixed_fps', '1001')?.code).toBe('INVALID_FIXED_FPS_VALUE');
+    it('warns (not errors) above the hint ceiling', () => {
+      const warning = check('fixed_fps', '1001');
+      expect(warning?.code).toBe('INVALID_FIXED_FPS_VALUE');
+      expect(warning?.severity).toBe('warning');
     });
   });
 
   describe('collision_base_size', () => {
     // gpu_particles_2d.cpp:960 hints "0,128,0.01,or_greater" — 0 is the hard
-    // floor, 128 is a soft `or_greater` ceiling.
+    // floor, 128 is a soft `or_greater` ceiling. set_collision_base_size
+    // (gpu_particles_2d.cpp:243-246) assigns unconditionally, so the floor
+    // is a warning.
     it('accepts a typical value', () => {
       expect(check('collision_base_size', '1.0')).toBeNull();
     });
@@ -297,8 +341,10 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('collision_base_size', 'w')?.code).toBe('INVALID_COLLISION_BASE_SIZE_FORMAT');
     });
 
-    it('rejects a negative value', () => {
-      expect(check('collision_base_size', '-0.1')?.code).toBe('INVALID_COLLISION_BASE_SIZE_VALUE');
+    it('warns (not errors) on a negative value', () => {
+      const warning = check('collision_base_size', '-0.1');
+      expect(warning?.code).toBe('INVALID_COLLISION_BASE_SIZE_VALUE');
+      expect(warning?.severity).toBe('warning');
     });
   });
 
@@ -318,23 +364,31 @@ describe('GPUParticles2D strict validators', () => {
   });
 
   describe('trails', () => {
-    it('accepts a typical trail_lifetime and rejects below the hard 0.01 floor', () => {
-      // gpu_particles_2d.cpp:967 hints "0.01,10,0.01,or_greater,…".
+    it('accepts a typical trail_lifetime and errors below the hard 0.01 floor', () => {
+      // gpu_particles_2d.cpp:967 hints "0.01,10,0.01,or_greater,…";
+      // set_trail_lifetime (gpu_particles_2d.cpp:187-188) ERR_FAILs below
+      // `0.01 - CMP_EPSILON`, so the floor is an enforced error.
       expect(check('trail_lifetime', '0.3')).toBeNull();
       expect(check('trail_lifetime', '0.01')).toBeNull();
       expect(check('trail_lifetime', '50')).toBeNull(); // soft or_greater ceiling
       expect(check('trail_lifetime', 't')?.code).toBe('INVALID_TRAIL_LIFETIME_FORMAT');
-      expect(check('trail_lifetime', '0.001')?.code).toBe('INVALID_TRAIL_LIFETIME_VALUE');
+      const belowFloor = check('trail_lifetime', '0.001');
+      expect(belowFloor?.code).toBe('INVALID_TRAIL_LIFETIME_VALUE');
+      expect(belowFloor?.severity).toBe('error');
     });
 
-    it('accepts trail_sections within 2..128 and rejects outside it', () => {
-      // gpu_particles_2d.cpp:968 hints "2,128,1" — hard both ends.
+    it('accepts trail_sections within 2..128 and errors outside it', () => {
+      // gpu_particles_2d.cpp:968 hints "2,128,1" — hard both ends;
+      // set_trail_sections (gpu_particles_2d.cpp:194-197) ERR_FAILs outside
+      // [2, 128], so both ends are enforced errors.
       expect(check('trail_sections', '8')).toBeNull();
       expect(check('trail_sections', '2')).toBeNull();
       expect(check('trail_sections', '128')).toBeNull();
       expect(check('trail_sections', 's')?.code).toBe('INVALID_TRAIL_SECTIONS_FORMAT');
-      expect(check('trail_sections', '1')?.code).toBe('INVALID_TRAIL_SECTIONS_VALUE');
-      expect(check('trail_sections', '129')?.code).toBe('INVALID_TRAIL_SECTIONS_VALUE');
+      const belowMin = check('trail_sections', '1');
+      expect(belowMin?.code).toBe('INVALID_TRAIL_SECTIONS_VALUE');
+      expect(belowMin?.severity).toBe('error');
+      expect(check('trail_sections', '129')?.severity).toBe('error');
     });
 
     it('accepts trail_section_subdivisions within 1..1024 and rejects outside it', () => {

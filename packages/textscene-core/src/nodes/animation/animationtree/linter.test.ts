@@ -167,12 +167,12 @@ describe('AnimationTree Linter', () => {
         invalid: [{ value: '".."', contains: ['advance_expression_base_node', 'NodePath'] }],
       },
       {
+        // animation_mixer.cpp:542, ERR_FAIL_COND(p_audio_max_polyphony < 0 || ... > 128).
         prop: 'audio_max_polyphony',
-        valid: [1, 8, 16, 32, 64, 128],
+        valid: [0, 1, 8, 16, 32, 64, 128],
         invalid: [
-          { value: 0, contains: ['audio_max_polyphony', 'must be >= 1'] },
-          { value: -5, contains: ['audio_max_polyphony', 'must be >= 1'] },
-          { value: 1000, contains: ['audio_max_polyphony', 'impractically large'] },
+          { value: -5, contains: ['audio_max_polyphony', 'between 0 and 128'] },
+          { value: 1000, contains: ['audio_max_polyphony', 'between 0 and 128'] },
           { value: 'many', contains: ['audio_max_polyphony', 'must be a number'] },
         ],
       },
@@ -457,29 +457,27 @@ describe('AnimationTree Linter', () => {
       });
     });
 
-    describe('audio_max_polyphony warnings', () => {
-      it('should warn when audio_max_polyphony is very low', () => {
-        expectDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: 4 })), {
+    describe('audio_max_polyphony', () => {
+      it('carries no advisory of its own, only the enforced bound', () => {
+        // The old "very low" (< 8) and "very high" (> 128) arms were invented
+        // thresholds. Godot states neither: animation_mixer.cpp:542 ERR_FAILs
+        // outside 0-128 and says nothing about taste inside it, so the
+        // validator is the whole story and 4 is a legal value.
+        expectNoDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: 4 })), {
           prop: 'audio_max_polyphony',
-          severity: 'warning',
-          contains: ['very low', '4'],
         });
-      });
-
-      it('should warn when audio_max_polyphony is very high', () => {
-        expectDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: 256 })), {
-          prop: 'audio_max_polyphony',
-          severity: 'warning',
-          contains: ['very high', '256'],
-        });
-      });
-
-      it('should not warn for normal audio_max_polyphony values', () => {
-        for (const value of [8, 16, 32, 64, 128]) {
+        for (const value of [0, 8, 32, 128]) {
           expectNoDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: value })), {
             prop: 'audio_max_polyphony',
           });
         }
+      });
+
+      it('errors past the ceiling the engine enforces', () => {
+        expectDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: 256 })), {
+          prop: 'audio_max_polyphony',
+          severity: 'error',
+        });
       });
     });
 
@@ -545,7 +543,9 @@ describe('AnimationTree Linter', () => {
             anim_player: 'invalid',
             active: 'maybe',
             process_callback: 10,
-            audio_max_polyphony: 0,
+            // -1, not 0: animation_mixer.cpp:542 permits 0, so the old value
+            // stopped contributing a diagnostic once the bound was corrected.
+            audio_max_polyphony: -1,
           })
         )
       );

@@ -84,18 +84,18 @@ describe('Sprite2D Linter', () => {
       },
       {
         prop: 'hframes',
-        valid: [4],
+        valid: [4, 16384],
         invalid: [
-          { value: 0, contains: ['hframes', 'greater than 0', 'division by zero'] },
-          { value: -1, contains: ['hframes', 'greater than 0'] },
+          { value: 0, contains: ['hframes', 'integer 1-16384'] },
+          { value: -1, contains: ['hframes', 'integer 1-16384'] },
         ],
       },
       {
         prop: 'vframes',
-        valid: [4],
+        valid: [4, 16384],
         invalid: [
-          { value: 0, contains: ['vframes', 'greater than 0', 'division by zero'] },
-          { value: -1, contains: ['vframes', 'greater than 0'] },
+          { value: 0, contains: ['vframes', 'integer 1-16384'] },
+          { value: -1, contains: ['vframes', 'integer 1-16384'] },
         ],
       },
       {
@@ -118,6 +118,31 @@ describe('Sprite2D Linter', () => {
         ],
       },
     ]);
+
+    describe('ADR-0032 tiering: enforced floor, hinted ceiling', () => {
+      // set_hframes ERR_FAIL_COND_MSGs below 1 (sprite_2d.cpp:323); nothing
+      // enforces the 16384 hint (sprite_2d.cpp:543) but the format is real.
+      it('errors below the enforced hframes floor', () => {
+        expectDiagnostic(scene(node('Sprite2D', { hframes: 0 })), {
+          prop: 'hframes',
+          severity: 'error',
+        });
+      });
+
+      it('warns above the hinted hframes ceiling', () => {
+        expectDiagnostic(scene(node('Sprite2D', { hframes: 20000 })), {
+          prop: 'hframes',
+          severity: 'warning',
+        });
+      });
+
+      it('warns above the hinted vframes ceiling', () => {
+        expectDiagnostic(scene(node('Sprite2D', { vframes: 20000 })), {
+          prop: 'vframes',
+          severity: 'warning',
+        });
+      });
+    });
   });
 
   describe('Semantic Validation (Resource References)', () => {

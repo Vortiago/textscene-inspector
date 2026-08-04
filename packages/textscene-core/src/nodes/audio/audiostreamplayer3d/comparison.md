@@ -51,7 +51,7 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 16 inh
 | `max_db` | float |
 | `max_distance` | float >= 0 |
 | `max_polyphony` | integer >= 1 |
-| `panning_strength` | float 0-1 |
+| `panning_strength` | float >= 0 |
 | `pitch_scale` | float >= 5e-324 |
 | `playing` | true or false |
 | `stream` | SubResource("id") or ExtResource("id") |

@@ -60,11 +60,13 @@ describe('Light3D shared validators', () => {
         ],
       },
       {
+        // light_3d.cpp:406 hints "-16,16,0.001" (both ends closed), warning-only
+        // since set_param:36 only guards the param index.
         prop: 'shadow_transmittance_bias',
-        valid: [-10, 0, 10],
+        valid: [-16, 0, 16],
         invalid: [
-          { value: -11, contains: ['between -10 and 10'] },
-          { value: 11, contains: ['between -10 and 10'] },
+          { value: -17, contains: ['between -16 and 16'] },
+          { value: 17, contains: ['between -16 and 16'] },
         ],
       },
       {

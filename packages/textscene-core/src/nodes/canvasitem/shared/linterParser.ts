@@ -17,7 +17,8 @@
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { layerBitmask, v } from '../../../linter/validators/index.js';
+import { layerBitmask } from '../../../linter/validators/layerBitmask.js';
+import { v } from '../../../linter/validators/index.js';
 
 // scene/main/canvas_item.cpp:1476, PROPERTY_HINT_ENUM "Disabled,Clip Only,Clip + Draw"
 const CLIP_CHILDREN = { 0: 'DISABLED', 1: 'ONLY', 2: 'AND_DRAW' };
@@ -42,18 +43,34 @@ validatorRegistry.registerAll('CanvasItem', {
   self_modulate: v.color('self_modulate'),
   show_behind_parent: v.boolean('show_behind_parent'),
   top_level: v.boolean('top_level'),
-  clip_children: v.enumInt('clip_children', 0, 2, CLIP_CHILDREN),
-  // PROPERTY_HINT_LAYERS_2D_RENDER — the same 32-bit shape as the 3D masks.
-  light_mask: layerBitmask('light_mask'),
-  visibility_layer: layerBitmask('visibility_layer'),
+  // canvas_item.cpp:1476, ENUM 3 labels (matches CLIP_CHILDREN_MAX=3,
+  // canvas_item.h:71-75). set_clip_children_mode (canvas_item.cpp:1731-1733)
+  // ERR_FAIL_CONDs against CLIP_CHILDREN_MAX.
+  clip_children: v.enumInt('clip_children', 0, 2, CLIP_CHILDREN, { enforced: 'canvas_item.cpp:1731' }),
+  // canvas_item.cpp:1477, PROPERTY_HINT_LAYERS_2D_RENDER — not a
+  // PROPERTY_HINT_RANGE, so there is no numeric hint to ground a bound on.
+  // set_light_mask (canvas_item.cpp:589-596) assigns unconditionally, no
+  // ERR_FAIL, no clamp. The 0..2^32-1 `layerBitmask` bound this used to carry
+  // was never engine-enforced, so it is removed here (ADR-0032 "none").
+  light_mask: layerBitmask('light_mask', { hinted: 'canvas_item.cpp:1477' }),
+  // canvas_item.cpp:1478, same PROPERTY_HINT_LAYERS_2D_RENDER shape.
+  // set_visibility_layer (canvas_item.cpp:1598-1602) assigns unconditionally.
+  visibility_layer: layerBitmask('visibility_layer', { hinted: 'canvas_item.cpp:1478' }),
   // scene/main/canvas_item.cpp:1481 takes its bounds from the rendering server:
   // servers/rendering/rendering_server.h:103, CANVAS_ITEM_Z_MIN = -4096, and
-  // CANVAS_ITEM_Z_MAX its positive mirror.
-  z_index: v.strictInt('z_index', { min: -4096, max: 4096 }),
+  // CANVAS_ITEM_Z_MAX its positive mirror. set_z_index
+  // (canvas_item.cpp:668-669) ERR_FAIL_CONDs both ends.
+  z_index: v.strictInt('z_index', { min: -4096, max: 4096, enforced: 'canvas_item.cpp:668' }),
   z_as_relative: v.boolean('z_as_relative'),
   y_sort_enabled: v.boolean('y_sort_enabled'),
-  texture_filter: v.enumInt('texture_filter', 0, 6, TEXTURE_FILTER),
-  texture_repeat: v.enumInt('texture_repeat', 0, 3, TEXTURE_REPEAT),
+  // canvas_item.cpp:1486, ENUM 7 labels (matches TEXTURE_FILTER_MAX=7,
+  // canvas_item.h:52-60). set_texture_filter (canvas_item.cpp:1665-1667)
+  // ERR_FAIL_INDEXes against TEXTURE_FILTER_MAX.
+  texture_filter: v.enumInt('texture_filter', 0, 6, TEXTURE_FILTER, { enforced: 'canvas_item.cpp:1665' }),
+  // canvas_item.cpp:1487, ENUM 4 labels (matches TEXTURE_REPEAT_MAX=4,
+  // canvas_item.h:63-68). set_texture_repeat (canvas_item.cpp:1720-1722)
+  // ERR_FAIL_INDEXes against TEXTURE_REPEAT_MAX.
+  texture_repeat: v.enumInt('texture_repeat', 0, 3, TEXTURE_REPEAT, { enforced: 'canvas_item.cpp:1720' }),
   material: v.resourceReference('material'),
   use_parent_material: v.boolean('use_parent_material'),
 });

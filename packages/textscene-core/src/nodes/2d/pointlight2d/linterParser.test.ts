@@ -11,9 +11,15 @@ function lintErrors(raw: string): number {
   return new Linter().lint(raw).filter(d => d.severity === 'error').length;
 }
 
+function lintWarnings(raw: string): number {
+  return new Linter().lint(raw).filter(d => d.severity === 'warning').length;
+}
+
 describe('PointLight2D linterParser validators', () => {
-  it('rejects an invalid blend_mode', () => {
-    expect(lintErrors(`[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nblend_mode = 9`)).toBeGreaterThan(0);
+  it('warns (not errors) on an invalid blend_mode (light_2d.cpp:190-192 has no ERR_FAIL_INDEX)', () => {
+    const scene = `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nblend_mode = 9`;
+    expect(lintWarnings(scene)).toBeGreaterThan(0);
+    expect(lintErrors(scene)).toBe(0);
   });
 
   it('accepts a valid blend_mode', () => {
@@ -39,8 +45,10 @@ describe('PointLight2D linterParser validators', () => {
     expect(lintErrors(scene)).toBe(0);
   });
 
-  it('rejects negative energy', () => {
-    expect(lintErrors(`[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nenergy = -1`)).toBeGreaterThan(0);
+  it('warns (not errors) on negative energy (light_2d.cpp:98-100 assigns unconditionally)', () => {
+    const scene = `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nenergy = -1`;
+    expect(lintWarnings(scene)).toBeGreaterThan(0);
+    expect(lintErrors(scene)).toBe(0);
   });
 
   it('accepts valid energy', () => {
@@ -63,8 +71,10 @@ describe('PointLight2D linterParser validators', () => {
     expect(lintErrors(`[gd_scene format=3]\n[node name="L" type="PointLight2D"]\ntexture = ExtResource("1")`)).toBe(0);
   });
 
-  it('rejects negative texture_scale', () => {
-    expect(lintErrors(`[gd_scene format=3]\n[node name="L" type="PointLight2D"]\ntexture_scale = -1`)).toBeGreaterThan(0);
+  it('warns (not errors) on negative texture_scale (light_2d.cpp:441-447 only special-cases exact 0)', () => {
+    const scene = `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\ntexture_scale = -1`;
+    expect(lintWarnings(scene)).toBeGreaterThan(0);
+    expect(lintErrors(scene)).toBe(0);
   });
 
   it('accepts valid texture_scale', () => {
@@ -79,18 +89,18 @@ describe('PointLight2D linterParser validators', () => {
     ).toBe(0);
   });
 
-  it('rejects a negative range_item_cull_mask', () => {
+  it('accepts a negative range_item_cull_mask (light_2d.cpp:143-145 assigns unconditionally, no range hint at all)', () => {
     expect(
       lintErrors(`[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nrange_item_cull_mask = -1`)
-    ).toBeGreaterThan(0);
+    ).toBe(0);
   });
 
-  it('rejects a shadow_item_cull_mask past 32 bits', () => {
+  it('accepts a shadow_item_cull_mask past 32 bits (light_2d.cpp:152-154 assigns unconditionally)', () => {
     expect(
       lintErrors(
         `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nshadow_item_cull_mask = 4294967296`
       )
-    ).toBeGreaterThan(0);
+    ).toBe(0);
   });
 
   it('accepts the four range-window properties as plain integers', () => {

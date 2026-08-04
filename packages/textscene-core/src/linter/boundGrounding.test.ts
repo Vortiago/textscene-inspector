@@ -33,7 +33,18 @@ import './index.js'; // side-effect: every slice registers its validators
  * blind to, so the true total is 596. The number went up because the
  * measurement got honest, which is the only reason it may ever go up.
  */
-const UNAUDITED_BOUND_BUDGET = 596;
+const UNAUDITED_BOUND_BUDGET = 0;
+
+/**
+ * The one bound that cannot be grounded, with the reason.
+ *
+ * `AreaLight3D` does not exist anywhere in Godot 4.6.3, so it has no
+ * ADD_PROPERTY hint and no setter to cite. Its slice sheet records that the
+ * node postdates this engine build. Guessing a citation would be worse than
+ * admitting there is none, so the bound stays an ungrounded error and is named
+ * here rather than hidden in a count.
+ */
+const UNGROUNDABLE: ReadonlySet<string> = new Set(['AreaLight3D.area_range']);
 
 interface BoundedKey {
   nodeType: string;
@@ -55,9 +66,12 @@ function boundedKeys(): BoundedKey[] {
 }
 
 describe('bound grounding', () => {
-  it('never lets the un-audited bound count rise', () => {
-    const unaudited = boundedKeys().filter((b) => !b.grounded);
-    expect(unaudited.length).toBeLessThanOrEqual(UNAUDITED_BOUND_BUDGET);
+  it('grounds every bound except the one that cannot be', () => {
+    const unaudited = boundedKeys()
+      .filter((b) => !b.grounded)
+      .map((b) => `${b.nodeType}.${b.key}`)
+      .filter((name) => !UNGROUNDABLE.has(name));
+    expect(unaudited.sort()).toHaveLength(UNAUDITED_BOUND_BUDGET);
   });
 
   it('gives every grounded bound a source citation', () => {
@@ -150,5 +164,31 @@ describe('per-end grounding', () => {
       v.boundedVector3('vec', { min: 0, hinted: 'f.cpp:6' })('vec', 'Vector3(-1, 0, 0)', 1)
         ?.severity
     ).toBe('warning');
+  });
+
+  it('splits float and int the same way strictInt does', () => {
+    // Regression for a bug the 3D rendering audit found: `float`/`int` used to
+    // collapse a per-end split through `boundSeverity`, which returns 'error'
+    // unless BOTH ends are hinted — so `{ enforced: { min }, hinted: { max } }`
+    // typechecked but silently made the whole bound an error. CSGCylinder3D's
+    // `sides` (enforced floor csg_shape.cpp:1876, hinted ceiling :1849) is the
+    // real shape this fixes.
+    const floatV = v.float('extra_cull_margin', {
+      min: 0,
+      max: 16384,
+      enforced: { min: 'visual_instance_3d.cpp:377' },
+      hinted: { max: 'visual_instance_3d.cpp:602' },
+    });
+    expect(floatV('extra_cull_margin', '-1', 1)?.severity).toBe('error');
+    expect(floatV('extra_cull_margin', '20000', 1)?.severity).toBe('warning');
+
+    const intV = v.int('sides', {
+      min: 3,
+      max: 64,
+      enforced: { min: 'csg_shape.cpp:1876' },
+      hinted: { max: 'csg_shape.cpp:1849' },
+    });
+    expect(intV('sides', '2', 1)?.severity).toBe('error');
+    expect(intV('sides', '65', 1)?.severity).toBe('warning');
   });
 });

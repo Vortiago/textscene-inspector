@@ -301,7 +301,7 @@ describe('TextEdit strict validators', () => {
     });
   });
 
-  describe('text_direction (enum 0-3)', () => {
+  describe('text_direction (enum -1-3)', () => {
     // control.cpp:4415-4418: TEXT_DIRECTION_AUTO=0, _LTR=1, _RTL=2, _INHERITED=3.
     it('accepts 0 (TEXT_DIRECTION_AUTO, the documented default)', () => {
       expect(check('text_direction', '0')).toBeNull();
@@ -311,12 +311,16 @@ describe('TextEdit strict validators', () => {
       expect(check('text_direction', '3')).toBeNull();
     });
 
+    it('accepts -1, a legacy value with no named constant that the ERR_FAIL_COND (text_edit.cpp:3724) still allows', () => {
+      expect(check('text_direction', '-1')).toBeNull();
+    });
+
     it('rejects a value beyond the enum (4)', () => {
       expect(check('text_direction', '4')).not.toBeNull();
     });
 
-    it('rejects a negative value', () => {
-      expect(check('text_direction', '-1')).not.toBeNull();
+    it('rejects -2, past the ERR_FAIL_COND on the other side', () => {
+      expect(check('text_direction', '-2')).not.toBeNull();
     });
   });
 

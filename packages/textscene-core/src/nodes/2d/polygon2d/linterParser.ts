@@ -17,7 +17,10 @@ validatorRegistry.registerAll('Polygon2D', {
   antialiased: v.boolean('antialiased'),
   invert_enabled: v.boolean('invert_enabled'),
   invert_border: v.float('invert_border'),
-  internal_vertex_count: v.int('internal_vertex_count', { min: 0 }),
+  // polygon_2d.cpp:722 hints "0,1000" hard both ends; set_internal_vertex_count
+  // (polygon_2d.cpp:418-420) assigns unconditionally, no ERR_FAIL/clamp — a
+  // warning, not an error (ADR-0032).
+  internal_vertex_count: v.int('internal_vertex_count', { min: 0, hinted: 'polygon_2d.cpp:722' }),
   texture_offset: v.vector2('texture_offset'),
   texture_scale: v.vector2('texture_scale'),
   texture_rotation: v.float('texture_rotation'),

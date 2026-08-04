@@ -21,6 +21,10 @@ import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 // bespoke `scale` validator stays as lenient as the renderer and v.vector2.
 const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 
+// node_2d.cpp:187-199: set_scale substitutes CMP_EPSILON for a component that
+// `Math::is_zero_approx`s ("Avoid having 0 scale values, can lead to errors in
+// physics and rendering."), a silent correction ADR-0032 treats the same as an
+// ERR_FAIL — enforced, stays an error.
 const scaleValidator: PropertyValidator = (key, value, line) => {
   const match = VECTOR2_REGEX.exec(value);
   if (!match) {

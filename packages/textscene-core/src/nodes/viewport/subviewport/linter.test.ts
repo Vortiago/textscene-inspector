@@ -1,9 +1,11 @@
 /**
  * SubViewport linting — format validators (errors) + semantic rules (warnings).
  *
- * The sorting principle (CONTEXT.md): a validator failure is ALWAYS an error,
- * because a format violation is objectively invalid; an advisory condition is
- * ALWAYS a warning, because committed positive fixtures may legally carry it.
+ * The sorting principle (CONTEXT.md): a validator failure is an error when
+ * Godot's own setter refuses or alters the value, and a warning when only a
+ * `PROPERTY_HINT_RANGE`/`PROPERTY_HINT_ENUM` states the bound while the setter
+ * assigns straight through (ADR-0032). An advisory condition is ALWAYS a
+ * warning, because committed positive fixtures may legally carry it.
  */
 
 import { describe, it } from 'vitest';
@@ -50,24 +52,26 @@ describe('SubViewport linter', () => {
       });
     });
 
-    it('rejects an out-of-range render_target_update_mode', () => {
-      expectDiagnostic(scene(node('SubViewport', { render_target_update_mode: 5 })), {
-        prop: 'render_target_update_mode',
-        severity: 'error',
-      });
-    });
-
-    it('rejects an out-of-range render_target_clear_mode', () => {
-      expectDiagnostic(scene(node('SubViewport', { render_target_clear_mode: 3 })), {
-        prop: 'render_target_clear_mode',
-        severity: 'error',
-      });
-    });
-
     it('rejects a non-boolean own_world_3d', () => {
       expectDiagnostic(scene(node('SubViewport', { own_world_3d: 'yes' })), {
         prop: 'own_world_3d',
         severity: 'error',
+      });
+    });
+  });
+
+  describe('hinted enums (warnings)', () => {
+    it('warns on an out-of-range render_target_update_mode — set_update_mode (viewport.cpp:5475-5479) bare-assigns, so the bound is only hinted (viewport.cpp:5584)', () => {
+      expectDiagnostic(scene(node('SubViewport', { render_target_update_mode: 5 })), {
+        prop: 'render_target_update_mode',
+        severity: 'warning',
+      });
+    });
+
+    it('warns on an out-of-range render_target_clear_mode — set_clear_mode (viewport.cpp:5486-5490) bare-assigns, so the bound is only hinted (viewport.cpp:5583)', () => {
+      expectDiagnostic(scene(node('SubViewport', { render_target_clear_mode: 3 })), {
+        prop: 'render_target_clear_mode',
+        severity: 'warning',
       });
     });
   });

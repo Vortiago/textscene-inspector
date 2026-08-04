@@ -78,7 +78,7 @@ Strict parsing format-checks these `Window` properties, plus 9 inherited from Vi
 | `always_on_top` | true or false |
 | `borderless` | true or false |
 | `content_scale_aspect` | enum 0-4 (IGNORE/KEEP/KEEP_WIDTH/KEEP_HEIGHT/EXPAND) |
-| `content_scale_factor` | float 0.5-8 |
+| `content_scale_factor` | float 5e-324-8 |
 | `content_scale_mode` | enum 0-2 (DISABLED/CANVAS_ITEMS/VIEWPORT) |
 | `content_scale_size` | Vector2i(x, y), both >= 0 |
 | `content_scale_stretch` | enum 0-1 (FRACTIONAL/INTEGER) |

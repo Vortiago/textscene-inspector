@@ -10,6 +10,10 @@ function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
   return diagnostics.filter((d) => d.severity === 'error');
 }
 
+function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
+  return diagnostics.filter((d) => d.severity === 'warning');
+}
+
 function scene(body: string): string {
   return `[gd_scene format=3]\n\n[node name="M" type="CSGMesh3D"]\n${body}\n`;
 }
@@ -36,12 +40,20 @@ describe('CSGMesh3D strict validators', () => {
   it.each([
     ['mesh = "not-a-resource"', 'mesh'],
     ['material = "not-a-resource"', 'material'],
-    ['operation = 5', 'operation'],
     ['flip_faces = perhaps', 'flip_faces'],
   ])('rejects %s', (line, property) => {
     const errors = errorsOf(linter.lint(scene(line)));
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.some((e) => e.message.includes(property))).toBe(true);
+  });
+
+  it('warns (not errors) on operation = 5', () => {
+    // csg_shape.cpp:1040 hints the enum but set_operation:933-937 is a bare
+    // assignment, so out-of-range is a warning, not an error (ADR-0032).
+    const content = scene('operation = 5');
+    expect(errorsOf(linter.lint(content))).toEqual([]);
+    const warnings = warningsOf(linter.lint(content));
+    expect(warnings.some((w) => w.message.includes('operation'))).toBe(true);
   });
 
   it('rejects a malformed transform via the inherited Node3D validator', () => {

@@ -81,7 +81,7 @@ Strict parsing format-checks these `TextEdit` properties, plus 26 inherited from
 | `syntax_highlighter` | SubResource("id") or ExtResource("id") |
 | `tab_input_mode` | true or false |
 | `text` | quoted string |
-| `text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) |
+| `text_direction` | enum -1-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) |
 | `use_custom_word_separators` | true or false |
 | `use_default_word_separators` | true or false |
 | `virtual_keyboard_enabled` | true or false |

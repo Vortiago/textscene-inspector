@@ -36,9 +36,9 @@ Strict parsing format-checks these `Sprite3D` properties, plus 17 inherited from
 
 | Property | Accepts |
 | --- | --- |
-| `alpha_cut` | enum 0-2 (DISABLED/DISCARD/OPAQUE_PREPASS) |
+| `alpha_cut` | enum 0-3 (DISABLED/DISCARD/OPAQUE_PREPASS/HASH) |
 | `axis` | enum 0-2 (X_AXIS/Y_AXIS/Z_AXIS) |
-| `billboard` | enum 0-3 (DISABLED/ENABLED/FIXED_Y/PARTICLES) |
+| `billboard` | enum 0-2 (DISABLED/ENABLED/FIXED_Y) |
 | `frame` | integer >= 0 |
 | `frame_coords` | Vector2i(x, y) |
 | `hframes` | integer > 0 |

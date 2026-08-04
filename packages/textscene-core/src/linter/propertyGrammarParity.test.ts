@@ -483,8 +483,14 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       // Complex multi-form dictionary: parsed by extractLibraries via
       // Object.keys loop and dict matching; no linter validator exists.
       'libraries',
+      // animation_player.cpp:1038-1039: PROPERTY_HINT_NONE + PROPERTY_USAGE_NONE
+      // with an empty setter method name, getter-only, never serialised into a
+      // real .tscn, so the linter carries no validator for either. The parser
+      // still reads them defensively (falls back to 0.0 on a parse failure).
+      'current_animation_length',
+      'current_animation_position',
     ],
-    reason: 'AnimationPlayer.libraries uses a bespoke dictionary decoder that the properties.X scrape cannot see.',
+    reason: 'AnimationPlayer.libraries uses a bespoke dictionary decoder that the properties.X scrape cannot see; current_animation_length/current_animation_position are getter-only and PROPERTY_USAGE_NONE in Godot, so they can never appear in a real .tscn and carry no validator.',
   },
 
 

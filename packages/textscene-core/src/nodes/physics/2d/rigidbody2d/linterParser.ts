@@ -11,6 +11,7 @@ import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js'
 
 const CENTER_OF_MASS_MODE = { 0: 'AUTO', 1: 'CUSTOM' };
 const DAMP_MODE = { 0: 'COMBINE', 1: 'REPLACE' };
+const FREEZE_MODE = { 0: 'STATIC', 1: 'KINEMATIC' };
 
 /** 2D inertia is a scalar (rotational mass around Z), unlike 3D's Vector3. */
 const inertia2d: PropertyValidator = (key, value, line) => {
@@ -23,6 +24,9 @@ const inertia2d: PropertyValidator = (key, value, line) => {
   }
   return null;
 };
+// rigid_body_2d.cpp:328, ERR_FAIL_COND(p_inertia < 0): the setter refuses.
+inertia2d.bounded = true;
+inertia2d.grounding = { kind: 'enforced', cite: 'rigid_body_2d.cpp:328' };
 
 validatorRegistry.registerAll('RigidBody2D', {
   // rigid_body_2d.cpp:318, ERR_FAIL_COND(p_mass <= 0): the setter refuses.
@@ -30,29 +34,57 @@ validatorRegistry.registerAll('RigidBody2D', {
     min: Number.MIN_VALUE,
     message:
       "Property 'mass' must be greater than 0. Physics bodies require positive mass.",
+    enforced: 'rigid_body_2d.cpp:318',
   }),
   physics_material_override: v.resourceReference('physics_material_override'),
   gravity_scale: v.float('gravity_scale'),
-  center_of_mass_mode: v.enumInt('center_of_mass_mode', 0, 1, CENTER_OF_MASS_MODE),
+  // rigid_body_2d.cpp:746 "Auto,Custom". set_center_of_mass_mode (:337-358) is a
+  // bare assignment, so out-of-range warns.
+  center_of_mass_mode: v.enumInt('center_of_mass_mode', 0, 1, CENTER_OF_MASS_MODE, {
+    hinted: 'rigid_body_2d.cpp:746',
+  }),
   center_of_mass: v.vector2('center_of_mass'),
   inertia: inertia2d,
-  linear_damp_mode: v.enumInt('linear_damp_mode', 0, 1, DAMP_MODE),
+  // rigid_body_2d.cpp:762 "Combine,Replace". set_linear_damp_mode (:406-409) is
+  // a bare assignment, so out-of-range warns.
+  linear_damp_mode: v.enumInt('linear_damp_mode', 0, 1, DAMP_MODE, {
+    hinted: 'rigid_body_2d.cpp:762',
+  }),
   // rigid_body_2d.cpp:425, ERR_FAIL_COND(p_linear_damp < -1). -1 is legal in 2D
   // and means "use the default"; the hint at :763 starts there too.
   linear_damp: v.float('linear_damp', {
     min: -1,
     message: "Property 'linear_damp' must be >= -1. Use -1 for the project default.",
+    enforced: 'rigid_body_2d.cpp:425',
   }),
-  angular_damp_mode: v.enumInt('angular_damp_mode', 0, 1, DAMP_MODE),
+  // rigid_body_2d.cpp:766 "Combine,Replace". set_angular_damp_mode (:415-418) is
+  // a bare assignment, so out-of-range warns.
+  angular_damp_mode: v.enumInt('angular_damp_mode', 0, 1, DAMP_MODE, {
+    hinted: 'rigid_body_2d.cpp:766',
+  }),
   // rigid_body_2d.cpp:435, ERR_FAIL_COND(p_angular_damp < -1); hint :767 starts at -1.
   angular_damp: v.float('angular_damp', {
     min: -1,
     message: "Property 'angular_damp' must be >= -1. Use -1 for the project default.",
+    enforced: 'rigid_body_2d.cpp:435',
   }),
   lock_rotation: v.boolean('lock_rotation'),
+  // rigid_body_2d.cpp:754 "Static,Kinematic". set_freeze_mode (:304-310) is a
+  // bare assignment (only an early-return-if-unchanged guard), so out-of-range
+  // warns. Godot has this property (unlike its absence suggested before this
+  // audit); RigidBody3D carries the same enum.
+  freeze_mode: v.enumInt('freeze_mode', 0, 1, FREEZE_MODE, { hinted: 'rigid_body_2d.cpp:754' }),
   freeze: v.boolean('freeze'),
   contact_monitor: v.boolean('contact_monitor'),
-  max_contacts_reported: v.positiveInt('max_contacts_reported'),
+  // rigid_body_2d.cpp:759 hints "0,64,1,or_greater" (min 0 stated, max open), but
+  // the real bound comes from the setter: rigid_body_2d.cpp:501,
+  // ERR_FAIL_INDEX_MSG(p_amount, MAX_CONTACTS_REPORTED_2D_MAX) where the
+  // constant is 4096, so the engine enforces [0, 4095] on both ends.
+  max_contacts_reported: v.int('max_contacts_reported', {
+    min: 0,
+    max: 4095,
+    enforced: 'rigid_body_2d.cpp:501',
+  }),
 });
 
 // Shown in the generated `## Linting` table of this node's sheet.

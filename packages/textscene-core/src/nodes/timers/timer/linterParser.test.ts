@@ -31,10 +31,12 @@ describe('Timer strict validators', () => {
     });
   });
 
-  it('rejects an out-of-range process_callback', () => {
+  it('warns on an out-of-range process_callback', () => {
+    // timer.cpp:163-179, set_timer_process_callback is a bare switch/assign; no
+    // engine-side range check, so out-of-range is a warning (ADR-0032).
     expectDiagnostic(scene(node('Timer', { process_callback: 5 })), {
       prop: 'process_callback',
-      severity: 'error',
+      severity: 'warning',
     });
   });
 });

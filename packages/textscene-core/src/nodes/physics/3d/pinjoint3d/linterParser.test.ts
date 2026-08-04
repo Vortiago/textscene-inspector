@@ -48,9 +48,10 @@ describe('PinJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_PARAMS/BIAS_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring (set_param index-guards only)', () => {
       const error = check('params/bias', '1.0');
       expect(error?.code).toBe('INVALID_PARAMS/BIAS_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -70,9 +71,10 @@ describe('PinJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_PARAMS/DAMPING_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring (set_param index-guards only)', () => {
       const error = check('params/damping', '8.5');
       expect(error?.code).toBe('INVALID_PARAMS/DAMPING_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
@@ -92,14 +94,16 @@ describe('PinJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_PARAMS/IMPULSE_CLAMP_FORMAT');
     });
 
-    it('rejects a value past the hard bound', () => {
+    it('warns past the hinted bound rather than erroring (set_param index-guards only)', () => {
       const error = check('params/impulse_clamp', '64.5');
       expect(error?.code).toBe('INVALID_PARAMS/IMPULSE_CLAMP_VALUE');
+      expect(error?.severity).toBe('warning');
     });
 
-    it('rejects a negative value', () => {
+    it('warns on a negative value rather than erroring', () => {
       const error = check('params/impulse_clamp', '-1.0');
       expect(error?.code).toBe('INVALID_PARAMS/IMPULSE_CLAMP_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 });

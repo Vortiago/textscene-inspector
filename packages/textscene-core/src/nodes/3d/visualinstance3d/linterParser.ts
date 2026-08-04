@@ -27,5 +27,5 @@ import { layerBitmask } from '../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('VisualInstance3D', {
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "layers", PROPERTY_HINT_LAYERS_3D_RENDER)
-  layers: layerBitmask('layers'),
+  layers: layerBitmask('layers', { hinted: 'visual_instance_3d.cpp:182' }),
 });

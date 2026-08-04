@@ -63,11 +63,18 @@ validatorRegistry.registerAll('TextEdit', {
   empty_selection_clipboard_enabled: v.boolean('empty_selection_clipboard_enabled'),
   // text_edit.cpp:7558 — PROPERTY_HINT_ENUM "None,Boundary"; BIND_ENUM_CONSTANT
   // LINE_WRAPPING_NONE=0, LINE_WRAPPING_BOUNDARY=1 (text_edit.cpp:7402-7403,
-  // enum declared text_edit.h:68-71).
-  wrap_mode: v.enumInt('wrap_mode', 0, 1, {
-    0: 'LINE_WRAPPING_NONE',
-    1: 'LINE_WRAPPING_BOUNDARY',
-  }),
+  // enum declared text_edit.h:68-71). set_line_wrapping_mode (text_edit.cpp:6341-6351)
+  // assigns unconditionally, no ERR_FAIL.
+  wrap_mode: v.enumInt(
+    'wrap_mode',
+    0,
+    1,
+    {
+      0: 'LINE_WRAPPING_NONE',
+      1: 'LINE_WRAPPING_BOUNDARY',
+    },
+    { hinted: 'text_edit.cpp:7558' }
+  ),
   // text_edit.cpp:7559 — PROPERTY_HINT_ENUM "Arbitrary:1,Word:2,Word (Smart):3"
   // only offers 1-3 in the editor dropdown, but the underlying
   // TextServer::AutowrapMode enum starts at AUTOWRAP_OFF=0 (servers/text/text_server.h:98-102,
@@ -75,7 +82,7 @@ validatorRegistry.registerAll('TextEdit', {
   // has no CLAMP or ERR_FAIL on the value (text_edit.cpp:6354-6360) — same call
   // as BaseButton's button_mask: an editor-hint width is an authoring aid, not
   // a validity bound, so 0 is accepted alongside the 3 offered values.
-  autowrap_mode: v.enumInt('autowrap_mode', 0, 3, AUTOWRAP_MODE),
+  autowrap_mode: v.enumInt('autowrap_mode', 0, 3, AUTOWRAP_MODE, { hinted: 'text_edit.cpp:7559' }),
   // text_edit.cpp:7560
   indent_wrapped_lines: v.boolean('indent_wrapped_lines'),
   // text_edit.cpp:7561
@@ -88,18 +95,21 @@ validatorRegistry.registerAll('TextEdit', {
   // Scroll (ADD_GROUP "Scroll", text_edit.cpp:7567-7574).
   scroll_smooth: v.boolean('scroll_smooth'),
   // text_edit.cpp:7569 — TextEdit::set_v_scroll_speed ERR_FAIL_COND(p_speed < 1.0)
-  // (text_edit.cpp:6488-6489): a real file can never carry a value below 1.
-  scroll_v_scroll_speed: v.float('scroll_v_scroll_speed', { min: 1 }),
+  // (text_edit.cpp:6490): a real file can never carry a value below 1.
+  scroll_v_scroll_speed: v.float('scroll_v_scroll_speed', { min: 1, enforced: 'text_edit.cpp:6490' }),
   scroll_past_end_of_file: v.boolean('scroll_past_end_of_file'),
-  // text_edit.cpp:7571 — TextEdit::set_v_scroll forwards to the internal
-  // VScrollBar's Range::set_value, whose default `min = 0.0` and
-  // `allow_lesser = false` (scene/gui/range.h:40,46) clamp any lesser value
-  // back up (scene/gui/range.cpp:196-198) before it could ever be saved.
-  scroll_vertical: v.float('scroll_vertical', { min: 0 }),
+  // text_edit.cpp:7571 — TextEdit::set_v_scroll (text_edit.cpp:6463-6470) itself
+  // has no guard; it forwards to the internal VScrollBar's Range::set_value.
+  // The guard is in Range::_calc_value's `if (!shared->allow_lesser && p_val <
+  // shared->min) { p_val = shared->min; }` (scene/gui/range.cpp:196), and
+  // TextEdit never touches that VScrollBar's `min`/`allow_lesser`, so the
+  // defaults (min=0.0, allow_lesser=false, scene/gui/range.h:40,46) clamp any
+  // lesser value back up before it could ever be saved.
+  scroll_vertical: v.float('scroll_vertical', { min: 0, enforced: 'range.cpp:196' }),
   // text_edit.cpp:7572 — TextEdit::set_h_scroll clamps p_scroll < 0 to 0
-  // in-place (text_edit.cpp:6476-6480), so a saved scene never carries a
+  // in-place (text_edit.cpp:6477-6479), so a saved scene never carries a
   // negative value.
-  scroll_horizontal: v.int('scroll_horizontal', { min: 0 }),
+  scroll_horizontal: v.int('scroll_horizontal', { min: 0, enforced: 'text_edit.cpp:6477' }),
   scroll_fit_content_height: v.boolean('scroll_fit_content_height'),
   scroll_fit_content_width: v.boolean('scroll_fit_content_width'),
 
@@ -112,17 +122,27 @@ validatorRegistry.registerAll('TextEdit', {
   // Caret (ADD_GROUP "Caret", text_edit.cpp:7580-7587).
   // text_edit.cpp:7581 — PROPERTY_HINT_ENUM "Line,Block"; BIND_ENUM_CONSTANT
   // CARET_TYPE_LINE=0, CARET_TYPE_BLOCK=1 (text_edit.cpp:7293-7294, enum
-  // declared text_edit.h:53-56).
-  caret_type: v.enumInt('caret_type', 0, 1, {
-    0: 'CARET_TYPE_LINE',
-    1: 'CARET_TYPE_BLOCK',
-  }),
+  // declared text_edit.h:53-56). set_caret_type (text_edit.cpp:5159-5166)
+  // assigns unconditionally, no ERR_FAIL.
+  caret_type: v.enumInt(
+    'caret_type',
+    0,
+    1,
+    {
+      0: 'CARET_TYPE_LINE',
+      1: 'CARET_TYPE_BLOCK',
+    },
+    { hinted: 'text_edit.cpp:7581' }
+  ),
   caret_blink: v.boolean('caret_blink'),
   // text_edit.cpp:7583 — PROPERTY_HINT_RANGE "0.1,10,0.01,suffix:s" is the
   // editor slider only; TextEdit::set_caret_blink_interval enforces just
-  // `ERR_FAIL_COND(p_interval <= 0)` (text_edit.cpp:5197-5199), so any
-  // positive float is engine-valid even past the slider's 10 ceiling.
-  caret_blink_interval: v.positiveFloat('caret_blink_interval'),
+  // `ERR_FAIL_COND(p_interval <= 0)` (text_edit.cpp:5198), so any positive
+  // float is engine-valid even past the slider's 10 ceiling. Deliberately
+  // wider than the hint: do not "correct" this toward 0.1-10.
+  caret_blink_interval: v.positiveFloat('caret_blink_interval', undefined, {
+    enforced: 'text_edit.cpp:5198',
+  }),
   caret_draw_when_editable_disabled: v.boolean('caret_draw_when_editable_disabled'),
   caret_move_on_right_click: v.boolean('caret_move_on_right_click'),
   caret_mid_grapheme: v.boolean('caret_mid_grapheme'),
@@ -149,14 +169,21 @@ validatorRegistry.registerAll('TextEdit', {
   // text_edit.cpp:7605 — PROPERTY_HINT_ENUM "Auto,Left-to-Right,Right-to-Left,Inherited";
   // BIND_ENUM_CONSTANT TEXT_DIRECTION_AUTO=0, _LTR=1, _RTL=2, _INHERITED=3
   // (scene/gui/control.cpp:4415-4418, enum declared control.h:166-171, mirroring
-  // TextServer::Direction servers/text/text_server.h:66-71).
-  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION),
+  // TextServer::Direction servers/text/text_server.h:66-71). set_text_direction
+  // (text_edit.cpp:3724): `ERR_FAIL_COND((int)p_text_direction < -1 || > 3)` —
+  // enforced, and -1 is a legacy inherited spelling with no named constant, so
+  // it is engine-legal but unlabelled here. Widened from 0-3 to include it.
+  text_direction: v.enumInt('text_direction', -1, 3, TEXT_DIRECTION, {
+    enforced: 'text_edit.cpp:3724',
+  }),
   // text_edit.cpp:7606 — Variant::STRING, PROPERTY_HINT_LOCALE_ID.
   language: v.quotedString('language'),
   // text_edit.cpp:7607 — PROPERTY_HINT_ENUM "Default,URI,File,Email,List,None,Custom";
   // BIND_ENUM_CONSTANT STRUCTURED_TEXT_DEFAULT=0 .. STRUCTURED_TEXT_CUSTOM=6
   // (servers/text/text_server.cpp:681-687, enum declared text_server.h:214-222).
   // The hint labels index 5 "None"; the real constant is STRUCTURED_TEXT_GDSCRIPT.
+  // set_structured_text_bidi_override (text_edit.cpp:3778-3786) assigns
+  // unconditionally, no ERR_FAIL.
   structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, {
     0: 'STRUCTURED_TEXT_DEFAULT',
     1: 'STRUCTURED_TEXT_URI',
@@ -165,7 +192,7 @@ validatorRegistry.registerAll('TextEdit', {
     4: 'STRUCTURED_TEXT_LIST',
     5: 'STRUCTURED_TEXT_GDSCRIPT',
     6: 'STRUCTURED_TEXT_CUSTOM',
-  }),
+  }, { hinted: 'text_edit.cpp:7607' }),
   // text_edit.cpp:7608 — Variant::ARRAY, default "[]"; see ARRAY_LITERAL_RE above.
   structured_text_bidi_override_options: accepts((key, value, line) => {
     if (!ARRAY_LITERAL_RE.test(value)) {

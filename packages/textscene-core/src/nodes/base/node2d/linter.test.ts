@@ -392,22 +392,30 @@ describe('Node2D Linter', () => {
 });
 
 describe('Node2D Linter: light_mask, inherited by every CanvasItem', () => {
+  // canvas_item.cpp:1477, PROPERTY_HINT_LAYERS_2D_RENDER — not a
+  // PROPERTY_HINT_RANGE. set_light_mask (canvas_item.cpp:589-596) assigns
+  // unconditionally, no ERR_FAIL, no clamp. ADR-0032 removed the 0..2^32-1
+  // `layerBitmask` bound this used to carry (ungrounded verdict "none");
+  // only the integer format is checked now.
   it('accepts the whole 32-bit range, including 0 and the sign bit', () => {
     for (const mask of ['0', '1', '512', '2147483648', '4294967295']) {
       expectClean(scene(node('Node2D', { light_mask: mask })));
     }
   });
 
-  it('rejects a negative mask', () => {
-    expectDiagnostic(scene(node('Node2D', { light_mask: '-1' })), {
-      ruleName: 'strict-parser',
-      severity: 'error',
-      contains: ['light_mask'],
-    });
+  it('warns on a negative mask, which the 32-checkbox widget cannot express', () => {
+    // canvas_item.cpp:1477 hints PROPERTY_HINT_LAYERS_2D_RENDER; set_light_mask
+    // (:589-596) assigns unconditionally, so this is the UI's bound, not the
+    // engine's, and it warns rather than erroring.
+    expectDiagnostic(scene(node('Node2D', { light_mask: '-1' })), { severity: 'warning' });
   });
 
-  it('rejects a mask past 32 bits', () => {
-    expectDiagnostic(scene(node('Node2D', { light_mask: '4294967296' })), {
+  it('warns on a mask past 32 bits, for the same reason', () => {
+    expectDiagnostic(scene(node('Node2D', { light_mask: '4294967296' })), { severity: 'warning' });
+  });
+
+  it('still requires an integer format', () => {
+    expectDiagnostic(scene(node('Node2D', { light_mask: 'not-a-number' })), {
       ruleName: 'strict-parser',
       severity: 'error',
       contains: ['light_mask'],
@@ -417,11 +425,7 @@ describe('Node2D Linter: light_mask, inherited by every CanvasItem', () => {
   it('reaches a Node2D SUBCLASS through the base walk', () => {
     // The point of registering it here: every 2D slice inherits the validator
     // rather than each one re-declaring it.
-    expectDiagnostic(scene(node('Sprite2D', { light_mask: '-1' })), {
-      ruleName: 'strict-parser',
-      severity: 'error',
-      contains: ['light_mask'],
-    });
+    expectDiagnostic(scene(node('Sprite2D', { light_mask: '-1' })), { severity: 'warning' });
   });
 });
 

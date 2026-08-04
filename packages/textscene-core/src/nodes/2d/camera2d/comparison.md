@@ -60,17 +60,16 @@ Strict parsing format-checks these `Camera2D` properties, plus 12 inherited from
 | `limit_top` | integer |
 | `offset` | Vector2(x, y) |
 | `position_smoothing_enabled` | true or false |
-| `position_smoothing_speed` | float > 0 |
+| `position_smoothing_speed` | float >= 0 |
 | `process_callback` | enum 0-1 (PHYSICS/IDLE) |
 | `rotation_smoothing_enabled` | true or false |
-| `rotation_smoothing_speed` | float > 0 |
-| `zoom` | Vector2(x, y), both > 0 |
+| `rotation_smoothing_speed` | float >= 0 |
+| `zoom` | Vector2(x, y), neither component (near-)zero |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-camera2d-properties` | `camera2d-multiple-enabled` | warning |
-|  | `camera2d-invalid-zoom` | error |
 |  | `camera2d-invalid-horizontal-limits` | warning |
 |  | `camera2d-invalid-vertical-limits` | warning |
 |  | `camera2d-smoothing-speed-missing` | warning |

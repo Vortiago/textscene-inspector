@@ -27,12 +27,14 @@ validatorRegistry.registerAll('ShapeCast2D', {
   exclude_parent: v.boolean('exclude_parent'),
   // scene/2d/physics/shape_cast_2d.cpp:471 — PROPERTY_HINT_NONE, "suffix:px" (no range, just a unit hint)
   target_position: v.vector2('target_position'),
-  // scene/2d/physics/shape_cast_2d.cpp:472 — PROPERTY_HINT_RANGE, "0,100,0.01,suffix:px" (no or_greater, so 100 is a hard cap)
-  margin: v.float('margin', { min: 0, max: 100 }),
+  // scene/2d/physics/shape_cast_2d.cpp:472 — PROPERTY_HINT_RANGE, "0,100,0.01,suffix:px"
+  // (no or_greater, so 100 is a hard-looking cap, but the setter is a bare
+  // assignment, so out-of-range only warns).
+  margin: v.float('margin', { min: 0, max: 100, hinted: 'shape_cast_2d.cpp:472' }),
   // scene/2d/physics/shape_cast_2d.cpp:473 — plain INT, no PROPERTY_HINT_RANGE, so no bound
   max_results: v.int('max_results'),
   // scene/2d/physics/shape_cast_2d.cpp:474 — PROPERTY_HINT_LAYERS_2D_PHYSICS
-  collision_mask: layerBitmask('collision_mask'),
+  collision_mask: layerBitmask('collision_mask', { hinted: 'shape_cast_2d.cpp:474' }),
   collide_with_areas: v.boolean('collide_with_areas'),
   collide_with_bodies: v.boolean('collide_with_bodies'),
 });

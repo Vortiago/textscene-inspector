@@ -40,7 +40,7 @@ Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inh
 | `bus` | quoted string or &"name" |
 | `max_distance` | float > 0 |
 | `max_polyphony` | integer >= 1 |
-| `panning_strength` | float 0-1 |
+| `panning_strength` | float >= 0 |
 | `pitch_scale` | float >= 5e-324 |
 | `playback_type` | enum 0-2 (DEFAULT/STREAM/SAMPLE) |
 | `playing` | true or false |

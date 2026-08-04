@@ -58,12 +58,15 @@ describe('Generic6DOFJoint3D strict validators', () => {
       expect(check('linear_limit_x/lower_distance', '-99999')).toBeNull();
     });
 
-    it('bounds softness/restitution/damping to 0.01-16 (PROPERTY_HINT_RANGE "0.01,16,0.01")', () => {
+    it('warns past softness/restitution/damping 0.01-16 (set_param_x/y/z index-guards only)', () => {
       expect(check('linear_limit_x/softness', '0.01')).toBeNull();
       expect(check('linear_limit_x/softness', '16')).toBeNull();
       expect(check('linear_limit_x/softness', '16.5')?.code).toBe('INVALID_SOFTNESS_VALUE');
+      expect(check('linear_limit_x/softness', '16.5')?.severity).toBe('warning');
       expect(check('linear_limit_x/restitution', '17')?.code).toBe('INVALID_RESTITUTION_VALUE');
+      expect(check('linear_limit_x/restitution', '17')?.severity).toBe('warning');
       expect(check('linear_limit_x/damping', '0')?.code).toBe('INVALID_DAMPING_VALUE');
+      expect(check('linear_limit_x/damping', '0')?.severity).toBe('warning');
     });
   });
 
@@ -113,14 +116,20 @@ describe('Generic6DOFJoint3D strict validators', () => {
     // Proves the radian conversion: 4.0 radians is well past ±π yet nowhere
     // near the ±180 a naive reader of the hint's raw degree numbers would
     // expect as the literal bound.
-    it('rejects a value past ±π radians (the ±180° hint converted to radians)', () => {
-      expect(check('angular_limit_x/upper_angle', '4.0')?.code).toBe('INVALID_UPPER_ANGLE_VALUE');
-      expect(check('angular_limit_x/lower_angle', '-4.0')?.code).toBe('INVALID_LOWER_ANGLE_VALUE');
+    it('warns past ±π radians (the ±180° hint converted) rather than erroring', () => {
+      const upper = check('angular_limit_x/upper_angle', '4.0');
+      const lower = check('angular_limit_x/lower_angle', '-4.0');
+      expect(upper?.code).toBe('INVALID_UPPER_ANGLE_VALUE');
+      expect(upper?.severity).toBe('warning');
+      expect(lower?.code).toBe('INVALID_LOWER_ANGLE_VALUE');
+      expect(lower?.severity).toBe('warning');
     });
 
-    it('bounds softness/restitution/damping to 0.01-16', () => {
+    it('warns past softness/restitution/damping 0.01-16 (set_param_x/y/z index-guards only)', () => {
       expect(check('angular_limit_x/softness', '0.01')).toBeNull();
-      expect(check('angular_limit_x/restitution', '17')?.code).toBe('INVALID_RESTITUTION_VALUE');
+      const restitution = check('angular_limit_x/restitution', '17');
+      expect(restitution?.code).toBe('INVALID_RESTITUTION_VALUE');
+      expect(restitution?.severity).toBe('warning');
       expect(check('angular_limit_x/damping', '16')).toBeNull();
     });
 
@@ -152,11 +161,11 @@ describe('Generic6DOFJoint3D strict validators', () => {
       expect(check('angular_spring_z/damping', '-99999')).toBeNull();
     });
 
-    it('bounds equilibrium_point to ±π radians (±180° hint, radian-converted)', () => {
+    it('warns past ±π radians (±180° hint, radian-converted) rather than erroring', () => {
       expect(check('angular_spring_z/equilibrium_point', '0.3')).toBeNull();
-      expect(check('angular_spring_z/equilibrium_point', '4.0')?.code).toBe(
-        'INVALID_EQUILIBRIUM_POINT_VALUE'
-      );
+      const error = check('angular_spring_z/equilibrium_point', '4.0');
+      expect(error?.code).toBe('INVALID_EQUILIBRIUM_POINT_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 
