@@ -83,8 +83,7 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
  * Member counts at the time of writing, for scale rather than as an assertion
  * (nothing can verify them without reading `doc/classes` at test time, which
  * `godot-source-decoupling.test.mjs` forbids). Registered leaves: LineEdit 36,
- * RichTextLabel 30, Label 22, ScrollContainer 11, CanvasLayer 9, TextureRect 5,
- * OptionButton 4, CenterContainer 1, ColorRect 1, GridContainer 1.
+ * RichTextLabel 30, Label 22, ScrollContainer 11, CanvasLayer 9, GridContainer 1.
  *
  * The six tiers below were invisible until this guard closed over the base
  * chain, and each one is worth more than a leaf because its keys reach every
@@ -100,8 +99,6 @@ const UNDECLARED: readonly string[] = [
   'CSGPrimitive3D',
   'CSGShape3D',
   'CanvasLayer',
-  'CenterContainer',
-  'ColorRect',
   'GridContainer',
   'Label',
   'Light2D',
@@ -110,7 +107,6 @@ const UNDECLARED: readonly string[] = [
   'RichTextLabel',
   'ScrollContainer',
   'SpriteBase3D',
-  'TextureRect',
 ];
 
 /**

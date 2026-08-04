@@ -36,7 +36,7 @@ tint is approximated rather than read from the default theme's disabled color.
 ## Linting
 
 <!-- lint:begin Button -->
-Strict parsing format-checks these `Button` properties, plus 10 inherited from BaseButton, 27 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Button` properties, plus 10 inherited from BaseButton, 28 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

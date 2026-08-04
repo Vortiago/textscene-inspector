@@ -27,16 +27,23 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin ColorRect -->
-Strict parsing format-checks the inherited set (27 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `ColorRect` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `ColorRect` properties, plus 28 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `color` | Color(r, g, b, a) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 <!-- lint:end -->
 
-ColorRect's only own property, `color`, has no strict validator; only the inherited
-Control set is checked. The parser doesn't parse `color` at all: `properties.color
-|| DEFAULT_COLOR` keeps whatever string is present verbatim, so even a malformed
-`Color(...)` literal reaches the renderer unexamined, and only an absent or empty
-value falls back to `Color(1, 1, 1, 1)` (opaque white), matching Godot's own
-default for an omitted property.
+ColorRect's only own property, `color`, gets a format-only Color check: Godot's
+`ADD_PROPERTY` for it carries no hint at all (`PROPERTY_HINT_NONE`), and
+`set_color` assigns any value through unclamped, so there is no numeric bound to
+enforce — a component outside 0-1 (HDR) is exactly as legal as one inside. The
+render parser doesn't parse `color` at all: `properties.color || DEFAULT_COLOR`
+keeps whatever string is present verbatim, so even a malformed `Color(...)`
+literal the linter would reject still reaches the renderer unexamined, and only
+an absent or empty value falls back to `Color(1, 1, 1, 1)` (opaque white),
+matching Godot's own default for an omitted property.

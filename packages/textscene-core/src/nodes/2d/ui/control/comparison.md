@@ -62,6 +62,7 @@ Strict parsing format-checks these `Control` properties, plus 15 inherited from 
 | `grow_horizontal` | integer 0-2 |
 | `grow_vertical` | integer 0-2 |
 | `layout_mode` | integer 0-3 |
+| `mouse_filter` | enum 0-2 (STOP/PASS/IGNORE) |
 | `offset_bottom` | float |
 | `offset_left` | float |
 | `offset_right` | float |

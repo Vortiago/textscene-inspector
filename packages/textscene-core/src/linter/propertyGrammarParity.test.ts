@@ -208,6 +208,18 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'The item family is read through a computed key the scrape cannot match; fit_to_longest_item and allow_reselect have no static render surface.',
   },
 
+  CenterContainer: {
+    linterOnly: [
+      // Not a desync and not a wrong base chain: an unimplemented render feature.
+      // `use_top_left` moves the centring ORIGIN to the container's top-left
+      // corner (center_container.cpp:83), and the DOM overlay hard-codes centred
+      // flex alignment with no equivalent mode, so no parser reads it. Godot
+      // accepts the value, so the linter validates it. Tracked separately.
+      'use_top_left',
+    ],
+    reason: 'use_top_left moves the centring origin to the container top-left corner (center_container.cpp:83); the DOM overlay has no equivalent mode yet, so no parser reads it.',
+  },
+
   Control: {
     linterOnly: [
       // Inherited from the CanvasItem tier and genuinely unread on this side:
@@ -225,11 +237,12 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'theme_override_colors/*', 'theme_override_constants/*',
       'theme_override_font_sizes/*', 'theme_override_styles/*',
       'theme_override_fonts/*', 'theme_override_icons/*',
-      // Focus is an input concern with no render surface at all: nothing about
-      // which control takes keyboard focus changes a pixel, so no parser reads
-      // it while the linter still checks the value Godot enforces
-      // (control.cpp:2267). One entry here covers every Control descendant.
-      'focus_mode',
+      // Input concerns with no render surface at all: nothing about which control
+      // takes keyboard focus, or how it swallows a mouse event, changes a pixel in
+      // a frozen scene, so no parser reads either while the linter still checks
+      // the values Godot enforces (control.cpp:2267, control.cpp:1923). These two
+      // entries cover every Control descendant.
+      'focus_mode', 'mouse_filter',
     ],
     reason: 'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare.',
   },

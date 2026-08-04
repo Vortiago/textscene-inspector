@@ -583,6 +583,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Nine Patch Rect",
+    "file": "unit-nine-patch-rect.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Noisetexture2d Normal",
     "file": "unit-noisetexture2d-normal.tscn",
     "category": "Other"
@@ -730,6 +735,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Ray Cast 3d",
     "file": "unit-ray-cast-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Reference Rect",
+    "file": "unit-reference-rect.tscn",
     "category": "Other"
   },
   {

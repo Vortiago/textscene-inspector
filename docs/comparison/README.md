@@ -222,6 +222,8 @@ reproduced:
 - [LinkButton](../../packages/textscene-core/src/nodes/2d/ui/linkbutton/comparison.md) — nothing yet; an underlined text link
 - [MenuButton](../../packages/textscene-core/src/nodes/2d/ui/menubutton/comparison.md) — nothing yet; a Button owning a PopupMenu of items
 - [TextureButton](../../packages/textscene-core/src/nodes/2d/ui/texturebutton/comparison.md) — nothing yet; a button drawn entirely from textures
+- [NinePatchRect](../../packages/textscene-core/src/nodes/2d/ui/ninepatchrect/comparison.md) — nothing yet; a texture stretched with fixed patch margins
+- [ReferenceRect](../../packages/textscene-core/src/nodes/2d/ui/referencerect/comparison.md) — nothing yet; a debug border around its rect
 - [ColorPicker](../../packages/textscene-core/src/nodes/2d/ui/colorpicker/comparison.md) — nothing yet; the full colour-selection panel
 - [GraphFrame](../../packages/textscene-core/src/nodes/2d/ui/graphframe/comparison.md) — nothing yet; a titled frame grouping graph nodes
 - [GraphNode](../../packages/textscene-core/src/nodes/2d/ui/graphnode/comparison.md) — nothing yet; a graph node with per-child connection slots

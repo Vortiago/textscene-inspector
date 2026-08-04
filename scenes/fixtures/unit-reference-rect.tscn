@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+; Exercises ReferenceRect's own border_color, border_width and editor_only at valid values.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyReferenceRect" type="ReferenceRect" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 108.0
+offset_bottom = 40.0
+border_color = Color(0, 1, 0, 1)
+border_width = 2.0
+editor_only = false

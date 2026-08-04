@@ -26,7 +26,7 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin VFlowContainer -->
-Strict parsing format-checks the inherited set (3 inherited from FlowContainer, 27 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `VFlowContainer` declares none of its own. Every validator failure is an **error**. `VFlowContainer` also REFUSES `vertical`, which its base declares but this class cannot carry.
+Strict parsing format-checks the inherited set (3 inherited from FlowContainer, 28 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `VFlowContainer` declares none of its own. Every validator failure is an **error**. `VFlowContainer` also REFUSES `vertical`, which its base declares but this class cannot carry.
 
 | Property | Accepts |
 | --- | --- |

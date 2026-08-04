@@ -1839,7 +1839,7 @@
       "name": "NinePatchRect",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -2391,7 +2391,7 @@
       "name": "ReferenceRect",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",

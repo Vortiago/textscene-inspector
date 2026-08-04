@@ -28,19 +28,33 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin TextureRect -->
-Strict parsing format-checks the inherited set (27 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `TextureRect` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `TextureRect` properties, plus 28 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `expand_mode` | enum 0-5 (EXPAND_KEEP_SIZE/EXPAND_IGNORE_SIZE/EXPAND_FIT_WIDTH/EXPAND_FIT_WIDTH_PROPORTIONAL/EXPAND_FIT_HEIGHT/EXPAND_FIT_HEIGHT_PROPORTIONAL) |
+| `flip_h` | true or false |
+| `flip_v` | true or false |
+| `stretch_mode` | enum 0-6 (STRETCH_SCALE/STRETCH_TILE/STRETCH_KEEP/STRETCH_KEEP_CENTERED/STRETCH_KEEP_ASPECT/STRETCH_KEEP_ASPECT_CENTERED/STRETCH_KEEP_ASPECT_COVERED) |
+| `texture` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 <!-- lint:end -->
 
-`TextureRect` has no strict counterpart for `expand_mode`, `stretch_mode`, `flip_h`,
-or `flip_v`. `expand_mode` and `stretch_mode` use the optional-int reader, so an
-absent or unparseable value becomes `undefined` and each falls through its own
-switch's default case at render time. `flip_h` / `flip_v` behave differently: a
-present-but-unparseable value collapses to `false` rather than `undefined`, since
-`parseOptionalBool` only checks for the literal string `true`.
+`expand_mode` and `stretch_mode` each warn (not error) outside their documented
+enum range: `set_expand_mode` (texture_rect.cpp:207-215) and `set_stretch_mode`
+(texture_rect.cpp:221-228) both assign straight through with no
+`ERR_FAIL_INDEX`, so only the `ADD_PROPERTY` hint states the bound. `flip_h` and
+`flip_v` are format-checked as booleans. None of the four carries a bound the
+setter itself enforces, so no value listed here is ever an error.
+
+At render time `expand_mode` and `stretch_mode` still use the optional-int
+reader, so an absent or unparseable value becomes `undefined` and each falls
+through its own switch's default case. `flip_h` / `flip_v` behave differently:
+a present-but-unparseable value collapses to `false` rather than `undefined`,
+since `parseOptionalBool` only checks for the literal string `true`.
 
 ## Known limitations
 

@@ -77,6 +77,18 @@ validatorRegistry.registerAll('Control', {
   // any value until this existed, including the ones whose own subclass bound is
   // narrower (GraphNode.slots_focus_mode enforces 1-3, TabContainer's
   // tab_focus_mode is only hinted 0-2 because it delegates to this same guard).
+  // control.cpp:4301, ENUM "Stop,Pass (Propagate Up),Ignore" (MouseFilter 0-2,
+  // control.h:88-92). set_mouse_filter (control.cpp:1923) is
+  // `ERR_FAIL_INDEX(p_filter, 3)`: enforced, so out of range is an error. Like
+  // focus_mode this had no validator anywhere, so every Control descendant
+  // accepted any value.
+  mouse_filter: v.enumInt(
+    'mouse_filter',
+    0,
+    2,
+    { 0: 'STOP', 1: 'PASS', 2: 'IGNORE' },
+    { enforced: 'control.cpp:1923' }
+  ),
   focus_mode: v.enumInt(
     'focus_mode',
     0,
