@@ -934,7 +934,7 @@
       "name": "FileDialog",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "ConfirmationDialog",
         "AcceptDialog",
@@ -2305,7 +2305,7 @@
       "name": "PopupMenu",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Popup",
         "Window",
@@ -2320,7 +2320,7 @@
       "name": "PopupPanel",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Popup",
         "Window",
@@ -2531,7 +2531,7 @@
       "name": "ScriptCreateDialog",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "ConfirmationDialog",
         "AcceptDialog",

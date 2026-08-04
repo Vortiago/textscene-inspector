@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node"]
+
+; Exercises the AcceptDialog/Window keys ScriptCreateDialog overrides the default of.
+[node name="MyScriptCreateDialog" type="ScriptCreateDialog" parent="."]
+title = "Attach Node Script"
+ok_button_text = "Create"
+dialog_hide_on_ok = false

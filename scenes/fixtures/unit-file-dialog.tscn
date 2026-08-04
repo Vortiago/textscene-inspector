@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node"]
+
+; Exercises FileDialog's own file_mode/display_mode/access, root_subfolder, filters,
+; filename_filter, show_hidden_files, use_native_dialog, option_count, and the nine
+; Customization toggles.
+
+[node name="MyFileDialog" type="FileDialog" parent="."]
+mode_overrides_title = false
+file_mode = 0
+display_mode = 1
+access = 2
+root_subfolder = "levels"
+filters = PackedStringArray("*.png, *.jpg, *.jpeg", "*.tscn")
+filename_filter = "level"
+show_hidden_files = true
+use_native_dialog = false
+option_count = 2
+hidden_files_toggle_enabled = true
+file_filter_toggle_enabled = true
+file_sort_options_enabled = true
+folder_creation_enabled = true
+favorites_enabled = false
+recent_list_enabled = false
+layout_toggle_enabled = true
+overwrite_warning_enabled = true
+deleting_enabled = false

@@ -228,3 +228,7 @@ reproduced:
 - [AcceptDialog](../../packages/textscene-core/src/nodes/windows/acceptdialog/comparison.md) — nothing yet; a dialog Window with an OK button
 - [Popup](../../packages/textscene-core/src/nodes/windows/popup/comparison.md) — nothing yet; a borderless Window that closes on focus loss
 - [ConfirmationDialog](../../packages/textscene-core/src/nodes/windows/confirmationdialog/comparison.md) — nothing yet; an AcceptDialog with a Cancel button
+- [FileDialog](../../packages/textscene-core/src/nodes/windows/filedialog/comparison.md) — nothing yet; the file-picking dialog, with a dynamic option array
+- [PopupMenu](../../packages/textscene-core/src/nodes/windows/popupmenu/comparison.md) — nothing yet; a Popup whose items are dynamic properties
+- [PopupPanel](../../packages/textscene-core/src/nodes/windows/popuppanel/comparison.md) — nothing yet; a Popup wrapped in a theme panel
+- [ScriptCreateDialog](../../packages/textscene-core/src/nodes/windows/scriptcreatedialog/comparison.md) — nothing yet; editor-only UI, absent from game scenes

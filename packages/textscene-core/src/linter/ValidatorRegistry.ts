@@ -72,6 +72,31 @@ export type PropertyValidator = ((
 };
 
 /**
+ * Whether `key` is `<prefix><digits>/<leaf>`, the shape Godot's
+ * `PropertyListHelper` writes for an indexed property array.
+ *
+ * Mirrors the engine's own parse (`property_list_helper.cpp:47-55`): split at the
+ * LAST `/`, require the head to start with the prefix, and require what follows
+ * the prefix to be a valid integer. Done with `lastIndexOf` and a char scan
+ * rather than `split`, because `findOwnValidator` runs for every property of
+ * every node and a miss must not allocate.
+ *
+ * A negative index is rejected, matching `_get_property`'s `index < 0` guard: a
+ * `.tscn` cannot address item -1, so `item_-1/text` is not a key Godot reads.
+ */
+function matchesIndexedKey(key: string, prefix: string): boolean {
+  if (!key.startsWith(prefix)) return false;
+  const slash = key.lastIndexOf('/');
+  // The leaf must be non-empty, and the index must sit between the two.
+  if (slash <= prefix.length || slash === key.length - 1) return false;
+  for (let i = prefix.length; i < slash; i++) {
+    const code = key.charCodeAt(i);
+    if (code < 48 || code > 57) return false;
+  }
+  return true;
+}
+
+/**
  * A key a concrete type takes away from its base, and the engine guard that
  * takes it away. `reason` reaches the scene author; `cite` is what makes the
  * claim checkable, exactly as `PropertyValidator.grounding` does for a bound.
@@ -215,7 +240,18 @@ export class ValidatorRegistry {
     return null;
   }
 
-  /** Exact-then-wildcard lookup among a single type's own validators. */
+  /**
+   * Exact-then-wildcard lookup among a single type's own validators.
+   *
+   * Two wildcard shapes, because Godot writes two:
+   *
+   * - `bones/*` matches `bones/0/position`. A literal `/` follows the prefix.
+   * - `item_#/*` matches `item_0/text`. Godot's `PropertyListHelper` builds these
+   *   as `vformat("%s%d/%s", prefix, i, name)` (`property_list_helper.cpp:149`),
+   *   gluing the index straight onto the prefix with no separator, so the first
+   *   shape can never match one. `PopupMenu`, `ItemList`, `OptionButton`,
+   *   `MenuButton` and `TabBar` all use it.
+   */
   private findOwnValidator(nodeType: string, propertyKey: string): PropertyValidator | null {
     const nodeValidators = this.validators.get(nodeType);
     if (!nodeValidators) {
@@ -232,7 +268,10 @@ export class ValidatorRegistry {
     // on every miss — and every unregistered property is a miss.
     for (const pattern in nodeValidators) {
       if (!pattern.endsWith('/*')) continue;
-      if (!propertyKey.startsWith(pattern.slice(0, -2) + '/')) continue;
+      const matches = pattern.endsWith('#/*')
+        ? matchesIndexedKey(propertyKey, pattern.slice(0, -3))
+        : propertyKey.startsWith(pattern.slice(0, -2) + '/');
+      if (!matches) continue;
       const validator = nodeValidators[pattern];
       if (validator) return validator;
     }

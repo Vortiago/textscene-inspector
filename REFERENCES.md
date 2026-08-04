@@ -26,8 +26,19 @@ from it rather than guessed. Clone it anywhere; nothing in this repo reads it:
 ```bash
 git clone --filter=blob:none --sparse --depth 1 --branch 4.6.3-stable \
     https://github.com/godotengine/godot.git godot-4.6.3
-cd godot-4.6.3 && git sparse-checkout set scene doc/classes modules servers
+cd godot-4.6.3 && git sparse-checkout set scene doc/classes modules servers \
+    core editor drivers
 ```
+
+All seven directories are needed. `scene` and `doc/classes` cover the common case;
+`servers` holds the rendering-server entry points a few parity notes cite;
+`modules` holds the OpenXR classes and their own `doc_classes/` pages; `core`
+holds `variant_parser.cpp`, which decides what a malformed literal does; `editor`
+holds the `TOOLS_ENABLED` node types the catalog still lists; `drivers` holds the
+GLES3 rasteriser the 2D-lighting notes cite. A directory left out does not
+produce an error, it produces an invented citation: an agent asked to ground a
+claim in a file it cannot open has been observed to return plausible, wrong line
+numbers. Check the path resolves before trusting any `file:line`.
 
 Match the tag to the `godot` binary `pnpm ref:godot` uses (currently 4.6.3). Read
 `doc/classes/<Type>.xml` for members, defaults, enum constants and the `inherits=`

@@ -288,6 +288,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "File Dialog",
+    "file": "unit-file-dialog.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Flow Container",
     "file": "unit-flow-container.tscn",
     "category": "Other"
@@ -663,6 +668,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Popup Menu",
+    "file": "unit-popup-menu.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Popup Panel",
+    "file": "unit-popup-panel.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Popup",
     "file": "unit-popup.tscn",
     "category": "Other"
@@ -705,6 +720,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Rigidbody3d",
     "file": "unit-rigidbody3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Script Create Dialog",
+    "file": "unit-script-create-dialog.tscn",
     "category": "Other"
   },
   {

@@ -55,6 +55,9 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
     'editor-only PanelContainer; its constructor only changes the inherited size_flags_horizontal default',
   OpenXRInteractionProfileEditor:
     'editor-only (TOOLS_ENABLED); _bind_methods binds methods only, and its abstract base declares nothing either',
+  PopupPanel: 'a themed Popup; its panel stylebox is a ThemeDB binding, not an ADD_PROPERTY',
+  ScriptCreateDialog:
+    'editor-only (TOOLS_ENABLED); binds no ADD_PROPERTY and overrides no _get_property_list, so its 3 documented members are all overrides= default changes',
   OpenXRInteractionProfileEditorBase:
     'abstract editor tier Godot cannot instantiate; binds no ADD_PROPERTY, so it owns no key to validate',
   Panel: 'draws only its theme stylebox',
