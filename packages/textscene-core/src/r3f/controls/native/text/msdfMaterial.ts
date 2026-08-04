@@ -80,6 +80,13 @@ void main() {
   vec4 diffuseColor = vec4(uColor, uOpacity * alpha);
   #include <clipping_planes_fragment>
   gl_FragColor = diffuseColor;
+  // uColor is LINEAR and the render target is sRGB. Every built-in three
+  // material ends with this chunk (linearToOutputTexel); a hand-written shader
+  // gets no encode unless it asks for one, so without it the linear value is
+  // written straight into an sRGB buffer and every glyph lands at
+  // srgbToLinear(c) — Godot's font colour 223 rendering as 188. White is that
+  // curve's fixed point, which is why white-on-anything looked perfect.
+  #include <colorspace_fragment>
 }
 `;
 

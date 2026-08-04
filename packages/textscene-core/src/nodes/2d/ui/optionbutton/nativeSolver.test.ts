@@ -5,7 +5,9 @@
  * them (`AGENTS.md`'s test-authoring rule) — same vendored OpenSans_SemiBold
  * metrics/atlas `button/nativeSolver.test.ts` cites.
  *
- * At font size 16: `linePitchPx` = 26. 'A' advance at 16px = 28*(16/42) =
+ * At font size 16 an OptionButton floors on `font->get_height()` = 23 (ascent
+ * 18 + descent 5); `line_spacing` is Label's constant and OptionButton sets
+ * none. 'A' advance at 16px = 28*(16/42) =
  * 10.666...; 'AB' = 21.333...; 'ABC' = 32...; `originCorrectionPx(16) =
  * 0.8571428571428577` (`buttonBase.test.ts`'s own worked example).
  *
@@ -41,7 +43,7 @@ import {
 
 const A_ADVANCE = 28 * (16 / 42); // 10.666...
 const AB_WIDTH = A_ADVANCE * 2; // 21.333...
-const LINE_PITCH = 26;
+const FONT_HEIGHT = 23;
 
 function node(props: Partial<OptionButtonProperties>): SolveNode {
   return {
@@ -115,10 +117,10 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
     expect(result.x).toBeCloseTo(16 + AB_WIDTH + 12 + 4, 6);
   });
 
-  it('height is 8 (marginY) + max(tallest item text height, arrow height 12) — text line pitch (26) wins', () => {
+  it('height is 8 (marginY) + max(tallest item text height, arrow height 12) — the 23px font height wins', () => {
     const items = [{ text: 'AB', id: 0 }];
     const result = optionButtonMinimumSize(node({ items, selected: 0 }), ctx());
-    expect(result.y).toBe(8 + LINE_PITCH);
+    expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
   it('treats an absent measurer as "no item contributes text width" — margin+arrow floor still returns', () => {

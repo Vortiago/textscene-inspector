@@ -21,7 +21,15 @@ import type { NativeTheme } from './nativeTheme';
  * metrics before then must treat an absent measurer as "no text contributes
  * to this measurement" rather than throw.
  */
-export type TextMeasurer = (text: string, fontSize: number) => Vec2;
+/**
+ * `lineSpacingPx` is the caller's OWN theme constant, and defaults to 0 —
+ * Godot's `font->get_height()`, which is what most widgets floor against.
+ * Only a widget whose theme sets `line_spacing` (Label's 3) passes one, and it
+ * applies BETWEEN lines only: the returned height never carries a trailing gap
+ * below the last line, so a single-line measurement is exactly the font height
+ * whatever the spacing.
+ */
+export type TextMeasurer = (text: string, fontSize: number, lineSpacingPx?: number) => Vec2;
 
 export interface SolveContext {
   /** The scaled default theme, plain data. */

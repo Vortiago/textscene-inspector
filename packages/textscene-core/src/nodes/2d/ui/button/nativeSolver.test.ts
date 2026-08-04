@@ -9,8 +9,11 @@
  * `buttonMargin`) — an independent worked example, never the implementation's
  * own output.
  *
- * At font size 16: linePitchPx (default 3px line_spacing) = 26
- * (`ascentPx=ceil(2189*16/2048)=18`, `descentPx=ceil(600*16/2048)=5`, `+3=26`).
+ * At font size 16 a Button floors on `font->get_height()` = ascent + descent =
+ * 23 (`ascentPx=ceil(2189*16/2048)=18`, `descentPx=ceil(600*16/2048)=5`), NOT
+ * on a line pitch. `line_spacing` is Label's own theme constant; Button sets
+ * none, so nothing separates lines it never stacks. Measured against real
+ * Godot 4.6.3: a `content_margin` 6 button is 12 + 23 = 35.
  * 'A' advance at 16px = 28*(16/42) = 10.666...; 'AB' = 21.333...
  */
 import { describe, expect, it } from 'vitest';
@@ -31,7 +34,7 @@ import {
 
 const A_ADVANCE = 28 * (16 / 42); // 10.666...
 const AB_WIDTH = A_ADVANCE * 2; // 21.333...
-const LINE_PITCH = 26;
+const FONT_HEIGHT = 23;
 
 function node(
   props: Partial<ButtonProperties>,
@@ -63,7 +66,7 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
   it('adds the measured text size on top of the margin', () => {
     const result = buttonMinimumSize(node({ text: 'AB' }), ctx());
     expect(result.x).toBeCloseTo(8 + AB_WIDTH, 6);
-    expect(result.y).toBe(8 + LINE_PITCH);
+    expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
   it('treats an absent measurer as "text contributes nothing", NOT as the whole function failing — margin alone still returns', () => {
@@ -102,10 +105,10 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
 
 describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)', () => {
   it('vertical_icon_alignment CENTER (default): height is the MAX of icon/text, width ADDS icon width + h_separation', () => {
-    // icon 20x20 (shorter than the 26px text line): height stays 26.
+    // icon 20x20 (shorter than the 23px font height): height stays 23.
     // width: 21.333 (text) + 20 (icon) + 4 (h_separation default) = 45.333.
     const result = buttonMinimumSize(node({ text: 'AB' }, {}, { x: 20, y: 20 }), ctx());
-    expect(result.y).toBe(8 + 26);
+    expect(result.y).toBe(8 + FONT_HEIGHT);
     expect(result.x).toBeCloseTo(8 + AB_WIDTH + 20 + 4, 6);
   });
 
@@ -126,8 +129,8 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
         node({ text: 'AB', vertical_icon_alignment: undefined, ...{ verticalIconAlignment: 0 } }, {}, { x: 10, y: 15 }),
         ctx()
       );
-      // 26 (initial text) + 15 (icon, += branch) + 26 (final font_height, += branch) = 67.
-      expect(result.y).toBe(8 + 67);
+      // 23 (initial text) + 15 (icon, += branch) + 23 (final font_height, += branch) = 61.
+      expect(result.y).toBe(8 + 61);
     }
   );
 
@@ -165,7 +168,7 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
     );
     // fitIconSize(20x20, 10) = 10x10 (aspect-preserving clamp).
     expect(result.x).toBeCloseTo(8 + AB_WIDTH + 10 + 4, 6);
-    expect(result.y).toBe(8 + 26); // 10 < 26, height still floored by text
+    expect(result.y).toBe(8 + FONT_HEIGHT); // 10 < 23, height still floored by text
   });
 });
 

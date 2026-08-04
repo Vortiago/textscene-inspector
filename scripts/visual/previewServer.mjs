@@ -29,6 +29,10 @@ const SKIP_BUILD_VALUES = new Set(['1', 'true', 'yes']);
  */
 const BUNDLED_SOURCE_DIRS = ['packages/textscene-core/src', 'apps/textscene-web/src'];
 
+/** Core's own source→emit pair. The app bundles the EMIT, so this pair is checked separately. */
+const CORE_SRC_DIR = 'packages/textscene-core/src';
+const CORE_DIST_DIR = 'packages/textscene-core/dist';
+
 /**
  * Only files that can actually end up in the bundle count. Tests, comparison
  * sheets and fixtures live inside `src/` but vite never sees them, so treating
@@ -79,6 +83,26 @@ function newestMtime(dir) {
 export function assertWebBuildFresh() {
   if (!existsSync(WEB_DIST_INDEX)) {
     console.error('[preview] no built dist/ to capture from');
+    process.exit(1);
+  }
+  // Core's OWN dist first, because the app bundles that rather than core's
+  // sources: `tsc --build` consults `tsconfig.tsbuildinfo` and will exit 0
+  // having emitted NOTHING when that file says everything is current — true
+  // even with `dist/` deleted. The app then re-bundles the stale core, rewrites
+  // `index.html`, and the source-vs-index check below passes on a bundle that
+  // does not contain the change under test. Comparing against index.html alone
+  // cannot see this: the freshly written index is exactly what makes it look
+  // fine.
+  const coreSrc = newestMtime(join(REPO_ROOT, CORE_SRC_DIR));
+  const coreDist = newestMtime(join(REPO_ROOT, CORE_DIST_DIR));
+  if (coreSrc.newest > coreDist.newest) {
+    console.error(
+      `[preview] ${CORE_DIST_DIR} predates ${relative(REPO_ROOT, coreSrc.newestFile)} — the app ` +
+        `would bundle a stale core and every scene would "pass" against the PREVIOUS revision.\n` +
+        `[preview] tsc kept a stale emit; clear its incremental state and rebuild:\n` +
+        `[preview]   find packages apps -name '*.tsbuildinfo' -not -path '*/node_modules/*' -delete\n` +
+        `[preview]   pnpm --filter @textscene/core build`
+    );
     process.exit(1);
   }
   const builtAt = statSync(WEB_DIST_INDEX).mtimeMs;

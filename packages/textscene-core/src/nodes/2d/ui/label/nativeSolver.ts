@@ -87,10 +87,11 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   if (!ctx.measureText) return { x: 0, y: 0 };
 
-  const measured = ctx.measureText(text, fontSizePx);
-  const lineSpacingPx = getLinePitchPx(fontSizePx) - fontHeightPx;
-  const naturalHeight = Math.max(0, measured.y - lineSpacingPx);
-  const height = Math.max(naturalHeight, fontHeightPx);
+  // Label is the one widget whose theme sets `line_spacing` (3), and it
+  // separates lines without adding a trailing gap — which the measurer's own
+  // contract guarantees, so nothing is subtracted back off here.
+  const measured = ctx.measureText(text, fontSizePx, getLinePitchPx(fontSizePx) - fontHeightPx);
+  const height = Math.max(measured.y, fontHeightPx);
 
   if ((props.autowrapMode ?? AUTOWRAP_OFF) !== AUTOWRAP_OFF) {
     return { x: 1, y: height };

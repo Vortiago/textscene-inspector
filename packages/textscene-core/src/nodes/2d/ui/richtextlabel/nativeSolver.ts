@@ -14,7 +14,6 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import { getLinePitchPx } from '../../../../r3f/controls/native/text/openSansMetrics';
 import type { GlyphPlacement, TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import type { ControlColor } from '../control/types';
@@ -88,14 +87,10 @@ function plainTextOf(props: RichTextLabelProperties): string {
  * bare ascent+descent, with NO extra spacing folded in (contrast Label's own
  * `getLinePitchPx(fontSizePx)` default-3 spacing).
  *
- * `ctx.measureText` (`measurer.ts`) always shapes with the SHARED default
- * `lineSpacingPx=3` (Label's own constant) regardless of caller, so its
- * `.y` cannot be read directly as RichTextLabel's content height. The line
- * COUNT it implies is recovered by dividing by that same default pitch, then
- * reapplied at RichTextLabel's own (0-spacing) pitch — the same "recover
- * whatever default the shared engine baked in, then use OUR OWN constant"
- * approach Label's own nativeSolver.ts already documents for its `-lineSpacingPx`
- * subtraction.
+ * `ctx.measureText` takes that spacing as an argument and defaults it to 0, so
+ * this reads its `.y` directly. It used to shape at Label's constant whatever
+ * the caller was, leaving each widget to undo it — which is how the widgets
+ * that did not undo it ended up a whole `line_spacing` too tall.
  */
 export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as RichTextLabelProperties;
@@ -115,16 +110,14 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   if (!ctx.measureText) return { x: 0, y: 0 };
 
+  // `line_separation` is 0 for RichTextLabel (`default_theme.cpp:1217`), which
+  // is the measurer's own default — so this needs no spacing argument.
   const measured = ctx.measureText(text, fontSizePx);
-  const sharedDefaultPitchPx = getLinePitchPx(fontSizePx); // measurer.ts's own hardcoded lineSpacingPx=3.
-  const lineCount = Math.round(measured.y / sharedDefaultPitchPx);
-  const ownPitchPx = getLinePitchPx(fontSizePx, 0); // default_theme.cpp:1217's line_separation=0.
-  const height = lineCount * ownPitchPx;
 
   if (wraps) {
-    return { x: 1, y: height };
+    return { x: 1, y: measured.y };
   }
-  return { x: measured.x, y: height };
+  return { x: measured.x, y: measured.y };
 };
 
 // --- Draw-time: the bbcode subset -> styled runs -> per-line/per-run placement ---

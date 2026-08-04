@@ -6,8 +6,10 @@
  * metrics/atlas `button/nativeSolver.test.ts` cites (`unitsPerEm=2048`,
  * `ascent=2189`, `descent=600`; atlas `xadvance` for 'A' is 28 at bake size 42).
  *
- * At font size 16: `linePitchPx` (default 3px line_spacing) = 26
- * (`ascentPx=ceil(2189*16/2048)=18`, `descentPx=ceil(600*16/2048)=5`, `+3=26`).
+ * At font size 16 a CheckBox floors on `font->get_height()` = ascent +
+ * descent = 23 (`ascentPx=ceil(2189*16/2048)=18`,
+ * `descentPx=ceil(600*16/2048)=5`). `line_spacing` is Label's own theme
+ * constant; CheckBox sets none.
  * 'A' advance at 16px = 28*(16/42) = 10.666...; 'AB' = 21.333...
  * `originCorrectionPx(16) = 0.8571428571428577` (`buttonBase.test.ts`'s own
  * worked example — same atlas, same function).
@@ -43,7 +45,7 @@ import {
 
 const A_ADVANCE = 28 * (16 / 42); // 10.666...
 const AB_WIDTH = A_ADVANCE * 2; // 21.333...
-const LINE_PITCH = 26;
+const FONT_HEIGHT = 23;
 const ORIGIN_16 = 0.8571428571428577;
 
 function node(props: Partial<CheckBoxProperties>): SolveNode {
@@ -159,8 +161,8 @@ describe('checkBoxMinimumSize — with text', () => {
     const result = checkBoxMinimumSize(node({ text: 'AB' }), ctx());
     // width = 8 (2*margin) + 21.333 (text) + 4 (h_separation) + 16 (icon) = 49.333.
     expect(result.x).toBeCloseTo(8 + AB_WIDTH + 4 + 16, 6);
-    // height = 8 + max(26, 16) = 34.
-    expect(result.y).toBe(8 + LINE_PITCH);
+    // height = 8 + max(23, 16) = 31.
+    expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
   it('treats an absent measurer as "text contributes nothing" — icon-only floor still returns', () => {
@@ -177,7 +179,7 @@ describe('checkBoxMinimumSize — with text', () => {
     const result = checkBoxMinimumSize(node({ text: 'AB', themeOverrideConstants: { icon_max_width: 8 } }), ctx());
     // fitIconSize(16x16, 8) = 8x8.
     expect(result.x).toBeCloseTo(8 + AB_WIDTH + 4 + 8, 6);
-    expect(result.y).toBe(8 + LINE_PITCH); // 8 < 26, text still floors height
+    expect(result.y).toBe(8 + FONT_HEIGHT); // 8 < 23, text still floors height
   });
 });
 
