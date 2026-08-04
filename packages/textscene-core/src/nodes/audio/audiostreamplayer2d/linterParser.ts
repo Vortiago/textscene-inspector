@@ -6,12 +6,15 @@
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 import { busValidator } from '../busValidator.js';
-import { streamValidator } from '../streamValidator.js';
 
 const PLAYBACK_TYPE = { 0: 'DEFAULT', 1: 'STREAM', 2: 'SAMPLE' };
 
 validatorRegistry.registerAll('AudioStreamPlayer2D', {
-  stream: streamValidator,
+  // audio_stream_player_2d.cpp:429 hints PROPERTY_HINT_RESOURCE_TYPE
+  // "AudioStream" (a type constraint, not a range). set_stream (:201-203)
+  // delegates to AudioStreamPlayerInternal::set_stream
+  // (audio_stream_player_internal.cpp:254-263), a bare assignment: format-only.
+  stream: v.resourceReference('stream'),
   volume_db: v.float('volume_db'),
   // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0).
   pitch_scale: v.float('pitch_scale', {

@@ -2,16 +2,13 @@
  * AudioStreamPlayer3D strict validators for linting.
  * Migrated to the declarative `v` namespace.
  *
- * `stream` and `bus` use the shared audio validators: `streamValidator`
- * enforces the "ExtResource or SubResource" wording (per-node test asserts
- * this); `busValidator` accepts both plain `"..."` strings and Godot's
- * StringName literal form `&"..."`.
+ * `bus` uses the shared `busValidator`, which accepts both plain `"..."`
+ * strings and Godot's StringName literal form `&"..."`.
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 import { busValidator } from '../busValidator.js';
-import { streamValidator } from '../streamValidator.js';
 
 const ATTENUATION_MODEL = {
   0: 'INVERSE_DISTANCE',
@@ -22,7 +19,11 @@ const ATTENUATION_MODEL = {
 const DOPPLER_TRACKING = { 0: 'DISABLED', 1: 'IDLE_STEP', 2: 'PHYSICS_STEP' };
 
 validatorRegistry.registerAll('AudioStreamPlayer3D', {
-  stream: streamValidator,
+  // audio_stream_player_3d.cpp:881 hints PROPERTY_HINT_RESOURCE_TYPE
+  // "AudioStream" (a type constraint, not a range). set_stream (:544-546)
+  // delegates to AudioStreamPlayerInternal::set_stream
+  // (audio_stream_player_internal.cpp:254-263), a bare assignment: format-only.
+  stream: v.resourceReference('stream'),
   volume_db: v.float('volume_db'),
   // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0).
   pitch_scale: v.float('pitch_scale', {

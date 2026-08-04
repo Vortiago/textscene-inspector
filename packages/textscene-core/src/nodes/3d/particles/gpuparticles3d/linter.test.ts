@@ -130,12 +130,16 @@ describe('GPUParticles3D Linter', () => {
       },
       {
         prop: 'visibility_aabb',
-        valid: ['AABB(0, 0, 0, 10, 10, 10)', 'AABB(-5, -5, -5, 10, 10, 10)'],
-        invalid: [
-          { value: 'AABB(0, 0, 0)', contains: ['6 numbers'] },
-          { value: 'AABB(0, 0, 0, -10, 10, 10)', contains: ['positive'] },
-          { value: 'AABB(0, 0, 0, 10, 0, 10)', contains: ['positive'] },
+        // set_visibility_aabb (gpu_particles_3d.cpp:139-143) assigns straight
+        // through to particles_set_custom_aabb, so a negative or zero extent is
+        // a value Godot keeps. Only the 6-number shape is checkable.
+        valid: [
+          'AABB(0, 0, 0, 10, 10, 10)',
+          'AABB(-5, -5, -5, 10, 10, 10)',
+          'AABB(0, 0, 0, -10, 10, 10)',
+          'AABB(0, 0, 0, 10, 0, 10)',
         ],
+        invalid: [{ value: 'AABB(0, 0, 0)', contains: ['6 numbers'] }],
       },
       {
         prop: 'local_coords',

@@ -28,6 +28,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `RigidBody${dim}`;
   const shapeType = `CollisionShape${dim}`;
   const prefix = `rigidbody${dimSuffix(dim)}`;
+  const massHintCite = dim === '2D' ? 'rigid_body_2d.cpp:742' : 'rigid_body_3d.cpp:764';
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
@@ -73,6 +74,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
             ruleName: `${prefix}-mass-too-low`,
             message: (mass) =>
               `${type} '${node.name}' has mass ${mass}. The editor range for mass starts at ${MASS_HINT_MIN}.`,
+            cite: massHintCite,
           },
         ],
       })

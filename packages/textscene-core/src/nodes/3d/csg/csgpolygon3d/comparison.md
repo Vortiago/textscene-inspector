@@ -109,7 +109,7 @@ Strict parsing format-checks these `CSGPolygon3D` properties, plus 17 inherited 
 | `path_rotation_accurate` | true or false |
 | `path_simplify_angle` | float 0-180 |
 | `path_u_distance` | float >= 0 |
-| `polygon` | PackedVector2Array(x, y, …) — even count |
+| `polygon` | PackedVector2Array(x, y, …) |
 | `smooth_faces` | true or false |
 | `spin_degrees` | float 0.01-360 |
 | `spin_sides` | integer 3-64 |

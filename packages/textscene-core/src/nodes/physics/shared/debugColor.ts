@@ -52,3 +52,9 @@ export const debugColorValidator: PropertyValidator = (key, value, line) => {
 
 // Shown in each sheet's generated `## Linting` table.
 debugColorValidator.accepts = 'Color(r, g, b, a)';
+// Both CollisionShape2D::set_debug_color (collision_shape_2d.cpp:235-241) and
+// CollisionShape3D::set_debug_color (collision_shape_3d.cpp:252-262) are bare
+// assignments, and `debug_color`'s ADD_PROPERTY (collision_shape_2d.cpp:296,
+// collision_shape_3d.cpp:182) carries PROPERTY_HINT_NONE: no hint string, so
+// no component range to ground. This only rejects a malformed Color literal.
+debugColorValidator.formatOnly = true;

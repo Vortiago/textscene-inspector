@@ -17,5 +17,8 @@ import '../boxcontainer/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 
 validatorRegistry.registerUnavailable('HBoxContainer', {
-  vertical: `its orientation is fixed by the class. Use a plain BoxContainer if the orientation must vary.`,
+  vertical: {
+    reason: `its orientation is fixed by the class. Use a plain BoxContainer if the orientation must vary.`,
+    cite: 'box_container.cpp:312',
+  },
 });

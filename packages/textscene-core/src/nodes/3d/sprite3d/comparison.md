@@ -40,7 +40,7 @@ Strict parsing format-checks these `Sprite3D` properties, plus 17 inherited from
 | `axis` | enum 0-2 (X_AXIS/Y_AXIS/Z_AXIS) |
 | `billboard` | enum 0-2 (DISABLED/ENABLED/FIXED_Y) |
 | `frame` | integer >= 0 |
-| `frame_coords` | Vector2i(x, y) |
+| `frame_coords` | Vector2i(x, y), both >= 0 |
 | `hframes` | integer > 0 |
 | `modulate` | Color(r, g, b, a) |
 | `offset` | Vector2(x, y) |

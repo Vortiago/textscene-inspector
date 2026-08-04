@@ -53,13 +53,13 @@ Strict parsing format-checks these `AnimationPlayer` properties, plus 10 inherit
 
 | Property | Accepts |
 | --- | --- |
-| `autoplay` | non-empty quoted string |
+| `autoplay` | quoted string or &"name" |
 | `current_animation` | any value (no format constraint) |
 | `method_call_mode` | enum 0-1 (DEFERRED/IMMEDIATE) |
 | `playback_active` | true or false |
 | `playback_default_blend_time` | float |
 | `playback_process_mode` | enum 0-2 (PHYSICS/IDLE/MANUAL) |
-| `root_node` | non-empty quoted string |
+| `root_node` | NodePath("path/to/node") |
 | `speed_scale` | float |
 
 | Rule | Reports | Severity |
@@ -83,11 +83,12 @@ rather than errors when it sits outside 0-4096. `playback_process_mode` and
 warning and substituting `IDLE` (1) or `DEFERRED` (0) for any value outside
 `0`-`2`/`0`-`1`; `playback_active` falls back to `true`. `autoplay` and
 `current_animation` go through `stripQuotes`, which only strips
-quote/StringName/NodePath sigil characters and never rejects an empty result,
-so strict's empty-string rejection has no lenient effect. `root_node` skips
-that helper entirely: absent, it defaults to the literal `NodePath("..")`;
-present, the raw string is stored verbatim with no quote-stripping and no
-empty-string check, unlike strict's `nonEmptyQuotedString` validator.
+quote/StringName/NodePath sigil characters; an empty result is kept, and
+strict accepts it too, because `set_autoplay` (animation_player.cpp:775)
+assigns straight through and `""` is Godot's own "no autoplay" state.
+`root_node` skips that helper entirely: absent, it defaults to the literal
+`NodePath("..")`; present, the raw string is stored verbatim with no
+quote-stripping, where strict checks the `NodePath("…")` grammar.
 `current_animation_length` and `current_animation_position` fall back to
 `0.0` on a parse failure and accept any value, including negative, matching
 strict, which carries no validator for either: both are getter-only and

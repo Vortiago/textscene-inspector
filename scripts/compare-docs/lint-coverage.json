@@ -71,7 +71,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -325,7 +325,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -772,7 +772,7 @@
         {
           "property": "scale",
           "declaredOn": "Node2D",
-          "accepts": "Vector2(x, y), no zero component"
+          "accepts": "Vector2(x, y), no (near-)zero component"
         },
         {
           "property": "skew",
@@ -985,7 +985,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -1139,7 +1139,7 @@
         {
           "property": "scale",
           "declaredOn": "Node2D",
-          "accepts": "Vector2(x, y), no zero component"
+          "accepts": "Vector2(x, y), no (near-)zero component"
         },
         {
           "property": "skew",
@@ -1342,7 +1342,7 @@
         {
           "property": "scale",
           "declaredOn": "Node2D",
-          "accepts": "Vector2(x, y), no zero component"
+          "accepts": "Vector2(x, y), no (near-)zero component"
         },
         {
           "property": "skew",
@@ -1555,7 +1555,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -1729,7 +1729,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -1883,7 +1883,7 @@
         {
           "property": "scale",
           "declaredOn": "Node2D",
-          "accepts": "Vector2(x, y), no zero component"
+          "accepts": "Vector2(x, y), no (near-)zero component"
         },
         {
           "property": "skew",
@@ -2106,7 +2106,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -2768,7 +2768,7 @@
         {
           "property": "scale",
           "declaredOn": "Node2D",
-          "accepts": "Vector2(x, y), no zero component"
+          "accepts": "Vector2(x, y), no (near-)zero component"
         },
         {
           "property": "skew",
@@ -2981,7 +2981,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -3839,7 +3839,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -4013,7 +4013,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -4167,7 +4167,7 @@
         {
           "property": "scale",
           "declaredOn": "Node2D",
-          "accepts": "Vector2(x, y), no zero component"
+          "accepts": "Vector2(x, y), no (near-)zero component"
         },
         {
           "property": "skew",
@@ -4390,7 +4390,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -4639,7 +4639,7 @@
         {
           "property": "mouse_passthrough_polygon",
           "declaredOn": "Window",
-          "accepts": "PackedVector2Array(x, y, …) — even count"
+          "accepts": "PackedVector2Array(x, y, …)"
         },
         {
           "property": "nonclient_area",
@@ -4939,7 +4939,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -7243,7 +7243,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -7690,7 +7690,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -7859,7 +7859,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -8023,7 +8023,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -8197,7 +8197,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -8706,7 +8706,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -9533,7 +9533,7 @@
         {
           "property": "scale",
           "declaredOn": "Node2D",
-          "accepts": "Vector2(x, y), no zero component"
+          "accepts": "Vector2(x, y), no (near-)zero component"
         },
         {
           "property": "skew",
@@ -9756,7 +9756,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -9910,7 +9910,7 @@
         {
           "property": "scale",
           "declaredOn": "Node2D",
-          "accepts": "Vector2(x, y), no zero component"
+          "accepts": "Vector2(x, y), no (near-)zero component"
         },
         {
           "property": "skew",
@@ -10213,7 +10213,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -10591,7 +10591,7 @@
         {
           "property": "scale",
           "declaredOn": "Node2D",
-          "accepts": "Vector2(x, y), no zero component"
+          "accepts": "Vector2(x, y), no (near-)zero component"
         },
         {
           "property": "skew",
@@ -10804,7 +10804,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -10958,7 +10958,7 @@
         {
           "property": "scale",
           "declaredOn": "Node2D",
-          "accepts": "Vector2(x, y), no zero component"
+          "accepts": "Vector2(x, y), no (near-)zero component"
         },
         {
           "property": "skew",
@@ -11449,7 +11449,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -11886,7 +11886,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -12050,7 +12050,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -12214,7 +12214,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -12378,7 +12378,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -12826,7 +12826,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -12990,7 +12990,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -13159,7 +13159,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -13313,7 +13313,7 @@
         {
           "property": "scale",
           "declaredOn": "Node2D",
-          "accepts": "Vector2(x, y), no zero component"
+          "accepts": "Vector2(x, y), no (near-)zero component"
         },
         {
           "property": "skew",
@@ -13536,7 +13536,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -13755,7 +13755,7 @@
         {
           "property": "mouse_passthrough_polygon",
           "declaredOn": "Window",
-          "accepts": "PackedVector2Array(x, y, …) — even count"
+          "accepts": "PackedVector2Array(x, y, …)"
         },
         {
           "property": "nonclient_area",
@@ -14105,7 +14105,7 @@
         {
           "property": "mouse_passthrough_polygon",
           "declaredOn": "Window",
-          "accepts": "PackedVector2Array(x, y, …) — even count"
+          "accepts": "PackedVector2Array(x, y, …)"
         },
         {
           "property": "nonclient_area",
@@ -15008,7 +15008,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -15250,7 +15250,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -15419,7 +15419,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -15668,7 +15668,7 @@
         {
           "property": "mouse_passthrough_polygon",
           "declaredOn": "Window",
-          "accepts": "PackedVector2Array(x, y, …) — even count"
+          "accepts": "PackedVector2Array(x, y, …)"
         },
         {
           "property": "nonclient_area",
@@ -16021,7 +16021,7 @@
         {
           "property": "scale",
           "declaredOn": "Node2D",
-          "accepts": "Vector2(x, y), no zero component"
+          "accepts": "Vector2(x, y), no (near-)zero component"
         },
         {
           "property": "skew",
@@ -16244,7 +16244,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -16748,7 +16748,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -16932,7 +16932,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -17128,7 +17128,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -17324,7 +17324,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -17510,7 +17510,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -18943,7 +18943,7 @@
         {
           "property": "scale",
           "declaredOn": "Node2D",
-          "accepts": "Vector2(x, y), no zero component"
+          "accepts": "Vector2(x, y), no (near-)zero component"
         },
         {
           "property": "skew",
@@ -19439,7 +19439,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -20169,7 +20169,7 @@
         {
           "property": "scale",
           "declaredOn": "Node2D",
-          "accepts": "Vector2(x, y), no zero component"
+          "accepts": "Vector2(x, y), no (near-)zero component"
         },
         {
           "property": "skew",
@@ -20392,7 +20392,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -20561,7 +20561,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -21343,7 +21343,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -21517,7 +21517,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -21741,7 +21741,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -21940,7 +21940,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -22104,7 +22104,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -22278,7 +22278,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",
@@ -22442,7 +22442,7 @@
         {
           "property": "scale",
           "declaredOn": "Node3D",
-          "accepts": "Vector3(x, y, z), no zero component"
+          "accepts": "Vector3(x, y, z)"
         },
         {
           "property": "top_level",

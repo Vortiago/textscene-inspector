@@ -61,7 +61,7 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 17 inherite
 | `sub_emitter` | NodePath("path/to/node") |
 | `trail_enabled` | true or false |
 | `trail_lifetime` | float >= 0.01 |
-| `visibility_aabb` | AABB(12 floats) |
+| `visibility_aabb` | AABB(x, y, z, w, h, d) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

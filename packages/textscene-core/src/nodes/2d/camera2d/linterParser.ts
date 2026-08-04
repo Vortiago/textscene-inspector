@@ -90,3 +90,8 @@ validatorRegistry.registerAll('Camera2D', {
 
 // Shown in the generated `## Linting` table of this node's sheet.
 zoomValidator.accepts = 'Vector2(x, y), neither component (near-)zero';
+// Hand-rolled (not built through `v`), so tagged by hand for
+// boundGrounding.test.ts: camera_2d.cpp:104's ERR_FAIL_COND is enforced, so
+// out-of-range stays an error.
+zoomValidator.bounded = true;
+zoomValidator.grounding = { kind: 'enforced', cite: 'camera_2d.cpp:104' };

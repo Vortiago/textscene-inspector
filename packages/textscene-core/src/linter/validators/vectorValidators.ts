@@ -31,13 +31,20 @@ export function createVector2Validator(
 }
 
 /**
- * Creates a Vector2i validator with optional non-negative constraint
+ * Creates a Vector2i validator with an optional per-COMPONENT minimum.
+ *
+ * `minComponent` was a `requireNonNegative` boolean, which could only ever say
+ * "0". Real setters floor elsewhere: `Viewport::_set_size` does `p_size.maxi(2)`,
+ * so a `SubViewport` sized 1 is altered exactly as a negative one is, and a
+ * boolean had no way to say so.
  */
 export function createVector2iValidator(
   propertyName: string,
-  requireNonNegative: boolean = false,
+  minComponent: number | undefined = undefined,
   errorCodeFormat: string = 'INVALID_FORMAT',
-  errorCodeValue: string = 'INVALID_VALUE'
+  errorCodeValue: string = 'INVALID_VALUE',
+  /** Severity of the minimum branch — `warning` when only a hint backs it. */
+  valueSeverity: ParseError['severity'] = 'error'
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
     const match = VECTOR2I_REGEX.exec(value);
@@ -45,11 +52,15 @@ export function createVector2iValidator(
       return propertyError(key, line, `Property '${propertyName}' must be Vector2i format like Vector2i(0, 0), got: "${value}"`, errorCodeFormat);
     }
 
-    if (requireNonNegative) {
+    if (minComponent !== undefined) {
       const x = parseInt(match[1] || '0', 10);
       const y = parseInt(match[2] || '0', 10);
-      if (x < 0 || y < 0) {
-        return propertyError(key, line, `Property '${propertyName}' must have non-negative values, got: Vector2i(${x}, ${y})`, errorCodeValue);
+      if (x < minComponent || y < minComponent) {
+        // The 0 case keeps its long-standing wording; every per-node test that
+        // asserts a substring of it is asserting the engine's floor, not the phrasing.
+        const requirement =
+          minComponent === 0 ? 'must have non-negative values' : `must have components >= ${minComponent}`;
+        return propertyError(key, line, `Property '${propertyName}' ${requirement}, got: Vector2i(${x}, ${y})`, errorCodeValue, valueSeverity);
       }
     }
 

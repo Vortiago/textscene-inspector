@@ -55,12 +55,14 @@ function checkLabel3D(context: RuleContext): Diagnostic[] {
         {
           under: PIXEL_SIZE_HINT_MIN,
           ruleName: 'label3d-small-pixel-size',
+          cite: 'label_3d.cpp:131',
           message: (pixelSize) =>
             `Label3D pixel_size is ${pixelSize}. The editor range starts at ${PIXEL_SIZE_HINT_MIN}.`,
         },
         {
           over: PIXEL_SIZE_HINT_MAX,
           ruleName: 'label3d-large-pixel-size',
+          cite: 'label_3d.cpp:131',
           message: (pixelSize) =>
             `Label3D pixel_size is ${pixelSize}. The editor range stops at ${PIXEL_SIZE_HINT_MAX}.`,
         },

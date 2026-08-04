@@ -2,10 +2,10 @@
  * Skeleton3D strict validators for linting.
  * Migrated to the declarative `v` namespace.
  *
- * Bone properties (`bones/<idx>/<sub>`) keep a bespoke validator
- * because the sub-property name drives format choice (Vector3 for
- * position/scale, Quaternion for rotation) and the indexed key needs
- * its own message wording.
+ * Bone properties (`bones/<idx>/<sub>`) keep a bespoke validator because the
+ * sub-property name drives format choice (Vector3 for position/scale,
+ * Quaternion for rotation), which `v`'s per-property combinators have no way
+ * to key on.
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
@@ -23,23 +23,20 @@ const MODIFIER_CALLBACK_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
 // v.quaternion and the renderer.
 const QUATERNION_REGEX = makeFloatTupleRegex('Quaternion', 4);
 
-/** Custom boolean validator with the legacy "true or false" message wording. */
-function legacyBoolean(name: string): PropertyValidator {
-  const validator: PropertyValidator = (key, value, line) => {
-    if (value !== 'true' && value !== 'false') {
-      return propertyError(key, line, `Property '${name}' must be true or false, got: "${value}"`, `INVALID_${name.toUpperCase()}_FORMAT`);
-    }
-    return null;
-  };
-  validator.accepts = 'true or false';
-  return validator;
-}
-
+/**
+ * `bones/<idx>/<sub>` dispatcher. The malformed-key and Vector3/Quaternion
+ * shape branches reject only format; the negative-index branch is a real
+ * bound (see the citation below), so the whole function is tagged `bounded`
+ * + `grounding` rather than `formatOnly`.
+ */
 const bonesValidator: PropertyValidator = (key, value, line) => {
   const match = key.match(/^bones\/(\d+)\/(.+)$/);
   if (!match || !match[1] || !match[2]) {
     const negativeMatch = key.match(/^bones\/(-\d+)\//);
     if (negativeMatch) {
+      // skeleton_3d.cpp:82, `path.get_slicec('/', 1).to_int()` assigned into a
+      // `uint32_t which`: a negative index wraps to a huge value, and :90
+      // `ERR_FAIL_UNSIGNED_INDEX_V(which, bones.size(), false)` then refuses it.
       return {
         severity: 'error',
         message: `Bone index must be non-negative, got: ${negativeMatch[1]}`,
@@ -80,8 +77,12 @@ validatorRegistry.registerAll('Skeleton3D', {
       "Property 'motion_scale' must be greater than 0. A value of 0 or less prevents animations from applying.",
     enforced: 'skeleton_3d.cpp:585',
   }),
-  show_rest_only: legacyBoolean('show_rest_only'),
-  animate_physical_bones: legacyBoolean('animate_physical_bones'),
+  // skeleton_3d.cpp:1294, plain BOOL ADD_PROPERTY, no hint. set_show_rest_only
+  // (:814-817) is a bare assignment (plus a signal emit, not a rejection).
+  show_rest_only: v.boolean('show_rest_only'),
+  // skeleton_3d.cpp:1326, plain BOOL ADD_PROPERTY, no hint.
+  // set_animate_physical_bones (:1369-1376) is a bare assignment.
+  animate_physical_bones: v.boolean('animate_physical_bones'),
   // skeleton_3d.cpp:435-441 is a bare assignment (only an equal-check early
   // return); no engine-side range check on the raw int.
   modifier_callback_mode_process: v.enumInt(
@@ -96,3 +97,7 @@ validatorRegistry.registerAll('Skeleton3D', {
 
 // Shown in the generated `## Linting` table of this node's sheet.
 bonesValidator.accepts = 'bone pose component (float, Vector3 or Quaternion)';
+// Tagged by hand (not built through `v`) so `boundGrounding.test.ts`'s sweep
+// sees the negative-index bound too.
+bonesValidator.bounded = true;
+bonesValidator.grounding = { kind: 'enforced', cite: 'skeleton_3d.cpp:90' };

@@ -59,10 +59,10 @@ validatorRegistry.registerAll('Window', {
     { hinted: 'window.cpp:3427' }
   ),
   position: v.vector2i('position'),
-  // scene/main/window.cpp: _update_window_size(): `size = size.max(size_limit)`, and
-  // size_limit derives from min_size (itself floor-clamped to 0 by _clamp_limit_size),
-  // so a negative size set via the .tscn setter is immediately clamped back to >= 0
-  size: v.vector2i('size', true),
+  // set_size (window.cpp:401) bare-assigns, but calls _update_window_size, whose
+  // `size = size.max(size_limit)` (window.cpp:1190) floors it: size_limit comes from
+  // min_size, itself clamped to >= 0 by _clamp_limit_size. A negative size is altered.
+  size: v.vector2i('size', { min: 0, enforced: 'window.cpp:1190' }),
   // window.cpp:3430 — PROPERTY_HINT_RANGE "0,64,1,or_greater": 64 is a soft
   // editor bound (or_greater), so only the 0 floor is closed. set_current_screen
   // (window.cpp:344-351) assigns unconditionally, no clamp.
@@ -91,13 +91,15 @@ validatorRegistry.registerAll('Window', {
   maximize_disabled: v.boolean('maximize_disabled'),
   force_native: v.boolean('force_native'),
 
-  // "Limits" group. min_size/max_size are clamped non-negative by _clamp_limit_size.
-  min_size: v.vector2i('min_size', true),
-  max_size: v.vector2i('max_size', true),
+  // "Limits" group. _clamp_limit_size (window.cpp:461-469) raises either component
+  // to 0 in both its branches, so a negative limit never survives the setter.
+  min_size: v.vector2i('min_size', { min: 0, enforced: 'window.cpp:461' }),
+  max_size: v.vector2i('max_size', { min: 0, enforced: 'window.cpp:461' }),
   keep_title_visible: v.boolean('keep_title_visible'),
 
   // "Content Scale" group.
-  content_scale_size: v.vector2i('content_scale_size', true), // set_content_scale_size: ERR_FAIL_COND on either component < 0
+  // set_content_scale_size (window.cpp:1716-1717) ERR_FAIL_CONDs on either component < 0.
+  content_scale_size: v.vector2i('content_scale_size', { min: 0, enforced: 'window.cpp:1716' }),
   // window.cpp:3463 — PROPERTY_HINT_ENUM, 3 labels. set_content_scale_mode
   // (window.cpp:1727-1731) assigns unconditionally, no ERR_FAIL.
   content_scale_mode: v.enumInt(

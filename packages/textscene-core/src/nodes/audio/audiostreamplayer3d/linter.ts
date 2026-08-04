@@ -11,16 +11,10 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import {
-  extremeVolumeArms,
-  unusualPitchArms,
+  player3DVolumeArms,
+  player3DPitchArms,
   checkInvalidMaxPolyphony,
 } from '../sharedLinterChecks.js';
-
-// audio_stream_player_3d.cpp:883, volume_db PROPERTY_HINT_RANGE "-80,80,suffix:dB":
-// both ends closed, and wider than the 2D/base players' "-80,24". set_volume_db
-// (:552) only ERR_FAILs on NaN, so the band is advisory.
-const VOLUME_DB_HINT_MIN = -80;
-const VOLUME_DB_HINT_MAX = 80;
 
 // audio_stream_player_3d.cpp:885, unit_size PROPERTY_HINT_RANGE
 // "0.1,100,0.01,or_greater": top end open, and set_unit_size (:569) is a bare
@@ -121,16 +115,17 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
   // Range advisories: volume, unit size and pitch bands.
   diagnostics.push(
     ...rangeAdvisories(node, {
-      volume_db: extremeVolumeArms('audiostreamplayer3d', VOLUME_DB_HINT_MIN, VOLUME_DB_HINT_MAX),
+      volume_db: player3DVolumeArms('audiostreamplayer3d'),
       unit_size: [
         {
           under: UNIT_SIZE_HINT_MIN,
           ruleName: 'audiostreamplayer3d-small-unit-size',
+          cite: 'audio_stream_player_3d.cpp:885',
           message: (unitSize) =>
             `Property 'unit_size' is ${unitSize}. The editor range starts at ${UNIT_SIZE_HINT_MIN}.`,
         },
       ],
-      pitch_scale: unusualPitchArms('audiostreamplayer3d'),
+      pitch_scale: player3DPitchArms('audiostreamplayer3d'),
     })
   );
 

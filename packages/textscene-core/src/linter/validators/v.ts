@@ -139,6 +139,20 @@ export function accepts(validator: PropertyValidator, description: string): Prop
 }
 
 /**
+ * `accepts`, plus the declaration that this validator rejects nothing but
+ * malformed input. Every combinator below is either a `shape` or carries a
+ * `Grounding`; `boundGrounding.test.ts` fails on one that is neither, so a new
+ * combinator cannot quietly start rejecting real values uncited.
+ *
+ * Exported for the same reason as `accepts`: a slice with a bespoke validator
+ * has to classify it too.
+ */
+export function shape(validator: PropertyValidator, description: string): PropertyValidator {
+  validator.formatOnly = true;
+  return accepts(validator, description);
+}
+
+/**
  * Severity of a bound's range branch, and the tag that records why.
  *
  * A validator is tagged with its grounding so `boundGrounding.test.ts` can
@@ -161,6 +175,9 @@ function ground(
   if (enforced) validator.grounding = { kind: 'enforced', cite: enforced };
   else if (hinted) validator.grounding = { kind: 'hinted', cite: hinted };
   if (isBounded) validator.bounded = true;
+  // An unbounded numeric combinator rejects only what is not a number, which
+  // is the same class of rejection every `shape` makes.
+  else validator.formatOnly = true;
   return validator;
 }
 
@@ -368,7 +385,7 @@ export const v = {
 
   /** Boolean (`'true'` | `'false'`). */
   boolean(name: string): PropertyValidator {
-    return accepts(createBooleanValidator(name, formatCode(name)), 'true or false');
+    return shape(createBooleanValidator(name, formatCode(name)), 'true or false');
   },
 
   /**
@@ -377,12 +394,12 @@ export const v = {
    * blank, which reads as "nobody tagged this".
    */
   any(): PropertyValidator {
-    return accepts(() => null, 'any value (no format constraint)');
+    return shape(() => null, 'any value (no format constraint)');
   },
 
   /** Non-empty string (anything that isn't whitespace-only). */
   string(name: string): PropertyValidator {
-    return accepts(createStringValidator(name, formatCode(name)), 'non-empty string');
+    return shape(createStringValidator(name, formatCode(name)), 'non-empty string');
   },
 
   /**
@@ -391,7 +408,7 @@ export const v = {
    */
   quotedString(name: string): PropertyValidator {
     const code = formatCode(name);
-    return accepts((key, value, line) => {
+    return shape((key, value, line) => {
       if (!QUOTED_RE.test(value)) {
         return propertyError(key, line, `Property '${name}' must be a quoted string, got: ${value}`, code);
       }
@@ -406,7 +423,7 @@ export const v = {
    */
   stringName(name: string): PropertyValidator {
     const code = formatCode(name);
-    return accepts((key, value, line) => {
+    return shape((key, value, line) => {
       if (!STRING_NAME_RE.test(value)) {
         return propertyError(
           key,
@@ -422,7 +439,7 @@ export const v = {
   /** `Rect2i(x, y, w, h)` integer format. */
   rect2i(name: string): PropertyValidator {
     const code = formatCode(name);
-    return accepts((key, value, line) => {
+    return shape((key, value, line) => {
       if (!RECT2I_RE.test(value)) {
         return propertyError(
           key,
@@ -437,23 +454,33 @@ export const v = {
 
   /** `Vector2(x, y)` format. */
   vector2(name: string): PropertyValidator {
-    return accepts(createVector2Validator(name, formatCode(name)), 'Vector2(x, y)');
+    return shape(createVector2Validator(name, formatCode(name)), 'Vector2(x, y)');
   },
 
   /**
-   * `Vector2i(x, y)` integer format with optional non-negative
-   * requirement (defaults to false to match the underlying factory).
+   * `Vector2i(x, y)` integer format, optionally with a per-COMPONENT minimum.
+   *
+   * `min` rejects a value Godot's parser reads perfectly well, so it is a bound
+   * like any other and takes its `Grounding`. It used to be a bare positional
+   * `requireNonNegative` boolean, which put it outside `boundGrounding`'s sweep
+   * entirely: `Window.size` and `SubViewport.size` both refused a negative
+   * component with nothing recorded about which setter, if any, agreed.
    */
-  vector2i(name: string, requireNonNegative = false): PropertyValidator {
-    return accepts(
-      createVector2iValidator(name, requireNonNegative, formatCode(name), valueCode(name)),
-      requireNonNegative ? 'Vector2i(x, y), both >= 0' : 'Vector2i(x, y)'
+  vector2i(name: string, opts: { min?: number } & Grounding = {}): PropertyValidator {
+    const { min } = opts;
+    return ground(
+      accepts(
+        createVector2iValidator(name, min, formatCode(name), valueCode(name), endSeverity(opts, 'min')),
+        min === undefined ? 'Vector2i(x, y)' : `Vector2i(x, y), both >= ${min}`
+      ),
+      opts,
+      min !== undefined
     );
   },
 
   /** `Vector3(x, y, z)` format. */
   vector3(name: string): PropertyValidator {
-    return accepts(createVector3Validator(name, formatCode(name)), 'Vector3(x, y, z)');
+    return shape(createVector3Validator(name, formatCode(name)), 'Vector3(x, y, z)');
   },
 
   /**
@@ -512,17 +539,17 @@ export const v = {
 
   /** `Rect2(x, y, w, h)` format. */
   rect2(name: string): PropertyValidator {
-    return accepts(createRect2Validator(name, formatCode(name)), 'Rect2(x, y, w, h)');
+    return shape(createRect2Validator(name, formatCode(name)), 'Rect2(x, y, w, h)');
   },
 
   /** `Transform3D(...12 floats)` format. */
   transform3d(name: string): PropertyValidator {
-    return accepts(createTransform3DValidator(name, formatCode(name)), 'Transform3D(12 floats)');
+    return shape(createTransform3DValidator(name, formatCode(name)), 'Transform3D(12 floats)');
   },
 
   /** `SubResource("id")` or `ExtResource("id")` format. */
   resourceReference(name: string): PropertyValidator {
-    return accepts(
+    return shape(
       createResourceReferenceValidator(
       name,
       `INVALID_${upper(name)}_REFERENCE`
@@ -533,7 +560,7 @@ export const v = {
 
   /** `NodePath("path/to/node")` format. */
   nodePath(name: string): PropertyValidator {
-    return accepts(
+    return shape(
       createNodePathValidator(name, `INVALID_${upper(name)}_PATH`),
       'NodePath("path/to/node")'
     );
@@ -545,7 +572,7 @@ export const v = {
    * directionallight3d/omnilight3d/spotlight3d's hand-rolled version.
    */
   color(name: string): PropertyValidator {
-    return accepts(
+    return shape(
       floatTupleValidator(name, 'Color', 4, 'Color with 4 numbers like Color(1, 1, 1, 1)', formatCode(name)),
       'Color(r, g, b, a)'
     );
@@ -553,7 +580,7 @@ export const v = {
 
   /** `AABB(x, y, z, w, h, d)` format. */
   aabb(name: string): PropertyValidator {
-    return accepts(
+    return shape(
       floatTupleValidator(name, 'AABB', 6, 'AABB with 6 numbers like AABB(0, 0, 0, 1, 1, 1)', formatCode(name)),
       'AABB(x, y, z, w, h, d)'
     );
@@ -561,7 +588,7 @@ export const v = {
 
   /** `Quaternion(x, y, z, w)` format. */
   quaternion(name: string): PropertyValidator {
-    return accepts(
+    return shape(
       floatTupleValidator(name, 'Quaternion', 4, 'Quaternion with 4 numbers like Quaternion(0, 0, 0, 1)', formatCode(name)),
       'Quaternion(x, y, z, w)'
     );
@@ -569,7 +596,7 @@ export const v = {
 
   /** `Transform2D(6 floats)` format. */
   transform2d(name: string): PropertyValidator {
-    return accepts(
+    return shape(
       floatTupleValidator(name, 'Transform2D', 6, 'Transform2D with 6 numbers like Transform2D(1, 0, 0, 1, 0, 0)', formatCode(name)),
       'Transform2D(6 floats)'
     );
@@ -583,7 +610,7 @@ export const v = {
    */
   lenientInt(name: string): PropertyValidator {
     const formatErr = formatCode(name);
-    return accepts(
+    return shape(
       (key, value, line) => {
       const parsed = parseInt(value, 10);
       if (isNaN(parsed)) {
@@ -654,7 +681,7 @@ export const v = {
 
   /** `Basis(9 floats)` format. */
   basis(name: string): PropertyValidator {
-    return accepts(
+    return shape(
       floatTupleValidator(name, 'Basis', 9, 'Basis with 9 numbers like Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)', formatCode(name)),
       'Basis(9 floats)'
     );
@@ -677,9 +704,8 @@ export const v = {
    */
   packedVector2Array(name: string): PropertyValidator {
     const formatErr = formatCode(name);
-    const valueErr = valueCode(name);
     const WRAPPER = /^\s*PackedVector2Array\s*\(([\s\S]*)\)\s*$/;
-    return accepts(
+    return shape(
       (key, value, line) => {
       const match = WRAPPER.exec(value);
       if (!match) {
@@ -705,17 +731,13 @@ export const v = {
           );
         }
       }
-      if (parts.length % 2 !== 0) {
-        return propertyError(
-          key,
-          line,
-          `Property '${name}' must contain coordinate pairs, got ${parts.length} values (odd)`,
-          valueErr
-        );
-      }
+      // An ODD count is NOT rejected. VariantParser builds the array with
+      // `int len = args.size() / 2` (variant_parser.cpp:1555), integer division,
+      // so a trailing lone coordinate is silently dropped and the scene loads.
+      // Rejecting it refused a file Godot reads.
       return null;
     },
-      'PackedVector2Array(x, y, …) — even count'
+      'PackedVector2Array(x, y, …)'
     );
   },
 };

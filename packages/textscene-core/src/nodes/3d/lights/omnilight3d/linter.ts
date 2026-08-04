@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { rangeAdvisories } from '../../../../linter/rangeAdvisory.js';
-import { lightEnergyArms, lightRangeArms } from '../shared/linterChecks.js';
+import { lightEnergyArms, omniRangeArms } from '../shared/linterChecks.js';
 
 /**
  * Validate OmniLight3D semantic rules
@@ -22,7 +22,7 @@ function checkOmniLight3D(context: RuleContext): Diagnostic[] {
 
   return rangeAdvisories(node, {
     light_energy: lightEnergyArms('omnilight3d'),
-    omni_range: lightRangeArms('omnilight3d'),
+    omni_range: omniRangeArms('omnilight3d'),
   });
 }
 

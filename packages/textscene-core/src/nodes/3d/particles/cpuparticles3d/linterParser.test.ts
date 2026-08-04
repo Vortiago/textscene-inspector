@@ -181,10 +181,11 @@ describe('CPUParticles3D strict validators', () => {
       expect(check('emission_points', 'not-an-array')?.code).toBe('INVALID_EMISSION_POINTS_FORMAT');
     });
 
-    it('rejects an emission_points whose count is not a multiple of 3', () => {
-      expect(check('emission_points', 'PackedVector3Array(0, 0, 1, 0)')?.code).toBe(
-        'INVALID_EMISSION_POINTS_VALUE'
-      );
+    // variant_parser.cpp:1573 divides the flat float count by 3 with integer
+    // division and drops the remainder, so a count that isn't a multiple of 3
+    // still loads (as a shorter array) rather than failing to parse.
+    it('accepts an emission_points count that is not a multiple of 3', () => {
+      expect(check('emission_points', 'PackedVector3Array(0, 0, 1, 0)')).toBeNull();
     });
 
     it('accepts an empty and a populated emission_colors (PackedColorArray)', () => {
@@ -192,10 +193,9 @@ describe('CPUParticles3D strict validators', () => {
       expect(check('emission_colors', 'PackedColorArray(1, 1, 1, 1)')).toBeNull();
     });
 
-    it('rejects an emission_colors whose count is not a multiple of 4', () => {
-      expect(check('emission_colors', 'PackedColorArray(1, 1, 1)')?.code).toBe(
-        'INVALID_EMISSION_COLORS_VALUE'
-      );
+    // variant_parser.cpp:1609 divides the flat float count by 4 the same way.
+    it('accepts an emission_colors count that is not a multiple of 4', () => {
+      expect(check('emission_colors', 'PackedColorArray(1, 1, 1)')).toBeNull();
     });
 
     it('rejects a malformed emission_colors', () => {

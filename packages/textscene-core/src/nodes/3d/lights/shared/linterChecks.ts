@@ -5,8 +5,8 @@
  * and messages live here once and flow through the shared `rangeAdvisories`
  * combinator.
  *
- * Both bands are one-sided: every Light3D range hint ends in `or_greater`, so
- * the high end is open and only a negative value is out of band. `Light3D::set_param`
+ * All three bands are one-sided: every Light3D range hint ends in `or_greater`,
+ * so the high end is open and only a negative value is out of band. `Light3D::set_param`
  * guards the param INDEX, not the value, so neither end is enforced.
  */
 
@@ -23,6 +23,7 @@ export function lightEnergyArms(rulePrefix: string): RangeArm[] {
       // light_3d.cpp:389 — light_energy PROPERTY_HINT_RANGE "0,16,0.001,or_greater"
       under: 0,
       ruleName: `${rulePrefix}-negative-energy`,
+      cite: 'light_3d.cpp:389',
       message: (energy) =>
         `Light energy is negative (${energy}). The editor range for light_energy starts at 0.`,
     },
@@ -30,15 +31,33 @@ export function lightEnergyArms(rulePrefix: string): RangeArm[] {
 }
 
 /**
- * The `<prop>_range` **Range advisory** shared by point/spot lights, whose two
- * hints are identical apart from the property name.
+ * `omni_range`'s **Range advisory**. light_3d.cpp:639, PROPERTY_HINT_RANGE
+ * "0,4096,0.001,or_greater,exp".
  */
-export function lightRangeArms(rulePrefix: string): RangeArm[] {
+export function omniRangeArms(rulePrefix: string): RangeArm[] {
   return [
     {
-      // light_3d.cpp:639 (omni_range) / :672 (spot_range) — PROPERTY_HINT_RANGE "0,4096,0.001,or_greater"
       under: 0,
       ruleName: `${rulePrefix}-negative-range`,
+      cite: 'light_3d.cpp:639',
+      message: (range) =>
+        `Light range is negative (${range}). The editor range for this property starts at 0.`,
+    },
+  ];
+}
+
+/**
+ * `spot_range`'s **Range advisory**. light_3d.cpp:672, PROPERTY_HINT_RANGE
+ * "0,4096,0.001,or_greater,exp,suffix:m". Same bound as `omni_range` (both 0,
+ * open top) but a separate hint line, so it gets its own citation rather than
+ * sharing `omniRangeArms`'s.
+ */
+export function spotRangeArms(rulePrefix: string): RangeArm[] {
+  return [
+    {
+      under: 0,
+      ruleName: `${rulePrefix}-negative-range`,
+      cite: 'light_3d.cpp:672',
       message: (range) =>
         `Light range is negative (${range}). The editor range for this property starts at 0.`,
     },

@@ -61,7 +61,7 @@ Strict parsing format-checks these `Polygon2D` properties, plus 12 inherited fro
 | `texture_offset` | Vector2(x, y) |
 | `texture_rotation` | float |
 | `texture_scale` | Vector2(x, y) |
-| `uv` | PackedVector2Array(x, y, …) — even count |
+| `uv` | PackedVector2Array(x, y, …) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

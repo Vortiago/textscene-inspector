@@ -133,6 +133,16 @@ describe('Generic6DOFJoint3D strict validators', () => {
       expect(check('angular_limit_x/damping', '16')).toBeNull();
     });
 
+    it('accepts an angular restitution of 0, which is Godot own constructor default', () => {
+      // The hint floors at 0.01 (:112) but the constructor writes 0 on every
+      // axis (:330, :360, :390). A scene serialising the default must not warn.
+      expect(check('angular_limit_x/restitution', '0')).toBeNull();
+      expect(check('angular_limit_y/restitution', '0')).toBeNull();
+      expect(check('angular_limit_z/restitution', '0')).toBeNull();
+      // The linear group keeps its floor: that restitution defaults to 0.5.
+      expect(check('linear_limit_x/restitution', '0')?.severity).toBe('warning');
+    });
+
     it('accepts force_limit/erp unbounded', () => {
       expect(check('angular_limit_x/force_limit', '99999')).toBeNull();
       expect(check('angular_limit_x/erp', '-99999')).toBeNull();
@@ -173,6 +183,56 @@ describe('Generic6DOFJoint3D strict validators', () => {
     it('rejects a key whose leaf name no ADD_PROPERTYI call registers, per group', () => {
       expect(check('linear_limit_x/not_a_real_leaf', '1')?.code).toBe('INVALID_LINEAR_LIMIT_KEY');
       expect(check('angular_spring_y/not_a_real_leaf', '1')?.code).toBe('INVALID_ANGULAR_SPRING_KEY');
+    });
+  });
+
+  describe('dispatcher-level classification (boundGrounding.test.ts sweep)', () => {
+    // The sweep inspects the function registered under the wildcard key
+    // itself, not the per-leaf validators it forwards to, so each of the 6
+    // shared dispatchers needs its own formatOnly/grounding tag even though
+    // every leaf above is already individually grounded.
+    function dispatcher(key: string) {
+      const validator = validatorRegistry.findValidator('Generic6DOFJoint3D', key);
+      expect(validator, `no validator registered for Generic6DOFJoint3D.${key}`).not.toBeNull();
+      return validator!;
+    }
+
+    it('tags groups with a real hinted bound as bounded + grounded, on every axis', () => {
+      // Pinned to the exact governing line per group (not a shape-only regex):
+      // softness (linear_limit), upper_angle (angular_limit) and
+      // equilibrium_point (angular_spring) are each the FIRST hinted bound in
+      // that group's leaf table above.
+      const expectedCite: Record<string, string> = {
+        linear_limit: 'generic_6dof_joint_3d.cpp:57',
+        angular_limit: 'generic_6dof_joint_3d.cpp:109',
+        angular_spring: 'generic_6dof_joint_3d.cpp:154',
+      };
+      for (const group of Object.keys(expectedCite)) {
+        for (const axis of ['x', 'y', 'z']) {
+          const validator = dispatcher(`${group}_${axis}/*`);
+          expect(validator.bounded, `${group}_${axis}/*`).toBe(true);
+          expect(validator.grounding, `${group}_${axis}/*`).toEqual({
+            kind: 'hinted',
+            cite: expectedCite[group],
+          });
+        }
+      }
+    });
+
+    it('tags groups with no bound anywhere as format-only, on every axis', () => {
+      for (const group of ['linear_motor', 'linear_spring', 'angular_motor']) {
+        for (const axis of ['x', 'y', 'z']) {
+          const validator = dispatcher(`${group}_${axis}/*`);
+          expect(validator.formatOnly, `${group}_${axis}/*`).toBe(true);
+          expect(validator.grounding, `${group}_${axis}/*`).toBeUndefined();
+        }
+      }
+    });
+
+    it('shares one dispatcher instance across all three axes per group', () => {
+      // Confirms tagging one instance covers all 18 registrations, not just 6.
+      expect(dispatcher('linear_limit_x/*')).toBe(dispatcher('linear_limit_y/*'));
+      expect(dispatcher('linear_limit_y/*')).toBe(dispatcher('linear_limit_z/*'));
     });
   });
 });

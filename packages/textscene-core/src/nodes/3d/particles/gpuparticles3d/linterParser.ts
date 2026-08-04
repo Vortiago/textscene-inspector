@@ -3,12 +3,11 @@
  * Migrated to the declarative `v` namespace.
  *
  * `amount` keeps a bespoke validator because it has THREE branches
- * (format / non-positive / excessive). `visibility_aabb` similarly
- * validates AABB format AND positive size components in one shot.
+ * (format / non-positive / excessive).
  */
 
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v, makeFloatTupleRegex } from '../../../../linter/validators/index.js';
+import { v } from '../../../../linter/validators/index.js';
 import { propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
@@ -17,10 +16,6 @@ import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js'
 // previous 3-label map both dropped REVERSE_LIFETIME and mislabelled index 2
 // as VIEW_DEPTH (Godot's own index 2 is REVERSE_LIFETIME; VIEW_DEPTH is 3).
 const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME', 2: 'REVERSE_LIFETIME', 3: 'VIEW_DEPTH' };
-
-// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
-// v.aabb and the renderer.
-const AABB_REGEX = makeFloatTupleRegex('AABB', 6);
 
 const amountValidator: PropertyValidator = (key, value, line) => {
   const num = parseInt(value, 10);
@@ -39,25 +34,6 @@ const amountValidator: PropertyValidator = (key, value, line) => {
 // sees this bound too.
 amountValidator.bounded = true;
 amountValidator.grounding = { kind: 'enforced', cite: 'gpu_particles_3d.cpp:76' };
-
-const visibilityAabbValidator: PropertyValidator = (key, value, line) => {
-  if (!AABB_REGEX.test(value)) {
-    return propertyError(key, line, `Property 'visibility_aabb' must be AABB with 6 numbers like AABB(0, 0, 0, 1, 1, 1), got: "${value}"`, 'INVALID_VISIBILITY_AABB_FORMAT');
-  }
-
-  const match = value.match(AABB_REGEX);
-  if (match && match[4] && match[5] && match[6]) {
-    const width = parseFloat(match[4]);
-    const height = parseFloat(match[5]);
-    const depth = parseFloat(match[6]);
-
-    if (width <= 0 || height <= 0 || depth <= 0) {
-      return propertyError(key, line, `Property 'visibility_aabb' size components must be positive (width=${width}, height=${height}, depth=${depth})`, 'INVALID_VISIBILITY_AABB_SIZE');
-    }
-  }
-
-  return null;
-};
 
 validatorRegistry.registerAll('GPUParticles3D', {
   emitting: v.boolean('emitting'),
@@ -92,7 +68,10 @@ validatorRegistry.registerAll('GPUParticles3D', {
   fract_delta: v.boolean('fract_delta'),
   process_material: v.resourceReference('process_material'),
   draw_pass_1: v.resourceReference('draw_pass_1'),
-  visibility_aabb: visibilityAabbValidator,
+  // set_visibility_aabb (gpu_particles_3d.cpp:139-143) assigns straight through
+  // to particles_set_custom_aabb. A negative extent is a value Godot keeps, which
+  // is why AABB.abs() exists, so only the format is checkable.
+  visibility_aabb: v.aabb('visibility_aabb'),
   local_coords: v.boolean('local_coords'),
   // gpu_particles_3d.cpp:236-239, set_draw_order is a bare assignment.
   draw_order: v.enumInt('draw_order', 0, 3, DRAW_ORDER, { hinted: 'gpu_particles_3d.cpp:843' }),
@@ -123,4 +102,3 @@ validatorRegistry.registerAll('GPUParticles3D', {
 
 // Shown in the generated `## Linting` table of this node's sheet.
 amountValidator.accepts = 'integer > 0';
-visibilityAabbValidator.accepts = 'AABB(12 floats)';

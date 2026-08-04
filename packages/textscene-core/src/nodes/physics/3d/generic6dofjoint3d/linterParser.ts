@@ -27,6 +27,14 @@
  * per-axis `ADD_PROPERTYI` calls for a given leaf uses byte-identical
  * `PropertyInfo` (same hint, same range), so all three axes of a group
  * share ONE leaf-lookup table rather than tripling it.
+ *
+ * Each leaf validator is individually grounded (`v.float`/`v.radians`
+ * `hinted:`, `v.boolean` format-only), but `boundGrounding.test.ts`'s sweep
+ * inspects the function REGISTERED under the wildcard key, i.e. the
+ * dispatcher `groupValidator` returns, not the leaves it forwards to — so
+ * each of the 6 shared dispatcher instances (covering the 18 registrations)
+ * carries its own `formatOnly`/`bounded`+`grounding` tag too, set by
+ * `groupValidator`'s `classification` parameter.
  */
 
 import '../../joints/shared/linterParser.js';
@@ -91,12 +99,16 @@ const ANGULAR_LIMIT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
     maxDeg: 180,
     hinted: 'generic_6dof_joint_3d.cpp:110',
   }),
-  // softness/restitution/damping: PROPERTY_HINT_RANGE "0.01,16,0.01" (:111-113).
+  // softness/damping: PROPERTY_HINT_RANGE "0.01,16,0.01" (:111, :113).
   softness: v.float('softness', { min: 0.01, max: 16, hinted: 'generic_6dof_joint_3d.cpp:111' }),
+  // The hint (:112) floors at 0.01, but the constructor sets this param to 0 on
+  // every axis (:330, :360, :390), so Godot's own default sits below its own
+  // hint. A floor its default violates states nothing about legal values, so
+  // only the ceiling is checked. The linear group has no such conflict: its
+  // restitution defaults to 0.5.
   restitution: v.float('restitution', {
-    min: 0.01,
     max: 16,
-    hinted: 'generic_6dof_joint_3d.cpp:112',
+    hinted: { max: 'generic_6dof_joint_3d.cpp:112' },
   }),
   damping: v.float('damping', { min: 0.01, max: 16, hinted: 'generic_6dof_joint_3d.cpp:113' }),
   // force_limit: PROPERTY_HINT_NONE, "suffix:kg⋅m²/s² (Nm)" — unbounded.
@@ -136,6 +148,33 @@ const ANGULAR_SPRING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 const GROUP_AXIS_PREFIX_RE = /^[^/]+\//;
 
 /**
+ * How a group's wildcard dispatcher itself is classified for
+ * `boundGrounding.test.ts`'s sweep. That sweep inspects only the function
+ * REGISTERED under the wildcard key (this dispatcher), never the per-leaf
+ * validators it forwards to, so the dispatcher needs its own tag even though
+ * every leaf above is already individually `v.float`/`v.radians`-grounded or
+ * `v.boolean`-format-only.
+ *
+ * `formatOnly` when no leaf in the group carries a bound at all (the group is
+ * booleans and HINT_NONE floats, so the dispatcher rejects only what Godot's
+ * own parser could not read either — an unrecognised leaf name included, since
+ * no `.tscn` the engine saves carries a leaf outside the group's fixed
+ * `ADD_PROPERTYI` list). `hinted` when at least one leaf has a real
+ * `PROPERTY_HINT_RANGE` bound; the citation names ONE governing line as a
+ * representative for the sweep — each leaf's own exact citation (which may
+ * differ line-to-line within the group) is what actually drives that leaf's
+ * severity, via its own `v.float`/`v.radians` call above.
+ *
+ * No `'enforced'` variant: `set_param_x/y/z` and `set_flag_x/y/z` are
+ * index-only guards (`ERR_FAIL_INDEX(p_param, PARAM_MAX)`) followed by a bare
+ * assignment, on every leaf in every group, so nothing on this node is ever
+ * enforced.
+ */
+type GroupClassification =
+  | { readonly kind: 'formatOnly' }
+  | { readonly kind: 'hinted'; readonly cite: string };
+
+/**
  * Builds a `<group>_<axis>/*` dispatcher for one property group. The axis
  * letter lives inside the segment this strips, so the same table (and the
  * same dispatcher instance) is registered under all three axis wildcards —
@@ -145,9 +184,10 @@ const GROUP_AXIS_PREFIX_RE = /^[^/]+\//;
 function groupValidator(
   leaves: Readonly<Record<string, PropertyValidator>>,
   groupLabel: string,
-  unknownCode: string
+  unknownCode: string,
+  classification: GroupClassification
 ): PropertyValidator {
-  return accepts((key, value, line) => {
+  const validator = accepts((key, value, line) => {
     const leafName = key.replace(GROUP_AXIS_PREFIX_RE, '');
     const leaf = leaves[leafName];
     if (!leaf) {
@@ -155,14 +195,64 @@ function groupValidator(
     }
     return leaf(key, value, line);
   }, `${groupLabel} parameter (see generic_6dof_joint_3d.cpp _bind_methods)`);
+  if (classification.kind === 'formatOnly') {
+    validator.formatOnly = true;
+  } else {
+    validator.bounded = true;
+    validator.grounding = { kind: classification.kind, cite: classification.cite };
+  }
+  // The dispatcher's own tag says nothing about the leaves behind it, so the
+  // sweep recurses through these rather than stopping at the wildcard key.
+  validator.leaves = Object.values(leaves);
+  return validator;
 }
 
-const linearLimitValidator = groupValidator(LINEAR_LIMIT_LEAVES, 'linear limit', 'INVALID_LINEAR_LIMIT_KEY');
-const linearMotorValidator = groupValidator(LINEAR_MOTOR_LEAVES, 'linear motor', 'INVALID_LINEAR_MOTOR_KEY');
-const linearSpringValidator = groupValidator(LINEAR_SPRING_LEAVES, 'linear spring', 'INVALID_LINEAR_SPRING_KEY');
-const angularLimitValidator = groupValidator(ANGULAR_LIMIT_LEAVES, 'angular limit', 'INVALID_ANGULAR_LIMIT_KEY');
-const angularMotorValidator = groupValidator(ANGULAR_MOTOR_LEAVES, 'angular motor', 'INVALID_ANGULAR_MOTOR_KEY');
-const angularSpringValidator = groupValidator(ANGULAR_SPRING_LEAVES, 'angular spring', 'INVALID_ANGULAR_SPRING_KEY');
+// Bounded: softness/restitution/damping are each hinted 0.01-16
+// (generic_6dof_joint_3d.cpp:57-59); citing the first as representative.
+const linearLimitValidator = groupValidator(
+  LINEAR_LIMIT_LEAVES,
+  'linear limit',
+  'INVALID_LINEAR_LIMIT_KEY',
+  { kind: 'hinted', cite: 'generic_6dof_joint_3d.cpp:57' }
+);
+// Format-only: enabled (bool) plus two HINT_NONE floats, no bound anywhere.
+const linearMotorValidator = groupValidator(
+  LINEAR_MOTOR_LEAVES,
+  'linear motor',
+  'INVALID_LINEAR_MOTOR_KEY',
+  { kind: 'formatOnly' }
+);
+// Format-only: enabled (bool) plus three unhinted floats, no bound anywhere.
+const linearSpringValidator = groupValidator(
+  LINEAR_SPRING_LEAVES,
+  'linear spring',
+  'INVALID_LINEAR_SPRING_KEY',
+  { kind: 'formatOnly' }
+);
+// Bounded: upper_angle/lower_angle hinted +-180 degrees
+// (generic_6dof_joint_3d.cpp:109-110) and softness/restitution/damping hinted
+// 0.01-16 (:111-113); citing upper_angle's line as representative.
+const angularLimitValidator = groupValidator(
+  ANGULAR_LIMIT_LEAVES,
+  'angular limit',
+  'INVALID_ANGULAR_LIMIT_KEY',
+  { kind: 'hinted', cite: 'generic_6dof_joint_3d.cpp:109' }
+);
+// Format-only: enabled (bool) plus two HINT_NONE floats, no bound anywhere.
+const angularMotorValidator = groupValidator(
+  ANGULAR_MOTOR_LEAVES,
+  'angular motor',
+  'INVALID_ANGULAR_MOTOR_KEY',
+  { kind: 'formatOnly' }
+);
+// Bounded: equilibrium_point hinted +-180 degrees (generic_6dof_joint_3d.cpp:154),
+// the group's only real bound.
+const angularSpringValidator = groupValidator(
+  ANGULAR_SPRING_LEAVES,
+  'angular spring',
+  'INVALID_ANGULAR_SPRING_KEY',
+  { kind: 'hinted', cite: 'generic_6dof_joint_3d.cpp:154' }
+);
 
 validatorRegistry.registerAll('Generic6DOFJoint3D', {
   'linear_limit_x/*': linearLimitValidator,

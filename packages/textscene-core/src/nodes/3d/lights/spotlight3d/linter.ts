@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { rangeAdvisories } from '../../../../linter/rangeAdvisory.js';
-import { lightEnergyArms, lightRangeArms } from '../shared/linterChecks.js';
+import { lightEnergyArms, spotRangeArms } from '../shared/linterChecks.js';
 
 /**
  * Validate SpotLight3D semantic rules
@@ -23,18 +23,20 @@ function checkSpotLight3D(context: RuleContext): Diagnostic[] {
 
   return rangeAdvisories(node, {
     light_energy: lightEnergyArms('spotlight3d'),
-    spot_range: lightRangeArms('spotlight3d'),
+    spot_range: spotRangeArms('spotlight3d'),
     spot_angle: [
       {
         // light_3d.cpp:674 — spot_angle PROPERTY_HINT_RANGE "0,180,0.01,degrees", both ends closed
         under: 0,
         ruleName: 'spotlight3d-spot-angle-out-of-range',
+        cite: 'light_3d.cpp:674',
         message: (angle) =>
           `Spot angle is negative (${angle} degrees). The editor range for spot_angle is 0 to 180 degrees.`,
       },
       {
         over: 180,
         ruleName: 'spotlight3d-spot-angle-out-of-range',
+        cite: 'light_3d.cpp:674',
         message: (angle) =>
           `Spot angle is ${angle} degrees. The editor range for spot_angle stops at 180 degrees.`,
       },

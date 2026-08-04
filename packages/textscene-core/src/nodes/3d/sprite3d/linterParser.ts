@@ -46,7 +46,10 @@ validatorRegistry.registerAll('Sprite3D', {
   // can check.
   frame: v.int('frame', { min: 0, enforced: 'sprite_3d.cpp:878' }),
   offset: v.vector2('offset'),
-  frame_coords: v.vector2i('frame_coords'),
+  // set_frame_coords (sprite_3d.cpp:894-895) ERR_FAIL_INDEXes both components
+  // against hframes/vframes, the same guard Sprite2D carries. Only the floor is
+  // checkable here: the ceiling is a sibling property.
+  frame_coords: v.vector2i('frame_coords', { min: 0, enforced: 'sprite_3d.cpp:894' }),
   region_rect: v.rect2('region_rect'),
   modulate: v.color('modulate'),
   // sprite_3d.cpp:697 hints RS::MATERIAL_RENDER_PRIORITY_MIN..MAX (-128..127)

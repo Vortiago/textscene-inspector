@@ -2,34 +2,20 @@
  * AnimationPlayer strict validators for linting.
  * Migrated to the declarative `v` namespace.
  *
- * `autoplay` and `root_node` keep bespoke validators because they encode
- * empty-string rejection after stripping quote characters.
+ * `autoplay` and `root_node` used to hand-roll an empty-string rejection, but
+ * animation_player.cpp:775 (`set_autoplay`) and animation_mixer.cpp:484
+ * (`set_root_node`) are both bare assignments, and an empty StringName/NodePath
+ * is Godot's own "nothing set" state (autoplay: line 150's `animation_set.has(autoplay)`
+ * guard; root_node: animation_mixer.cpp:2499 defaults it to `NodePath("..")`, not
+ * empty, but nothing refuses an empty one either) — rejecting it was a false
+ * positive. Both are now plain `v` combinators matching their real Variant type.
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { propertyError } from '../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
 const METHOD_CALL_MODE = { 0: 'DEFERRED', 1: 'IMMEDIATE' };
-
-/** Bespoke: must be a non-empty string (quote-stripped). */
-function nonEmptyQuotedString(
-  _propertyName: string,
-  emptyMessage: string,
-  code: string
-): PropertyValidator {
-  const validator: PropertyValidator = (key, value, line) => {
-    const strValue = value.replace(/^["']|["']$/g, '').trim();
-    if (strValue.length === 0) {
-      return propertyError(key, line, emptyMessage, code);
-    }
-    return null;
-  };
-  validator.accepts = 'non-empty quoted string';
-  return validator;
-}
 
 validatorRegistry.registerAll('AnimationPlayer', {
   // animation_player.cpp:1048, PROPERTY_HINT_RANGE "-4,4,0.001,or_less,or_greater":
@@ -49,17 +35,13 @@ validatorRegistry.registerAll('AnimationPlayer', {
     hinted: 'animation_mixer.cpp:2472',
   }),
   playback_active: v.boolean('playback_active'),
-  autoplay: nonEmptyQuotedString(
-    'autoplay',
-    "Property 'autoplay' cannot be empty. Specify a valid animation name.",
-    'INVALID_AUTOPLAY_EMPTY'
-  ),
+  // animation_player.cpp:1037, Variant::STRING_NAME, PROPERTY_HINT_NONE.
+  // set_autoplay (:770-776) is a bare assignment; empty is "no autoplay".
+  autoplay: v.stringName('autoplay'),
   current_animation: v.any(),
-  root_node: nonEmptyQuotedString(
-    'root_node',
-    "Property 'root_node' cannot be empty. Specify a valid NodePath.",
-    'INVALID_ROOT_NODE_EMPTY'
-  ),
+  // animation_mixer.cpp:2461, Variant::NODE_PATH, no hint text at all.
+  // set_root_node (:483-486) is a bare assignment; empty is accepted too.
+  root_node: v.nodePath('root_node'),
   // current_animation_length/current_animation_position (animation_player.cpp:1038-1039)
   // are PROPERTY_HINT_NONE + PROPERTY_USAGE_NONE with an empty setter method name
   // ("", "get_current_animation_length"/"get_current_animation_position"): getter-only

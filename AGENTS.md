@@ -88,6 +88,13 @@ real parser instead of the decode/build split. Conformance:
   only exists in the class-reference prose. A hint constrains the inspector widget, not
   the engine, so it warns and never errors. Cite the `file:line` beside each bound; a
   constant named `EXTREME_*` / `LARGE_*` / `*_RECOMMENDED` without one is a defect.
+- That grounding is declared, not inferred. Every validator carries `formatOnly` (it
+  rejects only what Godot's parser could not read either, so no citation exists) or
+  `grounding` (it rejects a real value, and names the `file:line`); the `v` DSL sets
+  one or the other, a hand-rolled validator must say which, and `boundGrounding` fails
+  on one that says neither. Every `RangeArm` carries a required `cite`, checked by
+  `rangeAdvisoryGrounding`. Both guards exist because a sweep that only sees the DSL
+  reads zero while a hand-rolled validator rejects legal scenes beside it.
 - Advisory linter conditions are WARNINGS, not errors — an error rule on a condition an
   existing positive fixture carries breaks fixtureLint.
 - Web tests run under happy-dom: no CSS cascade, no layout — never assert rendered

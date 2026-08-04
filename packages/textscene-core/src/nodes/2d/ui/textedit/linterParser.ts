@@ -33,6 +33,24 @@ import { AUTOWRAP_MODE, TEXT_DIRECTION } from '../../../../linter/validators/tex
  */
 const ARRAY_LITERAL_RE = /^\[[\s\S]*\]$/;
 
+/**
+ * `TextEdit::set_structured_text_bidi_override_options` (text_edit.cpp:3793-3803)
+ * is a bare assignment, and the property's `ADD_PROPERTY` (text_edit.cpp:7608)
+ * carries no hint at all, so this rejects only a malformed Array literal.
+ */
+const structuredTextBidiOverrideOptionsValidator = accepts((key, value, line) => {
+  if (!ARRAY_LITERAL_RE.test(value)) {
+    return propertyError(
+      key,
+      line,
+      `Property 'structured_text_bidi_override_options' must be an Array literal like [], got: ${value}`,
+      'INVALID_STRUCTURED_TEXT_BIDI_OVERRIDE_OPTIONS_FORMAT'
+    );
+  }
+  return null;
+}, 'Array literal ([...])');
+structuredTextBidiOverrideOptionsValidator.formatOnly = true;
+
 validatorRegistry.registerAll('TextEdit', {
   // Text & behaviour (ungrouped run, text_edit.cpp:7545-7561).
   // text_edit.cpp:7545 — Variant::STRING, PROPERTY_HINT_MULTILINE_TEXT.
@@ -194,15 +212,5 @@ validatorRegistry.registerAll('TextEdit', {
     6: 'STRUCTURED_TEXT_CUSTOM',
   }, { hinted: 'text_edit.cpp:7607' }),
   // text_edit.cpp:7608 — Variant::ARRAY, default "[]"; see ARRAY_LITERAL_RE above.
-  structured_text_bidi_override_options: accepts((key, value, line) => {
-    if (!ARRAY_LITERAL_RE.test(value)) {
-      return propertyError(
-        key,
-        line,
-        `Property 'structured_text_bidi_override_options' must be an Array literal like [], got: ${value}`,
-        'INVALID_STRUCTURED_TEXT_BIDI_OVERRIDE_OPTIONS_FORMAT'
-      );
-    }
-    return null;
-  }, 'Array literal ([...])'),
+  structured_text_bidi_override_options: structuredTextBidiOverrideOptionsValidator,
 });

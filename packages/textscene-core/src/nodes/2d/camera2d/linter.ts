@@ -205,7 +205,7 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
 const camera2DValidationRule: LintRule = {
   meta: {
     name: 'valid-camera2d-properties',
-    description: 'Validates Camera2D property values, zoom constraints, limit consistency, smoothing configuration, and drag settings',
+    description: 'Validates Camera2D limit consistency, smoothing configuration, and drag settings',
     category: 'validation',
     applicableNodeTypes: ['Camera2D'],
     emits: [

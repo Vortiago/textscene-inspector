@@ -123,8 +123,8 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `damping_max` | float >= 0 |
 | `damping_min` | float >= 0 |
 | `direction` | Vector2(x, y) |
-| `emission_normals` | PackedVector2Array(x, y, …) — even count |
-| `emission_points` | PackedVector2Array(x, y, …) — even count |
+| `emission_normals` | PackedVector2Array(x, y, …) |
+| `emission_points` | PackedVector2Array(x, y, …) |
 | `emission_rect_extents` | Vector2(x, y) |
 | `emission_ring_inner_radius` | float |
 | `emission_ring_radius` | float |

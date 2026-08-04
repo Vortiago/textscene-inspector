@@ -36,11 +36,8 @@ validatorRegistry.registerAll('Sprite2D', {
   // ERR_FAIL_INDEXes against `vframes * hframes`, a cross-property bound this
   // per-property validator can't see, so only the >=0 floor is checked here.
   frame: v.strictNonNegativeInt('frame', { enforced: 'sprite_2d.cpp:296' }),
-  // `vector2i(_, true)` rejects negative components. The default-message
-  // legacy wording "must have non-negative values" is what tests assert,
-  // matching the underlying `createVector2iValidator` output. Not groundable
-  // via the `v` DSL (vector2i takes no Grounding), but set_frame_coords
-  // (sprite_2d.cpp:312-313) does ERR_FAIL_INDEX both components against
-  // hframes/vframes, so the >=0 floor checked here is real engine enforcement.
-  frame_coords: v.vector2i('frame_coords', true),
+  // set_frame_coords (sprite_2d.cpp:312-313) ERR_FAIL_INDEXes both components
+  // against hframes/vframes, which fails below 0 as well as at/above the frame
+  // count. Only the floor is checkable here: the ceiling is a sibling property.
+  frame_coords: v.vector2i('frame_coords', { min: 0, enforced: 'sprite_2d.cpp:312' }),
 });

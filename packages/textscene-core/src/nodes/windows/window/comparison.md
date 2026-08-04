@@ -95,7 +95,7 @@ Strict parsing format-checks these `Window` properties, plus 9 inherited from Vi
 | `minimize_disabled` | true or false |
 | `mode` | enum 0-4 (WINDOWED/MINIMIZED/MAXIMIZED/FULLSCREEN/EXCLUSIVE_FULLSCREEN) |
 | `mouse_passthrough` | true or false |
-| `mouse_passthrough_polygon` | PackedVector2Array(x, y, …) — even count |
+| `mouse_passthrough_polygon` | PackedVector2Array(x, y, …) |
 | `nonclient_area` | Rect2i(x, y, w, h) |
 | `popup_window` | true or false |
 | `popup_wm_hint` | true or false |

@@ -17,5 +17,8 @@ import '../splitcontainer/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 
 validatorRegistry.registerUnavailable('VSplitContainer', {
-  vertical: `its orientation is fixed by the class. Use a plain SplitContainer if the orientation must vary.`,
+  vertical: {
+    reason: `its orientation is fixed by the class. Use a plain SplitContainer if the orientation must vary.`,
+    cite: 'split_container.cpp:1120',
+  },
 });

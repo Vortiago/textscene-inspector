@@ -86,7 +86,7 @@ describe('ValidatorRegistry.registerUnavailable', () => {
   it('rejects every value for a key the leaf removes, naming the reason', () => {
     const r = new ValidatorRegistry(CHAIN);
     r.registerAll('Root', { vertical: ok });
-    r.registerUnavailable('Leaf', { vertical: 'its orientation is fixed' });
+    r.registerUnavailable('Leaf', { vertical: { reason: 'its orientation is fixed', cite: 'box_container.cpp:312' } });
     const diagnostic = r.findValidator('Leaf', 'vertical')!('vertical', 'true', 7);
     expect(diagnostic?.code).toBe('UNAVAILABLE_VERTICAL');
     expect(diagnostic?.severity).toBe('error');
@@ -97,7 +97,7 @@ describe('ValidatorRegistry.registerUnavailable', () => {
   it('rejects the key whatever the value, since presence is the defect', () => {
     const r = new ValidatorRegistry(CHAIN);
     r.registerAll('Root', { vertical: ok });
-    r.registerUnavailable('Leaf', { vertical: 'fixed' });
+    r.registerUnavailable('Leaf', { vertical: { reason: 'fixed', cite: 'box_container.cpp:312' } });
     const validator = r.findValidator('Leaf', 'vertical')!;
     for (const value of ['true', 'false', '', 'garbage']) {
       expect(validator('vertical', value, 1)).not.toBeNull();
@@ -107,7 +107,7 @@ describe('ValidatorRegistry.registerUnavailable', () => {
   it('leaves siblings and the declaring base untouched', () => {
     const r = new ValidatorRegistry({ ...CHAIN, Other: 'Root' });
     r.registerAll('Root', { vertical: ok });
-    r.registerUnavailable('Leaf', { vertical: 'fixed' });
+    r.registerUnavailable('Leaf', { vertical: { reason: 'fixed', cite: 'box_container.cpp:312' } });
     expect(r.findValidator('Other', 'vertical')).toBe(ok);
     expect(r.findValidator('Root', 'vertical')).toBe(ok);
   });
@@ -116,7 +116,7 @@ describe('ValidatorRegistry.registerUnavailable', () => {
     // getOwnKeys feeds the shadow guard and the sheet's own-property table; a
     // removal is neither a declaration nor a shadow.
     const r = new ValidatorRegistry(CHAIN);
-    r.registerUnavailable('Leaf', { vertical: 'fixed' });
+    r.registerUnavailable('Leaf', { vertical: { reason: 'fixed', cite: 'box_container.cpp:312' } });
     expect(r.getOwnKeys('Leaf')).toEqual([]);
     expect(r.getUnavailableKeys('Leaf')).toEqual(['vertical']);
   });
@@ -125,7 +125,7 @@ describe('ValidatorRegistry.registerUnavailable', () => {
     // Mid removes it, but Leaf validates it again, so Leaf can carry it.
     const r = new ValidatorRegistry(CHAIN);
     r.registerAll('Root', { vertical: ok });
-    r.registerUnavailable('Mid', { vertical: 'fixed' });
+    r.registerUnavailable('Mid', { vertical: { reason: 'fixed', cite: 'box_container.cpp:312' } });
     r.registerAll('Leaf', { vertical: ok });
     expect(r.findValidator('Leaf', 'vertical')).toBe(ok);
     expect(r.findValidator('Mid', 'vertical')?.accepts).toBe('not available on this type');
@@ -138,7 +138,7 @@ describe('ValidatorRegistry.registerUnavailable', () => {
     // had just accepted it.
     const r = new ValidatorRegistry(CHAIN);
     r.registerAll('Root', { vertical: ok });
-    r.registerUnavailable('Mid', { vertical: 'fixed' });
+    r.registerUnavailable('Mid', { vertical: { reason: 'fixed', cite: 'box_container.cpp:312' } });
     r.registerAll('Leaf', { vertical: ok });
     expect(r.getUnavailableKeys('Leaf')).toEqual([]);
     expect(r.getUnavailableKeys('Mid')).toEqual(['vertical']);
@@ -150,14 +150,14 @@ describe('ValidatorRegistry.registerUnavailable', () => {
     // must agree rather than letting the declaration cancel the removal.
     const r = new ValidatorRegistry(CHAIN);
     r.registerAll('Leaf', { vertical: ok });
-    r.registerUnavailable('Leaf', { vertical: 'fixed' });
+    r.registerUnavailable('Leaf', { vertical: { reason: 'fixed', cite: 'box_container.cpp:312' } });
     expect(r.findValidator('Leaf', 'vertical')?.accepts).toBe('not available on this type');
     expect(r.getUnavailableKeys('Leaf')).toEqual(['vertical']);
   });
 
   it('is cleared with the validators', () => {
     const r = new ValidatorRegistry(CHAIN);
-    r.registerUnavailable('Leaf', { vertical: 'fixed' });
+    r.registerUnavailable('Leaf', { vertical: { reason: 'fixed', cite: 'box_container.cpp:312' } });
     r.clear();
     expect(r.findValidator('Leaf', 'vertical')).toBeNull();
   });

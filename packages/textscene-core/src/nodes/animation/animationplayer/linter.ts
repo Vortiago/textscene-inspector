@@ -126,12 +126,14 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
           ruleName: 'animationplayer-negative-blend-time',
           message: (blendTime) =>
             `AnimationPlayer 'playback_default_blend_time' is ${blendTime} seconds. The editor range starts at 0.`,
+          cite: 'animation_player.cpp:1046',
         },
         {
           over: BLEND_TIME_HINT_MAX,
           ruleName: 'animationplayer-large-blend-time',
           message: (blendTime) =>
             `AnimationPlayer 'playback_default_blend_time' is ${blendTime} seconds. The editor range stops at ${BLEND_TIME_HINT_MAX}.`,
+          cite: 'animation_player.cpp:1046',
         },
       ],
     })

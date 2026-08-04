@@ -91,16 +91,22 @@ describe('AnimationPlayer Linter', () => {
           invalid: [{ value: 'yes', contains: ['playback_active', 'boolean'] }],
         },
         {
+          // animation_player.cpp:775 (set_autoplay) is a bare assignment, and an
+          // empty StringName is Godot's own "no autoplay" state (line 150 guards
+          // on `animation_set.has(autoplay)`), so `""`/`&""` are valid, not errors.
           prop: 'autoplay',
           acceptMode: 'clean',
-          valid: ['"idle"'],
+          valid: ['"idle"', '""'],
           with: { 'anims/idle': 'SubResource("Animation_1")' },
-          invalid: [{ value: '""', contains: ['autoplay', 'cannot be empty'] }],
+          invalid: [{ value: 'idle', contains: ['autoplay'] }],
         },
         {
+          // animation_mixer.cpp:484 (set_root_node) is a bare assignment; an empty
+          // NodePath is accepted like any other, so only the NodePath("...") shape
+          // is checked.
           prop: 'root_node',
-          valid: ['NodePath("..")', 'NodePath(".")', 'NodePath("/root/Node")'],
-          invalid: [{ value: '""', contains: ['root_node', 'cannot be empty'] }],
+          valid: ['NodePath("..")', 'NodePath(".")', 'NodePath("/root/Node")', 'NodePath("")'],
+          invalid: [{ value: '""', contains: ['root_node', 'NodePath'] }],
         },
       ]
     );
@@ -409,10 +415,11 @@ describe('AnimationPlayer Linter', () => {
         'warning'
       );
 
-      // Empty root_node (error, nonEmptyQuotedString) + out-of-hint blend time
-      // (warning). playback_process_mode/method_call_mode no longer produce an
-      // error out of range: animation_mixer.cpp:501-525 is a bare assignment for
-      // both, so out-of-range is a warning (ADR-0032), not an error.
+      // root_node: '""' is a bare quoted empty string, not NodePath("...") syntax,
+      // so it fails the format check (error) + out-of-hint blend time (warning).
+      // playback_process_mode/method_call_mode no longer produce an error out of
+      // range: animation_mixer.cpp:501-525 is a bare assignment for both, so
+      // out-of-range is a warning (ADR-0032), not an error.
       expectSeverity(
         scene(
           node('AnimationPlayer', {

@@ -11,15 +11,10 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import {
-  extremeVolumeArms,
-  unusualPitchArms,
+  player2DVolumeArms,
+  player2DPitchArms,
   checkInvalidMaxPolyphony,
 } from '../sharedLinterChecks.js';
-
-// audio_stream_player_2d.cpp:430, volume_db PROPERTY_HINT_RANGE "-80,24,suffix:dB":
-// both ends closed, and set_volume_db (:209) only ERR_FAILs on NaN.
-const VOLUME_DB_HINT_MIN = -80;
-const VOLUME_DB_HINT_MAX = 24;
 
 // audio_stream_player_2d.cpp:436, max_distance PROPERTY_HINT_RANGE
 // "1,4096,1,or_greater,exp,suffix:px": the top end is open, so only the bottom
@@ -104,12 +99,13 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
           under: MAX_DISTANCE_HINT_MIN,
           floor: 0,
           ruleName: 'audiostreamplayer2d-small-max-distance',
+          cite: 'audio_stream_player_2d.cpp:436',
           message: (maxDistance) =>
             `Property 'max_distance' is ${maxDistance}. The editor range starts at ${MAX_DISTANCE_HINT_MIN} px.`,
         },
       ],
-      volume_db: extremeVolumeArms('audiostreamplayer2d', VOLUME_DB_HINT_MIN, VOLUME_DB_HINT_MAX),
-      pitch_scale: unusualPitchArms('audiostreamplayer2d'),
+      volume_db: player2DVolumeArms('audiostreamplayer2d'),
+      pitch_scale: player2DPitchArms('audiostreamplayer2d'),
     })
   );
 

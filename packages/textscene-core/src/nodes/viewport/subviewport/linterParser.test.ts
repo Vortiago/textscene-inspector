@@ -1,11 +1,11 @@
 /**
- * SubViewport linting — format validators (errors) + semantic rules (warnings).
+ * SubViewport linting — every diagnostic comes from a validator.
  *
  * The sorting principle (CONTEXT.md): a validator failure is an error when
  * Godot's own setter refuses or alters the value, and a warning when only a
  * `PROPERTY_HINT_RANGE`/`PROPERTY_HINT_ENUM` states the bound while the setter
- * assigns straight through (ADR-0032). An advisory condition is ALWAYS a
- * warning, because committed positive fixtures may legally carry it.
+ * assigns straight through (ADR-0032). SubViewport has no semantic rule, because
+ * the one condition it carried, a degenerate size, is a clamp the engine applies.
  */
 
 import { describe, it } from 'vitest';
@@ -14,11 +14,9 @@ import {
   scene,
   expectClean,
   expectDiagnostic,
-  expectNoDiagnostic,
   expectNoErrors,
 } from '../../../linter/testing/testkit';
 import './linterParser';
-import './linter';
 
 describe('SubViewport linter', () => {
   describe('format validators (errors)', () => {
@@ -76,24 +74,23 @@ describe('SubViewport linter', () => {
     });
   });
 
-  describe('semantic rules (warnings)', () => {
-    it('warns that a non-positive size renders nothing', () => {
-      const content = scene(node('SubViewport', { size: 'Vector2i(0, 400)' }));
-      expectDiagnostic(content, { ruleName: 'subviewport-empty-size', severity: 'warning' });
-      // Advisory only — a zero size is legal TSCN, so it must not fail the CLI.
-      expectNoErrors(content);
-    });
-
-    it('does not warn about a normal size', () => {
-      expectNoDiagnostic(scene(node('SubViewport', { size: 'Vector2i(256, 256)' })), {
-        ruleName: 'subviewport-empty-size',
+  describe('a degenerate size is an error, not an advisory', () => {
+    it('errors on a size Godot would clamp, rather than warning about it', () => {
+      // Viewport::_set_size raises either component to 2 (viewport.cpp:1120),
+      // so 0 is altered exactly as a negative is. The old
+      // `subviewport-empty-size` warning restated this and was removed.
+      expectDiagnostic(scene(node('SubViewport', { size: 'Vector2i(0, 400)' })), {
+        prop: 'size',
+        severity: 'error',
       });
     });
 
-    it('does not warn when size is absent (Godot defaults it to 512x512)', () => {
-      expectNoDiagnostic(scene(node('SubViewport', {})), {
-        ruleName: 'subviewport-empty-size',
-      });
+    it('accepts a normal size', () => {
+      expectNoErrors(scene(node('SubViewport', { size: 'Vector2i(256, 256)' })));
+    });
+
+    it('accepts an absent size, which Godot defaults to 512x512', () => {
+      expectNoErrors(scene(node('SubViewport', {})));
     });
   });
 });

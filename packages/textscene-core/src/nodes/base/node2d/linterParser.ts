@@ -21,10 +21,15 @@ import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 // bespoke `scale` validator stays as lenient as the renderer and v.vector2.
 const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 
+// Godot's own CMP_EPSILON (core/math/math_defs.h), the threshold
+// Math::is_zero_approx compares against. Matches camera2d/linterParser.ts's
+// zoomValidator, which grounds the identical is_zero_approx predicate.
+const CMP_EPSILON = 0.00001;
+
 // node_2d.cpp:187-199: set_scale substitutes CMP_EPSILON for a component that
 // `Math::is_zero_approx`s ("Avoid having 0 scale values, can lead to errors in
 // physics and rendering."), a silent correction ADR-0032 treats the same as an
-// ERR_FAIL — enforced, stays an error.
+// ERR_FAIL: enforced, stays an error.
 const scaleValidator: PropertyValidator = (key, value, line) => {
   const match = VECTOR2_REGEX.exec(value);
   if (!match) {
@@ -34,13 +39,19 @@ const scaleValidator: PropertyValidator = (key, value, line) => {
   const x = parseFloat(match[1] || '0');
   const y = parseFloat(match[2] || '0');
 
-  if (x === 0 || y === 0) {
+  if (Math.abs(x) < CMP_EPSILON || Math.abs(y) < CMP_EPSILON) {
     return propertyError(key, line, `Property 'scale' must have non-zero values, got: Vector2(${x}, ${y}). Zero scale causes rendering issues.`, 'INVALID_SCALE_VALUE');
   }
 
   return null;
 };
-scaleValidator.accepts = 'Vector2(x, y), no zero component';
+scaleValidator.accepts = 'Vector2(x, y), no (near-)zero component';
+// Hand-rolled (not built through `v`), so tagged by hand for
+// boundGrounding.test.ts: node_2d.cpp:194-198 substitutes CMP_EPSILON for a
+// (near-)zero component rather than assigning it, an enforced silent
+// alteration under ADR-0032, so out-of-range stays an error.
+scaleValidator.bounded = true;
+scaleValidator.grounding = { kind: 'enforced', cite: 'node_2d.cpp:194' };
 
 validatorRegistry.registerAll('Node2D', {
   position: v.vector2('position'),

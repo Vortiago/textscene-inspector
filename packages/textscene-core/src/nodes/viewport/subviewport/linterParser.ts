@@ -26,9 +26,10 @@ const UPDATE_MODE = {
 const CLEAR_MODE = { 0: 'ALWAYS', 1: 'NEVER', 2: 'ONCE' };
 
 validatorRegistry.registerAll('SubViewport', {
-  // Non-negative: a negative render target is meaningless, and Godot's own
-  // setter clamps. The zero case is advisory, so it lives in linter.ts.
-  size: v.vector2i('size', true),
+  // set_size reaches Viewport::_set_size, whose `Size2i new_size = p_size.maxi(2)`
+  // (viewport.cpp:1120) raises either component to 2. The floor is 2, not 0: a
+  // SubViewport sized 1 is altered exactly as a negative one is.
+  size: v.vector2i('size', { min: 2, enforced: 'viewport.cpp:1120' }),
   size_2d_override: v.vector2i('size_2d_override'),
   size_2d_override_stretch: v.boolean('size_2d_override_stretch'),
   // viewport.cpp:5584 — PROPERTY_HINT_ENUM, 5 labels. set_update_mode

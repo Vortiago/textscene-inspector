@@ -56,6 +56,34 @@ Every surviving threshold carries the governing `file:line` in a comment beside 
 A constant named for a feeling rather than a source — `EXTREME_*`, `LARGE_*`,
 `SMALL_*`, `*_RECOMMENDED` — does not pass review without that citation.
 
+## How it is enforced
+
+A convention decays; the guards below hold. Each closes one way a diagnostic can
+reject a value with nothing behind it.
+
+**Every validator declares which kind it is.** A `PropertyValidator` carries either
+`formatOnly` (it rejects only input Godot's own parser could not read, so no
+citation is possible or needed) or `grounding` (it rejects a real value, and says
+which `file:line` says so). The `v` DSL sets one or the other by construction: each
+combinator is either a `shape(…)` or takes a `Grounding`. A hand-rolled validator
+carries neither until its author chooses, and `boundGrounding.test.ts` fails on it.
+
+That distinction is what the first version of this ADR missed. `bounded` was set by
+`ground()`, so the un-audited count only ever saw validators already inside the DSL.
+It read zero while `GPUParticles3D.visibility_aabb` rejected a negative extent that
+`set_visibility_aabb` assigns unaltered — the validator was hand-rolled, so it was
+never in the denominator.
+
+**Every advisory threshold carries a `cite`.** `RangeArm.cite` is required, so the
+compiler rejects an uncited arm; `rangeAdvisoryGrounding.test.ts` then checks the
+string names a source location rather than restating the rule's own opinion. Arms
+were the other population outside the sweep, and the one where invented thresholds
+had actually shipped.
+
+**A bound cites each end separately when the ends differ.** `enforced` and `hinted`
+each take `{ min, max }`, because a floor with an `ERR_FAIL_COND` and a ceiling with
+only a hint are two different claims and must produce two different severities.
+
 ## Consequences
 
 - Rules that only restated a preference are deleted rather than widened. A rule left

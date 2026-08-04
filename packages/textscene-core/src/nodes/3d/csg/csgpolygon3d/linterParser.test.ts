@@ -64,10 +64,11 @@ describe('CSGPolygon3D strict validators', () => {
     expect(errorsOf(linter.lint(content))).toEqual([]);
   });
 
-  it('rejects an odd-length polygon (a truncated final vertex)', () => {
+  it('accepts an odd-length polygon, which Godot truncates rather than refuses', () => {
+    // variant_parser.cpp:1555 builds the array with `args.size() / 2`, integer
+    // division, so the lone trailing coordinate is dropped and the scene loads.
     const errors = errorsOf(linter.lint(scene('polygon = PackedVector2Array(0, -1, 0)')));
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]!.message).toContain('polygon');
+    expect(errors).toEqual([]);
   });
 
   it.each([

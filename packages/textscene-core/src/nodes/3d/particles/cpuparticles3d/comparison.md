@@ -72,9 +72,9 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 17 inherite
 | `direction` | Vector3(x, y, z) |
 | `draw_order` | enum 0-2 (INDEX/LIFETIME/VIEW_DEPTH) |
 | `emission_box_extents` | Vector3(x, y, z) |
-| `emission_colors` | PackedColorArray(r, g, b, a, …) — multiple of 4 |
-| `emission_normals` | PackedVector3Array(x, y, z, …) — multiple of 3 |
-| `emission_points` | PackedVector3Array(x, y, z, …) — multiple of 3 |
+| `emission_colors` | PackedColorArray(r, g, b, a, …) |
+| `emission_normals` | PackedVector3Array(x, y, z, …) |
+| `emission_points` | PackedVector3Array(x, y, z, …) |
 | `emission_ring_axis` | Vector3(x, y, z) |
 | `emission_ring_cone_angle` | float 0-90 |
 | `emission_ring_height` | float >= 0 |

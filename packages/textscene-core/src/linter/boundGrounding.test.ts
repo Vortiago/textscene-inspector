@@ -65,7 +65,81 @@ function boundedKeys(): BoundedKey[] {
   return out;
 }
 
+/**
+ * Types whose validators are all still unclassified.
+ *
+ * A validator built through the `v` DSL is classified by construction: every
+ * combinator is either a `shape` (rejects only malformed input, so it needs no
+ * citation) or takes a `Grounding`. A HAND-ROLLED validator is neither until
+ * its author says which, and that gap is what this list holds.
+ *
+ * It is the same shape of hole the bound ratchet closed one level up: while
+ * `UNAUDITED_BOUND_BUDGET` read 0, `GPUParticles3D.visibility_aabb` was
+ * rejecting a negative extent that `set_visibility_aabb` assigns unaltered,
+ * because a hand-rolled validator was never in the denominator.
+ *
+ * Only ever shrinks. Classify the validator instead of adding an entry.
+ */
+const UNCLASSIFIED_VALIDATOR_BUDGET = 0;
+
+/**
+ * Every key that resolves to a validator, declarations AND removals.
+ *
+ * Removals are the third population: `getOwnKeys` deliberately omits them (a
+ * removal is not a declaration), so a sweep built on it alone cannot see a
+ * rejection that refuses every value of the key outright.
+ */
+function classifiableKeys(): { nodeType: string; key: string }[] {
+  const out: { nodeType: string; key: string }[] = [];
+  for (const nodeType of validatorRegistry.getRegisteredNodeTypes()) {
+    for (const key of validatorRegistry.getOwnKeys(nodeType)) out.push({ nodeType, key });
+  }
+  // A separate walk, not a nested loop: a type that ONLY removes never appears
+  // in the validator map, so folding removals into the loop above visited none
+  // of them.
+  for (const nodeType of validatorRegistry.getTypesWithRemovals()) {
+    for (const key of Object.keys(validatorRegistry.getOwnRemovals(nodeType))) {
+      out.push({ nodeType, key });
+    }
+  }
+  return out;
+}
+
+/**
+ * Every registered validator that declares neither `formatOnly` nor `grounding`,
+ * counting a wildcard dispatcher's leaves as separate validators.
+ *
+ * Without the recursion a dispatcher's own tag would vouch for every bound
+ * behind it: `Generic6DOFJoint3D` registers 18 wildcard keys covering 27 leaf
+ * validators, and the sweep saw 18 functions.
+ */
+function unclassifiedKeys(): string[] {
+  const out: string[] = [];
+
+  const visit = (validator: PropertyValidator, label: string): void => {
+    // The exemption covers THIS validator, never its subtree: returning early
+    // would let one exempt wildcard key excuse every leaf behind it.
+    if (!UNGROUNDABLE.has(label) && !validator.formatOnly && !validator.grounding) {
+      out.push(label);
+    }
+    validator.leaves?.forEach((leaf, index) => visit(leaf, `${label}[${index}]`));
+  };
+
+  for (const { nodeType, key } of classifiableKeys()) {
+    const validator = validatorRegistry.findValidator(nodeType, key);
+    if (validator) visit(validator, `${nodeType}.${key}`);
+  }
+  return out.sort();
+}
+
 describe('bound grounding', () => {
+  it('classifies every validator as format-only or grounded', () => {
+    // The sweep the bound ratchet cannot make: `bounded` is set by `ground()`,
+    // so a validator that never calls it is invisible there however many real
+    // values it rejects.
+    expect(unclassifiedKeys()).toHaveLength(UNCLASSIFIED_VALIDATOR_BUDGET);
+  });
+
   it('grounds every bound except the one that cannot be', () => {
     const unaudited = boundedKeys()
       .filter((b) => !b.grounded)
@@ -78,11 +152,9 @@ describe('bound grounding', () => {
     // The citation is the whole point: `enforced` without a `file:line` is the
     // same unverifiable claim the invented thresholds used to make.
     const uncited: string[] = [];
-    for (const nodeType of validatorRegistry.getRegisteredNodeTypes()) {
-      for (const key of validatorRegistry.getOwnKeys(nodeType)) {
-        const g = validatorRegistry.findValidator(nodeType, key)?.grounding;
-        if (g && !/\.(cpp|h):\d+/.test(g.cite)) uncited.push(`${nodeType}.${key}: "${g.cite}"`);
-      }
+    for (const { nodeType, key } of classifiableKeys()) {
+      const g = validatorRegistry.findValidator(nodeType, key)?.grounding;
+      if (g && !/\.(cpp|h):\d+/.test(g.cite)) uncited.push(`${nodeType}.${key}: "${g.cite}"`);
     }
     expect(uncited.sort()).toEqual([]);
   });
@@ -190,5 +262,73 @@ describe('per-end grounding', () => {
     });
     expect(intV('sides', '2', 1)?.severity).toBe('error');
     expect(intV('sides', '65', 1)?.severity).toBe('warning');
+  });
+});
+
+describe('the classification guard bites', () => {
+  /** The predicate the registry sweep applies, on a single validator. */
+  const unclassified = (validator: PropertyValidator) =>
+    !validator.formatOnly && !validator.grounding;
+
+  it('catches a hand-rolled validator that declares neither', () => {
+    // The shape `GPUParticles3D.visibility_aabb` had: a bare function rejecting
+    // a real value, invisible to the bound ratchet because nothing set `bounded`.
+    const handRolled: PropertyValidator = () => null;
+    expect(unclassified(handRolled)).toBe(true);
+  });
+
+  it('passes a shape combinator, which rejects only malformed input', () => {
+    for (const validator of [
+      v.boolean('flat'),
+      v.color('modulate'),
+      v.aabb('visibility_aabb'),
+      v.nodePath('remote_path'),
+      v.quotedString('text'),
+      v.vector3('position'),
+    ]) {
+      expect(validator.formatOnly).toBe(true);
+      expect(unclassified(validator)).toBe(false);
+    }
+  });
+
+  it('treats an unbounded numeric combinator as format-only', () => {
+    // `v.float('width')` rejects only what is not a number, so there is no bound
+    // to cite. Counting it as un-audited was what inflated the ratchet to 596.
+    expect(v.float('width').formatOnly).toBe(true);
+    expect(v.int('count').formatOnly).toBe(true);
+    expect(v.float('fov', { min: 1, max: 179, enforced: 'camera_3d.cpp:725' }).formatOnly).toBeUndefined();
+  });
+
+  it('passes a grounded bound, which cites instead of declaring format-only', () => {
+    const validator = v.float('fov', { min: 1, max: 179, enforced: 'camera_3d.cpp:725' });
+    expect(validator.formatOnly).toBeUndefined();
+    expect(unclassified(validator)).toBe(false);
+  });
+
+  it('catches a bound whose grounding was left off', () => {
+    expect(unclassified(v.float('fov', { min: 1, max: 179 }))).toBe(true);
+  });
+
+  it('puts removal-only types in the swept key list, not just in the registry', () => {
+    // Every one of the four types declaring a removal registers NO validator of
+    // its own, so none appears in `getRegisteredNodeTypes()`. Sweeping removals
+    // as a nested loop inside that list visited zero of them while the count
+    // still read 0. This asserts the key list itself, which is what the
+    // classification test consumes.
+    const swept = classifiableKeys().map(({ nodeType, key }) => `${nodeType}.${key}`);
+    expect(validatorRegistry.getRegisteredNodeTypes()).not.toContain('HBoxContainer');
+    expect(swept).toContain('HBoxContainer.vertical');
+    expect(swept).toContain('VSplitContainer.vertical');
+  });
+
+  it('reaches removals, which getOwnKeys deliberately omits', () => {
+    // HBoxContainer takes `vertical` away from BoxContainer. That refuses every
+    // value of a key a scene can carry, so it needs the same citation a bound
+    // does, and a sweep over declarations alone would never look at it.
+    const validator = validatorRegistry.findValidator('HBoxContainer', 'vertical');
+    expect(validatorRegistry.getOwnKeys('HBoxContainer')).not.toContain('vertical');
+    expect(Object.keys(validatorRegistry.getOwnRemovals('HBoxContainer'))).toContain('vertical');
+    expect(validator?.grounding).toEqual({ kind: 'enforced', cite: 'box_container.cpp:312' });
+    expect(unclassified(validator!)).toBe(false);
   });
 });

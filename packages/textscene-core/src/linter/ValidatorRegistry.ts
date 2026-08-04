@@ -38,6 +38,31 @@ export type PropertyValidator = ((
   bounded?: boolean;
 
   /**
+   * True when the ONLY thing this validator rejects is a value Godot's own
+   * parser could not read either — `Color(1, 1)`, `not-a-float`, an unquoted
+   * string. Such a rejection needs no citation, because no `.tscn` the engine
+   * loads carries the value.
+   *
+   * It is a positive declaration rather than an inference: a validator with
+   * neither this flag nor `grounding` is one nobody has classified, and
+   * `boundGrounding.test.ts` fails on it. That is what stops a hand-rolled
+   * validator from rejecting real values with nothing behind it — the failure
+   * mode that let `GPUParticles3D.visibility_aabb` reject an extent Godot
+   * assigns unaltered.
+   */
+  formatOnly?: boolean;
+
+  /**
+   * The per-sub-property validators a WILDCARD dispatcher forwards to.
+   *
+   * A key like `angular_limit_x/*` registers one dispatcher, and the sweep sees
+   * only that function: tagging it satisfies the guard while an ungrounded leaf
+   * sits behind it, checking `upper_angle` against a bound nobody verified.
+   * Exposing the leaves is what lets the sweep recurse past the dispatcher.
+   */
+  leaves?: readonly PropertyValidator[];
+
+  /**
    * Why the bound is the bound (ADR-0032), with the governing `file:line`.
    * `enforced` = Godot's setter refuses or alters the value, so out of range is
    * an error. `hinted` = only the PROPERTY_HINT_RANGE says so, so it is a
@@ -47,11 +72,22 @@ export type PropertyValidator = ((
 };
 
 /**
+ * A key a concrete type takes away from its base, and the engine guard that
+ * takes it away. `reason` reaches the scene author; `cite` is what makes the
+ * claim checkable, exactly as `PropertyValidator.grounding` does for a bound.
+ */
+export interface Removal {
+  reason: string;
+  /** `file:line` of the guard that refuses the write. */
+  cite: string;
+}
+
+/**
  * Registry for property validators by node type
  */
 export class ValidatorRegistry {
   private validators = new Map<string, Record<string, PropertyValidator>>();
-  private unavailable = new Map<string, Record<string, string>>();
+  private unavailable = new Map<string, Record<string, Removal>>();
 
   /**
    * @param baseTypes - node-type → base-type map driving the inheritance walk in
@@ -91,14 +127,32 @@ export class ValidatorRegistry {
    * not a shadow.
    *
    * @param nodeType - the concrete type that cannot carry the properties.
-   * @param removals - property key → why Godot refuses it, phrased for a scene
-   *   author and used verbatim in the diagnostic.
+   * @param removals - property key → `{ reason, cite }`. A removal rejects every
+   *   value of a key a scene may legitimately contain, so it makes the same kind
+   *   of claim a bound does and carries the same kind of citation (ADR-0032).
+   *   `reason` is phrased for a scene author and used verbatim in the diagnostic;
+   *   `cite` is the `file:line` of the guard that refuses the write.
    */
-  registerUnavailable(nodeType: string, removals: Record<string, string>): void {
+  registerUnavailable(nodeType: string, removals: Record<string, Removal>): void {
     if (!this.unavailable.has(nodeType)) {
       this.unavailable.set(nodeType, {});
     }
     Object.assign(this.unavailable.get(nodeType)!, removals);
+  }
+
+  /** Every removal declared directly on `nodeType`, for the grounding sweep. */
+  getOwnRemovals(nodeType: string): Record<string, Removal> {
+    return this.unavailable.get(nodeType) ?? {};
+  }
+
+  /**
+   * Types declaring a removal, which is NOT a subset of
+   * `getRegisteredNodeTypes()`: `HBoxContainer` only takes `vertical` away and
+   * registers no validator of its own, so it appears in `unavailable` alone. A
+   * sweep over the validator map misses every such type entirely.
+   */
+  getTypesWithRemovals(): string[] {
+    return [...this.unavailable.keys()];
   }
 
   /**
@@ -148,8 +202,8 @@ export class ValidatorRegistry {
 
       // Removals and validators resolve in ONE walk: this is the hottest path
       // in the linter, reached for every property of every node.
-      const reason = this.unavailable.get(type)?.[propertyKey];
-      if (reason !== undefined) return unavailableValidator(nodeType, reason);
+      const removal = this.unavailable.get(type)?.[propertyKey];
+      if (removal !== undefined) return unavailableValidator(nodeType, removal);
 
       // Checked after the removal at the SAME hop, and before moving up: a
       // removal is not inherited past a descendant that re-declares the key.
@@ -219,18 +273,21 @@ export class ValidatorRegistry {
  */
 const unavailableValidators = new Map<string, PropertyValidator>();
 
-function unavailableValidator(nodeType: string, reason: string): PropertyValidator {
-  const cacheKey = `${nodeType}\u0000${reason}`;
+function unavailableValidator(nodeType: string, removal: Removal): PropertyValidator {
+  const cacheKey = `${nodeType}\u0000${removal.reason}`;
   const cached = unavailableValidators.get(cacheKey);
   if (cached) return cached;
   const validator: PropertyValidator = (key, _value, line) =>
     propertyError(
       key,
       line,
-      `Property '${key}' cannot be set on ${nodeType}: ${reason}`,
+      `Property '${key}' cannot be set on ${nodeType}: ${removal.reason}`,
       `UNAVAILABLE_${key.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}`
     );
   validator.accepts = 'not available on this type';
+  // A removal refuses every value of a key a scene may legitimately carry, so it
+  // is a grounded rejection (ADR-0032), not a format check.
+  validator.grounding = { kind: 'enforced', cite: removal.cite };
   unavailableValidators.set(cacheKey, validator);
   return validator;
 }

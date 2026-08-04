@@ -64,11 +64,12 @@ describe('Node3D Linter', () => {
   describe('Strict Parser Validation - Scale Properties', () => {
     runPropertyValidation({ nodeType: 'Node3D' }, [
       {
-        // Any nonzero magnitude is valid Godot and lints clean, including
-        // negative (a mirror/flip) and extreme-but-finite values; only a zero
-        // axis (a collapsed transform) and malformed values error. See
+        // Any magnitude is valid Godot and lints clean, including zero
+        // (`Node3D::set_scale`, node_3d.cpp:812-827, is a bare assignment with
+        // no zero guard, unlike Node2D's), negative (a mirror/flip), and
+        // extreme-but-finite values; only malformed values error. See
         // linterParser.ts — the base-walk inherits this to every Node3D
-        // subclass, so it must match what the renderer accepts (and Node2D).
+        // subclass.
         prop: 'scale',
         valid: [
           'Vector3(1, 1, 1)',
@@ -77,11 +78,10 @@ describe('Node3D Linter', () => {
           'Vector3(0.0001, 1, 1)',
           'Vector3(1, -1, 1)',
           'Vector3(-2, -2, -2)',
+          'Vector3(0, 1, 1)',
+          'Vector3(0, 0, 0)',
         ],
-        invalid: [
-          { value: 'Vector3(0, 1, 1)', contains: ['scale', 'non-zero'] },
-          { value: 'Vector3(1, 1)', contains: ['scale', '3 numbers'] },
-        ],
+        invalid: [{ value: 'Vector3(1, 1)', contains: ['scale', '3 numbers'] }],
       },
     ]);
   });
@@ -203,7 +203,7 @@ describe('Node3D Linter', () => {
         scene(
           node('Node3D', {
             position: 'Vector3(1, 2)',
-            scale: 'Vector3(0, 1, 1)',
+            scale: 'Vector3(1, 1)',
             visible: 'maybe',
           })
         )
@@ -228,6 +228,11 @@ describe('Node3D Linter', () => {
       expectClean(scene(node('Node3D', { scale: 'Vector3(100, 100, 100)' })));
     });
 
+    it('accepts a zero-component scale: Node3D::set_scale has no zero guard, unlike Node2D', () => {
+      expectClean(scene(node('Node3D', { scale: 'Vector3(0, 1, 1)' })));
+      expectClean(scene(node('Node3D', { scale: 'Vector3(0, 0, 0)' })));
+    });
+
     it('should handle Node3D properties on subclasses (e.g., MeshInstance3D)', () => {
       const content = `[gd_scene format=3]
 
@@ -235,12 +240,13 @@ describe('Node3D Linter', () => {
 
 [node name="MeshNode" type="Node3D"]
 position = Vector3(1, 2, 3)
-scale = Vector3(0, 1, 1)
+scale = Vector3(1, 1)
 `;
 
       const diagnostics = lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
-      // Should catch the zero scale error
+      // Should catch the malformed scale (base-walk delivers Node3D's own
+      // validator to the subclass)
       expect(diagnostics.some(d => d.message.includes('scale'))).toBe(true);
     });
   });

@@ -21,9 +21,10 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
     light_energy: lightEnergyArms('directionallight3d'),
     directional_shadow_max_distance: [
       {
-        // light_3d.cpp:584 — PROPERTY_HINT_RANGE "0,8192,0.1,or_greater": high end open, low end 0
+        // light_3d.cpp:584, PROPERTY_HINT_RANGE "0,8192,0.1,or_greater,exp": high end open, low end 0
         under: 0,
         ruleName: 'directionallight3d-negative-shadow-distance',
+        cite: 'light_3d.cpp:584',
         message: (maxDistance) =>
           `Shadow max distance is negative (${maxDistance}). The editor range for directional_shadow_max_distance starts at 0.`,
       },

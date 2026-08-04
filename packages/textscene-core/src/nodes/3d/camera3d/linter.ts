@@ -59,6 +59,7 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
           // camera_3d.cpp:685 — near PROPERTY_HINT_RANGE "0.001,10,0.001,or_greater,exp,suffix:m"
           under: 0.001,
           ruleName: 'camera3d-small-near-plane',
+          cite: 'camera_3d.cpp:685',
           message: (near) =>
             `Camera3D 'near' clipping plane is ${near}. The editor range for 'near' starts at 0.001; below that, depth precision degrades.`,
         },
@@ -68,6 +69,7 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
           // camera_3d.cpp:686 — far PROPERTY_HINT_RANGE "0.01,4000,0.01,or_greater,exp,suffix:m"
           under: 0.01,
           ruleName: 'camera3d-small-far-plane',
+          cite: 'camera_3d.cpp:686',
           message: (far) =>
             `Camera3D 'far' clipping plane is ${far}. The editor range for 'far' starts at 0.01.`,
         },

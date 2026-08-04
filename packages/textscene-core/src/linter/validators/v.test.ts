@@ -152,9 +152,29 @@ describe('v.vector2 / v.vector2i / v.vector3', () => {
     expect(v.vector2i('grid')('grid', 'Vector2i(0, 0)', 1)).toBeNull();
   });
 
-  it('vector2i with requireNonNegative rejects negatives', () => {
-    const err = v.vector2i('grid', true)('grid', 'Vector2i(-1, 0)', 1);
+  it('vector2i with a min rejects a component below it', () => {
+    const err = v.vector2i('grid', { min: 0, enforced: 'window.cpp:1190' })('grid', 'Vector2i(-1, 0)', 1);
     expect(err!.code).toBe('INVALID_GRID_VALUE');
+  });
+
+  it('vector2i takes a min above zero, which a boolean flag could not express', () => {
+    // Viewport::_set_size floors at 2, so a SubViewport sized 1 is altered
+    // exactly as a negative one is.
+    const validator = v.vector2i('size', { min: 2, enforced: 'viewport.cpp:1120' });
+    expect(validator('size', 'Vector2i(1, 8)', 1)?.code).toBe('INVALID_SIZE_VALUE');
+    expect(validator('size', 'Vector2i(2, 8)', 1)).toBeNull();
+  });
+
+  it('vector2i reports a hinted min as a warning and an enforced one as an error', () => {
+    const hinted = v.vector2i('grid', { min: 0, hinted: 'window.cpp:3430' });
+    expect(hinted('grid', 'Vector2i(-1, 0)', 1)?.severity).toBe('warning');
+    const enforced = v.vector2i('grid', { min: 0, enforced: 'window.cpp:1716' });
+    expect(enforced('grid', 'Vector2i(-1, 0)', 1)?.severity).toBe('error');
+  });
+
+  it('vector2i without a min is format-only, so it needs no citation', () => {
+    expect(v.vector2i('grid').formatOnly).toBe(true);
+    expect(v.vector2i('grid', { min: 0, enforced: 'window.cpp:1190' }).formatOnly).toBeUndefined();
   });
 
   it('vector3 accepts triplet', () => {
@@ -292,12 +312,10 @@ describe('float-tuple validators accept the renderer float grammar (#190 drift f
       expect(check('PackedVector2Array(4.37114e-08, -1.5, +0.5, .25)')).toBeNull();
     });
 
-    it('rejects an ODD count as a value error, not a format error', () => {
-      // A truncated final vertex parses fine as a grammar but is not a polygon.
-      const err = check('PackedVector2Array(0, -1, 0)');
-      expect(err).not.toBeNull();
-      expect(err!.code).toBe('INVALID_POLYGON_VALUE');
-      expect(err!.message).toContain('pairs');
+    it('accepts an ODD count, which Godot truncates rather than refusing', () => {
+      // variant_parser.cpp:1555 builds the array with `args.size() / 2`, integer
+      // division, so the lone trailing coordinate is dropped and the file loads.
+      expect(check('PackedVector2Array(0, -1, 0)')).toBeNull();
     });
 
     it('rejects a non-numeric entry as a format error', () => {

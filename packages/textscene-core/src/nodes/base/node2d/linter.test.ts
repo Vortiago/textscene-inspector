@@ -146,6 +146,16 @@ describe('Node2D Linter', () => {
       expectClean(scene(node('Node2D', { scale: 'Vector2(0.00001, 0.00001)' })));
     });
 
+    it('flags a component closer to zero than CMP_EPSILON, which Godot silently rewrites', () => {
+      // node_2d.cpp:194-198's is_zero_approx uses CMP_EPSILON (1e-5), not exact
+      // zero; a value strictly smaller gets substituted just like exact 0 does.
+      expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(0.000001, 1)' })), {
+        ruleName: 'strict-parser',
+        severity: 'error',
+        contains: ['scale', 'non-zero'],
+      });
+    });
+
     it('should detect invalid scale format', () => {
       expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(1)' })), {
         ruleName: 'strict-parser',

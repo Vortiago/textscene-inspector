@@ -48,7 +48,7 @@ Strict parsing format-checks these `Node3D` properties, plus 10 inherited from N
 | `rotation` | Vector3(x, y, z) |
 | `rotation_degrees` | Vector3(x, y, z) |
 | `rotation_order` | enum 0-5 (XYZ/XZY/YXZ/YZX/ZXY/ZYX) |
-| `scale` | Vector3(x, y, z), no zero component |
+| `scale` | Vector3(x, y, z) |
 | `top_level` | true or false |
 | `transform` | Transform3D(12 floats) |
 | `visibility_parent` | NodePath("path/to/node") |

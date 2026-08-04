@@ -46,7 +46,7 @@ const INTEGER_LITERAL = /^[+-]?\d+$/;
  * entries at the next layout pass rather than rejecting the array.
  */
 function splitOffsetsValidator(): PropertyValidator {
-  return accepts((key, value, line) => {
+  const validator = accepts((key, value, line) => {
     const match = SPLIT_OFFSETS_WRAPPER.exec(value);
     if (!match) {
       return propertyError(
@@ -71,6 +71,11 @@ function splitOffsetsValidator(): PropertyValidator {
     }
     return null;
   }, 'PackedInt32Array(n, n, …)');
+  // Format-only: rejects a malformed literal or a non-integer element.
+  // `set_split_offsets` (split_container.cpp:1071) accepts any length and any
+  // value, so there is nothing here to ground.
+  validator.formatOnly = true;
+  return validator;
 }
 
 validatorRegistry.registerAll('SplitContainer', {

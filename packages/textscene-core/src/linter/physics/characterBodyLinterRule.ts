@@ -28,6 +28,7 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `CharacterBody${dim}`;
   const shapeType = `CollisionShape${dim}`;
   const prefix = `characterbody${dimSuffix(dim)}`;
+  const safeMarginHintCite = dim === '2D' ? 'character_body_2d.cpp:757' : 'character_body_3d.cpp:942';
 
   // up_direction seam: 2D is Vector2(0, -1) (screen space), 3D is Vector3(0, 1, 0).
   const upDirRegex = dim === '2D' ? makeFloatTupleRegex('Vector2', 2) : makeFloatTupleRegex('Vector3', 3);
@@ -119,12 +120,14 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
             ruleName: `${prefix}-safe-margin-too-small`,
             message: (safeMargin) =>
               `${type} '${node.name}' has safe_margin ${safeMargin}. The editor range starts at ${SAFE_MARGIN_HINT_MIN}.`,
+            cite: safeMarginHintCite,
           },
           {
             over: SAFE_MARGIN_HINT_MAX,
             ruleName: `${prefix}-safe-margin-too-large`,
             message: (safeMargin) =>
               `${type} '${node.name}' has safe_margin ${safeMargin}. The editor range stops at ${SAFE_MARGIN_HINT_MAX}.`,
+            cite: safeMarginHintCite,
           },
         ],
       })

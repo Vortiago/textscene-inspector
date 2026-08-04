@@ -104,8 +104,10 @@ describe('Window strict validators', () => {
       expect(check('mouse_passthrough_polygon', 'PackedVector2Array(0, 0, 10, 0, 10, 10)')).toBeNull();
     });
 
-    it('rejects an odd-length mouse_passthrough_polygon (truncated vertex)', () => {
-      expect(check('mouse_passthrough_polygon', 'PackedVector2Array(0, 0, 10)')).not.toBeNull();
+    it('accepts an odd-length mouse_passthrough_polygon, which Godot truncates', () => {
+      // variant_parser.cpp:1555 divides the flat count by 2, dropping the lone
+      // trailing coordinate, so the file loads and there is nothing to reject.
+      expect(check('mouse_passthrough_polygon', 'PackedVector2Array(0, 0, 10)')).toBeNull();
     });
   });
 

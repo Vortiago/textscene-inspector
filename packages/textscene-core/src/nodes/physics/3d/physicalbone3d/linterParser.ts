@@ -199,6 +199,13 @@ const jointConstraintsValidator: PropertyValidator = accepts((key, value, line) 
   }
   return leaf(key, value, line);
 }, 'joint-type-dependent constraint (float or bool — see PinJointData/ConeJointData/HingeJointData/SliderJointData/SixDOFJointData)');
+// This dispatcher performs no comparison of its own: its only rejection is an
+// unrecognised leaf NAME, a format concern. Every magnitude bound lives in the
+// `JOINT_CONSTRAINT_LEAVES` table, so the table is exposed for the sweep to
+// recurse through: tagging the dispatcher alone would vouch for bounds it never
+// looks at.
+jointConstraintsValidator.formatOnly = true;
+jointConstraintsValidator.leaves = Object.values(JOINT_CONSTRAINT_LEAVES);
 
 validatorRegistry.registerAll('PhysicalBone3D', {
   // physical_bone_3d.cpp:709-745 — virtual STRING_NAME property (_get_property_list/

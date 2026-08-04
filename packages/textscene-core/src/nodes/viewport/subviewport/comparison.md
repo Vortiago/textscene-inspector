@@ -225,20 +225,20 @@ Strict parsing format-checks these `SubViewport` properties, plus 9 inherited fr
 | --- | --- |
 | `render_target_clear_mode` | enum 0-2 (ALWAYS/NEVER/ONCE) |
 | `render_target_update_mode` | enum 0-4 (DISABLED/ONCE/WHEN_VISIBLE/WHEN_PARENT_VISIBLE/ALWAYS) |
-| `size` | Vector2i(x, y), both >= 0 |
+| `size` | Vector2i(x, y), both >= 2 |
 | `size_2d_override` | Vector2i(x, y) |
 | `size_2d_override_stretch` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-subviewport-properties` | `subviewport-empty-size` | warning |
 <!-- lint:end -->
 
 Strict and lenient parsing diverge only on out-of-range enums: the lenient
 parser warns and falls back to Godot's default (`render_target_update_mode` → 2,
 `render_target_clear_mode` → 0, `msaa_3d` → 0,
 `canvas_item_default_texture_filter` → 1), while the strict parser reports an
-error. A malformed `size` falls back to `Vector2i(512, 512)`; a zero-area size
-parses cleanly and is reported by the advisory `subviewport-empty-size` rule
-instead.
+error. A malformed `size` falls back to `Vector2i(512, 512)`. A `size` component
+below 2 is a strict error rather than an advisory, because `Viewport::_set_size`
+raises it (`viewport.cpp:1120`, `p_size.maxi(2)`): the value in the file is not
+the value the engine runs.
