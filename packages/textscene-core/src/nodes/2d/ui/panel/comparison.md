@@ -45,7 +45,7 @@ there is no Panel-specific lenient fallback beyond what Control already covers.
 
 ## Native (WebGL canvas) painter
 
-`NativeComponent.tsx` draws the resolved `theme_override_styles/panel`
+`Component.tsx` draws the resolved `theme_override_styles/panel`
 StyleBox — or, absent one, the default-theme `panel` struct
 (`native/nativeTheme.ts`'s `widgets.panel`) — across the node's whole solved
 rect via `StyleBoxQuad`, the shared ring-tessellation geometry every native

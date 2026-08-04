@@ -51,7 +51,7 @@ present-but-unparseable value collapses to `false` rather than `undefined`, sinc
 
 `nativeSolver.ts` registers `TextureRect`'s `expand_mode` minimum-size
 contribution (`controlSolverRegistry.registerMinimumSize`) and exports the
-`stretch_mode` draw-rect math `NativeComponent.tsx` paints — both ported from
+`stretch_mode` draw-rect math `Component.tsx` paints — both ported from
 `scene/gui/texture_rect.cpp` (4.6.3). `flip_h`/`flip_v` and the `texture_filter`/
 `texture_repeat` sampler properties (below) are native-only: CSS has no
 per-image sampler control and no non-destructive way to express Godot's

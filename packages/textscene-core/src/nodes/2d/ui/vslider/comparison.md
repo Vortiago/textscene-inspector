@@ -64,7 +64,7 @@ degenerate range renders as fully filled, both matching the engine.
 ## Native (WebGL canvas) painter
 
 `nativeSolver.ts` registers `Slider::get_minimum_size()`
-(`controlSolverRegistry.registerMinimumSize`); `NativeComponent.tsx` is
+(`controlSolverRegistry.registerMinimumSize`); `Component.tsx` is
 HSlider's identical painter at `vertical = true` (`shared/sliderSolver.ts`,
 shared by both slices), drawing the actual vendored `slider_grabber(_disabled).svg`
 / `vslider_tick.svg` textures rather than a synthesized `div`. The axis swap —

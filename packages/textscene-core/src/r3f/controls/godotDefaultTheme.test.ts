@@ -1,11 +1,11 @@
 /**
  * The Godot default-theme constants are transcribed from
  * `scene/theme/default_theme.cpp` — this pins each to the exact Godot 4.6 value
- * and, for the fills, ties the CSS string to `controlColorToCss` of the source
- * `Color(...)` literal so a wrong rounding/format can't slip through.
+ * and, for the fills, ties the CSS string to a local `controlColorToCss` of the
+ * source `Color(...)` literal so a wrong rounding/format can't slip through.
  */
 import { describe, expect, it } from 'vitest';
-import { controlColorToCss } from './styleBoxToCss';
+import type { ThemeFill } from './godotDefaultTheme';
 import {
   DEFAULT_CONTENT_MARGIN,
   DEFAULT_CORNER_RADIUS,
@@ -18,7 +18,6 @@ import {
   SLIDER_GRABBER_RADIUS,
   SLIDER_GRABBER_SIZE,
   SLIDER_TICK_BOX,
-  SLIDER_TICK_LENGTH,
   SLIDER_TICK_THICKNESS,
   SLIDER_TRACK_THICKNESS,
   STYLE_DISABLED_FILL,
@@ -28,6 +27,13 @@ import {
   STYLE_PRESSED_FILL,
   scaledGodotTheme,
 } from './godotDefaultTheme';
+
+/** Format an already-parsed {r,g,b,a} (0..1) color as a CSS rgba() string — an independent ground truth, not a re-derivation of `godotDefaultTheme.ts`'s own `fillCss`. */
+function controlColorToCss(c: ThemeFill): string {
+  const ch = (v: number) => Math.max(0, Math.min(255, Math.round(v * 255)));
+  const alpha = Math.max(0, Math.min(1, c.a));
+  return `rgba(${ch(c.r)}, ${ch(c.g)}, ${ch(c.b)}, ${alpha})`;
+}
 
 describe('godotDefaultTheme', () => {
   it('derives DEFAULT_FONT_COLOR from control_font_color = Color(0.875, 0.875, 0.875)', () => {
@@ -98,7 +104,6 @@ describe('scaledGodotTheme', () => {
       sliderGrabberRadius: SLIDER_GRABBER_RADIUS,
       sliderTickBox: SLIDER_TICK_BOX,
       sliderTickThickness: SLIDER_TICK_THICKNESS,
-      sliderTickLength: SLIDER_TICK_LENGTH,
     });
   });
 
@@ -120,7 +125,6 @@ describe('scaledGodotTheme', () => {
       sliderGrabberRadius: 14,
       sliderTickBox: 8,
       sliderTickThickness: 4,
-      sliderTickLength: 32,
     });
   });
 
@@ -156,7 +160,6 @@ describe('scaledGodotTheme', () => {
       sliderGrabberRadius: 4,
       sliderTickBox: 2,
       sliderTickThickness: 1,
-      sliderTickLength: 8,
     });
   });
 });

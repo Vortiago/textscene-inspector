@@ -38,7 +38,7 @@ reads the exact theme constant instead — see its own section.
 ## Native (WebGL canvas) painter
 
 `nativeSolver.ts` registers `Button::get_minimum_size_for_text_and_icon`
-(`controlSolverRegistry.registerMinimumSize`); `NativeComponent.tsx` draws the
+(`controlSolverRegistry.registerMinimumSize`); `Component.tsx` draws the
 chrome (a `StyleBoxQuad`, skipped when `flat`), the label (`<TextRun>`, centred/
 aligned per `alignment`), and an optional icon (`<ControlQuad>`, honouring
 `icon_alignment`/`vertical_icon_alignment`/`expand_icon`) — Button is the first

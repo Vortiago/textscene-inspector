@@ -1,21 +1,19 @@
 /**
- * <Control> — base Godot UI node rendered as a positioned <div>. Establishes a
- * containing block for its children (which anchor against it) and resets the
- * child layout regime to 'free' (Control is not a container).
+ * `<Control>` — the native (WebGL canvas) painter for a plain `Control`.
+ * Godot's `Control` base class overrides no `_draw`, so it contributes no
+ * chrome of its own: `ControlCanvasWalker` already positions this node's
+ * group, composes its modulate into `Modulate2DContext` for descendants, and
+ * applies the free-Control rotate/scale-about-pivot transform
+ * (`Container::fit_child_in_rect`'s rule) around this painter's own output AND
+ * its children (rendered as the walker's siblings, not this component's
+ * `children`) — so a leaf painter with no chrome needs no code of its own to
+ * participate in either. Registering this (rather than leaving `Control`
+ * unregistered) matters anyway: an unregistered type falls back to
+ * `<ControlFallback>`'s debug outline, which a real Control should never
+ * show.
  */
+import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 
-import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlParent, ControlParentProvider } from '../../../../r3f/controls/ControlParentContext';
-import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
-import type { ControlProperties } from './types';
-
-export function Control({ node, children }: ControlComponentProps) {
-  const props = node.properties as ControlProperties;
-  const parentKind = useControlParent();
-  const style = controlLayoutStyle(props, parentKind);
-  return (
-    <div data-control-type="Control" data-node-name={node.name} style={style}>
-      <ControlParentProvider kind="free">{children}</ControlParentProvider>
-    </div>
-  );
+export function Control(_props: NativeControlComponentProps) {
+  return null;
 }

@@ -1,13 +1,7 @@
 /**
- * Godot's Control anchor model, as plain data and one pure resolver.
- *
- * Shared deliberately: the DOM overlay resolves anchors into CSS `calc()`
- * edges while the native canvas path resolves them into a numeric `Rect2`, but
- * BOTH answer the same question first — which four fractions does this node's
- * `anchors_preset` / `anchor_*` pair actually mean. Two transcriptions of the
- * same four `switch` statements would let a preset fix land on one renderer and
- * not the other, and nothing would fail: the two paths would simply disagree
- * about where a node belongs.
+ * Godot's Control anchor model, as plain data and one pure resolver: which
+ * four fractions a node's `anchors_preset` / `anchor_*` pair actually means,
+ * resolved by `native/controlRectSolver.ts` into a numeric `Rect2`.
  *
  * Framework-free (a type import only), so the `.ts`-only consumers that must
  * not pull in React can read it.

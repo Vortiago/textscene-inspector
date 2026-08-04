@@ -1,5 +1,5 @@
 /**
- * `<CheckBoxNative>` render contract — icon (always drawn, checked/unchecked/
+ * `<CheckBox>` render contract — icon (always drawn, checked/unchecked/
  * radio variant) + optional label text, NO chrome mesh. Structure/tint/
  * render-order assertions only (pixels are a golden-image concern via
  * `pnpm ref:godot`, not this suite).
@@ -15,7 +15,7 @@ import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { ControlProperties } from '../control/types';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { CheckBoxNative } from './NativeComponent';
+import { CheckBox } from './Component';
 import type { CheckBoxProperties } from './types';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
@@ -46,14 +46,14 @@ function findTextMesh(scene: { findAllByType: (t: string) => { instance: THREE.M
     .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
-describe('<CheckBoxNative> (isolated painter contract)', () => {
+describe('<CheckBox> (isolated painter contract)', () => {
   afterEach(() => {
     controlSolverRegistry.clear();
   });
 
   it('draws NO chrome mesh — CheckBox has no visible StyleBox (StyleBoxEmpty)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <CheckBoxNative {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+      <CheckBox {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     // Every mesh here is either the icon (PlaneGeometry, .parameters) or the
@@ -66,7 +66,7 @@ describe('<CheckBoxNative> (isolated painter contract)', () => {
 
   it('draws the icon even with no text at all (the check glyph is unconditional)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <CheckBoxNative {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
+      <CheckBox {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
     );
     expect(findIconMesh(renderer.scene)).toBeDefined();
     expect(findTextMesh(renderer.scene)).toBeUndefined();
@@ -74,7 +74,7 @@ describe('<CheckBoxNative> (isolated painter contract)', () => {
 
   it('draws the text mesh when text is present', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <CheckBoxNative {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+      <CheckBox {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
     expect(findTextMesh(renderer.scene)).toBeDefined();
   });
@@ -84,7 +84,7 @@ describe('<CheckBoxNative> (isolated painter contract)', () => {
       'pnpm ref:godot: probe (527,298) on unit-checkbox.tscn\'s checked row reads rgb(255,255,255)',
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
-        <CheckBoxNative
+        <CheckBox
           {...painterEnv()}
           solveNode={solveNode({ text: 'Hi', buttonPressed: true })}
           rect={RECT}
@@ -101,7 +101,7 @@ describe('<CheckBoxNative> (isolated painter contract)', () => {
     'uses font_color (0.875 gray) for an UNCHECKED, non-disabled box (DRAW_NORMAL, not DRAW_PRESSED)',
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
-        <CheckBoxNative {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+        <CheckBox {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
       );
       const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
       expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.875), 5);
@@ -114,7 +114,7 @@ describe('<CheckBoxNative> (isolated painter contract)', () => {
       "unit-checkbox.tscn's disabled row reads rgb(150,150,150) ≈ 0.5*223 + 0.5*76",
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
-        <CheckBoxNative
+        <CheckBox
           {...painterEnv()}
           solveNode={solveNode({ text: 'Hi', disabled: true })}
           rect={RECT}
@@ -129,7 +129,7 @@ describe('<CheckBoxNative> (isolated painter contract)', () => {
 
   it('disabled wins over pressed for the icon variant AND the font colour', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <CheckBoxNative
+      <CheckBox
         {...painterEnv()}
         solveNode={solveNode({ text: 'Hi', buttonPressed: true, disabled: true })}
         rect={RECT}
@@ -146,7 +146,7 @@ describe('<CheckBoxNative> (isolated painter contract)', () => {
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
         <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>
-          <CheckBoxNative
+          <CheckBox
             {...painterEnv()}
             solveNode={solveNode({ text: 'Hi', selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } })}
             rect={RECT}
@@ -166,7 +166,7 @@ describe('<CheckBoxNative> (isolated painter contract)', () => {
 
   it('forwards renderOrder to every mesh (icon + text)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <CheckBoxNative {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={7} />
+      <CheckBox {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={7} />
     );
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     expect(meshes.length).toBeGreaterThan(0);

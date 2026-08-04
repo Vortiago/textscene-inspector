@@ -106,9 +106,9 @@ function controlProps(n: SolveNode): ControlProperties {
  * against the viewport instead. It also authors no anchors or offsets, so the
  * anchor formula would hand it `(0, 0, 0, 0)` and every Control beneath it would
  * anchor against a degenerate rect: a `FULL_RECT` HUD collapses to nothing, and a
- * right-anchored one lands at negative x. Filling the rect it was given
- * reproduces the DOM overlay's own `position: absolute; inset: 0` passthrough,
- * which is where the same rule already lives for that renderer.
+ * right-anchored one lands at negative x. Filling the rect it was given makes
+ * this boundary a pure passthrough — it authors no rect of its own, so it
+ * takes on its parent's exactly.
  */
 function canvasBoundaryRect(parentRect: Rect2): Rect2 {
   return { x: 0, y: 0, w: parentRect.w, h: parentRect.h };

@@ -56,7 +56,7 @@ malformed value leaves the property undefined and the Godot default applies.
 ## Native (WebGL canvas) painter
 
 The same `shared/splitContainerSolver.ts` port at `vertical = true`;
-`NativeComponent.tsx` reads `size_flags_vertical`/`custom_minimum_size.y` and
+`Component.tsx` reads `size_flags_vertical`/`custom_minimum_size.y` and
 draws the `vsplitter` icon (48px across the split axis, 8px along it — the
 transpose of `hsplitter`'s 8×48). See HSplitContainer's comparison sheet for
 the divergences and limitations, identical here.

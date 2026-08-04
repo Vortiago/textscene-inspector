@@ -49,7 +49,7 @@ so all lenient-fallback behaviour for this node lives in the Control slice.
 
 ## Native (WebGL canvas) painter
 
-`NativeComponent.tsx` draws the SAME chrome `Panel`'s native painter draws —
+`Component.tsx` draws the SAME chrome `Panel`'s native painter draws —
 the resolved `theme_override_styles/panel` override, or the default-theme
 `panel` struct, across the node's whole solved rect. The container BEHAVIOUR
 lives in `nativeSolver.ts`, a port of `PanelContainer::get_minimum_size` and

@@ -1,5 +1,5 @@
-/* 2D viewport (ADR-0007): a pannable/zoomable stage that frames the live
-   ControlOverlay as a fixed-size canvas, distinct from the flat 3D viewport. */
+/* 2D viewport (ADR-0007): a pannable/zoomable stage that frames the 2D
+   canvas as a fixed-size region, distinct from the flat 3D viewport. */
 .canvasStage {
   position: absolute;
   inset: 0;
@@ -47,8 +47,8 @@
   background: rgba(135, 214, 3, 0.5);
 }
 
-/* The Control overlay's frame: same transform as .canvasFrame but transparent
-   and above the 2D world canvas (UI over world, Godot's 2D editor order). */
+/* The parity-capture frame: same transform as .canvasFrame, used by the
+   visual-regression harness to clip to the project viewport rect. */
 .overlayFrame {
   position: absolute;
   top: 0;
@@ -111,11 +111,4 @@
   width: auto !important;
   padding: 0 var(--tsi-space-2);
   border-radius: var(--tsi-radius-sm) !important;
-}
-
-.loading {
-  padding: var(--tsi-space-4);
-  text-align: center;
-  color: var(--tsi-fg-muted);
-  font-style: italic;
 }

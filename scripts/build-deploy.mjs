@@ -14,8 +14,7 @@
  *   - `apps/textscene-web/src/fixturesAll.ts`       → the `.games.` manifest
  *
  * The variable is set HERE rather than as a shell prefix on the npm script,
- * because `cmd.exe` cannot parse `FOO=1 cmd` — the same reason
- * `scripts/showcase/verify-2d.mjs` sets `SHOWCASE_CHANNEL` in JS.
+ * because `cmd.exe` cannot parse `FOO=1 cmd`.
  *
  * Point the Cloudflare Pages build command at `pnpm build:deploy`.
  */

@@ -11,7 +11,7 @@
 
 ## Domain language & decisions
 
-- **[CONTEXT.md](./CONTEXT.md)** — the shared glossary (Node, SceneGraph, vertical slice, viewport mode, Control overlay, collision gizmo, …). Use these terms exactly.
+- **[CONTEXT.md](./CONTEXT.md)** — the shared glossary (Node, SceneGraph, vertical slice, viewport mode, Control rect solve, collision gizmo, …). Use these terms exactly.
 - **[docs/adr/](./docs/adr/)** — architecture decision records, one per load-bearing decision, sequentially numbered with self-describing filenames (the directory is the source of truth — read it rather than a list mirrored here). Start with [0001 unified slice + React-free linter](./docs/adr/0001-unified-slice-react-free-linter.md) and [0002 three registries](./docs/adr/0002-three-separate-registries.md), which fix the overall shape; the rest record feature-level decisions (viewport-mode seam, render intent, animation drivers, instance-root merge, …).
 
 ## System Overview
@@ -68,7 +68,7 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │           │   ├── node/
 │           │   ├── base/{node2d,node3d}/
 │           │   ├── 2d/
-│           │   │   ├── ui/                  # 17 Control slices (control, label, button, containers, ...) — DOM overlay (ADR-0003)
+│           │   │   ├── ui/                  # 23 Control slices (control, label, button, containers, ...) — native canvas painters (ADR-0031)
 │           │   │   ├── tiles/{tilemap,tilemaplayer}/    # + shared/ — TileSet/atlas decoding
 │           │   │   ├── cpuparticles2d/      # frozen pose at `preprocess` — no clock (ADR-0008)
 │           │   │   └── {sprite2d,camera2d,animatedsprite2d,polygon2d,line2d,
@@ -104,9 +104,10 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │           │   ├── internal/{generic-node-fallback,glb-scene-root}/  # synthetic render-only types
 │           │   ├── contexts/{Selection,Hierarchy,CameraControl,NodePath}Context.tsx,
 │           │   │             {AnimationTransport,AnimationDriver,AnimatedValue}Context.tsx
-│           │   ├── controls/               # 2D Control overlay subsystem (ADR-0003):
-│           │   │                           #   ControlComponentRegistry, ControlDispatcher,
-│           │   │                           #   ControlOverlay, layout/StyleBox→CSS mapping
+│           │   ├── controls/               # Native 2D-UI Control canvas (ADR-0031, supersedes ADR-0003):
+│           │   │                           #   ControlComponentRegistry, native/ControlCanvasWalker,
+│           │   │                           #   native/ControlCanvasLayer, native/controlRectSolver
+│           │   │                           #   (rect solve), native/text/ (vendored MSDF atlas + layout)
 │           │   ├── lighting2d/             # Godot's canvas light pass (see below):
 │           │   │                           #   CanvasLighting2D (accumulator + pre-pass),
 │           │   │                           #   lightQuad (producer), canvasItemLighting (consumer)
@@ -155,9 +156,9 @@ side effect. Unknown types render as `<GenericNodeFallback>` (a labeled
 placeholder cube) from `r3f/internal/`. Not every slice carries every
 file: `propertyFormatter.ts` is present only for types with non-default
 Inspector formatting, and linter entry points exist only for types with
-validators/rules (Controls are render-only per
-[ADR-0003](./docs/adr/0003-2d-ui-dom-overlay.md)). Registration
-granularity also varies deliberately: the five 2D physics bodies share
+validators/rules (most 2D UI slices carry no validators/rules beyond
+`Control`'s own base-type chain, so they have no `index.linter.ts`).
+Registration granularity also varies deliberately: the five 2D physics bodies share
 one loop-based registration (`nodes/physics/2d/`) because they are
 five identical transform-only slices, while the 3D physics types keep
 per-type folders because each carries real per-type lint rules. See
@@ -293,6 +294,79 @@ target and one more seeded pass over the same quads:
 Parity is measured, not derived: `pnpm ref:godot <scene> --probe x,y` prints the
 engine's exact pixels, and the `unit-pointlight2d*` comparison sheets carry the
 resulting numbers.
+
+### The native Control canvas (2D UI)
+
+`r3f/controls/native/` renders Godot `Control`/`CanvasLayer` subtrees as ordinary
+three.js objects inside the same `World2DCanvas` the 2D world draws into
+([ADR-0031](./docs/adr/0031-control-nodes-render-natively-in-the-canvas.md),
+superseding ADR-0003's DOM overlay) — no `<div>`, no CSS, no second rendering
+technology.
+
+**The Control rect solve** (`controlRectSolver.ts`) replaces the browser's layout
+engine with a pure-TS port of Godot 4.6.3's own two phases: bottom-up
+`get_combined_minimum_size` (a widget's minimum, `custom_minimum_size`-floored,
+merged upward through nested containers), then top-down `fit_child_in_rect` (a
+free/anchored Control resolves against its parent's rect — the viewport for a
+root — a container child through that parent's registered `ContainerLayoutFn` in
+`controlSolverRegistry`). `ControlCanvasWalker` runs the solve once per
+generation over `buildSolveTree`'s live-tree walk, then emits one `<group>` per
+Control at its solved rect; a registered `Native` painter draws that node's own
+chrome, `ControlFallback` an outline when none is registered.
+
+**Draw order is `THREE.Object3D.renderOrder`, not a second z-banding scheme**
+(`controlDrawOrder.ts`). Every 2D canvas material in this codebase is
+`transparent` + `depthWrite={false}`, so three's transparent-object sort — which
+compares `renderOrder` BEFORE camera distance — decides paint order outright. A
+fractional-z scheme was rejected on plain arithmetic: the 2D camera sits at
+`position:[0,0,1000]`, `near:0.1`, `far:4000` (usable z range `(-3000, 999.9)`),
+and 2D world content already spans z `±409.6` (`canvasItemZ × Z_INDEX_STEP`) — no
+headroom left for a second per-layer band on top of that one. `renderOrder =
+bandBase(layer) + paintIndex` bands by the enclosing `CanvasLayer.layer` (Godot
+default 1; `WORLD_CANVAS_LAYER` with none) and offsets by one pre-order paint
+index per node, which is also how `CanvasLayer.layer` reaches the canvas's draw
+order for the first time — under the DOM overlay it existed only in the Control
+registry.
+
+**Clipping is clip planes, not the stencil buffer** (`controlClipping.tsx`). The
+on-screen 2D `<Canvas>` requests no stencil buffer at all (`World2DCanvas.tsx`'s
+`gl` props never ask for one, and three defaults it off), so a stencil-based clip
+would be a silent no-op everywhere — a spike measured 81/81 boundary samples
+exact across 4 nesting levels using planes instead. `ScrollContainer` builds its
+own subtree's 4 axis-aligned planes from its full rect, transforms them into
+world space via its own group's `matrixWorld`, and merges them onto whatever it
+inherited; every leaf material (`controlQuad.tsx`, `StyleBoxQuad.tsx`) spreads
+the accumulated list, since three's clip planes are per-material state.
+
+**Text is a vendored MSDF atlas plus this engine's own layout** (`native/text/`),
+not troika-three-text (already in the dependency tree via drei's lazy `<Text>`).
+A spike found troika impossible under the VS Code webview's CSP twice over:
+`worker-src` blocks its blob-URL SDF worker, and `connect-src` blocks its font
+*fetch* — for `data:` and `blob:` alike, so inlining the font bytes cannot help
+either. Godot's own default-theme font (`OpenSans_SemiBold.woff2`) is vendored
+and baked at build time into a PNG atlas + glyph table
+(`scripts/fonts/bake-metrics.mjs`, `--check` mode so the artifacts cannot drift
+from the font); line pitch ceiling-rounds ascent and descent to whole pixels
+independently before summing, matching Godot's FreeType-quantized metrics rather
+than a raw float scale.
+
+**One ordered pass driver, not per-publisher `useFrame`s**
+(`r3f/contexts/ViewportPassRegistryContext.tsx`). A `SubViewport`'s offscreen
+render and the native Control-only offscreen pass (the `ViewportTextureRegistry`
+publisher a `ViewportTexture` samples) each register `{ dependsOn, render }`
+instead of driving their own per-frame hook; `<ViewportPassOrchestrator>`
+topologically sorts every registered pass and runs them in that order from a
+single `useFrame`, so a pass nested inside another never renders a frame stale
+the way per-publisher mount-order driving did. A pass whose dependencies form a
+cycle is simply never driven — its target keeps whatever it last held,
+deterministic rather than flickering — `logger.warn` names it once, and
+`useViewportPassCycle` lets the sampling surface fall back to a placeholder.
+
+**Known limitation, not a regression:** a Control nested under a `Node2D`
+ancestor is positioned from its solved rect against the viewport; Godot composes
+the full CanvasItem transform chain through every `Node2D` parent above it. The
+DOM overlay was equally blind to a `Node2D` ancestor's transform, so this is
+unchanged behaviour, not new fallout from going native.
 
 ### Resource Loading
 
@@ -641,7 +715,12 @@ all node types on import), the resource pipeline, contexts, and selection.
 The lazy chunks contain: the tree viewer, the details panel, drei's
 `<Text>` (troika-three-text + bidi-js + its sdf-generator worker),
 GLTFLoader + SkeletonUtils (loaded on the first GLB resource request),
-and the CSS modules the DOM panels own.
+and the CSS modules the DOM panels own. The native Control canvas
+(`r3f/controls/native/`, all 23 painters, and the vendored MSDF font atlas)
+is lazy-loaded the same way, through the barrel `ControlCanvasLayer`
+imports (`r3f/controls/index.js`) — its side-effect registrations, and the
+atlas, only enter a bundle once a scene actually mounts the 2D stage, same
+as GLTFLoader only loads on an actual GLB request.
 
 **Bundle-size guard.** `scripts/check-bundle-size.mjs` walks the
 static-import closure starting at `webview.js`, gzips the
@@ -727,16 +806,16 @@ flowchart TB
 
 A module-graph guard test (over both `linter/index.ts` and `parser/TscnParser.ts`) plus an ESLint `no-restricted-imports` rule turn the React-free invariant from discipline into a red/green signal. Synthetic render-only types (`GenericNodeFallback`, `GLBSceneRoot`) move to `r3f/internal/` — they are not Node types.
 
-### Viewport mode + app chrome (P3/P4/P6 — [ADR-0003](./docs/adr/0003-2d-ui-dom-overlay.md), [ADR-0006](./docs/adr/0006-viewport-mode-seam.md), [ADR-0007](./docs/adr/0007-adopt-split-dock-shell.md))
+### Viewport mode + app chrome (P3/P4/P6 — [ADR-0031](./docs/adr/0031-control-nodes-render-natively-in-the-canvas.md) (supersedes [ADR-0003](./docs/adr/0003-2d-ui-dom-overlay.md)), [ADR-0006](./docs/adr/0006-viewport-mode-seam.md), [ADR-0007](./docs/adr/0007-adopt-split-dock-shell.md))
 
 **Status:** the 2D-UI Control set, the viewport toggle, and the **Split Dock** chrome (which replaced the 3-column DCC layout — ADR-0007) are all **shipped**.
 
-- **P3 — Control set (done).** All 15 Control types the target real-world corpus uses are registered DOM components: `Control`, `ColorRect`, `Label`, `VBoxContainer`, `HBoxContainer`, `GridContainer`, `CenterContainer`, `MarginContainer`, `ScrollContainer`, `Panel`, `PanelContainer`, `Button`, `TextureRect`, `RichTextLabel`, and the passthrough `CanvasLayer`. Each is a unified slice whose `index.r3f.ts` registers into `ControlComponentRegistry`; `ControlDispatcher` walks the subtree and `controlLayoutStyle` + `styleBoxToCss` + `resolveStyleBoxCss` map Godot layout/theme to CSS. `TextureRect` loads images host-agnostically via `useResource` (type-only `THREE` import — no runtime three in the slice). `CheckBox` and `OptionButton` were added later, beyond that original scope, bringing the current total to 17 (see Project Structure above).
-- **P4 — viewport toggle (done).** `TscnPreviewShell` is wrapped in `<ViewportModeProvider>`; a shared `<ViewportToolbar>` (3D/2D switch + Collisions checkbox) writes through `useViewportMode()`, and `<ViewportArea>` renders `TscnCanvas` (3D) or the lazy-loaded `ControlOverlay` (2D, fed the root scene's nodes + resources). The overlay is a separate lazy chunk, so the (now 17) Control components stay out of the initial canvas-paint bundle.
+- **P3 — Control set (done, superseded by native rendering — [ADR-0031](./docs/adr/0031-control-nodes-render-natively-in-the-canvas.md)).** All 23 Control types the target real-world corpus uses are registered as native (WebGL canvas) painters: `Control`, `ColorRect`, `Label`, `VBoxContainer`, `HBoxContainer`, `GridContainer`, `CenterContainer`, `MarginContainer`, `ScrollContainer`, `Panel`, `PanelContainer`, `Button`, `TextureRect`, `RichTextLabel`, `CheckBox`, `OptionButton`, `LineEdit`, `HSlider`/`VSlider`, `HSplitContainer`/`VSplitContainer`, `SubViewportContainer`, and the passthrough `CanvasLayer`. Each is a unified slice whose `index.r3f.ts` registers a `Native` painter into `ControlComponentRegistry`; `ControlCanvasWalker` walks the live subtree and runs the **Control rect solve** (`native/controlRectSolver.ts`, a two-phase port of Godot 4.6.3's `Control::get_combined_minimum_size` + `fit_child_in_rect`) to place every node before a painter draws its own chrome — StyleBoxes as tessellated, vertex-coloured meshes (`StyleBoxQuad`) and text as vendored MSDF glyph geometry (`native/text/`), never CSS. `TextureRect` loads images host-agnostically via `useResource`.
+- **P4 — viewport toggle (done).** `TscnPreviewShell` is wrapped in `<ViewportModeProvider>`; a shared `<ViewportToolbar>` (3D/2D switch + Collisions checkbox) writes through `useViewportMode()`, and `<ViewportArea>` renders `TscnCanvas` (3D) or `Canvas2DStage` (2D). The native Control canvas (`ControlCanvasLayer`, mounted inside `Canvas2DStage`'s `World2DCanvas`) is lazy-loaded through the same barrel that registers all 23 painters, so that registration weight — and the vendored MSDF atlas — stay out of the initial canvas-paint bundle until a 2D scene actually needs them.
 - **P5 — 3-column DCC chrome (superseded by P6).** The first chrome was a full-width top bar over three columns: a left **Scene** dock (SceneInfoCard + tree), the center viewport, and a right **Inspector** dock. Resizable + collapsible docks, stacked vertically under 768px. Replaced by the Split Dock (P6).
-- **P6 — Split Dock chrome (done, [ADR-0007](./docs/adr/0007-adopt-split-dock-shell.md)).** A prototype exploration (5 fresh-eyes designs → A+B hybrids → "Split Dock") landed the user-chosen layout: a slim top bar (file/brand + host toolbar + scene-stat chips) over **two** columns — a large center viewport (with the `ViewportToolbar` floated over its top-right corner) and a single right dock. **No left rail** (a VS Code webview sits right of VS Code's own activity bar + Explorer, so a left rail clashes + wastes width). The dock is a vertical **master-detail**: `SceneTreeViewer` on top over a tabbed detail (**Inspector / Resources / Cameras**) — selecting a node updates the inspector with no tab hop; the on-pane tab strip switches only the lower section; the Cameras tab lists `Camera3D` nodes with a one-click "use". `SceneInfoCard` was removed (node count moved to the top bar + tree header). Resizable width (`<Splitter>`) + a draggable master/detail handle; collapsible to a full-width viewport; stacks under 768px. In 2D mode the viewport becomes a framed pan/zoom `Canvas2DStage` wrapping the live `ControlOverlay`. The web app's scene picker is a Ctrl/Cmd+K command palette in the web toolbar (`apps/textscene-web/src/r3f-main.tsx`; "Open .tscn" primary — the built-in fixtures it lists are dev-only scaffolding). Restyled via the shared `--tsi-*` tokens (VS Code-theme-aware).
+- **P6 — Split Dock chrome (done, [ADR-0007](./docs/adr/0007-adopt-split-dock-shell.md)).** A prototype exploration (5 fresh-eyes designs → A+B hybrids → "Split Dock") landed the user-chosen layout: a slim top bar (file/brand + host toolbar + scene-stat chips) over **two** columns — a large center viewport (with the `ViewportToolbar` floated over its top-right corner) and a single right dock. **No left rail** (a VS Code webview sits right of VS Code's own activity bar + Explorer, so a left rail clashes + wastes width). The dock is a vertical **master-detail**: `SceneTreeViewer` on top over a tabbed detail (**Inspector / Resources / Cameras**) — selecting a node updates the inspector with no tab hop; the on-pane tab strip switches only the lower section; the Cameras tab lists `Camera3D` nodes with a one-click "use". `SceneInfoCard` was removed (node count moved to the top bar + tree header). Resizable width (`<Splitter>`) + a draggable master/detail handle; collapsible to a full-width viewport; stacks under 768px. In 2D mode the viewport becomes a framed pan/zoom `Canvas2DStage` compositing the 2D world and the native Control canvas in one draw. The web app's scene picker is a Ctrl/Cmd+K command palette in the web toolbar (`apps/textscene-web/src/r3f-main.tsx`; "Open .tscn" primary — the built-in fixtures it lists are dev-only scaffolding). Restyled via the shared `--tsi-*` tokens (VS Code-theme-aware).
 
-A single `ViewportModeContext` chooses between the 3D canvas and the 2D Control overlay (a sibling DOM layer, never inside `<Canvas>`), and drives the collision gizmo. The Split Dock shell is shared by both apps:
+A single `ViewportModeContext` chooses between the 3D canvas and the 2D stage's own canvas (native Controls draw inside it, never a sibling DOM layer), and drives the collision gizmo. The Split Dock shell is shared by both apps:
 
 ```mermaid
 flowchart TB
@@ -751,13 +830,13 @@ flowchart TB
   end
   TREE --> DETAIL
   VM -->|mode = 3D| TC["TscnCanvas → NodeDispatcher → R3F"]
-  VM -->|mode = 2D| CO["Canvas2DStage → ControlOverlay → &lt;div&gt; tree<br/>(framed 1152×648, zoom/pan)"]
+  VM -->|mode = 2D| CO["Canvas2DStage → World2DCanvas →<br/>NodeDispatcher + ControlCanvasWalker<br/>(one canvas, one tree order; framed 1152×648, zoom/pan)"]
   TC -. showCollisions .-> GZ["Collision gizmo<br/>(wireframe per collision-shape resource)"]
   CENTER --- TC
   CENTER --- CO
 ```
 
-The 2D overlay maps `layout_mode = 2` (container-managed, the majority case) to CSS flex/grid, the LayoutPreset 0..15 table to absolute positioning, and StyleBox resources to CSS; system fonts only, images via the host file provider (`useResource`, so VS Code webview CSP is honored). Per-app mode persistence behind a `usePersistedMode()` hook (`localStorage` web / webview state API) is **deferred** — the switch is per-session today.
+The native Control canvas resolves `layout_mode = 2` (container-managed, the majority case) through the parent's registered `ContainerLayoutFn`, the LayoutPreset 0..15 table into a solved `Rect2`, and StyleBox resources into tessellated mesh geometry — see [ADR-0031](./docs/adr/0031-control-nodes-render-natively-in-the-canvas.md) and CONTEXT.md's **Control rect solve** entry. Text draws from a vendored Open Sans MSDF atlas rather than the host's system fonts, so it renders identically under the VS Code webview and the web app; images load via the host file provider (`useResource`, so VS Code webview CSP is honored) straight into a GL texture, with no `data:`-URL laundering step. Per-app mode persistence behind a `usePersistedMode()` hook (`localStorage` web / webview state API) is **deferred** — the switch is per-session today.
 
 ### Scope (P2 — [ADR-0004](./docs/adr/0004-csg-as-primitive.md), [ADR-0005](./docs/adr/0005-physics-bodies-transform-only.md))
 

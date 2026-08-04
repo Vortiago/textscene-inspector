@@ -54,10 +54,7 @@ export const BUTTON_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 
  * `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)`
  * (`default_theme.cpp:106`), Button's own `font_disabled_color` default
  * (`:161`). The numeric twin of `godotDefaultTheme.ts`'s
- * `CONTROL_FONT_DISABLED_COLOR` CSS string (`rgba(223, 223, 223, 0.5)`) —
- * this is what the DOM overlay APPROXIMATES instead (a flat `opacity: 0.6` on
- * the whole button, `Component.tsx`), the divergence this packet's
- * `comparison.md` documents and this native path closes exactly.
+ * `CONTROL_FONT_DISABLED_COLOR` CSS string (`rgba(223, 223, 223, 0.5)`).
  */
 export const BUTTON_DEFAULT_DISABLED_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
 

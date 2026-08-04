@@ -1,6 +1,6 @@
 /**
- * SubViewportContainer registration — the 2D-overlay DOM component, plus a
- * workspace-neutral pass-through in the 3D registry.
+ * SubViewportContainer registration — the native (WebGL canvas) painter, plus
+ * a workspace-neutral pass-through in the 3D registry.
  *
  * Registered in BOTH registries on purpose. `container: true` — a
  * workspace-neutral container — is what it actually is: it passes through in
@@ -18,12 +18,10 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
 import { Node } from '../../../node/Component';
 import { SubViewportContainer } from './Component';
-import { SubViewportContainerNative } from './NativeComponent';
 
 controlComponentRegistry.register({
   typeName: 'SubViewportContainer',
   Component: SubViewportContainer,
-  Native: SubViewportContainerNative,
 });
 
 nodeComponentRegistry.register({
@@ -32,4 +30,4 @@ nodeComponentRegistry.register({
   container: true,
 });
 
-export { SubViewportContainer, SubViewportContainerNative };
+export { SubViewportContainer };

@@ -3,7 +3,7 @@
  * abstract base (Range → Slider → H/VSlider), so its own properties and their
  * parsing live ONCE here; the two slices keep only their wiring and their axis.
  * Pure `.ts` (no React/THREE) so both parsers can import it inside the linter
- * graph — the CSS mapping lives in `r3f/controls/sliderChrome.ts`.
+ * graph — the native painter's geometry lives in `shared/sliderSolver.ts`.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';

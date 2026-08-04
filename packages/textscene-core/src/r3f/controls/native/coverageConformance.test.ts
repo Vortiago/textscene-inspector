@@ -1,14 +1,13 @@
 /**
- * Conformance guard for the staged native-Control rollout, over the REAL
- * barrel-registered `ControlComponentRegistry`/`controlSolverRegistry` (the
- * side-effect import of `../index` registers every Control slice, DOM and
- * native alike — a hand-built stub registry would prove nothing about what
- * ships).
+ * Conformance guard over the REAL barrel-registered
+ * `ControlComponentRegistry`/`controlSolverRegistry` (the side-effect import
+ * of `../index` registers every Control slice's native painter — a
+ * hand-built stub registry would prove nothing about what ships).
  *
  * Two independent completeness checks:
  *
- * 1. Native painter coverage — every registered Control type carries a
- *    `Native` painter. A missing one falls back to `<ControlFallback>`'s
+ * 1. Native painter coverage — every Control type the 2D UI needs carries a
+ *    registered painter. A missing one falls back to `<ControlFallback>`'s
  *    outline (`ControlCanvasWalker.tsx`) instead of failing loudly, so this
  *    is the one place a lost painter would otherwise regress silently.
  * 2. Solver-registry completeness: exactly the Container-family types have a
@@ -20,8 +19,8 @@
  * `has2DUIContent.driftguard.test.ts` exists for exactly that and owns it.
  */
 import { describe, expect, it } from 'vitest';
-// Side-effect import: registers all 23 Control slices' DOM + native painters,
-// and every slice's solver functions (`nativeSolver.ts`/`index.r3f.ts`).
+// Side-effect import: registers all 23 Control slices' native painters, and
+// every slice's solver functions (`nativeSolver.ts`/`index.r3f.ts`).
 import { controlComponentRegistry } from '../index';
 import { parseBareNode } from '../testing/probeScene';
 import { controlSolverRegistry } from './solverRegistry';
@@ -80,11 +79,11 @@ describe('Native Control registry coverage', () => {
 
   it('every registered Control type has a native painter', () => {
     const registered = controlComponentRegistry.getAllTypeNames();
-    const missing = registered.filter((type) => controlComponentRegistry.getNative(type) === undefined);
+    const missing = registered.filter((type) => controlComponentRegistry.get(type) === undefined);
 
     expect(
       missing,
-      `${registered.length - missing.length}/${registered.length} registered types carry a Native painter`
+      `${registered.length - missing.length}/${registered.length} registered types carry a painter`
     ).toEqual([]);
   });
 

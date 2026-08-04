@@ -37,7 +37,7 @@ chevron icon — see its own section.
 `nativeSolver.ts` registers `OptionButton::get_minimum_size`
 (`controlSolverRegistry.registerMinimumSize`, honouring `fit_to_longest_item`'s
 engine default of `true` — the minimum size floors on the WIDEST item's text,
-not the selected one's); `NativeComponent.tsx` draws the Button-style StyleBox
+not the selected one's); `Component.tsx` draws the Button-style StyleBox
 chrome, the SELECTED item's text only (never the popup's full list, matching
 `Component.tsx`), and the chevron (`native/themeIcons.ts`'s
 `OPTION_BUTTON_ICONS.arrow`) at the right edge.

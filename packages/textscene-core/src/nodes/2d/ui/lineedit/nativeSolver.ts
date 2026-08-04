@@ -101,7 +101,7 @@ export function lineEditTextTheme(
  * `LineEdit::get_minimum_size` (`line_edit.cpp:2443-2477`), restricted to
  * what this codebase models (no `right_icon`/`clear_button`/
  * `expand_to_text_length` — none of the three are parsed onto
- * `LineEditProperties`, matching `Component.tsx`'s own DOM twin):
+ * `LineEditProperties`):
  *
  *     float em_space_size = font->get_char_size('W', font_size).x;
  *     min_size.width = theme_cache.minimum_character_width * em_space_size;

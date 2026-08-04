@@ -37,7 +37,7 @@ icon textures instead of a hand-drawn approximation — see its own section.
 ## Native (WebGL canvas) painter
 
 `nativeSolver.ts` registers `CheckBox::get_minimum_size`
-(`controlSolverRegistry.registerMinimumSize`); `NativeComponent.tsx` draws the
+(`controlSolverRegistry.registerMinimumSize`); `Component.tsx` draws the
 check (or radio, when the node belongs to a `button_group`) indicator using the
 real vendored icon textures (`native/themeIcons.ts`'s `CHECK_BOX_ICONS`, 8
 draw-state variants), followed by the label — CheckBox draws NO chrome mesh at

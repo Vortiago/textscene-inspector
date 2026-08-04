@@ -1,44 +1,34 @@
 /**
  * Canvas2DStage behavior: frame chrome (dimension badge), the zoom
  * HUD (in/out/fit + clamping), wheel-to-zoom, and pointer-capture
- * drag-to-pan. The lazy ControlOverlay barrel is stubbed — overlay layout
- * has its own suites; this one only covers the stage chrome around it.
+ * drag-to-pan. The native Control canvas mounts inside `<World2DCanvas>`,
+ * which has its own suites; this one only covers the stage chrome around it.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
-vi.mock('../../controls/index.js', () => ({
-  ControlOverlay: ({ nodes }: { nodes: readonly unknown[] }) => (
-    <div data-testid="overlay-stub" data-node-count={nodes.length} />
-  ),
-}));
-
-// The 2D-world R3F canvas needs WebGL — stub it, recording the pan/zoom (and
-// the native-controls flag) it receives so the transform-sync and mount-seam
-// contracts are assertable in jsdom.
+// The 2D-world R3F canvas needs WebGL — stub it, recording the pan/zoom it
+// receives so the transform-sync and mount-seam contracts are assertable in
+// jsdom.
 vi.mock('./World2DCanvas', () => ({
   World2DCanvas: ({
     pan,
     zoom,
     nodes,
-    nativeControls,
   }: {
     pan: { x: number; y: number };
     zoom: number;
     nodes: readonly unknown[];
-    nativeControls?: boolean;
   }) => (
     <div
       data-testid="world-canvas-stub"
       data-pan={`${pan.x},${pan.y}`}
       data-zoom={zoom}
       data-node-count={nodes.length}
-      data-native-controls={String(Boolean(nativeControls))}
     />
   ),
 }));
 
-import { NATIVE_CONTROLS_STORAGE_KEY } from './viewport2d';
 import { Canvas2DStage } from './Canvas2DStage';
 import {
   CameraControlProvider,
@@ -68,10 +58,9 @@ function sizeEveryElement(width: number, height: number) {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  // Read once at mount, so a leaked value silently changes the NEXT test's
+  // opening view.
   window.localStorage.removeItem(FIT_ON_OPEN_2D_STORAGE_KEY);
-  // Both keys are read once at mount, so a leaked value silently changes which
-  // renderer the NEXT test gets.
-  window.localStorage.removeItem(NATIVE_CONTROLS_STORAGE_KEY);
 });
 
 function makeNode(name: string): TscnNode {
@@ -133,13 +122,6 @@ describe('<Canvas2DStage>', () => {
     expect(screen.getByText('1152 × 648')).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Canvas zoom' })).toBeTruthy();
     expect(zoomLabel()).toBe('100%');
-  });
-
-  it('mounts the lazy ControlOverlay with the passed nodes when the overlay is opted into', async () => {
-    window.localStorage.setItem(NATIVE_CONTROLS_STORAGE_KEY, 'false');
-    renderStage([makeNode('A'), makeNode('B')]);
-    const overlay = await screen.findByTestId('overlay-stub');
-    expect(overlay.getAttribute('data-node-count')).toBe('2');
   });
 
   it('mounts the 2D world canvas with the stage pan/zoom kept in sync', () => {
@@ -384,31 +366,14 @@ describe('<Canvas2DStage>', () => {
     expect(frame.style.transform).toBe('translate(0px, 0px) scale(1)');
   });
 
-  it('native controls off (opt-in): renders <ControlOverlay> inside the capture frame, World2DCanvas gets nativeControls=false', async () => {
-    window.localStorage.setItem(NATIVE_CONTROLS_STORAGE_KEY, 'false');
-    renderStage([makeNode('A')]);
-    const overlay = await screen.findByTestId('overlay-stub');
-    const captureFrame = screen.getByTestId('canvas-2d-capture-frame');
-    expect(captureFrame.contains(overlay)).toBe(true);
-    expect(screen.getByTestId('world-canvas-stub').getAttribute('data-native-controls')).toBe(
-      'false'
-    );
-  });
-
-  it('native controls on (the default): omits <ControlOverlay>, keeps the capture frame, and passes nativeControls=true to World2DCanvas', () => {
-    // No seeding: native is the default now. The overlay is what needs opting
-    // into, which is what the two tests above do.
+  it('renders the capture frame regardless of scene content — the parity-capture contract', () => {
     render(
       <Canvas2DStage nodes={[makeNode('A')]} internalResources={[]} externalResources={[]} />
     );
-    expect(screen.queryByTestId('overlay-stub')).toBeNull();
-    // The capture frame itself is the parity-capture contract (ADR — see
-    // `scripts/godot-ref/capture-ours.mjs`) and must survive regardless of
-    // which Control renderer is active.
+    // The capture frame itself is the parity-capture contract (see
+    // `scripts/godot-ref/capture-ours.mjs`) — the Control canvas draws inside
+    // `<World2DCanvas>` above it, not into this div.
     expect(screen.getByTestId('canvas-2d-capture-frame')).toBeTruthy();
-    expect(screen.getByTestId('world-canvas-stub').getAttribute('data-native-controls')).toBe(
-      'true'
-    );
   });
 
   it('Fit recenters the frame inside the stage bounds with the margin-fitted zoom', () => {

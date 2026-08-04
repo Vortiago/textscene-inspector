@@ -1,6 +1,6 @@
 /**
- * `<VSplitContainerNative>` — the vertical-axis twin of
- * `hsplitcontainer/NativeComponent.test.tsx`; see that file's own doc for why
+ * `<VSplitContainer>` — the vertical-axis twin of
+ * `hsplitcontainer/Component.test.tsx`; see that file's own doc for why
  * the grabber is invisible by default. This pins the TRANSPOSED axis: reading
  * `sizeFlagsVertical` and drawing `vsplitter` (48x8) centred on the ROW split.
  */
@@ -9,7 +9,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { VSplitContainerNative } from './NativeComponent';
+import { VSplitContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
 function solveNode(
@@ -40,11 +40,11 @@ function split(properties: Record<string, unknown>, children: SolveNode[]): Solv
   return solveNode('Split', 'VSplitContainer', properties, children);
 }
 
-describe('<VSplitContainerNative>', () => {
+describe('<VSplitContainer>', () => {
   it('renders nothing under the default theme', async () => {
     const node = split({}, bothExpandChildren());
     const renderer = await ReactThreeTestRenderer.create(
-      <VSplitContainerNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 120, h: 300 }} renderOrder={0} />
+      <VSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 120, h: 300 }} renderOrder={0} />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });
@@ -55,7 +55,7 @@ describe('<VSplitContainerNative>', () => {
       solveNode('Bottom', 'ColorRect', { sizeFlagsHorizontal: EXPAND_FILL }),
     ]);
     const renderer = await ReactThreeTestRenderer.create(
-      <VSplitContainerNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 120, h: 300 }} renderOrder={0} />
+      <VSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 120, h: 300 }} renderOrder={0} />
     );
     // Neither counts as expanding on the vertical axis -> rest position 0.
     const group = renderer.scene.findByType('Group');
@@ -67,7 +67,7 @@ describe('<VSplitContainerNative>', () => {
   it('draws exactly one 48x8 textured quad, centred on the computed row split, once autohide is overridden', async () => {
     const node = split({ themeOverrideConstants: { autohide: 0 } }, bothExpandChildren());
     const renderer = await ReactThreeTestRenderer.create(
-      <VSplitContainerNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 120, h: 300 }} renderOrder={0} />
+      <VSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 120, h: 300 }} renderOrder={0} />
     );
 
     const meshes = renderer.scene.findAllByType('Mesh');
@@ -88,7 +88,7 @@ describe('<VSplitContainerNative>', () => {
   it('renders nothing with fewer than two sortable children, even with autohide overridden', async () => {
     const node = split({ themeOverrideConstants: { autohide: 0 } }, [solveNode('Only', 'ColorRect', {})]);
     const renderer = await ReactThreeTestRenderer.create(
-      <VSplitContainerNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 120, h: 300 }} renderOrder={0} />
+      <VSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 120, h: 300 }} renderOrder={0} />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });

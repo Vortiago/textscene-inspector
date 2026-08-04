@@ -40,7 +40,7 @@ Measured through Godot 4.6.3 with a 300×200 container at (100, 80) holding a
 ## What the surface shows
 
 Two arms, because a viewport target has two kinds of source. The NATIVE
-painter (`NativeComponent.tsx`, the shipped default — native Controls default
+painter (`Component.tsx`, the shipped default — native Controls default
 to `true`) draws both, since every content kind is a WebGL texture it can
 sample directly:
 

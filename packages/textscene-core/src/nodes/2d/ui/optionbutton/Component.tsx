@@ -1,66 +1,114 @@
 /**
- * <OptionButton> — renders the SELECTED item's text inside a collapsed dropdown
- * affordance (<div>) on the 2D-UI overlay. Font size/color come from
- * `theme_override_font_sizes/font_size` + `theme_override_colors/font_color`;
- * a system font stack is used (the VS Code webview CSP blocks web fonts). Only
- * the selected item is shown — not all items, not the first item.
+ * `<OptionButton>` — the native (WebGL canvas) painter for
+ * `OptionButton`: Button-style StyleBox chrome, the SELECTED item's text (not
+ * every item — this is a static previewer, never the open popup), and the
+ * chevron arrow icon at its right edge, drawn from the vendored theme icons
+ * (`native/themeIcons.ts`'s `OPTION_BUTTON_ICONS`).
+ *
+ * Tint follows `Button`'s rule: `modulate` is already folded into the
+ * ambient `Modulate2DContext` by the walker, so this calls `useCanvasItemTint`
+ * with `modulate: WHITE_MODULATE` and only this node's own `self_modulate`.
+ * The StyleBox uses `tintStyleBox` (two base colours); the arrow's own
+ * modulate is ALWAYS opaque white in the default theme (`modulate_arrow`
+ * defaults `false`, `default_theme.cpp:251` — `NOTIFICATION_DRAW` then never
+ * enters the font-colour switch at all, leaving `clr = Color(1, 1, 1)`
+ * unconditionally), so the arrow quad's colour/opacity are `tint.color`/
+ * `tint.opacity` directly, same as `CheckBox`'s icon.
+ *
+ * `renderOrder` reaches all three meshes (chrome `StyleBoxQuad`, arrow
+ * `ControlQuad`, text `<TextRun>`); `clippingPlanes` reaches the text material
+ * explicitly (the two quads read `useControlClipPlanes()` internally).
+ *
+ * This component never checks `props.visible`, never renders `children`, and
+ * never applies a transform — all three are `ControlCanvasWalker`'s job.
  */
-
-import type { CSSProperties } from 'react';
-import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
-import { controlStyle } from '../../../../r3f/controls/controlLayout';
-import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
+import { useMemo } from 'react';
+import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
+import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { OPTION_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import {
-  DEFAULT_FONT_COLOR,
-  STYLE_NORMAL_FILL,
-  type ScaledGodotTheme,
-} from '../../../../r3f/controls/godotDefaultTheme';
-import { useGodotTheme } from '../../../../r3f/controls/useGodotTheme';
+  layoutOptionButtonContent,
+  optionButtonTextTheme,
+  pickButtonStyleBox,
+  resolveButtonDrawState,
+  resolveOptionButtonSelectedText,
+  tintColor,
+  tintStyleBox,
+  OPTION_BUTTON_ARROW_NATURAL_SIZE,
+} from './nativeSolver';
 import type { OptionButtonProperties } from './types';
 
-/**
- * Godot's OptionButton wears the button "normal" StyleBoxFlat (dark,
- * translucent) with 8/4 content margins at scale 1 — sourced from the default
- * theme so it blends over the overlay backdrop the way the engine does, and
- * scaled with it so a project's `gui/theme/default_theme_scale` carries.
- */
-function dropdownDefaults(theme: ScaledGodotTheme): CSSProperties {
-  return {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: `${theme.optionButtonMarginY}px ${theme.optionButtonMarginX}px`,
-    borderRadius: `${theme.cornerRadius}px`,
-    backgroundColor: STYLE_NORMAL_FILL,
-    fontSize: `${theme.fontSize}px`,
-    color: DEFAULT_FONT_COLOR,
-  };
-}
+export function OptionButton({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
+  const props = solveNode.node.properties as OptionButtonProperties;
+  const state = resolveButtonDrawState(props.disabled);
 
-export function OptionButton({ node, children }: ControlComponentProps) {
-  const props = node.properties as OptionButtonProperties;
-  const parentKind = useControlParent();
-  const theme = useGodotTheme();
-  const style: CSSProperties = controlStyle(
-    props,
-    parentKind,
-    dropdownDefaults(theme),
-    { textAlign: 'left', cursor: props.disabled ? 'default' : 'pointer' },
-    textThemeStyle(props, { sizeKey: 'font_size', colorKey: 'font_color' })
+  const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.optionButton, state);
+
+  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
+  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+
+  const styleBox = useMemo(() => tintStyleBox(baseStyleBox, tint.own), [baseStyleBox, tint.own]);
+  const clippingPlanes = useControlClipPlanes();
+
+  const arrowTexture = useIconTexture(OPTION_BUTTON_ICONS.arrow);
+
+  // --- Text: the SELECTED item only, never the popup's full list -----------
+  const text = resolveOptionButtonSelectedText(props);
+  const hasText = text.length > 0;
+  const { fontSizePx, color: baseFontColor } = optionButtonTextTheme(props, state, { theme });
+  const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
+
+  const layout: TextLayoutResult | null = useMemo(
+    () => (hasText ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF }) : null),
+    [hasText, text, fontSizePx]
   );
 
-  if (props.disabled) style.opacity = 0.6;
+  // --- Content layout: text + arrow placement within the solved rect ------
+  const arrowMargin = props.themeOverrideConstants?.arrow_margin ?? theme.separation;
 
-  // Resolve the selected item by its Godot index, bounds-guarded — an out-of-range or
-  // absent `selected` falls back to empty text (a decision, not an accident).
-  const items = props.items ?? [];
-  const selectedIndex = props.selected ?? -1;
-  const selectedItem = selectedIndex >= 0 && selectedIndex < items.length ? items[selectedIndex] : undefined;
+  const content = useMemo(
+    () =>
+      layoutOptionButtonContent({
+        rectSize: { x: rect.w, y: rect.h },
+        styleMargin: styleBox.contentMargin,
+        arrowSize: OPTION_BUTTON_ARROW_NATURAL_SIZE,
+        arrowMargin,
+        textNaturalSize: layout ? { x: layout.widthPx, y: layout.heightPx } : { x: 0, y: 0 },
+        fontSizePx,
+      }),
+    [rect.w, rect.h, styleBox.contentMargin, arrowMargin, layout, fontSizePx]
+  );
 
   return (
-    <div data-control-type="OptionButton" data-node-name={node.name} style={style}>
-      {selectedItem?.text ?? ''}
-      {children}
-    </div>
+    <>
+      <StyleBoxQuad styleBox={styleBox} rect={rect} renderOrder={renderOrder} />
+      <group position={[content.arrowRect.x, -content.arrowRect.y, 0]}>
+        <ControlQuad
+          renderOrder={renderOrder}
+          width={content.arrowRect.w}
+          height={content.arrowRect.h}
+          color={tint.color}
+          opacity={tint.opacity}
+          map={arrowTexture}
+        />
+      </group>
+      {hasText && layout && (
+        <group position={[content.textOffset.x, -content.textOffset.y, 0]}>
+          <TextRun
+            layout={layout}
+            fontSizePx={fontSizePx}
+            tint={tintedFontColor}
+            clippingPlanes={clippingPlanes}
+            renderOrder={renderOrder}
+          />
+        </group>
+      )}
+    </>
   );
 }

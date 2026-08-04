@@ -5,7 +5,7 @@
  * given `nodes` into positioned Control groups (via `buildSolveTree` +
  * `<ControlCanvasWalker>`), reads the viewport rect from the active
  * project's settings rather than a hardcoded constant, and forces a
- * `visible = false` root visible the same way `<ControlOverlay>` does.
+ * `visible = false` root visible.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -52,7 +52,7 @@ describe('<ControlCanvasLayer>', () => {
   });
 
   it("gives layer-0 UI (no enclosing CanvasLayer) this canvas's own CanvasModulate scope, from a sibling root CanvasModulate", async () => {
-    controlComponentRegistry.register({ typeName: 'Control', Component: () => null, Native: ModulateProbeNative });
+    controlComponentRegistry.register({ typeName: 'Control', Component: ModulateProbeNative });
     const tint = node('CanvasModulate', 'CanvasModulate', { color: { r: 0.25, g: 0.5, b: 0.75, a: 1 } });
     const probe = node('Probe', 'Control', { anchorsPreset: 15 });
 
@@ -150,8 +150,7 @@ describe('<ControlCanvasLayer>', () => {
     // hardcode (always zero, regardless of text).
     controlComponentRegistry.register({
       typeName: 'Control',
-      Component: () => null,
-      Native: RectProbeNative,
+      Component: RectProbeNative,
     });
     controlSolverRegistry.registerMinimumSize('Control', (n, ctx) => {
       const text = (n.node.properties as { text?: string }).text ?? '';

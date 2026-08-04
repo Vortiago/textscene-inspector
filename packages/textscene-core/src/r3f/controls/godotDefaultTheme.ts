@@ -1,20 +1,20 @@
 /**
- * Godot 4.6 `default_theme` constants shared by the DOM-overlay Controls
- * (ADR-0003). Each value is transcribed from Godot's
- * `scene/theme/default_theme.cpp` and rendered to CSS so a Control's un-themed
- * chrome matches what the engine paints for the built-in dark UI theme, instead
- * of a hand-picked approximation that drifts from it.
+ * Godot 4.6 `default_theme` constants. Each value is transcribed from Godot's
+ * `scene/theme/default_theme.cpp` so a Control's un-themed chrome matches what
+ * the engine paints for the built-in dark UI theme, instead of a hand-picked
+ * approximation that drifts from it.
  *
  * The fills are the engine's SEMI-TRANSPARENT StyleBoxFlat colours (e.g.
  * `Color(0.1, 0.1, 0.1, 0.6)`) — kept translucent, not pre-composited — so they
- * blend over the overlay background exactly as Godot blends them over the 2D
+ * blend over the canvas background exactly as Godot blends them over the 2D
  * clear colour. Measured against real Godot renders: a `Color(0.1,0.1,0.1,0.6)`
  * fill over Godot's default `Color(0.3,0.3,0.3)` clear composites to
- * rgb(46,46,46), which the overlay reproduces because it shares that backdrop.
+ * rgb(46,46,46).
  *
  * Framework-free (plain strings/numbers, no React import) so both the
  * render-side components and any `.ts`-only consumer can read the constants;
- * each Control composes its own CSSProperties from them.
+ * `native/nativeTheme.ts` builds `NativeTheme` on top of `scaledGodotTheme`
+ * without re-transcribing any of them.
  */
 
 // --- Text (control_font_color / default_font_size) ---
@@ -62,11 +62,9 @@ export const STYLE_FILL = {
 } as const satisfies Record<string, ThemeFill>;
 
 /**
- * Formats a {@link ThemeFill} as CSS. Deliberately a local three-liner rather
- * than an import of `styleBoxToCss`'s equivalent: this module's contract is to
- * stay readable by the `.ts`-only consumers, and that module value-imports the
- * colour/vector parsers, which would widen this one's import closure to buy
- * nothing.
+ * Formats a {@link ThemeFill} as CSS. A local three-liner on purpose: this
+ * module's contract is to stay importable by `.ts`-only consumers, so it never
+ * value-imports the colour/vector parsers a shared formatter would drag in.
  */
 const fillCss = (c: ThemeFill): string =>
   `rgba(${Math.round(c.r * 255)}, ${Math.round(c.g * 255)}, ${Math.round(c.b * 255)}, ${c.a})`;
@@ -173,14 +171,15 @@ export const SLIDER_GRABBER_FILL = 'rgba(254, 254, 254, 0.75)';
 export const SLIDER_GRABBER_DISABLED_FILL = 'rgba(254, 254, 254, 0.37)';
 
 /**
- * `hslider_tick` is a 4x16 texture whose visible bar is 2px wide, inset 1px,
- * running the full 16px (`vslider_tick` is its transpose). So a tick is a 2px
- * bar spanning 16px across the 8px track, centred in a 4px-wide texture box.
+ * `hslider_tick.svg`/`vslider_tick.svg` declare a 4x8 canvas (`width="4"
+ * height="8"` / `width="8" height="4"`); the path inside draws past that, but
+ * Godot's SVG rasteriser clips to the declared canvas — measured directly off
+ * real Godot 4.6.3 (`pnpm ref:godot`, a probe scene with `tick_count` set):
+ * the painted tick band is exactly 8px. So a tick is a 2px bar spanning 8px
+ * across the 8px track, centred in a 4px-wide texture box.
  */
 export const SLIDER_TICK_BOX = 4;
 export const SLIDER_TICK_THICKNESS = 2;
-export const SLIDER_TICK_LENGTH = 16;
-export const SLIDER_TICK_FILL = 'rgba(255, 255, 255, 0.25)';
 
 // --- Project theme scale (gui/theme/default_theme_scale) ---
 
@@ -214,8 +213,6 @@ export interface ScaledGodotTheme {
   sliderTickBox: number;
   /** The visible tick bar's thickness, in px. */
   sliderTickThickness: number;
-  /** The visible tick bar's length across the track, in px. */
-  sliderTickLength: number;
 }
 
 /**
@@ -265,6 +262,5 @@ export function scaledGodotTheme(scale: number): ScaledGodotTheme {
     sliderGrabberRadius: Math.round(SLIDER_GRABBER_RADIUS * scale),
     sliderTickBox: Math.round(SLIDER_TICK_BOX * scale),
     sliderTickThickness: Math.round(SLIDER_TICK_THICKNESS * scale),
-    sliderTickLength: Math.round(SLIDER_TICK_LENGTH * scale),
   };
 }

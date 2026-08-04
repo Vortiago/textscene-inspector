@@ -59,7 +59,7 @@ laid-out width exceeds the floor and the substitution is invisible.
 `line_edit.cpp:2443-2477`) — the exact `minimum_character_width * 'W'-advance`
 term the DOM overlay only approximates with `4em` above, now measured against
 the SAME vendored Open Sans atlas Godot's own default theme font is baked
-from. `NativeComponent.tsx` draws the `normal`/`read_only` `StyleBoxQuad`
+from. `Component.tsx` draws the `normal`/`read_only` `StyleBoxQuad`
 (skipped when `flat`) and one `<TextRun>` — whichever string
 `lineEditDisplayText` selects, at `font_color`/`font_uneditable_color`/
 `font_placeholder_color` per state, aligned per `alignment`, and clipped to
@@ -78,7 +78,7 @@ independently unit-tested), but the vendored Open Sans atlas
 `•` (U+2022), the DEFAULT `secret_character`, is not among them. A secret
 field that never overrides `secret_character` therefore echoes a run of
 GLYPHS THAT DRAW NOTHING on the native canvas (zero quads, verified in
-`NativeComponent.test.tsx`) — invisible rather than wrong, but still a gap:
+`Component.test.tsx`) — invisible rather than wrong, but still a gap:
 an ASCII override (e.g. `*`) renders correctly. Closing it would mean adding
 `•` to the baked atlas, out of this packet's scope.
 

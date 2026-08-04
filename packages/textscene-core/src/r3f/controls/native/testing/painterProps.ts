@@ -4,7 +4,7 @@
  *
  * Spread it FIRST and let a test's own explicit attributes override:
  *
- *     <PanelNative {...painterEnv()} solveNode={n} rect={RECT} renderOrder={0} />
+ *     <Panel {...painterEnv()} solveNode={n} rect={RECT} renderOrder={0} />
  *
  * Before this existed, every painter test hand-rolled the whole props object, so
  * adding a required field broke sixteen test files at once — which is both

@@ -36,7 +36,6 @@ import { parseOptionalVector2 } from './valueParsers';
 import { parseVector2, FLOAT_PATTERN_SOURCE } from './vectors';
 import { heading } from './testing/parserKit';
 import { parseControl } from '../nodes/2d/ui/control/parser';
-import { styleBoxToCss } from '../r3f/controls/styleBoxToCss';
 import { parseBaseLightProperties } from '../nodes/3d/lights/shared/parser';
 import { parseDirectionalLight3D } from '../nodes/3d/lights/directionallight3d/parser';
 import { parseCamera3D } from '../nodes/3d/camera3d/parser';
@@ -106,25 +105,6 @@ describe('#175 control custom_minimum_size — canonical grammar, not the loose 
       custom_minimum_size: 'Vector2(--1, 2)',
     });
     expect(p.customMinimumSize).toBeUndefined();
-  });
-});
-
-describe('#175 styleBox shadow_offset — canonical grammar, never emits NaN', () => {
-  it('renders a valid shadow offset', () => {
-    const style = styleBoxToCss('StyleBoxFlat', {
-      shadow_size: '4',
-      shadow_offset: 'Vector2(2, 3)',
-    });
-    expect(style.boxShadow).toContain('2px 3px');
-    expect(String(style.boxShadow)).not.toContain('NaN');
-  });
-
-  it('falls back cleanly (no NaN in the CSS) for loose-regex-only garbage', () => {
-    const style = styleBoxToCss('StyleBoxFlat', {
-      shadow_size: '4',
-      shadow_offset: 'Vector2(--1, 2)',
-    });
-    expect(String(style.boxShadow)).not.toContain('NaN');
   });
 });
 

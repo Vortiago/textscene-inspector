@@ -3,11 +3,10 @@
  * and `Slider::_notification(NOTIFICATION_DRAW)` (`scene/gui/slider.cpp`, Godot
  * 4.6.3), transposed for `vertical` (the `shared/splitContainerSolver.ts`
  * pattern for a slice family: HSlider and VSlider register this ONCE here, and
- * each slice's own `nativeSolver.ts`/`NativeComponent.tsx` supplies only its own
+ * each slice's own `nativeSolver.ts`/`Component.tsx` supplies only its own
  * icon and `vertical` flag).
  *
- * NOT modelled, matching `sliderChrome.ts` (the DOM-overlay twin)'s own documented
- * restriction:
+ * NOT modelled — an explicit restriction:
  *  - `center_grabber` / `grabber_offset` / `tick_offset` — all 0 for both HSlider
  *    and VSlider in the default theme (`default_theme.cpp:594-596,609-611`); every
  *    formula below already has their (zero) contribution dropped.
@@ -44,13 +43,9 @@ import { rangeRatio, type RangeProperties } from './range';
  * `y="16"`/`x="16"` but Godot's SVG rasteriser clips to the declared canvas,
  * same as every other vendored icon in `native/themeIcons.ts`).
  *
- * This deliberately DIVERGES from `godotDefaultTheme.ts`'s `SLIDER_TICK_LENGTH`
- * (16), which the DOM overlay (`sliderChrome.ts`) draws a synthetic bar at —
- * that constant predates this measurement and is a DOM-overlay-owned file
- * outside this painter's scope, so it is left alone here; see this packet's
- * own report for the discrepancy. Not scaled by `default_theme_scale`, same as
- * `hsplitcontainer/NativeComponent.tsx`'s `ICON_SIZE` — the codebase's existing
- * convention for a vendored icon's own literal pixel dimension.
+ * Not scaled by `default_theme_scale`, same as `hsplitcontainer/Component.tsx`'s
+ * `ICON_SIZE` — the codebase's existing convention for a vendored icon's own
+ * literal pixel dimension.
  */
 export const SLIDER_TICK_CROSS_AXIS = 8;
 

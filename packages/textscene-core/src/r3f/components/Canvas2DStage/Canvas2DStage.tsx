@@ -4,19 +4,13 @@
  * world in one view:
  *   1. the canvas frame (Godot's project-viewport rectangle),
  *   2. the `<World2DCanvas>` (transparent ortho R3F layer: sprites, tilemaps,
- *      Node2D trees), camera glued to the stage pan/zoom,
- *   3. the `<ControlOverlay>` (DOM Control layout) on top.
- * The overlay still does the real Control layout; the stage owns the chrome
- * (bounds, zoom %, scroll-to-zoom, drag-to-pan).
- *
- * The dev-only native-controls flag (`NATIVE_CONTROLS_STORAGE_KEY`) swaps
- * step 3 for a native layer mounted INSIDE `<World2DCanvas>` instead — the
- * `.overlayFrame` div (and its capture-contract testid) stays either way, but
- * `<ControlOverlay>` itself only mounts while the flag is off.
+ *      Node2D trees, and the native Control canvas as a sibling), camera
+ *      glued to the stage pan/zoom.
+ * The stage itself only owns the chrome (bounds, zoom %, scroll-to-zoom,
+ * drag-to-pan) — the `.overlayFrame` div is the capture-contract region a
+ * visual-regression harness clips to, not overlay machinery.
  */
 import {
-  lazy,
-  Suspense,
   useCallback,
   useEffect,
   useRef,
@@ -41,18 +35,9 @@ import {
   type TouchPoint,
 } from '../../pointerGesture.js';
 import { World2DCanvas } from './World2DCanvas.js';
-import { FIT_ON_OPEN_2D_STORAGE_KEY, NATIVE_CONTROLS_STORAGE_KEY } from './viewport2d.js';
+import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import styles from './Canvas2DStage.module.css';
-
-// The 2D-UI overlay (ADR-0003) is lazy-loaded — keeping the 15 Control
-// components + their registrations out of the initial canvas-paint bundle.
-// Importing the barrel (`controls/index.js`) rather than ControlOverlay.tsx
-// directly is load-bearing: the barrel's side-effect imports are what
-// register the Control DOM components.
-const ControlOverlay = lazy(() =>
-  import('../../controls/index.js').then((m) => ({ default: m.ControlOverlay }))
-);
 
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4;
@@ -86,11 +71,11 @@ function zoomViewAround(view: View2D, px: number, py: number, factor: number): V
 const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
 
 export interface Canvas2DStageProps {
-  /** Root scene's nodes — the overlay lays out the Control subtree(s) within. */
+  /** Root scene's nodes — the native canvas lays out the Control subtree(s) within. */
   nodes: readonly TscnNode[];
-  /** SubResources for StyleBox/Texture refs inside the overlay (ADR-0009: explicit props). */
+  /** SubResources for StyleBox/Texture refs inside the Control canvas (ADR-0009: explicit props). */
   internalResources: readonly TscnInternalResource[];
-  /** ExtResources for texture refs inside the overlay (ADR-0009: explicit props). */
+  /** ExtResources for texture refs inside the Control canvas (ADR-0009: explicit props). */
   externalResources: readonly TscnExternalResource[];
 }
 
@@ -102,18 +87,6 @@ export function Canvas2DStage({
   const stageRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View2D>({ pan: { x: 0, y: 0 }, zoom: 1 });
   const { pan, zoom } = view;
-  // The 2D Control renderer. Defaults to the native canvas path: the DOM
-  // overlay is being retired, and leaving it as the default made it impossible
-  // to tell from a fixture which renderer produced what. Set this key to
-  // `false` in localStorage to get the old overlay back while it still exists.
-  //
-  // Read once at mount like `fitOnOpen` below:
-  // no UI flips it, so there is nothing to react to mid-session, and it stays
-  // off the viewport-mode seam where every other flag is a user preference
-  // with a toolbar affordance.
-  const [nativeControls] = useState(() =>
-    readPersisted(NATIVE_CONTROLS_STORAGE_KEY, true, isBoolean)
-  );
   // `display/window/size/viewport_*`, or Godot's 1152x648 for a scene with no
   // project around it. This rect is what a root Control resolves its anchors
   // to, so 23 of the corpus's 81 projects were being composed against the
@@ -232,7 +205,7 @@ export function Canvas2DStage({
   // The stage cannot move while fingers are on it, so its rect is read once per
   // gesture rather than per move: the previous move committed new inline styles,
   // so a getBoundingClientRect() here forces a synchronous layout of the whole
-  // stage — including the Control overlay — on every single pointermove.
+  // stage on every single pointermove.
   const touchRect = useRef<DOMRect | null>(null);
 
   const onStagePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -387,20 +360,21 @@ export function Canvas2DStage({
         aria-hidden
       />
 
-      {/* The CanvasItem world (sprites/tilemaps), drawn over the frame
-          surface and under the Control overlay — Godot's 2D editor order. */}
+      {/* The CanvasItem world (sprites/tilemaps) and, as a sibling inside
+          this canvas, the native Control layer — Godot's 2D editor order. */}
       <World2DCanvas
         nodes={nodes}
         internalResources={internalResources}
         externalResources={externalResources}
         pan={pan}
         zoom={zoom}
-        nativeControls={nativeControls}
       />
 
-      {/* The Godot project-viewport rectangle in the DOM: the Control overlay's
-          own box, and the region a parity capture clips to (its testid is the
-          contract `scripts/visual/previewServer.mjs` addresses it by). */}
+      {/* The Godot project-viewport rectangle: the region a parity capture
+          clips to (its testid is the contract `scripts/visual/previewServer.mjs`
+          addresses it by). The native Control canvas draws INSIDE
+          `<World2DCanvas>` above, not into this div — it is the capture
+          contract's own frame, not a mount point. */}
       <div
         className={styles.overlayFrame}
         data-testid="canvas-2d-capture-frame"
@@ -414,23 +388,7 @@ export function Canvas2DStage({
         // the frame is the project's viewport, so it is no longer a constant it
         // can hardcode (`projectViewportSize`).
         data-viewport-size={`${canvasWidth}x${canvasHeight}`}
-      >
-        {!nativeControls && (
-          <Suspense
-            fallback={
-              <div className={styles.loading} aria-busy="true">
-                Loading 2D overlay…
-              </div>
-            }
-          >
-            <ControlOverlay
-              nodes={nodes}
-              internalResources={internalResources}
-              externalResources={externalResources}
-            />
-          </Suspense>
-        )}
-      </div>
+      />
 
       <div className={styles.zoomHud} role="group" aria-label="Canvas zoom" data-testid="canvas-2d-zoom">
         <button type="button" onClick={() => zoomAroundCentre(1 / ZOOM_STEP_BUTTON)} aria-label="Zoom out">

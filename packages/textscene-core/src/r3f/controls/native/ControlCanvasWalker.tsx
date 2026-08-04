@@ -6,21 +6,21 @@
  * conjugation the way Node2D needs — see `node2dTransform.ts` — because
  * nothing here shears).
  *
- * A registered `Native` painter (`ControlComponentRegistry`) draws the node's
- * own chrome; `<ControlFallback>` draws an outline instead when none is
+ * A registered painter (`ControlComponentRegistry`) draws the node's own
+ * chrome; `<ControlFallback>` draws an outline instead when none is
  * registered yet. Children render as siblings of the painter, not passed
  * through it as React children — the rect solver already gave every child an
  * absolute (parent-relative) rect, so no painter needs to arrange them the
  * way a DOM container's CSS does.
  *
- * Free-Control rotation/scale/pivot (`controlLayout.ts:211-216`'s rule: a
- * Container resets its children's transform, `Container::fit_child_in_rect`
- * ending with `set_rotation(0)`/`set_scale(Vector2(1,1))`) go on an inner
- * group about the pivot, applied ONLY when this node's PARENT imposes no
- * registered `ContainerLayoutFn` — i.e. the same free/anchored-vs-container
- * split `controlRectSolver.ts`'s own `dispatchChildren` already made when it
- * solved this node's rect, read from the SAME registry so the two paths
- * cannot disagree about which nodes are "free".
+ * Free-Control rotation/scale/pivot (`Container::fit_child_in_rect`'s rule: a
+ * Container resets its children's transform, ending with
+ * `set_rotation(0)`/`set_scale(Vector2(1,1))`) go on an inner group about the
+ * pivot, applied ONLY when this node's PARENT imposes no registered
+ * `ContainerLayoutFn` — i.e. the same free/anchored-vs-container split
+ * `controlRectSolver.ts`'s own `dispatchChildren` already made when it solved
+ * this node's rect, read from the SAME registry so the two paths cannot
+ * disagree about which nodes are "free".
  */
 import { useMemo } from 'react';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
@@ -107,7 +107,7 @@ function ControlNodeGroup({
 
   // `useCanvasLayerIndex` reads whichever CanvasLayer band is ambient at this
   // position — `WORLD_CANVAS_LAYER` (0) with none, or the value a `CanvasLayer`
-  // ancestor's own `Native` painter published — see the `wrapsChildren` branch
+  // ancestor's own painter published — see the `wrapsChildren` branch
   // below, which the registration declares rather than the walker testing a
   // type name.
   // `paintIndex` is the solver's own pre-order counter (`controlRectSolver.ts`),
@@ -123,7 +123,7 @@ function ControlNodeGroup({
   const pivotX = (props.pivotOffset?.x ?? 0) + (props.pivotOffsetRatio?.x ?? 0) * rect.w;
   const pivotY = (props.pivotOffset?.y ?? 0) + (props.pivotOffsetRatio?.y ?? 0) * rect.h;
 
-  const Painter = controlComponentRegistry.getNative(solveNode.node.type) ?? ControlFallback;
+  const Painter = controlComponentRegistry.get(solveNode.node.type) ?? ControlFallback;
   // Whether THIS node's own children are free — mirrors dispatchChildren's
   // exact registry read so the walker and the solver never disagree.
   const childIsFreeParent = controlSolverRegistry.containerLayout(solveNode.node.type) === undefined;
@@ -150,7 +150,7 @@ function ControlNodeGroup({
   }, [solveNode.children, solved]);
 
   // A `CanvasLayer` is not chrome, it is a passthrough canvas boundary — its
-  // `Native` painter (`canvaslayer/NativeComponent.tsx`) needs to WRAP its
+  // painter (`canvaslayer/Component.tsx`) needs to WRAP its
   // descendants in fresh `CanvasLayerIndexProvider`/modulate context, which
   // only works if they are its React children rather than its siblings. Every
   // other registered painter draws fixed chrome unrelated to its descendants'

@@ -105,7 +105,7 @@ describe('SLIDER_GRABBER_ICONS', () => {
 });
 
 describe('SLIDER_TICK_ICONS', () => {
-  it('hslider is 4x8 — default_theme.cpp:592 (HSlider tick), not the 4x16 the DOM overlay assumes', () => {
+  it('hslider is 4x8 — default_theme.cpp:592 (HSlider tick)', () => {
     const svg = decodeSvg(SLIDER_TICK_ICONS.hslider);
     expect(svg).toContain('<svg');
     const { width, height } = svgSize(svg);

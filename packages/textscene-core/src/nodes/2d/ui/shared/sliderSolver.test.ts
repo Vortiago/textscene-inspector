@@ -123,7 +123,7 @@ describe('sliderGrabberRect — the `grabber` icon box, a value at min/max pins 
 });
 
 describe('sliderTickRects — the `tick` icon per painted index, TICK_POSITION_BOTTOM_RIGHT (Godot default)', () => {
-  it('draws the icon at its OWN measured size — 4 wide x 8 tall for hslider_tick, not the 16 the DOM overlay assumes', () => {
+  it('draws the icon at its OWN measured size — 4 wide x 8 tall for hslider_tick', () => {
     expect(SLIDER_TICK_CROSS_AXIS).toBe(8);
   });
 

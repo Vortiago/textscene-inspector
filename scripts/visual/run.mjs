@@ -138,10 +138,10 @@ export function isUniformImage(buffer) {
 /**
  * Fail-on-console-error gate, attached to every capture page. A scene that
  * logs a console error or throws is a broken render even when its pixels
- * happen to settle and look plausible — this generalises `verify:2d`'s
- * strongest assertion from a hand-picked few DOM-overlay targets to every
- * golden scene. Returns the mutable array `captureScene` checks and clears
- * per scene, so errors from one scene never bleed into the next.
+ * happen to settle and look plausible — every golden scene gets this
+ * assertion, not just a hand-picked few. Returns the mutable array
+ * `captureScene` checks and clears per scene, so errors from one scene never
+ * bleed into the next.
  */
 function attachConsoleGate(page) {
   const errors = [];

@@ -9,8 +9,8 @@
  * A non-Control ancestor (a `Node3D` housing an instanced HUD, or the raw
  * `Node` an unresolved/multi-root instance parses as) contributes no
  * `SolveNode` of its own: it is transparently skipped and its own children
- * are walked in its place, exactly like the DOM overlay's `GenericControlFallback`
- * (`display: contents`) never becomes a CSS containing block. Without this a
+ * are walked in its place — it is transparent to layout, never a box its
+ * descendants resolve against. Without this a
  * non-Control node would still get a rect from the solver (anchors/offsets
  * default to zero for a type that never authors them), and any REAL Control
  * nested under it would then anchor against that degenerate zero-sized rect

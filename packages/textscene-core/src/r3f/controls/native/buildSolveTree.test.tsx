@@ -1,11 +1,10 @@
 /**
  * `useBuildSolveTree` walks the **Live scene tree** (`liveSceneTree.ts`,
  * ADR-0013) into the `SolveNode` forest the native rect solver consumes.
- * These scenarios port `ControlOverlay.instances.test.tsx`'s instancing
- * fixtures onto the SolveNode seam instead of the DOM: a `.tscn` composed the
- * normal Godot way (a HUD instanced into a level, a widget instanced into
- * that HUD) must not lose content or resolve a StyleBox/texture against the
- * wrong scene's resource pool.
+ * These scenarios exercise instancing on the SolveNode seam: a `.tscn`
+ * composed the normal Godot way (a HUD instanced into a level, a widget
+ * instanced into that HUD) must not lose content or resolve a StyleBox/
+ * texture against the wrong scene's resource pool.
  *
  * Non-Control ancestors (a `Node3D` housing an instanced HUD, the raw `Node`
  * an unresolved/multi-root instance parses as) are transparent: they are not

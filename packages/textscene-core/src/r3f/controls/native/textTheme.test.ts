@@ -1,7 +1,7 @@
 /**
- * `resolveTextTheme` — the override key-name mapping (`theme_override_font_sizes/<key>`,
- * `theme_override_colors/<key>`) ported from `textThemeStyle.ts`, returning
- * plain data instead of `CSSProperties`.
+ * `resolveTextTheme` — the override key-name mapping a Control authors as
+ * `theme_override_font_sizes/<key>` / `theme_override_colors/<key>`, resolved
+ * to plain data a painter can read.
  */
 import { describe, expect, it } from 'vitest';
 import { resolveTextTheme, type TextThemeKeys } from './textTheme';

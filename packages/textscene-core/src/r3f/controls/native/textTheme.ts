@@ -4,11 +4,8 @@
  * `theme_override_colors/<key> → color` extraction; only the override key
  * NAMES differ (Label/Button read `font_size`/`font_color`; RichTextLabel
  * reads `normal_font_size`/`default_color`), so they are passed in rather than
- * hardcoded here. This is the native (WebGL canvas) twin of
- * `../textThemeStyle.ts`, which stays untouched — it still serves the DOM
- * overlay path — ported to return a plain `ResolvedTextTheme` a native
- * painter feeds straight to `shapeText`/`TextRun` instead of a `style` object
- * a `<div>` would consume.
+ * hardcoded here. Returns a plain `ResolvedTextTheme` a native painter feeds
+ * straight to `shapeText`/`TextRun`.
  */
 import type { ControlColor } from '../../../nodes/2d/ui/control/types';
 

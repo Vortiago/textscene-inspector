@@ -1,9 +1,8 @@
-/** Control registration — 2D-overlay DOM component + native (WebGL) painter. */
+/** Control registration — native (WebGL canvas) painter. */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Control } from './Component';
-import { ControlNative } from './NativeComponent';
 
-controlComponentRegistry.register({ typeName: 'Control', Component: Control, Native: ControlNative });
+controlComponentRegistry.register({ typeName: 'Control', Component: Control });
 
-export { Control, ControlNative };
+export { Control };

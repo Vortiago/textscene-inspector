@@ -1,3 +1,10 @@
+**Superseded by ADR-0031 (2026-08-04): Control nodes render natively in the WebGL
+canvas.** The history below is kept because it records why the DOM was chosen and
+what it cost, including the 2026-07-29 raster amendment, which ADR-0031's native
+offscreen pass also replaces. Its `font-src` framing for the system-fonts-only
+limitation is corrected by ADR-0031: the real, twice-over blocker for a non-CSS text
+pipeline is `worker-src` + `connect-src`, found only once one was attempted.
+
 # 2D UI renders as a DOM overlay, not in three.js
 
 Godot Control/CanvasLayer subtrees render as nested `<div>`s (a `ControlDispatcher` mirroring NodeDispatcher), layered as a sibling of the R3F `<Canvas>`, mapping `layout_mode`/anchors/offsets to CSS positioning, container nodes to flex/grid, and StyleBox resources to CSS background/border. They are not drawn as textured quads inside the 3D scene.

@@ -103,9 +103,8 @@ export function optionButtonTextTheme(
 // --- Selected item ---------------------------------------------------------------
 
 /**
- * The bounds-guarded selected-item lookup `Component.tsx` (the DOM twin)
- * already establishes: an out-of-range or absent `selected` renders empty
- * text rather than defaulting to item 0.
+ * The bounds-guarded selected-item lookup: an out-of-range or absent
+ * `selected` renders empty text rather than defaulting to item 0.
  */
 export function resolveOptionButtonSelectedText(props: OptionButtonProperties): string {
   const items = props.items ?? [];

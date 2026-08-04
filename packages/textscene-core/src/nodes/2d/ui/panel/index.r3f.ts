@@ -1,9 +1,8 @@
-/** Panel registration — 2D-overlay DOM component + native (WebGL) painter. */
+/** Panel registration — native (WebGL canvas) painter. */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Panel } from './Component';
-import { PanelNative } from './NativeComponent';
 
-controlComponentRegistry.register({ typeName: 'Panel', Component: Panel, Native: PanelNative });
+controlComponentRegistry.register({ typeName: 'Panel', Component: Panel });
 
-export { Panel, PanelNative };
+export { Panel };

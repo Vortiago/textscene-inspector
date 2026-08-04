@@ -92,8 +92,8 @@ describe('lastTagValue', () => {
 describe('resolveBBColor', () => {
   const FALLBACK = { r: 0.1, g: 0.2, b: 0.3, a: 1 };
 
-  it('parses a Godot Color(...) literal', () => {
-    expect(resolveBBColor('Color(1, 0, 0, 1)', FALLBACK)).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+  it('falls back for a GDScript Color(r, g, b, a) literal — real Color::from_string has no such branch', () => {
+    expect(resolveBBColor('Color(1, 0, 0, 1)', FALLBACK)).toEqual(FALLBACK);
   });
 
   it('parses a 6-digit hex color (Color::html, color.cpp:331-368), alpha defaults to 1', () => {

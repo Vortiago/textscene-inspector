@@ -21,7 +21,7 @@ import { bandBase } from './controlDrawOrder';
 import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
 import { CanvasLayerIndexProvider } from '../../lighting2d/canvasItemPlacement';
 
-// A stand-in for the real `canvaslayer/NativeComponent.tsx` (a different
+// A stand-in for the real `canvaslayer/Component.tsx` (a different
 // slice's file, not this suite's concern): just enough to prove the WALKER
 // threads `children` through the painter and republishes
 // `CanvasLayerIndexProvider` for a `CanvasLayer` type, without depending on
@@ -214,8 +214,7 @@ describe('<ControlCanvasWalker>', () => {
   it('bands every Control under a CanvasLayer by its layer property, reaching arbitrarily nested descendants', async () => {
     controlComponentRegistry.register({
       typeName: 'CanvasLayer',
-      Component: () => null,
-      Native: StubCanvasLayerNative,
+      Component: StubCanvasLayerNative,
       // The walker places children as siblings unless the registration opts in.
       wrapsChildren: true,
     });
@@ -235,8 +234,7 @@ describe('<ControlCanvasWalker>', () => {
   it('gives a negative-layer CanvasLayer a band below the world default, still reaching its Control', async () => {
     controlComponentRegistry.register({
       typeName: 'CanvasLayer',
-      Component: () => null,
-      Native: StubCanvasLayerNative,
+      Component: StubCanvasLayerNative,
       // The walker places children as siblings unless the registration opts in.
       wrapsChildren: true,
     });

@@ -267,9 +267,10 @@ What is left unimplemented:
 - Normal-mapped and specular response (`Light2D` against a
   `CanvasTexture.normal_texture`) is not computed; every surface takes the light
   head-on.
-- A `Control` draws in the DOM overlay rather than on the WebGL canvas
-  (ADR-0024), so no 2D light reaches one. Godot's own `light2d_as_mask` demo
-  masks a `TextureRect` this way.
+- A `Control`'s native painter tints only via `modulate`/`self_modulate`
+  (`useCanvasItemTint`), never `useCanvasItemLighting`, so no 2D light reaches
+  one — an explicit non-goal. Godot's own `light2d_as_mask` demo masks a
+  `TextureRect` this way.
 
 ## Linting
 
@@ -329,5 +330,5 @@ not do:
 - **A `CanvasLayer` is not placed as its own canvas.** Its layer decides which
   lights reach it (above), but it still follows the 2D camera, where Godot draws
   it through a canvas transform of its own.
-- **A `Control` draws in the DOM overlay** rather than on the WebGL canvas
-  (ADR-0024), so no 2D light reaches one.
+- **A `Control`'s native painter never binds the lighting shader.** It tints
+  via `modulate`/`self_modulate` only, so no 2D light reaches one.

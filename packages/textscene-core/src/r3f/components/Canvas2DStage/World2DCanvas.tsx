@@ -1,20 +1,15 @@
 /**
  * The 2D-world layer of the Canvas2DStage (ADR-0006, Godot-parity amendment):
  * a transparent orthographic R3F canvas rendering the scene's CanvasItem
- * content (sprites, tilemaps, Node2D trees) underneath the Control DOM
- * overlay — together they mirror Godot's 2D editor, which composites the
- * whole CanvasItem world in one view. The camera tracks the stage's pan/zoom
- * (world2DCamera math) so canvas pixels line up exactly with the overlay
- * frame. Pointer events pass through to the stage (pan/zoom drag).
+ * content (sprites, tilemaps, Node2D trees) and, as a sibling, the native
+ * Control canvas — together they mirror Godot's 2D editor, which composites
+ * the whole CanvasItem world in one view. The camera tracks the stage's
+ * pan/zoom (world2DCamera math) so canvas pixels line up exactly with the
+ * capture frame. Pointer events pass through to the stage (pan/zoom drag).
  *
  * `World2DContents` is exported separately so @react-three/test-renderer can
  * exercise the scene part without a DOM `<Canvas>` host (the TscnSceneContents
  * pattern).
- *
- * `nativeControls` (the dev-only `useNativeControls` flag) mounts a native
- * Control layer as a sibling right after `<NodeDispatcher>`. `Canvas2DStage`
- * decides whether that or the DOM overlay is active — never both — this
- * canvas only obeys the prop it is handed.
  */
 
 import { lazy, Suspense, useLayoutEffect, useMemo } from 'react';
@@ -34,39 +29,21 @@ import { canvasModulateColor } from '../../canvasModulate.js';
 import { ViewportPassOrchestrator } from '../../contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
 
-// The native Control layer is lazy-loaded through the SAME barrel as
-// the DOM `<ControlOverlay>` (see the lazy() in `Canvas2DStage.tsx`) — the
-// barrel's side-effect imports are what register every Control type, so a
-// direct import of the component file would silently unregister them all.
-// Lazy so its 17+ registrations stay out of the 2D canvas's initial bundle
-// until a stage that actually renders Controls asks for them.
+// The native Control layer is lazy-loaded through the controls barrel — its
+// side-effect imports are what register every Control type, so a direct
+// import of the component file would silently unregister them all. Lazy so
+// its 23 registrations stay out of the 2D canvas's initial bundle until a
+// stage that actually renders Controls asks for them.
 const ControlCanvasLayer = lazy(() =>
   import('../../controls/index.js').then((m) => ({ default: m.ControlCanvasLayer }))
 );
 
-// The native offscreen publisher for a Control-only sub-viewport
-// (ADR-0030) — a separate lazy boundary from `ControlCanvasLayer` above:
-// this must run regardless of `nativeControls` (a `SubViewportContainer`
-// elsewhere may sample its target even with the DOM overlay still active),
-// so it cannot share that flag's gate.
 export interface World2DCanvasProps {
   nodes: readonly TscnNode[];
   internalResources: readonly TscnInternalResource[];
   externalResources: readonly TscnExternalResource[];
   pan: { x: number; y: number };
   zoom: number;
-  /**
-   * Mount the native (WebGL) Control layer as a sibling of `<NodeDispatcher>`
-   * instead of leaving Control drawing to the DOM `<ControlOverlay>`
-   * (`Canvas2DStage`, defaults to `true` — the DOM overlay is being retired
-   * and stays reachable only via its own storage-key opt-out). An
-   * unregistered type still draws `<ControlFallback>`'s outline, but every
-   * shipped type has a `Native` painter now, `SubViewportContainer` included;
-   * every offscreen viewport pass — this canvas's own and the 3D canvas's —
-   * runs from one ordered driver (`ViewportPassRegistryContext.tsx`) rather
-   * than each publisher's own `useFrame`.
-   */
-  nativeControls?: boolean;
 }
 
 /** Keeps the ortho camera glued to the stage's pan/zoom transform. */
@@ -89,10 +66,8 @@ export function World2DContents({
   externalResources,
   pan,
   zoom,
-  nativeControls,
 }: World2DCanvasProps) {
   const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
-  // A Control-only sub-viewport still needs its own native offscreen pass in
   return (
     <CanvasWorkspaceProvider workspace="2d">
       <SceneResourcesProvider
@@ -105,19 +80,15 @@ export function World2DContents({
             function of `nodes` is the shared definition of it. */}
         <CanvasLighting2DProvider canvasModulate={canvasModulate}>
           <NodeDispatcher nodes={nodes} />
-          {nativeControls && (
-            // `null`, never a DOM element: this Suspense boundary lives inside
-            // the R3F reconciler's tree, which has no host to mount a `<div>`
-            // fallback on — unlike Canvas2DStage's DOM ControlOverlay Suspense.
-            // Inside the lighting provider because a Control is a CanvasItem
-            // like any other, so a 2D light reaches it.
-            <Suspense fallback={null}>
-              <ControlCanvasLayer nodes={nodes} />
-            </Suspense>
-          )}
-          {/* Driven in THIS canvas regardless of `nativeControls`: a
-              `SubViewportContainer` (or another `ViewportTexture` consumer) may
-              be sampling its target whoever draws the on-screen Controls. */}
+          {/* `null`, never a DOM element: this Suspense boundary lives inside
+              the R3F reconciler's tree, which has no host to mount a `<div>`
+              fallback on. Inside the lighting provider because a Control is a
+              CanvasItem like any other, so a 2D light reaches it. */}
+          <Suspense fallback={null}>
+            <ControlCanvasLayer nodes={nodes} />
+          </Suspense>
+          {/* A `SubViewportContainer` (or another `ViewportTexture` consumer)
+              may be sampling its target whoever draws the on-screen Controls. */}
           <ControlRasterLayer
             nodes={nodes}
             internalResources={internalResources}

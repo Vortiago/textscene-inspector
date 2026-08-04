@@ -16,12 +16,10 @@
  * Driven through the REAL `TscnParser` and the REAL `ControlCanvasWalker` —
  * never a hand-built `SolveNode` fixture for the type under test — so a
  * parser/registry/walker mismatch is caught too, not just a hand-wired stub.
- *
- * The DOM counterpart is ../subtreeConformance.test.tsx.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-// Side-effect import: registers all 23 Control slices' DOM + native painters.
+// Side-effect import: registers all 23 Control slices' native painters.
 import { controlComponentRegistry } from '../index';
 import type { TscnNode } from '../../../parser/types';
 import { parseWithChild } from '../testing/probeScene';

@@ -14,8 +14,8 @@ export interface FlowmapPixels {
  * A `DataTexture` already carries them (`image.data`). Everything the resource
  * pipeline loads is decoded by `THREE.TextureLoader` into an `HTMLImageElement`
  * with no `.data`, so those go through `withImageCanvas` — which owns the
- * drawable-image policy shared with `imageToDataUrl` — and come back via
- * `getImageData`. `undefined` means no pixels were readable (undecoded image,
+ * shared drawable-image policy — and come back via `getImageData`.
+ * `undefined` means no pixels were readable (undecoded image,
  * no DOM, no 2D context, tainted canvas); textures reach both hosts as blob
  * URLs built from bytes the host already fetched, so a taint is not expected,
  * but it must degrade to "no map" rather than break the material.

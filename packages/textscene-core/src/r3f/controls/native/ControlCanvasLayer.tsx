@@ -1,11 +1,10 @@
 /**
- * `<ControlCanvasLayer>` — the native (WebGL) Control mount point, where a
- * `useNativeControls` viewport draws Control nodes as canvas items,
- * superseding the DOM `<ControlOverlay>` (ADR-0003) the flag being off still
- * uses. Mounted by `World2DContents` as a sibling right after
- * `<NodeDispatcher>`, inside the same `SceneResourcesProvider` — resources
- * come from that ambient context (ADR-0009), matching how the sibling
- * `<NodeDispatcher>` reads them, rather than a second explicit-props path.
+ * `<ControlCanvasLayer>` — the native (WebGL) Control mount point, where the
+ * 2D viewport draws Control nodes as canvas items. Mounted by
+ * `World2DContents` as a sibling right after `<NodeDispatcher>`, inside the
+ * same `SceneResourcesProvider` — resources come from that ambient context
+ * (ADR-0009), matching how the sibling `<NodeDispatcher>` reads them, rather
+ * than a second explicit-props path.
  *
  * Wires the three pieces the walker needs: `buildSolveTree` (the live-tree
  * walk into `SolveNode`s), the viewport rect + theme scale from
@@ -41,12 +40,11 @@ export interface ControlCanvasLayerProps {
 }
 
 /**
- * Force the previewed root node(s) visible — the native twin of
- * `ControlOverlay.tsx`'s `showRoots`. Godot UI scenes are frequently authored
- * with the root `visible = false` (a modal a script toggles on); a previewer
- * shows it regardless. A shallow map keeps the SceneGraph untouched and only
- * affects the ROOT — child visibility (and `hiddenNodePaths`) still applies
- * further down, via `ControlCanvasWalker`.
+ * Force the previewed root node(s) visible. Godot UI scenes are frequently
+ * authored with the root `visible = false` (a modal a script toggles on); a
+ * previewer shows it regardless. A shallow map keeps the SceneGraph untouched
+ * and only affects the ROOT — child visibility (and `hiddenNodePaths`) still
+ * applies further down, via `ControlCanvasWalker`.
  */
 function showRoots(nodes: readonly TscnNode[]): readonly TscnNode[] {
   return nodes.map((n) =>

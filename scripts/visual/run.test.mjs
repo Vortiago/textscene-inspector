@@ -15,8 +15,8 @@
  *
  * `previewServer.mjs` is mocked throughout so these run with no browser at
  * all — the module's OWN correctness (does `findCaptureTarget` actually find
- * the right element in a real page) is covered by the real-browser gates
- * (`pnpm test:visual`, `pnpm verify:2d`), not duplicated here.
+ * the right element in a real page) is covered by the real-browser gate
+ * (`pnpm test:visual`), not duplicated here.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { PNG } from 'pngjs';

@@ -72,7 +72,7 @@ malformed count draws no ticks instead of warning.
 ## Native (WebGL canvas) painter
 
 `nativeSolver.ts` registers `Slider::get_minimum_size()`
-(`controlSolverRegistry.registerMinimumSize`); `NativeComponent.tsx` draws the
+(`controlSolverRegistry.registerMinimumSize`); `Component.tsx` draws the
 same four parts as the DOM overlay — the `slider` track, the `grabber_area`
 fill, any tick marks, and the grabber, in Godot's own draw order — but the
 geometry itself (`shared/sliderSolver.ts`, shared with VSlider at
@@ -81,25 +81,17 @@ grabber/tick are the ACTUAL vendored `slider_grabber(_disabled).svg` /
 `hslider_tick.svg` textures (`native/themeIcons.ts`) rather than a synthesized
 `div`.
 
-### Divergences from the DOM component
+### Divergences from Godot
 
-**The tick's cross-axis length is 8px, not 16px.** Godot's `hslider_tick.svg`
-declares an 8px-tall canvas (`width="4" height="8"`); the path inside draws
-past that (`y="16"`), but Godot's SVG rasteriser clips to the declared canvas,
-so the texture Slider actually draws is 8px tall. Measured directly off real
-Godot 4.6.3 (`pnpm ref:godot` against a probe scene with `tick_count` set): the
-painted tick band is exactly 8px, not 16. The DOM overlay's `sliderChrome.ts`
-(and the `SLIDER_TICK_LENGTH` constant it reads from `godotDefaultTheme.ts`)
-predates this measurement and draws a 16px synthetic bar instead — a
-DOM-overlay-owned divergence this native painter does not inherit, since it
-draws the real texture at its own measured size rather than re-deriving the
-bar's length.
-
-Otherwise none: `sliderStyleBox` builds the identical `style_normal_color` /
-`style_progress_color` fills the DOM overlay's `STYLE_NORMAL_FILL` /
-`STYLE_PROGRESS_FILL` already read, and every rect this painter draws is
-transcribed straight from `Slider::_notification(NOTIFICATION_DRAW)`, exactly
-like the DOM overlay's own `sliderChrome.ts`.
+None known: the tick's cross-axis length is 8px (`SLIDER_TICK_CROSS_AXIS`,
+`shared/sliderSolver.ts`) — Godot's `hslider_tick.svg` declares an 8px-tall
+canvas (`width="4" height="8"`); the path inside draws past that (`y="16"`),
+but Godot's SVG rasteriser clips to the declared canvas, so the texture
+Slider actually draws is 8px tall, matching real Godot 4.6.3 pixels
+(`pnpm ref:godot` against a probe scene with `tick_count` set). `sliderStyleBox`
+builds the identical `style_normal_color` / `style_progress_color` fills, and
+every rect this painter draws is transcribed straight from
+`Slider::_notification(NOTIFICATION_DRAW)`.
 
 ### Known limitations (native only)
 

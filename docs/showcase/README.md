@@ -24,11 +24,9 @@ The hallway mockup: CSG corridor (floor / walls / ceiling), portrait frames, and
 
 [▶ web/dcc-layout.webm](web/dcc-layout.webm)
 
-The shipped chrome is a 2-column **Split Dock** (ADR-0007): the viewport alongside a single right dock holding the scene tree on top and the tabbed detail panel (**Inspector** / **Resources** / **Cameras**) directly below — no left rail. The top bar carries the brand, the scene chip + Ctrl/Cmd+K palette, and the Reset Camera / 3D-2D / Collisions controls. The clip orbits the textured hallway mockup, then switches to a 2D-UI example scene and flips to **2D** mode so the Control overlay renders the dialog UI — note that it was recorded against the earlier 3-column layout and needs a re-run (`pnpm showcase:regen`) to show the Split Dock. Until then, this still captures the current toolbar:
+The shipped chrome is a 2-column **Split Dock** (ADR-0007): the viewport alongside a single right dock holding the scene tree on top and the tabbed detail panel (**Inspector** / **Resources** / **Cameras**) directly below — no left rail. The top bar carries the brand, the scene chip + Ctrl/Cmd+K palette, and the Reset Camera / 3D-2D / Collisions controls. The clip orbits the textured hallway mockup, then switches to a 2D-UI example scene and flips to **2D** mode so the native Control canvas renders the dialog UI — note that it was recorded against the earlier 3-column layout and needs a re-run (`pnpm showcase:regen`) to show the Split Dock. Until then, this still captures the current toolbar:
 
 ![Current toolbar with the scene chip's Ctrl/Cmd+K command palette open](../screenshots/j-integration/web-toolbar-palette.png)
-
-The 2D-overlay renders of the synthetic Control-coverage scenes (`example-ui-dialog`, `unit-control-containers`, the BBCode `RichTextLabel` demo) are captured as stills in [`verify/`](verify/) with per-scene control stats in [`verify/verify-2d.json`](verify/verify-2d.json).
 
 ### ui-hint
 
@@ -36,7 +34,7 @@ The 2D-overlay renders of the synthetic Control-coverage scenes (`example-ui-dia
 
 [▶ web/ui-hint.webm](web/ui-hint.webm)
 
-ADR-0006 discoverability: a Control-only scene (`example-ui-dialog`) opens in the default 3D viewport, so the shell floats a **"Contains 2D UI — switch to 2D"** hint over the canvas. Clicking it flips to the 2D overlay, which renders the dialog.
+ADR-0006 discoverability: a Control-only scene (`example-ui-dialog`) opens in the default 3D viewport, so the shell floats a **"Contains 2D UI — switch to 2D"** hint over the canvas. Clicking it flips to 2D mode, which renders the dialog.
 
 ## Feature clips
 
@@ -150,7 +148,7 @@ The **TextScene: Open Preview to the Side** webview fills the editor area, rende
 
 ![VS Code: the Preview webview in 2D mode rendering a Control-node "Field Journal" dialog](../screenshots/vscode/vscode-main.png)
 
-The same preview in 2D mode renders `example-ui-dialog.tscn`: a Godot `Control` UI tree (panel, body copy, Save Entry / Close buttons) drawn by the 2D overlay over the pan/zoom viewport, with the `JournalUI` node tree in the inspector.
+The same preview in 2D mode renders `example-ui-dialog.tscn`: a Godot `Control` UI tree (panel, body copy, Save Entry / Close buttons) drawn in the pan/zoom viewport, with the `JournalUI` node tree in the inspector.
 
 ![VS Code: split .tscn editors beside the live Preview panel](../screenshots/vscode/both-02-a.png)
 
@@ -184,6 +182,6 @@ Run the whole pipeline with **one command** — do this after any UI change, sin
 pnpm showcase:regen
 ```
 
-It builds the web previewer, starts a preview server, records every scenario in `scripts/showcase/scenarios.mjs` to `web/*.webm` (+ poster `.png`), captures the 2D-overlay screenshots into `verify/`, then shuts the server down. Add a scenario to `scenarios.mjs` for each new feature so it gets its own clip.
+It builds the web previewer, starts a preview server, records every scenario in `scripts/showcase/scenarios.mjs` to `web/*.webm` (+ poster `.png`), then shuts the server down. Add a scenario to `scenarios.mjs` for each new feature so it gets its own clip.
 
 During iteration, with a preview server already running, capture a single clip: `node scripts/showcase/run.mjs <name>`.

@@ -122,31 +122,30 @@ being built up.
 `shared/splitContainerSolver.ts` ports `_update_default_dragger_positions`/
 `_update_dragger_positions`/`_resort`/`get_minimum_size`, restricted to
 exactly two children (this packet's explicit scope — a closed form of the
-same source, see the module's own doc). `NativeComponent.tsx` draws only the
+same source, see the module's own doc). `Component.tsx` draws only the
 grabber icon between the two children `ControlCanvasWalker` already places as
 siblings; the container itself paints nothing else — `split_bar_background`
 (`default_theme.cpp:1275-1277`) is an EMPTY stylebox.
 
-### Divergences from the DOM component
+### Known limitations (native)
 
-- **The grabber icon CAN be drawn here**, unlike the DOM overlay's still
-  frame — but only once a scene overrides `theme_override_constants/autohide`
-  to `0`. Godot's own `autohide` theme constant defaults to `1` (true),
-  hiding the icon absent a hover/drag state a static render never has.
-  Verified against `pnpm ref:godot --mode 2d`, probing the gap between every
-  row of `unit-split-container.tscn`: every probe reads back the plain
-  backdrop colour, never the grabber's gray. So for every fixture and every
-  scene in this repo's corpus today, native and DOM agree — no grabber drawn.
+- **The grabber icon is drawn** only once a scene overrides
+  `theme_override_constants/autohide` to `0`. Godot's own `autohide` theme
+  constant defaults to `1` (true), hiding the icon absent a hover/drag state a
+  static render never has. Verified against `pnpm ref:godot --mode 2d`,
+  probing the gap between every row of `unit-split-container.tscn`: every
+  probe reads back the plain backdrop colour, never the grabber's gray. So for
+  every fixture and every scene in this repo's corpus today, no grabber is
+  drawn.
 - **`CLAMP(wished, first_min, size - sep - second_min)` IS applied**, with
-  full `combined_minimum_size` access (the registered solver has it; the DOM
-  overlay's CSS `calc()` cannot name it) — the two CHILD rects are always
-  exact. The grabber ICON's own recomputed position, on the rare scene where
-  it is ever visible, instead uses each child's OWN `custom_minimum_size`
-  only, not the full recursive minimum a Native painter has no channel to
-  reach (`NativeComponent.tsx`'s own doc) — bounded to the icon's own
-  (already off-by-default) pixels, never the actual child boundary.
+  full `combined_minimum_size` access from the registered solver — the two
+  CHILD rects are always exact. The grabber ICON's own recomputed position, on
+  the rare scene where it is ever visible, instead uses each child's OWN
+  `custom_minimum_size` only, not the full recursive minimum a Native painter
+  has no channel to reach (`Component.tsx`'s own doc) — bounded to the icon's
+  own (already off-by-default) pixels, never the actual child boundary.
 - **`theme_override_icons/grabber` still does not change the separation**,
-  same as the DOM overlay and the same `game_splitscreen.tscn` case.
+  same as the `game_splitscreen.tscn` case.
 
 ### Known limitations (native only)
 

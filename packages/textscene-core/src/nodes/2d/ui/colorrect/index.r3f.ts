@@ -1,9 +1,8 @@
-/** ColorRect registration — 2D-overlay DOM component + native (WebGL) painter. */
+/** ColorRect registration — native (WebGL canvas) painter. */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ColorRect } from './Component';
-import { ColorRectNative } from './NativeComponent';
 
-controlComponentRegistry.register({ typeName: 'ColorRect', Component: ColorRect, Native: ColorRectNative });
+controlComponentRegistry.register({ typeName: 'ColorRect', Component: ColorRect });
 
-export { ColorRect, ColorRectNative };
+export { ColorRect };

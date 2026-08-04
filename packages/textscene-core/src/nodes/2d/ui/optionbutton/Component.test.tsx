@@ -1,5 +1,5 @@
 /**
- * `<OptionButtonNative>` render contract — chrome (StyleBox) + selected-item
+ * `<OptionButton>` render contract — chrome (StyleBox) + selected-item
  * text + the chevron arrow icon. Structure/tint/render-order assertions only
  * (pixels are a golden-image concern via `pnpm ref:godot`, not this suite).
  */
@@ -14,7 +14,7 @@ import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { ControlProperties } from '../control/types';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { OptionButtonNative } from './NativeComponent';
+import { OptionButton } from './Component';
 import type { OptionButtonProperties } from './types';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 32 };
@@ -59,14 +59,14 @@ function findArrowMesh(scene: { findAllByType: (t: string) => { instance: THREE.
     .find((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
 }
 
-describe('<OptionButtonNative> (isolated painter contract)', () => {
+describe('<OptionButton> (isolated painter contract)', () => {
   afterEach(() => {
     controlSolverRegistry.clear();
   });
 
   it('draws the chrome StyleBox using the default-theme normal fill', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <OptionButtonNative {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
+      <OptionButton {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
@@ -77,7 +77,7 @@ describe('<OptionButtonNative> (isolated painter contract)', () => {
 
   it('switches to the disabled fill once disabled=true', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <OptionButtonNative {...painterEnv()} solveNode={solveNode({ disabled: true })} rect={RECT} renderOrder={0} />
+      <OptionButton {...painterEnv()} solveNode={solveNode({ disabled: true })} rect={RECT} renderOrder={0} />
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
@@ -86,14 +86,14 @@ describe('<OptionButtonNative> (isolated painter contract)', () => {
 
   it('always draws the chevron arrow, even with zero items (has_theme_icon is unconditional)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <OptionButtonNative {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
+      <OptionButton {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
     );
     expect(findArrowMesh(renderer.scene)).toBeDefined();
   });
 
   it('draws NO text mesh when selected is absent/out of range', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <OptionButtonNative
+      <OptionButton
         {...painterEnv()}
         solveNode={solveNode({ items: ITEMS, selected: 99 })}
         rect={RECT}
@@ -105,7 +105,7 @@ describe('<OptionButtonNative> (isolated painter contract)', () => {
 
   it('draws the SELECTED item\'s text, not the first item\'s', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <OptionButtonNative
+      <OptionButton
         {...painterEnv()}
         solveNode={solveNode({ items: ITEMS, selected: 1 })}
         rect={RECT}
@@ -117,7 +117,7 @@ describe('<OptionButtonNative> (isolated painter contract)', () => {
 
   it("uses control_font_color (0.875 sRGB) for the NORMAL label", async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <OptionButtonNative
+      <OptionButton
         {...painterEnv()}
         solveNode={solveNode({ items: ITEMS, selected: 1 })}
         rect={RECT}
@@ -131,7 +131,7 @@ describe('<OptionButtonNative> (isolated painter contract)', () => {
 
   it('uses control_font_disabled_color (alpha 0.5) for the DISABLED label', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <OptionButtonNative
+      <OptionButton
         {...painterEnv()}
         solveNode={solveNode({ items: ITEMS, selected: 1, disabled: true })}
         rect={RECT}
@@ -147,7 +147,7 @@ describe('<OptionButtonNative> (isolated painter contract)', () => {
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
         <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>
-          <OptionButtonNative
+          <OptionButton
             {...painterEnv()}
             solveNode={solveNode({ items: ITEMS, selected: 1, selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } })}
             rect={RECT}
@@ -171,7 +171,7 @@ describe('<OptionButtonNative> (isolated painter contract)', () => {
 
   it('forwards renderOrder to every mesh (chrome, arrow, text)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <OptionButtonNative
+      <OptionButton
         {...painterEnv()}
         solveNode={solveNode({ items: ITEMS, selected: 1 })}
         rect={RECT}

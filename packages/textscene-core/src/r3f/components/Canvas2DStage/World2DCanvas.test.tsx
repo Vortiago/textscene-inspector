@@ -60,21 +60,12 @@ describe('World2DContents native-controls mount seam', () => {
     zoom: 1,
   };
 
-  it('does not mount ControlCanvasLayer when nativeControls is unset (current DOM-overlay behavior)', async () => {
-    const off = await ReactThreeTestRenderer.create(
+  it('lazily mounts ControlCanvasLayer (from the controls barrel) as a sibling after NodeDispatcher', async () => {
+    const rendered = await ReactThreeTestRenderer.create(
       <SelectionProvider>
         <World2DContents {...baseProps} />
       </SelectionProvider>
     );
-    expect(off.scene.findAllByProps({ name: 'native-controls-stub' })).toHaveLength(0);
-  });
-
-  it('lazily mounts ControlCanvasLayer (from the controls barrel) as a sibling after NodeDispatcher when nativeControls is set', async () => {
-    const on = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
-        <World2DContents {...baseProps} nativeControls />
-      </SelectionProvider>
-    );
-    expect(on.scene.findAllByProps({ name: 'native-controls-stub' })).toHaveLength(1);
+    expect(rendered.scene.findAllByProps({ name: 'native-controls-stub' })).toHaveLength(1);
   });
 });

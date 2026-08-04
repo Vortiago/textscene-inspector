@@ -5,7 +5,7 @@
  * `TextureLoader.load` returns the texture synchronously — initially blank,
  * painted once the underlying `<img>` decodes, exactly like any
  * browser-loaded texture — so a caller never has to gate rendering on load
- * completion the way `TextureRectNative` does for a user-authored resource
+ * completion the way `TextureRect` does for a user-authored resource
  * that might genuinely be missing. A vendored icon is compiled into the
  * bundle, so it cannot fail to resolve.
  *

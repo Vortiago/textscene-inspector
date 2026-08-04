@@ -28,16 +28,13 @@ labels render identically placed in both images.
 ## Divergences
 
 Godot draws its vertical scrollbar down the right edge — a slim full-height track with a
-rounded grabber. This sheet's captured images are the DOM overlay path, which still shows
-no scrollbar: it maps each scroll axis to a CSS `overflow` value rather than painting
-Godot's themed scrollbar.
+rounded grabber.
 
-The native (WebGL canvas) painter closes this divergence: `ScrollContainerNative`
-(`NativeComponent.tsx`, dev-only behind `useNativeControls`) draws the themed `scroll`
-track and `grabber` StyleBoxes and clips the content to the container's own rect with
-`THREE.Plane` clipping (`../../../../r3f/controls/native/controlClipping.tsx`) — verified
-against the real engine's rects and `pnpm ref:godot --probe` pixels
-(`nativeSolver.test.ts`/`NativeComponent.test.tsx`).
+The native (WebGL canvas) painter `ScrollContainer` (`Component.tsx`) draws the themed
+`scroll` track and `grabber` StyleBoxes and clips the content to the container's own rect
+with `THREE.Plane` clipping (`../../../../r3f/controls/native/controlClipping.tsx`) —
+verified against the real engine's rects and `pnpm ref:godot --probe` pixels
+(`nativeSolver.test.ts`/`Component.test.tsx`).
 
 ## Linting
 

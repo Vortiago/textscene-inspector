@@ -3,9 +3,9 @@
  * shell can surface a "switch to 2D" hint in 3D mode (ADR-0006). The type set
  * is a literal mirror of ControlComponentRegistry's registered types — the
  * registry can't be queried here because it's lazy-loaded (empty until the
- * overlay mounts, which only happens in 2D mode). Keep in sync when adding a
- * Control slice. Light module (no component/THREE imports) — safe for the
- * shell's initial-paint bundle.
+ * native Control canvas mounts, which only happens in 2D mode). Keep in sync
+ * when adding a Control slice. Light module (no component/THREE imports) —
+ * safe for the shell's initial-paint bundle.
  */
 
 import type { TscnNode } from '../../parser/types';

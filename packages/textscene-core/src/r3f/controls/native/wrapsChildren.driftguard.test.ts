@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-// Side-effect import: registers every Control slice, DOM and native alike.
+// Side-effect import: registers every Control slice's native painter.
 import { controlComponentRegistry } from '../index';
 
 /**

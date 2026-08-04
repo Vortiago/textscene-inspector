@@ -1,5 +1,5 @@
 /**
- * `<RichTextLabelNative>` — the native (WebGL canvas) painter for
+ * `<RichTextLabel>` — the native (WebGL canvas) painter for
  * RichTextLabel: one `<TextRun>` mesh per (line, contiguous bbcode-style-run)
  * pair. Assertions are scene-graph structure and material properties, never
  * pixels — `pnpm ref:godot` is the pixel-measurement tool.
@@ -13,15 +13,14 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
-import { controlComponentRegistry, type ControlComponent } from '../../../../r3f/controls/ControlComponentRegistry';
+import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { BOLD_DISTANCE_BIAS, ITALIC_SKEW, richTextLabelMinimumSize } from './nativeSolver';
-import { RichTextLabelNative } from './NativeComponent';
+import { RichTextLabel } from './Component';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
-const DomStub: ControlComponent = () => null;
 
 function solveNode(path: string, properties: Record<string, unknown>): SolveNode {
   const name = path.split('/').pop()!;
@@ -35,7 +34,7 @@ function expectedLinear(r: number, g: number, b: number): THREE.Color {
 
 async function render(properties: Record<string, unknown>, rect: Rect2 = { x: 0, y: 0, w: 300, h: 200 }) {
   return ReactThreeTestRenderer.create(
-    <RichTextLabelNative {...painterEnv()} solveNode={solveNode('RTL', properties)} rect={rect} renderOrder={5} />
+    <RichTextLabel {...painterEnv()} solveNode={solveNode('RTL', properties)} rect={rect} renderOrder={5} />
   );
 }
 
@@ -43,7 +42,7 @@ function meshesOf(renderer: Awaited<ReturnType<typeof render>>): THREE.Mesh[] {
   return renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
 }
 
-describe('<RichTextLabelNative> (isolated painter contract)', () => {
+describe('<RichTextLabel> (isolated painter contract)', () => {
   it('draws exactly one mesh for plain (bbcode-disabled) single-line text', async () => {
     const renderer = await render({ text: 'Hello', bbcodeEnabled: false });
     expect(meshesOf(renderer)).toHaveLength(1);
@@ -104,7 +103,7 @@ describe('<RichTextLabelNative> (isolated painter contract)', () => {
     const node = solveNode('RTL', { text: 'A', selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 } });
     const renderer = await ReactThreeTestRenderer.create(
       <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>
-        <RichTextLabelNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 200, h: 200 }} renderOrder={0} />
+        <RichTextLabel {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 200, h: 200 }} renderOrder={0} />
       </Modulate2DContext.Provider>
     );
     const mat = meshesOf(renderer)[0]!.material as THREE.ShaderMaterial;
@@ -135,9 +134,9 @@ describe('<RichTextLabelNative> (isolated painter contract)', () => {
   });
 });
 
-describe('<RichTextLabelNative> registered through <ControlCanvasWalker> (end-to-end walker plumbing)', () => {
+describe('<RichTextLabel> registered through <ControlCanvasWalker> (end-to-end walker plumbing)', () => {
   it('draws through the real registry entry, at the walker-solved rect, honouring fit_content minimum size', async () => {
-    controlComponentRegistry.register({ typeName: 'RichTextLabel', Component: DomStub, Native: RichTextLabelNative });
+    controlComponentRegistry.register({ typeName: 'RichTextLabel', Component: RichTextLabel });
     controlSolverRegistry.clear();
     controlSolverRegistry.registerMinimumSize('RichTextLabel', richTextLabelMinimumSize);
     const root = solveNode('Root', {

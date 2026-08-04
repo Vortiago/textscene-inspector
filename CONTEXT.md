@@ -19,7 +19,7 @@ The parsed-and-built tree of Nodes for one or more scenes; produced by the scene
 _Avoid_: "scene tree" for the data structure — reserve "scene tree" for the UI panel (`SceneTreeViewer`).
 
 **Live scene tree** (`r3f/liveSceneTree.ts`):
-The composed, *runtime* tree the user navigates: the **SceneGraph**'s root Nodes with **PackedScene instancing** folded in (**Instance root merge** plus lazily-loaded sub-scenes) and **GLBSceneRoot** internals descended, in one consistent node-path space with per-sub-scene **ExtResource** scope. Unlike **SceneGraph** (static, parse-time, root-scene only) it depends on the **resource event bus** caches, so it is derived on demand from a cache snapshot. `liveSceneTree.ts` defines the single traversal; the 3D viewport and 2D world (**NodeDispatcher**), the **Control overlay** (`ControlDispatcher`), the scene tree panel, the inspector resolver (`useLiveNode` → `resolveLiveEntry`), and the cameras/stats panels are its consumers. Every consumer that *renders* a subtree descends this tree — a consumer reading **SceneGraph** children directly sees an instance as a childless node and silently drops everything inside it.
+The composed, *runtime* tree the user navigates: the **SceneGraph**'s root Nodes with **PackedScene instancing** folded in (**Instance root merge** plus lazily-loaded sub-scenes) and **GLBSceneRoot** internals descended, in one consistent node-path space with per-sub-scene **ExtResource** scope. Unlike **SceneGraph** (static, parse-time, root-scene only) it depends on the **resource event bus** caches, so it is derived on demand from a cache snapshot. `liveSceneTree.ts` defines the single traversal; the 3D viewport and 2D world (**NodeDispatcher**), the native Control canvas (**ControlCanvasWalker**), the scene tree panel, the inspector resolver (`useLiveNode` → `resolveLiveEntry`), and the cameras/stats panels are its consumers. Every consumer that *renders* a subtree descends this tree — a consumer reading **SceneGraph** children directly sees an instance as a childless node and silently drops everything inside it.
 _Avoid_: conflating with **SceneGraph** (the parsed structure) or "scene tree" (the UI panel).
 
 **ExtResource**:
@@ -123,8 +123,8 @@ The render-domain singleton mapping `typeName → React component`, populated by
 _Avoid_: "renderer registry".
 
 **ControlComponentRegistry**:
-The 2D-overlay analogue of NodeComponentRegistry, mapping a Control `typeName → DOM component`; kept separate so the 3D registry stays THREE-typed.
-_Avoid_: "UI registry".
+The 2D-UI analogue of NodeComponentRegistry, mapping a Control `typeName → native (WebGL canvas) painter component`; kept separate so the 3D registry stays THREE-typed. A type with no registration draws as `ControlFallback` — an outline at its solved rect — rather than nothing.
+_Avoid_: "UI registry"; "DOM component" (there is no DOM path left to register into).
 
 ### Rendering
 
@@ -132,17 +132,17 @@ _Avoid_: "UI registry".
 The recursive walker that turns SceneGraph root Nodes into a React-three-fiber tree, wrapping each Node in a pickable `<group>` and injecting instanced-scene children.
 _Avoid_: "renderer".
 
-**ControlDispatcher**:
-The DOM analogue of NodeDispatcher — recursively walks a Control subtree and emits nested `<div>`s mapping anchor/offset and container layout to CSS.
-_Avoid_: "UI renderer".
+**ControlCanvasWalker** (`r3f/controls/native/ControlCanvasWalker.tsx`):
+The native analogue of NodeDispatcher for Controls — recursively walks a Control subtree (`buildSolveTree`'s live-tree walk into a `SolveNode` forest), runs the **Control rect solve** over it, and emits one named `<group>` per Control at its solved rect (Godot pixels, +Y down, negated once to three's `-y`). A registered `Native` painter (**ControlComponentRegistry**) draws the node's own chrome; `ControlFallback` draws an outline at the solved rect when none is registered. Children render as solved siblings of the painter, never as its React children — the rect solve already gave every child an absolute, parent-relative rect, so no painter arranges its own children. Superseded the DOM-emitting `ControlDispatcher` at cutover (ADR-0031, superseding ADR-0003).
+_Avoid_: "UI renderer"; "ControlDispatcher" for current code (retired term — see Flagged ambiguities); assuming a painter positions or arranges its own children.
+
+**Control rect solve** (`r3f/controls/native/controlRectSolver.ts`):
+The two-phase pass that computes every Control's `Rect2` before anything paints: bottom-up `get_combined_minimum_size` (a widget's own minimum, `custom_minimum_size`-floored, merging upward through nested containers), then top-down `fit_child_in_rect` (a free/anchored Control resolves against its parent's rect — the viewport for a root — while a container child resolves through that parent's registered `ContainerLayoutFn`). Pure TS, framework-free, ported line-by-line from Godot 4.6.3's `scene/gui/control.cpp`. Runs once per generation over the whole `SolveNode` forest (`buildSolveTree`); **ControlCanvasWalker** is its only caller (ADR-0031).
+_Avoid_: "layout solve" — **layout_mode** and its `ContainerLayoutFn` registration (`controlSolverRegistry`) already name a different axis (free vs anchored vs container-managed); this is the rect arithmetic that axis feeds into, not the classification itself.
 
 **Viewport mode**:
-The single `'2D' | '3D'` display state of the center viewport — `3D` mounts the R3F canvas, `2D` mounts the pannable 2D stage (project-viewport frame + 2D world canvas + **Control overlay**, in Godot's 2D-editor order); chosen by an auto-default heuristic on the scene root type, overridable by the toolbar toggle.
+The single `'2D' | '3D'` display state of the center viewport — `3D` mounts the R3F canvas, `2D` mounts the pannable 2D stage (project-viewport frame + the 2D world canvas, which composites the 2D world and every Control/CanvasLayer subtree as canvas items in one Godot-tree-order draw); chosen by an auto-default heuristic on the scene root type, overridable by the toolbar toggle.
 _Avoid_: "2D mode" alone (it is one of two values of one state).
-
-**Control overlay**:
-The HTML/CSS DOM rendering of a Godot Control/CanvasLayer subtree, layered as a sibling of (never inside) the R3F `<Canvas>`.
-_Avoid_: "HUD", "UI canvas".
 
 **Sub-viewport**:
 Godot's `SubViewport` Node — a **canvas boundary, not a world boundary**. It always owns its World2D, so its CanvasItem descendants (2D world *and* Control UI) draw nowhere in the parent; it *shares* the parent's World3D unless `own_world_3d`, so its Node3D descendants draw in the parent's 3D view exactly as through a plain `Node`. Draws nothing itself. Always written hyphenated in prose to keep it distinct from **Viewport mode** (ADR-0030).
@@ -160,16 +160,16 @@ The pass-ordering half of the same seam (`ViewportPassRegistryContext.tsx`): a s
 _Avoid_: treating it as a resource cache (it is keyed by node path, not by `res://` path, and its value depends on the scene tree rather than a file).
 
 **layout_mode**:
-The Godot Control property recording how a node is positioned — `0` free position, `1` anchors, `2` container-managed (the parent lays out the child; anchors ignored); in this corpus `2` is the majority. The renderer does **not** branch on this field, though: it is parsed into `ControlProperties.layoutMode` but left unread, and the free-vs-container decision is made structurally from the **parent container's** imposed `ParentLayoutKind` (`controlLayout.ts`) — a Control is container-managed iff its parent is a layout container.
-_Avoid_: treating anchors as the primary path; saying the renderer branches on `layout_mode` (it branches on the parent's `ParentLayoutKind`).
+The Godot Control property recording how a node is positioned — `0` free position, `1` anchors, `2` container-managed (the parent lays out the child; anchors ignored); in this corpus `2` is the majority. The **Control rect solve** does **not** branch on this field, though: it is parsed into `ControlProperties.layoutMode` but left unread, and the free-vs-container decision is made structurally from whether the parent has a registered `ContainerLayoutFn` (`controlSolverRegistry`) — a Control is container-managed iff its parent is a layout container.
+_Avoid_: treating anchors as the primary path; saying the solve branches on `layout_mode` (it branches on the parent's `ContainerLayoutFn` registration).
 
 **Anchor / offset**:
-Godot Control layout properties (`anchors_preset`, `anchor_*`, `offset_*`, `grow_*`) decoded via the full LayoutPreset 0..15 table (`PRESET_ANCHORS`) to CSS absolute positioning; applied when the **parent imposes the `'free'` layout kind** (a top-level overlay, or a child of a plain Control/Panel/CanvasLayer rather than a layout container).
-_Avoid_: "margin" (reserve for `MarginContainer` → CSS padding); gating this on the child's `layout_mode` value (the gate is the parent's `ParentLayoutKind`).
+Godot Control layout properties (`anchors_preset`, `anchor_*`, `offset_*`, `grow_*`) decoded via the full LayoutPreset 0..15 table (`PRESET_ANCHORS`) into a `Rect2` — plain `x`/`y`/`w`/`h` numbers, by the **Control rect solve** — rather than a CSS position string; applied when the **parent has no registered `ContainerLayoutFn`** (a top-level root, or a child of a plain Control/Panel/CanvasLayer rather than a layout container), whose children resolve through that function instead.
+_Avoid_: "margin" (reserve for `MarginContainer`, which insets a rect rather than anchoring one); gating this on the child's `layout_mode` value (the gate is the parent's registration); CSS `calc()`/absolute-positioning language.
 
 **StyleBox**:
-A Godot Control theme resource (`StyleBoxFlat` / `StyleBoxEmpty`) defining background/border/corner-radius, mapped to CSS `background`/`border`/`border-radius` on the Control overlay.
-_Avoid_: "style".
+A Godot Control theme resource (`StyleBoxFlat` / `StyleBoxEmpty`) defining background/border/corner-radius — resolved to a typed `StyleBoxFlatData` (`parseStyleBox.ts`) and drawn as a hand-tessellated, vertex-coloured mesh (`styleBoxFlatGeometry.ts` + `StyleBoxQuad`): fill, per-corner radii, per-edge borders and `border_blend` all realised in geometry and vertex colour, ported from `StyleBoxFlat::draw` (Godot 4.6.3, `scene/resources/style_box_flat.cpp`).
+_Avoid_: "style"; CSS `background`/`border`/`border-radius` language.
 
 **Collision-shape resource**:
 A `[sub_resource]` carrying collision geometry — `BoxShape3D` (`size`), `ConvexPolygonShape3D` (`points`), `ConcavePolygonShape3D` (`data`); distinct from the **CollisionShape3D** Node that references one via a `shape` property.
@@ -363,21 +363,21 @@ _Avoid_: mounting the **AnimationTree driver** this way (it owns no clips — it
 
 ## Relationships
 
-- A **SceneGraph** holds many **Node**s; the active scene's root Nodes feed the **NodeDispatcher** (3D) or, in 2D **viewport mode**, the **ControlDispatcher**.
+- A **SceneGraph** holds many **Node**s; the active scene's root Nodes feed the **NodeDispatcher** — 3D content always, and the 2D world's CanvasItem content too — while a Control/CanvasLayer subtree, in 2D **viewport mode**, is solved and drawn by the **ControlCanvasWalker** inside that same canvas.
 - A **Node** references **ExtResource**s and **SubResource**s by id; the **resource event bus** resolves ExtResources to files. A `.tres` the scene reached may itself reference its OWN SubResources, which the bus resolves under a **Sub-resource path** — fetching the owning file, then building the named body out of it (ADR-0029).
 - A **CollisionShape3D** Node references one **collision-shape resource**; the **collision gizmo** reads the latter through the former.
 - The three registries (**NodeRegistry**, **NodeComponentRegistry**, **ControlComponentRegistry**) are keyed by the same `typeName` but kept separate to preserve the **React-free linter boundary**.
 - A unified **vertical slice** exposes its behavior through three **slice entry points**, one per registry domain.
-- **Label3D** (3D, billboarded text in-canvas) is a different subsystem from **Label** / **RichTextLabel** (2D DOM text in the **Control overlay**).
+- **Label3D** (3D, billboarded text rasterised to a `CanvasTexture` with the browser's own font) is a different subsystem from **Label** / **RichTextLabel** (2D canvas text — the vendored Open Sans MSDF atlas and this engine's own layout, drawn as glyph-quad geometry).
 - An **AnimationPlayer** references one **Animation library** via `libraries/`; the library's **GodotAnimation**s carry **Track**s that the **Animation transport** plays by building a `THREE.AnimationClip` and driving a `THREE.AnimationMixer` rooted at the **Animation root** (ADR-0011).
 - An **AnimationTree driver** owns no clips: it evaluates its `tree_root` at the authored `parameters/*` into a **blend program** and drives the **AnimationPlayer** or **GLB animation driver** its `anim_player` resolves to, found via the **AnimationDriverRegistry** (ADR-0019).
-- A **sub-viewport** publishes its render target into the **ViewportTextureRegistry**; a **viewport surface** or a `ViewportTexture` consumer resolves it back by node path. The parent's **NodeDispatcher** and **ControlDispatcher** both stop at the boundary, so the subtree is dispatched exactly once — by its surface (ADR-0030).
+- A **sub-viewport** publishes its render target into the **ViewportTextureRegistry**; a **viewport surface** or a `ViewportTexture` consumer resolves it back by node path. The parent's **NodeDispatcher** and **ControlCanvasWalker** both stop at the boundary, so the subtree is dispatched exactly once — by its surface (ADR-0030).
 - Both **Host (app)**s mount the same preview shell; what differs is the resource-loading adapter and how source text arrives — **Save-driven refresh** from disk (VS Code) vs the live-typed **Source pane** buffer under **Hold-last-valid** (web). **Progressive fill-in** is shared.
 
 ## Example dialogue
 
 > **Dev:** "When `main.tscn` loads — its root is a Node3D with a Hallway plus five CanvasLayer UI scenes — which **viewport mode** do we default to?"
-> **Architect:** "3D, because the root is spatial. The five **Control overlay** subtrees don't render in 3D mode — same as Godot's own 3D editor viewport — but we surface a 'contains 2D UI' hint so the user can flip the toggle."
+> **Architect:** "3D, because the root is spatial. The five native Control subtrees don't render in 3D mode — same as Godot's own 3D editor viewport — but we surface a 'contains 2D UI' hint so the user can flip the toggle."
 > **Dev:** "And a `StaticBody3D` with a `CollisionShape3D` child?"
 > **Architect:** "The body is a **transform-only group**; the CollisionShape3D renders nothing unless `showCollisions` is on, in which case its **collision gizmo** draws the **collision-shape resource** as a wireframe."
 
@@ -394,3 +394,4 @@ _Avoid_: mounting the **AnimationTree driver** this way (it owns no clips — it
 - "Host" meant both the embedding app and VS Code's extension-host process — resolved: **Host (app)** is the embedding application (web previewer / VS Code extension); VS Code's process is always written qualified as "extension host".
 - "Viewport" meant the previewer's centre panel (**Viewport mode**, the 2D/3D toggle) and Godot's `SubViewport` Node, which are unrelated referents — resolved: the Godot node is always the hyphenated **sub-viewport**, and the thing displaying it is a **viewport surface**; bare "viewport" stays the previewer's panel (ADR-0030).
 - "Offscreen" suggested a sub-viewport's whole subtree is hidden from the parent — resolved: only the **canvas** half is. A sub-viewport always owns its World2D but shares the parent's World3D unless `own_world_3d`, so its 3D descendants render in the parent view exactly as through a plain Node. Measured, not derived (ADR-0030).
+- "ControlDispatcher" named the DOM-emitting walker of ADR-0003 — resolved: Control nodes now draw as native canvas items, so the DOM walker and its name are retired; the walker is **ControlCanvasWalker**, which emits `<group>`s positioned by the **Control rect solve** instead of `<div>`s positioned by CSS (ADR-0031).

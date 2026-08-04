@@ -1,78 +1,117 @@
 /**
- * <Label> — a positioned <div> holding the node's text. Font size/color come
- * from `theme_override_font_sizes/font_size` + `theme_override_colors/font_color`;
- * a system font stack is used (the VS Code webview CSP blocks web fonts).
+ * `<Label>` — the native (WebGL canvas) painter for Label: the first
+ * text-bearing Control, drawing through the shared MSDF text engine
+ * (`native/text/textLayout.ts` + `TextRun.tsx`) instead of the empty-outline
+ * `<ControlFallback>` every other text widget still falls back to.
  *
- * Absent an override the size is the theme's `default_font_size` at the
- * project's `gui/theme/default_theme_scale`, set EXPLICITLY rather than left to
- * inherit: the overlay and the off-screen raster host both happen to sit at
- * 16px today, so inheriting matched Godot only by coincidence and could not
- * follow a scaled project at all.
+ * Godot aligns EVERY LINE of a Label independently by its own width
+ * (`Label::_get_line_rect`) — a single merged multi-line `<TextRun>` (sharing
+ * one x origin) cannot express that once lines differ in width, so this
+ * draws one `<TextRun>` per line, each in its own positioned `<group>`
+ * (`nativeSolver.ts`'s `layoutLabelLines`, which also folds in the
+ * vertical-origin reconciliation against the atlas's own bake anchor —
+ * see `originCorrectionPx`'s doc for the spike S2 residual it closes).
+ *
+ * Tint: `ControlCanvasWalker` already folds this node's OWN `modulate` into
+ * the `Modulate2DContext` value it provides AROUND this painter, so
+ * `useCanvasItemTint` is called with `modulate: WHITE_MODULATE` (already
+ * folded in), `self_modulate` from this node's own properties, and the
+ * resolved text COLOUR as `ownMultiplier` — composed in sRGB, converted to
+ * linear once, matching `TextRun`'s own contract (its `tint` prop is sRGB,
+ * converted internally).
+ *
+ * `renderOrder` is passed to each line's `<TextRun>` directly: three.js reads
+ * `renderOrder` per rendered object and never inherits it from a wrapping
+ * `<group>`, so the per-line mesh has to carry it itself.
  */
-
-import type { CSSProperties } from 'react';
-import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
-import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
-import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
-import { useGodotTheme } from '../../../../r3f/controls/useGodotTheme';
+import { useMemo } from 'react';
+import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import {
+  AutowrapMode,
+  clampAutowrapMode,
+  shapeText,
+  type TextLayoutResult,
+} from '../../../../r3f/controls/native/text/textLayout';
+import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { labelTextTheme, layoutLabelLines, type LabelLinePlacement } from './nativeSolver';
 import type { LabelProperties } from './types';
 
-const H_ALIGN = ['left', 'center', 'right', 'justify'] as const;
-// Godot VerticalAlignment 0 TOP / 1 CENTER / 2 BOTTOM / 3 FILL → flex main-axis.
-const V_JUSTIFY = ['flex-start', 'center', 'flex-end', 'stretch'] as const;
 
-export function Label({ node, children }: ControlComponentProps) {
-  const props = node.properties as LabelProperties;
-  const parentKind = useControlParent();
-  const theme = useGodotTheme();
-  const style: CSSProperties = {
-    ...controlLayoutStyle(props, parentKind),
-    fontSize: `${theme.fontSize}px`,
-    // After the theme size, so `theme_override_font_sizes/font_size` still wins.
-    ...textThemeStyle(props, { sizeKey: 'font_size', colorKey: 'font_color' }),
-  };
+/** A single line, wrapped as its own one-line `TextLayoutResult` — `TextRun` computes `lineIndex * linePitchPx` internally, which is 0 for a solo line, so it draws relative to y=0 with no cumulative pitch of its own; the caller (this component) supplies the real cumulative Y via the wrapping `<group>`'s position. */
+function soloLineLayout(placement: LabelLinePlacement, linePitchPx: number): TextLayoutResult {
+  return { lines: [placement.line], linePitchPx, widthPx: placement.line.widthPx, heightPx: linePitchPx };
+}
 
-  if (props.horizontalAlignment !== undefined) {
-    style.textAlign = H_ALIGN[props.horizontalAlignment] ?? 'left';
-  }
-  // Honor embedded newlines (Godot treats `\n` as a hard break regardless of
-  // autowrap); autowrap additionally soft-wraps long lines. Godot's modes:
-  // 0 off, 1 ARBITRARY (break anywhere), 2 WORD, 3 WORD_SMART (break a word
-  // that can't fit). `pre`/`pre-wrap` preserve the newlines either way.
-  applyAutowrap(style, props.autowrapMode);
-  if (props.uppercase) style.textTransform = 'uppercase';
-  // Vertical alignment only bites when the label is taller than its text (a
-  // stretched/min-sized label); apply it via a flex column.
-  if (props.verticalAlignment !== undefined) {
-    style.display = 'flex';
-    style.flexDirection = 'column';
-    style.justifyContent = V_JUSTIFY[props.verticalAlignment] ?? 'flex-start';
-  }
-
-  return (
-    <div data-control-type="Label" data-node-name={node.name} style={style}>
-      {props.text ?? ''}
-      {children}
-    </div>
+/**
+ * The per-line `TextLayoutResult`s, memoised together with the placements they
+ * come from. `TextRun` keys its geometry off its `layout` prop's identity and
+ * disposes the old one on every change, so building these inline would re-mesh
+ * every line of every Label on every render — not just when the text or rect
+ * actually changed.
+ */
+function useSoloLineLayouts(placements: LabelLinePlacement[], linePitchPx: number): TextLayoutResult[] {
+  return useMemo(
+    () => placements.map((placement) => soloLineLayout(placement, linePitchPx)),
+    [placements, linePitchPx]
   );
 }
 
-/** Map Godot's autowrap_mode to white-space + word-break CSS. */
-function applyAutowrap(style: CSSProperties, mode: number | undefined): void {
-  switch (mode) {
-    case 1: // AUTOWRAP_ARBITRARY — break at any character
-      style.whiteSpace = 'pre-wrap';
-      style.wordBreak = 'break-all';
-      break;
-    case 2: // AUTOWRAP_WORD — break only at word boundaries
-      style.whiteSpace = 'pre-wrap';
-      break;
-    case 3: // AUTOWRAP_WORD_SMART — break words that can't fit on one line
-      style.whiteSpace = 'pre-wrap';
-      style.overflowWrap = 'break-word';
-      break;
-    default: // 0 / absent — no soft wrapping (newlines still honored)
-      style.whiteSpace = 'pre';
-  }
+export function Label({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
+  const props = solveNode.node.properties as LabelProperties;
+  const textTheme = useMemo(() => labelTextTheme(props, { theme }), [props, theme]);
+
+  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
+  const tint = useCanvasItemTint(
+    { modulate: WHITE_MODULATE, self_modulate: selfModulate },
+    textTheme.color
+  );
+  const tintColor = { r: tint.own.r, g: tint.own.g, b: tint.own.b, a: tint.own.a };
+  const clippingPlanes = useControlClipPlanes();
+
+  const text = props.text ?? '';
+  // Label's own default is OFF (`label.h`'s `autowrap_mode` initialiser).
+  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
+  const layout = useMemo(
+    () =>
+      shapeText(text, {
+        fontSizePx: textTheme.fontSizePx,
+        boxWidthPx: rect.w,
+        autowrapMode,
+        uppercase: props.uppercase,
+      }),
+    [text, textTheme.fontSizePx, rect.w, autowrapMode, props.uppercase]
+  );
+
+  const placements = useMemo(
+    () =>
+      layoutLabelLines(
+        layout,
+        rect.w,
+        rect.h,
+        props.horizontalAlignment,
+        props.verticalAlignment,
+        textTheme.fontSizePx
+      ),
+    [layout, rect.w, rect.h, props.horizontalAlignment, props.verticalAlignment, textTheme.fontSizePx]
+  );
+
+  const lineLayouts = useSoloLineLayouts(placements, layout.linePitchPx);
+
+  return (
+    <>
+      {placements.map((placement, index) => (
+        <group key={index} position={[placement.x, -placement.y, 0]}>
+          <TextRun
+            layout={lineLayouts[index]!}
+            fontSizePx={textTheme.fontSizePx}
+            tint={tintColor}
+            clippingPlanes={clippingPlanes}
+            renderOrder={renderOrder}
+          />
+        </group>
+      ))}
+    </>
+  );
 }

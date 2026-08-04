@@ -131,9 +131,12 @@ which display real content.
     `ViewportTexture` on a `[sub_resource]` material is already scene-scoped, but two
     *instances* of the same sub-scene would share one material and therefore one viewport
     binding.
-  - A sub-viewport containing Controls has no WebGL source of its own; its texture comes
-    from a DOM raster (ADR-0003 as amended). Its text cannot match Godot's, which bundles
-    Open Sans SemiBold while the overlay is system-fonts-only.
+  - ~~A sub-viewport containing Controls has no WebGL source of its own; its texture
+    comes from a DOM raster (ADR-0003 as amended). Its text cannot match Godot's, which
+    bundles Open Sans SemiBold while the overlay is system-fonts-only.~~ **Resolved by
+    ADR-0031:** the publisher is now a native offscreen pass through the same
+    `ControlCanvasWalker` every other Control uses, which vendors that same Open Sans
+    SemiBold font as an MSDF atlas — this limitation no longer applies.
   - A **recursive** ViewportTexture — a viewport sampling its own target — is unsolved and
     unexercised: no scene in the corpus does it. (`gui_in_3d` looks like it does only
     because its `TextureRect` carries `ExtResource("2")` = `res://icon.webp` while the
@@ -141,15 +144,15 @@ which display real content.
     namespaces — a trap worth knowing when reading these scenes.)
   - `render_target_update_mode` does not gate rendering: the previewer derives the target
     from the scene, so there is no per-frame update to skip.
-  - **An opaque Control that Godot draws *behind* world content covers it.** Not specific
-    to sub-viewports — it is ADR-0003's DOM/WebGL split — but this work is where it
-    surfaced, and a viewport surface is a Control, so it is reachable here. `Canvas2DStage`
-    layers the whole Control overlay above the world canvas unconditionally, while Godot
-    orders all CanvasItems in one tree walk. `demos/2d/pong` renders as a flat rectangle
-    for exactly this reason: its `Background` ColorRect is the first child. Unfixable
-    within the split — interleaving `<div>`s and canvas draws by tree order is what two
-    rendering technologies cannot do — so it is evidence on issue #368 (native WebGL
-    Controls) rather than a limitation with a bounded fix.
+  - ~~**An opaque Control that Godot draws *behind* world content covers it.** Not
+    specific to sub-viewports — it is ADR-0003's DOM/WebGL split — but this work is
+    where it surfaced, and a viewport surface is a Control, so it is reachable here.
+    `Canvas2DStage` layers the whole Control overlay above the world canvas
+    unconditionally, while Godot orders all CanvasItems in one tree walk. `demos/2d/pong`
+    renders as a flat rectangle for exactly this reason: its `Background` ColorRect is
+    the first child.~~ **Resolved by ADR-0031:** Controls draw inside the same canvas as
+    the 2D world in one tree-order pass, so this class of bug cannot recur — this was
+    the evidence issue #368 (native WebGL Controls) was filed on.
   - **`ParallaxBackground` stays put while the camera moves**, so its edge cuts a
     horizontal line across a Camera2D-framed surface. In Godot it is a `CanvasLayer`
     whose layer transform tracks the viewport's canvas transform

@@ -1,24 +1,21 @@
 /**
  * Framework-free BBCode tokenizer for RichTextLabel's supported subset
- * (ADR-0003: best-effort [b]/[i]/[u]/[s]/[color]/[center]/[code], not full
- * BBCode). `bbcode.tsx`'s DOM renderer and the native painter
- * (`nativeSolver.ts`'s `styledTextRuns`) both consume `parseBBCodeRuns` so the
- * tag-stack/nesting semantics live in exactly one place; `bbcode.tsx` still
- * owns turning a run's tags into CSS (`TAG_STYLE`), and the native side still
- * owns turning them into `{bold, italic, color}` (its own explicit non-goal:
- * only `[b]`/`[i]`/`[color]` affect native styling — every other recognised
- * tag still tokenizes correctly, for stack/nesting fidelity, but contributes
- * no native effect, same as an unrecognised tag).
+ * (best-effort [b]/[i]/[u]/[s]/[color]/[center]/[code], not full BBCode).
+ * `parseBBCodeRuns` produces the tag-stack/nesting semantics; the native
+ * painter (`nativeSolver.ts`'s `styledTextRuns`) turns a run's tags into
+ * `{bold, italic, color}` (its own explicit non-goal: only `[b]`/`[i]`/
+ * `[color]` affect native styling — every other recognised tag still
+ * tokenizes correctly, for stack/nesting fidelity, but contributes no native
+ * effect, same as an unrecognised tag).
  */
 
-import { COLOR_RE } from '../../../../parser/vectors';
 import type { ControlColor } from '../control/types';
 
 /** One currently-open BBCode tag. `value` is the `[name=value]` payload, if the tag carries one. */
 export interface OpenBBCodeTag {
   /** Lowercased tag name, e.g. `'b'`, `'color'`. */
   name: string;
-  /** The `=value` portion (spaces preserved, so `Color(1, 0, 0, 1)` survives) — absent for a bare `[name]` or the space-attribute form. */
+  /** The `=value` portion, verbatim — absent for a bare `[name]` or the space-attribute form. */
   value?: string;
 }
 
@@ -29,8 +26,9 @@ export interface BBCodeRun {
 }
 
 // A tag is `[name]`, `[name=value]`, `[name attr=...]`, or a `[/name]` close.
-// `value` (the `=...` form) keeps spaces so `[color=Color(1, 0, 0, 1)]` works;
-// the space-attribute form is matched but its attributes are ignored.
+// `value` (the `=...` form) is taken verbatim, spaces and all — Godot does not
+// trim it either, and each tag decides for itself what its payload means. The
+// space-attribute form is matched but its attributes are ignored.
 const TOKEN = /(\[\/?[a-zA-Z][^\]]*\])/g;
 const OPEN = /^\[([a-zA-Z]+)(?:=([^\]]*)|\s[^\]]*)?\]$/;
 const CLOSE = /^\[\/([a-zA-Z]+)\]$/;
@@ -131,13 +129,6 @@ function parseHtmlHex(value: string): ControlColor | undefined {
   }
 }
 
-/** `Color(r, g, b, a)` — the GDScript constructor literal. NOT part of real Godot's `Color::from_string` (see `resolveBBColor`'s own doc), but the DOM `bbcode.tsx` already special-cases it, so the native side matches it for renderer parity rather than diverging further from the DOM overlay. */
-function parseColorLiteral(value: string): ControlColor | undefined {
-  const match = value.match(COLOR_RE);
-  if (!match || !match[1] || !match[2] || !match[3] || !match[4]) return undefined;
-  return { r: parseFloat(match[1]), g: parseFloat(match[2]), b: parseFloat(match[3]), a: parseFloat(match[4]) };
-}
-
 /**
  * Resolves a `[color=value]` payload to a linear-ready `ControlColor`.
  *
@@ -145,14 +136,9 @@ function parseColorLiteral(value: string): ControlColor | undefined {
  * label.cpp:6149`, `color.cpp:450-456`), which tries `Color::html` first
  * (hex, with or without `#`) and otherwise looks up `value` in Godot's ~150-
  * entry X11/CSS named-color table, falling back to `p_default` — NOT white —
- * when nothing matches. `Color::from_string` has NO branch for the
- * `Color(r, g, b, a)` GDScript literal at all: passing that string to real
- * Godot bbcode would silently resolve to the fallback, exactly like any other
- * unrecognised name. This function still accepts it (see
- * `parseColorLiteral`'s own doc) to stay at parity with the DOM renderer,
- * which predates this module and already treats it as valid — a
- * pre-existing, intentional divergence from the engine, not one this
- * function introduces.
+ * when nothing matches. There is no branch for a GDScript `Color(r, g, b, a)`
+ * constructor literal: passing that string to real Godot bbcode resolves to
+ * the fallback, exactly like any other unrecognised name.
  *
  * The full named-color table is NOT reproduced here (out of this packet's
  * bbcode scope, `[b]`/`[i]`/`[color]`); an unmatched name — including a CSS
@@ -161,5 +147,5 @@ function parseColorLiteral(value: string): ControlColor | undefined {
  * recognise, just with a smaller recognised set.
  */
 export function resolveBBColor(value: string, fallback: ControlColor): ControlColor {
-  return parseColorLiteral(value) ?? parseHtmlHex(value) ?? fallback;
+  return parseHtmlHex(value) ?? fallback;
 }

@@ -1,10 +1,8 @@
 /**
  * Resolve a Control's StyleBox theme override (e.g. `theme_override_styles/panel
- * = SubResource("StyleBoxFlat_x")`) to a typed `StyleBoxFlatData`. Reuses the
- * same SubResource resolution funnel `resolveStyleBoxCss`
- * (`../resolveStyleBox.ts`) uses — `parseResourceReference` + `findSubResource`
- * — but returns numbers for the native (WebGL) canvas painter instead of CSS
- * for the DOM overlay.
+ * = SubResource("StyleBoxFlat_x")`) to a typed `StyleBoxFlatData`, via the
+ * SubResource resolution funnel `parseResourceReference` + `findSubResource`,
+ * returning numbers for the native (WebGL) canvas painter to read directly.
  *
  * Degrades to `null`, never throws, for: an absent ref, a non-SubResource
  * reference (ExtResource / malformed string), an unknown id, or an id that

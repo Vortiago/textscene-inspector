@@ -1,5 +1,5 @@
 /**
- * `<ButtonNative>` render contract — chrome (StyleBox) + text + optional
+ * `<Button>` render contract — chrome (StyleBox) + text + optional
  * icon, composed from `buttonBase.ts` + this node's own theme resolution.
  * Structure/tint/render-order assertions only (pixels are a golden-image
  * concern via `pnpm ref:godot`, not this suite).
@@ -14,14 +14,14 @@ import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxF
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
-import { controlComponentRegistry, type ControlComponent } from '../../../../r3f/controls/ControlComponentRegistry';
+import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { ControlProperties } from '../control/types';
-import { ButtonNative } from './NativeComponent';
+import { Button } from './Component';
 import { buttonMinimumSize } from './nativeSolver';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
@@ -29,7 +29,6 @@ const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
-const DomStub: ControlComponent = () => null;
 const RECT: Rect2 = { x: 0, y: 0, w: 120, h: 32 };
 
 function styleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatData {
@@ -90,7 +89,7 @@ function findIconMesh(scene: { findAllByType: (t: string) => { instance: THREE.M
     .find((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
 }
 
-describe('<ButtonNative> (isolated painter contract)', () => {
+describe('<Button> (isolated painter contract)', () => {
   afterEach(() => {
     controlSolverRegistry.clear();
   });
@@ -98,7 +97,7 @@ describe('<ButtonNative> (isolated painter contract)', () => {
   it('draws the resolved theme_override_styles/normal chrome, not the default fill, when one is present', async () => {
     const override = styleBox({ bgColor: { r: 0.9, g: 0.1, b: 0.1, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative {...painterEnv()} solveNode={solveNode({}, { normal: override })} rect={RECT} renderOrder={5} />
+      <Button {...painterEnv()} solveNode={solveNode({}, { normal: override })} rect={RECT} renderOrder={5} />
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
@@ -108,7 +107,7 @@ describe('<ButtonNative> (isolated painter contract)', () => {
 
   it('falls back to the default-theme button.normal StyleBox when no override resolves', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative {...painterEnv()} solveNode={solveNode({}, {})} rect={RECT} renderOrder={0} />
+      <Button {...painterEnv()} solveNode={solveNode({}, {})} rect={RECT} renderOrder={0} />
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
@@ -119,7 +118,7 @@ describe('<ButtonNative> (isolated painter contract)', () => {
 
   it('switches to the default-theme button.disabled StyleBox once disabled=true', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative {...painterEnv()} solveNode={solveNode({ disabled: true }, {})} rect={RECT} renderOrder={0} />
+      <Button {...painterEnv()} solveNode={solveNode({ disabled: true }, {})} rect={RECT} renderOrder={0} />
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
@@ -129,7 +128,7 @@ describe('<ButtonNative> (isolated painter contract)', () => {
 
   it('flat=true draws NO chrome mesh at all, but still draws the text', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative {...painterEnv()} solveNode={solveNode({ flat: true, text: 'Hi' })} rect={RECT} renderOrder={0} />
+      <Button {...painterEnv()} solveNode={solveNode({ flat: true, text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
     expect(findChromeMesh(renderer.scene)).toBeUndefined();
     expect(findTextMesh(renderer.scene)).toBeDefined();
@@ -137,14 +136,14 @@ describe('<ButtonNative> (isolated painter contract)', () => {
 
   it('draws NO text mesh when text is absent/empty', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
+      <Button {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
     );
     expect(findTextMesh(renderer.scene)).toBeUndefined();
   });
 
   it("uses control_font_color (0.875 sRGB) for the NORMAL label, tinted the object's own colour, not an approximation", async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+      <Button {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
     const mesh = findTextMesh(renderer.scene)!;
     const material = mesh.material as THREE.ShaderMaterial;
@@ -157,7 +156,7 @@ describe('<ButtonNative> (isolated painter contract)', () => {
       'not the DOM overlay\'s 0.6-opacity approximation this packet\'s comparison.md documents closing',
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
-        <ButtonNative {...painterEnv()} solveNode={solveNode({ text: 'Hi', disabled: true })} rect={RECT} renderOrder={0} />
+        <Button {...painterEnv()} solveNode={solveNode({ text: 'Hi', disabled: true })} rect={RECT} renderOrder={0} />
       );
       const mesh = findTextMesh(renderer.scene)!;
       const material = mesh.material as THREE.ShaderMaterial;
@@ -173,7 +172,7 @@ describe('<ButtonNative> (isolated painter contract)', () => {
       const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
       const renderer = await ReactThreeTestRenderer.create(
         <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>
-          <ButtonNative {...painterEnv()}
+          <Button {...painterEnv()}
             solveNode={solveNode({ text: 'Hi', selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, { normal: flat })}
             rect={RECT}
             renderOrder={0}
@@ -195,7 +194,7 @@ describe('<ButtonNative> (isolated painter contract)', () => {
 
   it('forwards renderOrder to the chrome mesh and to the text mesh', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={7} />
+      <Button {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={7} />
     );
     expect(findChromeMesh(renderer.scene)!.renderOrder).toBe(7);
     // `<TextRun>` takes `renderOrder` itself now, so every mesh carries it —
@@ -205,7 +204,7 @@ describe('<ButtonNative> (isolated painter contract)', () => {
   });
 });
 
-describe('<ButtonNative> — icon (ControlQuad), via ResourceLoader/SceneResources', () => {
+describe('<Button> — icon (ControlQuad), via ResourceLoader/SceneResources', () => {
   const ICON_PATH = 'res://icon.png';
 
   function fakeTexture(w: number, h: number): THREE.Texture {
@@ -220,7 +219,7 @@ describe('<ButtonNative> — icon (ControlQuad), via ResourceLoader/SceneResourc
     return ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider externalResources={[{ id: '1', type: 'Texture2D', path: ICON_PATH }]}>
-          <ButtonNative {...painterEnv()}
+          <Button {...painterEnv()}
             solveNode={solveNode({ icon: 'ExtResource("1")', ...properties })}
             rect={RECT}
             renderOrder={0}
@@ -232,7 +231,7 @@ describe('<ButtonNative> — icon (ControlQuad), via ResourceLoader/SceneResourc
 
   it('draws no icon quad at all when the node has no icon reference', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ButtonNative {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+      <Button {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
     expect(findIconMesh(renderer.scene)).toBeUndefined();
   });
@@ -263,7 +262,7 @@ describe('<ButtonNative> — icon (ControlQuad), via ResourceLoader/SceneResourc
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider externalResources={[{ id: '1', type: 'Texture2D', path: ICON_PATH }]}>
-          <ButtonNative {...painterEnv()} solveNode={solveNode({ icon: 'ExtResource("1")' })} rect={RECT} renderOrder={9} />
+          <Button {...painterEnv()} solveNode={solveNode({ icon: 'ExtResource("1")' })} rect={RECT} renderOrder={9} />
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
@@ -271,9 +270,9 @@ describe('<ButtonNative> — icon (ControlQuad), via ResourceLoader/SceneResourc
   });
 });
 
-describe('<ButtonNative> registered through <ControlCanvasWalker> (end-to-end walker plumbing)', () => {
+describe('<Button> registered through <ControlCanvasWalker> (end-to-end walker plumbing)', () => {
   it('honours visible === false on the Button node itself (the WALKER hides the group, not this painter)', async () => {
-    controlComponentRegistry.register({ typeName: 'Button', Component: DomStub, Native: ButtonNative });
+    controlComponentRegistry.register({ typeName: 'Button', Component: Button });
     controlSolverRegistry.clear();
     controlSolverRegistry.registerMinimumSize('Button', buttonMinimumSize);
     const root = solveNode({ anchorsPreset: 15, visible: false, text: 'Hi' });

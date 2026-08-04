@@ -1,51 +1,98 @@
 /**
- * <RichTextLabel> — a positioned <div> holding the node's text. When
- * `bbcode_enabled` is true, a best-effort BBCode subset ([b]/[i]/[u]/[s]/
- * [color]/[center]/[code], ADR-0003) is rendered via parseBBCode; otherwise the
- * text is shown literally (Godot does not strip tags when BBCode is off). Font
- * size/color come from `theme_override_font_sizes/normal_font_size` +
- * `theme_override_colors/default_color`; a system font stack is used (the VS
- * Code webview CSP blocks web fonts).
+ * `<RichTextLabel>` — the native (WebGL canvas) painter for
+ * RichTextLabel: the bbcode subset `[b]`/`[i]`/`[color]` (anything
+ * beyond that is an explicit non-goal) drawn as one `<TextRun>` mesh per
+ * (line, contiguous style-run) pair through the shared MSDF text engine
+ * (`native/text/textLayout.ts` + `TextRun.tsx`), the same engine `<Label>`
+ * draws through.
+ *
+ * Bold/italic are SYNTHESIZED, not separate fonts — Godot's own default
+ * theme has one base font and builds bold/italic `FontVariation`s over it
+ * (`nativeSolver.ts`'s `BOLD_DISTANCE_BIAS`/`ITALIC_SKEW` cite the exact
+ * `default_theme.cpp` embolden/skew constants). `nativeSolver.ts`'s
+ * `styledTextRuns` turns the bbcode tag stack into `{bold, italic, color}`
+ * per run; `layoutRichTextRuns` attributes `shapeText`'s own line/glyph
+ * output back to those runs (shaping happens ONCE, over the whole
+ * concatenated plain text, so line-breaking sees the true paragraph width
+ * rather than each run measured in isolation).
+ *
+ * RichTextLabel has no `horizontal_alignment`/`vertical_alignment` Control
+ * property (unlike Label) — every line is left-aligned, and the paragraph as
+ * a whole is top-aligned, so there is no `layoutLabelLines`-style alignment
+ * pass here: each line's y is just `originCorrectionPx(fontSizePx) +
+ * lineIndex * linePitchPx` (the SAME shared baseline reconciliation Label
+ * uses — `textOrigin.ts`'s own doc frames it as a property of the shared
+ * drawing convention, not of any one Control).
+ *
+ * Tint: `ControlCanvasWalker` already folds this node's OWN `modulate` into
+ * the `Modulate2DContext` value it provides AROUND this painter, so
+ * `useCanvasItemTint` is called ONCE, with `modulate: WHITE_MODULATE`
+ * (already folded in) and this node's own `self_modulate` — but with NO
+ * `ownMultiplier` (each run's resolved colour differs, so there is no single
+ * "the" text colour to fold in at that call). `tint.own` is therefore
+ * `inherited * self_modulate`, sRGB; each run's OWN placement multiplies that
+ * (still in sRGB, via the plain `multiplyModulate` — not a hook, since the
+ * number of runs varies per render and hooks cannot be called a variable
+ * number of times) by its own resolved colour, then hands the sRGB result to
+ * `<TextRun>`, which converts to linear internally — one conversion, same as
+ * every other native text painter.
  */
-
-import type { CSSProperties } from 'react';
-import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
-import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
-import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
-import { useGodotTheme } from '../../../../r3f/controls/useGodotTheme';
-import { parseBBCode } from './bbcodeDom';
+import { useMemo } from 'react';
+import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { multiplyModulate, useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { AutowrapMode, clampAutowrapMode, shapeText } from '../../../../r3f/controls/native/text/textLayout';
+import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
+import { BOLD_DISTANCE_BIAS, ITALIC_SKEW, layoutRichTextRuns, richTextLabelTextTheme, styledTextRuns } from './nativeSolver';
 import type { RichTextLabelProperties } from './types';
 
-export function RichTextLabel({ node, children }: ControlComponentProps) {
-  const props = node.properties as RichTextLabelProperties;
-  const parentKind = useControlParent();
-  const theme = useGodotTheme();
-  const style: CSSProperties = {
-    ...controlLayoutStyle(props, parentKind),
-    whiteSpace: 'pre-wrap',
-    // The theme's `default_font_size` at the project's scale, set explicitly
-    // like Label's: inheriting only agreed with Godot while every ancestor
-    // happened to sit at 16px, and could not follow a scaled project at all.
-    fontSize: `${theme.fontSize}px`,
-    // After it, so `theme_override_font_sizes/normal_font_size` still wins.
-    ...textThemeStyle(props, { sizeKey: 'normal_font_size', colorKey: 'default_color' }),
-  };
+export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
+  const props = solveNode.node.properties as RichTextLabelProperties;
+  const textTheme = useMemo(() => richTextLabelTextTheme(props, { theme }), [props, theme]);
 
-  // fit_content shrinks the control's height to its content (Godot grows/shrinks
-  // the box to fit) instead of staying at the anchored/preset height.
-  if (props.fitContent) {
-    style.height = 'fit-content';
-    style.overflow = 'visible';
-  }
+  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
+  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+  const clippingPlanes = useControlClipPlanes();
 
-  const text = props.text ?? '';
-  const content = props.bbcodeEnabled ? parseBBCode(text) : text;
+  const runs = useMemo(() => styledTextRuns(props, textTheme.color), [props, textTheme.color]);
+  const plainText = useMemo(() => runs.map((r) => r.text).join(''), [runs]);
+  // RichTextLabel's own default is WORD_SMART (`rich_text_label.h:557`), not Label's OFF.
+  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.WORD_SMART);
+
+  const layout = useMemo(
+    () =>
+      shapeText(plainText, {
+        fontSizePx: textTheme.fontSizePx,
+        boxWidthPx: rect.w,
+        autowrapMode,
+        lineSpacingPx: 0, // default_theme.cpp:1217 — RichTextLabel's own line_separation default, NOT Label's 3.
+      }),
+    [plainText, textTheme.fontSizePx, rect.w, autowrapMode]
+  );
+
+  const placements = useMemo(() => layoutRichTextRuns(runs, layout), [runs, layout]);
+  const originPx = originCorrectionPx(textTheme.fontSizePx);
 
   return (
-    <div data-control-type="RichTextLabel" data-node-name={node.name} style={style}>
-      {content}
-      {children}
-    </div>
+    <>
+      {placements.map((placement, index) => {
+        const runTint = multiplyModulate(tint.own, placement.color);
+        const y = originPx + placement.lineIndex * layout.linePitchPx;
+        return (
+          <group key={index} position={[0, -y, 0]}>
+            <TextRun
+              layout={placement.layout}
+              fontSizePx={textTheme.fontSizePx}
+              tint={runTint}
+              distanceBias={placement.bold ? BOLD_DISTANCE_BIAS : 0}
+              skew={placement.italic ? ITALIC_SKEW : 0}
+              clippingPlanes={clippingPlanes}
+              renderOrder={renderOrder}
+            />
+          </group>
+        );
+      })}
+    </>
   );
 }

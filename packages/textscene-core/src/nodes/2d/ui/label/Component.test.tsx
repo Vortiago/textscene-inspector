@@ -1,5 +1,5 @@
 /**
- * `<LabelNative>` — the native (WebGL canvas) painter for Label: the first
+ * `<Label>` — the native (WebGL canvas) painter for Label: the first
  * Control that draws text through the shared MSDF text engine. Assertions are
  * scene-graph structure (mesh count, group position, material uniforms) —
  * pixels are `pnpm ref:godot`'s job.
@@ -13,15 +13,14 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
-import { controlComponentRegistry, type ControlComponent } from '../../../../r3f/controls/ControlComponentRegistry';
+import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
-import { LabelNative } from './NativeComponent';
+import { Label } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
-const DomStub: ControlComponent = () => null;
 
 function solveNode(path: string, properties: Record<string, unknown>): SolveNode {
   const name = path.split('/').pop()!;
@@ -35,11 +34,11 @@ function expectedLinear(r: number, g: number, b: number): THREE.Color {
 
 async function render(properties: Record<string, unknown>, rect: Rect2 = { x: 0, y: 0, w: 200, h: 200 }) {
   return ReactThreeTestRenderer.create(
-    <LabelNative {...painterEnv()} solveNode={solveNode('L', properties)} rect={rect} renderOrder={5} />
+    <Label {...painterEnv()} solveNode={solveNode('L', properties)} rect={rect} renderOrder={5} />
   );
 }
 
-describe('<LabelNative> (isolated painter contract)', () => {
+describe('<Label> (isolated painter contract)', () => {
   it('draws exactly one mesh for a single-line text', async () => {
     const renderer = await render({ text: 'AB' });
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
@@ -67,7 +66,7 @@ describe('<LabelNative> (isolated painter contract)', () => {
     });
     const renderer = await ReactThreeTestRenderer.create(
       <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }}>
-        <LabelNative {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 200, h: 200 }} renderOrder={0} />
+        <Label {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 200, h: 200 }} renderOrder={0} />
       </Modulate2DContext.Provider>
     );
     const mat = renderer.scene.findByType('Mesh').instance.material as THREE.ShaderMaterial;
@@ -160,9 +159,9 @@ describe('<LabelNative> (isolated painter contract)', () => {
   });
 });
 
-describe('<LabelNative> registered through <ControlCanvasWalker> (end-to-end walker plumbing)', () => {
+describe('<Label> registered through <ControlCanvasWalker> (end-to-end walker plumbing)', () => {
   it('draws through the real registry entry, at the walker-solved rect, honouring visible === false', async () => {
-    controlComponentRegistry.register({ typeName: 'Label', Component: DomStub, Native: LabelNative });
+    controlComponentRegistry.register({ typeName: 'Label', Component: Label });
     controlSolverRegistry.clear();
     const root = solveNode('Root', {
       text: 'Hi',

@@ -1,14 +1,12 @@
 /**
- * <CenterContainer> — centers its single child both horizontally and vertically
- * (CSS flex with centered main + cross axis). Provides the 'center' layout kind
- * to its subtree so the child positions itself relative to the centered box.
+ * `<CenterContainer>` — the native (WebGL canvas) painter for
+ * CenterContainer. CenterContainer draws no chrome of its own in Godot; it
+ * only centres its children (`centerContainerLayout`, `nativeSolver.ts`), so
+ * this paints nothing. `ControlCanvasWalker` still renders this node's
+ * children as siblings regardless of what this component returns.
  */
+import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 
-import { createContainerComponent } from '../../../../r3f/controls/createContainerComponent';
-import type { ControlProperties } from '../control/types';
-
-export const CenterContainer = createContainerComponent<ControlProperties>({
-  typeName: 'CenterContainer',
-  kind: 'center',
-  useStyle: () => ({ display: 'flex', alignItems: 'center', justifyContent: 'center' }),
-});
+export function CenterContainer(_props: NativeControlComponentProps) {
+  return null;
+}

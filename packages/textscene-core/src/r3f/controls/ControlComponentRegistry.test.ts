@@ -1,41 +1,37 @@
 /**
- * `ControlComponentRegistry` carries the DOM `Component` every registered
- * Control type has always had, plus an optional native (WebGL canvas)
- * `Native` painter a slice registers alongside it once its native painter
- * exists. `get()` (the pre-existing DOM lookup) must stay untouched — a
- * registration with no `Native` yet is exactly what every current slice is.
+ * `ControlComponentRegistry` maps a Control `type` string to its native
+ * (WebGL canvas) painter, plus the `wrapsChildren` flag a passthrough type
+ * (`CanvasLayer`, `ScrollContainer`) opts into.
  */
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  controlComponentRegistry,
-  type ControlComponent,
-  type NativeControlComponent,
-} from './ControlComponentRegistry';
+import { controlComponentRegistry, type NativeControlComponent } from './ControlComponentRegistry';
 
 const TYPE = 'TestRegistryProbeType';
-const DomStub: ControlComponent = () => null;
 const NativeStub: NativeControlComponent = () => null;
 
 afterEach(() => {
-  // This file never imports the DOM/native slice barrels, so the registry
-  // holds only what this suite puts in it — a full clear is safe here.
+  // This file never imports the native slice barrels, so the registry holds
+  // only what this suite puts in it — a full clear is safe here.
   controlComponentRegistry.clear();
 });
 
-describe('ControlComponentRegistry — Native field', () => {
-  it('registers with only a DOM Component (existing shape, no Native)', () => {
-    controlComponentRegistry.register({ typeName: TYPE, Component: DomStub });
-    expect(controlComponentRegistry.get(TYPE)).toBe(DomStub);
-    expect(controlComponentRegistry.getNative(TYPE)).toBeUndefined();
+describe('ControlComponentRegistry', () => {
+  it('registers a native painter under its type name', () => {
+    controlComponentRegistry.register({ typeName: TYPE, Component: NativeStub });
+    expect(controlComponentRegistry.get(TYPE)).toBe(NativeStub);
   });
 
-  it('carries both Component and Native when a slice registers both', () => {
-    controlComponentRegistry.register({ typeName: TYPE, Component: DomStub, Native: NativeStub });
-    expect(controlComponentRegistry.get(TYPE)).toBe(DomStub);
-    expect(controlComponentRegistry.getNative(TYPE)).toBe(NativeStub);
+  it('get returns undefined for an unregistered type', () => {
+    expect(controlComponentRegistry.get('NoSuchType')).toBeUndefined();
   });
 
-  it('getNative returns undefined for an unregistered type', () => {
-    expect(controlComponentRegistry.getNative('NoSuchType')).toBeUndefined();
+  it('defaults wrapsChildren to false when not declared', () => {
+    controlComponentRegistry.register({ typeName: TYPE, Component: NativeStub });
+    expect(controlComponentRegistry.wrapsChildren(TYPE)).toBe(false);
+  });
+
+  it('honours wrapsChildren: true on the registration', () => {
+    controlComponentRegistry.register({ typeName: TYPE, Component: NativeStub, wrapsChildren: true });
+    expect(controlComponentRegistry.wrapsChildren(TYPE)).toBe(true);
   });
 });

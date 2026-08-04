@@ -1,7 +1,7 @@
 /**
  * `parseStyleBox` — the SubResource reference chain (`parseResourceReference`
- * + `findSubResource`, the same funnel `resolveStyleBoxCss` uses) resolved to
- * a typed `StyleBoxFlatData` instead of CSS. Defaults are transcribed from
+ * + `findSubResource`, the shared resolution funnel) resolved to a typed
+ * `StyleBoxFlatData`. Defaults are transcribed from
  * `scene/resources/style_box_flat.h`/`.cpp` and `style_box.cpp::get_margin`
  * (Godot 4.6.3) — see `native/styleBoxFlat.ts` for the field-by-field citation.
  */

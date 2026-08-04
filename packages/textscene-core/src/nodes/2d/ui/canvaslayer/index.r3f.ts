@@ -1,7 +1,7 @@
 /**
- * CanvasLayer registration — 2D-overlay DOM component + native (WebGL) painter.
+ * CanvasLayer registration — native (WebGL canvas) painter.
  *
- * `wrapsChildren: true` is load-bearing, not decorative: `CanvasLayerNative`
+ * `wrapsChildren: true` is load-bearing, not decorative: `CanvasLayer`
  * publishes a draw-order band and a fresh modulate scope that its descendants
  * must inherit, which only works if the walker renders them as its React
  * CHILDREN rather than its siblings. Without it the scope reaches nothing — a
@@ -12,12 +12,10 @@
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { CanvasLayer } from './Component';
-import { CanvasLayerNative } from './NativeComponent';
 
 controlComponentRegistry.register({
   typeName: 'CanvasLayer',
   Component: CanvasLayer,
-  Native: CanvasLayerNative,
   wrapsChildren: true,
 });
 // Not a CanvasItem, and it authors no anchors/offsets — without this the rect
@@ -25,4 +23,4 @@ controlComponentRegistry.register({
 // against that instead of the layer's full rect (see `registerCanvasBoundary`).
 controlSolverRegistry.registerCanvasBoundary('CanvasLayer');
 
-export { CanvasLayer, CanvasLayerNative };
+export { CanvasLayer };

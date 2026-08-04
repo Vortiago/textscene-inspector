@@ -141,62 +141,10 @@ describe('Corpus-scoped uploads — app-shell wiring', () => {
     ).rejects.toThrow('Resource not found');
   });
 
-  /**
-   * `res://project.godot` is the SAME path in every corpus — only the active
-   * **Corpus root** decides which file it maps onto — so the **Project
-   * settings** must be re-read on a switch, not carried over. A scene whose
-   * project sets `gui/theme/default_theme_scale` would otherwise scale the
-   * next scene's Controls too (or, arriving second, not scale its own).
-   */
-  it('re-reads project.godot on a corpus switch, so the theme scale follows the scene', async () => {
-    const scaled = `[gd_scene load_steps=1 format=3]
-
-[node name="ScaledRoot" type="Control"]
-
-[node name="Caption" type="Label" parent="."]
-text = "caption"
-`;
-    // Only the demo corpus has a project.godot, and it sets scale 2.0.
-    globalThis.fetch = vi.fn().mockImplementation((url: unknown) => {
-      const href = String(url);
-      if (href.endsWith(`/${DEMO.root}/project.godot`)) {
-        return Promise.resolve({
-          ok: true,
-          headers: { get: () => 'text/plain' },
-          text: () => Promise.resolve('[gui]\n\ntheme/default_theme_scale=2.0\n'),
-        } as unknown as Response);
-      }
-      if (href.endsWith('/project.godot')) {
-        // The base corpus has none — an ordinary outcome, never an error.
-        return Promise.resolve({ ok: false } as unknown as Response);
-      }
-      return Promise.resolve({
-        ok: true,
-        text: () => Promise.resolve(href.endsWith(`/${DEMO.file}`) ? scaled : STUB_TSCN),
-      } as unknown as Response);
-    }) as unknown as typeof fetch;
-
-    resetPersistence(`/?fixture=${DEMO.file}`);
-    // The Control overlay only mounts in the 2D workspace, and the workspace a
-    // scene opens in is persisted state a sibling test can leave behind — pin
-    // it so this asserts the theme scale, not whichever mode ran last.
-    globalThis.localStorage.setItem('tsi.viewportMode', '2D');
-    // This asserts the theme scale through the DOM overlay's rendered font-size,
-    // so it needs that renderer specifically — the native canvas path is the
-    // default now, and its Label pixels are invisible to happy-dom either way.
-    // The subject here is project-settings re-reading, not which renderer draws;
-    // this pin retires with the overlay.
-    globalThis.localStorage.setItem('tsi.native2dUi', 'false');
-    render(<R3FApp />);
-    await waitForScene('ScaledRoot');
-
-    const caption = () =>
-      document.querySelector<HTMLElement>('[data-control-type="Label"]');
-    // `Canvas2DStage` lazy-imports the Control barrel, so the overlay appears a
-    // dynamic-import tick after the scene does — longer than waitFor's default
-    // second once the whole suite is competing for the module graph.
-    await waitFor(() => expect(caption()).toBeTruthy(), { timeout: 15000 });
-    // round(16 * 2.0) = 32 — the demo project's scale reached its Controls.
-    await waitFor(() => expect(caption()!.style.fontSize).toBe('32px'), { timeout: 15000 });
-  });
+  // `res://project.godot` is the SAME path in every corpus — only the active
+  // **Corpus root** decides which file it maps onto — so the **Project
+  // settings** must be re-read on a switch, not carried over. Covered at the
+  // provider level (not the DOM-overlay rendering this integration test used
+  // to observe it through) by
+  // `ProjectSettingsContext.test.tsx`'s "re-reads on a scene swap" case.
 });

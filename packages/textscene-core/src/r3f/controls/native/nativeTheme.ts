@@ -1,8 +1,9 @@
 /**
  * `NativeTheme` — the default-theme data the native (WebGL) Control solver and
  * painters read, extending `ScaledGodotTheme` (`../godotDefaultTheme.ts`, kept
- * framework-free on purpose) with the numeric StyleBoxFlat fill colours the
- * DOM overlay only ever needed as CSS strings.
+ * framework-free on purpose) with the numeric StyleBoxFlat fill colours a
+ * native painter needs (`godotDefaultTheme.ts` only exports them as CSS
+ * strings).
  *
  * `scaledGodotTheme(scale)` is NOT re-transcribed here — every scalable
  * metric (font size, corner radius, margins, separation, slider geometry)

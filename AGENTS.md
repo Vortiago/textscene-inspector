@@ -18,16 +18,16 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
 - Changed rendering: `pnpm test:visual` (golden images); `pnpm test:visual:update`
   rewrites baselines — eyeball, then commit. A NEW golden moves ONE variable, and its
   `.tscn` header names it and says why a regression in it is invisible in every other
-  scene — a fixture that moves two cannot localise which one broke.
+  scene — a fixture that moves two cannot localise which one broke. A 2D-UI scene sets
+  `mode: '2d'` (`scripts/visual/scenes.mjs`), routing it through the **2D parity
+  capture** — the project-viewport rectangle at zoom 1, chrome hidden, Godot's own
+  clear colour — instead of the default 3D one, so a Control's golden and its
+  `comparison.md` describe the same picture.
 - Parity questions: `pnpm ref:godot <scene.tscn> [--camera x,y,z] [--probe x,y]` renders
   through real Godot 4.6 and prints exact pixels — measure, never derive. Needs local
   `godot` + `xvfb-run`, so it is a tool, not a gate. It injects the editor preview
   sun/environment per Godot's yield rule (ADR-0025); `--no-previews` gives runtime
   semantics.
-- Changed the **Control overlay** (2D DOM UI): `pnpm verify:2d` against a running
-  preview (`SHOWCASE_URL`, default `:4173`). The goldens are WebGL-canvas-only and
-  happy-dom has no layout, so this is the only gate that sees a DOM-overlay
-  regression (ADR-0024).
 
 ## Vertical slices
 
