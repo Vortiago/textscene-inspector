@@ -543,15 +543,28 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '${toSrc}linter/ValidatorRegistry.js';
 import './linterParser.js';
 
-/** Fill from doc/classes/${typeName}.xml. Red until you do, deliberately. */
+/**
+ * Every key ${typeName} binds, read from its ADD_PROPERTY calls.
+ *
+ * Set exactly ONE of these two, from the source rather than from expectation:
+ * fill KEYS, or set DECLARES_NOTHING when the class binds no ADD_PROPERTY at all
+ * (Godot has many: a themed spacer whose whole surface is theme items, an
+ * orientation subclass that only fixes an inherited default). Leaving both unset
+ * is red on purpose. Do NOT delete an assertion to go green: an empty KEYS
+ * against an empty registerAll passes vacuously, which is what the pairing
+ * below exists to prevent.
+ */
 const KEYS: string[] = [];
+/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+const DECLARES_NOTHING = false;
 const LEAVES = ${JSON.stringify(heirs.slice(0, 3))} as const;
 
 describe('${typeName} shared validators', () => {
   it('registers exactly what ${typeName} binds', () => {
-    // Emptiness check first: an empty KEYS against an empty registerAll would
-    // otherwise pass vacuously and ship a tier that validates nothing.
-    expect(validatorRegistry.getOwnKeys('${typeName}')).not.toEqual([]);
+    expect(
+      DECLARES_NOTHING || KEYS.length > 0,
+      'fill KEYS from the ADD_PROPERTY calls, or set DECLARES_NOTHING with the source line that proves it'
+    ).toBe(true);
     expect(validatorRegistry.getOwnKeys('${typeName}').sort()).toEqual([...KEYS].sort());
   });
 
@@ -980,6 +993,7 @@ import './linterParser.js';
 
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '${toSrc}linter/ValidatorRegistry';
+import { expectFixtureClean } from '${toSrc}linter/testing/fixtureCheck';
 import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
@@ -989,9 +1003,30 @@ function check(property: string, value: string) {
   return validator!(property, value, 1);
 }
 
+/**
+ * Set exactly ONE, from the source rather than from expectation: list the keys
+ * ${typeName} binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
+ * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ */
+const KEYS: string[] = [];
+/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+const DECLARES_NOTHING = false;
+
 describe('${typeName} strict validators', () => {
-  it('registers validators of its own', () => {
-    expect(validatorRegistry.getOwnKeys('${typeName}')).not.toEqual([]);
+  it('registers exactly what ${typeName} binds', () => {
+    expect(
+      DECLARES_NOTHING || KEYS.length > 0,
+      'fill KEYS from the ADD_PROPERTY calls, or set DECLARES_NOTHING with the source line that proves it'
+    ).toBe(true);
+    expect(validatorRegistry.getOwnKeys('${typeName}').sort()).toEqual([...KEYS].sort());
+  });
+
+  it('accepts every value its own fixture carries', () => {
+    // The fixture's "zero errors and zero warnings" claim, RUN rather than
+    // reasoned. \`fixtureLint\` owns the whole-registry version but needs the
+    // barrel, so it cannot run while sibling slices are being written; this
+    // checks the same file against whatever this test imported.
+    expectFixtureClean('unit-${kebabName}.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
