@@ -1,15 +1,27 @@
-/** OptionButton parser — Control + items array (popup/item_N/…) + selected/disabled flags. */
+/**
+ * OptionButton parser: Button + items array (popup/item_N/…) + selected.
+ *
+ * Chains through `parseButton`, not `parseControl`: an OptionButton IS a Button in
+ * Godot, so `flat`, `alignment`, `icon` and the icon-alignment trio are live
+ * properties a scene can carry. Reading only Control's set dropped them, and
+ * re-derived `disabled` by hand from the one line `parseButton` already had.
+ *
+ * `text` and `icon` come through too, and the renderer deliberately ignores
+ * `text`: Godot's `_select` overwrites it from the chosen item
+ * (option_button.cpp:423), so the selected item's label is the real source and
+ * `Component.tsx` reads that instead.
+ */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { OptionItem, OptionButtonProperties } from './types';
-import { parseControl } from '../control/parser';
+import { parseButton } from '../button/parser';
 
 export function parseOptionButton(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): OptionButtonProperties {
-  const result: OptionButtonProperties = { ...parseControl(heading, properties) };
+  const result: OptionButtonProperties = { ...parseButton(heading, properties) };
 
   // Build a DENSE array — one slot per index 0..item_count-1 — so `selected` (the raw
   // Godot index) aligns with items[selected] even when an item omits its text key. A
@@ -25,6 +37,5 @@ export function parseOptionButton(
 
   if (items.length > 0) result.items = items;
   result.selected = parseOptionalInt(properties.selected);
-  result.disabled = properties.disabled === 'true';
   return result;
 }

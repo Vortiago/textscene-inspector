@@ -45,6 +45,11 @@ const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   Node3D: 'base/node3d/parser.ts',
   Node2D: 'base/node2d/parser.ts',
   Light3D: '3d/lights/shared/parser.ts',
+  // Button owns a parser.ts of its own, so a Button subclass that chains through
+  // `parseButton` really does read `text`/`flat`/`alignment`/the icon trio.
+  // Leaving this hop out made every one of those look linter-only on any such
+  // subclass, which reads as a validator desync when the parser is fine.
+  Button: '2d/ui/button/parser.ts',
   Control: '2d/ui/control/parser.ts',
   Node: 'node/parser.ts',
 };
@@ -199,19 +204,8 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       // Minimum-size and reselect behaviour: nothing about either changes a pixel
       // in a frozen scene, so the static overlay never reads them.
       'fit_to_longest_item', 'allow_reselect',
-      // Godot itself makes these two inert on an OptionButton: its
-      // `_validate_property` (option_button.cpp:554-558) clears their usage, and
-      // `_select` drives the visible label from the chosen ITEM instead. The
-      // linter still validates them because Button's setter accepts a write, but
-      // there is nothing for the parser to read.
-      'text', 'icon',
-      // A genuine render limitation, not a desync: these are live Button styling
-      // properties on a real OptionButton, but this slice's `parser.ts` reuses
-      // `parseControl` rather than `parseButton`, so the previewer does not style
-      // an OptionButton as a Button yet. The linter validates what Godot accepts.
-      'alignment', 'flat', 'icon_alignment', 'expand_icon', 'vertical_icon_alignment',
     ],
-    reason: 'The item family is read through a computed key the scrape cannot match; fit_to_longest_item and allow_reselect have no static render surface; text and icon are inert in Godot itself; the Button styling keys are unread because this parser reuses parseControl, a render limitation rather than a validator desync.',
+    reason: 'The item family is read through a computed key the scrape cannot match; fit_to_longest_item and allow_reselect have no static render surface.',
   },
 
   Control: {

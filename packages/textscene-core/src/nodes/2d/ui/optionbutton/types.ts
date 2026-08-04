@@ -1,6 +1,6 @@
 /** OptionButton property definitions. */
 
-import type { ControlProperties } from '../control/types';
+import type { ButtonProperties } from '../button/types';
 
 export interface OptionItem {
   /** Option label text. */
@@ -9,11 +9,9 @@ export interface OptionItem {
   id: number;
 }
 
-export interface OptionButtonProperties extends ControlProperties {
+export interface OptionButtonProperties extends ButtonProperties {
   /** List of selectable items, built from popup/item_N/… keys. */
   items?: OptionItem[];
   /** Index into `items` of the currently selected option (undefined = none). */
   selected?: number;
-  /** Disabled OptionButtons render dimmed and non-interactive. */
-  disabled?: boolean;
 }
