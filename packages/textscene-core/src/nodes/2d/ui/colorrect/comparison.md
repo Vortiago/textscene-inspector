@@ -3,13 +3,13 @@ type: ColorRect
 category: 2D
 fixture: unit-color-rect.tscn
 image: unit-color-rect
-renders_as: a color-filled div
+renders_as: a flat-filled quad
 ---
 
 # ColorRect
 
-A Control that fills its rect with a single flat `color`. The previewer draws a
-positioned `<div>` with that color as its `backgroundColor`, alpha included.
+A Control that fills its rect with a single flat `color`. The previewer draws a quad in that colour,
+alpha included.
 
 ## Properties exercised
 
@@ -22,7 +22,13 @@ positioned `<div>` with that color as its `backgroundColor`, alpha included.
 
 ## Divergences
 
-None visible in this fixture.
+None visible in this fixture. `pnpm ref:godot scenes/fixtures/unit-color-rect.tscn
+--mode 2d` and `pnpm ref:ours unit-color-rect.tscn --2d` put no pixel outside the
+visual harness's tolerance at all. The two opaque boxes are byte-identical
+(rgb(217, 51, 51) and rgb(255, 255, 255)), and all three land on the same
+columns; the only difference in the frame is the half-alpha box's blend against
+the backdrop, rgb(64, 89, 147) against rgb(64, 89, 146) — one count of rounding
+on the blue channel, over that box alone.
 
 ## Linting
 

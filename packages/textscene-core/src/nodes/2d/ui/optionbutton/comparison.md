@@ -9,10 +9,10 @@ renders_as: a collapsed dropdown box
 # OptionButton
 
 A dropdown that collapses to show its currently-selected item. Being a static
-viewer, the previewer draws that selected item's text inside a positioned HTML
-box on the Control overlay — not the open popup, not the whole list. The fixture
-centres one `DifficultySelect` with three items and `selected = 1`, so both
-renders show `Normal` in a dark charcoal rounded box.
+viewer, the previewer draws that selected item's text inside the button's own
+StyleBox — not the open popup, not the whole list. The fixture centres one
+`DifficultySelect` with three items and `selected = 1`, so both renders show
+`Normal` in a dark charcoal rounded box.
 
 ## Properties exercised
 
@@ -24,13 +24,28 @@ renders show `Normal` in a dark charcoal rounded box.
 
 ## Divergences
 
-Godot draws a right-side chevron arrow icon inside the box; the previewer draws
-none. The arrow is a default-theme icon texture outside the fill/radius/padding
-chrome the previewer synthesises, so the collapsed affordance ends at the label.
-The box fill (dark charcoal ~rgb(46,46,46)), corner radius, padding, font, and the
-`Normal` label otherwise match.
-**Closed by the native (WebGL) painter below**, which draws the real vendored
-chevron icon — see its own section.
+The chevron is drawn. Measured on Godot 4.6.3, `pnpm ref:godot
+scenes/fixtures/unit-optionbutton.tscn --mode 2d --probe <x,y>` against
+`pnpm ref:ours unit-optionbutton.tscn --2d --probe <x,y>`:
+
+| Probe | What it is | Godot | Ours |
+| --- | --- | --- | --- |
+| (641, 317) | the chevron's stroke | rgb(158, 158, 158) | rgb(152, 152, 152) |
+| (511, 310) | a stroke of the `Normal` label | rgb(223, 223, 223) | rgb(104, 104, 104) |
+
+The arrow's ink covers exactly 42 px in x 636..645 on both sides and peaks at
+rgb(158, 158, 158) against rgb(157, 157, 157) — the same texture at the same
+`arrow_margin`. It sits one row lower here (y 314..319 against 313..318) because
+the box is 34 px tall against Godot's 32, and the chevron is centred in it.
+
+Two things still differ, both shared with every other widget sheet:
+
+- **The box grows past its authored rect.** The fixture's offsets make it 150x32
+  and Godot keeps that (y 300..331); ours is y 300..333, floored by a minimum
+  height that measures the font 3 px too tall. See the Control sheet.
+- **The label is too dark**: rgb(188, 188, 188) at its peak against Godot's
+  rgb(223, 223, 223), the sRGB-encode gap the Control sheet measures. The probe
+  above reads a lower pair only because the two labels sit one row apart.
 
 ## Native (WebGL canvas) painter
 
@@ -38,9 +53,9 @@ chevron icon — see its own section.
 (`controlSolverRegistry.registerMinimumSize`, honouring `fit_to_longest_item`'s
 engine default of `true` — the minimum size floors on the WIDEST item's text,
 not the selected one's); `Component.tsx` draws the Button-style StyleBox
-chrome, the SELECTED item's text only (never the popup's full list, matching
-`Component.tsx`), and the chevron (`native/themeIcons.ts`'s
-`OPTION_BUTTON_ICONS.arrow`) at the right edge.
+chrome, the SELECTED item's text only (never the popup's full list), and the
+chevron (`native/themeIcons.ts`'s `OPTION_BUTTON_ICONS.arrow`) at the right
+edge.
 
 ### The chevron sits at `arrow_margin`, not the content-margin edge
 

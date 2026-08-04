@@ -10,9 +10,9 @@ renders_as: a single-line text box
 # LineEdit
 
 A single-line text field. The previewer draws its stylebox and one clipped run
-of text on the Control overlay — whichever string Godot's `_shape()` would
-paint, in whichever colour that string's state calls for. Being a static
-viewer, it renders no caret, no selection and no clear button.
+of text on the canvas — whichever string Godot's `_shape()` would paint, in
+whichever colour that string's state calls for. Being a static viewer, it
+renders no caret, no selection and no clear button.
 
 ## Properties exercised
 
@@ -28,11 +28,14 @@ viewer, it renders no caret, no selection and no clear button.
 
 ## Divergences
 
-Glyphs do not match: Godot bundles Open Sans SemiBold and the overlay is
-restricted to system fonts (ADR-0003), so the two renders differ in letterform,
-advance widths and therefore the field's own minimum width. Colour, stylebox
-fill, corner radius, the 2px bottom border and which string is painted all
-match.
+Glyphs match. Both sides shape the same bundled Open Sans, and the six fields
+land on the same rows: measured with `pnpm ref:godot
+scenes/fixtures/unit-lineedit.tscn --mode 2d --out …` against `pnpm ref:ours
+unit-lineedit.tscn --2d --out …`, every box spans 31 px starting at y 24 / 67 /
+110 / 153 / 196 / 239 on both sides, and `Ada Lovelace`'s ink runs x 28..128 in
+Godot and x 28..128 here. So field HEIGHT and minimum WIDTH are no longer
+approximations — the fields are the same size, exercised through a
+`VBoxContainer` that gives them none.
 
 The previewer draws no caret. That is not an approximation but the same
 condition Godot evaluates: `LineEdit::_validate_caret_can_draw()` sets
@@ -40,26 +43,38 @@ condition Godot evaluates: `LineEdit::_validate_caret_can_draw()` sets
 holding focus, and a static preview has neither — so a caret would be the
 divergence.
 
-Field height is left to the text's own line box rather than to Godot's
-`MAX(shaped text height, font->get_height(font_size))` plus the stylebox
-margins, so a field can be a pixel or two off Godot's height even where the box
-art matches.
+Three things do differ. Measured on Godot 4.6.3, `pnpm ref:godot
+scenes/fixtures/unit-lineedit.tscn --mode 2d --probe <x,y>` against `pnpm
+ref:ours unit-lineedit.tscn --2d --probe <x,y>`:
 
-The minimum WIDTH is approximate. `LineEdit::get_minimum_size()` floors it at
-`minimum_character_width * font->get_char_size('W', font_size).x` — four times
-the font's 'W' advance — and CSS has no unit addressing a specific glyph's
-advance, so the previewer substitutes `4em`. For the default font, whose 'W'
-advance is about 0.94em, that runs a few percent wide. It only shows on a field
-that gets no width from a container or from its own offsets; anywhere else the
-laid-out width exceeds the floor and the substitution is invisible.
+| Probe | What it is | Godot | Ours |
+| --- | --- | --- | --- |
+| (30, 125) | the first of `Secret`'s seven bullets | rgb(223, 223, 223) | rgb(45, 45, 45) |
+| (33, 77) | a stroke of `Ada Lovelace`, at Godot's baseline | rgb(223, 223, 223) | rgb(45, 45, 45) |
+
+**The secret echo draws nothing.** Godot paints seven `•` (U+2022) at
+x 29..68, y 123..127 — 126 px of ink; the baked MSDF atlas covers printable
+ASCII only, so the bullet has no glyph and the field comes out empty. The
+plaintext is correctly not drawn, which is the property the fixture exists to
+pin, but the echo that replaces it is missing.
+
+**The text sits 5 px too high in its box.** `Ada Lovelace`'s ink starts at row
+77 in Godot and row 72 here; `Flat, no stylebox` runs y 206..221 against
+y 201..217, with the identical x span 29..153; `Centred` runs y 249..260 against
+244..257. The horizontal placement is right — the centred run lands within 2 px
+of Godot's — so this is the vertical term of `LineEdit`'s own text offset, not
+the shaping.
+
+**Font colour is one sRGB transfer function too dark**, as on every text
+Control: the full-colour runs peak at rgb(188, 188, 188) here against Godot's
+rgb(223, 223, 223). The Control sheet has the mechanism.
 
 ## Native (WebGL canvas) painter
 
 `nativeSolver.ts` registers `LineEdit::get_minimum_size` (`controlSolverRegistry.registerMinimumSize`,
 `line_edit.cpp:2443-2477`) — the exact `minimum_character_width * 'W'-advance`
-term the DOM overlay only approximates with `4em` above, now measured against
-the SAME vendored Open Sans atlas Godot's own default theme font is baked
-from. `Component.tsx` draws the `normal`/`read_only` `StyleBoxQuad`
+term, measured against the SAME vendored Open Sans atlas Godot's own default
+theme font is baked from. `Component.tsx` draws the `normal`/`read_only` `StyleBoxQuad`
 (skipped when `flat`) and one `<TextRun>` — whichever string
 `lineEditDisplayText` selects, at `font_color`/`font_uneditable_color`/
 `font_placeholder_color` per state, aligned per `alignment`, and clipped to
@@ -77,10 +92,11 @@ independently unit-tested), but the vendored Open Sans atlas
 (`r3f/controls/native/text/openSansAtlas.ts`) only bakes printable ASCII —
 `•` (U+2022), the DEFAULT `secret_character`, is not among them. A secret
 field that never overrides `secret_character` therefore echoes a run of
-GLYPHS THAT DRAW NOTHING on the native canvas (zero quads, verified in
-`Component.test.tsx`) — invisible rather than wrong, but still a gap:
-an ASCII override (e.g. `*`) renders correctly. Closing it would mean adding
-`•` to the baked atlas, out of this packet's scope.
+GLYPHS THAT DRAW NOTHING (zero quads, verified in `Component.test.tsx`) —
+invisible rather than wrong, but still a gap: an ASCII override (e.g. `*`)
+renders correctly. Measured against the engine: Godot puts 126 px of bullet ink
+at x 29..68, y 123..127 on this fixture's `Secret` field, ours puts none.
+Closing it would mean adding `•` to the baked atlas.
 
 ## Linting
 

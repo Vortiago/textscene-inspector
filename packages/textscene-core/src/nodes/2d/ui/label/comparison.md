@@ -3,14 +3,14 @@ type: Label
 category: 2D
 fixture: unit-label-2d.tscn
 image: unit-label-2d
-renders_as: a positioned HTML div in the Control overlay
+renders_as: a shaped text run on the canvas
 ---
 
 # Label
 
-The 2D UI text node. The previewer draws each label as a positioned `<div>` in the
-Control overlay, styled from its alignment, case, and wrap settings. The fixture
-stacks three labels to exercise those in turn.
+The 2D UI text node. The previewer shapes the string against the theme's own
+bundled font and draws the glyphs on the canvas, honouring its alignment, case,
+and wrap settings. The fixture stacks three labels to exercise those in turn.
 
 ## Properties exercised
 
@@ -25,14 +25,31 @@ stacks three labels to exercise those in turn.
 
 ## Divergences
 
-The auto-wrap paragraph breaks at a different word. Godot lays it out as "This label
-wraps across / multiple lines once it runs out / of horizontal space."; ours packs one
-more word onto each line — "This label wraps across multiple / lines once it runs out
-of / horizontal space." — and spaces those lines slightly tighter. Both reach three
-lines, and the centered and single-line labels occupy the same span in both images, so
-the box width is not wrong: the previewer draws the text in a system font stack (web
-fonts are CSP-blocked in the VS Code webview), so the browser's glyph advances and
-leading stand in for Godot's bundled theme font and nudge the break to a different word.
+The auto-wrap paragraph breaks at the same words. Both lay it out as "This label
+wraps across / multiple lines once it runs out / of horizontal space.", at the
+same line pitch: measured on Godot 4.6.3 with
+`pnpm ref:godot scenes/fixtures/unit-label-2d.tscn --mode 2d --out …` against
+`pnpm ref:ours unit-label-2d.tscn --2d --out …`, the three lines' ink starts at
+y 146 / 172 / 198 in Godot and 145 / 171 / 197 here — 26 px between lines on both
+sides, with every line's ink ending on the same row. The one-pixel head start is
+antialiasing spill at the top of the ascenders, not a placement difference: our
+line's ink box is 17 rows against Godot's 16 and shares its bottom edge.
+
+`unit-label-2d-wrap.tscn` is the wider reading — the same sentence set four times
+over two box widths and two font sizes. Every break point matches, on all four
+panes, and the pitch tracks the size: 31 px at `font_size = 20` (line tops
+55 / 86 / 117 / 148 in Godot, 54 / 85 / 116 / 147 here) and 42 px at 28, where the
+five line tops are 344 / 386 / 428 / 470 / 512 on BOTH sides with no offset at all.
+
+What is left is colour, not layout. Label's own `font_color` default is opaque
+white, which is the fixed point of the sRGB transfer curve, so this fixture's
+glyphs peak at rgb(255, 255, 255) in both images. Any other font colour comes out
+one transfer function too dark here — the Control sheet measures it.
+
+Two characters the fixture does not contain are worth naming, because a Label is
+where they will be met: the MSDF atlas is baked over printable ASCII only, so a
+glyph outside that range (an em dash, a bullet) has no entry and draws nothing at
+all. The ScrollContainer sheet measures one.
 
 ## Linting
 

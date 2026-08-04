@@ -8,11 +8,11 @@ renders_as: a full-rect layout region
 
 # Control
 
-The base Godot UI node. The previewer maps it to a positioned `<div>` that
-establishes the containing block for its children and draws no pixels of its
-own. Everything visible in both images is the child stack — a `VBoxContainer`
-holding two CheckBoxes, two radio CheckBoxes, and an OptionButton — laid out
-inside the root's full-viewport rect.
+The base Godot UI node. The previewer solves it into a rect and draws no pixels
+of its own; that rect is what its children anchor against. Everything visible in
+both images is the child stack — a `VBoxContainer` holding two CheckBoxes, two
+radio CheckBoxes, and an OptionButton — laid out inside the root's full-viewport
+rect.
 
 ## Properties exercised
 
@@ -27,23 +27,49 @@ inside the root's full-viewport rect.
 
 ## Divergences
 
-The OptionButton chevron. Godot draws a right-edge dropdown chevron on the
-"VISIBLE DROPDOWN" bar; the previewer draws none. The chevron is a default-theme
-icon, compiled into the engine rather than shipped as a resource file. A
-scene-authored `theme_override_icons/<name>` is a separate case: `parseThemeOverrides`
-drops it through its `default` branch, but it would resolve the way
-`theme_override_styles` already does. The bar tone itself now matches — both draw a
-dark neutral StyleBox.
+Every widget in the stack now comes out of the same theme data on both sides.
+Measured on Godot 4.6.3, `pnpm ref:godot scenes/fixtures/unit-control-state.tscn
+--mode 2d --probe <x,y>` against `pnpm ref:ours unit-control-state.tscn --2d
+--probe <x,y>`:
 
-The checkbox and radio indicators are drawn approximations: the previewer draws
-thin outlines with a light tick or a filled dot, where Godot draws solid theme
-icon textures (a light filled square with a dark tick, a dark filled square, a
-ringed radio, a dark filled circle). Both distinguish the checked/unchecked and
-on/off states correctly. See the CheckBox sheet for the detail.
+| Probe | What it is | Godot | Ours |
+| --- | --- | --- | --- |
+| (1138, 153) | the dropdown chevron's ink where Godot draws it | rgb(158, 158, 158) | rgb(45, 45, 45) |
+| (1138, 167) | the same chevron 14 px lower, where ours draws it | rgb(46, 46, 46) | rgb(157, 157, 157) |
+| (600, 145) | inside Godot's dropdown bar | rgb(46, 46, 46) | rgb(76, 76, 76) |
+| (600, 180) | below Godot's bar, still inside ours | rgb(76, 76, 76) | rgb(45, 45, 45) |
+| (16, 150) | a stroke of the "VISIBLE DROPDOWN" label | rgb(223, 223, 223) | rgb(76, 76, 76) |
 
-Row pitch differs: Godot's rows are ~35px tall, the previewer's ~26px, so the
-whole stack reads shorter here. The cause is the default theme's larger control
-minimum sizes versus the previewer's more compact metrics.
+**The chevron is drawn**, from the same icon: the ink covers 10x6 px on both
+sides and peaks within 1/255 of Godot. It sits 14 px lower only because each of
+the four rows above it is 3 px taller here.
+
+**The checkbox and radio indicators are the real icon textures**, not outlines:
+the checked plate reads rgb(210, 210, 210) and its tick rgb(26, 26, 26) on both
+sides. See the CheckBox sheet.
+
+**Row pitch now over-runs Godot instead of under-running it: 38 px against 35.**
+The indicator icons' top edges land at y 8 / 43 / 78 / 113 in Godot and
+10 / 48 / 86 / 124 here, and the dropdown bar spans y 140..170 (31 px) against
+152..185 (34 px) — the `VBoxContainer` separation is 4 on both sides, so the
+whole gap is 3 px per ROW, not per gap. It is one arithmetic error, not a metric
+difference: `Button::get_minimum_size` floors a row at
+`font->get_height(font_size)` plus the stylebox's content margins, which for the
+default theme's Open Sans at 16 px is 23 + 8 = 31. Our shared text measurer
+(`native/text/measurer.ts` → `shapeText`) leaves `lineSpacingPx` at its default
+3 — Label's `line_spacing` theme constant — so every non-Label widget asks for
+26 + 8 = 34. The Button sheet isolates the same 3 px on a button whose own
+`content_margin_top/bottom = 6` makes Godot's total exactly 12 + 23 = 35.
+
+**A non-white font colour draws too dark.** `control_font_color` is
+`Color(0.875, 0.875, 0.875)`, which Godot rasterises at rgb(223, 223, 223); the
+same label peaks at rgb(188, 188, 188) here, and 188 is `255 ×
+srgbToLinear(0.875)` to the pixel. White text is the fixed point of that curve
+and matches exactly — "CHECKED BOX" peaks at rgb(255, 255, 255) on both sides.
+`TextRun` linearises its tint before handing it to `msdfMaterial`, whose
+fragment source assigns `gl_FragColor` with no output-colour-space encode, so
+the linear value is written straight into an sRGB target. Every text divergence
+on the other UI sheets that is a pure grey shift is this one.
 
 ## Linting
 

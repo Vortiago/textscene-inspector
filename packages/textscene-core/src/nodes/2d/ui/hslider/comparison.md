@@ -12,8 +12,8 @@ renders_as: a horizontal track with a round grabber
 A horizontal slider over a `Range`. The previewer draws the same four parts
 Godot does — the `slider` track, the `grabber_area` fill, any tick marks, and
 the grabber — placing each with the expressions from
-`Slider::_notification(NOTIFICATION_DRAW)` with the widget's pixel size left as
-a CSS percentage. The grabber's left edge sits at `ratio * (width - grabber)`,
+`Slider::_notification(NOTIFICATION_DRAW)`. The grabber's left edge sits at
+`ratio * (width - grabber)`,
 so the default `value = min_value` puts it hard against the left end.
 
 Every px below is the `gui/theme/default_theme_scale = 1` case. Godot bakes that
@@ -35,15 +35,15 @@ radius by it, and rasterising each icon at it — so a project setting 2.0 gets 
 
 ## Divergences
 
-Godot's grabber is a **texture**, not a stylebox: `slider_grabber.svg` is a
-16x16 image holding `<circle cx="8" cy="8" r="7" fill="#fefefe"
-fill-opacity=".75"/>`. The previewer approximates it with a 14px `div` at
-`border-radius: 50%` in `rgba(254, 254, 254, 0.75)`, offset 1px inside the 16px
-box Godot's placement math addresses. The geometry and colour are therefore
-exact; what is lost is the texture's own antialiasing — the browser's circle
-edge is rasterised by the compositor rather than sampled from Godot's SVG, so
-the one-pixel rim differs. The same substitution covers the disabled grabber
-(opacity 0.37) and the tick icons, which become plain 2px bars.
+None measurable in this fixture. `pnpm ref:godot
+scenes/fixtures/unit-hslider.tscn --mode 2d` and `pnpm ref:ours unit-hslider.tscn
+--2d` differ on ZERO pixels under the visual harness's tolerance, at a mean
+channel error of 0.07/255 over the frame — the grabber is Godot's own
+`slider_grabber` texture on both sides, not a substitute shape. Its core reads
+rgb(223, 223, 223) against rgb(222, 222, 222) (`--probe 305,80`) and the rim
+pixel Godot's SVG antialiases reads rgb(218, 218, 218) against rgb(214, 214, 214)
+(`--probe 301,80`); the six rows land on identical scanlines, y 33..46, 73..86,
+113..126, 153..166, 193..211, 233..246.
 
 The highlight grabber (`grabber_highlight`, drawn when a slider is hovered or
 focused) is never used: a static preview has no pointer and no focus, so Godot
@@ -73,13 +73,12 @@ malformed count draws no ticks instead of warning.
 
 `nativeSolver.ts` registers `Slider::get_minimum_size()`
 (`controlSolverRegistry.registerMinimumSize`); `Component.tsx` draws the
-same four parts as the DOM overlay — the `slider` track, the `grabber_area`
-fill, any tick marks, and the grabber, in Godot's own draw order — but the
-geometry itself (`shared/sliderSolver.ts`, shared with VSlider at
-`vertical = false`) is concrete pixel rects rather than CSS percentages, and the
-grabber/tick are the ACTUAL vendored `slider_grabber(_disabled).svg` /
-`hslider_tick.svg` textures (`native/themeIcons.ts`) rather than a synthesized
-`div`.
+four parts Godot draws — the `slider` track, the `grabber_area` fill, any tick
+marks, and the grabber, in Godot's own draw order. The geometry
+(`shared/sliderSolver.ts`, shared with VSlider at `vertical = false`) is
+concrete pixel rects, and the grabber/tick are the ACTUAL vendored
+`slider_grabber(_disabled).svg` / `hslider_tick.svg` textures
+(`native/themeIcons.ts`).
 
 ### Divergences from Godot
 
@@ -95,11 +94,12 @@ every rect this painter draws is transcribed straight from
 
 ### Known limitations (native only)
 
-- **No anti-aliased corner feather** on the track/fill roundrect corners —
-  `styleBoxFlatGeometry.ts` implements Godot's non-anti-aliased `StyleBoxFlat`
-  branch (see `panel/comparison.md`'s identical note); Godot's actual default
-  is `anti_aliased = true`. Not fixed here — a pre-existing, cross-cutting
-  parity item this slice inherits rather than introduces.
+- **The corner feather on the track/fill roundrects is one pixel narrower than
+  Godot's** — `styleBoxFlatGeometry.ts` implements Godot's non-anti-aliased
+  `StyleBoxFlat` branch (see `panel/comparison.md`, which measures the ramp on a
+  40 px arc); Godot's actual default is `anti_aliased = true`. Below this
+  fixture's own measurement threshold, and a cross-cutting parity item this
+  slice inherits rather than introduces.
 - **`ticks_position` is not modelled.** `shared/slider.ts` parses only
   `tick_count`/`ticks_on_borders`/`editable`, so every tick draws at Godot's
   own default, `TICK_POSITION_BOTTOM_RIGHT` (below the track). No corpus

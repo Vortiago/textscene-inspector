@@ -3,15 +3,15 @@ type: VBoxContainer
 category: 2D
 fixture: unit-vbox-container.tscn
 image: unit-vbox-container
-renders_as: a CSS flex-column `<div>`
+renders_as: children laid out down a column
 ---
 
 # VBoxContainer
 
-VBoxContainer stacks its children in a vertical column. The previewer renders it
-as a CSS flex-column `<div>`: `separation` becomes the flex `gap`, `alignment`
-becomes `justify-content`, and each child's `size_flags` drive its grow and
-cross-axis fill. Here `alignment = END` packs the two Labels ("Top", "Bottom")
+VBoxContainer stacks its children in a vertical column. The previewer runs Godot's own
+`BoxContainer::_resort`: `separation` spaces the children, `alignment` packs
+whatever is left over, and each child's `size_flags` decide its share of the
+column and its cross-axis fill. Here `alignment = END` packs the two Labels ("Top", "Bottom")
 to the bottom of the container, each carrying `size_flags_horizontal = 3`
 (FILL|EXPAND) so it spans the container's full width.
 
@@ -25,12 +25,21 @@ to the bottom of the container, each carrying `size_flags_horizontal = 3`
 
 ## Divergences
 
-The layout matches: both images pack "Top" above "Bottom" at the lower-left, at
-the same positions, with the same 16px separation between them. The only
-difference is font rendering — Godot draws the labels in its bundled theme font,
-which reads heavier and pure white, while the previewer uses the browser's system
-font stack (web fonts are CSP-blocked in the VS Code webview), so the glyphs come
-out thinner and a touch dimmer.
+None visible in this fixture. Both images pack "Top" above "Bottom" at the
+lower-left, at the same positions, with the same 16 px separation between them,
+and both draw the labels in the same bundled theme font at the same weight —
+`pnpm ref:godot scenes/fixtures/unit-vbox-container.tscn --mode 2d` against
+`pnpm ref:ours unit-vbox-container.tscn --2d` puts 74 px of 1152x648 (0.010%)
+outside the visual harness's tolerance, at a mean channel error of 0.03/255, all
+of it on glyph edges.
+
+`unit-vbox-container-pitch.tscn` is the wider reading of the solve, as flat bands
+with no text to blame an edge on. Every band edge in the `alignment = 1` column
+matches Godot exactly (y 180..239, 264..303, 328..367, 392..481), and in the
+expand column three of four do; the stretched `Green` band runs one pixel long
+(y 274..487 against Godot's 274..486) and carries `Amber` one row down with it,
+because Godot accumulates the truncated stretch shares in float32 where we use
+float64 and the two fractions land either side of a whole pixel at 320/3.
 
 ## Linting
 

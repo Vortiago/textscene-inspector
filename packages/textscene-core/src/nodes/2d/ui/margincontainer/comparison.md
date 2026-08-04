@@ -3,15 +3,14 @@ type: MarginContainer
 category: 2D
 fixture: unit-margin-container.tscn
 image: unit-margin-container
-renders_as: a padded flex container
+renders_as: a child inset by four margin constants
 ---
 
 # MarginContainer
 
 MarginContainer insets its single child by four theme-override margin constants.
-The previewer maps it to a CSS flex box whose padding is those margins, so the
-container draws nothing itself — the child's blue fill sits inset by the margins,
-and the grey background shows through the padding band.
+The container draws nothing itself — the child's blue fill sits inset by the
+margins, and the grey background shows through the band they leave.
 
 ## Properties exercised
 
@@ -24,7 +23,10 @@ and the grey background shows through the padding band.
 
 ## Divergences
 
-None visible in this fixture.
+None visible in this fixture — and not approximately: `pnpm ref:godot
+scenes/fixtures/unit-margin-container.tscn --mode 2d` and `pnpm ref:ours
+unit-margin-container.tscn --2d` are byte-identical over the whole 1152x648
+frame, so all four inset edges land on the same rows and columns.
 
 ## Linting
 

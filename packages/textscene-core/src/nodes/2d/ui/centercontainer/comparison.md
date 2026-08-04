@@ -3,14 +3,13 @@ type: CenterContainer
 category: 2D
 fixture: unit-center-container.tscn
 image: unit-center-container
-renders_as: a centering flex container
+renders_as: a rect centred inside its own
 ---
 
 # CenterContainer
 
 CenterContainer places its single child at the exact center of its own rect,
-horizontally and vertically. The previewer maps it to a CSS flexbox centered on
-both axes, so the container draws nothing itself — only the centered child shows.
+horizontally and vertically. The container draws nothing itself — only the centred child shows.
 
 ## Properties exercised
 
@@ -22,7 +21,11 @@ both axes, so the container draws nothing itself — only the centered child sho
 
 ## Divergences
 
-None visible in this fixture.
+None visible in this fixture. `pnpm ref:godot
+scenes/fixtures/unit-center-container.tscn --mode 2d` against `pnpm ref:ours
+unit-center-container.tscn --2d` puts 69 px of 1152x648 (0.009%) outside the
+visual harness's tolerance, at a mean channel error of 0.01/255 — all of it on
+the centred label's glyph edges.
 
 ## Linting
 

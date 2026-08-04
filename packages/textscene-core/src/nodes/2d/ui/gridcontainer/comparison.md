@@ -3,16 +3,16 @@ type: GridContainer
 category: 2D
 fixture: unit-grid-container.tscn
 image: unit-grid-container
-renders_as: a CSS grid container
+renders_as: children packed into a fixed column count
 ---
 
 # GridContainer
 
 GridContainer lays its children out left-to-right into a fixed number of
 columns, wrapping to a new row each time the column count is reached. The
-previewer maps it to a `display: grid` div, so `columns` becomes the
-column-template, the separation constants become the CSS gaps, and the rows
-pack to the top.
+previewer solves the column widths and row heights the way Godot's own
+`_notification` does, applies the separation constants between them, and packs
+the rows to the top.
 
 ## Properties exercised
 
@@ -27,7 +27,11 @@ pack to the top.
 
 ## Divergences
 
-None visible in this fixture.
+None visible in this fixture. `pnpm ref:godot
+scenes/fixtures/unit-grid-container.tscn --mode 2d` against `pnpm ref:ours
+unit-grid-container.tscn --2d` puts 517 px of 1152x648 (0.069%) outside the
+visual harness's tolerance, at a mean channel error of 0.15/255 — glyph edges,
+plus the second column starting one pixel apart (x 97 against x 96).
 
 ## Linting
 

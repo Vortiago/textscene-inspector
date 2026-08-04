@@ -3,14 +3,14 @@ type: CheckBox
 category: 2D
 fixture: unit-checkbox.tscn
 image: unit-checkbox
-renders_as: an inline HTML row with a drawn check indicator
+renders_as: a theme icon followed by a text run
 ---
 
 # CheckBox
 
 A toggle button that shows a check indicator to the left of its label. The
-previewer draws it in the Control overlay as an inline row: a small square
-indicator followed by the label text.
+previewer draws the theme's own indicator texture and then the label, with no
+chrome between them — CheckBox's `normal` StyleBox is empty.
 
 ## Properties exercised
 
@@ -22,17 +22,27 @@ indicator followed by the label text.
 
 ## Divergences
 
-The indicator's fill. Godot draws the theme's icon textures — a bright, solid
-square with a tick for the checked row, a gray solid square for the unchecked,
-disabled one — while the previewer draws a thin outlined square with a Unicode
-tick when checked and an empty outline when not. Godot's default-theme icons are
-compiled into the engine rather than shipped as resource files, so the indicator is
-a drawn approximation. A scene-authored `theme_override_icons/<name>` is a separate
-case: `parseThemeOverrides` drops it through its `default` branch, but it would
-resolve the way `theme_override_styles` already does. The checked/unchecked distinction and the dimmed disabled row
-read correctly in both, and the labels sit at the same place.
-**Closed by the native (WebGL) painter below**, which draws the actual vendored
-icon textures instead of a hand-drawn approximation — see its own section.
+The indicator is the theme's own icon texture on both sides. Measured on Godot
+4.6.3, `pnpm ref:godot scenes/fixtures/unit-checkbox.tscn --mode 2d --probe <x,y>`
+against `pnpm ref:ours unit-checkbox.tscn --2d --probe <x,y>`:
+
+| Probe | What it is | Godot | Ours |
+| --- | --- | --- | --- |
+| (509, 291) | the checked plate, where Godot draws it | rgb(210, 210, 210) | rgb(76, 76, 76) |
+| (509, 294) | the same plate 3 px lower, where ours draws it | rgb(210, 210, 210) | rgb(210, 210, 210) |
+| (516, 295) | the tick cut out of that plate | rgb(26, 26, 26) | rgb(210, 210, 210) |
+
+Same texture, same colours, same footprint: the checked icon's ink spans
+x 506..519 over 14 rows in both, 190 px against 194. It sits 3 px lower because
+the row itself is 3 px taller — `CheckBox::get_minimum_size` floors the row at the
+font height, and ours measures that 3 px over (the Control sheet has the
+arithmetic), which also moves the tick out from under a probe aimed at Godot's.
+The disabled row's unchecked icon lands at x 505..518 in Godot and x 506..519
+here, one pixel right.
+
+A scene-authored `theme_override_icons/<name>` is still a separate case:
+`parseThemeOverrides` drops it through its `default` branch, where
+`theme_override_styles` would resolve it.
 
 ## Native (WebGL canvas) painter
 

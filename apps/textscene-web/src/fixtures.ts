@@ -1078,6 +1078,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Audio"
   },
   {
+    "name": "Button States",
+    "file": "unit-button-states.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Button",
     "file": "unit-button.tscn",
     "category": "Unit - 2D UI Controls"
@@ -1158,6 +1163,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Label 2d Wrap",
+    "file": "unit-label-2d-wrap.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Label 2d",
     "file": "unit-label-2d.tscn",
     "category": "Unit - 2D UI Controls"
@@ -1178,6 +1188,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Panel Styleboxes",
+    "file": "unit-panel-styleboxes.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Panel",
     "file": "unit-panel.tscn",
     "category": "Unit - 2D UI Controls"
@@ -1188,6 +1203,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Scroll Container Clip",
+    "file": "unit-scroll-container-clip.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Scroll Container",
     "file": "unit-scroll-container.tscn",
     "category": "Unit - 2D UI Controls"
@@ -1195,6 +1215,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Texture Rect",
     "file": "unit-texture-rect.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Vbox Container Pitch",
+    "file": "unit-vbox-container-pitch.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

@@ -8,8 +8,8 @@ renders_as: a full-rect passthrough layer hosting Control children
 
 # CanvasLayer
 
-CanvasLayer is not a Control and paints nothing of its own — it fills the overlay
-and gives its Control children a viewport to anchor against. The visible "Score: 0"
+CanvasLayer is not a Control and paints nothing of its own — it spans the whole
+viewport and gives its Control children that rect to anchor against. The visible "Score: 0"
 is the child Label, and it lands in the top-right corner of both images, which is
 the evidence the layer hosts and viewport-anchors its child faithfully.
 
@@ -21,7 +21,11 @@ the evidence the layer hosts and viewport-anchors its child faithfully.
 
 ## Divergences
 
-None visible in this fixture.
+None visible in this fixture. `pnpm ref:godot
+scenes/fixtures/unit-canvas-layer.tscn --mode 2d` against `pnpm ref:ours
+unit-canvas-layer.tscn --2d` puts 82 px of 1152x648 (0.011%) outside the visual
+harness's tolerance, at a mean channel error of 0.02/255 — all of it on the
+label's glyph edges.
 
 ## Linting
 

@@ -3,15 +3,15 @@ type: HBoxContainer
 category: 2D
 fixture: unit-hbox-container.tscn
 image: unit-hbox-container
-renders_as: a CSS flex-row `<div>`
+renders_as: children laid out along a row
 ---
 
 # HBoxContainer
 
-HBoxContainer stacks its children in a horizontal row. The previewer renders it
-as a CSS flex-row `<div>`: `separation` becomes the flex `gap`, `alignment`
-becomes `justify-content`, and each child's `size_flags` drive its grow and
-cross-axis alignment. Here two Labels ("Left", "Right") each carry
+HBoxContainer stacks its children in a horizontal row. The previewer runs Godot's own
+`BoxContainer::_resort`: `separation` spaces the children, `alignment` packs
+whatever is left over, and each child's `size_flags` decide its share of the
+row and its cross-axis fill. Here two Labels ("Left", "Right") each carry
 `size_flags_horizontal = 3` (FILL|EXPAND), so each takes half the row.
 
 ## Properties exercised
@@ -25,7 +25,11 @@ cross-axis alignment. Here two Labels ("Left", "Right") each carry
 
 ## Divergences
 
-None visible in this fixture.
+None visible in this fixture. `pnpm ref:godot
+scenes/fixtures/unit-hbox-container.tscn --mode 2d` against `pnpm ref:ours
+unit-hbox-container.tscn --2d` puts 34 px of 1152x648 (0.005%) outside the
+visual harness's tolerance, at a mean channel error of 0.01/255 — all of it on
+the two labels' glyph edges.
 
 ## Linting
 

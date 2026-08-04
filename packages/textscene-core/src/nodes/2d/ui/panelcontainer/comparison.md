@@ -9,9 +9,9 @@ renders_as: a StyleBox panel around its child
 # PanelContainer
 
 PanelContainer draws its `theme_override_styles/panel` StyleBox and fits its single
-child inside the box's content margins. The previewer maps it to a flex-column
-`<div>` carrying the StyleBox's fill, corner radius and padding, and stretches the
-child to fill the content box — so a child Label's own alignment has room to act.
+child inside the box's content margins. The previewer draws that StyleBox as a quad and
+stretches the child to fill the rect its content margins leave — so a child
+Label's own alignment has room to act.
 
 ## Properties exercised
 
@@ -29,9 +29,13 @@ child to fill the content box — so a child Label's own alignment has room to a
 
 ## Divergences
 
-None visible in this fixture. The child now fills the content box, so the label's
+None visible in this fixture. The child fills the content box, so the label's
 `vertical_alignment = 1` centres it on the panel's midline as in Godot; panel
-position, size, dark slate fill, 6 px corners, padding and both-axis centring match.
+position, size, dark slate fill, 6 px corners, padding and both-axis centring
+match. `pnpm ref:godot scenes/fixtures/unit-panel-container.tscn --mode 2d`
+against `pnpm ref:ours unit-panel-container.tscn --2d` puts 128 px of 1152x648
+(0.017%) outside the visual harness's tolerance, at a mean channel error of
+0.04/255 — the label's glyph edges and the corner arcs.
 
 ## Linting
 
@@ -61,19 +65,12 @@ minimum size is the per-axis MAX of every child's combined minimum size plus
 those same margins — verified against this fixture's `16`/`12` px margins
 with synthetic `custom_minimum_size` children in `nativeSolver.test.ts`.
 
-### A DOM-vs-native default-margin divergence, found while wiring the native painter
+### The default panel StyleBox has ZERO content margins
 
-The DOM component's `useDefaults` fallback pads with `theme.contentMargin`
-(4px at scale 1) when no `theme_override_styles/panel` is set. Real Godot's
-actual default (`scene/theme/default_theme.cpp:1274`) calls
+Real Godot's default (`scene/theme/default_theme.cpp:1274`) calls
 `make_flat_stylebox(style_normal_color, 0, 0, 0, 0)` — explicit ZERO content
-margins, the identical call `Panel`'s own default stylebox makes (`:134`).
-The native painter/solver reproduce that zero-margin default verbatim
-(`native/nativeTheme.ts`'s `widgets.panel`, shared with `Panel`); the DOM
-component's 4px fallback padding is a pre-existing divergence from real
-Godot that predates this native slice and is unchanged by it.
-
-### Divergences from the DOM component
-
-None for this fixture — it carries an explicit `theme_override_styles/panel`
-override, so neither side's default-fallback path (see above) is exercised.
+margins, the identical call `Panel`'s own default stylebox makes (`:134`), so a
+`PanelContainer` with no `theme_override_styles/panel` insets its child by
+nothing at all. The painter and solver reproduce that verbatim
+(`native/nativeTheme.ts`'s `widgets.panel`, shared with `Panel`). This fixture
+carries an explicit override, so it does not exercise the default path.

@@ -3,14 +3,14 @@ type: TextureRect
 category: 2D
 fixture: unit-texture-rect.tscn
 image: unit-texture-rect
-renders_as: an HTML img element
+renders_as: a textured quad in the control's rect
 ---
 
 # TextureRect
 
-A Control that displays a `Texture2D` inside its rect. The previewer loads the
-texture into an `<img>` positioned to fill the control's box, with `object-fit`
-and `object-position` set from `stretch_mode`.
+A Control that displays a `Texture2D` inside its rect. The previewer draws the
+texture as a quad, with the draw rect and UV window computed from `stretch_mode`
+and `expand_mode`.
 
 ## Properties exercised
 
@@ -23,7 +23,13 @@ and `object-position` set from `stretch_mode`.
 
 ## Divergences
 
-None visible in this fixture.
+None visible in this fixture. `pnpm ref:godot
+scenes/fixtures/unit-texture-rect.tscn --mode 2d` against `pnpm ref:ours
+unit-texture-rect.tscn --2d` puts 0.107% of the frame (800 px of 1152x648)
+outside the visual harness's tolerance, at a mean channel error of 0.18/255 —
+all of it on the magnified texel edges of the upscaled marker, where the two
+linear samplers land a fraction apart. The letterbox boundaries, the drawn
+rect and the fill colour agree.
 
 ## Linting
 
@@ -44,8 +50,8 @@ present-but-unparseable value collapses to `false` rather than `undefined`, sinc
 
 ## Known limitations
 
-- **expand_mode FIT_* axis (DOM only)** — the DOM FIT modes take the right shape, but Godot names one axis as the driver from the control's current size, whereas CSS resolves whichever axis the layout leaves unconstrained; they differ only when the layout constrains both axes. **Partially closed by the native (WebGL) solver below** — see its own section for exactly what closes and what cannot without touching the shared `controlRectSolver.ts`.
-- **Absent stretch_mode → contain** — an absent `stretch_mode` defaults to `object-fit: contain` (a deliberate deviation from Godot's STRETCH_SCALE default) so a texture fits rather than stretch-distorts; an explicit `stretch_mode = 0` still maps to fill. The native painter below reproduces Godot's actual default (`STRETCH_SCALE`) verbatim instead — a second, independent DOM-vs-native divergence, in the DOM's favour visually but not in fidelity.
+- **expand_mode FIT_\* magnitude** — the axis IDENTITY is right (the solver returns an asymmetric `Vec2` per mode, so a later floor moves the axis Godot names), but the magnitude Godot reads is the control's own already-solved size, which is not available where the minimum size is computed. The section below has the mechanism and what closing it would cost. **Not re-measurable**: no fixture and no vendored corpus scene sets `expand_mode` to any FIT value, so there is no pixel to compare — this stands on the source and its unit tests, not on a probe.
+- **`texture_filter` / `texture_repeat` resolve `PARENT_NODE` to the viewport default, not to the nearest ancestor that names one.** Both properties are read and mapped (the section below), but there is no ancestor-chain context to walk. Also not re-measurable here: the only Control in the vendored corpus that sets either is an invisible `Panel`, which draws a StyleBox and samples no texture.
 
 ## Native (WebGL canvas) painter
 
@@ -53,33 +59,23 @@ present-but-unparseable value collapses to `false` rather than `undefined`, sinc
 contribution (`controlSolverRegistry.registerMinimumSize`) and exports the
 `stretch_mode` draw-rect math `Component.tsx` paints — both ported from
 `scene/gui/texture_rect.cpp` (4.6.3). `flip_h`/`flip_v` and the `texture_filter`/
-`texture_repeat` sampler properties (below) are native-only: CSS has no
-per-image sampler control and no non-destructive way to express Godot's
-draw-time flip, so both were simply absent from the DOM component.
+`texture_repeat` sampler properties (below) are drawn from the same port;
+`stretch_mode`'s default is Godot's own `STRETCH_SCALE`, not a fit.
 
-### The FIT_\* driver-axis divergence — what closes, what doesn't
+### The FIT_\* driver axis — what the solver names, and what it cannot read
 
 `TextureRect::get_minimum_size()` (`texture_rect.cpp:107-133`) ties
 FIT_WIDTH/FIT_HEIGHT (and their PROPORTIONAL twins) to the control's OWN
 **current, already-resolved** size (`get_size().y`/`get_size().x`,
-`:116-129`) — self-referential. The DOM component's CSS approximation
-(`Component.tsx`'s `textureRectMinSize`) maps FIT_WIDTH (2) and FIT_HEIGHT (4)
-to the IDENTICAL `aspect-ratio: 1/1` (ditto the PROPORTIONAL pair, both to the
-texture's own aspect) — CSS `aspect-ratio` is symmetric and only ever fills in
-whichever axis the layout leaves unconstrained, so it cannot express "Godot
-always floors WIDTH from HEIGHT, never the reverse" (or vice versa). The two
-approaches only actually diverge once anchors constrain BOTH axes: at that
-point `aspect-ratio` goes inert (no auto axis left to solve), while Godot's
-floor (`Control::_size_changed`'s `GROW_DIRECTION_*` step,
-`control.cpp:1773-1797`) can still override whichever axis it names as driven.
+`:116-129`) — self-referential. It names ONE axis as the driver and never the
+other, which is exactly what a symmetric ratio cannot express.
 
-The native solver's `textureRectMinimumSize` (`nativeSolver.ts`) returns an
-ASYMMETRIC `Vec2` per mode instead of a single ratio — zero on the axis Godot
-never floors, non-zero on the one it does, exactly the `Size2(h, 0)` /
-`Size2(0, w)` shape the source itself uses. **This closes the axis-IDENTITY
-half of the divergence**: FIT_WIDTH and FIT_HEIGHT are no longer
-interchangeable, so a later `floorAtMinimumSize` step floors the CORRECT axis,
-never the other one.
+`textureRectMinimumSize` (`nativeSolver.ts`) returns an ASYMMETRIC `Vec2` per
+mode instead of a single ratio — zero on the axis Godot never floors, non-zero
+on the one it does, exactly the `Size2(h, 0)` / `Size2(0, w)` shape the source
+itself uses. **This gets the axis IDENTITY right**: FIT_WIDTH and FIT_HEIGHT are
+not interchangeable, so a later `floorAtMinimumSize` step floors the CORRECT
+axis, never the other one.
 
 **What does not close**: the actual magnitude Godot reads (`get_size().y` for
 FIT_WIDTH) is the control's own rect, produced by `controlRectSolver.ts`'s

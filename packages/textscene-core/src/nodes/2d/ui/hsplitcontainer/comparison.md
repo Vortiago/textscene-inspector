@@ -20,9 +20,7 @@ fit_child_in_rect(second, Rect2(Point2(sofs, 0), Size2(get_size().width - sofs, 
 ```
 
 A child's own flags never size it here; they only choose how it sits inside the
-rect it was handed. The DOM form is therefore a **grid**, whose two tracks are
-those rects — `grid-template-columns: <computed_split_offset> 1fr`, with the
-separation as the gap.
+rect it was handed.
 
 ## `_compute_split_offset`
 
@@ -58,33 +56,35 @@ neither.
 Measured through Godot 4.6.3 on `unit-split-container.tscn` — 400 px wide rows,
 scanned for the colour edge (first | gap | second):
 
-| Row | Authored | Godot |
-| --- | --- | --- |
-| Both | both expand | 194 \| 12 \| 194 |
-| Offset | `split_offset = 60` | 254 \| 12 \| 134 |
-| Ratio | `stretch_ratio` 3 : 1 | 294 \| 12 \| 94 |
-| FirstOnly | only the first expands | 388 \| 12 \| 0 |
-| Neither | neither, `split_offset = 120` | 120 \| 12 \| 268 |
-| SepZero | `separation` overridden to 0 | 196 \| **8** \| 196 |
-| Collapsed | `collapsed`, `split_offset = 60` | 194 \| 12 \| 194 |
-| DraggerCollapsed | `dragger_visibility = 2` | 200 \| **0** \| 200 |
+| Row | Authored | Godot | Ours |
+| --- | --- | --- | --- |
+| Both | both expand | 194 \| 12 \| 194 | same |
+| Offset | `split_offset = 60` | 254 \| 12 \| 134 | same |
+| Ratio | `stretch_ratio` 3 : 1 | 294 \| 12 \| 94 | same |
+| FirstOnly | only the first expands | 388 \| 12 \| 0 | same |
+| Neither | neither, `split_offset = 120` | 120 \| 12 \| 268 | same |
+| SepZero | `separation` overridden to 0 | 196 \| **8** \| 196 | same |
+| Collapsed | `collapsed`, `split_offset = 60` | 194 \| 12 \| 194 | same |
+| DraggerCollapsed | `dragger_visibility = 2` | 200 \| **0** \| 200 | same |
+
+"same" is literal: the two renders are byte-identical over the whole 1152x648
+frame.
 
 So the default separation is **12** and the grabber's own extent is **8** —
 `SepZero` is what measures the latter, since the override cannot go below it.
 
 ## Divergences
 
-- **The dragger is not drawn and cannot be dragged.** The previewer renders an
-  authored scene, and `split_offset` is the authored state; the grabber icon,
-  its hover/pressed states and `dragging_area_control` have no still-frame
-  meaning. The separation it occupies IS reproduced, because it moves both
-  rects.
-- **`CLAMP(wished, first_min, size - sep - second_min)` is not applied.** It
-  needs both children's `get_combined_minimum_size()`, which are content
-  measurements the browser performs and CSS cannot name in a track expression.
-  The track's own `min-width: 0` plus the container's `overflow: hidden`
-  reproduce the clipping half; a child whose minimum size exceeds its rect is
-  clipped here where Godot would have pushed the boundary.
+`pnpm ref:godot scenes/fixtures/unit-split-container.tscn --mode 2d` and
+`pnpm ref:ours unit-split-container.tscn --2d` are byte-identical — all eight
+rows, every `_compute_split_offset` branch, the same boundaries.
+
+- **Neither side draws a dragger, and that is Godot's own behaviour here.**
+  A probe down the middle of the first row's separation (x 222, y 18..82) reads
+  the bare rgb(0, 0, 102) backdrop on BOTH sides: Godot gates the grabber icon
+  on hover/drag, and a static frame has neither. `split_offset` is the authored
+  state, and the separation the dragger occupies IS reproduced, because it moves
+  both rects.
 - **`theme_override_icons/grabber` does not change the separation.** Godot
   floors the separation at the OVERRIDING icon's width; here the default
   grabber's 8 px is always the floor. Visible in
@@ -149,5 +149,4 @@ siblings; the container itself paints nothing else — `split_bar_background`
 
 ### Known limitations (native only)
 
-- **Dragging** is out of scope, per this packet — only the authored
-  `split_offset` renders, exactly like the DOM overlay.
+- **Dragging** is out of scope — only the authored `split_offset` renders.

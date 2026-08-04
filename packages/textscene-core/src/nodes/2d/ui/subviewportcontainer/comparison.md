@@ -39,48 +39,40 @@ Measured through Godot 4.6.3 with a 300×200 container at (100, 80) holding a
 
 ## What the surface shows
 
-Two arms, because a viewport target has two kinds of source. The NATIVE
-painter (`Component.tsx`, the shipped default — native Controls default
-to `true`) draws both, since every content kind is a WebGL texture it can
-sample directly:
+A viewport target has two kinds of source, and the painter draws both, since
+every content kind is a WebGL texture it can sample directly:
 
-| Sub-viewport holds | Reaches the native surface as |
+| Sub-viewport holds | Reaches the surface as |
 | --- | --- |
 | Controls | its own live `<ControlCanvasWalker>` mount, drawn straight into the surface |
 | 2D-world (CanvasItem) or 3D content | the offscreen target's `texture`, sampled directly on a `<ControlQuad>` — no CPU round trip, no colour-space re-encode |
 
-The DOM overlay (`Component.tsx`, reachable only via its own storage-key
-opt-out while native Controls are the default) draws ONLY the Control arm now:
-a `<canvas>` element cannot sample a WebGL texture at all (ADR-0003), and the
-`ViewportTextureEntry.readPixels` CPU-blit that used to bridge that gap is
-gone along with the field.
+The target itself stores **linear** values: `createOffscreenTarget` tags it
+`LinearSRGBColorSpace` and sets `isXRRenderTarget`, so three takes the offscreen
+pass's output space from that tag, and the consumer decodes it back through the
+ordinary sampling pipeline. Measured on
+`unit-sub-viewport-container-2d-content.tscn` with `pnpm ref:godot
+scenes/fixtures/unit-sub-viewport-container-2d-content.tscn --mode 2d --probe
+<x,y>` against `pnpm ref:ours unit-sub-viewport-container-2d-content.tscn --2d
+--probe <x,y>`:
 
-The target itself still stores **linear** values: `createOffscreenTarget` tags
-it `LinearSRGBColorSpace` and sets `isXRRenderTarget`, so three takes the
-offscreen pass's output space from that tag. A WebGL consumer decodes it back
-through the ordinary sampling pipeline, with no hand-written encode step the
-way the deleted CPU blit needed. Measured on
-`unit-sub-viewport-container-2d-content.tscn` through Godot 4.6.3, against
-that (now removed) DOM blit — restated here as the historical colour-accuracy
-baseline, not yet re-measured against the native path (no golden exercises
-`SubViewportContainer` directly; see this slice's own module doc):
-
-| | Stored in the target | Blitted (DOM, historical) | Godot 4.6.3 |
+| Probe | What it is | Godot 4.6.3 | Ours |
 | --- | --- | --- | --- |
-| default clear colour, sRGB `Color(0.3, 0.3, 0.3)` | 19 | 77 | 76 |
-| authored `Color(0.5, 0.5, 0.5)` | 55 | 128 | 127 |
+| (250, 200) | the default clear colour, sRGB `Color(0.3, 0.3, 0.3)` | rgb(76, 76, 76) | rgb(77, 77, 77) |
+| (200, 100) | the authored `Color(0.5, 0.5, 0.5)` band | rgb(127, 127, 127) | rgb(128, 128, 128) |
 
 The 1-byte gap is the 8-bit **linear** intermediate: Godot keeps float precision
 to its swap chain, while the target quantises before the curve expands the
 darks. Dark gradients inside a sub-viewport band slightly more than the same
-content drawn directly.
+content drawn directly. Nothing else in the frame differs — pixelmatch reports
+zero differing pixels at a mean channel error of 0.04/255.
 
 Both content kinds land on the same value.
 `unit-sub-viewport-container-3d-content.tscn` is
 `unit-sub-viewport-container-2d-content.tscn` with the same authored
 `Color(0.5, 0.5, 0.5)` moved onto an unshaded box, so the one variable is which
-pass filled the target: Godot renders both at 127 and the previewer renders both
-at 128.
+pass filled the target: the same two probes return the same two pairs, 127
+against 128 and 76 against 77.
 
 That took fixing the canvas underneath. `<SubViewport>` deliberately leaves the
 renderer's live tone curve in force for 3D content — a shared world resolves to
@@ -95,10 +87,10 @@ runs on the 3D buffers and canvas items are composited AFTER it.
 `recalc_force_viewport_sizes` runs `set_size_force(get_size() / stretch_shrink)`
 on every `SubViewport` child and returns early when `stretch` is off, so with it
 on the authored `size` is **dead** — the content lays out against the
-container's own rect. That number lives in the DOM (the surface is a `<div>` in
-the Control overlay) while the target is allocated in the R3F root, so the
-surface measures its box with a `ResizeObserver` and publishes it through
-`ViewportRectRegistry`; `<SubViewport>` prefers it over `properties.size`. No
+container's own rect. That number is produced by the Control rect solve while
+the target is allocated in the R3F root, so the surface publishes its solved box
+through `ViewportRectRegistry`; `<SubViewport>` prefers it over
+`properties.size`. No
 rect published is the ordinary case, not an error — a non-stretching container
 resizes nothing, and a sub-viewport with no container has nothing to be resized
 by. Both keep the authored size.
@@ -138,16 +130,10 @@ also the blit's coverage guard. Measured through Godot 4.6.3 with
 
 ## Divergences
 
-- **The DOM overlay's Control arm can drift from what the native surface
-  shows for the SAME scene**, since native Controls are the shipped default
-  and the DOM overlay is a legacy opt-out that no longer draws a pixel arm at
-  all — direct comparison only makes sense native-to-native or DOM-to-DOM, not
-  across the two.
 - **Clipping is a consequence, not an operation.** The container issues no clip;
   content outside the target simply was never rendered, because the texture is
-  only `size` pixels. The DOM equivalent puts `overflow: hidden` on the
-  *surface*, never on the container — a surface may legitimately overflow the
-  container's own box, since Godot Controls do not clip unless `clip_contents`.
+  only `size` pixels. A surface may legitimately overflow the container's own
+  box, since Godot Controls do not clip unless `clip_contents`.
 - **`get_minimum_size()`** is `Size2()` when `stretch`, else the **max** over its
   `SubViewport` children's sizes — load-bearing when the container sits inside a
   layout container.

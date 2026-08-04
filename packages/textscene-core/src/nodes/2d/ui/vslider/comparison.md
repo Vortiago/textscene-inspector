@@ -28,9 +28,11 @@ and `max_value` at the top, and the `grabber_area` fills upward from the bottom.
 
 ## Divergences
 
-The grabber is approximated exactly as HSlider's is — a 14px CSS disc standing
-in for the 16x16 `slider_grabber` texture, matching in radius, colour and
-placement but not in the texture's own edge antialiasing. See the HSlider sheet.
+None measurable in this fixture. `pnpm ref:godot
+scenes/fixtures/unit-vslider.tscn --mode 2d` and `pnpm ref:ours unit-vslider.tscn
+--2d` differ on ZERO pixels under the visual harness's tolerance, at a mean
+channel error of 0.03/255 over the frame — the grabber is the same
+`slider_grabber` texture HSlider's sheet measures, not a substitute shape.
 
 Tick marks are NOT mirrored with the value axis. Godot's vertical tick loop
 computes `ofs = i * areasize / (ticks - 1) + grabber_offset` and draws downward
@@ -73,7 +75,7 @@ the widget's leading edge, not mirrored with the value axis — is the shared
 solver's own `vertical` branch, proved once against real Godot in
 `shared/sliderSolver.test.ts`.
 
-### Divergences from the DOM component
+### One metric worth naming
 
 **The tick's cross-axis length is 8px, not 16px** — see the HSlider sheet's
 identical note (`vslider_tick.svg` is `hslider_tick.svg`'s transpose, `width="8"
@@ -81,7 +83,7 @@ height="4"`, measured the same way against real Godot 4.6.3). Otherwise none.
 
 ### Known limitations (native only)
 
-Same as HSlider: no anti-aliased corner feather on the track/fill roundrect
-corners, and `ticks_position` is not modelled (every tick draws at Godot's
+Same as HSlider: the corner feather on the track/fill roundrects is one pixel
+narrower than Godot's, and `ticks_position` is not modelled (every tick draws at Godot's
 default, `TICK_POSITION_BOTTOM_RIGHT` — right of the track for a vertical
 slider). See the HSlider sheet.

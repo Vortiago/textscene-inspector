@@ -33,10 +33,19 @@ horizontal one passes whether the implementation reads the right axis or not.
 
 Measured through Godot 4.6.3 — 300 px tall columns (top | gap | bottom):
 
-| Column | Authored | Godot |
-| --- | --- | --- |
-| Both | both expand vertically | 144 \| 12 \| 144 |
-| Offset | `split_offset = 50` | 194 \| 12 \| 94 |
+| Column | Authored | Godot | Ours |
+| --- | --- | --- | --- |
+| Both | both expand vertically | 144 \| 12 \| 144 | 144 \| 12 \| 144 |
+| Offset | `split_offset = 50` | 194 \| 12 \| 94 | 194 \| 12 \| 94 |
+
+## Divergences
+
+None visible in this fixture. `pnpm ref:godot
+scenes/fixtures/unit-split-container-vertical.tscn --mode 2d` and `pnpm ref:ours
+unit-split-container-vertical.tscn --2d` are byte-identical over the whole
+1152x648 frame — the `Both` column's bands read
+y 20..163 red, y 164..175 backdrop, y 176..319 green on both sides. The
+limitations HSplitContainer's sheet records apply here unchanged.
 
 ## Linting
 
