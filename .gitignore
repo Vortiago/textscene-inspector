@@ -93,5 +93,6 @@ tscn-rescue-*.png
 # Visual-regression failure artifacts (actual/diff PNGs)
 scripts/visual/output/
 scripts/godot-ref/output/
+scripts/vscode/output/
 scripts/showcase/output/
 scripts/e2e-screenshots/
