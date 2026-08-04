@@ -203,6 +203,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Color Picker",
+    "file": "unit-color-picker.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Cone Twist Joint 3d",
     "file": "unit-cone-twist-joint-3d.tscn",
     "category": "Other"
@@ -398,6 +403,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Graph Frame",
+    "file": "unit-graph-frame.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Node",
+    "file": "unit-graph-node.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Grid Map Centering",
     "file": "unit-grid-map-centering.tscn",
     "category": "Other"
@@ -550,6 +565,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Omni Light 3d",
     "file": "unit-omni-light-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Binding Modifier Editor",
+    "file": "unit-open-xr-binding-modifier-editor.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Interaction Profile Editor",
+    "file": "unit-open-xr-interaction-profile-editor.tscn",
     "category": "Other"
   },
   {

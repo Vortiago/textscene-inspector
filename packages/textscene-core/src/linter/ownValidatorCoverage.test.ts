@@ -51,6 +51,12 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
   HSlider: "orientation only; the slider keys are Slider's",
   HSplitContainer: "orientation only; the split keys are SplitContainer's",
   MarginContainer: 'margins are theme constants, not properties',
+  OpenXRBindingModifierEditor:
+    'editor-only PanelContainer; its constructor only changes the inherited size_flags_horizontal default',
+  OpenXRInteractionProfileEditor:
+    'editor-only (TOOLS_ENABLED); _bind_methods binds methods only, and its abstract base declares nothing either',
+  OpenXRInteractionProfileEditorBase:
+    'abstract editor tier Godot cannot instantiate; binds no ADD_PROPERTY, so it owns no key to validate',
   Panel: 'draws only its theme stylebox',
   PanelContainer: 'draws only its theme stylebox',
   PhysicsBody2D: 'its one member, input_pickable, is overrides=CollisionObject2D',

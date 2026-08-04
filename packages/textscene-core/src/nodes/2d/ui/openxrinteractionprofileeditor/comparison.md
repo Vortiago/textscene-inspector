@@ -1,0 +1,53 @@
+---
+type: OpenXRInteractionProfileEditor
+category: 2D
+status: unimplemented
+fixture: unit-open-xr-interaction-profile-editor.tscn
+# image: unit-open-xr-interaction-profile-editor
+renders_as: invisible transform-only fallback; editor-only UI that no exported game scene ever instantiates
+---
+
+# OpenXRInteractionProfileEditor
+
+Godot compiles this only into editor builds (`TOOLS_ENABLED`) and instantiates it as the fallback tab of the OpenXR Action Map dock (`OpenXRActionMapEditor : EditorDock`) whenever an interaction profile has no custom editor registered for it; it is never present in a game's own scene tree or an exported build. The previewer parses and validates this node but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
+
+## Properties exercised
+
+| Property | Value | Effect |
+| --- | --- | --- |
+| `modulate` | `Color(1, 1, 0.7, 1)` | tint, inherited from CanvasItem, a non-default warm-white value |
+| `layout_mode` | `1` | anchored layout mode, inherited from Control |
+| `offset_left` | `8.0` | left edge of the anchored rect, inherited from Control |
+| `offset_top` | `8.0` | top edge of the anchored rect, inherited from Control |
+| `offset_right` | `108.0` | right edge of the anchored rect, inherited from Control |
+| `offset_bottom` | `40.0` | bottom edge of the anchored rect, inherited from Control |
+
+## Divergences
+
+None visible in this fixture.
+
+## Linting
+
+<!-- lint:begin OpenXRInteractionProfileEditor -->
+Strict parsing format-checks the inherited set (1 inherited from BoxContainer, 26 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `OpenXRInteractionProfileEditor` declares none of its own. Every validator failure is an **error**. `OpenXRInteractionProfileEditor` also REFUSES `vertical`, which its base declares but this class cannot carry.
+
+| Property | Accepts |
+| --- | --- |
+| `vertical` | **not available on this type** |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+<!-- lint:end -->
+
+OpenXRInteractionProfileEditor registers no properties of its own by design
+(`_bind_methods` binds only methods, never `ADD_PROPERTY`, on this class and its
+abstract base). Every property a scene author can set on it is inherited, so the
+strict parser format-checks the whole HBoxContainer/Control/CanvasItem set and
+rejects `vertical`, which HBoxContainer removes.
+
+A malformed value here, say `offset_right = garbage` or `modulate = Color(1)`, is
+silently dropped by the lenient parser: `parseOptionalFloat` and
+`parseColorOrUndefined` return `undefined`, so the property is simply absent from
+the parsed props with no diagnostic and no crash. Only the strict parser catches
+it, through the inherited Control/CanvasItem validators reached by the base-walk.

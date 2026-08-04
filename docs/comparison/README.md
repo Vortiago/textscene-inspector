@@ -211,6 +211,11 @@ reproduced:
 - [HFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/hflowcontainer/comparison.md) — nothing yet; a FlowContainer fixed to wrap in rows
 - [TabContainer](../../packages/textscene-core/src/nodes/2d/ui/tabcontainer/comparison.md) — nothing yet; shows one child at a time behind a tab strip
 - [VFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/vflowcontainer/comparison.md) — nothing yet; a FlowContainer fixed to wrap in columns
+- [ColorPicker](../../packages/textscene-core/src/nodes/2d/ui/colorpicker/comparison.md) — nothing yet; the full colour-selection panel
+- [GraphFrame](../../packages/textscene-core/src/nodes/2d/ui/graphframe/comparison.md) — nothing yet; a titled frame grouping graph nodes
+- [GraphNode](../../packages/textscene-core/src/nodes/2d/ui/graphnode/comparison.md) — nothing yet; a graph node with per-child connection slots
+- [OpenXRBindingModifierEditor](../../packages/textscene-core/src/nodes/2d/ui/openxrbindingmodifiereditor/comparison.md) — nothing yet; editor-only UI, absent from game scenes
+- [OpenXRInteractionProfileEditor](../../packages/textscene-core/src/nodes/2d/ui/openxrinteractionprofileeditor/comparison.md) — nothing yet; editor-only UI, absent from game scenes
 
 - [VSlider](../../packages/textscene-core/src/nodes/2d/ui/vslider/comparison.md) — a vertical track with a round grabber
 - [VSplitContainer](../../packages/textscene-core/src/nodes/2d/ui/vsplitcontainer/comparison.md) — two children stacked, split at a computed offset

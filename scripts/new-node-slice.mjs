@@ -305,15 +305,25 @@ function parseArgs(argv) {
  * is correct: there is no tier to reach.
  */
 function parentLinterParser(typeName, parentType, sliceDir, fallback) {
-  /** Directory of the linterParser that calls `registerAll('<type>')`, if one does. */
+  /**
+   * Directory of the linterParser that registers anything for `<type>`.
+   *
+   * `registerUnavailable` counts. A class whose whole relationship to its base
+   * is subtractive, like `HBoxContainer` fixing the orientation `BoxContainer`
+   * exposes, calls ONLY that: matching `registerAll` alone stepped past it and
+   * the generated slice never loaded the removal.
+   */
   const ownerOf = (type) => {
-    const needle = `registerAll('${type}'`;
+    const needles = [`registerAll('${type}'`, `registerUnavailable('${type}'`];
     const found = [];
     (function walk(dir) {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const full = join(dir, entry.name);
         if (entry.isDirectory()) walk(full);
-        else if (entry.name === 'linterParser.ts' && readFileSync(full, 'utf8').includes(needle)) {
+        else if (
+          entry.name === 'linterParser.ts' &&
+          needles.some((needle) => readFileSync(full, 'utf8').includes(needle))
+        ) {
           found.push(dirname(full));
         }
       }
@@ -753,10 +763,10 @@ import './index';
 import './index.r3f';
 
 describe('${typeName} registration', () => {
-  it('registers the ${base.component} base parser', () => {
+  it('registers the ${reusedParser.fn} parse it reuses', () => {
     const registration = nodeRegistry.getRegistration('${typeName}');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(${base.parser});
+    expect(registration!.parser).toBe(${reusedParser.fn});
   });
 
   it('reuses the ${base.component} component so children keep their transform space', () => {
@@ -787,10 +797,10 @@ import { ${reusedParser.fn} } from '${reusedParser.importPath}';
 import './index';
 
 describe('${typeName} registration', () => {
-  it('registers the ${base.component} base parser', () => {
+  it('registers the ${reusedParser.fn} parse it reuses', () => {
     const registration = nodeRegistry.getRegistration('${typeName}');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(${base.parser});
+    expect(registration!.parser).toBe(${reusedParser.fn});
   });
 
   it('registers no render component, so it still reads as not implemented', () => {

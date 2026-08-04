@@ -578,7 +578,7 @@
       "name": "ColorPicker",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VBoxContainer",
         "BoxContainer",
@@ -1185,7 +1185,7 @@
       "name": "GraphFrame",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GraphElement",
         "Container",
@@ -1201,7 +1201,7 @@
       "name": "GraphNode",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GraphElement",
         "Container",
@@ -1918,7 +1918,7 @@
       "name": "OpenXRBindingModifierEditor",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "PanelContainer",
         "Container",
@@ -1989,7 +1989,7 @@
       "name": "OpenXRInteractionProfileEditor",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "OpenXRInteractionProfileEditorBase",
         "HBoxContainer",
