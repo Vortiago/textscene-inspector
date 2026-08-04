@@ -22,10 +22,25 @@ import type { Rect2 } from '../rect';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
-/** The environment half of a painter's props — theme, measurer, child rects. */
+/**
+ * The environment half of a painter's props — theme, measurer, child rects,
+ * and the post-subtree chrome draw order.
+ *
+ * `subtreeChromeRenderOrder` defaults to `0` — the value the walker derives
+ * for a childless Control at paint index 0 — because only the painters with
+ * `INTERNAL_MODE_BACK`-style chrome read it at all, and one of those asserting
+ * draw order overrides it explicitly. It belongs here rather than being made
+ * optional on the contract: an absent value there would let a painter silently
+ * fall back to its own `renderOrder` and draw its chrome under its own subtree.
+ */
 export function painterEnv(): Pick<
   NativeControlComponentProps,
-  'theme' | 'measureText' | 'childRects'
+  'theme' | 'measureText' | 'childRects' | 'subtreeChromeRenderOrder'
 > {
-  return { theme: nativeTheme(1), measureText: null, childRects: NO_CHILD_RECTS };
+  return {
+    theme: nativeTheme(1),
+    measureText: null,
+    childRects: NO_CHILD_RECTS,
+    subtreeChromeRenderOrder: 0,
+  };
 }

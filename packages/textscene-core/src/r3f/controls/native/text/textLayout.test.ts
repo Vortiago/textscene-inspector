@@ -125,6 +125,35 @@ describe('shapeText — glyph pen positions', () => {
   });
 });
 
+describe('shapeText — a character outside the baked charset', () => {
+  it(
+    'still advances the pen by the font\'s own OS/2 xAvgCharWidth fallback (9.484375px at size 16: ' +
+      '1214 * 16/2048, an independent literal — openSansMetrics.ts\'s OPEN_SANS_METRICS.averageAdvanceUnits ' +
+      'is 1214, unitsPerEm 2048) rather than collapsing to a zero-width gap; the placement still carries ' +
+      'no atlas glyph, so it draws no ink, only occupies its own width',
+    () => {
+      // GREEK CAPITAL LETTER OMEGA (U+03A9) — outside ASCII, Latin-1 Supplement,
+      // and the individually-baked punctuation set; a character the vendored
+      // font itself could shape but this atlas never bakes. Chosen deliberately:
+      // nothing in Godot's own defaults or this repo's scene fixtures needs it,
+      // so it stands in for "some future unbaked codepoint" to pin the FALLBACK
+      // MECHANISM itself, not a specific known gap — unlike a test that asserts
+      // a character Godot's own default theme actually uses draws nothing,
+      // baking Omega would make this test wrong BY DESIGN (glyph would stop
+      // being null), so don't "fix" it by adding Omega to the charset; pick a
+      // different still-unbaked character instead if this ever needs re-proving.
+      const layout = shapeText('AΩB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+      const [a, omega, b] = layout.lines[0]!.glyphs;
+      expect(omega!.glyph).toBeNull();
+      expect(omega!.advance).toBeCloseTo(9.484375, 10);
+      // 'A's own advance is unaffected, and 'B's pen x sits right after the
+      // fallback advance — the fallback is folded into the running sum exactly
+      // like every baked glyph's own advance is.
+      expect(b!.x).toBeCloseTo(a!.advance + omega!.advance, 10);
+    }
+  );
+});
+
 describe('shapeText — kerning plumbing', () => {
   // OpenSans_SemiBold carries only mark/mkmk GPOS features -- zero ASCII kern
   // pairs -- but the table must still be wired in generically (per packet P10's

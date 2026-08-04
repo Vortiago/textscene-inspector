@@ -115,6 +115,11 @@ function ControlNodeGroup({
   // see `controlDrawOrder.ts` for why this replaces a z offset entirely.
   const layer = useCanvasLayerIndex();
   const renderOrder = controlRenderOrder(layer, solvedEntry?.paintIndex ?? 0);
+  // Second draw-order key, for chrome that must draw after this node's WHOLE
+  // subtree (Godot's `INTERNAL_MODE_BACK` — see `NativeControlComponentProps.
+  // subtreeChromeRenderOrder`'s own doc for why). Same band, but keyed off
+  // the LAST paint index in this node's own subtree rather than its own.
+  const subtreeChromeRenderOrder = controlRenderOrder(layer, solvedEntry?.subtreeLastPaintIndex ?? 0);
 
   const rotation = props.rotation ?? 0;
   const scaleX = props.scale?.x ?? 1;
@@ -163,6 +168,7 @@ function ControlNodeGroup({
       solveNode={solveNode}
       rect={rect}
       renderOrder={renderOrder}
+      subtreeChromeRenderOrder={subtreeChromeRenderOrder}
       theme={theme}
       measureText={measureText}
       childRects={childRects}
@@ -175,6 +181,7 @@ function ControlNodeGroup({
         solveNode={solveNode}
         rect={rect}
         renderOrder={renderOrder}
+        subtreeChromeRenderOrder={subtreeChromeRenderOrder}
         theme={theme}
         measureText={measureText}
         childRects={childRects}

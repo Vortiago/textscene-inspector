@@ -22,6 +22,7 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { OPEN_SANS_ATLAS_INFO, OPEN_SANS_ATLAS_PNG_DATA_URL } from './openSansAtlas';
+import { getAscentPx } from './openSansMetrics';
 import { createMsdfMaterial } from './msdfMaterial';
 import type { TextLayoutResult } from './textLayout';
 import type { Color } from '../../../../nodes/base/node2d/types';
@@ -49,10 +50,21 @@ function atlasUv(x: number, y: number, width: number, height: number) {
 
 /**
  * Builds one merged quad set for `layout`, skipping any placement with no
- * atlas bitmap (whitespace, or a character outside the vendored ASCII set).
- * `skewPx` shears each vertex proportional to its distance below the line's
- * OWN top (a simple, parameterised synthesized-italic shear — not calibrated
- * against Godot pixels in this packet; see the module header).
+ * atlas bitmap (whitespace, or a character outside the baked charset).
+ *
+ * `skew` shears each vertex around the line's BASELINE, not its top edge:
+ * Godot applies its synthesized-italic `Transform2D` via FreeType's
+ * `FT_Outline_Transform` (`modules/text_server_adv/text_server_adv.cpp:
+ * 1318-1320`, `:3621-3623`) directly on the glyph outline `FT_Load_Glyph`
+ * just loaded — that outline's own coordinate origin is the glyph's baseline
+ * pen position, so the shear pivots there (every glyph on a line shares the
+ * same baseline Y, so "pivot at the glyph's own origin" and "pivot at the
+ * line's baseline" are the same transform). Pivoting at the line's TOP edge
+ * instead (as this used to) shifts an ascender-height vertex LEFT rather than
+ * right, and shifts even a baseline-touching vertex left by a whole line's
+ * worth of height — for a styled run mid-paragraph (RichTextLabel's `[i]`),
+ * that eats into the space that precedes the run and opens a gap that
+ * shouldn't exist after it, without changing any glyph's own pen `x`.
  */
 export function buildGlyphQuadArrays(
   layout: TextLayoutResult,
@@ -60,6 +72,7 @@ export function buildGlyphQuadArrays(
   skew = 0
 ): GlyphQuadArrays {
   const scale = fontSizePx / OPEN_SANS_ATLAS_INFO.fontSize;
+  const baselineOffsetPx = getAscentPx(fontSizePx);
 
   let glyphCount = 0;
   for (const line of layout.lines) {
@@ -84,7 +97,8 @@ export function buildGlyphQuadArrays(
       const rightPx = leftPx + glyph.width * scale;
       const bottomPx = topPx + glyph.height * scale;
 
-      const dx = (yPx: number): number => -skew * (yPx - lineTopPx);
+      const baselinePx = lineTopPx + baselineOffsetPx;
+      const dx = (yPx: number): number => -skew * (yPx - baselinePx);
       const tl: [number, number] = [leftPx + dx(topPx), topPx];
       const tr: [number, number] = [rightPx + dx(topPx), topPx];
       const bl: [number, number] = [leftPx + dx(bottomPx), bottomPx];

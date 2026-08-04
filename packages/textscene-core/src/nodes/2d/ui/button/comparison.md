@@ -30,8 +30,8 @@ Measured on Godot 4.6.3, `pnpm ref:godot scenes/fixtures/unit-button.tscn --mode
 
 | Probe | What it is | Godot | Ours |
 | --- | --- | --- | --- |
-| (583, 370) | a solid stroke of the **Disabled** label | rgb(142, 142, 142) | rgb(125, 125, 125) |
-| (544, 362) | the same stroke where Godot's glyph sits | rgb(142, 142, 142) | rgb(88, 88, 88) |
+| (583, 370) | a solid stroke of the **Disabled** label | rgb(142, 142, 142) | rgb(142, 142, 142) |
+| (544, 362) | the same stroke where Godot's glyph sits | rgb(142, 142, 142) | rgb(127, 127, 127) |
 | (519, 308) | **Styled**'s top-left corner arc, one row into our rect | rgb(51, 128, 89) | rgb(64, 102, 83) |
 
 Chrome colours are exact. The unthemed **Click Me** fill is the default theme's
@@ -42,22 +42,33 @@ rgb(61, 61, 61) disabled StyleBox on both. Both labels sit in the same place to
 within a pixel: **Click Me**'s ink spans x 544..606, y 274..285 in Godot and
 x 544..607, y 273..286 here.
 
-**Two things still differ, and they are the same two on every widget sheet.**
-
-The **disabled label's tint** is rgb(125, 125, 125) against Godot's
-rgb(142, 142, 142). The colour fed to the draw is right — `font_disabled_color` is
+**CLOSED — the disabled label's tint is Godot's.** It reads rgb(142, 142, 142) at
+(583, 370) on both sides now, against rgb(125, 125, 125) before. The colour fed to
+the draw was always right — `font_disabled_color` is
 `control_font_color × Color(1, 1, 1, 0.5)`, and Godot's 142 is exactly
-`223 × 0.5 + 61 × 0.5` over the disabled fill. Ours is exactly `188 × 0.5 + 61 × 0.5`,
-because the glyph run writes its linearised colour into an sRGB target: 188 is
+`223 × 0.5 + 61 × 0.5` over the disabled fill. Ours came out `188 × 0.5 + 61 × 0.5`
+because the glyph run wrote its linearised colour into an sRGB target, and 188 is
 `255 × srgbToLinear(0.875)`. The Control sheet has the mechanism.
 
-**Every button is taller than Godot's.** All three carry authored offsets 32 px
-apart, and Godot keeps that: **Click Me** spans y 264..295 and **Disabled**
-y 352..383. Here both are 34 px, grown by the minimum size. **Styled** is the clean
-reading, because its own StyleBox sets `content_margin_top/bottom = 6`: Godot's rect
-is 35 px (12 + a 23 px font height), ours 38 (12 + 26). The 3 px is Label's
-`line_spacing` default leaking into the shared text measurer — see the Control sheet,
-which measures the same 3 px per row on a whole stack.
+**CLOSED — button heights are Godot's.** All three carry authored offsets 32 px
+apart, and both engines now keep that: **Click Me** spans y 264..295 and
+**Disabled** y 352..383, identically. **Styled** is the clean reading, because its
+own StyleBox sets `content_margin_top/bottom = 6`: Godot's rect is 35 px
+(12 + a 23 px font height), and ours is now 35 too, where it was 38 (12 + 26). The
+3 px was Label's `line_spacing` default leaking into the shared text measurer —
+see the Control sheet, which measures the same term per row on a whole stack.
+
+Two smaller things still differ.
+
+**Styled sits one row low**: y 308..342 here against Godot's y 307..341. The height
+is right and the other two buttons are on Godot's exact rows, so this is a
+placement term specific to a button carrying its own StyleBox content margins, not
+the minimum size.
+
+**A glyph's edge pixels part where its stroke lands mid-pixel**: probe (544, 362)
+reads rgb(127, 127, 127) against Godot's rgb(142, 142, 142) while (583, 370), a
+solid interior stroke, matches exactly. That is the horizontal advance drift the
+RichTextLabel sheet records, sampled at an antialiased edge.
 
 ## Native (WebGL canvas) painter
 
@@ -88,10 +99,11 @@ Measured against real Godot 4.6.3 — `pnpm ref:godot scenes/fixtures/unit-butto
 alpha-blended at 0.5 over the disabled StyleBox's own fill (rgb(61, 61, 61)):
 `223 × 0.5 + 61 × 0.5 = 142`. The native painter feeds `<TextRun>` the identical
 `{0.875, 0.875, 0.875, 0.5}` colour, tinted by `self_modulate`/ambient `modulate`
-like every other draw call this painter makes — so the ALPHA half of that number is
-right, and the same probe on our side reads `rgb(125, 125, 125)`, which is the same
-0.5 blend over the same fill with 188 in place of 223. What is left is the
-sRGB-encode gap the Divergences section above measures, not the theme lookup.
+like every other draw call this painter makes — so the ALPHA half of that number
+was always right. The same probe on our side used to read `rgb(125, 125, 125)`,
+the same 0.5 blend over the same fill with 188 in place of 223; it now reads
+`rgb(142, 142, 142)`, Godot's own value. What closed it was the sRGB-encode gap
+the Divergences section above measures, never the theme lookup.
 
 ### StyleBox corner anti-aliasing: present, but not Godot's
 

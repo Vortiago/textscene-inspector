@@ -180,7 +180,24 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
     });
     expect(result.contentRect).toEqual({ x: 4, y: 4, w: 192, h: 22 });
     expect(result.textOffset.x).toBe(4);
-    expect(result.textOffset.y).toBeCloseTo((22 - 23) / 2 + originCorrectionPx(16), 6);
+    // y_ofs = style->get_offset().y + (y_area - text_height) / 2 (line_edit.cpp:1427), truncated
+    // toward zero on assignment to `int y_ofs`: trunc(4 + (22 - 23) / 2) = trunc(3.5) = 3.
+    expect(result.textOffset.y).toBeCloseTo(3 + originCorrectionPx(16), 6);
+  });
+
+  it('y_ofs includes the ACTIVE style\'s own TOP margin — `style->get_offset().y` (style_box.cpp:87-89) — not just the text/area centring term', () => {
+    // A margin-heavy style shifts y_ofs down by (its own top margin), even though the
+    // centring term (y_area - text_height)/2 is identical to the LEFT case above.
+    const result = layoutLineEditContent({
+      rectSize: { x: 200, y: 38 },
+      styleMargin: { left: 4, top: 12, right: 4, bottom: 4 },
+      alignment: 0,
+      textWidthPx: 50,
+      textHeightPx: 23,
+      fontSizePx: 16,
+    });
+    // y_area = trunc(38 - 12 - 4) = 22; y_ofs = trunc(12 + (22 - 23) / 2) = trunc(11.5) = 11.
+    expect(result.textOffset.y).toBeCloseTo(11 + originCorrectionPx(16), 6);
   });
 
   it('FILL shares LEFT\'s branch exactly (line_edit.cpp:1398-1399 falls through the same case)', () => {

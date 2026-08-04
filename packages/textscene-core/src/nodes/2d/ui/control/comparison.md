@@ -48,28 +48,40 @@ the four rows above it is 3 px taller here.
 the checked plate reads rgb(210, 210, 210) and its tick rgb(26, 26, 26) on both
 sides. See the CheckBox sheet.
 
-**Row pitch now over-runs Godot instead of under-running it: 38 px against 35.**
-The indicator icons' top edges land at y 8 / 43 / 78 / 113 in Godot and
-10 / 48 / 86 / 124 here, and the dropdown bar spans y 140..170 (31 px) against
-152..185 (34 px) — the `VBoxContainer` separation is 4 on both sides, so the
-whole gap is 3 px per ROW, not per gap. It is one arithmetic error, not a metric
-difference: `Button::get_minimum_size` floors a row at
-`font->get_height(font_size)` plus the stylebox's content margins, which for the
-default theme's Open Sans at 16 px is 23 + 8 = 31. Our shared text measurer
-(`native/text/measurer.ts` → `shapeText`) leaves `lineSpacingPx` at its default
-3 — Label's `line_spacing` theme constant — so every non-Label widget asks for
-26 + 8 = 34. The Button sheet isolates the same 3 px on a button whose own
-`content_margin_top/bottom = 6` makes Godot's total exactly 12 + 23 = 35.
+**CLOSED — row pitch is 35 px, Godot's own, and every row now lands on Godot's
+exact pixel.** It used to over-run at 38. A vertical transect down the indicator
+column reads identically on both sides:
 
-**A non-white font colour draws too dark.** `control_font_color` is
-`Color(0.875, 0.875, 0.875)`, which Godot rasterises at rgb(223, 223, 223); the
-same label peaks at rgb(188, 188, 188) here, and 188 is `255 ×
-srgbToLinear(0.875)` to the pixel. White text is the fixed point of that curve
-and matches exactly — "CHECKED BOX" peaks at rgb(255, 255, 255) on both sides.
-`TextRun` linearises its tint before handing it to `msdfMaterial`, whose
-fragment source assigns `gl_FragColor` with no output-colour-space encode, so
-the linear value is written straight into an sRGB target. Every text divergence
-on the other UI sheets that is a pure grey shift is this one.
+| Transect | Godot | Ours, before | Ours, now |
+| --- | --- | --- | --- |
+| indicator ink runs, col 12 | 8..21 / 43..56 / 78..91 / 113..126 | tops at 10 / 48 / 86 / 124 | 8..21 / 43..56 / 78..91 / 113..126 |
+| the dropdown bar | y 140..170 (31 px) | y 152..185 (34 px) | y 140..170 (31 px) |
+
+It was one arithmetic error, not a metric difference. `Button::get_minimum_size`
+floors a row at `font->get_height(font_size)` plus the stylebox's content
+margins, which for the default theme's Open Sans at 16 px is 23 + 8 = 31. The
+shared text measurer (`native/text/measurer.ts` → `shapeText`) was left at
+`lineSpacingPx` 3 — Label's OWN `line_spacing` theme constant — so every
+non-Label widget asked for 26 + 8 = 34. `line_spacing` separates lines a Button
+never stacks; the measurer now takes it from the caller and a single line never
+carries a trailing gap.
+
+**CLOSED — a non-white font colour draws at Godot's value.**
+`control_font_color` is `Color(0.875, 0.875, 0.875)`, which Godot rasterises at
+rgb(223, 223, 223). The OptionButton's label peaked at rgb(188, 188, 188) here,
+and 188 is `255 × srgbToLinear(0.875)` to the pixel; it now peaks at
+rgb(223, 223, 223), the same value, over a comparable count of pixels (263 in
+Godot, 249 here across the same band).
+
+The cause is worth keeping on record, because it is the reason this sheet was
+the only one that could see it. `TextRun` linearises its tint before handing it
+to `msdfMaterial`, whose fragment source assigned `gl_FragColor` with no
+output-colour-space encode — every built-in three material ends with
+`colorspace_fragment` (`linearToOutputTexel`); a hand-written shader gets one
+only if it asks. So a linear value went straight into an sRGB target. White is
+the fixed point of that curve, so every white-text check — including Label's
+own sheet, whose theme colour really is white — matched perfectly while every
+other colour was one transfer function too dark.
 
 ## Linting
 

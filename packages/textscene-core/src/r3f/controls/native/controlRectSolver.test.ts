@@ -205,6 +205,61 @@ describe('solveControlTree — paintIndex is pre-order with siblings pre-sorted 
   });
 });
 
+describe('solveControlTree — subtreeLastPaintIndex (INTERNAL_MODE_BACK chrome ordering)', () => {
+  // `scene/gui/scroll_container.cpp:919,924` adds `h_scroll`/`v_scroll` via
+  // `Node::add_child(..., INTERNAL_MODE_BACK)` — internal children placed
+  // AFTER every normal child, so they paint last regardless of when they were
+  // added. `subtreeLastPaintIndex` is the plain pre-order fact a consumer
+  // needs to reproduce that: the paint index of the LAST node visited within
+  // this node's own subtree (itself, for a leaf).
+  it("a leaf's subtreeLastPaintIndex equals its own paintIndex", () => {
+    const leaf = node('Leaf', 'Control', {});
+    const solved = solveControlTree([leaf], VIEWPORT, ctx());
+    const entry = solved.get('Leaf')!;
+    expect(entry.paintIndex).toBe(0);
+    expect(entry.subtreeLastPaintIndex).toBe(0);
+  });
+
+  it("a parent's subtreeLastPaintIndex is the deepest/last descendant's own paintIndex", () => {
+    const grandchild = node('Root/Child/Grandchild', 'Control', {});
+    const child = node('Root/Child', 'Control', {}, [grandchild]);
+    const root = node('Root', 'Control', {}, [child]);
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+
+    // Pre-order: Root=0, Child=1, Grandchild=2.
+    expect(solved.get('Root/Child/Grandchild')?.paintIndex).toBe(2);
+    expect(solved.get('Root')?.subtreeLastPaintIndex).toBe(2);
+    expect(solved.get('Root/Child')?.subtreeLastPaintIndex).toBe(2);
+    expect(solved.get('Root/Child/Grandchild')?.subtreeLastPaintIndex).toBe(2);
+  });
+
+  it('reorders by z_index before assigning paint indices, and subtreeLastPaintIndex tracks the SORTED last child', () => {
+    // Authored [First, Second] but First has the higher z_index, so it sorts
+    // AFTER Second (canvas_item.h:101) — the parent's subtreeLastPaintIndex
+    // must follow the sorted order, not authoring order.
+    const first = node('Root/First', 'Control', { zIndex: 5 });
+    const second = node('Root/Second', 'Control', { zIndex: 0 });
+    const root = node('Root', 'Control', {}, [first, second]);
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+
+    // Sorted [Second, First]: Root=0, Second=1, First=2.
+    expect(solved.get('Root/Second')?.paintIndex).toBe(1);
+    expect(solved.get('Root/First')?.paintIndex).toBe(2);
+    expect(solved.get('Root')?.subtreeLastPaintIndex).toBe(2);
+  });
+
+  it("the next sibling's own paintIndex is exactly one past the previous sibling's subtreeLastPaintIndex", () => {
+    const grandchild = node('Root/Child/Grandchild', 'Control', {});
+    const child = node('Root/Child', 'Control', {}, [grandchild]);
+    const root = node('Root', 'Control', {}, [child]);
+    const sibling = node('Sibling', 'Control', {});
+    const solved = solveControlTree([root, sibling], VIEWPORT, ctx());
+
+    const rootSubtreeLast = solved.get('Root')!.subtreeLastPaintIndex;
+    expect(solved.get('Sibling')?.paintIndex).toBe(rootSubtreeLast + 1);
+  });
+});
+
 describe('solveControlTree — unregistered types are leaves with minimum size (0, 0)', () => {
   it('combinedMinimumSize is (0,0) for a type with no registration and no custom_minimum_size', () => {
     const n = node('Leaf', 'ThisTypeIsNotRegistered', {});

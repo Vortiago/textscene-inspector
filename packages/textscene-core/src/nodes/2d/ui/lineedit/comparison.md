@@ -43,31 +43,54 @@ condition Godot evaluates: `LineEdit::_validate_caret_can_draw()` sets
 holding focus, and a static preview has neither — so a caret would be the
 divergence.
 
-Three things do differ. Measured on Godot 4.6.3, `pnpm ref:godot
+Both of the things that used to differ here are now closed; what is left is one
+probe landing on an antialiased stroke edge. Measured on Godot 4.6.3, `pnpm ref:godot
 scenes/fixtures/unit-lineedit.tscn --mode 2d --probe <x,y>` against `pnpm
 ref:ours unit-lineedit.tscn --2d --probe <x,y>`:
 
 | Probe | What it is | Godot | Ours |
 | --- | --- | --- | --- |
-| (30, 125) | the first of `Secret`'s seven bullets | rgb(223, 223, 223) | rgb(45, 45, 45) |
-| (33, 77) | a stroke of `Ada Lovelace`, at Godot's baseline | rgb(223, 223, 223) | rgb(45, 45, 45) |
+| (30, 125) | the first of `Secret`'s seven bullets — CLOSED, see below | rgb(223, 223, 223) | rgb(223, 223, 223) |
+| (33, 77) | a stroke of `Ada Lovelace`, at Godot's baseline | rgb(223, 223, 223) | rgb(128, 128, 128) |
 
-**The secret echo draws nothing.** Godot paints seven `•` (U+2022) at
-x 29..68, y 123..127 — 126 px of ink; the baked MSDF atlas covers printable
-ASCII only, so the bullet has no glyph and the field comes out empty. The
-plaintext is correctly not drawn, which is the property the fixture exists to
-pin, but the echo that replaces it is missing.
+**CLOSED: the secret echo now draws.** Previously the baked MSDF atlas covered
+printable ASCII only, so the DEFAULT `secret_character` — `•` (U+2022) — had no
+glyph and the field came out empty (BEFORE: Godot 126 px of bullet ink at
+x 29..68, y 123..127; ours drew none, probe (30, 125) read rgb(45, 45, 45), the
+background). The atlas now bakes `•` (`scripts/fonts/bake-metrics.mjs`'s
+`EXTRA_CODEPOINTS`, cited to `line_edit.cpp:3094`'s own default), and the
+echo draws (AFTER, this fixture: Godot's bullet ink spans x 29..68,
+y 123..127; ours spans x 29..68, y 124..128 — a 1 px vertical residual at the
+ink's faint edge only, described under the native painter below; probe
+(30, 125) now reads rgb(223, 223, 223) on both sides).
 
-**The text sits 5 px too high in its box.** `Ada Lovelace`'s ink starts at row
-77 in Godot and row 72 here; `Flat, no stylebox` runs y 206..221 against
-y 201..217, with the identical x span 29..153; `Centred` runs y 249..260 against
-244..257. The horizontal placement is right — the centred run lands within 2 px
-of Godot's — so this is the vertical term of `LineEdit`'s own text offset, not
-the shaping.
+That (33, 77) row is the one probe in this table that still parts. It reads
+rgb(128, 128, 128) here against Godot's rgb(223, 223, 223) — a half-covered
+pixel at a stroke edge, not the background it used to read, so the glyph is
+present and its run sits on Godot's rows (y 77..88 on both sides). What moves it
+is the horizontal advance drift the RichTextLabel sheet records, which lands a
+stroke edge a fraction off and so lands this single probe mid-antialias.
 
-**Font colour is one sRGB transfer function too dark**, as on every text
-Control: the full-colour runs peak at rgb(188, 188, 188) here against Godot's
-rgb(223, 223, 223). The Control sheet has the mechanism.
+**CLOSED — the text sits on Godot's own rows.** It used to sit 5 px too high.
+Every run in the fixture now matches to the pixel:
+
+| Run | Godot | Ours, before | Ours, now |
+| --- | --- | --- | --- |
+| `Ada Lovelace` | y 77..88 | starts at row 72 | y 77..88 |
+| the secret echo | y 124..127 | drew nothing at all | y 124..127 |
+| `Flat, no stylebox` | y 206..221 | y 201..217 | y 206..221 |
+| `Centred` | y 249..260 | y 244..257 | y 249..260 |
+
+The horizontal placement was already right, which localised it to the vertical
+term of `LineEdit`'s own text offset rather than the shaping. `line_edit.cpp`'s
+`int y_ofs = style->get_offset().y + (y_area - text_height) / 2` adds the ACTIVE
+style's TOP margin — `StyleBox::get_offset()` is
+`Point2(get_margin(SIDE_LEFT), get_margin(SIDE_TOP))` — and that term was
+missing here entirely, as was the truncation of the sum toward zero.
+
+**CLOSED — font colour lands on Godot's value**, as on every text Control: the
+full-colour runs peak at rgb(223, 223, 223) on both sides now, where they used
+to peak at rgb(188, 188, 188). The Control sheet has the mechanism.
 
 ## Native (WebGL canvas) painter
 
@@ -85,18 +108,24 @@ own `normal`/`read_only` StyleBoxFlat structs (`widgets.lineEdit`) as part of
 this packet — no earlier packet needed them. As with every native painter
 shipped so far, this is a static-viewer draw: no caret, no selection, no IME.
 
-### Known, deliberate gap: the default secret bullet has no atlas glyph
+### CLOSED: the default secret bullet now has an atlas glyph
 
-`secret`'s substitution logic is exact (`displayText.ts`'s `lineEditDisplayText`,
-independently unit-tested), but the vendored Open Sans atlas
-(`r3f/controls/native/text/openSansAtlas.ts`) only bakes printable ASCII —
-`•` (U+2022), the DEFAULT `secret_character`, is not among them. A secret
-field that never overrides `secret_character` therefore echoes a run of
-GLYPHS THAT DRAW NOTHING (zero quads, verified in `Component.test.tsx`) —
-invisible rather than wrong, but still a gap: an ASCII override (e.g. `*`)
-renders correctly. Measured against the engine: Godot puts 126 px of bullet ink
-at x 29..68, y 123..127 on this fixture's `Secret` field, ours puts none.
-Closing it would mean adding `•` to the baked atlas.
+`secret`'s substitution logic was always exact (`displayText.ts`'s
+`lineEditDisplayText`, independently unit-tested) — the gap was purely that
+the vendored Open Sans atlas only baked printable ASCII, so `•` (U+2022), the
+DEFAULT `secret_character`, had no entry: a secret field that never overrides
+`secret_character` echoed a run of glyphs that drew zero quads, invisible
+rather than wrong, but still a gap (an ASCII override like `*` always
+rendered correctly). `scripts/fonts/bake-metrics.mjs` now bakes `•` (cited to
+`line_edit.cpp:3094`'s own default), closing it: Godot's 126 px of bullet ink
+at x 29..68, y 123..127 on this fixture's `Secret` field is now matched by
+ours, x 29..68, y 124..128 — a 1 px vertical residual on the glyph itself, not
+on the box's text offset, which is closed and puts all four of this fixture's
+runs on Godot's exact rows. It is visible only at the ink's faint edge: at a
+threshold that takes the glyph's core, both sides read y 124..127 exactly. That
+makes it a glyph-origin term (where a baked glyph's own `yoffset` anchors
+against the line box), the same family as the whole-line advance drift the
+RichTextLabel sheet records, and not a bullet-specific gap.
 
 ## Linting
 

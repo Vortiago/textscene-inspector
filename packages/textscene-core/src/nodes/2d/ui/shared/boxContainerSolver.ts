@@ -84,22 +84,37 @@ export function resortBoxContainer(
 ): Rect2[] {
   if (children.length === 0) return [];
 
+  // Size2i new_size = get_size(); (box_container.cpp:47) — truncated toward zero on
+  // assignment to Size2i. Every rect this solve produces, on BOTH axes, is built from
+  // this truncated pair (not the full-precision content rect `resortBoxContainer` was
+  // called with) — including the CROSS axis, which the final placement loop reads
+  // straight off it below.
+  const size = { width: Math.trunc(containerSize.width), height: Math.trunc(containerSize.height) };
+
   // First pass (:57-84): combined minimum size + which children want to stretch.
   const cache: MinSizeCache[] = children.map((c) => {
-    const minSize = vertical ? c.minSize.y : c.minSize.x;
+    // Size2i size = c->get_combined_minimum_size(); (:60) — same Size2i truncation, scoped
+    // to this stretch bookkeeping only. `fit_child_in_rect`'s later re-floor (this codebase's
+    // `native/controlRectSolver.ts` `dispatchChildren`, which already documents why) reads the
+    // child's OWN full-precision `minSize` instead, so `c.minSize` itself is never mutated.
+    const minSize = Math.trunc(vertical ? c.minSize.y : c.minSize.x);
     const willStretch = vertical ? hasFlag(c.vSizeFlags, SIZE_EXPAND) : hasFlag(c.hSizeFlags, SIZE_EXPAND);
     return { minSize, willStretch, finalSize: minSize };
   });
 
   const stretchMin = cache.reduce((sum, m) => sum + m.minSize, 0);
   let stretchAvail = cache.filter((m) => m.willStretch).reduce((sum, m) => sum + m.minSize, 0);
-  let stretchRatioTotal = children.reduce(
-    (sum, c, i) => (cache[i]!.willStretch ? sum + c.stretchRatio : sum),
-    0
-  );
+  // float stretch_ratio_total = 0.0; accumulated by `stretch_ratio_total +=
+  // c->get_stretch_ratio();` inside the SAME first-pass loop (:73) — a running float32
+  // total, not a float64 sum-then-cast; `Math.fround` after each addition reproduces the
+  // per-step 32-bit rounding.
+  let stretchRatioTotal = 0;
+  children.forEach((c, i) => {
+    if (cache[i]!.willStretch) stretchRatioTotal = Math.fround(stretchRatioTotal + c.stretchRatio);
+  });
 
-  // Stretch range (:90-97).
-  const mainAxisSize = vertical ? containerSize.height : containerSize.width;
+  // Stretch range (:90-97) — both int, built from the truncated Size2i above.
+  const mainAxisSize = vertical ? size.height : size.width;
   const stretchMax = mainAxisSize - (children.length - 1) * separation;
   const stretchDiff = Math.max(0, stretchMax - stretchMin);
   stretchAvail += stretchDiff;
@@ -111,19 +126,30 @@ export function resortBoxContainer(
   while (stretchRatioTotal > 0) {
     hasStretched = true;
     let refitSuccessful = true;
-    let error = 0; // accumulated fractional pixels, carried into whichever child crosses a whole pixel
+    // float error = 0.0; (:114) — accumulated fractional pixels, carried into whichever
+    // child crosses a whole pixel; float32 throughout, same as `stretch_ratio_total`.
+    let error = 0;
 
     for (let i = 0; i < cache.length; i++) {
       const m = cache[i]!;
       if (!m.willStretch) continue;
 
       const ratio = children[i]!.stretchRatio;
-      const finalPixelSize = (stretchAvail * ratio) / stretchRatioTotal;
-      error += finalPixelSize - Math.floor(finalPixelSize);
+      // float final_pixel_size = stretch_avail * c->get_stretch_ratio() /
+      // stretch_ratio_total; (:120-121) — `stretch_avail`(int) promotes to float32 on the
+      // multiply, `stretch_ratio_total` is itself `float`; both operations round to the
+      // nearest float32 value, exactly what a real_t build's FPU does. This single-step
+      // rounding is load-bearing: three 1/3-ish shares sum to just OVER 1 in float64 and
+      // just UNDER it in float32, so which one this port uses decides whether the carry
+      // below fires.
+      const finalPixelSize = Math.fround(Math.fround(stretchAvail * ratio) / stretchRatioTotal);
+      // error += final_pixel_size - (int)final_pixel_size; (:123) — `(int)` truncates
+      // toward zero; `finalPixelSize` is always >= 0 here, so trunc and floor agree.
+      error = Math.fround(error + (finalPixelSize - Math.trunc(finalPixelSize)));
 
       if (finalPixelSize < m.minSize) {
         m.willStretch = false;
-        stretchRatioTotal -= ratio;
+        stretchRatioTotal = Math.fround(stretchRatioTotal - ratio);
         refitSuccessful = false;
         stretchAvail -= m.minSize;
         m.finalSize = m.minSize;
@@ -168,11 +194,12 @@ export function resortBoxContainer(
       // Compensates for accumulated rounding: the last STILL-stretching child snaps to the far edge.
       to = mainAxisSize;
     }
-    const size = to - from;
+    const extent = to - from;
 
+    // `new_size` (the truncated Size2i, :182-186) supplies the CROSS-axis extent too.
     const placed: Rect2 = vertical
-      ? { x: 0, y: from, w: containerSize.width, h: size }
-      : { x: from, y: 0, w: size, h: containerSize.height };
+      ? { x: 0, y: from, w: size.width, h: extent }
+      : { x: from, y: 0, w: extent, h: size.height };
 
     const child = children[childIndex]!;
     rects[childIndex] = fitChildInRect(placed, child.minSize, child.hSizeFlags, child.vSizeFlags, rtl);

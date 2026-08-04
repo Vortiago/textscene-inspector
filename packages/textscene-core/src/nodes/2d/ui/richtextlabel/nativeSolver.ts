@@ -16,6 +16,7 @@
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { GlyphPlacement, TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
+import { getAscentPx, getUnderlinePositionPx, getUnderlineThicknessPx } from '../../../../r3f/controls/native/text/openSansMetrics';
 import type { ControlColor } from '../control/types';
 import type { RichTextLabelProperties } from './types';
 import { hasOpenTag, lastTagValue, parseBBCodeRuns, resolveBBColor } from './bbcode';
@@ -122,11 +123,13 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
 
 // --- Draw-time: the bbcode subset -> styled runs -> per-line/per-run placement ---
 
-/** One styled run of the plain (tag-stripped) text — the drawing-time counterpart of `plainTextOf`, carrying what `[b]`/`[i]`/`[color]` resolve to for this run. */
+/** One styled run of the plain (tag-stripped) text — the drawing-time counterpart of `plainTextOf`, carrying what `[b]`/`[i]`/`[u]`/`[color]` resolve to for this run. */
 export interface StyledTextRun {
   text: string;
   bold: boolean;
   italic: boolean;
+  /** `[u]` open anywhere on the tag stack (`rich_text_label.cpp:4677`'s `push_underline`) — drawn as a baseline-relative stroke, `underlineRectPx`. */
+  underline: boolean;
   color: ControlColor;
 }
 
@@ -136,17 +139,19 @@ export interface StyledTextRun {
  * (`Component.tsx`'s own header comment; ADR-0003) — a single run. With it
  * true, every run gets `[b]`/`[i]`'s boolean flags (independent, and they
  * COMBINE when nested — `rich_text_label.cpp:5452-5471`'s
- * `RTL_BOLD_ITALICS_FONT` selection) and the innermost open `[color=...]`'s
- * value resolved via `resolveBBColor`, falling back to `defaultColor`
- * (this node's own resolved theme colour) absent an override — every other
- * recognised-but-out-of-scope tag ([u]/[s]/[code]/[center]) still tokenizes
- * (so nesting stays correct) but contributes no native styling here, same as
- * an unrecognised tag.
+ * `RTL_BOLD_ITALICS_FONT` selection), `[u]`'s boolean flag (independent of
+ * both — Godot's underline is a drawn STROKE, not a font variant, so it
+ * combines freely with bold/italic/colour), and the innermost open
+ * `[color=...]`'s value resolved via `resolveBBColor`, falling back to
+ * `defaultColor` (this node's own resolved theme colour) absent an override —
+ * every other recognised-but-out-of-scope tag ([s]/[code]/[center]) still
+ * tokenizes (so nesting stays correct) but contributes no native styling
+ * here, same as an unrecognised tag.
  */
 export function styledTextRuns(props: RichTextLabelProperties, defaultColor: ControlColor): StyledTextRun[] {
   const raw = props.text ?? '';
   if (!props.bbcodeEnabled) {
-    return raw.length === 0 ? [] : [{ text: raw, bold: false, italic: false, color: defaultColor }];
+    return raw.length === 0 ? [] : [{ text: raw, bold: false, italic: false, underline: false, color: defaultColor }];
   }
 
   return parseBBCodeRuns(raw)
@@ -157,6 +162,7 @@ export function styledTextRuns(props: RichTextLabelProperties, defaultColor: Con
         text: run.text,
         bold: hasOpenTag(run.tags, 'b'),
         italic: hasOpenTag(run.tags, 'i'),
+        underline: hasOpenTag(run.tags, 'u'),
         color: colorValue !== undefined ? resolveBBColor(colorValue, defaultColor) : defaultColor,
       };
     });
@@ -197,11 +203,22 @@ export const BOLD_DISTANCE_BIAS = 0.08;
 /** See `BOLD_DISTANCE_BIAS`'s doc — `default_theme.cpp:1399`/`:1403`'s `Transform2D(1.0, 0.2, ...)` shear coefficient, transcribed exactly. */
 export const ITALIC_SKEW = 0.2;
 
+/**
+ * `default_theme.cpp:1231`: `theme->set_constant("underline_alpha", "RichTextLabel", 50)`.
+ * `rich_text_label.cpp:1237`: absent a `[u=color]` override, the stroke's
+ * colour is the run's own font colour with `.a *= underline_alpha / 100.0` —
+ * a DIMMER stroke, not a differently-coloured one. This bbcode subset has no
+ * `[u=color]` support (`bbcode.ts`'s own non-goal list), so every `[u]` run
+ * takes this default-colour, halved-alpha path.
+ */
+export const RICH_TEXT_LABEL_UNDERLINE_ALPHA = 0.5;
+
 /** One (line, contiguous-style-run) pair, ready for its own `<TextRun>`. */
 export interface RichTextRunPlacement {
   lineIndex: number;
   bold: boolean;
   italic: boolean;
+  underline: boolean;
   color: ControlColor;
   /** A single-line `TextLayoutResult` wrapper holding ONLY this run's glyphs from that line — `glyph.x` values are untouched (already this LINE's own pen-relative x), so this needs no rebasing, only the line's own wrapping `<group>` position. */
   layout: TextLayoutResult;
@@ -279,6 +296,7 @@ export function layoutRichTextRuns(
         lineIndex,
         bold: run.bold,
         italic: run.italic,
+        underline: run.underline,
         color: run.color,
         layout: soloRunLayout(plainText.slice(textStart, cursor), line.glyphs.slice(start, i), layout.linePitchPx),
       });
@@ -286,4 +304,46 @@ export function layoutRichTextRuns(
   });
 
   return placements;
+}
+
+/** A `[u]`-styled run's underline stroke rect, target-font-size px, in the SAME pen-space `TextRun`'s glyph geometry uses (Y-down, line-top-relative). */
+export interface UnderlineRectPx {
+  /** Left edge — the run's first glyph's own pen `x` (no left-side-bearing correction; matches `rich_text_label.cpp:1216-1244`'s `ul_start` sitting at the glyph's pen position, not its ink). */
+  x0: number;
+  /** Right edge — the run's last glyph's pen `x` + its own advance. */
+  x1: number;
+  /** Top edge of the stroke rect (centered on the underline y, `heightPx` tall). */
+  topPx: number;
+  heightPx: number;
+}
+
+/**
+ * `rich_text_label.cpp:1049` (`off.y += l_ascent`) puts a line's BASELINE at
+ * `getAscentPx(fontSizePx)` below its own top — the same reference point
+ * `TextRun`'s italic shear now pivots at. `:1242-1244`'s `y_off = upos` (this
+ * engine's `getUnderlinePositionPx`) offsets DOWN from that baseline to the
+ * stroke's own y, and `:1243`'s `MAX(1.0, uth * base_scale)` floors the
+ * stroke to at least 1px (`base_scale` — a UI content-scale factor this
+ * renderer does not thread through text metrics — is always its own default
+ * of 1 here, so the max only ever fires on the font's own sub-1px thickness).
+ * `draw_line`'s own width is CENTERED on the from/to segment, hence the
+ * `heightPx / 2` split either side of the stroke's y.
+ *
+ * Returns `null` for an empty glyph list — nothing to underline, same as
+ * `layoutRichTextRuns` never emitting a placement for a run with no glyphs.
+ */
+export function underlineRectPx(glyphs: readonly GlyphPlacement[], fontSizePx: number): UnderlineRectPx | null {
+  if (glyphs.length === 0) return null;
+
+  const first = glyphs[0]!;
+  const last = glyphs[glyphs.length - 1]!;
+  const centerY = getAscentPx(fontSizePx) + getUnderlinePositionPx(fontSizePx);
+  const heightPx = Math.max(1, getUnderlineThicknessPx(fontSizePx));
+
+  return {
+    x0: first.x,
+    x1: last.x + last.advance,
+    topPx: centerY - heightPx / 2,
+    heightPx,
+  };
 }

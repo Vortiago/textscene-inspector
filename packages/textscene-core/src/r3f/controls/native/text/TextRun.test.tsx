@@ -59,6 +59,32 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
     expect(topDx).not.toBe(0);
     expect(topDx).not.toBeCloseTo(bottomDx, 6);
   });
+
+  it(
+    "shears each vertex around the glyph's BASELINE, not the line's top edge — " +
+      "FreeType's FT_Outline_Transform (text_server_adv.cpp:1318-1320, :3621-3623) runs on the " +
+      "glyph outline loaded by FT_Load_Glyph, whose own coordinate origin is the glyph's baseline pen " +
+      "position, so a shear coefficient of 0.2 leaves a vertex ON the baseline unmoved and shifts a " +
+      "vertex ABOVE it (an ascender, smaller yPx) to the RIGHT — a pivot at the line's top edge instead " +
+      "(0.2 * distance below line top) would shift every ascender-height vertex LEFT, which is the " +
+      "wrong direction and (for a run boundary) eats into the space that precedes it.",
+    () => {
+      // 'A' (fontSize 16, atlas bake size 42, SCALE = 16/42): yoffset=13, height=34.
+      // topPx = 13 * (16/42) = 4.952380952...; bottomPx = topPx + 34*(16/42) = 17.90476190...
+      // ascentPx at fontSize 16 = ceil(2189 * 16/2048) = ceil(17.1015625) = 18 (getLinePitchPx's
+      // own ascent rounding, openSansMetrics.ts) — 'A' has no descender, so its bottom edge sits
+      // essentially AT the baseline (bottomPx - ascentPx ~= -0.095, not the ~17.9 a line-top pivot
+      // would use), and its top edge sits well ABOVE it (an ascender).
+      const skewed = buildGlyphQuadArrays(layoutFor('A'), 16, 0.2);
+      const straight = buildGlyphQuadArrays(layoutFor('A'), 16, 0);
+      const topDx = skewed.positions[0]! - straight.positions[0]!;
+      const bottomDx = skewed.positions[2 * 3]! - straight.positions[2 * 3]!;
+      // -0.2 * (4.952380952 - 18) = 2.609523809...
+      expect(topDx).toBeCloseTo(2.6095238, 5);
+      // -0.2 * (17.904761904 - 18) = 0.019047619...
+      expect(bottomDx).toBeCloseTo(0.0190476, 5);
+    }
+  );
 });
 
 async function renderTextRun(props: Partial<TextRunProps> = {}) {

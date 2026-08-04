@@ -122,11 +122,39 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
     expect(box.min.y).toBeCloseTo(-476.16, 1);
   });
 
-  it('gives the track renderOrder and the grabber renderOrder + 0.5', async () => {
-    const renderer = await mountFixtureScrollbar();
-    const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
-    const orders = meshes.map((m) => m.renderOrder).sort((a, b) => a - b);
-    expect(orders).toEqual([10, 10.5]);
+  it('draws both bars off subtreeChromeRenderOrder — track +0.25, grabber +0.5 — strictly above every descendant and strictly below the next sibling', async () => {
+    // `scene/gui/scroll_container.cpp:919,924` adds `h_scroll`/`v_scroll` via
+    // `INTERNAL_MODE_BACK`, which paints them AFTER the whole subtree, not at
+    // this node's own paint slot. `subtreeChromeRenderOrder` is
+    // `bandBase(layer) + subtreeLastPaintIndex` — the LAST descendant's own
+    // renderOrder — and the next sibling gets exactly one past it
+    // (`controlRectSolver.ts`'s `assignPaintIndex`), so the fractional
+    // offsets below must land strictly inside that one-wide gap.
+    const content = leaf('Scroll/Content', { customMinimumSize: { x: 399, y: 800 } });
+    const deepestDescendantOrder = 12; // stands in for subtreeLastPaintIndex's own renderOrder.
+    const renderer = await ReactThreeTestRenderer.create(
+      <ScrollContainer
+        {...painterEnv()}
+        solveNode={scrollNode({}, [content])}
+        rect={FIXTURE_RECT}
+        renderOrder={10}
+        subtreeChromeRenderOrder={deepestDescendantOrder}
+      >
+        <mesh name="deepest-descendant" renderOrder={deepestDescendantOrder}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshBasicMaterial />
+        </mesh>
+      </ScrollContainer>
+    );
+    const allMeshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
+    const descendant = allMeshes.find((m) => m.name === 'deepest-descendant')!;
+    const bars = allMeshes.filter((m) => m.name !== 'deepest-descendant');
+    const orders = bars.map((m) => m.renderOrder).sort((a, b) => a - b);
+    expect(orders).toEqual([deepestDescendantOrder + 0.25, deepestDescendantOrder + 0.5]);
+    // Strictly above every descendant this node ever draws...
+    expect(orders[0]!).toBeGreaterThan(descendant.renderOrder);
+    // ...and strictly below the next sibling's own paint slot.
+    expect(orders[1]!).toBeLessThan(deepestDescendantOrder + 1);
   });
 
   it('offsets the grabber toward the bottom when scrolled (scroll_vertical authored)', async () => {

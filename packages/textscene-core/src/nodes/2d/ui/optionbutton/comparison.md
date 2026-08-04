@@ -35,17 +35,21 @@ scenes/fixtures/unit-optionbutton.tscn --mode 2d --probe <x,y>` against
 
 The arrow's ink covers exactly 42 px in x 636..645 on both sides and peaks at
 rgb(158, 158, 158) against rgb(157, 157, 157) — the same texture at the same
-`arrow_margin`. It sits one row lower here (y 314..319 against 313..318) because
-the box is 34 px tall against Godot's 32, and the chevron is centred in it.
+`arrow_margin`. It lands on y 313..318 on both sides — it used to sit one row
+lower, at y 314..319, purely because the box was 34 px tall against Godot's 32
+and the chevron is centred in it. Closing the box height closed the chevron's
+row with it.
 
-Two things still differ, both shared with every other widget sheet:
+Every row this sheet used to record as differing is now CLOSED — see the Control
+sheet for each cause:
 
-- **The box grows past its authored rect.** The fixture's offsets make it 150x32
-  and Godot keeps that (y 300..331); ours is y 300..333, floored by a minimum
-  height that measures the font 3 px too tall. See the Control sheet.
-- **The label is too dark**: rgb(188, 188, 188) at its peak against Godot's
-  rgb(223, 223, 223), the sRGB-encode gap the Control sheet measures. The probe
-  above reads a lower pair only because the two labels sit one row apart.
+- **The box no longer grows past its authored rect.** The fixture's offsets make
+  it 150x32; a vertical transect at col 600 reads y 300..331 in Godot and
+  y 300..331 here. It used to read y 300..333, floored by a minimum height that
+  measured the font 3 px too tall.
+- **The label is no longer too dark.** It peaks at rgb(223, 223, 223) on both
+  sides now — 89 pixels at that value in Godot, 88 here, over the box's own
+  band. It used to peak at rgb(188, 188, 188), the sRGB-encode gap.
 
 ## Native (WebGL canvas) painter
 

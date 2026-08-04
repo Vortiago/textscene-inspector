@@ -58,7 +58,7 @@
  */
 
 import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO, type OpenSansGlyph } from './openSansAtlas';
-import { OPEN_SANS_METRICS, getKerningAdjustmentUnits, getLinePitchPx } from './openSansMetrics';
+import { OPEN_SANS_METRICS, getAverageAdvancePx, getKerningAdjustmentUnits, getLinePitchPx } from './openSansMetrics';
 
 /** Godot `TextServer::AutowrapMode` (`core/templates/rid.h`-adjacent enum; values match the engine's). */
 export enum AutowrapMode {
@@ -187,10 +187,18 @@ interface BreakGlyph {
   isHardBreak: boolean;
 }
 
-/** Atlas `xadvance` (bake size 42) scaled to `fontSizePx`. 0 for a character outside the vendored set. */
+/**
+ * Atlas `xadvance` (bake size 42) scaled to `fontSizePx`. A character outside
+ * the baked charset (`openSansAtlas.ts`'s own doc lists what IS baked and
+ * why) draws no ink — there is no bitmap to place — but still occupies
+ * roughly its own width via `getAverageAdvancePx` (this font's OS/2
+ * `xAvgCharWidth`, `openSansMetrics.ts`), rather than 0: a silent zero-width
+ * advance is what makes an unbaked character collapse the whole line around
+ * it instead of leaving a gap where its own ink would have been.
+ */
 function glyphAdvancePx(ch: string, fontSizePx: number): number {
   const g = OPEN_SANS_ATLAS_GLYPHS[ch];
-  if (!g) return 0;
+  if (!g) return getAverageAdvancePx(fontSizePx);
   return g.xadvance * (fontSizePx / OPEN_SANS_ATLAS_INFO.fontSize);
 }
 

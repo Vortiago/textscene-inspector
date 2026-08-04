@@ -27,8 +27,10 @@ import {
   richTextLabelTextTheme,
   styledTextRuns,
   layoutRichTextRuns,
+  underlineRectPx,
   BOLD_DISTANCE_BIAS,
   ITALIC_SKEW,
+  RICH_TEXT_LABEL_UNDERLINE_ALPHA,
 } from './nativeSolver';
 
 function node(props: Partial<RichTextLabelProperties>): SolveNode {
@@ -151,7 +153,7 @@ describe('styledTextRuns', () => {
 
   it('bbcode disabled: one literal run, no styling, even if it contains bracket characters', () => {
     expect(styledTextRuns({ text: '[b]x[/b]', bbcodeEnabled: false } as RichTextLabelProperties, WHITE)).toEqual([
-      { text: '[b]x[/b]', bold: false, italic: false, color: WHITE },
+      { text: '[b]x[/b]', bold: false, italic: false, underline: false, color: WHITE },
     ]);
   });
 
@@ -166,16 +168,29 @@ describe('styledTextRuns', () => {
       WHITE
     );
     expect(runs).toEqual([
-      { text: 'plain ', bold: false, italic: false, color: WHITE },
-      { text: 'bold', bold: true, italic: false, color: WHITE },
-      { text: ' ', bold: false, italic: false, color: WHITE },
-      { text: 'italic', bold: false, italic: true, color: WHITE },
+      { text: 'plain ', bold: false, italic: false, underline: false, color: WHITE },
+      { text: 'bold', bold: true, italic: false, underline: false, color: WHITE },
+      { text: ' ', bold: false, italic: false, underline: false, color: WHITE },
+      { text: 'italic', bold: false, italic: true, underline: false, color: WHITE },
     ]);
   });
 
   it('bbcode enabled: nested [b][i] combines both flags on one run (RTL_BOLD_ITALICS_FONT, rich_text_label.cpp:5452-5471)', () => {
     const runs = styledTextRuns({ text: '[b][i]x[/i][/b]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE);
-    expect(runs).toEqual([{ text: 'x', bold: true, italic: true, color: WHITE }]);
+    expect(runs).toEqual([{ text: 'x', bold: true, italic: true, underline: false, color: WHITE }]);
+  });
+
+  it('bbcode enabled: [u] sets the underline flag, independent of bold/italic/color (rich_text_label.cpp:4677 push_underline)', () => {
+    const runs = styledTextRuns(
+      { text: 'plain [u]underlined[/u] [b][u]bold and underlined[/u][/b]', bbcodeEnabled: true } as RichTextLabelProperties,
+      WHITE
+    );
+    expect(runs).toEqual([
+      { text: 'plain ', bold: false, italic: false, underline: false, color: WHITE },
+      { text: 'underlined', bold: false, italic: false, underline: true, color: WHITE },
+      { text: ' ', bold: false, italic: false, underline: false, color: WHITE },
+      { text: 'bold and underlined', bold: true, italic: false, underline: true, color: WHITE },
+    ]);
   });
 
   it('bbcode enabled: [color=#e0a030] resolves to that RGBA, overriding the passed default', () => {
@@ -184,7 +199,7 @@ describe('styledTextRuns', () => {
       WHITE
     );
     expect(runs).toEqual([
-      { text: 'x', bold: false, italic: false, color: { r: 0xe0 / 255, g: 0xa0 / 255, b: 0x30 / 255, a: 1 } },
+      { text: 'x', bold: false, italic: false, underline: false, color: { r: 0xe0 / 255, g: 0xa0 / 255, b: 0x30 / 255, a: 1 } },
     ]);
   });
 
@@ -199,7 +214,7 @@ describe('styledTextRuns', () => {
 
   it('bbcode enabled: drops zero-length runs (adjacent tags with nothing between)', () => {
     const runs = styledTextRuns({ text: '[b][/b][i]x[/i]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE);
-    expect(runs).toEqual([{ text: 'x', bold: false, italic: true, color: WHITE }]);
+    expect(runs).toEqual([{ text: 'x', bold: false, italic: true, underline: false, color: WHITE }]);
   });
 });
 
@@ -211,6 +226,12 @@ describe('BOLD_DISTANCE_BIAS / ITALIC_SKEW', () => {
 
   it('ITALIC_SKEW matches default_theme.cpp:1399/1403\'s Transform2D(1.0, 0.2, ...) shear coefficient exactly', () => {
     expect(ITALIC_SKEW).toBe(0.2);
+  });
+});
+
+describe('RICH_TEXT_LABEL_UNDERLINE_ALPHA', () => {
+  it("matches default_theme.cpp:1231's underline_alpha constant (50, i.e. 50%) exactly — rich_text_label.cpp:1237 multiplies it into the stroke's own alpha, on top of the run's font colour", () => {
+    expect(RICH_TEXT_LABEL_UNDERLINE_ALPHA).toBe(0.5);
   });
 });
 
@@ -228,7 +249,7 @@ describe('layoutRichTextRuns', () => {
   });
 
   it('a single run spanning one whole (unwrapped) line produces exactly one placement carrying every glyph', () => {
-    const runs = [{ text: 'AB', bold: false, italic: false, color: WHITE }];
+    const runs = [{ text: 'AB', bold: false, italic: false, underline: false, color: WHITE }];
     const layout = shape('AB');
     const placements = layoutRichTextRuns(runs, layout);
     expect(placements).toHaveLength(1);
@@ -240,8 +261,8 @@ describe('layoutRichTextRuns', () => {
 
   it('two runs on the same unwrapped line produce two placements, each carrying only its own glyphs, in source order', () => {
     const runs = [
-      { text: 'plain', bold: false, italic: false, color: WHITE },
-      { text: 'BOLD', bold: true, italic: false, color: BLACK },
+      { text: 'plain', bold: false, italic: false, underline: false, color: WHITE },
+      { text: 'BOLD', bold: true, italic: false, underline: false, color: BLACK },
     ];
     const layout = shape('plainBOLD');
     const placements = layoutRichTextRuns(runs, layout);
@@ -253,8 +274,20 @@ describe('layoutRichTextRuns', () => {
     expect(placements[1]!.layout.lines[0]!.glyphs.map((g) => g.char)).toEqual(['B', 'O', 'L', 'D']);
   });
 
+  it('carries the underline flag through per placement, independent of bold/color', () => {
+    const runs = [
+      { text: 'plain', bold: false, italic: false, underline: false, color: WHITE },
+      { text: 'ULINE', bold: false, italic: false, underline: true, color: WHITE },
+    ];
+    const layout = shape('plainULINE');
+    const placements = layoutRichTextRuns(runs, layout);
+    expect(placements).toHaveLength(2);
+    expect(placements[0]!.underline).toBe(false);
+    expect(placements[1]!.underline).toBe(true);
+  });
+
   it('a single run whose text WRAPS across two lines produces one placement per line, same style on both', () => {
-    const runs = [{ text: 'AAAA BBBB', bold: true, italic: false, color: WHITE }];
+    const runs = [{ text: 'AAAA BBBB', bold: true, italic: false, underline: false, color: WHITE }];
     // Narrow enough that 'AAAA' and 'BBBB' land on separate lines (see textLayout.test.ts's own break-point fixtures for this shape).
     const layout = shape('AAAA BBBB', 60, AutowrapMode.WORD);
     expect(layout.lines.length).toBeGreaterThan(1);
@@ -266,8 +299,8 @@ describe('layoutRichTextRuns', () => {
 
   it('a style change exactly at a wrap boundary keeps each line single-run (no spurious split within a line)', () => {
     const runs = [
-      { text: 'AAAA ', bold: true, italic: false, color: WHITE },
-      { text: 'BBBB', bold: false, italic: false, color: WHITE },
+      { text: 'AAAA ', bold: true, italic: false, underline: false, color: WHITE },
+      { text: 'BBBB', bold: false, italic: false, underline: false, color: WHITE },
     ];
     const layout = shape('AAAA BBBB', 60, AutowrapMode.WORD);
     const placements = layoutRichTextRuns(runs, layout);
@@ -276,5 +309,34 @@ describe('layoutRichTextRuns', () => {
       const chars = p.layout.lines[0]!.glyphs.map((g) => g.char).join('');
       expect(chars === 'AAAA' || chars === 'BBBB').toBe(true);
     }
+  });
+});
+
+describe('underlineRectPx', () => {
+  const FONT_SIZE_PX = 18;
+
+  it(
+    "computes the underline stroke's rect from the run's own first/last glyph x-extent and the " +
+      "font's baseline-relative underline metrics — an independent worked example, not the " +
+      'implementation recomputed: ascentPx=ceil(2189*18/2048)=20, underlinePositionPx=' +
+      '-(-100)*18/2048=0.87890625, underlineThicknessPx=50*18/2048=0.439453125 (floored to the 1px ' +
+      'minimum, rich_text_label.cpp:1243 MAX(1.0, uth)), so centerY=20.87890625 and the stroke spans ' +
+      'centerY +/- 0.5.',
+    () => {
+      const glyphs = [
+        { char: 'u', x: 10, advance: 5, glyph: null },
+        { char: 'l', x: 15, advance: 8, glyph: null },
+      ];
+      const rect = underlineRectPx(glyphs, FONT_SIZE_PX);
+      expect(rect).not.toBeNull();
+      expect(rect!.x0).toBe(10);
+      expect(rect!.x1).toBe(23);
+      expect(rect!.topPx).toBeCloseTo(20.37890625, 6);
+      expect(rect!.heightPx).toBeCloseTo(1, 6);
+    }
+  );
+
+  it('returns null for an empty glyph list (nothing to underline)', () => {
+    expect(underlineRectPx([], FONT_SIZE_PX)).toBeNull();
   });
 });

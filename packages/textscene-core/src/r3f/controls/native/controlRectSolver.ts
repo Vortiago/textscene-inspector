@@ -28,6 +28,22 @@ export interface SolvedControl {
   rect: Rect2;
   minSize: Vec2;
   paintIndex: number;
+  /**
+   * The paint index of the LAST node visited within this node's own
+   * subtree (pre-order, siblings pre-sorted by `z_index` — same walk as
+   * `paintIndex`) — its own index when it is a leaf. A plain pre-order fact,
+   * not a second traversal: `assignPaintIndex` already has this number in
+   * hand as `counter - 1` right after recursing into a node's children.
+   *
+   * Exists so chrome that must draw AFTER an entire subtree — Godot's
+   * `INTERNAL_MODE_BACK` children, e.g. `ScrollContainer`'s `h_scroll`/
+   * `v_scroll` (`scene/gui/scroll_container.cpp:919,924`) — can derive a
+   * render order from it instead of the node's own `paintIndex`, which every
+   * descendant necessarily exceeds. See `native/controlDrawOrder.ts`'s
+   * `controlRenderOrder` and `ControlComponentRegistry.ts`'s
+   * `NativeControlComponentProps.subtreeChromeRenderOrder`.
+   */
+  subtreeLastPaintIndex: number;
 }
 
 // --- Anchors ---------------------------------------------------------------
@@ -171,15 +187,27 @@ function zIndexOf(n: SolveNode): number {
   return controlProps(n).zIndex ?? 0;
 }
 
+/** `assignPaintIndex`'s two parallel outputs — one pre-order walk, two facts per node. */
+interface PaintIndexResult {
+  order: ReadonlyMap<string, number>;
+  subtreeLast: ReadonlyMap<string, number>;
+}
+
 /**
  * Pre-order traversal, siblings stably sorted by `z_index` first — Godot's
  * own CanvasItem paint order: a node draws before its children, and children
  * (like the roots passed in) draw in ascending `z_index` order among
  * themselves, ties keeping scene-tree order (`Array.prototype.sort` is
  * stable).
+ *
+ * Also records each node's `subtreeLast` — the paint index of the last node
+ * visited within its own subtree — as `counter - 1` right after recursing
+ * into its children, so this stays the one traversal rather than a second
+ * pass over the same tree.
  */
-function assignPaintIndex(roots: readonly SolveNode[]): ReadonlyMap<string, number> {
+function assignPaintIndex(roots: readonly SolveNode[]): PaintIndexResult {
   const order = new Map<string, number>();
+  const subtreeLast = new Map<string, number>();
   let counter = 0;
 
   const visit = (nodes: readonly SolveNode[]): void => {
@@ -187,11 +215,12 @@ function assignPaintIndex(roots: readonly SolveNode[]): ReadonlyMap<string, numb
     for (const node of sorted) {
       order.set(node.path, counter++);
       visit(node.children);
+      subtreeLast.set(node.path, counter - 1);
     }
   };
 
   visit(roots);
-  return order;
+  return { order, subtreeLast };
 }
 
 // --- Phase 2: top-down rect assignment ---------------------------------------
@@ -200,10 +229,15 @@ function record(
   n: SolveNode,
   rect: Rect2,
   minSize: Vec2,
-  paintIndexOf: ReadonlyMap<string, number>,
+  paintIndex: PaintIndexResult,
   out: Map<string, SolvedControl>
 ): void {
-  out.set(n.path, { rect, minSize, paintIndex: paintIndexOf.get(n.path) ?? 0 });
+  out.set(n.path, {
+    rect,
+    minSize,
+    paintIndex: paintIndex.order.get(n.path) ?? 0,
+    subtreeLastPaintIndex: paintIndex.subtreeLast.get(n.path) ?? 0,
+  });
 }
 
 /**
@@ -214,7 +248,7 @@ function solveFree(
   n: SolveNode,
   parentRect: Rect2,
   ctx: SolveContext,
-  paintIndexOf: ReadonlyMap<string, number>,
+  paintIndexOf: PaintIndexResult,
   out: Map<string, SolvedControl>
 ): void {
   const minSize = ctx.combinedMinimumSize(n);
@@ -246,7 +280,7 @@ function dispatchChildren(
   n: SolveNode,
   rect: Rect2,
   ctx: SolveContext,
-  paintIndexOf: ReadonlyMap<string, number>,
+  paintIndexOf: PaintIndexResult,
   out: Map<string, SolvedControl>
 ): void {
   const containerFn = controlSolverRegistry.containerLayout(n.node.type);

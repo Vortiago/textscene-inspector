@@ -250,6 +250,39 @@ describe('<ControlCanvasWalker>', () => {
     expect(lines.some((l) => l.renderOrder < 0)).toBe(true);
   });
 
+  it("hands the painter subtreeChromeRenderOrder derived from the solved subtreeLastPaintIndex — the deepest descendant's own renderOrder, one less than the next sibling's", async () => {
+    controlComponentRegistry.register({
+      typeName: 'TestOrderType',
+      Component: ({ subtreeChromeRenderOrder }) => (
+        <group name="order-probe" renderOrder={subtreeChromeRenderOrder ?? -1} />
+      ),
+    });
+    const grandchild = solveNode('Root/Child/Grandchild', 'TestType', { anchorsPreset: 15 });
+    const child = solveNode('Root/Child', 'TestType', { anchorsPreset: 15 }, [grandchild]);
+    const root = solveNode('Root', 'TestOrderType', { anchorsPreset: 15 }, [child]);
+    const sibling = solveNode('Sibling', 'TestType', { anchorsPreset: 15 });
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ControlCanvasWalker tree={[root, sibling]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+    );
+
+    const probe = renderer.scene
+      .findAllByType('Group')
+      .map((g) => g.instance as { name: string; renderOrder: number })
+      .find((g) => g.name === 'order-probe')!;
+    const lines = renderer.scene.findAllByType('LineSegments').map((l) => l.instance as { renderOrder: number });
+    // Fallback lines for the unregistered descendants/sibling: Child=1,
+    // Grandchild=2 (both under Root's TestOrderType painter), Sibling=3.
+    const grandchildOrder = bandBase(0) + 2;
+    const siblingOrder = bandBase(0) + 3;
+    expect(lines.some((l) => l.renderOrder === grandchildOrder)).toBe(true);
+    expect(lines.some((l) => l.renderOrder === siblingOrder)).toBe(true);
+    // Root's own subtree's last paint index is Grandchild's — same value —
+    // and exactly one less than the next sibling's own paintIndex.
+    expect(probe.renderOrder).toBe(grandchildOrder);
+    expect(probe.renderOrder).toBe(siblingOrder - 1);
+  });
+
   it('leaves every Control group at z=0 regardless of CanvasLayer nesting — paint order comes from renderOrder alone', async () => {
     const child = solveNode('Layer/Child', 'TestType', { anchorsPreset: 15 });
     const layer = solveNode('Layer', 'CanvasLayer', { layer: 3 }, [child]);

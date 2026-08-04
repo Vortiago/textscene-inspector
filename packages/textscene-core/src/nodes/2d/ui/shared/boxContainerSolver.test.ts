@@ -120,6 +120,63 @@ describe('resortBoxContainer — fractional-remainder carry + discard/refit evic
   });
 });
 
+describe('resortBoxContainer — float32 fractional-error accumulator (unit-vbox-container-pitch.tscn\'s ExpandColumn)', () => {
+  it('three-way carry test lands on Green=213/Amber=451, not the float64 double-precision 214/452', () => {
+    // Godot 4.6.3 headless, `Control.get_rect()` read directly off the live engine
+    // (SubViewport-free `_ready` probe against this exact scene, per the packet's own
+    // documented oracle technique): Red [P:(0,0), S:(400,60)], Blue [P:(0,84), S:(400,106)],
+    // Green [P:(0,214), S:(400,213)], Amber [P:(0,451), S:(400,90)].
+    //
+    // `stretch_avail`(320) * ratio / `stretch_ratio_total`(3) for Blue(ratio 1) and
+    // Green(ratio 2) leaves 320/3 and 640/3 fractional. `error`/`final_pixel_size` are
+    // `float` (box_container.cpp:114,121) — float32 throughout — and their two fractions
+    // sum to 0.9999923706054688, UNDER the `error >= 1` carry threshold (:134), so Green
+    // keeps its floored 213 and the container's 542px leaves 1px unassigned at the bottom.
+    // A float64 port sums the same two fractions to 1.0000000000000142, OVER the
+    // threshold, wrongly carries a pixel into Green (214), and shifts Amber down by one.
+    const VERTICAL_EXPAND = 3; // Control.SIZE_FILL | SIZE_EXPAND
+    const children = [
+      child({ minSize: { x: 0, y: 60 } }),
+      child({ minSize: { x: 0, y: 40 }, vSizeFlags: VERTICAL_EXPAND, stretchRatio: 1 }),
+      child({ minSize: { x: 0, y: 40 }, vSizeFlags: VERTICAL_EXPAND, stretchRatio: 2 }),
+      child({ minSize: { x: 0, y: 90 } }),
+    ];
+    const rects = resortBoxContainer(true, { width: 400, height: 542 }, 24, 0, false, children);
+    expect(rects).toEqual<Rect2[]>([
+      { x: 0, y: 0, w: 400, h: 60 },
+      { x: 0, y: 84, w: 400, h: 106 },
+      { x: 0, y: 214, w: 400, h: 213 },
+      { x: 0, y: 451, w: 400, h: 90 },
+    ]);
+  });
+});
+
+describe('resortBoxContainer — Size2i truncation of the container size and each child\'s minimum, ahead of the stretch arithmetic', () => {
+  it('truncates the fractional container height AND both fractional child minimums before dividing the stretch range', () => {
+    // Godot 4.6.3 headless, `Control.get_rect()`/`get_combined_minimum_size()` read off
+    // the live engine for a VBoxContainer sized 400.9x541.3 (fractional `offset_*`) holding
+    // two FILL|EXPAND children with fractional `custom_minimum_size` (60.6 and 40.4),
+    // separation 24, both stretch_ratio 1: A [P:(0,0), S:(400,258)] min=(0, 60.6),
+    // B [P:(0,282), S:(400,259)] min=(0, 40.4). `Size2i new_size = get_size()`
+    // (box_container.cpp:47) truncates 541.3 -> 541 and `Size2i size =
+    // c->get_combined_minimum_size()` (:60) truncates 60.6 -> 60 / 40.4 -> 40 BEFORE
+    // stretch_min/stretch_avail/stretch_max ever see them: stretch_max = 541-24 = 517,
+    // stretch_min = 60+40 = 100, stretch_diff = 417, stretch_avail = 100+417 = 517,
+    // 517/2 = 258.5 each -> A floors to 258, B carries the pixel to 259 (541 total, no
+    // leftover). A full-precision port would instead divide (541.3-24-100.9)... /2 and land
+    // on different fractional shares.
+    const children = [
+      child({ minSize: { x: 0, y: 60.6 }, vSizeFlags: 3, stretchRatio: 1 }),
+      child({ minSize: { x: 0, y: 40.4 }, vSizeFlags: 3, stretchRatio: 1 }),
+    ];
+    const rects = resortBoxContainer(true, { width: 400.9, height: 541.3 }, 24, 0, false, children);
+    expect(rects).toEqual<Rect2[]>([
+      { x: 0, y: 0, w: 400, h: 258 },
+      { x: 0, y: 282, w: 400, h: 259 },
+    ]);
+  });
+});
+
 describe('resortBoxContainer — RTL ordering + BEGIN+RTL alignment', () => {
   it('reverses placement order and (BEGIN, rtl) pushes the offset to the far edge', () => {
     // No child expands (stretch_ratio_total=0): stretch_diff = (1152-2*15) - (50+80+120) = 872.

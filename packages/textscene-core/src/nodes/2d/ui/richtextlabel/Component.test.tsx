@@ -16,7 +16,7 @@ import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanv
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { BOLD_DISTANCE_BIAS, ITALIC_SKEW, richTextLabelMinimumSize } from './nativeSolver';
+import { BOLD_DISTANCE_BIAS, ITALIC_SKEW, RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nativeSolver';
 import { RichTextLabel } from './Component';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
@@ -88,6 +88,42 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     expect(topDx).not.toBeCloseTo(bottomDx, 3);
     expect(ITALIC_SKEW).not.toBe(0);
   });
+
+  it('an [u] run draws an extra underline-stroke mesh (a flat PlaneGeometry quad, not glyph geometry); a plain run draws none', async () => {
+    const plain = await render({ text: 'AB', bbcodeEnabled: false });
+    const underlined = await render({ text: '[u]AB[/u]', bbcodeEnabled: true });
+    const strokesOf = (r: Awaited<ReturnType<typeof render>>) =>
+      meshesOf(r).filter((m) => m.geometry.type === 'PlaneGeometry');
+    expect(strokesOf(plain)).toHaveLength(0);
+    expect(strokesOf(underlined)).toHaveLength(1);
+  });
+
+  it(
+    "the underline stroke's material carries the run's own colour (ControlQuad's meshBasicMaterial, sRGB-space " +
+      "same as every other native chrome quad) at RICH_TEXT_LABEL_UNDERLINE_ALPHA times its opacity " +
+      "(default_theme.cpp:1231's underline_alpha=50, rich_text_label.cpp:1237), same RGB as the text",
+    async () => {
+      const renderer = await render({ text: '[color=#e0a030][u]AB[/u][/color]', bbcodeEnabled: true });
+      const meshes = meshesOf(renderer);
+      const stroke = meshes.find((m) => m.geometry.type === 'PlaneGeometry')!;
+      const text = meshes.find((m) => !(m.geometry.type === 'PlaneGeometry'))!;
+      const strokeMat = stroke.material as THREE.MeshBasicMaterial;
+      const textMat = text.material as THREE.ShaderMaterial;
+      const textColor = textMat.uniforms.uColor!.value as THREE.Vector3;
+      const textOpacity = textMat.uniforms.uOpacity!.value as number;
+      // The text run's own uColor is already sRGB->linear-converted (TextRun.tsx);
+      // ControlQuad's meshBasicMaterial takes an sRGB THREE.Color (three's own
+      // colour-management path does the same conversion on upload), so compare
+      // both against the SAME independently-computed expectation this file
+      // already uses for the text-run case below.
+      const expected = expectedLinear(0xe0 / 255, 0xa0 / 255, 0x30 / 255);
+      expect(strokeMat.color.r).toBeCloseTo(expected.r, 5);
+      expect(strokeMat.color.g).toBeCloseTo(expected.g, 5);
+      expect(strokeMat.color.b).toBeCloseTo(expected.b, 5);
+      expect(textColor.x).toBeCloseTo(expected.r, 5);
+      expect(strokeMat.opacity).toBeCloseTo(textOpacity * RICH_TEXT_LABEL_UNDERLINE_ALPHA, 6);
+    }
+  );
 
   it('resolves a [color=#e0a030] run to that RGBA, independent of the default text colour', async () => {
     const renderer = await render({ text: '[color=#e0a030]x[/color]', bbcodeEnabled: true });

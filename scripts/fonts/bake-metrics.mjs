@@ -58,12 +58,44 @@ const TEXT_DIR = join(REPO_ROOT, 'packages/textscene-core/src/r3f/controls/nativ
 const METRICS_OUT = join(TEXT_DIR, 'openSansMetrics.ts');
 const ATLAS_OUT = join(TEXT_DIR, 'openSansAtlas.ts');
 
-// Full ASCII printable, 0x20 (space) .. 0x7E (~) — 95 glyphs. Decided in
-// packet P10; do not narrow it.
+// Full ASCII printable, 0x20 (space) .. 0x7E (~) — 95 glyphs. Do not narrow it.
 const CHARSET_START = 0x20;
 const CHARSET_END = 0x7e;
+
+// Latin-1 Supplement, 0xA0 (NBSP) .. 0xFF (ÿ) — the standard second tier for
+// European-language coverage (accented Latin letters used by French, German,
+// Spanish, etc.), independent of any single Godot call site. 0xAD (SOFT
+// HYPHEN) is deliberately EXCLUDED: it is a Unicode Cf (Format) character —
+// invisible by design, a hyphenation hint, not a printable glyph — and this
+// specific font maps it to a visible hyphen-shaped bitmap with unusually
+// large GPOS kerning against nearly every other baked character (verified:
+// 199 kerning pairs, all involving 0xAD, once it was in this range). Nothing
+// in Godot's own defaults or this repo's scene fixtures needs it rendered,
+// and baking it would assert a specific visible-ink behavior for a format
+// character this packet never measured against real Godot.
+const LATIN1_SUPPLEMENT_START = 0xa0;
+const LATIN1_SUPPLEMENT_END = 0xff;
+const LATIN1_SUPPLEMENT_EXCLUDE = new Set([0xad]);
+
+// Individual punctuation codepoints outside both ranges above, each with its
+// own reason to be baked rather than silently falling back:
+const EXTRA_CODEPOINTS = [
+  0x2022, // BULLET — LineEdit's default `secret_character` when the scene sets none (`line_edit.cpp:3094`: `secret_character.is_empty() ? U"•" : ...`).
+  0x2026, // HORIZONTAL ELLIPSIS — Label's default overrun/truncation character (`label.cpp:294`, three sibling call sites at :299/:324/:328: `(el_char.length() > 0) ? el_char[0] : 0x2026`).
+  0x2013, // EN DASH — common scene-author prose punctuation (not itself a Godot GUI default literal).
+  0x2014, // EM DASH — ditto; the character this repo's own ScrollContainer fixture's Label text uses.
+  0x2018,
+  0x2019, // single curly quotes — common scene-author prose punctuation.
+  0x201c,
+  0x201d, // double curly quotes — ditto.
+];
+
 const CHARSET = [];
-for (let cp = CHARSET_START; cp <= CHARSET_END; cp++) CHARSET.push(String.fromCharCode(cp));
+for (let cp = CHARSET_START; cp <= CHARSET_END; cp++) CHARSET.push(String.fromCodePoint(cp));
+for (let cp = LATIN1_SUPPLEMENT_START; cp <= LATIN1_SUPPLEMENT_END; cp++) {
+  if (!LATIN1_SUPPLEMENT_EXCLUDE.has(cp)) CHARSET.push(String.fromCodePoint(cp));
+}
+for (const cp of EXTRA_CODEPOINTS) CHARSET.push(String.fromCodePoint(cp));
 
 // The atlas is baked at a larger font size than any Godot theme default (16)
 // so glyph edges keep enough MSDF resolution when magnified for headings —
@@ -91,7 +123,7 @@ async function loadFont() {
 }
 
 /**
- * GPOS/kern pairwise advance adjustments over the full ASCII x ASCII
+ * GPOS/kern pairwise advance adjustments over the full CHARSET x CHARSET
  * product, design units. A real shaper (HarfBuzz, which Godot's
  * TextServerAdvanced uses) applies exactly this kind of pairwise adjustment
  * for GPOS kerning pairs; fontkit's `layout()` exposes the same positioning
@@ -121,6 +153,21 @@ function bakeMetrics(font, kerning) {
     descent: -font.descent, // fontkit reports descent negative; store the magnitude
     lineGap: font.lineGap,
     kerning,
+    // `post` table, design units — `fontkit`'s `TTFFont#underlinePosition`/
+    // `#underlineThickness` read `post.underlinePosition`/`post.underlineThickness`
+    // directly (fontkit's `src/tables/post.js`, `src/TTFFont.js:189-201`), the
+    // SAME raw values FreeType exposes as `face->underline_position`/
+    // `face->underline_thickness` — what `text_server_adv.cpp:1517-1518` scales
+    // to pixels (see `getUnderlinePositionPx`/`getUnderlineThicknessPx` below).
+    underlinePosition: font.underlinePosition,
+    underlineThickness: font.underlineThickness,
+    // OS/2 `xAvgCharWidth`, design units — a standard per-font "typical
+    // glyph width" metric (the same field browsers/other engines already
+    // use to estimate the width of a character they cannot shape) rather
+    // than a magic constant. Used as the fallback advance for a codepoint
+    // outside the baked charset — see `OPEN_SANS_ATLAS_GLYPHS`'s doc in
+    // `renderAtlasModule` and `textLayout.ts`'s `glyphAdvancePx`.
+    averageAdvanceUnits: font['OS/2'].xAvgCharWidth,
   };
 }
 
@@ -205,13 +252,33 @@ export interface OpenSansMetrics {
   lineGap: number;
   /**
    * GPOS/kern pairwise advance adjustment, design units, keyed by the
-   * two-character pair (e.g. \`"AV"\`). Empty for OpenSans_SemiBold's ASCII x
-   * ASCII product — this font carries only \`mark\`/\`mkmk\` GPOS features, no
+   * two-character pair (e.g. \`"AV"\`). Empty for OpenSans_SemiBold's baked
+   * charset product — this font carries only \`mark\`/\`mkmk\` GPOS features, no
    * \`kern\` feature and no legacy \`kern\` table. Kept non-optional (rather
    * than omitted) so a synthesized bold/italic, or a different theme font,
    * has somewhere to plug in pairs without a shape change downstream.
    */
   kerning: Record<string, number>;
+  /**
+   * \`post\` table \`underlinePosition\`, design units — the top of the underline
+   * stroke relative to the baseline, POSITIVE = above baseline (the \`post\`
+   * table's own Y-up convention; typically negative for a below-baseline
+   * underline). Read via \`fontkit\`'s \`TTFFont#underlinePosition\`
+   * (\`fontkit/src/TTFFont.js:192-194\`, itself \`post.underlinePosition\`),
+   * matching FreeType's \`face->underline_position\` — the same field
+   * \`text_server_adv.cpp:1517\` scales to pixels for \`shaped_text_get_underline_position\`.
+   */
+  underlinePosition: number;
+  /** \`post\` table \`underlineThickness\`, design units — see \`underlinePosition\`'s doc; scaled by \`text_server_adv.cpp:1518\`. */
+  underlineThickness: number;
+  /**
+   * OS/2 \`xAvgCharWidth\`, design units — this font's own "typical glyph
+   * width" metric, used ONLY as \`textLayout.ts\`'s fallback advance for a
+   * character outside \`OPEN_SANS_ATLAS_GLYPHS\` (see that table's own doc in
+   * the atlas module). Never mixed into per-glyph advances for a BAKED
+   * character — those always come from the atlas's own \`xadvance\`.
+   */
+  averageAdvanceUnits: number;
 }
 
 export const OPEN_SANS_METRICS: OpenSansMetrics = ${JSON.stringify(metrics)};
@@ -222,28 +289,94 @@ export function getKerningAdjustmentUnits(a: string, b: string): number {
 }
 
 /**
+ * \`modules/text_server_adv/text_server_adv.cpp:1515-1516\` — Godot's
+ * TextServerAdvanced reads FreeType's PIXEL-QUANTIZED 26.6 fixed-point size
+ * metrics (\`face->size->metrics.ascender\`), which rounds UP to a whole pixel.
+ * Also \`rich_text_label.cpp:1049\`'s \`off.y += l_ascent\` (\`l_ascent =
+ * shaped_text_get_ascent\`) — the SAME rounded value is where a line's
+ * baseline sits, measured down from the line's own top; every other
+ * baseline-relative pixel quantity (the italic shear's pivot, the underline
+ * stroke's y) is this plus a further offset, never re-derived.
+ *
+ * At size 16: ceil(${metrics.ascent} * 16/${metrics.unitsPerEm}) = 18.
+ */
+export function getAscentPx(fontSizePx: number): number {
+  const scale = fontSizePx / OPEN_SANS_METRICS.unitsPerEm;
+  return Math.ceil(OPEN_SANS_METRICS.ascent * scale);
+}
+
+/**
  * Pixel line pitch at \`fontSizePx\`, replicating Godot's Label line-height
  * computation exactly rather than a raw float scale of the hhea table:
  *
- * - \`modules/text_server_adv/text_server_adv.cpp:1515-1516\` — Godot's
- *   TextServerAdvanced reads FreeType's PIXEL-QUANTIZED 26.6 fixed-point size
- *   metrics (\`face->size->metrics.ascender\` / \`.descender\`), which round
- *   each metric UP to a whole pixel independently. Summing raw floats
- *   (ascent+descent as floats, THEN rounding once) undershoots by ~1px
- *   system-wide — confirmed against real Godot pixels (packet P10 spike S2).
- *   So ascent and descent must each be ceiling-rounded to a whole pixel
- *   INDEPENDENTLY, before summing.
+ * - \`modules/text_server_adv/text_server_adv.cpp:1515-1516\` — ascent AND
+ *   descent are each ceiling-rounded to a whole pixel INDEPENDENTLY before
+ *   summing (not a raw float sum, THEN rounded once — that undershoots by
+ *   ~1px system-wide, confirmed against real Godot pixels, packet P10 spike
+ *   S2).
  * - \`scene/theme/default_theme.cpp:392\` — Label's \`line_spacing\` theme
  *   constant is \`Math::round(3 * scale)\`; \`lineSpacingPx\` defaults to 3 (UI
  *   scale 1.0).
  *
- * At size 16: ceil(${metrics.ascent} * 16/${metrics.unitsPerEm}) + ceil(${metrics.descent} * 16/${metrics.unitsPerEm}) + 3 = 26.
+ * At size 16: ${Math.ceil((metrics.ascent * 16) / metrics.unitsPerEm)} + ceil(${metrics.descent} * 16/${metrics.unitsPerEm}) + 3 = 26.
  */
 export function getLinePitchPx(fontSizePx: number, lineSpacingPx = 3): number {
+  const ascentPx = getAscentPx(fontSizePx);
   const scale = fontSizePx / OPEN_SANS_METRICS.unitsPerEm;
-  const ascentPx = Math.ceil(OPEN_SANS_METRICS.ascent * scale);
   const descentPx = Math.ceil(OPEN_SANS_METRICS.descent * scale);
   return ascentPx + descentPx + lineSpacingPx;
+}
+
+/**
+ * \`text_server_adv.cpp:1517\`: \`fd->underline_position = (-FT_MulFix(face->underline_position,
+ * size->metrics.y_scale) / 64.0) * fd->scale\` — a plain proportional scale of
+ * the \`post\` table value (NOT ceiling-rounded like ascent/descent; FreeType's
+ * \`y_scale\` here is the raw 26.6 size scale, not a hinted metric), NEGATED so
+ * a below-baseline \`post\` value (negative, that table's Y-up convention)
+ * becomes a positive DOWNWARD pixel offset from the baseline —
+ * \`rich_text_label.cpp:1242-1244\`'s \`y_off = upos\` is added directly to the
+ * baseline y (\`off_step.y\`, itself \`off.y\` after \`+= l_ascent\`) with no
+ * further sign flip.
+ *
+ * At size 16: -(-100) * 16/2048 = 0.78125.
+ */
+export function getUnderlinePositionPx(fontSizePx: number): number {
+  const scale = fontSizePx / OPEN_SANS_METRICS.unitsPerEm;
+  return -OPEN_SANS_METRICS.underlinePosition * scale;
+}
+
+/**
+ * \`text_server_adv.cpp:1518\`, scaled the same way as \`getUnderlinePositionPx\`
+ * (no negation — a thickness has no sign to flip). The MINIMUM 1px stroke
+ * width (\`rich_text_label.cpp:1243\`: \`MAX(1.0, uth * theme_cache.base_scale)\`)
+ * is the CALLER's job, not baked in here — \`base_scale\` is a UI content-scale
+ * factor this renderer does not thread through text metrics, and every fixture
+ * this atlas serves renders at its default (1.0), where the max is a no-op
+ * unless the font's own thickness already exceeds 1px.
+ *
+ * At size 16: 50 * 16/2048 = 0.390625.
+ */
+export function getUnderlineThicknessPx(fontSizePx: number): number {
+  const scale = fontSizePx / OPEN_SANS_METRICS.unitsPerEm;
+  return OPEN_SANS_METRICS.underlineThickness * scale;
+}
+
+/**
+ * Fallback advance for a character with no entry in \`OPEN_SANS_ATLAS_GLYPHS\`
+ * (outside the baked charset) — this font's own OS/2 \`xAvgCharWidth\` scaled,
+ * so a missing glyph still occupies roughly its own width rather than
+ * collapsing the line to nothing (see \`OPEN_SANS_ATLAS_GLYPHS\`'s doc in the
+ * atlas module and \`textLayout.ts\`'s \`glyphAdvancePx\`). This is a deliberate
+ * approximation, not a Godot-measured value: real Godot would shape the
+ * character against its own system-fallback fonts and draw real ink at that
+ * character's real advance, which this renderer cannot do for a codepoint
+ * outside the atlas.
+ *
+ * At size 16: ${metrics.averageAdvanceUnits} * 16/${metrics.unitsPerEm} = ${(metrics.averageAdvanceUnits * 16) / metrics.unitsPerEm}.
+ */
+export function getAverageAdvancePx(fontSizePx: number): number {
+  const scale = fontSizePx / OPEN_SANS_METRICS.unitsPerEm;
+  return OPEN_SANS_METRICS.averageAdvanceUnits * scale;
 }
 `;
 }
@@ -251,8 +384,8 @@ export function getLinePitchPx(fontSizePx: number, lineSpacingPx = 3): number {
 function renderAtlasModule({ pngDataUrl, glyphsByChar, atlasInfo }) {
   return `${GENERATED_HEADER}
 // The glyph table and atlas image below are generated data (base64 + a
-// per-glyph JSON table for 95 ASCII glyphs) on single very long lines; this
-// file is excluded from lint entirely via eslint.config.js's ignore list.
+// per-glyph JSON table for CHARSET.length glyphs) on single very long lines;
+// this file is excluded from lint entirely via eslint.config.js's ignore list.
 
 /** One glyph's MSDF-atlas placement/geometry, in atlas-bake-size pixels (see \`OPEN_SANS_ATLAS_INFO.fontSize\`). */
 export interface OpenSansGlyph {
@@ -289,7 +422,20 @@ export interface OpenSansAtlasInfo {
 
 export const OPEN_SANS_ATLAS_INFO: OpenSansAtlasInfo = ${JSON.stringify(atlasInfo)};
 
-/** Keyed by character, full ASCII printable 0x20-0x7E (95 glyphs) — decided in packet P10, do not narrow it. */
+/**
+ * Keyed by character — ASCII printable 0x20-0x7E, Latin-1 Supplement 0xA0-0xFF,
+ * and a handful of individual punctuation codepoints (bullet, ellipsis, en/em
+ * dash, curly quotes) the bake script's own \`CHARSET\`/\`EXTRA_CODEPOINTS\`
+ * build; see that script for what each addition is for and do not narrow
+ * either range without checking its callers first.
+ *
+ * A codepoint OUTSIDE this table draws no ink (\`openSansAtlas\`-backed
+ * painters skip a glyph placement with no atlas entry) but is NOT silently
+ * zero-width: \`text/textLayout.ts\`'s \`glyphAdvancePx\` falls back to this
+ * font's own OS/2 \`xAvgCharWidth\` (\`OPEN_SANS_METRICS.averageAdvanceUnits\`,
+ * scaled) rather than 0, so an unbaked character still occupies roughly its
+ * own width instead of collapsing the line around it.
+ */
 export const OPEN_SANS_ATLAS_GLYPHS: Record<string, OpenSansGlyph> = ${JSON.stringify(glyphsByChar)};
 
 /** MSDF atlas texture (\`distanceField.fieldType: "msdf"\`), inline so it rides \`img-src ... data:\` under the VS Code webview CSP (ADR-0003; packet P10 spike S1). */

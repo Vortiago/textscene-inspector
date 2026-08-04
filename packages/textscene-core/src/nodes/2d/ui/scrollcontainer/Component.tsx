@@ -38,16 +38,33 @@
  * `self_modulate` composes onto the track/grabber StyleBoxes' two base
  * colours, in sRGB, before `StyleBoxQuad`'s single linear conversion.
  *
- * `renderOrder` reaches every mesh this painter emits: each bar's track uses
- * the node's own `renderOrder`, and its grabber uses `renderOrder + 0.5` — a
- * FRACTIONAL offset, not `+1`, deliberately: every legitimate `renderOrder`
- * in this codebase is `bandBase(layer) + paintIndex`
- * (`native/controlDrawOrder.ts`), and both terms are always integers, so a
- * `+0.5` offset can never collide with another Control's own paint slot the
- * way an integer `+1` could (that would land exactly on this node's own
- * first child's slot, since paint index is a single pre-order counter across
- * the whole tree). The two h/v bars never spatially overlap (each dodges the
- * other's own reserved strip), so ordering between them is not load-bearing.
+ * DRAW ORDER. Both bars use `subtreeChromeRenderOrder`
+ * (`ControlComponentRegistry.ts`'s `NativeControlComponentProps`), NOT this
+ * node's own `renderOrder` — using `renderOrder` was the ORIGINAL, now-wrong
+ * rule, and it drew both bars UNDER the scrolled content instead of over it:
+ * `paintIndex` is a single pre-order counter across the WHOLE tree
+ * (`native/controlRectSolver.ts`'s `assignPaintIndex`), so every descendant
+ * of this ScrollContainer necessarily gets a LARGER paint index — and so a
+ * larger `renderOrder` — than this node's own. Godot never draws its
+ * scrollbars at this node's own paint slot either: `h_scroll`/`v_scroll` are
+ * added via `Node::add_child(..., INTERNAL_MODE_BACK)`
+ * (`scene/gui/scroll_container.cpp:919,924`), which places them AFTER every
+ * normal child regardless of when they were added, so they paint LAST among
+ * this node's own descendants.
+ *
+ * `subtreeChromeRenderOrder` is `bandBase(layer) + subtreeLastPaintIndex` —
+ * the paint index of the LAST descendant in this node's own subtree
+ * (`SolvedControl.subtreeLastPaintIndex`, `native/controlRectSolver.ts`) —
+ * so it equals that descendant's OWN `renderOrder`, and the solver hands
+ * this node's next SIBLING exactly one past it. Both bars must therefore
+ * land in that one-wide gap: track at `subtreeChromeRenderOrder + 0.25`,
+ * grabber at `+ 0.5` — FRACTIONAL, not `+1`/`+2`, so a `+1` bar can never
+ * reach the next sibling's own paint slot the way an integer offset could.
+ * (`+0.5` between the two bars was already deliberate for grabber-over-track
+ * ordering; `+0.25` for the track follows the same reasoning, now anchored
+ * to `subtreeChromeRenderOrder` rather than `renderOrder`.) The two h/v bars
+ * never spatially overlap (each dodges the other's own reserved strip), so
+ * ordering between them is not load-bearing.
  */
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -65,7 +82,8 @@ interface ScrollBarChromeProps {
   bar: ScrollBarPlacement;
   track: StyleBoxFlatData;
   grabber: StyleBoxFlatData;
-  renderOrder: number;
+  /** `subtreeChromeRenderOrder` (or its fallback) — see this module's own DRAW ORDER doc. */
+  chromeRenderOrder: number;
 }
 
 /**
@@ -100,22 +118,28 @@ interface ScrollBarChromeProps {
  * ALREADY-absolute rect verbatim would double-count that offset once the
  * mesh sits inside a group that already carries it.
  */
-function ScrollBarChrome({ bar, track, grabber, renderOrder }: ScrollBarChromeProps) {
+function ScrollBarChrome({ bar, track, grabber, chromeRenderOrder }: ScrollBarChromeProps) {
   if (!bar.visible) return null;
   // Position only. `StyleBoxQuad` now takes just the size from the rect it is
   // handed and applies the Godot→three y flip itself, so a caller supplies the
   // offset through a group and nothing else.
   return (
     <group position={[bar.rect.x, -bar.rect.y, 0]}>
-      <StyleBoxQuad styleBox={track} rect={bar.rect} renderOrder={renderOrder} />
+      <StyleBoxQuad styleBox={track} rect={bar.rect} renderOrder={chromeRenderOrder + 0.25} />
       <group position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}>
-        <StyleBoxQuad styleBox={grabber} rect={bar.grabberRect} renderOrder={renderOrder + 0.5} />
+        <StyleBoxQuad styleBox={grabber} rect={bar.grabberRect} renderOrder={chromeRenderOrder + 0.5} />
       </group>
     </group>
   );
 }
 
-export function ScrollContainer({ solveNode, rect, renderOrder, theme, children }: NativeControlComponentProps) {
+export function ScrollContainer({
+  solveNode,
+  rect,
+  subtreeChromeRenderOrder,
+  theme,
+  children,
+}: NativeControlComponentProps) {
   const props = solveNode.node.properties as ControlProperties;
   // A FRESH SolveContext, built from the exact same theme/measurer the real
   // solve uses — not a second, narrower approximation of one. Rebuilt whenever
@@ -151,8 +175,18 @@ export function ScrollContainer({ solveNode, rect, renderOrder, theme, children 
   return (
     <group ref={anchorRef}>
       <ControlClipProvider value={clippingPlanes}>
-        <ScrollBarChrome bar={layout.horizontal} track={trackHorizontal} grabber={grabber} renderOrder={renderOrder} />
-        <ScrollBarChrome bar={layout.vertical} track={trackVertical} grabber={grabber} renderOrder={renderOrder} />
+        <ScrollBarChrome
+          bar={layout.horizontal}
+          track={trackHorizontal}
+          grabber={grabber}
+          chromeRenderOrder={subtreeChromeRenderOrder}
+        />
+        <ScrollBarChrome
+          bar={layout.vertical}
+          track={trackVertical}
+          grabber={grabber}
+          chromeRenderOrder={subtreeChromeRenderOrder}
+        />
         {children}
       </ControlClipProvider>
     </group>

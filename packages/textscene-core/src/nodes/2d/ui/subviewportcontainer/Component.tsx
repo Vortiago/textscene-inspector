@@ -151,6 +151,9 @@ function ViewportSurfaceNative({
             solveNode={fallbackSolveNode}
             rect={clipRect}
             renderOrder={renderOrder}
+            // The cycle branch renders no subtree at all — nothing draws below
+            // this surface — so the fallback's own slot IS its subtree's last.
+            subtreeChromeRenderOrder={renderOrder}
             theme={theme}
             measureText={measureText}
             childRects={NO_CHILD_RECTS}

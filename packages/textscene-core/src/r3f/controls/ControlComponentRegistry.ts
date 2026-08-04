@@ -56,13 +56,42 @@ export interface NativeControlComponentProps {
    * (`native/controlDrawOrder.ts`) — for the painter's own mesh(es). Every 2D
    * material in this codebase is transparent + depthWrite=false, so three's
    * transparent sort decides paint order from this value, never from z.
-   *
-   * Optional so an existing painter's own isolated unit test (constructing
-   * this prop object directly, not through the walker) keeps type-checking
-   * without a value: `ControlCanvasWalker` — the only real caller — always
-   * supplies one.
    */
   renderOrder: number;
+  /**
+   * A SECOND draw-order key for chrome that must draw AFTER this node's
+   * ENTIRE subtree, regardless of `renderOrder` (this node's OWN paint
+   * slot — every descendant necessarily exceeds it, since `paintIndex` is a
+   * single pre-order counter across the whole tree). Godot's own answer to
+   * "draw after my children" is `INTERNAL_MODE_BACK`: `Node::add_child(...,
+   * INTERNAL_MODE_BACK)` places a child AFTER every normal child regardless
+   * of when it was added, and `ScrollContainer` is exactly such a case —
+   * its `h_scroll`/`v_scroll` are added that way
+   * (`scene/gui/scroll_container.cpp:919,924`) so its scrollbars paint over
+   * the scrolled content rather than under it. `LineEdit`, `OptionButton`,
+   * `RichTextLabel`, and `SplitContainer` all use internal children for the
+   * same reason (their own source files), so this is a general capability
+   * on the contract, not a `ScrollContainer` special case.
+   *
+   * `bandBase(canvasLayer) + subtreeLastPaintIndex`
+   * (`native/controlDrawOrder.ts`'s `controlRenderOrder`, fed
+   * `SolvedControl.subtreeLastPaintIndex` — `native/controlRectSolver.ts`'s
+   * `assignPaintIndex`). That value equals the LAST descendant's own
+   * `renderOrder` (or this node's own, if it is a leaf), and the solver
+   * hands the next sibling EXACTLY one past it — so a painter using this
+   * value must offset by a FRACTION strictly inside that one-wide gap (e.g.
+   * `+0.25`/`+0.5` for two layers of chrome) to draw after every descendant
+   * without ever reaching the next sibling's own paint slot.
+   *
+   * REQUIRED even though only `INTERNAL_MODE_BACK`-style painters read it.
+   * Making it optional would let a painter fall back to `renderOrder` when it
+   * is absent, and that fallback IS the defect this field exists to fix — a
+   * bar drawn under its own content, silently, with no type error and no
+   * failing test. `painterEnv` (`native/testing/painterProps.ts`) exists so
+   * widening this contract stays one edit rather than a quiet pressure to
+   * weaken it for test convenience.
+   */
+  subtreeChromeRenderOrder: number;
   /**
    * Rendered ONLY for a passthrough host that draws no chrome of its own but
    * must still wrap its descendants in fresh context — `CanvasLayer`'s native

@@ -231,15 +231,19 @@ describe('<LineEdit> — text: placeholder vs text vs secret echo', () => {
   });
 
   it(
-    'the DEFAULT bullet secret character (•) has no glyph in the vendored ASCII atlas, so its echoed run draws ' +
-      'zero visible quads — a real atlas-coverage gap, not a substitution-logic bug',
+    'the DEFAULT secret character — U+2022 BULLET, what LineEdit ships with when the scene overrides nothing — ' +
+      'draws one quad per character, exactly like an ASCII override',
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
         <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'hunter2', secret: true })} rect={RECT} renderOrder={0} />
       );
       const mesh = findTextMesh(renderer.scene)!;
       const indexAttr = (mesh.geometry as THREE.BufferGeometry).index!;
-      expect(indexAttr.count).toBe(0);
+      // The un-overridden path must not be the degenerate one: an atlas missing
+      // this glyph drew ZERO quads here while every ASCII override drew the full
+      // run, so the default — the only spelling most scenes ever use — was the
+      // one spelling that rendered nothing.
+      expect(indexAttr.count).toBe(7 * 6);
     }
   );
 });

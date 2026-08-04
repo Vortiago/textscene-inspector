@@ -1,6 +1,6 @@
 /**
  * `<RichTextLabel>` — the native (WebGL canvas) painter for
- * RichTextLabel: the bbcode subset `[b]`/`[i]`/`[color]` (anything
+ * RichTextLabel: the bbcode subset `[b]`/`[i]`/`[u]`/`[color]` (anything
  * beyond that is an explicit non-goal) drawn as one `<TextRun>` mesh per
  * (line, contiguous style-run) pair through the shared MSDF text engine
  * (`native/text/textLayout.ts` + `TextRun.tsx`), the same engine `<Label>`
@@ -9,12 +9,20 @@
  * Bold/italic are SYNTHESIZED, not separate fonts — Godot's own default
  * theme has one base font and builds bold/italic `FontVariation`s over it
  * (`nativeSolver.ts`'s `BOLD_DISTANCE_BIAS`/`ITALIC_SKEW` cite the exact
- * `default_theme.cpp` embolden/skew constants). `nativeSolver.ts`'s
- * `styledTextRuns` turns the bbcode tag stack into `{bold, italic, color}`
- * per run; `layoutRichTextRuns` attributes `shapeText`'s own line/glyph
- * output back to those runs (shaping happens ONCE, over the whole
- * concatenated plain text, so line-breaking sees the true paragraph width
- * rather than each run measured in isolation).
+ * `default_theme.cpp` embolden/skew constants). `[u]` is a drawn STROKE, not
+ * a font effect: `nativeSolver.ts`'s `underlineRectPx` computes its rect from
+ * the run's own glyph x-extent and the font's baseline-relative underline
+ * metrics (`openSansMetrics.ts`'s `getUnderlinePositionPx`/
+ * `getUnderlineThicknessPx`, baked from the vendored font's `post` table),
+ * drawn as an extra `<ControlQuad>` sibling of the run's own `<TextRun>` at
+ * `RICH_TEXT_LABEL_UNDERLINE_ALPHA` times the run's own opacity — Godot's own
+ * `underline_alpha` theme constant, a dimmer stroke rather than a
+ * differently-coloured one. `nativeSolver.ts`'s `styledTextRuns` turns the
+ * bbcode tag stack into `{bold, italic, underline, color}` per run;
+ * `layoutRichTextRuns` attributes `shapeText`'s own line/glyph output back to
+ * those runs (shaping happens ONCE, over the whole concatenated plain text,
+ * so line-breaking sees the true paragraph width rather than each run
+ * measured in isolation).
  *
  * RichTextLabel has no `horizontal_alignment`/`vertical_alignment` Control
  * property (unlike Label) — every line is left-aligned, and the paragraph as
@@ -40,11 +48,21 @@
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { multiplyModulate, useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { AutowrapMode, clampAutowrapMode, shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
-import { BOLD_DISTANCE_BIAS, ITALIC_SKEW, layoutRichTextRuns, richTextLabelTextTheme, styledTextRuns } from './nativeSolver';
+import {
+  BOLD_DISTANCE_BIAS,
+  ITALIC_SKEW,
+  RICH_TEXT_LABEL_UNDERLINE_ALPHA,
+  layoutRichTextRuns,
+  richTextLabelTextTheme,
+  styledTextRuns,
+  underlineRectPx,
+} from './nativeSolver';
 import type { RichTextLabelProperties } from './types';
 
 export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
@@ -79,6 +97,9 @@ export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeCon
       {placements.map((placement, index) => {
         const runTint = multiplyModulate(tint.own, placement.color);
         const y = originPx + placement.lineIndex * layout.linePitchPx;
+        const underline = placement.underline
+          ? underlineRectPx(placement.layout.lines[0]!.glyphs, textTheme.fontSizePx)
+          : null;
         return (
           <group key={index} position={[0, -y, 0]}>
             <TextRun
@@ -90,6 +111,17 @@ export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeCon
               clippingPlanes={clippingPlanes}
               renderOrder={renderOrder}
             />
+            {underline && (
+              <group position={[underline.x0, -underline.topPx, 0]}>
+                <ControlQuad
+                  width={underline.x1 - underline.x0}
+                  height={underline.heightPx}
+                  color={godotColorToLinear(runTint)}
+                  opacity={runTint.a * RICH_TEXT_LABEL_UNDERLINE_ALPHA}
+                  renderOrder={renderOrder}
+                />
+              </group>
+            )}
           </group>
         );
       })}

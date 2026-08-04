@@ -217,10 +217,19 @@ export function layoutLineEditContent(input: LineEditContentInput): LineEditCont
       break;
   }
 
-  // y_area = height - style->get_minimum_size().height (the ACTIVE style's own margins).
-  const yArea = rectSize.y - styleMargin.top - styleMargin.bottom;
-  // style->get_offset().y is 0 — `make_flat_stylebox`/`lineEditStyleBox` never set a StyleBox offset.
-  const yOfs = (yArea - textHeightPx) / 2 + originCorrectionPx(fontSizePx);
+  // int y_area = height - style->get_minimum_size().height; (line_edit.cpp:1426) — `height`
+  // is already an int (`Size2 size = get_size()` truncated on assignment), and
+  // `get_minimum_size().height` is the ACTIVE style's own top+bottom margins
+  // (`style_box.cpp:35-40`); the whole subtraction truncates toward zero on assignment.
+  const yArea = Math.trunc(rectSize.y - styleMargin.top - styleMargin.bottom);
+  // int y_ofs = style->get_offset().y + (y_area - text_height) / 2; (line_edit.cpp:1427).
+  // `StyleBox::get_offset()` (style_box.cpp:87-89) is `Point2(get_margin(SIDE_LEFT),
+  // get_margin(SIDE_TOP))` — its Y component is the ACTIVE style's own TOP margin, which
+  // was missing from this expression entirely. The whole sum truncates toward zero on
+  // assignment to `int y_ofs`, same as every other `int(...)` cast in this draw path.
+  // `originCorrectionPx` is this codebase's own MSDF baseline correction, not part of
+  // Godot's formula, so it is added on top of the truncated Godot value rather than inside it.
+  const yOfs = Math.trunc(styleMargin.top + (yArea - textHeightPx) / 2) + originCorrectionPx(fontSizePx);
 
   const contentRect: Rect2 = {
     x: styleMargin.left,

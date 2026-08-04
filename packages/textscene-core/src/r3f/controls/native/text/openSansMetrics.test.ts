@@ -14,12 +14,18 @@ describe('OPEN_SANS_METRICS', () => {
     expect(OPEN_SANS_METRICS.lineGap).toBe(0);
   });
 
-  it('carries a present-but-empty kerning table for ASCII x ASCII', () => {
+  it('carries a present-but-empty kerning table for the full baked charset product', () => {
     // This font carries only `mark`/`mkmk` GPOS features, no `kern` feature
     // and no legacy `kern` table (spike S2 finding) — 0 pairs is the correct
-    // answer for OpenSans_SemiBold, not a missing feature. The shape must
-    // still exist so a synthesized bold/italic, or a different theme font,
-    // has somewhere to plug in pairs without a shape change downstream.
+    // answer for OpenSans_SemiBold, not a missing feature. Re-verified true
+    // for the WIDER charset the bake script now covers (ASCII + Latin-1
+    // Supplement, minus 0xAD SOFT HYPHEN, + punctuation): 0xAD specifically
+    // DOES carry ~200 large kerning pairs against nearly everything else in
+    // this font, which is exactly why the bake script excludes it (see its
+    // own `LATIN1_SUPPLEMENT_EXCLUDE` doc) rather than this table quietly
+    // gaining entries no downstream code expected. The shape must still exist
+    // so a synthesized bold/italic, or a different theme font, has somewhere
+    // to plug in pairs without a shape change downstream.
     expect(OPEN_SANS_METRICS.kerning).toEqual({});
     expect(getKerningAdjustmentUnits('A', 'V')).toBe(0);
   });

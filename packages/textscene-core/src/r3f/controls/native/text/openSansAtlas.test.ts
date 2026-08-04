@@ -29,11 +29,24 @@ describe('OPEN_SANS_ATLAS_PNG_DATA_URL', () => {
 });
 
 describe('OPEN_SANS_ATLAS_GLYPHS', () => {
-  it('covers the full ASCII printable charset, 0x20-0x7E (95 glyphs) — decided, not narrowed', () => {
-    const expectedChars: string[] = [];
-    for (let cp = 0x20; cp <= 0x7e; cp++) expectedChars.push(String.fromCharCode(cp));
-    expect(Object.keys(OPEN_SANS_ATLAS_GLYPHS).sort()).toEqual(expectedChars.sort());
-  });
+  it(
+    'covers ASCII printable (0x20-0x7E), Latin-1 Supplement (0xA0-0xFF, EXCLUDING 0xAD SOFT HYPHEN — a Cf ' +
+      'format character this font maps to visible ink with unusually large kerning, never verified against ' +
+      'real Godot and not needed by any default or fixture), and bullet/ellipsis/en-dash/em-dash/curly-quote ' +
+      'punctuation (U+2022/2026/2013/2014/2018/2019/201C/201D) — decided, not narrowed',
+    () => {
+      const expectedChars: string[] = [];
+      for (let cp = 0x20; cp <= 0x7e; cp++) expectedChars.push(String.fromCodePoint(cp));
+      for (let cp = 0xa0; cp <= 0xff; cp++) {
+        if (cp === 0xad) continue;
+        expectedChars.push(String.fromCodePoint(cp));
+      }
+      for (const cp of [0x2022, 0x2026, 0x2013, 0x2014, 0x2018, 0x2019, 0x201c, 0x201d]) {
+        expectedChars.push(String.fromCodePoint(cp));
+      }
+      expect(Object.keys(OPEN_SANS_ATLAS_GLYPHS).sort()).toEqual(expectedChars.sort());
+    }
+  );
 
   it('gives every glyph a positive xadvance', () => {
     for (const [ch, glyph] of Object.entries(OPEN_SANS_ATLAS_GLYPHS)) {
