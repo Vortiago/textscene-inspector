@@ -1,0 +1,60 @@
+/**
+ * Label tables two unrelated Godot classes bind identically.
+ *
+ * A table here is DATA, not a bound. The citation stays at each `v.enumInt` call
+ * site, because two classes binding the same constants still enforce them at
+ * their own `file:line` and ADR-0032 wants that line beside the bound. What
+ * moves here is only the names, which are the part that is genuinely the same.
+ *
+ * The bar for admission is a table byte-identical in two or more slices with no
+ * common ancestor to hoist onto. `containerAlignment.ts` and `textServerEnums.ts`
+ * are the same idea, kept separate because those belong to one family each;
+ * these are cross-family coincidences.
+ */
+
+/**
+ * `Area2D.SpaceOverride` and `Area3D.SpaceOverride`.
+ *
+ * Enforced separately by each class: `area_2d.cpp:653` and `area_3d.cpp:778`.
+ * This table used to live in a shared `physicsValidators.ts`; when that file was
+ * deleted the validator-building was correctly inlined into both slices, but the
+ * label data got copied rather than re-homed.
+ */
+export const SPACE_OVERRIDE = {
+  0: 'DISABLED',
+  1: 'COMBINE',
+  2: 'COMBINE_REPLACE',
+  3: 'REPLACE',
+  4: 'REPLACE_COMBINE',
+} as const;
+
+/**
+ * `TextureButton.StretchMode` and `TextureRect.StretchMode`.
+ *
+ * Two classes that happen to bind the identical seven constants
+ * (`texture_button.h:39-47`, `texture_rect.h:48-56`). Neither setter enforces
+ * the range, so both bounds are hinted, each citing its own `ADD_PROPERTY`.
+ */
+export const TEXTURE_STRETCH_MODE = {
+  0: 'STRETCH_SCALE',
+  1: 'STRETCH_TILE',
+  2: 'STRETCH_KEEP',
+  3: 'STRETCH_KEEP_CENTERED',
+  4: 'STRETCH_KEEP_ASPECT',
+  5: 'STRETCH_KEEP_ASPECT_CENTERED',
+  6: 'STRETCH_KEEP_ASPECT_COVERED',
+} as const;
+
+/**
+ * `PopupMenu`'s per-item checkable type, reached by `MenuButton` too.
+ *
+ * MenuButton forwards its item writes to PopupMenu's own setter
+ * (`popup_menu.cpp:62-73`), so both slices check the same values against the same
+ * guard, and there is no shared ancestor between a Popup and a Button to hoist
+ * the table onto.
+ */
+export const ITEM_CHECKABLE_TYPE = {
+  0: 'NONE',
+  1: 'CHECK_BOX',
+  2: 'RADIO_BUTTON',
+} as const;

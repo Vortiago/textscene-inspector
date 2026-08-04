@@ -55,13 +55,14 @@
 
 import '../button/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v, accepts, propertyError } from '../../../../linter/validators/index.js';
+import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';import { ITEM_CHECKABLE_TYPE } from '../../../../linter/validators/sharedEnumLabels.js';
+
+import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 // menu_button.cpp:217, PROPERTY_HINT_ENUM "No,As Checkbox,As Radio Button",
 // values 0-2 in popup_menu.h:65-67's declaration order (the same
-// CHECKABLE_TYPE enum PopupMenu's own item family uses).
-const CHECKABLE_TYPE = { 0: 'NONE', 1: 'CHECK_BOX', 2: 'RADIO_BUTTON' };
+// ITEM_CHECKABLE_TYPE enum PopupMenu's own item family uses).
 
 /**
  * `popup/item_<idx>/<leaf>` leaves, keyed by leaf name: the 7 properties
@@ -87,7 +88,7 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // before the write, a silently dropped write (ADR-0032), not a value the
   // setter "assigns straight through" the way a hinted bound requires.
   // Enforced, not hinted.
-  checkable: v.enumInt('checkable', 0, 2, CHECKABLE_TYPE, { enforced: 'popup_menu.cpp:62' }),
+  checkable: v.enumInt('checkable', 0, 2, ITEM_CHECKABLE_TYPE, { enforced: 'popup_menu.cpp:62' }),
   // menu_button.cpp:218, Variant::BOOL, no hint.
   checked: v.boolean('checked'),
   // menu_button.cpp:219, Variant::INT, PROPERTY_HINT_RANGE
@@ -103,58 +104,18 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   separator: v.boolean('separator'),
 };
 
-const ITEM_KEY_RE = /^popup\/item_(-?\d+)\/(.+)$/;
-
-/**
- * Dispatches a `popup/item_<idx>/<leaf>` key to the validator for its leaf
- * name, mirroring `PropertyListHelper::is_property_valid`
- * (property_list_helper.cpp:118-135): split at the LAST `/`, require the head
- * to begin with the prefix and parse as an int, then look the leaf up.
- * `is_property_valid` itself accepts a negative index (`is_valid_int` allows
- * a leading `-`, and `is_property_valid` never range-checks it); the write
- * only fails once it reaches the popup child: `PopupMenu::_set` ->
- * `property_helper.property_set_value` -> `_get_property`'s `index < 0`
- * guard (property_list_helper.cpp:58). This dispatcher rejects it up front
- * so the diagnostic lands on the key that actually carries the defect,
- * rather than reporting a write the engine silently drops as if it landed.
- *
- * `ValidatorRegistry`'s own `#/*` matcher requires every character between
- * the prefix and the leaf-separating `/` to be a digit (0-9), so a real
- * `popup/item_-1/...` key never reaches this function through
- * `findValidator` today (`-` is not a digit), exactly as
- * `findValidator('MenuButton', 'popup/item_-1/text')` returns null in this
- * slice's tests. This branch is written to be CORRECT for a real key
- * regardless of whether the registry currently routes one to it, matching
- * the precedent in `packages/textscene-core/src/nodes/windows/popupmenu/linterParser.ts`.
- */
-const itemValidator: PropertyValidator = accepts((key, value, line) => {
-  const match = ITEM_KEY_RE.exec(key);
-  if (!match) {
-    return propertyError(key, line, `Unknown item property: "${key}"`, 'INVALID_ITEM_KEY');
-  }
-  const index = Number(match[1]);
-  const leafName = match[2]!;
-  if (index < 0) {
-    return propertyError(
-      key,
-      line,
+const itemValidator = indexedFamilyValidator({
+  prefix: 'popup/item_',
+  leaves: ITEM_LEAVES,
+  unknownCode: 'INVALID_ITEM_KEY',
+  describes: 'item',
+  negativeIndex: {
+    cite: 'property_list_helper.cpp:58',
+    code: 'INVALID_ITEM_INDEX',
+    message: (index) =>
       `Item index ${index} must be non-negative. MenuButton forwards this write to its popup child, whose property helper refuses a negative index (property_list_helper.cpp:58), so it is never applied`,
-      'INVALID_ITEM_INDEX'
-    );
-  }
-  const leaf = ITEM_LEAVES[leafName];
-  if (!leaf) {
-    return propertyError(key, line, `Unknown item property: "${key}"`, 'INVALID_ITEM_KEY');
-  }
-  return leaf(key, value, line);
-}, 'popup/item_<index>/<leaf> (see menu_button.cpp, forwarded to popup_menu.cpp)');
-// The dispatcher's own rejection is a key-shape/leaf-name/negative-index
-// concern; every magnitude bound lives in `ITEM_LEAVES`, exposed so the
-// grounding sweep recurses through it instead of being vouched for by this
-// tag alone.
-itemValidator.bounded = true;
-itemValidator.grounding = { kind: 'enforced', cite: 'property_list_helper.cpp:58' };
-itemValidator.leaves = Object.values(ITEM_LEAVES);
+  },
+});
 
 validatorRegistry.registerAll('MenuButton', {
   // menu_button.cpp:204, Variant::BOOL, no hint. set_switch_on_hover

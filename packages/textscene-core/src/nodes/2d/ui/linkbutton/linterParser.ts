@@ -84,7 +84,6 @@ const ellipsisCharValidator: PropertyValidator = (key, value, line) => {
   return null;
 };
 ellipsisCharValidator.accepts = 'quoted string, at most one character';
-ellipsisCharValidator.bounded = true;
 ellipsisCharValidator.grounding = { kind: 'enforced', cite: 'link_button.cpp:93' };
 
 /**

@@ -21,21 +21,6 @@ import type { PropertyValidator } from './ValidatorRegistry.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 /**
- * How many bounded validators still carry no grounding.
- *
- * Lower this every time a family is audited. It must never rise: adding a bound
- * without `enforced:` or `hinted:` is what this exists to catch.
- *
- * It read 476 when only `float`, `int`, `enumInt` and `strictInt` could be
- * grounded. Extending the other eight combinators (`radians`, `positiveInt`,
- * `positiveFloat`, `nonNegativeFloat`, `boundedVector3`, `strictNonNegativeInt`,
- * `layerBitmask`) did not add bounds - it let this sweep SEE bounds it had been
- * blind to, so the true total is 596. The number went up because the
- * measurement got honest, which is the only reason it may ever go up.
- */
-const UNAUDITED_BOUND_BUDGET = 0;
-
-/**
  * The one bound that cannot be grounded, with the reason.
  *
  * `AreaLight3D` does not exist anywhere in Godot 4.6.3, so it has no
@@ -46,25 +31,6 @@ const UNAUDITED_BOUND_BUDGET = 0;
  */
 const UNGROUNDABLE: ReadonlySet<string> = new Set(['AreaLight3D.area_range']);
 
-interface BoundedKey {
-  nodeType: string;
-  key: string;
-  grounded: boolean;
-}
-
-/** Every bounded validator in the registry, with whether it is grounded. */
-function boundedKeys(): BoundedKey[] {
-  const out: BoundedKey[] = [];
-  for (const nodeType of validatorRegistry.getRegisteredNodeTypes()) {
-    for (const key of validatorRegistry.getOwnKeys(nodeType)) {
-      const validator = validatorRegistry.findValidator(nodeType, key);
-      if (!validator?.bounded) continue;
-      out.push({ nodeType, key, grounded: validator.grounding !== undefined });
-    }
-  }
-  return out;
-}
-
 /**
  * Types whose validators are all still unclassified.
  *
@@ -73,10 +39,15 @@ function boundedKeys(): BoundedKey[] {
  * citation) or takes a `Grounding`. A HAND-ROLLED validator is neither until
  * its author says which, and that gap is what this list holds.
  *
- * It is the same shape of hole the bound ratchet closed one level up: while
- * `UNAUDITED_BOUND_BUDGET` read 0, `GPUParticles3D.visibility_aabb` was
- * rejecting a negative extent that `set_visibility_aabb` assigns unaltered,
- * because a hand-rolled validator was never in the denominator.
+ * This is the whole ratchet. An earlier version also swept a `bounded` tag for
+ * validators carrying no grounding, but `ground()` sets `bounded` XOR
+ * `formatOnly`, so "bounded and ungrounded" was definitionally "neither
+ * formatOnly nor grounding" - the same set this catches, minus the recursion
+ * into `.leaves`. The tag and the weaker sweep are gone; this one stayed.
+ *
+ * It found `GPUParticles3D.visibility_aabb` rejecting a negative extent that
+ * `set_visibility_aabb` assigns unaltered, because a hand-rolled validator had
+ * never been in any denominator.
  *
  * Only ever shrinks. Classify the validator instead of adding an entry.
  */
@@ -134,18 +105,9 @@ function unclassifiedKeys(): string[] {
 
 describe('bound grounding', () => {
   it('classifies every validator as format-only or grounded', () => {
-    // The sweep the bound ratchet cannot make: `bounded` is set by `ground()`,
-    // so a validator that never calls it is invisible there however many real
-    // values it rejects.
+    // Covers hand-rolled validators too: one that never goes through the DSL
+    // declares neither tag, so it lands here however many real values it rejects.
     expect(unclassifiedKeys()).toHaveLength(UNCLASSIFIED_VALIDATOR_BUDGET);
-  });
-
-  it('grounds every bound except the one that cannot be', () => {
-    const unaudited = boundedKeys()
-      .filter((b) => !b.grounded)
-      .map((b) => `${b.nodeType}.${b.key}`)
-      .filter((name) => !UNGROUNDABLE.has(name));
-    expect(unaudited.sort()).toHaveLength(UNAUDITED_BOUND_BUDGET);
   });
 
   it('gives every grounded bound a source citation', () => {

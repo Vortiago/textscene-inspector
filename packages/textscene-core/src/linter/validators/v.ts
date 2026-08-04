@@ -174,10 +174,9 @@ function ground(
   const hinted = citeFor(opts.hinted, 'min') ?? citeFor(opts.hinted, 'max');
   if (enforced) validator.grounding = { kind: 'enforced', cite: enforced };
   else if (hinted) validator.grounding = { kind: 'hinted', cite: hinted };
-  if (isBounded) validator.bounded = true;
   // An unbounded numeric combinator rejects only what is not a number, which
   // is the same class of rejection every `shape` makes.
-  else validator.formatOnly = true;
+  if (!isBounded) validator.formatOnly = true;
   return validator;
 }
 

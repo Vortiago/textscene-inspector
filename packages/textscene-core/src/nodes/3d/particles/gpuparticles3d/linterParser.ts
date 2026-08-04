@@ -32,7 +32,6 @@ const amountValidator: PropertyValidator = (key, value, line) => {
 };
 // Tagged by hand (not built through `v`) so `boundGrounding.test.ts`'s sweep
 // sees this bound too.
-amountValidator.bounded = true;
 amountValidator.grounding = { kind: 'enforced', cite: 'gpu_particles_3d.cpp:76' };
 
 validatorRegistry.registerAll('GPUParticles3D', {

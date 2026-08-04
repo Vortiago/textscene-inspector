@@ -23,7 +23,8 @@
  */
 
 import '../control/linterParser.js';
-import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
+import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';import { TEXTURE_STRETCH_MODE } from '../../../../linter/validators/sharedEnumLabels.js';
+
 import { v } from '../../../../linter/validators/index.js';
 
 // texture_rect.h:39-46: enum ExpandMode, 6 values; BIND_ENUM_CONSTANT at
@@ -41,15 +42,6 @@ const EXPAND_MODE = {
 // texture_rect.h:48-56: enum StretchMode, 7 values; BIND_ENUM_CONSTANT at
 // texture_rect.cpp:160-166. Labels from the ADD_PROPERTY hint string at
 // texture_rect.cpp:149.
-const STRETCH_MODE = {
-  0: 'STRETCH_SCALE',
-  1: 'STRETCH_TILE',
-  2: 'STRETCH_KEEP',
-  3: 'STRETCH_KEEP_CENTERED',
-  4: 'STRETCH_KEEP_ASPECT',
-  5: 'STRETCH_KEEP_ASPECT_CENTERED',
-  6: 'STRETCH_KEEP_ASPECT_COVERED',
-};
 
 validatorRegistry.registerAll('TextureRect', {
   // texture_rect.cpp:207-215: set_expand_mode assigns straight through with no
@@ -70,7 +62,7 @@ validatorRegistry.registerAll('TextureRect', {
   // shape as TextureButton's stretch_mode. ADD_PROPERTY at :149 carries
   // PROPERTY_HINT_ENUM with 7 labels, so out-of-range is only HINTED, not
   // enforced: a warning, not an error.
-  stretch_mode: v.enumInt('stretch_mode', 0, 6, STRETCH_MODE, { hinted: 'texture_rect.cpp:149' }),
+  stretch_mode: v.enumInt('stretch_mode', 0, 6, TEXTURE_STRETCH_MODE, { hinted: 'texture_rect.cpp:149' }),
   // texture_rect.cpp:184-201: set_texture assigns straight through (only an
   // early-return on a redundant set); ADD_PROPERTY at :147 is
   // PROPERTY_HINT_RESOURCE_TYPE "Texture2D", editor-picker only. Format-only.

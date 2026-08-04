@@ -33,7 +33,7 @@ Strict parsing format-checks these `GraphNode` properties, plus 6 inherited from
 | Property | Accepts |
 | --- | --- |
 | `ignore_invalid_connection_type` | true or false |
-| `slot/*` | slot/<index>/<leaf> (see graph_node.cpp _get_property_list/_set/_get) |
+| `slot/*` | slot |
 | `slots_focus_mode` | enum 1-3 (Click/All/Accessibility) |
 | `title` | quoted string |
 

@@ -24,6 +24,7 @@
 
 import '../graphelement/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
+import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v, accepts, propertyError, RESOURCE_REFERENCE_REGEX } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
@@ -83,46 +84,18 @@ const SLOT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 /** `slot/<index>/<leaf>`, e.g. `slot/0/left_enabled`. Index may be negative in
  * the text (nothing stops an author from writing one); the leaf name is
  * whatever follows the second slash. */
-const SLOT_KEY_RE = /^slot\/(-?\d+)\/(.+)$/;
-
-/**
- * Dispatches a `slot/<index>/<leaf>` key. `_set` (graph_node.cpp:75-87) always
- * forwards to `set_slot()`, whose `ERR_FAIL_COND_MSG(p_slot_index < 0, …)`
- * (graph_node.cpp:706) refuses the write for a negative index — but `_set`
- * itself unconditionally `return`s `true` regardless (graph_node.cpp:87), so
- * the refusal is invisible unless the delegate's own guard is cited: the
- * "setter that delegates carries the delegate's guard" case (ADR-0032). Every
- * other rejection here is a leaf-name or leaf-value format problem.
- */
-const slotValidator: PropertyValidator = accepts((key, value, line) => {
-  const match = SLOT_KEY_RE.exec(key);
-  if (!match) {
-    return propertyError(key, line, `Unknown slot property: "${key}"`, 'INVALID_SLOT_KEY');
-  }
-  const index = Number(match[1]);
-  const leafName = match[2]!;
-  if (index < 0) {
-    return propertyError(
-      key,
-      line,
-      `Slot index ${index} must be >= 0. GraphNode::set_slot refuses a negative ` +
-        'slot_index (graph_node.cpp:706), so this slot is never applied',
-      'INVALID_SLOT_INDEX',
-      'error'
-    );
-  }
-  const leaf = SLOT_LEAVES[leafName];
-  if (!leaf) {
-    return propertyError(key, line, `Unknown slot property: "${key}"`, 'INVALID_SLOT_KEY');
-  }
-  return leaf(key, value, line);
-}, 'slot/<index>/<leaf> (see graph_node.cpp _get_property_list/_set/_get)');
-// The dispatcher itself carries one real bound (the index >= 0 enforcement);
-// its leaves are exposed for the sweep to recurse through and classify on
-// their own terms rather than being vouched for by this tag.
-slotValidator.bounded = true;
-slotValidator.grounding = { kind: 'enforced', cite: 'graph_node.cpp:706' };
-slotValidator.leaves = Object.values(SLOT_LEAVES);
+const slotValidator = indexedFamilyValidator({
+  prefix: 'slot/',
+  leaves: SLOT_LEAVES,
+  unknownCode: 'INVALID_SLOT_KEY',
+  describes: 'slot',
+  negativeIndex: {
+    cite: 'graph_node.cpp:706',
+    code: 'INVALID_SLOT_INDEX',
+    message: (index) =>
+      `Slot index ${index} must be >= 0. GraphNode::set_slot refuses a negative slot_index (graph_node.cpp:706), so this slot is never applied`,
+  },
+});
 
 validatorRegistry.registerAll('GraphNode', {
   // graph_node.cpp:1299 — Variant::STRING, no hint. set_title (:1171-1174) assigns

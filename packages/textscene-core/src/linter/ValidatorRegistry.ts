@@ -31,13 +31,6 @@ export type PropertyValidator = ((
   accepts?: string;
 
   /**
-   * True when this validator enforces a numeric or enum BOUND, as opposed to a
-   * pure shape check. `boundGrounding.test.ts` sweeps for bounded validators
-   * that carry no `grounding`.
-   */
-  bounded?: boolean;
-
-  /**
    * True when the ONLY thing this validator rejects is a value Godot's own
    * parser could not read either — `Color(1, 1)`, `not-a-float`, an unquoted
    * string. Such a rejection needs no citation, because no `.tscn` the engine
@@ -84,6 +77,50 @@ export type PropertyValidator = ((
  * A negative index is rejected, matching `_get_property`'s `index < 0` guard: a
  * `.tscn` cannot address item -1, so `item_-1/text` is not a key Godot reads.
  */
+/**
+ * How many base-chain hops `findValidator` will walk before giving up.
+ *
+ * Godot's deepest ancestry is a dozen or so; 32 is slack enough to never bind in
+ * practice while still terminating on a malformed hand-built registry.
+ */
+const MAX_BASE_CHAIN_HOPS = 32;
+
+/**
+ * A wildcard registration with its prefix already sliced off the pattern.
+ *
+ * The prefix used to be re-derived on every lookup (`pattern.slice(0, -2) + '/'`,
+ * two allocations per candidate) and a miss is the common case, so the work
+ * landed on the hot path for every unregistered property of every node. Slicing
+ * once at registration makes the lookup a `startsWith` against a retained
+ * string. It also lets the loop skip EXACT keys entirely: `Control` registers
+ * far more of those than the six `theme_override_*` wildcards every Control
+ * descendant inherits.
+ */
+interface WildcardEntry {
+  /** `bones/` for `bones/*`, `item_` for `item_#/*`. */
+  prefix: string;
+  /** True for the `#/*` shape, whose index is glued to the prefix. */
+  indexed: boolean;
+  validator: PropertyValidator;
+}
+
+/** Extract the wildcard patterns from a type's own validators, prefixes pre-sliced. */
+function buildWildcardIndex(own: Record<string, PropertyValidator>): WildcardEntry[] {
+  const entries: WildcardEntry[] = [];
+  for (const pattern in own) {
+    if (!pattern.endsWith('/*')) continue;
+    const validator = own[pattern];
+    if (!validator) continue;
+    const indexed = pattern.endsWith('#/*');
+    entries.push({
+      prefix: indexed ? pattern.slice(0, -3) : pattern.slice(0, -2) + '/',
+      indexed,
+      validator,
+    });
+  }
+  return entries;
+}
+
 function matchesIndexedKey(key: string, prefix: string): boolean {
   if (!key.startsWith(prefix)) return false;
   const slash = key.lastIndexOf('/');
@@ -113,6 +150,8 @@ export interface Removal {
 export class ValidatorRegistry {
   private validators = new Map<string, Record<string, PropertyValidator>>();
   private unavailable = new Map<string, Record<string, Removal>>();
+  /** Wildcard patterns per type, prefixes pre-sliced. Rebuilt on every registerAll. */
+  private wildcards = new Map<string, WildcardEntry[]>();
 
   /**
    * @param baseTypes - node-type → base-type map driving the inheritance walk in
@@ -130,7 +169,9 @@ export class ValidatorRegistry {
     if (!this.validators.has(nodeType)) {
       this.validators.set(nodeType, {});
     }
-    Object.assign(this.validators.get(nodeType)!, validators);
+    const own = this.validators.get(nodeType)!;
+    Object.assign(own, validators);
+    this.wildcards.set(nodeType, buildWildcardIndex(own));
   }
 
   /**
@@ -226,10 +267,13 @@ export class ValidatorRegistry {
    * @returns Validator function or null if neither the type nor its bases match
    */
   findValidator(nodeType: string, propertyKey: string): PropertyValidator | null {
-    const visited = new Set<string>();
+    // A hop counter, not a visited Set: this runs for every property of every
+    // node, and the Set was an allocation on every call including every miss.
+    // `NODE_BASE_TYPES` is derived from ClassDB ancestry, so it is acyclic by
+    // construction; the bound only stops a malformed hand-built registry from
+    // spinning, which is what the Set was really guarding.
     let type: string | undefined = nodeType;
-    while (type && !visited.has(type)) {
-      visited.add(type);
+    for (let hops = 0; type !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
 
       // Removals and validators resolve in ONE walk: this is the hottest path
       // in the linter, reached for every property of every node.
@@ -269,17 +313,16 @@ export class ValidatorRegistry {
       return nodeValidators[propertyKey];
     }
 
-    // Try pattern matching (e.g., "surface_material_override/*"). `for...in`
-    // rather than `Object.entries`, which allocates an array plus a pair per key
-    // on every miss — and every unregistered property is a miss.
-    for (const pattern in nodeValidators) {
-      if (!pattern.endsWith('/*')) continue;
-      const matches = pattern.endsWith('#/*')
-        ? matchesIndexedKey(propertyKey, pattern.slice(0, -3))
-        : propertyKey.startsWith(pattern.slice(0, -2) + '/');
-      if (!matches) continue;
-      const validator = nodeValidators[pattern];
-      if (validator) return validator;
+    // Then the wildcards, over a list that holds ONLY wildcards with their
+    // prefixes already sliced, so a miss walks a short array and allocates
+    // nothing.
+    const wildcards = this.wildcards.get(nodeType);
+    if (wildcards === undefined) return null;
+    for (const entry of wildcards) {
+      const matches = entry.indexed
+        ? matchesIndexedKey(propertyKey, entry.prefix)
+        : propertyKey.startsWith(entry.prefix);
+      if (matches) return entry.validator;
     }
 
     return null;
@@ -307,6 +350,7 @@ export class ValidatorRegistry {
   clear(): void {
     this.validators.clear();
     this.unavailable.clear();
+    this.wildcards.clear();
   }
 }
 

@@ -29,6 +29,27 @@ import { join } from 'node:path';
 import { rangeAdvisories, type RangeAdvisoryTable } from './rangeAdvisory.js';
 import type { TscnNode } from '../parser/types.js';
 
+/**
+ * Drop comments before scraping, so PROSE about the convention cannot fail it.
+ *
+ * This file's own guidance quotes the shape it looks for, and a doc comment in
+ * `validators/indexedFamily.ts` does too. Without this the scrape read those
+ * examples as real citations. `ruleCoverage.test.ts` learned the same lesson
+ * about a backtick in prose; the fix belongs in the scraper, not in contorting
+ * every comment that mentions the thing being scraped.
+ *
+ * Deliberately conservative: whole block comments, and only lines whose first
+ * non-space character opens a comment, so a `//` inside a string literal never
+ * truncates a line and hides a real citation.
+ */
+function stripComments(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n')
+    .filter((line) => !/^\s*(\/\/|\*)/.test(line))
+    .join('\n');
+}
+
 /** `scene/3d/light_3d.cpp:389` and the bare `light_3d.cpp:389` both pass. */
 const CITE_RE = /\.(cpp|h):\d+/;
 
@@ -45,7 +66,7 @@ function citeLiterals(): { file: string; cite: string }[] {
         continue;
       }
       if (!entry.endsWith('.ts') || entry.endsWith('.test.ts')) continue;
-      const source = readFileSync(path, 'utf8');
+      const source = stripComments(readFileSync(path, 'utf8'));
       for (const match of source.matchAll(/\bcite:\s*'([^']*)'/g)) {
         out.push({ file: path.slice(root.length + 1), cite: match[1]! });
       }

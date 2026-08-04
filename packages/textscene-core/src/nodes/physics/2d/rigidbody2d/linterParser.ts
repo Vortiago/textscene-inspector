@@ -25,7 +25,6 @@ const inertia2d: PropertyValidator = (key, value, line) => {
   return null;
 };
 // rigid_body_2d.cpp:328, ERR_FAIL_COND(p_inertia < 0): the setter refuses.
-inertia2d.bounded = true;
 inertia2d.grounding = { kind: 'enforced', cite: 'rigid_body_2d.cpp:328' };
 
 validatorRegistry.registerAll('RigidBody2D', {

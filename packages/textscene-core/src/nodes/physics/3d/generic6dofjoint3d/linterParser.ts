@@ -33,7 +33,7 @@
  * inspects the function REGISTERED under the wildcard key, i.e. the
  * dispatcher `groupValidator` returns, not the leaves it forwards to — so
  * each of the 6 shared dispatcher instances (covering the 18 registrations)
- * carries its own `formatOnly`/`bounded`+`grounding` tag too, set by
+ * carries its own `formatOnly` or `grounding` tag too, set by
  * `groupValidator`'s `classification` parameter.
  */
 
@@ -198,7 +198,6 @@ function groupValidator(
   if (classification.kind === 'formatOnly') {
     validator.formatOnly = true;
   } else {
-    validator.bounded = true;
     validator.grounding = { kind: classification.kind, cite: classification.cite };
   }
   // The dispatcher's own tag says nothing about the leaves behind it, so the

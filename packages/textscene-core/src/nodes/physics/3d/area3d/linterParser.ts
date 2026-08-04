@@ -10,16 +10,10 @@
  */
 
 import '../../shared/linterParser.js';
-import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
+import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';import { SPACE_OVERRIDE } from '../../../../linter/validators/sharedEnumLabels.js';
+
 import { v } from '../../../../linter/validators/index.js';
 
-const SPACE_OVERRIDE = {
-  0: 'DISABLED',
-  1: 'COMBINE',
-  2: 'COMBINE_REPLACE',
-  3: 'REPLACE',
-  4: 'REPLACE_COMBINE',
-};
 
 validatorRegistry.registerAll('Area3D', {
   monitoring: v.boolean('monitoring'),

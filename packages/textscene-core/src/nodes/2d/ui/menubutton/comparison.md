@@ -35,7 +35,7 @@ Strict parsing format-checks these `MenuButton` properties, plus 13 inherited fr
 | Property | Accepts |
 | --- | --- |
 | `item_count` | integer >= 0 |
-| `popup/item_#/*` | popup/item_<index>/<leaf> (see menu_button.cpp, forwarded to popup_menu.cpp) |
+| `popup/item_#/*` | item |
 | `switch_on_hover` | true or false |
 
 | Rule | Reports | Severity |

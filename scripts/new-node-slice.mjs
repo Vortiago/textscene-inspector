@@ -315,15 +315,19 @@ function parentLinterParser(typeName, parentType, sliceDir, fallback) {
    */
   const ownerOf = (type) => {
     const needles = [`registerAll('${type}'`, `registerUnavailable('${type}'`];
+    // Read once per file, not once per needle: `some` over a callback that reads
+    // meant every file failing the first needle, which is most of them, got read
+    // a second time.
+    const matchesAnyNeedle = (file) => {
+      const src = readFileSync(file, 'utf8');
+      return needles.some((needle) => src.includes(needle));
+    };
     const found = [];
     (function walk(dir) {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const full = join(dir, entry.name);
         if (entry.isDirectory()) walk(full);
-        else if (
-          entry.name === 'linterParser.ts' &&
-          needles.some((needle) => readFileSync(full, 'utf8').includes(needle))
-        ) {
+        else if (entry.name === 'linterParser.ts' && matchesAnyNeedle(full)) {
           found.push(dirname(full));
         }
       }

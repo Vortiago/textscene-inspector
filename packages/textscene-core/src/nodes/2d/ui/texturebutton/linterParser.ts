@@ -23,21 +23,13 @@
  */
 
 import '../basebutton/linterParser.js';
-import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
+import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';import { TEXTURE_STRETCH_MODE } from '../../../../linter/validators/sharedEnumLabels.js';
+
 import { v } from '../../../../linter/validators/index.js';
 
 // texture_button.h:39-47: enum StretchMode, 7 values; BIND_ENUM_CONSTANT at
 // texture_button.cpp:286-292. Labels from the ADD_PROPERTY hint string at
 // texture_button.cpp:282.
-const STRETCH_MODE = {
-  0: 'STRETCH_SCALE',
-  1: 'STRETCH_TILE',
-  2: 'STRETCH_KEEP',
-  3: 'STRETCH_KEEP_CENTERED',
-  4: 'STRETCH_KEEP_ASPECT',
-  5: 'STRETCH_KEEP_ASPECT_CENTERED',
-  6: 'STRETCH_KEEP_ASPECT_COVERED',
-};
 
 validatorRegistry.registerAll('TextureButton', {
   // texture_button.cpp:396-403: set_flip_h assigns straight through (only an
@@ -55,7 +47,7 @@ validatorRegistry.registerAll('TextureButton', {
   // TextureProgressBar's set_fill_mode. ADD_PROPERTY at :282 carries
   // PROPERTY_HINT_ENUM with 7 labels, so out-of-range is only HINTED, not
   // enforced: a warning, not an error.
-  stretch_mode: v.enumInt('stretch_mode', 0, 6, STRETCH_MODE, { hinted: 'texture_button.cpp:282' }),
+  stretch_mode: v.enumInt('stretch_mode', 0, 6, TEXTURE_STRETCH_MODE, { hinted: 'texture_button.cpp:282' }),
   // texture_button.cpp:311-317: set_click_mask assigns straight through (only
   // an early-return on a redundant set); ADD_PROPERTY at :280 is
   // PROPERTY_HINT_RESOURCE_TYPE "BitMap", which restricts the editor's resource

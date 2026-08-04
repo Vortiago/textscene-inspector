@@ -99,5 +99,4 @@ validatorRegistry.registerAll('Skeleton3D', {
 bonesValidator.accepts = 'bone pose component (float, Vector3 or Quaternion)';
 // Tagged by hand (not built through `v`) so `boundGrounding.test.ts`'s sweep
 // sees the negative-index bound too.
-bonesValidator.bounded = true;
 bonesValidator.grounding = { kind: 'enforced', cite: 'skeleton_3d.cpp:90' };

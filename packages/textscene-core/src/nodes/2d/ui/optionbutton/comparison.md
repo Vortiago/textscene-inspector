@@ -40,7 +40,7 @@ Strict parsing format-checks these `OptionButton` properties, plus 13 inherited 
 | `allow_reselect` | true or false |
 | `fit_to_longest_item` | true or false |
 | `item_count` | integer >= 0 |
-| `popup/item_#/*` | popup/item_<index>/<leaf> (see option_button.cpp:628-632, PropertyListHelper-backed) |
+| `popup/item_#/*` | item |
 | `selected` | integer >= -1 |
 
 | Rule | Reports | Severity |

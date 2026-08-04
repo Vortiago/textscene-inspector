@@ -42,7 +42,8 @@
 
 import '../button/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v, accepts, propertyError } from '../../../../linter/validators/index.js';
+import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
+import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 /**
@@ -75,53 +76,18 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   separator: v.boolean('separator'),
 };
 
-const ITEM_KEY_RE = /^popup\/item_(-?\d+)\/(.+)$/;
-
-/**
- * Dispatches a `popup/item_<idx>/<leaf>` key to its leaf validator.
- *
- * `OptionButton::_set` (option_button.cpp:162-184) gates every item write
- * through `property_helper.is_property_valid`, which accepts any key shaped
- * `<prefix><digits>/<leaf>` with no index-range check of its own
- * (property_list_helper.cpp:118-133), and then forwards to `popup->set(...)`.
- * PopupMenu's OWN `_set` (popup_menu.cpp:3091-3092) resolves that write
- * through `property_helper.property_set_value`, which calls `_get_property`
- * (property_list_helper.cpp:46-64) with `allow_oob_assign` left at its default
- * `false` (neither class calls `enable_out_of_bounds_assign()`), so a
- * negative index is refused there (property_list_helper.cpp:58) and the write
- * never lands, whichever class's helper is asked. The high end
- * (index >= item_count) hits the SAME line, but that is a bound against a
- * RUNTIME count a per-property validator cannot see (ADR-0032), so it is left
- * unchecked, matching popupmenu/linterParser.ts's own dispatcher.
- */
-const itemValidator: PropertyValidator = accepts((key, value, line) => {
-  const match = ITEM_KEY_RE.exec(key);
-  if (!match) {
-    return propertyError(key, line, `Unknown item property: "${key}"`, 'INVALID_ITEM_KEY');
-  }
-  const index = Number(match[1]);
-  const leafName = match[2]!;
-  if (index < 0) {
-    return propertyError(
-      key,
-      line,
+const itemValidator = indexedFamilyValidator({
+  prefix: 'popup/item_',
+  leaves: ITEM_LEAVES,
+  unknownCode: 'INVALID_ITEM_KEY',
+  describes: 'item',
+  negativeIndex: {
+    cite: 'property_list_helper.cpp:58',
+    code: 'INVALID_ITEM_INDEX',
+    message: (index) =>
       `Item index ${index} must be non-negative. OptionButton's item family refuses a negative index the same way PopupMenu's does (property_list_helper.cpp:58), so this property is never applied`,
-      'INVALID_ITEM_INDEX'
-    );
-  }
-  const leaf = ITEM_LEAVES[leafName];
-  if (!leaf) {
-    return propertyError(key, line, `Unknown item property: "${key}"`, 'INVALID_ITEM_KEY');
-  }
-  return leaf(key, value, line);
-}, 'popup/item_<index>/<leaf> (see option_button.cpp:628-632, PropertyListHelper-backed)');
-// The dispatcher's own rejection is a key-shape/leaf-name/negative-index
-// concern; every magnitude bound lives in `ITEM_LEAVES`, exposed so the
-// grounding sweep recurses through it instead of being vouched for by this
-// tag alone.
-itemValidator.bounded = true;
-itemValidator.grounding = { kind: 'enforced', cite: 'property_list_helper.cpp:58' };
-itemValidator.leaves = Object.values(ITEM_LEAVES);
+  },
+});
 
 validatorRegistry.registerAll('OptionButton', {
   // option_button.cpp:601, Variant::INT, no hint (PROPERTY_HINT_NONE).

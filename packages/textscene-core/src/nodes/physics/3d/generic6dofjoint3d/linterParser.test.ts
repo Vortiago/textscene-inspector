@@ -210,7 +210,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
       for (const group of Object.keys(expectedCite)) {
         for (const axis of ['x', 'y', 'z']) {
           const validator = dispatcher(`${group}_${axis}/*`);
-          expect(validator.bounded, `${group}_${axis}/*`).toBe(true);
+          expect(validator.grounding, `${group}_${axis}/*`).toBeDefined();
           expect(validator.grounding, `${group}_${axis}/*`).toEqual({
             kind: 'hinted',
             cite: expectedCite[group],

@@ -50,7 +50,6 @@ scaleValidator.accepts = 'Vector2(x, y), no (near-)zero component';
 // boundGrounding.test.ts: node_2d.cpp:194-198 substitutes CMP_EPSILON for a
 // (near-)zero component rather than assigning it, an enforced silent
 // alteration under ADR-0032, so out-of-range stays an error.
-scaleValidator.bounded = true;
 scaleValidator.grounding = { kind: 'enforced', cite: 'node_2d.cpp:194' };
 
 validatorRegistry.registerAll('Node2D', {

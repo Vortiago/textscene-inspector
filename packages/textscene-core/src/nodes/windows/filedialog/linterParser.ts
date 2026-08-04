@@ -77,6 +77,7 @@
 
 import '../confirmationdialog/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
+import { indexedFamilyValidator } from '../../../linter/validators/indexedFamily.js';
 import { v, accepts, propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
@@ -147,24 +148,20 @@ const OPTION_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   default: v.int('default'),
 };
 
-/** Dispatches `option_<index>/<leaf>` to the validator for its leaf name. */
-const optionValidator: PropertyValidator = accepts((key, value, line) => {
-  const leafName = key.slice(key.lastIndexOf('/') + 1);
-  const leafValidator = OPTION_LEAVES[leafName];
-  if (!leafValidator) {
-    return propertyError(
-      key,
-      line,
-      `Unknown FileDialog option property: "${key}". Valid leaves: ${Object.keys(OPTION_LEAVES).join(', ')}`,
-      'INVALID_OPTION_KEY'
-    );
-  }
-  return leafValidator(key, value, line);
-}, 'option name, values or default');
-// Rejects only an unrecognised leaf name, a format concern; every real bound
-// lives in OPTION_LEAVES, exposed so the grounding sweep recurses past here.
-optionValidator.formatOnly = true;
-optionValidator.leaves = Object.values(OPTION_LEAVES);
+/**
+ * Dispatches `option_<index>/<leaf>` to the validator for its leaf name.
+ *
+ * No negative-index branch here, unlike the item families: this slice covers the
+ * index range with a cross-field rule instead, because the interesting bound is
+ * the index against `option_count`, which a per-property validator cannot see.
+ * See linter.ts.
+ */
+const optionValidator = indexedFamilyValidator({
+  prefix: 'option_',
+  leaves: OPTION_LEAVES,
+  unknownCode: 'INVALID_OPTION_KEY',
+  describes: 'option name, values or default',
+});
 
 validatorRegistry.registerAll('FileDialog', {
   // file_dialog.cpp:2113, BOOL, no hint. set_mode_overrides_title (:1354-1356)
