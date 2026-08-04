@@ -163,6 +163,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Aspect Ratio Container",
+    "file": "unit-aspect-ratio-container.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Base Button",
     "file": "unit-base-button.tscn",
     "category": "Other"
@@ -283,6 +288,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Foldable Container",
+    "file": "unit-foldable-container.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Generic 6d Of Joint 3d",
     "file": "unit-generic-6d-of-joint-3d.tscn",
     "category": "Other"
@@ -400,6 +410,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Groove Joint 2d",
     "file": "unit-groove-joint-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "H Flow Container",
+    "file": "unit-h-flow-container.tscn",
     "category": "Other"
   },
   {
@@ -783,6 +798,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Tab Container",
+    "file": "unit-tab-container.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Text Edit",
     "file": "unit-text-edit.tscn",
     "category": "Other"
@@ -805,6 +825,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Uv Scale",
     "file": "unit-uv-scale.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "V Flow Container",
+    "file": "unit-v-flow-container.tscn",
     "category": "Other"
   },
   {

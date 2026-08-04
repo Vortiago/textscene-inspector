@@ -206,6 +206,11 @@ reproduced:
 - [FlowContainer](../../packages/textscene-core/src/nodes/2d/ui/flowcontainer/comparison.md) — nothing yet; the wrapping-layout base
 - [GraphElement](../../packages/textscene-core/src/nodes/2d/ui/graphelement/comparison.md) — nothing yet; the draggable graph-node base
 - [SplitContainer](../../packages/textscene-core/src/nodes/2d/ui/splitcontainer/comparison.md) — nothing yet; the splitter base HSplit and VSplit inherit
+- [AspectRatioContainer](../../packages/textscene-core/src/nodes/2d/ui/aspectratiocontainer/comparison.md) — nothing yet; fits one child to a target aspect ratio
+- [FoldableContainer](../../packages/textscene-core/src/nodes/2d/ui/foldablecontainer/comparison.md) — nothing yet; a collapsible titled panel
+- [HFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/hflowcontainer/comparison.md) — nothing yet; a FlowContainer fixed to wrap in rows
+- [TabContainer](../../packages/textscene-core/src/nodes/2d/ui/tabcontainer/comparison.md) — nothing yet; shows one child at a time behind a tab strip
+- [VFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/vflowcontainer/comparison.md) — nothing yet; a FlowContainer fixed to wrap in columns
 
 - [VSlider](../../packages/textscene-core/src/nodes/2d/ui/vslider/comparison.md) — a vertical track with a round grabber
 - [VSplitContainer](../../packages/textscene-core/src/nodes/2d/ui/vsplitcontainer/comparison.md) — two children stacked, split at a computed offset

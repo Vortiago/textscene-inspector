@@ -153,7 +153,7 @@
       "name": "AspectRatioContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -979,7 +979,7 @@
       "name": "FoldableContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -1276,7 +1276,7 @@
       "name": "HFlowContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "FlowContainer",
         "Container",
@@ -2943,7 +2943,7 @@
       "name": "TabContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -3144,7 +3144,7 @@
       "name": "VFlowContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "FlowContainer",
         "Container",

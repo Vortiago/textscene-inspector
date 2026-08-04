@@ -47,6 +47,7 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
   CheckButton: 'a themed BaseButton; its constructor only changes inherited defaults',
   Container: 'layout behaviour only, driven entirely by Control keys',
   HBoxContainer: "orientation only; the box keys are BoxContainer's",
+  HFlowContainer: "orientation only; the flow keys are FlowContainer's",
   HSlider: "orientation only; the slider keys are Slider's",
   HSplitContainer: "orientation only; the split keys are SplitContainer's",
   MarginContainer: 'margins are theme constants, not properties',
@@ -55,6 +56,7 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
   PhysicsBody2D: 'its one member, input_pickable, is overrides=CollisionObject2D',
   Popup: "popup behaviour only; the geometry keys are Window's",
   VBoxContainer: "orientation only; the box keys are BoxContainer's",
+  VFlowContainer: "orientation only; the flow keys are FlowContainer's",
   VSlider: "orientation only; the slider keys are Slider's",
   VSplitContainer: "orientation only; the split keys are SplitContainer's",
 };
