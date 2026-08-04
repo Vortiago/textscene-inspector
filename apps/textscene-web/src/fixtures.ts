@@ -203,6 +203,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Color Picker Button",
+    "file": "unit-color-picker-button.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Color Picker",
     "file": "unit-color-picker.tscn",
     "category": "Other"
@@ -553,8 +558,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Link Button",
+    "file": "unit-link-button.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Marker 3d",
     "file": "unit-marker-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Menu Button",
+    "file": "unit-menu-button.tscn",
     "category": "Other"
   },
   {
@@ -870,6 +885,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Text Edit",
     "file": "unit-text-edit.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Texture Button",
+    "file": "unit-texture-button.tscn",
     "category": "Other"
   },
   {

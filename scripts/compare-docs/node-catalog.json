@@ -595,7 +595,7 @@
       "name": "ColorPickerButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Button",
         "BaseButton",
@@ -1537,7 +1537,7 @@
       "name": "LinkButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "BaseButton",
         "Control",
@@ -1622,7 +1622,7 @@
       "name": "MenuButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Button",
         "BaseButton",
@@ -2972,7 +2972,7 @@
       "name": "TextureButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "BaseButton",
         "Control",

@@ -106,7 +106,6 @@ const UNDECLARED: readonly string[] = [
   'Label',
   'Light2D',
   'LineEdit',
-  'OptionButton',
   'PhysicsBody3D',
   'RichTextLabel',
   'ScrollContainer',

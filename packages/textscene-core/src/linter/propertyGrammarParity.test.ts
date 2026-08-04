@@ -190,6 +190,30 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'Parser reads y_sort_origin, which any number satisfies; linter validates global-space properties the renderer ignores.',
   },
 
+  OptionButton: {
+    linterOnly: [
+      // Read through a computed key, `properties[`popup/item_${i}/text`]`, which
+      // the guard's scrape of fixed key strings cannot match. The parser DOES
+      // read these; only the scrape is blind to how.
+      'popup/item_#/*',
+      // Minimum-size and reselect behaviour: nothing about either changes a pixel
+      // in a frozen scene, so the static overlay never reads them.
+      'fit_to_longest_item', 'allow_reselect',
+      // Godot itself makes these two inert on an OptionButton: its
+      // `_validate_property` (option_button.cpp:554-558) clears their usage, and
+      // `_select` drives the visible label from the chosen ITEM instead. The
+      // linter still validates them because Button's setter accepts a write, but
+      // there is nothing for the parser to read.
+      'text', 'icon',
+      // A genuine render limitation, not a desync: these are live Button styling
+      // properties on a real OptionButton, but this slice's `parser.ts` reuses
+      // `parseControl` rather than `parseButton`, so the previewer does not style
+      // an OptionButton as a Button yet. The linter validates what Godot accepts.
+      'alignment', 'flat', 'icon_alignment', 'expand_icon', 'vertical_icon_alignment',
+    ],
+    reason: 'The item family is read through a computed key the scrape cannot match; fit_to_longest_item and allow_reselect have no static render surface; text and icon are inert in Godot itself; the Button styling keys are unread because this parser reuses parseControl, a render limitation rather than a validator desync.',
+  },
+
   Control: {
     linterOnly: [
       // Inherited from the CanvasItem tier and genuinely unread on this side:

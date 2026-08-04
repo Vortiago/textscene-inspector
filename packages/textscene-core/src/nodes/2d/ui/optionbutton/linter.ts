@@ -1,0 +1,81 @@
+/**
+ * OptionButton cross-field advisory: `selected` against `item_count`.
+ *
+ * Format validation (including `selected`'s own -1 floor) is handled by
+ * linterParser.ts. This rule catches what a single-property validator
+ * cannot: `selected` naming an index that `item_count` never provides.
+ *
+ * The engine-grounded reason this is worth flagging, not just "seems wrong":
+ * `ADD_PROPERTY(PropertyInfo(Variant::INT, "selected"), "_select_int", ...)`
+ * (option_button.cpp:601) routes every scene-loaded `selected` write through
+ * `OptionButton::_select_int` (option_button.cpp:432-443). Its outcome
+ * depends on which of `selected`/`item_count` SceneState applies FIRST, an
+ * ordering this rule's `node.properties` bag cannot see (it holds only the
+ * final key/value pairs):
+ *
+ * - `item_count` applied first (Godot's own writer order, and the order this
+ *   slice's fixture uses): by the time `selected` lands, `initialized` is
+ *   already true, so the `p_which >= popup->get_item_count()` branch just
+ *   returns, the write is silently dropped and `current` keeps its previous
+ *   value (option_button.cpp:436-441).
+ * - `selected` applied first: the SAME branch instead stashes the value in
+ *   `queued_current` (option_button.cpp:437-438), and the pending
+ *   `set_item_count` call later assigns it straight to `current`
+ *   (option_button.cpp:329-334) with NO bounds check at all, bypassing the
+ *   `ERR_FAIL_INDEX` that guards every other path into `_select`
+ *   (option_button.cpp:416). `current` ends up permanently out of range, and
+ *   `get_selected()`/`get_selected_id()` return it as-is.
+ *
+ * Neither outcome selects the intended item, so this warns regardless of
+ * which shape a real file turns out to be. Warning, not error, because the
+ * common (canonical-order) outcome is a no-op rather than a corrupted state,
+ * and because the rule cannot know which shape applies without the file's
+ * own property order.
+ */
+
+import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
+import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+
+function checkOptionButtonSelected(context: RuleContext): Diagnostic[] {
+  const { node } = context;
+  if (!isValidProperties(node.properties)) return [];
+  const props = node.properties as Record<string, string>;
+
+  if (props.selected === undefined) return [];
+  const selected = parseInt(props.selected, 10);
+  // -1 ("none selected") and below are the single-property validator's own
+  // concern; this rule only compares a NON-NEGATIVE selected index against
+  // the sibling item_count.
+  if (isNaN(selected) || selected < 0) return [];
+
+  const itemCount = props.item_count !== undefined ? parseInt(props.item_count, 10) : 0;
+  if (isNaN(itemCount)) return [];
+
+  if (selected < itemCount) return [];
+
+  return [
+    {
+      severity: 'warning',
+      message: `OptionButton '${node.name}' sets 'selected' = ${selected} but declares only ${itemCount} item(s) (item_count). Depending on the order these two properties appear in the file, Godot either silently drops this selection (option_button.cpp:436-441) or assigns it to the internal current index with no bounds check at all (option_button.cpp:329-334); neither selects the intended item.`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'optionbutton-selected-out-of-range',
+    },
+  ];
+}
+
+const optionButtonSelectedRule: LintRule = {
+  meta: {
+    name: 'valid-optionbutton-selected',
+    description: "Flags an OptionButton 'selected' index that item_count never provides",
+    category: 'validation',
+    applicableNodeTypes: ['OptionButton'],
+    emits: [{ ruleName: 'optionbutton-selected-out-of-range', severity: 'warning' }],
+  },
+  check: checkOptionButtonSelected,
+};
+
+ruleRegistry.register(optionButtonSelectedRule);
+
+export { optionButtonSelectedRule };
