@@ -1,0 +1,29 @@
+// Type-checking config — everything under `src`, tests and shared test helpers
+// included.
+//
+// `tsconfig.json` is the BUILD config: it excludes `*.test.*` and
+// `src/**/testing/**` so they never reach `dist`, which is right. But that same
+// file was also what `type-check` pointed at, so the emit exclusion silently
+// doubled as a CHECK exclusion — tests and test helpers were type-checked by
+// nothing, and vitest only transpiles. A test could pass arguments of the wrong
+// type to the API it exercises and every gate stayed green.
+//
+// `src/**/testing/**` matters most: `controls/native/testing/painterProps.ts`
+// exists precisely so widening a painter's contract is one edit, and it was the
+// least-checked file in the package.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // The build config is `composite` for project references, which requires
+    // declaration emit — meaningless here and illegal alongside `noEmit`.
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    // The ambients vitest gives a test at runtime, so checking sees what the
+    // test actually has rather than inventing failures.
+    "types": ["vitest/globals", "node"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

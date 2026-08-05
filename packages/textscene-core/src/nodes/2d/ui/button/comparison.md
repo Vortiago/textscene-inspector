@@ -58,7 +58,17 @@ own StyleBox sets `content_margin_top/bottom = 6`: Godot's rect is 35 px
 3 px was Label's `line_spacing` default leaking into the shared text measurer —
 see the Control sheet, which measures the same term per row on a whole stack.
 
-Two smaller things still differ.
+**CLOSED — and the same leak had a second half, on the PAINT side.** Closing it
+in the minimum-size solver fixed the button's HEIGHT while the label inside it
+still sat a row high, because the painter shaped its own copy of the run and
+passed no `lineSpacingPx` at all — taking the shared default of 3, the very
+constant the solver had stopped using. The two halves were independent, and the
+height being right is exactly what made the remainder easy to miss. Now that the
+painter reads back the layout the solver already produced, there is one shaped
+run and one spacing rule. Measured on the states fixture, the topmost label's
+glyph rows: Godot 120..131, ours 120..132, where the previous render sat at
+119..130 — a whole row high. `Button` declares no `line_spacing` theme key at
+all; it is Label's, and a button never stacks the lines it would separate.
 
 **Styled sits one row low**: y 308..342 here against Godot's y 307..341. The height
 is right and the other two buttons are on Godot's exact rows, so this is a
