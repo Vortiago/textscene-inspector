@@ -39,7 +39,7 @@ A diagnostic may exist in exactly one of three tiers, decided by the engine sour
 | Tier | Grounding | Verdict |
 | --- | --- | --- |
 | **error** | The setter refuses or alters the value: an `ERR_FAIL*`, or a clamp/mask that silently changes what was written. | error |
-| **warning** | The value lies outside the `PROPERTY_HINT_RANGE` in the property's `ADD_PROPERTY`. | warning |
+| **warning** | The value lies outside what the property's own UI-control hint permits: `PROPERTY_HINT_RANGE`, `PROPERTY_HINT_LAYERS_*` or `PROPERTY_HINT_FLAGS` in its `ADD_PROPERTY`. | warning |
 | **nothing** | `PROPERTY_HINT_NONE`, no hint, both hint ends open, or a bound that exists only in the class-reference prose. | no rule |
 
 Three rules govern reading the hint:
@@ -51,6 +51,13 @@ Three rules govern reading the hint:
   narrative advice is not, and never grounds a diagnostic on its own.
 - **A hint is not enforcement.** It yields a warning, never an error. Only the
   setter's own behaviour can justify an error.
+- **A bit mask is two tiers, not one.** Where a setter stores `p_flags & MASK`, a
+  bit outside the mask is DROPPED, which is the error row's "silently changes what
+  was written"; a bit inside the mask but absent from the `PROPERTY_HINT_FLAGS`
+  list is kept unaltered and only unreachable from the inspector, which is the
+  warning row. `autowrap_trim_flags` is both at once: the mask keeps 224, the hint
+  offers 192. Membership is not a range, so neither tier can be expressed as a
+  min/max bound; `maskedBitField` exists for this shape.
 
 Every surviving threshold carries the governing `file:line` in a comment beside it.
 A constant named for a feeling rather than a source — `EXTREME_*`, `LARGE_*`,

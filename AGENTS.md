@@ -81,13 +81,22 @@ real parser instead of the decode/build split. Conformance:
   `TscnParser` renders what it can; `StrictTscnParser` lints and reports everything.
   Depth: ARCHITECTURE.md.
 - Every diagnostic is grounded in the engine source, in one of three tiers (ADR-0032).
-  **error** = the setter refuses or alters the value (`ERR_FAIL*`, a clamp).
-  **warning** = outside the `PROPERTY_HINT_RANGE` in the property's `ADD_PROPERTY`,
-  where `,or_greater` opens the max end and `,or_less` opens the min end and an open
-  end never warns. **nothing** = `PROPERTY_HINT_NONE`, both ends open, or a bound that
+  **error** = the setter refuses or alters the value (`ERR_FAIL*`, a clamp, a mask
+  that drops bits, a truncation). **warning** = outside what the property's own
+  UI-control hint permits, `PROPERTY_HINT_RANGE` / `LAYERS_*` / `FLAGS` alike, where
+  `,or_greater` opens the max end and `,or_less` opens the min end and an open end
+  never warns. **nothing** = `PROPERTY_HINT_NONE`, both ends open, or a bound that
   only exists in the class-reference prose. A hint constrains the inspector widget, not
   the engine, so it warns and never errors. Cite the `file:line` beside each bound; a
   constant named `EXTREME_*` / `LARGE_*` / `*_RECOMMENDED` without one is a defect.
+  A `p_flags & MASK` setter is BOTH tiers and needs `maskedBitField`, not a min/max:
+  a bit outside the mask is dropped (error), a bit inside it but missing from the
+  `FLAGS` hint is kept yet unreachable from the inspector (warning).
+- **`ADD_PROPERTY` gives the declared type; the GETTER decides the serialised form.**
+  A `TypedArray<T>` getter behind a `PropertyInfo(Variant::PACKED_*, …)` serialises as
+  `Array[T]([…])`, not `PackedTArray(…)` — all five of CodeEdit's array properties do
+  this. Read the getter signature for every array or dictionary property, or ship a
+  validator that rejects what Godot itself wrote.
 - That grounding is declared, not inferred. Every validator carries `formatOnly` (it
   rejects only what Godot's parser could not read either, so no citation exists) or
   `grounding` (it rejects a real value, and names the `file:line`); the `v` DSL sets

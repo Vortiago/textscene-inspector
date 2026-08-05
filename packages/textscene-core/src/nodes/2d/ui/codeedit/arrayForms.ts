@@ -20,6 +20,11 @@
  *
  * The declared packed spelling stays accepted: Godot's parser reads it back
  * happily, and a hand-written or older scene may well use it.
+ *
+ * The bare `[…]` spelling is accepted for a reason of its own, not by analogy:
+ * `TypedArray<T>(const Array &)` (core/variant/typed_array.h:43-50) calls
+ * `assign(p_array)` whenever the incoming array is not already same-typed, so an
+ * untyped literal converts element-wise on the way into the setter and loads.
  */
 
 /** `PackedStringArray("a")`, `Array[String](["a"])`, or `["a"]`. */
