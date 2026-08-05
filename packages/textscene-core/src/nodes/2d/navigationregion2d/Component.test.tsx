@@ -82,7 +82,7 @@ describe('<NavigationRegion2D>', () => {
     const renderer = await render(true);
     const overlay = renderer.scene
       .findAllByType('Mesh')
-      .map((m) => m.instance.material as THREE.MeshBasicMaterial)
+      .map((m) => (m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
       .find((mat) => mat?.transparent && mat.color?.getHex() === NAV_OVERLAY_COLOR);
     expect(overlay).toBeDefined();
     expect(renderer.scene.findAllByType('LineSegments').length).toBeGreaterThan(0);

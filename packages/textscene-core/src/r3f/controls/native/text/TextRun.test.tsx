@@ -98,14 +98,14 @@ describe('<TextRun>', () => {
     const renderer = await renderTextRun();
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(1);
-    const geometry = meshes[0]!.instance.geometry as THREE.BufferGeometry;
+    const geometry = (meshes[0]!.instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     expect(geometry.getAttribute('position').count).toBe(2 * 4);
   });
 
   it('tints the material from the sRGB tint, converted to linear, with alpha as opacity', async () => {
     const tint = { r: 0.2, g: 0.4, b: 0.6, a: 0.75 };
     const renderer = await renderTextRun({ tint });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.ShaderMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
     const [lr, lg, lb] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
     const uColor = mat.uniforms.uColor!.value as THREE.Vector3;
     expect(uColor.x).toBeCloseTo(lr, 6);
@@ -116,20 +116,20 @@ describe('<TextRun>', () => {
 
   it('forwards distanceBias to the material', async () => {
     const renderer = await renderTextRun({ distanceBias: 0.1 });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.ShaderMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
     expect(mat.uniforms.uDistanceBias!.value).toBe(0.1);
   });
 
   it('forwards clipping planes to the material (per-material state)', async () => {
     const planes = [new THREE.Plane(new THREE.Vector3(1, 0, 0), 0)];
     const renderer = await renderTextRun({ clippingPlanes: planes });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.ShaderMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
     expect(mat.clippingPlanes).toEqual(planes);
   });
 
   it('renders one fewer quad when the layout has an extra whitespace-only glyph', async () => {
     const renderer = await renderTextRun({ layout: layoutFor('A B') });
-    const geometry = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     expect(geometry.getAttribute('position').count).toBe(2 * 4);
   });
 });

@@ -375,11 +375,11 @@ describe('TileMapLayer degradation (ADR-0008)', () => {
     const meshes = r.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(2);
     const colors = meshes.map((m) =>
-      (m.instance.material as THREE.MeshBasicMaterial).color.getHexString()
+      ((m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color.getHexString()
     );
     expect(colors).toContain('ff00ff'); // the magenta per-source placeholder
     const tiled = meshes.find(
-      (m) => (m.instance.material as THREE.MeshBasicMaterial).map !== null
+      (m) => ((m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).map !== null
     );
     expect(tiled).toBeDefined();
   });

@@ -9,6 +9,7 @@ import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseNode2D } from '../../nodes/base/node2d/parser';
 import type { TscnNode } from '../../parser/types';
+import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { CanvasItem2D } from './CanvasItem2D';
 
 const heading = { type: 'node', attributes: { type: 'Node2D', name: 'CI' } };
@@ -26,11 +27,16 @@ function makeNode(raw: Record<string, string> = {}): TscnNode {
   };
 }
 
+/** `node.properties` narrowed to this suite's node type, the same cast a real Component dispatcher applies. */
+function node2DProps(node: TscnNode): Node2DProperties {
+  return node.properties as Node2DProperties;
+}
+
 describe('CanvasItem2D', () => {
   it('renders a named group carrying the conjugated Node2D transform and z_index draw order', async () => {
     const node = makeNode({ position: 'Vector2(100, 50)', rotation: '0.5', z_index: '2' });
     const r = await ReactThreeTestRenderer.create(
-      <CanvasItem2D node={node} props={node.properties} />
+      <CanvasItem2D node={node} props={node2DProps(node)} />
     );
     const group = r.scene.children[0]!.instance as THREE.Group;
     expect(group.name).toBe('CI');
@@ -43,7 +49,7 @@ describe('CanvasItem2D', () => {
   it('hides the group when visible is false', async () => {
     const node = makeNode({ visible: 'false' });
     const r = await ReactThreeTestRenderer.create(
-      <CanvasItem2D node={node} props={node.properties} />
+      <CanvasItem2D node={node} props={node2DProps(node)} />
     );
     const group = r.scene.children[0]!.instance as THREE.Group;
     expect(group.visible).toBe(false);
@@ -63,13 +69,13 @@ describe('CanvasItem2D', () => {
       </mesh>
     );
     const r = await ReactThreeTestRenderer.create(
-      <CanvasItem2D node={parent} props={parent.properties} body={body}>
-        <CanvasItem2D node={child} props={child.properties} body={body} />
+      <CanvasItem2D node={parent} props={node2DProps(parent)} body={body}>
+        <CanvasItem2D node={child} props={node2DProps(child)} body={body} />
       </CanvasItem2D>
     );
     const meshes = r.scene.findAllByType('Mesh');
-    const parentColor = (meshes[0]!.instance.material as THREE.MeshBasicMaterial).color;
-    const childColor = (meshes[1]!.instance.material as THREE.MeshBasicMaterial).color;
+    const parentColor = ((meshes[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color;
+    const childColor = ((meshes[1]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color;
     expect(parentColor.r).toBeCloseTo(0, 5); // own pixels: modulate × self_modulate(0)
     expect(childColor.r).toBeCloseTo(srgbToLinear(0.5), 4); // inherits modulate, not self_modulate
   });

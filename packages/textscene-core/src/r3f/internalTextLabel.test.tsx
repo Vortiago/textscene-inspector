@@ -29,7 +29,7 @@ function staticImportSpecifiers(src: string): string[] {
   const out: string[] = [];
   let m: RegExpExecArray | null;
   const re = new RegExp(STATIC_IMPORT_RE.source, 'g');
-  while ((m = re.exec(src)) !== null) out.push(m[1]);
+  while ((m = re.exec(src)) !== null) out.push(m[1]!);
   return out;
 }
 

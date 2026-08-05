@@ -59,10 +59,16 @@ function makePhotoFrameScene(canvasName: string): TscnScene {
   };
 }
 
-/** A Hallway-level PhotoFrame instancing node carrying the authored transform basis + origin. */
+/**
+ * A Hallway-level PhotoFrame instancing node carrying the authored transform
+ * basis + origin. `_scenePath` is unused here — the instance's ExtResource id
+ * is derived from `name` alone; the actual path resolution is wired through
+ * `renderFrame`'s separate `ref` argument — kept as a parameter so every call
+ * site still reads the scene path it seeds alongside the node it builds.
+ */
 function makeFrameInstanceNode(
   name: string,
-  scenePath: string,
+  _scenePath: string,
   origin: { x: number; y: number; z: number }
 ): TscnNode {
   return {

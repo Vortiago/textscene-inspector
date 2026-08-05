@@ -92,7 +92,7 @@ describe('TileMap render parity', () => {
         'layer_0/modulate': 'Color(0.5, 0.5, 0.5, 0.5)',
       })
     );
-    const material = r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const material = (r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     const srgbToLinear = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
     expect(material.color.r).toBeCloseTo(srgbToLinear(0.5), 4);
     expect(material.opacity).toBeCloseTo(0.5, 5);

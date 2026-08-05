@@ -31,6 +31,8 @@ const STYLE_BOX: StyleBoxFlatData = {
   contentMargin: { ...ZERO_SIDES },
   drawCenter: true,
   borderBlend: false,
+  antiAliased: true,
+  aaSize: 1,
 };
 const RECT: Rect2 = { x: 0, y: 0, w: 40, h: 20 };
 
@@ -51,7 +53,7 @@ describe('every native quad primitive spreads useControlClipPlanes()', () => {
         <StyleBoxQuad styleBox={STYLE_BOX} rect={RECT} renderOrder={0} />
       </ControlClipProvider>
     );
-    const material = renderer.scene.findByType('Mesh').instance.material as THREE.Material;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
     expect(material.clippingPlanes).toEqual(planes);
   });
 
@@ -59,7 +61,7 @@ describe('every native quad primitive spreads useControlClipPlanes()', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <StyleBoxQuad styleBox={STYLE_BOX} rect={RECT} renderOrder={0} />
     );
-    const material = renderer.scene.findByType('Mesh').instance.material as THREE.Material;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
     expect(material.clippingPlanes).toEqual([]);
   });
 
@@ -70,7 +72,7 @@ describe('every native quad primitive spreads useControlClipPlanes()', () => {
         <ControlQuad width={40} height={20} color={new THREE.Color(1, 1, 1)} opacity={1} renderOrder={0} />
       </ControlClipProvider>
     );
-    const material = renderer.scene.findByType('Mesh').instance.material as THREE.Material;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
     expect(material.clippingPlanes).toEqual(planes);
   });
 
@@ -78,7 +80,7 @@ describe('every native quad primitive spreads useControlClipPlanes()', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ControlQuad width={40} height={20} color={new THREE.Color(1, 1, 1)} opacity={1} renderOrder={0} />
     );
-    const material = renderer.scene.findByType('Mesh').instance.material as THREE.Material;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
     expect(material.clippingPlanes).toEqual([]);
   });
 });

@@ -25,6 +25,8 @@ function box(overrides: Partial<StyleBoxFlatData>): StyleBoxFlatData {
     contentMargin: { ...ZERO_SIDES },
     drawCenter: true,
     borderBlend: false,
+    antiAliased: true,
+    aaSize: 1,
     ...overrides,
   };
 }
@@ -32,20 +34,20 @@ function box(overrides: Partial<StyleBoxFlatData>): StyleBoxFlatData {
 describe('<StyleBoxQuad>', () => {
   it('builds an indexed BufferGeometry matching styleBoxFlatGeometry\'s vertex/index counts', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <StyleBoxQuad styleBox={box({})} rect={{ x: 0, y: 0, w: 100, h: 50 }} />
+      <StyleBoxQuad styleBox={box({})} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
     );
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
     // Sharp rect, draw_center only: 8 vertices, 6 triangles (see
     // styleBoxFlatGeometry.test.ts's "a sharp rect" case for the derivation).
-    expect(geom.attributes.position.count).toBe(8);
+    expect(geom.attributes.position!.count).toBe(8);
     expect(geom.getIndex()!.count).toBe(18);
-    expect(geom.attributes.color.count).toBe(8);
-    expect(geom.attributes.color.itemSize).toBe(4);
+    expect(geom.attributes.color!.count).toBe(8);
+    expect(geom.attributes.color!.itemSize).toBe(4);
   });
 
   it('applies the house material recipe: vertex colours, transparent, no depth write, double-sided', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <StyleBoxQuad styleBox={box({})} rect={{ x: 0, y: 0, w: 100, h: 50 }} />
+      <StyleBoxQuad styleBox={box({})} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const mat = mesh.material as THREE.MeshBasicMaterial;
@@ -61,9 +63,10 @@ describe('<StyleBoxQuad>', () => {
       <StyleBoxQuad
         styleBox={box({ bgColor: { r: 1, g: 0.5, b: 0, a: 1 } })}
         rect={{ x: 0, y: 0, w: 100, h: 50 }}
+        renderOrder={0}
       />
     );
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
     // sRGBChannelToLinear(0.5) = ((0.5+0.055)/1.055)^2.4 ≈ 0.2140.
     expect(color.getX(0)).toBeCloseTo(1, 4);
@@ -74,22 +77,23 @@ describe('<StyleBoxQuad>', () => {
 
   it('renders nothing (no mesh) when the stylebox draws no geometry (draw_center false, no border)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <StyleBoxQuad styleBox={box({ drawCenter: false })} rect={{ x: 0, y: 0, w: 100, h: 50 }} />
+      <StyleBoxQuad styleBox={box({ drawCenter: false })} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
     );
     expect(() => renderer.scene.findByType('Mesh')).toThrow();
   });
 
   it('disposes the previous geometry when the stylebox changes', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <StyleBoxQuad styleBox={box({})} rect={{ x: 0, y: 0, w: 100, h: 50 }} />
+      <StyleBoxQuad styleBox={box({})} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
     );
-    const firstGeom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const firstGeom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
     const disposeSpy = vi.spyOn(firstGeom, 'dispose');
 
     await renderer.update(
       <StyleBoxQuad
         styleBox={box({ bgColor: { r: 0, g: 0, b: 1, a: 1 } })}
         rect={{ x: 0, y: 0, w: 100, h: 50 }}
+        renderOrder={0}
       />
     );
 
@@ -111,7 +115,7 @@ describe('<StyleBoxQuad>', () => {
           renderOrder={0}
         />
       );
-      const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+      const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
       const color = geom.attributes.color as THREE.BufferAttribute;
 
       const composedOnce = sRGBChannelToLinear(0.25);
@@ -132,7 +136,7 @@ describe('<StyleBoxQuad>', () => {
           renderOrder={0}
         />
       );
-      const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+      const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
       const color = geom.attributes.color as THREE.BufferAttribute;
       // Vertex 1 is the border ring's first OUTER (border_color) vertex — see
       // styleBoxFlatGeometry.test.ts's border_blend fixture for the even/odd
@@ -144,7 +148,7 @@ describe('<StyleBoxQuad>', () => {
       const renderer = await ReactThreeTestRenderer.create(
         <StyleBoxQuad styleBox={box({ bgColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 } })} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
       );
-      const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+      const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
       const color = geom.attributes.color as THREE.BufferAttribute;
       expect(color.getX(0)).toBeCloseTo(sRGBChannelToLinear(0.8), 5);
     });
@@ -158,7 +162,7 @@ describe('<StyleBoxQuad>', () => {
           renderOrder={0}
         />
       );
-      const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+      const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
       const color = geom.attributes.color as THREE.BufferAttribute;
       expect(color.getW(0)).toBeCloseTo(0.4, 5);
     });

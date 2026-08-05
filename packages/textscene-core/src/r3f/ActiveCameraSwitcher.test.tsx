@@ -11,6 +11,7 @@
  * canvas is 1280x800, so a synced camera reads 1.6, not the authored 16/9.
  */
 import { describe, expect, it } from 'vitest';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ActiveCameraSwitcher } from './TscnCanvas';
 import { HierarchyProvider } from './contexts/HierarchyContext';
@@ -38,13 +39,13 @@ async function mount(initialActiveCameraPath?: string) {
 describe('ActiveCameraSwitcher', () => {
   it('syncs a deep-linked scene camera aspect to the canvas so it renders undistorted', async () => {
     const r = await mount('Root/Camera3D');
-    const cam = r.scene.findByType('PerspectiveCamera').instance as { aspect: number };
+    const cam = r.scene.findByType('PerspectiveCamera').instance as THREE.PerspectiveCamera;
     expect(cam.aspect).toBeCloseTo(1280 / 800, 5);
   });
 
   it('leaves the authored aspect untouched when no camera is activated (free orbit)', async () => {
     const r = await mount(undefined);
-    const cam = r.scene.findByType('PerspectiveCamera').instance as { aspect: number };
+    const cam = r.scene.findByType('PerspectiveCamera').instance as THREE.PerspectiveCamera;
     expect(cam.aspect).toBeCloseTo(16 / 9, 5);
   });
 
@@ -57,7 +58,7 @@ describe('ActiveCameraSwitcher', () => {
         </CameraControlProvider>
       </HierarchyProvider>
     );
-    const cam = r.scene.findByType('PerspectiveCamera').instance as { aspect: number };
+    const cam = r.scene.findByType('PerspectiveCamera').instance as THREE.PerspectiveCamera;
     expect(cam.aspect).toBeCloseTo(16 / 9, 5);
   });
 });

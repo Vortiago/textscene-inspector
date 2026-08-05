@@ -709,7 +709,7 @@ describe('liveChildGroups — internalResources scope (a sub-scene\'s own SubRes
     expect(groups).toHaveLength(1);
     expect(groups[0]!.origin).toBe('merged');
     expect(groups[0]!.scope.internalResources).toBe(subInternal);
-    expect(groups[0]!.internalResources).not.toBe(hostInternal);
+    expect(groups[0]!.scope.internalResources).not.toBe(hostInternal);
   });
 
   it('non-instance node — inline group carries the HOST-passed internalResources (host-authored children still resolve)', () => {

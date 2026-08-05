@@ -16,6 +16,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
@@ -215,7 +216,7 @@ describe('NodeDispatcher — nested external scenes (3+ levels)', () => {
 
       const meshes = renderer.scene.findAllByType('Mesh');
       const leafSphere = meshes.find((m) => m.instance.name === 'LeafSphere');
-      expect(leafSphere?.instance.isMesh).toBe(true);
+      expect((leafSphere?.instance as THREE.Mesh | undefined)?.isMesh).toBe(true);
     });
 
     it('DELETED_FEATURE: userData.instanceRoot not set in R3F pipeline', () => {

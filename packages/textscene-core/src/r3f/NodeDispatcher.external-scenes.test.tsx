@@ -16,6 +16,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene, TscnInternalResource } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
@@ -127,7 +128,7 @@ describe('NodeDispatcher — external scene node rendering', () => {
       const meshes = renderer.scene.findAllByType('Mesh');
       const cubeMesh = meshes.find((m) => m.instance.name === 'Cube');
       expect(cubeMesh).toBeDefined();
-      expect(cubeMesh!.instance.isMesh).toBe(true);
+      expect((cubeMesh!.instance as THREE.Mesh).isMesh).toBe(true);
     });
 
     it('maintains correct parent-child relationships in THREE.js graph', async () => {

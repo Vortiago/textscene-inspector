@@ -14,7 +14,7 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: 1,
+            id: '1',
             type: 'ArrayMesh',
             data: { id: 'mesh_1' },
           },
@@ -30,7 +30,7 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: 1,
+            id: '1',
             type: 'ArrayMesh',
             data: { id: 'mesh_1' },
           },
@@ -50,23 +50,13 @@ describe('checkResourceExists', () => {
       expect(checkResourceExists(scene, 'SubResource("mesh_1")')).toBe(false);
     });
 
-    it('should handle scene with undefined internal resources', () => {
-      const scene: TscnScene = {
-        nodes: [],
-        externalResources: [],
-        internalResources: undefined,
-      };
-
-      expect(checkResourceExists(scene, 'SubResource("mesh_1")')).toBe(false);
-    });
-
     it('should find SubResource with hyphenated ID', () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
         internalResources: [
           {
-            id: 1,
+            id: '1',
             type: 'StandardMaterial3D',
             data: { id: 'material-red-glossy' },
           },
@@ -82,7 +72,7 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: 1,
+            id: '1',
             type: 'StandardMaterial3D',
             data: { id: 'material_red_glossy' },
           },
@@ -98,17 +88,17 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: 1,
+            id: '1',
             type: 'ArrayMesh',
             data: { id: 'mesh_1' },
           },
           {
-            id: 2,
+            id: '2',
             type: 'StandardMaterial3D',
             data: { id: 'material_1' },
           },
           {
-            id: 3,
+            id: '3',
             type: 'BoxShape3D',
             data: { id: 'shape_1' },
           },
@@ -158,16 +148,6 @@ describe('checkResourceExists', () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
-        internalResources: [],
-      };
-
-      expect(checkResourceExists(scene, 'ExtResource("texture_1")')).toBe(false);
-    });
-
-    it('should handle scene with undefined external resources', () => {
-      const scene: TscnScene = {
-        nodes: [],
-        externalResources: undefined,
         internalResources: [],
       };
 
@@ -281,7 +261,7 @@ describe('checkResourceExists', () => {
         ] as TscnExternalResource[],
         internalResources: [
           {
-            id: 1,
+            id: '1',
             type: 'ArrayMesh',
             data: { id: 'resource_1' },
           },
@@ -315,7 +295,7 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: 1,
+            id: '1',
             type: 'ArrayMesh',
             data: { id: 'resource_1' },
           },

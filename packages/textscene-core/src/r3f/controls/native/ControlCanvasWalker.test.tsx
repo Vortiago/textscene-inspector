@@ -8,6 +8,7 @@
  * this is a happy-dom-free but still non-visual test.
  */
 import { afterEach, describe, expect, it } from 'vitest';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useEffect } from 'react';
 import type { TscnNode } from '../../../parser/types';
@@ -157,7 +158,7 @@ describe('<ControlCanvasWalker>', () => {
 
     const lines = renderer.scene.findAllByType('LineSegments');
     expect(lines).toHaveLength(1);
-    const geometry = lines[0]!.instance.geometry as { boundingBox: { max: { x: number; y: number }; min: { x: number; y: number } } | null; computeBoundingBox: () => void };
+    const geometry = (lines[0]!.instance as THREE.LineSegments).geometry as { boundingBox: { max: { x: number; y: number }; min: { x: number; y: number } } | null; computeBoundingBox: () => void };
     geometry.computeBoundingBox();
     const box = geometry.boundingBox!;
     expect(box.max.x - box.min.x).toBeCloseTo(64);

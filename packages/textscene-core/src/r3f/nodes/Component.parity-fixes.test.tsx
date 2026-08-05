@@ -38,7 +38,7 @@ import {
   KeepAspectMode,
 } from '../../nodes/3d/camera3d/types';
 import type { Label3DProperties } from '../../nodes/3d/label3d/types';
-import { BillboardMode } from '../../nodes/3d/label3d/types';
+import { BillboardMode, HorizontalAlignment } from '../../nodes/3d/label3d/types';
 
 function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
   return {
@@ -99,12 +99,10 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         />
       </SceneResourcesProvider>
     );
-    const mesh = renderer.scene.findByType('Mesh').instance as {
-      castShadow: boolean;
-      material: { shadowSide: THREE.Side };
-    };
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const material = mesh.material as THREE.Material;
     expect(mesh.castShadow).toBe(true);
-    expect(mesh.material.shadowSide).toBe(THREE.DoubleSide);
+    expect(material.shadowSide).toBe(THREE.DoubleSide);
   });
 
   it('audit slot 16b — cast_shadow=3 (SHADOWS_ONLY) → still casts, draws no colour', async () => {
@@ -124,18 +122,15 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         />
       </SceneResourcesProvider>
     );
-    const mesh = renderer.scene.findByType('Mesh').instance as {
-      castShadow: boolean;
-      visible: boolean;
-      material: { colorWrite: boolean };
-    };
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const material = mesh.material as THREE.Material;
     expect(mesh.castShadow).toBe(true);
     // NOT `visible = false`: three's shadow pass bails on an invisible object
     // and stops walking its subtree, so that spelling cost both the shadow and
     // every descendant. Suppressing the colour write leaves both intact — see
     // meshinstance3d/Component.shadows-only.test.tsx.
     expect(mesh.visible).toBe(true);
-    expect(mesh.material.colorWrite).toBe(false);
+    expect(material.colorWrite).toBe(false);
   });
 
   it('audit slot 38a — ao_texture loaded → material.aoMap is a THREE.Texture', async () => {
@@ -163,7 +158,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
     expect(mat.aoMap).toBeInstanceOf(THREE.Texture);
   });
 
@@ -377,15 +372,14 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         />
       </SceneResourcesProvider>
     );
-    const mesh = renderer.scene.findByType('Mesh').instance as {
-      material: Array<{ color: { r: number; g: number } }>;
-    };
-    expect(Array.isArray(mesh.material)).toBe(true);
-    expect(mesh.material).toHaveLength(2);
-    expect(mesh.material[0]!.color.r).toBe(1);
-    expect(mesh.material[0]!.color.g).toBe(0);
-    expect(mesh.material[1]!.color.r).toBe(0);
-    expect(mesh.material[1]!.color.g).toBe(1);
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const materials = mesh.material as THREE.MeshStandardMaterial[];
+    expect(Array.isArray(materials)).toBe(true);
+    expect(materials).toHaveLength(2);
+    expect(materials[0]!.color.r).toBe(1);
+    expect(materials[0]!.color.g).toBe(0);
+    expect(materials[1]!.color.r).toBe(0);
+    expect(materials[1]!.color.g).toBe(1);
   });
 
   it('audit slot 93a — Label3D billboard=ENABLED → mesh.userData.billboardMode set + useFrame copies camera.quaternion', async () => {
@@ -411,6 +405,11 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       modulate: { r: 1, g: 1, b: 1, a: 1 },
       outline_size: 0,
       outline_modulate: { r: 0, g: 0, b: 0, a: 1 },
+      double_sided: true,
+      font_size: 32,
+      line_spacing: 0,
+      horizontal_alignment: HorizontalAlignment.CENTER,
+      no_depth_test: false,
     };
     const node: TscnNode = { name: 'L', type: 'Label3D', children: [], properties: props };
 
@@ -463,13 +462,18 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       modulate: { r: 1, g: 1, b: 1, a: 1 },
       outline_size: 0,
       outline_modulate: { r: 0, g: 0, b: 0, a: 1 },
+      double_sided: true,
+      font_size: 32,
+      line_spacing: 0,
+      horizontal_alignment: HorizontalAlignment.CENTER,
+      no_depth_test: false,
       transform: {
         basis_x: { x: 1, y: 0, z: 0 },
         basis_y: { x: 0, y: 1, z: 0 },
         basis_z: { x: 0, y: 0, z: 1 },
         origin: { x: 0, y: 0, z: 0 },
       },
-    } as Label3DProperties;
+    };
     const node: TscnNode = { name: 'L', type: 'Label3D', children: [], properties: props };
 
     const renderer = await ReactThreeTestRenderer.create(

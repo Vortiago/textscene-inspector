@@ -19,7 +19,7 @@ async function matFor(scalars: StandardMaterial3DScalars | null): Promise<THREE.
       <StandardMaterialSlot scalars={scalars} />
     </mesh>
   );
-  return r.scene.findByType('Mesh').instance.material as THREE.Material;
+  return (r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
 }
 
 describe('transparency-mode + shading_mode scalar parity', () => {

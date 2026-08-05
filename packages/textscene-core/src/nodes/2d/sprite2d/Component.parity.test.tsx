@@ -61,13 +61,13 @@ describe('Sprite2D parser parity', () => {
 describe('Sprite2D render parity', () => {
   it('modulate is converted sRGB→linear before reaching the material', async () => {
     const r = await render(node({ modulate: 'Color(0.5, 0.5, 0.5, 1)' }));
-    const color = (r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial).color;
+    const color = ((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color;
     expect(color.r).toBeCloseTo(srgbToLinear(0.5), 4); // ≈ 0.214, not 0.5
   });
 
   it('self_modulate multiplies onto own pixels', async () => {
     const r = await render(node({ self_modulate: 'Color(0, 0, 0, 1)' }));
-    const color = (r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial).color;
+    const color = ((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color;
     expect(color.r).toBeCloseTo(0, 5);
   });
 
@@ -76,8 +76,8 @@ describe('Sprite2D render parity', () => {
     const parent = node({ self_modulate: 'Color(0, 0, 0, 1)' }, [child]);
     const r = await render(parent);
     const meshes = r.scene.findAllByType('Mesh');
-    const parentColor = (meshes[0]!.instance.material as THREE.MeshBasicMaterial).color;
-    const childColor = (meshes[1]!.instance.material as THREE.MeshBasicMaterial).color;
+    const parentColor = ((meshes[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color;
+    const childColor = ((meshes[1]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color;
     expect(parentColor.r).toBeCloseTo(0, 5); // parent's own pixels darkened
     expect(childColor.r).toBeCloseTo(1, 5); // child unaffected by parent self_modulate
   });

@@ -89,7 +89,8 @@ describe('AnimatedSprite2D render', () => {
 
   it('renders the magenta placeholder when sprite_frames is missing', async () => {
     const r = await render(makeNode({}));
-    const material = r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
+    const material = mesh.material as THREE.MeshBasicMaterial;
     expect(material.color.getHexString()).toBe('ff00ff');
   });
 });

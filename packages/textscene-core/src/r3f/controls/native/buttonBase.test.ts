@@ -45,6 +45,8 @@ function styleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatData {
     contentMargin: { ...ZERO_SIDES },
     drawCenter: true,
     borderBlend: false,
+    antiAliased: true,
+    aaSize: 1,
     ...overrides,
   };
 }

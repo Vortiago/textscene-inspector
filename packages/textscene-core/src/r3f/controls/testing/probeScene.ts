@@ -14,7 +14,7 @@ import type { TscnNode } from '../../../parser/types';
 const PROBE_NAME = 'Probe';
 
 function parseProbe(body: string): TscnNode {
-  return new TscnParser().parse(`[gd_scene format=3]\n\n${body}`).nodes[0];
+  return new TscnParser().parse(`[gd_scene format=3]\n\n${body}`).nodes[0]!;
 }
 
 /** `type` as a root node, with no properties set. */

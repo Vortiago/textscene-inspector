@@ -94,7 +94,7 @@ const INTENTIONAL_OVERRIDES = new Set<string>([]);
 /** Walk the filesystem for all linterParser.ts source files. */
 function walkLinterParsers(dir: string): string[] {
   const results: string[] = [];
-  let entries: ReturnType<typeof readdirSync>;
+  let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
   } catch {
