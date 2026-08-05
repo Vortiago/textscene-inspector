@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3]
+
+; SplineIK3D under the Skeleton3D it modifies, which is the only placement where
+; a SkeletonModifier3D does anything. The subject is the four leaves it adds to
+; ChainIK3D's settings/<i>/ family: tilt_fade_in and tilt_fade_out are bone
+; COUNTS with a "-1,100,1,or_greater" hint, not angles, so nothing here is
+; stored in radians. Setting 1 turns tilt off, the state in which Godot stops
+; serialising the two fade keys at all.
+
+[sub_resource type="Curve3D" id="Curve3D_spline"]
+_data = {
+"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0),
+"tilts": PackedFloat32Array(0, 0, 0)
+}
+point_count = 3
+
+[node name="Root" type="Node3D"]
+
+[node name="SplinePath" type="Path3D" parent="."]
+curve = SubResource("Curve3D_spline")
+
+[node name="Follower" type="PathFollow3D" parent="SplinePath"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MySplineIK3D" type="SplineIK3D" parent="Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+setting_count = 2
+settings/0/path_3d = NodePath("../../SplinePath")
+settings/0/tilt_fade_in = 4
+settings/0/tilt_fade_out = 0
+settings/1/path_3d = NodePath("../../SplinePath")
+settings/1/tilt_enabled = false

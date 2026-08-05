@@ -1,0 +1,17 @@
+[gd_scene format=3]
+; AimModifier3D: no visuals, exercises setting_count plus the whole settings/0/ family.
+; use_euler is true so primary_rotation_axis and use_secondary_rotation serialise at all.
+; Forward +Z (axis Z) against primary rotation Y, the non-parallel pairing this
+; slice's linter.ts requires.
+
+[node name="Root" type="Node3D"]
+
+[node name="MyAimModifier3D" type="AimModifier3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+setting_count = 1
+settings/0/amount = 0.75
+settings/0/forward_axis = 4
+settings/0/use_euler = true
+settings/0/primary_rotation_axis = 1
+settings/0/use_secondary_rotation = false
+settings/0/relative = false

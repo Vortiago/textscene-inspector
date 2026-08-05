@@ -73,6 +73,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Aim Modifier 3d",
+    "file": "unit-aim-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animatable Body 2d",
     "file": "unit-animatable-body-2d.tscn",
     "category": "Other"
@@ -183,6 +188,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Ccdik 3d",
+    "file": "unit-ccdik-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Characterbody2d",
     "file": "unit-characterbody2d.tscn",
     "category": "Other"
@@ -230,6 +240,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Container",
     "file": "unit-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Copy Transform Modifier 3d",
+    "file": "unit-copy-transform-modifier-3d.tscn",
     "category": "Other"
   },
   {
@@ -295,6 +310,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Environment Sky Tonemap",
     "file": "unit-environment-sky-tonemap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Fabrik 3d",
+    "file": "unit-fabrik-3d.tscn",
     "category": "Other"
   },
   {
@@ -490,6 +510,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Item List",
     "file": "unit-item-list.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Jacobian Ik 3d",
+    "file": "unit-jacobian-ik-3d.tscn",
     "category": "Other"
   },
   {
@@ -853,6 +878,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Spline Ik 3d",
+    "file": "unit-spline-ik-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Split Container Vertical",
     "file": "unit-split-container-vertical.tscn",
     "category": "Other"
@@ -945,6 +975,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tree",
     "file": "unit-tree.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Two Bone Ik 3d",
+    "file": "unit-two-bone-ik-3d.tscn",
     "category": "Other"
   },
   {

@@ -142,6 +142,13 @@ reproduced:
 - [BoneConstraint3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneconstraint3d/comparison.md) — a transform-only group (the base for bone constraints)
 - [GeometryInstance3D](../../packages/textscene-core/src/nodes/3d/geometryinstance3d/comparison.md) — a transform-only group (the shadow/LOD/GI base for 3D visuals)
 - [VisibleOnScreenNotifier3D](../../packages/textscene-core/src/nodes/3d/visibleonscreennotifier3d/comparison.md) — a transform-only group (signals when its AABB enters view)
+- [TwoBoneIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/twoboneik3d/comparison.md) — a transform-only group (a two-bone IK solver with a pole target)
+- [SplineIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/splineik3d/comparison.md) — a transform-only group (bends a bone chain along a Path3D curve)
+- [CCDIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/ccdik3d/comparison.md) — a transform-only group (a cyclic coordinate descent IK solver)
+- [FABRIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/fabrik3d/comparison.md) — a transform-only group (a forward-and-backward reaching IK solver)
+- [JacobianIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/jacobianik3d/comparison.md) — a transform-only group (a Jacobian IK solver)
+- [AimModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/aimmodifier3d/comparison.md) — a transform-only group (points a bone at a reference)
+- [CopyTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/copytransformmodifier3d/comparison.md) — a transform-only group (copies a reference transform onto a bone)
 
 ## 2D
 

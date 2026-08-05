@@ -42,16 +42,21 @@ import './index.js'; // side-effect: every slice registers its validators
  * base-walk.
  */
 const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
-  BoneConstraint3D: 'abstract base; the constraint parameters live on each subclass',
+  CCDIK3D:
+    "a solver body; the class is a `_solve_iteration` override alone, parameterised entirely by IterateIK3D's keys",
   CheckBox: 'a themed BaseButton; its constructor only changes inherited defaults',
   CheckButton: 'a themed BaseButton; its constructor only changes inherited defaults',
   Container: 'layout behaviour only, driven entirely by Control keys',
+  FABRIK3D:
+    "a solver body; the class is a `_solve_iteration` override alone, parameterised entirely by IterateIK3D's keys",
   HBoxContainer: "orientation only; the box keys are BoxContainer's",
   HFlowContainer: "orientation only; the flow keys are FlowContainer's",
   HScrollBar: "orientation only; the scrollbar keys are ScrollBar's",
   HSeparator: 'a themed Separator; its constructor only sets a protected orientation field, not a property',
   HSlider: "orientation only; the slider keys are Slider's",
   HSplitContainer: "orientation only; the split keys are SplitContainer's",
+  JacobianIK3D:
+    "a solver body; the class is a `_solve_iteration` override alone, parameterised entirely by IterateIK3D's keys",
   MarginContainer: 'margins are theme constants, not properties',
   OpenXRBindingModifierEditor:
     'editor-only PanelContainer; its constructor only changes the inherited size_flags_horizontal default',

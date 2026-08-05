@@ -97,6 +97,14 @@ real parser instead of the decode/build split. Conformance:
   opening with `ERR_FAIL_COND(!is_finite(...))` refuses one, and it says so with
   `{ finite: 'file:line' }` — a range bound cannot stand in, since every comparison
   against `nan` is false.
+- **`ADD_PROPERTY` is one of FOUR ways a property reaches a `.tscn`.** The others are
+  `PropertyListHelper`/`register_property`, `ADD_ARRAY_COUNT` (a real serialised INT,
+  `class_db.cpp:1492`, whose floor is often an `ERR_FAIL_COND` in a template in the
+  BASE header), and a hand-rolled `_set`/`_get`/property-list override. That override
+  is **not always underscore-prefixed** — `ChainIK3D::get_property_list` has none, and
+  that class serialises a whole nested `settings/<i>/joints/<j>/` family while
+  declaring zero `ADD_PROPERTY` and zero XML `<member>`. Grep all four, both
+  spellings, plus the family's literal key prefix, before calling a class empty.
 - **`ADD_PROPERTY` gives the declared type; the GETTER decides the serialised form.**
   A `TypedArray<T>` getter behind a `PropertyInfo(Variant::PACKED_*, …)` serialises as
   `Array[T]([…])`, not `PackedTArray(…)` — all five of CodeEdit's array properties do

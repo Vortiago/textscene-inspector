@@ -197,12 +197,24 @@ export { path3DValidationRule };
  * negative (staying quiet about a genuinely unused path) is much cheaper here
  * than warning about a correct scene.
  */
+/**
+ * Property keys that name a Path3D.
+ *
+ * `path_node` is CSGPolygon3D's. `settings/<i>/path_3d` is SplineIK3D's, which
+ * consumes a Path3D through its indexed setting family and needs no
+ * PathFollow3D either (`spline_ik_3d.cpp:83`); scanning only `path_node` warned
+ * on every scene using that pattern.
+ */
+const CONSUMER_KEY_RE = /^(path_node|settings\/\d+\/path_3d)$/;
+
 function isReferencedByPathNode(scene: TscnScene, pathName: string): boolean {
   let found = false;
   const visit = (nodes: readonly TscnNode[]): void => {
     for (const n of nodes) {
-      const raw = (n.properties as Record<string, unknown>).path_node;
-      if (typeof raw === 'string' && nodePathLeaf(raw) === pathName) found = true;
+      for (const [key, raw] of Object.entries(n.properties as Record<string, unknown>)) {
+        if (!CONSUMER_KEY_RE.test(key)) continue;
+        if (typeof raw === 'string' && nodePathLeaf(raw) === pathName) found = true;
+      }
       if (n.children.length > 0) visit(n.children);
     }
   };

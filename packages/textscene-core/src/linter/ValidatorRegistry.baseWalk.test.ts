@@ -194,7 +194,25 @@ describe('ValidatorRegistry.registerUnavailable', () => {
  * accepts something DIFFERENT, not less; a leaf that accepts less belongs in
  * `registerUnavailable`.
  */
-const INTENTIONAL_OVERRIDES = new Set<string>([]);
+const INTENTIONAL_OVERRIDES = new Set<string>([
+  // Godot builds ONE `settings/<i>/…` family cooperatively: each class's
+  // property-list override calls its base's and then appends its own leaves
+  // (`iterate_ik_3d.cpp:129`, `aim_modifier_3d.cpp:85`,
+  // `copy_transform_modifier_3d.cpp:84`). `findValidator` resolves one wildcard
+  // per key with no fall-through, so the subclass MUST re-register the prefix
+  // to answer for the leaves it adds; letting the base-walk deliver it would
+  // mean the subclass's own leaves reach no validator at all.
+  //
+  // This is the one shape where re-declaring is correct rather than drift, and
+  // it is not a licence to accept less: each of these dispatchers hands an
+  // unrecognised leaf back to its base via `findValidator('<Base>', key)`, and
+  // `settingsFamilySeam.test.ts` asserts under the full barrel that the base's
+  // BOUND still fires through the hop. Delete a delegation and that file goes
+  // red, so the exemption cannot quietly become a hole.
+  'AimModifier3D:settings/#/*',
+  'CopyTransformModifier3D:settings/#/*',
+  'IterateIK3D:settings/*',
+]);
 
 /** Walk the filesystem for all linterParser.ts source files. */
 function walkLinterParsers(dir: string): string[] {

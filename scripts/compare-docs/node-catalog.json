@@ -20,7 +20,7 @@
       "name": "AimModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "BoneConstraint3D",
         "SkeletonModifier3D",
@@ -414,7 +414,7 @@
       "name": "CCDIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "IterateIK3D",
         "ChainIK3D",
@@ -696,7 +696,7 @@
       "name": "CopyTransformModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "BoneConstraint3D",
         "SkeletonModifier3D",
@@ -917,7 +917,7 @@
       "name": "FABRIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "IterateIK3D",
         "ChainIK3D",
@@ -1408,7 +1408,7 @@
       "name": "JacobianIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "IterateIK3D",
         "ChainIK3D",
@@ -2700,7 +2700,7 @@
       "name": "SplineIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "ChainIK3D",
         "IKModifier3D",
@@ -3084,7 +3084,7 @@
       "name": "TwoBoneIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "IKModifier3D",
         "SkeletonModifier3D",

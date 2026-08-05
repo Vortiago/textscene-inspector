@@ -197,6 +197,49 @@ curve = SubResource("curve_1")
       );
     });
 
+    it('should not warn when a SplineIK3D setting names the path', () => {
+      // SplineIK3D consumes a Path3D through its indexed setting family
+      // (spline_ik_3d.cpp:83) and needs no PathFollow3D, exactly as a
+      // CSGPolygon3D in PATH mode does through `path_node`.
+      expectNoDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="Curve3D" id="curve_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Path3D" type="Path3D" parent="."]
+curve = SubResource("curve_1")
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="SplineIK3D" type="SplineIK3D" parent="Skeleton3D"]
+setting_count = 1
+settings/0/path_3d = NodePath("../../Path3D")
+`,
+        { ruleName: 'path3d-unused' }
+      );
+    });
+
+    it('still warns when an unrelated indexed key holds the name', () => {
+      // The key match is anchored, so a lookalike must not silence the rule.
+      expectDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="Curve3D" id="curve_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Path3D" type="Path3D" parent="."]
+curve = SubResource("curve_1")
+
+[node name="Other" type="Node3D" parent="."]
+settings/0/path_3d_backup = NodePath("../Path3D")
+`,
+        { ruleName: 'path3d-unused' }
+      );
+    });
+
     it('should not warn when Path3D has multiple PathFollow3D children', () => {
       expectNoDiagnostic(
         `[gd_scene format=3]

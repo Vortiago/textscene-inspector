@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+; One TwoBoneIK3D setting with every serialised leaf present. The combination is
+; the one Godot's inspector keeps visible at once (two_bone_ik_3d.cpp:162-190):
+; middle_bone set, end_bone set, use_virtual_end off and extend_end_bone on so
+; the end_bone/* pair stays live, pole_direction Custom so pole_direction_vector
+; is neither hidden nor dropped on load.
+
+[node name="Root" type="Node3D"]
+
+[node name="Target" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0)
+
+[node name="Pole" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1)
+
+[node name="MyTwoBoneIK3D" type="TwoBoneIK3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+setting_count = 1
+settings/0/target_node = NodePath("../Target")
+settings/0/pole_node = NodePath("../Pole")
+settings/0/root_bone_name = "UpperArm"
+settings/0/root_bone = 0
+settings/0/middle_bone_name = "LowerArm"
+settings/0/middle_bone = 1
+settings/0/pole_direction = 7
+settings/0/pole_direction_vector = Vector3(0, 0, 1)
+settings/0/end_bone_name = "Hand"
+settings/0/end_bone = 2
+settings/0/use_virtual_end = false
+settings/0/extend_end_bone = true
+settings/0/end_bone/direction = 6
+settings/0/end_bone/length = 0.1
