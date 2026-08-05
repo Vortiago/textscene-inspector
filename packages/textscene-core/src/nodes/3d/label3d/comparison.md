@@ -35,6 +35,27 @@ outline on "Outlined Text" all match. The canvas texture is now premultiplied, s
 glyphs no longer carry a dark halo, and the outline is scaled to Godot's thinner
 font-outline weight rather than a heavy centred stroke.
 
+`context.font` is hardcoded to `Arial`, which Godot never uses (its default project font
+is a bundled Noto/OpenSans-derived face, not a system font at all), so the divergence
+exists on every host regardless of what is installed — only its exact magnitude moves
+with the host's font substitution. On a host with no `Arial` face, Linux `fontconfig`
+resolves the canvas request to whatever sits in its `sans-serif` chain (`fc-match Arial`
+resolves to Noto Sans on a bare Fedora/Debian box), which is a different substitution
+again from whatever face a Mac or Windows dev machine would have supplied when a golden
+PNG was captured there.
+
+This scales with how much text a scene carries: `example-hallway-mockup.tscn` places 11
+Label3D nodes across the frame, and re-rendering it against Godot 4.6.3 puts every
+edge-antialiasing byte of drift for that scene inside those 11 labels' silhouettes — 0
+elsewhere in a 955×756 frame. Rebuilding the exact commit that captured that scene's
+`scripts/visual/baselines/hallway-mockup.png` reproduces the same 168 px / 0.023%
+`pnpm test:visual` delta against its own golden that later commits also show, which rules
+out a code regression: the gap was already there the day the golden was written, just on
+a host whose font substitution didn't match this one's. It is a fixed cost of rasterising
+through the browser's font stack, not something a later change introduced or a later
+change can close — closing it for real means shipping Godot's actual bundled font as a
+web font, a separate undertaking, not a fix to any one label-rendering code path.
+
 ## Linting
 
 <!-- lint:begin Label3D -->
