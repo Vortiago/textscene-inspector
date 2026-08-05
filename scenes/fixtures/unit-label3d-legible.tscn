@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+; unit-label3d.tscn is excluded from the visual-regression set (see the NOTE
+; in scripts/visual/scenes.mjs) because its four labels sit ~4 world units
+; apart, so auto-framing fits that whole spread rather than any one label —
+; each ends up a few pixels tall, too small for a glyph-shape or outline-width
+; regression to show up in a diff. This fixture moves the ONE variable that
+; fixes that: `pixel_size`, large enough (0.05, vs the Godot default 0.005)
+; that a SINGLE, un-spread label fills most of the auto-framed picture, so
+; its own MSDF glyph shapes and outline pass are directly checkable
+; pixel-by-pixel — coverage no other committed golden carries for Label3D.
+
+[node name="Root" type="Node3D"]
+
+[node name="Caption" type="Label3D" parent="."]
+text = "Label3D"
+pixel_size = 0.05
+billboard = 1
+modulate = Color(1, 1, 1, 1)
+outline_size = 8
+outline_modulate = Color(0, 0, 0, 1)

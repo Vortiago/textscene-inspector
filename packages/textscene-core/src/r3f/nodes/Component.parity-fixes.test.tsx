@@ -17,7 +17,7 @@
  *   66b — Camera3D v_offset → position shifted along local Y
  *   93a — Label3D billboard=ENABLED → mesh rotates to face camera (post useFrame)
  */
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { MeshInstance3D } from '../../nodes/3d/meshinstance3d/Component';
@@ -382,21 +382,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     expect(materials[1]!.color.g).toBe(1);
   });
 
-  it('audit slot 93a — Label3D billboard=ENABLED → mesh.userData.billboardMode set + useFrame copies camera.quaternion', async () => {
-    // The mocked canvas context lets the rasteriser run under jsdom.
-    const mockContext = {
-      font: '',
-      fillStyle: '',
-      strokeStyle: '',
-      lineWidth: 0,
-      measureText: vi.fn(() => ({ width: 100 })),
-      fillText: vi.fn(),
-      strokeText: vi.fn(),
-    };
-    HTMLCanvasElement.prototype.getContext = vi.fn((type: string) =>
-      type === '2d' ? (mockContext as unknown as CanvasRenderingContext2D) : null
-    ) as unknown as typeof HTMLCanvasElement.prototype.getContext;
-
+  it('audit slot 93a — Label3D billboard=ENABLED → group.userData.billboardMode set + useFrame copies camera.quaternion', async () => {
     const props: Label3DProperties = {
       name: 'L',
       text: 'Hello',
@@ -418,15 +404,15 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         <Label3D node={node} />
       </ViewportModeProvider>
     );
-    const meshInstance = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const groupInstance = renderer.scene.findByProps({ name: 'L' }).instance as THREE.Group;
 
     // The marker is used by old-renderer-era tooling to enumerate labels.
-    expect(meshInstance.userData.isLabel3D).toBe(true);
-    expect(meshInstance.userData.billboardMode).toBe(BillboardMode.BILLBOARD_ENABLED);
+    expect(groupInstance.userData.isLabel3D).toBe(true);
+    expect(groupInstance.userData.billboardMode).toBe(BillboardMode.BILLBOARD_ENABLED);
 
     // Snapshot the quaternion before any frame ticks (initial render
     // sets it via the JSX `rotation` prop = [0, 0, 0] → identity quaternion).
-    const qBefore = meshInstance.quaternion.clone();
+    const qBefore = groupInstance.quaternion.clone();
 
     // Advance enough frames that useFrame runs at least once.
     await renderer.advanceFrames(2, 16);
@@ -436,8 +422,8 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     // equals the initial identity, so we can't assert it CHANGED.
     // What we CAN assert: the quaternion is a valid normalized quaternion
     // (sum of squares ≈ 1), proving useFrame ran without throwing and
-    // left the mesh in a renderable state.
-    const q = meshInstance.quaternion;
+    // left the group in a renderable state.
+    const q = groupInstance.quaternion;
     const norm = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
     expect(norm).toBeCloseTo(1, 4);
     // qBefore is normalized too; just confirms we tracked the right value.
@@ -445,15 +431,6 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
   });
 
   it('audit slot 93a — Label3D billboard=DISABLED → useFrame leaves rotation untouched', async () => {
-    const mockContext = {
-      font: '', fillStyle: '', strokeStyle: '', lineWidth: 0,
-      measureText: vi.fn(() => ({ width: 100 })),
-      fillText: vi.fn(), strokeText: vi.fn(),
-    };
-    HTMLCanvasElement.prototype.getContext = vi.fn((type: string) =>
-      type === '2d' ? (mockContext as unknown as CanvasRenderingContext2D) : null
-    ) as unknown as typeof HTMLCanvasElement.prototype.getContext;
-
     const props: Label3DProperties = {
       name: 'L',
       text: 'Hello',
@@ -481,16 +458,16 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         <Label3D node={node} />
       </ViewportModeProvider>
     );
-    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    const qBefore = mesh.quaternion.clone();
+    const groupInstance = renderer.scene.findByProps({ name: 'L' }).instance as THREE.Group;
+    const qBefore = groupInstance.quaternion.clone();
 
     // Tick frames — billboard DISABLED should be a no-op.
     await renderer.advanceFrames(2, 16);
 
     // Quaternion identical to pre-frame value.
-    expect(mesh.quaternion.x).toBeCloseTo(qBefore.x, 6);
-    expect(mesh.quaternion.y).toBeCloseTo(qBefore.y, 6);
-    expect(mesh.quaternion.z).toBeCloseTo(qBefore.z, 6);
-    expect(mesh.quaternion.w).toBeCloseTo(qBefore.w, 6);
+    expect(groupInstance.quaternion.x).toBeCloseTo(qBefore.x, 6);
+    expect(groupInstance.quaternion.y).toBeCloseTo(qBefore.y, 6);
+    expect(groupInstance.quaternion.z).toBeCloseTo(qBefore.z, 6);
+    expect(groupInstance.quaternion.w).toBeCloseTo(qBefore.w, 6);
   });
 });

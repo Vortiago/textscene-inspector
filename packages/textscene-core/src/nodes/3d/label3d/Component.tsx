@@ -1,43 +1,76 @@
 /**
- * <Label3D> — 2D text rendered onto a textured plane in 3D space.
+ * <Label3D> — glyph-quad text on a billboard-able group in 3D space, drawn
+ * through the SAME vendored MSDF Open Sans atlas + shaping engine
+ * (`r3f/controls/native/text/`) the native 2D Control Label uses
+ * (`nodes/2d/ui/label/Component.tsx`) — Godot's actual default-theme font,
+ * not a host system font, so a Label3D's glyphs can no longer drift from a
+ * Control's on a host with a different font-substitution chain.
  *
- * Matches the imperative renderer: rasterise text to a canvas, build a
- * CanvasTexture, apply to a transparent PlaneGeometry sized by pixel_size.
+ * The glyph-drawing pass (`LabelGlyphs`) is `React.lazy`-loaded: it, and
+ * everything it imports (the shaping engine, the ~300KB vendored atlas),
+ * has no business in the initial render bundle. `nodes/viewport/subviewport/
+ * ControlRasterLayer.tsx` documents the same split for the same reason; this
+ * file itself imports nothing from that engine, so it stays out of the
+ * static closure `r3f/nodes/index.ts` pulls eagerly.
  *
- * The canvas/texture is built once via useMemo and disposed on unmount.
- * If document is unavailable (no DOM), the component renders an invisible
- * marker group so the scene continues to function.
+ * `pixel_size` (world units per Godot glyph-pixel) is a nested `<group>`
+ * scale rather than baked into geometry: `LabelGlyphs`'/`TextRun`'s geometry
+ * is already in Godot px (the SAME space the 2D Control text engine draws
+ * in), so converting to world units is one more transform level, the same
+ * role `nodeTransform.ts`'s own scale plays for the node's authored
+ * transform.
+ *
+ * `boundsProxySizePx` sizes an invisible `<mesh>` by a CHEAP estimate
+ * (average glyph advance × char count, no shaping, no atlas) alongside the
+ * lazy-loaded real glyphs — the same `visible={false}` bounds-proxy pattern
+ * `nodes/3d/csg/CsgPrimitive.tsx`'s `CSG_BOUNDS_PROXY` uses for its own
+ * async-loaded content, and for the same reason: `TscnCanvas.tsx`'s
+ * `CameraFit` can lock in its LAST auto-frame retry before an async mesh
+ * exists at all (measured: without a synchronous stand-in, a scene framed
+ * as if every Label3D caption were absent, since `React.lazy` gives
+ * `frameSceneBounds` nothing to find until the glyph chunk resolves — a
+ * one-shot pending-count signal is not a safe substitute, since another
+ * resource's fast pending→settled transition can retire that ONE shot before
+ * this label's own request even registers). `frameSceneBounds` already
+ * prefers framing too LARGE over too small (its own CSG-proxy comment), so
+ * an approximate estimate — never exact, since it skips real shaping — is
+ * the right trade here too.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { Suspense, lazy, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { Label3DProperties } from './types';
-import { HorizontalAlignment } from './types';
-import type { Color } from '../../../utils/colorParser';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
+import { getAverageAdvancePx, getLinePitchPx } from '../../../r3f/controls/native/text/openSansMetrics';
+
+const LabelGlyphs = lazy(() => import('./LabelGlyphs'));
+
+/** Marks the invisible bounds proxy — mirrors `CsgPrimitive.tsx`'s `CSG_BOUNDS_PROXY`, see this file's own doc. */
+export const LABEL3D_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
 /**
- * Canvas rasterisation resolution, independent of Godot's `font_size`: the
- * quad's WORLD size follows `font_size`, while the texture is always drawn at
- * this size so a small label stays crisp when the camera moves in.
+ * A same-order-of-magnitude (text.length × average glyph advance) stand-in
+ * for the real shaped size, computed with NO shaping and NO atlas — the
+ * average-advance metric already vendored for exactly this "no real glyph
+ * data available" case (`textLayout.ts`'s `glyphAdvancePx` fallback for an
+ * unbaked character; `getLinePitchPx` is the SAME per-line pitch the real
+ * layout uses, shaping or not, since it depends only on `font_size`/
+ * `line_spacing`). Godot px; the caller scales by `pixel_size`.
  */
-const RENDER_FONT_SIZE = 128;
-
-/** Padding baked into the canvas around the text, in render pixels. */
-const CANVAS_PADDING = 10;
-
-/**
- * Godot renders a Label3D outline far thinner than a centred canvas `strokeText`
- * of the same `outline_size`: three-outward vs Godot's font-outline rasteriser.
- * Measured against a real Godot render of `unit-label3d.tscn`, a raw stroke came
- * out ~3x too heavy (Godot's black outline runs ~2 px where ours ran ~6–7 px),
- * so the stroke width is scaled to match Godot's outline weight.
- */
-const OUTLINE_WIDTH_SCALE = 0.33;
+function boundsProxySizePx(
+  text: string,
+  fontSizePx: number,
+  lineSpacingPx: number
+): { widthPx: number; heightPx: number } {
+  const lines = text.split('\n');
+  const longestLineLength = lines.reduce((max, line) => Math.max(max, line.length), 0);
+  const widthPx = longestLineLength * getAverageAdvancePx(fontSizePx);
+  const heightPx = lines.length * getLinePitchPx(fontSizePx, lineSpacingPx);
+  return { widthPx, heightPx };
+}
 
 export function Label3D({ node, children }: NodeComponentProps) {
   const { showLabels } = useViewportMode();
@@ -47,49 +80,23 @@ export function Label3D({ node, children }: NodeComponentProps) {
     [properties]
   );
 
-  const noDepthTest = properties.no_depth_test;
-
-  const built = useMemo(
-    () => buildLabelTexture(properties, RENDER_FONT_SIZE, properties.font_size),
-    [properties]
-  );
-
-  // Dispose of the GPU texture and source canvas when the label unmounts
-  // or its inputs change.
-  useEffect(() => {
-    return () => {
-      built?.texture.dispose();
-    };
-  }, [built]);
-
-  const meshRef = useRef<THREE.Mesh | null>(null);
+  const groupRef = useRef<THREE.Group | null>(null);
 
   // The pre-migration imperative renderer turned each Label3D per frame via
   // `TscnRenderer.updateLabels()`; `useBillboard` is that behaviour, shared
   // with Sprite3D so both slices implement Godot's modes identically.
-  useBillboard(meshRef, properties.billboard);
+  useBillboard(groupRef, properties.billboard);
 
-  // Godot modulate is sRGB → convert to linear before the unlit material tint
-  // (the white canvas text is colorized by this), matching Sprite2D/Sprite3D.
-  const tint = useGodotLinearColor(properties.modulate);
-
-  // The texture is uploaded premultiplied (below), so the fragment RGB is ALREADY
-  // premultiplied by coverage — the material must therefore NOT premultiply again
-  // (`premultipliedAlpha` would `rgb *= a` in the shader, giving color·a² and
-  // eroding every anti-aliased glyph/outline edge). Use an explicit premultiplied
-  // OVER blend (src = 1, dst = 1−srcα) instead, and fold modulate's alpha into the
-  // tint so a translucent label scales its premultiplied RGB by opacity too (with
-  // premultiplied blending, `opacity` alone would scale only the alpha channel).
-  const tintWithOpacity = useMemo(
-    () => tint.clone().multiplyScalar(properties.modulate.a),
-    [tint, properties.modulate.a]
+  const proxy = useMemo(
+    () => boundsProxySizePx(properties.text, properties.font_size, properties.line_spacing),
+    [properties.text, properties.font_size, properties.line_spacing]
   );
 
   // On by default to match Godot (ADR-0008 point 4 superseded — see its
-  // amendment note); the Labels toggle can hide it. When off (or the canvas
-  // couldn't be built), render an invisible marker group so the node still
-  // positions any children and stays selectable.
-  if (!showLabels || !built) {
+  // amendment note); the Labels toggle can hide it. When off, render an
+  // invisible marker group so the node still positions any children and
+  // stays selectable.
+  if (!showLabels) {
     return (
       <group name={node.name} position={position} rotation={rotation} scale={scale}>
         {children}
@@ -99,34 +106,31 @@ export function Label3D({ node, children }: NodeComponentProps) {
 
   return (
     <>
-      <mesh
-        ref={meshRef}
+      <group
+        ref={groupRef}
         name={node.name}
         position={position}
         rotation={rotation}
         scale={scale}
         userData={{ billboardMode: properties.billboard, isLabel3D: true }}
       >
-        <planeGeometry args={[built.width, built.height]} />
-        <meshBasicMaterial
-          map={built.texture}
-          color={tintWithOpacity}
-          transparent
-          blending={THREE.CustomBlending}
-          blendSrc={THREE.OneFactor}
-          blendDst={THREE.OneMinusSrcAlphaFactor}
-          blendSrcAlpha={THREE.OneFactor}
-          blendDstAlpha={THREE.OneMinusSrcAlphaFactor}
-          opacity={properties.modulate.a}
-          side={properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide}
-          depthWrite={false}
-          depthTest={!noDepthTest}
-        />
-      </mesh>
+        {proxy.widthPx > 0 && proxy.heightPx > 0 && (
+          <mesh visible={false} userData={LABEL3D_BOUNDS_PROXY}>
+            <planeGeometry
+              args={[proxy.widthPx * properties.pixel_size, proxy.heightPx * properties.pixel_size]}
+            />
+          </mesh>
+        )}
+        <group scale={properties.pixel_size}>
+          <Suspense fallback={null}>
+            <LabelGlyphs properties={properties} />
+          </Suspense>
+        </group>
+      </group>
       {/* Descendants sit in a SIBLING group carrying the same transform, not
-          inside the label mesh: `billboard` rewrites the mesh's quaternion
-          every frame, and in Godot that is a shader-side effect on the label
-          itself — it never spins the node's children. */}
+          inside the label's own group: `billboard` rewrites the group's
+          quaternion every frame, and in Godot that is a shader-side effect
+          on the label itself — it never spins the node's children. */}
       {children === undefined ? null : (
         <group position={position} rotation={rotation} scale={scale}>
           {children}
@@ -134,112 +138,4 @@ export function Label3D({ node, children }: NodeComponentProps) {
       )}
     </>
   );
-}
-
-interface BuiltLabel {
-  texture: THREE.CanvasTexture;
-  width: number;
-  height: number;
-}
-
-function buildLabelTexture(
-  properties: Label3DProperties,
-  fontSize: number,
-  godotFontSize: number
-): BuiltLabel | null {
-  if (typeof document === 'undefined') return null;
-  try {
-    // Godot breaks the paragraph on `\n` and stacks the lines; a trailing
-    // newline therefore yields an empty final line that still takes height.
-    // Canvas2D `fillText` ignores `\n` entirely, so the split has to happen
-    // here or every multi-line label collapses onto one baseline.
-    const lines = (properties.text || '').split('\n');
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    if (!context) return null;
-
-    // Godot-pixel quantities (font_size, line_spacing, outline_size) scale to
-    // the canvas resolution by this factor.
-    const renderScale = fontSize / godotFontSize;
-    const lineHeight = fontSize + properties.line_spacing * renderScale;
-
-    context.font = `${fontSize}px Arial`;
-    const lineWidths = lines.map((line) => context.measureText(line).width);
-    const textWidth = Math.max(0, ...lineWidths);
-    canvas.width = Math.max(1, Math.ceil(textWidth) + CANVAS_PADDING * 2);
-    canvas.height = Math.max(1, Math.ceil(lineHeight * lines.length) + CANVAS_PADDING * 2);
-
-    // Setting width/height resets every context attribute, so re-apply the
-    // font after sizing the canvas.
-    context.font = `${fontSize}px Arial`;
-
-    // outline_size is in Godot font-pixels; scale to the canvas resolution, then
-    // by OUTLINE_WIDTH_SCALE to match Godot's thinner font-outline rasteriser.
-    const strokeWidth =
-      properties.outline_size > 0
-        ? properties.outline_size * renderScale * OUTLINE_WIDTH_SCALE
-        : 0;
-    if (strokeWidth > 0) {
-      context.strokeStyle = colorToCss(properties.outline_modulate);
-      context.lineWidth = strokeWidth;
-      // Round the outline joins so the stroke hugs the glyph instead of spiking
-      // into boxy miter corners — Godot's outline is a smooth dilation.
-      context.lineJoin = 'round';
-      context.miterLimit = 2;
-    }
-
-    // Rasterise the text in white. The material's `color` carries the
-    // modulate tint, so the texture stays font-size-agnostic and can be
-    // re-tinted without rebuilding the canvas.
-    context.fillStyle = '#ffffff';
-
-    lines.forEach((line, i) => {
-      const x = lineOriginX(properties.horizontal_alignment, textWidth, lineWidths[i] ?? 0);
-      const baseline = CANVAS_PADDING + lineHeight * i + fontSize;
-      if (strokeWidth > 0) context.strokeText(line, x, baseline);
-      context.fillText(line, x, baseline);
-    });
-
-    const texture = new THREE.CanvasTexture(canvas);
-    // Premultiply alpha on upload so the transparent canvas edges (a white glyph
-    // fading to 0-alpha black) don't bilinear-interpolate their RGB toward black
-    // and leave a dark fringe hugging every glyph. Paired with the material's
-    // `premultipliedAlpha` blend below.
-    texture.premultiplyAlpha = true;
-    texture.needsUpdate = true;
-
-    // Godot world size = glyph-pixels (at the Godot font_size) × pixel_size.
-    // The canvas is rasterised at `fontSize` (render resolution), so convert its
-    // pixel dimensions back to Godot-pixel space via worldScale before scaling
-    // by pixel_size.
-    const worldScale = godotFontSize / fontSize;
-    const height = canvas.height * properties.pixel_size * worldScale;
-    const width = canvas.width * properties.pixel_size * worldScale;
-    return { texture, width, height };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Left edge of one line inside the text block, per Godot's
- * `horizontal_alignment`. FILL justifies to the block width, which without a
- * shaper is indistinguishable from LEFT for a single run of glyphs.
- */
-function lineOriginX(
-  alignment: HorizontalAlignment,
-  blockWidth: number,
-  lineWidth: number
-): number {
-  const slack = blockWidth - lineWidth;
-  if (alignment === HorizontalAlignment.CENTER) return CANVAS_PADDING + slack / 2;
-  if (alignment === HorizontalAlignment.RIGHT) return CANVAS_PADDING + slack;
-  return CANVAS_PADDING;
-}
-
-function colorToCss(color: Color): string {
-  const r = Math.round(Math.max(0, Math.min(1, color.r)) * 255);
-  const g = Math.round(Math.max(0, Math.min(1, color.g)) * 255);
-  const b = Math.round(Math.max(0, Math.min(1, color.b)) * 255);
-  return `rgb(${r}, ${g}, ${b})`;
 }

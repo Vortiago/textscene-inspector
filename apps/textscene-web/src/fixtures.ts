@@ -298,6 +298,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label3d Legible",
+    "file": "unit-label3d-legible.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d",
     "file": "unit-label3d.tscn",
     "category": "Other"

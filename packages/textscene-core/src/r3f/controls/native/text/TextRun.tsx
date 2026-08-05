@@ -164,6 +164,14 @@ export interface TextRunProps {
   renderOrder?: number;
   /** Per-mesh clip planes (`controlClipping.tsx`'s hook) — forwarded to the material, per-material state. */
   clippingPlanes?: readonly THREE.Plane[];
+  /** Forwarded to `createMsdfMaterial` — see its own doc. Omitted (2D-UI default) leaves the material's own `false`. */
+  depthTest?: boolean;
+  /** Forwarded to `createMsdfMaterial` — see its own doc. Omitted (2D-UI default) leaves the material's own `DoubleSide`. */
+  side?: THREE.Side;
+  /** Outline colour, Godot sRGB (converted to linear like `tint`) — Label3D's `outline_modulate`. Forwarded to `createMsdfMaterial`; see its own doc. */
+  outlineTint?: Color;
+  /** Additional dilation for a second (outline) edge, forwarded to `createMsdfMaterial`. 0 (default) disables the outline band. */
+  outlineBias?: number;
 }
 
 export function TextRun({
@@ -174,6 +182,10 @@ export function TextRun({
   distanceBias = 0,
   clippingPlanes,
   renderOrder = 0,
+  depthTest,
+  side,
+  outlineTint,
+  outlineBias,
 }: TextRunProps) {
   const geometry = useMemo(() => {
     const { positions, uvs, indices } = buildGlyphQuadArrays(layout, fontSizePx, skew);
@@ -186,6 +198,7 @@ export function TextRun({
 
   const material = useMemo(() => {
     const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
+    const outline = outlineTint ? sRGBToLinearRGB(outlineTint.r, outlineTint.g, outlineTint.b) : null;
     return createMsdfMaterial({
       map: getAtlasTexture(),
       color: { r, g, b },
@@ -193,8 +206,24 @@ export function TextRun({
       pxRange: OPEN_SANS_ATLAS_INFO.distanceRange,
       distanceBias,
       clippingPlanes,
+      depthTest,
+      side,
+      outlineColor: outline ? { r: outline[0], g: outline[1], b: outline[2] } : undefined,
+      outlineOpacity: outlineTint?.a,
+      outlineBias,
     });
-  }, [tint.r, tint.g, tint.b, tint.a, distanceBias, clippingPlanes]);
+  }, [
+    tint.r,
+    tint.g,
+    tint.b,
+    tint.a,
+    distanceBias,
+    clippingPlanes,
+    depthTest,
+    side,
+    outlineTint,
+    outlineBias,
+  ]);
 
   // R3F does not dispose a geometry/material passed as a PROP (only ones it
   // created from JSX args), so both leak on every rebuild without this. Cheap
