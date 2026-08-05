@@ -79,7 +79,7 @@ visibly SQUARES OFF (reads as the glyph's own bounding rectangle rather than a r
 band) — measured directly against `unit-box-mesh.tscn`'s "BoxMesh Test" caption
 (`font_size` 32, `pixel_size` 0.008, default `outline_size` 12): `MAX_DISTANCE_BIAS = 0.3`
 is the largest value that kept every letter's outline rounded rather than square across
-the three arbitration scenes below. That caps the achievable dilation well below Godot's
+the arbitration scenes below. That caps the achievable dilation well below Godot's
 own for `outline_size` above roughly 4 (at `font_size` 32); a Label3D with a large
 `outline_size` renders a thinner outline than Godot, not the full weight. This is an
 accepted, documented trade — reusing the shared MSDF pipeline with zero new atlas bytes —
@@ -119,112 +119,181 @@ renders at Godot's own default for each:
   the pre-MSDF canvas renderer, which treated FILL as `LEFT` instead — fixed as part of
   this rewrite (`glyphLayout.test.ts` pins it against the C++ source).
 
-## Auto-framing (a bug found and fixed while building this)
+## Auto-framing (two bugs found while building this — one fixed here, one Label3D-adjacent but NOT this component's to fix)
+
+### Bug 1 — a lazily-mounted glyph mesh framed as if the caption were absent (FIXED)
 
 `React.lazy`-loading `LabelGlyphs` means a Label3D's glyph mesh does not exist in the
 scene graph for a window after mount. `TscnCanvas.tsx`'s `CameraFit` auto-frames the camera
-from whatever `THREE.Mesh` geometry is currently present (`frameSceneBounds.ts`), and its
-LAST retry can fire before that lazy chunk resolves — measured directly: without a
-synchronous stand-in, `unit-box-mesh.tscn` framed as if its two Label3D captions were
-absent entirely, at one point overlapping the box mesh outright (frame computed from the
-box's own ~2-unit extent instead of the ~4.5-unit spread the captions' Y positions
-establish). A one-shot `pendingResourceCount`-based signal (the mechanism GLB loads use)
-is not a safe substitute either: another resource's fast pending→settled transition can
-retire that ONE shot before a Label3D's own request even registers.
+from whatever geometry is currently present (`frameSceneBounds.ts`), and its retries can
+fire before that lazy chunk resolves — measured directly: without a synchronous stand-in,
+`unit-box-mesh.tscn` framed as if its two Label3D captions were absent entirely. The fix
+mirrors `nodes/3d/csg/CsgPrimitive.tsx`'s own async-loading precedent: `Component.tsx`
+renders an invisible (`visible={false}`), always-present bounds-proxy `<mesh>`.
 
-The fix mirrors `nodes/3d/csg/CsgPrimitive.tsx`'s own async-loading precedent: `Component.tsx`
-renders an invisible (`visible={false}`), always-present bounds-proxy `<mesh>`, sized by
-summing each character's OWN advance (`openSansMetrics.ts`'s `getGlyphAdvanceUnits`, the
-SAME per-character table `textLayout.ts`'s real shaping reads, so the two produce the SAME
-width for this font — its vendored charset carries no kerning pairs at all, which is the
-one thing the estimate skips) for width, `getLinePitchPx` for height — so `frameSceneBounds`
-always sees a reasonable approximation of the label's footprint from the very first
-synchronous render, with no atlas dependency (`openSansMetrics.ts` is a self-contained
-~12KB metrics table, unlike the ~300KB atlas `LabelGlyphs.tsx` alone pulls in).
+What that proxy should be SIZED as went through two wrong answers before the measured one,
+each caught by comparing against Godot's own reference render rather than assumed correct:
 
-A cruder first cut (`text.length × the font's OVERALL average advance`, ignoring which
-characters those actually are) measurably over-widened the frame for a caption-dominated
-scene: a space's own advance is under half that average, so a multi-word caption's true
-width is nowhere near `length × average` once it carries several. Measured on
-`unit-material-heightmap.tscn`'s single 29-character caption (3 spaces): the flat estimate
-pulled the whole frame ≈16% wider than necessary (the torus/sphere/box itself measurably
-smaller on screen than the baseline's), while the per-character sum reproduces the real
-shaped width almost exactly (that scene's object came out within ~2.5% of the baseline's
-size). `frameSceneBounds` prefers framing too LARGE over too small (its own CSG-proxy
-comment) — but "too large" still has to stay close, once the label itself (not some large
-mesh alongside it) dominates the bounds union.
+1. **A flat estimate (`text.length × the font's average advance`).** Over-widened the frame
+   for a caption-dominated scene — a space's own advance is under half that average, so a
+   multi-word caption's true width is nowhere near `length × average` once it carries
+   several. Measured on `unit-material-heightmap.tscn`: ≈16% wider than necessary.
+2. **The exact per-character shaped width, then Godot's OWN billboard-cube AABB inflation**
+   (`label_3d.cpp:625-638`: for `BILLBOARD_ENABLED`, a label's rect inflates into a CUBE
+   sized by the larger of its half-width/half-height, because Godot's billboard rotation is
+   shader-only and never touches the actual `Transform3D`/AABB). This one MATCHED Godot's
+   own `--emit-bounds` output almost exactly — and still measurably made auto-framing
+   WORSE, not better, against Godot's actual `--frame` picture (torus-mesh, material-emissive,
+   material-heightmap all regressed; see "the mechanism", below).
+3. **A zero-size point at the node's own local origin** (what ships now). Reproduces
+   Godot's `--frame` picture exactly, for the reason in the next section.
 
-## Arbitration (representative sample, `pnpm ref:godot` vs `pnpm ref:ours`, restricted to disagreeing pixels)
+### The mechanism: `--emit-bounds` is not what placed the camera
+
+`scripts/godot-ref/run.mjs`'s bootstrap calls Godot's own `_scene_bounds()` TWICE:
+`_place_camera` calls it synchronously, right after `add_child()`, before any frame has
+rendered; `_write_bounds` (which `--emit-bounds` reads) calls it again LATER, after
+`_settle()` (six process frames + a compositor flush) — and only after the reference PNG
+has already been saved. For a scene with no Label3D these two calls agree, so the gap had
+never surfaced before. For a scene WITH one they can disagree, because a fresh Label3D's
+shaped-text AABB is not available synchronously on `add_child()` (despite
+`NOTIFICATION_ENTER_TREE` requesting an update — some part of `TextServer` shaping
+evidently lands a frame or more later).
+
+Measured directly, by instrumenting the bootstrap to write both calls' results for
+`unit-torus-mesh.tscn` (one `TorusMesh`, two Label3D captions at Y=+2/-2):
+
+| Call | Position | Size |
+| --- | --- | --- |
+| Pre-settle (`_place_camera`'s own view) | `[-1.5, -2.0, -1.5]` | `[3.0, 4.0, 3.0]` |
+| Post-settle (`--emit-bounds`'s view) | `[-2.469, -4.469, -2.469]` | `[4.938, 7.445, 4.938]` |
+
+The pre-settle box is exactly the TorusMesh's own extent (outer radius 1.5) unioned with
+the two Label3D nodes' bare Y POSITIONS — each contributing no width, no height, no
+billboard inflation, only its own origin. Rendering the camera the pre-settle box derives
+(`--camera 1.9226,2.1905,3.5197 --look-at 0,0,0`) reproduces Godot's own `--frame` picture
+pixel-for-pixel (measured: 0.105 average per-pixel channel difference, consistent with
+ordinary render noise); a camera derived from the larger, post-settle box does not — it
+renders the SAME undersized torus this renderer's own cube-inflated proxy did.
+
+So `--frame` — the camera every golden is measured against — is placed from a scene-graph
+state in which Label3D has not yet shaped anything, every time. `--emit-bounds` is a true
+read of the FINAL scene bounds; it is simply not the number that produced the picture,
+because it is read later, after the picture was already saved. No estimate of a Label3D's
+rendered extent belongs in a framing decision — not the flat average, not the per-character
+shaped width, not Godot's own eventual billboard-cube geometry — because Godot's own framing
+decision never has that number available either. The bounds-proxy is now a zero-size point
+at the node's local origin, and the real (lazily-mounted) glyph mesh is tagged
+`tscnFrameExcluded` (`TextRun.tsx`) so `frameSceneBounds.ts` skips it outright — otherwise an
+incidental async-mount-timing accident (the chunk resolving inside vs. outside `CameraFit`'s
+retry window) would make the auto-fit bounds depend on load speed, deterministic on no host.
+
+### Bug 2 — a pre-existing, NOT Label3D-caused, camera-ANGLE divergence the point-fix exposed for one fixture (flagged, not fixed here)
+
+Fixing bug 1 removed the ONLY thing keeping one fixture,
+`unit-arraymesh-own-material.tscn`, out of `frameSceneBounds.ts`'s separate `isFlat` branch
+(`size.z <= max(maxXY, 1) * 0.02` picks a head-on camera instead of Godot's own isometric
+one). That fixture's real geometry (two coplanar quads, thickness 0) was ALWAYS
+dimensionally flat; its Label3D captions used to contribute a non-zero Z (first via the
+per-character rect's own non-flat cases, later via the billboard-cube inflation), which
+incidentally kept the scene out of the `isFlat` branch. The point-proxy correctly reports
+zero Z (verified: Godot's own pre-settle `_scene_bounds()` for this exact fixture is ALSO
+`size: [4.2, 3.6, 0]`), so the scene now correctly reads as flat — and framed head-on,
+diverging sharply from Godot's own reference camera as a result (ratio 5.70, see
+"Arbitration" below).
+
+This is not a bug in the point-proxy or in bug 1's fix: measured directly, `isFlat`'s
+head-on branch diverges from Godot's own `--frame` camera UNCONDITIONALLY, independent of
+Label3D entirely — `unit-quadmesh.tscn` (no Label3D anywhere in the fixture) renders
+head-on in this app but obliquely in Godot's own reference. A census of all 97 3D-mode
+golden fixtures found 5 total that ever take the `isFlat` branch — `arraymesh-own-material`,
+`material-emission-texture`, `quadmesh`, `sprite3d`, `sprite3d-region-oversized` — of which
+only `arraymesh-own-material` changed classification as a result of this rewrite; the other
+4 have taken it since before this component existed, and their committed goldens already
+encode a camera Godot does not produce. Removing `isFlat` outright would correct all 5 at
+once, but 4 of those goldens are untouched by this change and outside its scope — recorded
+here as a follow-up, not fixed in this pass.
+
+## Arbitration (`pnpm ref:godot --frame` vs `pnpm ref:ours --frame`, restricted to disagreeing pixels)
 
 Delta = sum of |channel difference| over every pixel where the committed baseline and the
-new render actually disagree (excludes the ~90%+ of a 3D frame both sides already render
-identically). Ratio < 1 means the new render is closer to Godot than the baseline was.
+new render actually disagree (excludes the pixels both sides already render identically).
+Ratio = new-render Δ / baseline Δ; ratio < 1 means the new render is closer to Godot's own
+`--frame` reference than the previously-committed baseline was.
 
 | Scene | Pixels disagreeing | Baseline Δ | New render Δ | Ratio | Direction |
 | --- | --- | --- | --- | --- | --- |
-| `unit-box-mesh` (small captions, default `outline_size` 12) | 1.76% | 2,793,797 | 2,954,800 | 1.058 | ≈ parity, new render marginally farther |
-| `unit-material-ao` (medium captions) | 1.23% | 2,554,690 | 1,870,802 | 0.732 | new render closer |
-| `example-hallway-mockup` (11 tiny captions) | 0.109% | 97,626 | 88,353 | 0.905 | new render closer |
+| `unit-torus-mesh` | 91,205 | 8,929,395 | 2,238,355 | 0.251 | new render closer |
+| `unit-material-emissive` | 173,601 | 16,310,897 | 3,186,686 | 0.195 | new render closer |
+| `unit-material-heightmap` | 124,106 | 12,146,122 | 6,358,181 | 0.524 | new render closer |
+| `integration-material-features` | 170,665 | 22,558,263 | 2,641,611 | 0.117 | new render closer |
+| `unit-arraymesh-own-material` (Bug 2, `isFlat` — see above) | 520,275 | 15,774,075 | 89,913,341 | 5.700 | new render FARTHER (pre-existing `isFlat` divergence, not this fix) |
 
-`unit-box-mesh`'s two captions default `outline_size` to 12, well above the ≈4
-(`font_size` 32) ceiling `MAX_DISTANCE_BIAS` imposes, so both captions render a visibly
-thinner outline than Godot's own — the accepted trade documented above — yet the render is
-still essentially at parity with the pre-MSDF canvas renderer overall (ratio 1.058, down
-from an early build's 1.457 before the bounds-proxy width fix above; the outline-width gap
-alone is a much smaller effect than that framing bug was). The other two samples are
-closer to Godot than the pre-MSDF canvas renderer was, consistent with using Godot's own
-vendored font instead of a host system font.
+The first four are the scenes the billboard-cube-inflation attempt had regressed (ratios
+1.264-2.032 against Godot before this fix); the point-proxy + `tscnFrameExcluded` fix brings
+all four measurably closer to Godot instead — matching Godot's OWN camera exactly (as
+opposed to matching `--emit-bounds`, a number Godot itself never used to take the picture).
+`unit-arraymesh-own-material` is the one exception, and its cause is `isFlat` (Bug 2 above),
+confirmed by measuring Godot's own pre-settle bounds for that exact fixture (`size: [4.2,
+3.6, 0]` — genuinely flat, and Godot still framed it obliquely).
+
+`unit-box-mesh` (small captions, default `outline_size` 12, well above the ≈4 ceiling
+`MAX_DISTANCE_BIAS` imposes) also carries two billboarded Label3D captions and moves the
+same direction as the four above: ratio 0.235 (5,211,235 → 1,222,610 Δ, 21,305 disagreeing
+pixels) — closer to Godot despite the accepted thinner-outline trade documented above,
+because the framing fix is the dominant effect on this scene too.
 
 ## Goldens moved (all 27 committed goldens whose fixture places a Label3D, vs the pre-MSDF baseline)
 
-Measured directly (`pnpm ref:ours <fixture> --frame`, diffed byte-for-byte against each
-committed `scripts/visual/baselines/<name>.png`) rather than through `pnpm test:visual`,
-whose full run repeatedly stalled indefinitely on this host under concurrent load from
-other sessions; this reaches every scene `pnpm test:visual` would, sequentially, with the
-same capture path. 24 of the 27 diff directly; the remaining 3 additionally click-select a
-node in the tree (`select:` in `scenes.mjs`), which only the full harness drives — not
-diffed here, but their Label3D content is identical to `audio-stream-player-3d`'s own
-(unselected) entry, already covered.
+Measured directly (`pnpm ref:ours <fixture> --frame`, pixelmatch-diffed against each
+committed `scripts/visual/baselines/<name>.png` with the SAME `threshold: 0.1` `pnpm
+test:visual` itself uses) rather than through `pnpm test:visual`, whose full run repeatedly
+stalled indefinitely on this host under concurrent load from other sessions; this reaches
+every scene `pnpm test:visual` would, sequentially, with the same capture path. 24 of the 27
+diff directly; the remaining 3 additionally click-select a node in the tree (`select:` in
+`scenes.mjs`), which only the full harness drives — not diffed here, but their Label3D
+content is identical to `audio-stream-player-3d`'s own (unselected) entry, already covered.
 
 | Scene | Fixture | Pixels changed |
 | --- | --- | --- |
-| `plane-mesh` | `unit-plane-mesh.tscn` | 0.834% |
-| `plane-rotated-scaled` | `edge-plane-rotated-scaled.tscn` | 0.423% |
-| `arraymesh` | `unit-arraymesh.tscn` | 2.173% |
-| `arraymesh-uv` | `unit-arraymesh-uv.tscn` | 2.164% |
-| `arraymesh-compressed` | `unit-arraymesh-compressed.tscn` | 2.474% |
-| `arraymesh-own-material` | `unit-arraymesh-own-material.tscn` | 3.225% |
-| `material-metallic` | `unit-material-metallic.tscn` | 5.576% |
-| `material-emissive` | `unit-material-emissive.tscn` | 12.238% |
-| `material-heightmap` | `unit-material-heightmap.tscn` | 11.656% |
-| `hallway-mockup` | `example-hallway-mockup.tscn` | 0.109% |
-| `camera-basic` | `unit-camera-basic.tscn` | 0.670% |
-| `audio-stream-player-3d` | `unit-audio-stream-player.tscn` | 0.922% |
-| `box-mesh` | `unit-box-mesh.tscn` | 1.764% |
-| `capsule-mesh` | `unit-capsule-mesh.tscn` | 3.480% |
-| `cylinder-mesh` | `unit-cylinder-mesh.tscn` | 2.765% |
-| `prism-mesh` | `unit-prism-mesh.tscn` | 2.969% |
-| `torus-mesh` | `unit-torus-mesh.tscn` | 9.816% |
-| `material-ao` | `unit-material-ao.tscn` | 1.232% |
-| `material-normal-map` | `unit-material-normal-map.tscn` | 2.134% |
-| `material-textured` | `unit-material-textured.tscn` | 2.910% |
-| `material-override` | `unit-material-override.tscn` | 1.530% |
-| `surface-material-override` | `unit-surface-material-override.tscn` | 3.171% |
-| `material-features` | `integration-material-features.tscn` | 12.126% |
-| `sprite3d` | `unit-sprite3d.tscn` | 1.587% |
+| `plane-mesh` | `unit-plane-mesh.tscn` | 0.504% |
+| `plane-rotated-scaled` | `edge-plane-rotated-scaled.tscn` | 0.222% |
+| `arraymesh` | `unit-arraymesh.tscn` | 6.139% |
+| `arraymesh-uv` | `unit-arraymesh-uv.tscn` | 7.371% |
+| `arraymesh-compressed` | `unit-arraymesh-compressed.tscn` | 7.921% |
+| `arraymesh-own-material` | `unit-arraymesh-own-material.tscn` | **53.066%** — `isFlat` camera-angle flip, NOT this fix's glyph/framing change; see Bug 2 above |
+| `material-metallic` | `unit-material-metallic.tscn` | 4.959% |
+| `material-emissive` | `unit-material-emissive.tscn` | 6.363% |
+| `material-heightmap` | `unit-material-heightmap.tscn` | 5.142% |
+| `hallway-mockup` | `example-hallway-mockup.tscn` | 0.012% |
+| `camera-basic` | `unit-camera-basic.tscn` | 3.438% |
+| `audio-stream-player-3d` | `unit-audio-stream-player.tscn` | 0.549% |
+| `box-mesh` | `unit-box-mesh.tscn` | 1.842% |
+| `capsule-mesh` | `unit-capsule-mesh.tscn` | 2.199% |
+| `cylinder-mesh` | `unit-cylinder-mesh.tscn` | 3.067% |
+| `prism-mesh` | `unit-prism-mesh.tscn` | 3.922% |
+| `torus-mesh` | `unit-torus-mesh.tscn` | 3.717% |
+| `material-ao` | `unit-material-ao.tscn` | 0.629% |
+| `material-normal-map` | `unit-material-normal-map.tscn` | 0.503% |
+| `material-textured` | `unit-material-textured.tscn` | 4.424% |
+| `material-override` | `unit-material-override.tscn` | 3.406% |
+| `surface-material-override` | `unit-surface-material-override.tscn` | 3.755% |
+| `material-features` | `integration-material-features.tscn` | 10.823% |
+| `sprite3d` | `unit-sprite3d.tscn` | 1.200% |
 | `camera3d-selected` | `unit-multi-camera.tscn` (select) | not directly diffed — see above |
 | `audio-stream-player-3d-selected` | `unit-audio-stream-player.tscn` (select) | not directly diffed — see above |
 | `audio-stream-player-3d-cone-selected` | `unit-audio-stream-player.tscn` (select) | not directly diffed — see above |
 
-Movement correlates with how much of the frame the label's own glyphs occupy — a scene
-with one large, legible caption (`material-emissive`, `material-heightmap`,
-`material-features`, `torus-mesh`) moves the most, since MSDF Open Sans and the host's
-Arial fallback occupy overlapping but non-identical pixels at that scale; `hallway-mockup`'s
-11 tiny captions move almost nothing (0.109%, unchanged from before this rewrite) because a
-caption a few pixels tall barely renders any ink either way. Spot-checked
-`material-heightmap`/`torus-mesh`/`box-mesh` directly against `pnpm ref:godot`: object
-position and size now match the baseline closely (within ~2.5%, down from ~16% before the
-bounds-proxy width fix), so the remaining movement is glyph shape, not framing.
+All 23 scenes other than `arraymesh-own-material` moved LESS than they did at the previous
+(billboard-cube-inflation) framing state, consistent with the arbitration table above: the
+point-proxy fix pulls the camera to the same position Godot's own reference uses, so what
+remains is glyph shape (MSDF Open Sans vs. the host's Arial fallback occupying overlapping
+but non-identical pixels), not a framing gap. `hallway-mockup`'s 11 tiny captions move
+almost nothing (0.012%) because a caption a few pixels tall barely renders any ink either
+way. `arraymesh-own-material` is the sole outlier, and its cause is fully accounted for
+above (Bug 2, `isFlat`) — it is not evidence of a glyph or framing regression in this
+rewrite, and rebaselining it without also addressing `isFlat` would commit a picture that
+diverges from Godot's own reference by 5.7x more than the fixture's current baseline does.
 
 ## Linting
 
