@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { TscnParser } from './TscnParser';
+import { transformOf } from './testing/parserKit';
 
 describe('TscnParser', () => {
   it('should create a parser instance', () => {
@@ -33,9 +34,9 @@ describe('TscnParser', () => {
       const result = parser.parse(content);
 
       expect(result.nodes).toHaveLength(1);
-      expect(result.nodes[0].name).toBe('Root');
-      expect(result.nodes[0].type).toBe('Node3D');
-      expect(result.nodes[0].children).toEqual([]);
+      expect(result.nodes[0]!.name).toBe('Root');
+      expect(result.nodes[0]!.type).toBe('Node3D');
+      expect(result.nodes[0]!.children).toEqual([]);
     });
 
     it('should parse Node3D with transform', () => {
@@ -48,11 +49,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)`;
       const result = parser.parse(content);
 
       expect(result.nodes).toHaveLength(1);
-      const node = result.nodes[0];
+      const node = result.nodes[0]!;
       expect(node.properties).toHaveProperty('transform');
 
-      if ('transform' in node.properties && node.properties.transform) {
-        expect(node.properties.transform.origin.x).toBe(2);
+      const transform = transformOf(node.properties);
+      if (transform) {
+        expect(transform.origin.x).toBe(2);
       }
     });
 
@@ -67,7 +69,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)`;
       const result = parser.parse(content);
 
       expect(result.nodes).toHaveLength(1);
-      expect(result.nodes[0].name).toBe('Root');
+      expect(result.nodes[0]!.name).toBe('Root');
     });
 
     it('should skip empty lines', () => {
@@ -97,10 +99,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)`;
       const result = parser.parse(content);
 
       expect(result.nodes).toHaveLength(1);
-      const root = result.nodes[0];
+      const root = result.nodes[0]!;
       expect(root.name).toBe('Root');
       expect(root.children).toHaveLength(1);
-      expect(root.children[0].name).toBe('Child');
+      expect(root.children[0]!.name).toBe('Child');
     });
 
     it('should build multi-level hierarchy', () => {
@@ -118,7 +120,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)`;
       const result = parser.parse(content);
 
       expect(result.nodes).toHaveLength(1);
-      const root = result.nodes[0];
+      const root = result.nodes[0]!;
 
       // Root should have 2 children
       expect(root.children).toHaveLength(2);
@@ -127,7 +129,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)`;
       const child1 = root.children.find(c => c.name === 'Child1');
       expect(child1).toBeDefined();
       expect(child1!.children).toHaveLength(1);
-      expect(child1!.children[0].name).toBe('GrandChild');
+      expect(child1!.children[0]!.name).toBe('GrandChild');
 
       // Second child should have no children
       const child2 = root.children.find(c => c.name === 'Child2');
@@ -153,7 +155,7 @@ text = "Score: 0"`;
       const result = parser.parse(content);
 
       expect(result.nodes).toHaveLength(1);
-      const layer = result.nodes[0].children[0];
+      const layer = result.nodes[0]!.children[0];
       expect(layer?.type).toBe('CanvasLayer');
       expect(layer?.children.map((c) => c.name)).toEqual(['Score']);
     });
@@ -169,9 +171,9 @@ text = "Score: 0"`;
       const result = parser.parse(content);
 
       expect(result.nodes).toHaveLength(1);
-      expect(result.nodes[0].name).toBe('Root');
-      expect(result.nodes[0].children).toHaveLength(1);
-      expect(result.nodes[0].children[0].name).toBe('Child');
+      expect(result.nodes[0]!.name).toBe('Root');
+      expect(result.nodes[0]!.children).toHaveLength(1);
+      expect(result.nodes[0]!.children[0]!.name).toBe('Child');
     });
   });
 
@@ -195,7 +197,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)`;
 
       // Should have 1 root node
       expect(result.nodes).toHaveLength(1);
-      const root = result.nodes[0];
+      const root = result.nodes[0]!;
       expect(root.name).toBe('Root');
 
       // Root should have 2 children
@@ -204,20 +206,22 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)`;
       // Check Child1
       const child1 = root.children.find(c => c.name === 'Child1');
       expect(child1).toBeDefined();
-      if ('transform' in child1!.properties && child1!.properties.transform) {
-        expect(child1!.properties.transform.origin.x).toBe(2);
+      const child1Transform = transformOf(child1!.properties);
+      if (child1Transform) {
+        expect(child1Transform.origin.x).toBe(2);
       }
 
       // Child1 should have GrandChild
       expect(child1!.children).toHaveLength(1);
-      expect(child1!.children[0].name).toBe('GrandChild');
+      expect(child1!.children[0]!.name).toBe('GrandChild');
 
       // Check Child2
       const child2 = root.children.find(c => c.name === 'Child2');
       expect(child2).toBeDefined();
-      if ('transform' in child2!.properties && child2!.properties.transform) {
-        expect(child2!.properties.transform.origin.x).toBe(-2);
-        expect(child2!.properties.transform.origin.y).toBe(1);
+      const child2Transform = transformOf(child2!.properties);
+      if (child2Transform) {
+        expect(child2Transform.origin.x).toBe(-2);
+        expect(child2Transform.origin.y).toBe(1);
       }
     });
   });
@@ -234,8 +238,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)`;
       const result = parser.parse(content);
 
       expect(result.externalResources).toHaveLength(1);
-      expect(result.externalResources[0].type).toBe('PackedScene');
-      expect(result.externalResources[0].path).toBe('res://scene.tscn');
+      expect(result.externalResources[0]!.type).toBe('PackedScene');
+      expect(result.externalResources[0]!.path).toBe('res://scene.tscn');
     });
 
     it('should parse internal resources', () => {
@@ -250,8 +254,8 @@ size = Vector3(1, 1, 1)
       const result = parser.parse(content);
 
       expect(result.internalResources).toHaveLength(1);
-      expect(result.internalResources[0].type).toBe('BoxMesh');
-      expect(result.internalResources[0].data).toHaveProperty('size');
+      expect(result.internalResources[0]!.type).toBe('BoxMesh');
+      expect(result.internalResources[0]!.data).toHaveProperty('size');
     });
   });
 });

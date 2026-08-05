@@ -53,8 +53,9 @@ describe('multi-line value scanning performance', () => {
     // Sanity: still parses correctly (the multi-line value still rejoins and
     // parsing continues past it) — the perf fix must not change output.
     const title = scene.nodes.find(n => n.name === 'Title');
-    expect(title?.properties.text).toContain('Line number 0 of a very long pathological label value.');
-    expect(title?.properties.horizontalAlignment).toBe(1);
+    const titleProps = title?.properties as Record<string, unknown> | undefined;
+    expect(titleProps?.text).toContain('Line number 0 of a very long pathological label value.');
+    expect(titleProps?.horizontalAlignment).toBe(1);
 
     // O(L) target: comfortably under a second on any reasonable machine.
     // O(L^2) on the unfixed code took ~119s at this size — this bound is

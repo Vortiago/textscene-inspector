@@ -25,6 +25,7 @@ vi.mock('./sourceGate', () => ({
 }));
 
 import { useSceneSource } from './useSceneSource';
+import type { UseSceneSourceOptions, UseSceneSourceResult } from './useSceneSource';
 
 const FIXTURE_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -395,8 +396,8 @@ describe('replace — upload supersedes pending debounce', () => {
       text: () => text.promise,
     } as unknown as Response) as unknown as typeof fetch;
 
-    const { result, rerender } = renderHook(
-      (props: { fixtureFile: string; uploadedTscnName: string | null }) => useSceneSource(props),
+    const { result, rerender } = renderHook<UseSceneSourceResult, UseSceneSourceOptions>(
+      (props) => useSceneSource(props),
       { initialProps: { fixtureFile: 'unit-plane-mesh.tscn', uploadedTscnName: null } }
     );
 

@@ -120,7 +120,7 @@ describe('tileSetFromScene', () => {
       ];
       const model = tileSetFromScene('SubResource("ts")', hexInternals, externals);
       expect(model!.shape).toBe(Number(shape));
-      const shapeWarns = warnSpy.mock.calls.filter((c) => String(c[0]).includes('tile_shape'));
+      const shapeWarns = warnSpy.mock.calls.filter((c: unknown[]) => String(c[0]).includes('tile_shape'));
       expect(shapeWarns).toHaveLength(0);
     }
   });
@@ -135,7 +135,7 @@ describe('tileSetFromScene', () => {
       },
     ];
     tileSetFromScene('SubResource("ts")', oddInternals, externals);
-    const shapeWarns = warnSpy.mock.calls.filter((c) => String(c[0]).includes('tile_shape'));
+    const shapeWarns = warnSpy.mock.calls.filter((c: unknown[]) => String(c[0]).includes('tile_shape'));
     expect(shapeWarns).toHaveLength(1);
   });
 });

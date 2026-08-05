@@ -247,7 +247,7 @@ describe('matchResourceFiles', () => {
     const result = matchResourceFiles(extResourcePaths(tscnNoPlayer), [file], missingPaths);
     expect(result.matches).toHaveLength(1);
     expect(result.ambiguousMatches).toHaveLength(1);
-    expect(result.ambiguousMatches[0].file).toBe(file);
-    expect(result.ambiguousMatches[0].candidates.length).toBeGreaterThan(1);
+    expect(result.ambiguousMatches[0]!.file).toBe(file);
+    expect(result.ambiguousMatches[0]!.candidates.length).toBeGreaterThan(1);
   });
 });

@@ -49,7 +49,7 @@ describe('decodeArrayMesh', () => {
     const mesh = decodeArrayMesh(WALL_TRES, 'res://mesh.tres');
 
     expect(mesh.surfaces).toHaveLength(1);
-    const surface = mesh.surfaces[0];
+    const surface = mesh.surfaces[0]!;
     expect(surface.format).toBe(34359742487);
     expect(surface.primitive).toBe(3);
     expect(surface.vertexCount).toBe(4);
@@ -57,7 +57,7 @@ describe('decodeArrayMesh', () => {
   });
 
   it('decodes vertex positions (3×float32, first in the vertex stride)', () => {
-    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0];
+    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(surface.positions).toHaveLength(4 * 3);
     // Vertex 0 = (-1, -1, 1) per the surface AABB(-1,-1,1, 2,2,~0).
@@ -73,14 +73,14 @@ describe('decodeArrayMesh', () => {
   });
 
   it('decodes indices with byte-width auto-detection (uint16 here)', () => {
-    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0];
+    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(surface.indices).toBeInstanceOf(Uint16Array);
     expect(Array.from(surface.indices)).toEqual([2, 0, 3, 2, 1, 0]);
   });
 
   it('decodes UV1 from attribute_data when TEX_UV is present (2×float32)', () => {
-    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0];
+    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(surface.uvs).toBeDefined();
     expect(surface.uvs).toHaveLength(4 * 2);
@@ -88,14 +88,14 @@ describe('decodeArrayMesh', () => {
   });
 
   it('decodes Godot packed octahedral normals (wall quad faces +Z)', () => {
-    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0];
+    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(surface.normals).toBeDefined();
     expect(surface.normals).toHaveLength(4 * 3);
     for (let i = 0; i < 4; i++) {
-      const nx = surface.normals![i * 3 + 0];
-      const ny = surface.normals![i * 3 + 1];
-      const nz = surface.normals![i * 3 + 2];
+      const nx = surface.normals![i * 3 + 0]!;
+      const ny = surface.normals![i * 3 + 1]!;
+      const nz = surface.normals![i * 3 + 2]!;
       // unit length
       expect(Math.hypot(nx, ny, nz)).toBeCloseTo(1, 3);
       // planar quad in the XY plane at z=1 → normal (0, 0, 1)
@@ -106,7 +106,7 @@ describe('decodeArrayMesh', () => {
   });
 
   it("resolves each surface's material to its res:// path via the file's ext_resources", () => {
-    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0];
+    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
     // "material": ExtResource("1_a5mma") → the [ext_resource] with that id.
     expect(surface.materialPath).toBe('res://stage/tile_material.tres');
   });
@@ -114,10 +114,10 @@ describe('decodeArrayMesh', () => {
   it('decodes multiple surfaces with per-surface groups-worth of data and materials', () => {
     const mesh = decodeArrayMesh(TWO_SURFACE_TRES, 'res://mesh.tres');
     expect(mesh.surfaces).toHaveLength(2);
-    expect(mesh.surfaces[0].materialPath).toBe('res://a.tres');
-    expect(mesh.surfaces[1].materialPath).toBe('res://b.tres');
-    expect(mesh.surfaces[0].vertexCount).toBe(4);
-    expect(mesh.surfaces[1].vertexCount).toBe(4);
+    expect(mesh.surfaces[0]!.materialPath).toBe('res://a.tres');
+    expect(mesh.surfaces[1]!.materialPath).toBe('res://b.tres');
+    expect(mesh.surfaces[0]!.vertexCount).toBe(4);
+    expect(mesh.surfaces[1]!.vertexCount).toBe(4);
   });
 
   it("addresses a surface material declared in the mesh's own .tres as a sub-resource path", () => {
@@ -566,7 +566,7 @@ describe('undecodable surfaces', () => {
 
     expect(() => decodeArrayMesh(shortIndices, 'res://mesh.tres')).toThrow();
     expect(
-      warnSpy.mock.calls.some((c) => String(c[0]).includes('index_data'))
+      warnSpy.mock.calls.some((c: unknown[]) => String(c[0]).includes('index_data'))
     ).toBe(true);
   });
 

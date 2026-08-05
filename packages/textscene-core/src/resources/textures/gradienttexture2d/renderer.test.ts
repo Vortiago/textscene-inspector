@@ -142,15 +142,15 @@ describe('rasterizeGradientTexture2D', () => {
     const tex: GradientTexture2D = {
       width: 1,
       height: 4,
-      fill: GradientFill.LINEAR,
+      fill: GradientFill.Linear,
       fillFrom: { x: 0, y: 0 },
       fillTo: { x: 0, y: 1 },
-      repeat: GradientRepeat.NONE,
-      gradient: null,
+      repeat: GradientRepeat.None,
+      useHdr: false,
     };
     // Black at Godot's top (offset 0), white at Godot's bottom (offset 1).
     const gradient: Gradient = {
-      interpolationMode: GradientInterpolationMode.LINEAR,
+      interpolationMode: GradientInterpolationMode.Linear,
       stops: [
         { offset: 0, color: { r: 0, g: 0, b: 0, a: 1 } },
         { offset: 1, color: { r: 1, g: 1, b: 1, a: 1 } },

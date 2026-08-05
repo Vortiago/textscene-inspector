@@ -14,7 +14,7 @@ vi.mock('three', async () => {
 
   // Create a mock TextureLoader constructor
   class MockTextureLoader {
-    load(url: string, onLoad?: (texture: THREE.Texture) => void, _onProgress?: () => void, onError?: (error: Error) => void) {
+    load(_url: string, onLoad?: (texture: THREE.Texture) => void, _onProgress?: () => void, onError?: (error: Error) => void) {
       try {
         // Simulate successful texture load
         const mockTexture = new actual.Texture();
@@ -85,7 +85,7 @@ function createMockFileEventBus(): {
         cache.clear();
       }
     }),
-  };
+  } as unknown as FileEventBus;
 
   return {
     fileEventBus,

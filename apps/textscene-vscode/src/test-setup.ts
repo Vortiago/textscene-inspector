@@ -7,25 +7,22 @@
 
 import { vi, afterEach } from 'vitest';
 import * as path from 'path';
+// Aliased: this module also exports its own `vscode` mock namespace below,
+// which would otherwise collide with a same-named type-only import.
+import type * as VSCode from 'vscode';
 
 // ============================================================================
 // Helper Factories
 // ============================================================================
 
 /**
- * Create a mock vscode.Uri object
+ * Create a mock vscode.Uri object. Typed as the real `vscode.Uri` so it
+ * type-checks at every call site that hands it to production code expecting
+ * one — the mock only implements the fields/methods those call sites
+ * actually touch, so the cast (not a structural match — `with`/`toJSON`
+ * differ from the real `Uri`) is the mock boundary, not a widened type.
  */
-export function createMockUri(fsPath: string): {
-  fsPath: string;
-  path: string;
-  scheme: string;
-  authority: string;
-  query: string;
-  fragment: string;
-  with: ReturnType<typeof vi.fn>;
-  toString: () => string;
-  toJSON: () => { fsPath: string; path: string; scheme: string };
-} {
+export function createMockUri(fsPath: string): VSCode.Uri {
   // Normalize path for cross-platform compatibility
   const normalizedPath = fsPath.replace(/\\/g, '/');
 
@@ -39,7 +36,7 @@ export function createMockUri(fsPath: string): {
     with: vi.fn(),
     toString: () => `file://${normalizedPath}`,
     toJSON: () => ({ fsPath, path: normalizedPath, scheme: 'file' })
-  };
+  } as unknown as VSCode.Uri;
 }
 
 /**

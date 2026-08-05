@@ -1,0 +1,21 @@
+// Type-checking config — everything under `src`, tests included.
+//
+// `tsconfig.json` is the BUILD config: vite bundles the app itself, but
+// `type-check` (`tsc --noEmit`) points at it directly, so its `*.test.ts` /
+// `*.spec.ts` exclusion — correct for keeping tests out of a hypothetical
+// `tsc` emit — silently doubled as a CHECK exclusion. Those tests were
+// type-checked by nothing, and vitest only transpiles.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    // The ambients vitest gives a test at runtime, so checking sees what the
+    // test actually has rather than inventing failures.
+    "types": ["vitest/globals", "node"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

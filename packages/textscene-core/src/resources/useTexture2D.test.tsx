@@ -88,8 +88,9 @@ describe('useTexture2D — procedural cookies reach 2D canvas items', () => {
     // quad samples the rasterised gradient.
     const cookie = cookieOf(meshes[0]!.instance);
     expect(cookie).toBeInstanceOf(THREE.DataTexture);
-    expect(cookie!.image.width).toBe(64);
-    expect(cookie!.image.height).toBe(64);
+    const dataCookie = cookie as THREE.DataTexture;
+    expect(dataCookie.image.width).toBe(64);
+    expect(dataCookie.image.height).toBe(64);
   });
 
   it('rasterises ONE texture for every node pointing at the same gradient', async () => {
@@ -205,7 +206,7 @@ describe('useTexture2D — reference forms', () => {
     );
 
     expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
-    expect(result.current.texture!.image.width).toBe(16);
+    expect((result.current.texture as THREE.DataTexture).image.width).toBe(16);
     expect(result.current.missing).toBe(false);
   });
 

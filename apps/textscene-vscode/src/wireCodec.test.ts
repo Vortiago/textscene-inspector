@@ -91,7 +91,7 @@ describe('wireCodec — binary resources smaller than one chunk', () => {
 
 describe('wireCodec — binary resources crossing 8 KB chunk boundaries', () => {
   /** Build a deterministic byte pattern (not the trivial `i % 256` ramp). */
-  function makeBytes(length: number): Uint8Array {
+  function makeBytes(length: number): Uint8Array<ArrayBuffer> {
     const b = new Uint8Array(length);
     for (let i = 0; i < length; i++) {
       b[i] = (i * 37 + 11) % 256;

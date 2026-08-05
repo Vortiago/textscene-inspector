@@ -65,7 +65,7 @@ describe('launchIntegrationTests', () => {
         paths: fakePaths(workspaceRoot),
         prepareWorkspace: (root) => mkdirSync(root, { recursive: true }),
         launch: async (options: IntegrationLaunchOptions) => {
-          existedAtLaunch = existsSync(options.launchArgs[0]);
+          existedAtLaunch = existsSync(options.launchArgs[0]!);
         },
       });
     } finally {

@@ -87,7 +87,7 @@ describe('parseCurve', () => {
 
 const CURVE_RESOURCE: TscnInternalResource = {
   type: 'Curve',
-  id: 1,
+  id: '1',
   data: { id: '4', ...CANDLE_SPARKLE },
 };
 
@@ -98,7 +98,7 @@ describe('resolveCurve', () => {
   });
 
   it('returns null when the reference names a different resource type (error path)', () => {
-    const gradient: TscnInternalResource = { type: 'Gradient', id: 2, data: { id: '4' } };
+    const gradient: TscnInternalResource = { type: 'Gradient', id: '2', data: { id: '4' } };
     expect(resolveCurve('SubResource("4")', [gradient])).toBeNull();
   });
 
