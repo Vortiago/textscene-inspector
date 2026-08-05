@@ -15,12 +15,14 @@
  * `gui_panel_3d.tscn`, whose `TextureRect` names `ExtResource("2")` — an id the
  * host scene never defines.
  *
- * The scope rules mirror `useBuildSolveTree`'s own live-tree walk exactly,
- * because the native pass mounts a fresh `ControlCanvasWalker` and must hand it
- * the scope that walk would have resolved: a collapsed single-root instance
- * puts ALL its children in the sub-scene's scope; a multi-root one keeps the
- * instance node, its authored children in the outer scope and the loaded roots
- * in the sub-scene's.
+ * The instance-collapse and per-sub-scene scoping is `liveSceneTree.ts`'s
+ * `liveChildGroups` — the SAME primitive `useBuildSolveTree`'s own live-tree
+ * walk is built on — so this walk only decides WHICH group a Control-raster
+ * viewport sits in and pairs it with that group's already-resolved scope,
+ * rather than re-deriving instance-collapse/scope rules by hand: a collapsed
+ * single-root instance puts ALL its children in the sub-scene's scope; a
+ * multi-root one keeps the instance node, its authored children in the outer
+ * scope and the loaded roots in the sub-scene's.
  *
  * Pure (no React, no THREE, no DOM) so the path/scope rules are asserted
  * directly — the rasterisation half needs a real renderer and is gated by
@@ -32,8 +34,7 @@ import type {
   TscnInternalResource,
   TscnNode,
 } from '../../../parser/types.js';
-import { mergeInstanceRoot } from '../../../resources/mergeInstanceRoot.js';
-import { resolveInstancePath } from '../../../resources/SubResourceResolver.js';
+import { liveChildGroups } from '../../../r3f/liveSceneTree.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { isViewportBoundary } from './viewportBoundary.js';
 import { viewportContentKind } from './viewportContent.js';
@@ -48,6 +49,8 @@ export interface SceneScope {
 /**
  * Read surface for the loader's PackedScene cache. Structural rather than the
  * concrete `ResourceLoader`, so the walk stays pure and a test supplies a map.
+ * Every cached scene carries BOTH resource pools, so this satisfies
+ * `liveChildGroups`' `CachedSceneSource` surface without an adapter.
  */
 export interface SceneScopeSource {
   getCached: (path: string) => (SceneScope & { nodes: readonly TscnNode[] }) | null | undefined;
@@ -96,25 +99,29 @@ export function collectControlRasterViewports(
     for (const node of nodes) {
       const path = joinPath(parentPath, node.name);
 
-      // The sub-scene behind an `instance=`, once loaded — the only thing that
-      // can change the scope below this node.
-      const scenePath = node.instance
-        ? resolveInstancePath(node.instance, current.externalResources)
-        : null;
-      const subScene = scenePath ? sceneCache.getCached(scenePath) : undefined;
-      const subScope: SceneScope | null = subScene
-        ? {
-            internalResources: subScene.internalResources,
-            externalResources: subScene.externalResources,
-          }
-        : null;
-      // A single-root sub-scene collapses INTO the instance node (ADR-0013), so
-      // the node itself is already the sub-scene's root and is read in that scope.
-      const merged = subScene ? mergeInstanceRoot(node, subScene) : null;
-      const effective = merged ?? node;
+      // liveChildGroups decides instance-collapse and per-group resource scope
+      // — the SAME decision `useBuildSolveTree`'s walk makes for the on-screen
+      // native pass. Passing `current.internalResources` explicitly (the 5th,
+      // otherwise-defaulted-empty argument) is load-bearing: it is the ONLY way
+      // a host-authored (`inline`) child of an instance node keeps resolving
+      // its own SubResource refs against the HOST's pool rather than losing it.
+      const groups = liveChildGroups(
+        node,
+        current.externalResources,
+        sceneCache,
+        undefined,
+        current.internalResources
+      );
+      // A collapsed single-root instance (ADR-0013) BECOMES its sub-scene
+      // root; every other origin leaves the node's own identity alone.
+      const mergedGroup = groups.find((group) => group.origin === 'merged');
+      const effective = mergedGroup?.mergedNode ?? node;
 
       if (isViewportBoundary(effective.type) && viewportContentKind(effective) === 'dom') {
         const properties = effective.properties as SubViewportProperties;
+        const effectiveScope: SceneScope = mergedGroup
+          ? { internalResources: mergedGroup.internalResources, externalResources: mergedGroup.externalResources }
+          : current;
         found.push({
           path,
           node: effective,
@@ -123,20 +130,21 @@ export function collectControlRasterViewports(
             y: Math.max(1, Math.round(properties.size?.y ?? DEFAULT_SIZE)),
           },
           transparentBg: properties.transparent_bg === true,
-          ...(merged && subScope ? subScope : current),
+          ...effectiveScope,
         });
       }
 
-      if (merged && subScope) {
-        // Collapsed: every child came from the sub-scene root, in its scope.
-        walk(merged.children, path, subScope, depth + 1);
-        continue;
+      // Every group descends in ITS OWN scope: the sub-scene's for
+      // `merged`/`subscene`, the outer one for `inline`/`glb`. A found
+      // sub-viewport is still descended into (see module doc).
+      for (const group of groups) {
+        walk(
+          group.children,
+          path,
+          { internalResources: group.internalResources, externalResources: group.externalResources },
+          depth + 1
+        );
       }
-      // Host-authored children keep the outer scope whether or not the instance
-      // resolved; a multi-root sub-scene's roots are injected beneath the
-      // instance node in the sub-scene's scope.
-      walk(node.children, path, current, depth + 1);
-      if (subScene && subScope) walk(subScene.nodes, path, subScope, depth + 1);
     }
   };
 
