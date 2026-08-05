@@ -19,6 +19,7 @@ import {
   type LiveTreeContext,
   type CachedSceneSource,
   type CachedGlbSource,
+  type SceneScope,
 } from './liveSceneTree';
 import type { TscnNode, TscnScene, TscnExternalResource, TscnInternalResource } from '../parser/types';
 
@@ -28,6 +29,19 @@ function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): T
 
 function cacheOf(entries: Record<string, TscnScene>): CachedSceneSource {
   return { getCached: (p) => entries[p] };
+}
+
+/**
+ * A {@link SceneScope} from its parts. Most cases here only care about the
+ * ExtResource half, so the SubResource pool defaults to empty — but it is named
+ * at the call site rather than omitted, which is the whole point of the two
+ * pools travelling as one value.
+ */
+function scopeOf(
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[] = []
+): SceneScope {
+  return { externalResources, internalResources };
 }
 
 function ext(id: string, path: string): TscnExternalResource {
@@ -508,12 +522,12 @@ describe('singleSceneCache — one-entry adapter the tree + viewport hand their 
 
     expect(collapseLiveNode(node, outer, cache).type).toBe('CharacterBody3D');
 
-    const groups = liveChildGroups(node, outer, cache);
+    const groups = liveChildGroups(node, scopeOf(outer), cache);
     // Single-root collapse → one merged group carrying the sub-scene's children.
     expect(groups).toHaveLength(1);
     expect(groups[0]!.children.map((c) => c.name)).toEqual(['Model']);
     // Scope switched to the sub-scene's table, so the nested GLB ref resolves.
-    expect(groups[0]!.externalResources).toBe(sub.externalResources);
+    expect(groups[0]!.scope.externalResources).toBe(sub.externalResources);
   });
 });
 
@@ -529,17 +543,17 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
     const node = makeNode('Root', 'Node3D', {
       children: [makeNode('A', 'Node3D'), makeNode('B', 'Node3D')],
     });
-    const groups = liveChildGroups(node, outer, cacheOf({}));
+    const groups = liveChildGroups(node, scopeOf(outer), cacheOf({}));
     expect(digest(groups)).toEqual([{ origin: 'inline', names: ['A', 'B'] }]);
-    expect(groups[0]!.externalResources).toBe(outer);
+    expect(groups[0]!.scope.externalResources).toBe(outer);
   });
 
   it('non-instance node with no children → one inline group (empty)', () => {
     const outer = [ext('1', 'res://a.tscn')];
     const node = makeNode('Leaf', 'Node3D');
-    const groups = liveChildGroups(node, outer, cacheOf({}));
+    const groups = liveChildGroups(node, scopeOf(outer), cacheOf({}));
     expect(digest(groups)).toEqual([{ origin: 'inline', names: [] }]);
-    expect(groups[0]!.externalResources).toBe(outer);
+    expect(groups[0]!.scope.externalResources).toBe(outer);
   });
 
   it('instance node with unresolvable ref → one inline group in OUTER scope', () => {
@@ -548,17 +562,17 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
       instance: 'ExtResource("missing")',
       children: [makeNode('Child', 'Node3D')],
     });
-    const groups = liveChildGroups(node, outer, cacheOf({}));
+    const groups = liveChildGroups(node, scopeOf(outer), cacheOf({}));
     expect(digest(groups)).toEqual([{ origin: 'inline', names: ['Child'] }]);
-    expect(groups[0]!.externalResources).toBe(outer);
+    expect(groups[0]!.scope.externalResources).toBe(outer);
   });
 
   it('instance node not-yet-cached → one inline group in OUTER scope', () => {
     const outer = [ext('1', 'res://a.tscn')];
     const node = makeNode('X', 'Node3D', { instance: 'ExtResource("1")' });
-    const groups = liveChildGroups(node, outer, cacheOf({}));
+    const groups = liveChildGroups(node, scopeOf(outer), cacheOf({}));
     expect(digest(groups)).toEqual([{ origin: 'inline', names: [] }]);
-    expect(groups[0]!.externalResources).toBe(outer);
+    expect(groups[0]!.scope.externalResources).toBe(outer);
   });
 
   it('collapsed single-root instance → one merged group in sub-scene scope', () => {
@@ -573,13 +587,13 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
       internalResources: [],
     };
     const node = makeNode('Player', 'Node3D', { instance: 'ExtResource("1")' });
-    const groups = liveChildGroups(node, outer, cacheOf({ 'res://player.tscn': sub }));
+    const groups = liveChildGroups(node, scopeOf(outer), cacheOf({ 'res://player.tscn': sub }));
     expect(groups).toHaveLength(1);
     expect(groups[0]!.origin).toBe('merged');
     // Merged children are the sub-scene root's children (and any host-added).
     expect(groups[0]!.children.map((c) => c.name)).toEqual(['Camera', 'Mesh']);
     // Scope is the sub-scene's own resource table.
-    expect(groups[0]!.externalResources).toBe(sub.externalResources);
+    expect(groups[0]!.scope.externalResources).toBe(sub.externalResources);
     // The merged group carries the collapsed node (keeps the instance name,
     // adopts the sub-scene root's type) so callers reuse the merge.
     expect(groups[0]!.mergedNode?.name).toBe('Player');
@@ -600,20 +614,20 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
       instance: 'ExtResource("1")',
       children: [makeNode('InlineChild', 'MeshInstance3D')],
     });
-    const groups = liveChildGroups(node, outer, cacheOf({ 'res://multi.tscn': multi }));
+    const groups = liveChildGroups(node, scopeOf(outer), cacheOf({ 'res://multi.tscn': multi }));
     expect(groups).toHaveLength(2);
 
     const inlineGroup = groups.find((g) => g.origin === 'inline')!;
     expect(inlineGroup).toBeDefined();
     expect(inlineGroup.children.map((c) => c.name)).toEqual(['InlineChild']);
     // Inline children are authored in the host scene — they must resolve against OUTER resources.
-    expect(inlineGroup.externalResources).toBe(outer);
+    expect(inlineGroup.scope.externalResources).toBe(outer);
 
     const subsceneGroup = groups.find((g) => g.origin === 'subscene')!;
     expect(subsceneGroup).toBeDefined();
     expect(subsceneGroup.children.map((c) => c.name)).toEqual(['RootA', 'RootB']);
     // Loaded roots resolve against the sub-scene's resource table.
-    expect(subsceneGroup.externalResources).toBe(subExt);
+    expect(subsceneGroup.scope.externalResources).toBe(subExt);
   });
 
   it('fallback multi-root instance with NO inline children → subscene group only (no empty inline group)', () => {
@@ -624,11 +638,11 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
       internalResources: [],
     };
     const node = makeNode('Host', 'Node3D', { instance: 'ExtResource("1")' });
-    const groups = liveChildGroups(node, outer, cacheOf({ 'res://multi.tscn': multi }));
+    const groups = liveChildGroups(node, scopeOf(outer), cacheOf({ 'res://multi.tscn': multi }));
     // No inline children → no inline group emitted.
     expect(groups.map((g) => g.origin)).toEqual(['subscene']);
     expect(groups[0]!.children.map((c) => c.name)).toEqual(['RootA', 'RootB']);
-    expect(groups[0]!.externalResources).toBe(multi.externalResources);
+    expect(groups[0]!.scope.externalResources).toBe(multi.externalResources);
   });
 
   it('GLBSceneRoot → one glb group in OUTER scope', () => {
@@ -641,12 +655,12 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
     const node = makeNode('m', 'GLBSceneRoot', {
       properties: { glbPath: 'res://m.glb' } as Record<string, unknown>,
     });
-    const groups = liveChildGroups(node, outer, cacheOf({}), glbCache);
+    const groups = liveChildGroups(node, scopeOf(outer), cacheOf({}), glbCache);
     expect(groups).toHaveLength(1);
     expect(groups[0]!.origin).toBe('glb');
     expect(groups[0]!.children.map((c) => c.name)).toEqual(['body']);
     // GLB nodes carry no instance refs — they stay in OUTER scope.
-    expect(groups[0]!.externalResources).toBe(outer);
+    expect(groups[0]!.scope.externalResources).toBe(outer);
   });
 
   it('fallback-inline scope fix: inline children of a multi-root instance resolve OUTER ExtResources', () => {
@@ -666,11 +680,11 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
       instance: 'ExtResource("1")',
       children: [inlineChild],
     });
-    const groups = liveChildGroups(node, outer, cacheOf({ 'res://multi.tscn': multi }));
+    const groups = liveChildGroups(node, scopeOf(outer), cacheOf({ 'res://multi.tscn': multi }));
     const inlineGroup = groups.find((g) => g.origin === 'inline')!;
     // The gadget ext id resolves only in the outer scene; inline group has outer scope.
-    expect(inlineGroup.externalResources).toContain(outerOnlyExt);
-    expect(inlineGroup.externalResources).toBe(outer);
+    expect(inlineGroup.scope.externalResources).toContain(outerOnlyExt);
+    expect(inlineGroup.scope.externalResources).toBe(outer);
   });
 });
 
@@ -691,10 +705,10 @@ describe('liveChildGroups — internalResources scope (a sub-scene\'s own SubRes
       internalResources: subInternal,
     };
     const node = makeNode('Player', 'Node3D', { instance: 'ExtResource("1")' });
-    const groups = liveChildGroups(node, outer, cacheOf({ 'res://player.tscn': sub }), undefined, hostInternal);
+    const groups = liveChildGroups(node, scopeOf(outer, hostInternal), cacheOf({ 'res://player.tscn': sub }));
     expect(groups).toHaveLength(1);
     expect(groups[0]!.origin).toBe('merged');
-    expect(groups[0]!.internalResources).toBe(subInternal);
+    expect(groups[0]!.scope.internalResources).toBe(subInternal);
     expect(groups[0]!.internalResources).not.toBe(hostInternal);
   });
 
@@ -702,16 +716,16 @@ describe('liveChildGroups — internalResources scope (a sub-scene\'s own SubRes
     const outer = [ext('1', 'res://a.tscn')];
     const hostInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'HOST' })];
     const node = makeNode('Root', 'Node3D', { children: [makeNode('Panel', 'Panel')] });
-    const groups = liveChildGroups(node, outer, cacheOf({}), undefined, hostInternal);
+    const groups = liveChildGroups(node, scopeOf(outer, hostInternal), cacheOf({}));
     expect(groups).toHaveLength(1);
     expect(groups[0]!.origin).toBe('inline');
-    expect(groups[0]!.internalResources).toBe(hostInternal);
+    expect(groups[0]!.scope.internalResources).toBe(hostInternal);
   });
 
   it('defaults to an empty internalResources pool when the caller does not supply one (backward-compatible)', () => {
     const node = makeNode('Root', 'Node3D', { children: [makeNode('A', 'Node3D')] });
-    const groups = liveChildGroups(node, [], cacheOf({}));
-    expect(groups[0]!.internalResources).toEqual([]);
+    const groups = liveChildGroups(node, scopeOf([]), cacheOf({}));
+    expect(groups[0]!.scope.internalResources).toEqual([]);
   });
 
   it('fallback multi-root instance → inline group keeps OUTER internalResources, subscene group gets its OWN pool', () => {
@@ -727,11 +741,11 @@ describe('liveChildGroups — internalResources scope (a sub-scene\'s own SubRes
       instance: 'ExtResource("1")',
       children: [makeNode('InlineChild', 'Panel')],
     });
-    const groups = liveChildGroups(node, outer, cacheOf({ 'res://multi.tscn': multi }), undefined, hostInternal);
+    const groups = liveChildGroups(node, scopeOf(outer, hostInternal), cacheOf({ 'res://multi.tscn': multi }));
     const inlineGroup = groups.find((g) => g.origin === 'inline')!;
-    expect(inlineGroup.internalResources).toBe(hostInternal);
+    expect(inlineGroup.scope.internalResources).toBe(hostInternal);
     const subsceneGroup = groups.find((g) => g.origin === 'subscene')!;
-    expect(subsceneGroup.internalResources).toBe(subInternal);
+    expect(subsceneGroup.scope.internalResources).toBe(subInternal);
   });
 
   it('a NESTED instance resolves against ITS OWN pool at each level, never the host\'s or an intermediate ancestor\'s', () => {
@@ -761,24 +775,18 @@ describe('liveChildGroups — internalResources scope (a sub-scene\'s own SubRes
     const sceneCache = cacheOf({ 'res://subA.tscn': subA, 'res://subB.tscn': subB });
 
     // Level 1: host → A. Merged group must carry A's OWN pool, not the host's.
-    const level1 = liveChildGroups(node, outer, sceneCache, undefined, hostInternal);
+    const level1 = liveChildGroups(node, scopeOf(outer, hostInternal), sceneCache);
     const merged1 = level1.find((g) => g.origin === 'merged')!;
-    expect(merged1.internalResources).toBe(aInternal);
+    expect(merged1.scope.internalResources).toBe(aInternal);
 
     // Level 2: A's child 'Inner' instances B. Descending with A's OWN pool
     // threaded in (as a recursive walker does) must resolve B's merged group
     // against B's OWN pool — neither the host's nor A's.
     const inner = merged1.children.find((c) => c.name === 'Inner')!;
-    const level2 = liveChildGroups(
-      inner,
-      merged1.externalResources,
-      sceneCache,
-      undefined,
-      merged1.internalResources
-    );
+    const level2 = liveChildGroups(inner, merged1.scope, sceneCache);
     const merged2 = level2.find((g) => g.origin === 'merged')!;
-    expect(merged2.internalResources).toBe(bInternal);
-    expect(merged2.internalResources).not.toBe(aInternal);
-    expect(merged2.internalResources).not.toBe(hostInternal);
+    expect(merged2.scope.internalResources).toBe(bInternal);
+    expect(merged2.scope.internalResources).not.toBe(aInternal);
+    expect(merged2.scope.internalResources).not.toBe(hostInternal);
   });
 });

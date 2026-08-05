@@ -29,22 +29,12 @@
  * `pnpm test:visual`'s golden images.
  */
 
-import type {
-  TscnExternalResource,
-  TscnInternalResource,
-  TscnNode,
-} from '../../../parser/types.js';
-import { liveChildGroups } from '../../../r3f/liveSceneTree.js';
+import type { TscnNode } from '../../../parser/types.js';
+import { liveChildGroups, type SceneScope } from '../../../r3f/liveSceneTree.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { isViewportBoundary } from './viewportBoundary.js';
 import { viewportContentKind } from './viewportContent.js';
 import type { SubViewportProperties } from './types.js';
-
-/** The resource scope a subtree resolves its ids against. */
-export interface SceneScope {
-  internalResources: readonly TscnInternalResource[];
-  externalResources: readonly TscnExternalResource[];
-}
 
 /**
  * Read surface for the loader's PackedScene cache. Structural rather than the
@@ -101,17 +91,8 @@ export function collectControlRasterViewports(
 
       // liveChildGroups decides instance-collapse and per-group resource scope
       // — the SAME decision `useBuildSolveTree`'s walk makes for the on-screen
-      // native pass. Passing `current.internalResources` explicitly (the 5th,
-      // otherwise-defaulted-empty argument) is load-bearing: it is the ONLY way
-      // a host-authored (`inline`) child of an instance node keeps resolving
-      // its own SubResource refs against the HOST's pool rather than losing it.
-      const groups = liveChildGroups(
-        node,
-        current.externalResources,
-        sceneCache,
-        undefined,
-        current.internalResources
-      );
+      // native pass.
+      const groups = liveChildGroups(node, current, sceneCache);
       // A collapsed single-root instance (ADR-0013) BECOMES its sub-scene
       // root; every other origin leaves the node's own identity alone.
       const mergedGroup = groups.find((group) => group.origin === 'merged');
@@ -119,9 +100,7 @@ export function collectControlRasterViewports(
 
       if (isViewportBoundary(effective.type) && viewportContentKind(effective) === 'dom') {
         const properties = effective.properties as SubViewportProperties;
-        const effectiveScope: SceneScope = mergedGroup
-          ? { internalResources: mergedGroup.internalResources, externalResources: mergedGroup.externalResources }
-          : current;
+        const effectiveScope: SceneScope = mergedGroup ? mergedGroup.scope : current;
         found.push({
           path,
           node: effective,
@@ -138,12 +117,7 @@ export function collectControlRasterViewports(
       // `merged`/`subscene`, the outer one for `inline`/`glb`. A found
       // sub-viewport is still descended into (see module doc).
       for (const group of groups) {
-        walk(
-          group.children,
-          path,
-          { internalResources: group.internalResources, externalResources: group.externalResources },
-          depth + 1
-        );
+        walk(group.children, path, group.scope, depth + 1);
       }
     }
   };

@@ -22,25 +22,42 @@ import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js'
 import { joinPath } from '../utils/nodePath.js';
 
 /**
+ * The resource scope a subtree resolves its ids against — BOTH pools, always
+ * together.
+ *
+ * They travel as one value rather than two parameters because a `.tscn`'s ids
+ * are per-file and per-KIND: a node can name `ExtResource("2")` and
+ * `SubResource("1")` in the same property block, and both mean "in the scene I
+ * was authored in". Splitting them lets a caller pass one and forget the other,
+ * which resolves half the ids against the right scene and half against nothing
+ * — a StyleBox that silently comes back `undefined` while the textures beside
+ * it load fine. That is not hypothetical: while these were separate parameters
+ * (one required, one optional), BOTH consumers that needed the SubResource pool
+ * shipped call sites that compiled, ran, and passed their full suites with it
+ * omitted. One type makes the omission unrepresentable instead of untested.
+ */
+export interface SceneScope {
+  readonly externalResources: readonly TscnExternalResource[];
+  readonly internalResources: readonly TscnInternalResource[];
+}
+
+/**
  * Read surface for the loader's PackedScene cache. `undefined` = never
- * requested, `null` = previously failed, value = loaded (with its own
- * ExtResource AND SubResource pools — a StyleBox authored inside the sub-scene
- * resolves through `internalResources` the same way a nested instance resolves
- * through `externalResources`). Both resource fields are optional so a caller
- * that only tracks one pool (most do — StyleBox resolution is the one consumer
- * that needs `internalResources`) can still satisfy this surface.
+ * requested, `null` = previously failed, value = loaded, carrying whichever of
+ * its own pools the cache holds.
+ *
+ * The pools stay OPTIONAL here, unlike on {@link SceneScope}, because this is a
+ * READ surface a test or a narrow caller implements — `ResourceLoader.scenes`
+ * returns a full `TscnScene` and satisfies it completely, while a stub that
+ * answers with nodes alone is still a legitimate cache. An absent pool here
+ * means "this cache does not know", which the walk resolves to an empty scope;
+ * an absent pool on `SceneScope` would mean "I forgot", which is why that one
+ * admits no such thing.
  */
 export interface CachedSceneSource {
   getCached: (
     path: string
-  ) =>
-    | {
-        nodes: readonly TscnNode[];
-        externalResources?: readonly TscnExternalResource[];
-        internalResources?: readonly TscnInternalResource[];
-      }
-    | null
-    | undefined;
+  ) => (Partial<SceneScope> & { nodes: readonly TscnNode[] }) | null | undefined;
 }
 
 /** Read surface for the loader's GLB cache — lets the walk descend into a GLB's internals. */
@@ -101,10 +118,24 @@ export function collapseLiveNode(
   return mergeInstanceRoot(node, cached) ?? node;
 }
 
-/** A node's live children, paired with the ExtResource scope those children resolve against. */
+/** A node's live children, paired with the scope those children resolve against. */
 interface ChildScope {
   children: readonly TscnNode[];
-  externalResources: readonly TscnExternalResource[];
+  scope: SceneScope;
+}
+
+/**
+ * The root {@link SceneScope} for a path/tree walk.
+ *
+ * These walkers resolve node paths and collapse instances; they never read a
+ * SubResource id, so `LiveTreeContext` carries no such pool and this states
+ * that explicitly rather than implying one exists. A consumer that DOES need
+ * SubResources (StyleBox resolution) does not come through here — it calls
+ * `liveChildGroups` with a real scope of its own.
+ */
+const NO_INTERNAL_RESOURCES: readonly TscnInternalResource[] = [];
+function rootScope(ctx: LiveTreeContext): SceneScope {
+  return { externalResources: ctx.externalResources, internalResources: NO_INTERNAL_RESOURCES };
 }
 
 /**
@@ -122,9 +153,8 @@ interface ChildScope {
 export interface LiveChildGroup {
   origin: 'merged' | 'inline' | 'subscene' | 'glb';
   children: readonly TscnNode[];
-  externalResources: readonly TscnExternalResource[];
-  /** The SubResource pool this group's children resolve their OWN internal refs against — mirrors `externalResources`. */
-  internalResources: readonly TscnInternalResource[];
+  /** Both pools this group's children resolve their own refs against — see {@link SceneScope}. */
+  scope: SceneScope;
   /**
    * `origin: 'merged'` groups only: the collapsed root node the instance became
    * (Instance root merge, ADR-0013) — the effective identity the tree row and
@@ -151,23 +181,20 @@ export interface LiveChildGroup {
  * The tree and viewport walkers map these groups directly to get per-group scope
  * without re-computing the branch.
  *
- * `internalResources` is the caller's own SubResource pool — the scope a
- * host-authored (`inline`/`glb`) group's children resolve their SubResource
- * refs against. It defaults to an empty pool so every existing caller that
- * never tracked it (most don't — StyleBox resolution is the one consumer that
- * does) keeps working unchanged.
+ * `scope` is the CALLER's own scope — what a host-authored (`inline`/`glb`)
+ * group's children resolve against. A sub-scene's groups get the sub-scene's
+ * own scope instead, read from the cache.
  */
 export function liveChildGroups(
   node: TscnNode,
-  externalResources: readonly TscnExternalResource[],
+  scope: SceneScope,
   sceneCache: CachedSceneSource,
-  glbCache?: CachedGlbSource,
-  internalResources: readonly TscnInternalResource[] = []
+  glbCache?: CachedGlbSource
 ): LiveChildGroup[] {
   // A node's own authored children in the incoming (OUTER) scope — the answer
   // for every non-instance case and every not-(yet-)resolvable instance case.
   const inlineOnly = (): LiveChildGroup[] => [
-    { origin: 'inline', children: node.children, externalResources, internalResources },
+    { origin: 'inline', children: node.children, scope },
   ];
 
   // GLBSceneRoot: its children are the loaded GLB's internal nodes. No instance
@@ -176,37 +203,32 @@ export function liveChildGroups(
     const glbPath = (node.properties as Record<string, unknown>).glbPath as string | undefined;
     const object = glbPath ? glbCache.getCached(glbPath) : undefined;
     if (object) {
-      return [
-        { origin: 'glb', children: glbSceneRootChildren(object), externalResources, internalResources },
-      ];
+      return [{ origin: 'glb', children: glbSceneRootChildren(object), scope }];
     }
   }
 
   if (!node.instance) return inlineOnly();
 
-  const scenePath = resolveInstancePath(node.instance, externalResources);
+  const scenePath = resolveInstancePath(node.instance, scope.externalResources);
   if (!scenePath) return inlineOnly();
 
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return inlineOnly();
 
-  const subExternalResources = cached.externalResources ?? [];
-  const subInternalResources = cached.internalResources ?? [];
+  // An absent pool on the CACHE means "this cache does not track it" (see
+  // `CachedSceneSource`), which is an empty scope — not the caller's, since
+  // these ids belong to the sub-scene's file.
+  const subScope: SceneScope = {
+    externalResources: cached.externalResources ?? [],
+    internalResources: cached.internalResources ?? [],
+  };
 
   // Collapsed single-root instance (ADR-0013): one merged group under sub-scene
   // scope. The merged node rides along on the group so a caller needing the
   // collapsed identity (the tree row) reuses this merge instead of re-running it.
   const merged = mergeInstanceRoot(node, cached);
   if (merged) {
-    return [
-      {
-        origin: 'merged',
-        children: merged.children,
-        externalResources: subExternalResources,
-        internalResources: subInternalResources,
-        mergedNode: merged,
-      },
-    ];
+    return [{ origin: 'merged', children: merged.children, scope: subScope, mergedNode: merged }];
   }
 
   // Fallback (multi-root / GLB instance): inline children stay in OUTER scope;
@@ -214,14 +236,9 @@ export function liveChildGroups(
   // inline children are authored in the host scene and resolve against its resources.
   const groups: LiveChildGroup[] = [];
   if (node.children.length > 0) {
-    groups.push({ origin: 'inline', children: node.children, externalResources, internalResources });
+    groups.push({ origin: 'inline', children: node.children, scope });
   }
-  groups.push({
-    origin: 'subscene',
-    children: cached.nodes,
-    externalResources: subExternalResources,
-    internalResources: subInternalResources,
-  });
+  groups.push({ origin: 'subscene', children: cached.nodes, scope: subScope });
   return groups;
 }
 
@@ -258,20 +275,18 @@ function liveChainLinks(
 
   const links: LiveChainLink[] = [];
   // Seed: the root-level candidates are in a single implicit inline group.
-  let candidateGroups: ChildScope[] = [
-    { children: roots, externalResources: ctx.externalResources },
-  ];
+  let candidateGroups: ChildScope[] = [{ children: roots, scope: rootScope(ctx) }];
 
   for (const segment of segments) {
     // Find the segment in any of the current candidate groups, tracking which
     // group it was found in so we inherit that group's scope for collapse + descent.
     let match: TscnNode | undefined;
-    let matchScope: readonly TscnExternalResource[] = ctx.externalResources;
+    let matchScope: SceneScope = rootScope(ctx);
     for (const group of candidateGroups) {
       const found = group.children.find((n) => n.name === segment);
       if (found) {
         match = found;
-        matchScope = group.externalResources;
+        matchScope = group.scope;
         break;
       }
     }
@@ -279,7 +294,7 @@ function liveChainLinks(
     // The collapsed node uses the scope it lives in (its own group's scope).
     links.push({
       raw: match,
-      collapsed: collapseLiveNode(match, matchScope, ctx.sceneCache),
+      collapsed: collapseLiveNode(match, matchScope.externalResources, ctx.sceneCache),
     });
     // Descend: use liveChildGroups so each next-level group carries the right scope.
     candidateGroups = liveChildGroups(match, matchScope, ctx.sceneCache, ctx.glbCache);
@@ -374,25 +389,25 @@ export function walkLiveTree(
 ): void {
   const walk = (
     nodes: readonly TscnNode[],
-    scope: readonly TscnExternalResource[],
+    scope: SceneScope,
     parentPath: string,
     depth: number
   ): void => {
     if (depth > MAX_DEPTH) return;
     for (const node of nodes) {
       const path = joinPath(parentPath, node.name);
-      const effective = collapseLiveNode(node, scope, ctx.sceneCache);
+      const effective = collapseLiveNode(node, scope.externalResources, ctx.sceneCache);
       visit({ node: effective, path });
       // The node itself is always visited; `descend` only prunes its CHILDREN,
       // so a consumer can count a boundary without counting what is behind it.
       if (descend && !descend(effective)) continue;
       const groups = liveChildGroups(node, scope, ctx.sceneCache, ctx.glbCache);
       for (const group of groups) {
-        walk(group.children, group.externalResources, path, depth + 1);
+        walk(group.children, group.scope, path, depth + 1);
       }
     }
   };
-  walk(roots, ctx.externalResources, '', 0);
+  walk(roots, rootScope(ctx), '', 0);
 }
 
 /**

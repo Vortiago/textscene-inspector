@@ -33,7 +33,7 @@ import { joinPath } from '../../../utils/nodePath';
 import { resolveInstancePath, resolveTexture2DPath } from '../../../resources/SubResourceResolver';
 import { useResourceLoader } from '../../../resources/useResource';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
-import { liveChildGroups, type CachedSceneSource } from '../../liveSceneTree';
+import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../liveSceneTree';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import type { SolveNode } from './solveTree';
@@ -130,12 +130,8 @@ function buildForest(
     return { x: image?.width ?? 0, y: image?.height ?? 0 };
   }
 
-  function walk(
-    list: readonly TscnNode[],
-    parentPath: string,
-    ext: readonly TscnExternalResource[],
-    int: readonly TscnInternalResource[]
-  ): SolveNode[] {
+  function walk(list: readonly TscnNode[], parentPath: string, scope: SceneScope): SolveNode[] {
+    const { externalResources: ext } = scope;
     const out: SolveNode[] = [];
     for (const node of list) {
       // A SubViewport owns its own World2D (ADR-0033); its Control subtree is
@@ -147,22 +143,27 @@ function buildForest(
       const scenePath = node.instance ? resolveInstancePath(node.instance, ext) : null;
       if (scenePath && sceneCache.getCached(scenePath) === undefined) pendingScenes.add(scenePath);
 
-      const groups = liveChildGroups(node, ext, sceneCache, undefined, int);
+      const groups = liveChildGroups(node, scope, sceneCache);
       const mergedGroup = groups.find((g) => g.origin === 'merged');
       const collapsed = mergedGroup?.mergedNode ?? node;
 
-      const ownExternal = mergedGroup ? mergedGroup.externalResources : ext;
-      const ownInternal = mergedGroup ? mergedGroup.internalResources : int;
+      // A collapsed instance's own properties came from the sub-scene, so its
+      // ids resolve there; every other node keeps the scope it was authored in.
+      const ownScope = mergedGroup ? mergedGroup.scope : scope;
 
-      const children = groups.flatMap((g) => walk(g.children, path, g.externalResources, g.internalResources));
+      const children = groups.flatMap((g) => walk(g.children, path, g.scope));
 
       if (TWO_D_UI_TYPES.has(collapsed.type)) {
         out.push({
           path,
           node: collapsed,
           children,
-          styleBoxes: resolveStyleBoxes(collapsed, ownInternal),
-          textureSize: resolveTextureSize(collapsed, ownExternal, ownInternal),
+          styleBoxes: resolveStyleBoxes(collapsed, ownScope.internalResources),
+          textureSize: resolveTextureSize(
+            collapsed,
+            ownScope.externalResources,
+            ownScope.internalResources
+          ),
         });
       } else {
         // Not a genuine Control type — transparent passthrough (see module doc):
@@ -173,7 +174,7 @@ function buildForest(
     return out;
   }
 
-  const tree = walk(nodes, '', externalResources, internalResources);
+  const tree = walk(nodes, '', { externalResources, internalResources });
   return { tree, pendingScenes: [...pendingScenes], pendingTextures: [...pendingTextures] };
 }
 

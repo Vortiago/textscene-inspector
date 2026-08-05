@@ -18,7 +18,11 @@
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
-import { liveChildGroups, type CachedSceneSource } from '../../../r3f/liveSceneTree.js';
+import {
+  liveChildGroups,
+  type CachedSceneSource,
+  type SceneScope,
+} from '../../../r3f/liveSceneTree.js';
 
 /**
  * CanvasItem-only property names. Each exists on `CanvasItem` or `Node2D` and
@@ -170,7 +174,7 @@ export function resolveViewportSubtree(
 ): TscnNode {
   const resolve = (
     child: TscnNode,
-    scope: readonly TscnExternalResource[],
+    scope: SceneScope,
     depth: number
   ): TscnNode => {
     if (depth >= MAX_RESOLVE_DEPTH || child.type === 'SubViewport') return child;
@@ -179,15 +183,18 @@ export function resolveViewportSubtree(
     // origin leaves the node's own identity alone.
     const effective = groups.find((group) => group.origin === 'merged')?.mergedNode ?? child;
     const children = groups.flatMap((group) =>
-      group.children.map((grandchild) =>
-        resolve(grandchild, group.externalResources, depth + 1)
-      )
+      group.children.map((grandchild) => resolve(grandchild, group.scope, depth + 1))
     );
     return { ...effective, children };
   };
 
   return {
     ...node,
-    children: node.children.map((child) => resolve(child, externalResources, 0)),
+    // This resolution classifies content KIND and collapses instances; it never
+    // reads a SubResource id, so it declares an empty pool rather than pretending
+    // to carry one. See `SceneScope` for why the two travel together at all.
+    children: node.children.map((child) =>
+      resolve(child, { externalResources, internalResources: [] }, 0)
+    ),
   };
 }
