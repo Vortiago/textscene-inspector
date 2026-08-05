@@ -214,7 +214,17 @@ export const GOLDEN_SCENES = [
   // authored pose, but the fixtures exist to be played, so they stay out of
   // the stability-gated visual set (same rationale as Label3D above).
   { name: 'mixed-nodes', file: 'integration-mixed-nodes.tscn' },
-  { name: 'hallway-mockup', file: 'example-hallway-mockup.tscn', maxDiffPct: 0.5 },
+  // NOT rebaselined, deliberately, unlike material-features above. The same
+  // Godot arbitration ran here and came back the other way: over the 801 px
+  // where baseline and render disagree, the BASELINE measures 33.1% closer to
+  // Godot, so the render is the worse of the two and rewriting the baseline
+  // would freeze a regression. The pixels are scattered rather than one
+  // object, and we are too bright exactly where Godot is darkest (mean over
+  // them: Godot 79.6, baseline 101.8, ours 119.9), which reads as specular or
+  // edge sampling rather than the global colour shift that moved
+  // material-features. Threshold still tightened to the strict default, but
+  // note that alone does not gate this: the miss is 0.023%, well under 0.1%.
+  { name: 'hallway-mockup', file: 'example-hallway-mockup.tscn' },
   // Instance root merge (ADR-0013): two instances of unit-instance-child.tscn
   // collapse into Area3D coins at x=±1.5. Pins the rendered pixels of a
   // sub-scene-instancing scene so the wrapper-collapse + transform-replace
@@ -485,7 +495,15 @@ export const GOLDEN_SCENES = [
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property showcase guard (12 spheres across 4 rows: basic PBR,
   // emission/normal, advanced PBR, transparency/glass).
-  { name: 'material-features', file: 'integration-material-features.tscn', maxDiffPct: 0.5 },
+  // Held a 0.5 threshold and a permanent 0.092% miss for months. The miss was
+  // real: the emission colour-space fix landed after this baseline was written
+  // and rebaselined only the glow/emission-specific goldens, so a global
+  // tonemap change never reached this one. Arbitrated against Godot rather
+  // than against the stale PNG — over the pixels where the two disagreed, the
+  // render measured 13.4% closer to Godot than the baseline was — then
+  // rebaselined and returned to the strict default. A loose threshold is what
+  // let a genuine global change hide here; it does not get one back.
+  { name: 'material-features', file: 'integration-material-features.tscn' },
   // StandardMaterial3D `billboard_mode = ENABLED` on a QuadMesh: the left quad
   // must turn to face the camera (full asymmetric walk sprite) while the right
   // quad (billboard_mode = DISABLED) foreshortens at the editor orbit. The only
