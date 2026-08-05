@@ -135,7 +135,7 @@ function TreeNodeImpl({
   // below reuses this one merge instead of re-parsing on every re-render.
   const groups: readonly LiveChildGroup[] = useMemo(() => {
     if (node.type === GLB_SCENE_ROOT_TYPE && glbChildren) {
-      return [{ origin: 'glb' as const, children: glbChildren, externalResources }];
+      return [{ origin: 'glb' as const, children: glbChildren, externalResources, internalResources: [] }];
     }
     return liveChildGroups(node, externalResources, singleSceneCache(scenePath, subScene));
   }, [node, externalResources, scenePath, subScene, glbChildren]);

@@ -2,8 +2,8 @@
  * The **live scene tree** — one traversal that composes the SceneGraph's root
  * Nodes with PackedScene instancing (Instance root merge, ADR-0013, plus
  * lazily-loaded sub-scenes) and GLBSceneRoot internals into a single, consistent
- * node-path space, scoping each sub-scene's ExtResource refs to ITS own resource
- * table.
+ * node-path space, scoping each sub-scene's ExtResource AND SubResource refs to
+ * ITS own resource tables.
  *
  * This is the shared definition the inspector resolver, the cameras/stats panels
  * (and, over time, the tree + viewport walkers) read from, instead of each
@@ -14,7 +14,7 @@
  * not here.
  */
 import type * as THREE from 'three';
-import type { TscnNode, TscnExternalResource } from '../parser/types.js';
+import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 import { GLB_SCENE_ROOT_TYPE } from './internal/glb-scene-root/Component.js';
@@ -23,13 +23,22 @@ import { joinPath } from '../utils/nodePath.js';
 
 /**
  * Read surface for the loader's PackedScene cache. `undefined` = never
- * requested, `null` = previously failed, value = loaded (with its own resources).
+ * requested, `null` = previously failed, value = loaded (with its own
+ * ExtResource AND SubResource pools — a StyleBox authored inside the sub-scene
+ * resolves through `internalResources` the same way a nested instance resolves
+ * through `externalResources`). Both resource fields are optional so a caller
+ * that only tracks one pool (most do — StyleBox resolution is the one consumer
+ * that needs `internalResources`) can still satisfy this surface.
  */
 export interface CachedSceneSource {
   getCached: (
     path: string
   ) =>
-    | { nodes: readonly TscnNode[]; externalResources?: readonly TscnExternalResource[] }
+    | {
+        nodes: readonly TscnNode[];
+        externalResources?: readonly TscnExternalResource[];
+        internalResources?: readonly TscnInternalResource[];
+      }
     | null
     | undefined;
 }
@@ -101,7 +110,9 @@ interface ChildScope {
 /**
  * One origin-tagged group of live children. The origin is the React key
  * namespace (`merged`/`inline`/`subscene`/`glb`) and the authoritative
- * record of which resource scope its children resolve against.
+ * record of which resource scope its children resolve against — BOTH pools:
+ * `externalResources` for a nested instance ref, `internalResources` for a
+ * StyleBox/other SubResource authored in that same scope.
  *
  * - `merged`   — collapsed single-root instance; children from merged node; sub-scene scope.
  * - `inline`   — host-authored children of an instance node; OUTER scope.
@@ -112,6 +123,8 @@ export interface LiveChildGroup {
   origin: 'merged' | 'inline' | 'subscene' | 'glb';
   children: readonly TscnNode[];
   externalResources: readonly TscnExternalResource[];
+  /** The SubResource pool this group's children resolve their OWN internal refs against — mirrors `externalResources`. */
+  internalResources: readonly TscnInternalResource[];
   /**
    * `origin: 'merged'` groups only: the collapsed root node the instance became
    * (Instance root merge, ADR-0013) — the effective identity the tree row and
@@ -137,17 +150,24 @@ export interface LiveChildGroup {
  *
  * The tree and viewport walkers map these groups directly to get per-group scope
  * without re-computing the branch.
+ *
+ * `internalResources` is the caller's own SubResource pool — the scope a
+ * host-authored (`inline`/`glb`) group's children resolve their SubResource
+ * refs against. It defaults to an empty pool so every existing caller that
+ * never tracked it (most don't — StyleBox resolution is the one consumer that
+ * does) keeps working unchanged.
  */
 export function liveChildGroups(
   node: TscnNode,
   externalResources: readonly TscnExternalResource[],
   sceneCache: CachedSceneSource,
-  glbCache?: CachedGlbSource
+  glbCache?: CachedGlbSource,
+  internalResources: readonly TscnInternalResource[] = []
 ): LiveChildGroup[] {
   // A node's own authored children in the incoming (OUTER) scope — the answer
   // for every non-instance case and every not-(yet-)resolvable instance case.
   const inlineOnly = (): LiveChildGroup[] => [
-    { origin: 'inline', children: node.children, externalResources },
+    { origin: 'inline', children: node.children, externalResources, internalResources },
   ];
 
   // GLBSceneRoot: its children are the loaded GLB's internal nodes. No instance
@@ -156,7 +176,9 @@ export function liveChildGroups(
     const glbPath = (node.properties as Record<string, unknown>).glbPath as string | undefined;
     const object = glbPath ? glbCache.getCached(glbPath) : undefined;
     if (object) {
-      return [{ origin: 'glb', children: glbSceneRootChildren(object), externalResources }];
+      return [
+        { origin: 'glb', children: glbSceneRootChildren(object), externalResources, internalResources },
+      ];
     }
   }
 
@@ -168,7 +190,8 @@ export function liveChildGroups(
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return inlineOnly();
 
-  const subResources = cached.externalResources ?? [];
+  const subExternalResources = cached.externalResources ?? [];
+  const subInternalResources = cached.internalResources ?? [];
 
   // Collapsed single-root instance (ADR-0013): one merged group under sub-scene
   // scope. The merged node rides along on the group so a caller needing the
@@ -176,7 +199,13 @@ export function liveChildGroups(
   const merged = mergeInstanceRoot(node, cached);
   if (merged) {
     return [
-      { origin: 'merged', children: merged.children, externalResources: subResources, mergedNode: merged },
+      {
+        origin: 'merged',
+        children: merged.children,
+        externalResources: subExternalResources,
+        internalResources: subInternalResources,
+        mergedNode: merged,
+      },
     ];
   }
 
@@ -185,9 +214,14 @@ export function liveChildGroups(
   // inline children are authored in the host scene and resolve against its resources.
   const groups: LiveChildGroup[] = [];
   if (node.children.length > 0) {
-    groups.push({ origin: 'inline', children: node.children, externalResources });
+    groups.push({ origin: 'inline', children: node.children, externalResources, internalResources });
   }
-  groups.push({ origin: 'subscene', children: cached.nodes, externalResources: subResources });
+  groups.push({
+    origin: 'subscene',
+    children: cached.nodes,
+    externalResources: subExternalResources,
+    internalResources: subInternalResources,
+  });
   return groups;
 }
 

@@ -20,7 +20,7 @@ import {
   type CachedSceneSource,
   type CachedGlbSource,
 } from './liveSceneTree';
-import type { TscnNode, TscnScene, TscnExternalResource } from '../parser/types';
+import type { TscnNode, TscnScene, TscnExternalResource, TscnInternalResource } from '../parser/types';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return { name, type, children: [], properties: {}, ...extras };
@@ -32,6 +32,10 @@ function cacheOf(entries: Record<string, TscnScene>): CachedSceneSource {
 
 function ext(id: string, path: string): TscnExternalResource {
   return { id, path, type: 'PackedScene' };
+}
+
+function intRes(id: string, type: string, data: Record<string, unknown> = {}): TscnInternalResource {
+  return { id, type, data };
 }
 
 describe('collectLiveNodes', () => {
@@ -667,5 +671,114 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
     // The gadget ext id resolves only in the outer scene; inline group has outer scope.
     expect(inlineGroup.externalResources).toContain(outerOnlyExt);
     expect(inlineGroup.externalResources).toBe(outer);
+  });
+});
+
+describe('liveChildGroups — internalResources scope (a sub-scene\'s own SubResource pool)', () => {
+  // StyleBox resolution (buildSolveTree.ts) needs a sub-scene's own SubResource
+  // pool the same way it needs ExtResource scope: a StyleBox authored INSIDE an
+  // instanced sub-scene must resolve against that sub-scene's own
+  // `internalResources`, never the host's — ids are per-file, so two files can
+  // both declare SubResource "1" for entirely different StyleBoxes.
+
+  it('collapsed single-root instance → merged group carries the SUB-SCENE\'s own internalResources, not the host\'s', () => {
+    const outer = [ext('1', 'res://player.tscn')];
+    const hostInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'HOST' })];
+    const subInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'SUB' })];
+    const sub: TscnScene = {
+      nodes: [makeNode('PlayerRoot', 'CharacterBody3D', { children: [makeNode('Panel', 'Panel')] })],
+      externalResources: [],
+      internalResources: subInternal,
+    };
+    const node = makeNode('Player', 'Node3D', { instance: 'ExtResource("1")' });
+    const groups = liveChildGroups(node, outer, cacheOf({ 'res://player.tscn': sub }), undefined, hostInternal);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.origin).toBe('merged');
+    expect(groups[0]!.internalResources).toBe(subInternal);
+    expect(groups[0]!.internalResources).not.toBe(hostInternal);
+  });
+
+  it('non-instance node — inline group carries the HOST-passed internalResources (host-authored children still resolve)', () => {
+    const outer = [ext('1', 'res://a.tscn')];
+    const hostInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'HOST' })];
+    const node = makeNode('Root', 'Node3D', { children: [makeNode('Panel', 'Panel')] });
+    const groups = liveChildGroups(node, outer, cacheOf({}), undefined, hostInternal);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.origin).toBe('inline');
+    expect(groups[0]!.internalResources).toBe(hostInternal);
+  });
+
+  it('defaults to an empty internalResources pool when the caller does not supply one (backward-compatible)', () => {
+    const node = makeNode('Root', 'Node3D', { children: [makeNode('A', 'Node3D')] });
+    const groups = liveChildGroups(node, [], cacheOf({}));
+    expect(groups[0]!.internalResources).toEqual([]);
+  });
+
+  it('fallback multi-root instance → inline group keeps OUTER internalResources, subscene group gets its OWN pool', () => {
+    const outer = [ext('1', 'res://multi.tscn')];
+    const hostInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'HOST' })];
+    const subInternal = [intRes('9', 'StyleBoxFlat', { bg_color: 'SUB' })];
+    const multi: TscnScene = {
+      nodes: [makeNode('RootA', 'Node3D'), makeNode('RootB', 'Node3D')],
+      externalResources: [],
+      internalResources: subInternal,
+    };
+    const node = makeNode('Host', 'Node3D', {
+      instance: 'ExtResource("1")',
+      children: [makeNode('InlineChild', 'Panel')],
+    });
+    const groups = liveChildGroups(node, outer, cacheOf({ 'res://multi.tscn': multi }), undefined, hostInternal);
+    const inlineGroup = groups.find((g) => g.origin === 'inline')!;
+    expect(inlineGroup.internalResources).toBe(hostInternal);
+    const subsceneGroup = groups.find((g) => g.origin === 'subscene')!;
+    expect(subsceneGroup.internalResources).toBe(subInternal);
+  });
+
+  it('a NESTED instance resolves against ITS OWN pool at each level, never the host\'s or an intermediate ancestor\'s', () => {
+    // Host instances A; A instances B. Each of the three levels declares a
+    // DIFFERENT StyleBoxFlat under the SAME SubResource id "1" — the shape a
+    // real project produces, since ids are per-file — so resolving against the
+    // wrong level's pool is loud (wrong data) rather than silently missing.
+    const hostInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'HOST' })];
+    const aInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'A' })];
+    const bInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'B' })];
+    const subB: TscnScene = {
+      nodes: [makeNode('BRoot', 'Node3D', { children: [makeNode('Leaf', 'Panel')] })],
+      externalResources: [],
+      internalResources: bInternal,
+    };
+    const subA: TscnScene = {
+      nodes: [
+        makeNode('ARoot', 'Node3D', {
+          children: [makeNode('Inner', 'Node3D', { instance: 'ExtResource("9_subB")' })],
+        }),
+      ],
+      externalResources: [ext('9_subB', 'res://subB.tscn')],
+      internalResources: aInternal,
+    };
+    const node = makeNode('A', 'Node3D', { instance: 'ExtResource("1_subA")' });
+    const outer = [ext('1_subA', 'res://subA.tscn')];
+    const sceneCache = cacheOf({ 'res://subA.tscn': subA, 'res://subB.tscn': subB });
+
+    // Level 1: host → A. Merged group must carry A's OWN pool, not the host's.
+    const level1 = liveChildGroups(node, outer, sceneCache, undefined, hostInternal);
+    const merged1 = level1.find((g) => g.origin === 'merged')!;
+    expect(merged1.internalResources).toBe(aInternal);
+
+    // Level 2: A's child 'Inner' instances B. Descending with A's OWN pool
+    // threaded in (as a recursive walker does) must resolve B's merged group
+    // against B's OWN pool — neither the host's nor A's.
+    const inner = merged1.children.find((c) => c.name === 'Inner')!;
+    const level2 = liveChildGroups(
+      inner,
+      merged1.externalResources,
+      sceneCache,
+      undefined,
+      merged1.internalResources
+    );
+    const merged2 = level2.find((g) => g.origin === 'merged')!;
+    expect(merged2.internalResources).toBe(bInternal);
+    expect(merged2.internalResources).not.toBe(aInternal);
+    expect(merged2.internalResources).not.toBe(hostInternal);
   });
 });

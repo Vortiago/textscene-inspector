@@ -27,12 +27,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
-import type {
-  TscnExternalResource,
-  TscnInternalResource,
-  TscnNode,
-  TscnScene,
-} from '../../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import { joinPath } from '../../../utils/nodePath';
 import { resolveInstancePath, resolveTexture2DPath } from '../../../resources/SubResourceResolver';
@@ -53,12 +48,7 @@ export interface UseBuildSolveTreeResult {
   generation: number;
 }
 
-/** A `CachedSceneSource` whose cache actually holds the full `TscnScene` (nodes + BOTH resource pools). */
-interface SceneSourceWithResources extends CachedSceneSource {
-  getCached(path: string): TscnScene | null | undefined;
-}
-
-const EMPTY_SCENE_CACHE: SceneSourceWithResources = { getCached: () => undefined };
+const EMPTY_SCENE_CACHE: CachedSceneSource = { getCached: () => undefined };
 const NO_TEXTURE_CACHE = { getCached: (): THREE.Texture | null | undefined => undefined };
 
 /**
@@ -104,7 +94,7 @@ function buildForest(
   const pendingScenes = new Set<string>();
   const pendingTextures = new Set<string>();
 
-  const sceneCache: SceneSourceWithResources = loader
+  const sceneCache: CachedSceneSource = loader
     ? { getCached: (p: string) => loader.scenes.getCached(p) }
     : EMPTY_SCENE_CACHE;
   const textureCache = loader ? { getCached: (p: string) => loader.textures.getCached(p) } : NO_TEXTURE_CACHE;
@@ -155,21 +145,16 @@ function buildForest(
       const path = joinPath(parentPath, node.name);
 
       const scenePath = node.instance ? resolveInstancePath(node.instance, ext) : null;
-      const cachedScene = scenePath ? sceneCache.getCached(scenePath) : undefined;
-      if (scenePath && cachedScene === undefined) pendingScenes.add(scenePath);
+      if (scenePath && sceneCache.getCached(scenePath) === undefined) pendingScenes.add(scenePath);
 
-      const groups = liveChildGroups(node, ext, sceneCache);
+      const groups = liveChildGroups(node, ext, sceneCache, undefined, int);
       const mergedGroup = groups.find((g) => g.origin === 'merged');
       const collapsed = mergedGroup?.mergedNode ?? node;
 
       const ownExternal = mergedGroup ? mergedGroup.externalResources : ext;
-      const ownInternal = mergedGroup ? cachedScene?.internalResources ?? [] : int;
+      const ownInternal = mergedGroup ? mergedGroup.internalResources : int;
 
-      const children = groups.flatMap((g) => {
-        const groupInternal =
-          g.origin === 'merged' || g.origin === 'subscene' ? cachedScene?.internalResources ?? [] : int;
-        return walk(g.children, path, g.externalResources, groupInternal);
-      });
+      const children = groups.flatMap((g) => walk(g.children, path, g.externalResources, g.internalResources));
 
       if (TWO_D_UI_TYPES.has(collapsed.type)) {
         out.push({
