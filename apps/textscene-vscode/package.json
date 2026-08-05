@@ -145,7 +145,7 @@
     "test:integration:debug": "node --inspect-brk ./dist/test/integration/runTests.js",
     "test:web": "vscode-test-web --browserType=chromium --headless --extensionDevelopmentPath=. .test-workspace-web",
     "pretype-check": "pnpm --filter @textscene/core build",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit -p tsconfig.typecheck.json",
     "package": "npx @vscode/vsce package --no-dependencies",
     "publish": "npx @vscode/vsce publish --no-dependencies",
     "clean": "rimraf dist out .test-workspace .vscode-test-web"

@@ -14,7 +14,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "pretype-check": "pnpm --filter @textscene/core build",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit -p tsconfig.typecheck.json",
     "clean": "rimraf dist node_modules/.vite public/fixtures public/parity"
   },
   "keywords": [
