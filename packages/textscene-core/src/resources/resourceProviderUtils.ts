@@ -18,17 +18,22 @@ export function isBinaryResourceType(type: string, path?: string): boolean {
     'AudioStreamWAV',
     'AudioStreamOggVorbis',
     'AudioStreamMP3',
-    'FontFile',
   ];
 
   if (binaryTypes.includes(type)) {
     return true;
   }
 
-  // Check for binary file extensions (GLB/GLTF PackedScenes)
+  // Check for binary file extensions (GLB/GLTF PackedScenes; raw font files —
+  // NOT `FontFile` by type, since a `FontFile` ExtResource just as often
+  // points at a text `.tres` wrapper, e.g. a `.tres` carrying `fallbacks`
+  // rather than font bytes of its own).
   if (path) {
     const ext = path.split('.').pop()?.toLowerCase();
-    const binaryExtensions = ['glb', 'gltf', 'png', 'jpg', 'jpeg', 'webp', 'svg', 'wav', 'ogg', 'mp3'];
+    const binaryExtensions = [
+      'glb', 'gltf', 'png', 'jpg', 'jpeg', 'webp', 'svg', 'wav', 'ogg', 'mp3',
+      'ttf', 'otf', 'woff', 'woff2',
+    ];
     if (ext && binaryExtensions.includes(ext)) {
       return true;
     }

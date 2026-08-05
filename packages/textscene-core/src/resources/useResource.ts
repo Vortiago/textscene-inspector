@@ -27,7 +27,8 @@ export type ResourceType =
   | 'GLBMesh'
   | 'PackedScene'
   | 'Resource'
-  | 'ArrayMesh';
+  | 'ArrayMesh'
+  | 'Font';
 /**
  * - `pending`     — still loading.
  * - `loaded`      — value present.
@@ -61,6 +62,7 @@ const BUS_TYPE: Record<ResourceType, BusResourceType> = {
   PackedScene: 'scene',
   Resource: 'resource',
   ArrayMesh: 'arraymesh',
+  Font: 'font',
 };
 
 interface ProcessorAccess<T> {
@@ -99,6 +101,8 @@ function getProcessorAccess<T>(
       return loader.resources as unknown as ProcessorAccess<T>;
     case 'ArrayMesh':
       return loader.arrayMeshes as unknown as ProcessorAccess<T>;
+    case 'Font':
+      return loader.fonts as unknown as ProcessorAccess<T>;
   }
 }
 

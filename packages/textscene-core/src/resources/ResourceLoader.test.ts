@@ -133,18 +133,20 @@ describe('ResourceLoader (loader-level gaps)', () => {
       expect(glbSpy).not.toHaveBeenCalled();
     });
 
-    it('fans an unregistered .tres out to both .tres processors (material + generic resource)', () => {
+    it('fans an unregistered .tres out to all three .tres processors (material + generic resource + font)', () => {
       // A raw `res://…tres` reference (e.g. a tile_set path never declared as
-      // ExtResource) must reach the generic resource processor too, or a
-      // late-arrival upload can never resolve the TileSet.
+      // ExtResource) must reach every .tres-capable processor, or a
+      // late-arrival upload can never resolve depending on which one it is.
       const matSpy = vi.spyOn(loader.materials, 'request');
       const resSpy = vi.spyOn(loader.resources, 'request');
+      const fontSpy = vi.spyOn(loader.fonts, 'request');
       const texSpy = vi.spyOn(loader.textures, 'request');
 
       loader.provideFile('res://tileset/tiles.tres');
 
       expect(matSpy).toHaveBeenCalledWith('res://tileset/tiles.tres');
       expect(resSpy).toHaveBeenCalledWith('res://tileset/tiles.tres');
+      expect(fontSpy).toHaveBeenCalledWith('res://tileset/tiles.tres');
       expect(texSpy).not.toHaveBeenCalled();
     });
 
@@ -156,6 +158,18 @@ describe('ResourceLoader (loader-level gaps)', () => {
 
       expect(resSpy).toHaveBeenCalledWith('res://tiles.tres');
     });
+
+    it.each(['FontFile', 'SystemFont', 'FontVariation'])(
+      'routes a registered %s through the font processor',
+      (type) => {
+        loader.register({ id: '1_font', path: 'res://fonts/x.tres', type });
+        const fontSpy = vi.spyOn(loader.fonts, 'request');
+
+        loader.provideFile('res://fonts/x.tres');
+
+        expect(fontSpy).toHaveBeenCalledWith('res://fonts/x.tres');
+      }
+    );
   });
 
   describe('clearCaches() — corpus switches', () => {
@@ -222,6 +236,22 @@ describe('ResourceLoader (loader-level gaps)', () => {
       expect(onResourceNeeded).toHaveBeenCalledWith(
         expect.objectContaining({ error: 'Unknown error' })
       );
+    });
+
+    it('reports a font failure with the "Node using font" label', () => {
+      const fontMeta: ExtResource = { id: '7_font', path: 'res://fonts/missing.ttf', type: 'FontFile' };
+      loader.register(fontMeta);
+      const onResourceNeeded = vi.fn();
+      loader.setOnResourceNeeded(onResourceNeeded);
+
+      loader.eventBus.emit<Error>('font', 'failed', fontMeta.path, new Error('404 not found'));
+
+      expect(onResourceNeeded).toHaveBeenCalledWith({
+        path: fontMeta.path,
+        type: 'FontFile',
+        referencedBy: 'Node using font 7_font',
+        error: '404 not found',
+      });
     });
 
     it('does nothing when the failed path has no registered metadata', () => {

@@ -18,7 +18,7 @@ export type ResourceEventType =
    * (hot-reload) does NOT emit this — its caller re-requests itself.
    */
   | 'invalidated';
-export type ResourceType = 'texture' | 'material' | 'scene' | 'glb' | 'resource' | 'arraymesh';
+export type ResourceType = 'texture' | 'material' | 'scene' | 'glb' | 'resource' | 'arraymesh' | 'font';
 
 export interface ProgressData {
   loaded: number;

@@ -6,3 +6,4 @@
 export * from './textureProcessing';
 export * from './materialProcessing';
 export * from './glbProcessing';
+export * from './fontProcessing';

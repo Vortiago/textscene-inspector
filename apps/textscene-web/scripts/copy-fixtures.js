@@ -44,6 +44,36 @@ try {
   // Textures directory doesn't exist yet, skip
 }
 
+// Copy fonts directory from scenes/fixtures/ — same shape as textures/ above,
+// for a unit fixture that needs its own small vendored font (raw .ttf/.otf/
+// .woff/.woff2, or a FontFile/FontVariation/SystemFont .tres) rather than
+// reaching into the demos corpus. Guarded by the same size limit as
+// `copyRecursive` below — unlike textures/materials, a font file can
+// plausibly be large enough (a CJK-covering face, an unsubsetted variable
+// font) to hit the Cloudflare Pages ceiling, so this loop must not silently
+// ship (or silently drop) an oversized one.
+const fontsSource = join(fixturesSource, 'fonts');
+const fontsTarget = join(fixturesTarget, 'fonts');
+try {
+  if (statSync(fontsSource).isDirectory()) {
+    mkdirSync(fontsTarget, { recursive: true });
+    const fontFiles = readdirSync(fontsSource);
+    let copiedCount = 0;
+    for (const file of fontFiles) {
+      const src = join(fontsSource, file);
+      if (statSync(src).size > MAX_DEPLOY_FILE_BYTES) {
+        skippedLargeFiles.push(relative(scenesRoot, src));
+        continue;
+      }
+      copyFileSync(src, join(fontsTarget, file));
+      copiedCount++;
+    }
+    console.log(`Copied ${copiedCount} font files to public/fixtures/fonts/`);
+  }
+} catch {
+  // Fonts directory doesn't exist yet, skip
+}
+
 // Copy from scenes/examples/
 const exampleFiles = readdirSync(examplesSource).filter((file) => file.endsWith('.tscn'));
 for (const file of exampleFiles) {
