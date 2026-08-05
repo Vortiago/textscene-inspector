@@ -19,7 +19,7 @@
 
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Rect2, Vec2 } from './rect';
-import type { SolveNode } from './solveTree';
+import { controlProps, type SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import {
   controlSolverRegistry,
@@ -131,10 +131,6 @@ function floorAtMinimumSize(rect: Rect2, minSize: Vec2, growHorizontal: number, 
   }
 
   return { x, y, w, h };
-}
-
-function controlProps(n: SolveNode): ControlProperties {
-  return n.node.properties as ControlProperties;
 }
 
 /**

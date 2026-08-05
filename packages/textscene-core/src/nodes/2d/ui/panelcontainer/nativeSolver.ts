@@ -36,17 +36,12 @@
  * Pure data + functions, no React, no THREE.
  */
 
-import type { ControlProperties } from '../control/types';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { ContainerLayoutFn, MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, isSortableControl, SIZE_FILL } from '../shared/fitChildInRect';
 
-
-function controlProps(n: SolveNode): ControlProperties {
-  return n.node.properties as ControlProperties;
-}
 
 /** The resolved `theme_override_styles/panel`, or the default-theme `panel` struct. */
 function panelStyleOf(n: SolveNode, ctx: SolveContext): StyleBoxFlatData {

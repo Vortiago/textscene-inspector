@@ -38,7 +38,7 @@
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
-import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { isSortableControl } from '../shared/fitChildInRect';
@@ -60,14 +60,22 @@ export function HSplitContainer({ solveNode, rect, theme, renderOrder, meta }: N
 
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
-  const texture = useIconTexture(SPLIT_CONTAINER_ICONS.hsplitter);
 
   // `_resort` hides every dragger outright below two valid children
   // (`split_container.cpp:714-724`), before `dragger_visibility`/`autohide`
   // are ever consulted — mirrored here rather than only in the layout, since
   // this painter has no rect to draw an icon between otherwise.
+  //
+  // Decided BEFORE the icon hook, not after: hook order is fixed, so an early
+  // return cannot skip the load. `autohide` defaults true, which makes the
+  // grabber invisible in the common scene — decoding its image and holding a
+  // GPU texture for a quad that never draws.
   const sortable = solveNode.children.filter(isSortableControl).slice(0, 2);
-  if (sortable.length !== 2 || !isSplitGrabberVisible(props, theme.widgets.splitContainer)) {
+  const drawsGrabber =
+    sortable.length === 2 && isSplitGrabberVisible(props, theme.widgets.splitContainer);
+  const texture = useOptionalIconTexture(drawsGrabber ? SPLIT_CONTAINER_ICONS.hsplitter : null);
+
+  if (!drawsGrabber || !texture) {
     return null;
   }
 
