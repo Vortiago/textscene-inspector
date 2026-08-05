@@ -23,6 +23,18 @@
  * `renderOrder` is passed to each line's `<TextRun>` directly: three.js reads
  * `renderOrder` per rendered object and never inherits it from a wrapping
  * `<group>`, so the per-line mesh has to carry it itself.
+ *
+ * TEXT LAYOUT: reads `meta` (`nativeSolver.ts`'s `labelMinimumSize` — see its
+ * own doc) when autowrap is OFF (Label's default), instead of re-shaping —
+ * that function already shapes the SAME text at the SAME effective
+ * parameters (`shapeText` forces `effectiveWidth = 0` whenever
+ * `autowrapMode === OFF` regardless of `boxWidthPx`, so `rect.w` never
+ * mattered for this case anyway). Autowrap ON always re-shapes locally: the
+ * solver's own minimum size substitutes an UNWRAPPED height for that case
+ * (see `labelMinimumSize`'s own doc), so its shape is not the box-constrained
+ * one this painter needs — reusing it there would be a silent wrong picture,
+ * not a shortcut, so this component only ever reads `meta` for the ONE case
+ * it is provably identical.
  */
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -32,6 +44,7 @@ import {
   AutowrapMode,
   clampAutowrapMode,
   shapeText,
+  isTextLayoutResult,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
@@ -58,7 +71,7 @@ function useSoloLineLayouts(placements: LabelLinePlacement[], linePitchPx: numbe
   );
 }
 
-export function Label({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
+export function Label({ solveNode, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
   const props = solveNode.node.properties as LabelProperties;
   const textTheme = useMemo(() => labelTextTheme(props, { theme }), [props, theme]);
 
@@ -73,15 +86,16 @@ export function Label({ solveNode, rect, renderOrder, theme }: NativeControlComp
   const text = props.text ?? '';
   // Label's own default is OFF (`label.h`'s `autowrap_mode` initialiser).
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
-  const layout = useMemo(
-    () =>
-      shapeText(text, {
-        fontSizePx: textTheme.fontSizePx,
-        boxWidthPx: rect.w,
-        autowrapMode,
-        uppercase: props.uppercase,
-      }),
-    [text, textTheme.fontSizePx, rect.w, autowrapMode, props.uppercase]
+  const cachedLayout = autowrapMode === AutowrapMode.OFF && isTextLayoutResult(meta) ? meta : null;
+  const layout = useMemo(() => {
+    if (cachedLayout) return cachedLayout;
+    return shapeText(text, {
+      fontSizePx: textTheme.fontSizePx,
+      boxWidthPx: rect.w,
+      autowrapMode,
+      uppercase: props.uppercase,
+    });
+  }, [cachedLayout, text, textTheme.fontSizePx, rect.w, autowrapMode, props.uppercase]
   );
 
   const placements = useMemo(

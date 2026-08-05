@@ -41,49 +41,67 @@ const EXPAND_FIT_HEIGHT_PROPORTIONAL = 5;
  * OTHER axis's CURRENT, already-resolved control size (`get_size().y` /
  * `get_size().x`, `:116-129`) — genuinely self-referential. This solver's
  * minimum-size pass runs bottom-up (`controlRectSolver.ts`'s Phase 1) BEFORE
- * any rect is assigned (Phase 2), and `MinimumSizeFn` is never handed a
- * parent rect (`solverRegistry.ts`), so "this node's own current size" does
- * not exist yet when this function runs. Closing that fully would mean either
- * widening `MinimumSizeFn`'s contract or iterating `solveControlTree` to a
- * fixed point — both changes to `controlRectSolver.ts`, out of this slice's
- * scope.
+ * any rect is assigned (Phase 2), and a plain `MinimumSizeFn` is never handed
+ * a parent rect (`solverRegistry.ts`), so "this node's own current size"
+ * does not exist on a tree's FIRST pass.
  *
- * What DOES close, relative to the divergence `comparison.md` documents: the
- * DOM `<TextureRect>` (`Component.tsx`'s `textureRectMinSize`) maps FIT_WIDTH
- * (2) and FIT_HEIGHT (4) to the IDENTICAL CSS `aspect-ratio: 1/1` (ditto the
- * PROPORTIONAL pair, both to the texture's own aspect) — CSS `aspect-ratio`
- * is symmetric and only ever fills in whichever axis the surrounding layout
- * leaves unconstrained, so it cannot express "Godot always floors WIDTH from
- * HEIGHT, never the reverse" (or vice versa): the two only actually diverge
- * once anchors constrain BOTH axes, at which point `aspect-ratio` goes inert
- * (no auto axis left to solve) while Godot's floor can still override
- * whichever axis it names as the driven one. This function returns an
- * ASYMMETRIC `Vec2` per mode instead — zero on the axis Godot never floors,
- * non-zero on the one it does, exactly the `Size2(h, 0)` / `Size2(0, w)`
- * shape the source itself uses — substituting the texture's OWN natural size
- * for the unavailable "current size" (the only non-circular per-node size
- * datum on hand, in the same spirit as EXPAND_KEEP_SIZE already using it).
- * The PROPORTIONAL pair's substitution collapses algebraically to the
- * texture's own size on the driven axis (`h * (w/h) = w`; `w * (h/w) = h`),
- * so it reduces to exactly EXPAND_KEEP_SIZE's number on that one axis — see
- * the worked arithmetic in `nativeSolver.test.ts`.
+ * CLOSED via `SolveContext.tentativeRect` (`solverRegistry.ts`'s own doc) —
+ * this type is registered with `controlSolverRegistry.
+ * registerSizeDependentMinimum` (`index.r3f.ts`), so `solveControlTree` runs
+ * a second, final pass whenever one is present in the tree, feeding this
+ * function the FIRST pass's own resolved rect for the OTHER axis. On that
+ * pass, `tentative.h`/`tentative.w` IS Godot's `get_size().y`/`get_size().x`
+ * — the real, already-resolved control size, not a substitute. On the FIRST
+ * pass (`tentative` undefined) this still substitutes the texture's OWN
+ * natural size on that axis, exactly as before this closed — the only
+ * non-circular per-node size datum on hand, in the same spirit as
+ * EXPAND_KEEP_SIZE already using it, and ALGEBRAICALLY IDENTICAL to what the
+ * corrected formula below produces once `tentative` is substituted with the
+ * texture's own size on that axis (worked in `nativeSolver.test.ts`) — so a
+ * tree with only one Control ever asking for this axis (no ancestor/sibling
+ * whose OWN size depends on it) converges on the FIRST pass already, and the
+ * second pass is a no-op for it.
+ *
+ * The DOM `<TextureRect>` (`Component.tsx`'s `textureRectMinSize`) maps
+ * FIT_WIDTH (2) and FIT_HEIGHT (4) to the IDENTICAL CSS `aspect-ratio: 1/1`
+ * (ditto the PROPORTIONAL pair, both to the texture's own aspect) — CSS
+ * `aspect-ratio` is symmetric and only ever fills in whichever axis the
+ * surrounding layout leaves unconstrained, so it cannot express "Godot
+ * always floors WIDTH from HEIGHT, never the reverse" (or vice versa): the
+ * two only actually diverge once anchors constrain BOTH axes, at which point
+ * `aspect-ratio` goes inert (no auto axis left to solve) while Godot's floor
+ * can still override whichever axis it names as the driven one. This
+ * function returns an ASYMMETRIC `Vec2` per mode instead — zero on the axis
+ * Godot never floors, non-zero on the one it does, exactly the `Size2(h, 0)`
+ * / `Size2(0, w)` shape the source itself uses.
  */
-export const textureRectMinimumSize: MinimumSizeFn = (n) => {
+export const textureRectMinimumSize: MinimumSizeFn = (n, ctx) => {
   const textureSize = n.textureSize;
   if (!textureSize) return { x: 0, y: 0 };
   const props = n.node.properties as TextureRectProperties;
+  const tentative = ctx.tentativeRect?.(n);
+  // `get_size().y` (:117,120) / `get_size().x` (:125,128) — this node's OWN
+  // resolved size on the axis it does NOT drive, substituting the texture's
+  // own natural size on that axis while unavailable (see this function's
+  // own doc for why that substitution is exact on the first pass).
+  const currentHeight = tentative?.h ?? textureSize.y;
+  const currentWidth = tentative?.w ?? textureSize.x;
 
   switch (props.expandMode ?? EXPAND_KEEP_SIZE) {
     case EXPAND_KEEP_SIZE:
       return { x: textureSize.x, y: textureSize.y };
     case EXPAND_FIT_WIDTH:
-      return { x: textureSize.y, y: 0 };
-    case EXPAND_FIT_WIDTH_PROPORTIONAL:
-      return { x: textureSize.x, y: 0 };
+      return { x: currentHeight, y: 0 };
+    case EXPAND_FIT_WIDTH_PROPORTIONAL: {
+      const ratio = textureSize.x / textureSize.y;
+      return { x: currentHeight * ratio, y: 0 };
+    }
     case EXPAND_FIT_HEIGHT:
-      return { x: 0, y: textureSize.x };
-    case EXPAND_FIT_HEIGHT_PROPORTIONAL:
-      return { x: 0, y: textureSize.y };
+      return { x: 0, y: currentWidth };
+    case EXPAND_FIT_HEIGHT_PROPORTIONAL: {
+      const ratio = textureSize.y / textureSize.x;
+      return { x: 0, y: currentWidth * ratio };
+    }
     case EXPAND_IGNORE_SIZE:
     default:
       return { x: 0, y: 0 };

@@ -151,6 +151,24 @@ export interface TextLayoutResult {
   heightPx: number;
 }
 
+/**
+ * A runtime shape check for `NativeControlComponentProps.meta` — a text
+ * painter (Button, Label) reading back a `MinimumSizeFn`'s cached
+ * `TextLayoutResult` (ITEM C: avoiding a second `shapeText` call for text
+ * the solve already shaped) casts `unknown` at that boundary exactly like
+ * every other painter already casts `solveNode.node.properties`, but this
+ * ONE check is cheap and the failure mode of skipping it — rendering
+ * whatever `.lines`/`.widthPx` happen to be on an unrelated object — is a
+ * silent wrong picture rather than a thrown error, so it is worth the four
+ * property reads. Duck-typed, not `instanceof`: a `TextLayoutResult` is
+ * plain data with no prototype of its own.
+ */
+export function isTextLayoutResult(value: unknown): value is TextLayoutResult {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Partial<TextLayoutResult>;
+  return Array.isArray(v.lines) && typeof v.linePitchPx === 'number' && typeof v.widthPx === 'number' && typeof v.heightPx === 'number';
+}
+
 interface BreakFlags {
   /** BREAK_WORD_BOUND — a space glyph is a safe break point. */
   wordBound: boolean;

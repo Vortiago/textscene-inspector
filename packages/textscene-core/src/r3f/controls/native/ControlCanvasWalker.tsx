@@ -209,6 +209,7 @@ function ControlNodeGroup({
       theme={theme}
       measureText={measureText}
       childRects={childRects}
+      meta={solvedEntry?.meta}
     >
       {childElements}
     </Painter>
@@ -223,6 +224,7 @@ function ControlNodeGroup({
         theme={theme}
         measureText={measureText}
         childRects={childRects}
+        meta={solvedEntry?.meta}
       />
       {childElements}
     </>

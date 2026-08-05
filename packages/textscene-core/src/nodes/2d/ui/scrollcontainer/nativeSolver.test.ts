@@ -28,7 +28,14 @@ import {
   scrollContainerMinimumSize,
   scrollContainerLayout,
   scrollContainerScrollBars,
+  isScrollContainerLayout,
 } from './nativeSolver';
+
+/** `scrollContainerLayout`'s child-rects half only — every test below except the dedicated `meta` describe cares only about this, exactly like before `{ rects, meta }` existed. */
+function layoutRects(...args: Parameters<typeof scrollContainerLayout>): ReadonlyMap<string, Rect2> {
+  const result = scrollContainerLayout(...args);
+  return result instanceof Map ? result : result.rects;
+}
 
 const THEME = nativeTheme(1);
 // scaled.contentMargin = 4 at scale 1; a scrollbar's own thickness is
@@ -188,7 +195,7 @@ describe('scrollContainerLayout (scroll_container.cpp::_reposition_children)', (
     const child = leaf('Scroll/Child', { customMinimumSize: { x: 399, y: 800 } });
     const n = scrollContainer({}, [child]);
     const children = [{ node: child, minSize: { x: 399, y: 800 } }];
-    const out = scrollContainerLayout(n, children, RECT, ctx());
+    const out = layoutRects(n, children, RECT, ctx());
     expect(out.get('Scroll/Child')).toEqual({ x: 0, y: 0, w: 399, h: 800 });
   });
 
@@ -200,7 +207,7 @@ describe('scrollContainerLayout (scroll_container.cpp::_reposition_children)', (
     });
     const n = scrollContainer({}, [child]);
     const children = [{ node: child, minSize: { x: 50, y: 50 } }];
-    const out = scrollContainerLayout(n, children, RECT, ctx());
+    const out = layoutRects(n, children, RECT, ctx());
     // No scrollbar shows (child's minimum fits both axes): contentSize = own rect.
     expect(out.get('Scroll/Child')).toEqual({ x: 0, y: 0, w: 300, h: 200 });
   });
@@ -213,7 +220,7 @@ describe('scrollContainerLayout (scroll_container.cpp::_reposition_children)', (
     });
     const n = scrollContainer({}, [child]);
     const children = [{ node: child, minSize: { x: 50, y: 500 } }];
-    const out = scrollContainerLayout(n, children, RECT, ctx());
+    const out = layoutRects(n, children, RECT, ctx());
     // vertical overflow (500 > 200) shows the v-bar, reserving 8px of width.
     expect(out.get('Scroll/Child')).toEqual({ x: 0, y: 0, w: 300 - 8, h: 500 });
   });
@@ -222,7 +229,7 @@ describe('scrollContainerLayout (scroll_container.cpp::_reposition_children)', (
     const child = leaf('Scroll/Child', { customMinimumSize: { x: 50, y: 50 } });
     const n = scrollContainer({ scrollHorizontal: 30, scrollVertical: 70 }, [child]);
     const children = [{ node: child, minSize: { x: 50, y: 50 } }];
-    const out = scrollContainerLayout(n, children, RECT, ctx());
+    const out = layoutRects(n, children, RECT, ctx());
     expect(out.get('Scroll/Child')).toEqual({ x: -30, y: -70, w: 50, h: 50 });
   });
 
@@ -234,9 +241,28 @@ describe('scrollContainerLayout (scroll_container.cpp::_reposition_children)', (
       { node: a, minSize: { x: 10, y: 10 } },
       { node: b, minSize: { x: 20, y: 20 } },
     ];
-    const out = scrollContainerLayout(n, children, RECT, ctx());
+    const out = layoutRects(n, children, RECT, ctx());
     expect(out.get('Scroll/A')).toEqual({ x: 0, y: 0, w: 10, h: 10 });
     expect(out.get('Scroll/B')).toEqual({ x: 0, y: 0, w: 20, h: 20 });
+  });
+});
+
+describe('scrollContainerLayout — meta carries the FULL ScrollContainerLayout (ITEM A: no fresh SolveContext in the painter)', () => {
+  const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
+
+  it('meta is the SAME object scrollContainerScrollBars would compute for this node/ctx/rect — not a re-derivation', () => {
+    const child = leaf('Scroll/Child', { customMinimumSize: { x: 120, y: 500 } });
+    const n = scrollContainer({}, [child]);
+    const children = [{ node: child, minSize: { x: 120, y: 500 } }];
+    const solveCtx = ctx();
+
+    const result = scrollContainerLayout(n, children, RECT, solveCtx);
+    const expected = scrollContainerScrollBars(n, solveCtx, RECT);
+
+    expect(result).not.toBeInstanceOf(Map);
+    if (result instanceof Map) throw new Error('unreachable');
+    expect(isScrollContainerLayout(result.meta)).toBe(true);
+    expect(result.meta).toEqual(expected);
   });
 });
 

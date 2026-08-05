@@ -191,6 +191,7 @@ function ViewportSurfaceNative({
             theme={theme}
             measureText={measureText}
             childRects={NO_CHILD_RECTS}
+            meta={undefined}
           />
         ) : texture ? (
           <ControlQuad

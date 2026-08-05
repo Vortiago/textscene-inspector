@@ -30,6 +30,17 @@
  *
  * This component never checks `props.visible`, never renders `children`, and
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ *
+ * TEXT LAYOUT: reads `meta` (`nativeSolver.ts`'s `buttonMinimumSize` — see
+ * its own doc) instead of shaping `text` itself. That function already shapes
+ * the SAME string at the SAME literal parameters this painter would
+ * (`boxWidthPx: 0`, `autowrapMode: OFF`, `lineSpacingPx: 0` — Button never
+ * wraps) every time the solve runs, so re-shaping here was pure duplicate
+ * work, unconditional on every mount/text/font change. Falls back to shaping
+ * locally only when `meta` is not a usable `TextLayoutResult` (a hand-built
+ * test props object, or a solve whose measurer was unavailable) — the SAME
+ * numbers either way, so the fallback carries no divergence risk the way
+ * `HSplitContainer`'s custom-minimum-size fallback does.
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
@@ -43,7 +54,12 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  shapeText,
+  AutowrapMode,
+  isTextLayoutResult,
+  type TextLayoutResult,
+} from '../../../../r3f/controls/native/text/textLayout';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveButtonDrawState,
@@ -62,7 +78,7 @@ interface IconImageLike {
   height?: number;
 }
 
-export function Button({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
+export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
   const props = solveNode.node.properties as ButtonProperties;
   const state = resolveButtonDrawState(props.disabled);
 
@@ -82,10 +98,12 @@ export function Button({ solveNode, rect, renderOrder, theme }: NativeControlCom
     [baseFontColor, tint.own]
   );
 
-  const layout: TextLayoutResult | null = useMemo(
-    () => (hasText ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF }) : null),
-    [hasText, text, fontSizePx]
-  );
+  const cachedLayout = isTextLayoutResult(meta) ? meta : null;
+  const layout: TextLayoutResult | null = useMemo(() => {
+    if (!hasText) return null;
+    if (cachedLayout) return cachedLayout;
+    return shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0 });
+  }, [hasText, cachedLayout, text, fontSizePx]);
 
   // --- Icon: resolve + load the referenced texture -------------------------
   const { externalResources, internalResources } = useSceneResources();

@@ -41,7 +41,7 @@ const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
  */
 export function painterEnv(): Pick<
   NativeControlComponentProps,
-  'theme' | 'measureText' | 'childRects' | 'subtreeChromeRenderOrder' | 'effectiveZ'
+  'theme' | 'measureText' | 'childRects' | 'subtreeChromeRenderOrder' | 'effectiveZ' | 'meta'
 > {
   return {
     theme: nativeTheme(1),
@@ -49,5 +49,6 @@ export function painterEnv(): Pick<
     childRects: NO_CHILD_RECTS,
     subtreeChromeRenderOrder: 0,
     effectiveZ: 0,
+    meta: undefined,
   };
 }

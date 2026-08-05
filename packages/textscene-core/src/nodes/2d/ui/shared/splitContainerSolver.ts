@@ -152,6 +152,23 @@ export function computeSplitDraggerPosition(
  * at most two (the registry adapter below slices to the first two sortable
  * children, mirroring the DOM `SplitContainerComponent.tsx`).
  */
+/**
+ * A `SplitChildInput`'s split-AXIS subset — `SplitAxisChild`, selecting the
+ * split-axis component of `minSize`/`sizeFlags`. Exported (not just a local
+ * closure inside `resortSplitContainer`) so `makeSplitContainerLayout` can
+ * derive the SAME `draggerPos` its own `ContainerLayoutFn` meta reports —
+ * one implementation, not two that could drift apart the moment the
+ * axis-selection rule changes.
+ */
+export function toSplitAxisChild(vertical: boolean, c: SplitChildInput): SplitAxisChild {
+  const flags = vertical ? c.vSizeFlags : c.hSizeFlags;
+  return {
+    minSize: vertical ? c.minSize.y : c.minSize.x,
+    expands: hasFlag(flags, SIZE_EXPAND) && c.stretchRatio > 0,
+    stretchRatio: c.stretchRatio,
+  };
+}
+
 export function resortSplitContainer(
   vertical: boolean,
   containerSize: { width: number; height: number },
@@ -172,20 +189,11 @@ export function resortSplitContainer(
   const [c0, c1] = children as readonly [SplitChildInput, SplitChildInput];
   const size = vertical ? containerSize.height : containerSize.width;
 
-  const axisChild = (c: SplitChildInput): SplitAxisChild => {
-    const flags = vertical ? c.vSizeFlags : c.hSizeFlags;
-    return {
-      minSize: vertical ? c.minSize.y : c.minSize.x,
-      expands: hasFlag(flags, SIZE_EXPAND) && c.stretchRatio > 0,
-      stretchRatio: c.stretchRatio,
-    };
-  };
-
   const draggerPos = computeSplitDraggerPosition(
     size,
     separation,
-    axisChild(c0),
-    axisChild(c1),
+    toSplitAxisChild(vertical, c0),
+    toSplitAxisChild(vertical, c1),
     splitOffset,
     collapsed
   );
@@ -274,6 +282,28 @@ function toChildInput(node: SolveNode, minSize: Vec2): SplitChildInput {
 }
 
 /**
+ * `HSplitContainer`/`VSplitContainer`'s `ContainerLayoutFn` meta
+ * (`ContainerLayoutResult.meta` — `solverRegistry.ts`'s own doc) — the ONE
+ * intermediate their painter (`hsplitcontainer/Component.tsx`,
+ * `vsplitcontainer/Component.tsx`) needs and cannot otherwise reach: the
+ * split boundary this layout ACTUALLY computed, from the full recursive
+ * `combined_minimum_size` of both sortable children
+ * (`ctx.combinedMinimumSize`), not the narrower `custom_minimum_size` alone
+ * a painter is limited to without this channel.
+ */
+export interface SplitContainerLayoutMeta {
+  /** `computed_split_offset` — this container's own local-space position where the first child ends and the separation begins. `undefined` with fewer than two sortable children (no boundary to report). */
+  draggerPos: number | undefined;
+}
+
+/** A runtime shape check for `NativeControlComponentProps.meta` — see `isTextLayoutResult`'s own doc for why this is worth four property reads at a painter's contract boundary. */
+export function isSplitContainerLayoutMeta(value: unknown): value is SplitContainerLayoutMeta {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Partial<SplitContainerLayoutMeta>;
+  return 'draggerPos' in v && (typeof v.draggerPos === 'number' || v.draggerPos === undefined);
+}
+
+/**
  * Builds the `ContainerLayoutFn` for a split axis. Like `boxContainerSolver.ts`'s
  * equivalent, a SplitContainer has no chrome of its own that insets its
  * children, so `contentRect`'s width/height ARE the full rect to split; its
@@ -304,7 +334,27 @@ export function makeSplitContainerLayout(vertical: boolean): ContainerLayoutFn {
 
     const out = new Map<string, Rect2>();
     sortable.forEach(({ node: child }, i) => out.set(child.path, rects[i]!));
-    return out;
+
+    // `computeSplitDraggerPosition` — the SAME function `resortSplitContainer`
+    // calls internally for exactly this pair — re-invoked here (not
+    // extracted from `resortSplitContainer`'s own return) since it is O(1)
+    // arithmetic on inputs already in hand: cheap enough that duplicating
+    // the CALL costs nothing, while `toSplitAxisChild` (not duplicated —
+    // exported and shared) keeps the axis-selection RULE itself one
+    // implementation.
+    const draggerPos =
+      inputs.length === 2
+        ? computeSplitDraggerPosition(
+            vertical ? contentRect.h : contentRect.w,
+            separation,
+            toSplitAxisChild(vertical, inputs[0]!),
+            toSplitAxisChild(vertical, inputs[1]!),
+            props.splitOffset ?? 0,
+            props.collapsed === true
+          )
+        : undefined;
+
+    return { rects: out, meta: { draggerPos } satisfies SplitContainerLayoutMeta };
   };
 }
 

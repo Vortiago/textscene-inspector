@@ -13,7 +13,7 @@
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import {getLinePitchPx} from '../../../../r3f/controls/native/text/openSansMetrics';
-import type { TextLayoutResult, TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { AutowrapMode, shapeText, type TextLayoutResult, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import type { ControlColor } from '../control/types';
 import type { LabelProperties } from './types';
@@ -63,21 +63,40 @@ export function labelTextTheme(
  *
  * `_update_visible` (`:344-388`) sums `asc + dsc + line_spacing` per line then
  * subtracts ONE trailing `line_spacing` — N lines carry only (N-1) inter-line
- * gaps. `ctx.measureText` (always AUTOWRAP_OFF, unconstrained — `measurer.ts`)
- * returns `N * linePitchPx` with no such subtraction, so it is applied here:
- * `measured.y - lineSpacingPx`. `lineSpacingPx` itself is never hardcoded —
- * `getLinePitchPx(fontSizePx) - getLinePitchPx(fontSizePx, 0)` recovers
- * whatever default the text engine itself uses, so a future change to that
- * default cannot silently drift this subtraction out of sync with it.
+ * gaps. Shaping at `getLinePitchPx(fontSizePx) - fontHeightPx` (Label's own
+ * 3px `line_spacing` theme constant, never hardcoded — recovered the same
+ * way so a future change to that default cannot silently drift this
+ * subtraction out of sync with it) returns `N * linePitchPx` with no such
+ * subtraction, so it is applied here: `layout.heightPx - lineSpacingPx`.
  *
  * Empty text (`:239-241`) short-circuits before any of the above: `_shape()`
  * sets `minsize = Size2(1, get_line_height())`, and `get_line_height()` with
  * no shaped lines (`:125-134`) returns `font->get_height(font_size)` — ascent
  * + descent, no `line_spacing` folded in at all.
+ *
+ * `uppercase` transforms `text` BEFORE any of this, matching `_shape()`
+ * (`label.cpp:154`: `txt = uppercase ? TS->string_to_upper(xl_text) : xl_text`,
+ * read by `get_minimum_size` via `_ensure_shaped`) — a Label's minimum size
+ * reflects the UPPERCASED glyphs' own (typically wider) advances, not the
+ * source casing.
+ *
+ * Shapes via `shapeText` DIRECTLY rather than through `ctx.measureText`
+ * (still the presence GATE — an absent measurer still means "text
+ * contributes nothing", exactly as before) so this function can attach the
+ * shaped `TextLayoutResult` as `meta` when autowrap is OFF: `shapeText`
+ * forces `effectiveWidth = 0` whenever `autowrapMode === OFF` regardless of
+ * `boxWidthPx`, so THIS shape (unconstrained, `lineSpacingPx` = Label's own
+ * 3px) is the IDENTICAL layout `Label`'s painter (`Component.tsx`) would
+ * compute for the OFF case (its own default) — reused instead of re-shaped.
+ * The autowrap-ON branch never attaches meta: its own minimum size already
+ * substitutes the UNWRAPPED height for the unavailable "current width", so
+ * the shape behind it is NOT what a box-constrained painter needs — no
+ * reuse is correct there, and none is attempted.
  */
 export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LabelProperties;
-  const text = props.text ?? '';
+  const rawText = props.text ?? '';
+  const text = props.uppercase ? rawText.toUpperCase() : rawText;
   const { fontSizePx } = labelTextTheme(props, ctx);
   const fontHeightPx = getLinePitchPx(fontSizePx, 0);
 
@@ -88,15 +107,17 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   if (!ctx.measureText) return { x: 0, y: 0 };
 
   // Label is the one widget whose theme sets `line_spacing` (3), and it
-  // separates lines without adding a trailing gap — which the measurer's own
-  // contract guarantees, so nothing is subtracted back off here.
-  const measured = ctx.measureText(text, fontSizePx, getLinePitchPx(fontSizePx) - fontHeightPx);
-  const height = Math.max(measured.y, fontHeightPx);
+  // separates lines without adding a trailing gap — which the subtraction
+  // below guarantees, so nothing is added back for a single line.
+  const lineSpacingPx = getLinePitchPx(fontSizePx) - fontHeightPx;
+  const layout = shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx });
+  const measuredY = Math.max(0, layout.heightPx - lineSpacingPx);
+  const height = Math.max(measuredY, fontHeightPx);
 
   if ((props.autowrapMode ?? AUTOWRAP_OFF) !== AUTOWRAP_OFF) {
-    return { x: 1, y: height };
+    return { size: { x: 1, y: height } };
   }
-  return { x: measured.x, y: height };
+  return { size: { x: layout.widthPx, y: height }, meta: layout };
 };
 
 // --- Draw-time layout: per-line placement + the vertical-origin reconciliation ---

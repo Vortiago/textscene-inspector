@@ -19,18 +19,22 @@
  * through every ancestor) — exactly "this node's local origin, in world
  * space", which is the frame the rect handed to the hook is expressed in.
  *
- * SCROLLBAR GEOMETRY. `scrollContainerScrollBars` (`nativeSolver.ts`) is the
- * ONE function this painter and `scrollContainerLayout` (this type's
- * registered `ContainerLayoutFn`) both call — this painter builds its OWN
- * fresh `SolveContext` (the same `nativeTheme`/`measureText` the real solve
- * uses, via `createSolveContext`) and re-invokes that SAME pure function
- * rather than re-deriving overflow/grabber geometry from a narrower input
- * (e.g. child `custom_minimum_size` alone) — the two callers would otherwise
- * be two formulas that could silently drift apart. `ScrollBar`'s own grabber
- * has no `autohide`/pointer-state gate in `scene/gui/scroll_bar.cpp` (unlike
- * `SplitContainer`'s split-bar background) — it always draws once its
- * enclosing bar is visible, so this painter never needs interactive state to
- * decide whether to draw one.
+ * SCROLLBAR GEOMETRY. Reads `meta` (`ContainerLayoutResult.meta`, from this
+ * type's registered `ContainerLayoutFn` — `nativeSolver.ts`'s
+ * `scrollContainerLayout`) — the FULL `ScrollContainerLayout`
+ * `scrollContainerScrollBars` already computed during the REAL solve, whose
+ * `SolveContext` cache had every descendant's `combinedMinimumSize` already
+ * memoised. Falls back to building a FRESH `SolveContext` (the same
+ * `nativeTheme`/`measureText` the real solve uses, via `createSolveContext`)
+ * and re-invoking `scrollContainerScrollBars` itself ONLY when `meta` is not
+ * a usable `ScrollContainerLayout` (a hand-built test props object) — never
+ * to a narrower input (e.g. child `custom_minimum_size` alone), so the
+ * fallback and the cached path can never disagree about overflow/grabber
+ * geometry, only about how much redundant work they cost. `ScrollBar`'s own
+ * grabber has no `autohide`/pointer-state gate in `scene/gui/scroll_bar.cpp`
+ * (unlike `SplitContainer`'s split-bar background) — it always draws once
+ * its enclosing bar is visible, so this painter never needs interactive
+ * state to decide whether to draw one.
  *
  * TINT. Mirrors `PanelChrome.tsx` exactly: the walker already folds this
  * node's OWN `modulate` into the ambient `Modulate2DContext` its descendants
@@ -76,7 +80,11 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { ControlProperties } from '../control/types';
-import { scrollContainerScrollBars, type ScrollBarPlacement } from './nativeSolver';
+import {
+  scrollContainerScrollBars,
+  isScrollContainerLayout,
+  type ScrollBarPlacement,
+} from './nativeSolver';
 
 
 interface ScrollBarChromeProps {
@@ -142,21 +150,25 @@ export function ScrollContainer({
   subtreeChromeRenderOrder,
   theme,
   children,
+  meta,
 }: NativeControlComponentProps) {
   const props = solveNode.node.properties as ControlProperties;
-  // A FRESH SolveContext, built from the exact same theme/measurer the real
-  // solve uses — not a second, narrower approximation of one. Rebuilt whenever
+  const cachedLayout = isScrollContainerLayout(meta) ? meta : null;
+  // FALLBACK ONLY (`cachedLayout` absent, `layout` below): a FRESH
+  // SolveContext, built from the exact same theme/measurer the real solve
+  // uses — not a second, narrower approximation of one. Rebuilt whenever
   // `solveNode` changes, not only on a theme change: the context carries a
-  // path-keyed minimum-size cache, so reusing one across a re-walk (a sub-scene
-  // or a child's texture arriving, which gives that child a real minimum where
-  // it had none) would answer from the pre-arrival numbers — the bars would
-  // disagree with the registered layout fn about whether anything overflows.
-  // `solveNode` is an intentional cache-buster, not a value the callback reads.
+  // path-keyed minimum-size cache, so reusing one across a re-walk (a
+  // sub-scene or a child's texture arriving, which gives that child a real
+  // minimum where it had none) would answer from the pre-arrival numbers —
+  // the bars would disagree with the registered layout fn about whether
+  // anything overflows. `solveNode` is an intentional cache-buster, not a
+  // value the callback reads.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const solveCtx = useMemo(() => createSolveContext(theme, measureText), [theme, solveNode]);
   const layout = useMemo(
-    () => scrollContainerScrollBars(solveNode, solveCtx, rect),
-    [solveNode, solveCtx, rect]
+    () => cachedLayout ?? scrollContainerScrollBars(solveNode, solveCtx, rect),
+    [cachedLayout, solveNode, solveCtx, rect]
   );
 
   const selfModulate = props.selfModulate ?? WHITE_MODULATE;

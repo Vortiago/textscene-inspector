@@ -9,25 +9,26 @@
  * ever draws the (usually invisible — see below) icon between them.
  *
  * The icon's own position depends on where the two children's boundary
- * landed, but a Native painter receives only ITS OWN solved rect
- * (`ControlComponentRegistry.ts`'s own doc: "no child content is threaded
- * through the painter's props") — there is no channel back from the
- * registered `ContainerLayoutFn`'s internal `computed_split_offset` to this
- * component, and `SolveContext.measureText` (needed for a text-driven
- * minimum size) is not threaded to a Native painter at all. So this
- * component RECOMPUTES the boundary via the SAME `computeSplitDraggerPosition`
- * the solver calls, fed by each sortable child's OWN `custom_minimum_size`
- * rather than the solver's full recursive `combined_minimum_size`.
+ * landed. This reads `meta` (`ContainerLayoutResult.meta`, from this type's
+ * registered `ContainerLayoutFn` — `shared/splitContainerSolver.ts`'s
+ * `makeSplitContainerLayout`, `SplitContainerLayoutMeta`) — the EXACT
+ * `computed_split_offset` the solver already computed from each sortable
+ * child's full recursive `combined_minimum_size`, not a recomputation from a
+ * narrower subset of the inputs.
  *
- * That gap is real but bounded, and today invisible everywhere:
+ * Falls back to recomputing via the SAME `computeSplitDraggerPosition` the
+ * solver calls, fed by each sortable child's OWN `custom_minimum_size`
+ * rather than the full `combined_minimum_size`, ONLY when `meta` is not a
+ * usable `SplitContainerLayoutMeta` (a hand-built test props object). That
+ * gap is real but bounded, and today invisible everywhere:
  * `isSplitGrabberVisible` is false for every scene that does not override
  * `theme_override_constants/autohide` to `0` (its own doc — verified against
  * `pnpm ref:godot` on `unit-split-container.tscn`: the gap between every
  * row's two ColorRects reads back the plain backdrop colour, never the
- * grabber's gray). So the only pixels this recomputation could ever
- * mis-place are the (already invisible by default) icon's own — the two
- * ACTUAL child rects are always exact, computed by the registered solver
- * with full `combined_minimum_size` access.
+ * grabber's gray). So the only pixels the FALLBACK could ever mis-place are
+ * the (already invisible by default) icon's own — the two ACTUAL child
+ * rects are always exact regardless, computed by the registered solver with
+ * full `combined_minimum_size` access.
  *
  * Tint follows `ColorRect`/`TextureRect`'s rule: `modulate` is
  * already folded into the ambient `Modulate2DContext` by the walker, so this
@@ -44,6 +45,7 @@ import { isSortableControl } from '../shared/fitChildInRect';
 import {
   axisChildFromCustomMinimumSize,
   computeSplitDraggerPosition,
+  isSplitContainerLayoutMeta,
   isSplitGrabberVisible,
   resolveSplitSeparation,
   splitGrabberIconRect,
@@ -53,7 +55,7 @@ import type { SplitContainerProperties } from '../shared/splitContainer';
 /** `hsplitter.svg`'s own authored size (`native/themeIcons.ts`) — 8px along the split axis, 48px across it. */
 const ICON_SIZE = { x: 8, y: 48 };
 
-export function HSplitContainer({ solveNode, rect, theme, renderOrder }: NativeControlComponentProps) {
+export function HSplitContainer({ solveNode, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
   const props = solveNode.node.properties as SplitContainerProperties;
 
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
@@ -71,14 +73,17 @@ export function HSplitContainer({ solveNode, rect, theme, renderOrder }: NativeC
 
   const separation = resolveSplitSeparation(props, theme.widgets.splitContainer);
   const [first, second] = sortable as [SolveNode, SolveNode];
-  const draggerPos = computeSplitDraggerPosition(
-    rect.w,
-    separation,
-    axisChildFromCustomMinimumSize(first, false),
-    axisChildFromCustomMinimumSize(second, false),
-    props.splitOffset ?? 0,
-    props.collapsed === true
-  );
+  const cachedDraggerPos = isSplitContainerLayoutMeta(meta) ? meta.draggerPos : undefined;
+  const draggerPos =
+    cachedDraggerPos ??
+    computeSplitDraggerPosition(
+      rect.w,
+      separation,
+      axisChildFromCustomMinimumSize(first, false),
+      axisChildFromCustomMinimumSize(second, false),
+      props.splitOffset ?? 0,
+      props.collapsed === true
+    );
   const iconRect = splitGrabberIconRect(false, { width: rect.w, height: rect.h }, draggerPos, separation, ICON_SIZE);
 
   return (

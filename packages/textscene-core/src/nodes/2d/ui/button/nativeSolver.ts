@@ -33,6 +33,7 @@ import {
   type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
+import { AutowrapMode, shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import type { ControlColor } from '../control/types';
 import type { ButtonProperties } from './types';
 
@@ -107,6 +108,20 @@ export function buttonTextTheme(
  * than the whole function degrading to zero (`solverRegistry.ts`'s own
  * contract) — margin and icon still contribute, since neither depends on
  * text measurement.
+ *
+ * Shapes via `shapeText` DIRECTLY (`boxWidthPx: 0`, `autowrapMode: OFF`,
+ * `lineSpacingPx: 0` — Button never wraps and reads no `line_spacing` theme
+ * key at all, unlike Label) rather than through `ctx.measureText`, whose own
+ * `Vec2`-only return would discard the shaped `TextLayoutResult` this
+ * function attaches as `meta` — `Button`'s painter (`Component.tsx`) reads it
+ * back instead of re-shaping the SAME text with the SAME literal parameters
+ * on every render (`comparison.md`'s own "Native (WebGL canvas) painter"
+ * section has the measured cost). `ctx.measureText` is still the presence
+ * GATE (`!ctx.measureText` still means "text contributes nothing", exactly
+ * as before this — a null measurer never reaches `shapeText` at all), so the
+ * `TextMeasurer` abstraction still decides whether text shaping runs; only
+ * the ACTUAL computation moved to the function this codebase's own painters
+ * already call directly for the SAME parameters.
  */
 export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ButtonProperties;
@@ -117,7 +132,11 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const text = props.text ?? '';
   const hasText = text.length > 0;
   const { fontSizePx } = buttonTextTheme(props, state, ctx);
-  const textSize = hasText && ctx.measureText ? ctx.measureText(text, fontSizePx) : { x: 0, y: 0 };
+  const layout: TextLayoutResult | null =
+    hasText && ctx.measureText
+      ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0 })
+      : null;
+  const textSize = layout ? { x: layout.widthPx, y: layout.heightPx } : { x: 0, y: 0 };
 
   let width = textSize.x;
   let height = textSize.y;
@@ -152,5 +171,5 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
     }
   }
 
-  return { x: marginX + width, y: marginY + height };
+  return { size: { x: marginX + width, y: marginY + height }, meta: layout ?? undefined };
 };

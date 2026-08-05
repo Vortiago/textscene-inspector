@@ -20,10 +20,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
+import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { ButtonProperties } from './types';
 import {
@@ -33,6 +35,18 @@ import {
   BUTTON_DEFAULT_DISABLED_FONT_COLOR,
   BUTTON_DEFAULT_FONT_COLOR,
 } from './nativeSolver';
+
+/** `buttonMinimumSize`'s `size` half only — every test below except the dedicated `meta` describe cares only about this, exactly like before `{ size, meta }` existed. */
+function minSize(...args: Parameters<typeof buttonMinimumSize>): Vec2 {
+  const result = buttonMinimumSize(...args);
+  return 'size' in result ? result.size : result;
+}
+
+/** `buttonMinimumSize`'s `meta` half — the shaped `TextLayoutResult`, or `undefined` for empty text / no measurer. */
+function minMeta(...args: Parameters<typeof buttonMinimumSize>): unknown {
+  const result = buttonMinimumSize(...args);
+  return 'meta' in result ? result.meta : undefined;
+}
 
 // 'A's hmtx advance width is 1354 design units, 'B's is 1350 — a DIFFERENT
 // glyph, so 'AB's width is their SUM (the two only coincided at the OLD
@@ -65,17 +79,17 @@ function ctx(withMeasurer = true): SolveContext {
 
 describe('buttonMinimumSize — StyleBox content margins + text, no icon', () => {
   it('is exactly the default-theme button margin for empty text (8, 8) — content_margin=4 all sides', () => {
-    expect(buttonMinimumSize(node({}), ctx())).toEqual({ x: 8, y: 8 });
+    expect(minSize(node({}), ctx())).toEqual({ x: 8, y: 8 });
   });
 
   it('adds the measured text size on top of the margin', () => {
-    const result = buttonMinimumSize(node({ text: 'AB' }), ctx());
+    const result = minSize(node({ text: 'AB' }), ctx());
     expect(result.x).toBeCloseTo(8 + AB_WIDTH, 6);
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
   it('treats an absent measurer as "text contributes nothing", NOT as the whole function failing — margin alone still returns', () => {
-    const result = buttonMinimumSize(node({ text: 'AB' }), ctx(false));
+    const result = minSize(node({ text: 'AB' }), ctx(false));
     expect(result).toEqual({ x: 8, y: 8 });
   });
 
@@ -90,7 +104,7 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
       drawCenter: true,
       borderBlend: false,
     };
-    expect(buttonMinimumSize(node({}, { normal: wide }), ctx())).toEqual({ x: 28, y: 12 });
+    expect(minSize(node({}, { normal: wide }), ctx())).toEqual({ x: 28, y: 12 });
   });
 
   it('uses the DISABLED override/theme margin, not normal, once disabled=true', () => {
@@ -104,7 +118,7 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
       drawCenter: true,
       borderBlend: false,
     };
-    expect(buttonMinimumSize(node({ disabled: true }, { disabled: narrow }), ctx())).toEqual({ x: 40, y: 4 });
+    expect(minSize(node({ disabled: true }, { disabled: narrow }), ctx())).toEqual({ x: 40, y: 4 });
   });
 });
 
@@ -112,13 +126,13 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
   it('vertical_icon_alignment CENTER (default): height is the MAX of icon/text, width ADDS icon width + h_separation', () => {
     // icon 20x20 (shorter than the 23px font height): height stays 23.
     // width: 21.125 (text) + 20 (icon) + 4 (h_separation default) = 45.125.
-    const result = buttonMinimumSize(node({ text: 'AB' }, {}, { x: 20, y: 20 }), ctx());
+    const result = minSize(node({ text: 'AB' }, {}, { x: 20, y: 20 }), ctx());
     expect(result.y).toBe(8 + FONT_HEIGHT);
     expect(result.x).toBeCloseTo(8 + AB_WIDTH + 20 + 4, 6);
   });
 
   it('vertical_icon_alignment CENTER: a TALLER icon floors the height instead of the text', () => {
-    const result = buttonMinimumSize(
+    const result = minSize(
       node({ text: 'AB' }, {}, { x: 10, y: 40 }),
       ctx()
     );
@@ -130,7 +144,7 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
       'once as the initial paragraph size, once again as the final font_height add) — ported verbatim from ' +
       'button.cpp:322-329,515-522, not a divergence this port introduces',
     () => {
-      const result = buttonMinimumSize(
+      const result = minSize(
         node({ text: 'AB', vertical_icon_alignment: undefined, ...{ verticalIconAlignment: 0 } }, {}, { x: 10, y: 15 }),
         ctx()
       );
@@ -140,7 +154,7 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
   );
 
   it('icon_alignment CENTER: width is the MAX of icon/text, no h_separation added', () => {
-    const result = buttonMinimumSize(
+    const result = minSize(
       node({ text: 'AB', iconAlignment: 1 }, {}, { x: 30, y: 10 }),
       ctx()
     );
@@ -148,18 +162,18 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
   });
 
   it('expand_icon=true: the icon contributes NOTHING to minimum size (Godot gates the whole block on !expand_icon)', () => {
-    const withIcon = buttonMinimumSize(node({ text: 'AB', expandIcon: true }, {}, { x: 100, y: 100 }), ctx());
-    const withoutIcon = buttonMinimumSize(node({ text: 'AB' }), ctx());
+    const withIcon = minSize(node({ text: 'AB', expandIcon: true }, {}, { x: 100, y: 100 }), ctx());
+    const withoutIcon = minSize(node({ text: 'AB' }), ctx());
     expect(withIcon).toEqual(withoutIcon);
   });
 
   it('an unresolved icon (textureSize still null) contributes nothing, exactly like TextureRect before its texture loads', () => {
-    const result = buttonMinimumSize(node({ text: 'AB' }, {}, null), ctx());
+    const result = minSize(node({ text: 'AB' }, {}, null), ctx());
     expect(result.x).toBeCloseTo(8 + AB_WIDTH, 6);
   });
 
   it('h_separation theme_override_constants wins over the theme default', () => {
-    const result = buttonMinimumSize(
+    const result = minSize(
       node({ text: 'AB', themeOverrideConstants: { h_separation: 12 } }, {}, { x: 20, y: 20 }),
       ctx()
     );
@@ -167,13 +181,39 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
   });
 
   it('icon_max_width theme_override_constants clamps the icon before it contributes', () => {
-    const result = buttonMinimumSize(
+    const result = minSize(
       node({ text: 'AB', themeOverrideConstants: { icon_max_width: 10 } }, {}, { x: 20, y: 20 }),
       ctx()
     );
     // fitIconSize(20x20, 10) = 10x10 (aspect-preserving clamp).
     expect(result.x).toBeCloseTo(8 + AB_WIDTH + 10 + 4, 6);
     expect(result.y).toBe(8 + FONT_HEIGHT); // 10 < 23, height still floored by text
+  });
+});
+
+describe('buttonMinimumSize — meta carries the shaped TextLayoutResult (ITEM C: no re-shape in the painter)', () => {
+  it('attaches the shaped layout as meta when there is text and a measurer', () => {
+    const meta = minMeta(node({ text: 'AB' }), ctx()) as TextLayoutResult;
+    expect(meta.widthPx).toBeCloseTo(AB_WIDTH, 6);
+    expect(meta.lines).toHaveLength(1);
+    expect(meta.lines[0]?.text).toBe('AB');
+  });
+
+  it('is undefined for empty text', () => {
+    expect(minMeta(node({}), ctx())).toBeUndefined();
+  });
+
+  it('is undefined when no measurer is available, matching the size half\'s own "no measurer" gate', () => {
+    expect(minMeta(node({ text: 'AB' }), ctx(false))).toBeUndefined();
+  });
+
+  it('is shaped at boxWidthPx 0 / autowrap OFF / lineSpacingPx 0 — the SAME literal parameters Button\'s own painter shapes with', () => {
+    const meta = minMeta(node({ text: 'AB' }), ctx()) as TextLayoutResult;
+    // Single line ('AB' has no hard break), so widthPx/heightPx alone prove
+    // this: an autowrap-constrained shape of 'AB' at a 0-width box would
+    // have broken onto multiple lines instead.
+    expect(meta.lines).toHaveLength(1);
+    expect(meta.heightPx).toBe(FONT_HEIGHT);
   });
 });
 

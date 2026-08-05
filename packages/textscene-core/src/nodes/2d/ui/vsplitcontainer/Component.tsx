@@ -1,10 +1,10 @@
 /**
  * `<VSplitContainer>` — the native (WebGL canvas) painter for
  * VSplitContainer. Identical reasoning to `hsplitcontainer/Component.tsx`
- * (read its module doc first) at `vertical = true`: reads `sizeFlagsVertical`/
- * `customMinimumSize.y` for the split axis, and draws the `vsplitter` icon
- * (48px along the container's width, 8px along the split axis) instead of
- * `hsplitter`.
+ * (read its module doc first, including the `meta`/fallback split) at
+ * `vertical = true`: reads `sizeFlagsVertical`/`customMinimumSize.y` for the
+ * split axis, and draws the `vsplitter` icon (48px along the container's
+ * width, 8px along the split axis) instead of `hsplitter`.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -16,6 +16,7 @@ import { isSortableControl } from '../shared/fitChildInRect';
 import {
   axisChildFromCustomMinimumSize,
   computeSplitDraggerPosition,
+  isSplitContainerLayoutMeta,
   isSplitGrabberVisible,
   resolveSplitSeparation,
   splitGrabberIconRect,
@@ -25,7 +26,7 @@ import type { SplitContainerProperties } from '../shared/splitContainer';
 /** `vsplitter.svg`'s own authored size (`native/themeIcons.ts`) — 48px across the split axis, 8px along it. */
 const ICON_SIZE = { x: 48, y: 8 };
 
-export function VSplitContainer({ solveNode, rect, theme, renderOrder }: NativeControlComponentProps) {
+export function VSplitContainer({ solveNode, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
   const props = solveNode.node.properties as SplitContainerProperties;
 
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
@@ -39,14 +40,17 @@ export function VSplitContainer({ solveNode, rect, theme, renderOrder }: NativeC
 
   const separation = resolveSplitSeparation(props, theme.widgets.splitContainer);
   const [first, second] = sortable as [SolveNode, SolveNode];
-  const draggerPos = computeSplitDraggerPosition(
-    rect.h,
-    separation,
-    axisChildFromCustomMinimumSize(first, true),
-    axisChildFromCustomMinimumSize(second, true),
-    props.splitOffset ?? 0,
-    props.collapsed === true
-  );
+  const cachedDraggerPos = isSplitContainerLayoutMeta(meta) ? meta.draggerPos : undefined;
+  const draggerPos =
+    cachedDraggerPos ??
+    computeSplitDraggerPosition(
+      rect.h,
+      separation,
+      axisChildFromCustomMinimumSize(first, true),
+      axisChildFromCustomMinimumSize(second, true),
+      props.splitOffset ?? 0,
+      props.collapsed === true
+    );
   const iconRect = splitGrabberIconRect(true, { width: rect.w, height: rect.h }, draggerPos, separation, ICON_SIZE);
 
   return (

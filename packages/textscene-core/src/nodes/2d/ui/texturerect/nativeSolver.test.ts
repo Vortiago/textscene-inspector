@@ -7,9 +7,16 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
+// Side-effect import: registers every Control slice's solver, including this
+// type's own `registerSizeDependentMinimum` (`index.r3f.ts`) — needed for the
+// end-to-end `solveControlTree` describe below to actually exercise the real
+// second pass, not a hand-rolled stand-in for it.
+import '../../../../r3f/controls/index';
 import type { TextureRectProperties } from './types';
 import {
   textureRectMinimumSize,
@@ -92,6 +99,86 @@ describe('textureRectMinimumSize (texture_rect.cpp:107-133)', () => {
   it('contributes nothing before the texture has resolved (SolveNode.textureSize === null)', () => {
     expect(textureRectMinimumSize(node({ expandMode: 0 }, null), ctx())).toEqual({ x: 0, y: 0 });
     expect(textureRectMinimumSize(node({ expandMode: 3 }, null), ctx())).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('textureRectMinimumSize — SolveContext.tentativeRect closes the self-reference (texture_rect.cpp:116-129)', () => {
+  function ctxWithTentative(rect: { x: number; y: number; w: number; h: number }): SolveContext {
+    return { ...ctx(), tentativeRect: () => rect };
+  }
+
+  it('FIT_WIDTH (2) reads get_size().y from the tentative rect\'s OWN height, not the texture\'s (:116-118)', () => {
+    // Godot: Size2(get_size().y, 0). The tentative rect's height (500) is
+    // NOT the texture's own height (160) — proves the real value wins.
+    const result = textureRectMinimumSize(node({ expandMode: 2 }, TEXTURE), ctxWithTentative({ x: 0, y: 0, w: 10, h: 500 }));
+    expect(result).toEqual({ x: 500, y: 0 });
+  });
+
+  it("FIT_HEIGHT (4) reads get_size().x from the tentative rect's OWN width, not the texture's (:123-125)", () => {
+    const result = textureRectMinimumSize(node({ expandMode: 4 }, TEXTURE), ctxWithTentative({ x: 0, y: 0, w: 500, h: 10 }));
+    expect(result).toEqual({ x: 0, y: 500 });
+  });
+
+  it('FIT_WIDTH_PROPORTIONAL (3) scales the tentative height by the texture\'s own aspect ratio (:119-122)', () => {
+    // ratio = tex.w/tex.h = 320/160 = 2; Size2(get_size().y * ratio, 0).
+    const result = textureRectMinimumSize(
+      node({ expandMode: 3 }, TEXTURE),
+      ctxWithTentative({ x: 0, y: 0, w: 10, h: 50 })
+    );
+    expect(result).toEqual({ x: 100, y: 0 });
+  });
+
+  it("FIT_HEIGHT_PROPORTIONAL (5) scales the tentative width by the texture's own aspect ratio (:126-129)", () => {
+    // ratio = tex.h/tex.w = 160/320 = 0.5; Size2(0, get_size().x * ratio).
+    const result = textureRectMinimumSize(
+      node({ expandMode: 5 }, TEXTURE),
+      ctxWithTentative({ x: 0, y: 0, w: 50, h: 10 })
+    );
+    expect(result).toEqual({ x: 0, y: 25 });
+  });
+
+  it('EXPAND_KEEP_SIZE (0) and EXPAND_IGNORE_SIZE (1) never consult the tentative rect at all', () => {
+    const withTentative = ctxWithTentative({ x: 0, y: 0, w: 999, h: 999 });
+    expect(textureRectMinimumSize(node({ expandMode: 0 }, TEXTURE), withTentative)).toEqual({ x: 320, y: 160 });
+    expect(textureRectMinimumSize(node({ expandMode: 1 }, TEXTURE), withTentative)).toEqual({ x: 0, y: 0 });
+  });
+
+  it('an absent tentativeRect() reading (undefined) falls back to the texture\'s own size, exactly like a ctx with no tentativeRect at all', () => {
+    const ctxUndefinedTentative: SolveContext = { ...ctx(), tentativeRect: () => undefined };
+    const withField = textureRectMinimumSize(node({ expandMode: 2 }, TEXTURE), ctxUndefinedTentative);
+    const withoutField = textureRectMinimumSize(node({ expandMode: 2 }, TEXTURE), ctx());
+    expect(withField).toEqual(withoutField);
+    expect(withField).toEqual({ x: 160, y: 0 });
+  });
+});
+
+describe('solveControlTree — the real two-pass solve closes the self-reference end-to-end', () => {
+  const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
+
+  it('registers TextureRect as size-dependent, so a lone TextureRect tree still needs no second pass to see the SAME number', () => {
+    // Zero-width anchors (raw w=0) + a real fixed height (500, via anchorBottom)
+    // — first pass floors width from the TEXTURE's own height (160), second
+    // pass re-floors it from the REAL resolved height (500) instead.
+    const root = node({ expandMode: 2, anchorBottom: 1, offsetBottom: -148 }, TEXTURE);
+    const solved = solveControlTree([root], VIEWPORT, createSolveContext(nativeTheme(1)));
+
+    // FIT_WIDTH: minSize.x = get_size().y. The tree's only non-driven-axis
+    // truth is the anchored height (500), not the texture's own (160) —
+    // proves the second pass's `tentativeRect` fed the REAL value in, not
+    // the first pass's texture-size substitute.
+    expect(solved.get('Portrait')?.rect).toEqual({ x: 0, y: 0, w: 500, h: 500 });
+  });
+
+  it('a tree with no TextureRect at all is unaffected (single pass, unchanged rects)', () => {
+    const plain: SolveNode = {
+      path: 'Plain',
+      node: { name: 'Plain', type: 'Control', children: [], properties: { name: 'Plain', anchorRight: 1, anchorBottom: 1 } as ControlProperties },
+      children: [],
+      styleBoxes: {},
+      textureSize: null,
+    };
+    const solved = solveControlTree([plain], VIEWPORT, createSolveContext(nativeTheme(1)));
+    expect(solved.get('Plain')?.rect).toEqual(VIEWPORT);
   });
 });
 

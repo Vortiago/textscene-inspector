@@ -21,7 +21,13 @@ import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Rect2, Vec2 } from './rect';
 import type { SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
-import { controlSolverRegistry, type SolveContext, type TextMeasurer } from './solverRegistry';
+import {
+  controlSolverRegistry,
+  type ContainerLayoutResult,
+  type MinimumSizeResult,
+  type SolveContext,
+  type TextMeasurer,
+} from './solverRegistry';
 import { resolveAnchors } from '../controlAnchors.js';
 
 export interface SolvedControl {
@@ -44,6 +50,24 @@ export interface SolvedControl {
    * `NativeControlComponentProps.subtreeChromeRenderOrder`.
    */
   subtreeLastPaintIndex: number;
+  /**
+   * This node's own intermediate, if its registered `MinimumSizeFn`/
+   * `ContainerLayoutFn` attached one (`MinimumSizeResult.meta` /
+   * `ContainerLayoutResult.meta` — see either's own doc). A
+   * `ContainerLayoutFn`'s meta describes what THIS node computed while
+   * laying out its CHILDREN (a split's dragger position, a scroll
+   * container's bar geometry) and wins over a `MinimumSizeFn`'s meta for the
+   * SAME node when both are present — no registered type needs both today
+   * (a container's painter cares about its own layout output, not its
+   * floor-computation intermediate), so one slot is enough; a type that
+   * genuinely needed both would be the first to widen this.
+   *
+   * `unknown` at this boundary since its shape is entirely the producing
+   * type's own — `NativeControlComponentProps.meta` is the same value, and a
+   * painter casts it exactly like it already casts
+   * `solveNode.node.properties`.
+   */
+  meta?: unknown;
 }
 
 // --- Anchors ---------------------------------------------------------------
@@ -132,6 +156,43 @@ function canvasBoundaryRect(parentRect: Rect2): Rect2 {
 
 // --- Phase 1: combined minimum size ------------------------------------------
 
+/** A `MinimumSizeFn`'s normalised result — see `MinimumSizeResult`'s own doc for why a bare `Vec2` and this shape both need to be accepted. A `MinimumSizeResult` never carries an `x`/`y` of its own, so `'size' in result` cleanly tells the two apart. */
+function normalizeMinimumSizeResult(result: Vec2 | MinimumSizeResult): { size: Vec2; meta: unknown } {
+  if ('size' in result) return { size: result.size, meta: result.meta };
+  return { size: result, meta: undefined };
+}
+
+/**
+ * A `ContainerLayoutFn`'s normalised result — see `ContainerLayoutResult`'s
+ * own doc. `'rects' in result` rather than `result instanceof Map`: a plain
+ * `Map` is not STRUCTURALLY a subtype of `Map<any, any>` from TS's own
+ * narrowing rules once its declared type is the read-only `ReadonlyMap`
+ * interface (it lacks `set`/`delete`/`clear` in that view), so `instanceof`
+ * cannot safely exclude it from the other arm of the union — a real `Map`
+ * never carries a `rects` OWN property either way, so this discriminator is
+ * exact, not a heuristic.
+ */
+function normalizeContainerLayoutResult(
+  result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
+): { rects: ReadonlyMap<string, Rect2>; meta: unknown } {
+  if ('rects' in result) return { rects: result.rects, meta: result.meta };
+  return { rects: result, meta: undefined };
+}
+
+/**
+ * `Control::get_combined_minimum_size` (`control.cpp:1744-1758`) PLUS this
+ * type's own meta, if its registered `MinimumSizeFn` attached one — the
+ * pairing `createSolveContext`'s cache actually stores; `combinedMinimumSize`
+ * below returns only the `Vec2` half, unchanged from before `meta` existed.
+ */
+function combinedMinimumSizeWithMeta(n: SolveNode, ctx: SolveContext): { size: Vec2; meta: unknown } {
+  const typeFn = controlSolverRegistry.minimumSize(n.node.type);
+  const raw = typeFn ? typeFn(n, ctx) : { x: 0, y: 0 };
+  const { size: typeMin, meta } = normalizeMinimumSizeResult(raw);
+  const custom = controlProps(n).customMinimumSize ?? { x: 0, y: 0 };
+  return { size: { x: Math.max(typeMin.x, custom.x), y: Math.max(typeMin.y, custom.y) }, meta };
+}
+
 /**
  * `Control::get_combined_minimum_size` (`control.cpp:1744-1758`):
  * `max(get_minimum_size(), custom_minimum_size)`. `get_minimum_size()` is the
@@ -139,10 +200,7 @@ function canvasBoundaryRect(parentRect: Rect2): Rect2 {
  * type — this packet registers none).
  */
 export function combinedMinimumSize(n: SolveNode, ctx: SolveContext): Vec2 {
-  const typeFn = controlSolverRegistry.minimumSize(n.node.type);
-  const typeMin = typeFn ? typeFn(n, ctx) : { x: 0, y: 0 };
-  const custom = controlProps(n).customMinimumSize ?? { x: 0, y: 0 };
-  return { x: Math.max(typeMin.x, custom.x), y: Math.max(typeMin.y, custom.y) };
+  return combinedMinimumSizeWithMeta(n, ctx).size;
 }
 
 /**
@@ -160,22 +218,39 @@ export function combinedMinimumSize(n: SolveNode, ctx: SolveContext): Vec2 {
  * (Panel → MarginContainer → VBoxContainer → …) and turns a linear walk
  * quadratic. The cache lives on the context, so it spans both phases of one
  * solve and is discarded with it.
+ *
+ * The SAME cache backs `minimumSizeMeta`: both read the ONE
+ * `combinedMinimumSizeWithMeta` call per path, so asking for a node's meta
+ * after (or before) its size costs nothing beyond the lookup already paid
+ * for by the memoisation above.
+ *
+ * `tentativeRect`, when given, becomes this context's own — `solveFree`'s
+ * (transitively, `combinedMinimumSizeWithMeta`'s) reference to `ctx` inside
+ * this closure must resolve to the object this field actually lives on, so
+ * `solveControlTree`'s own second pass cannot build one via `{
+ * ...createSolveContext(...), tentativeRect }`: that spread would copy the
+ * `combinedMinimumSize`/`minimumSizeMeta` CLOSURES from the ORIGINAL object,
+ * which still call back into an inner `ctx` that never gained the field.
  */
 export function createSolveContext(
   theme: NativeTheme,
-  measureText: TextMeasurer | null = null
+  measureText: TextMeasurer | null = null,
+  tentativeRect?: (n: SolveNode) => Rect2 | undefined
 ): SolveContext {
-  const cache = new Map<string, Vec2>();
+  const cache = new Map<string, { size: Vec2; meta: unknown }>();
+  const resolve = (n: SolveNode): { size: Vec2; meta: unknown } => {
+    const hit = cache.get(n.path);
+    if (hit) return hit;
+    const value = combinedMinimumSizeWithMeta(n, ctx);
+    cache.set(n.path, value);
+    return value;
+  };
   const ctx: SolveContext = {
     theme,
     measureText,
-    combinedMinimumSize: (n) => {
-      const hit = cache.get(n.path);
-      if (hit) return hit;
-      const value = combinedMinimumSize(n, ctx);
-      cache.set(n.path, value);
-      return value;
-    },
+    combinedMinimumSize: (n) => resolve(n).size,
+    minimumSizeMeta: (n) => resolve(n).meta,
+    tentativeRect,
   };
   return ctx;
 }
@@ -187,10 +262,22 @@ function zIndexOf(n: SolveNode): number {
   return controlProps(n).zIndex ?? 0;
 }
 
-/** `assignPaintIndex`'s two parallel outputs — one pre-order walk, two facts per node. */
+/** `assignPaintIndex`'s parallel outputs — one pre-order walk, several facts about the whole tree. */
 interface PaintIndexResult {
   order: ReadonlyMap<string, number>;
   subtreeLast: ReadonlyMap<string, number>;
+  /**
+   * Whether ANY node in this tree is a type registered via
+   * `controlSolverRegistry.registerSizeDependentMinimum` — decides whether
+   * `solveControlTree` runs its bounded second pass at all (see
+   * `SolveContext.tentativeRect`'s own doc). Computed during this SAME
+   * pre-order walk rather than a separate scan: every solve already pays for
+   * this traversal, so piggybacking the check costs nothing extra, and
+   * skipping it entirely for the (overwhelmingly common) tree with no such
+   * type keeps a plain single-pass solve exactly as cheap as before this
+   * existed.
+   */
+  hasSizeDependentMinimum: boolean;
 }
 
 /**
@@ -209,10 +296,12 @@ function assignPaintIndex(roots: readonly SolveNode[]): PaintIndexResult {
   const order = new Map<string, number>();
   const subtreeLast = new Map<string, number>();
   let counter = 0;
+  let hasSizeDependentMinimum = false;
 
   const visit = (nodes: readonly SolveNode[]): void => {
     const sorted = [...nodes].sort((a, b) => zIndexOf(a) - zIndexOf(b));
     for (const node of sorted) {
+      if (controlSolverRegistry.isSizeDependentMinimum(node.node.type)) hasSizeDependentMinimum = true;
       order.set(node.path, counter++);
       visit(node.children);
       subtreeLast.set(node.path, counter - 1);
@@ -220,7 +309,7 @@ function assignPaintIndex(roots: readonly SolveNode[]): PaintIndexResult {
   };
 
   visit(roots);
-  return { order, subtreeLast };
+  return { order, subtreeLast, hasSizeDependentMinimum };
 }
 
 // --- Phase 2: top-down rect assignment ---------------------------------------
@@ -230,13 +319,15 @@ function record(
   rect: Rect2,
   minSize: Vec2,
   paintIndex: PaintIndexResult,
-  out: Map<string, SolvedControl>
+  out: Map<string, SolvedControl>,
+  meta?: unknown
 ): void {
   out.set(n.path, {
     rect,
     minSize,
     paintIndex: paintIndex.order.get(n.path) ?? 0,
     subtreeLastPaintIndex: paintIndex.subtreeLast.get(n.path) ?? 0,
+    meta,
   });
 }
 
@@ -261,7 +352,7 @@ function solveFree(
         props.growHorizontal ?? 1,
         props.growVertical ?? 1
       );
-  record(n, rect, minSize, paintIndexOf, out);
+  record(n, rect, minSize, paintIndexOf, out, ctx.minimumSizeMeta?.(n));
   dispatchChildren(n, rect, ctx, paintIndexOf, out);
 }
 
@@ -295,12 +386,26 @@ function dispatchChildren(
   const childEntries = n.children.map((child) => ({
     node: child,
     minSize: ctx.combinedMinimumSize(child),
+    meta: ctx.minimumSizeMeta?.(child),
   }));
   // No container registers chrome yet; one that does insets its own content
   // rect before calling its ContainerLayoutFn.
-  const childRects = containerFn(n, childEntries, rect, ctx);
+  const { rects: childRects, meta: containerMeta } = normalizeContainerLayoutResult(
+    containerFn(n, childEntries, rect, ctx)
+  );
 
-  for (const { node: child, minSize } of childEntries) {
+  // `n`'s own record already happened in the caller (`solveFree`, or this
+  // same function one level up for a non-root container) BEFORE this
+  // function ran — patch its meta in now that the container layout that
+  // just ran has computed one. Wins over any `MinimumSizeFn`-sourced meta
+  // already on the entry (see `SolvedControl.meta`'s own doc for why that
+  // never collides with a real type today).
+  if (containerMeta !== undefined) {
+    const existing = out.get(n.path);
+    if (existing) out.set(n.path, { ...existing, meta: containerMeta });
+  }
+
+  for (const { node: child, minSize, meta } of childEntries) {
     const assigned = childRects.get(child.path) ?? { x: 0, y: 0, w: 0, h: 0 };
     // `Container::fit_child_in_rect` ends by calling `Control::set_rect`, so
     // `Control::_size_changed` (control.cpp:1531-1541,1760-1797) re-floors the
@@ -319,7 +424,7 @@ function dispatchChildren(
     const childRect = controlSolverRegistry.isCanvasBoundary(child.node.type)
       ? canvasBoundaryRect(rect)
       : floorAtMinimumSize(assigned, minSize, childProps.growHorizontal ?? 1, childProps.growVertical ?? 1);
-    record(child, childRect, minSize, paintIndexOf, out);
+    record(child, childRect, minSize, paintIndexOf, out, meta);
     dispatchChildren(child, childRect, ctx, paintIndexOf, out);
   }
 }
@@ -328,18 +433,48 @@ function dispatchChildren(
  * Solves every Control in `roots` (and their descendants) into a rect —
  * Godot pixels, relative to each node's immediate parent (the viewport for a
  * root) — plus its combined minimum size and pre-order paint index.
+ *
+ * Runs a SECOND, final pass — feeding the first pass's own resolved rects
+ * back in as `SolveContext.tentativeRect` — when (and only when) `roots`
+ * contains a type registered via `registerSizeDependentMinimum` (see that
+ * field's own doc for why one such type, `TextureRect`'s `EXPAND_FIT_WIDTH`/
+ * `FIT_HEIGHT`, exists at all). Every OTHER `MinimumSizeFn`/`ContainerLayoutFn`
+ * is a pure function of props + the rest of `ctx`, neither of which changes
+ * between passes, so its output does not either — the second pass changes
+ * ONLY the rects (and anything downstream of them, e.g. an ancestor
+ * container's own size) that a size-dependent type's corrected minimum
+ * actually touches. A tree with no such type pays nothing beyond the
+ * membership check `assignPaintIndex` already performed.
+ *
+ * Bounded at exactly one extra pass, not a loop to convergence: the ONE
+ * self-reference this codebase models (a control's OWN size feeding its OWN
+ * minimum, on the axis IT does not drive) is resolved after a single
+ * correction, since the axis it reads is never itself downstream of the
+ * axis it drives. A pathological scene that made the two mutually dependent
+ * through a container's own cross-axis negotiation would not fully converge
+ * even in real, live Godot (`_size_changed`/`update_minimum_size` are
+ * likewise reactive, not iterative-to-convergence) — this matches that same
+ * practical guarantee rather than a stronger one this codebase's clean
+ * two-phase solve cannot make deterministic anyway.
  */
 export function solveControlTree(
   roots: readonly SolveNode[],
   viewport: Rect2,
   ctx: SolveContext
 ): ReadonlyMap<string, SolvedControl> {
-  const out = new Map<string, SolvedControl>();
   const paintIndexOf = assignPaintIndex(roots);
 
+  const out = new Map<string, SolvedControl>();
   for (const root of roots) {
     solveFree(root, viewport, ctx, paintIndexOf, out);
   }
 
-  return out;
+  if (!paintIndexOf.hasSizeDependentMinimum) return out;
+
+  const pass2Ctx = createSolveContext(ctx.theme, ctx.measureText, (n) => out.get(n.path)?.rect);
+  const out2 = new Map<string, SolvedControl>();
+  for (const root of roots) {
+    solveFree(root, viewport, pass2Ctx, paintIndexOf, out2);
+  }
+  return out2;
 }

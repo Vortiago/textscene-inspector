@@ -16,14 +16,27 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
+import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { LabelProperties } from './types';
-import { shapeText, AutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
+import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { labelMinimumSize, LABEL_THEME_KEYS, LABEL_DEFAULT_FONT_COLOR, labelTextTheme, layoutLabelLines } from './nativeSolver';
 import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
+
+/** `labelMinimumSize`'s `size` half only — every test below except the dedicated `meta` describe cares only about this, exactly like before `{ size, meta }` existed. */
+function minSize(...args: Parameters<typeof labelMinimumSize>): Vec2 {
+  const result = labelMinimumSize(...args);
+  return 'size' in result ? result.size : result;
+}
+
+/** `labelMinimumSize`'s `meta` half — the shaped `TextLayoutResult` (autowrap OFF only), or `undefined`. */
+function minMeta(...args: Parameters<typeof labelMinimumSize>): unknown {
+  const result = labelMinimumSize(...args);
+  return 'meta' in result ? result.meta : undefined;
+}
 
 function node(props: Partial<LabelProperties>): SolveNode {
   return {
@@ -57,32 +70,32 @@ describe('labelMinimumSize (label.cpp:973-998)', () => {
   });
 
   it('autowrap OFF: width is the longest UNWRAPPED line, height is a single line (23px, no spacing to subtract)', () => {
-    const result = labelMinimumSize(node({ text: 'AB', autowrapMode: 0 }), ctx());
+    const result = minSize(node({ text: 'AB', autowrapMode: 0 }), ctx());
     expect(result.x).toBeCloseTo(AB_WIDTH, 6);
     expect(result.y).toBe(23);
   });
 
   it('autowrap OFF, explicit hard break: height sums per-line (asc+dsc+spacing) then drops ONE trailing spacing (label.cpp:379-387) — 2*26-3=49, not the naive 2*26=52', () => {
-    const result = labelMinimumSize(node({ text: 'A\nAB', autowrapMode: 0 }), ctx());
+    const result = minSize(node({ text: 'A\nAB', autowrapMode: 0 }), ctx());
     expect(result.y).toBe(49);
     // width floors to the WIDER of the two unwrapped lines ('AB'), not 'A'.
     expect(result.x).toBeCloseTo(AB_WIDTH, 6);
   });
 
   it('autowrap ON (any non-zero mode): width floors to 1px regardless of text (label.cpp:984-991, always Size2(1, ...))', () => {
-    const arbitrary = labelMinimumSize(node({ text: 'a very long line indeed', autowrapMode: 1 }), ctx());
-    const wordSmart = labelMinimumSize(node({ text: 'a very long line indeed', autowrapMode: 3 }), ctx());
+    const arbitrary = minSize(node({ text: 'a very long line indeed', autowrapMode: 1 }), ctx());
+    const wordSmart = minSize(node({ text: 'a very long line indeed', autowrapMode: 3 }), ctx());
     expect(arbitrary.x).toBe(1);
     expect(wordSmart.x).toBe(1);
   });
 
   it('autowrap ON height substitutes the UNWRAPPED natural height (self-referential FIT_* shape, texturerect/nativeSolver.ts precedent) — single line is still 23px', () => {
-    const result = labelMinimumSize(node({ text: 'AB', autowrapMode: 2 }), ctx());
+    const result = minSize(node({ text: 'AB', autowrapMode: 2 }), ctx());
     expect(result.y).toBe(23);
   });
 
   it('autowrap ON, explicit hard break still contributes its own per-line height (49px for two lines, same -spacing rule as OFF)', () => {
-    const result = labelMinimumSize(node({ text: 'A\nAB', autowrapMode: 2 }), ctx());
+    const result = minSize(node({ text: 'A\nAB', autowrapMode: 2 }), ctx());
     expect(result.y).toBe(49);
   });
 
@@ -91,12 +104,43 @@ describe('labelMinimumSize (label.cpp:973-998)', () => {
   });
 
   it('reads theme_override_font_sizes/font_size, not the theme default, when present', () => {
-    const withOverride = labelMinimumSize(
+    const withOverride = minSize(
       node({ text: '', themeOverrideFontSizes: { font_size: 32 } }),
       ctx()
     );
     // At size 32: ascentPx=ceil(2189*32/2048)=35, descentPx=ceil(600*32/2048)=10 -> fontHeightPx=45.
     expect(withOverride.y).toBe(45);
+  });
+
+  it('uppercase transforms the text BEFORE measuring (label.cpp:154, read by get_minimum_size via _ensure_shaped) — uppercase glyphs are WIDER in this atlas', () => {
+    // Same source text, only `uppercase` differs — 'ab' -> lowercase glyphs
+    // (narrower), 'AB' -> uppercase glyphs (wider, this atlas's own advances).
+    const lower = minSize(node({ text: 'ab', autowrapMode: 0 }), ctx());
+    const upper = minSize(node({ text: 'ab', uppercase: true, autowrapMode: 0 }), ctx());
+    expect(upper.x).toBeCloseTo(AB_WIDTH, 6);
+    expect(upper.x).toBeGreaterThan(lower.x);
+  });
+});
+
+describe('labelMinimumSize — meta carries the shaped TextLayoutResult when autowrap is OFF (ITEM C: no re-shape in the painter)', () => {
+  it('attaches the shaped layout as meta when autowrap is OFF and there is text', () => {
+    const meta = minMeta(node({ text: 'AB', autowrapMode: 0 }), ctx()) as TextLayoutResult;
+    expect(meta.widthPx).toBeCloseTo(AB_WIDTH, 6);
+    expect(meta.lines).toHaveLength(1);
+  });
+
+  it('the meta layout is uppercase-transformed exactly like the size half', () => {
+    const meta = minMeta(node({ text: 'ab', uppercase: true, autowrapMode: 0 }), ctx()) as TextLayoutResult;
+    expect(meta.lines[0]?.text).toBe('AB');
+  });
+
+  it('attaches NO meta when autowrap is ON — the unwrapped shape behind the height substitute is not what a box-constrained painter needs', () => {
+    expect(minMeta(node({ text: 'AB', autowrapMode: 2 }), ctx())).toBeUndefined();
+  });
+
+  it('attaches no meta for empty text or an absent measurer', () => {
+    expect(minMeta(node({}), ctx())).toBeUndefined();
+    expect(minMeta(node({ text: 'AB', autowrapMode: 0 }), ctx(false))).toBeUndefined();
   });
 });
 

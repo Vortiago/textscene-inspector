@@ -421,3 +421,158 @@ describe('solveControlTree — a registered canvas boundary (CanvasLayer)', () =
     expect(solved.get('Box/HUD')?.rect).toEqual({ x: 0, y: 0, w: 1152, h: 648 });
   });
 });
+
+describe('solveControlTree — MinimumSizeFn/ContainerLayoutFn meta side-channel', () => {
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  it('a MinimumSizeFn returning a bare Vec2 (the old contract) leaves SolvedControl.meta undefined', () => {
+    const TYPE = 'TestBareVec2MinimumSize';
+    controlSolverRegistry.registerMinimumSize(TYPE, () => ({ x: 10, y: 20 }));
+
+    const root = node('Leaf', TYPE, {});
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+
+    expect(solved.get('Leaf')?.minSize).toEqual({ x: 10, y: 20 });
+    expect(solved.get('Leaf')?.meta).toBeUndefined();
+  });
+
+  it('a MinimumSizeFn returning { size, meta } floors `size` as before and surfaces `meta` on SolvedControl', () => {
+    const TYPE = 'TestMetaMinimumSize';
+    const layout = { widthPx: 42 };
+    controlSolverRegistry.registerMinimumSize(TYPE, () => ({ size: { x: 10, y: 20 }, meta: layout }));
+
+    const root = node('Leaf', TYPE, {});
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+
+    expect(solved.get('Leaf')?.minSize).toEqual({ x: 10, y: 20 });
+    expect(solved.get('Leaf')?.meta).toBe(layout);
+  });
+
+  it('{ size, meta }\'s `size` still floors to custom_minimum_size exactly like a bare Vec2', () => {
+    const TYPE = 'TestMetaMinimumSizeFloored';
+    controlSolverRegistry.registerMinimumSize(TYPE, () => ({ size: { x: 5, y: 5 }, meta: 'x' }));
+
+    const root = node('Leaf', TYPE, { customMinimumSize: { x: 50, y: 5 } });
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+
+    expect(solved.get('Leaf')?.minSize).toEqual({ x: 50, y: 5 });
+    expect(solved.get('Leaf')?.meta).toBe('x');
+  });
+
+  it('a ContainerLayoutFn returning a bare Map (the old contract) leaves the container\'s own SolvedControl.meta undefined', () => {
+    const TYPE = 'TestBareMapContainer';
+    controlSolverRegistry.registerContainerLayout(TYPE, (_n, children) => {
+      const out = new Map<string, Rect2>();
+      for (const c of children) out.set(c.node.path, { x: 0, y: 0, w: 10, h: 10 });
+      return out;
+    });
+
+    const child = node('Root/Child', 'Control', {});
+    const root = node('Root', TYPE, { anchorsPreset: 15 }, [child]);
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+
+    expect(solved.get('Root')?.meta).toBeUndefined();
+    expect(solved.get('Root/Child')?.rect).toEqual({ x: 0, y: 0, w: 10, h: 10 });
+  });
+
+  it("a ContainerLayoutFn returning { rects, meta } surfaces `meta` on the CONTAINER's own SolvedControl, not its children's", () => {
+    const TYPE = 'TestMetaContainer';
+    const layoutMeta = { draggerPos: 77 };
+    controlSolverRegistry.registerContainerLayout(TYPE, (_n, children) => {
+      const rects = new Map<string, Rect2>();
+      for (const c of children) rects.set(c.node.path, { x: 0, y: 0, w: 10, h: 10 });
+      return { rects, meta: layoutMeta };
+    });
+
+    const child = node('Root/Child', 'Control', {});
+    const root = node('Root', TYPE, { anchorsPreset: 15 }, [child]);
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+
+    expect(solved.get('Root')?.meta).toBe(layoutMeta);
+    expect(solved.get('Root/Child')?.rect).toEqual({ x: 0, y: 0, w: 10, h: 10 });
+    expect(solved.get('Root/Child')?.meta).toBeUndefined();
+  });
+
+  it("a child's own MinimumSizeFn meta survives being laid out by a container (the two metas don't collide)", () => {
+    const CONTAINER = 'TestMetaContainerParent';
+    const LEAF = 'TestMetaLeafChild';
+    controlSolverRegistry.registerContainerLayout(CONTAINER, (_n, children) => {
+      const rects = new Map<string, Rect2>();
+      for (const c of children) rects.set(c.node.path, { x: 0, y: 0, w: 10, h: 10 });
+      return { rects, meta: 'container-meta' };
+    });
+    controlSolverRegistry.registerMinimumSize(LEAF, () => ({ size: { x: 1, y: 1 }, meta: 'leaf-meta' }));
+
+    const child = node('Root/Child', LEAF, {});
+    const root = node('Root', CONTAINER, { anchorsPreset: 15 }, [child]);
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+
+    expect(solved.get('Root')?.meta).toBe('container-meta');
+    expect(solved.get('Root/Child')?.meta).toBe('leaf-meta');
+  });
+});
+
+describe('solveControlTree — a second pass for a size-dependent MinimumSizeFn (TextureRect FIT_*)', () => {
+  const TYPE = 'TestTentativeRectMinimumSize';
+
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  it('SolveContext.tentativeRect is undefined on a tree with no registered size-dependent type', () => {
+    let seenTentative: Rect2 | undefined | 'never-called' = 'never-called';
+    controlSolverRegistry.registerMinimumSize(TYPE, (n, c) => {
+      seenTentative = c.tentativeRect?.(n);
+      return { x: 0, y: 0 };
+    });
+    // Deliberately NOT calling registerSizeDependentMinimum(TYPE).
+
+    const root = node('Leaf', TYPE, {});
+    solveControlTree([root], VIEWPORT, ctx());
+
+    expect(seenTentative).toBeUndefined();
+  });
+
+  it("re-solves once more when a type opts in, feeding the SECOND pass's MinimumSizeFn the FIRST pass's own resolved rect", () => {
+    const seenTentative: Array<Rect2 | undefined> = [];
+    controlSolverRegistry.registerMinimumSize(TYPE, (n, c) => {
+      const t = c.tentativeRect?.(n);
+      seenTentative.push(t);
+      // First pass: no tentative rect yet, contributes nothing. Second pass:
+      // floors width to double the tentative rect's own height.
+      return { x: t ? t.h * 2 : 0, y: 0 };
+    });
+    controlSolverRegistry.registerSizeDependentMinimum(TYPE);
+
+    // Zero-width anchors (left=right=0) but a bottom anchor of 1 floors this
+    // node's HEIGHT to 100 independent of its own (width-only) minimum — the
+    // width starts at 0, so the height-derived floor is the only thing that
+    // can ever widen it.
+    const root = node('Leaf', TYPE, { anchorBottom: 1, offsetBottom: -548 });
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+
+    // Two passes ran: first with no tentative rect, second with the first's.
+    expect(seenTentative).toEqual([undefined, { x: 0, y: 0, w: 0, h: 100 }]);
+    // The SECOND pass's width floor (100 * 2 = 200) wins in the final result.
+    expect(solved.get('Leaf')?.rect).toEqual({ x: 0, y: 0, w: 200, h: 100 });
+  });
+
+  it('a tree with the type registered but ABSENT from it never triggers a second pass', () => {
+    controlSolverRegistry.registerMinimumSize(TYPE, () => ({ x: 0, y: 0 }));
+    controlSolverRegistry.registerSizeDependentMinimum(TYPE);
+
+    let calls = 0;
+    const OTHER = 'TestUnrelatedType';
+    controlSolverRegistry.registerMinimumSize(OTHER, () => {
+      calls++;
+      return { x: 1, y: 1 };
+    });
+
+    const root = node('Leaf', OTHER, {});
+    solveControlTree([root], VIEWPORT, ctx());
+
+    expect(calls).toBe(1);
+  });
+});

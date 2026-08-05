@@ -50,7 +50,6 @@ present-but-unparseable value collapses to `false` rather than `undefined`, sinc
 
 ## Known limitations
 
-- **expand_mode FIT_\* magnitude** — the axis IDENTITY is right (the solver returns an asymmetric `Vec2` per mode, so a later floor moves the axis Godot names), but the magnitude Godot reads is the control's own already-solved size, which is not available where the minimum size is computed. The section below has the mechanism and what closing it would cost. **Not re-measurable**: no fixture and no vendored corpus scene sets `expand_mode` to any FIT value, so there is no pixel to compare — this stands on the source and its unit tests, not on a probe.
 - **`texture_filter` / `texture_repeat` resolve `PARENT_NODE` to the viewport default, not to the nearest ancestor that names one.** Both properties are read and mapped (the section below), but there is no ancestor-chain context to walk. Also not re-measurable here: the only Control in the vendored corpus that sets either is an invisible `Panel`, which draws a StyleBox and samples no texture.
 
 ## Native (WebGL canvas) painter
@@ -62,7 +61,7 @@ contribution (`controlSolverRegistry.registerMinimumSize`) and exports the
 `texture_repeat` sampler properties (below) are drawn from the same port;
 `stretch_mode`'s default is Godot's own `STRETCH_SCALE`, not a fit.
 
-### The FIT_\* driver axis — what the solver names, and what it cannot read
+### The FIT_\* driver axis — identity AND magnitude
 
 `TextureRect::get_minimum_size()` (`texture_rect.cpp:107-133`) ties
 FIT_WIDTH/FIT_HEIGHT (and their PROPORTIONAL twins) to the control's OWN
@@ -77,18 +76,21 @@ itself uses. **This gets the axis IDENTITY right**: FIT_WIDTH and FIT_HEIGHT are
 not interchangeable, so a later `floorAtMinimumSize` step floors the CORRECT
 axis, never the other one.
 
-**What does not close**: the actual magnitude Godot reads (`get_size().y` for
-FIT_WIDTH) is the control's own rect, produced by `controlRectSolver.ts`'s
-Phase 2 (top-down) — but `MinimumSizeFn` runs in Phase 1 (bottom-up), before
-any rect exists, and is never handed a parent rect
-(`native/solverRegistry.ts`'s `MinimumSizeFn` contract). Substituting the
-texture's OWN natural size for that unavailable "current size" is the closest
-non-circular per-node datum available (and, for the PROPORTIONAL modes,
-algebraically collapses to exactly EXPAND_KEEP_SIZE's number on the driven
-axis — see `nativeSolver.test.ts`'s worked arithmetic). Closing this fully
-would require widening `MinimumSizeFn`'s contract or iterating
-`solveControlTree` to a fixed point, both changes to the shared
-`controlRectSolver.ts` outside this slice's scope.
+**Magnitude closes too**, via `SolveContext.tentativeRect`
+(`native/solverRegistry.ts`): `solveControlTree` runs a bounded second pass —
+feeding a first pass's own resolved rects back in — whenever the tree
+contains a type registered via `registerSizeDependentMinimum`, which this
+type's `index.r3f.ts` does. On that second pass, `tentativeRect(n).h`/`.w` IS
+`get_size().y`/`.x` — the REAL, already-resolved control size, not a
+substitute. The first pass still substitutes the texture's OWN natural size
+on that axis (unavailable otherwise), which is algebraically identical to
+what the corrected formula produces once fed that same substitute — so a
+FIT_\* TextureRect with nothing else depending on its own size already
+converges on the first pass, and the second pass only changes the answer
+when something genuinely constrains the non-driven axis to a DIFFERENT
+value (an anchor, a sibling, a container) — see `nativeSolver.test.ts`'s
+`tentativeRect`-aware cases and `solveControlTree`'s own end-to-end case for
+the worked numbers.
 
 ### Sampler properties: `texture_filter` / `texture_repeat`
 
