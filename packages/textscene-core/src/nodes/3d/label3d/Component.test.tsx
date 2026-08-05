@@ -93,39 +93,60 @@ describe('<Label3D>', () => {
     expect((scaled.instance as THREE.Group).scale.y).toBeCloseTo(0.02, 6);
   });
 
-  it('renders an invisible bounds-proxy mesh sized from font_size/pixel_size, so auto-framing sees it before the lazy glyphs mount', async () => {
-    const renderer = await renderLabel(makeNode({ text: 'Hello', pixel_size: 0.02 }));
-    const named = renderer.scene.findByProps({ name: 'Label' });
-    const proxy = named.children.find((c) => c.type === 'Mesh')!;
-    expect(proxy).toBeDefined();
-    const mesh = proxy.instance as THREE.Mesh;
+  /** The proxy carries no `name`, so it's found by its own userData tag, scene-wide. */
+  function findProxyMesh(renderer: Awaited<ReturnType<typeof renderLabel>>): THREE.Mesh {
+    return renderer.scene.find(
+      (n) => (n.instance as THREE.Mesh).userData?.tscnBoundsProxy === true
+    ).instance as THREE.Mesh;
+  }
+
+  it('renders an invisible, zero-size bounds-proxy mesh at the node origin, so auto-framing sees the label before the lazy glyphs mount', async () => {
+    // Regression pin, in the OTHER direction from an earlier version of this
+    // test: a text/font-sized (or billboard-cube-inflated) proxy measurably
+    // made this renderer's own auto-framing WORSE, not better — Godot's own
+    // reference camera is placed (`_place_camera`, synchronous, before any
+    // frame settles) from a scene state in which Label3D has not yet shaped
+    // any text, so it contributes only its ORIGIN, never an extent. Measured
+    // on unit-torus-mesh.tscn: a bootstrap reading `_scene_bounds()` right
+    // after `add_child()` got `size [3.0, 4.0, 3.0]` (the mesh only, each
+    // Label3D contributing a bare Y position); the SAME scene's `--emit-
+    // bounds` (read later, after `_settle()`) got the much larger
+    // `[4.938, 7.445, 4.938]` the billboard-cube inflation predicts. Only the
+    // FIRST number's camera reproduces Godot's own `--frame` picture. See
+    // `Component.tsx`'s own doc for the full citation.
+    const renderer = await renderLabel(
+      makeNode({ text: 'A somewhat long caption for this test', font_size: 32, pixel_size: 0.02 })
+    );
+    const mesh = findProxyMesh(renderer);
     expect(mesh.visible).toBe(false);
-    expect((mesh.userData as { tscnBoundsProxy?: boolean }).tscnBoundsProxy).toBe(true);
-    const geometry = mesh.geometry as unknown as { parameters: { width: number; height: number } };
-    expect(geometry.parameters.width).toBeGreaterThan(0);
-    expect(geometry.parameters.height).toBeGreaterThan(0);
+    const geometry = mesh.geometry as unknown as { parameters: { width: number; height: number; depth: number } };
+    expect(geometry.parameters.width).toBe(0);
+    expect(geometry.parameters.height).toBe(0);
+    expect(geometry.parameters.depth).toBe(0);
+
+    // A point has no extent to be wrong about under rotation, so it needs no
+    // unrotated sibling group (unlike an earlier cube-shaped version of this
+    // proxy) — it can sit at the node's own world position directly.
+    const worldPos = new THREE.Vector3();
+    mesh.getWorldPosition(worldPos);
+    expect(worldPos.length()).toBeCloseTo(0, 6);
   });
 
-  it('sizes the bounds-proxy width from PER-CHARACTER advances, not text.length × the flat average', async () => {
-    // Regression pin: an earlier version used `text.length * getAverageAdvancePx`,
-    // which measurably over-widened auto-framing for a caption with several
-    // spaces (a space's own advance is under half the font's average) —
-    // measured on unit-material-heightmap.tscn, ~16% wider than the real
-    // shaped width. A space-heavy string's proxy must come out narrower
-    // than that flat estimate would give, one Hello-sized "no spaces"
-    // comparison string at a time so this doesn't depend on the exact
-    // average-advance constant.
-    const noSpaces = await renderLabel(makeNode({ name: 'A', text: 'AAAAA', pixel_size: 0.01 }));
-    const withSpaces = await renderLabel(makeNode({ name: 'A', text: 'A A A', pixel_size: 0.01 }));
-    // 'A A A' (5 chars: 3 'A' + 2 spaces) vs 'AAAAA' (5 'A's): if width were
-    // flat text.length-based, both would be identical. A per-character sum
-    // must come out narrower, since a space advances less than 'A'.
-    const widthOf = (r: Awaited<ReturnType<typeof renderLabel>>) => {
-      const named = r.scene.findByProps({ name: 'A' });
-      const proxy = named.children.find((c) => c.type === 'Mesh')!.instance as THREE.Mesh;
-      return (proxy.geometry as unknown as { parameters: { width: number } }).parameters.width;
-    };
-    expect(widthOf(withSpaces)).toBeLessThan(widthOf(noSpaces));
+  it('the bounds-proxy point stays at the node origin even after useBillboard rotates the label group', async () => {
+    // A point is rotation-invariant — rotating the group it sits in must
+    // never move it away from the node's own position.
+    const renderer = await renderLabel(
+      makeNode({ billboard: BillboardMode.BILLBOARD_ENABLED, text: 'Hello' })
+    );
+    const billboardGroup = renderer.scene.findByProps({ name: 'Label' }).instance as THREE.Group;
+    const mesh = findProxyMesh(renderer);
+    const worldPosBefore = new THREE.Vector3();
+    mesh.getWorldPosition(worldPosBefore);
+    billboardGroup.quaternion.set(0.2, 0.3, 0.4, Math.sqrt(1 - 0.2 ** 2 - 0.3 ** 2 - 0.4 ** 2));
+    billboardGroup.updateMatrixWorld(true);
+    const worldPosAfter = new THREE.Vector3();
+    mesh.getWorldPosition(worldPosAfter);
+    expect(worldPosAfter.distanceTo(worldPosBefore)).toBeCloseTo(0, 6);
   });
 
   it('billboard=ENABLED copies the camera quaternion onto the named group after a frame', async () => {

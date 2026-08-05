@@ -45,6 +45,13 @@ export function frameSceneBounds(
   let hasGizmo = false;
   scene.traverse((obj) => {
     if (obj.userData?.tscnEmptyState) return;
+    // A Label3D's own real glyph mesh (`LabelGlyphs.tsx`'s own doc has the
+    // measurement) — skipped so an incidental async-mount timing accident
+    // can never change the frame. Label3D's contribution to auto-framing is
+    // its zero-size bounds proxy (`nodes/3d/label3d/Component.tsx`'s
+    // `LABEL3D_BOUNDS_PROXY`) ALONE, matching what Godot's own reference
+    // camera is placed from.
+    if (obj.userData?.tscnFrameExcluded) return;
     // CSG contributor bounds proxies are deliberately INCLUDED here.
     //
     // Excluding them looks right (a fully-subtracted brush cannot then enlarge the

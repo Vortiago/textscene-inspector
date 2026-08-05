@@ -520,8 +520,21 @@ func _write_mode(two_d: bool) -> void:
 	file.store_string("2d" if two_d else "3d")
 	file.close()
 
-# The scene's world-space AABB, so a comparison can derive ONE camera both
-# renderers use rather than each framing the scene its own way.
+# The scene's world-space AABB — a true read of the FINAL scene bounds, but
+# NOT necessarily the number that placed --frame's camera: this runs AFTER
+# _settle() (six process frames + frame_post_draw), while _place_camera runs
+# synchronously right after add_child(), before any frame has settled. For a
+# scene holding a Label3D the two calls can disagree, because a fresh
+# Label3D's shaped-text AABB is not available synchronously on add_child()
+# despite NOTIFICATION_ENTER_TREE requesting an update — measured on
+# unit-torus-mesh.tscn: pre-settle _scene_bounds() returns [3,4,3] (each
+# Label3D contributing only its bare position, no extent); this
+# post-settle call returns [4.938,7.445,4.938] once the labels have actually
+# shaped. Rendering the pre-settle box's derived camera reproduces --frame's
+# own picture pixel-for-pixel; this (later, larger) box's camera does not.
+# nodes/3d/label3d/Component.tsx's own doc has the full citation — do not
+# move this call earlier to "fix" the mismatch, since that would change what
+# --emit-bounds reports for every OTHER scene too.
 func _write_bounds(target: Node) -> void:
 	if BOUNDS_OUT == "":
 		return

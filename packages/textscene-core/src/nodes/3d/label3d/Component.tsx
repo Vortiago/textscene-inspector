@@ -20,33 +20,64 @@
  * role `nodeTransform.ts`'s own scale plays for the node's authored
  * transform.
  *
- * `boundsProxySizePx` sizes an invisible `<mesh>` alongside the lazy-loaded
- * real glyphs — the same `visible={false}` bounds-proxy pattern
+ * BOUNDS PROXY — what it is and, at length, what it is NOT:
+ *
+ * `frameSceneBounds.ts` (auto-fit on load, F-to-frame) unions every rendered
+ * Mesh's world AABB. Because `LabelGlyphs` is lazy, a fresh Label3D has
+ * nothing in the scene graph for that union to find until the atlas chunk
+ * resolves — measured: without a synchronous stand-in, a scene framed as if
+ * every Label3D caption were simply absent, since `CameraFit`'s last retry
+ * can fire before the chunk lands. `LABEL3D_BOUNDS_PROXY` is that stand-in:
+ * an invisible `<mesh>`, the same `visible={false}` pattern
  * `nodes/3d/csg/CsgPrimitive.tsx`'s `CSG_BOUNDS_PROXY` uses for its own
- * async-loaded content, and for the same reason: `TscnCanvas.tsx`'s
- * `CameraFit` can lock in its LAST auto-frame retry before an async mesh
- * exists at all (measured: without a synchronous stand-in, a scene framed
- * as if every Label3D caption were absent, since `React.lazy` gives
- * `frameSceneBounds` nothing to find until the glyph chunk resolves — a
- * one-shot pending-count signal is not a safe substitute, since another
- * resource's fast pending→settled transition can retire that ONE shot before
- * this label's own request even registers). `frameSceneBounds` already
- * prefers framing too LARGE over too small (its own CSG-proxy comment), but
- * "too large" still has to be reasonably close: a flat text.length × average
- * advance first cut (this file's own earlier version) measurably over-widened
- * scenes where the label's own extent — not a large mesh alongside it —
- * dominates the union (`unit-material-heightmap.tscn`'s single caption
- * pulled the whole frame ~16% wider than the baseline's, since the true
- * width of a 29-char string with several spaces is nowhere near 29×the
- * font's OVERALL average advance — a space is under half that average).
- * Summing each character's OWN advance (`getGlyphAdvanceUnits`, falling back
- * to the average only for a character outside the vendored charset) is
- * `textLayout.ts`'s `glyphAdvancePx` in every respect but kerning — and
- * `openSansMetrics.ts`'s own doc notes this font's vendored charset carries
- * no kerning pairs at all, so the two are the SAME number for every Label3D
- * this renderer ships. `getLinePitchPx` is the SAME per-line pitch the real
- * layout uses too, shaping or not, since it depends only on `font_size`/
- * `line_spacing`. Godot px; the caller scales by `pixel_size`.
+ * async-loaded content.
+ *
+ * The proxy is a ZERO-SIZE box at the label's own local origin — a point,
+ * not a rect sized from the caption's text/font. This looks like it throws
+ * away information the renderer has (`glyphLayout.ts` computes the exact
+ * shaped extent), but it does not: Godot's own reference camera never sees
+ * that extent either, and matching a richer estimate measurably made this
+ * renderer's own framing WORSE, not better. Measured directly, on
+ * `unit-torus-mesh.tscn`, via a bootstrap that wrote `_scene_bounds()`
+ * (`scripts/godot-ref/run.mjs`) at two points — immediately after
+ * `add_child()` (mirroring `_place_camera`, which runs synchronously,
+ * before any frame settles) and again after `_settle()` (mirroring
+ * `--emit-bounds`, which `_write_bounds` calls only after the reference PNG
+ * is already saved):
+ *
+ *   pre-settle:  position [-1.5, -2.0, -1.5]   size [3.0, 4.0, 3.0]
+ *   post-settle: position [-2.469, -4.469, -2.469]  size [4.938, 7.445, 4.938]
+ *
+ * The pre-settle box is exactly the TorusMesh's own extent (outer radius
+ * 1.5) unioned with the TWO Label3D nodes' bare Y positions (+2 and -2,
+ * `Title`/`Description` in that fixture) — each Label3D contributing only
+ * its ORIGIN, no width, no height, no billboard inflation. The post-settle
+ * box is the much larger one `label_3d.cpp:625-638`'s billboard-cube
+ * inflation predicts once the label has actually shaped its text. Rendering
+ * the exact camera the pre-settle box derives (`--camera 1.9226,2.1905,3.5197
+ * --look-at 0,0,0`) reproduces Godot's own `--frame` picture pixel-for-pixel;
+ * `--emit-bounds`'s later, larger box does not. So `--frame` — the camera
+ * every golden is measured against — is placed from a scene-graph state in
+ * which Label3D has not yet shaped anything: `_place_camera` runs before
+ * `_settle()`, and Label3D's AABB update is not synchronous with
+ * `add_child()` despite `NOTIFICATION_ENTER_TREE` requesting it (some part
+ * of TextServer shaping evidently lands a frame or more later). `--emit-
+ * bounds` is a true, correct read of the FINAL scene bounds; it is simply
+ * not the number that produced the reference picture, because it is read
+ * later, after the picture was already saved.
+ *
+ * The practical upshot: no estimate of a Label3D's rendered extent —
+ * average-advance, per-character shaped width, or the exact billboard-cube
+ * geometry Godot itself eventually settles on — belongs in a framing
+ * decision, because Godot's own framing decision never has that number
+ * available either. A point is not an approximation of "how big the label
+ * is"; it is the precise, measured contribution a Label3D makes to the
+ * bounds that actually placed the camera. It also does not need to inherit
+ * `useBillboard`'s per-frame rotation to stay correct: a point has no
+ * extent to be wrong about under rotation, so the proxy sits directly
+ * inside the same group `LabelGlyphs` mounts into, with no separate
+ * unrotated sibling required (an earlier version needed one for the cube
+ * proxy specifically, which was not rotation-invariant off-axis).
  */
 
 import { Suspense, lazy, useMemo, useRef } from 'react';
@@ -56,42 +87,11 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
-import {
-  getAverageAdvancePx,
-  getGlyphAdvanceUnits,
-  getLinePitchPx,
-  OPEN_SANS_METRICS,
-} from '../../../r3f/controls/native/text/openSansMetrics';
 
 const LabelGlyphs = lazy(() => import('./LabelGlyphs'));
 
 /** Marks the invisible bounds proxy — mirrors `CsgPrimitive.tsx`'s `CSG_BOUNDS_PROXY`, see this file's own doc. */
 export const LABEL3D_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
-
-/** One character's advance, Godot px — `textLayout.ts`'s `glyphAdvancePx` minus kerning (this file's own doc says why that is a no-op here). */
-function glyphAdvancePxNoKerning(ch: string, fontSizePx: number): number {
-  const units = getGlyphAdvanceUnits(ch);
-  if (units === null) return getAverageAdvancePx(fontSizePx);
-  return units * (fontSizePx / OPEN_SANS_METRICS.unitsPerEm);
-}
-
-/** Sums each character's own advance — the real shaped width for this font (see this file's own doc on kerning). */
-function lineWidthPx(line: string, fontSizePx: number): number {
-  let width = 0;
-  for (const ch of line) width += glyphAdvancePxNoKerning(ch, fontSizePx);
-  return width;
-}
-
-function boundsProxySizePx(
-  text: string,
-  fontSizePx: number,
-  lineSpacingPx: number
-): { widthPx: number; heightPx: number } {
-  const lines = text.split('\n');
-  const widthPx = lines.reduce((max, line) => Math.max(max, lineWidthPx(line, fontSizePx)), 0);
-  const heightPx = lines.length * getLinePitchPx(fontSizePx, lineSpacingPx);
-  return { widthPx, heightPx };
-}
 
 export function Label3D({ node, children }: NodeComponentProps) {
   const { showLabels } = useViewportMode();
@@ -107,11 +107,6 @@ export function Label3D({ node, children }: NodeComponentProps) {
   // `TscnRenderer.updateLabels()`; `useBillboard` is that behaviour, shared
   // with Sprite3D so both slices implement Godot's modes identically.
   useBillboard(groupRef, properties.billboard);
-
-  const proxy = useMemo(
-    () => boundsProxySizePx(properties.text, properties.font_size, properties.line_spacing),
-    [properties.text, properties.font_size, properties.line_spacing]
-  );
 
   // On by default to match Godot (ADR-0008 point 4 superseded — see its
   // amendment note); the Labels toggle can hide it. When off, render an
@@ -135,18 +130,17 @@ export function Label3D({ node, children }: NodeComponentProps) {
         scale={scale}
         userData={{ billboardMode: properties.billboard, isLabel3D: true }}
       >
-        {proxy.widthPx > 0 && proxy.heightPx > 0 && (
-          <mesh visible={false} userData={LABEL3D_BOUNDS_PROXY}>
-            <planeGeometry
-              args={[proxy.widthPx * properties.pixel_size, proxy.heightPx * properties.pixel_size]}
-            />
-          </mesh>
-        )}
         <group scale={properties.pixel_size}>
           <Suspense fallback={null}>
             <LabelGlyphs properties={properties} />
           </Suspense>
         </group>
+        {/* Zero-size — a point at the node's own origin, see this file's own
+            doc for why that (not a text-sized estimate) is what matches
+            Godot's own framing camera. */}
+        <mesh visible={false} userData={LABEL3D_BOUNDS_PROXY}>
+          <boxGeometry args={[0, 0, 0]} />
+        </mesh>
       </group>
       {/* Descendants sit in a SIBLING group carrying the same transform, not
           inside the label's own group: `billboard` rewrites the group's

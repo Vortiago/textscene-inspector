@@ -172,6 +172,17 @@ export interface TextRunProps {
   outlineTint?: Color;
   /** Additional dilation for a second (outline) edge, forwarded to `createMsdfMaterial`. 0 (default) disables the outline band. */
   outlineBias?: number;
+  /**
+   * Tags the mesh `tscnFrameExcluded`, which `frameSceneBounds.ts` skips —
+   * for Label3D's own use ONLY (`LabelGlyphs.tsx`'s own doc has the
+   * measurement): its real glyph geometry mounts asynchronously and, when it
+   * happens to land inside `CameraFit`'s retry window, measurably grows the
+   * auto-fit bounds past what Godot's own reference camera ever sees (it is
+   * placed before ANY Label3D has shaped text, every time). Omitted
+   * (default) for every 2D Control caller — their text is real, present
+   * content with no such asynchronous-mount/framing quirk to route around.
+   */
+  frameExcluded?: boolean;
 }
 
 export function TextRun({
@@ -186,6 +197,7 @@ export function TextRun({
   side,
   outlineTint,
   outlineBias,
+  frameExcluded,
 }: TextRunProps) {
   const geometry = useMemo(() => {
     const { positions, uvs, indices } = buildGlyphQuadArrays(layout, fontSizePx, skew);
@@ -232,5 +244,12 @@ export function TextRun({
   useEffect(() => () => geometry.dispose(), [geometry]);
   useEffect(() => () => material.dispose(), [material]);
 
-  return <mesh geometry={geometry} material={material} renderOrder={renderOrder} />;
+  return (
+    <mesh
+      geometry={geometry}
+      material={material}
+      renderOrder={renderOrder}
+      userData={frameExcluded ? { tscnFrameExcluded: true } : undefined}
+    />
+  );
 }

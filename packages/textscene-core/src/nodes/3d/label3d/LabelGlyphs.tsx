@@ -22,6 +22,20 @@
  * near-identical shape darken every anti-aliased edge, which at a small
  * on-screen caption (most of its fragments ARE edge fragments) rendered a
  * solid blob instead of a thin outline.
+ *
+ * Every `<TextRun>` here passes `frameExcluded` — this mesh must never
+ * contribute to `frameSceneBounds.ts`'s auto-fit. Measured on
+ * `unit-material-heightmap.tscn`: `CameraFit`'s later retries sometimes land
+ * AFTER this lazy chunk resolves, and the mounted glyph mesh's own extent
+ * then grows the auto-fit bounds — but Godot's own reference camera never
+ * sees it (`Component.tsx`'s own doc has the full measurement: `_place_camera`
+ * runs before ANY Label3D has shaped text, every time, so it is placed from
+ * bounds where every Label3D contributes only its origin). Whether this
+ * chunk happens to resolve inside the retry window is incidental load
+ * timing, not something a golden should depend on either way — excluding it
+ * outright is what keeps the auto-fit deterministic AND matching Godot,
+ * instead of matching Godot only when the network/cache happens to be slow
+ * enough.
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
@@ -98,6 +112,7 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
               side={side}
               outlineTint={drawOutline ? properties.outline_modulate : undefined}
               outlineBias={outlineBias}
+              frameExcluded
             />
           </group>
         );
