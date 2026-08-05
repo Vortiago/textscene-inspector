@@ -158,7 +158,10 @@ validatorRegistry.registerAll('ItemList', {
   // written. The one guard is ERR_FAIL_COND(!Math::is_finite(p_scale)) at
   // item_list.cpp:2098, and `inf` / `inf_neg` / `nan` are exactly the spellings
   // the unbounded numeric check already refuses, so no extra bound is needed.
-  icon_scale: v.float('icon_scale'),
+  // set_icon_scale (item_list.cpp:2098) opens with
+  // ERR_FAIL_COND(!Math::is_finite), the only bound on this property:
+  // item_list.cpp:2410 is PROPERTY_HINT_NONE and negatives are legal.
+  icon_scale: v.float('icon_scale', { finite: 'item_list.cpp:2098' }),
   // item_list.cpp:2411, Variant::VECTOR2I, PROPERTY_HINT_NONE ("suffix:px" only).
   // set_fixed_icon_size (item_list.cpp:691-699) assigns past an equality
   // early-out, so neither component has a floor: shape only.

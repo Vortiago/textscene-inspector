@@ -4,6 +4,48 @@ import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
 
 /**
+ * The float spellings Godot's parser accepts that `parseFloat` does not.
+ *
+ * `variant_parser.cpp:150-155` (the string form) and `:701-706` (the token
+ * form) both recognise these, and the serializer writes them back, so a `.tscn`
+ * carrying `zoom = inf` is a file Godot produced and reloads. `parseFloat`
+ * returns NaN for every one of them, which made the shared numeric validator
+ * report a FORMAT error on a legal value.
+ *
+ * Being non-finite is not by itself a defect. Only five setters in `scene/`
+ * refuse it (`ERR_FAIL_COND(!is_finite(...))`), and those five say so with the
+ * `finite` grounding rather than relying on a parse accident.
+ */
+const NON_FINITE_FLOATS: Readonly<Record<string, number>> = {
+  inf: Infinity,
+  '-inf': -Infinity,
+  inf_neg: -Infinity,
+  nan: NaN,
+};
+
+/**
+ * A TSCN float literal as a number, or `null` when the text is not one.
+ *
+ * `null` rather than NaN is the miss signal precisely because `nan` is itself a
+ * legal value: the two must stay distinguishable.
+ */
+export function parseGodotFloat(value: string): number | null {
+  const trimmed = value.trim();
+  if (Object.prototype.hasOwnProperty.call(NON_FINITE_FLOATS, trimmed)) {
+    return NON_FINITE_FLOATS[trimmed]!;
+  }
+  // `parseFloat` also reads JavaScript's own spellings, which Godot's tokenizer
+  // does not: it matches the four above and nothing else. Rejected by exact
+  // name rather than by testing the result for non-finiteness, because
+  // `1e999` overflows to infinity in Godot too and is a legal literal.
+  if (trimmed === 'Infinity' || trimmed === '-Infinity' || trimmed === '+Infinity') {
+    return null;
+  }
+  const num = parseFloat(trimmed);
+  return Number.isNaN(num) ? null : num;
+}
+
+/**
  * Creates a boolean validator function
  * Validates that a value is either 'true' or 'false'
  */
@@ -86,9 +128,20 @@ export function createNumericRangeValidator(
   maxSeverity: ParseError['severity'] = valueSeverity
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
-    const num = parseAsInt ? parseInt(value, 10) : parseFloat(value);
-    if (isNaN(num)) {
-      return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
+    let num: number;
+    if (parseAsInt) {
+      num = parseInt(value, 10);
+      if (isNaN(num)) {
+        return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
+      }
+    } else {
+      // `inf`/`nan` are legal float literals, so the miss signal is null and a
+      // parsed NaN falls through to the range checks, which it never trips.
+      const parsed = parseGodotFloat(value);
+      if (parsed === null) {
+        return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
+      }
+      num = parsed;
     }
 
     // Check min constraint

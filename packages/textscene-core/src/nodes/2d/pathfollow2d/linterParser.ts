@@ -7,7 +7,10 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('PathFollow2D', {
-  progress: v.float('progress'),
+  // set_progress (path_2d.cpp:425) opens with ERR_FAIL_COND(!isfinite), so
+  // `inf`/`nan` are refused here even though they are legal float literals
+  // elsewhere. The path offset itself is unbounded.
+  progress: v.float('progress', { finite: 'path_2d.cpp:425' }),
   progress_ratio: v.float('progress_ratio'),
   h_offset: v.float('h_offset'),
   v_offset: v.float('v_offset'),

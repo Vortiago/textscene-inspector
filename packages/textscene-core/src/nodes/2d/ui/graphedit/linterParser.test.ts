@@ -103,7 +103,9 @@ describe('GraphEdit strict validators', () => {
         kind: 'enforced',
         cite: 'graph_edit.cpp:2907, graph_edit.cpp:3081',
       },
-      zoom_step: { kind: 'enforced', cite: 'graph_edit.cpp:2465' },
+      // Two separate guards on one setter: the finite check at :2466 and the
+      // std::abs rewrite at :2465, both recorded.
+      zoom_step: { kind: 'enforced', cite: 'graph_edit.cpp:2466, graph_edit.cpp:2465' },
     });
   });
 

@@ -147,7 +147,10 @@ validatorRegistry.registerAll('GraphEdit', {
   // graph_edit.cpp:3089: set_zoom_step opens with
   // `p_zoom_step = std::abs(p_zoom_step);` (graph_edit.cpp:2465), so a negative
   // step is silently rewritten to its magnitude, an altered value, hence ERROR.
-  zoom_step: v.nonNegativeFloat('zoom_step', { enforced: { min: 'graph_edit.cpp:2465' } }),
+  zoom_step: v.nonNegativeFloat('zoom_step', {
+    enforced: { min: 'graph_edit.cpp:2465' },
+    finite: 'graph_edit.cpp:2466',
+  }),
 
   // "Minimap" group, graph_edit.cpp:3091-3094.
   // graph_edit.cpp:3092: BOOL with PROPERTY_HINT_GROUP_ENABLE, which only makes

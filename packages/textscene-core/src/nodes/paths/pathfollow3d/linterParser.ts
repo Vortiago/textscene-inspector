@@ -9,7 +9,10 @@ import { v } from '../../../linter/validators/index.js';
 const ROTATION_MODE = { 0: 'NONE', 1: 'Y', 2: 'XY', 3: 'XYZ', 4: 'ORIENTED' };
 
 validatorRegistry.registerAll('PathFollow3D', {
-  progress: v.float('progress'),
+  // set_progress (path_3d.cpp:450) opens with ERR_FAIL_COND(!isfinite), so
+  // `inf`/`nan` are refused here even though they are legal float literals
+  // elsewhere. The path offset itself is unbounded.
+  progress: v.float('progress', { finite: 'path_3d.cpp:450' }),
   progress_ratio: v.float('progress_ratio'),
   h_offset: v.float('h_offset'),
   v_offset: v.float('v_offset'),

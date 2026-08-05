@@ -92,6 +92,11 @@ real parser instead of the decode/build split. Conformance:
   A `p_flags & MASK` setter is BOTH tiers and needs `maskedBitField`, not a min/max:
   a bit outside the mask is dropped (error), a bit inside it but missing from the
   `FLAGS` hint is kept yet unreachable from the inspector (warning).
+  `inf`/`-inf`/`inf_neg`/`nan` are LEGAL float literals that Godot writes and reloads
+  (`variant_parser.cpp:150-155`), so every float validator accepts them. Only a setter
+  opening with `ERR_FAIL_COND(!is_finite(...))` refuses one, and it says so with
+  `{ finite: 'file:line' }` — a range bound cannot stand in, since every comparison
+  against `nan` is false.
 - **`ADD_PROPERTY` gives the declared type; the GETTER decides the serialised form.**
   A `TypedArray<T>` getter behind a `PropertyInfo(Variant::PACKED_*, …)` serialises as
   `Array[T]([…])`, not `PackedTArray(…)` — all five of CodeEdit's array properties do

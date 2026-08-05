@@ -71,10 +71,15 @@ validatorRegistry.registerAll('TextureProgressBar', {
   // outside [0, 360] with `Math::fposmodp` rather than rejecting it: still an
   // alteration, so still enforcement. Same degrees-not-radians storage as
   // radial_fill_degrees (rad_init_angle / 360 at texture_progress_bar.cpp:494).
+  // The same setter opens with ERR_FAIL_COND_MSG(!Math::is_finite) at
+  // texture_progress_bar.cpp:592, a separate guard from the wrap below. The
+  // range alone would not cover it: `inf` happens to exceed 360, but every
+  // comparison against `nan` is false, so it would pass unreported.
   radial_initial_angle: v.float('radial_initial_angle', {
     min: 0,
     max: 360,
     enforced: 'texture_progress_bar.cpp:594',
+    finite: 'texture_progress_bar.cpp:592',
   }),
 
   // texture_progress_bar.cpp:49-59 — set_stretch_margin assigns p_size

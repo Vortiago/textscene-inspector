@@ -29,6 +29,7 @@ import {
   createEnumValidator,
   createNumericRangeValidator,
   createPositiveIntegerValidator,
+  parseGodotFloat,
 } from './commonValidators.js';
 import {
   createNodePathValidator,
@@ -86,6 +87,17 @@ export interface Grounding {
   enforced?: string | { min?: string; max?: string };
   /** `file:line` of the ADD_PROPERTY whose PROPERTY_HINT_RANGE states the bound. */
   hinted?: string | { min?: string; max?: string };
+  /**
+   * `file:line` of an `ERR_FAIL_COND(!is_finite(...))` in the setter.
+   *
+   * `inf` and `nan` are legal TSCN float literals that Godot writes and reloads
+   * (`variant_parser.cpp:150-155`), so the shared numeric validator accepts
+   * them. Exactly five setters in `scene/` refuse one, and each names its guard
+   * here. Before this existed they were rejected everywhere by a `parseFloat`
+   * accident, which was right for these five and a false positive on every
+   * other float property.
+   */
+  finite?: string;
 }
 
 /** The citation covering one end of a bound, if the grounding names it. */
@@ -150,6 +162,52 @@ export function accepts(validator: PropertyValidator, description: string): Prop
 export function shape(validator: PropertyValidator, description: string): PropertyValidator {
   validator.formatOnly = true;
   return accepts(validator, description);
+}
+
+/**
+ * Reject `inf` / `-inf` / `inf_neg` / `nan` ahead of the range check, for the
+ * handful of setters that open with `ERR_FAIL_COND(!is_finite(...))`.
+ *
+ * It runs FIRST because a range check cannot express it: `Infinity > max` is
+ * true so a bounded property would report the wrong reason, and every NaN
+ * comparison is false so an unbounded one would report nothing at all.
+ */
+function withFiniteGuard(
+  validator: PropertyValidator,
+  name: string,
+  cite: string
+): PropertyValidator {
+  const guarded: PropertyValidator = (key, value, line) => {
+    const parsed = parseGodotFloat(value);
+    if (parsed !== null && !Number.isFinite(parsed)) {
+      return propertyError(
+        key,
+        line,
+        `Property '${name}' must be finite; Godot's setter refuses "${value.trim()}"`,
+        valueCode(name)
+      );
+    }
+    return validator(key, value, line);
+  };
+  guarded.accepts = validator.accepts;
+  // Keep BOTH citations when the property also carries a range bound, the same
+  // rule `ground` follows: the finite guard and the range guard are separate
+  // lines in the setter, and dropping either makes it uncheckable.
+  const inner = validator.grounding?.cite;
+  guarded.grounding = {
+    kind: 'enforced',
+    cite: inner && inner !== cite ? `${cite}, ${inner}` : cite,
+  };
+  return guarded;
+}
+
+/** Apply `withFiniteGuard` only when the caller named a guard. */
+function maybeFinite(
+  name: string,
+  opts: Grounding,
+  validator: PropertyValidator
+): PropertyValidator {
+  return opts.finite ? withFiniteGuard(validator, name, opts.finite) : validator;
 }
 
 /**
@@ -218,7 +276,7 @@ export const v = {
    * Default `min = null` (no lower bound), `max = null` (no upper bound).
    */
   float(name: string, opts: FloatOpts = {}): PropertyValidator {
-    return ground(
+    return maybeFinite(name, opts, ground(
       accepts(
         createNumericRangeValidator(
           name,
@@ -235,7 +293,7 @@ export const v = {
       ),
       opts,
       opts.min !== undefined || opts.max !== undefined
-    );
+    ));
   },
 
   /**
@@ -280,7 +338,7 @@ export const v = {
 
   /** Float ≥ 0. Convenience alias for `v.float(name, { min: 0 })`. */
   nonNegativeFloat(name: string, opts: Grounding = {}): PropertyValidator {
-    return ground(
+    return maybeFinite(name, opts, ground(
       accepts(
         createNumericRangeValidator(
           name,
@@ -295,7 +353,7 @@ export const v = {
         'float >= 0'
       ),
       opts
-    );
+    ));
   },
 
   /** Float > 0 (strict). Useful for distances, energies, near/far planes. */
