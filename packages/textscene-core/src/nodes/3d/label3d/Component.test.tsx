@@ -106,6 +106,28 @@ describe('<Label3D>', () => {
     expect(geometry.parameters.height).toBeGreaterThan(0);
   });
 
+  it('sizes the bounds-proxy width from PER-CHARACTER advances, not text.length × the flat average', async () => {
+    // Regression pin: an earlier version used `text.length * getAverageAdvancePx`,
+    // which measurably over-widened auto-framing for a caption with several
+    // spaces (a space's own advance is under half the font's average) —
+    // measured on unit-material-heightmap.tscn, ~16% wider than the real
+    // shaped width. A space-heavy string's proxy must come out narrower
+    // than that flat estimate would give, one Hello-sized "no spaces"
+    // comparison string at a time so this doesn't depend on the exact
+    // average-advance constant.
+    const noSpaces = await renderLabel(makeNode({ name: 'A', text: 'AAAAA', pixel_size: 0.01 }));
+    const withSpaces = await renderLabel(makeNode({ name: 'A', text: 'A A A', pixel_size: 0.01 }));
+    // 'A A A' (5 chars: 3 'A' + 2 spaces) vs 'AAAAA' (5 'A's): if width were
+    // flat text.length-based, both would be identical. A per-character sum
+    // must come out narrower, since a space advances less than 'A'.
+    const widthOf = (r: Awaited<ReturnType<typeof renderLabel>>) => {
+      const named = r.scene.findByProps({ name: 'A' });
+      const proxy = named.children.find((c) => c.type === 'Mesh')!.instance as THREE.Mesh;
+      return (proxy.geometry as unknown as { parameters: { width: number } }).parameters.width;
+    };
+    expect(widthOf(withSpaces)).toBeLessThan(widthOf(noSpaces));
+  });
+
   it('billboard=ENABLED copies the camera quaternion onto the named group after a frame', async () => {
     const renderer = await renderLabel(makeNode({ billboard: BillboardMode.BILLBOARD_ENABLED }));
     const group = renderer.scene.findByProps({ name: 'Label' }).instance as THREE.Group;

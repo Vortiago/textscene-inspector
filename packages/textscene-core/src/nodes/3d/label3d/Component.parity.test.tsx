@@ -23,6 +23,13 @@ describe('Label3D parser parity', () => {
   it('outline_size defaults to 12', () => {
     expect(parseLabel3D(heading, {}).outline_size).toBe(12);
   });
+  it('font_size defaults to 32 when the scene omits it', () => {
+    expect(parseLabel3D(heading, {}).font_size).toBe(32);
+    expect(parseLabel3D(heading, { font_size: '64' }).font_size).toBe(64);
+  });
+  it('line_spacing defaults to 0 when the scene omits it', () => {
+    expect(parseLabel3D(heading, {}).line_spacing).toBe(0);
+  });
   it('double_sided defaults to true; parses false', () => {
     expect(parseLabel3D(heading, {}).double_sided).toBe(true);
     expect(parseLabel3D(heading, { double_sided: 'false' }).double_sided).toBe(false);

@@ -20,9 +20,8 @@
  * role `nodeTransform.ts`'s own scale plays for the node's authored
  * transform.
  *
- * `boundsProxySizePx` sizes an invisible `<mesh>` by a CHEAP estimate
- * (average glyph advance × char count, no shaping, no atlas) alongside the
- * lazy-loaded real glyphs — the same `visible={false}` bounds-proxy pattern
+ * `boundsProxySizePx` sizes an invisible `<mesh>` alongside the lazy-loaded
+ * real glyphs — the same `visible={false}` bounds-proxy pattern
  * `nodes/3d/csg/CsgPrimitive.tsx`'s `CSG_BOUNDS_PROXY` uses for its own
  * async-loaded content, and for the same reason: `TscnCanvas.tsx`'s
  * `CameraFit` can lock in its LAST auto-frame retry before an async mesh
@@ -32,9 +31,22 @@
  * one-shot pending-count signal is not a safe substitute, since another
  * resource's fast pending→settled transition can retire that ONE shot before
  * this label's own request even registers). `frameSceneBounds` already
- * prefers framing too LARGE over too small (its own CSG-proxy comment), so
- * an approximate estimate — never exact, since it skips real shaping — is
- * the right trade here too.
+ * prefers framing too LARGE over too small (its own CSG-proxy comment), but
+ * "too large" still has to be reasonably close: a flat text.length × average
+ * advance first cut (this file's own earlier version) measurably over-widened
+ * scenes where the label's own extent — not a large mesh alongside it —
+ * dominates the union (`unit-material-heightmap.tscn`'s single caption
+ * pulled the whole frame ~16% wider than the baseline's, since the true
+ * width of a 29-char string with several spaces is nowhere near 29×the
+ * font's OVERALL average advance — a space is under half that average).
+ * Summing each character's OWN advance (`getGlyphAdvanceUnits`, falling back
+ * to the average only for a character outside the vendored charset) is
+ * `textLayout.ts`'s `glyphAdvancePx` in every respect but kerning — and
+ * `openSansMetrics.ts`'s own doc notes this font's vendored charset carries
+ * no kerning pairs at all, so the two are the SAME number for every Label3D
+ * this renderer ships. `getLinePitchPx` is the SAME per-line pitch the real
+ * layout uses too, shaping or not, since it depends only on `font_size`/
+ * `line_spacing`. Godot px; the caller scales by `pixel_size`.
  */
 
 import { Suspense, lazy, useMemo, useRef } from 'react';
@@ -44,30 +56,39 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
-import { getAverageAdvancePx, getLinePitchPx } from '../../../r3f/controls/native/text/openSansMetrics';
+import {
+  getAverageAdvancePx,
+  getGlyphAdvanceUnits,
+  getLinePitchPx,
+  OPEN_SANS_METRICS,
+} from '../../../r3f/controls/native/text/openSansMetrics';
 
 const LabelGlyphs = lazy(() => import('./LabelGlyphs'));
 
 /** Marks the invisible bounds proxy — mirrors `CsgPrimitive.tsx`'s `CSG_BOUNDS_PROXY`, see this file's own doc. */
 export const LABEL3D_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
-/**
- * A same-order-of-magnitude (text.length × average glyph advance) stand-in
- * for the real shaped size, computed with NO shaping and NO atlas — the
- * average-advance metric already vendored for exactly this "no real glyph
- * data available" case (`textLayout.ts`'s `glyphAdvancePx` fallback for an
- * unbaked character; `getLinePitchPx` is the SAME per-line pitch the real
- * layout uses, shaping or not, since it depends only on `font_size`/
- * `line_spacing`). Godot px; the caller scales by `pixel_size`.
- */
+/** One character's advance, Godot px — `textLayout.ts`'s `glyphAdvancePx` minus kerning (this file's own doc says why that is a no-op here). */
+function glyphAdvancePxNoKerning(ch: string, fontSizePx: number): number {
+  const units = getGlyphAdvanceUnits(ch);
+  if (units === null) return getAverageAdvancePx(fontSizePx);
+  return units * (fontSizePx / OPEN_SANS_METRICS.unitsPerEm);
+}
+
+/** Sums each character's own advance — the real shaped width for this font (see this file's own doc on kerning). */
+function lineWidthPx(line: string, fontSizePx: number): number {
+  let width = 0;
+  for (const ch of line) width += glyphAdvancePxNoKerning(ch, fontSizePx);
+  return width;
+}
+
 function boundsProxySizePx(
   text: string,
   fontSizePx: number,
   lineSpacingPx: number
 ): { widthPx: number; heightPx: number } {
   const lines = text.split('\n');
-  const longestLineLength = lines.reduce((max, line) => Math.max(max, line.length), 0);
-  const widthPx = longestLineLength * getAverageAdvancePx(fontSizePx);
+  const widthPx = lines.reduce((max, line) => Math.max(max, lineWidthPx(line, fontSizePx)), 0);
   const heightPx = lines.length * getLinePitchPx(fontSizePx, lineSpacingPx);
   return { widthPx, heightPx };
 }

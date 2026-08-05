@@ -78,7 +78,18 @@ describe('<LabelGlyphs>', () => {
     const material = mesh.material as THREE.ShaderMaterial;
     const srgbToLinear = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
     expect(material.uniforms.uColor!.value.x).toBeCloseTo(srgbToLinear(0.5), 4);
+    // `uOpacity`, a shader uniform the fragment shader multiplies into alpha
+    // itself — NOT `material.opacity` (the built-in THREE.Material field),
+    // which a hand-written ShaderMaterial never reads unless the shader
+    // says so, and this one does not: `opacity` reaching the glyph's actual
+    // alpha is exactly what this asserts.
     expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.5, 6);
+  });
+
+  it('uses a transparent material, so a translucent modulate blends over what is behind it', async () => {
+    const renderer = await render(props());
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect((mesh.material as THREE.Material).transparent).toBe(true);
   });
 
   it('no_depth_test=true → material.depthTest === false; default false → true', async () => {
@@ -147,18 +158,39 @@ describe('<LabelGlyphs>', () => {
   });
 
   describe('multi-line text', () => {
-    it('renders one line-group per newline-separated line', async () => {
-      const renderer = await render(props({ text: 'A\nB\nC' }));
-      const groups = renderer.scene.children;
+    it('renders one line-group per newline-separated line, each exactly one linePitchPx apart', async () => {
+      const renderer = await render(props({ text: 'A\nB\nC', font_size: 32 }));
+      const groups = renderer.scene.children.map((c) => c.instance as THREE.Group);
       expect(groups.length).toBe(3);
+      // Every line-group's own Y matches the previous one exactly one line
+      // pitch further down — the render-level equivalent of the deleted
+      // Component.multiline.test.tsx's "grows the quad by one line height
+      // per newline" (there measured as PlaneGeometry.height deltas; here as
+      // each line's own group position, since a line is now its own mesh
+      // rather than one merged canvas).
+      const step0 = groups[0]!.position.y - groups[1]!.position.y;
+      const step1 = groups[1]!.position.y - groups[2]!.position.y;
+      expect(step0).toBeGreaterThan(0);
+      expect(step0).toBeCloseTo(step1, 6);
     });
 
-    it('sizes the merged geometry from the widest line, not the concatenated string', async () => {
+    it('sizes each line-group from ITS OWN width, not the concatenated string — the widest line bounds the whole label', async () => {
       const oneLine = await render(props({ text: 'ABCDEFG' }));
       const twoLines = await render(props({ text: 'AB\nCDEFG' }));
       const oneMesh = oneLine.scene.findByType('Mesh').instance as THREE.Mesh;
-      const twoMesh = twoLines.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh)[1]!; // widest ("CDEFG") line's own mesh
-      expect(boundingSize(twoMesh).x).toBeLessThan(boundingSize(oneMesh).x);
+      const twoMeshes = twoLines.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
+      // "AB\nCDEFG" concatenates to the SAME 7 glyphs as "ABCDEFG" — a
+      // single-fillText/single-merged-geometry implementation would report
+      // the same overall width for both. Neither of the two-line render's
+      // OWN lines ("AB", "CDEFG") is as wide as the one-line render's single
+      // "ABCDEFG" line, which is the render-level equivalent of the deleted
+      // Component.multiline.test.tsx's "sizes the quad from the widest
+      // line, not the concatenated string" (there one PlaneGeometry; here
+      // one mesh per line, so the check is over ALL of them, not just one).
+      const oneWidth = boundingSize(oneMesh).x;
+      for (const mesh of twoMeshes) {
+        expect(boundingSize(mesh).x).toBeLessThan(oneWidth);
+      }
     });
 
     it('counts a trailing newline as an empty final line, like Godot', async () => {

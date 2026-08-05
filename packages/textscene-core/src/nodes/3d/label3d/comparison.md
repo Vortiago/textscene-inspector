@@ -133,13 +133,26 @@ is not a safe substitute either: another resource's fast pending→settled trans
 retire that ONE shot before a Label3D's own request even registers.
 
 The fix mirrors `nodes/3d/csg/CsgPrimitive.tsx`'s own async-loading precedent: `Component.tsx`
-renders an invisible (`visible={false}`), always-present bounds-proxy `<mesh>` sized by a
-CHEAP estimate — `text.length × average glyph advance` (no shaping, no atlas;
-`openSansMetrics.ts`'s existing "no baked glyph data" fallback constant) for width,
-`getLinePitchPx` for height — so `frameSceneBounds` always sees a reasonable approximation
-of the label's footprint from the very first synchronous render. `frameSceneBounds` already
-prefers framing too LARGE over too small (its own CSG-proxy comment); this proxy is the
-same trade, and is never exact since it skips real shaping.
+renders an invisible (`visible={false}`), always-present bounds-proxy `<mesh>`, sized by
+summing each character's OWN advance (`openSansMetrics.ts`'s `getGlyphAdvanceUnits`, the
+SAME per-character table `textLayout.ts`'s real shaping reads, so the two produce the SAME
+width for this font — its vendored charset carries no kerning pairs at all, which is the
+one thing the estimate skips) for width, `getLinePitchPx` for height — so `frameSceneBounds`
+always sees a reasonable approximation of the label's footprint from the very first
+synchronous render, with no atlas dependency (`openSansMetrics.ts` is a self-contained
+~12KB metrics table, unlike the ~300KB atlas `LabelGlyphs.tsx` alone pulls in).
+
+A cruder first cut (`text.length × the font's OVERALL average advance`, ignoring which
+characters those actually are) measurably over-widened the frame for a caption-dominated
+scene: a space's own advance is under half that average, so a multi-word caption's true
+width is nowhere near `length × average` once it carries several. Measured on
+`unit-material-heightmap.tscn`'s single 29-character caption (3 spaces): the flat estimate
+pulled the whole frame ≈16% wider than necessary (the torus/sphere/box itself measurably
+smaller on screen than the baseline's), while the per-character sum reproduces the real
+shaped width almost exactly (that scene's object came out within ~2.5% of the baseline's
+size). `frameSceneBounds` prefers framing too LARGE over too small (its own CSG-proxy
+comment) — but "too large" still has to stay close, once the label itself (not some large
+mesh alongside it) dominates the bounds union.
 
 ## Arbitration (representative sample, `pnpm ref:godot` vs `pnpm ref:ours`, restricted to disagreeing pixels)
 
@@ -149,15 +162,69 @@ identically). Ratio < 1 means the new render is closer to Godot than the baselin
 
 | Scene | Pixels disagreeing | Baseline Δ | New render Δ | Ratio | Direction |
 | --- | --- | --- | --- | --- | --- |
-| `unit-box-mesh` (small captions, default `outline_size` 12) | 3.33% | 2,889,575 | 4,209,918 | 1.457 | new render farther |
-| `unit-material-ao` (medium captions) | 1.23% | 2,590,028 | 1,905,753 | 0.732 | new render closer |
+| `unit-box-mesh` (small captions, default `outline_size` 12) | 1.76% | 2,793,797 | 2,954,800 | 1.058 | ≈ parity, new render marginally farther |
+| `unit-material-ao` (medium captions) | 1.23% | 2,554,690 | 1,870,802 | 0.732 | new render closer |
 | `example-hallway-mockup` (11 tiny captions) | 0.109% | 97,626 | 88,353 | 0.905 | new render closer |
 
-`unit-box-mesh` is the outlier: its two captions default `outline_size` to 12, well above
-the ≈4 (`font_size` 32) ceiling `MAX_DISTANCE_BIAS` imposes, so both captions render a
-visibly thinner outline than Godot's own — the accepted trade documented above. The other
-two samples are closer to Godot than the pre-MSDF canvas renderer was, consistent with
-using Godot's own vendored font instead of a host system font.
+`unit-box-mesh`'s two captions default `outline_size` to 12, well above the ≈4
+(`font_size` 32) ceiling `MAX_DISTANCE_BIAS` imposes, so both captions render a visibly
+thinner outline than Godot's own — the accepted trade documented above — yet the render is
+still essentially at parity with the pre-MSDF canvas renderer overall (ratio 1.058, down
+from an early build's 1.457 before the bounds-proxy width fix above; the outline-width gap
+alone is a much smaller effect than that framing bug was). The other two samples are
+closer to Godot than the pre-MSDF canvas renderer was, consistent with using Godot's own
+vendored font instead of a host system font.
+
+## Goldens moved (all 27 committed goldens whose fixture places a Label3D, vs the pre-MSDF baseline)
+
+Measured directly (`pnpm ref:ours <fixture> --frame`, diffed byte-for-byte against each
+committed `scripts/visual/baselines/<name>.png`) rather than through `pnpm test:visual`,
+whose full run repeatedly stalled indefinitely on this host under concurrent load from
+other sessions; this reaches every scene `pnpm test:visual` would, sequentially, with the
+same capture path. 24 of the 27 diff directly; the remaining 3 additionally click-select a
+node in the tree (`select:` in `scenes.mjs`), which only the full harness drives — not
+diffed here, but their Label3D content is identical to `audio-stream-player-3d`'s own
+(unselected) entry, already covered.
+
+| Scene | Fixture | Pixels changed |
+| --- | --- | --- |
+| `plane-mesh` | `unit-plane-mesh.tscn` | 0.834% |
+| `plane-rotated-scaled` | `edge-plane-rotated-scaled.tscn` | 0.423% |
+| `arraymesh` | `unit-arraymesh.tscn` | 2.173% |
+| `arraymesh-uv` | `unit-arraymesh-uv.tscn` | 2.164% |
+| `arraymesh-compressed` | `unit-arraymesh-compressed.tscn` | 2.474% |
+| `arraymesh-own-material` | `unit-arraymesh-own-material.tscn` | 3.225% |
+| `material-metallic` | `unit-material-metallic.tscn` | 5.576% |
+| `material-emissive` | `unit-material-emissive.tscn` | 12.238% |
+| `material-heightmap` | `unit-material-heightmap.tscn` | 11.656% |
+| `hallway-mockup` | `example-hallway-mockup.tscn` | 0.109% |
+| `camera-basic` | `unit-camera-basic.tscn` | 0.670% |
+| `audio-stream-player-3d` | `unit-audio-stream-player.tscn` | 0.922% |
+| `box-mesh` | `unit-box-mesh.tscn` | 1.764% |
+| `capsule-mesh` | `unit-capsule-mesh.tscn` | 3.480% |
+| `cylinder-mesh` | `unit-cylinder-mesh.tscn` | 2.765% |
+| `prism-mesh` | `unit-prism-mesh.tscn` | 2.969% |
+| `torus-mesh` | `unit-torus-mesh.tscn` | 9.816% |
+| `material-ao` | `unit-material-ao.tscn` | 1.232% |
+| `material-normal-map` | `unit-material-normal-map.tscn` | 2.134% |
+| `material-textured` | `unit-material-textured.tscn` | 2.910% |
+| `material-override` | `unit-material-override.tscn` | 1.530% |
+| `surface-material-override` | `unit-surface-material-override.tscn` | 3.171% |
+| `material-features` | `integration-material-features.tscn` | 12.126% |
+| `sprite3d` | `unit-sprite3d.tscn` | 1.587% |
+| `camera3d-selected` | `unit-multi-camera.tscn` (select) | not directly diffed — see above |
+| `audio-stream-player-3d-selected` | `unit-audio-stream-player.tscn` (select) | not directly diffed — see above |
+| `audio-stream-player-3d-cone-selected` | `unit-audio-stream-player.tscn` (select) | not directly diffed — see above |
+
+Movement correlates with how much of the frame the label's own glyphs occupy — a scene
+with one large, legible caption (`material-emissive`, `material-heightmap`,
+`material-features`, `torus-mesh`) moves the most, since MSDF Open Sans and the host's
+Arial fallback occupy overlapping but non-identical pixels at that scale; `hallway-mockup`'s
+11 tiny captions move almost nothing (0.109%, unchanged from before this rewrite) because a
+caption a few pixels tall barely renders any ink either way. Spot-checked
+`material-heightmap`/`torus-mesh`/`box-mesh` directly against `pnpm ref:godot`: object
+position and size now match the baseline closely (within ~2.5%, down from ~16% before the
+bounds-proxy width fix), so the remaining movement is glyph shape, not framing.
 
 ## Linting
 
