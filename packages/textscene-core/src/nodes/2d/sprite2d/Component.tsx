@@ -54,7 +54,10 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // below: a viewport target owns its GPU texture, so cloning per frame and
   // disposing the clone would tear down the publisher's own render target.
   const isViewportSlot = isViewportTextureRef(props.texture, internalResources);
-  const viewportTexture = useViewportTextureSlot(props.texture, internalResources);
+  const { texture: viewportTexture, cyclic: viewportCyclic } = useViewportTextureSlot(
+    props.texture,
+    internalResources
+  );
 
   const texturePath = useMemo(
     () =>
@@ -92,9 +95,13 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // Placeholder when no texture is referenced or it failed to load. A
   // ViewportTexture that has not published yet is NOT missing — the sub-viewport
   // is there and simply has not rendered, so the sprite draws nothing until it
-  // does rather than flashing a placeholder.
-  const showPlaceholder =
-    !isViewportSlot && (!texturePath || texResult.status === 'unavailable');
+  // does rather than flashing a placeholder. A ViewportTexture whose target
+  // sits in an unrenderable pass cycle (`useViewportTextureSlot`'s `cyclic`)
+  // IS missing in the same visible sense a broken file reference is — it will
+  // never render — so it gets the same placeholder, not permanent silence.
+  const showPlaceholder = isViewportSlot
+    ? viewportCyclic
+    : !texturePath || texResult.status === 'unavailable';
 
   return (
     <CanvasItem2D

@@ -63,6 +63,8 @@ describe('nativeTheme', () => {
         contentMargin: ZERO_SIDES,
         drawCenter: true,
         borderBlend: false,
+        antiAliased: true, // StyleBoxFlat's own untouched default (style_box_flat.h:49)
+        aaSize: 1, // StyleBoxFlat's own untouched default (style_box_flat.h:54)
       });
     });
 
@@ -76,6 +78,8 @@ describe('nativeTheme', () => {
         contentMargin: uniform(4), // default_margin
         drawCenter: true,
         borderBlend: false,
+        antiAliased: true,
+        aaSize: 1,
       };
       expect(theme.widgets.button.normal).toEqual({ ...shared, bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 } });
       expect(theme.widgets.button.hover).toEqual({ ...shared, bgColor: { r: 0.225, g: 0.225, b: 0.225, a: 0.6 } });
@@ -96,6 +100,8 @@ describe('nativeTheme', () => {
         contentMargin: { left: 0, top: 4, right: 0, bottom: 4 },
         drawCenter: true,
         borderBlend: false,
+        antiAliased: true,
+        aaSize: 1,
       });
       // style_v_scrollbar = make_flat_stylebox(style_normal_color, 4, 0, 4, 0, 10): transposed.
       expect(theme.widgets.scrollBar.scrollVertical).toEqual({
@@ -107,6 +113,8 @@ describe('nativeTheme', () => {
         contentMargin: { left: 4, top: 0, right: 4, bottom: 0 },
         drawCenter: true,
         borderBlend: false,
+        antiAliased: true,
+        aaSize: 1,
       });
     });
 
@@ -121,6 +129,8 @@ describe('nativeTheme', () => {
         contentMargin: uniform(4),
         drawCenter: true,
         borderBlend: false,
+        antiAliased: true,
+        aaSize: 1,
       });
     });
 
@@ -164,6 +174,8 @@ describe('nativeTheme', () => {
           contentMargin: uniform(4), // default_margin
           drawCenter: true,
           borderBlend: false,
+          antiAliased: true,
+          aaSize: 1,
         });
       }
     );
@@ -182,6 +194,8 @@ describe('nativeTheme', () => {
           contentMargin: uniform(4),
           drawCenter: true,
           borderBlend: false,
+          antiAliased: true,
+          aaSize: 1,
         });
       }
     );

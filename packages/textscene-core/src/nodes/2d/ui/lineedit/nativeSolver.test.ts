@@ -2,15 +2,17 @@
  * `lineEditMinimumSize` vs Godot 4.6.3 (`LineEdit::get_minimum_size`,
  * `scene/gui/line_edit.cpp:2443-2477`). Expected numbers are hand-derived
  * from the vendored OpenSans_SemiBold metrics/atlas (`unitsPerEm=2048`,
- * `ascent=2189`, `descent=600`; atlas `xadvance` for 'W' is 40 at bake size
- * 42) and the default theme's LineEdit margin (`content_margin` =
- * `round(4*scale)` = 4 at scale 1, all four sides, from `make_flat_stylebox`'s
- * own default — `nativeTheme.ts`'s `widgets.lineEdit`) — an independent
- * worked example, never the implementation's own output.
+ * `ascent=2189`, `descent=600`; `hmtx` advance width for 'W' is 1936 design
+ * units — `openSansMetrics.ts`'s CONTINUOUS `advanceWidths`, not
+ * `openSansAtlas.ts`'s own atlas-bake-resolution-42 `xadvance`) and the
+ * default theme's LineEdit margin (`content_margin` = `round(4*scale)` = 4 at
+ * scale 1, all four sides, from `make_flat_stylebox`'s own default —
+ * `nativeTheme.ts`'s `widgets.lineEdit`) — an independent worked example,
+ * never the implementation's own output.
  *
  * At font size 16: fontHeightPx (ceil(ascent)+ceil(descent), NO line_spacing
  * — LineEdit sets none, unlike Label/Button) = ceil(2189*16/2048) +
- * ceil(600*16/2048) = 18 + 5 = 23. 'W' advance at 16px = 39*(16/42) = 14.857...
+ * ceil(600*16/2048) = 18 + 5 = 23. 'W' advance at 16px = 1936*(16/2048) = 15.125.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
@@ -31,7 +33,7 @@ import {
   LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR,
 } from './nativeSolver';
 
-const W_ADVANCE = 40 * (16 / 42); // 15.238...
+const W_ADVANCE = 1936 * (16 / 2048); // 15.125
 const FONT_HEIGHT = 23; // ceil(2189*16/2048) + ceil(600*16/2048)
 
 function node(props: Partial<LineEditProperties>, styleBoxes: Record<string, StyleBoxFlatData> = {}): SolveNode {
@@ -105,7 +107,7 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
 
   it('a theme_override_font_sizes/font_size override changes BOTH the W-advance and the font height', () => {
     const result = lineEditMinimumSize(node({ themeOverrideFontSizes: { font_size: 32 } }), ctx());
-    const wAdvance32 = 40 * (32 / 42);
+    const wAdvance32 = 1936 * (32 / 2048);
     const fontHeight32 = Math.ceil(2189 * (32 / 2048)) + Math.ceil(600 * (32 / 2048));
     expect(result.x).toBeCloseTo(8 + 4 * wAdvance32, 6);
     expect(result.y).toBe(8 + fontHeight32);

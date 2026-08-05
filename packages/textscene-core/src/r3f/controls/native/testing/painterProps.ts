@@ -24,7 +24,7 @@ const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
 /**
  * The environment half of a painter's props — theme, measurer, child rects,
- * and the post-subtree chrome draw order.
+ * the post-subtree chrome draw order, and this Control's own `z_final`.
  *
  * `subtreeChromeRenderOrder` defaults to `0` — the value the walker derives
  * for a childless Control at paint index 0 — because only the painters with
@@ -32,15 +32,22 @@ const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
  * draw order overrides it explicitly. It belongs here rather than being made
  * optional on the contract: an absent value there would let a painter silently
  * fall back to its own `renderOrder` and draw its chrome under its own subtree.
+ *
+ * `effectiveZ` defaults to `0` for the same reason and with the same shape of
+ * hazard — Godot's z for a Control authoring no `z_index` under no
+ * z-shifting ancestor. A painter that opts into 2D lighting must pass it to
+ * `useCanvasItemLighting` explicitly, since that parameter's own fallback
+ * reads the ambient context, which is the PARENT's z.
  */
 export function painterEnv(): Pick<
   NativeControlComponentProps,
-  'theme' | 'measureText' | 'childRects' | 'subtreeChromeRenderOrder'
+  'theme' | 'measureText' | 'childRects' | 'subtreeChromeRenderOrder' | 'effectiveZ'
 > {
   return {
     theme: nativeTheme(1),
     measureText: null,
     childRects: NO_CHILD_RECTS,
     subtreeChromeRenderOrder: 0,
+    effectiveZ: 0,
   };
 }

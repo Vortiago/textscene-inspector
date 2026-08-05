@@ -1,6 +1,11 @@
 # A sub-resource path addresses a resource inside a `.tres`
 
 - Status: Accepted (2026-07-28)
+- Renumbered from ADR-0029, which ADR-0029 (viewport navigation bindings) had
+  already taken — the two were authored in parallel branches and merged a day
+  apart, so neither author saw the clash. The earlier-merged decision keeps the
+  number. External references predating this (merged pull-request descriptions)
+  still say ADR-0029; in-tree citations all point here.
 - Related: the `resource event bus` / `useResource` seam (ARCHITECTURE.md "Resource
   Loading"), ADR-0022 (uploads are frontend-only), ADR-0028 (import sidecars).
 - Closes the "two unjoined halves" gap recorded in

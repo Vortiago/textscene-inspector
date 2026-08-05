@@ -4,13 +4,15 @@
  * from the source, NOT recomputed the way the implementation itself computes
  * them (`AGENTS.md`'s test-authoring rule) — same vendored OpenSans_SemiBold
  * metrics/atlas `button/nativeSolver.test.ts` cites (`unitsPerEm=2048`,
- * `ascent=2189`, `descent=600`; atlas `xadvance` for 'A' is 28 at bake size 42).
+ * `ascent=2189`, `descent=600`; `hmtx` advance width for 'A' is 1354 design
+ * units — `openSansMetrics.ts`'s CONTINUOUS `advanceWidths`, not
+ * `openSansAtlas.ts`'s own atlas-bake-resolution-42 `xadvance`).
  *
  * At font size 16 a CheckBox floors on `font->get_height()` = ascent +
  * descent = 23 (`ascentPx=ceil(2189*16/2048)=18`,
  * `descentPx=ceil(600*16/2048)=5`). `line_spacing` is Label's own theme
  * constant; CheckBox sets none.
- * 'A' advance at 16px = 28*(16/42) = 10.666...; 'AB' = 21.333...
+ * 'A' advance at 16px = 1354*(16/2048) = 10.578125; 'AB' = (1354+1350)*(16/2048) = 21.125.
  * `originCorrectionPx(16) = 0.8571428571428577` (`buttonBase.test.ts`'s own
  * worked example — same atlas, same function).
  *
@@ -43,8 +45,11 @@ import {
   CHECKBOX_ICON_NATURAL_SIZE,
 } from './nativeSolver';
 
-const A_ADVANCE = 28 * (16 / 42); // 10.666...
-const AB_WIDTH = A_ADVANCE * 2; // 21.333...
+// 'A's hmtx advance width is 1354 design units, 'B's is 1350 — a DIFFERENT
+// glyph, so 'AB's width is their SUM (the two only coincided at the OLD
+// atlas-bake-resolution-42 xadvance, where both rounded to the integer 28 —
+// a coincidence of that rounding, not a fact about the font).
+const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 const FONT_HEIGHT = 23;
 const ORIGIN_16 = 0.8571428571428577;
 
@@ -159,7 +164,7 @@ describe('checkBoxMinimumSize (check_box.cpp:64-79) — no text', () => {
 describe('checkBoxMinimumSize — with text', () => {
   it('adds text width + h_separation(4) alongside the icon width; height floors on the taller of text/icon', () => {
     const result = checkBoxMinimumSize(node({ text: 'AB' }), ctx());
-    // width = 8 (2*margin) + 21.333 (text) + 4 (h_separation) + 16 (icon) = 49.333.
+    // width = 8 (2*margin) + 21.125 (text) + 4 (h_separation) + 16 (icon) = 49.125.
     expect(result.x).toBeCloseTo(8 + AB_WIDTH + 4 + 16, 6);
     // height = 8 + max(23, 16) = 31.
     expect(result.y).toBe(8 + FONT_HEIGHT);

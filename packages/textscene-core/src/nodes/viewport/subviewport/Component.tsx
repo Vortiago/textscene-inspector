@@ -1,5 +1,5 @@
 /**
- * SubViewport — a canvas boundary that is not a world boundary (ADR-0030), and
+ * SubViewport — a canvas boundary that is not a world boundary (ADR-0033), and
  * the publisher of its own offscreen render target.
  *
  * Godot's `Viewport` always instantiates its own `World2D` but resolves

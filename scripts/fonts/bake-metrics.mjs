@@ -145,14 +145,45 @@ function bakeKerning(font) {
   return Object.fromEntries(Object.keys(kerning).sort().map((k) => [k, kerning[k]]));
 }
 
+/**
+ * Per-glyph `hmtx` advance width, design units, over the SAME `CHARSET` the
+ * atlas bakes — the CONTINUOUS source `textLayout.ts`'s `glyphAdvancePx` now
+ * scales directly, instead of `openSansAtlas.ts`'s `xadvance` (msdf-bmfont-xml's
+ * OWN atlas-bake-resolution-42 glyph table, INTEGER-rounded at that bake size
+ * before this script ever sees it — confirmed empirically: msdf-bmfont-xml's
+ * `roundDecimal` option defaults to `null` — no rounding — yet its own output
+ * for this font is already whole pixels at size 42, so the rounding is
+ * upstream, in the atlas-bake tool itself). Godot's real advance at ANY UI
+ * font size (`text_server_adv.cpp:7078`, `subpos` true whenever
+ * `SUBPIXEL_POSITIONING_AUTO` and `font_size <= 20` — true for every theme
+ * default and every fixture this repo ships) is NEVER rounded per glyph: it
+ * is HarfBuzz's `x_advance`, itself FreeType's UNHINTED (`hb-ft.cc:115`'s
+ * default `FT_LOAD_NO_HINTING`) advance — a plain proportional scale of this
+ * SAME `hmtx` table, continuous down to floating-point precision. Baking a
+ * SEPARATE continuous table (rather than reusing the atlas's own
+ * bake-size-42-quantized one) closes that residual: measured on
+ * `unit-rich-text-label.tscn`'s 45-character line against real Godot 4.6.3,
+ * reusing the atlas's own `xadvance` left the line's ink 1px wider than
+ * Godot's own render even after the (much larger) per-style-run font-size fix
+ * (nativeSolver.ts's `resolveRunFontSizePx`) closed the rest.
+ */
+function bakeAdvanceWidths(font) {
+  const advanceWidths = {};
+  for (const ch of CHARSET) {
+    advanceWidths[ch] = font.glyphForCodePoint(ch.codePointAt(0)).advanceWidth;
+  }
+  return advanceWidths;
+}
+
 /** Font-wide scalar metrics, design units (`font.unitsPerEm`-relative). */
-function bakeMetrics(font, kerning) {
+function bakeMetrics(font, kerning, advanceWidths) {
   return {
     unitsPerEm: font.unitsPerEm,
     ascent: font.ascent,
     descent: -font.descent, // fontkit reports descent negative; store the magnitude
     lineGap: font.lineGap,
     kerning,
+    advanceWidths,
     // `post` table, design units — `fontkit`'s `TTFFont#underlinePosition`/
     // `#underlineThickness` read `post.underlinePosition`/`post.underlineThickness`
     // directly (fontkit's `src/tables/post.js`, `src/TTFFont.js:189-201`), the
@@ -237,9 +268,14 @@ function renderMetricsModule(metrics) {
  * \`.woff2\` (decompressed in memory at bake time with \`wawoff2\`, since
  * fontkit does not decompress woff2 itself — see the bake script's header).
  *
- * Per-glyph advances are deliberately NOT duplicated here: \`openSansAtlas.ts\`'s
- * glyph table already carries \`xadvance\` from the same \`hmtx\` source, and a
- * second copy would just be a second place for the two to drift apart.
+ * \`advanceWidths\` IS a deliberate duplicate of \`openSansAtlas.ts\`'s own
+ * glyph table's \`xadvance\` field — the ONE exception to "one bake, one
+ * source": that table is the atlas tool's OWN glyph geometry (bitmap
+ * placement inside the PNG, at the atlas's bake-size-42 resolution), rounded
+ * to whole atlas-bake pixels by msdf-bmfont-xml itself before this script
+ * ever reads it back, where THIS advance is a direct, unrounded \`hmtx\` scale
+ * — see \`getGlyphAdvanceUnits\`'s own doc for why a shaper never wants the
+ * ATLAS's rounded copy.
  */
 export interface OpenSansMetrics {
   /** \`font.unitsPerEm\` (fontkit) — hhea/head design units per em. */
@@ -260,6 +296,15 @@ export interface OpenSansMetrics {
    */
   kerning: Record<string, number>;
   /**
+   * Per-glyph \`hmtx\` advance width, design units, keyed by character — the
+   * SAME \`CHARSET\` \`openSansAtlas.ts\` bakes, read directly via \`fontkit\`'s
+   * \`Glyph#advanceWidth\` (\`bake-metrics.mjs\`'s own \`bakeAdvanceWidths\`
+   * doc has the full citation for why this is the correct source and
+   * \`openSansAtlas.ts\`'s \`xadvance\` is not). \`getGlyphAdvanceUnits\` is the
+   * only intended reader.
+   */
+  advanceWidths: Record<string, number>;
+  /**
    * \`post\` table \`underlinePosition\`, design units — the top of the underline
    * stroke relative to the baseline, POSITIVE = above baseline (the \`post\`
    * table's own Y-up convention; typically negative for a below-baseline
@@ -274,9 +319,8 @@ export interface OpenSansMetrics {
   /**
    * OS/2 \`xAvgCharWidth\`, design units — this font's own "typical glyph
    * width" metric, used ONLY as \`textLayout.ts\`'s fallback advance for a
-   * character outside \`OPEN_SANS_ATLAS_GLYPHS\` (see that table's own doc in
-   * the atlas module). Never mixed into per-glyph advances for a BAKED
-   * character — those always come from the atlas's own \`xadvance\`.
+   * character outside \`OPEN_SANS_ATLAS_GLYPHS\`/\`advanceWidths\` (see that
+   * table's own doc in the atlas module).
    */
   averageAdvanceUnits: number;
 }
@@ -286,6 +330,34 @@ export const OPEN_SANS_METRICS: OpenSansMetrics = ${JSON.stringify(metrics)};
 /** \`OPEN_SANS_METRICS.kerning[a + b] ?? 0\` — design-unit advance adjustment for a glyph pair. */
 export function getKerningAdjustmentUnits(a: string, b: string): number {
   return OPEN_SANS_METRICS.kerning[a + b] ?? 0;
+}
+
+/**
+ * A baked character's own \`hmtx\` advance width, design units, or \`null\`
+ * outside \`advanceWidths\` (the same charset as \`OPEN_SANS_ATLAS_GLYPHS\` —
+ * \`textLayout.ts\`'s \`glyphAdvancePx\` falls back to \`getAverageAdvancePx\` in
+ * that case, unchanged from before this table existed).
+ *
+ * This is the CONTINUOUS source \`textLayout.ts\` scales to a target pixel
+ * size — never \`openSansAtlas.ts\`'s own \`xadvance\`, which is msdf-bmfont-xml's
+ * OWN atlas-bake-resolution glyph table (bake size 42, INTEGER-rounded at
+ * THAT resolution before this repo's bake script ever sees it) and therefore
+ * carries roughly 1/2 an atlas-bake-pixel of quantization noise per glyph —
+ * negligible at the atlas's own 42px bake size, but the SAME absolute error
+ * persists after scaling down to a UI font size (16-18px), where it is a much
+ * larger fraction of each glyph's own advance and accumulates roughly
+ * linearly with line length. Godot's own real per-glyph advance
+ * (\`text_server_adv.cpp:7078\`) is HarfBuzz's unrounded \`x_advance\` whenever
+ * \`subpos\` is true — true for \`SUBPIXEL_POSITIONING_AUTO\` (Godot's own
+ * default) at every font size this engine ships (\`<=\`
+ * \`SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE\`, 20px, \`servers/text/
+ * text_server.h:172\`) — itself FreeType's UNHINTED advance
+ * (\`thirdparty/harfbuzz/src/hb-ft.cc:115\`'s default \`FT_LOAD_NO_HINTING\`), a
+ * plain proportional scale of this SAME \`hmtx\` table with no rounding
+ * anywhere in the chain. This getter is that same continuous scale.
+ */
+export function getGlyphAdvanceUnits(ch: string): number | null {
+  return OPEN_SANS_METRICS.advanceWidths[ch] ?? null;
 }
 
 /**
@@ -397,7 +469,19 @@ export interface OpenSansGlyph {
   xoffset: number;
   /** Offset from the line-top to the bitmap's top edge, atlas-bake-size px. */
   yoffset: number;
-  /** Pen advance to the next glyph, atlas-bake-size px (same \`hmtx\` source as \`OpenSansMetrics\`, scaled to \`OPEN_SANS_ATLAS_INFO.fontSize\`). */
+  /**
+   * msdf-bmfont-xml's OWN glyph-table advance, atlas-bake-size (42) px —
+   * INTEGER-rounded at that resolution by the atlas-bake tool itself before
+   * this script ever reads it back (confirmed empirically against the
+   * vendored font; msdf-bmfont-xml's own \`roundDecimal\` option, which would
+   * explain an INTENTIONAL round, defaults to \`null\`/off). NOT the glyph
+   * shaper's advance source: \`openSansMetrics.ts\`'s \`getGlyphAdvanceUnits\`
+   * (backed by this SAME \`hmtx\` table, at full floating-point precision) is
+   * — see that function's own doc for why the atlas-bake-resolution rounding
+   * here is a real, measured source of drift a shaper must not inherit. Kept
+   * only as atlas metadata a consumer might reasonably expect a glyph-info
+   * table to carry; \`textLayout.ts\` never reads this field.
+   */
   xadvance: number;
   /** Left edge of the glyph's bitmap within the atlas texture, px. */
   x: number;
@@ -446,7 +530,8 @@ export const OPEN_SANS_ATLAS_PNG_DATA_URL = ${JSON.stringify(pngDataUrl)};
 async function bake() {
   const { font, ttfBuffer } = await loadFont();
   const kerning = bakeKerning(font);
-  const metrics = bakeMetrics(font, kerning);
+  const advanceWidths = bakeAdvanceWidths(font);
+  const metrics = bakeMetrics(font, kerning, advanceWidths);
   const { png, glyphsByChar, atlasInfo } = await bakeAtlas(ttfBuffer);
   const pngDataUrl = `data:image/png;base64,${png.toString('base64')}`;
 

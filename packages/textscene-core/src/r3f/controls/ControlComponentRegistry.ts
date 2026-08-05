@@ -93,6 +93,27 @@ export interface NativeControlComponentProps {
    */
   subtreeChromeRenderOrder: number;
   /**
+   * This Control's OWN `z_final` — its `z_index` already accumulated onto its
+   * ancestors' and clamped (`lighting2d/canvasItemPlacement.tsx`'s
+   * `accumulateCanvasItemZ`). A 2D light's `range_z_min`/`range_z_max` window
+   * is tested against this, and Godot tests an item against its own accumulated
+   * value: `_cull_canvas_item` accumulates into `p_z` and only then calls
+   * `_attach_canvas_item_for_draw(ci, …, p_z, …)`
+   * (`servers/rendering/renderer_canvas_cull.cpp`).
+   *
+   * REQUIRED, and passed even though no painter reads it yet, because the way
+   * to get this wrong is silent. `useCanvasItemLighting`'s `effectiveZ`
+   * parameter is optional and falls back to `useEffectiveZ()` — and the
+   * walker publishes that context to a node's DESCENDANTS, so the ambient a
+   * painter would read is its PARENT's z, missing the painter's own
+   * `z_index`. A painter that opts into lighting must therefore hand this
+   * value in explicitly, exactly as `CanvasItem2D.tsx` does for the Node2D
+   * path. Nothing about that mistake produces a type error or a failing test:
+   * it is invisible in every scene without a `PointLight2D`, and wrong only
+   * at the z-window edge in the scenes that have one.
+   */
+  effectiveZ: number;
+  /**
    * Rendered ONLY for a passthrough host that draws no chrome of its own but
    * must still wrap its descendants in fresh context — `CanvasLayer`'s native
    * painter (`nodes/2d/ui/canvaslayer/Component.tsx`) is the one type

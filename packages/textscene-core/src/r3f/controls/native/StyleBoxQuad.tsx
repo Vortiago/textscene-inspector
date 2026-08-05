@@ -15,6 +15,20 @@
  * (`utils/colorSpace.ts`) so this stays a plain THREE-only conversion with no
  * extra per-render `THREE.Color` allocation.
  *
+ * The optional `color` prop is a CanvasItem tint (`useCanvasItemTint`'s
+ * `own`, RAW sRGB, alpha included) composed into `styleBox`'s two base
+ * colours INTERNALLY, via `tintStyleBox`, before that single conversion runs.
+ * Unlike `ControlQuad`'s `color`/`opacity` pair (already-linear `THREE.Color`
+ * + a separate alpha scalar, because a plain quad has ONE colour to hand the
+ * material directly), a StyleBox has TWO base colours and this component's
+ * own downstream sRGB→linear conversion — multiplying a linear tint in here
+ * would double-convert, and splitting alpha into its own prop would just be
+ * `color.a` twice over. One RGBA prop, multiplied pre-conversion, is the
+ * correct shape for this component; passing `tint.own` from
+ * `useCanvasItemTint` is the caller's whole job. Every StyleBox painter that
+ * used to call `tintStyleBox` itself and hand the RESULT here can now hand
+ * `color={tint.own}` and its ORIGINAL untinted `StyleBoxFlatData` instead.
+ *
  * R3F does not auto-dispose a geometry passed via `attach="geometry"`
  * (`Polygon2D`'s own comment) — released on rebuild/unmount here too.
  */
@@ -26,11 +40,19 @@ import { styleBoxFlatGeometry } from './styleBoxFlatGeometry';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rect2 } from './rect';
 import { useControlClipPlanes } from './controlClipping';
-import { multiplyModulate, type RGBA } from '../../canvasItemModulate';
+import { multiplyModulate, WHITE_MODULATE, type RGBA } from '../../canvasItemModulate';
 
 export interface StyleBoxQuadProps {
   styleBox: StyleBoxFlatData;
   rect: Rect2;
+  /**
+   * A CanvasItem tint (raw sRGB, alpha included — pass `useCanvasItemTint`'s
+   * `own`, never its already-linear `color`) multiplied into `styleBox`'s
+   * `bgColor`/`borderColor` BEFORE this component's single sRGB→linear
+   * conversion. Defaults to opaque white (no tint), the `WHITE_MODULATE`
+   * no-op `tintStyleBox` already fast-paths.
+   */
+  color?: RGBA;
   /**
    * Paint order within the 2D transparent bucket. Load-bearing rather than
    * cosmetic: nothing here writes depth, so three's transparent sort — which
@@ -41,7 +63,7 @@ export interface StyleBoxQuadProps {
   renderOrder: number;
 }
 
-export function StyleBoxQuad({ styleBox, rect, renderOrder }: StyleBoxQuadProps) {
+export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQuadProps) {
   // Godot space → three space, once, here.
   //
   // `styleBoxFlatGeometry` is a faithful transcription of `StyleBoxFlat::draw`,
@@ -54,7 +76,8 @@ export function StyleBoxQuad({ styleBox, rect, renderOrder }: StyleBoxQuadProps)
   // group. Every Panel until now happened to be drawn at rect (0,0), where both
   // errors vanish — which is also why no test caught it.
   const size = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
-  const geometry = useMemo(() => buildGeometry(styleBox, size), [styleBox, size]);
+  const tintedStyleBox = useMemo(() => tintStyleBox(styleBox, color ?? WHITE_MODULATE), [styleBox, color]);
+  const geometry = useMemo(() => buildGeometry(tintedStyleBox, size), [tintedStyleBox, size]);
   // R3F won't auto-dispose a geometry passed via `attach`; release on rebuild.
   useEffect(() => () => geometry?.dispose(), [geometry]);
   const clippingPlanes = useControlClipPlanes();
@@ -104,12 +127,15 @@ function linearizeColors(rgba: readonly number[]): Float32Array {
 /**
  * Multiplies a composed tint into a StyleBox's TWO base colours, in raw sRGB.
  *
- * Shared rather than per-consumer: `styleBoxFlatGeometry` performs the single
- * sRGB→linear conversion downstream, so multiplying after that point would
- * double-convert — and that ordering is invisible at tint 1 and wrong
- * everywhere else. Lives here, beside the component that draws the result,
- * because `styleBoxFlat.ts` sits inside the solver's framework-free closure and
- * cannot import the modulate helpers.
+ * `<StyleBoxQuad>`'s own `color` prop is this function applied internally —
+ * still exported (and independently tested) because `styleBoxFlat.ts` sits
+ * inside the solver's framework-free closure and cannot import the modulate
+ * helpers, so a painter that needs a tinted StyleBox for something OTHER than
+ * feeding `<StyleBoxQuad>` (there is none today, but the seam is cheap to
+ * keep) still has it available directly. `styleBoxFlatGeometry` performs the
+ * single sRGB→linear conversion downstream of both call sites, so multiplying
+ * after that point would double-convert — invisible at tint 1, wrong
+ * everywhere else.
  */
 export function tintStyleBox(styleBox: StyleBoxFlatData, tint: RGBA): StyleBoxFlatData {
   if (tint.r === 1 && tint.g === 1 && tint.b === 1 && tint.a === 1) return styleBox;

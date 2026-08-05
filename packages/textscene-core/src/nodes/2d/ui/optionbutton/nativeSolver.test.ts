@@ -7,9 +7,11 @@
  *
  * At font size 16 an OptionButton floors on `font->get_height()` = 23 (ascent
  * 18 + descent 5); `line_spacing` is Label's constant and OptionButton sets
- * none. 'A' advance at 16px = 28*(16/42) =
- * 10.666...; 'AB' = 21.333...; 'ABC' = 32...; `originCorrectionPx(16) =
- * 0.8571428571428577` (`buttonBase.test.ts`'s own worked example).
+ * none. 'A' `hmtx` advance width at 16px = 1354*(16/2048) = 10.578125 (the
+ * CONTINUOUS source, `openSansMetrics.ts`'s `advanceWidths` — not
+ * `openSansAtlas.ts`'s own atlas-bake-resolution-42 `xadvance`); 'AB' =
+ * 21.15625; `originCorrectionPx(16) = 0.8571428571428577`
+ * (`buttonBase.test.ts`'s own worked example).
  *
  * The OptionButton "normal"/"hover"/"pressed"/"disabled" styleboxes use
  * `2*default_margin(4)=8` horizontal / `default_margin(4)=4` vertical content
@@ -41,8 +43,11 @@ import {
   OPTION_BUTTON_ARROW_NATURAL_SIZE,
 } from './nativeSolver';
 
-const A_ADVANCE = 28 * (16 / 42); // 10.666...
-const AB_WIDTH = A_ADVANCE * 2; // 21.333...
+const A_ADVANCE = 1354 * (16 / 2048); // 10.578125
+// 'B's hmtx advance width is 1350 design units, DIFFERENT from 'A's 1354 — the
+// two only coincided at the OLD atlas-bake-resolution-42 xadvance (both
+// rounded to the integer 28), not a fact about the font.
+const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 const FONT_HEIGHT = 23;
 
 function node(props: Partial<OptionButtonProperties>): SolveNode {
@@ -109,11 +114,11 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
 
   it('uses the WIDEST item\'s text, not the selected one\'s, for the width floor', () => {
     const items = [
-      { text: 'A', id: 0 }, // 10.666 wide
-      { text: 'AB', id: 1 }, // 21.333 wide — the widest
+      { text: 'A', id: 0 }, // 10.578125 wide
+      { text: 'AB', id: 1 }, // 21.125 wide — the widest
     ];
     const result = optionButtonMinimumSize(node({ items, selected: 0 }), ctx());
-    // width = 16 (margin) + 21.333 (widest item) + 12 (arrow) + 4 (h_separation).
+    // width = 16 (margin) + 21.125 (widest item) + 12 (arrow) + 4 (h_separation).
     expect(result.x).toBeCloseTo(16 + AB_WIDTH + 12 + 4, 6);
   });
 

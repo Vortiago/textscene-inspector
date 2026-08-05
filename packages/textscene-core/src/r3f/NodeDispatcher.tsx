@@ -204,7 +204,7 @@ function PlainNode({
   // A viewport surface (SubViewportContainer) is a Control, so it is in
   // TWO_D_UI_TYPES — but it must NOT be dropped here, or a contained
   // sub-viewport's 3D content goes with it, and that content really does draw
-  // in Godot's 3D view (shared World3D unless `own_world_3d`). ADR-0030.
+  // in Godot's 3D view (shared World3D unless `own_world_3d`). ADR-0033.
   const isCanvasItem =
     !isViewportSurface(node.type) &&
     (nodeComponentRegistry.isCanvasItem(node.type) || TWO_D_UI_TYPES.has(node.type));
@@ -248,7 +248,7 @@ function PlainNode({
     // sub-scene) needs that target. Dropping it here would mean the publisher
     // never mounts, so the texture could never resolve. Its subtree still
     // never reaches this canvas: the component portals it into a detached
-    // scene rather than rendering it inline. ADR-0030.
+    // scene rather than rendering it inline. ADR-0033.
     !isViewportBoundary(node.type) &&
     nodeComponentRegistry.get(node.type) &&
     !nodeComponentRegistry.isContainer(node.type)

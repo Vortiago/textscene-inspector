@@ -238,7 +238,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // and it arrives AFTER first paint, once that sub-viewport has published.
   // Highest precedence of the three: nothing else can be in the slot when the
   // authored value is a ViewportTexture.
-  const viewportAlbedo = useViewportTextureSlot(
+  const { texture: viewportAlbedo, cyclic: viewportAlbedoCyclic } = useViewportTextureSlot(
     (materialSubResource?.data as { albedo_texture?: string } | undefined)?.albedo_texture,
     internalResources
   );
@@ -357,6 +357,12 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     return null;
   }, [textureSlots, textureRequests]);
 
+  // A ViewportTexture albedo whose target's pass is cyclic never renders —
+  // same visible fact as a missing file, so it takes the same magenta
+  // placeholder branch below rather than silently sampling the unwritten
+  // target (`useViewportTextureSlot`'s `cyclic`).
+  const materialUnresolved = firstMissingPath !== null || viewportAlbedoCyclic;
+
   // A StandardMaterial3D carrying `billboard_mode` turns the whole mesh to
   // face the camera — the same per-material effect Godot's shader applies, and
   // the same enum `useBillboard` already implements for Label3D/Sprite3D. The
@@ -445,8 +451,8 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // Missing texture: magenta placeholder material. The in-3D floating
   // label was redundant once the DOM `<MissingResourcesPanel>` lists
   // every missing path. `firstMissingPath` is still used for the
-  // placeholder branch trigger.
-  if (firstMissingPath !== null) {
+  // placeholder branch trigger, alongside a cyclic ViewportTexture albedo.
+  if (materialUnresolved) {
     return (
       <MeshShell {...shellProps}>
         {geometryElement}

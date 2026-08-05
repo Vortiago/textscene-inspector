@@ -1,7 +1,7 @@
 /**
  * Registry of sub-viewport render targets, keyed by scene-tree node path — the
  * seam between a `SubViewport` that renders offscreen and everything that
- * displays what it rendered (ADR-0030).
+ * displays what it rendered (ADR-0033).
  *
  * Deliberately the same shape as the **AnimationDriverRegistry**: that registry
  * exists because an AnimationTree resolves a NodePath to a driver another node

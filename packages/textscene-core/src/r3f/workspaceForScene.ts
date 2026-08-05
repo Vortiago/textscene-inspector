@@ -38,7 +38,7 @@ export function workspaceForRoot(root: TscnNode | undefined): ViewportMode | nul
   }
   // A viewport is a plain `Node` that neither editor plugin handles, so it
   // claims nothing — but it IS registered and non-container, so without this
-  // it would fall through to the Node3D arm below and claim '3D' (ADR-0030).
+  // it would fall through to the Node3D arm below and claim '3D' (ADR-0033).
   if (isViewportBoundary(root.type)) {
     return null;
   }

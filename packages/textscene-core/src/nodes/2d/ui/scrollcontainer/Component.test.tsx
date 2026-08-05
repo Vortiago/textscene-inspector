@@ -95,31 +95,41 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(2);
   });
 
-  it("places the track spanning the bar's full rect: world x [1112,1120], y [-616,0]", async () => {
+  it("places the track spanning the bar's full rect, grown by the AA feather ring: world x [1111.5,1120.5], y [-616.5,0.5]", async () => {
+    // ScrollBar's track/grabber styleboxes are `flatStyleBox`'d with a
+    // rounded corner (`scrollBarCornerRadius`, `nativeTheme.ts`) and NO
+    // border, so `anti_aliased`'s default-true `aa_on` branch applies
+    // (`styleBoxFlatGeometry.ts`'s anti-aliasing describe block): with no
+    // border on any side, the whole fill gets a `aa_size/2` = 0.5px
+    // transparent feather ring OUTSIDE the base [1112,1120]x[-616,0] rect —
+    // `computeBoundingBox()` includes those alpha-0 vertices, so the box
+    // grows by 0.5 on every side (style_box_flat.cpp:584-601).
     const renderer = await mountFixtureScrollbar();
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     const track = meshes.reduce((a, b) => (worldBounds(a).max.y - worldBounds(a).min.y >
       worldBounds(b).max.y - worldBounds(b).min.y ? a : b));
     const box = worldBounds(track);
-    expect(box.min.x).toBeCloseTo(1112, 3);
-    expect(box.max.x).toBeCloseTo(1120, 3);
-    expect(box.min.y).toBeCloseTo(-616, 3);
-    expect(box.max.y).toBeCloseTo(0, 3);
+    expect(box.min.x).toBeCloseTo(1111.5, 3);
+    expect(box.max.x).toBeCloseTo(1120.5, 3);
+    expect(box.min.y).toBeCloseTo(-616.5, 3);
+    expect(box.max.y).toBeCloseTo(0.5, 3);
   });
 
-  it('places the grabber at the TOP of the track (scroll_vertical unset = 0), height ~476.16, flipped the right way', async () => {
+  it('places the grabber at the TOP of the track (scroll_vertical unset = 0), height ~476.16, flipped the right way, grown by the AA feather ring', async () => {
     const renderer = await mountFixtureScrollbar();
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     const grabber = meshes.reduce((a, b) => (worldBounds(a).max.y - worldBounds(a).min.y <
       worldBounds(b).max.y - worldBounds(b).min.y ? a : b));
     const box = worldBounds(grabber);
-    expect(box.min.x).toBeCloseTo(1112, 3);
-    expect(box.max.x).toBeCloseTo(1120, 3);
+    expect(box.min.x).toBeCloseTo(1111.5, 3);
+    expect(box.max.x).toBeCloseTo(1120.5, 3);
     // Godot-top of the track is world Y ~ 0; the grabber sits there when
     // unscrolled, extending DOWN (negative) by its own size — the flip this
     // painter applies is what makes this the top edge and not the bottom.
-    expect(box.max.y).toBeCloseTo(0, 1);
-    expect(box.min.y).toBeCloseTo(-476.16, 1);
+    // Both bounds grow 0.5px outward for the same AA feather-ring reason the
+    // track's own bounding box does (see the test above).
+    expect(box.max.y).toBeCloseTo(0.5, 1);
+    expect(box.min.y).toBeCloseTo(-476.66, 1);
   });
 
   it('draws both bars off subtreeChromeRenderOrder — track +0.25, grabber +0.5 — strictly above every descendant and strictly below the next sibling', async () => {
@@ -170,8 +180,10 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
     const grabber = meshes.reduce((a, b) => (worldBounds(a).max.y - worldBounds(a).min.y <
       worldBounds(b).max.y - worldBounds(b).min.y ? a : b));
     const box = worldBounds(grabber);
-    // range=800, area=200-8=192; ratio=200/800=0.25; offset=48 -> top at -48.
-    expect(box.max.y).toBeCloseTo(-48, 1);
+    // range=800, area=200-8=192; ratio=200/800=0.25; offset=48 -> top at -48,
+    // then +0.5 for the AA feather ring's outward growth (see the two tests
+    // above) -> -47.5.
+    expect(box.max.y).toBeCloseTo(-47.5, 1);
   });
 });
 

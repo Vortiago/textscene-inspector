@@ -1,7 +1,7 @@
 /**
  * Which node types are **viewport boundaries** — a sub-viewport's subtree is
  * dispatched by its viewport surface (a `SubViewportContainer`, or a
- * `ViewportTexture` consumer), never by the parent's own walker (ADR-0030).
+ * `ViewportTexture` consumer), never by the parent's own walker (ADR-0033).
  *
  * Lives here, next to the slice that defines the behaviour, rather than in a
  * central set: it is consulted by the Control overlay walker, the workspace

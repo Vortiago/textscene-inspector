@@ -1,6 +1,6 @@
 /**
  * `<SubViewportContainer>` — the native (WebGL canvas) painter for
- * `SubViewportContainer` (ADR-0030).
+ * `SubViewportContainer` (ADR-0033).
  *
  * Godot draws EVERY `SubViewport` child, stacked in tree order, sized from
  * `stretch` (see `ViewportSurfaceNative` below for the exact rule). Every
@@ -9,26 +9,53 @@
  * `ViewportTextureEntry` whose `texture` this painter samples DIRECTLY on a
  * `<ControlQuad>`, with no CPU round trip.
  *
- * CYCLE FALLBACK. The ordered pass driver (`ViewportPassRegistryContext.tsx`)
- * can find a viewport's own dependency chain unsatisfiable (two viewports
- * each depending, directly or transitively, on the other's target) — the
- * driver itself never runs that pass, so the published texture (if any)
- * stays frozen rather than reflecting anything live. `useViewportPassCycle`
- * is this painter's own seam onto that: a cyclic path renders the SAME
- * outline `<ControlFallback>` draws for an unregistered type, since "this
- * viewport's content is not available" is the same visible fact a missing
- * painter reports, and the driver's own effect already logs the offending
- * path — this painter does not warn a second time.
+ * CYCLE FALLBACK. This painter samples its nested viewport's target through
+ * `useViewportTargetSlot` — the SAME choke point every other ViewportTexture
+ * consumer shares (`resources/textures/viewporttexture/useViewportTextureSlot.ts`),
+ * called with its target's PATH directly rather than through a SubResource ref
+ * (a nested `<SubViewport>` names no ref; this painter already knows the path).
+ * A cyclic target (the ordered pass driver, `ViewportPassRegistryContext.tsx`,
+ * found this viewport's own dependency chain unsatisfiable — two viewports
+ * each depending, directly or transitively, on the other's target) reports
+ * `texture: null, cyclic: true` rather than the published entry's raw,
+ * never-written texture: this painter renders the SAME outline
+ * `<ControlFallback>` draws for an unregistered type, since "this viewport's
+ * content is not available" is the same visible fact a missing painter
+ * reports. Passed `warnAs: null` — the driver's own cycle-detection effect
+ * already logs the offending path once, so this painter does not warn a
+ * second time.
  *
  * Also republishes the STRETCHING container's forced rect
- * (`ViewportRectContext`), the return leg of ADR-0030's seam: with `stretch`
+ * (`ViewportRectContext`), the return leg of ADR-0033's seam: with `stretch`
  * on, Godot resizes the sub-viewport to `get_size() / stretch_shrink`
  * (`recalc_force_viewport_sizes`), and the solved `rect` this painter already
  * receives from the Control layout solver IS that container rect — no extra
  * measurement round trip needed.
+ *
+ * TINT. `NOTIFICATION_DRAW` composites each child viewport with a plain
+ * `draw_texture_rect(c->get_texture(), rect)` — no explicit colour argument —
+ * but every `CanvasItem` draw call is tinted by the item's own
+ * `modulate`/`self_modulate` at the rendering-server level
+ * (`RenderingServer::canvas_item_set_modulate`/`_self_modulate`), the same
+ * mechanism a `ColorRect` or `TextureRect`'s draw calls go through. Measured
+ * on a scratch fixture through Godot 4.6.3 (see `comparison.md`'s Item 2
+ * row): a `ColorRect(0.8, 0.8, 0.8)` filling the sub-viewport reads rgb(204)
+ * with no tint, rgb(102) with `self_modulate = Color(0.5, 0.5, 0.5, 1)`
+ * (204 × 0.5 exactly), and rgb(51) with an ANCESTOR `modulate = Color(0.5,
+ * 0.5, 0.5, 1)` on top of that same `self_modulate` (204 × 0.5 × 0.5 exactly)
+ * — a plain multiply in the same sRGB-authored space the content colour
+ * lives in, confirming this painter should fold tint exactly the way every
+ * other native painter does: `useCanvasItemTint({ modulate: WHITE_MODULATE,
+ * self_modulate })`, `modulate` pinned to white because `ControlCanvasWalker`
+ * already folded this node's OWN `modulate` into the ambient
+ * `Modulate2DContext` this component renders inside (see `TextureRect`'s
+ * identical comment for why re-applying it here would double it). Computed
+ * ONCE for the whole container (Godot's `self_modulate` is one CanvasItem
+ * property, shared by every child viewport's `draw_texture_rect` call in the
+ * same `NOTIFICATION_DRAW`), then handed to every `ViewportSurfaceNative`.
  */
 import { useEffect, useMemo } from 'react';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry.js';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad.js';
 import { ControlFallback } from '../../../../r3f/controls/native/ControlFallback.js';
@@ -37,9 +64,9 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect.js';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker.js';
 import { useBuildSolveTree } from '../../../../r3f/controls/native/buildSolveTree.js';
 import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping.js';
+import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate.js';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext.js';
-import { useViewportTexture } from '../../../../r3f/contexts/ViewportTextureContext.js';
-import { useViewportPassCycle } from '../../../../r3f/contexts/ViewportPassRegistryContext.js';
+import { useViewportTargetSlot } from '../../../../resources/textures/viewporttexture/useViewportTextureSlot.js';
 import { useRegisterViewportRect } from '../../../../r3f/contexts/ViewportRectContext.js';
 import { joinPath } from '../../../../utils/nodePath.js';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../../parser/types.js';
@@ -47,7 +74,6 @@ import { isViewportBoundary } from '../../../viewport/subviewport/viewportBounda
 import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
 import type { SubViewportContainerProperties } from './types.js';
 
-const WHITE = new THREE.Color(1, 1, 1);
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
 interface ViewportSurfaceNativeProps {
@@ -57,10 +83,15 @@ interface ViewportSurfaceNativeProps {
   stretch: boolean;
   shrink: number;
   renderOrder: number;
+  /** Forwarded to `<ControlFallback>` on the cycle branch — see `NativeControlComponentProps.effectiveZ`. */
+  effectiveZ: number;
   theme: NativeControlComponentProps['theme'];
   measureText: NativeControlComponentProps['measureText'];
   externalResources: readonly TscnExternalResource[];
   internalResources: readonly TscnInternalResource[];
+  /** This container's own resolved tint (`self_modulate` folded onto the ambient), shared by every nested viewport's composited quad. */
+  tintColor: THREE.Color;
+  tintOpacity: number;
 }
 
 /**
@@ -77,10 +108,13 @@ function ViewportSurfaceNative({
   stretch,
   shrink,
   renderOrder,
+  effectiveZ,
   theme,
   measureText,
   externalResources,
   internalResources,
+  tintColor,
+  tintOpacity,
 }: ViewportSurfaceNativeProps) {
   const props = viewport.properties as SubViewportProperties;
   const authoredSize = props.size ?? { x: 512, y: 512 };
@@ -106,8 +140,7 @@ function ViewportSurfaceNative({
     return registerViewportRect(path, forced);
   }, [registerViewportRect, path, stretch, width, height, shrink]);
 
-  const entry = useViewportTexture(path);
-  const cycle = useViewportPassCycle(path);
+  const { texture, cyclic } = useViewportTargetSlot(path, null);
 
   // Controls anchor against the RENDERED rect (post-shrink when stretching):
   // Godot lays a viewport's own Controls out against the target it actually
@@ -146,11 +179,12 @@ function ViewportSurfaceNative({
   return (
     <group ref={anchorRef} scale={[scale, scale, 1]}>
       <ControlClipProvider value={clippingPlanes}>
-        {cycle ? (
+        {cyclic ? (
           <ControlFallback
             solveNode={fallbackSolveNode}
             rect={clipRect}
             renderOrder={renderOrder}
+            effectiveZ={effectiveZ}
             // The cycle branch renders no subtree at all — nothing draws below
             // this surface — so the fallback's own slot IS its subtree's last.
             subtreeChromeRenderOrder={renderOrder}
@@ -158,13 +192,13 @@ function ViewportSurfaceNative({
             measureText={measureText}
             childRects={NO_CHILD_RECTS}
           />
-        ) : entry ? (
+        ) : texture ? (
           <ControlQuad
             width={renderedWidth}
             height={renderedHeight}
-            color={WHITE}
-            opacity={1}
-            map={entry.texture}
+            color={tintColor}
+            opacity={tintOpacity}
+            map={texture}
             renderOrder={renderOrder}
           />
         ) : null}
@@ -184,6 +218,7 @@ export function SubViewportContainer({
   solveNode,
   rect,
   renderOrder,
+  effectiveZ,
   theme,
   measureText,
 }: NativeControlComponentProps) {
@@ -191,6 +226,14 @@ export function SubViewportContainer({
   const stretch = props.stretch ?? false;
   const shrink = Math.max(1, props.stretch_shrink ?? 1);
   const { externalResources, internalResources } = useSceneResources();
+
+  // This node's own `modulate` is already folded into the ambient
+  // `Modulate2DContext` this component renders inside (`ControlCanvasWalker`),
+  // so `modulate` here stays white — see the module doc's TINT section.
+  // `self_modulate` never propagates to children, so it is resolved once,
+  // here, and shared by every nested viewport's composited quad below.
+  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
+  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
 
   // Raw live children (unlike `solveNode.children`, the Control-only solve
   // forest — `buildSolveTree` skips a viewport boundary entirely), so a
@@ -207,6 +250,9 @@ export function SubViewportContainer({
           containerRect={rect}
           stretch={stretch}
           shrink={shrink}
+          effectiveZ={effectiveZ}
+          tintColor={tint.color}
+          tintOpacity={tint.opacity}
           // Each successive viewport draws ON TOP of the last (Godot's own
           // tree-order stacking) — a fraction below the next paint index's
           // integer slot, matching the small-offset convention

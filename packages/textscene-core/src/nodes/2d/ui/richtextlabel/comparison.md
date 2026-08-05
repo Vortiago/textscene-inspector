@@ -35,8 +35,7 @@ Measured on Godot 4.6.3, `pnpm ref:godot scenes/fixtures/unit-rich-text-label.ts
 | Probe | What it is | Godot | Ours |
 | --- | --- | --- | --- |
 | (120, 21) | the `[u]` span's underline stroke — CLOSED, see below | rgb(153, 153, 153) | rgb(153, 153, 153) |
-| (245, 6) | the `[color]` span's fill, where Godot draws it | rgb(224, 160, 48) | rgb(76, 76, 76) |
-| (254, 7) | the same fill ~9 px right, where ours draws it | rgb(76, 76, 76) | rgb(224, 160, 48) |
+| (244, 11) | the `[color]` span's fill, an interior pixel — CLOSED, see below | rgb(224, 160, 48) | rgb(224, 160, 48) |
 
 **CLOSED: `[u]` now draws an underline.** Previously nothing at all was drawn
 on that row (BEFORE: Godot a 1 px stroke running x 92..175 on row 21, 84 px of
@@ -45,9 +44,9 @@ the background). `nativeSolver.ts`'s `underlineRectPx` now draws the stroke
 from the vendored font's own `post`-table underline metrics
 (`openSansMetrics.ts`'s `getUnderlinePositionPx`/`getUnderlineThicknessPx`),
 at `RICH_TEXT_LABEL_UNDERLINE_ALPHA` (Godot's `underline_alpha` theme
-constant) times the run's own colour (AFTER, this fixture: a 1 px stroke at
-row 21, x 101..183 — matches Godot's row and colour exactly, x shifted ~9 px
-by the same residual advance drift the next paragraph describes; probe
+constant) times the run's own colour (AFTER: a 1 px stroke at row 21, x
+83..178 in Godot and x 82..177 here — within a pixel, where it used to sit
+several pixels off because of the whole-line advance drift below; probe
 (120, 21) now reads rgb(153, 153, 153) on both sides).
 
 **CLOSED — every colour now lands on Godot's value, tag colours included.**
@@ -71,21 +70,75 @@ at the outline's own origin — the baseline), so an ascender-height vertex
 shifted the wrong direction. Fixed in `buildGlyphQuadArrays` (AFTER: the line
 now reads "Bold, italic, underline, and colored BBCode" on both sides).
 
-**A residual ~9-10 px advance drift remains, evenly distributed across the
-whole line, unrelated to the two fixes above.** The line's ink ends at x 359
-in Godot and x 369 here — present before AND after both fixes, and not
-specific to any span boundary: it grows steadily across the line (the
-`[color]` span above lands 9 px right of Godot's own position by the time the
-line reaches it). Likely a small systemic difference between this engine's
-per-glyph advances (`openSansAtlas.ts`'s baked `xadvance`, a plain
-`hmtx`-derived scale) and Godot's real HarfBuzz-shaped, FreeType-hinted
-advances at this font size — out of this sheet's three fixed defects, not
-investigated further here.
+**CLOSED — the whole-line advance drift that used to grow across the line is
+gone.** The line's ink used to end at x 359 in Godot and x 369 here — a 10 px
+overshoot that was NOT a per-glyph advance-quantization artifact (the
+standing hypothesis this fix started from): a scratch line-length sweep
+(plain, non-bbcode text at 9/19/29/44 characters, `pnpm ref:godot` against
+this engine's own `shapeText`) showed near-zero drift for PLAIN text of any
+length, which localised the real cause to the BBCode styling itself.
+Measured directly (`pnpm ref:godot` on isolated `[b]Bold[/b]`, `[i]italic[/i]`
+fragments, comma-position probes on the un-styled glyph immediately
+following each styled run): Godot's own bold "Bold" advances the pen ~3 px
+LESS than the same word set unstyled, and italic "italic" ~4 px less — the
+opposite direction and far larger magnitude than any rounding artifact could
+explain. The mechanism: `scene/theme/default_theme.cpp:1199-1202` sets
+`bold_font_size`/`italics_font_size`/`bold_italics_font_size` to the SAME `-1`
+sentinel `normal_font_size` itself defaults to, but `RichTextLabel::_find_font`
+(`rich_text_label.cpp:3257`/`:3270`/`:3283`) reads each style's OWN key
+unconditionally — never falling back to `normal_font_size` — and
+`Theme::get_font_size` (`scene/resources/theme.cpp:658-661`) resolves an
+unset (`<= 0`) key to `ThemeDB::get_fallback_font_size()` (hardcoded 16,
+`scene/theme/theme_db.h:85`), independent of whatever `normal_font_size`
+resolved to. This fixture overrides only `normal_font_size` (18), so Godot
+renders every `[b]`/`[i]`/`[b][i]` span two pixels smaller than the
+surrounding plain text — a real Godot behaviour this engine had no notion of
+at all, since it shaped every glyph on a line at one flat size regardless of
+style. `nativeSolver.ts`'s `resolveRunFontSizePx` ports the same key
+resolution now, and `textLayout.ts`'s `shapeText` gained a `fontSizePxAt`
+per-character override so a styled run's own glyphs advance at ITS resolved
+size while the paragraph still shapes as one pass (line-breaking needs the
+whole paragraph's width, not each run measured alone). Closing this took the
+line from a 10 px overshoot to within a pixel (AFTER: line ink x 1..359 in
+Godot, x 0..358 here).
 
-`[b]` is drawn, but not as Godot's face: the span spans x 1..39 in Godot and
-x 1..41 here. The distance-field bias that stands in for
-`set_variation_embolden` is a qualitative substitution, not a port — there is no
-MSDF equivalent of FreeType's stroke units. `[i]`'s skew is exact.
+A much smaller, genuinely per-glyph-quantization term was real too, just far
+too small to be the drift on its own (~1.5 px over this 45-character line,
+confirmed by comparing `fontkit`'s raw `hmtx` scale against this engine's OLD
+per-glyph advance table): `openSansAtlas.ts`'s `xadvance` is msdf-bmfont-xml's
+OWN atlas-bake-resolution-42 glyph table, integer-rounded at THAT resolution
+before this repo's bake script ever reads it back — confirmed empirically
+(msdf-bmfont-xml's own `roundDecimal` option, which would round intentionally,
+defaults to `null`/off; the rounding is upstream, in the atlas-bake tool's own
+pipeline). Godot's real per-glyph advance is never rounded at any UI font size
+this engine ships (`text_server_adv.cpp:7078`'s `subpos` branch, true for
+`SUBPIXEL_POSITIONING_AUTO` — Godot's own default — whenever `font_size <= 20`,
+`servers/text/text_server.h:172`): it is HarfBuzz's unrounded `x_advance`,
+itself FreeType's UNHINTED advance (`thirdparty/harfbuzz/src/hb-ft.cc:115`'s
+default `FT_LOAD_NO_HINTING`), a plain proportional `hmtx` scale with no
+rounding anywhere. `openSansMetrics.ts` now bakes a SEPARATE, continuous
+per-glyph `advanceWidths` table (`bake-metrics.mjs`'s `bakeAdvanceWidths`,
+straight from `fontkit`'s `Glyph#advanceWidth`) that `textLayout.ts`'s
+`glyphAdvancePx` reads instead — the atlas's own bitmap/geometry data (glyph
+placement inside the PNG) is untouched, only the ADVANCE source changed.
+
+`[b]` is drawn closer to Godot's own weight now too: the span spans x 1..39
+in Godot and x 1..38 here (was x 1..41, confounded by the drift above).
+`BOLD_DISTANCE_BIAS` was an unmeasured placeholder (0.08); measured directly
+against real Godot — a horizontal transect through the `l` stem (a single
+vertical stroke, so its half-max-crossing width is the stroke thickness
+directly) — Godot's own `embolden=1.2` renders that stem 3.04 px wide where
+0.08 rendered only 2.15 px, visibly thinner. `BOLD_DISTANCE_BIAS` is now
+0.35, which renders the same stem 3.01 px wide without collapsing `o`'s
+counter to a blob — Godot's own render at this size (18 px) already nearly
+closes `o`'s counter too, so a tight counter is Godot's own behaviour here,
+not an artifact to avoid. The `[b]` span's own overall ink width barely moved
+between 0.08 and 0.35 (both ~38 px): a uniform SDF threshold shift moves the
+`d` bowl's outermost curve only a fraction of a pixel, so stem thickness, not
+span width, is the signal this constant actually controls. There is still no
+MSDF equivalent of FreeType's stroke units, so this remains a tuned
+approximation, not a calibrated port — `[i]`'s skew is exact by contrast,
+since it transcribes a Transform2D coefficient directly.
 
 ## Linting
 

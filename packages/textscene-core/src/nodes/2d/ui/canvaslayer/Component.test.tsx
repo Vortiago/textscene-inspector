@@ -14,7 +14,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CanvasLayer } from './Component';
 import { parseCanvasLayer } from './parser';
-import { useCanvasLayerIndex } from '../../../../r3f/lighting2d/canvasItemPlacement';
+import { EffectiveZProvider, useCanvasLayerIndex, useEffectiveZ } from '../../../../r3f/lighting2d/canvasItemPlacement';
 import { CanvasModulateContext, useCanvasModulate } from '../../../../r3f/canvasModulate';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 
@@ -37,6 +37,11 @@ function LayerProbe({ testId }: { testId: string }) {
   return (
     <group name={`probe:${testId}:layer=${layer}:r=${modulate.r}`} />
   );
+}
+
+function ZProbe({ testId }: { testId: string }) {
+  const z = useEffectiveZ();
+  return <group name={`zprobe:${testId}:z=${z}`} />;
 }
 
 async function renderLayer(raw: Record<string, string> = {}, rawChildren: TscnNode[] = [], testId = 'a') {
@@ -83,4 +88,21 @@ describe('<CanvasLayer>', () => {
     const renderer = await renderLayer({ visible: 'false' }, [], 'hidden');
     expect(renderer.scene.findAllByType('Group')).toHaveLength(0);
   });
+
+  it(
+    "resets EffectiveZProvider to 0 for its children regardless of any ambient z outside the layer " +
+      '— a CanvasLayer starts its OWN canvas (renderer_canvas_cull.cpp culls each canvas independently), ' +
+      "mirroring NodeDispatcher.tsx's own CanvasLayer branch (`<EffectiveZProvider value={0}>`)",
+    async () => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <EffectiveZProvider value={999}>
+          <CanvasLayer {...painterEnv()} solveNode={layerSolveNode({}, [])} rect={ZERO_RECT} renderOrder={0}>
+            <ZProbe testId="reset" />
+          </CanvasLayer>
+        </EffectiveZProvider>
+      );
+      const probe = renderer.scene.findAllByType('Group').map((g) => g.instance as { name: string })[0]!;
+      expect(probe.name).toBe('zprobe:reset:z=0');
+    }
+  );
 });

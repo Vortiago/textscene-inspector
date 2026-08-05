@@ -105,7 +105,7 @@ const CONTROL_LEAVES = [
   'GridContainer',
   'HBoxContainer',
   'VBoxContainer',
-  // Displays its SubViewport children's targets (ADR-0030). Needs the Control
+  // Displays its SubViewport children's targets (ADR-0033). Needs the Control
   // chain like any other: without it every anchor/offset/layout validator
   // silently skips this type while erroring on every sibling Control.
   'SubViewportContainer',

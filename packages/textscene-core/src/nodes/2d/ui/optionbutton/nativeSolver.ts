@@ -49,7 +49,6 @@ import {
   pickButtonStyleBox,
   resolveButtonDrawState,
   tintColor,
-  tintStyleBox,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
@@ -64,7 +63,7 @@ import type { OptionButtonProperties } from './types';
 
 // Re-exported so NativeComponent.tsx can build on the shared, Button-generic
 // pieces without importing `buttonBase.ts` a second time under a different name.
-export { originCorrectionPx, pickButtonStyleBox, resolveButtonDrawState, tintColor, tintStyleBox };
+export { originCorrectionPx, pickButtonStyleBox, resolveButtonDrawState, tintColor };
 export type { ButtonDrawState };
 
 // --- Theme font colours --------------------------------------------------------

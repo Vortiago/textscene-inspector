@@ -11,10 +11,10 @@
  * the `Modulate2DContext` value it provides AROUND this painter, so re-running
  * `modulate` here would multiply it a SECOND time. This painter therefore
  * calls `useCanvasItemTint` with `modulate: WHITE_MODULATE` (a no-op) and
- * `self_modulate` from this node's own properties, then multiplies the
- * resulting `tint.own` (raw sRGB) into the StyleBox's two colours and the
- * font colour, before each item's own single sRGB→linear conversion —
- * mirroring `Button`'s established ordering.
+ * `self_modulate` from this node's own properties; the resulting `tint.own`
+ * (raw sRGB) is handed to `<StyleBoxQuad>`'s own `color` prop for the chrome
+ * and multiplied into the font colour before its own single sRGB→linear
+ * conversion — mirroring `Button`'s established ordering.
  *
  * CLIPPING. `Control::clip_contents` is never modelled generically in this
  * codebase (`ScrollContainer`, packet P16, is the one type that opts a
@@ -37,7 +37,7 @@
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
-import { StyleBoxQuad, tintStyleBox } from '../../../../r3f/controls/native/StyleBoxQuad';
+import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
@@ -63,8 +63,6 @@ export function LineEdit({ solveNode, rect, renderOrder, theme }: NativeControlC
 
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
-
-  const styleBox = useMemo(() => tintStyleBox(baseStyleBox, tint.own), [baseStyleBox, tint.own]);
 
   // --- Text: which string, which theme colour, shaped -----------------------
   const { text, isPlaceholder } = lineEditDisplayText(props);
@@ -94,13 +92,13 @@ export function LineEdit({ solveNode, rect, renderOrder, theme }: NativeControlC
     () =>
       layoutLineEditContent({
         rectSize: { x: rect.w, y: rect.h },
-        styleMargin: styleBox.contentMargin,
+        styleMargin: baseStyleBox.contentMargin,
         alignment: props.alignment ?? HORIZONTAL_ALIGNMENT_LEFT,
         textWidthPx: layout?.widthPx ?? 0,
         textHeightPx: layout?.heightPx ?? 0,
         fontSizePx,
       }),
-    [rect.w, rect.h, styleBox.contentMargin, props.alignment, layout, fontSizePx]
+    [rect.w, rect.h, baseStyleBox.contentMargin, props.alignment, layout, fontSizePx]
   );
 
   // Text is clipped to the content rect, never the whole widget.
@@ -108,7 +106,7 @@ export function LineEdit({ solveNode, rect, renderOrder, theme }: NativeControlC
 
   return (
     <group ref={anchorRef}>
-      {!props.flat && <StyleBoxQuad styleBox={styleBox} rect={rect} renderOrder={renderOrder} />}
+      {!props.flat && <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />}
       {layout && (
         <group position={[content.textOffset.x, -content.textOffset.y, 0]}>
           <TextRun

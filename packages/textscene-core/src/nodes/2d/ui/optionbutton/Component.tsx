@@ -8,7 +8,8 @@
  * Tint follows `Button`'s rule: `modulate` is already folded into the
  * ambient `Modulate2DContext` by the walker, so this calls `useCanvasItemTint`
  * with `modulate: WHITE_MODULATE` and only this node's own `self_modulate`.
- * The StyleBox uses `tintStyleBox` (two base colours); the arrow's own
+ * The StyleBox hands `tint.own` straight to `<StyleBoxQuad>`'s `color` prop
+ * (two base colours, composed internally); the arrow's own
  * modulate is ALWAYS opaque white in the default theme (`modulate_arrow`
  * defaults `false`, `default_theme.cpp:251` — `NOTIFICATION_DRAW` then never
  * enters the font-colour switch at all, leaving `clr = Color(1, 1, 1)`
@@ -39,7 +40,6 @@ import {
   resolveButtonDrawState,
   resolveOptionButtonSelectedText,
   tintColor,
-  tintStyleBox,
   OPTION_BUTTON_ARROW_NATURAL_SIZE,
 } from './nativeSolver';
 import type { OptionButtonProperties } from './types';
@@ -53,7 +53,6 @@ export function OptionButton({ solveNode, rect, renderOrder, theme }: NativeCont
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
 
-  const styleBox = useMemo(() => tintStyleBox(baseStyleBox, tint.own), [baseStyleBox, tint.own]);
   const clippingPlanes = useControlClipPlanes();
 
   const arrowTexture = useIconTexture(OPTION_BUTTON_ICONS.arrow);
@@ -76,18 +75,18 @@ export function OptionButton({ solveNode, rect, renderOrder, theme }: NativeCont
     () =>
       layoutOptionButtonContent({
         rectSize: { x: rect.w, y: rect.h },
-        styleMargin: styleBox.contentMargin,
+        styleMargin: baseStyleBox.contentMargin,
         arrowSize: OPTION_BUTTON_ARROW_NATURAL_SIZE,
         arrowMargin,
         textNaturalSize: layout ? { x: layout.widthPx, y: layout.heightPx } : { x: 0, y: 0 },
         fontSizePx,
       }),
-    [rect.w, rect.h, styleBox.contentMargin, arrowMargin, layout, fontSizePx]
+    [rect.w, rect.h, baseStyleBox.contentMargin, arrowMargin, layout, fontSizePx]
   );
 
   return (
     <>
-      <StyleBoxQuad styleBox={styleBox} rect={rect} renderOrder={renderOrder} />
+      <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
       <group position={[content.arrowRect.x, -content.arrowRect.y, 0]}>
         <ControlQuad
           renderOrder={renderOrder}

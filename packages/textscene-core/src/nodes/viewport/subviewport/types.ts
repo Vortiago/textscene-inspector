@@ -6,7 +6,7 @@
  * The property that matters most to the renderer is `own_world_3d`: a
  * SubViewport ALWAYS owns its World2D (so CanvasItem descendants never draw in
  * the parent's canvas) but SHARES the parent's World3D unless this is set — see
- * `Viewport::find_world_2d` / `find_world_3d` in Godot, and ADR-0030.
+ * `Viewport::find_world_2d` / `find_world_3d` in Godot, and ADR-0033.
  *
  * Defaults are Godot's own (`doc/classes/SubViewport.xml`, `Viewport.xml`).
  */

@@ -35,8 +35,9 @@
  * TINT. Mirrors `PanelChrome.tsx` exactly: the walker already folds this
  * node's OWN `modulate` into the ambient `Modulate2DContext` its descendants
  * (and this painter) read, so re-applying it here would square it — only
- * `self_modulate` composes onto the track/grabber StyleBoxes' two base
- * colours, in sRGB, before `StyleBoxQuad`'s single linear conversion.
+ * `self_modulate` reaches `tint.own`, handed to each track/grabber
+ * `<StyleBoxQuad>`'s own `color` prop, which composes it onto the StyleBox's
+ * two base colours, in sRGB, before its single linear conversion.
  *
  * DRAW ORDER. Both bars use `subtreeChromeRenderOrder`
  * (`ControlComponentRegistry.ts`'s `NativeControlComponentProps`), NOT this
@@ -71,8 +72,8 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { createSolveContext } from '../../../../r3f/controls/native/controlRectSolver';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { StyleBoxQuad, tintStyleBox } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { useCanvasItemTint, WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
+import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
+import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { ControlProperties } from '../control/types';
 import { scrollContainerScrollBars, type ScrollBarPlacement } from './nativeSolver';
@@ -82,6 +83,8 @@ interface ScrollBarChromeProps {
   bar: ScrollBarPlacement;
   track: StyleBoxFlatData;
   grabber: StyleBoxFlatData;
+  /** Raw sRGB, composed into `track`/`grabber` internally by `<StyleBoxQuad>`'s own `color` prop. */
+  color: RGBA;
   /** `subtreeChromeRenderOrder` (or its fallback) — see this module's own DRAW ORDER doc. */
   chromeRenderOrder: number;
 }
@@ -118,16 +121,16 @@ interface ScrollBarChromeProps {
  * ALREADY-absolute rect verbatim would double-count that offset once the
  * mesh sits inside a group that already carries it.
  */
-function ScrollBarChrome({ bar, track, grabber, chromeRenderOrder }: ScrollBarChromeProps) {
+function ScrollBarChrome({ bar, track, grabber, color, chromeRenderOrder }: ScrollBarChromeProps) {
   if (!bar.visible) return null;
   // Position only. `StyleBoxQuad` now takes just the size from the rect it is
   // handed and applies the Godot→three y flip itself, so a caller supplies the
   // offset through a group and nothing else.
   return (
     <group position={[bar.rect.x, -bar.rect.y, 0]}>
-      <StyleBoxQuad styleBox={track} rect={bar.rect} renderOrder={chromeRenderOrder + 0.25} />
+      <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={chromeRenderOrder + 0.25} />
       <group position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}>
-        <StyleBoxQuad styleBox={grabber} rect={bar.grabberRect} renderOrder={chromeRenderOrder + 0.5} />
+        <StyleBoxQuad styleBox={grabber} color={color} rect={bar.grabberRect} renderOrder={chromeRenderOrder + 0.5} />
       </group>
     </group>
   );
@@ -158,15 +161,6 @@ export function ScrollContainer({
 
   const selfModulate = props.selfModulate ?? WHITE_MODULATE;
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
-  const trackHorizontal = useMemo(
-    () => tintStyleBox(theme.widgets.scrollBar.scrollHorizontal, tint.own),
-    [theme, tint.own]
-  );
-  const trackVertical = useMemo(
-    () => tintStyleBox(theme.widgets.scrollBar.scrollVertical, tint.own),
-    [theme, tint.own]
-  );
-  const grabber = useMemo(() => tintStyleBox(theme.widgets.scrollBar.grabber, tint.own), [theme, tint.own]);
 
   // The whole widget rect clips its subtree — the planes go into the Provider below.
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
@@ -177,14 +171,16 @@ export function ScrollContainer({
       <ControlClipProvider value={clippingPlanes}>
         <ScrollBarChrome
           bar={layout.horizontal}
-          track={trackHorizontal}
-          grabber={grabber}
+          track={theme.widgets.scrollBar.scrollHorizontal}
+          grabber={theme.widgets.scrollBar.grabber}
+          color={tint.own}
           chromeRenderOrder={subtreeChromeRenderOrder}
         />
         <ScrollBarChrome
           bar={layout.vertical}
-          track={trackVertical}
-          grabber={grabber}
+          track={theme.widgets.scrollBar.scrollVertical}
+          grabber={theme.widgets.scrollBar.grabber}
+          color={tint.own}
           chromeRenderOrder={subtreeChromeRenderOrder}
         />
         {children}

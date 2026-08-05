@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { StyleBoxQuad } from './StyleBoxQuad';
 import type { StyleBoxFlatData } from './styleBoxFlat';
+import { sRGBChannelToLinear } from '../../../utils/colorSpace';
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
@@ -93,5 +94,73 @@ describe('<StyleBoxQuad>', () => {
     );
 
     expect(disposeSpy).toHaveBeenCalled();
+  });
+
+  describe('color override', () => {
+    it('composes the tint into bg_color/border_color in raw sRGB ONCE, before the single sRGB→linear conversion — 0.5 * 0.5 = 0.25, not 0.125', async () => {
+      // The composed channel is 0.5 (widget) * 0.5 (tint) = 0.25 in sRGB,
+      // converted to linear EXACTLY once. Double-linearisation (converting
+      // both operands first, THEN multiplying in linear space) would instead
+      // give sRGBChannelToLinear(0.5) ** 2 ≈ 0.0334 — an entirely different,
+      // much darker number this test also rules out.
+      const renderer = await ReactThreeTestRenderer.create(
+        <StyleBoxQuad
+          styleBox={box({ bgColor: { r: 0.5, g: 0.5, b: 0.5, a: 1 } })}
+          rect={{ x: 0, y: 0, w: 100, h: 50 }}
+          color={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}
+          renderOrder={0}
+        />
+      );
+      const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+      const color = geom.attributes.color as THREE.BufferAttribute;
+
+      const composedOnce = sRGBChannelToLinear(0.25);
+      const doubleLinearised = sRGBChannelToLinear(0.5) * sRGBChannelToLinear(0.5);
+      expect(composedOnce).not.toBeCloseTo(doubleLinearised, 3);
+
+      expect(color.getX(0)).toBeCloseTo(composedOnce, 5);
+      expect(color.getY(0)).toBeCloseTo(composedOnce, 5);
+      expect(color.getZ(0)).toBeCloseTo(composedOnce, 5);
+    });
+
+    it('tints borderColor the same way as bgColor', async () => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <StyleBoxQuad
+          styleBox={box({ borderColor: { r: 0.5, g: 0.5, b: 0.5, a: 1 }, borderWidth: { left: 5, top: 5, right: 5, bottom: 5 } })}
+          rect={{ x: 0, y: 0, w: 100, h: 50 }}
+          color={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}
+          renderOrder={0}
+        />
+      );
+      const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+      const color = geom.attributes.color as THREE.BufferAttribute;
+      // Vertex 1 is the border ring's first OUTER (border_color) vertex — see
+      // styleBoxFlatGeometry.test.ts's border_blend fixture for the even/odd
+      // inner/outer ordering this relies on.
+      expect(color.getX(1)).toBeCloseTo(sRGBChannelToLinear(0.25), 5);
+    });
+
+    it('defaults to no tint (opaque white) when the prop is omitted, matching pre-existing behaviour', async () => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <StyleBoxQuad styleBox={box({ bgColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 } })} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
+      );
+      const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+      const color = geom.attributes.color as THREE.BufferAttribute;
+      expect(color.getX(0)).toBeCloseTo(sRGBChannelToLinear(0.8), 5);
+    });
+
+    it('multiplies alpha too (tint.a composes into the vertex alpha channel)', async () => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <StyleBoxQuad
+          styleBox={box({ bgColor: { r: 1, g: 1, b: 1, a: 0.8 } })}
+          rect={{ x: 0, y: 0, w: 100, h: 50 }}
+          color={{ r: 1, g: 1, b: 1, a: 0.5 }}
+          renderOrder={0}
+        />
+      );
+      const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+      const color = geom.attributes.color as THREE.BufferAttribute;
+      expect(color.getW(0)).toBeCloseTo(0.4, 5);
+    });
   });
 });

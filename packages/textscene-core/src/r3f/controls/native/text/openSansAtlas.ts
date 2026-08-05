@@ -21,7 +21,19 @@ export interface OpenSansGlyph {
   xoffset: number;
   /** Offset from the line-top to the bitmap's top edge, atlas-bake-size px. */
   yoffset: number;
-  /** Pen advance to the next glyph, atlas-bake-size px (same `hmtx` source as `OpenSansMetrics`, scaled to `OPEN_SANS_ATLAS_INFO.fontSize`). */
+  /**
+   * msdf-bmfont-xml's OWN glyph-table advance, atlas-bake-size (42) px —
+   * INTEGER-rounded at that resolution by the atlas-bake tool itself before
+   * this script ever reads it back (confirmed empirically against the
+   * vendored font; msdf-bmfont-xml's own `roundDecimal` option, which would
+   * explain an INTENTIONAL round, defaults to `null`/off). NOT the glyph
+   * shaper's advance source: `openSansMetrics.ts`'s `getGlyphAdvanceUnits`
+   * (backed by this SAME `hmtx` table, at full floating-point precision) is
+   * — see that function's own doc for why the atlas-bake-resolution rounding
+   * here is a real, measured source of drift a shaper must not inherit. Kept
+   * only as atlas metadata a consumer might reasonably expect a glyph-info
+   * table to carry; `textLayout.ts` never reads this field.
+   */
   xadvance: number;
   /** Left edge of the glyph's bitmap within the atlas texture, px. */
   x: number;

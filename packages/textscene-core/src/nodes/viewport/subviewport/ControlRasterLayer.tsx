@@ -3,7 +3,7 @@
  * scene, or nothing at all when there are none.
  *
  * BOTH canvases need this, for the same reason: a Control-only sub-viewport
- * (ADR-0030) still needs its pass driven in whichever canvas is mounted, even
+ * (ADR-0033) still needs its pass driven in whichever canvas is mounted, even
  * where Controls are never drawn on-screen — a `SubViewportContainer` or any
  * other `ViewportTexture` consumer in that canvas may be sampling one. So the
  * hook call, the lazy boundary and the "are there any?" gate live here once

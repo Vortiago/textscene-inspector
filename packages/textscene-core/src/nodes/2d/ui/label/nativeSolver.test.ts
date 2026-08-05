@@ -8,7 +8,11 @@
  * At font size 16: ascentPx = ceil(2189*16/2048) = 18, descentPx =
  * ceil(600*16/2048) = 5, line_spacing = 3 (default_theme.cpp:392, scale 1) ->
  * linePitchPx = 26, fontHeightPx (no spacing) = 23.
- * Atlas xadvance (bake size 42, scale 16/42): 'A' = 28, 'B' = 28.
+ * Per-glyph `hmtx` advance width, design units (`openSansMetrics.ts`'s
+ * `advanceWidths`, unitsPerEm 2048 — the CONTINUOUS source, not
+ * `openSansAtlas.ts`'s own atlas-bake-resolution-42 `xadvance`, which is
+ * itself INTEGER-rounded at that resolution before this repo's bake script
+ * ever reads it back): 'A' = 1354.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
@@ -39,7 +43,12 @@ function ctx(withMeasurer = true): SolveContext {
   };
 }
 
-const A_ADVANCE = 28 * (16 / 42); // 10.666...
+// 'A's hmtx advance width is 1354 design units, 'B's is 1350 — a DIFFERENT
+// glyph, so 'AB's width is their SUM, not `A_ADVANCE * 2` (the two only
+// coincided at the OLD atlas-bake-resolution-42 xadvance, where both rounded
+// to the same integer 28 — a coincidence of that rounding, not a fact about
+// the font).
+const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 
 describe('labelMinimumSize (label.cpp:973-998)', () => {
   it('is (1, fontHeightPx) for empty text (label.cpp:239-241, get_line_height with no lines falls to font->get_height, no line_spacing)', () => {
@@ -49,7 +58,7 @@ describe('labelMinimumSize (label.cpp:973-998)', () => {
 
   it('autowrap OFF: width is the longest UNWRAPPED line, height is a single line (23px, no spacing to subtract)', () => {
     const result = labelMinimumSize(node({ text: 'AB', autowrapMode: 0 }), ctx());
-    expect(result.x).toBeCloseTo(A_ADVANCE * 2, 6);
+    expect(result.x).toBeCloseTo(AB_WIDTH, 6);
     expect(result.y).toBe(23);
   });
 
@@ -57,7 +66,7 @@ describe('labelMinimumSize (label.cpp:973-998)', () => {
     const result = labelMinimumSize(node({ text: 'A\nAB', autowrapMode: 0 }), ctx());
     expect(result.y).toBe(49);
     // width floors to the WIDER of the two unwrapped lines ('AB'), not 'A'.
-    expect(result.x).toBeCloseTo(A_ADVANCE * 2, 6);
+    expect(result.x).toBeCloseTo(AB_WIDTH, 6);
   });
 
   it('autowrap ON (any non-zero mode): width floors to 1px regardless of text (label.cpp:984-991, always Size2(1, ...))', () => {

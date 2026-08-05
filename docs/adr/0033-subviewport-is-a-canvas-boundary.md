@@ -1,6 +1,11 @@
 # A sub-viewport is a canvas boundary, not a world boundary
 
 - Status: Accepted (2026-07-29)
+- Renumbered from ADR-0030, which ADR-0030 (2D shadow penumbra polar map) had
+  already taken — the two were authored in parallel branches and merged a day
+  apart, so neither author saw the clash. The earlier-merged decision keeps the
+  number. External references predating this (merged pull-request descriptions)
+  still say ADR-0030; in-tree citations all point here.
 - Related: ADR-0003 (2D-UI DOM overlay), ADR-0006 (viewport-mode seam and its two
   amendments), ADR-0024 (DOM-overlay browser gate), ADR-0002 (three separate registries).
 

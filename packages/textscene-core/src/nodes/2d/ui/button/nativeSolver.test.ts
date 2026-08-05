@@ -3,9 +3,11 @@
  * (`Button::get_minimum_size_for_text_and_icon`, `scene/gui/button.cpp:481-526`).
  * Expected numbers are hand-derived from the vendored OpenSans_SemiBold
  * metrics/atlas (same constants `label/nativeSolver.test.ts` cites:
- * `unitsPerEm=2048`, `ascent=2189`, `descent=600`; atlas `xadvance` for 'A' is
- * 28 at bake size 42) and the default theme's Button margin (`content_margin`
- * = `round(4*scale)` = 4 at scale 1, all four sides — `nativeTheme.ts`'s
+ * `unitsPerEm=2048`, `ascent=2189`, `descent=600`; `hmtx` advance width for
+ * 'A' is 1354 design units — `openSansMetrics.ts`'s CONTINUOUS
+ * `advanceWidths`, not `openSansAtlas.ts`'s own atlas-bake-resolution-42
+ * `xadvance`) and the default theme's Button margin (`content_margin` =
+ * `round(4*scale)` = 4 at scale 1, all four sides — `nativeTheme.ts`'s
  * `buttonMargin`) — an independent worked example, never the implementation's
  * own output.
  *
@@ -14,7 +16,7 @@
  * on a line pitch. `line_spacing` is Label's own theme constant; Button sets
  * none, so nothing separates lines it never stacks. Measured against real
  * Godot 4.6.3: a `content_margin` 6 button is 12 + 23 = 35.
- * 'A' advance at 16px = 28*(16/42) = 10.666...; 'AB' = 21.333...
+ * 'A' advance at 16px = 1354*(16/2048) = 10.578125; 'AB' = (1354+1350)*(16/2048) = 21.125.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
@@ -32,8 +34,11 @@ import {
   BUTTON_DEFAULT_FONT_COLOR,
 } from './nativeSolver';
 
-const A_ADVANCE = 28 * (16 / 42); // 10.666...
-const AB_WIDTH = A_ADVANCE * 2; // 21.333...
+// 'A's hmtx advance width is 1354 design units, 'B's is 1350 — a DIFFERENT
+// glyph, so 'AB's width is their SUM (the two only coincided at the OLD
+// atlas-bake-resolution-42 xadvance, where both rounded to the integer 28 —
+// a coincidence of that rounding, not a fact about the font).
+const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 const FONT_HEIGHT = 23;
 
 function node(
@@ -106,7 +111,7 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
 describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)', () => {
   it('vertical_icon_alignment CENTER (default): height is the MAX of icon/text, width ADDS icon width + h_separation', () => {
     // icon 20x20 (shorter than the 23px font height): height stays 23.
-    // width: 21.333 (text) + 20 (icon) + 4 (h_separation default) = 45.333.
+    // width: 21.125 (text) + 20 (icon) + 4 (h_separation default) = 45.125.
     const result = buttonMinimumSize(node({ text: 'AB' }, {}, { x: 20, y: 20 }), ctx());
     expect(result.y).toBe(8 + FONT_HEIGHT);
     expect(result.x).toBeCloseTo(8 + AB_WIDTH + 20 + 4, 6);
@@ -139,7 +144,7 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
       node({ text: 'AB', iconAlignment: 1 }, {}, { x: 30, y: 10 }),
       ctx()
     );
-    expect(result.x).toBeCloseTo(8 + 30, 6); // 30 > 21.333, floors width; no +4 separation
+    expect(result.x).toBeCloseTo(8 + 30, 6); // 30 > 21.125, floors width; no +4 separation
   });
 
   it('expand_icon=true: the icon contributes NOTHING to minimum size (Godot gates the whole block on !expand_icon)', () => {

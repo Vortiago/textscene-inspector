@@ -21,6 +21,14 @@
  * `controlRectSolver.ts`'s own `dispatchChildren` already made when it solved
  * this node's rect, read from the SAME registry so the two paths cannot
  * disagree about which nodes are "free".
+ *
+ * Also publishes `EffectiveZProvider` for every node's own children — Controls
+ * are CanvasItems too, and the whole native layer mounts inside
+ * `CanvasLighting2DProvider` so a `PointLight2D`'s `range_z_min`/`range_z_max`
+ * culling can reach them. Each node accumulates its OWN `z_index` onto the
+ * ambient it read (`accumulateCanvasItemZ` — the ONE accumulation rule this
+ * codebase has, shared with `CanvasItem2D.tsx`'s Node2D path and
+ * `canvaslayer/Component.tsx`'s reset to 0), never the other way around.
  */
 import { useMemo } from 'react';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
@@ -34,7 +42,12 @@ import { ControlFallback } from './ControlFallback';
 import { Modulate2DContext, useControlTint } from './useControlTint';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { controlRenderOrder } from './controlDrawOrder';
-import { useCanvasLayerIndex } from '../../lighting2d/canvasItemPlacement';
+import {
+  accumulateCanvasItemZ,
+  EffectiveZProvider,
+  useCanvasLayerIndex,
+  useEffectiveZ,
+} from '../../lighting2d/canvasItemPlacement';
 
 export interface ControlCanvasWalkerProps {
   tree: readonly SolveNode[];
@@ -115,6 +128,18 @@ function ControlNodeGroup({
   // see `controlDrawOrder.ts` for why this replaces a z offset entirely.
   const layer = useCanvasLayerIndex();
   const renderOrder = controlRenderOrder(layer, solvedEntry?.paintIndex ?? 0);
+  // Godot's `z_final`: this Control's own `z_index` accumulated onto the
+  // ambient a CanvasItem2D ancestor (or an enclosing CanvasLayer's painter,
+  // which resets it to 0 — a fresh canvas) published, clamped exactly as
+  // `CanvasItem2D.tsx` clamps it for Node2D — the ONE accumulation rule
+  // (`accumulateCanvasItemZ`), not a parallel one for Controls. Controls have
+  // no parsed `z_as_relative` override (`ControlProperties`), so this always
+  // takes Godot's own default of relative-true. `show_behind_parent` never
+  // enters this: `renderer_canvas_cull.cpp`'s `_cull_canvas_item` calls both
+  // its behind-children and front-children loops with the SAME `p_z` — the
+  // flag reorders draw order, not z accumulation.
+  const parentEffectiveZ = useEffectiveZ();
+  const effectiveZ = accumulateCanvasItemZ(parentEffectiveZ, { z_index: props.zIndex ?? 0 });
   // Second draw-order key, for chrome that must draw after this node's WHOLE
   // subtree (Godot's `INTERNAL_MODE_BACK` — see `NativeControlComponentProps.
   // subtreeChromeRenderOrder`'s own doc for why). Same band, but keyed off
@@ -133,17 +158,28 @@ function ControlNodeGroup({
   // exact registry read so the walker and the solver never disagree.
   const childIsFreeParent = controlSolverRegistry.containerLayout(solveNode.node.type) === undefined;
 
-  const childElements = solveNode.children.map((child) => (
-    <ControlNodeGroup
-      key={child.path}
-      solveNode={child}
-      solved={solved}
-      hiddenNodePaths={hiddenNodePaths}
-      isFreeParent={childIsFreeParent}
-      theme={theme}
-      measureText={measureText}
-    />
-  ));
+  // The CONTEXT carries this node's z to its DESCENDANTS, matching
+  // `CanvasItem2D.tsx`'s `EffectiveZProvider` placement. This node's own
+  // painter gets the same value by prop instead, because Godot tests an item
+  // against its own accumulated z, not its parent's — and the ambient a
+  // painter would read here is the parent's. See
+  // `NativeControlComponentProps.effectiveZ` for why that asymmetry is a prop
+  // rather than something a painter is trusted to re-derive.
+  const childElements = (
+    <EffectiveZProvider value={effectiveZ}>
+      {solveNode.children.map((child) => (
+        <ControlNodeGroup
+          key={child.path}
+          solveNode={child}
+          solved={solved}
+          hiddenNodePaths={hiddenNodePaths}
+          isFreeParent={childIsFreeParent}
+          theme={theme}
+          measureText={measureText}
+        />
+      ))}
+    </EffectiveZProvider>
+  );
 
   // Only this node's DIRECT children, so a painter cannot reach across the tree.
   const childRects = useMemo(() => {
@@ -169,6 +205,7 @@ function ControlNodeGroup({
       rect={rect}
       renderOrder={renderOrder}
       subtreeChromeRenderOrder={subtreeChromeRenderOrder}
+      effectiveZ={effectiveZ}
       theme={theme}
       measureText={measureText}
       childRects={childRects}
@@ -182,6 +219,7 @@ function ControlNodeGroup({
         rect={rect}
         renderOrder={renderOrder}
         subtreeChromeRenderOrder={subtreeChromeRenderOrder}
+        effectiveZ={effectiveZ}
         theme={theme}
         measureText={measureText}
         childRects={childRects}

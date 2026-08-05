@@ -1,11 +1,15 @@
 /**
  * `shapeText` — a framework-free port of Godot's Label line-shaping, against
  * the vendored Open Sans SemiBold atlas/metrics (packet P10). Every expected
- * pixel width below is hand-derived from `OPEN_SANS_ATLAS_GLYPHS[ch].xadvance`
- * scaled to the target font size (`fontSizePx / OPEN_SANS_ATLAS_INFO.fontSize`,
- * the atlas's own bake size of 42) — an independent source of truth from the
- * line-breaking algorithm under test, never the algorithm's own arithmetic
- * fed back at itself.
+ * pixel width below is hand-derived from `openSansMetrics.ts`'s
+ * `OPEN_SANS_METRICS.advanceWidths[ch]` (the font's own CONTINUOUS `hmtx`
+ * advance width, design units) scaled to the target font size
+ * (`fontSizePx / OPEN_SANS_METRICS.unitsPerEm`) — an independent source of
+ * truth from the line-breaking algorithm under test, never the algorithm's
+ * own arithmetic fed back at itself, and NOT `openSansAtlas.ts`'s own
+ * `xadvance` (that table's own doc has the citation for why it is the wrong
+ * source for a glyph's advance: it is msdf-bmfont-xml's OWN atlas-bake-
+ * resolution-42 glyph table, integer-rounded at THAT resolution).
  *
  * Citations:
  *   scene/gui/label.cpp :: Label::_shape() (~209-225) -- AUTOWRAP_* -> break
@@ -45,8 +49,9 @@ describe('shapeText — autowrap OFF', () => {
 
 describe('shapeText — autowrap ARBITRARY (BREAK_GRAPHEME_BOUND)', () => {
   it('wraps at any glyph boundary, irrespective of word count', () => {
-    // 'A' xadvance 28 @ bake 42 -> 28*16/42 = 10.666...7 px/glyph at size 16.
-    // width 50 fits 4 (42.67px) but not 5 (53.33px) -> 4,4,2.
+    // 'A' hmtx advance width 1354 design units, unitsPerEm 2048 -> 1354*16/2048
+    // = 10.578125 px/glyph at size 16. width 50 fits 4 (42.3125px) but not 5
+    // (52.890625px) -> 4,4,2.
     expect(lineTexts('AAAAAAAAAA', 50, AutowrapMode.ARBITRARY)).toEqual(['AAAA', 'AAAA', 'AA']);
   });
 });
@@ -120,8 +125,8 @@ describe('shapeText — glyph pen positions', () => {
     const [a, b] = layout.lines[0]!.glyphs;
     expect(a!.x).toBe(0);
     expect(b!.x).toBeCloseTo(a!.advance, 10);
-    // 'A' xadvance 28 @ bake 42 -> 28*16/42.
-    expect(a!.advance).toBeCloseTo((28 * 16) / 42, 10);
+    // 'A' hmtx advance width 1354 design units, unitsPerEm 2048 -> 1354*16/2048.
+    expect(a!.advance).toBeCloseTo((1354 * 16) / 2048, 10);
   });
 });
 
@@ -171,9 +176,76 @@ describe('shapeText — kerning plumbing', () => {
     OPEN_SANS_METRICS.kerning.AB = -256;
     const layout = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
     const [a, b] = layout.lines[0]!.glyphs;
-    const bareAdvance = (28 * 16) / 42;
+    const bareAdvance = (1354 * 16) / 2048;
     expect(a!.advance).toBeCloseTo(bareAdvance - 2, 10);
     expect(b!.x).toBeCloseTo(bareAdvance - 2, 10);
+  });
+});
+
+describe('shapeText — fontSizePxAt (per-character size override)', () => {
+  it('advances each character by ITS OWN resolved size, not the flat fontSizePx', () => {
+    // 'A' hmtx advance width 1354 design units, unitsPerEm 2048. First char at
+    // 16px, second at 18px — two DIFFERENT scales of the same glyph, an
+    // independent worked example from `glyphAdvancePx`'s own arithmetic.
+    const layout = shapeText('AA', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      fontSizePxAt: (i) => (i === 0 ? 16 : 18),
+    });
+    const [a0, a1] = layout.lines[0]!.glyphs;
+    expect(a0!.advance).toBeCloseTo((1354 * 16) / 2048, 10);
+    expect(a1!.x).toBeCloseTo((1354 * 16) / 2048, 10);
+    expect(a1!.advance).toBeCloseTo((1354 * 18) / 2048, 10);
+  });
+
+  it('is a pure additive option: omitting it reproduces the flat-fontSizePx result exactly', () => {
+    const withCallback = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      fontSizePxAt: () => 16,
+    });
+    const flat = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    expect(withCallback).toEqual(flat);
+  });
+
+  it('skips kerning across a size boundary (a proxy for a shaped-run boundary — no GPOS pair spans two Items)', () => {
+    OPEN_SANS_METRICS.kerning.AB = -256;
+    try {
+      const layout = shapeText('AB', {
+        fontSizePx: 16,
+        boxWidthPx: 0,
+        autowrapMode: AutowrapMode.OFF,
+        fontSizePxAt: (i) => (i === 0 ? 16 : 18),
+      });
+      const [a] = layout.lines[0]!.glyphs;
+      // No -2px kerning fold-in, unlike the same-size case in the kerning
+      // plumbing suite above.
+      expect(a!.advance).toBeCloseTo((1354 * 16) / 2048, 10);
+    } finally {
+      delete OPEN_SANS_METRICS.kerning.AB;
+    }
+  });
+
+  it('line-break width accounting still uses each character\'s own (possibly smaller or larger) advance', () => {
+    // Two 'A's at 40px each (80px total) overflow a 60px box on their own;
+    // shrinking the second character to 8px brings the pair under budget.
+    const wideLayout = shapeText('A A', {
+      fontSizePx: 40,
+      boxWidthPx: 60,
+      autowrapMode: AutowrapMode.WORD,
+      fontSizePxAt: () => 40,
+    });
+    expect(wideLayout.lines.length).toBeGreaterThan(1);
+
+    const mixedLayout = shapeText('A A', {
+      fontSizePx: 40,
+      boxWidthPx: 60,
+      autowrapMode: AutowrapMode.WORD,
+      fontSizePxAt: (i) => (i === 0 ? 40 : 8),
+    });
+    expect(mixedLayout.lines.map((l) => l.text)).toEqual(['A A']);
   });
 });
 

@@ -10,7 +10,7 @@ renders_as: a clipped surface showing its SubViewport children's targets
 # SubViewportContainer
 
 The Control that displays its `SubViewport` children's render targets — a
-**viewport surface** (ADR-0030), and the one place a sub-viewport's canvas
+**viewport surface** (ADR-0033), and the one place a sub-viewport's canvas
 subtree is drawn.
 
 It draws **every** `SubViewport` child, stacked in tree order — not just the
@@ -127,6 +127,32 @@ also the blit's coverage guard. Measured through Godot 4.6.3 with
 | (150, 20) | `Band`, authored `Color(0.5, 0.5, 0.5)` | rgb(127, 127, 127) | rgb(128, 128, 128) |
 | (40, 95) | `Mark` | rgb(255, 102, 0) | rgb(255, 102, 0) |
 | (80, 50) | where the whole-rect fallback puts `Decoy` | rgb(76, 76, 76) | rgb(77, 77, 77) |
+
+## `modulate` / `self_modulate` tint the composite
+
+`NOTIFICATION_DRAW` calls a plain `draw_texture_rect(c->get_texture(), rect)` —
+no colour argument — but every `CanvasItem` draw call is tinted by the item's
+own `modulate`/`self_modulate` at the rendering-server level
+(`RenderingServer::canvas_item_set_modulate`/`_self_modulate`), the same
+mechanism `ColorRect`/`TextureRect` go through. Measured through Godot 4.6.3 on
+a scratch fixture (a `SubViewportContainer` compositing a `ColorRect(0.8, 0.8,
+0.8)` that fills its sub-viewport — not a corpus fixture; the numbers below are
+what proves the fold, not a specific pixel worth pinning to a golden):
+
+| Tint authored | Composited pixel |
+| --- | --- |
+| none | rgb(204, 204, 204) |
+| `self_modulate = Color(0.5, 0.5, 0.5, 1)` | rgb(102, 102, 102) — 204 × 0.5 exactly |
+| ancestor `modulate = Color(0.5, 0.5, 0.5, 1)` **and** that same `self_modulate` | rgb(51, 51, 51) — 204 × 0.5 × 0.5 exactly |
+
+A plain multiply in the same sRGB-authored space the content colour lives in —
+not a double gamma application, and not two independent multiplies that
+happen to agree only at this pair of values. The painter now folds both
+through `useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate })`, the
+identical mechanism every other native painter uses (`TextureRect`,
+`ColorRect`, …); `Component.modulate.test.tsx` asserts the resulting material
+colour against `sRGB→linear(self_modulate)` rather than re-deriving the byte
+math, since `useCanvasItemTint`'s own correctness is established elsewhere.
 
 ## Divergences
 

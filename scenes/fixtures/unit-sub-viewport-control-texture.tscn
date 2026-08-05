@@ -3,7 +3,7 @@
 ; The one variable: where a sub-viewport's CONTROL pixels come from and what
 ; colour pipeline they go through. Its content is Controls only, so there is no
 ; WebGL source at all — the target is a raster of the DOM overlay subtree
-; (ADR-0003 as amended, ADR-0030), which is a different mechanism from
+; (ADR-0003 as amended, ADR-0033), which is a different mechanism from
 ; `unit-sub-viewport-texture.tscn`'s 3D offscreen pass and shares no code with
 ; it. A regression here is invisible in every other scene because no other
 ; scene puts Controls behind a ViewportTexture.

@@ -11,7 +11,7 @@
  * It IS in `TWO_D_UI_TYPES` (that set mirrors the Control registry, and drives
  * the 2D-content hint and the root-workspace rule). The 3D dispatcher subtracts
  * it separately via `isViewportSurface`, because "is this 2D UI" and "does the
- * 3D canvas skip its subtree" are different questions here — ADR-0030.
+ * 3D canvas skip its subtree" are different questions here — ADR-0033.
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

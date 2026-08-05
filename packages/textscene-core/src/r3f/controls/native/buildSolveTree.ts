@@ -148,7 +148,7 @@ function buildForest(
   ): SolveNode[] {
     const out: SolveNode[] = [];
     for (const node of list) {
-      // A SubViewport owns its own World2D (ADR-0030); its Control subtree is
+      // A SubViewport owns its own World2D (ADR-0033); its Control subtree is
       // drawn by its own viewport surface, never by the enclosing canvas.
       if (isViewportBoundary(node.type)) continue;
 

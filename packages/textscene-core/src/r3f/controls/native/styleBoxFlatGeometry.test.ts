@@ -2,16 +2,27 @@
  * `styleBoxFlatGeometry` — ported from `scene/resources/style_box_flat.cpp`'s
  * `StyleBoxFlat::draw` and its `draw_rounded_rectangle` helper (Godot 4.6.3),
  * restricted to this packet's scope: fill, per-corner radii, per-edge
- * borders, `border_blend`, `draw_center`, expand margins. Anti-aliasing,
- * `skew` and the drop shadow are out of scope (not in `StyleBoxFlatData`), so
- * every expected number below traces the NON-anti-aliased branch of `draw()`
- * (`aa_on` forced false) with `skew = (0, 0)`.
+ * borders, `border_blend`, `draw_center`, expand margins, and now
+ * anti-aliasing (`anti_aliased`/`aa_size`). `skew` and the drop shadow remain
+ * out of scope (not in `StyleBoxFlatData`), so every expected number below
+ * traces `draw()` with `skew = (0, 0)` and `shadow_size = 0`.
+ *
+ * Every fixture in this file EXCEPT the "anti-aliasing" describe block sets
+ * `antiAliased: false` explicitly, so `aa_on` (`draw()`'s own flag, ==
+ * `rounded_corners && anti_aliased` with skew always zero here) is forced
+ * false and these numbers are unaffected by this module's AA support — they
+ * pin that `anti_aliased: false` still produces exactly the geometry this
+ * suite pinned before AA existed.
  *
  * Every expected vertex position/count in this file was hand-derived by
  * tracing `draw_rounded_rectangle`'s corner-arc formula and the adjacent
  * `adapt_values`/`set_inner_corner_radius`/`set_corner_scale` helpers against
  * each fixture's own numbers — an independent derivation from the cited
- * source, not a re-run of this module's own code.
+ * source, not a re-run of this module's own code. The AA fixtures additionally
+ * trace `draw()`'s `aa_on` block (style_box_flat.cpp:511-630), assuming the
+ * `TextServer` 2D oversampling factor is 1 (style_box_flat.cpp:499-502) — this
+ * codebase does not model per-viewport oversampling anywhere, so `aa_size_scaled
+ * == aa_size` throughout.
  */
 import { describe, expect, it } from 'vitest';
 import { styleBoxFlatGeometry } from './styleBoxFlatGeometry';
@@ -33,6 +44,9 @@ function box(overrides: Partial<StyleBoxFlatData>): StyleBoxFlatData {
     contentMargin: { ...ZERO_SIDES },
     drawCenter: true,
     borderBlend: false,
+    // Every non-AA fixture opts out explicitly — see file header.
+    antiAliased: false,
+    aaSize: 1,
     ...overrides,
   };
 }
@@ -218,5 +232,95 @@ describe('styleBoxFlatGeometry', () => {
     expect(Math.max(...xs)).toBeCloseTo(10 + 100 + 4);
     expect(Math.min(...ys)).toBeCloseTo(10 - 3);
     expect(Math.max(...ys)).toBeCloseTo(10 + 50 + 5);
+  });
+});
+
+describe('styleBoxFlatGeometry anti-aliasing (style_box_flat.cpp:468-471,511-630)', () => {
+  it('a sharp rect (no rounded corner) ignores anti_aliased entirely — aa_on requires rounded_corners', () => {
+    // draw(): `aa_on = (rounded_corners || !skew.is_zero_approx()) && anti_aliased`.
+    // skew is always zero in this port, so with corner_radius all 0, aa_on is
+    // false REGARDLESS of anti_aliased — same 8-vertex geometry as the
+    // existing "a sharp rect" test above, whether AA is requested or not.
+    const off = styleBoxFlatGeometry(box({ antiAliased: false }), { x: 0, y: 0, w: 100, h: 50 });
+    const on = styleBoxFlatGeometry(box({ antiAliased: true, aaSize: 1 }), { x: 0, y: 0, w: 100, h: 50 });
+    expect(on.positions).toEqual(off.positions);
+    expect(on.colors).toEqual(off.colors);
+    expect(on.indices).toEqual(off.indices);
+    expect(off.positions).toHaveLength(8 * 3);
+  });
+
+  it('rounded corners, no border: anti_aliased adds a 108-vertex AA fill ring (108 vs the 36-vertex non-AA fill)', () => {
+    // draw_border=false (border_width all 0) => blend_on=false regardless of
+    // border_blend, so the aa_on block's draw_center branch runs unconditionally:
+    //  - filled infill at infill_rect_aa_colored (is_filled -> ring_vert_count
+    //    = (corner_detail+1)*4 = 36, corner_detail=8 since a radius is > 0)
+    //  - AA ring (is_filled=false, draw_border local -> doubled) from
+    //    infill_rect_aa_transparent (outer, alpha 0) to infill_rect_aa_colored
+    //    (inner, opaque) = (8+1)*4*2 = 72 vertices.
+    // 36 + 72 = 108, vs. the non-AA "uniform corner radius" test's 36.
+    const params = box({ cornerRadius: { topLeft: 10, topRight: 10, bottomRight: 10, bottomLeft: 10 } });
+    const rect = { x: 0, y: 0, w: 100, h: 50 };
+
+    const aaOff = styleBoxFlatGeometry(params, rect);
+    expect(aaOff.positions).toHaveLength(36 * 3);
+
+    const aaOn = styleBoxFlatGeometry({ ...params, antiAliased: true, aaSize: 1 }, rect);
+    expect(aaOn.positions).toHaveLength(108 * 3);
+    expect(aaOn.colors).toHaveLength(108 * 4);
+
+    // Vertices [0, 36) are the colored (non-AA-yet) filled centre, alpha 1.
+    for (let i = 0; i < 36; i++) {
+      expect(aaOn.colors.slice(i * 4, i * 4 + 4)).toEqual([RED.r, RED.g, RED.b, RED.a]);
+    }
+    // Vertices [36, 108) are the AA ring: even ring-local offsets are the
+    // INNER (opaque bg_color) boundary, odd offsets the OUTER (alpha 0,
+    // same rgb) boundary — draw_rounded_rectangle always writes inner then
+    // outer per (corner, detail) step.
+    for (let i = 0; i < 72; i += 2) {
+      expect(aaOn.colors.slice((36 + i) * 4, (36 + i) * 4 + 4)).toEqual([RED.r, RED.g, RED.b, RED.a]);
+      expect(aaOn.colors.slice((36 + i + 1) * 4, (36 + i + 1) * 4 + 4)).toEqual([RED.r, RED.g, RED.b, 0]);
+    }
+  });
+
+  it('rounded corners + uniform border: anti_aliased adds a 324-vertex geometry (vs. 108 non-AA), with an outer feather ring extending aa_size/2 PAST the style rect at alpha 0', () => {
+    // border_width 5 all sides, corner_radius 10 all corners, border_blend
+    // false (blend_on false) on a 100x50 rect:
+    //  - non-AA: border ring (72, corner_detail 8, doubled) + filled infill
+    //    (36) = 108, matching the existing border_blend-off shape.
+    //  - AA (aa_size 1): border_style_rect shrinks 1px in on every bordered
+    //    side (style_box_flat.cpp:511-517) — 4 rings of 72 (fill-boundary AA
+    //    ring degenerate-width but still emitted, border main ring, border
+    //    inner AA ring, border outer AA ring) + 1 filled centre of 36
+    //    = 4*72 + 36 = 324.
+    const rect = { x: 0, y: 0, w: 100, h: 50 };
+    const params = box({
+      borderWidth: { left: 5, top: 5, right: 5, bottom: 5 },
+      cornerRadius: { topLeft: 10, topRight: 10, bottomRight: 10, bottomLeft: 10 },
+    });
+
+    const aaOff = styleBoxFlatGeometry(params, rect);
+    expect(aaOff.positions).toHaveLength(108 * 3);
+
+    const aaOn = styleBoxFlatGeometry({ ...params, antiAliased: true, aaSize: 1 }, rect);
+    expect(aaOn.positions).toHaveLength(324 * 3);
+    expect(aaOn.colors).toHaveLength(324 * 4);
+
+    // The LAST 72 vertices are the border's OUTER feather ring
+    // (style_box_flat.cpp:626-628): inner boundary (even ring-local offset,
+    // outer_rect_aa_colored) is opaque border_color; outer boundary (odd
+    // offset, outer_rect_aa_transparent) is alpha-0 border_color, positioned
+    // aa_size/2 = 0.5px OUTSIDE the original [0,100]x[0,50] style rect.
+    const ringStart = 324 - 72;
+    const xs: number[] = [];
+    for (let i = 0; i < 72; i += 2) {
+      const innerIdx = ringStart + i;
+      const outerIdx = ringStart + i + 1;
+      expect(aaOn.colors.slice(innerIdx * 4, innerIdx * 4 + 4)).toEqual([GREEN.r, GREEN.g, GREEN.b, 1]);
+      expect(aaOn.colors.slice(outerIdx * 4, outerIdx * 4 + 4)).toEqual([GREEN.r, GREEN.g, GREEN.b, 0]);
+      xs.push(aaOn.positions[outerIdx * 3]!);
+    }
+    // The alpha-0 boundary's leftmost point sits half the AA size beyond the
+    // original style rect's left edge (x = 0).
+    expect(Math.min(...xs)).toBeCloseTo(-0.5);
   });
 });

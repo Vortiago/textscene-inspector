@@ -94,12 +94,14 @@ every rect this painter draws is transcribed straight from
 
 ### Known limitations (native only)
 
-- **The corner feather on the track/fill roundrects is one pixel narrower than
-  Godot's** — `styleBoxFlatGeometry.ts` implements Godot's non-anti-aliased
-  `StyleBoxFlat` branch (see `panel/comparison.md`, which measures the ramp on a
-  40 px arc); Godot's actual default is `anti_aliased = true`. Below this
-  fixture's own measurement threshold, and a cross-cutting parity item this
-  slice inherits rather than introduces.
+- **The corner feather on the track/fill roundrects was one pixel narrower than
+  Godot's — now closed at the geometry level.** `styleBoxFlatGeometry.ts` used to
+  implement only Godot's non-anti-aliased `StyleBoxFlat` branch (see
+  `panel/comparison.md`, which measures the ramp on a 40 px arc, for the full
+  writeup and citations); it now ports the `anti_aliased`/`aa_size` AA-ring branch
+  too, a cross-cutting fix this slice inherits rather than introduces. Already
+  below this fixture's own measurement threshold before the fix, so no pixel
+  re-capture is expected to move here.
 - **`ticks_position` is not modelled.** `shared/slider.ts` parses only
   `tick_count`/`ticks_on_borders`/`editable`, so every tick draws at Godot's
   own default, `TICK_POSITION_BOTTOM_RIGHT` (below the track). No corpus

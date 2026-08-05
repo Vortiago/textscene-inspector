@@ -14,12 +14,11 @@
  * painter therefore calls `useCanvasItemTint` with `modulate: WHITE_MODULATE`
  * (a no-op — the ambient value already carries it) and `self_modulate` from
  * this node's own properties (own-pixels only, never propagated to
- * children). The resulting `tint.own` (raw sRGB) is then multiplied,
- * per-item, into whichever base colour each of the three draw calls uses
- * (StyleBox fill/border, font colour, icon modulate) BEFORE that item's own
+ * children). The resulting `tint.own` (raw sRGB) is handed straight to
+ * `<StyleBoxQuad>`'s own `color` prop for the chrome, and multiplied,
+ * per-item, into the font colour and icon modulate BEFORE each item's own
  * single sRGB→linear conversion — mirroring `PanelChrome.tsx`'s established
- * ordering for its own StyleBox, just applied three times here instead of
- * once.
+ * ordering for its own StyleBox.
  *
  * `renderOrder` is forwarded to EVERY mesh this painter emits: `StyleBoxQuad`,
  * `ControlQuad` (the icon) and `<TextRun>` all take it directly as a prop.
@@ -49,7 +48,6 @@ import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveButtonDrawState,
   pickButtonStyleBox,
-  tintStyleBox,
   tintColor,
   layoutButtonContent,
   HORIZONTAL_ALIGNMENT_CENTER,
@@ -73,7 +71,6 @@ export function Button({ solveNode, rect, renderOrder, theme }: NativeControlCom
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
 
-  const styleBox = useMemo(() => tintStyleBox(baseStyleBox, tint.own), [baseStyleBox, tint.own]);
   const clippingPlanes = useControlClipPlanes();
 
   // --- Text: theme resolution + shaping ------------------------------------
@@ -116,7 +113,7 @@ export function Button({ solveNode, rect, renderOrder, theme }: NativeControlCom
     () =>
       layoutButtonContent({
         rectSize: { x: rect.w, y: rect.h },
-        styleMargin: styleBox.contentMargin,
+        styleMargin: baseStyleBox.contentMargin,
         hSeparation: props.themeOverrideConstants?.h_separation ?? theme.separation,
         iconMaxWidth: props.themeOverrideConstants?.icon_max_width ?? 0,
         textAlignment: props.alignment ?? HORIZONTAL_ALIGNMENT_CENTER,
@@ -131,7 +128,7 @@ export function Button({ solveNode, rect, renderOrder, theme }: NativeControlCom
     [
       rect.w,
       rect.h,
-      styleBox.contentMargin,
+      baseStyleBox.contentMargin,
       props.themeOverrideConstants,
       props.alignment,
       props.iconAlignment,
@@ -147,7 +144,7 @@ export function Button({ solveNode, rect, renderOrder, theme }: NativeControlCom
 
   return (
     <>
-      {!props.flat && <StyleBoxQuad styleBox={styleBox} rect={rect} renderOrder={renderOrder} />}
+      {!props.flat && <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />}
       {content.icon && iconTexture && (
         <group position={[content.icon.rect.x, -content.icon.rect.y, 0]}>
           <ControlQuad

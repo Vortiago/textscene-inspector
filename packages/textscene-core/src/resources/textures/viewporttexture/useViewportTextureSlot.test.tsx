@@ -2,10 +2,21 @@
  * The consumer half of the ViewportTexture seam: a texture slot that names a
  * node instead of a file.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { useEffect } from 'react';
 import * as THREE from 'three';
+
+const warnCalls: unknown[][] = [];
+vi.mock('../../../logger.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../logger.js')>();
+  return {
+    ...actual,
+    warn: (...args: unknown[]) => {
+      warnCalls.push(args);
+    },
+  };
+});
 
 import type { TscnInternalResource } from '../../../parser/types';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
@@ -13,6 +24,10 @@ import {
   ViewportTextureProvider,
   useRegisterViewportTexture,
 } from '../../../r3f/contexts/ViewportTextureContext';
+import {
+  ViewportPassProvider,
+  useRegisterViewportPass,
+} from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { isViewportTextureRef, useViewportTextureSlot } from './useViewportTextureSlot';
 
 const viewportTexture: TscnInternalResource = {
@@ -44,7 +59,7 @@ function Consumer({
   onResolve,
 }: {
   slotRef: string | undefined;
-  onResolve: (t: THREE.Texture | null) => void;
+  onResolve: (result: ReturnType<typeof useViewportTextureSlot>) => void;
 }) {
   onResolve(useViewportTextureSlot(slotRef, RESOURCES));
   return null;
@@ -52,9 +67,9 @@ function Consumer({
 
 /** Mounts a consumer at `consumerPath`, optionally with a publisher. */
 function mount(slotRef: string | undefined, consumerPath: string | null, publishAt?: string) {
-  const seen: (THREE.Texture | null)[] = [];
+  const seen: ReturnType<typeof useViewportTextureSlot>[] = [];
   const texture = new THREE.Texture();
-  const consumer = <Consumer slotRef={slotRef} onResolve={(t) => seen.push(t)} />;
+  const consumer = <Consumer slotRef={slotRef} onResolve={(r) => seen.push(r)} />;
   render(
     <ViewportTextureProvider>
       {publishAt ? <Publisher path={publishAt} texture={texture} /> : null}
@@ -65,7 +80,11 @@ function mount(slotRef: string | undefined, consumerPath: string | null, publish
       )}
     </ViewportTextureProvider>
   );
-  return { resolved: () => seen.at(-1) ?? null, texture };
+  return {
+    resolved: () => seen.at(-1)?.texture ?? null,
+    cyclic: () => seen.at(-1)?.cyclic ?? false,
+    texture,
+  };
 }
 
 describe('isViewportTextureRef', () => {
@@ -154,15 +173,81 @@ describe('useViewportTextureSlot', () => {
       type: 'ViewportTexture',
       data: { id: 'Empty_1', viewport_path: 'NodePath("")' },
     };
-    const seen: (THREE.Texture | null)[] = [];
+    const seen: ReturnType<typeof useViewportTextureSlot>[] = [];
     render(
       <ViewportTextureProvider>
         <NodePathProvider path="Root/Screen">
-          <ConsumerWith resources={[empty]} onResolve={(t) => seen.push(t)} />
+          <ConsumerWith resources={[empty]} onResolve={(r) => seen.push(r)} />
         </NodePathProvider>
       </ViewportTextureProvider>
     );
-    expect(seen.at(-1) ?? null).toBeNull();
+    expect(seen.at(-1)?.texture ?? null).toBeNull();
+  });
+
+  describe('a target sitting in an unrenderable pass cycle', () => {
+    /**
+     * `viewport_path` counts from the local scene root, so
+     * `SubResource("ViewportTexture_1")` above resolves to the registry key
+     * `Root/SubViewport` — the exact path a cyclic pass registers under.
+     */
+    const VIEWPORT_TEXTURE_REF = 'SubResource("ViewportTexture_1")';
+    const ATLAS_REF = 'SubResource("Atlas_1")';
+
+    function mountCyclic(slotRef: string, consumerPath: string, publish: boolean) {
+      const seen: ReturnType<typeof useViewportTextureSlot>[] = [];
+      const texture = new THREE.Texture();
+      render(
+        <ViewportTextureProvider>
+          <ViewportPassProvider>
+            <CyclicRegistration />
+            {publish ? <Publisher path="Root/SubViewport" texture={texture} /> : null}
+            <NodePathProvider path={consumerPath}>
+              <Consumer slotRef={slotRef} onResolve={(r) => seen.push(r)} />
+            </NodePathProvider>
+          </ViewportPassProvider>
+        </ViewportTextureProvider>
+      );
+      return { last: () => seen.at(-1)! };
+    }
+
+    /** Registers `Root/SubViewport` into a two-node cycle with `Root/Other`. */
+    function CyclicRegistration() {
+      const register = useRegisterViewportPass();
+      useEffect(() => register('Root/Other', { dependsOn: ['Root/SubViewport'], render: () => {} }), [register]);
+      useEffect(
+        () => register('Root/SubViewport', { dependsOn: ['Root/Other'], render: () => {} }),
+        [register]
+      );
+      return null;
+    }
+
+    it('reports cyclic: true and a null texture even though an entry was published', () => {
+      const { last } = mountCyclic(VIEWPORT_TEXTURE_REF, 'Root/Screen', true);
+      expect(last().cyclic).toBe(true);
+      expect(last().texture).toBeNull();
+    });
+
+    it('logs a warning naming the consuming node path', () => {
+      warnCalls.length = 0;
+      mountCyclic(VIEWPORT_TEXTURE_REF, 'Root/Screen', true);
+      const matched = warnCalls.filter((args) => String(args[0]).includes('Root/Screen'));
+      expect(matched.length).toBeGreaterThan(0);
+    });
+
+    /**
+     * `CyclicRegistration` alone makes `ViewportPassProvider`'s own
+     * cycle-detection effect warn (unrelated to this hook) — the assertion
+     * here is specifically that THIS hook's own "falls back" warning, keyed
+     * off a real ViewportTexture resolution, does not additionally fire for
+     * a slot that never named one.
+     */
+    it('does not warn its own fallback message when the slot names no ViewportTexture at all', () => {
+      warnCalls.length = 0;
+      const { last } = mountCyclic(ATLAS_REF, 'Root/Screen', false);
+      expect(last().cyclic).toBe(false);
+      const matched = warnCalls.filter((args) => String(args[0]).includes('falls back'));
+      expect(matched).toHaveLength(0);
+    });
   });
 });
 
@@ -171,7 +256,7 @@ function ConsumerWith({
   onResolve,
 }: {
   resources: TscnInternalResource[];
-  onResolve: (t: THREE.Texture | null) => void;
+  onResolve: (result: ReturnType<typeof useViewportTextureSlot>) => void;
 }) {
   onResolve(useViewportTextureSlot('SubResource("Empty_1")', resources));
   return null;

@@ -36,7 +36,7 @@ export function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) 
   // Stops at a sub-viewport: its Controls are visible only through a viewport
   // surface, so counting them would offer "switch to 2D" for a scene whose 2D
   // workspace shows nothing. A SubViewportContainer is itself a Control and
-  // still counts, which is right — it DOES draw something there (ADR-0030).
+  // still counts, which is right — it DOES draw something there (ADR-0033).
   const has2DContent = useLiveSceneNodes(isCanvasItemNode, NOT_A_VIEWPORT).length > 0;
 
   if (mode === '2D') {

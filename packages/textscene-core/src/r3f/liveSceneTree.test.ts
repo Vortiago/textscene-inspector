@@ -118,7 +118,7 @@ describe('collectLiveNodes', () => {
     // Some consumers ask "what is in THIS view", which is not the same as "what
     // is in the tree": a sub-viewport's content is only visible through its
     // surface, so a consumer answering the first question must be able to stop
-    // at that boundary (ADR-0030).
+    // at that boundary (ADR-0033).
     const roots = [
       makeNode('Root', 'Node3D', {
         children: [

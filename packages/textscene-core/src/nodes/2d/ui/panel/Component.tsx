@@ -28,10 +28,10 @@
  *
  * Unlike `ColorRect` (one `color` property), a StyleBox carries TWO base
  * colours (`bgColor`, `borderColor`) that both need the SAME composed tint —
- * so instead of passing a single `ownMultiplier` to `useCanvasItemTint`, this
- * reads its `own` product (ancestor × own modulate × self_modulate, still raw
- * sRGB) and multiplies it into both colours itself, letting `StyleBoxQuad`
- * supply the one sRGB→linear conversion `useControlTint.ts` requires.
+ * so `PanelChrome` (this painter's actual implementation) reads `own` product
+ * (ancestor × own modulate × self_modulate, still raw sRGB) and hands it to
+ * `<StyleBoxQuad>`'s own `color` prop, which multiplies it into both colours
+ * internally, before its one sRGB→linear conversion.
  */
 import { PanelChrome } from '../../../../r3f/controls/native/PanelChrome';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';

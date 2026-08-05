@@ -28,10 +28,11 @@ own fields.
 None visible in this fixture: `pnpm ref:godot scenes/fixtures/unit-panel.tscn
 --mode 2d` against `pnpm ref:ours unit-panel.tscn --2d` differs on no pixel at
 all under the visual harness's own tolerance, at a mean channel error under
-0.005/255 over the frame. The one measurable difference is a corner pixel:
-`--probe 418,226`, on the 8 px arc, reads rgb(84, 88, 100) in Godot and
-rgb(96, 106, 134) here — a different point on the same ramp, both blends, and the
-"Known limitations (native only)" section below has the reading.
+0.005/255 over the frame. The closest thing to a measurable difference is a
+corner pixel, `--probe 418,226`, on the 8 px arc: rgb(84, 88, 100) in Godot
+against rgb(81, 84, 92) here — a few counts apart on the same AA ramp (down from
+rgb(96, 106, 134) before this StyleBox's anti-aliasing was ported; see "Known
+limitations (native only)" below).
 
 ## Linting
 
@@ -74,15 +75,22 @@ its own rect.
 
 ### Known limitations (native only)
 
-- **The corner feather is one pixel narrower than Godot's.**
-  `styleBoxFlatGeometry.ts` implements Godot's non-anti-aliased `StyleBoxFlat`
-  branch, while Godot's actual default is `anti_aliased = true`, `aa_size = 1`.
-  The arc is still soft here, because the canvas is multisampled — so the
-  divergence is the ramp's WIDTH, not its absence. Measured across a 40 px arc
-  on `unit-panel-styleboxes.tscn`, transect at y = 60: Godot ramps over two
-  pixels (rgb(207, 209, 205) at x 74, rgb(69, 100, 141) at x 75) before the
-  rgb(38, 76, 128) fill, ours over one (`--probe 75,60` → rgb(83, 112, 149),
-  with the bare rgb(217, 217, 209) backdrop at x 74). On this sheet's own
-  8 px arc, `--probe 418,226` reads rgb(84, 88, 100) against rgb(96, 106, 134)
-  — the same pixel a fraction further along the same ramp. Tracked as its own
-  decision (port the AA ring, or record the parity limitation), not fixed here.
+- **CLOSED — the corner feather now carries Godot's own AA ring.**
+  `styleBoxFlatGeometry.ts` used to implement only Godot's non-anti-aliased
+  `StyleBoxFlat` branch; it now also ports the `anti_aliased`/`aa_size` branch
+  (`StyleBoxFlat::draw`, `scene/resources/style_box_flat.cpp:511-630`), and
+  `StyleBoxFlatData` carries both fields with Godot's own defaults
+  (`anti_aliased = true`, `aa_size = 1`, `style_box_flat.h:49,54`) rather than
+  silently dropping an authored value. Re-measured on the same two probes:
+  `--probe 75,60` (`unit-panel-styleboxes.tscn`'s 40 px arc) now reads
+  rgb(60, 94, 138) against Godot's rgb(69, 100, 141) — down from rgb(83, 112, 149)
+  — and the adjacent `--probe 74,60`, previously the bare rgb(217, 217, 209)
+  backdrop with NO blend at all, now reads rgb(213, 214, 207) against Godot's
+  rgb(207, 209, 205): the feather ring now reaches a pixel it used to miss
+  entirely, which is exactly Godot's "ramp runs one pixel further out" behaviour
+  this limitation used to describe. This sheet's own `--probe 418,226` closed
+  from rgb(96, 106, 134) to rgb(81, 84, 92) against Godot's rgb(84, 88, 100).
+  Both channels are within a handful of counts of Godot on every probe above,
+  where they used to differ by 20-40; `styleBoxFlatGeometry.test.ts`'s
+  "anti-aliasing" describe block additionally pins the new ring's exact vertex
+  count and alpha-0 outer colours independent of any rendered pixel.

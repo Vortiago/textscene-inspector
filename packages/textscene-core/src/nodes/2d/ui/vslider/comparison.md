@@ -83,7 +83,8 @@ height="4"`, measured the same way against real Godot 4.6.3). Otherwise none.
 
 ### Known limitations (native only)
 
-Same as HSlider: the corner feather on the track/fill roundrects is one pixel
-narrower than Godot's, and `ticks_position` is not modelled (every tick draws at Godot's
+Same as HSlider: the corner feather on the track/fill roundrects was one pixel
+narrower than Godot's and is now closed at the geometry level (see the HSlider
+sheet), and `ticks_position` is not modelled (every tick draws at Godot's
 default, `TICK_POSITION_BOTTOM_RIGHT` — right of the track for a vertical
 slider). See the HSlider sheet.

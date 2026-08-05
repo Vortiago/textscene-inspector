@@ -51,7 +51,7 @@ ref:ours unit-lineedit.tscn --2d --probe <x,y>`:
 | Probe | What it is | Godot | Ours |
 | --- | --- | --- | --- |
 | (30, 125) | the first of `Secret`'s seven bullets — CLOSED, see below | rgb(223, 223, 223) | rgb(223, 223, 223) |
-| (33, 77) | a stroke of `Ada Lovelace`, at Godot's baseline | rgb(223, 223, 223) | rgb(128, 128, 128) |
+| (33, 77) | a stroke of `Ada Lovelace`, at Godot's baseline — unmoved by the advance-drift fix below, see why | rgb(223, 223, 223) | rgb(128, 128, 128) |
 
 **CLOSED: the secret echo now draws.** Previously the baked MSDF atlas covered
 printable ASCII only, so the DEFAULT `secret_character` — `•` (U+2022) — had no
@@ -67,9 +67,22 @@ ink's faint edge only, described under the native painter below; probe
 That (33, 77) row is the one probe in this table that still parts. It reads
 rgb(128, 128, 128) here against Godot's rgb(223, 223, 223) — a half-covered
 pixel at a stroke edge, not the background it used to read, so the glyph is
-present and its run sits on Godot's rows (y 77..88 on both sides). What moves it
-is the horizontal advance drift the RichTextLabel sheet records, which lands a
-stroke edge a fraction off and so lands this single probe mid-antialias.
+present and its run sits on Godot's rows (y 77..88 on both sides).
+
+This probe does NOT move with the RichTextLabel sheet's whole-line
+advance-drift fix (`openSansMetrics.ts`'s continuous per-glyph
+`advanceWidths`, replacing the atlas-bake-resolution-42-rounded `xadvance` as
+the shaping source) — measured directly, before and after, it reads the exact
+same rgb(128, 128, 128). That is expected, not a miss: `Ada Lovelace`'s ink
+already spanned x 28..128 on both sides before this fix (`widthPx` matched to
+the pixel), so there was no accumulated drift left to close on THIS field by
+the time the fix landed, and (33, 77) sits on the very FIRST glyph ('A' of
+'Ada') — a position with zero accumulated advance ahead of it regardless.
+Dumping the raw pixels around it (`y=7`-relative rows through the apex of
+'A') shows Godot's own peak arriving one row earlier than ours at that exact
+column — a difference in how the apex's own antialiasing falls across pixel
+rows, not a horizontal pen-position error. Left open; not the same defect the
+RichTextLabel sheet closed.
 
 **CLOSED — the text sits on Godot's own rows.** It used to sit 5 px too high.
 Every run in the fixture now matches to the pixel:

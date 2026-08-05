@@ -14,7 +14,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import type { GlyphPlacement, TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { AutowrapMode, shapeText, type GlyphPlacement, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { getAscentPx, getUnderlinePositionPx, getUnderlineThicknessPx } from '../../../../r3f/controls/native/text/openSansMetrics';
 import type { ControlColor } from '../control/types';
@@ -39,15 +39,6 @@ export function richTextLabelTextTheme(
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: RICH_TEXT_LABEL_DEFAULT_FONT_COLOR };
   return resolveTextTheme(props, RICH_TEXT_LABEL_THEME_KEYS, defaults);
-}
-
-/** The concatenated, tag-stripped text `shapeText`/`ctx.measureText` should measure — bbcode markup characters (`[b]`, `[/color]`, …) never occupy width or a line of their own once bbcode is enabled. */
-function plainTextOf(props: RichTextLabelProperties): string {
-  const raw = props.text ?? '';
-  if (!props.bbcodeEnabled) return raw;
-  return parseBBCodeRuns(raw)
-    .map((run) => run.text)
-    .join('');
 }
 
 /**
@@ -102,18 +93,32 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
     return wraps ? { x: 1, y: 0 } : { x: 0, y: 0 };
   }
 
-  const { fontSizePx } = richTextLabelTextTheme(props, ctx);
-  const text = plainTextOf(props);
+  const { fontSizePx, color } = richTextLabelTextTheme(props, ctx);
+  const runs = styledTextRuns(props, color, fontSizePx, ctx.theme.fontSize);
+  const text = runs.map((r) => r.text).join('');
 
   if (text.length === 0) {
     return wraps ? { x: 1, y: 0 } : { x: 0, y: 0 };
   }
 
+  // `ctx.measureText` is the text engine's own presence signal (`null` until
+  // it lands) — this measurement calls `shapeText` directly rather than
+  // through it, since a bold/italic-mixed line needs `fontSizePxAt` (a
+  // per-CHARACTER size `TextMeasurer`'s flat-size signature has no room for),
+  // but the gate stays: no text engine, no attempted measurement.
   if (!ctx.measureText) return { x: 0, y: 0 };
 
-  // `line_separation` is 0 for RichTextLabel (`default_theme.cpp:1217`), which
-  // is the measurer's own default — so this needs no spacing argument.
-  const measured = ctx.measureText(text, fontSizePx);
+  // `line_separation` is 0 for RichTextLabel (`default_theme.cpp:1217`), matching
+  // `lineSpacingPx`'s own default of 0 here (Label's own measurer instead passes
+  // its own non-zero constant).
+  const layout = shapeText(text, {
+    fontSizePx,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.OFF,
+    lineSpacingPx: 0,
+    fontSizePxAt: fontSizePxAtFromRuns(runs),
+  });
+  const measured = { x: layout.widthPx, y: layout.heightPx };
 
   if (wraps) {
     return { x: 1, y: measured.y };
@@ -123,7 +128,7 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
 
 // --- Draw-time: the bbcode subset -> styled runs -> per-line/per-run placement ---
 
-/** One styled run of the plain (tag-stripped) text — the drawing-time counterpart of `plainTextOf`, carrying what `[b]`/`[i]`/`[u]`/`[color]` resolve to for this run. */
+/** One styled run of the plain (tag-stripped) text — the drawing-time counterpart of the old `plainTextOf`, carrying what `[b]`/`[i]`/`[u]`/`[color]` resolve to for this run. */
 export interface StyledTextRun {
   text: string;
   bold: boolean;
@@ -131,41 +136,126 @@ export interface StyledTextRun {
   /** `[u]` open anywhere on the tag stack (`rich_text_label.cpp:4677`'s `push_underline`) — drawn as a baseline-relative stroke, `underlineRectPx`. */
   underline: boolean;
   color: ControlColor;
+  /** This run's OWN resolved font size, px — see `resolveRunFontSizePx`'s doc. Equal to `normal_font_size` for a plain (non-bold, non-italic) run. */
+  fontSizePx: number;
+}
+
+/**
+ * `scene/theme/default_theme.cpp:1199-1202` — RichTextLabel's default theme
+ * registers FOUR independent font-size keys, one per `_find_font`
+ * (`rich_text_label.cpp:3226-3296`) font selection, each its OWN theme
+ * constant rather than a shared one:
+ *
+ * ```
+ * theme->set_font_size("normal_font_size", "RichTextLabel", -1);
+ * theme->set_font_size("bold_font_size", "RichTextLabel", -1);
+ * theme->set_font_size("italics_font_size", "RichTextLabel", -1);
+ * theme->set_font_size("bold_italics_font_size", "RichTextLabel", -1);
+ * ```
+ *
+ * `_find_font` reads the matching one UNCONDITIONALLY per style
+ * (`:3257`/`:3270`/`:3283`: `fi->font_size = theme_cache.bold_font_size` for
+ * `RTL_BOLD_FONT`, etc.) — a `[b]` span NEVER falls back to
+ * `theme_cache.normal_font_size`, even though every one of these defaults to
+ * the SAME sentinel. `Theme::get_font_size` (`scene/resources/theme.cpp:
+ * 658-661`) treats a stored value `<= 0` as unset and falls through to
+ * `ThemeDB::get_fallback_font_size()` — hardcoded 16
+ * (`scene/theme/theme_db.h:85`) — independently of whatever `normal_font_size`
+ * itself resolved to. So a scene overriding ONLY `normal_font_size` (this
+ * fixture's own `18`) renders every `[b]`/`[i]`/`[b][i]` span at Godot's
+ * fallback size (16, scaled) instead — two pixels smaller here, which is why
+ * a styled run's own cumulative advance runs measurably short of the
+ * surrounding plain text: measured directly against real Godot 4.6.3
+ * (`pnpm ref:godot`, richtextlabel/comparison.md's own worked numbers), the
+ * bold word "Bold" alone advances the pen ~3px less than the SAME word set
+ * unstyled, and the italic word "italic" alone ~4px less — both close entirely
+ * when the scene ALSO overrides the style-specific key to match
+ * `normal_font_size`.
+ */
+const RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS = {
+  boldItalic: 'bold_italics_font_size',
+  bold: 'bold_font_size',
+  italic: 'italics_font_size',
+} as const;
+
+/**
+ * A styled run's own font size — `normalFontSizePx` for a plain run, else the
+ * matching `RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS` override or
+ * `fallbackFontSizePx` (Godot's `ThemeDB::get_fallback_font_size()`, i.e. this
+ * node's own `richTextLabelTextTheme`'s `ctx.theme.fontSize` default — NEVER
+ * `normalFontSizePx`, see `RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS`'s own doc).
+ */
+function resolveRunFontSizePx(
+  bold: boolean,
+  italic: boolean,
+  props: RichTextLabelProperties,
+  normalFontSizePx: number,
+  fallbackFontSizePx: number
+): number {
+  if (!bold && !italic) return normalFontSizePx;
+  const key = bold && italic ? RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.boldItalic : bold ? RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.bold : RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.italic;
+  return props.themeOverrideFontSizes?.[key] ?? fallbackFontSizePx;
 }
 
 /**
  * Splits `props.text` into styled runs. With `bbcode_enabled` false, Godot
  * shows the text literally — bracket characters included, no styling at all
- * (`Component.tsx`'s own header comment; ADR-0003) — a single run. With it
- * true, every run gets `[b]`/`[i]`'s boolean flags (independent, and they
- * COMBINE when nested — `rich_text_label.cpp:5452-5471`'s
- * `RTL_BOLD_ITALICS_FONT` selection), `[u]`'s boolean flag (independent of
- * both — Godot's underline is a drawn STROKE, not a font variant, so it
- * combines freely with bold/italic/colour), and the innermost open
+ * (`Component.tsx`'s own header comment; ADR-0003) — a single run at
+ * `normalFontSizePx`. With it true, every run gets `[b]`/`[i]`'s boolean flags
+ * (independent, and they COMBINE when nested — `rich_text_label.cpp:
+ * 5452-5471`'s `RTL_BOLD_ITALICS_FONT` selection), `[u]`'s boolean flag
+ * (independent of both — Godot's underline is a drawn STROKE, not a font
+ * variant, so it combines freely with bold/italic/colour), the innermost open
  * `[color=...]`'s value resolved via `resolveBBColor`, falling back to
- * `defaultColor` (this node's own resolved theme colour) absent an override —
- * every other recognised-but-out-of-scope tag ([s]/[code]/[center]) still
- * tokenizes (so nesting stays correct) but contributes no native styling
- * here, same as an unrecognised tag.
+ * `defaultColor` (this node's own resolved theme colour) absent an override,
+ * AND its own resolved font size (`resolveRunFontSizePx`) — every other
+ * recognised-but-out-of-scope tag ([s]/[code]/[center]) still tokenizes (so
+ * nesting stays correct) but contributes no native styling here, same as an
+ * unrecognised tag.
  */
-export function styledTextRuns(props: RichTextLabelProperties, defaultColor: ControlColor): StyledTextRun[] {
+export function styledTextRuns(
+  props: RichTextLabelProperties,
+  defaultColor: ControlColor,
+  normalFontSizePx: number,
+  fallbackFontSizePx: number
+): StyledTextRun[] {
   const raw = props.text ?? '';
   if (!props.bbcodeEnabled) {
-    return raw.length === 0 ? [] : [{ text: raw, bold: false, italic: false, underline: false, color: defaultColor }];
+    return raw.length === 0
+      ? []
+      : [{ text: raw, bold: false, italic: false, underline: false, color: defaultColor, fontSizePx: normalFontSizePx }];
   }
 
   return parseBBCodeRuns(raw)
     .filter((run) => run.text.length > 0)
     .map((run) => {
       const colorValue = lastTagValue(run.tags, 'color');
+      const bold = hasOpenTag(run.tags, 'b');
+      const italic = hasOpenTag(run.tags, 'i');
       return {
         text: run.text,
-        bold: hasOpenTag(run.tags, 'b'),
-        italic: hasOpenTag(run.tags, 'i'),
+        bold,
+        italic,
         underline: hasOpenTag(run.tags, 'u'),
         color: colorValue !== undefined ? resolveBBColor(colorValue, defaultColor) : defaultColor,
+        fontSizePx: resolveRunFontSizePx(bold, italic, props, normalFontSizePx, fallbackFontSizePx),
       };
     });
+}
+
+/**
+ * Builds the per-character `fontSizePxAt` callback `shapeText` accepts, from
+ * `styledTextRuns`' own OUTPUT — one lookup array over the SAME concatenated
+ * plain text those runs' `.text` fields join into (in order), so the index
+ * `shapeText` walks lines up with the index this array was built from.
+ */
+export function fontSizePxAtFromRuns(styledRuns: readonly StyledTextRun[]): (charIndex: number) => number {
+  const sizes: number[] = [];
+  for (const run of styledRuns) {
+    for (let i = 0; i < run.text.length; i++) sizes.push(run.fontSizePx);
+  }
+  const lastSize = sizes.length > 0 ? sizes[sizes.length - 1]! : 0;
+  return (charIndex: number) => sizes[charIndex] ?? lastSize;
 }
 
 /**
@@ -192,13 +282,29 @@ export function styledTextRuns(props: RichTextLabelProperties, defaultColor: Con
  * unit space from this engine's MSDF `distanceBias` (a normalized signed-
  * distance threshold shift — `msdfMaterial.ts`, whose own doc already frames
  * `distanceBias` as a parameterised synthesized-bold effect, not a calibrated
- * port). `BOLD_DISTANCE_BIAS` transcribes the QUALITATIVE fact (Godot's own
- * embolden is non-zero, so this must be too) at a magnitude in the range this
- * material's own tests already exercise (`msdfMaterial.test.ts`'s `0.08`
- * fixture) — visibly bolder without collapsing to a blob at this atlas's
- * `distanceRange` (4px, `openSansAtlas.ts`).
+ * port) — there is no formula converting one to the other, so this value is
+ * TUNED against a real Godot 4.6.3 measurement rather than derived.
+ *
+ * Measured on `unit-rich-text-label.tscn`'s `[b]Bold[/b]` span (`pnpm
+ * ref:godot` / `pnpm ref:ours`, a horizontal transect through the 'l' stem —
+ * a single vertical stroke, so its half-max-crossing width is the stroke
+ * thickness directly, uncontaminated by any neighbouring glyph): Godot's own
+ * embolden=1.2 renders that stem 3.04px wide (half-max crossings at x≈21.7
+ * and x≈24.8, row y=7 of the fixture's capture). The former value here,
+ * 0.08 (an unmeasured placeholder), rendered only 2.15px — visibly thinner.
+ * 0.35 renders 3.01px, matching to within the measurement's own row-to-row
+ * noise (a single scanline's sub-pixel crossings), without collapsing 'o's
+ * counter to a solid blob: Godot's OWN real embolden at this render size
+ * (18px) already nearly closes 'o's counter too (the SAME capture's 'o' glyph
+ * is solid ink but for a sliver at its very top), so a closely-matched
+ * counter is Godot's own behaviour at this size, not an artifact to avoid.
+ * The word's own overall ink span (x1..38 here against Godot's x1..39) is
+ * insensitive to this constant in the 0.08-0.35 range tested — bounded by the
+ * 'd' bowl's own outermost curve, which a uniform SDF threshold shift moves
+ * only a fraction of a pixel — so stem thickness, not span width, is the
+ * signal this constant actually controls.
  */
-export const BOLD_DISTANCE_BIAS = 0.08;
+export const BOLD_DISTANCE_BIAS = 0.35;
 
 /** See `BOLD_DISTANCE_BIAS`'s doc — `default_theme.cpp:1399`/`:1403`'s `Transform2D(1.0, 0.2, ...)` shear coefficient, transcribed exactly. */
 export const ITALIC_SKEW = 0.2;
@@ -220,6 +326,8 @@ export interface RichTextRunPlacement {
   italic: boolean;
   underline: boolean;
   color: ControlColor;
+  /** This run's OWN resolved font size, px (`StyledTextRun.fontSizePx`) — the scale `<TextRun>` and `underlineRectPx` must use for THIS placement, which can differ from the paragraph's `normal_font_size` (`resolveRunFontSizePx`'s own doc). */
+  fontSizePx: number;
   /** A single-line `TextLayoutResult` wrapper holding ONLY this run's glyphs from that line — `glyph.x` values are untouched (already this LINE's own pen-relative x), so this needs no rebasing, only the line's own wrapping `<group>` position. */
   layout: TextLayoutResult;
 }
@@ -298,6 +406,7 @@ export function layoutRichTextRuns(
         italic: run.italic,
         underline: run.underline,
         color: run.color,
+        fontSizePx: run.fontSizePx,
         layout: soloRunLayout(plainText.slice(textStart, cursor), line.glyphs.slice(start, i), layout.linePitchPx),
       });
     }

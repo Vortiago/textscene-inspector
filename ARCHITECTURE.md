@@ -430,7 +430,7 @@ do the async I/O underneath — see the note below.)
 **A resource path is not always a file path.** A `.tres` can declare the resources it
 uses as its own `[sub_resource]` blocks — a mesh's per-surface materials, a
 MeshLibrary's embedded item meshes — and those are addressed with Godot's own
-`res://file.tres::SubId` notation (**Sub-resource path**, ADR-0029). The layers above
+`res://file.tres::SubId` notation (**Sub-resource path**, ADR-0032). The layers above
 split on that: the **whole address is the resource identity** (processor cache key,
 in-flight key, what `useResource` pins and subscribes to), while layer 3 normalises it
 to its `filePath` before touching layer 2. So the `FileEventBus`, the

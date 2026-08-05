@@ -61,10 +61,10 @@ const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
  * `StyleBoxFlatData` models: every input here is ALREADY the scaled,
  * rounded number the caller wants (`Math.round(x * scale)`), so this helper
  * never scales — it only assembles the struct. `border_color`/`expand_margin`/
- * `border_blend` are never touched by `make_flat_stylebox`, so they stay at
- * `StyleBoxFlat`'s own defaults; `draw_center` defaults true and no widget
- * built here overrides it (Button's "focus" stylebox does, but focus styles
- * are out of this packet's scope).
+ * `border_blend`/`anti_aliased`/`aa_size` are never touched by
+ * `make_flat_stylebox`, so they stay at `StyleBoxFlat`'s own defaults;
+ * `draw_center` defaults true and no widget built here overrides it (Button's
+ * "focus" stylebox does, but focus styles are out of this packet's scope).
  */
 function flatStyleBox(
   bgColor: ControlColor,
@@ -85,6 +85,8 @@ function flatStyleBox(
     contentMargin,
     drawCenter: true,
     borderBlend: false,
+    antiAliased: true,
+    aaSize: 1,
   };
 }
 

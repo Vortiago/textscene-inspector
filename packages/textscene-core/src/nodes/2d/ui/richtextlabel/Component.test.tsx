@@ -73,6 +73,36 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     expect(biases).toContain(0);
   });
 
+  it(
+    "a [b] run with no bold_font_size override draws its glyphs at Godot's FALLBACK font size (16px), " +
+      'not normal_font_size — scene/theme/default_theme.cpp:1200 leaves bold_font_size at its own -1 ' +
+      'sentinel, which Theme::get_font_size (scene/resources/theme.cpp:658-661) never falls through to a ' +
+      'sibling key for, only to ThemeDB::get_fallback_font_size() (16)',
+    async () => {
+      const renderer = await render({
+        text: 'A[b]A[/b]',
+        bbcodeEnabled: true,
+        themeOverrideFontSizes: { normal_font_size: 32 },
+      });
+      const meshes = meshesOf(renderer);
+      expect(meshes).toHaveLength(2);
+      const widthOf = (mesh: THREE.Mesh) => {
+        const pos = (mesh.geometry as THREE.BufferGeometry).getAttribute('position');
+        return pos.getX(1) - pos.getX(0); // TR.x - TL.x, the first (only) glyph's own ink width.
+      };
+      const plainWidth = widthOf(meshes[0]!);
+      const boldWidth = widthOf(meshes[1]!);
+      // Atlas 'A' bitmap width 32 @ bake 42 (openSansAtlas.ts). At 32px: 32*32/42.
+      // At the 16px fallback: 32*16/42 — exactly HALF the plain run's width,
+      // since normal_font_size (32) here is exactly double the 16px fallback.
+      // Float32Array-backed geometry (three's own BufferAttribute) — 4 digits
+      // clears its precision loss without loosening the assertion's INTENT.
+      expect(plainWidth).toBeCloseTo((32 * 32) / 42, 4);
+      expect(boldWidth).toBeCloseTo((32 * 16) / 42, 4);
+      expect(boldWidth).toBeCloseTo(plainWidth / 2, 4);
+    }
+  );
+
   it('an [i] run\'s geometry is sheared relative to an otherwise-identical plain run (skew, not a material uniform)', async () => {
     const plain = await render({ text: 'AB', bbcodeEnabled: false });
     const italic = await render({ text: '[i]AB[/i]', bbcodeEnabled: true });

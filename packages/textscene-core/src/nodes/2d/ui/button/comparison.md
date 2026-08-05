@@ -31,8 +31,8 @@ Measured on Godot 4.6.3, `pnpm ref:godot scenes/fixtures/unit-button.tscn --mode
 | Probe | What it is | Godot | Ours |
 | --- | --- | --- | --- |
 | (583, 370) | a solid stroke of the **Disabled** label | rgb(142, 142, 142) | rgb(142, 142, 142) |
-| (544, 362) | the same stroke where Godot's glyph sits | rgb(142, 142, 142) | rgb(127, 127, 127) |
-| (519, 308) | **Styled**'s top-left corner arc, one row into our rect | rgb(51, 128, 89) | rgb(64, 102, 83) |
+| (544, 362) | the same stroke where Godot's glyph sits — mostly closed, see below | rgb(142, 142, 142) | rgb(138, 138, 138) |
+| (519, 308) | **Styled**'s top-left corner arc, one row into our rect | rgb(51, 128, 89) | rgb(64, 100, 82) — see "StyleBox corner anti-aliasing" below: closed on the straight edge and one row further down this same arc, entangled with the "sits one row low" offset at this exact probe |
 
 Chrome colours are exact. The unthemed **Click Me** fill is the default theme's
 charcoal on both sides (rgb(46, 46, 46) against rgb(45, 45, 45) — one step of
@@ -65,10 +65,16 @@ is right and the other two buttons are on Godot's exact rows, so this is a
 placement term specific to a button carrying its own StyleBox content margins, not
 the minimum size.
 
-**A glyph's edge pixels part where its stroke lands mid-pixel**: probe (544, 362)
-reads rgb(127, 127, 127) against Godot's rgb(142, 142, 142) while (583, 370), a
-solid interior stroke, matches exactly. That is the horizontal advance drift the
-RichTextLabel sheet records, sampled at an antialiased edge.
+**MOSTLY CLOSED — a glyph's edge pixels still part by a residual sub-pixel,
+where they used to part by a growing multi-pixel drift.** Probe (544, 362)
+used to read rgb(127, 127, 127) against Godot's rgb(142, 142, 142); it now
+reads rgb(138, 138, 138) — much closer, while (583, 370), a solid interior
+stroke, still matches exactly on both sides. The RichTextLabel sheet has the
+mechanism and the fix (`openSansMetrics.ts`'s continuous per-glyph
+`advanceWidths`, replacing the old atlas-bake-resolution-42-rounded
+`xadvance` as the shaping source): here the **Disabled** label's last glyph
+stem sits at x 606 in Godot and x 607 here — a steady 1 px residual now, not
+a growing one.
 
 ## Native (WebGL canvas) painter
 
@@ -105,19 +111,38 @@ the same 0.5 blend over the same fill with 188 in place of 223; it now reads
 `rgb(142, 142, 142)`, Godot's own value. What closed it was the sRGB-encode gap
 the Divergences section above measures, never the theme lookup.
 
-### StyleBox corner anti-aliasing: present, but not Godot's
+### StyleBox corner anti-aliasing: CLOSED away from the corner arc; the arc itself is entangled with a placement offset
 
 `styleBoxFlatGeometry.ts` (this painter's chrome, shared with every other native
 StyleBox consumer — `panel/comparison.md` measures the same arc on a 40 px radius)
-implements Godot's non-anti-aliased branch, while Godot's own `StyleBoxFlat` defaults
-`anti_aliased = true` with `aa_size = 1` (`scene/resources/style_box_flat.h:49,54`).
-The drawn arc is still soft, because the canvas is multisampled — measured on
-**Styled**'s top-left corner (`corner_radius = 6`) one row inside our own rect,
-`pnpm ref:godot scenes/fixtures/unit-button.tscn --mode 2d --probe 519,308` returns
-`rgb(51, 128, 89)` (full fill) where `pnpm ref:ours unit-button.tscn --2d --probe
-519,308` returns `rgb(64, 102, 83)`, a partial blend against the rgb(76, 76, 76)
-backdrop. So the difference at a corner pixel is the WIDTH of the feather, not its
-absence: Godot's ramp runs one pixel further out than the sampled polygon's does.
+used to implement only Godot's non-anti-aliased branch, silently dropping
+`anti_aliased`/`aa_size` (defaults `true`/`1`, `scene/resources/style_box_flat.h:49,54`)
+at the parser too. Both are now ported: `StyleBoxFlatData` carries the two fields
+(`native/styleBoxFlat.ts`, `native/parseStyleBox.ts`) and `styleBoxFlatGeometry.ts`
+builds the same AA feather rings `StyleBoxFlat::draw` does
+(`scene/resources/style_box_flat.cpp:511-630`).
+
+**Styled**'s own StyleBox draws no border, so this is the fill-only AA branch — the
+whole rect's boundary gets a `aa_size / 2` = 0.5 px feather. On the STRAIGHT top
+edge, away from the corner arc, this closes the gap completely:
+`--probe 576,308` now reads `rgb(51, 128, 89)` on BOTH sides — pixel-exact, where
+before the fix ours read the bare rgb(76, 76, 76) backdrop at that row (the polygon
+boundary sat exactly on the style rect edge with no feather past it).
+
+The original corner probe (`--probe 519,308`, top-left arc, `corner_radius = 6`)
+barely moved — Godot rgb(51, 128, 89), ours rgb(64, 102, 83) before this fix,
+rgb(64, 100, 82) after — but that probe sits exactly on the row where this sheet's
+own "Styled sits one row low" divergence (above) puts OUR rect's top edge one row
+BELOW Godot's: Godot's rect already reads full fill a row earlier than ours does at
+this x. Sampling one row further down the SAME arc, at `--probe 519,309`, is
+pixel-exact on both sides (`rgb(51, 128, 89)`), and `--probe 520,308` (one column
+right, same row) closes most of the way there too — `rgb(55, 118, 87)` against
+Godot's `rgb(51, 128, 89)`, down from the pre-fix `rgb(64, 102, 83)`-scale gap. So
+the AA ring itself is doing its job on this arc; what is left at the ORIGINAL probe
+is the pre-existing row offset compounding with it, not a remaining AA gap.
+`styleBoxFlatGeometry.test.ts`'s "anti-aliasing" describe block additionally pins
+the new ring's exact vertex count and alpha-0 outer colours independent of any
+rendered pixel.
 
 ## Linting
 

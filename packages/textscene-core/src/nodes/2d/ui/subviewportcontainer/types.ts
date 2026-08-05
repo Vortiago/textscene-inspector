@@ -1,6 +1,6 @@
 /**
  * SubViewportContainer — the Control that displays its SubViewport children's
- * render targets (a **viewport surface**, ADR-0030).
+ * render targets (a **viewport surface**, ADR-0033).
  *
  * Godot draws EVERY SubViewport child, stacked in tree order
  * (`SubViewportContainer::_notification(NOTIFICATION_DRAW)`).

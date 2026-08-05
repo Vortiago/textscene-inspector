@@ -10,15 +10,20 @@
  * whole layer.
  *
  * Mounts a fresh `CanvasLayerIndexProvider` (this layer's own `layer`
- * property, Godot's default 1 — `DEFAULT_CANVAS_LAYER`) and a fresh
+ * property, Godot's default 1 — `DEFAULT_CANVAS_LAYER`), a fresh
  * `CanvasModulateContext` scope (`canvasModulateColor` over this node's OWN
  * raw `children` — a `CanvasLayer` is its own canvas, so a `CanvasModulate`
- * inside it tints only this layer, never the world one) around `children`,
- * mirroring the `CanvasLayer` branch of `NodeDispatcher.tsx`'s `PlainNode`
- * exactly — not a second convention. That dispatcher also resets
- * `EffectiveZProvider` for the same branch; there is no native-Control
- * equivalent here because Light2D culling (what that context feeds) does not
- * extend to native Controls in this codebase.
+ * inside it tints only this layer, never the world one), and a fresh
+ * `EffectiveZProvider` reset to 0 (a `CanvasLayer` starts an entirely
+ * separate canvas culled on its own — `RendererViewport::_draw_viewport`
+ * (`servers/rendering/renderer_viewport.cpp`) calls `RSG::canvas->render_canvas`
+ * once per `Viewport::canvas_map` entry, and `RendererCanvasCull::render_canvas`
+ * (`servers/rendering/renderer_canvas_cull.cpp`) always starts that canvas's
+ * OWN root items at `p_z = 0` in `_render_canvas_item_tree` — so nothing
+ * outside this layer's own CanvasItem chain can affect a light's z-window
+ * test on what is inside it) around `children`, mirroring
+ * the `CanvasLayer` branch of `NodeDispatcher.tsx`'s `PlainNode` exactly —
+ * not a second convention.
  *
  * `ControlCanvasWalker` renders `children` through this component ONLY for
  * `CanvasLayer` — every other registered painter draws fixed chrome as a
@@ -34,7 +39,11 @@
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { canvasModulateColor, CanvasModulateContext } from '../../../../r3f/canvasModulate';
-import { CanvasLayerIndexProvider, DEFAULT_CANVAS_LAYER } from '../../../../r3f/lighting2d/canvasItemPlacement';
+import {
+  CanvasLayerIndexProvider,
+  DEFAULT_CANVAS_LAYER,
+  EffectiveZProvider,
+} from '../../../../r3f/lighting2d/canvasItemPlacement';
 import type { CanvasLayerProperties } from './types';
 
 export function CanvasLayer({ solveNode, children }: NativeControlComponentProps) {
@@ -53,7 +62,9 @@ export function CanvasLayer({ solveNode, children }: NativeControlComponentProps
 
   return (
     <CanvasModulateContext.Provider value={modulate}>
-      <CanvasLayerIndexProvider value={layer}>{children}</CanvasLayerIndexProvider>
+      <CanvasLayerIndexProvider value={layer}>
+        <EffectiveZProvider value={0}>{children}</EffectiveZProvider>
+      </CanvasLayerIndexProvider>
     </CanvasModulateContext.Provider>
   );
 }

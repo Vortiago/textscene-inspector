@@ -4,13 +4,13 @@
 import * as path from 'path';
 import Mocha from 'mocha';
 import { glob } from 'glob';
-import { setupTestWorkspace } from '../setupWorkspace';
 
+/**
+ * The test workspace is populated by the launcher, not here: this runs inside
+ * a window that has already resolved its workspace folder, so creating the
+ * directory now would be too late to become one. See `integrationLaunch.ts`.
+ */
 export async function run(): Promise<void> {
-  // Setup test workspace before running tests
-  const workspaceRoot = path.resolve(__dirname, '../../../../.test-workspace');
-  setupTestWorkspace(workspaceRoot);
-
   // Create the mocha test
   const mocha = new Mocha({
     ui: 'tdd', // Use TDD interface for suite() and test()

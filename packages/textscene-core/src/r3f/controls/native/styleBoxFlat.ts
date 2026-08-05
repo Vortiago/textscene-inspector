@@ -24,6 +24,9 @@
  *    repeating the fallback rule.
  *  - `draw_center` default `true`, `blend_border` (`border_blend` in the
  *    scene-file property name) default `false` (`style_box_flat.h:46-47`).
+ *  - `anti_aliased` default `true`, `aa_size` default `1`, clamped to
+ *    `[0.01, 10]` by `StyleBoxFlat::set_aa_size` (`style_box_flat.h:49,54`,
+ *    `style_box_flat.cpp::set_aa_size`).
  */
 
 import type { ControlColor } from '../../../nodes/2d/ui/control/types';
@@ -38,6 +41,8 @@ export interface StyleBoxFlatData {
   contentMargin: { left: number; top: number; right: number; bottom: number };
   drawCenter: boolean;
   borderBlend: boolean;
+  antiAliased: boolean;
+  aaSize: number;
 }
 
 /**

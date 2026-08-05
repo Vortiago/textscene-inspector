@@ -57,8 +57,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO, type OpenSansGlyph } from './openSansAtlas';
-import { OPEN_SANS_METRICS, getAverageAdvancePx, getKerningAdjustmentUnits, getLinePitchPx } from './openSansMetrics';
+import { OPEN_SANS_ATLAS_GLYPHS, type OpenSansGlyph } from './openSansAtlas';
+import { OPEN_SANS_METRICS, getAverageAdvancePx, getGlyphAdvanceUnits, getKerningAdjustmentUnits, getLinePitchPx } from './openSansMetrics';
 
 /** Godot `TextServer::AutowrapMode` (`core/templates/rid.h`-adjacent enum; values match the engine's). */
 export enum AutowrapMode {
@@ -89,7 +89,7 @@ export function clampAutowrapMode(mode: number | undefined, fallback: AutowrapMo
 }
 
 export interface ShapeTextOptions {
-  /** Target render font size, px. Atlas advances (baked at 42px) scale by `fontSizePx / 42`. */
+  /** Target render font size, px. Atlas advances (baked at 42px) scale by `fontSizePx / 42`. Used verbatim for every character absent `fontSizePxAt`. */
   fontSizePx: number;
   /** Wrap width, px. `<= 0` means unconstrained — no soft wrap, only hard breaks. */
   boxWidthPx: number;
@@ -98,6 +98,21 @@ export interface ShapeTextOptions {
   uppercase?: boolean;
   /** `default_theme.cpp:392`'s `line_spacing` constant, px. Default 3 (UI scale 1.0). */
   lineSpacingPx?: number;
+  /**
+   * Per-character font size override, keyed by index into the (post-uppercase)
+   * text — RichTextLabel's `[b]`/`[i]`/`[b][i]` bbcode spans shape at their OWN
+   * theme font-size key (`bold_font_size`/`italics_font_size`/
+   * `bold_italics_font_size`), independent of the paragraph's own
+   * `normal_font_size` (`rich_text_label.cpp:3244-3290`'s `_find_font`, one
+   * `theme_cache.*_font_size` read per `RTL_*_FONT` case — never a fallback to
+   * `normal_font_size`). Absent for every other caller (Label, Button,
+   * LineEdit — none has per-character styling), in which case every glyph
+   * advances at the flat `fontSizePx` exactly as before. Kerning between two
+   * adjacent characters is skipped when they resolve to different sizes — a
+   * proxy for "different shaped run", matching HarfBuzz shaping each
+   * RichTextLabel Item separately (no GPOS pair spans a style boundary).
+   */
+  fontSizePxAt?: (charIndex: number) => number;
 }
 
 /** One glyph's placement within its line, in target-font-size px. */
@@ -188,18 +203,25 @@ interface BreakGlyph {
 }
 
 /**
- * Atlas `xadvance` (bake size 42) scaled to `fontSizePx`. A character outside
- * the baked charset (`openSansAtlas.ts`'s own doc lists what IS baked and
- * why) draws no ink — there is no bitmap to place — but still occupies
- * roughly its own width via `getAverageAdvancePx` (this font's OS/2
- * `xAvgCharWidth`, `openSansMetrics.ts`), rather than 0: a silent zero-width
+ * `openSansMetrics.ts`'s `getGlyphAdvanceUnits` (the font's own CONTINUOUS
+ * `hmtx` advance, design units) scaled to `fontSizePx` — deliberately NOT
+ * `openSansAtlas.ts`'s own `xadvance` (that table's own doc, and
+ * `getGlyphAdvanceUnits`'s, both have the full citation: msdf-bmfont-xml
+ * rounds its OWN glyph table to whole pixels at the atlas's bake size before
+ * this repo's bake script ever reads it back, and Godot's real per-glyph
+ * advance at any UI font size is never rounded at all).
+ *
+ * A character outside the baked charset draws no ink (there is no atlas
+ * bitmap to place — `OPEN_SANS_ATLAS_GLYPHS`'s own doc lists what IS baked
+ * and why) but still occupies roughly its own width via `getAverageAdvancePx`
+ * (this font's OS/2 `xAvgCharWidth`), rather than 0: a silent zero-width
  * advance is what makes an unbaked character collapse the whole line around
  * it instead of leaving a gap where its own ink would have been.
  */
 function glyphAdvancePx(ch: string, fontSizePx: number): number {
-  const g = OPEN_SANS_ATLAS_GLYPHS[ch];
-  if (!g) return getAverageAdvancePx(fontSizePx);
-  return g.xadvance * (fontSizePx / OPEN_SANS_ATLAS_INFO.fontSize);
+  const units = getGlyphAdvanceUnits(ch);
+  if (units === null) return getAverageAdvancePx(fontSizePx);
+  return units * (fontSizePx / OPEN_SANS_METRICS.unitsPerEm);
 }
 
 /** `getKerningAdjustmentUnits`, design units, scaled to `fontSizePx` via `unitsPerEm`. */
@@ -214,24 +236,34 @@ function kerningAdjustmentPx(a: string, b: string, fontSizePx: number): number {
  * (`label.cpp:164`, a zero-advance whitespace glyph — itself a trailing break
  * candidate, though it never changes visible layout since it carries no ink
  * and no advance).
+ *
+ * `fontSizePxAt`, when given, resolves EACH character's own size (RichTextLabel's
+ * per-style-run sizing — see `ShapeTextOptions`'s own doc); absent, every
+ * character uses the flat `fontSizePx`, identical to before this option existed.
  */
-function toBreakGlyphs(text: string, fontSizePx: number): BreakGlyph[] {
+function toBreakGlyphs(text: string, fontSizePx: number, fontSizePxAt?: (charIndex: number) => number): BreakGlyph[] {
+  const sizeAt = (i: number): number => fontSizePxAt?.(i) ?? fontSizePx;
   const glyphs: BreakGlyph[] = [];
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]!;
     glyphs.push({
       start: i,
       end: i + 1,
-      advance: glyphAdvancePx(ch, fontSizePx),
+      advance: glyphAdvancePx(ch, sizeAt(i)),
       isSpace: isWhitespace(ch.codePointAt(0)!),
       isHardBreak: isLinebreak(ch.codePointAt(0)!),
     });
   }
   // Kerning narrows/widens the gap BETWEEN a pair; folding it into the
   // leading glyph's own advance keeps one cumulative sum for both the
-  // line-break width check and the placement pass below.
+  // line-break width check and the placement pass below. Skipped across a
+  // size boundary (see this function's own doc) — moot for the vendored
+  // charset today (no `kern` feature, `openSansMetrics.ts`'s own doc), kept
+  // for whichever font/kerning table lands next.
   for (let i = 0; i + 1 < text.length; i++) {
-    glyphs[i]!.advance += kerningAdjustmentPx(text[i]!, text[i + 1]!, fontSizePx);
+    const sizeI = sizeAt(i);
+    if (sizeI !== sizeAt(i + 1)) continue;
+    glyphs[i]!.advance += kerningAdjustmentPx(text[i]!, text[i + 1]!, sizeI);
   }
   glyphs.push({ start: text.length, end: text.length + 1, advance: 0, isSpace: true, isHardBreak: false });
   return glyphs;
@@ -352,7 +384,7 @@ function shapedTextGetLineBreaks(glyphs: BreakGlyph[], width: number, flags: Bre
 
 /** Shapes `text` into lines and per-glyph placements at `options.fontSizePx`. */
 export function shapeText(text: string, options: ShapeTextOptions): TextLayoutResult {
-  const { fontSizePx, boxWidthPx, autowrapMode, uppercase = false, lineSpacingPx = 3 } = options;
+  const { fontSizePx, boxWidthPx, autowrapMode, uppercase = false, lineSpacingPx = 3, fontSizePxAt } = options;
   const transformed = uppercase ? text.toUpperCase() : text;
   const flags = breakFlagsForAutowrap(autowrapMode);
   // AUTOWRAP_OFF never soft-wraps: force an unconstrained width regardless of
@@ -360,7 +392,11 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   // start a new line (mirrors Label::_shape() never OR-ing a wrap flag in).
   const effectiveWidth = autowrapMode === AutowrapMode.OFF ? 0 : boxWidthPx;
 
-  const breakGlyphs = toBreakGlyphs(transformed, fontSizePx);
+  // `uppercase` transforms the string BEFORE indices are assigned, so
+  // `fontSizePxAt` (keyed by a caller who built it off the SAME transformed
+  // text — RichTextLabel has no `uppercase` support today, but this keeps the
+  // contract honest for whichever text control adds it next) still lines up.
+  const breakGlyphs = toBreakGlyphs(transformed, fontSizePx, fontSizePxAt);
   const ranges = shapedTextGetLineBreaks(breakGlyphs, effectiveWidth, flags);
   const linePitchPx = getLinePitchPx(fontSizePx, lineSpacingPx);
 

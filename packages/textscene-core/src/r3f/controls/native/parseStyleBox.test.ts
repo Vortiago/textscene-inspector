@@ -34,6 +34,8 @@ const resources: TscnInternalResource[] = [
       content_margin_bottom: '13',
       draw_center: 'false',
       border_blend: 'true',
+      anti_aliased: 'false',
+      aa_size: '3',
     },
   },
   { id: 'StyleBoxFlat_empty', type: 'StyleBoxFlat', data: {} },
@@ -42,6 +44,8 @@ const resources: TscnInternalResource[] = [
     type: 'StyleBoxFlat',
     data: { border_width_left: '3', border_width_top: '3', border_width_right: '3', border_width_bottom: '3' },
   },
+  { id: 'StyleBoxFlat_aa_size_too_small', type: 'StyleBoxFlat', data: { aa_size: '0' } },
+  { id: 'StyleBoxFlat_aa_size_too_large', type: 'StyleBoxFlat', data: { aa_size: '50' } },
   { id: 'StyleBoxEmpty_x', type: 'StyleBoxEmpty', data: {} },
   { id: 'StandardMaterial3D_m', type: 'StandardMaterial3D', data: {} },
 ];
@@ -58,6 +62,8 @@ describe('parseStyleBox', () => {
       contentMargin: { left: 10, top: 11, right: 12, bottom: 13 },
       drawCenter: false,
       borderBlend: true,
+      antiAliased: false,
+      aaSize: 3,
     });
   });
 
@@ -65,7 +71,8 @@ describe('parseStyleBox', () => {
     // style_box_flat.h: bg_color default Color(0.6,0.6,0.6) [a defaults to 1],
     // border_color default Color(0.8,0.8,0.8) [a defaults to 1]; border_width/
     // corner_radius/expand_margin default 0 per side; draw_center default
-    // true; blend_border (border_blend) default false.
+    // true; blend_border (border_blend) default false; anti_aliased default
+    // true; aa_size default 1 (style_box_flat.h:49,54).
     const box = parseStyleBox('SubResource("StyleBoxFlat_empty")', resources);
     expect(box).toEqual({
       bgColor: { r: 0.6, g: 0.6, b: 0.6, a: 1 },
@@ -76,7 +83,19 @@ describe('parseStyleBox', () => {
       contentMargin: { left: 0, top: 0, right: 0, bottom: 0 },
       drawCenter: true,
       borderBlend: false,
+      antiAliased: true,
+      aaSize: 1,
     });
+  });
+
+  it('clamps an authored aa_size below the setter minimum to 0.01 (StyleBoxFlat::set_aa_size)', () => {
+    const box = parseStyleBox('SubResource("StyleBoxFlat_aa_size_too_small")', resources);
+    expect(box?.aaSize).toBeCloseTo(0.01);
+  });
+
+  it('clamps an authored aa_size above the setter maximum to 10 (StyleBoxFlat::set_aa_size)', () => {
+    const box = parseStyleBox('SubResource("StyleBoxFlat_aa_size_too_large")', resources);
+    expect(box?.aaSize).toBe(10);
   });
 
   it('falls back content_margin to the matching border_width when content_margin is absent (the -1 sentinel)', () => {

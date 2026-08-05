@@ -7,7 +7,7 @@
   on top of).
 - Related: ADR-0002 (three separate registries — unaffected: the render-domain
   registry still exists as a third registry, only what it holds changes, from DOM
-  components to native painter components); ADR-0030 (a sub-viewport is a canvas
+  components to native painter components); ADR-0033 (a sub-viewport is a canvas
   boundary; its Control-only offscreen pass is now native, not a DOM raster).
 
 ## Context
@@ -19,7 +19,7 @@ slices) whose layout was a CSS *approximation* of Godot's container algorithm �
 Godot's own `get_combined_minimum_size` / `fit_child_in_rect` math — invisible to the
 visual goldens (ADR-0024 exists only because of that gap), and unable to feed a
 `ViewportTexture` without rasterizing DOM into an image first (ADR-0003's 2026-07-29
-amendment, and ADR-0030's `verify:raster` gate).
+amendment, and ADR-0033's `verify:raster` gate).
 
 The DOM/WebGL split was also not just a fidelity gap but a **correctness** one: Godot
 composites every CanvasItem — 2D world and Control UI alike — in one tree-order draw.
@@ -153,7 +153,7 @@ rather than flickering — `logger.warn` names the offending sampler once per de
 cycle, and `useViewportPassCycle` lets the consuming surface fall back to its own
 placeholder instead of showing a frozen or uninitialised texture. This same registry
 is also the seam by which the native Control-only offscreen pass now publishes into
-`ViewportTextureRegistry` (ADR-0030), replacing the `<foreignObject>`-based
+`ViewportTextureRegistry` (ADR-0033), replacing the `<foreignObject>`-based
 `rasterizeControlSubtree` DOM rasterizer entirely — no consumer of that registry
 changed.
 
@@ -186,7 +186,7 @@ heuristic.
   `createContainerComponent.tsx`'s CSS flex/grid emission, and the inline-SVG
   `feColorMatrix` modulate filter are deleted, not built upon.
 - `verify:2d` (ADR-0024) and `verify:raster` (ADR-0003's 2026-07-29 amendment,
-  ADR-0030) retire: the visual-golden harness is now the only rendering gate 2D UI
+  ADR-0033) retire: the visual-golden harness is now the only rendering gate 2D UI
   needs, since native Controls are renderer pixels like everything else it already
   covers. 2D-UI fixtures join the golden set behind the existing `mode: '2d'` parity
   capture (`scripts/visual/scenes.mjs`) rather than a bespoke DOM-stats harness.
@@ -194,7 +194,7 @@ heuristic.
   half of issue #358); previously it existed only in the DOM Control registry.
 - A `SubViewport`'s Control-only content publishes into `ViewportTextureRegistry`
   from a native offscreen pass instead of a DOM raster; `SubViewport`/
-  `SubViewportContainer`/`ViewportTexture` consumers are unchanged (ADR-0030's seam
+  `SubViewportContainer`/`ViewportTexture` consumers are unchanged (ADR-0033's seam
   held).
 - The linter bundle is untouched: `index.linter.ts` never imported `Component.tsx`
   (ADR-0001), so this swap is invisible to `apps/textscene-linter`.

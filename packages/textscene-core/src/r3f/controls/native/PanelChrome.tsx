@@ -10,9 +10,10 @@
  * `ownMultiplier` shortcut a one-colour widget uses: the tint must be
  * multiplied into `bgColor` and `borderColor` while both are still raw sRGB,
  * because `styleBoxFlatGeometry` performs the single sRGB→linear conversion
- * downstream. That ordering is invisible at tint 1, wrong everywhere else, and
- * discoverable only by tracing the conversion — so it lives in one place every
- * panel-chrome consumer shares.
+ * downstream. `<StyleBoxQuad>`'s own `color` prop now does that multiply
+ * internally, so this chrome only has to hand it the UNTINTED base StyleBox
+ * plus `tint.own` — the ordering is `<StyleBoxQuad>`'s contract to keep, not
+ * every consumer's to re-derive.
  *
  * Note what is deliberately NOT applied: this node's own `modulate`. The walker
  * has already folded it into the ambient modulate context, so re-applying it
@@ -20,9 +21,8 @@
  * must never reach children — is applied here.
  */
 
-import { useMemo } from 'react';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../canvasItemModulate';
-import { StyleBoxQuad, tintStyleBox } from './StyleBoxQuad';
+import { StyleBoxQuad } from './StyleBoxQuad';
 import type { NativeTheme } from './nativeTheme';
 import type { SolveNode } from './solveTree';
 import type { Rect2 } from './rect';
@@ -42,8 +42,7 @@ export function PanelChrome({ solveNode, rect, theme, renderOrder }: PanelChrome
 
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
-  const styleBox = useMemo(() => tintStyleBox(baseStyleBox, tint.own), [baseStyleBox, tint.own]);
 
-  return <StyleBoxQuad styleBox={styleBox} rect={rect} renderOrder={renderOrder} />;
+  return <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />;
 }
 

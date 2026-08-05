@@ -4,10 +4,18 @@
  * and its `draw_rounded_rectangle`/`adapt_values`/`set_inner_corner_radius`/
  * `set_corner_scale` helpers — restricted to this module's scope: fill,
  * per-corner radii, per-edge borders, `border_blend`, `draw_center`, expand
- * margins. Anti-aliasing (`anti_aliased`/`aa_size`), `skew` and the drop
- * shadow are NOT modelled (`StyleBoxFlatData` carries none of them), which is
- * equivalent to always taking `draw()`'s `aa_on = false` branch with
- * `skew = (0, 0)` and `shadow_size = 0`.
+ * margins, and anti-aliasing (`anti_aliased`/`aa_size`). `skew` and the drop
+ * shadow are NOT modelled (`StyleBoxFlatData` carries neither), equivalent to
+ * always taking `draw()` with `skew = (0, 0)` and `shadow_size = 0` — which
+ * also means `aa_on` (`draw()`: `(rounded_corners || !skew.is_zero_approx())
+ * && anti_aliased`) reduces to `rounded_corners && anti_aliased` here: a
+ * sharp-cornered box never gets an AA ring, matching Godot's own "only
+ * antialias if actually needed" comment.
+ *
+ * The AA ring math additionally assumes `TextServer::get_current_drawn_item_
+ * oversampling()` (style_box_flat.cpp:499-502) is `1`: this codebase has no
+ * concept of per-viewport 2D oversampling anywhere else, so `aa_size_scaled
+ * == aa_size` throughout this port.
  *
  * `border_blend` is realised with vertex colours, not a shader: the border
  * ring's INNER (infill-boundary) vertices are coloured `border_color_inner`
@@ -15,7 +23,10 @@
  * fill) and its OUTER (style-rect-boundary) vertices stay `border_color`;
  * three's own per-triangle colour interpolation blends one into the other
  * across the ring, exactly how the RenderingServer's flat-shaded triangle
- * array does in Godot itself.
+ * array does in Godot itself. The AA rings reuse the same mechanism: an
+ * alpha-0 outer/transparent boundary blended into an opaque inner one is
+ * exactly what a vertex-coloured ring already expresses, so no shader change
+ * was needed to add AA.
  *
  * No THREE import — plain number arrays throughout, positions in the same
  * Godot-pixel, +Y-down space as the `Rect2` passed in (`native/rect.ts`); the
@@ -358,17 +369,179 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
   const borderColorBlend: Rgba = data.drawCenter ? data.bgColor : borderColorAlpha;
   const borderColorInner: Rgba = blendOn ? borderColorBlend : data.borderColor;
 
-  const buffers: GeometryBuffers = { positions: [], indices: [], colors: [] };
+  // draw(): `aa_on = (rounded_corners || !skew.is_zero_approx()) && anti_aliased`,
+  // skew always zero here.
+  const roundedCorners = cornerRadiusIn.some((r) => r > 0);
+  const aaOn = roundedCorners && data.antiAliased;
+  // aa_size_scaled = aa_size / oversampling; oversampling assumed 1 (see file header).
+  const aaSizeScaled = data.aaSize;
 
-  // Border ring (aa_on forced false, so this is the ONLY border pass — no AA
-  // feather rings, matching `draw()`'s `if (draw_border && !aa_on)`).
-  if (drawBorder) {
-    drawRoundedRectangle(buffers, styleRect, adaptedCorner, styleRect, infillRect, borderColorInner, data.borderColor, false);
+  // draw(): style_box_flat.cpp:511-517 — each BORDERED side (not the adapted
+  // one — the raw authored border_width) shrinks border_style_rect inward by
+  // aa_size_scaled, so the border ring's own drawing rect narrows to leave
+  // room for the outer feather ring without growing past style_rect.
+  let borderStyleRect = styleRect;
+  if (aaOn) {
+    if (borderWidth[SIDE_LEFT]! > 0) borderStyleRect = growIndividual(borderStyleRect, -aaSizeScaled, 0, 0, 0);
+    if (borderWidth[SIDE_TOP]! > 0) borderStyleRect = growIndividual(borderStyleRect, 0, -aaSizeScaled, 0, 0);
+    if (borderWidth[SIDE_RIGHT]! > 0) borderStyleRect = growIndividual(borderStyleRect, 0, 0, -aaSizeScaled, 0);
+    if (borderWidth[SIDE_BOTTOM]! > 0) borderStyleRect = growIndividual(borderStyleRect, 0, 0, 0, -aaSizeScaled);
   }
 
-  // Centre fill (`if (draw_center && (!aa_on || blend_on))` — always true here).
-  if (data.drawCenter) {
-    drawRoundedRectangle(buffers, styleRect, adaptedCorner, infillRect, infillRect, data.bgColor, data.bgColor, true);
+  const buffers: GeometryBuffers = { positions: [], indices: [], colors: [] };
+
+  // Border ring, no AA (`if (draw_border && !aa_on)`).
+  if (drawBorder && !aaOn) {
+    drawRoundedRectangle(
+      buffers,
+      borderStyleRect,
+      adaptedCorner,
+      borderStyleRect,
+      infillRect,
+      borderColorInner,
+      data.borderColor,
+      false
+    );
+  }
+
+  // Centre fill, no AA yet (`if (draw_center && (!aa_on || blend_on))`).
+  if (data.drawCenter && (!aaOn || blendOn)) {
+    drawRoundedRectangle(buffers, borderStyleRect, adaptedCorner, infillRect, infillRect, data.bgColor, data.bgColor, true);
+  }
+
+  if (aaOn) {
+    // style_box_flat.cpp:555-582: per-side AA feather widths — a bordered
+    // side feathers the BORDER's outer/inner edges; a borderless side
+    // feathers the FILL's own boundary instead (there is no border ring
+    // there to feather).
+    const aaBorderWidth: number[] = [0, 0, 0, 0];
+    const aaBorderWidthHalf: number[] = [0, 0, 0, 0];
+    const aaFillWidth: number[] = [0, 0, 0, 0];
+    const aaFillWidthHalf: number[] = [0, 0, 0, 0];
+    for (let i = 0; i < 4; i++) {
+      if (drawBorder && borderWidth[i]! > 0) {
+        aaBorderWidth[i] = aaSizeScaled;
+        aaBorderWidthHalf[i] = aaSizeScaled * 0.5;
+      } else {
+        aaFillWidth[i] = aaSizeScaled;
+        aaFillWidthHalf[i] = aaSizeScaled * 0.5;
+      }
+    }
+
+    // style_box_flat.cpp:584-601.
+    if (data.drawCenter) {
+      const infillRectAaTransparent = growIndividual(
+        infillRect,
+        aaFillWidthHalf[SIDE_LEFT]!,
+        aaFillWidthHalf[SIDE_TOP]!,
+        aaFillWidthHalf[SIDE_RIGHT]!,
+        aaFillWidthHalf[SIDE_BOTTOM]!
+      );
+      const infillRectAaColored = growIndividual(
+        infillRectAaTransparent,
+        -aaFillWidth[SIDE_LEFT]!,
+        -aaFillWidth[SIDE_TOP]!,
+        -aaFillWidth[SIDE_RIGHT]!,
+        -aaFillWidth[SIDE_BOTTOM]!
+      );
+
+      if (!blendOn) {
+        drawRoundedRectangle(
+          buffers,
+          borderStyleRect,
+          adaptedCorner,
+          infillRectAaColored,
+          infillRectAaColored,
+          data.bgColor,
+          data.bgColor,
+          true
+        );
+      }
+      if (!blendOn || !drawBorder) {
+        const alphaBg: Rgba = { ...data.bgColor, a: 0 };
+        drawRoundedRectangle(
+          buffers,
+          borderStyleRect,
+          adaptedCorner,
+          infillRectAaTransparent,
+          infillRectAaColored,
+          data.bgColor,
+          alphaBg,
+          false
+        );
+      }
+    }
+
+    // style_box_flat.cpp:604-629.
+    if (drawBorder) {
+      const innerRectAaColored = growIndividual(
+        infillRect,
+        aaBorderWidthHalf[SIDE_LEFT]!,
+        aaBorderWidthHalf[SIDE_TOP]!,
+        aaBorderWidthHalf[SIDE_RIGHT]!,
+        aaBorderWidthHalf[SIDE_BOTTOM]!
+      );
+      const innerRectAaTransparent = growIndividual(
+        innerRectAaColored,
+        -aaBorderWidth[SIDE_LEFT]!,
+        -aaBorderWidth[SIDE_TOP]!,
+        -aaBorderWidth[SIDE_RIGHT]!,
+        -aaBorderWidth[SIDE_BOTTOM]!
+      );
+      const outerRectAaTransparent = growIndividual(
+        styleRect,
+        aaBorderWidthHalf[SIDE_LEFT]!,
+        aaBorderWidthHalf[SIDE_TOP]!,
+        aaBorderWidthHalf[SIDE_RIGHT]!,
+        aaBorderWidthHalf[SIDE_BOTTOM]!
+      );
+      const outerRectAaColored = growIndividual(
+        borderStyleRect,
+        aaBorderWidthHalf[SIDE_LEFT]!,
+        aaBorderWidthHalf[SIDE_TOP]!,
+        aaBorderWidthHalf[SIDE_RIGHT]!,
+        aaBorderWidthHalf[SIDE_BOTTOM]!
+      );
+
+      // Border ring, not antialiased yet.
+      drawRoundedRectangle(
+        buffers,
+        borderStyleRect,
+        adaptedCorner,
+        outerRectAaColored,
+        blendOn ? infillRect : innerRectAaColored,
+        borderColorInner,
+        data.borderColor,
+        false
+      );
+      if (!blendOn) {
+        // AA on the ring's INNER edge — feathers into border_color_blend
+        // (bg_color when draw_center, else alpha-0 border_color).
+        drawRoundedRectangle(
+          buffers,
+          borderStyleRect,
+          adaptedCorner,
+          innerRectAaColored,
+          innerRectAaTransparent,
+          borderColorBlend,
+          data.borderColor,
+          false
+        );
+      }
+      // AA on the ring's OUTER edge — feathers to alpha-0 border_color,
+      // extending aa_size/2 PAST style_rect (the "extra outer ring" the AA
+      // port adds).
+      drawRoundedRectangle(
+        buffers,
+        borderStyleRect,
+        adaptedCorner,
+        outerRectAaTransparent,
+        outerRectAaColored,
+        data.borderColor,
+        borderColorAlpha,
+        false
+      );
+    }
   }
 
   return buffers;

@@ -10,7 +10,7 @@ renders_as: an offscreen render target, plus a boundary that scopes its canvas s
 # SubViewport
 
 A Viewport that renders its subtree into an offscreen target. It draws nothing
-itself; what it does is decide **where its subtree draws** — see ADR-0030 — and
+itself; what it does is decide **where its subtree draws** — see ADR-0033 — and
 publish what it rendered for a `ViewportTexture` consumer to sample.
 
 A sub-viewport is a **canvas boundary, not a world boundary**. Godot's
