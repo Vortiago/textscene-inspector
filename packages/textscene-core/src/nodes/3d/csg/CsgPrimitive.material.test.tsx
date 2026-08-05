@@ -18,6 +18,8 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { CSGBox3DProperties } from './csgbox3d/types';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 const EXTERNALS: readonly TscnExternalResource[] = [
   { id: '1_blue', path: 'res://blue_material.tres', type: 'Material' },
@@ -42,14 +44,14 @@ async function render(material: string | undefined, seed?: THREE.Material) {
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={INTERNALS} externalResources={EXTERNALS}>
-        <CsgPrimitive node={node} properties={node.properties} />
+        <CsgPrimitive node={node} properties={node.properties as CSGBox3DProperties} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
 }
 
 function materialOf(renderer: Awaited<ReturnType<typeof render>>) {
-  return renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+  return findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
 }
 
 describe('<CsgPrimitive> material resolution', () => {

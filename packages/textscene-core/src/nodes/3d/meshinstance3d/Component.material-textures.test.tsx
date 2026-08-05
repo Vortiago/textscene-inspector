@@ -16,6 +16,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { findMesh } from '../testing/reactThreeTestInstance';
 import type {
   TscnExternalResource,
   TscnInternalResource,
@@ -98,7 +99,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(mat.map).toBeInstanceOf(THREE.Texture);
   });
 
@@ -108,7 +109,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: 'missing' }],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(mat.color.r).toBeCloseTo(1, 1);
     expect(mat.color.g).toBeCloseTo(0, 1);
     expect(mat.color.b).toBeCloseTo(1, 1);
@@ -122,7 +123,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       externals: [extRef('2_nrm', NORMAL_PATH)],
       cached: [{ path: NORMAL_PATH, texture: tex }],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(mat.normalMap).toBeInstanceOf(THREE.Texture);
   });
 
@@ -139,7 +140,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       externals: [extRef('6_hgt', HEIGHT_PATH)],
       cached: [{ path: HEIGHT_PATH, texture: tex }],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(mat.displacementMap).toBeInstanceOf(THREE.Texture);
     expect(mat.displacementScale).toBeCloseTo(0.3, 5);
   });
@@ -155,7 +156,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       externals: [extRef('2_nrm', NORMAL_PATH)],
       cached: [{ path: NORMAL_PATH, texture: tex }],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(mat.normalScale.x).toBe(2.0);
     expect(mat.normalScale.y).toBe(2.0);
   });
@@ -167,7 +168,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       externals: [extRef('3_r', ROUGHNESS_PATH)],
       cached: [{ path: ROUGHNESS_PATH, texture: tex }],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(mat.roughnessMap).toBeInstanceOf(THREE.Texture);
   });
 
@@ -178,7 +179,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       externals: [extRef('4_m', METALLIC_PATH)],
       cached: [{ path: METALLIC_PATH, texture: tex }],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(mat.metalnessMap).toBeInstanceOf(THREE.Texture);
   });
 
@@ -193,7 +194,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       externals: [extRef('5_e', EMISSION_PATH)],
       cached: [{ path: EMISSION_PATH, texture: tex }],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(mat.emissiveMap).toBeInstanceOf(THREE.Texture);
   });
 
@@ -229,7 +230,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
         { path: EMISSION_PATH, texture: emit },
       ],
     });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(mat.map).toBeInstanceOf(THREE.Texture);
     expect(mat.normalMap).toBeInstanceOf(THREE.Texture);
     expect(mat.roughnessMap).toBeInstanceOf(THREE.Texture);
@@ -277,7 +278,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       </ResourceLoaderProvider>
     );
 
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(mat.map).toBeInstanceOf(THREE.Texture);
   });
 
@@ -323,7 +324,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     );
 
     // First render: useResource still pending; material has no map.
-    const matBefore = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const matBefore = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(matBefore.map).toBeNull();
 
     // Now simulate the file pipeline emitting `loaded` after the fetch
@@ -334,7 +335,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       fake.eventBus.emit<THREE.Texture>('texture', 'loaded', TEXTURE_PATH, tex);
     });
 
-    const matAfter = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const matAfter = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(matAfter.map).toBeInstanceOf(THREE.Texture);
   });
 });

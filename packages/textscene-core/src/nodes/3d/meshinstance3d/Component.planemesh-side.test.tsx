@@ -28,6 +28,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 function sub(
   type: string,
@@ -73,7 +74,7 @@ async function renderWithMeshAndMaterial(
       <MeshInstance3D node={node} />
     </SceneResourcesProvider>
   );
-  return renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+  return findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
 }
 
 describe('MeshInstance3D + PlaneMesh — material.side default (Godot BACK = FrontSide)', () => {

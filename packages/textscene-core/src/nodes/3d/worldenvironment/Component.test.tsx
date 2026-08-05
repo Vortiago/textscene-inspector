@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { WorldEnvironment } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { WorldEnvironmentProperties } from './types';
+import { instanceAs } from '../testing/reactThreeTestInstance';
 
 function makeNode(envRef?: string): TscnNode {
   const properties: WorldEnvironmentProperties = {
@@ -38,7 +40,7 @@ describe('<WorldEnvironment>', () => {
       background_color: 'Color(0.2, 0.4, 0.8, 1)',
     });
     const renderer = await render(node, [resource]);
-    const scene = renderer.scene.instance;
+    const scene = instanceAs<THREE.Scene>(renderer.scene);
     const bg = scene.background as { getHexString(): string } | null;
     expect(bg).not.toBeNull();
     // Godot Color is sRGB; three.js stores linear, so compare via the sRGB hex.
@@ -52,7 +54,7 @@ describe('<WorldEnvironment>', () => {
       fog_density: '0.1',
     });
     const renderer = await render(node, [resource]);
-    expect(renderer.scene.instance.fog).not.toBeNull();
+    expect(instanceAs<THREE.Scene>(renderer.scene).fog).not.toBeNull();
   });
 
   it('does NOT attach fog when volumetric_fog_enabled is false', async () => {
@@ -62,13 +64,14 @@ describe('<WorldEnvironment>', () => {
       background_color: 'Color(0, 0, 0, 1)',
     });
     const renderer = await render(node, [resource]);
-    expect(renderer.scene.instance.fog).toBeNull();
+    expect(instanceAs<THREE.Scene>(renderer.scene).fog).toBeNull();
   });
 
   it('renders nothing extra when environment reference is missing', async () => {
     const node = makeNode('SubResource("Nope")');
     const renderer = await render(node, []);
-    expect(renderer.scene.instance.background).toBeNull();
-    expect(renderer.scene.instance.fog).toBeNull();
+    const scene = instanceAs<THREE.Scene>(renderer.scene);
+    expect(scene.background).toBeNull();
+    expect(scene.fog).toBeNull();
   });
 });

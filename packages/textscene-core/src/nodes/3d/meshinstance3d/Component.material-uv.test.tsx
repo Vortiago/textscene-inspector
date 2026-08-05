@@ -19,6 +19,7 @@ import type {
   TscnNode,
 } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 function makeNode(): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -67,7 +68,7 @@ async function renderUV(opts: {
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
-  return renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+  return findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
 }
 
 const A_PATH = 'res://a.png';

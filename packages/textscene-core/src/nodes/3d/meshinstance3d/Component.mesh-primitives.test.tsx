@@ -12,6 +12,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 function makeNode(meshSubResId: string): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -42,7 +43,7 @@ async function renderGeometry(
       <MeshInstance3D node={makeNode(meshSubResource.id)} />
     </SceneResourcesProvider>
   );
-  return renderer.scene.findByType('Mesh').instance.geometry;
+  return findMesh(renderer.scene).geometry;
 }
 
 describe('Mesh primitives (assertions 48–59)', () => {

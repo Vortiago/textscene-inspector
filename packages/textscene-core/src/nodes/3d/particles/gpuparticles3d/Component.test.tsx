@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Node3D } from '../../../base/node3d/Component';
 import type { Node3DProperties, Transform3D } from '../../../base/node3d/types';
-import type { TscnNode } from '../../../parser/types';
+import type { TscnNode } from '../../../../parser/types';
 
 function makeNode(properties: Node3DProperties): TscnNode {
   return { name: properties.name ?? 'GPUParticles3D', type: 'GPUParticles3D' as const, children: [], properties };

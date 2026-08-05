@@ -33,6 +33,7 @@ import type {
   TscnNode,
 } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 
 /**
  * Provider that always returns null; we never let the file pipeline
@@ -105,7 +106,8 @@ function findMaterial(
   renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>
 ): THREE.MeshStandardMaterial | undefined {
   const materials = renderer.scene.findAllByType('MeshStandardMaterial');
-  return materials[0]?.instance as THREE.MeshStandardMaterial | undefined;
+  const first = materials[0];
+  return first ? materialInstanceAs<THREE.MeshStandardMaterial>(first) : undefined;
 }
 
 async function renderWith(
@@ -323,9 +325,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
 
     const materials = renderer.scene.findAllByType('MeshStandardMaterial');
     expect(materials).toHaveLength(2);
-    const [matA, matB] = materials.map(
-      (m) => m.instance as THREE.MeshStandardMaterial
-    );
+    const [matA, matB] = materials.map((m) => materialInstanceAs<THREE.MeshStandardMaterial>(m));
 
     expect(matA!.map).toBeDefined();
     expect(matB!.map).toBeDefined();
@@ -362,7 +362,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     // material with native clearcoat), carrying the parsed strength + roughness.
     const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = physical[0]!.instance as THREE.MeshPhysicalMaterial;
+    const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
     expect(material.clearcoat).toBeCloseTo(0.7, 5);
     expect(material.clearcoatRoughness).toBeCloseTo(0.25, 5);
   });
@@ -411,7 +411,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     // onto three.js's Fresnel sheen term (the closest native analog).
     const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = physical[0]!.instance as THREE.MeshPhysicalMaterial;
+    const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
     expect(material.sheen).toBeCloseTo(0.7, 5);
   });
 

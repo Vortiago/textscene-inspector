@@ -6,10 +6,12 @@
  *   is the HORIZONTAL fov; three.js wants vertical, so it must be converted.
  */
 import { describe, it, expect } from 'vitest';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Camera3D } from './Component';
 import { ProjectionMode, KeepAspectMode } from './types';
 import type { TscnNode } from '../../../parser/types';
+import { instanceAs } from '../testing/reactThreeTestInstance';
 
 function makeNode(props: Record<string, unknown> = {}): TscnNode {
   return {
@@ -27,10 +29,7 @@ describe('Camera3D projection parity', () => {
     const r = await ReactThreeTestRenderer.create(
       <Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size: 4 })} />
     );
-    const o = r.scene.findByType('OrthographicCamera').instance as {
-      top: number;
-      bottom: number;
-    };
+    const o = instanceAs<THREE.OrthographicCamera>(r.scene.findByType('OrthographicCamera'));
     expect(o.top).toBeCloseTo(2, 5); // size 4 → half-height 2
     expect(o.bottom).toBeCloseTo(-2, 5);
   });
@@ -39,7 +38,7 @@ describe('Camera3D projection parity', () => {
     const r = await ReactThreeTestRenderer.create(
       <Camera3D node={makeNode({ fov: 90, keep_aspect: KeepAspectMode.KEEP_WIDTH })} />
     );
-    const cam = r.scene.findByType('PerspectiveCamera').instance as { fov: number };
+    const cam = instanceAs<THREE.PerspectiveCamera>(r.scene.findByType('PerspectiveCamera'));
     const expectedVertical =
       (2 * Math.atan(Math.tan((90 * Math.PI) / 180 / 2) / DEFAULT_ASPECT) * 180) / Math.PI;
     expect(cam.fov).toBeCloseTo(expectedVertical, 3);
@@ -50,7 +49,7 @@ describe('Camera3D projection parity', () => {
     const r = await ReactThreeTestRenderer.create(
       <Camera3D node={makeNode({ fov: 60, keep_aspect: KeepAspectMode.KEEP_HEIGHT })} />
     );
-    const cam = r.scene.findByType('PerspectiveCamera').instance as { fov: number };
+    const cam = instanceAs<THREE.PerspectiveCamera>(r.scene.findByType('PerspectiveCamera'));
     expect(cam.fov).toBe(60);
   });
 });

@@ -17,6 +17,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 describe('material misc scalar parity', () => {
   it('vertex_color_use_as_albedo → useVertexColors (default false)', () => {
@@ -66,7 +67,7 @@ describe('StandardMaterialSlot vertexColors', () => {
         <StandardMaterialSlot scalars={scalars} />
       </mesh>
     );
-    const m = r.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    const m = findMesh(r.scene).material as THREE.MeshStandardMaterial;
     expect(m.vertexColors).toBe(true);
   });
 
@@ -80,7 +81,7 @@ describe('StandardMaterialSlot vertexColors', () => {
         <StandardMaterialSlot scalars={scalars} />
       </mesh>
     );
-    const m = r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const m = findMesh(r.scene).material as THREE.MeshBasicMaterial;
     expect((m as THREE.Material).type).toBe('MeshBasicMaterial');
     expect(m.vertexColors).toBe(true);
   });
@@ -100,7 +101,7 @@ describe('StandardMaterialSlot vertexColors', () => {
         <StandardMaterialSlot scalars={scalars} />
       </mesh>
     );
-    const m = r.scene.findByType('Mesh').instance.material as THREE.Material;
+    const m = findMesh(r.scene).material as THREE.Material;
     expect(m.type).toBe('MeshBasicMaterial');
     expect('emissive' in m).toBe(false);
   });
@@ -131,7 +132,7 @@ async function renderAo(matData: Record<string, string>): Promise<THREE.MeshStan
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
-  return renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+  return findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
 }
 
 describe('ao_enabled gate', () => {

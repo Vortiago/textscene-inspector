@@ -12,6 +12,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -46,9 +47,9 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
   it('#11 mesh resolves → BufferGeometry present on rendered mesh', async () => {
     const node = makeNode({ mesh: 'SubResource("Box_1")' });
     const renderer = await render(node, [sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
-    const mesh = renderer.scene.findByType('Mesh');
-    expect(mesh.instance.geometry).toBeDefined();
-    expect(mesh.instance.geometry.type).toBe('BoxGeometry');
+    const mesh = findMesh(renderer.scene);
+    expect(mesh.geometry).toBeDefined();
+    expect(mesh.geometry.type).toBe('BoxGeometry');
   });
 
   it('#12 material_override replaces the mesh-own material', async () => {
@@ -61,7 +62,7 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
       sub('StandardMaterial3D', 'MeshOwn', { albedo_color: 'Color(0, 0, 1, 1)' }),
       sub('StandardMaterial3D', 'Override', { albedo_color: 'Color(1, 0, 0, 1)' }),
     ]);
-    const mat = renderer.scene.findByType('Mesh').instance.material as { color: { r: number } };
+    const mat = findMesh(renderer.scene).material as unknown as { color: { r: number } };
     expect(mat.color.r).toBe(1); // override (red), not mesh-own (blue)
   });
 
@@ -77,7 +78,7 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
       sub('StandardMaterial3D', 'Override', { albedo_color: 'Color(1, 0, 0, 1)' }),
       sub('StandardMaterial3D', 'Surf0', { albedo_color: 'Color(0, 1, 0, 1)' }),
     ]);
-    const mat = renderer.scene.findByType('Mesh').instance.material as {
+    const mat = findMesh(renderer.scene).material as unknown as {
       color: { r: number; g: number };
     };
     expect(mat.color.r).toBe(0);
@@ -98,7 +99,7 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     // defaults to grey placeholder, slot 1 carries the yellow override.
     // Each surface gets its own material slot in the array, mirroring
     // the pre-migration imperative renderer's `materials[N]` semantics.
-    const mesh = renderer.scene.findByType('Mesh').instance as {
+    const mesh = findMesh(renderer.scene) as unknown as {
       material: Array<{ color: { r: number; g: number; b: number } }>;
     };
     expect(Array.isArray(mesh.material)).toBe(true);

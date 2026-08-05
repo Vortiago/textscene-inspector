@@ -164,7 +164,7 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes.length).toBeGreaterThan(0);
     for (const m of meshes) {
-      const mat = m.instance.material as { type: string };
+      const mat = (m.instance as THREE.Mesh).material as { type: string };
       expect(mat.type).toBe('MeshBasicMaterial');
       // None of the meshes should cast shadows — gizmos are non-lit.
       expect(m.instance.castShadow).toBe(false);

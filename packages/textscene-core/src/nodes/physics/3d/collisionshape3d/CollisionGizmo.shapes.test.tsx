@@ -16,12 +16,13 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionGizmo } from './CollisionGizmo';
 import type { TscnInternalResource } from '../../../../parser/types';
+import { findMesh } from '../../../3d/testing/reactThreeTestInstance';
 
 async function geometryOf(shape: TscnInternalResource) {
   const renderer = await ReactThreeTestRenderer.create(
     <CollisionGizmo shape={shape} color={new THREE.Color(0x00ff88)} />
   );
-  return renderer.scene.findByType('Mesh').instance.geometry as unknown as {
+  return findMesh(renderer.scene).geometry as unknown as {
     type: string;
     parameters: Record<string, number>;
   };

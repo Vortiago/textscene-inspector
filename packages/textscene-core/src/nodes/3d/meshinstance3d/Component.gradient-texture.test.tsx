@@ -126,7 +126,9 @@ describe('<MeshInstance3D> GradientTexture2D albedo (coin glow)', () => {
     expect(basic).toBeDefined();
     // The gradient DataTexture is on the map, resolved without any async load.
     expect(basic!.map).toBeInstanceOf(THREE.DataTexture);
-    expect(basic!.map!.image.width).toBe(64);
+    // `.map` is typed `Texture<unknown> | null`; the assertion above proves it's
+    // really the DataTexture whose `.image` carries known `width`/`height`.
+    expect((basic!.map as THREE.DataTexture).image.width).toBe(64);
     // ADD blend + transparency carried from the material.
     expect(basic!.blending).toBe(THREE.AdditiveBlending);
     expect(basic!.transparent).toBe(true);

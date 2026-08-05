@@ -329,7 +329,7 @@ input_pickable = true
       const diagnostics = lint(scene(node('StaticBody2D')));
       // Should only have warning about missing CollisionShape2D
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0].ruleName).toBe('staticbody2d-needs-collision-shape');
+      expect(diagnostics[0]!.ruleName).toBe('staticbody2d-needs-collision-shape');
     });
 
     it('should handle scientific notation in velocities', () => {

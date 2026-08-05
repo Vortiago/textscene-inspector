@@ -320,7 +320,7 @@ describe('Area2D Linter', () => {
     it('should handle node with no properties', () => {
       const diagnostics = lint(scene(node('Area2D')));
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0].ruleName).toBe('area2d-needs-collision-shape');
+      expect(diagnostics[0]!.ruleName).toBe('area2d-needs-collision-shape');
     });
 
     it('should handle scientific notation in numeric values', () => {

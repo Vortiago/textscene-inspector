@@ -7,6 +7,7 @@ import { parseCSGMesh3D } from './parser';
 // Imports the wired slice, not the bare component: CsgPrimitive builds the solid
 // from the registered builder, so the registration is part of what is under test.
 import { CSGMesh3D } from './index.r3f';
+import { findMesh } from '../../testing/reactThreeTestInstance';
 
 const BOX_MESH: TscnInternalResource = {
   id: 'BoxMesh_csg',
@@ -37,7 +38,7 @@ async function render(node: TscnNode, internalResources: TscnInternalResource[] 
 }
 
 function geometryOf(renderer: Awaited<ReturnType<typeof render>>): THREE.BufferGeometry {
-  return renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+  return findMesh(renderer.scene).geometry;
 }
 
 describe('<CSGMesh3D>', () => {

@@ -97,7 +97,7 @@ describe('<Decal>', () => {
     });
     const box = renderer.scene.findAllByType('LineSegments');
     expect(box).toHaveLength(1);
-    const scale = (box[0].instance as THREE.Object3D).parent!.scale;
+    const scale = (box[0]!.instance as THREE.Object3D).parent!.scale;
     expect([scale.x, scale.y, scale.z]).toEqual([3, 2, 4]);
   });
 

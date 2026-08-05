@@ -45,8 +45,8 @@ describe('MeshInstance3D Linter', () => {
           severity: 'error',
           ruleName: 'strict-parser',
         });
-        expect(diagnostics[0].message).toContain('cast_shadow');
-        expect(diagnostics[0].message).toContain('0-3');
+        expect(diagnostics[0]!.message).toContain('cast_shadow');
+        expect(diagnostics[0]!.message).toContain('0-3');
       });
 
       it('should validate all valid cast_shadow values', () => {
@@ -143,7 +143,7 @@ describe('MeshInstance3D Linter', () => {
         severity: 'error',
         ruleName: 'strict-parser',
       });
-      expect(diagnostics[0].message).toContain('transform');
+      expect(diagnostics[0]!.message).toContain('transform');
     });
   });
 
@@ -159,7 +159,7 @@ describe('MeshInstance3D Linter', () => {
         nodeType: 'MeshInstance3D',
         ruleName: 'valid-meshinstance3d-resources',
       });
-      expect(diagnostics[0].message).toContain('Mesh resource not found');
+      expect(diagnostics[0]!.message).toContain('Mesh resource not found');
     });
 
     it('should pass when all resources exist', () => {
@@ -194,7 +194,7 @@ describe('MeshInstance3D Linter', () => {
         scene(node('MeshInstance3D', { skin: 'SubResource("nonexistent_skin")' }, { name: 'MissingSkin' }))
       );
       expect(diagnostics).toHaveLength(1);
-      expect(diagnostics[0].message).toContain('Skin resource not found');
+      expect(diagnostics[0]!.message).toContain('Skin resource not found');
     });
 
     it('should detect missing surface material override resource', () => {
@@ -279,7 +279,7 @@ describe('MeshInstance3D Linter', () => {
         severity: 'error',
         ruleName: 'valid-meshinstance3d-skeleton',
       });
-      expect(diagnostics[0].message).toContain('Skeleton node not found');
+      expect(diagnostics[0]!.message).toContain('Skeleton node not found');
     });
 
     it('should pass when skeleton node exists', () => {

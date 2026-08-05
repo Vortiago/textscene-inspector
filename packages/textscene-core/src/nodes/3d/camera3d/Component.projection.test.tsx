@@ -6,11 +6,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Camera3D } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { Camera3DProperties } from './types';
 import { ProjectionMode, KeepAspectMode } from './types';
+import { instanceAs } from '../testing/reactThreeTestInstance';
 
 function makeNode(overrides: Partial<Camera3DProperties> = {}): TscnNode {
   const base: Camera3DProperties = {
@@ -38,7 +40,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
       <Camera3D node={makeNode({ fov: 60 })} />
     );
     const cam = renderer.scene.findByType('PerspectiveCamera');
-    expect((cam.instance as { fov: number }).fov).toBe(60);
+    expect(instanceAs<THREE.PerspectiveCamera>(cam).fov).toBe(60);
   });
 
   it('#61 near → camera.near (clamped to >= 0.001)', async () => {
@@ -46,7 +48,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
       <Camera3D node={makeNode({ near: 0.1 })} />
     );
     const cam = renderer.scene.findByType('PerspectiveCamera');
-    expect((cam.instance as { near: number }).near).toBe(0.1);
+    expect(instanceAs<THREE.PerspectiveCamera>(cam).near).toBe(0.1);
   });
 
   it('#62 far → camera.far', async () => {
@@ -54,7 +56,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
       <Camera3D node={makeNode({ near: 0.1, far: 500 })} />
     );
     const cam = renderer.scene.findByType('PerspectiveCamera');
-    expect((cam.instance as { far: number }).far).toBe(500);
+    expect(instanceAs<THREE.PerspectiveCamera>(cam).far).toBe(500);
   });
 
   it('#63 projection=1 (ORTHOGRAPHIC) → OrthographicCamera used, not PerspectiveCamera', async () => {
@@ -80,7 +82,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
       />
     );
     const cam = renderer.scene.findByType('OrthographicCamera');
-    const o = cam.instance as { top: number; bottom: number; left: number; right: number };
+    const o = instanceAs<THREE.OrthographicCamera>(cam);
     // Godot `size` is the full frustum height (diameter) → half-extent = size/2.
     expect(o.top).toBe(2);
     expect(o.bottom).toBe(-2);
@@ -112,14 +114,12 @@ describe('Camera3D projection (assertions 60–66)', () => {
         })}
       />
     );
-    const widthCam = widthRenderer.scene.findByType('OrthographicCamera').instance as {
-      right: number;
-      top: number;
-    };
-    const heightCam = heightRenderer.scene.findByType('OrthographicCamera').instance as {
-      right: number;
-      top: number;
-    };
+    const widthCam = instanceAs<THREE.OrthographicCamera>(
+      widthRenderer.scene.findByType('OrthographicCamera')
+    );
+    const heightCam = instanceAs<THREE.OrthographicCamera>(
+      heightRenderer.scene.findByType('OrthographicCamera')
+    );
     // Different keep_aspect modes should produce different frustums at the
     // same `size`. If this fails, keep_aspect is being ignored.
     expect(widthCam.right === heightCam.right && widthCam.top === heightCam.top).toBe(false);

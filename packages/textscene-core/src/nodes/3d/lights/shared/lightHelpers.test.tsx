@@ -78,6 +78,8 @@ function spotNode(name: string, overrides: Partial<SpotLight3DProperties> = {}):
     shadow_enabled: false,
     spot_range: 10,
     spot_angle: 30,
+    spot_attenuation: 1.0,
+    spot_angle_attenuation: 1.0,
     ...overrides,
   };
   return { name, type: 'SpotLight3D', children: [], properties: props };
@@ -452,9 +454,8 @@ function cameraNode(name: string, overrides: Partial<Camera3DProperties> = {}): 
     far: 4000,
     h_offset: 0,
     v_offset: 0,
+    frustum_offset: { x: 0, y: 0 },
     cull_mask: 1048575,
-    environment: undefined,
-    attributes: undefined,
     doppler_tracking: 0,
     current: false,
     ...overrides,

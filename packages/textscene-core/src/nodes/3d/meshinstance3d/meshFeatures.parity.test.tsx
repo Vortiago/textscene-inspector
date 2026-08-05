@@ -12,6 +12,7 @@ import { parseSphereMesh } from '../../../resources/meshes/spheremesh/parser';
 import { parseCylinderMesh } from '../../../resources/meshes/cylindermesh/parser';
 import { MeshGeometry } from './meshGeometry';
 import type { TscnInternalResource } from '../../../parser/types';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 async function geomFor(resource: TscnInternalResource): Promise<THREE.BufferGeometry> {
   const renderer = await ReactThreeTestRenderer.create(
@@ -19,7 +20,7 @@ async function geomFor(resource: TscnInternalResource): Promise<THREE.BufferGeom
       <MeshGeometry resource={resource} />
     </mesh>
   );
-  return renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+  return findMesh(renderer.scene).geometry;
 }
 const params = (g: THREE.BufferGeometry) => (g as unknown as { parameters: Record<string, number> }).parameters;
 

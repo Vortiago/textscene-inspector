@@ -8,6 +8,7 @@ import { parseCSGTorus3D } from './parser';
 // from the registered builder, so the registration is part of what is under test.
 import { CSGTorus3D } from './index.r3f';
 import type { CSGTorus3DProperties } from './types';
+import { findMesh } from '../../testing/reactThreeTestInstance';
 
 function makeNode(overrides: Record<string, string> = {}, children: TscnNode[] = []): TscnNode {
   const properties = parseCSGTorus3D(
@@ -32,7 +33,7 @@ describe('<CSGTorus3D>', () => {
     const renderer = await render(
       makeNode({ inner_radius: '0.25', outer_radius: '0.4', sides: '64', ring_sides: '64' })
     );
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geom = findMesh(renderer.scene).geometry;
     geom.computeBoundingBox();
     expect(geom.boundingBox!.max.y).toBeCloseTo(0.075, 3);
     expect(geom.boundingBox!.max.x).toBeCloseTo(0.4, 3);
@@ -88,7 +89,7 @@ describe('<CSGTorus3D>', () => {
   it('renders nothing but does not throw when the radii are equal', async () => {
     // Godot returns an empty brush rather than clamping (csg_shape.cpp:1930).
     const renderer = await render(makeNode({ inner_radius: '0.5', outer_radius: '0.5' }));
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geom = findMesh(renderer.scene).geometry;
     expect(geom.getAttribute('position').count).toBe(0);
   });
 

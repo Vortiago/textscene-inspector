@@ -36,6 +36,7 @@ import {
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 
 function meshNode(): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -115,7 +116,7 @@ describe('<MeshInstance3D> ViewportTexture albedo cycle fallback', () => {
     const { renderer } = await renderCyclicMesh();
     const materials = renderer.scene.findAllByType('MeshStandardMaterial');
     const magenta = materials.find((m) => {
-      const color = (m.instance as THREE.MeshStandardMaterial).color;
+      const color = materialInstanceAs<THREE.MeshStandardMaterial>(m).color;
       return color.r > 0.9 && color.g < 0.1 && color.b > 0.9;
     });
     expect(magenta).toBeDefined();

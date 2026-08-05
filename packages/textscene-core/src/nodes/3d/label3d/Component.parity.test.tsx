@@ -15,6 +15,7 @@ import { BillboardMode } from './types';
 import { Label3D } from './Component';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import type { TscnNode } from '../../../parser/types';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 const heading = { type: 'node', attributes: { type: 'Label3D', name: 'L' } };
 
@@ -72,13 +73,13 @@ function srgbToLinear(c: number): number {
 describe('Label3D render parity', () => {
   it('double_sided=false → FrontSide material', async () => {
     const r = await renderLabel(node({ double_sided: 'false' }));
-    const mat = r.scene.findByType('Mesh').instance.material as THREE.Material;
+    const mat = findMesh(r.scene).material as THREE.Material;
     expect(mat.side).toBe(THREE.FrontSide);
   });
 
   it('modulate tint is converted sRGB→linear before the material (#6 parity)', async () => {
     const r = await renderLabel(node({ modulate: 'Color(0.5, 0.5, 0.5, 1)' }));
-    const color = (r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial).color;
+    const color = (findMesh(r.scene).material as THREE.MeshBasicMaterial).color;
     expect(color.r).toBeCloseTo(srgbToLinear(0.5), 4); // ≈ 0.214, not 0.5
   });
 
@@ -95,7 +96,7 @@ describe('Label3D render parity', () => {
     // worldScale = 32/128 maps the high-res canvas back to Godot-pixel space so
     // the world size matches Godot's default font_size, not the render one.
     const r = await renderLabel(node({ pixel_size: '0.01' }));
-    const geom = r.scene.findByType('Mesh').instance.geometry as unknown as {
+    const geom = findMesh(r.scene).geometry as unknown as {
       parameters: { height: number };
     };
     expect(geom.parameters.height).toBeCloseTo(148 * 0.01 * (32 / 128), 4); // ≈ 0.37

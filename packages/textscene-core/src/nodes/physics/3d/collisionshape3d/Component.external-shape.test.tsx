@@ -18,6 +18,7 @@ import { createFakeResourceLoader } from '../../../../resources/testing/createFa
 import type { ParsedTresFile } from '../../../../parser/tresParser';
 import { TscnParser } from '../../../../parser/TscnParser';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
+import { findMesh } from '../../../3d/testing/reactThreeTestInstance';
 
 const SHAPE_PATH = 'res://robot_head_collision.tres';
 
@@ -43,7 +44,7 @@ function node(type: string, shape: string | undefined): TscnNode {
   const scene = new TscnParser().parse(
     `[gd_scene format=3]\n\n[node name="My${type}" type="${type}"]\n${body}`
   );
-  return scene.nodes[0];
+  return scene.nodes[0]!;
 }
 
 async function render3D(shape: string | undefined, tres?: ParsedTresFile) {
@@ -61,7 +62,7 @@ async function render3D(shape: string | undefined, tres?: ParsedTresFile) {
 }
 
 function boxSize(renderer: Awaited<ReturnType<typeof render3D>>) {
-  const geometry = renderer.scene.findByType('Mesh').instance.geometry as unknown as {
+  const geometry = findMesh(renderer.scene).geometry as unknown as {
     parameters: { width: number; height: number; depth: number };
   };
   return [geometry.parameters.width, geometry.parameters.height, geometry.parameters.depth];

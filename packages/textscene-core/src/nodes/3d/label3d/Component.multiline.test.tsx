@@ -19,6 +19,7 @@ import { Label3D } from './Component';
 import { parseLabel3D } from './parser';
 import type { TscnNode } from '../../../parser/types';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 const CHAR_WIDTH = 10;
 
@@ -53,8 +54,9 @@ async function quad(properties: Record<string, string>) {
       <Label3D node={makeNode(properties)} />
     </ViewportModeProvider>
   );
-  const geometry = renderer.scene.findByType('Mesh').instance
-    .geometry as unknown as { parameters: { width: number; height: number } };
+  const geometry = findMesh(renderer.scene).geometry as unknown as {
+    parameters: { width: number; height: number };
+  };
   return geometry.parameters;
 }
 

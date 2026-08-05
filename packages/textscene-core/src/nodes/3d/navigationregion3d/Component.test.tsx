@@ -15,6 +15,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
+import { instanceAs } from '../testing/reactThreeTestInstance';
 
 class NoopProvider implements ResourceProvider {
   async loadResource(): Promise<string | ArrayBuffer | null> {
@@ -82,7 +83,7 @@ describe('<NavigationRegion3D>', () => {
     const renderer = await render(true);
     const overlay = renderer.scene
       .findAllByType('Mesh')
-      .map((m) => m.instance.material as THREE.MeshBasicMaterial)
+      .map((m) => instanceAs<THREE.Mesh>(m).material as THREE.MeshBasicMaterial)
       .find((mat) => mat?.transparent && mat.color?.getHex() === NAV_OVERLAY_COLOR);
     expect(overlay).toBeDefined();
     expect(overlay!.depthWrite).toBe(false);

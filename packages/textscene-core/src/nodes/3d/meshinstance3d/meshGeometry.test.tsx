@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { MeshGeometry } from './meshGeometry';
 import type { TscnInternalResource } from '../../../parser/types';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 function sub(type: string, data: Record<string, string> = {}): TscnInternalResource {
   return { id: `${type}_test`, type, data };
@@ -24,7 +25,7 @@ async function renderGeometry(resource: TscnInternalResource): Promise<THREE.Buf
       <MeshGeometry resource={resource} />
     </mesh>
   );
-  return renderer.scene.findByType('Mesh').instance.geometry;
+  return findMesh(renderer.scene).geometry;
 }
 
 function params<T>(geometry: THREE.BufferGeometry): T {

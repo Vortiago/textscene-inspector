@@ -113,11 +113,14 @@ describe('repackAnisotropyFlowmap', () => {
     const out = repackAnisotropyFlowmap(texture, read)!;
 
     expect(read).toHaveBeenCalledWith(texture.image);
-    const data = (out.image as { data: Uint8Array }).data;
-    expect(data).toBeInstanceOf(Uint8Array);
-    expect(Array.from(data)).toEqual([128, 128, 200, 200, 10, 20, 30, 30]);
-    expect(out.image.width).toBe(2);
-    expect(out.image.height).toBe(1);
+    // `repackAnisotropyFlowmap` is declared `THREE.Texture | undefined` — accurate
+    // for callers, but it always constructs a `DataTexture` internally, whose
+    // `.image` carries `data`/`width`/`height` the plain `Texture` type can't see.
+    const image = out.image as { data: Uint8Array; width: number; height: number };
+    expect(image.data).toBeInstanceOf(Uint8Array);
+    expect(Array.from(image.data)).toEqual([128, 128, 200, 200, 10, 20, 30, 30]);
+    expect(image.width).toBe(2);
+    expect(image.height).toBe(1);
   });
 
   it('carries the source texture sampling settings onto the repacked texture', () => {

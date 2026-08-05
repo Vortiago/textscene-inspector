@@ -5,6 +5,7 @@ import type { TscnNode } from '../../../parser/types';
 import type { Label3DProperties } from './types';
 import { BillboardMode, HorizontalAlignment } from './types';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 // happy-dom provides HTMLCanvasElement but not a 2D rendering context.
 // Stub getContext so Label3D can build its texture in this environment.
@@ -67,22 +68,22 @@ describe('<Label3D>', () => {
 
   it('renders a Mesh with a PlaneGeometry when labels are toggled on', async () => {
     const renderer = await renderLabel(makeNode());
-    const mesh = renderer.scene.findByType('Mesh');
-    expect(mesh.instance.geometry.type).toBe('PlaneGeometry');
+    const mesh = findMesh(renderer.scene);
+    expect(mesh.geometry.type).toBe('PlaneGeometry');
   });
 
   it('uses a transparent MeshBasicMaterial', async () => {
     const renderer = await renderLabel(makeNode());
-    const mesh = renderer.scene.findByType('Mesh');
-    const material = mesh.instance.material as { transparent: boolean; type: string };
+    const mesh = findMesh(renderer.scene);
+    const material = mesh.material as unknown as { transparent: boolean; type: string };
     expect(material.transparent).toBe(true);
     expect(material.type).toBe('MeshBasicMaterial');
   });
 
   it('applies modulate alpha to material opacity', async () => {
     const renderer = await renderLabel(makeNode({ modulate: { r: 1, g: 1, b: 1, a: 0.5 } }));
-    const mesh = renderer.scene.findByType('Mesh');
-    expect((mesh.instance.material as { opacity: number }).opacity).toBe(0.5);
+    const mesh = findMesh(renderer.scene);
+    expect((mesh.material as unknown as { opacity: number }).opacity).toBe(0.5);
   });
 
   it('positions the mesh at transform origin', async () => {
@@ -105,10 +106,10 @@ describe('<Label3D>', () => {
     const a = await renderLabel(makeNode({ pixel_size: 0.01 }));
     const b = await renderLabel(makeNode({ pixel_size: 0.02 }));
     const ah = (
-      a.scene.findByType('Mesh').instance.geometry as unknown as { parameters: { height: number } }
+      findMesh(a.scene).geometry as unknown as { parameters: { height: number } }
     ).parameters.height;
     const bh = (
-      b.scene.findByType('Mesh').instance.geometry as unknown as { parameters: { height: number } }
+      findMesh(b.scene).geometry as unknown as { parameters: { height: number } }
     ).parameters.height;
     expect(bh).toBeCloseTo(2 * ah, 5);
   });

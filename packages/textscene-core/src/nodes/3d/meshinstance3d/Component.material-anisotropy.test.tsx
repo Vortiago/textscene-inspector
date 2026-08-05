@@ -36,6 +36,7 @@ import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../i
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 
 /** Provider that never loads anything — textures are pre-cached directly. */
 class NoopProvider implements ResourceProvider {
@@ -115,7 +116,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
 
     const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = physical[0]!.instance as THREE.MeshPhysicalMaterial;
+    const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
     expect(material.anisotropy).toBeCloseTo(0.8, 5);
     expect(material.anisotropyRotation).toBeCloseTo(0, 5);
   });
@@ -132,7 +133,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
 
     const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = physical[0]!.instance as THREE.MeshPhysicalMaterial;
+    const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
     expect(material.anisotropy).toBeCloseTo(0.8, 5); // magnitude preserved
     expect(material.anisotropyRotation).toBeCloseTo(Math.PI / 2, 5); // direction flipped perpendicular
   });
@@ -184,7 +185,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
 
     const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    return physical[0]!.instance as THREE.MeshPhysicalMaterial;
+    return materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
   }
 
   it('wires anisotropy_flowmap onto material.anisotropyMap, repacking Godot alpha-strength into three.js blue', async () => {
@@ -254,8 +255,9 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     await new Promise<void>((r) => setTimeout(r, 10));
     await renderer.update(tree(makeNode('mat'), internal, external, loader));
 
-    const material = renderer.scene.findAllByType('MeshPhysicalMaterial')[0]!
-      .instance as THREE.MeshPhysicalMaterial;
+    const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(
+      renderer.scene.findAllByType('MeshPhysicalMaterial')[0]!
+    );
     const sampled = material.anisotropyMap!;
     // The clone, not the repack: only the UV transform sets `repeat`.
     expect(sampled.repeat.x).toBeCloseTo(3, 5);
