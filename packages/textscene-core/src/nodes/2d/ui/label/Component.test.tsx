@@ -69,7 +69,7 @@ describe('<Label> (isolated painter contract)', () => {
         <Label {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 200, h: 200 }} renderOrder={0} />
       </Modulate2DContext.Provider>
     );
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.ShaderMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
     // own(sRGB) = inherited(.5,.5,.5,.5) * self_modulate(1,.5,1,1) * font_color(.8,.4,.2,.5) = (.4,.1,.1,.25)
     const expected = expectedLinear(0.4, 0.1, 0.1);
     const uColor = mat.uniforms.uColor!.value as THREE.Vector3;
@@ -81,7 +81,7 @@ describe('<Label> (isolated painter contract)', () => {
 
   it('defaults to opaque WHITE text (Label’s own default_theme.cpp literal), not the shared gray control_font_color', async () => {
     const renderer = await render({ text: 'A' });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.ShaderMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
     const uColor = mat.uniforms.uColor!.value as THREE.Vector3;
     const expected = expectedLinear(1, 1, 1);
     expect(uColor.x).toBeCloseTo(expected.r, 6);
@@ -107,8 +107,8 @@ describe('<Label> (isolated painter contract)', () => {
   it('honours uppercase: the SAME source text renders WIDER glyphs than lowercase (A/B are wider than a/b in this atlas)', async () => {
     const lower = await render({ text: 'ab', uppercase: false });
     const upper = await render({ text: 'ab', uppercase: true });
-    const lowerGeo = lower.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
-    const upperGeo = upper.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const lowerGeo = (lower.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    const upperGeo = (upper.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     const extent = (geo: THREE.BufferGeometry) => {
       const pos = geo.getAttribute('position');
       let min = Infinity;
@@ -145,14 +145,14 @@ describe('<Label> (isolated painter contract)', () => {
       }
       return max - min;
     };
-    const smallGeo = small.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
-    const bigGeo = big.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const smallGeo = (small.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    const bigGeo = (big.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     expect(extent(bigGeo)).toBeCloseTo(extent(smallGeo) * 2, 0);
   });
 
   it('is transparent, non-depth-writing, and spreads the shared clip planes hook (edge: empty list)', async () => {
     const renderer = await render({ text: 'A' });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.ShaderMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
     expect(mat.transparent).toBe(true);
     expect(mat.depthWrite).toBe(false);
     expect(mat.clippingPlanes).toEqual([]);

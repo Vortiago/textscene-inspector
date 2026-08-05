@@ -18,7 +18,7 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { ControlClipProvider } from '../../../../r3f/controls/native/controlClipping';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
-import type { ControlProperties } from '../control/types';
+import type { LineEditProperties } from './types';
 import { LineEdit } from './Component';
 import { lineEditMinimumSize } from './nativeSolver';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
@@ -27,15 +27,17 @@ const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 30 };
 
+type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
 function solveNode(
-  properties: Partial<ControlProperties> = {},
+  properties: Partial<LineEditProperties> = {},
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
   const node: TscnNode = {
     name: 'MyLineEdit',
     type: 'LineEdit',
     children: [],
-    properties: { name: 'MyLineEdit', ...properties } as ControlProperties,
+    properties: { name: 'MyLineEdit', ...properties } as LineEditProperties,
   };
   return { path: 'MyLineEdit', node, children: [], styleBoxes, textureSize: null };
 }
@@ -53,15 +55,17 @@ function styleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatData {
     contentMargin: { left: 4, top: 4, right: 4, bottom: 4 },
     drawCenter: true,
     borderBlend: false,
+    antiAliased: true,
+    aaSize: 1,
     ...overrides,
   };
 }
 
 /** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute; `<TextRun>` does not. */
-function findChromeMesh(scene: { findAllByType: (t: string) => { instance: THREE.Mesh }[] }) {
+function findChromeMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
-    .map((m) => m.instance)
+    .map((m) => m.instance as THREE.Mesh)
     .find((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
 }
 
@@ -84,21 +88,25 @@ function findFillColor(mesh: THREE.Mesh): { r: number; g: number; b: number; a: 
 }
 
 /** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms); the chrome does not. */
-function findTextMesh(scene: { findAllByType: (t: string) => { instance: THREE.Mesh }[] }) {
+function findTextMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
-    .map((m) => m.instance)
+    .map((m) => m.instance as THREE.Mesh)
     .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
 /** The `<group position=[x,-y,0]>` directly wrapping the text mesh — its own local x/y give the pen offset. */
-function findTextGroup(scene: {
-  findAllByType: (t: string) => { instance: THREE.Object3D; children: { instance: THREE.Object3D }[] }[];
-}) {
+function findTextGroup(scene: Rendered['scene']) {
   return scene
     .findAllByType('Group')
     .map((g) => g.instance)
-    .find((g) => g.children.some((c) => (c as THREE.Mesh).material && ((c as THREE.Mesh).material as THREE.ShaderMaterial).uniforms?.uColor !== undefined));
+    .find((g) =>
+      g.children.some(
+        (c) =>
+          (c as THREE.Mesh).material &&
+          ((c as THREE.Mesh).material as THREE.ShaderMaterial).uniforms?.uColor !== undefined
+      )
+    );
 }
 
 describe('<LineEdit> — chrome (StyleBoxQuad)', () => {

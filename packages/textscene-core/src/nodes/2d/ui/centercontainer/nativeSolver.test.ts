@@ -12,10 +12,18 @@
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
 import type { CenterContainerProperties } from './types';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveContext, ContainerLayoutResult } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { centerContainerMinimumSize, centerContainerLayout } from './nativeSolver';
+
+/** `centerContainerLayout`'s `rects` half only — see `ContainerLayoutResult`'s own doc for why the union is here at all. */
+function asMap(
+  result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
+): ReadonlyMap<string, Rect2> {
+  return 'rects' in result ? result.rects : result;
+}
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
@@ -88,14 +96,14 @@ describe('centerContainerLayout', () => {
       sizeFlagsVertical: 3,
     });
     const n = container('C', {}, [child]);
-    const rects = centerContainerLayout(n, [{ node: child, minSize: { x: 200, y: 100 } }], viewport, ctx());
+    const rects = asMap(centerContainerLayout(n, [{ node: child, minSize: { x: 200, y: 100 } }], viewport, ctx()));
     expect(rects.get('Leaf')).toEqual({ x: 476, y: 274, w: 200, h: 100 });
   });
 
   it('floors the halved remainder for an odd minimum size — oracle: Leaf rect=[525,293,101,61]', () => {
     const child = leaf('Leaf', { customMinimumSize: { x: 101, y: 61 } });
     const n = container('C', {}, [child]);
-    const rects = centerContainerLayout(n, [{ node: child, minSize: { x: 101, y: 61 } }], viewport, ctx());
+    const rects = asMap(centerContainerLayout(n, [{ node: child, minSize: { x: 101, y: 61 } }], viewport, ctx()));
     // floor((1152-101)/2) = floor(525.5) = 525; floor((648-61)/2) = floor(293.5) = 293.
     expect(rects.get('Leaf')).toEqual({ x: 525, y: 293, w: 101, h: 61 });
   });
@@ -111,7 +119,7 @@ describe('centerContainerLayout', () => {
     // floor and truncation agree there in practice.
     const child = leaf('Leaf', { customMinimumSize: { x: 101, y: 61 } });
     const n = container('C', { useTopLeft: true }, [child]);
-    const rects = centerContainerLayout(n, [{ node: child, minSize: { x: 101, y: 61 } }], viewport, ctx());
+    const rects = asMap(centerContainerLayout(n, [{ node: child, minSize: { x: 101, y: 61 } }], viewport, ctx()));
     expect(rects.get('Leaf')).toEqual({ x: -51, y: -31, w: 101, h: 61 });
   });
 
@@ -121,7 +129,9 @@ describe('centerContainerLayout', () => {
     const child = leaf('Leaf', { customMinimumSize: { x: 101, y: 61 } });
     const n = container('C', {}, [child]);
     const nestedContentRect = { x: 514, y: 267, w: 1152, h: 648 };
-    const rects = centerContainerLayout(n, [{ node: child, minSize: { x: 101, y: 61 } }], nestedContentRect, ctx());
+    const rects = asMap(
+      centerContainerLayout(n, [{ node: child, minSize: { x: 101, y: 61 } }], nestedContentRect, ctx())
+    );
     expect(rects.get('Leaf')).toEqual({ x: 525, y: 293, w: 101, h: 61 });
   });
 
@@ -129,14 +139,16 @@ describe('centerContainerLayout', () => {
     const a = leaf('LeafA', { customMinimumSize: { x: 60, y: 40 } });
     const b = leaf('LeafB', { customMinimumSize: { x: 200, y: 20 } });
     const n = container('C', {}, [a, b]);
-    const rects = centerContainerLayout(
-      n,
-      [
-        { node: a, minSize: { x: 60, y: 40 } },
-        { node: b, minSize: { x: 200, y: 20 } },
-      ],
-      viewport,
-      ctx()
+    const rects = asMap(
+      centerContainerLayout(
+        n,
+        [
+          { node: a, minSize: { x: 60, y: 40 } },
+          { node: b, minSize: { x: 200, y: 20 } },
+        ],
+        viewport,
+        ctx()
+      )
     );
     expect(rects.get('LeafA')).toEqual({ x: 546, y: 304, w: 60, h: 40 });
     expect(rects.get('LeafB')).toEqual({ x: 476, y: 314, w: 200, h: 20 });
@@ -145,7 +157,7 @@ describe('centerContainerLayout', () => {
   it('omits an invisible child from the solved rects (center_container.cpp:77-78, as_sortable_control default VISIBLE_IN_TREE)', () => {
     const child = leaf('Hidden', { customMinimumSize: { x: 10, y: 10 }, visible: false });
     const n = container('C', {}, [child]);
-    const rects = centerContainerLayout(n, [{ node: child, minSize: { x: 10, y: 10 } }], viewport, ctx());
+    const rects = asMap(centerContainerLayout(n, [{ node: child, minSize: { x: 10, y: 10 } }], viewport, ctx()));
     expect(rects.has('Hidden')).toBe(false);
   });
 });

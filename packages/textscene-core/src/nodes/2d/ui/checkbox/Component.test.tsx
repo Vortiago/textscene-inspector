@@ -13,36 +13,37 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
-import type { ControlProperties } from '../control/types';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { CheckBox } from './Component';
 import type { CheckBoxProperties } from './types';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
 
+type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
 function solveNode(properties: Partial<CheckBoxProperties> = {}): SolveNode {
   const node: TscnNode = {
     name: 'MyCheckBox',
     type: 'CheckBox',
     children: [],
-    properties: { name: 'MyCheckBox', ...properties } as ControlProperties,
+    properties: { name: 'MyCheckBox', ...properties } as CheckBoxProperties,
   };
   return { path: 'MyCheckBox', node, children: [], styleBoxes: {}, textureSize: null };
 }
 
 /** The icon `ControlQuad` is a `PlaneGeometry`, identified by its own `.parameters.width` (survives a duplicate-three.js test environment). */
-function findIconMesh(scene: { findAllByType: (t: string) => { instance: THREE.Mesh }[] }) {
+function findIconMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
-    .map((m) => m.instance)
+    .map((m) => m.instance as THREE.Mesh)
     .find((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
 }
 
 /** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
-function findTextMesh(scene: { findAllByType: (t: string) => { instance: THREE.Mesh }[] }) {
+function findTextMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
-    .map((m) => m.instance)
+    .map((m) => m.instance as THREE.Mesh)
     .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 

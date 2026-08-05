@@ -11,10 +11,18 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveContext, ContainerLayoutResult } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { marginContainerMinimumSize, marginContainerLayout } from './nativeSolver';
+
+/** `marginContainerLayout`'s `rects` half only — see `ContainerLayoutResult`'s own doc for why the union is here at all. */
+function asMap(
+  result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
+): ReadonlyMap<string, Rect2> {
+  return 'rects' in result ? result.rects : result;
+}
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
@@ -89,7 +97,7 @@ describe('marginContainerLayout', () => {
       { themeOverrideConstants: { margin_left: 32, margin_top: 16, margin_right: 32, margin_bottom: 16 } },
       [child]
     );
-    const rects = marginContainerLayout(n, [{ node: child, minSize: { x: 500, y: 500 } }], viewport, ctx());
+    const rects = asMap(marginContainerLayout(n, [{ node: child, minSize: { x: 500, y: 500 } }], viewport, ctx()));
     // FILL ignores the child's own minimum size entirely (container.cpp:103,114
     // — the shrink branch that reads `minsize` is inside `if (!FILL)`), so a
     // minimum LARGER than the padded box still yields the padded box verbatim.
@@ -107,7 +115,7 @@ describe('marginContainerLayout', () => {
       { themeOverrideConstants: { margin_left: 50, margin_top: 50, margin_right: 50, margin_bottom: 50 } },
       [child]
     );
-    const rects = marginContainerLayout(n, [{ node: child, minSize: { x: 101, y: 61 } }], viewport, ctx());
+    const rects = asMap(marginContainerLayout(n, [{ node: child, minSize: { x: 101, y: 61 } }], viewport, ctx()));
     // Padded box: (50,50,1052,548). Horizontal: floor((1052-101)/2)=475 → x=525.
     // Vertical: SHRINK_END offsets by the full remainder, not halved: 548-61=487 → y=537.
     expect(rects.get('Leaf')).toEqual({ x: 525, y: 537, w: 101, h: 61 });
@@ -130,7 +138,7 @@ describe('marginContainerLayout', () => {
       { themeOverrideConstants: { margin_left: 20, margin_top: 20, margin_right: 20, margin_bottom: 20 } },
       [child]
     );
-    const rects = marginContainerLayout(n, [{ node: child, minSize: { x: 80, y: 40 } }], viewport, ctx());
+    const rects = asMap(marginContainerLayout(n, [{ node: child, minSize: { x: 80, y: 40 } }], viewport, ctx()));
     expect(rects.get('Leaf')).toEqual({ x: 20, y: 20, w: 80, h: 40 });
   });
 
@@ -150,7 +158,7 @@ describe('marginContainerLayout', () => {
       [child]
     );
     const nestedContentRect = { x: 514, y: 267, w: 124, h: 113 };
-    const rects = marginContainerLayout(n, [{ node: child, minSize: { x: 84, y: 53 } }], nestedContentRect, ctx());
+    const rects = asMap(marginContainerLayout(n, [{ node: child, minSize: { x: 84, y: 53 } }], nestedContentRect, ctx()));
     expect(rects.get('Leaf')).toEqual({ x: 10, y: 20, w: 84, h: 53 });
   });
 
@@ -161,7 +169,7 @@ describe('marginContainerLayout', () => {
       { themeOverrideConstants: { margin_left: 5, margin_top: 5, margin_right: 5, margin_bottom: 5 } },
       [child]
     );
-    const rects = marginContainerLayout(n, [{ node: child, minSize: { x: 10, y: 10 } }], viewport, ctx());
+    const rects = asMap(marginContainerLayout(n, [{ node: child, minSize: { x: 10, y: 10 } }], viewport, ctx()));
     expect(rects.has('Hidden')).toBe(false);
   });
 });

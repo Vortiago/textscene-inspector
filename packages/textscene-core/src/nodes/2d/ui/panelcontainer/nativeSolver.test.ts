@@ -17,9 +17,16 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
-import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import { controlSolverRegistry, type ContainerLayoutResult } from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
 import { panelContainerLayout, panelContainerMinimumSize } from './nativeSolver';
+
+/** `panelContainerLayout`'s `rects` half only — see `ContainerLayoutResult`'s own doc for why the union is here at all. */
+function rects(
+  result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
+): ReadonlyMap<string, Rect2> {
+  return 'rects' in result ? result.rects : result;
+}
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
@@ -34,6 +41,8 @@ function styleBox(contentMargin = ZERO_SIDES): StyleBoxFlatData {
     contentMargin,
     drawCenter: true,
     borderBlend: false,
+    antiAliased: true,
+    aaSize: 1,
   };
 }
 
@@ -90,7 +99,7 @@ describe("panelContainerLayout (PanelContainer::_notification's NOTIFICATION_SOR
     });
     const rect: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
     const children = [{ node: child, minSize: { x: 10, y: 10 } }];
-    const out = panelContainerLayout(n, children, rect, ctx());
+    const out = rects(panelContainerLayout(n, children, rect, ctx()));
     // ofs = style->get_offset() = (margin_left, margin_top) = (10, 6) (style_box.cpp:88-89).
     // size = get_size() - style->get_minimum_size() = (200-20, 100-12) = (180, 88).
     // Default size flags (SIZE_FILL) take the whole content rect
@@ -107,7 +116,7 @@ describe("panelContainerLayout (PanelContainer::_notification's NOTIFICATION_SOR
     const n = solveNode('Panel', {}, [child], { panel: styleBox() });
     const rect: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
     const children = [{ node: child, minSize: { x: 40, y: 20 } }];
-    const out = panelContainerLayout(n, children, rect, ctx());
+    const out = rects(panelContainerLayout(n, children, rect, ctx()));
     // container.cpp:103-112,114-122: r.size = minsize; no SHRINK_END/CENTER bit → position unchanged.
     expect(out.get('Panel/Child')).toEqual({ x: 0, y: 0, w: 40, h: 20 });
   });
@@ -121,7 +130,7 @@ describe("panelContainerLayout (PanelContainer::_notification's NOTIFICATION_SOR
     const n = solveNode('Panel', {}, [child], { panel: styleBox() });
     const rect: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
     const children = [{ node: child, minSize: { x: 40, y: 21 } }];
-    const out = panelContainerLayout(n, children, rect, ctx());
+    const out = rects(panelContainerLayout(n, children, rect, ctx()));
     // x = floor((200-40)/2) = 80; y = floor((100-21)/2) = floor(39.5) = 39.
     expect(out.get('Panel/Child')).toEqual({ x: 80, y: 39, w: 40, h: 21 });
   });
@@ -135,7 +144,7 @@ describe("panelContainerLayout (PanelContainer::_notification's NOTIFICATION_SOR
     const n = solveNode('Panel', {}, [child], { panel: styleBox() });
     const rect: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
     const children = [{ node: child, minSize: { x: 40, y: 20 } }];
-    const out = panelContainerLayout(n, children, rect, ctx());
+    const out = rects(panelContainerLayout(n, children, rect, ctx()));
     // x = 0 + (200-40) = 160; y = 0 + (100-20) = 80.
     expect(out.get('Panel/Child')).toEqual({ x: 160, y: 80, w: 40, h: 20 });
   });
@@ -149,7 +158,7 @@ describe("panelContainerLayout (PanelContainer::_notification's NOTIFICATION_SOR
       { node: a, minSize: { x: 10, y: 10 } },
       { node: b, minSize: { x: 10, y: 10 } },
     ];
-    const out = panelContainerLayout(n, children, rect, ctx());
+    const out = rects(panelContainerLayout(n, children, rect, ctx()));
     expect(out.get('Panel/A')).toEqual({ x: 5, y: 5, w: 90, h: 50 });
     expect(out.get('Panel/B')).toEqual({ x: 5, y: 5, w: 90, h: 50 });
   });

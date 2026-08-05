@@ -23,7 +23,7 @@ function hboxSolveNode(): SolveNode {
 describe('<HBoxContainer>', () => {
   it('renders no scene objects — a container draws nothing of its own', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <HBoxContainer {...painterEnv()} solveNode={hboxSolveNode()} rect={{ x: 0, y: 0, w: 100, h: 40 }} />
+      <HBoxContainer {...painterEnv()} solveNode={hboxSolveNode()} rect={{ x: 0, y: 0, w: 100, h: 40 }} renderOrder={0} />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });

@@ -12,11 +12,19 @@
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
 import type { GridContainerProperties } from './types';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveContext, ContainerLayoutResult } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { gridContainerMinimumSize, gridContainerLayout } from './nativeSolver';
 import { solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
+
+/** `gridContainerLayout`'s `rects` half only — see `ContainerLayoutResult`'s own doc for why the union is here at all. */
+function asMap(
+  result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
+): ReadonlyMap<string, Rect2> {
+  return 'rects' in result ? result.rects : result;
+}
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
@@ -148,7 +156,7 @@ describe('gridContainerLayout', () => {
       children
     );
     const contentRect = { x: 0, y: 0, w: 400, h: 400 };
-    const rects = gridContainerLayout(n, childEntries(children), contentRect, ctx());
+    const rects = asMap(gridContainerLayout(n, childEntries(children), contentRect, ctx()));
 
     expect(rects.get('A')).toEqual({ x: 0, y: 0, w: 40, h: 20 });
     expect(rects.get('B')).toEqual({ x: 48, y: 0, w: 50, h: 20 });
@@ -171,7 +179,7 @@ describe('gridContainerLayout', () => {
       children
     );
     const contentRect = { x: 0, y: 0, w: 300, h: 100 };
-    const rects = gridContainerLayout(n, childEntries(children), contentRect, ctx());
+    const rects = asMap(gridContainerLayout(n, childEntries(children), contentRect, ctx()));
 
     expect(rects.get('C0')).toEqual({ x: 0, y: 0, w: 130, h: 10 });
     expect(rects.get('C1')).toEqual({ x: 140, y: 0, w: 21, h: 10 });
@@ -191,7 +199,7 @@ describe('gridContainerLayout', () => {
       children
     );
     const contentRect = { x: 0, y: 0, w: 300, h: 100 };
-    const rects = gridContainerLayout(n, childEntries(children), contentRect, ctx());
+    const rects = asMap(gridContainerLayout(n, childEntries(children), contentRect, ctx()));
 
     expect(rects.get('C0')).toEqual({ x: 0, y: 0, w: 200, h: 10 });
     expect(rects.get('C1')).toEqual({ x: 200, y: 0, w: 100, h: 10 });
@@ -212,7 +220,7 @@ describe('gridContainerLayout', () => {
       children
     );
     const contentRect = { x: 0, y: 0, w: 200, h: 100 };
-    const rects = gridContainerLayout(n, childEntries(children), contentRect, ctx());
+    const rects = asMap(gridContainerLayout(n, childEntries(children), contentRect, ctx()));
 
     expect(rects.get('C0')).toEqual({ x: 0, y: 0, w: 80, h: 15 });
     expect(rects.get('C1')).toEqual({ x: 90, y: 0, w: 30, h: 15 });
@@ -229,7 +237,7 @@ describe('gridContainerLayout', () => {
       children
     );
     const contentRect = { x: 0, y: 0, w: 300, h: 100 };
-    const rects = gridContainerLayout(n, childEntries(children), contentRect, ctx());
+    const rects = asMap(gridContainerLayout(n, childEntries(children), contentRect, ctx()));
 
     // Both land in row 0 (col 0 and col 1) since the hidden child claims no
     // slot; row height is the row-0 max (12, from C2), so C0 (FILL) stretches
@@ -253,7 +261,7 @@ describe('gridContainerLayout', () => {
       children
     );
     const contentRect = { x: 0, y: 0, w: 50, h: 300 };
-    const rects = gridContainerLayout(n, childEntries(children), contentRect, ctx());
+    const rects = asMap(gridContainerLayout(n, childEntries(children), contentRect, ctx()));
 
     expect(rects.get('R0')).toEqual({ x: 0, y: 0, w: 50, h: 10 });
     expect(rects.get('R1')).toEqual({ x: 0, y: 280, w: 50, h: 20 });
@@ -270,7 +278,7 @@ describe('gridContainerLayout', () => {
       children
     );
     const contentRect = { x: 0, y: 0, w: 60, h: 300 };
-    const rects = gridContainerLayout(n, childEntries(children), contentRect, ctx());
+    const rects = asMap(gridContainerLayout(n, childEntries(children), contentRect, ctx()));
 
     expect(rects.get('R0Wide')).toEqual({ x: 0, y: 0, w: 60, h: 10 });
     expect(rects.get('R1Center')).toEqual({ x: 20, y: 10, w: 20, h: 10 });
@@ -339,7 +347,7 @@ describe('gridContainerLayout', () => {
 
   it('is empty with no sortable children', () => {
     const n = grid('Grid', { columns: 2 }, []);
-    const rects = gridContainerLayout(n, [], { x: 0, y: 0, w: 100, h: 100 }, ctx());
+    const rects = asMap(gridContainerLayout(n, [], { x: 0, y: 0, w: 100, h: 100 }, ctx()));
     expect(rects.size).toBe(0);
   });
 });

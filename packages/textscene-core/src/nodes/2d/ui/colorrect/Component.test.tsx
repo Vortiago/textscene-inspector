@@ -44,11 +44,11 @@ describe('<ColorRect> (isolated painter contract)', () => {
   it('draws exactly one quad sized to the solved rect', async () => {
     const node = solveNode('Root', 'ColorRect', { color: 'Color(1, 0, 0, 1)' });
     const renderer = await ReactThreeTestRenderer.create(
-      <ColorRect {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 64, h: 32 }} />
+      <ColorRect {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 64, h: 32 }} renderOrder={0} />
     );
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(1);
-    const geometry = meshes[0]!.instance.geometry as THREE.PlaneGeometry;
+    const geometry = (meshes[0]!.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
     expect(geometry.parameters.width).toBe(64);
     expect(geometry.parameters.height).toBe(32);
   });
@@ -56,10 +56,10 @@ describe('<ColorRect> (isolated painter contract)', () => {
   it('defaults to opaque white when color is absent (Godot default Color(1,1,1,1))', async () => {
     const node = solveNode('Root', 'ColorRect', {});
     const renderer = await ReactThreeTestRenderer.create(
-      <ColorRect {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 10, h: 10 }} />
+      <ColorRect {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 10, h: 10 }} renderOrder={0} />
     );
     const mesh = renderer.scene.findByType('Mesh');
-    const material = mesh.instance.material as THREE.MeshBasicMaterial;
+    const material = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     const expected = expectedLinear(1, 1, 1);
     expect(material.color.r).toBeCloseTo(expected.r);
     expect(material.color.g).toBeCloseTo(expected.g);
@@ -74,11 +74,11 @@ describe('<ColorRect> (isolated painter contract)', () => {
     });
     const renderer = await ReactThreeTestRenderer.create(
       <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }}>
-        <ColorRect {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 10, h: 10 }} />
+        <ColorRect {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 10, h: 10 }} renderOrder={0} />
       </Modulate2DContext.Provider>
     );
     const mesh = renderer.scene.findByType('Mesh');
-    const material = mesh.instance.material as THREE.MeshBasicMaterial;
+    const material = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
 
     // own(sRGB) = inherited(0.5,0.5,0.5,0.5) * self_modulate(1,0.5,1,1) * color(0.8,0.4,0.2,0.5)
     //           = (0.4, 0.1, 0.1, 0.25)
@@ -92,10 +92,10 @@ describe('<ColorRect> (isolated painter contract)', () => {
   it('is transparent and non-depth-writing, spreading the shared clip planes hook (edge: empty list)', async () => {
     const node = solveNode('Root', 'ColorRect', { color: 'Color(1, 1, 1, 1)' });
     const renderer = await ReactThreeTestRenderer.create(
-      <ColorRect {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 10, h: 10 }} />
+      <ColorRect {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 10, h: 10 }} renderOrder={0} />
     );
     const mesh = renderer.scene.findByType('Mesh');
-    const material = mesh.instance.material as THREE.MeshBasicMaterial;
+    const material = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(material.transparent).toBe(true);
     expect(material.depthWrite).toBe(false);
     expect(material.clippingPlanes).toEqual([]);
@@ -124,7 +124,7 @@ describe('<ColorRect> registered through <ControlCanvasWalker> (end-to-end walke
 
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(1);
-    const geometry = meshes[0]!.instance.geometry as THREE.PlaneGeometry;
+    const geometry = (meshes[0]!.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
     expect(geometry.parameters.width).toBe(64);
     expect(geometry.parameters.height).toBe(32);
 

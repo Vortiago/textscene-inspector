@@ -36,14 +36,14 @@ const theme2x = nativeTheme(2);
 
 describe('resolveSliderRatio', () => {
   it('reads a mid-range value through Range::get_as_ratio (happy path)', () => {
-    expect(resolveSliderRatio({ name: 'S', value: 25, maxValue: 100 })).toBeCloseTo(0.25);
+    expect(resolveSliderRatio({ value: 25, maxValue: 100 })).toBeCloseTo(0.25);
   });
 
   it('is NaN-guarded to 0 — `Math::is_nan(get_as_ratio()) ? 0 : get_as_ratio()` (edge case)', () => {
     // A degenerate min===max range already returns 1 from `rangeRatio`
     // (Range::get_as_ratio's own is_equal_approx guard), so the only way to
     // reach the NaN branch here is a genuinely NaN authored value.
-    expect(resolveSliderRatio({ name: 'S', value: Number.NaN })).toBe(0);
+    expect(resolveSliderRatio({ value: Number.NaN })).toBe(0);
   });
 });
 

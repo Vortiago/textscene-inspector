@@ -65,7 +65,7 @@ describe('<VSlider>', () => {
     );
     const meshes = renderer.scene.findAllByType('Mesh');
     // meshes: [track, fill, tick0, tick1, tick2, grabber] — pick a tick mesh (index 2).
-    const tickMesh = meshes[2]!.instance;
+    const tickMesh = meshes[2]!.instance as THREE.Mesh;
     const geometry = tickMesh.geometry as THREE.PlaneGeometry;
     expect(geometry.parameters.width).toBe(8);
     expect(geometry.parameters.height).toBe(4);

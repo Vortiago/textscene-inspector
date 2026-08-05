@@ -63,10 +63,10 @@ async function renderIsolated(raw: Record<string, string> = {}, rect: Rect2, opt
       <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
         {options.modulateContext ? (
           <Modulate2DContext.Provider value={options.modulateContext}>
-            <TextureRect {...painterEnv()} solveNode={solveNode(node)} rect={rect} />
+            <TextureRect {...painterEnv()} solveNode={solveNode(node)} rect={rect} renderOrder={0} />
           </Modulate2DContext.Provider>
         ) : (
-          <TextureRect {...painterEnv()} solveNode={solveNode(node)} rect={rect} />
+          <TextureRect {...painterEnv()} solveNode={solveNode(node)} rect={rect} renderOrder={0} />
         )}
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
@@ -89,14 +89,19 @@ describe('<TextureRect> (isolated painter contract)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
-          <TextureRect {...painterEnv()} solveNode={solveNode(node)} rect={{ x: 0, y: 0, w: 300, h: 100 }} />
+          <TextureRect
+            {...painterEnv()}
+            solveNode={solveNode(node)}
+            rect={{ x: 0, y: 0, w: 300, h: 100 }}
+            renderOrder={0}
+          />
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
 
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(1);
-    const material = meshes[0]!.instance.material as THREE.MeshBasicMaterial;
+    const material = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(material.map).not.toBeNull();
     // Cloned, not the same cached instance `useResource` handed out — mutating
     // filter/wrap/repeat/offset per-consumer must never bleed into siblings
@@ -107,7 +112,7 @@ describe('<TextureRect> (isolated painter contract)', () => {
   it('STRETCH_SCALE (default): the quad fills the FULL control rect', async () => {
     const renderer = await renderIsolated({}, { x: 0, y: 0, w: 300, h: 100 });
     const mesh = renderer.scene.findByType('Mesh');
-    const geometry = mesh.instance.geometry as THREE.PlaneGeometry;
+    const geometry = (mesh.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
     expect(geometry.parameters.width).toBe(300);
     expect(geometry.parameters.height).toBe(100);
   });
@@ -115,7 +120,7 @@ describe('<TextureRect> (isolated painter contract)', () => {
   it("STRETCH_KEEP (2): the quad is the texture's OWN intrinsic size, top-left", async () => {
     const renderer = await renderIsolated({ stretch_mode: '2' }, { x: 0, y: 0, w: 300, h: 100 });
     const mesh = renderer.scene.findByType('Mesh');
-    const geometry = mesh.instance.geometry as THREE.PlaneGeometry;
+    const geometry = (mesh.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
     expect(geometry.parameters.width).toBe(320);
     expect(geometry.parameters.height).toBe(160);
     const group = renderer.scene.findByType('Group');
@@ -133,32 +138,32 @@ describe('<TextureRect> (isolated painter contract)', () => {
 
   it('maps texture_filter NEAREST (1) to THREE.NearestFilter', async () => {
     const renderer = await renderIsolated({ texture_filter: '1' }, { x: 0, y: 0, w: 64, h: 32 });
-    const material = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(material.map!.magFilter).toBe(THREE.NearestFilter);
     expect(material.map!.minFilter).toBe(THREE.NearestFilter);
   });
 
   it('an absent texture_filter (PARENT_NODE) resolves to LinearFilter, the CanvasItem root default', async () => {
     const renderer = await renderIsolated({}, { x: 0, y: 0, w: 64, h: 32 });
-    const material = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(material.map!.magFilter).toBe(THREE.LinearFilter);
   });
 
   it('maps texture_repeat ENABLED (2) to THREE.RepeatWrapping', async () => {
     const renderer = await renderIsolated({ texture_repeat: '2' }, { x: 0, y: 0, w: 64, h: 32 });
-    const material = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
   });
 
   it('an absent texture_repeat (PARENT_NODE) resolves to ClampToEdgeWrapping, the CanvasItem root default', async () => {
     const renderer = await renderIsolated({}, { x: 0, y: 0, w: 64, h: 32 });
-    const material = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(material.map!.wrapS).toBe(THREE.ClampToEdgeWrapping);
   });
 
   it('flip_h mirrors the UV in place (negative repeat.x, offset shifted to compensate)', async () => {
     const renderer = await renderIsolated({ flip_h: 'true' }, { x: 0, y: 0, w: 300, h: 100 });
-    const material = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(material.map!.repeat.x).toBeCloseTo(-1);
     expect(material.map!.offset.x).toBeCloseTo(1);
   });
@@ -168,7 +173,7 @@ describe('<TextureRect> (isolated painter contract)', () => {
       { stretch_mode: '1', flip_h: 'true' },
       { x: 0, y: 0, w: 300, h: 100 }
     );
-    const material = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     // tile repeat = 300/320 = 0.9375, mirrored: repeat -0.9375, offset 0.9375.
     expect(material.map!.repeat.x).toBeCloseTo(-0.9375);
     expect(material.map!.offset.x).toBeCloseTo(0.9375);
@@ -188,7 +193,7 @@ describe('<TextureRect> (isolated painter contract)', () => {
         { x: 0, y: 0, w: 10, h: 10 },
         { modulateContext: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 } }
       );
-      const material = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
       // own(sRGB) = inherited(0.5,0.5,0.5,0.5) * self_modulate(1,0.5,1,1) * (no own colour) = (0.5,0.25,0.5,0.5)
       const expected = new THREE.Color().setRGB(0.5, 0.25, 0.5, THREE.SRGBColorSpace);
       expect(material.color.r).toBeCloseTo(expected.r);
@@ -200,7 +205,7 @@ describe('<TextureRect> (isolated painter contract)', () => {
 
   it('is transparent, double-sided and does not write depth (2D canvas-item convention)', async () => {
     const renderer = await renderIsolated({}, { x: 0, y: 0, w: 64, h: 32 });
-    const material = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(material.transparent).toBe(true);
     expect(material.depthWrite).toBe(false);
     expect(material.side).toBe(THREE.DoubleSide);
@@ -240,7 +245,7 @@ describe('<TextureRect> registered through <ControlCanvasWalker> (end-to-end wal
 
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(1);
-    const geometry = meshes[0]!.instance.geometry as THREE.PlaneGeometry;
+    const geometry = (meshes[0]!.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
     expect(geometry.parameters.width).toBe(300);
     expect(geometry.parameters.height).toBe(100);
 

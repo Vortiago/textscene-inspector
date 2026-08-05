@@ -59,7 +59,7 @@ describe('<HSlider>', () => {
 
     const meshes = renderer.scene.findAllByType('Mesh');
     const grabberMesh = meshes[meshes.length - 1]!;
-    const geometry = grabberMesh.instance.geometry as THREE.PlaneGeometry;
+    const geometry = (grabberMesh.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
     expect(geometry.parameters.width).toBe(16);
     expect(geometry.parameters.height).toBe(16);
   });
@@ -83,8 +83,8 @@ describe('<HSlider>', () => {
     );
     const enabledMeshes = enabled.scene.findAllByType('Mesh');
     const disabledMeshes = disabled.scene.findAllByType('Mesh');
-    const enabledMap = (enabledMeshes[enabledMeshes.length - 1]!.instance.material as THREE.MeshBasicMaterial).map;
-    const disabledMap = (disabledMeshes[disabledMeshes.length - 1]!.instance.material as THREE.MeshBasicMaterial).map;
+    const enabledMap = ((enabledMeshes[enabledMeshes.length - 1]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).map;
+    const disabledMap = ((disabledMeshes[disabledMeshes.length - 1]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).map;
     expect(enabledMap).toBeInstanceOf(THREE.Texture);
     expect(disabledMap).toBeInstanceOf(THREE.Texture);
     expect((enabledMap!.image as HTMLImageElement).src).toBe(SLIDER_GRABBER_ICONS.grabber);

@@ -62,14 +62,14 @@ describe('splitSeparation', () => {
   /** `MAX(theme_cache.separation, grabber)` — the override cannot go below the icon. */
   it('floors an override at the grabber’s own extent', () => {
     expect(
-      splitSeparation({ themeOverrideConstants: { separation: 0 } } as SplitContainerProperties)
+      splitSeparation({ name: 'S', themeOverrideConstants: { separation: 0 } })
     ).toBe(GRABBER_EXTENT);
     expect(GRABBER_EXTENT).toBe(8);
   });
 
   it('honours an override above the grabber', () => {
     expect(
-      splitSeparation({ themeOverrideConstants: { separation: 30 } } as SplitContainerProperties)
+      splitSeparation({ name: 'S', themeOverrideConstants: { separation: 30 } })
     ).toBe(30);
   });
 
@@ -107,11 +107,7 @@ describe('splitFirstExtent', () => {
 
     it('an overridden separation still keeps the grabber’s floor (SepZero: 196)', () => {
       expect(
-        split(
-          { themeOverrideConstants: { separation: 0 } } as SplitContainerProperties,
-          expands(),
-          expands()
-        )
+        split({ name: 'S', themeOverrideConstants: { separation: 0 } }, expands(), expands())
       ).toBe(196);
     });
   });

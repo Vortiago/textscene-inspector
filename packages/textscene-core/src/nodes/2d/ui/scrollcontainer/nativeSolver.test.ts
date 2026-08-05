@@ -31,10 +31,15 @@ import {
   isScrollContainerLayout,
 } from './nativeSolver';
 
-/** `scrollContainerLayout`'s child-rects half only — every test below except the dedicated `meta` describe cares only about this, exactly like before `{ rects, meta }` existed. */
+/**
+ * `scrollContainerLayout`'s child-rects half only — every test below except the dedicated `meta` describe cares only
+ * about this, exactly like before `{ rects, meta }` existed. `'rects' in result`, not `instanceof Map`: a plain `Map`
+ * is not STRUCTURALLY a subtype of the read-only `ReadonlyMap` interface's own view (see `controlRectSolver.ts`'s
+ * `normalizeContainerLayoutResult`, the same discriminator this mirrors), so `instanceof` cannot safely narrow it.
+ */
 function layoutRects(...args: Parameters<typeof scrollContainerLayout>): ReadonlyMap<string, Rect2> {
   const result = scrollContainerLayout(...args);
-  return result instanceof Map ? result : result.rects;
+  return 'rects' in result ? result.rects : result;
 }
 
 const THEME = nativeTheme(1);
@@ -260,7 +265,8 @@ describe('scrollContainerLayout — meta carries the FULL ScrollContainerLayout 
     const expected = scrollContainerScrollBars(n, solveCtx, RECT);
 
     expect(result).not.toBeInstanceOf(Map);
-    if (result instanceof Map) throw new Error('unreachable');
+    // `'rects' in result`, not `instanceof Map`: see `layoutRects`'s own doc for why.
+    if (!('rects' in result)) throw new Error('unreachable');
     expect(isScrollContainerLayout(result.meta)).toBe(true);
     expect(result.meta).toEqual(expected);
   });

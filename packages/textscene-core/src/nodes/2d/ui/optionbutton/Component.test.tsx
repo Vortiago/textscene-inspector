@@ -12,19 +12,20 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
-import type { ControlProperties } from '../control/types';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { OptionButton } from './Component';
 import type { OptionButtonProperties } from './types';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 32 };
 
+type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
 function solveNode(properties: Partial<OptionButtonProperties> = {}): SolveNode {
   const node: TscnNode = {
     name: 'MyOptionButton',
     type: 'OptionButton',
     children: [],
-    properties: { name: 'MyOptionButton', ...properties } as ControlProperties,
+    properties: { name: 'MyOptionButton', ...properties } as OptionButtonProperties,
   };
   return { path: 'MyOptionButton', node, children: [], styleBoxes: {}, textureSize: null };
 }
@@ -36,26 +37,26 @@ const ITEMS = [
 ];
 
 /** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute; `<TextRun>`/`<ControlQuad>` do not. */
-function findChromeMesh(scene: { findAllByType: (t: string) => { instance: THREE.Mesh }[] }) {
+function findChromeMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
-    .map((m) => m.instance)
+    .map((m) => m.instance as THREE.Mesh)
     .find((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
 }
 
 /** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
-function findTextMesh(scene: { findAllByType: (t: string) => { instance: THREE.Mesh }[] }) {
+function findTextMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
-    .map((m) => m.instance)
+    .map((m) => m.instance as THREE.Mesh)
     .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
 /** The arrow `ControlQuad` is a `PlaneGeometry`, identified by its own `.parameters.width`. */
-function findArrowMesh(scene: { findAllByType: (t: string) => { instance: THREE.Mesh }[] }) {
+function findArrowMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
-    .map((m) => m.instance)
+    .map((m) => m.instance as THREE.Mesh)
     .find((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
 }
 

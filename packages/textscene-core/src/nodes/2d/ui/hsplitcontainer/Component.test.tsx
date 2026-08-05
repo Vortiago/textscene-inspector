@@ -90,7 +90,7 @@ describe('<HSplitContainer>', () => {
 
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(1);
-    const geometry = meshes[0]!.instance.geometry as THREE.PlaneGeometry;
+    const geometry = (meshes[0]!.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
     // hsplitter.svg is 8x48; draggerPos for an even split of 400 at sep 12 is 194
     // (trunc(400*0.5 - 12*0.5) = 194), so the band centres the icon at x=194+2=196.
     expect(geometry.parameters.width).toBe(8);
@@ -100,9 +100,9 @@ describe('<HSplitContainer>', () => {
     expect(group.instance.position.x).toBeCloseTo(196);
     expect(group.instance.position.y).toBeCloseTo(-6); // -(60-48)/2
 
-    const material = meshes[0]!.instance.material as THREE.MeshBasicMaterial;
+    const material = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(material.map).toBeInstanceOf(THREE.Texture);
-    expect(material.renderOrder ?? meshes[0]!.instance.renderOrder).toBe(5);
+    expect(meshes[0]!.instance.renderOrder).toBe(5);
   });
 
   it('honours a split_offset override once visible', async () => {

@@ -26,9 +26,9 @@
  * from the left, NOT `150 - 12 - 8`.
  */
 import { describe, expect, it } from 'vitest';
-import type { ControlProperties } from '../control/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
+import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { resolveButtonDrawState } from '../../../../r3f/controls/native/buttonBase';
@@ -53,11 +53,21 @@ const FONT_HEIGHT = 23;
 function node(props: Partial<OptionButtonProperties>): SolveNode {
   return {
     path: 'O',
-    node: { name: 'O', type: 'OptionButton', children: [], properties: { name: 'O', ...props } as ControlProperties },
+    node: {
+      name: 'O',
+      type: 'OptionButton',
+      children: [],
+      properties: { name: 'O', ...props } as OptionButtonProperties,
+    },
     children: [],
     styleBoxes: {},
     textureSize: null,
   };
+}
+
+/** `optionButtonMinimumSize`'s `size` half only — see `button/nativeSolver.test.ts`'s own `minSize` for why the union is here at all. */
+function minSize(result: Vec2 | MinimumSizeResult): Vec2 {
+  return 'size' in result ? result.size : result;
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -117,14 +127,14 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
       { text: 'A', id: 0 }, // 10.578125 wide
       { text: 'AB', id: 1 }, // 21.125 wide — the widest
     ];
-    const result = optionButtonMinimumSize(node({ items, selected: 0 }), ctx());
+    const result = minSize(optionButtonMinimumSize(node({ items, selected: 0 }), ctx()));
     // width = 16 (margin) + 21.125 (widest item) + 12 (arrow) + 4 (h_separation).
     expect(result.x).toBeCloseTo(16 + AB_WIDTH + 12 + 4, 6);
   });
 
   it('height is 8 (marginY) + max(tallest item text height, arrow height 12) — the 23px font height wins', () => {
     const items = [{ text: 'AB', id: 0 }];
-    const result = optionButtonMinimumSize(node({ items, selected: 0 }), ctx());
+    const result = minSize(optionButtonMinimumSize(node({ items, selected: 0 }), ctx()));
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
@@ -136,9 +146,8 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
 
   it('h_separation theme_override_constants wins over the theme default', () => {
     const items = [{ text: 'A', id: 0 }];
-    const result = optionButtonMinimumSize(
-      node({ items, selected: 0, themeOverrideConstants: { h_separation: 10 } }),
-      ctx()
+    const result = minSize(
+      optionButtonMinimumSize(node({ items, selected: 0, themeOverrideConstants: { h_separation: 10 } }), ctx())
     );
     expect(result.x).toBeCloseTo(16 + A_ADVANCE + 12 + 10, 6);
   });
@@ -164,7 +173,10 @@ describe('optionButtonTextTheme', () => {
   });
 
   it('a theme_override_colors/font_color override wins over the default', () => {
-    const props = { themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } } } as OptionButtonProperties;
+    const props: OptionButtonProperties = {
+      name: 'O',
+      themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
+    };
     expect(optionButtonTextTheme(props, 'normal', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 });

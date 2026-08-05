@@ -19,7 +19,6 @@
  * 'A' advance at 16px = 1354*(16/2048) = 10.578125; 'AB' = (1354+1350)*(16/2048) = 21.125.
  */
 import { describe, expect, it } from 'vitest';
-import type { ControlProperties } from '../control/types';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
@@ -62,7 +61,7 @@ function node(
 ): SolveNode {
   return {
     path: 'B',
-    node: { name: 'B', type: 'Button', children: [], properties: { name: 'B', ...props } as ControlProperties },
+    node: { name: 'B', type: 'Button', children: [], properties: { name: 'B', ...props } as ButtonProperties },
     children: [],
     styleBoxes,
     textureSize,
@@ -103,6 +102,8 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
       contentMargin: { left: 14, top: 6, right: 14, bottom: 6 },
       drawCenter: true,
       borderBlend: false,
+      antiAliased: true,
+      aaSize: 1,
     };
     expect(minSize(node({}, { normal: wide }), ctx())).toEqual({ x: 28, y: 12 });
   });
@@ -117,6 +118,8 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
       contentMargin: { left: 20, top: 2, right: 20, bottom: 2 },
       drawCenter: true,
       borderBlend: false,
+      antiAliased: true,
+      aaSize: 1,
     };
     expect(minSize(node({ disabled: true }, { disabled: narrow }), ctx())).toEqual({ x: 40, y: 4 });
   });
@@ -145,7 +148,7 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
       'button.cpp:322-329,515-522, not a divergence this port introduces',
     () => {
       const result = minSize(
-        node({ text: 'AB', vertical_icon_alignment: undefined, ...{ verticalIconAlignment: 0 } }, {}, { x: 10, y: 15 }),
+        node({ text: 'AB', verticalIconAlignment: 0 }, {}, { x: 10, y: 15 }),
         ctx()
       );
       // 23 (initial text) + 15 (icon, += branch) + 23 (final font_height, += branch) = 61.
@@ -234,12 +237,15 @@ describe('buttonTextTheme — font_color / font_disabled_color key mapping', () 
   });
 
   it('a theme_override_colors/font_disabled_color override wins over the default disabled color', () => {
-    const props = { themeOverrideColors: { font_disabled_color: { r: 1, g: 0, b: 0, a: 1 } } } as ButtonProperties;
+    const props: ButtonProperties = {
+      name: 'B',
+      themeOverrideColors: { font_disabled_color: { r: 1, g: 0, b: 0, a: 1 } },
+    };
     expect(buttonTextTheme(props, 'disabled', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 
   it('theme_override_font_sizes/font_size overrides the theme default for BOTH states', () => {
-    const props = { themeOverrideFontSizes: { font_size: 24 } } as ButtonProperties;
+    const props: ButtonProperties = { name: 'B', themeOverrideFontSizes: { font_size: 24 } };
     expect(buttonTextTheme(props, 'normal', ctx()).fontSizePx).toBe(24);
     expect(buttonTextTheme(props, 'disabled', ctx()).fontSizePx).toBe(24);
   });
@@ -255,7 +261,10 @@ describe('buttonIconColor — icon_normal_color / icon_disabled_color (default_t
   });
 
   it('a theme_override_colors/icon_disabled_color override wins over the default', () => {
-    const props = { themeOverrideColors: { icon_disabled_color: { r: 1, g: 0, b: 0, a: 1 } } } as ButtonProperties;
+    const props: ButtonProperties = {
+      name: 'B',
+      themeOverrideColors: { icon_disabled_color: { r: 1, g: 0, b: 0, a: 1 } },
+    };
     expect(buttonIconColor(props, 'disabled')).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 });

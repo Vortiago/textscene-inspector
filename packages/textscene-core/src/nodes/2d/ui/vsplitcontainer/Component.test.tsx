@@ -72,7 +72,7 @@ describe('<VSplitContainer>', () => {
 
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(1);
-    const geometry = meshes[0]!.instance.geometry as THREE.PlaneGeometry;
+    const geometry = (meshes[0]!.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
     expect(geometry.parameters.width).toBe(48);
     expect(geometry.parameters.height).toBe(8);
 
@@ -81,7 +81,7 @@ describe('<VSplitContainer>', () => {
     expect(group.instance.position.x).toBeCloseTo((120 - 48) / 2);
     expect(group.instance.position.y).toBeCloseTo(-146);
 
-    const material = meshes[0]!.instance.material as THREE.MeshBasicMaterial;
+    const material = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(material.map).toBeInstanceOf(THREE.Texture);
   });
 

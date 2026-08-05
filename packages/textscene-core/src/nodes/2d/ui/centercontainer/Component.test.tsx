@@ -18,7 +18,7 @@ function solveNode(): SolveNode {
 describe('<CenterContainer>', () => {
   it('renders nothing — CenterContainer has no chrome of its own', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <CenterContainer {...painterEnv()} solveNode={solveNode()} rect={{ x: 0, y: 0, w: 100, h: 50 }} />
+      <CenterContainer {...painterEnv()} solveNode={solveNode()} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });

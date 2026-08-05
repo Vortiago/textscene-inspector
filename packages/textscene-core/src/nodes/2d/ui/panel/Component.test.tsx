@@ -36,6 +36,8 @@ function styleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatData {
     contentMargin: { ...ZERO_SIDES },
     drawCenter: true,
     borderBlend: false,
+    antiAliased: true,
+    aaSize: 1,
     ...overrides,
   };
 }
@@ -59,9 +61,9 @@ describe('<Panel> (isolated painter contract)', () => {
   it('draws the resolved theme_override_styles/panel override, not the default fill, when one is present', async () => {
     const override = styleBox({ bgColor: { r: 0.9, g: 0.1, b: 0.1, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <Panel {...painterEnv()} solveNode={solveNode({}, { panel: override })} rect={RECT} />
+      <Panel {...painterEnv()} solveNode={solveNode({}, { panel: override })} rect={RECT} renderOrder={0} />
     );
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
     // sRGBChannelToLinear(0.9) ≈ 0.787412 (utils/colorSpace.ts).
     expect(color.getX(0)).toBeCloseTo(0.787412, 4);
@@ -69,9 +71,9 @@ describe('<Panel> (isolated painter contract)', () => {
 
   it('falls back to the default-theme panel struct when no override resolves', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Panel {...painterEnv()} solveNode={solveNode({}, {})} rect={RECT} />
+      <Panel {...painterEnv()} solveNode={solveNode({}, {})} rect={RECT} renderOrder={0} />
     );
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
     // Default-theme `panel` stylebox fill is `style_normal_color` =
     // Color(0.1, 0.1, 0.1, 0.6) (default_theme.cpp:134, nativeTheme.ts's
@@ -86,9 +88,10 @@ describe('<Panel> (isolated painter contract)', () => {
       <Panel {...painterEnv()}
         solveNode={solveNode({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, { panel: flat })}
         rect={RECT}
+        renderOrder={0}
       />
     );
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
     // 0.8 (bgColor) * 0.5 (self_modulate) = 0.4 in sRGB, THEN converted once:
     // sRGBChannelToLinear(0.4) ≈ 0.1328683.
@@ -107,10 +110,11 @@ describe('<Panel> (isolated painter contract)', () => {
         <Panel {...painterEnv()}
           solveNode={solveNode({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, { panel: flat })}
           rect={RECT}
+          renderOrder={0}
         />
       </Modulate2DContext.Provider>
     );
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
     // sRGBChannelToLinear(0.25) ≈ 0.05088.
     expect(color.getX(0)).toBeCloseTo(0.050876, 4);

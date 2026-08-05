@@ -14,8 +14,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
+import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
@@ -42,6 +43,11 @@ function node(props: Partial<RichTextLabelProperties>): SolveNode {
     styleBoxes: {},
     textureSize: null,
   };
+}
+
+/** `richTextLabelMinimumSize`'s `size` half only — see `MinimumSizeResult`'s own doc for why the union is here at all. */
+function size(result: Vec2 | MinimumSizeResult): Vec2 {
+  return 'x' in result ? result : result.size;
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -85,25 +91,25 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
   });
 
   it('fit_content + autowrap OFF: width is the natural line width, height is ONE line at 23px (not 26 — no line_separation)', () => {
-    const result = richTextLabelMinimumSize(node({ fitContent: true, text: 'AB', autowrapMode: 0 }), ctx());
+    const result = size(richTextLabelMinimumSize(node({ fitContent: true, text: 'AB', autowrapMode: 0 }), ctx()));
     expect(result.x).toBeCloseTo(AB_WIDTH, 6);
     expect(result.y).toBe(OWN_LINE_PITCH);
   });
 
   it('fit_content + autowrap OFF + explicit hard break: height is N*23 with NO trailing subtraction (2*23=46, not Label\'s 2*26-3=49)', () => {
-    const result = richTextLabelMinimumSize(node({ fitContent: true, text: 'A\nAB', autowrapMode: 0 }), ctx());
+    const result = size(richTextLabelMinimumSize(node({ fitContent: true, text: 'A\nAB', autowrapMode: 0 }), ctx()));
     expect(result.y).toBe(2 * OWN_LINE_PITCH);
     expect(result.x).toBeCloseTo(AB_WIDTH, 6);
   });
 
   it('fit_content + default autowrap (WORD_SMART): width still floors to 1 (Size2(1, height) substitution), height still the natural single-line 23px', () => {
-    const result = richTextLabelMinimumSize(node({ fitContent: true, text: 'AB' }), ctx());
+    const result = size(richTextLabelMinimumSize(node({ fitContent: true, text: 'AB' }), ctx()));
     expect(result.x).toBe(1);
     expect(result.y).toBe(OWN_LINE_PITCH);
   });
 
   it('fit_content + default autowrap + explicit hard break: height still counts both natural lines (2*23=46)', () => {
-    const result = richTextLabelMinimumSize(node({ fitContent: true, text: 'A\nAB' }), ctx());
+    const result = size(richTextLabelMinimumSize(node({ fitContent: true, text: 'A\nAB' }), ctx()));
     expect(result.x).toBe(1);
     expect(result.y).toBe(2 * OWN_LINE_PITCH);
   });
@@ -125,29 +131,33 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
   });
 
   it('reads theme_override_font_sizes/normal_font_size, not the theme default, when present', () => {
-    const result = richTextLabelMinimumSize(
-      node({
-        fitContent: true,
-        autowrapMode: 0,
-        text: 'A',
-        themeOverrideFontSizes: { normal_font_size: 32 },
-      } as Partial<RichTextLabelProperties>),
-      ctx()
+    const result = size(
+      richTextLabelMinimumSize(
+        node({
+          fitContent: true,
+          autowrapMode: 0,
+          text: 'A',
+          themeOverrideFontSizes: { normal_font_size: 32 },
+        }),
+        ctx()
+      )
     );
     // At size 32: ascentPx=ceil(2189*32/2048)=35, descentPx=ceil(600*32/2048)=10 -> ownLinePitch=45.
     expect(result.y).toBe(45);
   });
 
   it('a [b] span with no bold_font_size override measures at the FALLBACK size (16), not normal_font_size — the same font-size resolution styledTextRuns pins', () => {
-    const result = richTextLabelMinimumSize(
-      node({
-        fitContent: true,
-        autowrapMode: 0,
-        bbcodeEnabled: true,
-        text: 'A[b]A[/b]',
-        themeOverrideFontSizes: { normal_font_size: 32 },
-      } as Partial<RichTextLabelProperties>),
-      ctx()
+    const result = size(
+      richTextLabelMinimumSize(
+        node({
+          fitContent: true,
+          autowrapMode: 0,
+          bbcodeEnabled: true,
+          text: 'A[b]A[/b]',
+          themeOverrideFontSizes: { normal_font_size: 32 },
+        }),
+        ctx()
+      )
     );
     // 'A' hmtx advance width 1354 design units, unitsPerEm 2048. Plain 'A' at
     // 32px + bold 'A' at the 16px fallback: 1354*32/2048 + 1354*16/2048 =
@@ -156,15 +166,17 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
   });
 
   it('a [b] span whose bold_font_size ALSO matches normal_font_size measures as if uniformly shaped (the positive control this fix closes)', () => {
-    const result = richTextLabelMinimumSize(
-      node({
-        fitContent: true,
-        autowrapMode: 0,
-        bbcodeEnabled: true,
-        text: 'A[b]A[/b]',
-        themeOverrideFontSizes: { normal_font_size: 32, bold_font_size: 32 },
-      } as Partial<RichTextLabelProperties>),
-      ctx()
+    const result = size(
+      richTextLabelMinimumSize(
+        node({
+          fitContent: true,
+          autowrapMode: 0,
+          bbcodeEnabled: true,
+          text: 'A[b]A[/b]',
+          themeOverrideFontSizes: { normal_font_size: 32, bold_font_size: 32 },
+        }),
+        ctx()
+      )
     );
     // Both 'A's now shape at 32px: 2 * 1354*32/2048.
     expect(result.x).toBeCloseTo(2 * ((1354 * 32) / 2048), 10);
@@ -288,7 +300,12 @@ describe('styledTextRuns', () => {
 
     it('an explicit bold_font_size override wins over the fallback', () => {
       const runs = styledTextRuns(
-        { text: '[b]x[/b]', bbcodeEnabled: true, themeOverrideFontSizes: { bold_font_size: 24 } } as RichTextLabelProperties,
+        {
+          name: 'RTL',
+          text: '[b]x[/b]',
+          bbcodeEnabled: true,
+          themeOverrideFontSizes: { bold_font_size: 24 },
+        },
         WHITE,
         NORMAL,
         FALLBACK
@@ -298,7 +315,12 @@ describe('styledTextRuns', () => {
 
     it('a scene that ALSO overrides bold_font_size to match normal_font_size closes the gap (the fixture used to prove this against real Godot)', () => {
       const runs = styledTextRuns(
-        { text: '[b]x[/b]', bbcodeEnabled: true, themeOverrideFontSizes: { bold_font_size: NORMAL } } as RichTextLabelProperties,
+        {
+          name: 'RTL',
+          text: '[b]x[/b]',
+          bbcodeEnabled: true,
+          themeOverrideFontSizes: { bold_font_size: NORMAL },
+        },
         WHITE,
         NORMAL,
         FALLBACK
@@ -308,7 +330,12 @@ describe('styledTextRuns', () => {
 
     it('an italics_font_size override applies only to italic-only runs, not to bold-only ones', () => {
       const runs = styledTextRuns(
-        { text: '[b]x[/b][i]y[/i]', bbcodeEnabled: true, themeOverrideFontSizes: { italics_font_size: 20 } } as RichTextLabelProperties,
+        {
+          name: 'RTL',
+          text: '[b]x[/b][i]y[/i]',
+          bbcodeEnabled: true,
+          themeOverrideFontSizes: { italics_font_size: 20 },
+        },
         WHITE,
         NORMAL,
         FALLBACK
@@ -320,10 +347,11 @@ describe('styledTextRuns', () => {
     it('[b][i] combined reads bold_italics_font_size, NOT bold_font_size or italics_font_size', () => {
       const runs = styledTextRuns(
         {
+          name: 'RTL',
           text: '[b][i]x[/i][/b]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { bold_font_size: 20, italics_font_size: 22, bold_italics_font_size: 30 },
-        } as RichTextLabelProperties,
+        },
         WHITE,
         NORMAL,
         FALLBACK

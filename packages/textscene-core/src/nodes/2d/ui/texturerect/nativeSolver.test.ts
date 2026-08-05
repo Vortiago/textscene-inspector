@@ -7,9 +7,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
 // Side-effect import: registers every Control slice's solver, including this
@@ -27,6 +27,11 @@ import {
 } from './nativeSolver';
 
 const TEXTURE = { x: 320, y: 160 };
+
+/** `textureRectMinimumSize`'s `size` half only — see `MinimumSizeResult`'s own doc for why the union is here at all. */
+function size(result: Vec2 | MinimumSizeResult): Vec2 {
+  return 'x' in result ? result : result.size;
+}
 
 function node(props: Partial<TextureRectProperties>, textureSize: { x: number; y: number } | null): SolveNode {
   return {
@@ -76,8 +81,8 @@ describe('textureRectMinimumSize (texture_rect.cpp:107-133)', () => {
     "FIT_WIDTH and FIT_HEIGHT disagree on which axis is 0 (the driver-axis divergence " +
       "comparison.md documents against DOM's symmetric `aspect-ratio: 1/1` for both)",
     () => {
-      const fitWidth = textureRectMinimumSize(node({ expandMode: 2 }, TEXTURE), ctx());
-      const fitHeight = textureRectMinimumSize(node({ expandMode: 4 }, TEXTURE), ctx());
+      const fitWidth = size(textureRectMinimumSize(node({ expandMode: 2 }, TEXTURE), ctx()));
+      const fitHeight = size(textureRectMinimumSize(node({ expandMode: 4 }, TEXTURE), ctx()));
       expect(fitWidth).not.toEqual(fitHeight);
       expect(fitWidth.y).toBe(0);
       expect(fitHeight.x).toBe(0);

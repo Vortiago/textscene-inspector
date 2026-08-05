@@ -20,7 +20,7 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
-import type { ControlProperties } from '../control/types';
+import type { ButtonProperties } from './types';
 import { Button } from './Component';
 import { buttonMinimumSize } from './nativeSolver';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
@@ -30,6 +30,8 @@ const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
 const RECT: Rect2 = { x: 0, y: 0, w: 120, h: 32 };
+
+type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function styleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatData {
   return {
@@ -41,36 +43,38 @@ function styleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatData {
     contentMargin: { left: 4, top: 4, right: 4, bottom: 4 },
     drawCenter: true,
     borderBlend: false,
+    antiAliased: true,
+    aaSize: 1,
     ...overrides,
   };
 }
 
 function solveNode(
-  properties: Partial<ControlProperties> = {},
+  properties: Partial<ButtonProperties> = {},
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
   const node: TscnNode = {
     name: 'MyButton',
     type: 'Button',
     children: [],
-    properties: { name: 'MyButton', ...properties } as ControlProperties,
+    properties: { name: 'MyButton', ...properties } as ButtonProperties,
   };
   return { path: 'MyButton', node, children: [], styleBoxes, textureSize: null };
 }
 
 /** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute; `<TextRun>`/`<ControlQuad>` do not. */
-function findChromeMesh(scene: { findAllByType: (t: string) => { instance: THREE.Mesh }[] }) {
+function findChromeMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
-    .map((m) => m.instance)
+    .map((m) => m.instance as THREE.Mesh)
     .find((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
 }
 
 /** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms); nothing else in this painter does. */
-function findTextMesh(scene: { findAllByType: (t: string) => { instance: THREE.Mesh }[] }) {
+function findTextMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
-    .map((m) => m.instance)
+    .map((m) => m.instance as THREE.Mesh)
     .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
@@ -82,10 +86,10 @@ function findTextMesh(scene: { findAllByType: (t: string) => { instance: THREE.M
  * the chrome's hand-built BufferGeometry (no `.parameters` at all) and the
  * text's glyph BufferGeometry (ditto).
  */
-function findIconMesh(scene: { findAllByType: (t: string) => { instance: THREE.Mesh }[] }) {
+function findIconMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
-    .map((m) => m.instance)
+    .map((m) => m.instance as THREE.Mesh)
     .find((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
 }
 
@@ -213,7 +217,7 @@ describe('<Button> — icon (ControlQuad), via ResourceLoader/SceneResources', (
     return tex;
   }
 
-  async function renderWithIcon(properties: Partial<ControlProperties>, iconSize: { w: number; h: number }) {
+  async function renderWithIcon(properties: Partial<ButtonProperties>, iconSize: { w: number; h: number }) {
     const fake = createFakeResourceLoader();
     fake.textures.seed(ICON_PATH, fakeTexture(iconSize.w, iconSize.h));
     return ReactThreeTestRenderer.create(

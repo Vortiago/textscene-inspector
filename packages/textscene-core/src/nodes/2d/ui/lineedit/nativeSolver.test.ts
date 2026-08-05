@@ -15,9 +15,9 @@
  * ceil(600*16/2048) = 18 + 5 = 23. 'W' advance at 16px = 1936*(16/2048) = 15.125.
  */
 import { describe, expect, it } from 'vitest';
-import type { ControlProperties } from '../control/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
+import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -36,10 +36,15 @@ import {
 const W_ADVANCE = 1936 * (16 / 2048); // 15.125
 const FONT_HEIGHT = 23; // ceil(2189*16/2048) + ceil(600*16/2048)
 
+/** `lineEditMinimumSize` is a `MinimumSizeFn`, so it's typed to allow the `MinimumSizeResult` shape even though this implementation only ever returns a bare `Vec2` — narrow to the size for the tests that read `.x`/`.y`. */
+function size(result: Vec2 | MinimumSizeResult): Vec2 {
+  return 'x' in result ? result : result.size;
+}
+
 function node(props: Partial<LineEditProperties>, styleBoxes: Record<string, StyleBoxFlatData> = {}): SolveNode {
   return {
     path: 'L',
-    node: { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L', ...props } as ControlProperties },
+    node: { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L', ...props } as LineEditProperties },
     children: [],
     styleBoxes,
     textureSize: null,
@@ -64,13 +69,15 @@ function flatStyleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatDa
     contentMargin: { left: 4, top: 4, right: 4, bottom: 4 },
     drawCenter: true,
     borderBlend: false,
+    antiAliased: true,
+    aaSize: 1,
     ...overrides,
   };
 }
 
 describe('lineEditMinimumSize — StyleBox content margins + minimum_character_width*W-advance + font height', () => {
   it('is exactly minimum_character_width(4)*W-advance + margin(8), and fontHeight(23) + margin(8), by default', () => {
-    const result = lineEditMinimumSize(node({}), ctx());
+    const result = size(lineEditMinimumSize(node({}), ctx()));
     expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE, 6);
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
@@ -82,7 +89,7 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
 
   it('reads a resolved theme_override_styles/normal content margin instead of the default theme', () => {
     const wide = flatStyleBox({ contentMargin: { left: 14, top: 6, right: 14, bottom: 6 } });
-    const result = lineEditMinimumSize(node({}, { normal: wide }), ctx());
+    const result = size(lineEditMinimumSize(node({}, { normal: wide }), ctx()));
     expect(result.x).toBeCloseTo(28 + 4 * W_ADVANCE, 6);
     expect(result.y).toBe(12 + FONT_HEIGHT);
   });
@@ -93,7 +100,7 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
     () => {
       const wideReadOnly = flatStyleBox({ contentMargin: { left: 20, top: 10, right: 20, bottom: 10 } });
       // editable defaults true (uses "normal" for DRAWING), but min-size still floors against read_only's wider box.
-      const result = lineEditMinimumSize(node({}, { read_only: wideReadOnly }), ctx());
+      const result = size(lineEditMinimumSize(node({}, { read_only: wideReadOnly }), ctx()));
       expect(result.x).toBeCloseTo(40 + 4 * W_ADVANCE, 6);
       expect(result.y).toBe(20 + FONT_HEIGHT);
     }
@@ -106,7 +113,7 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
   });
 
   it('a theme_override_font_sizes/font_size override changes BOTH the W-advance and the font height', () => {
-    const result = lineEditMinimumSize(node({ themeOverrideFontSizes: { font_size: 32 } }), ctx());
+    const result = size(lineEditMinimumSize(node({ themeOverrideFontSizes: { font_size: 32 } }), ctx()));
     const wAdvance32 = 1936 * (32 / 2048);
     const fontHeight32 = Math.ceil(2189 * (32 / 2048)) + Math.ceil(600 * (32 / 2048));
     expect(result.x).toBeCloseTo(8 + 4 * wAdvance32, 6);
