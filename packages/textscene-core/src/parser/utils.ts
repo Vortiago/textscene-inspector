@@ -3,6 +3,126 @@ export interface ParsedHeading {
   attributes: Record<string, string>;
 }
 
+/**
+ * Scan one attribute value starting at `pos` in `str`.  Returns the value
+ * substring and the index where the *next* character (whitespace, `=`, or `]`)
+ * begins.  Handles five forms:
+ *
+ * | First char | Form                | Strategy                        |
+ * |------------|---------------------|---------------------------------|
+ * | `"`        | Quoted string       | Walk, skip `\`, stop at `"`     |
+ * | `[`        | Bracketed array     | Depth-count `[]`, `inString`    |
+ * | `(`        | Constructor         | depth-count `()`, `inString`    |
+ * | letter/dig | Constructor or bare | Detect `Name(...)` then paren-balance; else to whitespace |
+ * | other      | Bare token          | Walk to whitespace              |
+ */
+function scanHeadingValue(str: string, pos: number): { value: string; nextPos: number } {
+  let i = pos;
+  const len = str.length;
+
+  // skip leading whitespace (shouldn't be any, but be safe)
+  while (i < len && str[i] === ' ') i++;
+  if (i >= len) return { value: '', nextPos: i };
+
+  const first = str[i];
+
+  // Quoted string
+  if (first === '"') {
+    let start = i;
+    i++; // skip opening quote
+    while (i < len) {
+      if (str[i] === '\\') {
+        i += 2; // skip escaped char
+        continue;
+      }
+      if (str[i] === '"') {
+        i++; // include closing quote
+        return { value: str.slice(start, i), nextPos: i };
+      }
+      i++;
+    }
+    // unterminated — return everything from here
+    return { value: str.slice(start), nextPos: len };
+  }
+
+  // Bracketed array `[...]`
+  if (first === '[') {
+    let start = i;
+    let depth = 0;
+    let inString = false;
+    while (i < len) {
+      const c = str[i];
+      if (inString) {
+        if (c === '\\') {
+          i += 2; // skip backslash and escaped character
+          continue;
+        }
+        if (c === '"') inString = false;
+        i++;
+        continue;
+      }
+      if (c === '"') inString = true;
+      else if (c === '[') depth++;
+      else if (c === ']') {
+        depth--;
+        if (depth === 0) {
+          i++; // include closing bracket
+          return { value: str.slice(start, i), nextPos: i };
+        }
+      }
+      i++;
+    }
+    return { value: str.slice(start), nextPos: len };
+  }
+
+  // Constructor call or bare token: scan the identifier, then peek for `(`
+  let start = i;
+  while (i < len) {
+    const code = str.charCodeAt(i);
+    if (code === 40 /* '(' */) break;
+    if (!((code >= 97 && code <= 122) || (code >= 65 && code <= 90) || (code >= 48 && code <= 57) || code === 95)) break;
+    i++;
+  }
+  const identEnd = i;
+
+  // skip whitespace after identifier
+  while (i < len && str[i] === ' ') i++;
+
+  // check for constructor call
+  if (i < len && str[i] === '(') {
+    let depth = 0;
+    let inString = false;
+    while (i < len) {
+      const c = str[i];
+      if (inString) {
+        if (c === '\\') {
+          i += 2; // skip backslash and escaped character
+          continue;
+        }
+        if (c === '"') inString = false;
+        i++;
+        continue;
+      }
+      if (c === '"') inString = true;
+      else if (c === '(') depth++;
+      else if (c === ')') {
+        depth--;
+        if (depth === 0) {
+          i++; // include closing paren
+          return { value: str.slice(start, i), nextPos: i };
+        }
+      }
+      i++;
+    }
+    // unterminated constructor — return everything from identifier start
+    return { value: str.slice(start), nextPos: len };
+  }
+
+  // Bare token — value starts at `start`, ends at first whitespace/`=/`]`
+  // (the closing `]` of the heading was already stripped)
+  return { value: str.slice(start, identEnd), nextPos: identEnd };
+}
+
 export function parseHeading(line: string): ParsedHeading | null {
   const trimmed = line.trim();
 
@@ -21,19 +141,36 @@ export function parseHeading(line: string): ParsedHeading | null {
   const attributesStr = content.slice(spaceIndex + 1);
 
   const attributes: Record<string, string> = {};
-  const attrRegex = /(\w+)=("(?:[^"\\]|\\.)*"|PackedStringArray\([^)]*\)|\[[^\]]*\]|[^\s]+)/g;
-  let match: RegExpExecArray | null;
+  let pos = 0;
+  const len = attributesStr.length;
 
-  while ((match = attrRegex.exec(attributesStr)) !== null) {
-    const key = match[1];
-    let value = match[2];
+  while (pos < len) {
+    // skip whitespace
+    while (pos < len && attributesStr[pos] === ' ') pos++;
+    if (pos >= len) break;
 
-    if (!key || !value) continue;
+    // scan key: [^\s=]+
+    let keyStart = pos;
+    while (pos < len && attributesStr[pos] !== '=' && attributesStr[pos] !== ' ') pos++;
+    const key = attributesStr.slice(keyStart, pos);
+    if (!key) break;
 
-    if (value.startsWith('"') && value.endsWith('"')) {
-      value = value.slice(1, -1);
-      value = value.replace(/\\"/g, '"');
-    }
+    // skip whitespace before =
+    while (pos < len && attributesStr[pos] === ' ') pos++;
+    if (pos >= len || attributesStr[pos] !== '=') break;
+    pos++; // skip '='
+
+    // skip whitespace after =
+    while (pos < len && attributesStr[pos] === ' ') pos++;
+    if (pos >= len) break;
+
+    // scan value
+    const { value: rawValue, nextPos } = scanHeadingValue(attributesStr, pos);
+    pos = nextPos;
+
+    if (!rawValue) continue;
+
+    const value = unquoteString(rawValue);
 
     attributes[key] = value;
   }
