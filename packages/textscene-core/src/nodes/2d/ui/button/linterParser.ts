@@ -25,6 +25,7 @@ import {
   BREAK_TRIM_HINTED_BITS,
   BREAK_TRIM_LABELS,
   BREAK_TRIM_MASK,
+  OVERRUN_BEHAVIOR,
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
 
@@ -51,21 +52,9 @@ validatorRegistry.registerAll('Button', {
   // OVERRUN_NO_TRIMMING=0 … OVERRUN_TRIM_WORD_ELLIPSIS_FORCE=6
   // (servers/text/text_server.h:124-130). set_text_overrun_behavior
   // (button.cpp:574-585) assigns unconditionally, no ERR_FAIL.
-  text_overrun_behavior: v.enumInt(
-    'text_overrun_behavior',
-    0,
-    6,
-    {
-      0: 'OVERRUN_NO_TRIMMING',
-      1: 'OVERRUN_TRIM_CHAR',
-      2: 'OVERRUN_TRIM_WORD',
-      3: 'OVERRUN_TRIM_ELLIPSIS',
-      4: 'OVERRUN_TRIM_WORD_ELLIPSIS',
-      5: 'OVERRUN_TRIM_ELLIPSIS_FORCE',
-      6: 'OVERRUN_TRIM_WORD_ELLIPSIS_FORCE',
-    },
-    { hinted: 'button.cpp:815' }
-  ),
+  text_overrun_behavior: v.enumInt('text_overrun_behavior', 0, 6, OVERRUN_BEHAVIOR, {
+    hinted: 'button.cpp:815',
+  }),
   // button.cpp:816 — PROPERTY_HINT_ENUM "Off,Arbitrary,Word,Word (Smart)", so
   // Button offers the whole enum and the bound is the hint's own width.
   // set_autowrap_mode (button.cpp:610-615) assigns unconditionally.

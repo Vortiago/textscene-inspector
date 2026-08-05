@@ -230,6 +230,12 @@ reproduced:
 - [GraphNode](../../packages/textscene-core/src/nodes/2d/ui/graphnode/comparison.md) — nothing yet; a graph node with per-child connection slots
 - [OpenXRBindingModifierEditor](../../packages/textscene-core/src/nodes/2d/ui/openxrbindingmodifiereditor/comparison.md) — nothing yet; editor-only UI, absent from game scenes
 - [OpenXRInteractionProfileEditor](../../packages/textscene-core/src/nodes/2d/ui/openxrinteractionprofileeditor/comparison.md) — nothing yet; editor-only UI, absent from game scenes
+- [GraphEdit](../../packages/textscene-core/src/nodes/2d/ui/graphedit/comparison.md) — nothing yet; a zoomable graph canvas with grid, connection lines, toolbar and minimap
+- [ItemList](../../packages/textscene-core/src/nodes/2d/ui/itemlist/comparison.md) — nothing yet; a scrollable list of icon-and-text items
+- [MenuBar](../../packages/textscene-core/src/nodes/2d/ui/menubar/comparison.md) — nothing yet; a horizontal bar of PopupMenu titles
+- [TabBar](../../packages/textscene-core/src/nodes/2d/ui/tabbar/comparison.md) — nothing yet; a single row of selectable tabs
+- [Tree](../../packages/textscene-core/src/nodes/2d/ui/tree/comparison.md) — nothing yet; a multi-column tree with a title row and fold arrows
+- [VideoStreamPlayer](../../packages/textscene-core/src/nodes/2d/ui/videostreamplayer/comparison.md) — nothing yet; a video surface sized by its stream or its rect
 
 - [VSlider](../../packages/textscene-core/src/nodes/2d/ui/vslider/comparison.md) — a vertical track with a round grabber
 - [VSplitContainer](../../packages/textscene-core/src/nodes/2d/ui/vsplitcontainer/comparison.md) — two children stacked, split at a computed offset

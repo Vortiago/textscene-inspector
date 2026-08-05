@@ -1156,7 +1156,7 @@
       "name": "GraphEdit",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -1394,7 +1394,7 @@
       "name": "ItemList",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -1608,7 +1608,7 @@
       "name": "MenuBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -2929,7 +2929,7 @@
       "name": "TabBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -3070,7 +3070,7 @@
       "name": "Tree",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -3160,7 +3160,7 @@
       "name": "VideoStreamPlayer",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",

@@ -20,22 +20,15 @@ import '../basebutton/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { propertyError, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
+import {
+  OVERRUN_BEHAVIOR,
+  TEXT_DIRECTION,
+} from '../../../../linter/validators/textServerEnums.js';
 
 const UNDERLINE_MODE = {
   0: 'UNDERLINE_MODE_ALWAYS',
   1: 'UNDERLINE_MODE_ON_HOVER',
   2: 'UNDERLINE_MODE_NEVER',
-};
-
-const OVERRUN_BEHAVIOR = {
-  0: 'OVERRUN_NO_TRIMMING',
-  1: 'OVERRUN_TRIM_CHAR',
-  2: 'OVERRUN_TRIM_WORD',
-  3: 'OVERRUN_TRIM_ELLIPSIS',
-  4: 'OVERRUN_TRIM_WORD_ELLIPSIS',
-  5: 'OVERRUN_TRIM_ELLIPSIS_FORCE',
-  6: 'OVERRUN_TRIM_WORD_ELLIPSIS_FORCE',
 };
 
 const STRUCTURED_TEXT_PARSER = {

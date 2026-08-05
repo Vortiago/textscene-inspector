@@ -1,0 +1,29 @@
+; Every VideoStreamPlayer property the strict parser validates, at a valid value.
+; The .ogv target is a placeholder: nothing here decodes video, and the point of
+; the fixture is the property grammar.
+
+[gd_scene load_steps=2 format=3 uid="uid://unit_video_stream_player"]
+
+[ext_resource type="VideoStream" path="res://video/test_clip.ogv" id="1_video"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyVideoStreamPlayer" type="VideoStreamPlayer" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 328.0
+offset_bottom = 188.0
+stream = ExtResource("1_video")
+audio_track = 1
+volume_db = -6.0
+speed_scale = 1.5
+autoplay = true
+paused = true
+expand = true
+loop = true
+buffering_msec = 250
+bus = &"Master"

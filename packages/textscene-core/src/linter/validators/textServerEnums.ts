@@ -26,6 +26,28 @@ export const AUTOWRAP_MODE = {
 } as const;
 
 /**
+ * `TextServer::OverrunBehavior` — OVERRUN_NO_TRIMMING=0 …
+ * OVERRUN_TRIM_WORD_ELLIPSIS_FORCE=6 (servers/text/text_server.h:123-130).
+ *
+ * Four slices bind all seven and had byte-identical copies: Button, Label,
+ * LinkButton and ItemList. `FoldableContainer` deliberately does NOT use this
+ * table — its hint stops at OVERRUN_TRIM_WORD_ELLIPSIS (4), so it keeps a
+ * narrower local one and widening it here would loosen a real bound.
+ *
+ * As everywhere in this file the BOUND stays at the call site: each class hints
+ * its own list and cites its own ADD_PROPERTY line.
+ */
+export const OVERRUN_BEHAVIOR = {
+  0: 'OVERRUN_NO_TRIMMING',
+  1: 'OVERRUN_TRIM_CHAR',
+  2: 'OVERRUN_TRIM_WORD',
+  3: 'OVERRUN_TRIM_ELLIPSIS',
+  4: 'OVERRUN_TRIM_WORD_ELLIPSIS',
+  5: 'OVERRUN_TRIM_ELLIPSIS_FORCE',
+  6: 'OVERRUN_TRIM_WORD_ELLIPSIS_FORCE',
+};
+
+/**
  * `TextServer::LineBreakFlag`'s trim bits, as `autowrap_trim_flags` uses them.
  *
  * Unusually for this file the BOUND is shared too, not just the labels, and the

@@ -1,0 +1,53 @@
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+; Exercises every ADD_PROPERTY GraphEdit binds: scroll/grid/snapping, the port
+; type-name dictionary, connection-line styling, the four zoom levels, the
+; minimap, and all six toolbar-menu toggles. `type_names` and `connections` are
+; written on ONE line each on purpose: the strict parser skips multi-line values,
+; so the wrapped form Godot saves would never reach their validators.
+
+[node name="MyGraphEdit" type="GraphEdit" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 408.0
+offset_bottom = 328.0
+scroll_offset = Vector2(32, 16)
+show_grid = true
+grid_pattern = 1
+snapping_enabled = true
+snapping_distance = 40
+panning_scheme = 1
+right_disconnects = true
+type_names = { 0: "Number", 1: "Text" }
+connection_lines_curvature = 0.25
+connection_lines_thickness = 6.0
+connection_lines_antialiased = false
+connections = [{ "from_node": &"Source", "from_port": 0, "to_node": &"Sink", "to_port": 0, "keep_alive": true }]
+zoom = 1.5
+zoom_min = 0.25
+zoom_max = 4.0
+zoom_step = 1.5
+minimap_enabled = true
+minimap_size = Vector2(200, 120)
+minimap_opacity = 0.4
+show_menu = true
+show_zoom_label = true
+show_zoom_buttons = true
+show_grid_buttons = false
+show_minimap_button = false
+show_arrange_button = false
+
+[node name="Source" type="GraphNode" parent="MyGraphEdit"]
+offset_right = 120.0
+offset_bottom = 64.0
+
+[node name="Sink" type="GraphNode" parent="MyGraphEdit"]
+offset_left = 200.0
+offset_right = 320.0
+offset_bottom = 64.0

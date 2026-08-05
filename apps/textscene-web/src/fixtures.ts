@@ -413,6 +413,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Graph Edit",
+    "file": "unit-graph-edit.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Graph Element",
     "file": "unit-graph-element.tscn",
     "category": "Other"
@@ -480,6 +485,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Instanced Environment",
     "file": "unit-instanced-environment.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Item List",
+    "file": "unit-item-list.tscn",
     "category": "Other"
   },
   {
@@ -570,6 +580,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Marker 3d",
     "file": "unit-marker-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Menu Bar",
+    "file": "unit-menu-bar.tscn",
     "category": "Other"
   },
   {
@@ -893,6 +908,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Tab Bar",
+    "file": "unit-tab-bar.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Tab Container",
     "file": "unit-tab-container.tscn",
     "category": "Other"
@@ -923,6 +943,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Tree",
+    "file": "unit-tree.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Unsupported Nodes",
     "file": "unit-unsupported-nodes.tscn",
     "category": "Other"
@@ -945,6 +970,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "V Separator",
     "file": "unit-v-separator.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Video Stream Player",
+    "file": "unit-video-stream-player.tscn",
     "category": "Other"
   },
   {

@@ -99,7 +99,6 @@ const UNDECLARED: readonly string[] = [
   'CSGPrimitive3D',
   'CSGShape3D',
   'CanvasLayer',
-  'GridContainer',
   'Light2D',
   'PhysicsBody3D',
   'SpriteBase3D',
@@ -144,7 +143,7 @@ describe('own-validator coverage', () => {
   it('never lets the undeclared list grow', () => {
     // The ratchet: a new gap cannot be waved through by appending to the list.
     // Each decrement is a type whose properties stopped being silently accepted.
-    expect(UNDECLARED.length).toBeLessThanOrEqual(8);
+    expect(UNDECLARED.length).toBeLessThanOrEqual(7);
   });
 
   it('declares validators for Button, whose 13 members were the trigger', () => {

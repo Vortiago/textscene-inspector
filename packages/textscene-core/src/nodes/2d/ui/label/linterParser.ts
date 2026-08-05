@@ -42,6 +42,7 @@ import {
   BREAK_TRIM_HINTED_BITS,
   BREAK_TRIM_LABELS,
   BREAK_TRIM_MASK,
+  OVERRUN_BEHAVIOR,
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
 
@@ -59,21 +60,6 @@ const VERTICAL_ALIGNMENT = {
   1: 'VERTICAL_ALIGNMENT_CENTER',
   2: 'VERTICAL_ALIGNMENT_BOTTOM',
   3: 'VERTICAL_ALIGNMENT_FILL',
-};
-
-/**
- * `TextServer::OverrunBehavior` — same table Button/LinkButton each declare
- * locally (servers/text/text_server.h:123-130), label.cpp:1441 hint with 7
- * entries.
- */
-const OVERRUN_BEHAVIOR = {
-  0: 'OVERRUN_NO_TRIMMING',
-  1: 'OVERRUN_TRIM_CHAR',
-  2: 'OVERRUN_TRIM_WORD',
-  3: 'OVERRUN_TRIM_ELLIPSIS',
-  4: 'OVERRUN_TRIM_WORD_ELLIPSIS',
-  5: 'OVERRUN_TRIM_ELLIPSIS_FORCE',
-  6: 'OVERRUN_TRIM_WORD_ELLIPSIS_FORCE',
 };
 
 /**
