@@ -78,7 +78,10 @@ export function labelTextTheme(
  * (`label.cpp:154`: `txt = uppercase ? TS->string_to_upper(xl_text) : xl_text`,
  * read by `get_minimum_size` via `_ensure_shaped`) — a Label's minimum size
  * reflects the UPPERCASED glyphs' own (typically wider) advances, not the
- * source casing.
+ * source casing. The transform is `shapeText`'s own option here, not applied
+ * before the call: the painter's fallback shape passes the same option, and
+ * this minimum is what the painter reads back as its layout, so the casing
+ * rule has to live in exactly one place or the two can disagree silently.
  *
  * Shapes via `shapeText` DIRECTLY rather than through `ctx.measureText`
  * (still the presence GATE — an absent measurer still means "text
@@ -95,8 +98,12 @@ export function labelTextTheme(
  */
 export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LabelProperties;
-  const rawText = props.text ?? '';
-  const text = props.uppercase ? rawText.toUpperCase() : rawText;
+  // Raw, with `uppercase` handed to `shapeText` as an option rather than
+  // pre-applied here: the painter's own fallback shape passes the option too,
+  // and one rule implemented in two places agrees only for as long as both
+  // spellings happen to match. Emptiness is unaffected by case, so the
+  // early-out below reads the same either way.
+  const text = props.text ?? '';
   const { fontSizePx } = labelTextTheme(props, ctx);
   const fontHeightPx = getLinePitchPx(fontSizePx, 0);
 
@@ -110,7 +117,13 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // separates lines without adding a trailing gap — which the subtraction
   // below guarantees, so nothing is added back for a single line.
   const lineSpacingPx = getLinePitchPx(fontSizePx) - fontHeightPx;
-  const layout = shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx });
+  const layout = shapeText(text, {
+    fontSizePx,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.OFF,
+    lineSpacingPx,
+    uppercase: props.uppercase,
+  });
   const measuredY = Math.max(0, layout.heightPx - lineSpacingPx);
   const height = Math.max(measuredY, fontHeightPx);
 
