@@ -201,6 +201,53 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     expect(solved.textureSize).toEqual({ x: 40, y: 20 });
   });
 
+  it("resolves a HOST-authored child's StyleBox in the HOST's pool, even when it hangs off an instance node", () => {
+    // The mirror of the test above, and the one that gates the host half of
+    // the scope. A multi-root instance keeps the instance node in place and
+    // splits its children into an `inline` group (host-authored, HOST scope)
+    // and a `subscene` group (SUB scope). The sub-scene pool arrives on the
+    // group by construction, but the HOST pool only reaches the inline group
+    // because the walk passes it down — and that argument is optional, so
+    // dropping it fails silently: the StyleBox simply stops resolving, with
+    // no error and nothing else in this file going red.
+    //
+    // Both pools declare id "1" for different colours, so resolving against
+    // the wrong one is loud (wrong numbers) rather than quiet (absent).
+    const loader = createFakeResourceLoader();
+    loader.scenes.seed(
+      LAYER_PATH,
+      scene(
+        [label('FirstRoot', { text: 'FIRST ROOT' }), label('SecondRoot', { text: 'SECOND ROOT' })],
+        [],
+        [{ id: '1', type: 'StyleBoxFlat', data: { bg_color: 'Color(0.1, 0.2, 0.3, 1)' } }]
+      )
+    );
+
+    const hostPanel = node('HostPanel', 'Panel', {
+      properties: {
+        name: 'HostPanel',
+        themeOverrideStyles: { panel: 'SubResource("1")' },
+      } as Record<string, unknown>,
+    });
+    const hud = instanceOf('Hud', '1_layer', 'Control');
+    const nodes = [{ ...hud, children: [hostPanel] } as TscnNode];
+
+    const { result } = renderHook(
+      () =>
+        useBuildSolveTree(
+          nodes,
+          [{ id: '1_layer', path: LAYER_PATH, type: 'PackedScene' }],
+          [{ id: '1', type: 'StyleBoxFlat', data: { bg_color: 'Color(0.9, 0.9, 0.9, 1)' } }]
+        ),
+      { wrapper: wrapperFor(loader.loader) }
+    );
+
+    const solvedHud = result.current.tree[0]!;
+    const panel = solvedHud.children.find((c) => c.node.name === 'HostPanel');
+    expect(panel, 'the host-authored Panel must survive the instance split').toBeDefined();
+    expect(panel!.styleBoxes.panel?.bgColor).toEqual({ r: 0.9, g: 0.9, b: 0.9, a: 1 });
+  });
+
   it("populates a top-level TextureRect's own textureSize from its `texture` property, no instancing involved", () => {
     // `resolveTextureSize` reads `node.properties.texture` generically for any
     // 2D-UI node — TextureRect just happens to be the first type whose native
