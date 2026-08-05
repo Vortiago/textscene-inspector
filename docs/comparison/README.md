@@ -158,6 +158,7 @@ reproduced:
 - [CheckButton](../../packages/textscene-core/src/nodes/2d/ui/checkbutton/comparison.md) — nothing yet; a labelled on/off switch
 - [CollisionShape2D](../../packages/textscene-core/src/nodes/physics/2d/collisionshape2d/comparison.md) — a toggle-gated collision outline
 - [ColorRect](../../packages/textscene-core/src/nodes/2d/ui/colorrect/comparison.md) — a color-filled div
+- [CodeEdit](../../packages/textscene-core/src/nodes/2d/ui/codeedit/comparison.md) — nothing yet; a multi-line code editor with gutters and folding
 - [Control](../../packages/textscene-core/src/nodes/2d/ui/control/comparison.md) — a full-rect layout region
 - [CPUParticles2D](../../packages/textscene-core/src/nodes/2d/cpuparticles2d/comparison.md) — one merged quad mesh holding a frozen particle pose
 - [DampedSpringJoint2D](../../packages/textscene-core/src/nodes/physics/2d/dampedspringjoint2d/comparison.md) — nothing (a transform-only group; a spring between two bodies)

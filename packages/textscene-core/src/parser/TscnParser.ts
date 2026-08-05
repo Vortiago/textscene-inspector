@@ -116,6 +116,7 @@ import '../nodes/2d/ui/linkbutton/index.js';
 import '../nodes/2d/ui/texturebutton/index.js';
 import '../nodes/2d/ui/ninepatchrect/index.js';
 import '../nodes/2d/ui/referencerect/index.js';
+import '../nodes/2d/ui/codeedit/index.js';
 import '../nodes/base/node2d/index.js';
 import '../nodes/2d/sprite2d/index.js';
 import '../nodes/2d/polygon2d/index.js';

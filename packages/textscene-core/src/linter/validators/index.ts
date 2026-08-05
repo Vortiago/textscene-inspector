@@ -7,4 +7,5 @@ export { propertyError } from './propertyError.js';
 export { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
 export { v, accepts, shape } from './v.js';
 export { layerBitmask } from './layerBitmask.js';
+export { maskedBitField } from './maskedBitField.js';
 export type { FloatOpts, IntOpts, EnumOpts } from './v.js';

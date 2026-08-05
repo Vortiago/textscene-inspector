@@ -26,6 +26,39 @@ export const AUTOWRAP_MODE = {
 } as const;
 
 /**
+ * `TextServer::LineBreakFlag`'s trim bits, as `autowrap_trim_flags` uses them.
+ *
+ * Unusually for this file the BOUND is shared too, not just the labels, and the
+ * reason is that there is no per-class bound to differ: all three setters mask
+ * with the same named engine constant (`x = p_flags &
+ * TextServer::BREAK_TRIM_MASK` at `label.cpp:63`, `button.cpp:625`,
+ * `rich_text_label.cpp:7390`), and all three `ADD_PROPERTY` hint strings are
+ * byte-identical. Only the setter's `file:line` varies, and that stays at each
+ * call site as the `enforced` citation.
+ *
+ * `BREAK_TRIM_MASK = BREAK_TRIM_INDENT | BREAK_TRIM_START_EDGE_SPACES |
+ * BREAK_TRIM_END_EDGE_SPACES` (servers/text/text_server.h:120) = 224.
+ */
+export const BREAK_TRIM_MASK = 32 | 64 | 128;
+
+/** The three bits `BREAK_TRIM_MASK` keeps (servers/text/text_server.h:116-118). */
+export const BREAK_TRIM_LABELS = {
+  32: 'BREAK_TRIM_INDENT',
+  64: 'BREAK_TRIM_START_EDGE_SPACES',
+  128: 'BREAK_TRIM_END_EDGE_SPACES',
+};
+
+/**
+ * What the inspector's flag list actually offers: `vformat("Trim Spaces After
+ * Break:%d,Trim Spaces Before Break:%d", BREAK_TRIM_START_EDGE_SPACES,
+ * BREAK_TRIM_END_EDGE_SPACES)`. Narrower than the mask, so BREAK_TRIM_INDENT is
+ * kept by the setter yet unreachable from the editor, which is the warning arm.
+ * Deliberately not `BREAK_TRIM_MASK & ~32`: this is the hint's own content, and
+ * deriving it from the mask would make a future hint change invisible.
+ */
+export const BREAK_TRIM_HINTED_BITS = 64 | 128;
+
+/**
  * `Control::TextDirection`, which aliases `TextServer::Direction` —
  * TEXT_DIRECTION_AUTO=0 … TEXT_DIRECTION_INHERITED=3 (scene/gui/control.h:166-171,
  * BIND_ENUM_CONSTANT control.cpp:4415-4418).

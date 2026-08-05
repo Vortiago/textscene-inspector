@@ -19,8 +19,14 @@
 
 import '../basebutton/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v } from '../../../../linter/validators/index.js';
-import { AUTOWRAP_MODE, TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
+import { maskedBitField, v } from '../../../../linter/validators/index.js';
+import {
+  AUTOWRAP_MODE,
+  BREAK_TRIM_HINTED_BITS,
+  BREAK_TRIM_LABELS,
+  BREAK_TRIM_MASK,
+  TEXT_DIRECTION,
+} from '../../../../linter/validators/textServerEnums.js';
 
 const HORIZONTAL_ALIGNMENT = {
   0: 'HORIZONTAL_ALIGNMENT_LEFT',
@@ -64,14 +70,16 @@ validatorRegistry.registerAll('Button', {
   // Button offers the whole enum and the bound is the hint's own width.
   // set_autowrap_mode (button.cpp:610-615) assigns unconditionally.
   autowrap_mode: v.enumInt('autowrap_mode', 0, 3, AUTOWRAP_MODE, { hinted: 'button.cpp:816' }),
-  // button.cpp:817 — PROPERTY_HINT_FLAGS naming two bits, but
-  // set_autowrap_trim_flags (button.cpp:624) masks the incoming BitField with
-  // BREAK_TRIM_MASK rather than rejecting it — it coerces the value, it never
-  // refuses one, so no value is invalid. PROPERTY_HINT_FLAGS is not a
-  // PROPERTY_HINT_RANGE either, so no Godot statement backs the previous
-  // `min: 0` floor — deleted, format-only (any integer) now. Same call as
-  // BaseButton's button_mask.
-  autowrap_trim_flags: v.int('autowrap_trim_flags'),
+  // set_autowrap_trim_flags (button.cpp:625) stores `p_flags &
+  // BREAK_TRIM_MASK`, so bits outside the mask are dropped and the stored value
+  // is not the written one. button.cpp:817 hints only the two edge-space bits,
+  // narrower than the mask, so BREAK_TRIM_INDENT is kept but not offered by the
+  // inspector.
+  autowrap_trim_flags: maskedBitField('autowrap_trim_flags', BREAK_TRIM_MASK, {
+    enforced: 'button.cpp:625',
+    labels: BREAK_TRIM_LABELS,
+    hintedBits: BREAK_TRIM_HINTED_BITS,
+  }),
   // button.cpp:818
   clip_text: v.boolean('clip_text'),
   // button.cpp:821 — PROPERTY_HINT_ENUM "Left,Center,Right". set_icon_alignment

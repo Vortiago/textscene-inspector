@@ -37,17 +37,46 @@ leading stand in for Godot's bundled theme font and nudge the break to a differe
 ## Linting
 
 <!-- lint:begin Label -->
-Strict parsing format-checks the inherited set (28 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `Label` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `Label` properties, plus 28 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `autowrap_mode` | enum 0-3 (AUTOWRAP_OFF/AUTOWRAP_ARBITRARY/AUTOWRAP_WORD/AUTOWRAP_WORD_SMART) |
+| `autowrap_trim_flags` | bit mask of BREAK_TRIM_INDENT (32) | BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128) |
+| `clip_text` | true or false |
+| `ellipsis_char` | quoted string, at most one character |
+| `horizontal_alignment` | enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL) |
+| `justification_flags` | integer |
+| `label_settings` | SubResource("id") or ExtResource("id") |
+| `language` | quoted string |
+| `lines_skipped` | integer 0-999 |
+| `max_lines_visible` | integer -1-999 |
+| `paragraph_separator` | quoted string |
+| `structured_text_bidi_override` | enum 0-6 (STRUCTURED_TEXT_DEFAULT/STRUCTURED_TEXT_URI/STRUCTURED_TEXT_FILE/STRUCTURED_TEXT_EMAIL/STRUCTURED_TEXT_LIST/STRUCTURED_TEXT_GDSCRIPT/STRUCTURED_TEXT_CUSTOM) |
+| `structured_text_bidi_override_options` | Array literal ([...]) |
+| `tab_stops` | PackedFloat32Array(x, y, …) |
+| `text` | quoted string |
+| `text_direction` | enum -1-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) |
+| `text_overrun_behavior` | enum 0-6 (OVERRUN_NO_TRIMMING/OVERRUN_TRIM_CHAR/OVERRUN_TRIM_WORD/OVERRUN_TRIM_ELLIPSIS/OVERRUN_TRIM_WORD_ELLIPSIS/OVERRUN_TRIM_ELLIPSIS_FORCE/OVERRUN_TRIM_WORD_ELLIPSIS_FORCE) |
+| `uppercase` | true or false |
+| `vertical_alignment` | enum 0-3 (VERTICAL_ALIGNMENT_TOP/VERTICAL_ALIGNMENT_CENTER/VERTICAL_ALIGNMENT_BOTTOM/VERTICAL_ALIGNMENT_FILL) |
+| `visible_characters` | integer >= -1 |
+| `visible_characters_behavior` | enum 0-4 (VC_CHARS_BEFORE_SHAPING/VC_CHARS_AFTER_SHAPING/VC_GLYPHS_AUTO/VC_GLYPHS_LTR/VC_GLYPHS_RTL) |
+| `visible_ratio` | float 0-1 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 <!-- lint:end -->
 
-Label's own properties, `text`, `horizontal_alignment`, `vertical_alignment`,
-`autowrap_mode`, `uppercase`, carry no strict validator either; only the inherited
-Control set is checked. `horizontal_alignment`, `vertical_alignment`, and
-`autowrap_mode` use `parseOptionalInt`, so an absent or unparseable value becomes
-`undefined` silently, no warning. `uppercase` isn't `boolOr`: only the literal
-string `"true"` turns it on, anything else (including a garbled value) leaves it
-falsy without a warning.
+Label's own 22 members (everything `doc/classes/Label.xml` lists without
+`overrides="Control"`) now carry strict validators, where the lenient parser
+still reads only five of them: `text`, `horizontal_alignment`,
+`vertical_alignment`, `autowrap_mode`, `uppercase`. Where it stays lenient,
+strict now flags it: `horizontal_alignment`/`vertical_alignment` use
+`parseOptionalInt`, so an out-of-range or unparseable value silently becomes
+`undefined`, no warning; `uppercase` isn't `boolOr`, so only the literal string
+`"true"` turns it on and anything else (including a garbled value) leaves it
+falsy without a warning. The other seventeen members tune Godot's
+shaping/BiDi/visibility behaviour with no effect on the DOM overlay's static
+frame, so the lenient parser never reads them at all.

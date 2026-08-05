@@ -116,18 +116,30 @@ describe('Button strict validators', () => {
   });
 
   describe('autowrap_trim_flags', () => {
-    it('accepts a combined bitfield', () => {
-      expect(check('autowrap_trim_flags', '3')).toBeNull();
+    it('accepts a subset of the hinted bits', () => {
+      expect(check('autowrap_trim_flags', '192')).toBeNull();
     });
 
-    it('accepts a bit the hint does not name', () => {
-      // set_autowrap_trim_flags (button.cpp:624) masks with BREAK_TRIM_MASK
-      // instead of rejecting, so a wider value is not a malformed file.
-      expect(check('autowrap_trim_flags', '64')).toBeNull();
+    it('rejects a bit outside BREAK_TRIM_MASK, which the setter drops silently', () => {
+      // button.cpp:625 stores `p_flags & BREAK_TRIM_MASK`, so 3 lands as 0. Nothing
+      // downstream reports the loss, which is why this is the error tier.
+      const error = check('autowrap_trim_flags', '3');
+      expect(error?.severity).toBe('error');
+      expect(error?.message).toContain('Godot stores 0');
     });
 
-    it('accepts a negative value — the mask coerces rather than rejects, so no value is invalid', () => {
-      expect(check('autowrap_trim_flags', '-1')).toBeNull();
+    it('warns on BREAK_TRIM_INDENT, which the setter keeps but the hint omits', () => {
+      expect(check('autowrap_trim_flags', '32')?.severity).toBe('warning');
+    });
+
+    it('rejects a negative value', () => {
+      expect(check('autowrap_trim_flags', '-1')?.severity).toBe('error');
+    });
+
+    it('rejects a non-numeric value', () => {
+      expect(check('autowrap_trim_flags', 'not-a-number')?.code).toBe(
+        'INVALID_AUTOWRAP_TRIM_FLAGS_FORMAT'
+      );
     });
   });
 

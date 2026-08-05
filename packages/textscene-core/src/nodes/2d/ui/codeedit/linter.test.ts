@@ -1,0 +1,101 @@
+/**
+ * Tests for CodeEdit's semantic linter rule (strict parser format checks live
+ * in linterParser.test.ts and are asserted through validatorRegistry there).
+ *
+ * Calls `codeEditDelimiterCollisionRule.check(...)` directly with a hand-built
+ * `RuleContext`, rather than through `Linter`/`ruleRegistry`/the shared
+ * testkit: several other agents are editing sibling slices concurrently, and
+ * both `Linter` and the testkit run every rule the GLOBAL `ruleRegistry`
+ * singleton currently holds, which is whatever any other test file running in
+ * the same process happened to register. Calling the exported rule object
+ * directly reaches only this slice's rule.
+ */
+
+import { describe, expect, it } from 'vitest';
+import type { RuleContext } from '../../../../linter/types';
+import type { TscnNode, TscnScene } from '../../../../parser/types';
+import { codeEditDelimiterCollisionRule } from './linter';
+
+function makeContext(properties: Record<string, string>): RuleContext {
+  const node: TscnNode = {
+    name: 'MyCodeEdit',
+    type: 'CodeEdit',
+    children: [],
+    properties,
+  };
+  const scene: TscnScene = { nodes: [node], externalResources: [], internalResources: [] };
+  return { scene, node, properties };
+}
+
+describe('CodeEdit semantic rules', () => {
+  it('warns when delimiter_strings and delimiter_comments share a start key', () => {
+    const diagnostics = codeEditDelimiterCollisionRule.check(
+      makeContext({
+        delimiter_strings: 'PackedStringArray("# ")',
+        delimiter_comments: 'PackedStringArray("# ")',
+      })
+    );
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]?.severity).toBe('warning');
+    expect(diagnostics[0]?.ruleName).toBe('codeedit-delimiter-start-key-collision');
+    expect(diagnostics[0]?.message).toContain('"#"');
+  });
+
+  it('warns on the Array[String]([...]) form Godot actually serialises', () => {
+    // Both getters are TypedArray<String> (code_edit.cpp:2036, :2065), so this
+    // is the spelling a saved scene carries. Parsing only the declared packed
+    // form made this rule silently find no start keys and never fire.
+    const diagnostics = codeEditDelimiterCollisionRule.check(
+      makeContext({
+        delimiter_strings: 'Array[String](["# "])',
+        delimiter_comments: 'Array[String](["# "])',
+      })
+    );
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]?.message).toContain('"#"');
+  });
+
+  it('warns across a mix of the two spellings', () => {
+    const diagnostics = codeEditDelimiterCollisionRule.check(
+      makeContext({
+        delimiter_strings: 'PackedStringArray("# ")',
+        delimiter_comments: 'Array[String](["# "])',
+      })
+    );
+    expect(diagnostics).toHaveLength(1);
+  });
+
+  it('does not warn when the two properties use disjoint start keys', () => {
+    const diagnostics = codeEditDelimiterCollisionRule.check(
+      makeContext({
+        delimiter_strings: 'PackedStringArray("\' \'")',
+        delimiter_comments: 'PackedStringArray("# ")',
+      })
+    );
+    expect(diagnostics).toEqual([]);
+  });
+
+  it('does not warn when only one of the two properties is set', () => {
+    const diagnostics = codeEditDelimiterCollisionRule.check(
+      makeContext({ delimiter_comments: 'PackedStringArray("# ")' })
+    );
+    expect(diagnostics).toEqual([]);
+  });
+
+  it('does not warn when neither property is set', () => {
+    expect(codeEditDelimiterCollisionRule.check(makeContext({}))).toEqual([]);
+  });
+
+  it('compares start keys only, ignoring a differing end key', () => {
+    const diagnostics = codeEditDelimiterCollisionRule.check(
+      makeContext({
+        delimiter_strings: 'PackedStringArray("\' \'")',
+        // Same start key "'" as a (nonsensical but structurally valid) comment
+        // delimiter with a different end key.
+        delimiter_comments: 'PackedStringArray("\' !")',
+      })
+    );
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]?.message).toContain("\"'\"");
+  });
+});

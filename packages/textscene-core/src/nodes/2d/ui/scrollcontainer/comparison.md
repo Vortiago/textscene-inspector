@@ -35,7 +35,21 @@ this static capture.
 ## Linting
 
 <!-- lint:begin ScrollContainer -->
-Strict parsing format-checks the inherited set (28 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `ScrollContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `ScrollContainer` properties, plus 28 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `draw_focus_border` | true or false |
+| `follow_focus` | true or false |
+| `horizontal_scroll_mode` | enum 0-4 (DISABLED/AUTO/SHOW_ALWAYS/SHOW_NEVER/RESERVE) |
+| `scroll_deadzone` | integer |
+| `scroll_hint_mode` | enum 0-3 (DISABLED/ALL/TOP_AND_LEFT/BOTTOM_AND_RIGHT) |
+| `scroll_horizontal` | integer >= 0 |
+| `scroll_horizontal_custom_step` | float -1-4096 |
+| `scroll_vertical` | integer >= 0 |
+| `scroll_vertical_custom_step` | float -1-4096 |
+| `tile_scroll_hint` | true or false |
+| `vertical_scroll_mode` | enum 0-4 (DISABLED/AUTO/SHOW_ALWAYS/SHOW_NEVER/RESERVE) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

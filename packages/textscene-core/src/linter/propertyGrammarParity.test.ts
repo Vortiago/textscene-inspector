@@ -60,8 +60,16 @@ const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
 // "parserOnly"  — parser reads this property for rendering but no linter
 //                 validator is registered (acceptable: the renderer needs it,
 //                 the linter has nothing to check).
-// "linterOnly"  — linter validates this key but the parser never reads it
-//                 (acceptable: valid TSCN property the renderer ignores).
+// "linterOnly"  — linter validates this key and the parser never reads it
+//                 BECAUSE THERE IS NOTHING TO READ: the property cannot change
+//                 a frozen frame.
+// "renderGap"   — linter validates this key, the property DOES change a frozen
+//                 frame, and the renderer has not implemented it yet.
+//
+// The last two both suppress the failure, so the split is not about the guard:
+// it is about not letting a bug masquerade as a decision. Pick by asking one
+// question — would Godot draw this scene differently? — and never by asking
+// whether the key looks important.
 //
 // Shared keys that span every Node2D or Node3D leaf are recorded on the base
 // type (Node2D / Node3D) and inherited automatically; leaf-specific entries
@@ -70,7 +78,28 @@ const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
 
 interface AsymmetryEntry {
   parserOnly?: readonly string[];
+  /**
+   * Validated but not read, BY DESIGN: the property cannot change a frozen
+   * frame, so there is nothing for a parser to do with it. Focus order, mouse
+   * filtering, context menus, threading, clipboard behaviour.
+   */
   linterOnly?: readonly string[];
+  /**
+   * Validated but not read, and it SHOULD be: the property does change a frozen
+   * frame and the renderer simply does not implement it yet.
+   *
+   * Split out from `linterOnly` because collapsing the two is how a parser bug
+   * hides. `OptionButton`'s `item_*` keys sat in a "limitations" list reading
+   * like deliberate scope while the real cause was `parseOptionButton` chaining
+   * `parseControl` instead of `parseButton` and dropping six lines. A reviewer
+   * scanning one undifferentiated list has no way to tell "we decided not to"
+   * from "this is broken".
+   *
+   * The stale check below is the payoff: the day someone renders one of these,
+   * the guard fails until the key is removed, so the list can only shrink by
+   * the gap actually closing.
+   */
+  renderGap?: readonly string[];
   reason: string;
 }
 
@@ -201,20 +230,25 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       // the guard's scrape of fixed key strings cannot match. The parser DOES
       // read these; only the scrape is blind to how.
       'popup/item_#/*',
-      // Minimum-size and reselect behaviour: nothing about either changes a pixel
-      // in a frozen scene, so the static overlay never reads them.
-      'fit_to_longest_item', 'allow_reselect',
+      // Reselecting an already-selected item is an interaction, so a frozen
+      // frame cannot show it.
+      'allow_reselect',
     ],
-    reason: 'The item family is read through a computed key the scrape cannot match; fit_to_longest_item and allow_reselect have no static render surface.',
+    renderGap: [
+      // Sizes the button to its widest item, so it changes the control's width
+      // in a static frame. Previously grouped with allow_reselect under "nothing
+      // changes a pixel", which was simply wrong about this one.
+      'fit_to_longest_item',
+    ],
+    reason: 'The item family is read through a computed key the scrape cannot match; allow_reselect is interaction-only, while fit_to_longest_item changes the rendered width and is not implemented yet.',
   },
 
   CenterContainer: {
-    linterOnly: [
-      // Not a desync and not a wrong base chain: an unimplemented render feature.
+    renderGap: [
       // `use_top_left` moves the centring ORIGIN to the container's top-left
       // corner (center_container.cpp:83), and the DOM overlay hard-codes centred
       // flex alignment with no equivalent mode, so no parser reads it. Godot
-      // accepts the value, so the linter validates it. Tracked separately.
+      // accepts the value, so the linter validates it.
       'use_top_left',
     ],
     reason: 'use_top_left moves the centring origin to the container top-left corner (center_container.cpp:83); the DOM overlay has no equivalent mode yet, so no parser reads it.',
@@ -245,6 +279,118 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'focus_mode', 'mouse_filter',
     ],
     reason: 'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare.',
+  },
+
+  // -------------------------------------------------------------------------
+  // Text-bearing Control leaves
+  //
+  // These four share a shape: the overlay renders the text and lets the browser
+  // shape it, so wrapping, BiDi and locale are delegated rather than missing,
+  // while everything about carets, selection, context menus and virtual
+  // keyboards has no frozen-frame surface at all. What is left over after those
+  // two groups is the real render gap, and it is listed as such.
+  // -------------------------------------------------------------------------
+
+  Label: {
+    linterOnly: [
+      // Shaping delegated to the browser, exactly as the Button entry above.
+      'autowrap_trim_flags', 'clip_text', 'ellipsis_char', 'justification_flags',
+      'tab_stops', 'text_overrun_behavior',
+      // BiDi and locale.
+      'language', 'structured_text_bidi_override', 'structured_text_bidi_override_options',
+      'text_direction',
+    ],
+    renderGap: [
+      // A LabelSettings resource carries font, size, colour and outline, none of
+      // which the overlay's CSS defaults reproduce.
+      'label_settings',
+      // Each of these changes which characters are on screen: a window into the
+      // paragraph (lines_skipped, max_lines_visible), a custom split point
+      // (paragraph_separator), or a typewriter reveal frozen part-way
+      // (visible_characters and its two companions).
+      'lines_skipped', 'max_lines_visible', 'paragraph_separator',
+      'visible_characters', 'visible_characters_behavior', 'visible_ratio',
+    ],
+    reason: 'The overlay renders the label as DOM text, so shaping, BiDi and locale are delegated; label_settings, the line window and the visible-character reveal all change the frozen frame and are not implemented yet.',
+  },
+
+  LineEdit: {
+    linterOnly: [
+      // Caret appearance and movement, none of it drawn in an unfocused frame.
+      'caret_blink', 'caret_blink_interval', 'caret_column', 'caret_mid_grapheme',
+      // Selection, clipboard and context-menu interaction.
+      'context_menu_enabled', 'deselect_on_focus_loss_enabled',
+      'drag_and_drop_selection_enabled', 'emoji_menu_enabled',
+      'keep_editing_on_text_submit', 'middle_mouse_paste_enabled',
+      'select_all_on_focus', 'selecting_enabled', 'shortcut_keys_enabled',
+      'backspace_deletes_composite_character_enabled',
+      // Virtual keyboard: a mobile input affordance with no rendered surface.
+      'virtual_keyboard_enabled', 'virtual_keyboard_show_on_focus', 'virtual_keyboard_type',
+      // BiDi and locale, delegated as above.
+      'language', 'structured_text_bidi_override', 'structured_text_bidi_override_options',
+      'text_direction',
+    ],
+    renderGap: [
+      // Draws a caret even unfocused, which is the one caret property a static
+      // frame does show.
+      'caret_force_displayed',
+      // Each of these adds or resizes something visible: the inline clear
+      // button, the trailing icon and its scaling, control characters drawn as
+      // glyphs, and the field sizing itself to its content.
+      'clear_button_enabled', 'draw_control_chars', 'expand_to_text_length',
+      'icon_expand_mode', 'right_icon', 'right_icon_scale',
+      // set_max_length re-runs set_text (line_edit.cpp:2523), which truncates,
+      // so an over-long `text` renders shortened in Godot and in full here.
+      'max_length',
+    ],
+    reason: 'Carets, selection, clipboard and virtual-keyboard behaviour have no frozen-frame surface, and shaping is delegated to the browser; the trailing icon, clear button, control-character glyphs, content sizing and max_length truncation all change the frame and are not implemented yet.',
+  },
+
+  RichTextLabel: {
+    linterOnly: [
+      // Shaping and BiDi delegated to the browser.
+      'autowrap_mode', 'autowrap_trim_flags', 'justification_flags', 'tab_size',
+      'tab_stops', 'language', 'structured_text_bidi_override',
+      'structured_text_bidi_override_options', 'text_direction',
+      // Selection and context-menu interaction.
+      'context_menu_enabled', 'deselect_on_focus_loss_enabled',
+      'drag_and_drop_selection_enabled', 'selection_enabled', 'shortcut_keys_enabled',
+      // Threaded layout and the delay before its progress bar appears: both are
+      // about how the layout is computed, not what it looks like when done.
+      'threaded', 'progress_bar_delay',
+    ],
+    renderGap: [
+      // Alignment of the whole document within the control.
+      'horizontal_alignment', 'vertical_alignment',
+      // Underlines actually drawn under [url] and [hint] spans.
+      'hint_underlined', 'meta_underlined',
+      // Custom BBCode effect resources, which change how their spans draw.
+      'custom_effects',
+      // Scroll state decides which part of a long document is on screen, and
+      // whether a scrollbar is drawn beside it.
+      'scroll_active', 'scroll_following', 'scroll_following_visible_characters',
+      // The typewriter reveal, as on Label.
+      'visible_characters', 'visible_characters_behavior', 'visible_ratio',
+    ],
+    reason: 'Shaping, BiDi, selection and threaded layout have no frozen-frame surface; document alignment, span underlines, custom effects, scroll position and the visible-character reveal all change the frame and are not implemented yet.',
+  },
+
+  ScrollContainer: {
+    linterOnly: [
+      // Input tuning: how far a drag must travel before it scrolls, how big a
+      // wheel step is, and whether focusing a child scrolls it into view. All
+      // three need an interaction to have any effect.
+      'follow_focus', 'scroll_deadzone',
+      'scroll_horizontal_custom_step', 'scroll_vertical_custom_step',
+    ],
+    renderGap: [
+      // A scene saved mid-scroll renders unscrolled here.
+      'scroll_horizontal', 'scroll_vertical',
+      // Both drive set_visible() on the hint nodes (scroll_container.cpp:623),
+      // and the focus border is drawn outright.
+      'draw_focus_border', 'scroll_hint_mode', 'tile_scroll_hint',
+    ],
+    reason: 'Deadzone, wheel step and follow-focus need an interaction to matter; the scroll offsets, the scroll hints and the focus border are all drawn by Godot in a static frame and are not implemented yet.',
   },
 
   // -------------------------------------------------------------------------
@@ -758,7 +904,10 @@ function checkParity(): ParityViolation[] {
       const e = ASYMMETRY_ALLOWLIST[t];
       if (!e) continue;
       for (const k of e.parserOnly ?? []) allowedParserOnly.add(k);
+      // Both suppress the failure; they differ in what they claim about WHY,
+      // which is what a reader and the census below need.
       for (const k of e.linterOnly ?? []) allowedLinterOnly.add(k);
+      for (const k of e.renderGap ?? []) allowedLinterOnly.add(k);
     }
 
     const parserOnlyNotAllowlisted = [...parserProps]
@@ -836,8 +985,45 @@ describe('property-grammar parity guard', () => {
           staleSections.push(`${nodeType}.linterOnly['${key}']: now read by the parser — remove from allowlist`);
         }
       }
+      for (const key of entry.renderGap ?? []) {
+        if (slice.parserProps.has(key)) {
+          staleSections.push(
+            `${nodeType}.renderGap['${key}']: now read by the parser — the gap closed, remove from allowlist`
+          );
+        }
+      }
     }
 
     expect(staleSections, `Stale allowlist entries found:\n  ${staleSections.join('\n  ')}`).toEqual([]);
+  });
+
+  it('no key is claimed as both deliberate scope and a render gap', () => {
+    const conflicts: string[] = [];
+    for (const [nodeType, entry] of Object.entries(ASYMMETRY_ALLOWLIST)) {
+      const deliberate = new Set(entry.linterOnly ?? []);
+      for (const key of entry.renderGap ?? []) {
+        if (deliberate.has(key)) conflicts.push(`${nodeType}: '${key}'`);
+      }
+    }
+    expect(
+      conflicts,
+      `A key is either out of render scope or a gap, never both:\n  ${conflicts.join('\n  ')}`
+    ).toEqual([]);
+  });
+
+  // The render-gap surface is the previewer's honest to-do list, so it gets a
+  // number rather than a pile. Exact equality, not a ceiling: this list should
+  // only move when someone deliberately adds a slice or closes a gap, and
+  // either way the diff should say so out loud.
+  const EXPECTED_RENDER_GAP_KEYS = 33;
+
+  it('the render-gap surface matches its recorded size', () => {
+    const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
+      (entry.renderGap ?? []).map((key) => `${nodeType}.${key}`)
+    );
+    expect(
+      gaps.length,
+      `Render gaps now number ${gaps.length}, not ${EXPECTED_RENDER_GAP_KEYS}:\n  ${gaps.join('\n  ')}`
+    ).toBe(EXPECTED_RENDER_GAP_KEYS);
   });
 });

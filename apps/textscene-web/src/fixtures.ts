@@ -198,6 +198,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Code Edit",
+    "file": "unit-code-edit.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Coin Glow",
     "file": "unit-coin-glow.tscn",
     "category": "Other"
