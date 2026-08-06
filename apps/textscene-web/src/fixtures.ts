@@ -243,6 +243,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Convert Transform Modifier 3d",
+    "file": "unit-convert-transform-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Copy Transform Modifier 3d",
     "file": "unit-copy-transform-modifier-3d.tscn",
     "category": "Other"

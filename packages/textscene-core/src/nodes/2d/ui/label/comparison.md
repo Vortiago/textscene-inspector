@@ -46,7 +46,7 @@ Strict parsing format-checks these `Label` properties, plus 28 inherited from Co
 | `clip_text` | true or false |
 | `ellipsis_char` | quoted string, at most one character |
 | `horizontal_alignment` | enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL) |
-| `justification_flags` | integer |
+| `justification_flags` | bit mask of JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128) |
 | `label_settings` | SubResource("id") or ExtResource("id") |
 | `language` | quoted string |
 | `lines_skipped` | integer 0-999 |

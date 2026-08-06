@@ -148,6 +148,7 @@ reproduced:
 - [FABRIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/fabrik3d/comparison.md) — a transform-only group (a forward-and-backward reaching IK solver)
 - [JacobianIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/jacobianik3d/comparison.md) — a transform-only group (a Jacobian IK solver)
 - [AimModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/aimmodifier3d/comparison.md) — a transform-only group (points a bone at a reference)
+- [ConvertTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/converttransformmodifier3d/comparison.md) — a transform-only group (maps one transform component onto another)
 - [CopyTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/copytransformmodifier3d/comparison.md) — a transform-only group (copies a reference transform onto a bone)
 
 ## 2D

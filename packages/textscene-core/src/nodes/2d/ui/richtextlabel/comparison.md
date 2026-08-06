@@ -48,7 +48,7 @@ Strict parsing format-checks these `RichTextLabel` properties, plus 28 inherited
 | `fit_content` | true or false |
 | `hint_underlined` | true or false |
 | `horizontal_alignment` | enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL) |
-| `justification_flags` | integer |
+| `justification_flags` | bit mask of JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128) |
 | `language` | quoted string |
 | `meta_underlined` | true or false |
 | `progress_bar_delay` | integer |

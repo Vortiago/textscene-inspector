@@ -47,6 +47,18 @@ the modifier would visibly move a bone renders as the unmodified rest pose.
 ## Linting
 
 <!-- lint:begin ConvertTransformModifier3D -->
+Strict parsing format-checks these `ConvertTransformModifier3D` properties, plus 1 inherited from BoneConstraint3D, 2 inherited from SkeletonModifier3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `setting_count` | integer >= 0 |
+| `settings/*` | per-setting apply/ and reference/ transform_mode, axis, range_min, range_max, plus relative, additive and the BoneConstraint3D leaves |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-converttransformmodifier3d-ranges` (type-family match) | `converttransformmodifier3d-range-outside-mode-hint` | warning |
 <!-- lint:end -->
 
 ConvertTransformModifier3D has no `parser.ts` of its own: it registers `parseNode3D`

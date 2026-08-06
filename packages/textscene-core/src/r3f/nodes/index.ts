@@ -102,6 +102,7 @@ import '../../nodes/3d/skeleton/fabrik3d/index.r3f';
 import '../../nodes/3d/skeleton/jacobianik3d/index.r3f';
 import '../../nodes/3d/skeleton/aimmodifier3d/index.r3f';
 import '../../nodes/3d/skeleton/copytransformmodifier3d/index.r3f';
+import '../../nodes/3d/skeleton/converttransformmodifier3d/index.r3f';
 import '../../nodes/3d/visualinstance3d/index.r3f';
 import '../../nodes/3d/xr/xrnode3d/index.r3f';
 import '../../nodes/3d/geometryinstance3d/index.r3f';

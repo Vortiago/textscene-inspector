@@ -165,6 +165,7 @@ import '../nodes/3d/skeleton/fabrik3d/index.js';
 import '../nodes/3d/skeleton/jacobianik3d/index.js';
 import '../nodes/3d/skeleton/aimmodifier3d/index.js';
 import '../nodes/3d/skeleton/copytransformmodifier3d/index.js';
+import '../nodes/3d/skeleton/converttransformmodifier3d/index.js';
 import '../nodes/3d/visualinstance3d/index.js';
 import '../nodes/3d/xr/xrnode3d/index.js';
 import '../nodes/3d/geometryinstance3d/index.js';

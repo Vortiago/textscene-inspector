@@ -681,7 +681,7 @@
       "name": "ConvertTransformModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "BoneConstraint3D",
         "SkeletonModifier3D",

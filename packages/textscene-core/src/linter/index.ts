@@ -173,6 +173,7 @@ import '../nodes/3d/skeleton/fabrik3d/index.linter.js';
 import '../nodes/3d/skeleton/jacobianik3d/index.linter.js';
 import '../nodes/3d/skeleton/aimmodifier3d/index.linter.js';
 import '../nodes/3d/skeleton/copytransformmodifier3d/index.linter.js';
+import '../nodes/3d/skeleton/converttransformmodifier3d/index.linter.js';
 import '../nodes/3d/visualinstance3d/index.linter.js';
 import '../nodes/3d/xr/xrnode3d/index.linter.js';
 import '../nodes/3d/geometryinstance3d/index.linter.js';
