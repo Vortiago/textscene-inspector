@@ -147,6 +147,23 @@ describe('CopyTransformModifier3D strict validators', () => {
       expect(error?.message).toContain('-1');
     });
 
+    it('leaves a NON-NUMERIC index alone, which _set resolves to setting 0', () => {
+      // `path.get_slicec('/', 1).to_int()` (copy_transform_modifier_3d.cpp:37)
+      // has no is_valid_int() gate ahead of it and `_to_int` skips non-digits
+      // (ustring.cpp:2268-2298), so `x` reads as 0 and the write LANDS. The
+      // leaf still decides: it resolved whatever the index came to.
+      expect(check('settings/x/relative', 'true')).toBeNull();
+      expect(check('settings/x/copy', '9')?.severity).toBe('warning');
+      expect(check('settings/x/bogus', 'true')).not.toBeNull();
+    });
+
+    it('forwards an unowned leaf behind a non-numeric index to BoneConstraint3D', () => {
+      // `amount` is the base's (bone_constraint_3d.cpp:102), and the index does
+      // not change who owns the leaf.
+      expect(check('settings/x/amount', '0.5')).toBeNull();
+      expect(check('settings/x/amount', '5')?.severity).toBe('warning');
+    });
+
     it('rejects a key that is not <prefix><index>/<leaf>', () => {
       // The registry's own matcher refuses the shape first, so no validator
       // claims the key at all: `settings/copy` has no index and `settings/0/`

@@ -189,9 +189,16 @@ describe('AimModifier3D strict validators', () => {
     it('leaves a non-integer index alone, because Godot applies that write', () => {
       // `path.get_slicec('/', 1).to_int()` (aim_modifier_3d.cpp:38) reads "x" as
       // 0, with no is_valid_int() guard ahead of it, so `settings/x/relative`
-      // lands on setting 0 rather than being dropped. The registry's indexed
-      // matcher routes no validator to it, and there is nothing to report.
-      expect(validatorRegistry.findValidator('AimModifier3D', 'settings/x/relative')).toBeNull();
+      // lands on setting 0 rather than being dropped. The key still ROUTES here
+      // (an unrecognised leaf under it is dropped and has to be reportable);
+      // it is the index alone that draws no diagnostic.
+      expect(check('settings/x/relative', 'true')).toBeNull();
+    });
+
+    it('still rejects an unknown leaf behind a non-integer index', () => {
+      // The index resolved to something; the leaf did not, so `_set` falls to
+      // `return false` (aim_modifier_3d.cpp:52-54) and the write is dropped.
+      expect(check('settings/x/bogus', 'true')?.code).toBe('INVALID_SETTING_KEY');
     });
   });
 

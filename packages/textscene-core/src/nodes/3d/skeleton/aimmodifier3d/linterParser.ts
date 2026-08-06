@@ -109,6 +109,10 @@ const settingValidator = indexedFamilyValidator({
   leaves: { ...AIM_LEAVES, ...BASE_LEAVES },
   unknownCode: 'INVALID_SETTING_KEY',
   describes: 'setting',
+  // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
+  // (aim_modifier_3d.cpp:38) and gates on nothing, so a non-numeric index
+  // resolves to a setting and the write lands.
+  indexParse: 'to_int',
   negativeIndex: {
     cite: 'aim_modifier_3d.cpp:40',
     code: 'INVALID_SETTING_INDEX',

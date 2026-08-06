@@ -28,7 +28,7 @@
  * under the same prefix. Rejecting an unrecognised leaf the way
  * `indexedFamilyValidator` does would therefore false-positive on
  * `settings/0/amount`, which every real scene writes. The dispatcher instead
- * rejects only a key whose SHAPE is not `settings/<int>/<leaf>` and hands any
+ * rejects only a key whose SHAPE is not `settings/<index>/<leaf>` and hands any
  * leaf this class does not own back to `findValidator('BoneConstraint3D', …)`,
  * which reproduces exactly the walk that would have run had this wildcard not
  * matched.
@@ -123,30 +123,33 @@ const SETTINGS_PREFIX = 'settings/';
  *
  * The key parse mirrors the engine's own (`_set`,
  * copy_transform_modifier_3d.cpp:36-38): split at the LAST `/`, require the head
- * to start with the prefix, require what sits between to be an integer.
+ * to start with the prefix, read the index that sits between.
+ *
+ * The index is read with a BARE `to_int()` and no validity gate
+ * (copy_transform_modifier_3d.cpp:37), and `_to_int` skips non-digits rather
+ * than stopping at them (ustring.cpp:2268-2298), so `settings/x/relative`
+ * resolves to setting 0 and the write LANDS. Nothing refuses it, so ADR-0032
+ * grounds no diagnostic on a non-numeric index and only a NEGATIVE one, which
+ * `ERR_FAIL_INDEX_V` does refuse, is reportable. The leaf below still decides
+ * either way: an unrecognised one is dropped whatever the index came to.
  */
 const settingsValidator: PropertyValidator = (key, value, line) => {
   const slash = key.lastIndexOf('/');
   const indexText = slash > SETTINGS_PREFIX.length ? key.slice(SETTINGS_PREFIX.length, slash) : '';
   const leafName = key.slice(slash + 1);
 
-  // `[+-]?`, matching `String::is_valid_int()`, the test Godot's own key parse
-  // applies before it looks at the number.
-  if (
-    !key.startsWith(SETTINGS_PREFIX) ||
-    indexText === '' ||
-    leafName === '' ||
-    !/^[+-]?\d+$/.test(indexText)
-  ) {
+  if (!key.startsWith(SETTINGS_PREFIX) || indexText === '' || leafName === '') {
     return propertyError(key, line, `Unknown setting property: "${key}"`, 'INVALID_SETTING_KEY');
   }
 
-  const index = Number(indexText);
-  if (index < 0) {
+  // `[+-]?`, matching `String::to_int()`'s sign handling. A non-match is a
+  // non-numeric index, which the engine resolves rather than refusing, so it
+  // falls through uncommented-on.
+  if (/^[+-]?\d+$/.test(indexText) && Number(indexText) < 0) {
     return propertyError(
       key,
       line,
-      `Setting index ${index} must be non-negative; CopyTransformModifier3D::_set refuses it before the write lands`,
+      `Setting index ${Number(indexText)} must be non-negative; CopyTransformModifier3D::_set refuses it before the write lands`,
       'INVALID_SETTING_INDEX'
     );
   }

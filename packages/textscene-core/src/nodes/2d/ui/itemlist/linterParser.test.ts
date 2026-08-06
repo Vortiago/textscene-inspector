@@ -261,14 +261,15 @@ describe('ItemList per-item family', () => {
     expect(check('item_0/checked', 'true')?.code).toBe('INVALID_ITEM_KEY');
   });
 
-  it('leaves an index that is not an integer unrouted, as the engine does', () => {
-    // `String::is_valid_int()` (property_list_helper.cpp:53) gates the parse
-    // BEFORE the sign check, so `item_-1/…` resolves far enough to be refused
-    // while `item_x/…` and `item_1.5/…` never name a property at all. The
-    // registry's `item_#/*` match models that split, so these two reach no
-    // validator rather than reaching this slice's dispatcher.
-    expect(validatorRegistry.findValidator('ItemList', 'item_x/text')).toBeNull();
-    expect(validatorRegistry.findValidator('ItemList', 'item_1.5/text')).toBeNull();
+  it('errors on an index that is not an integer, which the helper never resolves', () => {
+    // `ItemList::_set` routes every per-item key through
+    // `property_helper.property_set_value` (item_list.cpp:2238), whose
+    // `_get_property` returns nullptr unless the index `is_valid_int()`
+    // (property_list_helper.cpp:53-55). `_set` then returns false and Godot
+    // DROPS the write, which is the error tier: the key has to reach this
+    // dispatcher for that to be reportable at all.
+    expect(check('item_x/text', '"Sword"')?.code).toBe('INVALID_ITEM_KEY');
+    expect(check('item_1.5/text', '"Sword"')?.code).toBe('INVALID_ITEM_KEY');
   });
 
   it('rejects an unrecognised key shape handed straight to the dispatcher', () => {

@@ -182,6 +182,29 @@ describe('FileDialog strict validators', () => {
     });
   });
 
+  describe('the option_<i>/<leaf> family', () => {
+    it('routes a real per-option key through the indexed wildcard', () => {
+      // `set_prefix("option_")` (file_dialog.cpp:2199) glues the index to the
+      // prefix, so the key is `option_0/name`, never `option_/0/name`.
+      expect(check('option_0/name', '"Format"')).toBeNull();
+      expect(check('option_2/default', '1')).toBeNull();
+    });
+
+    it('rejects a non-integer index, which the helper never resolves', () => {
+      // `FileDialog::_set` is `property_helper.property_set_value` verbatim
+      // (file_dialog.h:386) and `_get_property` returns nullptr unless the
+      // index `is_valid_int()` (property_list_helper.cpp:53-55), so `_set`
+      // returns false and Godot DROPS the write.
+      expect(check('option_x/name', '"Format"')?.code).toBe('INVALID_OPTION_KEY');
+      expect(check('option_1.5/name', '"Format"')?.severity).toBe('error');
+    });
+
+    it('rejects a leaf FileDialog does not register', () => {
+      // Three leaves only, file_dialog.cpp:2201-2203.
+      expect(check('option_0/tooltip', '"nope"')?.code).toBe('INVALID_OPTION_KEY');
+    });
+  });
+
   describe('the nine Customization bools', () => {
     const CUSTOMIZATION_KEYS = [
       'hidden_files_toggle_enabled',

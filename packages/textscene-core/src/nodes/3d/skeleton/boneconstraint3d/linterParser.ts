@@ -74,6 +74,10 @@ validatorRegistry.registerAll('BoneConstraint3D', {
     leaves: SETTING_LEAVES,
     unknownCode: 'INVALID_BONE_CONSTRAINT_SETTING',
     describes: 'BoneConstraint3D setting',
+    // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
+    // (bone_constraint_3d.cpp:37) and gates on nothing, so a non-numeric index
+    // resolves to a setting rather than being refused, and the write lands.
+    indexParse: 'to_int',
     negativeIndex: {
       // Each subclass refuses a negative index in its own `_set`; the base's
       // accessors do the same through ERR_FAIL_INDEX on `settings.size()`.

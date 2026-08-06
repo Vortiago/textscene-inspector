@@ -96,6 +96,10 @@ const ownFamily = indexedFamilyValidator({
   leaves: OWN_LEAVES,
   unknownCode: 'INVALID_SPLINE_IK_3D_SETTING',
   describes: 'SplineIK3D setting',
+  // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
+  // (spline_ik_3d.cpp:37) and gates on nothing, so a non-numeric index resolves
+  // to a setting and the write lands.
+  indexParse: 'to_int',
   negativeIndex: {
     // `ERR_FAIL_INDEX_V(which, (int)settings.size(), false)` in _set, which
     // fires on a negative index before any leaf is looked at, so the write is

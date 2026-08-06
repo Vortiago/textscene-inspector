@@ -51,6 +51,10 @@ const tabValidator = indexedFamilyValidator({
   leaves: TAB_LEAVES,
   unknownCode: 'INVALID_TAB_KEY',
   describes: 'tab',
+  // `_set` is `property_helper.property_set_value` verbatim (tab_bar.h:208),
+  // whose `_get_property` returns nullptr unless the index `is_valid_int()`
+  // (property_list_helper.cpp:53-55), so a non-numeric index is a DROPPED write.
+  indexParse: 'is_valid_int',
   negativeIndex: {
     cite: 'property_list_helper.cpp:58',
     code: 'INVALID_TAB_INDEX',

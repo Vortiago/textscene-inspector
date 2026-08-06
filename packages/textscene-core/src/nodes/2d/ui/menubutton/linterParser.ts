@@ -109,6 +109,10 @@ const itemValidator = indexedFamilyValidator({
   leaves: ITEM_LEAVES,
   unknownCode: 'INVALID_ITEM_KEY',
   describes: 'item',
+  // `_set` gates on `property_helper.is_property_valid` (menu_button.cpp:176),
+  // which returns false unless the index `is_valid_int()`
+  // (property_list_helper.cpp:126), so a non-numeric index is a DROPPED write.
+  indexParse: 'is_valid_int',
   negativeIndex: {
     cite: 'property_list_helper.cpp:58',
     code: 'INVALID_ITEM_INDEX',

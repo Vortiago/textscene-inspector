@@ -88,6 +88,13 @@ export interface IndexedFamilyOptions {
    *
    * A negative index is refused under BOTH parses (`property_list_helper.cpp:58`
    * and each class's own `ERR_FAIL_INDEX_V`), so `negativeIndex` is unaffected.
+   *
+   * STATE IT EXPLICITLY, with the `file:line` of the class's own `_set`. Every
+   * consumer does, default or not, because taking the default is indistinguishable
+   * from never having checked: BoneConstraint3D read the index with a bare
+   * `to_int` and carried the `is_valid_int` default for as long as the registry's
+   * matcher declined to route a non-numeric index, and the day it routed one the
+   * slice would have rejected a write Godot applies.
    */
   indexParse?: 'is_valid_int' | 'to_int';
   /** What this family accepts, for the generated sheet's Accepts column. */

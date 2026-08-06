@@ -162,8 +162,15 @@ describe('OptionButton strict validators', () => {
       ).not.toBeNull();
     });
 
-    it('does not resolve a key whose index is not an integer, as the engine does not address one either', () => {
-      expect(validatorRegistry.findValidator('OptionButton', 'popup/item_x/text')).toBeNull();
+    it('rejects a key whose index is not an integer, which the engine drops', () => {
+      // `OptionButton::_set` gates on `property_helper.is_property_valid`
+      // (option_button.cpp:166), which requires is_valid_int() on the trimmed
+      // prefix (property_list_helper.cpp:126) and otherwise returns false, so
+      // Godot DROPS the write. That is the error tier, so the key has to reach
+      // the dispatcher rather than resolving to no validator.
+      const nonNumeric = validatorRegistry.findValidator('OptionButton', 'popup/item_x/text');
+      expect(nonNumeric).not.toBeNull();
+      expect(nonNumeric!('popup/item_x/text', '"x"', 1)?.severity).toBe('error');
       // A NEGATIVE index is a well-formed key Godot resolves and then refuses
       // (is_valid_int accepts the sign, property_list_helper.cpp:52, and the
       // index < 0 guard rejects it at :57). It must reach the dispatcher so the

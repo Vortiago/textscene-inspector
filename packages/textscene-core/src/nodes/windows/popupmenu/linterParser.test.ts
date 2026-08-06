@@ -181,9 +181,15 @@ describe('PopupMenu strict validators', () => {
     });
 
     it('rejects a key whose index is not an integer, as the engine does', () => {
-      // property_list_helper.cpp:53 requires is_valid_int() on the trimmed
-      // prefix, so these are not keys Godot would read either.
-      expect(validatorRegistry.findValidator('PopupMenu', 'item_x/text')).toBeNull();
+      // `PopupMenu::_set` routes per-item keys through
+      // `property_helper.property_set_value` (popup_menu.cpp:3092), whose
+      // `_get_property` returns nullptr unless the index `is_valid_int()`
+      // (property_list_helper.cpp:53-55); `_set` then returns false and Godot
+      // DROPS the write. Reporting that requires the key to reach the
+      // dispatcher, so it routes rather than resolving to no validator.
+      const nonNumeric = validatorRegistry.findValidator('PopupMenu', 'item_x/text');
+      expect(nonNumeric).not.toBeNull();
+      expect(nonNumeric!('item_x/text', '"x"', 1)?.severity).toBe('error');
       // A NEGATIVE index is a well-formed key Godot resolves and then refuses
       // (is_valid_int accepts the sign, property_list_helper.cpp:52, and the
       // index < 0 guard rejects it at :57). It must reach the dispatcher so the

@@ -61,8 +61,9 @@
  *
  * The index is GLUED to the prefix, with no separating slash, so the family is
  * registered under the `option_#/*` pattern rather than `option_/*`: the
- * registry matches that shape by parsing the index the way
- * `PropertyListHelper::_get_property` does (property_list_helper.cpp:47-55).
+ * registry routes that SHAPE, and the dispatcher below applies
+ * `PropertyListHelper::_get_property`'s own `is_valid_int()` test
+ * (property_list_helper.cpp:53-55) to what sits in the index.
  *
  * All three leaves are format-only. `set_option_name` (:1977) and
  * `set_option_values` (:1989) assign straight through once the option INDEX
@@ -161,6 +162,10 @@ const optionValidator = indexedFamilyValidator({
   leaves: OPTION_LEAVES,
   unknownCode: 'INVALID_OPTION_KEY',
   describes: 'option name, values or default',
+  // `_set` is `property_helper.property_set_value` verbatim (file_dialog.h:386),
+  // whose `_get_property` returns nullptr unless the index `is_valid_int()`
+  // (property_list_helper.cpp:53-55), so a non-numeric index is a DROPPED write.
+  indexParse: 'is_valid_int',
 });
 
 validatorRegistry.registerAll('FileDialog', {

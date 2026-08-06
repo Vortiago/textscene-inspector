@@ -65,19 +65,6 @@ export type PropertyValidator = ((
 };
 
 /**
- * Whether `key` is `<prefix><digits>/<leaf>`, the shape Godot's
- * `PropertyListHelper` writes for an indexed property array.
- *
- * Mirrors the engine's own parse (`property_list_helper.cpp:47-55`): split at the
- * LAST `/`, require the head to start with the prefix, and require what follows
- * the prefix to be a valid integer. Done with `lastIndexOf` and a char scan
- * rather than `split`, because `findOwnValidator` runs for every property of
- * every node and a miss must not allocate.
- *
- * A negative index is rejected, matching `_get_property`'s `index < 0` guard: a
- * `.tscn` cannot address item -1, so `item_-1/text` is not a key Godot reads.
- */
-/**
  * How many base-chain hops `findValidator` will walk before giving up.
  *
  * Godot's deepest ancestry is a dozen or so; 32 is slack enough to never bind in
@@ -121,27 +108,43 @@ function buildWildcardIndex(own: Record<string, PropertyValidator>): WildcardEnt
   return entries;
 }
 
+/**
+ * Whether `key` is `<prefix><index>/<leaf>`, the shape Godot's
+ * `PropertyListHelper` writes for an indexed property array.
+ *
+ * This is ROUTING, not acceptance, and the two are deliberately different
+ * widths. The engine splits the key at the LAST `/`
+ * (`property_list_helper.cpp:47`) and requires what sits between the prefix and
+ * that slash to be `is_valid_int()` (`:53`); when it is not, `_get_property`
+ * returns nullptr, `_set` returns false, and the write is DROPPED. That drop is
+ * exactly the ADR-0032 error tier, so the key has to REACH the family's
+ * dispatcher for anything to report it. Matching the engine's acceptance here
+ * instead is how `item_x/text` reached no validator and read as clean, the same
+ * failure a leading sign once had: `item_-1/text` routed nowhere, so the
+ * dispatcher's negative-index diagnostic could never fire.
+ *
+ * So the index half is matched by SHAPE alone — non-empty, and no `/` of its
+ * own. Whether those characters are an integer, and what a non-integer means,
+ * belongs to the dispatcher: Godot has two index parses and they disagree about
+ * it (`indexedFamily.ts`'s `indexParse`), which is a per-class fact this matcher
+ * cannot know.
+ *
+ * The no-`/` rule is the engine's `rsplit(…, 1)` restated: `item_0/deep/text`
+ * puts `item_0/deep` in the index half, which is no integer under either parse,
+ * so `#/*` addresses ONE leaf segment. A family whose leaves nest deeper
+ * registers the plain `<prefix>*` wildcard instead.
+ *
+ * `lastIndexOf` plus `indexOf` rather than `split`, because `findOwnValidator`
+ * runs for every property of every node and a miss must not allocate.
+ */
 function matchesIndexedKey(key: string, prefix: string): boolean {
   if (!key.startsWith(prefix)) return false;
   const slash = key.lastIndexOf('/');
   // The leaf must be non-empty, and the index must sit between the two.
   if (slash <= prefix.length || slash === key.length - 1) return false;
-
-  // A LEADING SIGN IS PART OF THE INDEX, matching `String::is_valid_int()`,
-  // which is what the engine tests before it looks at the value
-  // (property_list_helper.cpp:52-58: `is_valid_int()` first, THEN `index < 0`).
-  // Rejecting the sign here instead routed `item_-1/text` to no validator at
-  // all, so the dispatcher's negative-index diagnostic could never fire and a
-  // key Godot silently drops was reported clean.
-  let i = prefix.length;
-  const first = key.charCodeAt(i);
-  if (first === 45 || first === 43) i++;
-  if (i === slash) return false; // a sign with no digits is not an int
-  for (; i < slash; i++) {
-    const code = key.charCodeAt(i);
-    if (code < 48 || code > 57) return false;
-  }
-  return true;
+  // No `/` inside the index half, which is what makes that last slash the
+  // engine's rsplit point rather than one buried in a nested leaf name.
+  return key.indexOf('/', prefix.length) === slash;
 }
 
 /**

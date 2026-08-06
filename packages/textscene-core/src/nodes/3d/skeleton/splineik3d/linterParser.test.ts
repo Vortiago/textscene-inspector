@@ -124,6 +124,15 @@ describe('SplineIK3D strict validators', () => {
       expect(error?.severity).toBe('error');
     });
 
+    it('leaves a NON-NUMERIC setting index alone, which `_set` resolves to 0', () => {
+      // `path.get_slicec('/', 1).to_int()` (spline_ik_3d.cpp:37) has no
+      // is_valid_int() gate ahead of it and `_to_int` skips non-digits
+      // (ustring.cpp:2268-2298), so `x` reads as 0 and the write lands. The
+      // VALUE is still judged, because the leaf resolved either way.
+      expect(check('settings/x/tilt_enabled', 'true')).toBeNull();
+      expect(check('settings/x/tilt_fade_in', 'not-an-int')?.severity).toBe('error');
+    });
+
     it('leaves a leaf no class in the chain declares alone', () => {
       // ChainIK3D keeps the family OPEN on purpose, because a base cannot close
       // a leaf set its descendants extend; this slice is one of those

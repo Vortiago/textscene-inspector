@@ -95,5 +95,24 @@ describe('BoneConstraint3D settings leaves', () => {
     it('accepts a large setting index, a bound only the sibling count knows', () => {
       expect(check('settings/99/amount', '0.5')).toBeNull();
     });
+
+    // `_set` reads the index with a BARE `to_int()` and no validity gate
+    // (bone_constraint_3d.cpp:37), and `_to_int` skips non-digits rather than
+    // stopping at them (ustring.cpp:2268-2298), so `x` resolves to 0 and the
+    // write LANDS on setting 0. Nothing refuses it, so ADR-0032 grounds no
+    // diagnostic on the index; only the leaf is left to judge.
+    it('leaves a non-numeric setting index alone, since to_int resolves it to 0', () => {
+      expect(check('settings/x/amount', '0.5')).toBeNull();
+    });
+
+    it('still judges the VALUE behind a non-numeric index', () => {
+      expect(check('settings/x/amount', '5')?.severity).toBe('warning');
+    });
+
+    it('still rejects an unrecognised leaf behind a non-numeric index', () => {
+      // Whatever the index resolved to, `_set` falls to `return false` on an
+      // unknown leaf (bone_constraint_3d.cpp:55-57) and the write is dropped.
+      expect(check('settings/x/not_a_leaf', '1')).not.toBeNull();
+    });
   });
 });

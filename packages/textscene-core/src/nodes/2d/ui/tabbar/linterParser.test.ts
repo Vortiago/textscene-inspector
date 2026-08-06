@@ -253,6 +253,14 @@ describe('TabBar strict validators', () => {
       expect(error?.code).toBe('INVALID_TAB_INDEX');
       expect(error?.severity).toBe('error');
     });
+    it('rejects a non-integer index, which the helper never resolves', () => {
+      // `TabBar::_set` is `property_helper.property_set_value` verbatim
+      // (tab_bar.h:208) and `_get_property` returns nullptr unless the index
+      // `is_valid_int()` (property_list_helper.cpp:53-55), so `_set` returns
+      // false and Godot DROPS the write.
+      expect(check('tab_x/title', '"Ghost"')?.code).toBe('INVALID_TAB_KEY');
+      expect(check('tab_1.5/title', '"Ghost"')?.severity).toBe('error');
+    });
     it('accepts an index past the live tab_count: that bound is against a sibling property, so linter.ts owns it', () => {
       expect(check('tab_99/title', '"Far"')).toBeNull();
     });

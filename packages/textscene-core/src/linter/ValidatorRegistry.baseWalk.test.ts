@@ -433,11 +433,38 @@ describe('indexed wildcard routing mirrors the engine', () => {
     expect(r.findValidator('Menu', 'item_+2/text')).not.toBeNull();
   });
 
-  it('still refuses a sign with no digits, and a non-numeric index', () => {
+  /**
+   * A NON-NUMERIC index is the same case as a signed one, one step further on.
+   * `PropertyListHelper::_get_property` returns nullptr when the index is not
+   * `is_valid_int()` (property_list_helper.cpp:53-55), so `_set` returns false
+   * and Godot DROPS the write. Routing has to deliver the key to the family's
+   * dispatcher for that to be reportable at all; leaving it unrouted is how
+   * `item_x/text` used to read as clean.
+   *
+   * A lone sign IS a valid index shape to route (the dispatcher decides), which
+   * is why only the empty index below stays unrouted: with nothing between the
+   * prefix and the slash there is no index text to report on.
+   */
+  it('routes a NON-NUMERIC index to the dispatcher, since Godot drops that write too', () => {
+    const { r, seen } = registryWithItems();
+    expect(r.findValidator('Menu', 'item_x/text')).not.toBeNull();
+    r.findValidator('Menu', 'item_x/text')!('item_x/text', '"x"', 1);
+    expect(seen).toContain('item_x/text');
+  });
+
+  it('routes a sign with no digits, which is_valid_int also refuses', () => {
     const { r } = registryWithItems();
-    expect(r.findValidator('Menu', 'item_-/text')).toBeNull();
-    expect(r.findValidator('Menu', 'item_x/text')).toBeNull();
+    expect(r.findValidator('Menu', 'item_-/text')).not.toBeNull();
+  });
+
+  it('still refuses an EMPTY index, and a leaf below another slash', () => {
+    const { r } = registryWithItems();
     expect(r.findValidator('Menu', 'item_/text')).toBeNull();
+    // `#/*` addresses ONE leaf segment: `rsplit("/", true, 1)` puts
+    // `item_0/deep` in the index half (property_list_helper.cpp:47), which is
+    // not an index, so the helper never resolves it and no family owns it.
+    expect(r.findValidator('Menu', 'item_0/deep/text')).toBeNull();
+    expect(r.findValidator('Menu', 'item_x/deep/text')).toBeNull();
   });
 });
 
