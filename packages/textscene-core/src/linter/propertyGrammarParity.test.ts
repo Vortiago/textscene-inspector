@@ -527,6 +527,20 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'SpriteBase3D material properties the shared tier validates; the Sprite3D parser reads none of them yet, and each one changes what Godot draws.',
   },
 
+  CollisionShape3D: {
+    renderGap: [
+      // The gizmo already honours `debug_color`, which `parser.ts` reads, so
+      // this sibling flag — filled vs wireframe on the same gizmo — is a gap we
+      // have not closed rather than a decision not to. Godot's own runtime frame
+      // is unchanged either way (collision debug draw is off by default), but
+      // this previewer chose to draw the gizmo, and having drawn it the flag is
+      // ours to honour.
+      'debug_fill',
+    ],
+    reason:
+      'CollisionShape3D.debug_fill switches the collision gizmo between filled and wireframe; the parser reads debug_color for that same gizmo but not this.',
+  },
+
   CSGBox3D: {
     linterOnly: [
       // CSG parsers call finishCsgParse which reads material/operation from
@@ -1043,7 +1057,7 @@ describe('property-grammar parity guard', () => {
   // number rather than a pile. Exact equality, not a ceiling: this list should
   // only move when someone deliberately adds a slice or closes a gap, and
   // either way the diff should say so out loud.
-  const EXPECTED_RENDER_GAP_KEYS = 43;
+  const EXPECTED_RENDER_GAP_KEYS = 44;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
