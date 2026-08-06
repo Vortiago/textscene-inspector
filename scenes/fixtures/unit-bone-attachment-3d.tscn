@@ -1,0 +1,40 @@
+[gd_scene format=3]
+
+; Both ways a BoneAttachment3D can reach a skeleton, because they are exclusive
+; (bone_attachment_3d.cpp:128-142): MyBoneAttachment3D is parented to the
+; Skeleton3D and takes it from get_parent(), ExternalBoneAttachment3D sits
+; outside and names one through external_skeleton, which only serialises while
+; use_external_skeleton is on. The skeleton carries two real bones so bone_idx
+; and bone_name name something; the linter checks neither against it, since the
+; only ceiling on a bone index is a bone count no .tscn states.
+
+[node name="Root" type="Node3D"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+bones/0/name = "Root"
+bones/0/parent = -1
+bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+bones/0/enabled = true
+bones/0/position = Vector3(0, 0, 0)
+bones/0/rotation = Quaternion(0, 0, 0, 1)
+bones/0/scale = Vector3(1, 1, 1)
+bones/1/name = "Head"
+bones/1/parent = 0
+bones/1/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+bones/1/enabled = true
+bones/1/position = Vector3(0, 1, 0)
+bones/1/rotation = Quaternion(0, 0, 0, 1)
+bones/1/scale = Vector3(1, 1, 1)
+
+[node name="MyBoneAttachment3D" type="BoneAttachment3D" parent="Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+bone_name = "Head"
+bone_idx = 1
+override_pose = true
+
+[node name="ExternalBoneAttachment3D" type="BoneAttachment3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+bone_name = "Head"
+bone_idx = 1
+use_external_skeleton = true
+external_skeleton = NodePath("../Skeleton3D")

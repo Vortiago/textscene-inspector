@@ -166,6 +166,14 @@ import '../nodes/3d/skeleton/jacobianik3d/index.js';
 import '../nodes/3d/skeleton/aimmodifier3d/index.js';
 import '../nodes/3d/skeleton/copytransformmodifier3d/index.js';
 import '../nodes/3d/skeleton/converttransformmodifier3d/index.js';
+import '../nodes/3d/skeleton/boneattachment3d/index.js';
+import '../nodes/3d/skeleton/bonetwistdisperser3d/index.js';
+import '../nodes/3d/skeleton/limitangularvelocitymodifier3d/index.js';
+import '../nodes/3d/skeleton/lookatmodifier3d/index.js';
+import '../nodes/3d/skeleton/modifierbonetarget3d/index.js';
+import '../nodes/3d/skeleton/retargetmodifier3d/index.js';
+import '../nodes/3d/skeleton/springbonesimulator3d/index.js';
+import '../nodes/3d/skeleton/physicalbonesimulator3d/index.js';
 import '../nodes/3d/visualinstance3d/index.js';
 import '../nodes/3d/xr/xrnode3d/index.js';
 import '../nodes/3d/geometryinstance3d/index.js';
@@ -187,6 +195,8 @@ import '../nodes/3d/particles/collisions/gpuparticlescollisionheightfield3d/inde
 import '../nodes/3d/particles/collisions/gpuparticlescollisionsdf3d/index.js';
 import '../nodes/3d/particles/cpuparticles3d/index.js';
 import '../nodes/2d/particles/gpuparticles2d/index.js';
+import '../nodes/2d/bone2d/index.js';
+import '../nodes/2d/skeleton2d/index.js';
 
 import type { TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';

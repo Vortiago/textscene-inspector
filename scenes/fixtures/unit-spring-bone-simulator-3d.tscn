@@ -1,0 +1,76 @@
+[gd_scene format=3]
+
+; Two bone chains, one per config mode, because the two never coexist in a
+; single setting: `individual_config` false keeps the shared radius/stiffness/
+; drag/gravity block live and turns the joint list read-only, true swaps them.
+; Setting 0 is the shared mode Godot saves by default, joints/<j>/bone included
+; (spring_bone_simulator_3d.cpp:382 hands those two keys storage back); setting 1
+; is the individual mode, with joint_count and the per-joint tunables.
+; `enable_all_child_collisions` is absent on setting 1, its default true, so the
+; exclude list is the live one there and the explicit collision list is setting
+; 0's.
+
+[node name="Root" type="Node3D"]
+
+[node name="MySpringBoneSimulator3D" type="SpringBoneSimulator3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+external_force = Vector3(0, 0, 0.1)
+mutable_bone_axes = false
+setting_count = 2
+settings/0/root_bone_name = "Bone0"
+settings/0/root_bone = 0
+settings/0/end_bone_name = "Bone3"
+settings/0/end_bone = 3
+settings/0/extend_end_bone = true
+settings/0/end_bone/direction = 6
+settings/0/end_bone/length = 0.05
+settings/0/center_from = 2
+settings/0/center_bone_name = "Bone0"
+settings/0/center_bone = 0
+settings/0/individual_config = false
+settings/0/rotation_axis = 4
+settings/0/rotation_axis_vector = Vector3(1, 0, 0)
+settings/0/radius/value = 0.02
+settings/0/radius/damping_curve = null
+settings/0/stiffness/value = 1.0
+settings/0/stiffness/damping_curve = null
+settings/0/drag/value = 0.4
+settings/0/drag/damping_curve = null
+settings/0/gravity/value = 0.0
+settings/0/gravity/damping_curve = null
+settings/0/gravity/direction = Vector3(0, -1, 0)
+settings/0/joints/0/bone_name = "Bone0"
+settings/0/joints/0/bone = 0
+settings/0/joints/1/bone_name = "Bone1"
+settings/0/joints/1/bone = 1
+settings/0/enable_all_child_collisions = false
+settings/0/collision_count = 1
+settings/0/collisions/0 = NodePath("Sphere")
+settings/1/root_bone_name = "Bone4"
+settings/1/root_bone = 4
+settings/1/end_bone_name = "Bone5"
+settings/1/end_bone = 5
+settings/1/extend_end_bone = false
+settings/1/center_from = 1
+settings/1/center_node = NodePath("..")
+settings/1/individual_config = true
+settings/1/joint_count = 2
+settings/1/joints/0/rotation_axis = 4
+settings/1/joints/0/rotation_axis_vector = Vector3(1, 0, 0)
+settings/1/joints/0/radius = 0.1
+settings/1/joints/0/stiffness = 1.0
+settings/1/joints/0/drag = 0.0
+settings/1/joints/0/gravity = 0.0
+settings/1/joints/0/gravity_direction = Vector3(0, -1, 0)
+settings/1/joints/1/rotation_axis = 3
+settings/1/joints/1/radius = 0.1
+settings/1/joints/1/stiffness = 1.0
+settings/1/joints/1/drag = 0.0
+settings/1/joints/1/gravity = 0.0
+settings/1/joints/1/gravity_direction = Vector3(0, -1, 0)
+settings/1/exclude_collision_count = 1
+settings/1/exclude_collisions/0 = NodePath("Sphere")
+
+[node name="Sphere" type="SpringBoneCollisionSphere3D" parent="MySpringBoneSimulator3D"]
+bone_name = &"Bone0"
+bone = 0

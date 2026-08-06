@@ -262,7 +262,7 @@
       "name": "Bone2D",
       "category": "2D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -276,7 +276,7 @@
       "name": "BoneAttachment3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -303,7 +303,7 @@
       "name": "BoneTwistDisperser3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -1495,7 +1495,7 @@
       "name": "LimitAngularVelocityModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -1552,7 +1552,7 @@
       "name": "LookAtModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -1667,7 +1667,7 @@
       "name": "ModifierBoneTarget3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -2219,7 +2219,7 @@
       "name": "PhysicalBoneSimulator3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -2458,7 +2458,7 @@
       "name": "RetargetModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -2601,7 +2601,7 @@
       "name": "Skeleton2D",
       "category": "2D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -2814,7 +2814,7 @@
       "name": "SpringBoneSimulator3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",

@@ -125,6 +125,37 @@ describe('TwoBoneIK3D semantic rules', () => {
     );
   });
 
+  it('resolves the sibling by NUMBER, so a padded index finds its own pole_direction', () => {
+    // `_set` reads the index with a bare `to_int` (two_bone_ik_3d.cpp:37), so
+    // `settings/00/…` and `settings/0/…` are the SAME setting and Godot applies
+    // the Custom direction to this vector. Matching on index TEXT instead made
+    // the lookup miss, read the direction as None, and warn about a write the
+    // engine honours.
+    expectNoDiagnostic(
+      scene(
+        node('TwoBoneIK3D', {
+          setting_count: 1,
+          'settings/0/pole_direction': 7,
+          'settings/00/pole_direction_vector': 'Vector3(0, 0, 1)',
+        })
+      ),
+      { ruleName: 'twoboneik3d-pole-direction-vector-ignored' }
+    );
+  });
+
+  it('still warns on a padded index when the direction really is not Custom', () => {
+    expectDiagnostic(
+      scene(
+        node('TwoBoneIK3D', {
+          setting_count: 1,
+          'settings/0/pole_direction': 3,
+          'settings/00/pole_direction_vector': 'Vector3(0, 0, 1)',
+        })
+      ),
+      { ruleName: 'twoboneik3d-pole-direction-vector-ignored', severity: 'warning' }
+    );
+  });
+
   it('stays quiet when pole_direction is Custom', () => {
     expectNoDiagnostic(scene(node('TwoBoneIK3D', VALID_SETTING)), {
       ruleName: 'twoboneik3d-pole-direction-vector-ignored',

@@ -52,6 +52,9 @@ const POLE_VECTOR_KEY_RE = /^settings\/([+-]?\d+)\/pole_direction_vector$/;
 /** `SECONDARY_DIRECTION_CUSTOM`, skeleton_modifier_3d.h:75. */
 const SECONDARY_DIRECTION_CUSTOM = 7;
 /** `SecondaryDirection pole_direction = SECONDARY_DIRECTION_NONE`, two_bone_ik_3d.h:53. */
+/** `settings/<i>/pole_direction`, capturing the index text for numeric resolution. */
+const POLE_DIRECTION_KEY_RE = /^settings\/(-?\d+)\/pole_direction$/;
+
 const SECONDARY_DIRECTION_NONE = 0;
 
 function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
@@ -71,6 +74,20 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   const outOfRange = new Set<number>();
   const ignoredVectors = new Set<number>();
 
+  // `pole_direction` indexed CANONICALLY, by the number `_set` resolves the
+  // index to, not by its text. `_set` reads it with a bare `to_int`
+  // (two_bone_ik_3d.cpp:37) with no `is_valid_int` gate, so `settings/00/…` and
+  // `settings/0/…` address the SAME setting. Matching on text instead made
+  // `settings/00/pole_direction_vector` miss its own `settings/0/pole_direction`
+  // and warn that Godot had ignored a vector it actually applies.
+  const poleDirections = new Map<number, string>();
+  for (const key of Object.keys(rawProps)) {
+    const m = POLE_DIRECTION_KEY_RE.exec(key);
+    if (!m) continue;
+    const at = Number(m[1]);
+    if (Number.isFinite(at)) poleDirections.set(at, rawProps[key]!);
+  }
+
   for (const key of Object.keys(rawProps)) {
     const indexed = SETTING_KEY_RE.exec(key);
     if (!indexed) continue;
@@ -82,9 +99,7 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
 
     const vector = POLE_VECTOR_KEY_RE.exec(key);
     if (!vector) continue;
-    // Read back through the index TEXT, so `settings/00/…` finds its own
-    // sibling rather than `settings/0/…`.
-    const directionRaw = rawProps[`settings/${vector[1]}/pole_direction`];
+    const directionRaw = poleDirections.get(index);
     const direction =
       directionRaw === undefined ? SECONDARY_DIRECTION_NONE : parseInt(directionRaw, 10);
     if (Number.isNaN(direction)) continue;

@@ -178,8 +178,23 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Bone 2d",
+    "file": "unit-bone-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Bone Attachment 3d",
+    "file": "unit-bone-attachment-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Bone Constraint 3d",
     "file": "unit-bone-constraint-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Bone Twist Disperser 3d",
+    "file": "unit-bone-twist-disperser-3d.tscn",
     "category": "Other"
   },
   {
@@ -598,6 +613,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Limit Angular Velocity Modifier 3d",
+    "file": "unit-limit-angular-velocity-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Lineedit",
     "file": "unit-lineedit.tscn",
     "category": "Other"
@@ -605,6 +625,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Link Button",
     "file": "unit-link-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Look At Modifier 3d",
+    "file": "unit-look-at-modifier-3d.tscn",
     "category": "Other"
   },
   {
@@ -620,6 +645,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Menu Button",
     "file": "unit-menu-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Modifier Bone Target 3d",
+    "file": "unit-modifier-bone-target-3d.tscn",
     "category": "Other"
   },
   {
@@ -685,6 +715,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Physical Bone 3d",
     "file": "unit-physical-bone-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Physical Bone Simulator 3d",
+    "file": "unit-physical-bone-simulator-3d.tscn",
     "category": "Other"
   },
   {
@@ -803,6 +838,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Retarget Modifier 3d",
+    "file": "unit-retarget-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Rigidbody2d",
     "file": "unit-rigidbody2d.tscn",
     "category": "Other"
@@ -835,6 +875,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Shape Cast 3d",
     "file": "unit-shape-cast-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Skeleton 2d",
+    "file": "unit-skeleton-2d.tscn",
     "category": "Other"
   },
   {
@@ -910,6 +955,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Spring Bone Collision 3d",
     "file": "unit-spring-bone-collision-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spring Bone Simulator 3d",
+    "file": "unit-spring-bone-simulator-3d.tscn",
     "category": "Other"
   },
   {

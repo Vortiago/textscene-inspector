@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+; Two BoneTwistDisperser3D settings, because one cannot carry every serialised
+; leaf at once: _validate_dynamic_prop (bone_twist_disperser_3d.cpp:173-216)
+; clears a leaf to PROPERTY_USAGE_NONE outside the mode that reads it, and
+; weight_position (Weighted) and damping_curve / joints twist_amount (Custom)
+; are mutually exclusive within a setting.
+;
+; Setting 0 is Weighted with an extended end bone and an explicit twist_from, so
+; end_bone_direction and twist_from stay live. Setting 1 is Custom without an
+; extended end bone, so damping_curve is live and the LAST joint's twist_amount
+; is hidden (:204-206), hence two amounts for three joints.
+;
+; reference_bone_name and the joints/<j>/bone* pair are deliberately absent:
+; their PropertyInfos carry no PROPERTY_USAGE_STORAGE (:151, :161-162), so the
+; packer never writes them (packed_scene.cpp:865) and _set refuses them (:71,
+; :74).
+
+[node name="Root" type="Node3D"]
+
+[node name="MyBoneTwistDisperser3D" type="BoneTwistDisperser3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mutable_bone_axes = false
+setting_count = 2
+settings/0/root_bone_name = "UpperArm"
+settings/0/root_bone = 0
+settings/0/end_bone_name = "Hand"
+settings/0/end_bone = 2
+settings/0/extend_end_bone = true
+settings/0/end_bone_direction = 6
+settings/0/twist_from_rest = false
+settings/0/twist_from = Quaternion(0, 0.7071068, 0, 0.7071068)
+settings/0/disperse_mode = 1
+settings/0/weight_position = 0.5
+settings/0/joint_count = 3
+settings/1/root_bone_name = "UpperLeg"
+settings/1/root_bone = 3
+settings/1/end_bone_name = "Foot"
+settings/1/end_bone = 5
+settings/1/extend_end_bone = false
+settings/1/twist_from_rest = true
+settings/1/disperse_mode = 2
+settings/1/damping_curve = null
+settings/1/joint_count = 3
+settings/1/joints/0/twist_amount = 0.25
+settings/1/joints/1/twist_amount = 0.75

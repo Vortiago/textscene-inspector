@@ -142,6 +142,14 @@ reproduced:
 - [BoneConstraint3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneconstraint3d/comparison.md) — a transform-only group (the base for bone constraints)
 - [GeometryInstance3D](../../packages/textscene-core/src/nodes/3d/geometryinstance3d/comparison.md) — a transform-only group (the shadow/LOD/GI base for 3D visuals)
 - [VisibleOnScreenNotifier3D](../../packages/textscene-core/src/nodes/3d/visibleonscreennotifier3d/comparison.md) — a transform-only group (signals when its AABB enters view)
+- [BoneAttachment3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneattachment3d/comparison.md) — a transform-only group (follows one Skeleton3D bone)
+- [BoneTwistDisperser3D](../../packages/textscene-core/src/nodes/3d/skeleton/bonetwistdisperser3d/comparison.md) — a transform-only group (spreads a bone twist along a chain)
+- [LimitAngularVelocityModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/limitangularvelocitymodifier3d/comparison.md) — a transform-only group (caps how fast bones may rotate)
+- [LookAtModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/lookatmodifier3d/comparison.md) — a transform-only group (aims a bone at a target, with angle limits)
+- [ModifierBoneTarget3D](../../packages/textscene-core/src/nodes/3d/skeleton/modifierbonetarget3d/comparison.md) — a transform-only group (exposes one bone as a modifier target)
+- [PhysicalBoneSimulator3D](../../packages/textscene-core/src/nodes/3d/skeleton/physicalbonesimulator3d/comparison.md) — a transform-only group (drives its PhysicalBone3D children)
+- [RetargetModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/retargetmodifier3d/comparison.md) — a transform-only group (maps a pose onto another skeleton profile)
+- [SpringBoneSimulator3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonesimulator3d/comparison.md) — a transform-only group (springy secondary motion on bone chains)
 - [TwoBoneIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/twoboneik3d/comparison.md) — a transform-only group (a two-bone IK solver with a pole target)
 - [SplineIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/splineik3d/comparison.md) — a transform-only group (bends a bone chain along a Path3D curve)
 - [CCDIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/ccdik3d/comparison.md) — a transform-only group (a cyclic coordinate descent IK solver)
@@ -247,6 +255,8 @@ reproduced:
 
 - [VSlider](../../packages/textscene-core/src/nodes/2d/ui/vslider/comparison.md) — a vertical track with a round grabber
 - [VSplitContainer](../../packages/textscene-core/src/nodes/2d/ui/vsplitcontainer/comparison.md) — two children stacked, split at a computed offset
+- [Bone2D](../../packages/textscene-core/src/nodes/2d/bone2d/comparison.md) — nothing (a transform-only group; one Skeleton2D bone, the gizmo is editor-only)
+- [Skeleton2D](../../packages/textscene-core/src/nodes/2d/skeleton2d/comparison.md) — nothing (a transform-only group; the Bone2D hierarchy root)
 ## Other
 
 - [AudioStreamPlayer](../../packages/textscene-core/src/nodes/audio/audiostreamplayer/comparison.md) — nothing (a non-spatial audio node)

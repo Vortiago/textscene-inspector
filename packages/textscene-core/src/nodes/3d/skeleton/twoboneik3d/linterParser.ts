@@ -111,11 +111,21 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   root_bone_name: v.quotedString('root_bone_name'),
   // two_bone_ik_3d.cpp:143, Variant::INT, PROPERTY_HINT_NONE,
   // PROPERTY_USAGE_NO_EDITOR (which still serialises).
-  root_bone: v.strictInt('root_bone'),
+  // The setter assigns, then (when a Skeleton3D has resolved) rewrites anything
+  // `<= -1` or past the bone count back to -1. So -2 is ALTERED, which is the
+  // enforced tier, while -1 itself is a no-op and must stay legal: it is the
+  // documented unset default, and a floor of 0 would reject what Godot writes.
+  // The ceiling is the live bone count, which no per-property validator sees.
+  root_bone: v.strictInt('root_bone', { min: -1, enforced: 'two_bone_ik_3d.cpp:231' }),
   // two_bone_ik_3d.cpp:144, as root_bone_name.
   middle_bone_name: v.quotedString('middle_bone_name'),
   // two_bone_ik_3d.cpp:145, as root_bone.
-  middle_bone: v.strictInt('middle_bone'),
+  // The setter assigns, then (when a Skeleton3D has resolved) rewrites anything
+  // `<= -1` or past the bone count back to -1. So -2 is ALTERED, which is the
+  // enforced tier, while -1 itself is a no-op and must stay legal: it is the
+  // documented unset default, and a floor of 0 would reject what Godot writes.
+  // The ceiling is the live bone count, which no per-property validator sees.
+  middle_bone: v.strictInt('middle_bone', { min: -1, enforced: 'two_bone_ik_3d.cpp:268' }),
   // two_bone_ik_3d.cpp:146, Variant::INT, PROPERTY_HINT_ENUM
   // "None,+X,-X,+Y,-Y,+Z,-Z,Custom" (skeleton_modifier_3d.h:77), values 0-7.
   // set_pole_direction (two_bone_ik_3d.cpp:425-437) static_casts the int and
@@ -132,7 +142,12 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // two_bone_ik_3d.cpp:148, as root_bone_name.
   end_bone_name: v.quotedString('end_bone_name'),
   // two_bone_ik_3d.cpp:149, as root_bone.
-  end_bone: v.strictInt('end_bone'),
+  // The setter assigns, then (when a Skeleton3D has resolved) rewrites anything
+  // `<= -1` or past the bone count back to -1. So -2 is ALTERED, which is the
+  // enforced tier, while -1 itself is a no-op and must stay legal: it is the
+  // documented unset default, and a floor of 0 would reject what Godot writes.
+  // The ceiling is the live bone count, which no per-property validator sees.
+  end_bone: v.strictInt('end_bone', { min: -1, enforced: 'two_bone_ik_3d.cpp:307' }),
   // two_bone_ik_3d.cpp:150, Variant::BOOL, no hint. set_use_virtual_end
   // (two_bone_ik_3d.cpp:325-338) is a bare assignment.
   use_virtual_end: v.boolean('use_virtual_end'),

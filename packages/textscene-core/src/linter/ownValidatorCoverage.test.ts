@@ -57,6 +57,8 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
   HSplitContainer: "orientation only; the split keys are SplitContainer's",
   JacobianIK3D:
     "a solver body; the class is a `_solve_iteration` override alone, parameterised entirely by IterateIK3D's keys",
+  PhysicalBoneSimulator3D:
+    "drives its PhysicalBone3D children, which hold every simulation parameter; _bind_methods binds five methods and zero ADD_PROPERTY (physical_bone_simulator_3d.cpp:386-393), and it overrides no property-list hook under either spelling",
   MarginContainer: 'margins are theme constants, not properties',
   OpenXRBindingModifierEditor:
     'editor-only PanelContainer; its constructor only changes the inherited size_flags_horizontal default',
