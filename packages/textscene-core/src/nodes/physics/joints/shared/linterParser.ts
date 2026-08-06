@@ -20,11 +20,8 @@
  */
 
 // The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it.
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it.
+// this slice resolves an inherited key ONLY if the ancestors below are pulled
+// in too; without them just the full barrel ever registers them.
 import '../../../base/node3d/linterParser.js';
 import '../../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';

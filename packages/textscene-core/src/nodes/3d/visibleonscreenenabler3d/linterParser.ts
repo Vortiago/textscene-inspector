@@ -14,17 +14,7 @@
 import '../visibleonscreennotifier3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-
-/**
- * `VisibleOnScreenEnabler3D::EnableMode`
- * (visible_on_screen_notifier_3d.h:65-69), in the order of the hint string
- * "Inherit,Always,When Paused".
- */
-const ENABLE_MODE: Record<number, string> = {
-  0: 'ENABLE_MODE_INHERIT',
-  1: 'ENABLE_MODE_ALWAYS',
-  2: 'ENABLE_MODE_WHEN_PAUSED',
-};
+import { ENABLE_MODE } from '../../../linter/validators/sharedEnumLabels.js';
 
 validatorRegistry.registerAll('VisibleOnScreenEnabler3D', {
   // visible_on_screen_notifier_3d.cpp:198, PROPERTY_HINT_ENUM

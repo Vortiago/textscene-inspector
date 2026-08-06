@@ -1,6 +1,6 @@
 /** CSGCylinder3D strict validators for linting. */
 
-import '../../../base/node3d/linterParser.js';
+import '../../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 

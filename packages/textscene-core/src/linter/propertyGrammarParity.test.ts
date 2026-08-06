@@ -52,6 +52,13 @@ const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   Button: '2d/ui/button/parser.ts',
   Control: '2d/ui/control/parser.ts',
   Node: 'node/parser.ts',
+  // The last four hops, measured rather than guessed: walking NODE_BASE_TYPES for
+  // every base-parser-reusing slice shows just NINE distinct ancestors cover all
+  // of them, and the six above already resolve all but these.
+  VBoxContainer: '2d/ui/vboxcontainer/parser.ts',
+  HBoxContainer: '2d/ui/hboxcontainer/parser.ts',
+  PanelContainer: '2d/ui/panelcontainer/parser.ts',
+  MeshInstance3D: '3d/meshinstance3d/parser.ts',
 };
 
 // ---------------------------------------------------------------------------
@@ -1118,10 +1125,20 @@ describe('property-grammar parity guard', () => {
    * new slices are symmetric" when it actually means "they were never examined".
    * A wave that adds ten base-reusing slices now moves a number and must say so.
    *
-   * Closing it properly means keying the population on `linterParser.ts` alone
-   * and resolving the parser side through `getInheritedParserProps`, which needs
-   * `BASE_TYPE_TO_PARSER_SUBPATH` extended well past its current few hops or the
-   * unmapped chains over-report. That is its own piece of work.
+   * Closing it means keying the population on `linterParser.ts` alone and
+   * resolving the parser side through `getInheritedParserProps`. The blocker is
+   * NOT the lookup table: walking `NODE_BASE_TYPES` for every slice in this set
+   * shows only nine distinct ancestors cover all of them, and the table above now
+   * has all nine, so nothing would over-report for want of a hop. (An earlier
+   * version of this note claimed the table needed extending "well past its
+   * current few hops"; that was wrong, and the four entries it implied were a
+   * project have since been added.)
+   *
+   * What remains is real but is classification work, not plumbing: admitting the
+   * whole set at once surfaces every asymmetry it was never asked about, and each
+   * one needs the honest `linterOnly` vs `renderGap` call that only a reading of
+   * the property can give. That is the piece of work, and it wants its own pass
+   * rather than being smuggled into a wave.
    */
   const SWEPT_SLICES = 74;
   const PARSER_REUSING_SLICES = 144;

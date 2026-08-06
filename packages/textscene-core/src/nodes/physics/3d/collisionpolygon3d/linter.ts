@@ -21,6 +21,14 @@ const ADVICE =
   'Please only use it as a child of Area3D, StaticBody3D, RigidBody3D, CharacterBody3D, etc. to give them a shape.';
 
 /**
+ * The literal wrapper, compiled once. A regex literal inside the function below
+ * would be rebuilt on every node this rule visits; the 2D sibling hoists the
+ * identical pattern for the same reason. No `g` flag, so the shared instance is
+ * stateless under `.exec`.
+ */
+const POLYGON_WRAPPER = /^\s*PackedVector2Array\s*\(([\s\S]*)\)\s*$/;
+
+/**
  * True for a `PackedVector2Array(...)` with zero vertices, or an absent key —
  * collision_polygon_3d.cpp:242-244, `polygon.is_empty()`. Godot's own default is
  * an empty `PackedVector2Array()` (doc/classes/CollisionPolygon3D.xml), so an
@@ -28,7 +36,7 @@ const ADVICE =
  */
 function polygonIsEmpty(raw: string | undefined): boolean {
   if (raw === undefined) return true;
-  const match = /^\s*PackedVector2Array\s*\(([\s\S]*)\)\s*$/.exec(raw);
+  const match = POLYGON_WRAPPER.exec(raw);
   if (!match) return false; // malformed literal is linterParser.ts's job, not this rule's
   return match[1]!.trim() === '';
 }

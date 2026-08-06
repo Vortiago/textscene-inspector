@@ -77,3 +77,19 @@ export const VECTOR3_AXIS: Readonly<Record<number, string>> = {
   1: 'Y',
   2: 'Z',
 };
+
+/**
+ * `VisibleOnScreenEnabler2D::EnableMode` and `VisibleOnScreenEnabler3D::EnableMode`.
+ *
+ * Two separate C++ enums that happen to bind the identical three constants
+ * (`visible_on_screen_notifier_2d.h:85-89`, `visible_on_screen_notifier_3d.h:65-69`),
+ * in the order of the shared hint string "Inherit,Always,When Paused". The two
+ * classes share no ancestor that owns the property — one descends from Node2D,
+ * the other from Node3D — so there is no slice to hoist onto. Each setter
+ * bare-assigns and each `v.enumInt` keeps its own citation.
+ */
+export const ENABLE_MODE = {
+  0: 'ENABLE_MODE_INHERIT',
+  1: 'ENABLE_MODE_ALWAYS',
+  2: 'ENABLE_MODE_WHEN_PAUSED',
+} as const;
