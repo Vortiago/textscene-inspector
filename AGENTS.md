@@ -8,7 +8,11 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
 ## Gates (repo root)
 
 - `pnpm type-check:all` — builds `@textscene/core` first; run once in a fresh worktree
-  before any per-package check.
+  before any per-package check. It does **not** cover test files.
+- `pnpm --filter @textscene/core type-check:tests` — a separate tsc project over the
+  `*.test.ts(x)` files. vitest transpiles without checking, so a test can be green and
+  untyped; only the pre-push hook runs this, which is how two waves reached a push with
+  it red. Run it with the other gates, not at push time.
 - `pnpm test:unit` — full vitest suite, takes minutes. On shell-tool timeout re-run the
   SAME command with a larger `timeout` (ms); a subset never proves the gate.
 - Per-package: `pnpm --filter @textscene/web-previewer type-check` / `test`.
