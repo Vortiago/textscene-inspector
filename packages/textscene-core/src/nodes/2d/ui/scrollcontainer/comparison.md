@@ -41,44 +41,13 @@ The bar occupies x 1128..1135 — 8 px, the same 8 — on both sides, and the
 grabber's solid run spans y 17..490 in Godot against y 17..491 here, a single
 row of difference on its rounded cap.
 
-**CLOSED — the bars are drawn over the content, as Godot draws them.** They used to
-be drawn under it. Godot's `scroll` StyleBox is semi-transparent, so where a bar
-crosses content the two blend; here the content simply won, because the painter
-gave both bars this node's own paint slot and every descendant necessarily has a
-later one. Godot adds `h_scroll`/`v_scroll` as `INTERNAL_MODE_BACK` children, which
-paint after the whole subtree. Measured on `unit-scroll-container-clip.tscn` — a
-600x500 container around a 900x900 child, with three blocks straddling the
-boundary:
-
-| Probe | What it is | Godot | Ours, before | Ours, now |
-| --- | --- | --- | --- | --- |
-| (715, 95) | the vertical track over the red band | rgb(164, 130, 127) | rgb(217, 77, 64) | rgb(163, 130, 127) |
-| (390, 555) | the horizontal track over the cyan block | rgb(133, 161, 161) | rgb(89, 204, 204) | rgb(133, 160, 160) |
-
-The "before" column is the bare content colour — the bar contributed nothing at
-all. The remaining single count on one channel is the same rounding the plain
-fixture's own probes show above, not a compositing difference. The clip rect was
-never the problem: probe (700, 95) reads the band's own colour on both sides, and
-the straddling blocks are cut on the same edge.
-
-**CLOSED — a character outside printable ASCII now draws, and carries its advance.**
-The first label's text is "Scroll down — this content overflows the container.";
-the em dash (U+2014) had no entry in the baked MSDF atlas, so it left a gap where
-Godot draws a stroke, and everything after it shifted left by the width Godot gave
-it — the line's ink spanned x 16..413 in Godot against x 16..399 here, exactly the
-dash's own advance short. The atlas now bakes ASCII, the Latin-1 Supplement and
-the punctuation Godot's own defaults reach for, and any codepoint still outside it
-contributes the font's `xAvgCharWidth` rather than collapsing the line. The same
-line now spans x 16..415 against Godot's x 16..413.
-
-One thing still differs.
-
-**A whole line's ink ends 2 px past Godot's**, and the residual is not the em dash:
-it survives on lines of plain ASCII too, and the rendered string matches Godot
-character for character. It looks like a per-glyph advance precision difference
-between this engine's `hmtx`-derived advances and Godot's HarfBuzz/FreeType-hinted
-ones, which would accumulate with line length — untested. The second label, which
-is shorter and plain ASCII, spans x 17..269 in Godot against x 17..271 here.
+The first label's line of text — "Scroll down — this content overflows the
+container." — ends 2 px past Godot's, at x 16..415 against Godot's x 16..413.
+The same 2 px gap appears on the second label, plain ASCII and shorter: x
+17..271 here against Godot's x 17..269. It looks like a per-glyph advance
+precision difference between this engine's `hmtx`-derived advances and
+Godot's HarfBuzz/FreeType-hinted ones, which would accumulate with line
+length — untested.
 
 ## Linting
 

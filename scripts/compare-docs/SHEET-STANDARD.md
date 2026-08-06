@@ -144,6 +144,35 @@ and a header/section badge. A node's badge **rolls up to its worst section**.
 matches. An unassessed sheet stays `unreviewed`; a whole-scene showcase with gaps is
 `limitation`, not `done`. When in doubt, do not go green.
 
+## Current state only — a sheet is not a changelog
+
+A sheet describes how the previewer renders this type **right now**, against Godot.
+It carries no history. The reader wants to know what the two images show today, not
+how they got there.
+
+Never write, in any form:
+
+- **Fix narration** — "(FIXED)", "flagged here, fixed subsequently", "closed in a
+  later pass", "not this component's to fix", "recorded as a follow-up".
+- **Discovery narration** — "two bugs found while building this", "the point-fix
+  exposed", "measured directly, it turned out that…", "my first attempt".
+- **Before/after** — what a value used to be, what a previous implementation did,
+  what a baseline encoded before it was corrected. Arbitration tables comparing an
+  old render to a new one are history by definition.
+- **Dates, commits, agent or packet names, issue or WI numbers.**
+
+If a divergence is **open**, state the divergence in present tense with its measured
+numbers. If it is **closed**, delete the row — a fixed divergence is simply not a
+divergence, and leaving it "closed with numbers" is the changelog creeping back.
+
+That history is not lost; it lives where history belongs — git, the ADRs, the issue.
+A sheet that reads as a diary is stale the moment the code moves again, and it buries
+the one thing it exists to say.
+
+Applies to prose, headings and tables alike. A heading like
+`## Auto-framing (two bugs found while building this)` is the same violation as the
+sentence would be.
+
 ## Rules
 
 - **Look at both images.** Read `docs/comparison/images/<image>-godot.png` and

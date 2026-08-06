@@ -121,8 +121,8 @@ being built up.
 
 `shared/splitContainerSolver.ts` ports `_update_default_dragger_positions`/
 `_update_dragger_positions`/`_resort`/`get_minimum_size`, restricted to
-exactly two children (this packet's explicit scope — a closed form of the
-same source, see the module's own doc). `Component.tsx` draws only the
+exactly two children (a closed form of the same source, see the module's own
+doc). `Component.tsx` draws only the
 grabber icon between the two children `ControlCanvasWalker` already places as
 siblings; the container itself paints nothing else — `split_bar_background`
 (`default_theme.cpp:1275-1277`) is an EMPTY stylebox.

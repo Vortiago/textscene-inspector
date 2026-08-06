@@ -30,9 +30,7 @@ None visible in this fixture: `pnpm ref:godot scenes/fixtures/unit-panel.tscn
 all under the visual harness's own tolerance, at a mean channel error under
 0.005/255 over the frame. The closest thing to a measurable difference is a
 corner pixel, `--probe 418,226`, on the 8 px arc: rgb(84, 88, 100) in Godot
-against rgb(81, 84, 92) here — a few counts apart on the same AA ramp (down from
-rgb(96, 106, 134) before this StyleBox's anti-aliasing was ported; see "Known
-limitations (native only)" below).
+against rgb(81, 84, 92) here — a few counts apart on the same AA ramp.
 
 ## Linting
 
@@ -72,25 +70,3 @@ rect via `StyleBoxQuad`, the shared ring-tessellation geometry every native
 StyleBox-painted Control uses. Not a container: `Panel` registers no
 `ContainerLayoutFn`, so its children solve as free/anchored Controls against
 its own rect.
-
-### Known limitations (native only)
-
-- **CLOSED — the corner feather now carries Godot's own AA ring.**
-  `styleBoxFlatGeometry.ts` used to implement only Godot's non-anti-aliased
-  `StyleBoxFlat` branch; it now also ports the `anti_aliased`/`aa_size` branch
-  (`StyleBoxFlat::draw`, `scene/resources/style_box_flat.cpp:511-630`), and
-  `StyleBoxFlatData` carries both fields with Godot's own defaults
-  (`anti_aliased = true`, `aa_size = 1`, `style_box_flat.h:49,54`) rather than
-  silently dropping an authored value. Re-measured on the same two probes:
-  `--probe 75,60` (`unit-panel-styleboxes.tscn`'s 40 px arc) now reads
-  rgb(60, 94, 138) against Godot's rgb(69, 100, 141) — down from rgb(83, 112, 149)
-  — and the adjacent `--probe 74,60`, previously the bare rgb(217, 217, 209)
-  backdrop with NO blend at all, now reads rgb(213, 214, 207) against Godot's
-  rgb(207, 209, 205): the feather ring now reaches a pixel it used to miss
-  entirely, which is exactly Godot's "ramp runs one pixel further out" behaviour
-  this limitation used to describe. This sheet's own `--probe 418,226` closed
-  from rgb(96, 106, 134) to rgb(81, 84, 92) against Godot's rgb(84, 88, 100).
-  Both channels are within a handful of counts of Godot on every probe above,
-  where they used to differ by 20-40; `styleBoxFlatGeometry.test.ts`'s
-  "anti-aliasing" describe block additionally pins the new ring's exact vertex
-  count and alpha-0 outer colours independent of any rendered pixel.

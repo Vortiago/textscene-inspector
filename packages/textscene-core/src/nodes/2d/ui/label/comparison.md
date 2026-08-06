@@ -41,21 +41,9 @@ panes, and the pitch tracks the size: 31 px at `font_size = 20` (line tops
 55 / 86 / 117 / 148 in Godot, 54 / 85 / 116 / 147 here) and 42 px at 28, where the
 five line tops are 344 / 386 / 428 / 470 / 512 on BOTH sides with no offset at all.
 
-Colour is closed. Label's own `font_color` default is opaque white, which is the
-fixed point of the sRGB transfer curve, so this fixture's glyphs peak at
-rgb(255, 255, 255) in both images — and did so even while every OTHER font colour
-came out one transfer function too dark, because white is the one colour that
-hides the error. That is why this sheet could not see it and the Control sheet
-could. The MSDF shader now applies the output encode every built-in three material
-gets, so a font colour of 223 renders as 223 rather than 188.
-
-Character coverage is closed too. The MSDF atlas was baked over printable ASCII
-only, so a glyph outside that range — an em dash, a bullet — had no entry and drew
-nothing at all, contributing no advance either, so the rest of the line silently
-slid left. The bake now covers ASCII, the Latin-1 Supplement and the punctuation
-Godot's own defaults reach for; anything still outside it contributes the font's
-`xAvgCharWidth` rather than nothing. The ScrollContainer sheet measures the em
-dash, the LineEdit sheet the bullet.
+Label's own `font_color` default is opaque white, the fixed point of the sRGB
+transfer curve, so this fixture's glyphs peak at rgb(255, 255, 255) in both
+images.
 
 ## Linting
 

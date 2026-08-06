@@ -28,12 +28,6 @@ The multiply is faithful and the frame matches to a mean channel error of
 the same places, and white `× (0.5, 0.5, 1)` lands on Godot's exact
 `[128, 128, 255]`.
 
-An earlier revision of this sheet measured `[149, 143, 226]` there and blamed the
-ADR-0025 preview environment. That was wrong on both counts — the 2D stage never
-mounts a preview environment — and the real cause, react-three-fiber's default
-ACES tone mapping on the stage's own `<Canvas>`, is now switched off. See
-"Why 2D colours used to read paler in our captures" in the comparison README.
-
 ## Known limitations
 
 Two consequences of Godot applying the colour to the CANVAS
