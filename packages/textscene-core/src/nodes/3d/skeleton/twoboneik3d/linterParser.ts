@@ -164,6 +164,11 @@ const END_BONE_OPTIONS: Readonly<Record<string, PropertyValidator>> = {
 
 /** Every `settings/<i>/<leaf>` key whose leaf is a single segment. */
 const flatFamily = indexedFamilyValidator({
+  // `_set` reads the index with a BARE `to_int` and no `is_valid_int` gate
+  // (two_bone_ik_3d.cpp:37), and `_to_int` skips non-digits (ustring.cpp:2268-2298), so
+  // `settings/first/x` resolves to setting 0 and the write LANDS. Reporting it
+  // was a false positive: that is the PropertyListHelper behaviour, not this one.
+  indexParse: 'to_int',
   prefix: 'settings/',
   leaves: SETTING_LEAVES,
   unknownCode: UNKNOWN_SETTING_CODE,

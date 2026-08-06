@@ -85,6 +85,11 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
  * `ERR_FAIL_INDEX_V(which, settings.size(), false)`, so the value never lands.
  */
 const settingLeafValidator = indexedFamilyValidator({
+  // `_set` reads the index with a BARE `to_int` and no `is_valid_int` gate
+  // (iterate_ik_3d.cpp:37), and `_to_int` skips non-digits (ustring.cpp:2268-2298), so
+  // `settings/first/x` resolves to setting 0 and the write LANDS. Reporting it
+  // was a false positive: that is the PropertyListHelper behaviour, not this one.
+  indexParse: 'to_int',
   prefix: 'settings/',
   leaves: SETTING_LEAVES,
   unknownCode: 'INVALID_ITERATE_SETTING_KEY',

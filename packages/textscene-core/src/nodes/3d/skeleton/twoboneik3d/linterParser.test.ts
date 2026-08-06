@@ -126,8 +126,19 @@ describe('TwoBoneIK3D settings/<i>/ key shape', () => {
     expect(error?.code).toBe('INVALID_SETTING_KEY');
   });
 
-  it('rejects a non-numeric index', () => {
-    expect(check('settings/first/target_node', 'NodePath("../Target")')).not.toBeNull();
+  it('accepts a non-numeric index, because this class reads it with a bare to_int', () => {
+    // `_set` (two_bone_ik_3d.cpp:37) has no `is_valid_int` gate, and `_to_int`
+    // skips non-digits (ustring.cpp:2268-2298), so `first` resolves to 0 and the
+    // write LANDS on setting 0. Reporting it was a false positive imported from
+    // PropertyListHelper, which DOES gate (property_list_helper.cpp:52-54) and
+    // drops the write. Two engine paths, two verdicts; this class is the former.
+    expect(check('settings/first/target_node', 'NodePath("../Target")')).toBeNull();
+  });
+
+  it('still applies the leaf bound under a non-numeric index', () => {
+    // Accepting the index must not mean skipping the leaf: Godot applies the
+    // write to setting 0, so a bad VALUE is still a bad value.
+    expect(check('settings/first/pole_direction', '99')).not.toBeNull();
   });
 
   it('rejects a negative index on a flat leaf', () => {
