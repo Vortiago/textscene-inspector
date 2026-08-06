@@ -32,32 +32,6 @@ validated. Existence checks deliberately stay silent across an instance boundary
 and only reaches the rule phase if it produced no errors, so a file with a format
 error reports that error alone — never the semantic findings underneath it.
 
-## Why 2D colours used to read paler in our captures (fixed)
-
-Every 2D sheet once carried the same colour divergence, so the cause is recorded
-here once — and so is its correction, because sheets captured before it show the
-old shift.
-
-Godot writes authored 2D colour straight to the framebuffer: its canvas pipeline
-is never tonemapped, and only the 3D pass is. The previewer's 2D stage mounts its
-own `<Canvas>` (`r3f/components/Canvas2DStage/World2DCanvas.tsx`), and
-react-three-fiber's default for one of those is
-
-```js
-gl.toneMapping = flat ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
-```
-
-so leaving `flat` off ran ACES over the whole 2D stage: bright values were
-highlight-compressed and saturated fills lifted toward grey. Passing `flat`
-removes it, and the 2D sheets now land on Godot almost exactly — measured mean
-channel error over the whole frame: Sprite2D 0.03, Line2D 0.03, TileMap 0.06,
-AnimatedSprite2D 0.06, RemoteTransform2D 0.05, PathFollow2D 0.00, CanvasModulate
-0.43, TileMapLayer 0.37, Polygon2D 0.79.
-
-Note this is NOT the ADR-0025 preview environment, which earlier revisions of
-this file blamed. `<PreviewLighting>` is mounted only by `r3f/TscnCanvas.tsx` and
-never by the 2D stage, so a 2D-workspace capture never saw it.
-
 ## What a RemoteTransform relay does not reproduce
 
 `RemoteTransform2D` and `RemoteTransform3D` share one implementation and one set

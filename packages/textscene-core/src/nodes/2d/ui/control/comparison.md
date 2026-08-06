@@ -27,26 +27,29 @@ rect.
 
 ## Divergences
 
-Every widget in the stack draws from the same theme data on both sides.
-Measured on Godot 4.6.3, `pnpm ref:godot scenes/fixtures/unit-control-state.tscn
---mode 2d --probe <x,y>` against `pnpm ref:ours unit-control-state.tscn --2d
---probe <x,y>`:
+Every widget in the stack draws from the same theme data on both sides, and the
+row stack has the same 35 px pitch. The one difference is that every label's glyph
+rows sit 1 px above Godot's. Measured on Godot 4.6.3, `pnpm ref:godot
+scenes/fixtures/unit-control-state.tscn --mode 2d --probe <x,y>` against
+`pnpm ref:ours unit-control-state.tscn --2d --probe <x,y>`:
 
 | Probe | What it is | Godot | Ours |
 | --- | --- | --- | --- |
-| (1138, 153) | the dropdown chevron's ink where Godot draws it | rgb(158, 158, 158) | rgb(45, 45, 45) |
-| (1138, 167) | the same chevron 14 px lower, where ours draws it | rgb(46, 46, 46) | rgb(157, 157, 157) |
-| (600, 145) | inside Godot's dropdown bar | rgb(46, 46, 46) | rgb(76, 76, 76) |
-| (600, 180) | below Godot's bar, still inside ours | rgb(76, 76, 76) | rgb(45, 45, 45) |
-| (16, 150) | a stroke of the "VISIBLE DROPDOWN" label | rgb(223, 223, 223) | rgb(76, 76, 76) |
+| (9, 149) | the `V` stem's top row — ink here only in ours | rgb(46, 46, 46) | rgb(208, 208, 208) |
+| (12, 161) | the same stem's bottom row — ink here only in Godot | rgb(223, 223, 223) | rgb(45, 45, 45) |
 
-**The chevron is drawn**, from the same icon: the ink covers 10x6 px on both
-sides and peaks within 1/255 of Godot. It sits 14 px lower only because each of
-the four rows above it is 3 px taller here.
+It is the glyphs alone, not the layout: the checked plate's icon rows are 8..21 on
+both sides, while the label beside it runs 10..21 in Godot and 9..20 here, and all
+five text bands carry the same 1 px shift.
+
+**The chevron is drawn**, from the same icon and in the same place: its ink spans
+x 1137..1146 and y 152..157 on both sides and peaks at rgb(158, 158, 158) against
+rgb(157, 157, 157). The dropdown bar behind it spans rows 140..170 at x = 600 on
+both sides.
 
 **The checkbox and radio indicators are the real icon textures**, not outlines:
-the checked plate reads rgb(210, 210, 210) and its tick rgb(26, 26, 26) on both
-sides. See the CheckBox sheet.
+the checked plate reads rgb(210, 210, 210) and its tick rgb(26, 26, 26) at the
+same pixels on both sides. See the CheckBox sheet.
 
 ## Linting
 

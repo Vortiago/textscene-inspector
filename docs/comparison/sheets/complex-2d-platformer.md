@@ -27,17 +27,19 @@ rendered through real Godot and through this previewer.
 
 ## Divergences
 
-The two frames show overlapping but offset slices of the level. Ours is scrolled up
-relative to Godot's, so the platform undersides clip at the top edge and a different set
-of background trees sits in view; because the parallax layers track the camera, their
-clouds and distant trees land in different positions (Godot's big white clouds vs. ours'
-greyer tree silhouettes).
+Both frames cover the same slice of the level, in the same colours: the sky reads
+rgb(114, 221, 255) on both sides, the parallax layers carry no global offset and the same
+colours, and the coins are present in both. Two content differences remain, measured
+on Godot 4.6.3 with `pnpm ref:godot scenes/demos/2d/platformer/level/level.tscn --mode 2d
+--probe <x,y>` against `pnpm ref:ours demos/2d/platformer/level/level.tscn --2d --probe
+<x,y>`:
 
-2D content is tone-mapped on our side, so the sky and foliage read paler and flatter —
-Godot's un-tonemapped canvas is a deeper blue with more vivid orange leaves, and the
-distant parallax layers that stay saturated there wash out to grey in ours.
+| Probe | What it is | Godot | Ours |
+| --- | --- | --- | --- |
+| (4, 0) | the top edge — sky in Godot, platform rock here | rgb(62, 168, 255) | rgb(64, 59, 72) |
+| (780, 400) | the lower-right platform — rock in Godot, sky here | rgb(64, 59, 72) | rgb(114, 221, 255) |
 
-Coins are scattered throughout Godot's frame but none appear in ours: the coin is an
-instanced, animated pickup that the static preview does not surface. A repeating parallax
-background layer also leaves a small visible tile seam of sky and cloud at the top-right
-of our render, which Godot tiles seamlessly.
+So ours draws a platform underside and its hanging vines clipped by the top edge across
+rows 0..8, where Godot's frame is open sky; and Godot's lower-right
+platform runs to the right frame edge with a full tree crown while ours stops at x = 759.
+The cause of neither is identified.

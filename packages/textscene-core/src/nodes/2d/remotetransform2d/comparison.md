@@ -27,14 +27,9 @@ was authored.
 
 ## Divergences
 
-The relay itself is faithful — the blue pentagon lands at the same upper-right spot
-in both images, so the default global-coordinate drive is reproduced.
-One visible difference remains, in the polygon fill rather than its placement:
-
-- **The blue pentagon reads paler and less saturated in ours.** Godot writes
-  `0.2, 0.7, 0.9` as exactly `51, 178, 229`; ours renders `95, 191, 217`, and the
-  semi-transparent ghost carries the same lift faintly (`93` to `98`).
-  See "Why 2D colours read paler in our captures" in docs/comparison/README.md.
+None visible in this fixture. The blue pentagon lands at the same upper-right spot
+in both images and in the same fill, so the default global-coordinate drive is
+reproduced, and the ghost stays at the authored spot.
 
 ## Linting
 

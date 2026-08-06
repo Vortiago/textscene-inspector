@@ -27,14 +27,13 @@ field, so its position and colour report the whole story.
 
 ## Divergences
 
-**Marker colour.** Godot fills the square with `(76, 204, 255)`, the exact sRGB of
-`Color(0.3, 0.8, 1)`; ours renders a paler `(134, 207, 225)`. See "Why 2D colours read paler in our captures" in docs/comparison/README.md.
+None visible in this fixture: both draw the square at the path midpoint, filled
+with the exact sRGB of `Color(0.3, 0.8, 1)`.
 
-The follow position now agrees — both draw the square at the path midpoint. The
-fixture drives the follower with absolute `progress`, which both renderers honour
-at load; `progress_ratio` would still diverge, since Godot binds the parent Path2D
-only on enter-tree and drops a ratio set during scene load, while ours applies it
-directly.
+`progress_ratio` is the one property that would diverge, and this fixture does not
+set it: Godot binds the parent Path2D only on enter-tree and drops a ratio set
+during scene load, while ours applies it directly. The absolute `progress` the
+fixture uses is honoured by both.
 
 
 ## Linting

@@ -24,10 +24,9 @@ The fixture places two: a white diagonal bar and a closed blue-purple triangle.
 
 ## Divergences
 
-Position, width, cap shape, and closed-outline corners match Godot to within a
-pixel, but the colours are dimmer and shifted. Godot draws pure white
-`(255,255,255)` and blue-purple `(128,128,255)`; ours renders them as
-`(226,226,226)` and `(149,143,226)`. See "Why 2D colours read paler in our captures" in docs/comparison/README.md.
+None visible in this fixture: position, width, cap shape, and closed-outline
+corners match Godot to within a pixel, and both draw the bar pure white
+`(255,255,255)` and the triangle blue-purple `(128,128,255)`.
 
 
 ## Linting
