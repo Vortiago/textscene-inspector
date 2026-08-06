@@ -5,11 +5,16 @@
  * during the web build, and silently coerces an unknown `status=` to
  * `unreviewed`, so a typo'd frontmatter key or a dangling image was invisible.
  *
- * Two rules here are load-bearing rather than tidy. `build-gallery` only reports
+ * Three rules here are load-bearing rather than tidy. `build-gallery` only reports
  * a missing image when `image:` is DECLARED (so a freshly scaffolded slice cannot
  * break the web build), which leaves two holes this file closes: an unknown key
  * catches `imgae:`, and the status rule catches `image:` being deleted from a
- * sheet that claims a verified status.
+ * sheet that claims a verified status. The third closes a hole those two open
+ * between them: a SECTIONED sheet (one carrying `<!-- compare: … -->` markers)
+ * takes its nav badge from the rollup over its section statuses, never from
+ * frontmatter, so a frontmatter `status:` there is never read by anything — and
+ * every other check above skips sectioned sheets when judging `status:`, so
+ * nothing was watching that dead value for a contradiction.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -99,11 +104,29 @@ describe('comparison sheets', () => {
   it('declares an image once it claims a verified status', () => {
     // `done`/`limitation` assert a comparison someone actually looked at, which
     // is impossible without captures. Scaffolded sheets are `unreviewed` and pass.
+    // Excludes sectioned sheets: their own `image:` (if any) is the header pair,
+    // not the thing a top-level `status:` would be claiming about — the next
+    // test below is the one that polices their frontmatter status.
     const bad = sheets
       .filter((s) => s.meta.visual !== 'false' && !s.body.includes('<!-- compare:'))
       .filter((s) => ['done', 'limitation'].includes(s.meta.status) && !s.meta.image)
       .map((s) => s.label);
     expect(bad).toEqual([]);
+  });
+
+  it('declares no frontmatter status on a sectioned sheet', () => {
+    // build-gallery.mjs never reads frontmatter `status:` for a sectioned sheet
+    // (one carrying a `<!-- compare: … -->` marker) — its nav badge and header
+    // rolls up from its sections' own `status=` attributes instead. A frontmatter
+    // `status:` there is a second, unread source of truth that can silently say
+    // something the sections do not: PointLight2D declared `limitation` while
+    // every one of its seven sections was `done`, and the badge always read
+    // "Done". Forbidding the key outright is the fix that cannot rot again.
+    const bad = sheets
+      .filter((s) => s.body.includes('<!-- compare:'))
+      .filter((s) => s.meta.status)
+      .map((s) => `${s.label}: status=${s.meta.status}`);
+    expect(bad.sort()).toEqual([]);
   });
 
   it('references only images that exist', () => {

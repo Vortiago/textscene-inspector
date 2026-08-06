@@ -3,7 +3,6 @@ type: PointLight2D
 category: 2D
 fixture: unit-pointlight2d.tscn
 image: unit-pointlight2d
-status: limitation
 group: Lighting
 renders_as: the light's cookie multiplied into every CanvasItem beneath it
 ---

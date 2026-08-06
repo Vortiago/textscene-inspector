@@ -1,7 +1,6 @@
 ---
 type: CPUParticles2D
 category: 2D
-status: limitation
 fixture: unit-cpuparticles2d.tscn
 image: unit-cpuparticles2d
 renders_as: one merged quad mesh holding a frozen particle pose

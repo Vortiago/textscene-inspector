@@ -108,6 +108,12 @@ What the fixture sets and what the two images show; fold any limitation in here.
   `fixture=` (optional — the live `?fixture=` deep link).
 - A sectioned sheet needs NO top-level `image:` frontmatter; each section supplies
   its own. Legacy single-pair sheets (one `image:`, no markers) still work unchanged.
+- A sectioned sheet carries NO top-level `status:` frontmatter either — forbidden,
+  not just optional. Its nav badge and header always roll up from its sections'
+  own `status=` (worst-first: `unimplemented` > `limitation` > `unreviewed` >
+  `done`); a frontmatter `status:` is never read for it, so it is dead the moment
+  it is written and only invites drifting away from what the sections actually say.
+  The sheets test enforces this.
 
 ## Sections beyond the four
 

@@ -1,7 +1,6 @@
 ---
 type: Truck Town
 category: Complex Scenes
-status: limitation
 fixture: demos/3d/truck_town/town/town_scene.tscn
 renders_as: Godot's Truck Town world through the scene's own camera
 ---
