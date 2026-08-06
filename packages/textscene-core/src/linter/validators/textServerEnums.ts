@@ -48,6 +48,28 @@ export const OVERRUN_BEHAVIOR = {
 };
 
 /**
+ * The `TextServer::JustificationFlag` bits a `justification_flags` hint OFFERS.
+ *
+ * Deliberately NOT the whole enum. `servers/text/text_server.h:78-88` also
+ * declares `JUSTIFICATION_TRIM_EDGE_SPACES = 4` and
+ * `JUSTIFICATION_CONSTRAIN_ELLIPSIS = 16`, which the setters keep unaltered but
+ * no hint lists, so they are the values `hintedBitField` reports. Label and
+ * RichTextLabel hint byte-identical strings (`label.cpp:1437`,
+ * `rich_text_label.cpp:7769`), which is what makes this shared data rather than
+ * a coincidence; each call site still cites its own line.
+ *
+ * Note the set is SPARSE (4 and 16 missing), so no min/max bound can express it.
+ */
+export const JUSTIFICATION_HINTED_BITS = {
+  1: 'JUSTIFICATION_KASHIDA',
+  2: 'JUSTIFICATION_WORD_BOUND',
+  8: 'JUSTIFICATION_AFTER_LAST_TAB',
+  32: 'JUSTIFICATION_SKIP_LAST_LINE',
+  64: 'JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS',
+  128: 'JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE',
+};
+
+/**
  * `TextServer::LineBreakFlag`'s trim bits, as `autowrap_trim_flags` uses them.
  *
  * Unusually for this file the BOUND is shared too, not just the labels, and the

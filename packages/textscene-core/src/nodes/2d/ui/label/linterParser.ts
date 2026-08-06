@@ -35,13 +35,14 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { maskedBitField, propertyError, shape, v } from '../../../../linter/validators/index.js';
+import { hintedBitField, maskedBitField, propertyError, shape, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import {
   AUTOWRAP_MODE,
   BREAK_TRIM_HINTED_BITS,
   BREAK_TRIM_LABELS,
   BREAK_TRIM_MASK,
+  JUSTIFICATION_HINTED_BITS,
   OVERRUN_BEHAVIOR,
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
@@ -218,11 +219,14 @@ validatorRegistry.registerAll('Label', {
     labels: BREAK_TRIM_LABELS,
     hintedBits: BREAK_TRIM_HINTED_BITS,
   }),
-  // label.cpp:1437 — PROPERTY_HINT_FLAGS naming 6 of the 8 JustificationFlag
-  // bits. set_justification_flags (label.cpp:79-93) bare-assigns with no mask
-  // and no ERR_FAIL at all, so every integer reaches the engine unaltered.
-  // Format-only.
-  justification_flags: v.int('justification_flags'),
+  // label.cpp:1437 — PROPERTY_HINT_FLAGS naming 6 of the 8 JustificationFlag bits.
+  // The setter bare-assigns with no mask, so bits 4 and 16 are KEPT rather than
+  // dropped: unreachable from the inspector, not refused, which is the hint's
+  // warning tier and not the mask's error tier (contrast autowrap_trim_flags).
+  justification_flags: hintedBitField('justification_flags', {
+    hinted: 'label.cpp:1437',
+    labels: JUSTIFICATION_HINTED_BITS,
+  }),
   // label.cpp:1438 — Variant::STRING, PROPERTY_HINT_NONE. set_paragraph_separator
   // (label.cpp:1198-1205) assigns unconditionally.
   paragraph_separator: v.quotedString('paragraph_separator'),

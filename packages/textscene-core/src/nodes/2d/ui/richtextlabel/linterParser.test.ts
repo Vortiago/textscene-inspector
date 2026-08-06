@@ -258,12 +258,24 @@ describe('RichTextLabel strict validators', () => {
       expect(check('justification_flags', '3')).toBeNull();
     });
 
-    it('accepts a bit the hint does not name (16, JUSTIFICATION_CONSTRAIN_ELLIPSIS)', () => {
-      expect(check('justification_flags', '16')).toBeNull();
+    it('warns on a bit the hint does not offer, which the engine still keeps', () => {
+      // servers/text/text_server.h:78-88 declares JUSTIFICATION_CONSTRAIN_ELLIPSIS
+      // = 16 and JUSTIFICATION_TRIM_EDGE_SPACES = 4; neither is named in the
+      // hint. The setter bare-assigns, so the value LOADS and RUNS: it is
+      // unreachable from the inspector, not refused, which is the hint's
+      // warning tier rather than the mask's error tier.
+      expect(check('justification_flags', '16')?.severity).toBe('warning');
+      expect(check('justification_flags', '4')?.severity).toBe('warning');
     });
 
-    it('accepts a negative value: no clamp exists to reject it', () => {
-      expect(check('justification_flags', '-1')).toBeNull();
+    it('warns on a negative value for the same reason, since no clamp rejects it', () => {
+      expect(check('justification_flags', '-1')?.severity).toBe('warning');
+    });
+
+    it('accepts any subset of the six bits the hint does offer', () => {
+      for (const value of ['0', '1', '2', '3', '8', '32', '64', '128', '235']) {
+        expect(check('justification_flags', value), value).toBeNull();
+      }
     });
   });
 

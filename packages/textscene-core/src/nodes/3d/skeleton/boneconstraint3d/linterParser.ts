@@ -20,7 +20,7 @@
  * bounds arrive only because each subclass's dispatcher forwards an unrecognised
  * leaf here via `findValidator('BoneConstraint3D', key)`.
  *
- * That contract is asserted in `linter/boneConstraintSettingsSeam.test.ts`,
+ * That contract is asserted in `linter/settingsFamilySeam.test.ts`,
  * which loads the whole barrel: a per-slice test cannot see the shadow, because
  * a scoped test loads only its own module graph.
  */

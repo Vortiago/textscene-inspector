@@ -69,7 +69,7 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
   // mode extrudes along a Path3D it names through `path_node` and needs no
   // PathFollow3D at all — a first-class Godot pattern that two vendored scenes
   // use, and that this rule used to warn about.
-  if (!hasPathFollowChildren(node) && !isReferencedByPathNode(context.scene, node.name)) {
+  if (!hasPathFollowChildren(node) && !isReferencedByAnyConsumer(context.scene, node.name)) {
     diagnostics.push({
       severity: 'warning',
       message: `Path3D '${node.name}' has no PathFollow3D children. While paths can be used programmatically, they are typically followed by PathFollow3D nodes. Consider adding a PathFollow3D child if you intend to animate objects along this path.`,
@@ -189,7 +189,17 @@ ruleRegistry.register(path3DValidationRule);
 export { path3DValidationRule };
 
 /**
- * Is any node in the scene pointing a `path_node` NodePath at this Path3D?
+ * The indexed key shape that names a Path3D.
+ *
+ * `path_node` is CSGPolygon3D's and is read directly. `settings/<i>/path_3d` is
+ * SplineIK3D's, which consumes a Path3D through its indexed setting family and
+ * needs no PathFollow3D either (`spline_ik_3d.cpp:83`); scanning only
+ * `path_node` warned on every scene using that pattern.
+ */
+const INDEXED_CONSUMER_RE = /^settings\/\d+\/path_3d$/;
+
+/**
+ * Does any node in the scene name this Path3D through a Path3D-consuming key?
  *
  * Matched by the NodePath's FINAL SEGMENT rather than resolved properly: the
  * linter reads a single static scene, where an instanced sub-scene's internals
@@ -197,29 +207,28 @@ export { path3DValidationRule };
  * negative (staying quiet about a genuinely unused path) is much cheaper here
  * than warning about a correct scene.
  */
-/**
- * Property keys that name a Path3D.
- *
- * `path_node` is CSGPolygon3D's. `settings/<i>/path_3d` is SplineIK3D's, which
- * consumes a Path3D through its indexed setting family and needs no
- * PathFollow3D either (`spline_ik_3d.cpp:83`); scanning only `path_node` warned
- * on every scene using that pattern.
- */
-const CONSUMER_KEY_RE = /^(path_node|settings\/\d+\/path_3d)$/;
+function isReferencedByAnyConsumer(scene: TscnScene, pathName: string): boolean {
+  const names = (raw: unknown): boolean =>
+    typeof raw === 'string' && nodePathLeaf(raw) === pathName;
 
-function isReferencedByPathNode(scene: TscnScene, pathName: string): boolean {
-  let found = false;
-  const visit = (nodes: readonly TscnNode[]): void => {
+  // Direct reads before any iteration: this runs for every node of every scene,
+  // once per Path3D, so materialising key/value pairs per node would allocate
+  // across the whole tree to find a key that is usually absent. `for...in`
+  // costs nothing when the guard fails, and `endsWith` rejects almost every key
+  // before the regex runs.
+  const visit = (nodes: readonly TscnNode[]): boolean => {
     for (const n of nodes) {
-      for (const [key, raw] of Object.entries(n.properties as Record<string, unknown>)) {
-        if (!CONSUMER_KEY_RE.test(key)) continue;
-        if (typeof raw === 'string' && nodePathLeaf(raw) === pathName) found = true;
+      const props = n.properties as Record<string, unknown>;
+      if (names(props['path_node'])) return true;
+      for (const key in props) {
+        if (!key.endsWith('/path_3d') || !INDEXED_CONSUMER_RE.test(key)) continue;
+        if (names(props[key])) return true;
       }
-      if (n.children.length > 0) visit(n.children);
+      if (n.children.length > 0 && visit(n.children)) return true;
     }
+    return false;
   };
-  visit(scene.nodes);
-  return found;
+  return visit(scene.nodes);
 }
 
 /** Last segment of a `NodePath("a/b/Target")` literal, or the raw string. */

@@ -32,6 +32,17 @@ import { propertyError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 
+/** One TSCN integer literal. Hoisted: these validators run per property. */
+const INTEGER_LITERAL_RE = /^[+-]?\d+$/;
+
+/** `LABEL (bit) | LABEL (bit)` for whichever of `labels` appear in `bits`. */
+function describeBits(labels: Record<number, string>, bits: number): string {
+  return Object.entries(labels)
+    .filter(([bit]) => (Number(bit) & bits) !== 0)
+    .map(([bit, label]) => `${label} (${bit})`)
+    .join(' | ');
+}
+
 export interface MaskedBitFieldOptions {
   /**
    * `file:line` of the setter that applies the mask. Pass a literal, not a
@@ -63,15 +74,11 @@ export function maskedBitField(
   opts: MaskedBitFieldOptions
 ): PropertyValidator {
   const upper = name.toUpperCase();
-  const describe = (bits: number): string =>
-    Object.entries(opts.labels)
-      .filter(([bit]) => (Number(bit) & bits) !== 0)
-      .map(([bit, label]) => `${label} (${bit})`)
-      .join(' | ');
+  const describe = (bits: number): string => describeBits(opts.labels, bits);
   const allNames = describe(mask);
 
   const validator = accepts((key, value, line) => {
-    if (!/^[+-]?\d+$/.test(value.trim())) {
+    if (!INTEGER_LITERAL_RE.test(value.trim())) {
       return propertyError(
         key,
         line,
@@ -111,5 +118,64 @@ export function maskedBitField(
   // The error branch is the stronger claim, so it carries the tag; a narrower
   // `hintedBits` cites its ADD_PROPERTY in the comment at the call site.
   validator.grounding = { kind: 'enforced', cite: opts.enforced };
+  return validator;
+}
+
+
+export interface HintedBitFieldOptions {
+  /** `file:line` of the `ADD_PROPERTY` whose PROPERTY_HINT_FLAGS lists the bits. */
+  hinted: string;
+  /** Bit value to constant name, for the message and the sheet's Accepts column. */
+  labels: Record<number, string>;
+}
+
+/**
+ * A `BitField` whose setter keeps EVERY bit, where only the inspector's flag
+ * list is narrower.
+ *
+ * This is `maskedBitField`'s warning arm standing alone, and the two differ in
+ * exactly the way ADR-0032 separates the tiers: there the setter writes
+ * `p_flags & MASK`, so a bit outside the mask is DROPPED and the stored value is
+ * not the written one (error). Here the setter bare-assigns, so an unlisted bit
+ * is kept unaltered and is merely unreachable from the inspector (warning).
+ *
+ * A min/max bound cannot substitute, and not only for elegance: the hinted set
+ * is often SPARSE. `Label.justification_flags` offers {1, 2, 8, 32, 64, 128}
+ * (`label.cpp:1437`) while `JUSTIFICATION_TRIM_EDGE_SPACES = 4` and
+ * `JUSTIFICATION_CONSTRAIN_ELLIPSIS = 16` exist and load fine
+ * (`servers/text/text_server.h:78-88`), so `{ min: 0, max: 255 }` would wave
+ * through the two values a reader most needs told about.
+ */
+export function hintedBitField(name: string, opts: HintedBitFieldOptions): PropertyValidator {
+  const upper = name.toUpperCase();
+  const hintedBits = Object.keys(opts.labels).reduce((acc, bit) => acc | Number(bit), 0);
+  const allNames = describeBits(opts.labels, hintedBits);
+
+  const validator = accepts((key, value, line) => {
+    if (!INTEGER_LITERAL_RE.test(value.trim())) {
+      return propertyError(
+        key,
+        line,
+        `Property '${name}' must be an integer, got: "${value}"`,
+        `INVALID_${upper}_FORMAT`
+      );
+    }
+    const num = Number(value);
+    // `num > hintedBits` first, so a value past 32 bits never reaches `&`,
+    // where JS would coerce and wrap. Same ordering, same reason, as
+    // `maskedBitField`.
+    if (num < 0 || num > hintedBits || (num & ~hintedBits) !== 0) {
+      return propertyError(
+        key,
+        line,
+        `Property '${name}' sets a bit the inspector's flag list does not offer; it lists only ${allNames}. Godot keeps the value, so this loads and runs, but the value is unreachable from the editor`,
+        `INVALID_${upper}_VALUE`,
+        'warning'
+      );
+    }
+    return null;
+  }, `bit mask of ${allNames}`);
+
+  validator.grounding = { kind: 'hinted', cite: opts.hinted };
   return validator;
 }

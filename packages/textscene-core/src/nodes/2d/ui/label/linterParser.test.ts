@@ -161,8 +161,15 @@ describe('Label strict validators', () => {
   });
 
   describe('justification_flags', () => {
-    it('accepts the full 8-bit combination — set_justification_flags (label.cpp:79-93) bare-assigns with no mask', () => {
-      expect(check('justification_flags', '255')).toBeNull();
+    it('warns on the full 8-bit combination, which sets two unoffered bits', () => {
+      // set_justification_flags (label.cpp:79-93) bare-assigns with no mask, so
+      // 255 LOADS unaltered. But label.cpp:1437 offers only {1,2,8,32,64,128},
+      // so bits 4 and 16 are unreachable from the inspector: warning, not error.
+      expect(check('justification_flags', '255')?.severity).toBe('warning');
+    });
+
+    it('accepts 235, the OR of every bit the hint does offer', () => {
+      expect(check('justification_flags', '235')).toBeNull();
     });
 
     it('accepts 0 (JUSTIFICATION_NONE)', () => {

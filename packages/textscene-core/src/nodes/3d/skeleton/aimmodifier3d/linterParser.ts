@@ -38,7 +38,7 @@
 // Chains through BoneConstraint3D, not past it: that tier owns the seven
 // settings/ leaves this class's dispatcher delegates to, and it chains on to
 // SkeletonModifier3D itself.
-import '../boneconstraint3d/linterParser.js';
+import { BONE_CONSTRAINT_SETTING_LEAVES } from '../boneconstraint3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
@@ -96,15 +96,12 @@ const delegateToBase: PropertyValidator = (key, value, line) =>
   validatorRegistry.findValidator('BoneConstraint3D', key)?.(key, value, line) ?? null;
 
 const BASE_LEAVES: Readonly<Record<string, PropertyValidator>> = Object.fromEntries(
-  [
-    'amount',
-    'apply_bone_name',
-    'apply_bone',
-    'reference_type',
-    'reference_bone_name',
-    'reference_bone',
-    'reference_node',
-  ].map((leaf) => [leaf, delegateToBase])
+  // Derived from the base's own table rather than re-spelled here. A hand-copy
+  // would go stale silently in the worst direction: an eighth leaf on
+  // BoneConstraint3D would make this dispatcher report a LEGAL key as
+  // INVALID_SETTING_KEY, and only `amount` is covered by settingsFamilySeam's
+  // canary, so nothing would go red.
+  Object.keys(BONE_CONSTRAINT_SETTING_LEAVES).map((leaf) => [leaf, delegateToBase])
 );
 
 const settingValidator = indexedFamilyValidator({

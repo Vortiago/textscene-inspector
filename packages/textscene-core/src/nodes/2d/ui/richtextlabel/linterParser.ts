@@ -21,12 +21,13 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { maskedBitField, propertyError, shape, v } from '../../../../linter/validators/index.js';
+import { hintedBitField, maskedBitField, propertyError, shape, v } from '../../../../linter/validators/index.js';
 import {
   AUTOWRAP_MODE,
   BREAK_TRIM_HINTED_BITS,
   BREAK_TRIM_LABELS,
   BREAK_TRIM_MASK,
+  JUSTIFICATION_HINTED_BITS,
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
 
@@ -195,13 +196,14 @@ validatorRegistry.registerAll('RichTextLabel', {
     enforced: 'rich_text_label.cpp:7262',
   }),
   // rich_text_label.cpp:7769: PROPERTY_HINT_FLAGS listing 6 of the 8
-  // JustificationFlag bits (servers/text/text_server.h:78-88 also has
-  // JUSTIFICATION_TRIM_EDGE_SPACES=4 and JUSTIFICATION_CONSTRAIN_ELLIPSIS=16,
-  // neither named in the hint). set_justification_flags
-  // (rich_text_label.cpp:7276-7289) is a bare assignment with no masking at
-  // all (unlike autowrap_trim_flags above), so every bit combination reaches
-  // the engine unchanged. PROPERTY_HINT_FLAGS grounds no bound. Format-only.
-  justification_flags: v.int('justification_flags'),
+  // rich_text_label.cpp:7769 — PROPERTY_HINT_FLAGS naming 6 of the 8 JustificationFlag bits.
+  // The setter bare-assigns with no mask, so bits 4 and 16 are KEPT rather than
+  // dropped: unreachable from the inspector, not refused, which is the hint's
+  // warning tier and not the mask's error tier (contrast autowrap_trim_flags).
+  justification_flags: hintedBitField('justification_flags', {
+    hinted: 'rich_text_label.cpp:7769',
+    labels: JUSTIFICATION_HINTED_BITS,
+  }),
   // rich_text_label.cpp:7770: Variant::PACKED_FLOAT32_ARRAY, no hint.
   // set_tab_stops (rich_text_label.cpp:7295-7308) is a bare assignment.
   tab_stops: packedFloat32ArrayValidator('tab_stops', 'INVALID_TAB_STOPS_FORMAT'),
