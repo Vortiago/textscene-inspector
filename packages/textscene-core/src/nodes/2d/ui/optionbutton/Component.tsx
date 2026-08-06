@@ -33,6 +33,7 @@ import { OPTION_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons'
 import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   layoutOptionButtonContent,
   optionButtonTextTheme,
@@ -41,6 +42,7 @@ import {
   resolveOptionButtonSelectedText,
   tintColor,
   OPTION_BUTTON_ARROW_NATURAL_SIZE,
+  OPTION_BUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { OptionButtonProperties } from './types';
 
@@ -63,9 +65,12 @@ export function OptionButton({ solveNode, rect, renderOrder, theme }: NativeCont
   const { fontSizePx, color: baseFontColor } = optionButtonTextTheme(props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
+  // Read INSIDE the render body, not the `useMemo` below — see Label's own
+  // Component.tsx for why.
+  const fontMetrics = resolveNodeFontMetrics(solveNode, OPTION_BUTTON_THEME_FONT_KEY);
   const layout: TextLayoutResult | null = useMemo(
-    () => (hasText ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF }) : null),
-    [hasText, text, fontSizePx]
+    () => (hasText ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, fontMetrics }) : null),
+    [hasText, text, fontSizePx, fontMetrics]
   );
 
   // --- Content layout: text + arrow placement within the solved rect ------

@@ -14,7 +14,7 @@
  * itself INTEGER-rounded at that resolution before this repo's bake script
  * ever reads it back): 'A' = 1354.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { ControlProperties } from '../control/types';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -23,8 +23,11 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { LabelProperties } from './types';
 import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { labelMinimumSize, LABEL_THEME_KEYS, LABEL_DEFAULT_FONT_COLOR, labelTextTheme, layoutLabelLines } from './nativeSolver';
+import { labelMinimumSize, LABEL_THEME_KEYS, LABEL_THEME_FONT_KEY, LABEL_DEFAULT_FONT_COLOR, labelTextTheme, layoutLabelLines } from './nativeSolver';
 import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import type { FontResource } from '../../../../resources/processing/fontProcessing';
+import * as logger from '../../../../logger';
 
 /** `labelMinimumSize`'s `size` half only — every test below except the dedicated `meta` describe cares only about this, exactly like before `{ size, meta }` existed. */
 function minSize(...args: Parameters<typeof labelMinimumSize>): Vec2 {
@@ -38,13 +41,12 @@ function minMeta(...args: Parameters<typeof labelMinimumSize>): unknown {
   return 'meta' in result ? result.meta : undefined;
 }
 
-function node(props: Partial<LabelProperties>): SolveNode {
+function node(props: Partial<LabelProperties>, overrides: Partial<SolveNode> = {}): SolveNode {
   return {
+    ...emptySolveNode(),
     path: 'L',
     node: { name: 'L', type: 'Label', children: [], properties: { name: 'L', ...props } as ControlProperties },
-    children: [],
-    styleBoxes: {},
-    textureSize: null,
+    ...overrides,
   };
 }
 
@@ -242,5 +244,31 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
     const placements = layoutLabelLines(layout, 200, 200, 3, undefined, FONT_SIZE);
     expect(placements[0]!.line.widthPx).toBeCloseTo(200, 6);
     expect(placements[1]!.line.widthPx).toBeCloseTo(naturalWidth, 6);
+  });
+});
+
+describe(`labelMinimumSize — resolves this Label's own theme font key ("${LABEL_THEME_FONT_KEY}", default_theme.cpp:381)`, () => {
+  // See `resolveNodeFontMetrics.test.ts`'s own doc for why an UNRESOLVABLE
+  // font's warn is the observable proof here, not a resolved FontMetrics value.
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it('a theme_override_fonts/font local override is fed to the text engine, even for empty text (fontHeightPx is resolved unconditionally)', () => {
+    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const n = { ...node({}), fontOverrides: { [LABEL_THEME_FONT_KEY]: systemFont } };
+    labelMinimumSize(n, ctx());
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('a local override under a different key is not consulted', () => {
+    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const n = { ...node({}), fontOverrides: { normal_font: systemFont } };
+    labelMinimumSize(n, ctx());
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });

@@ -12,7 +12,7 @@
  * `getLinePitchPx(fontSizePx, 0)` — not the default-3 call Label uses — is
  * this widget's own per-line step.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { ControlProperties } from '../control/types';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -20,11 +20,14 @@ import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/n
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import type { FontResource } from '../../../../resources/processing/fontProcessing';
+import * as logger from '../../../../logger';
 import type { RichTextLabelProperties } from './types';
 import {
   richTextLabelMinimumSize,
   RICH_TEXT_LABEL_THEME_KEYS,
   RICH_TEXT_LABEL_DEFAULT_FONT_COLOR,
+  RICH_TEXT_LABEL_THEME_FONT_KEY,
   richTextLabelTextTheme,
   styledTextRuns,
   fontSizePxAtFromRuns,
@@ -42,6 +45,9 @@ function node(props: Partial<RichTextLabelProperties>): SolveNode {
     children: [],
     styleBoxes: {},
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 
@@ -180,6 +186,35 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
     );
     // Both 'A's now shape at 32px: 2 * 1354*32/2048.
     expect(result.x).toBeCloseTo(2 * ((1354 * 32) / 2048), 10);
+  });
+});
+
+describe(`richTextLabelMinimumSize — resolves this RichTextLabel's own PARAGRAPH theme font key ("${RICH_TEXT_LABEL_THEME_FONT_KEY}", default_theme.cpp:1194)`, () => {
+  // See `resolveNodeFontMetrics.test.ts`'s own doc for why an UNRESOLVABLE
+  // font's warn is the observable proof here, not a resolved FontMetrics value.
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it('a theme_override_fonts/normal_font local override is fed to the text engine (fit_content required for the shape branch to run at all)', () => {
+    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const n: SolveNode = {
+      ...node({ fitContent: true, text: 'A' }),
+      fontOverrides: { [RICH_TEXT_LABEL_THEME_FONT_KEY]: systemFont },
+    };
+    richTextLabelMinimumSize(n, ctx());
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('a local override under a different key ("font", Label/Button/etc\'s own key) is not consulted', () => {
+    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const n: SolveNode = { ...node({ fitContent: true, text: 'A' }), fontOverrides: { font: systemFont } };
+    richTextLabelMinimumSize(n, ctx());
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -496,6 +531,15 @@ describe('layoutRichTextRuns', () => {
     const placements = layoutRichTextRuns(runs, layout);
     expect(placements[0]!.fontSizePx).toBe(18);
     expect(placements[1]!.fontSizePx).toBe(16);
+  });
+
+  it("(regression) each placement's own solo-run layout echoes the PARENT layout's fontMetrics/baselineOffsetPx, not the pre-existing implicit atlas default — TextRun.tsx dispatches paint by layout.fontMetrics.kind, so an omitted value here would silently force every run onto the atlas path", () => {
+    const runs = [{ text: 'AB', bold: false, italic: false, underline: false, color: WHITE, fontSizePx: FONT_SIZE }];
+    const layout = shape('AB');
+    const placements = layoutRichTextRuns(runs, layout);
+    expect(placements[0]!.layout.fontMetrics).toBe(layout.fontMetrics);
+    expect(placements[0]!.layout.baselineOffsetPx).toBe(layout.baselineOffsetPx);
+    expect(placements[0]!.layout.linePitchPx).toBe(layout.linePitchPx);
   });
 });
 

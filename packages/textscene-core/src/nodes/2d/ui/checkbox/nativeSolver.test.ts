@@ -25,13 +25,15 @@
  * rgb(150,150,150) at probe (526,350) — `font_disabled_color` (0.875 * alpha
  * 0.5) blended over the 76,76,76 clear colour: `0.5*223 + 0.5*76 = 149.5`.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { originCorrectionPx } from '../../../../r3f/controls/native/buttonBase';
+import type { FontResource } from '../../../../resources/processing/fontProcessing';
+import * as logger from '../../../../logger';
 import type { CheckBoxProperties } from './types';
 import {
   checkBoxMinimumSize,
@@ -43,6 +45,7 @@ import {
   CHECKBOX_DEFAULT_PRESSED_FONT_COLOR,
   CHECKBOX_DEFAULT_DISABLED_FONT_COLOR,
   CHECKBOX_ICON_NATURAL_SIZE,
+  CHECKBOX_THEME_FONT_KEY,
 } from './nativeSolver';
 
 // 'A's hmtx advance width is 1354 design units, 'B's is 1350 — a DIFFERENT
@@ -60,6 +63,9 @@ function node(props: Partial<CheckBoxProperties>): SolveNode {
     children: [],
     styleBoxes: {},
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 
@@ -249,5 +255,38 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
 
   it('matches originCorrectionPx(16) exactly (shared text-origin convention with Button/Label)', () => {
     expect(originCorrectionPx(16)).toBeCloseTo(ORIGIN_16, 10);
+  });
+});
+
+describe(`checkBoxMinimumSize — resolves this CheckBox's own theme font key ("${CHECKBOX_THEME_FONT_KEY}", default_theme.cpp:297)`, () => {
+  // See `resolveNodeFontMetrics.test.ts`'s own doc for why an UNRESOLVABLE
+  // font's warn is the observable proof here, not a resolved FontMetrics value.
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it("a theme_override_fonts/font local override is fed to the text engine (also threaded through TextMeasurer, not just shapeText)", () => {
+    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { [CHECKBOX_THEME_FONT_KEY]: systemFont } };
+    checkBoxMinimumSize(n, ctx());
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('a local override under a different key is not consulted', () => {
+    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { normal_font: systemFont } };
+    checkBoxMinimumSize(n, ctx());
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('resolves the font key even for empty text (unconditional, not gated behind hasText)', () => {
+    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const n: SolveNode = { ...node({}), fontOverrides: { [CHECKBOX_THEME_FONT_KEY]: systemFont } };
+    checkBoxMinimumSize(n, ctx());
+    expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 });

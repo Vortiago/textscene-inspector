@@ -39,7 +39,7 @@ function textureRectNode(raw: Record<string, string> = {}): TscnNode {
 }
 
 function solveNode(node: TscnNode): SolveNode {
-  return { path: node.name, node, children: [], styleBoxes: {}, textureSize: null };
+  return { path: node.name, node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 /** A 320x160 texture — the same non-square size `nativeSolver.test.ts` uses. */

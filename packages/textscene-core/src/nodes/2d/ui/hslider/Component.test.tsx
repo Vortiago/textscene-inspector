@@ -22,6 +22,9 @@ function solveNode(properties: Record<string, unknown>): SolveNode {
     children: [],
     styleBoxes: {},
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 

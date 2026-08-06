@@ -18,11 +18,17 @@
  * (`has2DUIContent.ts`) is the existing mirror of "which types are genuinely
  * Control-ish"; this module reads it rather than keeping a second list.
  *
- * `generation` bumps whenever ANY scene or texture load/failure lands on the
- * bus. A plain `useMemo` over `[nodes, externalResources, internalResources]`
- * cannot see a sub-scene arriving in the loader's cache later — the cache is
- * a mutable snapshot outside React's dependency graph — so `generation` is
- * the seam that makes a later arrival force a re-walk.
+ * `generation` bumps whenever ANY scene/texture/theme/font-resource
+ * load/failure lands on the bus, OR a runtime scene-font metrics load settles
+ * (`text/sceneFontLoader.ts`'s `onSceneFontMetricsSettled` — the SAME
+ * mechanism, a second listener source rather than a second one: that module's
+ * `peekSceneFontMetrics` answers synchronously with the bundled fallback
+ * while a real font is still loading, so the FIRST solve after a scene font
+ * appears necessarily under-shapes text against it; this bump is what makes
+ * the solve rerun once the real metrics land). A plain `useMemo` over
+ * `[nodes, externalResources, internalResources]` cannot see either kind of
+ * arrival — both are mutable caches outside React's dependency graph — so
+ * `generation` is the seam that makes a later arrival force a re-walk.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -45,6 +51,7 @@ import {
   type FontCacheReader,
   type ThemeResource,
 } from '../../../resources/processing/themeProcessing';
+import { onSceneFontMetricsSettled } from './text/sceneFontLoader';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../liveSceneTree';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
@@ -322,8 +329,13 @@ export function useBuildSolveTree(
   const projectThemeRef = useProjectSettings().settings?.['gui/theme/custom']?.trim() || undefined;
 
   useEffect(() => {
-    if (!loader) return undefined;
     const bump = () => setGeneration((g) => g + 1);
+    // Not gated on `loader` — a runtime scene-font metrics load is triggered
+    // by `peekSceneFontMetrics` from inside the SOLVE pass itself, never
+    // through `loader`, so this subscription must live regardless of whether
+    // a loader is present.
+    const offSceneFontMetrics = onSceneFontMetricsSettled(bump);
+    if (!loader) return offSceneFontMetrics;
     loader.eventBus.on('scene', 'loaded', bump);
     loader.eventBus.on('scene', 'failed', bump);
     loader.eventBus.on('texture', 'loaded', bump);
@@ -333,6 +345,7 @@ export function useBuildSolveTree(
     loader.eventBus.on('font', 'loaded', bump);
     loader.eventBus.on('font', 'failed', bump);
     return () => {
+      offSceneFontMetrics();
       loader.eventBus.off('scene', 'loaded', bump);
       loader.eventBus.off('scene', 'failed', bump);
       loader.eventBus.off('texture', 'loaded', bump);

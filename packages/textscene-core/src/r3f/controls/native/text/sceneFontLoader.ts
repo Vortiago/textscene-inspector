@@ -42,26 +42,33 @@
  * `.tres` chain, the warn-once dedupe, the sync peek/cache contract) and
  * documents which branch is untestable here and why.
  *
- * ## The join-point contract (for the agent wiring `nativeSolver.ts` to
- * `resolveThemeFont`/`SolveNode.fontOverrides`/`.themeChain`/`.projectTheme`)
+ * ## The join-point contract
  *
- * `peekSceneFontMetrics(font, nodePath)` is the ONE call a synchronous solve
- * pass (`nativeSolver.ts`, pure per-node math, no hooks) needs: pass the
- * `FontResource | null` `themeProcessing.ts`'s `resolveThemeFont(name,
- * solveNode.fontOverrides?.[name], nativeType, typeVariation,
- * solveNode.themeChain ?? [], solveNode.projectTheme ?? null)` returns for
- * this widget's own font-theme key, plus that node's own scene path (for the
- * warn message), and thread the returned `FontMetrics` into `shapeText({
- * ..., fontMetrics })`. It ALWAYS returns synchronously — the
- * bundled default while a real load is still in flight or failed, the real
- * `CanvasFontMetrics` once one lands — and never throws. No `await`, no
- * hook, no effect at the call site: the async work (and any eventual
- * re-solve/re-render once a font finishes loading) is this module's own
- * problem, not `nativeSolver.ts`'s. `resolveSceneFontMetrics(font, nodePath)`
- * is the same work as a `Promise` a caller that DOES want to await
- * completion (or drive a re-render off it) can use instead; `peek` calls it
- * internally as a fire-and-forget kickoff, so calling both for the same
- * `font` never double-loads.
+ * `text/resolveNodeFontMetrics.ts`'s `resolveNodeFontMetrics(solveNode,
+ * themeKey)` is the seam every widget's solver/painter actually calls — it
+ * wraps `themeProcessing.ts`'s `resolveThemeFont` (walking
+ * `solveNode.fontOverrides`/`.themeChain`/`.projectTheme`) and THIS module's
+ * own `peekSceneFontMetrics` in one place. `peekSceneFontMetrics(font,
+ * nodePath)` itself is the ONE call a synchronous solve pass
+ * (`nativeSolver.ts`, pure per-node math, no hooks) needs: it ALWAYS returns
+ * synchronously — the bundled default while a real load is still in flight or
+ * failed, the real `CanvasFontMetrics` once one lands — and never throws. No
+ * `await`, no hook, no effect at the call site.
+ *
+ * ## Re-solve/re-render on arrival
+ *
+ * A font resolves asynchronously, so the FIRST solve/paint of a node
+ * necessarily uses the bundled fallback. `onSceneFontMetricsSettled` is this
+ * module's half of the SAME generation-bump mechanism `buildSolveTree.ts`
+ * already uses for a texture/scene/theme/font-RESOURCE arrival (`generation`,
+ * bumped from `loader.eventBus` listeners in a `useEffect`) — not a second,
+ * parallel re-render channel: `useBuildSolveTree.ts` subscribes to this
+ * listener list in the SAME effect, calling the SAME `bump`, so a runtime
+ * metrics settling forces the identical re-walk → re-solve → re-paint a
+ * texture arrival already does. `resolveSceneFontMetrics(font, nodePath)` is
+ * the same work as a `Promise` a caller that DOES want to await completion
+ * can use instead; `peek` calls it internally as a fire-and-forget kickoff,
+ * so calling both for the same `font` never double-loads.
  */
 import type { FontMetrics } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
@@ -84,6 +91,36 @@ const IS_VITEST = (() => {
 const SYNTHETIC_UNITS_PER_EM = 1000;
 
 let familyCounter = 0;
+
+/** A no-argument re-render trigger — see `onSceneFontMetricsSettled`'s own doc. */
+export type SceneFontMetricsListener = () => void;
+
+const settledListeners = new Set<SceneFontMetricsListener>();
+
+/**
+ * Subscribes to "a runtime scene-font metrics load just settled" — this
+ * module's own half of the SAME generation-bump mechanism
+ * `buildSolveTree.ts` already uses for a texture/scene/theme/font-resource
+ * arrival (this file's own doc, "Re-solve/re-render on arrival"). Fires once
+ * per resource the FIRST time its `resolveSceneFontMetrics` promise settles
+ * (success or fallback — see the call site below); never for a font that
+ * short-circuits synchronously (`null`/`undefined`, or an unresolvable
+ * resource caught by `warnUnresolvable` before any async work starts) since
+ * nothing there can later change value.
+ *
+ * Returns an unsubscribe function, the same shape `ResourceEventBus.on`'s
+ * callers already unwind via their own `off` call in a `useEffect` cleanup.
+ */
+export function onSceneFontMetricsSettled(listener: SceneFontMetricsListener): () => void {
+  settledListeners.add(listener);
+  return () => {
+    settledListeners.delete(listener);
+  };
+}
+
+function notifySceneFontMetricsSettled(): void {
+  for (const listener of settledListeners) listener();
+}
 
 type CacheEntry = { status: 'pending'; promise: Promise<FontMetrics> } | { status: 'settled'; metrics: FontMetrics };
 
@@ -209,6 +246,11 @@ export async function resolveSceneFontMetrics(
   metricsCache.set(resolved.leaf, { status: 'pending', promise });
   const metrics = await promise;
   metricsCache.set(resolved.leaf, { status: 'settled', metrics });
+  // Wakes any solve/paint pass that already ran against the bundled
+  // fallback (`peekSceneFontMetrics`'s synchronous first answer) so it reruns
+  // and picks up `metrics` from the now-settled cache — see this module's own
+  // doc, "Re-solve/re-render on arrival".
+  notifySceneFontMetricsSettled();
   return metrics;
 }
 

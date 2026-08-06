@@ -14,6 +14,7 @@ import { createTypeRegistry } from '../../../core/createTypeRegistry';
 import type { Rect2, Vec2 } from './rect';
 import type { SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
+import type { FontMetrics } from './text/fontMetrics';
 
 /**
  * Measures a run of text at a given font size. `null` until the text engine
@@ -28,8 +29,24 @@ import type { NativeTheme } from './nativeTheme';
  * applies BETWEEN lines only: the returned height never carries a trailing gap
  * below the last line, so a single-line measurement is exactly the font height
  * whatever the spacing.
+ *
+ * `fontMetrics` is the SAME `FontMetrics` (`./text/fontMetrics.ts`) the
+ * caller's own painter shapes/paints against
+ * (`text/resolveNodeFontMetrics.ts`'s `resolveNodeFontMetrics`) — defaults to
+ * `measurer.ts`'s own `OPEN_SANS_FONT_METRICS` default when omitted, matching
+ * every caller's behaviour before this parameter existed. Threading it
+ * through is what keeps a floored minimum size in the SAME font the paint
+ * pass draws: without it, a widget whose text engine resolves a scene font
+ * would still floor its box against Open Sans's advances while painting the
+ * scene font's — a box sized for the wrong text, never a crash (see
+ * `measurer.ts`'s own doc).
  */
-export type TextMeasurer = (text: string, fontSize: number, lineSpacingPx?: number) => Vec2;
+export type TextMeasurer = (
+  text: string,
+  fontSize: number,
+  lineSpacingPx?: number,
+  fontMetrics?: FontMetrics
+) => Vec2;
 
 export interface SolveContext {
   /** The scaled default theme, plain data. */

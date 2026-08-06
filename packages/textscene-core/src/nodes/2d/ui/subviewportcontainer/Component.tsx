@@ -160,7 +160,20 @@ function ViewportSurfaceNative({
   );
 
   const fallbackSolveNode = useMemo<SolveNode>(
-    () => ({ path, node: viewport, children: [], styleBoxes: {}, textureSize: null }),
+    () => ({
+      path,
+      node: viewport,
+      children: [],
+      styleBoxes: {},
+      textureSize: null,
+      // This synthetic root stands in for the SubViewport itself (never a
+      // real Control `buildSolveTree.ts` walked), so it carries no theme of
+      // its own to inherit — matching what that walker would produce for a
+      // themeless root.
+      fontOverrides: {},
+      themeChain: [],
+      projectTheme: null,
+    }),
     [path, viewport]
   );
 

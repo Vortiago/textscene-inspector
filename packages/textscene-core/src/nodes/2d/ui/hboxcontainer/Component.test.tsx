@@ -17,7 +17,7 @@ function hboxSolveNode(): SolveNode {
     children: [],
     properties: { name: 'Row' },
   };
-  return { path: 'Row', node, children: [], styleBoxes: {}, textureSize: null };
+  return { path: 'Row', node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 describe('<HBoxContainer>', () => {

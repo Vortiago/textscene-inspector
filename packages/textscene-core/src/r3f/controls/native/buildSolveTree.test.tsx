@@ -27,6 +27,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext';
 import type { ThemeResource } from '../../../resources/processing/themeProcessing';
 import type { FontResource } from '../../../resources/processing/fontProcessing';
+import { resolveSceneFontMetrics } from './text/sceneFontLoader';
 import { useBuildSolveTree } from './buildSolveTree';
 
 const LAYER_PATH = 'res://hud-layer.tscn';
@@ -560,6 +561,45 @@ describe('useBuildSolveTree — theme resolution', () => {
 
     expect(result.current.generation).toBeGreaterThan(initialGeneration);
     expect(result.current.tree[0]?.fontOverrides).toEqual({ font: FONT_A });
+  });
+
+  it('generation bumps once a runtime scene-font metrics load settles (text/sceneFontLoader.ts, not the loader.eventBus)', async () => {
+    const loader = createFakeResourceLoader();
+    const nodes = [label('Title')];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    const initialGeneration = result.current.generation;
+
+    await act(async () => {
+      // `peekSceneFontMetrics`'s own async pipeline — kicked off entirely
+      // outside `loader`, inside the SOLVE pass itself, not through any
+      // `loader.eventBus` channel this test's other generation-bump cases use.
+      await resolveSceneFontMetrics(
+        { kind: 'file', bytes: new ArrayBuffer(4), mimeType: 'font/ttf', fallbacks: [], properties: {} },
+        'Root/Title'
+      );
+    });
+
+    expect(result.current.generation).toBeGreaterThan(initialGeneration);
+  });
+
+  it('subscribes to scene-font metrics settlement even with no ResourceLoaderProvider mounted', async () => {
+    const nodes = [label('Title')];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+
+    const initialGeneration = result.current.generation;
+
+    await act(async () => {
+      await resolveSceneFontMetrics(
+        { kind: 'file', bytes: new ArrayBuffer(4), mimeType: 'font/ttf', fallbacks: [], properties: {} },
+        'Root/Title'
+      );
+    });
+
+    expect(result.current.generation).toBeGreaterThan(initialGeneration);
   });
 
   it("wires the project's default theme (gui/theme/custom) as the final rung of a themeless Control's chain", async () => {

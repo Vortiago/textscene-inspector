@@ -11,7 +11,7 @@
  * dedupe, and the synchronous peek/cache-population contract.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { peekSceneFontMetrics, resolveSceneFontMetrics } from './sceneFontLoader';
+import { onSceneFontMetricsSettled, peekSceneFontMetrics, resolveSceneFontMetrics } from './sceneFontLoader';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import * as logger from '../../../../logger';
 import type { FontFileResource, FontResource } from '../../../../resources/processing/fontProcessing';
@@ -72,5 +72,56 @@ describe('resolveSceneFontMetrics / peekSceneFontMetrics', () => {
     const leaf = fontFile(new ArrayBuffer(4));
     const metrics = peekSceneFontMetrics(leaf, 'Root/D');
     expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
+  });
+});
+
+describe('onSceneFontMetricsSettled', () => {
+  it('(happy) fires once a resolveSceneFontMetrics promise for a resolvable resource settles', async () => {
+    const listener = vi.fn();
+    const off = onSceneFontMetricsSettled(listener);
+    try {
+      const leaf = fontFile(new ArrayBuffer(4));
+      await resolveSceneFontMetrics(leaf, 'Root/E');
+      expect(listener).toHaveBeenCalledTimes(1);
+    } finally {
+      off();
+    }
+  });
+
+  it('(edge) does NOT fire for a font that short-circuits synchronously (nothing to later change value)', async () => {
+    const listener = vi.fn();
+    const off = onSceneFontMetricsSettled(listener);
+    try {
+      await resolveSceneFontMetrics(undefined, 'Root/F');
+      await resolveSceneFontMetrics({ kind: 'system', fontNames: [], properties: {} }, 'Root/G');
+      expect(listener).not.toHaveBeenCalled();
+    } finally {
+      off();
+    }
+  });
+
+  it('(edge) an unsubscribed listener is never called again', async () => {
+    const listener = vi.fn();
+    const off = onSceneFontMetricsSettled(listener);
+    off();
+    const leaf = fontFile(new ArrayBuffer(4));
+    await resolveSceneFontMetrics(leaf, 'Root/H');
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('notifies every subscribed listener, not just the first', async () => {
+    const a = vi.fn();
+    const b = vi.fn();
+    const offA = onSceneFontMetricsSettled(a);
+    const offB = onSceneFontMetricsSettled(b);
+    try {
+      const leaf = fontFile(new ArrayBuffer(4));
+      await resolveSceneFontMetrics(leaf, 'Root/I');
+      expect(a).toHaveBeenCalledTimes(1);
+      expect(b).toHaveBeenCalledTimes(1);
+    } finally {
+      offA();
+      offB();
+    }
   });
 });

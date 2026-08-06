@@ -25,13 +25,15 @@
  * sits at probe (641,y), i.e. `150 - 12(arrow) - 4(arrow_margin) = 134` in
  * from the left, NOT `150 - 12 - 8`.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { resolveButtonDrawState } from '../../../../r3f/controls/native/buttonBase';
+import type { FontResource } from '../../../../resources/processing/fontProcessing';
+import * as logger from '../../../../logger';
 import type { OptionButtonProperties } from './types';
 import {
   optionButtonMinimumSize,
@@ -41,6 +43,7 @@ import {
   OPTION_BUTTON_DEFAULT_FONT_COLOR,
   OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR,
   OPTION_BUTTON_ARROW_NATURAL_SIZE,
+  OPTION_BUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 
 const A_ADVANCE = 1354 * (16 / 2048); // 10.578125
@@ -62,6 +65,9 @@ function node(props: Partial<OptionButtonProperties>): SolveNode {
     children: [],
     styleBoxes: {},
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 
@@ -219,5 +225,31 @@ describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-2
     const { textOffset } = layoutOptionButtonContent(BASE);
     // customElementHeight = 32-8=24; y = (24-26)/2 + 4 + origin = -1+4+origin = 3+origin.
     expect(textOffset.y).toBeCloseTo(3 + 0.8571428571428577, 10);
+  });
+});
+
+describe(`optionButtonMinimumSize — resolves this OptionButton's own theme font key ("${OPTION_BUTTON_THEME_FONT_KEY}", default_theme.cpp:237)`, () => {
+  // See `resolveNodeFontMetrics.test.ts`'s own doc for why an UNRESOLVABLE
+  // font's warn is the observable proof here, not a resolved FontMetrics value.
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it('a theme_override_fonts/font local override is fed to the text engine (resolved unconditionally, before the per-item measurement loop)', () => {
+    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const n: SolveNode = { ...node({}), fontOverrides: { [OPTION_BUTTON_THEME_FONT_KEY]: systemFont } };
+    optionButtonMinimumSize(n, ctx());
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('a local override under a different key is not consulted', () => {
+    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const n: SolveNode = { ...node({}), fontOverrides: { normal_font: systemFont } };
+    optionButtonMinimumSize(n, ctx());
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });

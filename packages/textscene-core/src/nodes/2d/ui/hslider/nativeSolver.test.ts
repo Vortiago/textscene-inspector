@@ -19,6 +19,9 @@ function node(): SolveNode {
     children: [],
     styleBoxes: {},
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 

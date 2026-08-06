@@ -34,8 +34,20 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { AutowrapMode, shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ControlColor } from '../control/types';
 import type { ButtonProperties } from './types';
+
+/**
+ * Button's own theme font key — `SceneStringName(font)` = `"font"`,
+ * `scene/theme/default_theme.cpp:152`:
+ * `theme->set_font(SceneStringName(font), "Button", Ref<Font>());`. Fed to
+ * `resolveNodeFontMetrics` by both this module and `Component.tsx`'s own
+ * fallback shape (the path taken when `meta` is not a usable
+ * `TextLayoutResult` — see that component's own doc) so the two agree on
+ * which font this Button is in.
+ */
+export const BUTTON_THEME_FONT_KEY = 'font';
 
 /**
  * Button reads `theme_override_font_sizes/font_size` for both states (a
@@ -132,9 +144,10 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const text = props.text ?? '';
   const hasText = text.length > 0;
   const { fontSizePx } = buttonTextTheme(props, state, ctx);
+  const fontMetrics = resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY);
   const layout: TextLayoutResult | null =
     hasText && ctx.measureText
-      ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0 })
+      ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics })
       : null;
   const textSize = layout ? { x: layout.widthPx, y: layout.heightPx } : { x: 0, y: 0 };
 

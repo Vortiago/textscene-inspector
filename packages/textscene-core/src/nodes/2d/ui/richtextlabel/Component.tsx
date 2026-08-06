@@ -59,11 +59,13 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { AutowrapMode, clampAutowrapMode, shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
 import {
   BOLD_DISTANCE_BIAS,
   ITALIC_SKEW,
   RICH_TEXT_LABEL_UNDERLINE_ALPHA,
+  RICH_TEXT_LABEL_THEME_FONT_KEY,
   fontSizePxAtFromRuns,
   layoutRichTextRuns,
   richTextLabelTextTheme,
@@ -89,6 +91,9 @@ export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeCon
   // RichTextLabel's own default is WORD_SMART (`rich_text_label.h:557`), not Label's OFF.
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.WORD_SMART);
 
+  // Read INSIDE the render body, not the `useMemo` below — see Label's own
+  // Component.tsx for why.
+  const fontMetrics = resolveNodeFontMetrics(solveNode, RICH_TEXT_LABEL_THEME_FONT_KEY);
   const layout = useMemo(
     () =>
       shapeText(plainText, {
@@ -97,8 +102,9 @@ export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeCon
         autowrapMode,
         lineSpacingPx: 0, // default_theme.cpp:1217 — RichTextLabel's own line_separation default, NOT Label's 3.
         fontSizePxAt, // a [b]/[i]/[b][i] run shapes at its OWN theme font-size key, not normal_font_size — nativeSolver.ts's resolveRunFontSizePx.
+        fontMetrics,
       }),
-    [plainText, textTheme.fontSizePx, rect.w, autowrapMode, fontSizePxAt]
+    [plainText, textTheme.fontSizePx, rect.w, autowrapMode, fontSizePxAt, fontMetrics]
   );
 
   const placements = useMemo(() => layoutRichTextRuns(runs, layout), [runs, layout]);

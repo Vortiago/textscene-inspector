@@ -29,7 +29,7 @@ const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
 
 function bareSolveNode(node: TscnNode): SolveNode {
-  return { path: node.name, node, children: [], styleBoxes: {}, textureSize: null };
+  return { path: node.name, node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 describe('Native Control visibility conformance', () => {

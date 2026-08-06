@@ -17,12 +17,27 @@ import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/nativ
 import { AutowrapMode, shapeText, type GlyphPlacement, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { getAscentPx, getUnderlinePositionPx, getUnderlineThicknessPx } from '../../../../r3f/controls/native/text/openSansMetrics';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ControlColor } from '../control/types';
 import type { RichTextLabelProperties } from './types';
 import { hasOpenTag, lastTagValue, parseBBCodeRuns, resolveBBColor } from './bbcode';
 
 /** RichTextLabel reads `theme_override_font_sizes/normal_font_size` and `theme_override_colors/default_color` — different override key NAMES from Label's `font_size`/`font_color`, same mechanism (`textTheme.ts`). */
 export const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'normal_font_size', colorKey: 'default_color' };
+
+/**
+ * RichTextLabel's own PLAIN-paragraph theme font key —
+ * `scene/theme/default_theme.cpp:1194`: `theme->set_font("normal_font",
+ * "RichTextLabel", Ref<Font>());`. Godot's `_find_font` (`rich_text_label.cpp:
+ * 3226-3296`) reads a DIFFERENT key per bbcode style (`bold_font`/
+ * `italics_font`/`bold_italics_font`/`mono_font`) — out of scope here exactly
+ * like `resolveRunFontSizePx`'s own doc frames the style-specific font-SIZE
+ * keys: this engine synthesizes bold/italic as an MSDF-distance-field/shear
+ * effect over the SAME base face (`BOLD_DISTANCE_BIAS`/`ITALIC_SKEW`, this
+ * module's own doc), never a separate loaded font resource, so only the
+ * paragraph's own base key is resolved to a `FontMetrics` at all.
+ */
+export const RICH_TEXT_LABEL_THEME_FONT_KEY = 'normal_font';
 
 /** `default_theme.cpp:1205`: `theme->set_color("default_color", "RichTextLabel", Color(1, 1, 1))` — opaque white, its own literal (coincidentally the same value as Label's, a separate call site). */
 export const RICH_TEXT_LABEL_DEFAULT_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
@@ -108,6 +123,7 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // but the gate stays: no text engine, no attempted measurement.
   if (!ctx.measureText) return { x: 0, y: 0 };
 
+  const fontMetrics = resolveNodeFontMetrics(n, RICH_TEXT_LABEL_THEME_FONT_KEY);
   // `line_separation` is 0 for RichTextLabel (`default_theme.cpp:1217`), matching
   // `lineSpacingPx`'s own default of 0 here (Label's own measurer instead passes
   // its own non-zero constant).
@@ -117,6 +133,7 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
     autowrapMode: AutowrapMode.OFF,
     lineSpacingPx: 0,
     fontSizePxAt: fontSizePxAtFromRuns(runs),
+    fontMetrics,
   });
   const measured = { x: layout.widthPx, y: layout.heightPx };
 
@@ -332,9 +349,25 @@ export interface RichTextRunPlacement {
   layout: TextLayoutResult;
 }
 
-function soloRunLayout(text: string, glyphs: GlyphPlacement[], linePitchPx: number): TextLayoutResult {
+/**
+ * Echoes the PARENT layout's own `fontMetrics`/`baselineOffsetPx` rather than
+ * leaving them unset — see `label/Component.tsx`'s `soloLineLayout`, the
+ * SAME hazard: `TextRun` dispatches MSDF-atlas vs. canvas-rasterised painting
+ * off `layout.fontMetrics.kind`, so an omitted value here would silently
+ * force every run back onto the atlas path regardless of which font `layout`
+ * (the ALREADY-SHAPED paragraph this run's glyphs were sliced from) was
+ * actually shaped against.
+ */
+function soloRunLayout(text: string, glyphs: GlyphPlacement[], parentLayout: TextLayoutResult): TextLayoutResult {
   const widthPx = glyphs.length ? glyphs[glyphs.length - 1]!.x + glyphs[glyphs.length - 1]!.advance - glyphs[0]!.x : 0;
-  return { lines: [{ text, glyphs, widthPx }], linePitchPx, widthPx, heightPx: linePitchPx };
+  return {
+    lines: [{ text, glyphs, widthPx }],
+    linePitchPx: parentLayout.linePitchPx,
+    widthPx,
+    heightPx: parentLayout.linePitchPx,
+    baselineOffsetPx: parentLayout.baselineOffsetPx,
+    fontMetrics: parentLayout.fontMetrics,
+  };
 }
 
 /**
@@ -407,7 +440,7 @@ export function layoutRichTextRuns(
         underline: run.underline,
         color: run.color,
         fontSizePx: run.fontSizePx,
-        layout: soloRunLayout(plainText.slice(textStart, cursor), line.glyphs.slice(start, i), layout.linePitchPx),
+        layout: soloRunLayout(plainText.slice(textStart, cursor), line.glyphs.slice(start, i), layout),
       });
     }
   });
@@ -440,6 +473,17 @@ export interface UnderlineRectPx {
  *
  * Returns `null` for an empty glyph list — nothing to underline, same as
  * `layoutRichTextRuns` never emitting a placement for a run with no glyphs.
+ *
+ * Deliberately stays on the vendored Open Sans's OWN ascent/underline-position/
+ * thickness (`openSansMetrics.ts`) rather than the resolved `FontMetrics` a
+ * scene font would carry: `fontMetrics.ts`'s `FontMetrics` contract exposes no
+ * underline-position/thickness fields at all (only ascent/descent/advances —
+ * a shaper's needs, not a stroke-drawer's), and there is no formula deriving
+ * one font's underline geometry from another's. A scene-font RichTextLabel's
+ * `[u]` stroke therefore keeps Open Sans's proportions — a documented,
+ * pre-existing-class residual (the same one `TextRun.tsx`'s own doc already
+ * carries for outline/synthesized-bold on the canvas path: an MSDF-only
+ * feature approximated rather than ported, never silently dropped).
  */
 export function underlineRectPx(glyphs: readonly GlyphPlacement[], fontSizePx: number): UnderlineRectPx | null {
   if (glyphs.length === 0) return null;

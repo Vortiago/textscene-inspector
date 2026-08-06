@@ -38,22 +38,29 @@ export interface SolveNode {
    * This node's OWN `theme_override_fonts/*`, resolved in ITS scope. Presence
    * of a key means it was AUTHORED (`Control::get_theme_font`'s local-override
    * branch has no validity check) — the value is `null` when the ref failed to
-   * resolve. Absent (`undefined`, the type's own default) when `buildSolveTree`
-   * never populated this node, so every existing literal SolveNode fixture
-   * outside this feature stays valid; `buildSolveTree.ts` itself always sets
-   * this to `{}` at minimum.
+   * resolve. `buildSolveTree.ts` always sets this to `{}` at minimum, so every
+   * producer of a `SolveNode` is total; required here (rather than defaulted
+   * via `?? {}` at each read site) so a hand-built test literal that omits it
+   * fails to compile instead of silently resolving no font — this repo has
+   * been bitten twice by an optional input a test could leave out while
+   * production never does. `testing/solveNode.ts`'s `solveNode()` factory
+   * supplies the empty default for a literal that does not care.
    */
-  fontOverrides?: Readonly<Record<string, FontResource | null>>;
+  fontOverrides: Readonly<Record<string, FontResource | null>>;
   /**
    * Nearest-first ancestor Controls' resolved `theme` — this node's own
    * `theme`, if it has one, is index 0 (`Control::get_theme_font`'s ancestor
    * walk, `scene/theme/theme_owner.cpp`'s `ThemeOwner::_get_next_owner_node`).
    * An ancestor Control with NO `theme` set contributes no entry. Feeds
    * `themeProcessing.ts`'s `resolveThemeFont`/`resolveThemeFontSizePx`.
+   * Required — see `fontOverrides`'s own doc for why.
    */
-  themeChain?: readonly ThemeResource[];
-  /** The project's default theme (`gui/theme/custom`), resolved; `null` when unset/unresolved/failed. */
-  projectTheme?: ThemeResource | null;
+  themeChain: readonly ThemeResource[];
+  /**
+   * The project's default theme (`gui/theme/custom`), resolved; `null` when
+   * unset/unresolved/failed. Required — see `fontOverrides`'s own doc for why.
+   */
+  projectTheme: ThemeResource | null;
 }
 
 /**

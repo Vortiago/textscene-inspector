@@ -39,8 +39,21 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import type { CheckBoxIcons } from '../../../../r3f/controls/native/themeIcons';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ControlColor } from '../control/types';
 import type { CheckBoxProperties } from './types';
+
+/**
+ * CheckBox's own theme font key — `SceneStringName(font)` = `"font"`,
+ * `scene/theme/default_theme.cpp:297`:
+ * `theme->set_font(SceneStringName(font), "CheckBox", Ref<Font>());` — its
+ * OWN default-theme registration, under CheckBox's own native type, not
+ * inherited from Button's (Godot's theme lookup walks native inheritance
+ * only when THIS type has no entry of its own — `themeProcessing.ts`'s
+ * `buildThemeTypeChain`). Fed to `resolveNodeFontMetrics` by both this module
+ * and `Component.tsx` so the two agree on which font this CheckBox is in.
+ */
+export const CHECKBOX_THEME_FONT_KEY = 'font';
 
 // Re-exported so NativeComponent.tsx can build on the shared, Button-generic
 // pieces without importing `buttonBase.ts` a second time under a different name.
@@ -167,7 +180,8 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const hasText = text.length > 0;
   const state = resolveCheckBoxDrawState(props);
   const { fontSizePx } = checkBoxTextTheme(props, state, ctx);
-  const textSize = hasText && ctx.measureText ? ctx.measureText(text, fontSizePx) : { x: 0, y: 0 };
+  const fontMetrics = resolveNodeFontMetrics(n, CHECKBOX_THEME_FONT_KEY);
+  const textSize = hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
 
   const iconSize = fitIconSize(CHECKBOX_ICON_NATURAL_SIZE, checkBoxIconMaxWidth(props));
   const hSeparation = checkBoxHSeparation(props, ctx);

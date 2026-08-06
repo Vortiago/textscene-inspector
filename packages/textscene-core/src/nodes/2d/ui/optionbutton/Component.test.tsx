@@ -27,7 +27,7 @@ function solveNode(properties: Partial<OptionButtonProperties> = {}): SolveNode 
     children: [],
     properties: { name: 'MyOptionButton', ...properties } as OptionButtonProperties,
   };
-  return { path: 'MyOptionButton', node, children: [], styleBoxes: {}, textureSize: null };
+  return { path: 'MyOptionButton', node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 const ITEMS = [

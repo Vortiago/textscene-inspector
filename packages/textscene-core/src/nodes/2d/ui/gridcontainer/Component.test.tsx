@@ -17,7 +17,7 @@ function gridSolveNode(): SolveNode {
     children: [],
     properties: { name: 'Grid' },
   };
-  return { path: 'Grid', node, children: [], styleBoxes: {}, textureSize: null };
+  return { path: 'Grid', node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 describe('<GridContainer>', () => {

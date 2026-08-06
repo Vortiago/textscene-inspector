@@ -26,6 +26,9 @@ function solveNode(
     children,
     styleBoxes: {},
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 

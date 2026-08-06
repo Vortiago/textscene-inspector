@@ -34,6 +34,7 @@ import { CHECK_BOX_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   checkBoxIconMaxWidth,
   checkBoxHSeparation,
@@ -45,6 +46,7 @@ import {
   resolveCheckBoxIconKey,
   tintColor,
   CHECKBOX_ICON_NATURAL_SIZE,
+  CHECKBOX_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { CheckBoxProperties } from './types';
 
@@ -70,9 +72,12 @@ export function CheckBox({ solveNode, rect, renderOrder, theme }: NativeControlC
   const { fontSizePx, color: baseFontColor } = checkBoxTextTheme(props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
+  // Read INSIDE the render body, not the `useMemo` below — see Label's own
+  // Component.tsx for why.
+  const fontMetrics = resolveNodeFontMetrics(solveNode, CHECKBOX_THEME_FONT_KEY);
   const layout: TextLayoutResult | null = useMemo(
-    () => (hasText ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF }) : null),
-    [hasText, text, fontSizePx]
+    () => (hasText ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, fontMetrics }) : null),
+    [hasText, text, fontSizePx, fontMetrics]
   );
 
   // --- Content layout: icon + text placement within the solved rect -------

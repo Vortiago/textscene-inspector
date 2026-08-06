@@ -15,7 +15,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import { getLinePitchPx } from '../../../../r3f/controls/native/text/openSansMetrics';
+import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
 import {
   resolveTextTheme,
@@ -28,6 +29,15 @@ import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/contro
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { ControlColor } from '../control/types';
 import type { LineEditProperties } from './types';
+
+/**
+ * LineEdit's own theme font key — `SceneStringName(font)` = `"font"`,
+ * `scene/theme/default_theme.cpp:419`:
+ * `theme->set_font(SceneStringName(font), "LineEdit", Ref<Font>());`. Fed to
+ * `resolveNodeFontMetrics` by both this module and `Component.tsx` so the two
+ * agree on which font this LineEdit is in.
+ */
+export const LINE_EDIT_THEME_FONT_KEY = 'font';
 
 /** `LineEdit::get_draw_mode`'s stylebox axis: which `theme_override_styles/*` key (and default-theme box) this node's CURRENT `editable` selects. */
 export type LineEditStyleState = 'normal' | 'read_only';
@@ -144,8 +154,9 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
     y: Math.max(normalMargin.y, readOnlyMargin.y),
   };
 
-  const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx).x : 0;
-  const fontHeightPx = getLinePitchPx(fontSizePx, 0);
+  const fontMetrics = resolveNodeFontMetrics(n, LINE_EDIT_THEME_FONT_KEY);
+  const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;
+  const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
 
   return {
     x: styleMinSize.x + LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emSpaceSize,

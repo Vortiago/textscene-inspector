@@ -53,7 +53,7 @@ function solveNode(
     children: [],
     properties: { name: 'MyPanelContainer', ...properties } as ControlProperties,
   };
-  return { path: 'MyPanelContainer', node, children: [], styleBoxes, textureSize: null };
+  return { path: 'MyPanelContainer', node, children: [], styleBoxes, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 const RECT = { x: 0, y: 0, w: 240, h: 80 };

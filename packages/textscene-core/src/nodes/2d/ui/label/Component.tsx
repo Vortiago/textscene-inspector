@@ -48,13 +48,32 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { labelTextTheme, layoutLabelLines, type LabelLinePlacement } from './nativeSolver';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { LABEL_THEME_FONT_KEY, labelTextTheme, layoutLabelLines, type LabelLinePlacement } from './nativeSolver';
 import type { LabelProperties } from './types';
 
 
-/** A single line, wrapped as its own one-line `TextLayoutResult` — `TextRun` computes `lineIndex * linePitchPx` internally, which is 0 for a solo line, so it draws relative to y=0 with no cumulative pitch of its own; the caller (this component) supplies the real cumulative Y via the wrapping `<group>`'s position. */
-function soloLineLayout(placement: LabelLinePlacement, linePitchPx: number): TextLayoutResult {
-  return { lines: [placement.line], linePitchPx, widthPx: placement.line.widthPx, heightPx: linePitchPx };
+/**
+ * A single line, wrapped as its own one-line `TextLayoutResult` — `TextRun`
+ * computes `lineIndex * linePitchPx` internally, which is 0 for a solo line,
+ * so it draws relative to y=0 with no cumulative pitch of its own; the caller
+ * (this component) supplies the real cumulative Y via the wrapping `<group>`'s
+ * position. Echoes the PARENT layout's own `fontMetrics`/`baselineOffsetPx`
+ * rather than leaving them unset: `TextRun` dispatches MSDF-atlas vs.
+ * canvas-rasterised painting off `layout.fontMetrics.kind` — an omitted value
+ * here would silently force every Label back onto the atlas path (and, for a
+ * font this atlas has no bitmaps for, zero visible glyphs) regardless of
+ * which font `layout` itself was actually shaped against.
+ */
+export function soloLineLayout(placement: LabelLinePlacement, layout: TextLayoutResult): TextLayoutResult {
+  return {
+    lines: [placement.line],
+    linePitchPx: layout.linePitchPx,
+    widthPx: placement.line.widthPx,
+    heightPx: layout.linePitchPx,
+    baselineOffsetPx: layout.baselineOffsetPx,
+    fontMetrics: layout.fontMetrics,
+  };
 }
 
 /**
@@ -64,10 +83,10 @@ function soloLineLayout(placement: LabelLinePlacement, linePitchPx: number): Tex
  * every line of every Label on every render — not just when the text or rect
  * actually changed.
  */
-function useSoloLineLayouts(placements: LabelLinePlacement[], linePitchPx: number): TextLayoutResult[] {
+function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayoutResult): TextLayoutResult[] {
   return useMemo(
-    () => placements.map((placement) => soloLineLayout(placement, linePitchPx)),
-    [placements, linePitchPx]
+    () => placements.map((placement) => soloLineLayout(placement, layout)),
+    [placements, layout]
   );
 }
 
@@ -87,6 +106,14 @@ export function Label({ solveNode, rect, renderOrder, theme, meta }: NativeContr
   // Label's own default is OFF (`label.h`'s `autowrap_mode` initialiser).
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
   const cachedLayout = autowrapMode === AutowrapMode.OFF && isTextLayoutResult(meta) ? meta : null;
+  // Read INSIDE the render body, not the `useMemo` below: `peekSceneFontMetrics`
+  // (`resolveNodeFontMetrics`'s own doc) answers synchronously from a WeakMap
+  // cache that a later async load mutates in place, so this must re-run every
+  // render to see a settled font — the `useMemo`'s own dependency array
+  // (which includes `fontMetrics`) is what limits the actual re-SHAPE to when
+  // this value's identity changes (the bundled default vs. a just-settled
+  // scene font), not every render.
+  const fontMetrics = resolveNodeFontMetrics(solveNode, LABEL_THEME_FONT_KEY);
   const layout = useMemo(() => {
     if (cachedLayout) return cachedLayout;
     return shapeText(text, {
@@ -94,8 +121,9 @@ export function Label({ solveNode, rect, renderOrder, theme, meta }: NativeContr
       boxWidthPx: rect.w,
       autowrapMode,
       uppercase: props.uppercase,
+      fontMetrics,
     });
-  }, [cachedLayout, text, textTheme.fontSizePx, rect.w, autowrapMode, props.uppercase]
+  }, [cachedLayout, text, textTheme.fontSizePx, rect.w, autowrapMode, props.uppercase, fontMetrics]
   );
 
   const placements = useMemo(
@@ -111,7 +139,7 @@ export function Label({ solveNode, rect, renderOrder, theme, meta }: NativeContr
     [layout, rect.w, rect.h, props.horizontalAlignment, props.verticalAlignment, textTheme.fontSizePx]
   );
 
-  const lineLayouts = useSoloLineLayouts(placements, layout.linePitchPx);
+  const lineLayouts = useSoloLineLayouts(placements, layout);
 
   return (
     <>

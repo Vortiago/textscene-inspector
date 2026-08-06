@@ -14,13 +14,15 @@
  * — LineEdit sets none, unlike Label/Button) = ceil(2189*16/2048) +
  * ceil(600*16/2048) = 18 + 5 = 23. 'W' advance at 16px = 1936*(16/2048) = 15.125.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { FontResource } from '../../../../resources/processing/fontProcessing';
+import * as logger from '../../../../logger';
 import type { LineEditProperties } from './types';
 import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
 import {
@@ -31,6 +33,7 @@ import {
   LINE_EDIT_DEFAULT_FONT_COLOR,
   LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
   LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR,
+  LINE_EDIT_THEME_FONT_KEY,
 } from './nativeSolver';
 
 const W_ADVANCE = 1936 * (16 / 2048); // 15.125
@@ -48,6 +51,9 @@ function node(props: Partial<LineEditProperties>, styleBoxes: Record<string, Sty
     children: [],
     styleBoxes,
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 
@@ -290,5 +296,31 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
     });
     expect(result.contentRect.w).toBe(0);
     expect(result.contentRect.h).toBe(0);
+  });
+});
+
+describe(`lineEditMinimumSize — resolves this LineEdit's own theme font key ("${LINE_EDIT_THEME_FONT_KEY}", default_theme.cpp:419)`, () => {
+  // See `resolveNodeFontMetrics.test.ts`'s own doc for why an UNRESOLVABLE
+  // font's warn is the observable proof here, not a resolved FontMetrics value.
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it('a theme_override_fonts/font local override is fed to BOTH the em-space TextMeasurer call and the font-height floor', () => {
+    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const n: SolveNode = { ...node({}), fontOverrides: { [LINE_EDIT_THEME_FONT_KEY]: systemFont } };
+    lineEditMinimumSize(n, ctx());
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('a local override under a different key is not consulted', () => {
+    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const n: SolveNode = { ...node({}), fontOverrides: { normal_font: systemFont } };
+    lineEditMinimumSize(n, ctx());
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });

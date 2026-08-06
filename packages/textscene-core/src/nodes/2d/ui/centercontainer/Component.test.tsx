@@ -12,7 +12,7 @@ import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps
 
 function solveNode(): SolveNode {
   const node: TscnNode = { name: 'C', type: 'CenterContainer', children: [], properties: { name: 'C' } };
-  return { path: 'C', node, children: [], styleBoxes: {}, textureSize: null };
+  return { path: 'C', node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 describe('<CenterContainer>', () => {

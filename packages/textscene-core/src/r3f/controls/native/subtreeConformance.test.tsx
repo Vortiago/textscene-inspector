@@ -43,6 +43,9 @@ function toSolveNode(node: TscnNode, path: string): SolveNode {
     children: node.children.map((child) => toSolveNode(child, joinPath(path, child.name))),
     styleBoxes: {},
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 

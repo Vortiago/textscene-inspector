@@ -33,6 +33,9 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
     children: [],
     styleBoxes: {},
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 
@@ -48,6 +51,9 @@ function grid(name: string, props: Partial<GridContainerProperties>, children: S
     children,
     styleBoxes: {},
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 

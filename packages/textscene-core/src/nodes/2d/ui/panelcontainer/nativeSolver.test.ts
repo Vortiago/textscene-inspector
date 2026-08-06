@@ -59,7 +59,7 @@ function solveNode(
     children: [],
     properties: { name, ...properties } as ControlProperties,
   };
-  return { path, node, children, styleBoxes, textureSize: null };
+  return { path, node, children, styleBoxes, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 function ctx() {
@@ -186,6 +186,9 @@ describe('panelContainerLayout wired through the registry + full solve', () => {
       children: [],
       styleBoxes: {},
       textureSize: null,
+      fontOverrides: {},
+      themeChain: [],
+      projectTheme: null,
     };
     const root: SolveNode = {
       path: 'Panel',
@@ -198,6 +201,9 @@ describe('panelContainerLayout wired through the registry + full solve', () => {
       children: [child],
       styleBoxes: { panel: styleBox({ left: 10, top: 6, right: 10, bottom: 6 }) },
       textureSize: null,
+      fontOverrides: {},
+      themeChain: [],
+      projectTheme: null,
     };
 
     const viewport: Rect2 = { x: 0, y: 0, w: 200, h: 100 };

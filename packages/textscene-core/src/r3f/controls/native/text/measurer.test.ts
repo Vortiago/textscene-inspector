@@ -8,6 +8,19 @@
 import { describe, expect, it } from 'vitest';
 import { measureText } from './measurer';
 import { shapeText, AutowrapMode } from './textLayout';
+import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
+import type { FontMetrics } from './fontMetrics';
+
+/** A `FontMetrics` deliberately unlike Open Sans — every advance is 2x an 'A', so a caller that fails to thread `fontMetrics` through would measure a visibly different width. */
+const WIDE_FONT_METRICS: FontMetrics = {
+  kind: 'atlas',
+  unitsPerEm: 1000,
+  ascent: 1000,
+  descent: 300,
+  getGlyphAdvanceUnits: () => 900,
+  getKerningAdjustmentUnits: () => 0,
+  averageAdvanceUnits: 900,
+};
 
 describe('measureText', () => {
   it('matches shapeText with autowrap OFF and no box width constraint', () => {
@@ -58,5 +71,19 @@ describe('measureText', () => {
     const large = measureText('AB', 32);
     expect(large.x).toBeCloseTo(small.x * 2, 10);
     expect(large.y).toBeGreaterThan(small.y);
+  });
+
+  it('shapes against a caller-supplied fontMetrics instead of the OPEN_SANS default', () => {
+    const openSans = measureText('AB', 16);
+    const wide = measureText('AB', 16, 0, WIDE_FONT_METRICS);
+    expect(wide.x).not.toBeCloseTo(openSans.x, 5);
+    expect(wide).toEqual({
+      x: shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics: WIDE_FONT_METRICS }).widthPx,
+      y: shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics: WIDE_FONT_METRICS }).heightPx,
+    });
+  });
+
+  it('omitting fontMetrics keeps shaping against the OPEN_SANS default, unchanged from before this parameter existed', () => {
+    expect(measureText('AB', 16)).toEqual(measureText('AB', 16, 0, OPEN_SANS_FONT_METRICS));
   });
 });

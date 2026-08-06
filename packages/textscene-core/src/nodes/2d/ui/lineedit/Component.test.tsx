@@ -39,7 +39,7 @@ function solveNode(
     children: [],
     properties: { name: 'MyLineEdit', ...properties } as LineEditProperties,
   };
-  return { path: 'MyLineEdit', node, children: [], styleBoxes, textureSize: null };
+  return { path: 'MyLineEdit', node, children: [], styleBoxes, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };

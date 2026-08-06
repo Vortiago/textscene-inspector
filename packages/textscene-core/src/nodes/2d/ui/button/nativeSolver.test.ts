@@ -18,7 +18,7 @@
  * Godot 4.6.3: a `content_margin` 6 button is 12 + 23 = 35.
  * 'A' advance at 16px = 1354*(16/2048) = 10.578125; 'AB' = (1354+1350)*(16/2048) = 21.125.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
@@ -26,6 +26,8 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { FontResource } from '../../../../resources/processing/fontProcessing';
+import * as logger from '../../../../logger';
 import type { ButtonProperties } from './types';
 import {
   buttonMinimumSize,
@@ -33,6 +35,7 @@ import {
   buttonIconColor,
   BUTTON_DEFAULT_DISABLED_FONT_COLOR,
   BUTTON_DEFAULT_FONT_COLOR,
+  BUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 
 /** `buttonMinimumSize`'s `size` half only — every test below except the dedicated `meta` describe cares only about this, exactly like before `{ size, meta }` existed. */
@@ -65,6 +68,9 @@ function node(
     children: [],
     styleBoxes,
     textureSize,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 
@@ -266,5 +272,35 @@ describe('buttonIconColor — icon_normal_color / icon_disabled_color (default_t
       themeOverrideColors: { icon_disabled_color: { r: 1, g: 0, b: 0, a: 1 } },
     };
     expect(buttonIconColor(props, 'disabled')).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+  });
+});
+
+describe(`buttonMinimumSize — resolves this Button's own theme font key ("${BUTTON_THEME_FONT_KEY}", default_theme.cpp:152)`, () => {
+  // `peekSceneFontMetrics` (`sceneFontLoader.ts`) always answers the bundled
+  // default under this DOM-less test environment, so a resolved `FontMetrics`
+  // VALUE cannot be observed — but it warns unconditionally for an
+  // UNRESOLVABLE font (a SystemFont), which proves the lookup found
+  // something at all (`resolveNodeFontMetrics.test.ts`'s own doc has the
+  // full reasoning).
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it("a theme_override_fonts/font local override is fed to the text engine (proven by peekSceneFontMetrics's own warn)", () => {
+    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { [BUTTON_THEME_FONT_KEY]: systemFont } };
+    buttonMinimumSize(n, ctx());
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('a local override under a different key is not consulted', () => {
+    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { normal_font: systemFont } };
+    buttonMinimumSize(n, ctx());
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });

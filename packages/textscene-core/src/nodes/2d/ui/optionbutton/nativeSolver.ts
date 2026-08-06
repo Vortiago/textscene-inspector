@@ -58,6 +58,7 @@ import {
   type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ControlColor } from '../control/types';
 import type { OptionButtonProperties } from './types';
 
@@ -65,6 +66,15 @@ import type { OptionButtonProperties } from './types';
 // pieces without importing `buttonBase.ts` a second time under a different name.
 export { originCorrectionPx, pickButtonStyleBox, resolveButtonDrawState, tintColor };
 export type { ButtonDrawState };
+
+/**
+ * OptionButton's own theme font key — `SceneStringName(font)` = `"font"`,
+ * `scene/theme/default_theme.cpp:237`:
+ * `theme->set_font(SceneStringName(font), "OptionButton", Ref<Font>());`.
+ * Fed to `resolveNodeFontMetrics` by both this module and `Component.tsx` so
+ * the two agree on which font this OptionButton is in.
+ */
+export const OPTION_BUTTON_THEME_FONT_KEY = 'font';
 
 // --- Theme font colours --------------------------------------------------------
 
@@ -142,6 +152,7 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
   const { fontSizePx } = optionButtonTextTheme(props, state, ctx);
+  const fontMetrics = resolveNodeFontMetrics(n, OPTION_BUTTON_THEME_FONT_KEY);
   const items = props.items ?? [];
   const texts = items.length > 0 ? items.map((item) => item.text) : [''];
 
@@ -150,7 +161,7 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   if (ctx.measureText) {
     for (const text of texts) {
       if (!text) continue;
-      const size = ctx.measureText(text, fontSizePx);
+      const size = ctx.measureText(text, fontSizePx, 0, fontMetrics);
       textW = Math.max(textW, size.x);
       textH = Math.max(textH, size.y);
     }

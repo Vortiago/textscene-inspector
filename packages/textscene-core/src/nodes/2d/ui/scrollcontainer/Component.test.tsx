@@ -33,6 +33,9 @@ function leaf(name: string, props: Partial<ScrollContainerProperties> = {}): Sol
     children: [],
     styleBoxes: {},
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 
@@ -46,7 +49,7 @@ function scrollNode(
     children: [],
     properties: { name: 'Scroll', ...props } as ScrollContainerProperties,
   };
-  return { path: 'Scroll', node, children, styleBoxes: {}, textureSize: null };
+  return { path: 'Scroll', node, children, styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 /** World-space bounding box of a mesh's geometry, via its (fresh) matrixWorld. */

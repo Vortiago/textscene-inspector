@@ -16,8 +16,10 @@ import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanv
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
-import { Label } from './Component';
+import { Label, soloLineLayout } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { shapeText, AutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
+import type { CanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -25,7 +27,7 @@ const THEME = nativeTheme(1);
 function solveNode(path: string, properties: Record<string, unknown>): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type: 'Label', children: [], properties: { name, ...properties } };
-  return { path, node: tscnNode, children: [], styleBoxes: {}, textureSize: null };
+  return { path, node: tscnNode, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 function expectedLinear(r: number, g: number, b: number): THREE.Color {
@@ -181,5 +183,40 @@ describe('<Label> registered through <ControlCanvasWalker> (end-to-end walker pl
     expect(renderer.scene.findAllByType('Mesh').length).toBeGreaterThan(0);
 
     controlComponentRegistry.clear();
+  });
+});
+
+describe('soloLineLayout (regression: a scene-font Label must not silently fall back to the atlas paint path)', () => {
+  const FAKE_SCENE_FONT_METRICS: CanvasFontMetrics = {
+    kind: 'canvas',
+    cssFontFamily: 'tscn-scene-font-test',
+    unitsPerEm: 1000,
+    ascent: 800,
+    descent: 200,
+    getGlyphAdvanceUnits: () => 500,
+    getKerningAdjustmentUnits: () => 0,
+    averageAdvanceUnits: 500,
+  };
+
+  it("echoes the parent layout's own fontMetrics, not the implicit atlas default — TextRun.tsx dispatches paint by layout.fontMetrics.kind", () => {
+    const parent = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      fontMetrics: FAKE_SCENE_FONT_METRICS,
+    });
+    const placement = { x: 0, y: 0, line: parent.lines[0]! };
+    const solo = soloLineLayout(placement, parent);
+    expect(solo.fontMetrics).toBe(FAKE_SCENE_FONT_METRICS);
+    expect(solo.baselineOffsetPx).toBe(parent.baselineOffsetPx);
+    expect(solo.linePitchPx).toBe(parent.linePitchPx);
+  });
+
+  it('still echoes the atlas default when the parent layout used none explicitly (unchanged behaviour)', () => {
+    const parent = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    const placement = { x: 0, y: 0, line: parent.lines[0]! };
+    const solo = soloLineLayout(placement, parent);
+    expect(solo.fontMetrics).toBe(parent.fontMetrics);
+    expect(solo.fontMetrics?.kind).toBe('atlas');
   });
 });

@@ -42,6 +42,7 @@ import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { lineEditDisplayText } from './displayText';
 import {
   lineEditTextTheme,
@@ -49,6 +50,7 @@ import {
   pickLineEditStyleBox,
   resolveLineEditStyleState,
   resolveLineEditTextState,
+  LINE_EDIT_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { LineEditProperties } from './types';
 
@@ -79,12 +81,15 @@ export function LineEdit({ solveNode, rect, renderOrder, theme }: NativeControlC
   // instead makes the height 3px too tall and lifts every field's text 1.5px
   // above where both Godot and this slice's own solver put it, past the top of
   // the content rect it is then clipped to.
+  // Read INSIDE the render body, not the `useMemo` below — see Label's own
+  // Component.tsx for why.
+  const fontMetrics = resolveNodeFontMetrics(solveNode, LINE_EDIT_THEME_FONT_KEY);
   const layout: TextLayoutResult | null = useMemo(
     () =>
       hasText
-        ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0 })
+        ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics })
         : null,
-    [hasText, text, fontSizePx]
+    [hasText, text, fontSizePx, fontMetrics]
   );
 
   // --- Content layout: content rect (clip) + pen offset ----------------------

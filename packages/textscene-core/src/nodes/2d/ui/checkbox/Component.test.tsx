@@ -28,7 +28,7 @@ function solveNode(properties: Partial<CheckBoxProperties> = {}): SolveNode {
     children: [],
     properties: { name: 'MyCheckBox', ...properties } as CheckBoxProperties,
   };
-  return { path: 'MyCheckBox', node, children: [], styleBoxes: {}, textureSize: null };
+  return { path: 'MyCheckBox', node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 /** The icon `ControlQuad` is a `PlaneGeometry`, identified by its own `.parameters.width` (survives a duplicate-three.js test environment). */

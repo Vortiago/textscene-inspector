@@ -17,7 +17,7 @@ function vboxSolveNode(): SolveNode {
     children: [],
     properties: { name: 'Column' },
   };
-  return { path: 'Column', node, children: [], styleBoxes: {}, textureSize: null };
+  return { path: 'Column', node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 describe('<VBoxContainer>', () => {

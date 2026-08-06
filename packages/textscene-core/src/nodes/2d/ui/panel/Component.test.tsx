@@ -52,7 +52,7 @@ function solveNode(
     children: [],
     properties: { name: 'MyPanel', ...properties } as ControlProperties,
   };
-  return { path: 'MyPanel', node, children: [], styleBoxes, textureSize: null };
+  return { path: 'MyPanel', node, children: [], styleBoxes, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 const RECT = { x: 0, y: 0, w: 100, h: 50 };

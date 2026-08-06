@@ -37,7 +37,7 @@ function solveNode(
 ): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
-  return { path, node: tscnNode, children, styleBoxes: {}, textureSize: null };
+  return { path, node: tscnNode, children, styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 interface WrapperInstance {

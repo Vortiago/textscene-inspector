@@ -25,7 +25,7 @@ const THEME = nativeTheme(1);
 function solveNode(path: string, properties: Record<string, unknown>): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type: 'RichTextLabel', children: [], properties: { name, ...properties } };
-  return { path, node: tscnNode, children: [], styleBoxes: {}, textureSize: null };
+  return { path, node: tscnNode, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 function expectedLinear(r: number, g: number, b: number): THREE.Color {

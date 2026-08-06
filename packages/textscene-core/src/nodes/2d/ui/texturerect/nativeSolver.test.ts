@@ -45,6 +45,9 @@ function node(props: Partial<TextureRectProperties>, textureSize: { x: number; y
     children: [],
     styleBoxes: {},
     textureSize,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 
@@ -181,6 +184,9 @@ describe('solveControlTree — the real two-pass solve closes the self-reference
       children: [],
       styleBoxes: {},
       textureSize: null,
+      fontOverrides: {},
+      themeChain: [],
+      projectTheme: null,
     };
     const solved = solveControlTree([plain], VIEWPORT, createSolveContext(nativeTheme(1)));
     expect(solved.get('Plain')?.rect).toEqual(VIEWPORT);

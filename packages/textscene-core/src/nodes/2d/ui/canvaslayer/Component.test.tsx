@@ -28,7 +28,7 @@ function layerSolveNode(raw: Record<string, string> = {}, rawChildren: TscnNode[
   const heading = { type: 'node', attributes: { type: 'CanvasLayer', name: 'HUD' } };
   const properties = parseCanvasLayer(heading, raw);
   const node: TscnNode = { name: 'HUD', type: 'CanvasLayer', children: rawChildren, properties };
-  return { path: 'HUD', node, children: [], styleBoxes: {}, textureSize: null };
+  return { path: 'HUD', node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 function LayerProbe({ testId }: { testId: string }) {

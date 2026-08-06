@@ -26,7 +26,7 @@ function node(path: string, type: string, properties: Props, children: SolveNode
     children: [],
     properties: { name, ...properties },
   };
-  return { path, node: tscnNode, children, styleBoxes: {}, textureSize: null };
+  return { path, node: tscnNode, children, styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 function ctx(): SolveContext {

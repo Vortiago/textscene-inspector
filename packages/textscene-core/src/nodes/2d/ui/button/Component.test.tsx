@@ -59,7 +59,7 @@ function solveNode(
     children: [],
     properties: { name: 'MyButton', ...properties } as ButtonProperties,
   };
-  return { path: 'MyButton', node, children: [], styleBoxes, textureSize: null };
+  return { path: 'MyButton', node, children: [], styleBoxes, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 /** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute; `<TextRun>`/`<ControlQuad>` do not. */

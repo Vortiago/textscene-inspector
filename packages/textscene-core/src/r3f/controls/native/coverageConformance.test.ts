@@ -60,7 +60,7 @@ const THEME = nativeTheme(1);
 
 function bareSolveNode(type: string): SolveNode {
   const node = parseBareNode(type);
-  return { path: node.name, node, children: [], styleBoxes: {}, textureSize: null };
+  return { path: node.name, node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 /**

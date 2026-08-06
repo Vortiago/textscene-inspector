@@ -336,7 +336,7 @@ describe('splitGrabberIconRect', () => {
 function solveNode(path: string, type: string, properties: Record<string, unknown>, children: SolveNode[] = []): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
-  return { path, node: tscnNode, children, styleBoxes: {}, textureSize: null };
+  return { path, node: tscnNode, children, styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
 }
 
 describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registered end-to-end', () => {
@@ -434,7 +434,7 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     function toSolveTree(nodes: readonly TscnNode[], parentPath: string): SolveNode[] {
       return nodes.map((n) => {
         const path = joinPath(parentPath, n.name);
-        return { path, node: n, children: toSolveTree(n.children, path), styleBoxes: {}, textureSize: null };
+        return { path, node: n, children: toSolveTree(n.children, path), styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
       });
     }
 
@@ -465,7 +465,7 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     function toSolveTree(nodes: readonly TscnNode[], parentPath: string): SolveNode[] {
       return nodes.map((n) => {
         const path = joinPath(parentPath, n.name);
-        return { path, node: n, children: toSolveTree(n.children, path), styleBoxes: {}, textureSize: null };
+        return { path, node: n, children: toSolveTree(n.children, path), styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
       });
     }
 

@@ -59,6 +59,9 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
     children: [],
     styleBoxes: {},
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 
@@ -77,6 +80,9 @@ function scrollContainer(
     children,
     styleBoxes: {},
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 
@@ -290,6 +296,9 @@ describe('wired through the registry + full solve, against the real fixture numb
         children: [],
         styleBoxes: {},
         textureSize: null,
+        fontOverrides: {},
+        themeChain: [],
+        projectTheme: null,
       };
       const scroll: SolveNode = {
         path: 'Root/ScrollContainer',
@@ -311,6 +320,9 @@ describe('wired through the registry + full solve, against the real fixture numb
         children: [content],
         styleBoxes: {},
         textureSize: null,
+        fontOverrides: {},
+        themeChain: [],
+        projectTheme: null,
       };
       const root: SolveNode = {
         path: 'Root',
@@ -323,6 +335,9 @@ describe('wired through the registry + full solve, against the real fixture numb
         children: [scroll],
         styleBoxes: {},
         textureSize: null,
+        fontOverrides: {},
+        themeChain: [],
+        projectTheme: null,
       };
 
       const viewport: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };

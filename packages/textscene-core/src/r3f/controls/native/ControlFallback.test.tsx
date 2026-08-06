@@ -14,7 +14,17 @@ import { painterEnv } from './testing/painterProps';
 
 function solveNode(overrides: Partial<SolveNode> = {}): SolveNode {
   const node: TscnNode = { name: 'Widget', type: 'SomeUnimplementedType', children: [], properties: {} };
-  return { path: 'Widget', node, children: [], styleBoxes: {}, textureSize: null, ...overrides };
+  return {
+    path: 'Widget',
+    node,
+    children: [],
+    styleBoxes: {},
+    textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
+    ...overrides,
+  };
 }
 
 describe('<ControlFallback>', () => {

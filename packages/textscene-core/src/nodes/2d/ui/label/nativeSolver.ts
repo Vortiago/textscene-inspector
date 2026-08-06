@@ -12,7 +12,9 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import {getLinePitchPx} from '../../../../r3f/controls/native/text/openSansMetrics';
+import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { AutowrapMode, shapeText, type TextLayoutResult, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import type { ControlColor } from '../control/types';
@@ -21,6 +23,16 @@ import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOri
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 export const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
+
+/**
+ * Label's own theme font key — `SceneStringName(font)` = `"font"`,
+ * `scene/theme/default_theme.cpp:381`:
+ * `theme->set_font(SceneStringName(font), "Label", Ref<Font>());`. Fed to
+ * `resolveNodeFontMetrics` by both this module (the solve pass) and
+ * `Component.tsx` (the autowrap-ON re-shape, which does not reuse `meta`) so
+ * the two agree on which font this Label is in.
+ */
+export const LABEL_THEME_FONT_KEY = 'font';
 
 /**
  * Label's own default-theme font colour — opaque white, a DIFFERENT literal
@@ -105,7 +117,8 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // early-out below reads the same either way.
   const text = props.text ?? '';
   const { fontSizePx } = labelTextTheme(props, ctx);
-  const fontHeightPx = getLinePitchPx(fontSizePx, 0);
+  const fontMetrics = resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY);
+  const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
 
   if (text.length === 0) {
     return { x: 1, y: fontHeightPx };
@@ -115,14 +128,19 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   // Label is the one widget whose theme sets `line_spacing` (3), and it
   // separates lines without adding a trailing gap — which the subtraction
-  // below guarantees, so nothing is added back for a single line.
-  const lineSpacingPx = getLinePitchPx(fontSizePx) - fontHeightPx;
+  // below guarantees, so nothing is added back for a single line. The
+  // subtraction is mathematically independent of WHICH `fontMetrics` is
+  // used (ascent/descent cancel identically either way), so this still
+  // recovers exactly `getFontLinePitchPx`'s own default (3) rather than a
+  // hardcoded literal.
+  const lineSpacingPx = getFontLinePitchPx(fontMetrics, fontSizePx) - fontHeightPx;
   const layout = shapeText(text, {
     fontSizePx,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.OFF,
     lineSpacingPx,
     uppercase: props.uppercase,
+    fontMetrics,
   });
   const measuredY = Math.max(0, layout.heightPx - lineSpacingPx);
   const height = Math.max(measuredY, fontHeightPx);
@@ -210,8 +228,16 @@ export function layoutLabelLines(
   const lineCount = layout.lines.length;
   if (lineCount === 0) return [];
 
-  const fontHeightPx = getLinePitchPx(fontSizePx, 0);
-  const lineSpacingPx = getLinePitchPx(fontSizePx) - fontHeightPx;
+  // `layout.fontMetrics` is `shapeText`'s own echo of whichever `FontMetrics`
+  // it shaped THIS layout against (`textLayout.ts`'s own doc) — reading it
+  // back here, rather than taking a second `fontMetrics` parameter, is what
+  // keeps this placement math from EVER disagreeing with the layout it is
+  // placing (the only way the two could diverge is a hand-built
+  // `TextLayoutResult` that omits the field, which none of this module's own
+  // callers do).
+  const fontMetrics = layout.fontMetrics ?? OPEN_SANS_FONT_METRICS;
+  const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
+  const lineSpacingPx = getFontLinePitchPx(fontMetrics, fontSizePx) - fontHeightPx;
   // label.cpp:599 etc: `total_h - line_spacing - paragraph_spacing` (single
   // paragraph here, so paragraph_spacing is 0) — the SAME `-lineSpacingPx`
   // correction `labelMinimumSize` applies to `ctx.measureText`'s own sum.

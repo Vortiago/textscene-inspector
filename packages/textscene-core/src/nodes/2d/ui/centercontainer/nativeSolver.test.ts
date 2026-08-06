@@ -32,6 +32,9 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
     children: [],
     styleBoxes: {},
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 
@@ -47,6 +50,9 @@ function container(name: string, props: Partial<CenterContainerProperties>, chil
     children,
     styleBoxes: {},
     textureSize: null,
+    fontOverrides: {},
+    themeChain: [],
+    projectTheme: null,
   };
 }
 

@@ -60,6 +60,7 @@ import {
   isTextLayoutResult,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveButtonDrawState,
@@ -70,7 +71,7 @@ import {
   HORIZONTAL_ALIGNMENT_LEFT,
   VERTICAL_ALIGNMENT_CENTER,
 } from '../../../../r3f/controls/native/buttonBase';
-import { buttonTextTheme, buttonIconColor } from './nativeSolver';
+import { BUTTON_THEME_FONT_KEY, buttonTextTheme, buttonIconColor } from './nativeSolver';
 import type { ButtonProperties } from './types';
 
 interface IconImageLike {
@@ -99,11 +100,14 @@ export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeCont
   );
 
   const cachedLayout = isTextLayoutResult(meta) ? meta : null;
+  // See Label's own Component.tsx for why this reads INSIDE the render body
+  // rather than inside the `useMemo` below.
+  const fontMetrics = resolveNodeFontMetrics(solveNode, BUTTON_THEME_FONT_KEY);
   const layout: TextLayoutResult | null = useMemo(() => {
     if (!hasText) return null;
     if (cachedLayout) return cachedLayout;
-    return shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0 });
-  }, [hasText, cachedLayout, text, fontSizePx]);
+    return shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics });
+  }, [hasText, cachedLayout, text, fontSizePx, fontMetrics]);
 
   // --- Icon: resolve + load the referenced texture -------------------------
   const { externalResources, internalResources } = useSceneResources();
