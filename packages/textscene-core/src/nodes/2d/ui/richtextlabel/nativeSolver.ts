@@ -213,6 +213,14 @@ const RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS = {
  * ONLY `normal_font_size` locally, by contrast, still leaves `[b]` at the
  * built-in default — that divergence is Godot's own real behaviour, not a
  * bug this walk papers over).
+ *
+ * `cache` is `styledTextRuns`'s OWN per-call memo, keyed by the style key
+ * itself — only 3 keys exist at all (`RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS`),
+ * so a paragraph with N styled spans (`[b]` repeated, say, five times) walks
+ * the ancestor Theme chain at most 3 times total rather than once per span:
+ * every input to the walk (`n.themeChain`/`n.projectTheme`/`props.themeOverrideFontSizes`/
+ * `normalFontSizePx`/`builtInDefaultPx`) is fixed for the WHOLE `styledTextRuns`
+ * call, so the same key always resolves to the same answer within it.
  */
 function resolveRunFontSizePx(
   bold: boolean,
@@ -220,11 +228,16 @@ function resolveRunFontSizePx(
   props: RichTextLabelProperties,
   normalFontSizePx: number,
   n: SolveNode,
-  builtInDefaultPx: number
+  builtInDefaultPx: number,
+  cache: Map<string, number>
 ): number {
   if (!bold && !italic) return normalFontSizePx;
   const key = bold && italic ? RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.boldItalic : bold ? RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.bold : RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.italic;
-  return resolveNodeFontSizePx(n, key, props.themeOverrideFontSizes?.[key], builtInDefaultPx);
+  const cached = cache.get(key);
+  if (cached !== undefined) return cached;
+  const resolved = resolveNodeFontSizePx(n, key, props.themeOverrideFontSizes?.[key], builtInDefaultPx);
+  cache.set(key, resolved);
+  return resolved;
 }
 
 /**
@@ -257,6 +270,10 @@ export function styledTextRuns(
       : [{ text: raw, bold: false, italic: false, underline: false, color: defaultColor, fontSizePx: normalFontSizePx }];
   }
 
+  // Per-call memo — see `resolveRunFontSizePx`'s own doc: bounds the ancestor
+  // Theme walk at 3 (one per possible style key) regardless of how many
+  // styled spans this paragraph declares.
+  const runFontSizeCache = new Map<string, number>();
   return parseBBCodeRuns(raw)
     .filter((run) => run.text.length > 0)
     .map((run) => {
@@ -269,7 +286,7 @@ export function styledTextRuns(
         italic,
         underline: hasOpenTag(run.tags, 'u'),
         color: colorValue !== undefined ? resolveBBColor(colorValue, defaultColor) : defaultColor,
-        fontSizePx: resolveRunFontSizePx(bold, italic, props, normalFontSizePx, n, builtInDefaultPx),
+        fontSizePx: resolveRunFontSizePx(bold, italic, props, normalFontSizePx, n, builtInDefaultPx, runFontSizeCache),
       };
     });
 }

@@ -25,6 +25,7 @@ import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/ope
 import type { FontResource } from '../../../../resources/processing/fontProcessing';
 import type { ThemeResource } from '../../../../resources/processing/themeProcessing';
 import * as logger from '../../../../logger';
+import * as resolveNodeFontMetricsModule from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { RichTextLabelProperties } from './types';
 import {
   richTextLabelMinimumSize,
@@ -475,6 +476,33 @@ describe('styledTextRuns', () => {
         FALLBACK
       );
       expect(runs[0]!.fontSizePx).toBe(24);
+    });
+  });
+
+  describe('memoises the per-key ancestor-Theme walk within one call — only 3 distinct style keys exist (bold_font_size/italics_font_size/bold_italics_font_size), so a label with many styled spans must not re-walk once per span', () => {
+    let sizeSpy: ReturnType<typeof vi.spyOn>;
+    beforeEach(() => {
+      sizeSpy = vi.spyOn(resolveNodeFontMetricsModule, 'resolveNodeFontSizePx');
+    });
+    afterEach(() => {
+      sizeSpy.mockRestore();
+    });
+
+    it('five [b] spans walk bold_font_size ONCE, not five times', () => {
+      const text = '[b]a[/b][b]b[/b][b]c[/b][b]d[/b][b]e[/b]';
+      styledTextRuns(node({}), { text, bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
+      expect(sizeSpy).toHaveBeenCalledTimes(1);
+      expect(sizeSpy).toHaveBeenCalledWith(expect.anything(), 'bold_font_size', undefined, FALLBACK);
+    });
+
+    it('bold/italic/bold+italic spans, each repeated, walk their own key ONCE each — 3 calls total, not 6', () => {
+      const text = '[b]a[/b][i]b[/i][b][i]c[/i][/b][b]d[/b][i]e[/i][b][i]f[/i][/b]';
+      const runs = styledTextRuns(node({}), { text, bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
+      // Correctness is unaffected by memoising — still 6 runs, still resolved individually.
+      expect(runs).toHaveLength(6);
+      expect(sizeSpy).toHaveBeenCalledTimes(3);
+      const keys = sizeSpy.mock.calls.map((call) => call[1]).sort();
+      expect(keys).toEqual(['bold_font_size', 'bold_italics_font_size', 'italics_font_size']);
     });
   });
 });
