@@ -20,6 +20,8 @@ import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/n
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontResource } from '../../../../resources/processing/fontProcessing';
 import * as logger from '../../../../logger';
 import type { RichTextLabelProperties } from './types';
@@ -533,13 +535,29 @@ describe('layoutRichTextRuns', () => {
     expect(placements[1]!.fontSizePx).toBe(16);
   });
 
-  it("(regression) each placement's own solo-run layout echoes the PARENT layout's fontMetrics/baselineOffsetPx, not the pre-existing implicit atlas default — TextRun.tsx dispatches paint by layout.fontMetrics.kind, so an omitted value here would silently force every run onto the atlas path", () => {
+  it('(regression) each placement echoes the PARENT layout\'s fontMetrics/linePitchPx — TextRun.tsx dispatches paint by layout.fontMetrics.kind, so an omitted value here would silently force every run onto the atlas path', () => {
     const runs = [{ text: 'AB', bold: false, italic: false, underline: false, color: WHITE, fontSizePx: FONT_SIZE }];
     const layout = shape('AB');
     const placements = layoutRichTextRuns(runs, layout);
     expect(placements[0]!.layout.fontMetrics).toBe(layout.fontMetrics);
-    expect(placements[0]!.layout.baselineOffsetPx).toBe(layout.baselineOffsetPx);
     expect(placements[0]!.layout.linePitchPx).toBe(layout.linePitchPx);
+  });
+
+  it("(regression) a run's own solo layout recomputes baselineOffsetPx at THAT RUN's own fontSizePx, not the paragraph's — TextRun/paintSceneFontCanvas key baseline placement off this field directly, so inheriting the paragraph's would misplace every glyph of a differently-sized [b]/[i] run", () => {
+    // 'A' at both sizes so the two runs shape at the SAME paragraph pitch
+    // (`shape()` always uses FONT_SIZE=16) while each placement's OWN
+    // baselineOffsetPx must reflect ITS run's fontSizePx (18 vs 16) —
+    // `resolveRunFontSizePx`'s own doc: a [b] span shapes at its OWN
+    // theme font-size key, independent of normal_font_size.
+    const runs = [
+      { text: 'plain', bold: false, italic: false, underline: false, color: WHITE, fontSizePx: 18 },
+      { text: 'BOLD', bold: true, italic: false, underline: false, color: WHITE, fontSizePx: 16 },
+    ];
+    const layout = shape('plainBOLD');
+    const placements = layoutRichTextRuns(runs, layout);
+    expect(placements[0]!.layout.baselineOffsetPx).toBe(getFontAscentPx(OPEN_SANS_FONT_METRICS, 18));
+    expect(placements[1]!.layout.baselineOffsetPx).toBe(getFontAscentPx(OPEN_SANS_FONT_METRICS, 16));
+    expect(placements[0]!.layout.baselineOffsetPx).not.toBe(placements[1]!.layout.baselineOffsetPx);
   });
 });
 

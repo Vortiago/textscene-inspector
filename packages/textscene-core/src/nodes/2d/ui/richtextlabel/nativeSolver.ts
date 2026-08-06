@@ -17,6 +17,8 @@ import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/nativ
 import { AutowrapMode, shapeText, type GlyphPlacement, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { getAscentPx, getUnderlinePositionPx, getUnderlineThicknessPx } from '../../../../r3f/controls/native/text/openSansMetrics';
+import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ControlColor } from '../control/types';
 import type { RichTextLabelProperties } from './types';
@@ -357,15 +359,35 @@ export interface RichTextRunPlacement {
  * force every run back onto the atlas path regardless of which font `layout`
  * (the ALREADY-SHAPED paragraph this run's glyphs were sliced from) was
  * actually shaped against.
+ *
+ * `baselineOffsetPx`, unlike `fontMetrics`/`linePitchPx`, is NOT inherited
+ * from the parent paragraph layout — it is recomputed at `runFontSizePx`, THIS
+ * run's own resolved size (`RichTextRunPlacement.fontSizePx`, which a `[b]`/
+ * `[i]` run's `resolveRunFontSizePx` can leave DIFFERENT from the paragraph's
+ * `normal_font_size` — that function's own doc). `<TextRun>` is handed this
+ * placement's `fontSizePx`, not the paragraph's, for the atlas geometry AND
+ * the canvas raster's `baselineY` alike (`buildGlyphQuadArrays`/
+ * `paintSceneFontCanvas` both key off `layout.baselineOffsetPx` directly, with
+ * no independent per-call fontSizePx re-derivation of their own) — inheriting
+ * the paragraph's ascent here would paint every glyph in a differently-sized
+ * run at the WRONG baseline y (a whole ascent-delta vertical miss on the
+ * canvas path, which has no ascent bake-time correction of any kind to
+ * absorb it).
  */
-function soloRunLayout(text: string, glyphs: GlyphPlacement[], parentLayout: TextLayoutResult): TextLayoutResult {
+function soloRunLayout(
+  text: string,
+  glyphs: GlyphPlacement[],
+  parentLayout: TextLayoutResult,
+  runFontSizePx: number
+): TextLayoutResult {
   const widthPx = glyphs.length ? glyphs[glyphs.length - 1]!.x + glyphs[glyphs.length - 1]!.advance - glyphs[0]!.x : 0;
+  const fontMetrics = parentLayout.fontMetrics ?? OPEN_SANS_FONT_METRICS;
   return {
     lines: [{ text, glyphs, widthPx }],
     linePitchPx: parentLayout.linePitchPx,
     widthPx,
     heightPx: parentLayout.linePitchPx,
-    baselineOffsetPx: parentLayout.baselineOffsetPx,
+    baselineOffsetPx: getFontAscentPx(fontMetrics, runFontSizePx),
     fontMetrics: parentLayout.fontMetrics,
   };
 }
@@ -440,7 +462,7 @@ export function layoutRichTextRuns(
         underline: run.underline,
         color: run.color,
         fontSizePx: run.fontSizePx,
-        layout: soloRunLayout(plainText.slice(textStart, cursor), line.glyphs.slice(start, i), layout),
+        layout: soloRunLayout(plainText.slice(textStart, cursor), line.glyphs.slice(start, i), layout, run.fontSizePx),
       });
     }
   });
