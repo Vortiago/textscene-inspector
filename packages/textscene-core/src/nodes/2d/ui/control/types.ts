@@ -105,4 +105,21 @@ export interface ControlProperties {
   themeOverrideFontSizes?: Record<string, number>;
   /** `theme_override_styles/<name>` → resource ref (e.g. panel → StyleBox). */
   themeOverrideStyles?: Record<string, string>;
+  /** `theme_override_fonts/<name>` → resource ref (e.g. font → FontFile/FontVariation/SystemFont). */
+  themeOverrideFonts?: Record<string, string>;
+
+  /**
+   * `theme = ExtResource(...)` / `SubResource(...)` — this Control's own
+   * Theme resource, raw reference string (resolved downstream, the same way
+   * `themeOverrideStyles`' refs are). Undefined when unset — most Controls
+   * inherit their theme from an ancestor rather than carrying one.
+   */
+  theme?: string;
+  /**
+   * `theme_type_variation` — the StringName this Control's theme items are
+   * looked up under instead of its own class name (`Control::get_theme_type_variation`,
+   * `scene/gui/control.h`). Godot writes it as a StringName literal
+   * (`&"HeaderLabel"`); the parser strips the `&` and quotes.
+   */
+  themeTypeVariation?: string;
 }

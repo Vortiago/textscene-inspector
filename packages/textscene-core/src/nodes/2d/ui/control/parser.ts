@@ -1,16 +1,18 @@
 /** Base Control parser — layout + theme-override properties shared by all 2D UI nodes. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
+import { unquoteString } from '../../../../parser/utils';
 import type { ControlProperties, ControlColor } from './types';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
 import { intOr, parseOptionalFloat, parseOptionalVector2 } from '../../../../parser/valueParsers';
 
-/** Collect `theme_override_<category>/<name> = value` into the four typed maps. */
+/** Collect `theme_override_<category>/<name> = value` into the five typed maps. */
 function parseThemeOverrides(properties: Record<string, string>): Partial<ControlProperties> {
   const constants: Record<string, number> = {};
   const colors: Record<string, ControlColor> = {};
   const fontSizes: Record<string, number> = {};
   const styles: Record<string, string> = {};
+  const fonts: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(properties)) {
     const m = key.match(/^theme_override_(\w+)\/(.+)$/);
@@ -35,6 +37,9 @@ function parseThemeOverrides(properties: Record<string, string>): Partial<Contro
       case 'styles':
         styles[name!] = value;
         break;
+      case 'fonts':
+        fonts[name!] = value;
+        break;
       default:
         break;
     }
@@ -45,7 +50,22 @@ function parseThemeOverrides(properties: Record<string, string>): Partial<Contro
   if (Object.keys(colors).length) out.themeOverrideColors = colors;
   if (Object.keys(fontSizes).length) out.themeOverrideFontSizes = fontSizes;
   if (Object.keys(styles).length) out.themeOverrideStyles = styles;
+  if (Object.keys(fonts).length) out.themeOverrideFonts = fonts;
   return out;
+}
+
+/**
+ * `theme_type_variation` is stored as a StringName literal — `&"HeaderLabel"`,
+ * not a plain quoted string — Godot's text saver prefixes any StringName
+ * property with `&` (`core/variant/variant_utility.cpp`'s `RTOS`/StringName
+ * stringify path). Strip the sigil before unquoting; a bare quoted string
+ * (no `&`) passes through unchanged for leniency.
+ */
+function parseThemeTypeVariation(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  const unsigiled = value.startsWith('&') ? value.slice(1) : value;
+  const name = unquoteString(unsigiled);
+  return name === '' ? undefined : name;
 }
 
 export function parseControl(
@@ -108,6 +128,11 @@ export function parseControl(
   );
 
   Object.assign(result, parseThemeOverrides(properties));
+
+  // `theme = ExtResource(...)`/`SubResource(...)` — raw, resolved downstream
+  // the same way `themeOverrideStyles`' refs are (`SubResourceResolver`).
+  if (properties.theme !== undefined) result.theme = properties.theme;
+  result.themeTypeVariation = parseThemeTypeVariation(properties.theme_type_variation);
 
   return result;
 }

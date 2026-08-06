@@ -31,6 +31,7 @@ import { busTypeFor, type ResourceLoader } from '../ResourceLoader';
 import { runClearCachesSequence } from '../clearCachesSequence';
 import type { ArrayMeshResource } from '../processors/createArrayMeshProcessor';
 import type { FontResource } from '../processing/fontProcessing';
+import type { ThemeResource } from '../processing/themeProcessing';
 
 export interface FakeProcessor<T> {
   /** Backing cache — `undefined` = never requested, `null` = failed/sentinel-miss, value = loaded. */
@@ -76,6 +77,7 @@ export interface FakeResourceLoader {
   readonly resources: FakeProcessor<ParsedTresFile>;
   readonly arrayMeshes: FakeProcessor<ArrayMeshResource>;
   readonly fonts: FakeProcessor<FontResource>;
+  readonly themes: FakeProcessor<ThemeResource>;
   /** Every ExtResource passed to `loader.register`, in call order — for assertions. */
   readonly registerCalls: ExtResource[];
 }
@@ -149,6 +151,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
   const resources = makeFakeProcessor<ParsedTresFile>(eventBus, 'resource');
   const arrayMeshes = makeFakeProcessor<ArrayMeshResource>(eventBus, 'arraymesh');
   const fonts = makeFakeProcessor<FontResource>(eventBus, 'font');
+  const themes = makeFakeProcessor<ThemeResource>(eventBus, 'theme');
   const registerCalls: ExtResource[] = [];
 
   const byType: Record<ResourceType, FakeProcessor<unknown>> = {
@@ -159,6 +162,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     resource: resources,
     arraymesh: arrayMeshes,
     font: fonts,
+    theme: themes,
   };
   const all = Object.values(byType);
 
@@ -172,6 +176,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     resources,
     arrayMeshes,
     fonts,
+    themes,
     // Mirror ResourceLoader.register (metadata bookkeeping) and record the
     // call so tests can assert registration without a vitest spy.
     register(resource: ExtResource): void {
@@ -191,6 +196,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
         materials.request(path);
         resources.request(path);
         fonts.request(path);
+        themes.request(path);
       } else {
         textures.request(path);
         materials.request(path);
@@ -247,6 +253,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     resources,
     arrayMeshes,
     fonts,
+    themes,
     registerCalls,
   };
 }

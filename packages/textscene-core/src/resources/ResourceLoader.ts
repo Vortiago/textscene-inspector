@@ -42,10 +42,12 @@ import { createSceneProcessor } from './processors/createSceneProcessor';
 import { createTresResourceProcessor } from './processors/createTresResourceProcessor';
 import { createArrayMeshProcessor, type ArrayMeshResource } from './processors/createArrayMeshProcessor';
 import { createFontProcessor } from './processors/createFontProcessor';
+import { createThemeProcessor } from './processors/createThemeProcessor';
 import { runClearCachesSequence } from './clearCachesSequence';
 import { resourceFilePath } from './subResourcePath';
 import type { ParsedTresFile } from '../parser/tresParser';
 import type { FontResource } from './processing/fontProcessing';
+import type { ThemeResource } from './processing/themeProcessing';
 import type { ResourceProcessor } from './createResourceProcessor';
 import * as logger from '../logger';
 
@@ -66,6 +68,7 @@ export function busTypeFor(resourceType: string | undefined): ResourceType | nul
   if (resourceType === 'FontFile' || resourceType === 'SystemFont' || resourceType === 'FontVariation') {
     return 'font';
   }
+  if (resourceType === 'Theme') return 'theme';
   return null;
 }
 
@@ -82,6 +85,8 @@ export class ResourceLoader {
   readonly arrayMeshes: ResourceProcessor<ArrayMeshResource>;
   /** FontFile/SystemFont/FontVariation, recursively resolved (base_font, fallbacks). */
   readonly fonts: ResourceProcessor<FontResource>;
+  /** Theme .tres, font-relevant fields resolved (default_font, <Type>/fonts/<name>); everything else raw. */
+  readonly themes: ResourceProcessor<ThemeResource>;
 
   /**
    * Type → processor table. The four named accessors above are stable
@@ -174,6 +179,21 @@ export class ResourceLoader {
     this.arrayMeshes = createArrayMeshProcessor(fileEventBus, this.eventBus);
     this.fonts = createFontProcessor(fileEventBus, this.eventBus);
 
+    // A Theme's font refs resolve through the FONT processor (a different
+    // peer, unlike a Font's own self-recursion) — same getCached-then-request-
+    // then-await shape as `loadTexture` above.
+    const loadFontForThemes = async (address: string): Promise<FontResource | null> => {
+      const cached = this.fonts.getCached(address);
+      if (cached !== undefined) return cached;
+      this.fonts.request(address);
+      try {
+        return await this.eventBus.once<FontResource>('font', 'loaded', address);
+      } catch {
+        return null;
+      }
+    };
+    this.themes = createThemeProcessor(fileEventBus, this.eventBus, loadFontForThemes);
+
     this.processors = new Map<ResourceType, ResourceProcessor<unknown>>([
       ['texture', this.textures as ResourceProcessor<unknown>],
       ['material', this.materials as ResourceProcessor<unknown>],
@@ -182,6 +202,7 @@ export class ResourceLoader {
       ['resource', this.resources as ResourceProcessor<unknown>],
       ['arraymesh', this.arrayMeshes as ResourceProcessor<unknown>],
       ['font', this.fonts as ResourceProcessor<unknown>],
+      ['theme', this.themes as ResourceProcessor<unknown>],
     ]);
 
     this.setupFailureCallbacks();
@@ -206,6 +227,7 @@ export class ResourceLoader {
       resource: 'Resource',
       arraymesh: 'Node using ArrayMesh',
       font: 'Node using font',
+      theme: 'Node using theme',
     };
 
     for (const type of this.processors.keys()) {
@@ -381,12 +403,13 @@ export class ResourceLoader {
       this.request(busType, path);
     } else if (path.endsWith('.tres')) {
       // Unregistered .tres — a raw `res://…tres` reference (e.g. a
-      // `tile_set` path with no ExtResource declaration). All three .tres
-      // processors get the re-request; subscribers listen on their own
+      // `tile_set` path with no ExtResource declaration). Every .tres
+      // processor gets the re-request; subscribers listen on their own
       // bus slot, so only the relevant one is observed.
       this.materials.request(path);
       this.resources.request(path);
       this.fonts.request(path);
+      this.themes.request(path);
     } else {
       // Unknown type — try the two MVS processors. Only the one that
       // can process the file's content will produce a non-null result;

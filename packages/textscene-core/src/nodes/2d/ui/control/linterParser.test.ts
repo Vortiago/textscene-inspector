@@ -83,6 +83,34 @@ describe('Control Linter', () => {
     },
   ]);
 
+  describe('theme reference', () => {
+    it('accepts an ExtResource theme', () => {
+      expectClean(scene(node('Control', { theme: 'ExtResource("1_theme")' })));
+    });
+
+    it('accepts a SubResource theme (a scene-inline Theme)', () => {
+      expectClean(scene(node('Control', { theme: 'SubResource("5")' })));
+    });
+
+    it('rejects a non-reference theme value', () => {
+      expectDiagnostic(scene(node('Control', { theme: 'res://theme.tres' })), {
+        prop: 'theme',
+      });
+    });
+  });
+
+  describe('theme_type_variation', () => {
+    it('accepts a StringName literal', () => {
+      expectClean(scene(node('Control', { theme_type_variation: '&"title_panel"' })));
+    });
+
+    it('rejects an empty value', () => {
+      expectDiagnostic(scene(node('Control', { theme_type_variation: '' })), {
+        prop: 'theme_type_variation',
+      });
+    });
+  });
+
   describe('theme_override wildcard groups', () => {
     it('accepts a well-formed theme_override_colors entry', () => {
       expectClean(scene(node('Control', { 'theme_override_colors/font_color': 'Color(1, 1, 1, 1)' })));
@@ -126,6 +154,8 @@ describe('Control Linter', () => {
   // the axis variants and props the accept/reject table above only spot-checks.
   describe('every registered Control property is validated', () => {
     const MALFORMED: ReadonlyArray<readonly [string, string]> = [
+      ['theme', 'res://theme.tres'],
+      ['theme_type_variation', ''],
       ['self_modulate', 'Color(1, 1, 1)'],
       ['layout_mode', 'x'],
       ['anchor_left', 'x'],

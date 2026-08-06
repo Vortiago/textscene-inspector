@@ -36,6 +36,53 @@ describe('parseControl', () => {
     expect(p.themeOverrideStyles?.panel).toBe('SubResource("StyleBoxFlat_1")');
   });
 
+  describe('theme reference + type variation', () => {
+    it('parses a present theme ExtResource ref', () => {
+      const p = parseControl(heading('Control', { name: 'Root' }), {
+        theme: 'ExtResource("1_theme")',
+      });
+      expect(p.theme).toBe('ExtResource("1_theme")');
+    });
+
+    it('leaves theme undefined when absent', () => {
+      const p = parseControl(heading('Control', { name: 'Plain' }), {});
+      expect(p.theme).toBeUndefined();
+    });
+
+    it('parses a SubResource theme ref (a scene-inline Theme)', () => {
+      const p = parseControl(heading('Control', { name: 'Root' }), {
+        theme: 'SubResource("5")',
+      });
+      expect(p.theme).toBe('SubResource("5")');
+    });
+
+    it('treats a malformed theme value as an opaque raw string (resolved downstream)', () => {
+      const p = parseControl(heading('Control', { name: 'Bad' }), { theme: 'not-a-ref' });
+      expect(p.theme).toBe('not-a-ref');
+    });
+
+    it('strips the StringName sigil and quotes from theme_type_variation', () => {
+      const p = parseControl(heading('Control', { name: 'Title' }), {
+        theme_type_variation: '&"title_panel"',
+      });
+      expect(p.themeTypeVariation).toBe('title_panel');
+    });
+
+    it('leaves themeTypeVariation undefined when absent', () => {
+      const p = parseControl(heading('Control', { name: 'Plain' }), {});
+      expect(p.themeTypeVariation).toBeUndefined();
+    });
+  });
+
+  it('collects theme_override_fonts into a raw-ref map', () => {
+    const p = parseControl(heading('Control', { name: 'L' }), {
+      'theme_override_fonts/font': 'ExtResource("2_font")',
+      'theme_override_fonts/bold_font': 'SubResource("3")',
+    });
+    expect(p.themeOverrideFonts?.font).toBe('ExtResource("2_font")');
+    expect(p.themeOverrideFonts?.bold_font).toBe('SubResource("3")');
+  });
+
   it('parses custom_minimum_size and size flags', () => {
     const p = parseControl(heading('Control', { name: 'B' }), {
       custom_minimum_size: 'Vector2(120, 40)',

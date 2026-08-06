@@ -74,6 +74,14 @@ validatorRegistry.registerAll('Control', {
   texture_filter: v.enumInt('texture_filter', 0, 6, CANVAS_ITEM_TEXTURE_FILTER),
   texture_repeat: v.enumInt('texture_repeat', 0, 3, CANVAS_ITEM_TEXTURE_REPEAT),
 
+  // The Control's own Theme resource (`scene/resources/theme.cpp`) — an
+  // ExtResource pointing at a `.tres`, or a SubResource carrying one inline.
+  theme: v.resourceReference('theme'),
+  // `Control::get_theme_type_variation` — a StringName literal (`&"..."`);
+  // `v.string` (not `v.quotedString`, which requires a bare `"..."`) accepts
+  // it, mirroring the parser's own leniency (`parseThemeTypeVariation`).
+  theme_type_variation: v.string('theme_type_variation'),
+
   // Per-instance theme overrides (grouped keys → one validator each).
   'theme_override_colors/*': v.color('theme_override_colors'),
   'theme_override_constants/*': v.int('theme_override_constants'),
