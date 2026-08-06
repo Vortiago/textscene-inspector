@@ -768,6 +768,20 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Walk dir recursively; collect every path holding a `linterParser.ts`,
+ * `parser.ts` or not. The superset {@link findSliceDirs} narrows, so the
+ * blind-spot count at the bottom of this file has something to measure against.
+ */
+function findLinterParserDirs(dir: string): string[] {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const result = entries.some((e) => e.name === 'linterParser.ts') ? [dir] : [];
+  for (const e of entries) {
+    if (e.isDirectory()) result.push(...findLinterParserDirs(join(dir, e.name)));
+  }
+  return result;
+}
+
 /** Walk dir recursively; collect paths where both parser.ts and linterParser.ts exist. */
 function findSliceDirs(dir: string): string[] {
   const entries = readdirSync(dir, { withFileTypes: true });
@@ -1025,5 +1039,40 @@ describe('property-grammar parity guard', () => {
       gaps.length,
       `Render gaps now number ${gaps.length}, not ${EXPECTED_RENDER_GAP_KEYS}:\n  ${gaps.join('\n  ')}`
     ).toBe(EXPECTED_RENDER_GAP_KEYS);
+  });
+
+  /**
+   * Slices this guard does NOT see, counted so the blind spot moves visibly.
+   *
+   * `findSliceDirs` admits a directory only when it holds BOTH `parser.ts` and
+   * `linterParser.ts`. Every slice that reuses a base parser has no `parser.ts`
+   * of its own — ADR-0008's transform-only shape and the whole Control-reuse
+   * pattern — so the guard's most valuable question, "is this validated key
+   * something the renderer should be reading?", is never asked of them. All 28
+   * skeleton slices are in this set.
+   *
+   * That is a real limitation, and the number is here because the alternative is
+   * worse than the limitation: an untouched `ASYMMETRY_ALLOWLIST` reads as "the
+   * new slices are symmetric" when it actually means "they were never examined".
+   * A wave that adds ten base-reusing slices now moves a number and must say so.
+   *
+   * Closing it properly means keying the population on `linterParser.ts` alone
+   * and resolving the parser side through `getInheritedParserProps`, which needs
+   * `BASE_TYPE_TO_PARSER_SUBPATH` extended well past its current few hops or the
+   * unmapped chains over-report. That is its own piece of work.
+   */
+  const SWEPT_SLICES = 74;
+  const PARSER_REUSING_SLICES = 125;
+
+  it('accounts for every linterParser.ts, swept or knowingly not', () => {
+    const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>
+      extractNodeType(readFileSync(join(dir, 'linterParser.ts'), 'utf8'))
+    );
+    expect(collectSlices()).toHaveLength(SWEPT_SLICES);
+    expect(
+      withLinterParser.length - collectSlices().length,
+      'Slices outside this guard changed. Update the count, and say in the commit ' +
+        'whether the new ones are base-parser reusers (expected) or are missing a parser.ts they should have.'
+    ).toBe(PARSER_REUSING_SLICES);
   });
 });

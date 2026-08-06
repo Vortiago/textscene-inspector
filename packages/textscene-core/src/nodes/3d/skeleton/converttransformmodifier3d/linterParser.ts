@@ -56,7 +56,7 @@
 // Chains through BoneConstraint3D, not past it: that tier owns the seven
 // settings/ leaves this registration delegates to, and it chains on to
 // SkeletonModifier3D itself.
-import { BONE_CONSTRAINT_SETTING_LEAVES } from '../boneconstraint3d/linterParser.js';
+import { boneConstraintBaseLeaves } from '../boneconstraint3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
@@ -124,32 +124,9 @@ const OWN_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   additive: v.boolean('additive'),
 };
 
-/**
- * The seven leaves BoneConstraint3D pushes into the same family
- * (bone_constraint_3d.cpp:91-115) are DELEGATED, not re-declared and not waved
- * through.
- *
- * They have to be named here because this registration owns the `settings/`
- * prefix for this node type and the dispatcher would otherwise report a legal
- * key as unknown. But the bounds belong to the base, so each one forwards there.
- * Resolving at call time rather than at module scope keeps it independent of
- * import order.
- */
-const delegateToBase: PropertyValidator = (key, value, line) =>
-  validatorRegistry.findValidator('BoneConstraint3D', key)?.(key, value, line) ?? null;
-
-const BASE_LEAVES: Readonly<Record<string, PropertyValidator>> = Object.fromEntries(
-  // Derived from the base's own table rather than re-spelled here. A hand-copy
-  // would go stale silently in the worst direction: an eighth leaf on
-  // BoneConstraint3D would make this dispatcher report a LEGAL key as
-  // INVALID_SETTING_KEY, and only `amount` is covered by settingsFamilySeam's
-  // canary, so nothing would go red.
-  Object.keys(BONE_CONSTRAINT_SETTING_LEAVES).map((leaf) => [leaf, delegateToBase])
-);
-
 const settingValidator = indexedFamilyValidator({
   prefix: 'settings/',
-  leaves: { ...OWN_LEAVES, ...BASE_LEAVES },
+  leaves: { ...OWN_LEAVES, ...boneConstraintBaseLeaves() },
   unknownCode: 'INVALID_SETTING_KEY',
   describes: 'setting',
   // No angle brackets: the sheet generator drops this straight into a Markdown

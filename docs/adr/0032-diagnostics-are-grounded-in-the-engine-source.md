@@ -63,6 +63,34 @@ Every surviving threshold carries the governing `file:line` in a comment beside 
 A constant named for a feeling rather than a source — `EXTREME_*`, `LARGE_*`,
 `SMALL_*`, `*_RECOMMENDED` — does not pass review without that citation.
 
+### Usage flags decide whether there is anything to ground at all
+
+Before asking which tier a property belongs to, ask whether it reaches a `.tscn`
+at all. `_validate_property` and the usage flags answer that, and they get read
+wrong in both directions — as a removal that is not one, and as a hiding that is
+not one. Three rules, because a property that never serialises needs no validator
+while one that does must not be reported as impossible:
+
+- **`PROPERTY_USAGE_NONE` removes storage.** The property is never written, so it
+  gets no validator. That alone is NOT `registerUnavailable`: modelling a key as
+  removed means claiming a scene carrying it is wrong, and only a SETTER guard
+  that refuses the write supports that claim. `SpinBox.exp_edit` and
+  `FileDialog.dialog_text` are the cases where both hold.
+- **`usage ^= PROPERTY_USAGE_STORAGE` can ADD storage back.** The XOR is a
+  toggle, not a clear, so a property that reads as hidden in one configuration
+  serialises in another. A key Godot writes in that mode must not be reported.
+- **`PROPERTY_USAGE_NO_EDITOR` IS `PROPERTY_USAGE_STORAGE`** (`object.h:132`), so
+  it serialises. It hides a property from the inspector and does nothing else;
+  `SpringBoneCollision3D.bone` and the `settings/<i>/…` bone indices carry it and
+  are validated.
+
+No guard can hold this one. Verifying a usage-flag reading means reading engine
+source at test time, which `scripts/godot-source-decoupling.test.mjs` forbids, so
+it is written here instead — after being rediscovered from scratch once it had
+already been settled. `SpringBoneSimulator3D` derived the XOR rule independently
+and reached the OPPOSITE verdict from `ChainIK3D` on same-looking keys, while the
+rule sat in a registry method's docblock where no slice author was looking.
+
 ## How it is enforced
 
 A convention decays; the guards below hold. Each closes one way a diagnostic can

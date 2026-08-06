@@ -38,7 +38,7 @@
 // Chains through BoneConstraint3D, not past it: that tier owns the seven
 // settings/ leaves this class's dispatcher delegates to, and it chains on to
 // SkeletonModifier3D itself.
-import { BONE_CONSTRAINT_SETTING_LEAVES } from '../boneconstraint3d/linterParser.js';
+import { boneConstraintBaseLeaves } from '../boneconstraint3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
@@ -71,38 +71,9 @@ const AIM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   relative: v.boolean('relative'),
 };
 
-/**
- * The seven leaves BoneConstraint3D pushes into the same family
- * (bone_constraint_3d.cpp:102-108) are DELEGATED, not re-declared and not
- * waved through.
- *
- * They have to be named here because this class's dispatcher owns the
- * `settings/` prefix for this node type and would otherwise report a legal key
- * as unknown. But the bounds belong to the base, so each one forwards there.
- * `findValidator` walks the base chain and the NEAREST hop wins with no
- * fall-through, so this dispatcher SHADOWS the base's registration; forwarding
- * is what puts the base's bounds back. Resolving at call time rather than at
- * module scope keeps it independent of import order.
- *
- * The alternative, accepting all seven unconditionally, would have made
- * `settings/0/amount = 5` silently legal on this type while the identical key
- * is correctly bounded to 0..1 on a plain BoneConstraint3D.
- */
-const delegateToBase: PropertyValidator = (key, value, line) =>
-  validatorRegistry.findValidator('BoneConstraint3D', key)?.(key, value, line) ?? null;
-
-const BASE_LEAVES: Readonly<Record<string, PropertyValidator>> = Object.fromEntries(
-  // Derived from the base's own table rather than re-spelled here. A hand-copy
-  // would go stale silently in the worst direction: an eighth leaf on
-  // BoneConstraint3D would make this dispatcher report a LEGAL key as
-  // INVALID_SETTING_KEY, and only `amount` is covered by settingsFamilySeam's
-  // canary, so nothing would go red.
-  Object.keys(BONE_CONSTRAINT_SETTING_LEAVES).map((leaf) => [leaf, delegateToBase])
-);
-
 const settingValidator = indexedFamilyValidator({
   prefix: 'settings/',
-  leaves: { ...AIM_LEAVES, ...BASE_LEAVES },
+  leaves: { ...AIM_LEAVES, ...boneConstraintBaseLeaves() },
   unknownCode: 'INVALID_SETTING_KEY',
   describes: 'setting',
   // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`

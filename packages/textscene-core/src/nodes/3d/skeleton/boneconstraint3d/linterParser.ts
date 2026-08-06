@@ -26,7 +26,7 @@
  */
 
 import '../skeletonmodifier3d/linterParser.js';
-import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
+import { validatorRegistry, type PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
 
@@ -89,3 +89,26 @@ validatorRegistry.registerAll('BoneConstraint3D', {
 });
 
 export { SETTING_LEAVES as BONE_CONSTRAINT_SETTING_LEAVES };
+
+/**
+ * A router for each of the seven leaves above, for a subclass whose own
+ * `settings/` wildcard SHADOWS this one.
+ *
+ * Godot builds one `settings/<i>/` family cooperatively: each subclass's
+ * `get_property_list` calls this class's and appends its own leaves. The
+ * registry resolves ONE wildcard per key with no fall-through, so a subclass
+ * that registers the prefix to answer for its own leaves stops the base-walk
+ * from ever delivering these seven. Spreading this into the subclass's `leaves`
+ * hands each one back.
+ *
+ * Derived from {@link SETTING_LEAVES}'s keys rather than re-spelled, and
+ * resolved through the registry per call rather than captured at module load.
+ * The first keeps an eighth leaf here from being reported as INVALID_SETTING_KEY
+ * by three subclasses; the second makes the delegation independent of which
+ * module's registration ran first.
+ */
+export function boneConstraintBaseLeaves(): Readonly<Record<string, PropertyValidator>> {
+  const delegate: PropertyValidator = (key, value, line) =>
+    validatorRegistry.findValidator('BoneConstraint3D', key)?.(key, value, line) ?? null;
+  return Object.fromEntries(Object.keys(SETTING_LEAVES).map((leaf) => [leaf, delegate]));
+}

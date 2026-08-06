@@ -43,7 +43,8 @@ import {
   type PropertyValidator,
 } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { propertyError } from '../../../../linter/validators/propertyError.js';
+import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
+import { boneConstraintBaseLeaves } from '../boneconstraint3d/linterParser.js';
 
 /**
  * A `PROPERTY_HINT_FLAGS` int whose setter assigns straight through.
@@ -115,65 +116,34 @@ const OWN_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   additive: v.boolean('additive'),
 };
 
-/** `settings/` — the array prefix ADD_ARRAY_COUNT names (copy_transform_modifier_3d.cpp:358). */
-const SETTINGS_PREFIX = 'settings/';
+const settingsValidator = indexedFamilyValidator({
+  prefix: 'settings/',
+  // Its own five, plus a router back to each of BoneConstraint3D's seven: this
+  // wildcard shadows the base's, so without them the ancestor's leaves would
+  // reach no validator at all.
+  leaves: { ...OWN_LEAVES, ...boneConstraintBaseLeaves() },
+  unknownCode: 'INVALID_SETTING_KEY',
+  describes: 'setting',
+  // No angle brackets: the sheet generator drops this straight into a Markdown
+  // table cell (lintCoverage.mjs:131), where `<i>` would open italics.
+  accepts: 'per-setting copy, axes and invert bit masks, plus relative and additive',
+  // `_set` reads the index with a BARE `to_int()` and no validity gate
+  // (copy_transform_modifier_3d.cpp:37), and `_to_int` skips non-digits rather
+  // than stopping at them (ustring.cpp:2268-2298), so `settings/x/relative`
+  // resolves to setting 0 and the write LANDS. Nothing refuses it, so nothing is
+  // reported for a non-numeric index.
+  indexParse: 'to_int',
+  negativeIndex: {
+    cite: 'copy_transform_modifier_3d.cpp:39',
+    code: 'INVALID_SETTING_INDEX',
+    message: (index) =>
+      `Setting index ${index} must be non-negative; CopyTransformModifier3D::_set refuses it before the write lands`,
+  },
+});
 
-/**
- * Dispatch `settings/<i>/<leaf>`, owning five leaves and delegating the rest.
- *
- * The key parse mirrors the engine's own (`_set`,
- * copy_transform_modifier_3d.cpp:36-38): split at the LAST `/`, require the head
- * to start with the prefix, read the index that sits between.
- *
- * The index is read with a BARE `to_int()` and no validity gate
- * (copy_transform_modifier_3d.cpp:37), and `_to_int` skips non-digits rather
- * than stopping at them (ustring.cpp:2268-2298), so `settings/x/relative`
- * resolves to setting 0 and the write LANDS. Nothing refuses it, so ADR-0032
- * grounds no diagnostic on a non-numeric index and only a NEGATIVE one, which
- * `ERR_FAIL_INDEX_V` does refuse, is reportable. The leaf below still decides
- * either way: an unrecognised one is dropped whatever the index came to.
- */
-const settingsValidator: PropertyValidator = (key, value, line) => {
-  const slash = key.lastIndexOf('/');
-  const indexText = slash > SETTINGS_PREFIX.length ? key.slice(SETTINGS_PREFIX.length, slash) : '';
-  const leafName = key.slice(slash + 1);
-
-  if (!key.startsWith(SETTINGS_PREFIX) || indexText === '' || leafName === '') {
-    return propertyError(key, line, `Unknown setting property: "${key}"`, 'INVALID_SETTING_KEY');
-  }
-
-  // `[+-]?`, matching `String::to_int()`'s sign handling. A non-match is a
-  // non-numeric index, which the engine resolves rather than refusing, so it
-  // falls through uncommented-on.
-  if (/^[+-]?\d+$/.test(indexText) && Number(indexText) < 0) {
-    return propertyError(
-      key,
-      line,
-      `Setting index ${Number(indexText)} must be non-negative; CopyTransformModifier3D::_set refuses it before the write lands`,
-      'INVALID_SETTING_INDEX'
-    );
-  }
-
-  // hasOwnProperty, so a leaf named `toString` cannot resolve an inherited
-  // function and get called as a validator.
-  const leaf = Object.prototype.hasOwnProperty.call(OWN_LEAVES, leafName)
-    ? OWN_LEAVES[leafName]
-    : undefined;
-  if (leaf) return leaf(key, value, line);
-
-  // Not one of this class's five, so it is BoneConstraint3D's (or nobody's).
-  // Resolving from the base rather than rejecting is what keeps this wildcard
-  // from shadowing the ancestor that owns the other seven leaves.
-  return validatorRegistry.findValidator('BoneConstraint3D', key)?.(key, value, line) ?? null;
-};
-
-settingsValidator.accepts =
-  'settings/<i>/ copy, axes, invert (bit masks), relative, additive (bool)';
-// The rejected index is a real value a scene can carry, and the guard that
-// refuses it is `ERR_FAIL_INDEX_V(which, (int)settings.size(), false)`.
-settingsValidator.grounding = { kind: 'enforced', cite: 'copy_transform_modifier_3d.cpp:39' };
-// Exposed so `boundGrounding`'s sweep recurses past the dispatcher: a tag here
-// says nothing about the bounds behind it.
+// `leaves` drives `boundGrounding`'s recursion, so it must list BOUNDS, not
+// routes: the seven base routers forward to seven different citations, which no
+// single tag can honestly stand for.
 settingsValidator.leaves = Object.values(OWN_LEAVES);
 
 validatorRegistry.registerAll('CopyTransformModifier3D', {
