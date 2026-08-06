@@ -1016,6 +1016,20 @@ const KEYS: string[] = [];
 /** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
+/**
+ * Keys ${typeName} does NOT declare, each paired with the ancestor that does.
+ * Name at least one; ${chain} is where to start.
+ *
+ * This is the assertion the malformed-value sweep below CANNOT make. That sweep
+ * iterates \`getOwnKeys\`, so on a class that rightly declares nothing it sweeps
+ * an EMPTY set and passes while asserting nothing — "Godot gives ${typeName} no
+ * properties of its own" and "nobody has written this slice yet" look identical
+ * to it. Resolving a key through the base-walk to the ancestor's own validator
+ * function tells the two apart, and it is red until filled for the same reason
+ * KEYS is.
+ */
+const INHERITED: [owner: string, key: string][] = [];
+
 describe('${typeName} strict validators', () => {
   it('registers exactly what ${typeName} binds', () => {
     expect(
@@ -1035,11 +1049,27 @@ describe('${typeName} strict validators', () => {
 
   it('rejects a malformed value on every property it validates', () => {
     // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // sweep is generic on purpose; per-property cases come next. Vacuous when
+    // ${typeName} declares nothing, which is what INHERITED below covers.
     const accepted = validatorRegistry
       .getOwnKeys('${typeName}')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
     expect(accepted).toEqual([]);
+  });
+
+  it('resolves each inherited key to the ancestor that declares it', () => {
+    expect(
+      INHERITED.length,
+      'name at least one key ${typeName} inherits, and the ancestor that declares it'
+    ).toBeGreaterThan(0);
+    for (const [owner, key] of INHERITED) {
+      const owned = validatorRegistry.findValidator(owner, key);
+      expect(owned, \`\${owner} does not declare '\${key}'\`).not.toBeNull();
+      // The SAME function, not merely some validator: a shadowing copy on
+      // ${typeName} would answer here while drifting from the ancestor's rule.
+      expect(validatorRegistry.findValidator('${typeName}', key)).toBe(owned);
+      expect(validatorRegistry.getOwnKeys('${typeName}')).not.toContain(key);
+    }
   });
 });
 `
