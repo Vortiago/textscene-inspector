@@ -595,6 +595,24 @@ export const GOLDEN_SCENES = [
   { name: 'vbox-container-pitch', file: 'unit-vbox-container-pitch.tscn', mode: '2d' },
   { name: 'panel-styleboxes', file: 'unit-panel-styleboxes.tscn', mode: '2d' },
   { name: 'label-wrap', file: 'unit-label-2d-wrap.tscn', mode: '2d' },
+  // `label-wrap` above (and every other Control golden) renders through the
+  // bundled default MSDF atlas — none of them authors a Theme or a scene
+  // font. This is the first: a Theme `.tres`'s `default_font`/
+  // `default_font_size`, applied via `theme =` on the root Control and
+  // resolved for two Labels with no local font override at all, one direct
+  // child and one two hops down through a themeless wrapper Control — the
+  // ancestor walk is what resolves them, not a node-local read. Fixture
+  // header has the full rationale and the measured probes.
+  { name: 'control-scene-font-theme', file: 'unit-control-scene-font-theme.tscn', mode: '2d' },
+  // Same wiring, a `.woff2` `default_font` instead of a `.otf` one — the ONE
+  // variable is the ascent/descent FALLBACK path (`sfntTables.ts` cannot table-
+  // parse Brotli-compressed WOFF2, so this font's line metrics come from
+  // canvas `TextMetrics.fontBoundingBoxAscent`/`.fontBoundingBoxDescent`
+  // instead of a real `head`/`hhea` read) rather than the sibling's real SFNT
+  // table read. Different typeface than the sibling on purpose — no same-face
+  // `.woff2`/`.otf` pair exists in the corpus — so it is arbitrated on its own
+  // terms against Godot, never against the sibling's baseline.
+  { name: 'control-scene-font-woff2', file: 'unit-control-scene-font-woff2.tscn', mode: '2d' },
   { name: 'button-states', file: 'unit-button-states.tscn', mode: '2d' },
   { name: 'scroll-container-clip', file: 'unit-scroll-container-clip.tscn', mode: '2d' },
   // The two SubViewportContainer surfaces. `sub-viewport-texture` above is a

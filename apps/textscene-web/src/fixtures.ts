@@ -1143,6 +1143,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Scene Font Theme",
+    "file": "unit-control-scene-font-theme.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Scene Font Woff2",
+    "file": "unit-control-scene-font-woff2.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control State",
     "file": "unit-control-state.tscn",
     "category": "Unit - 2D UI Controls"
