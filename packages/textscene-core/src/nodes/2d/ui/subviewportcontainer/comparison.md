@@ -74,13 +74,12 @@ Both content kinds land on the same value.
 pass filled the target: the same two probes return the same two pairs, 127
 against 128 and 76 against 77.
 
-That took fixing the canvas underneath. `<SubViewport>` deliberately leaves the
-renderer's live tone curve in force for 3D content — a shared world resolves to
-the parent viewport's environment — and a viewport surface only ever exists in
-the 2D workspace, whose canvas mounts no `EnvironmentLayer` and so carried
-@react-three/fiber's ACES default. The 2D canvas is now `flat`
-(`NoToneMapping`), which is Godot: `_render_buffers_post_process_and_tonemap`
-runs on the 3D buffers and canvas items are composited AFTER it.
+`<SubViewport>` deliberately leaves the renderer's live tone curve in force for
+3D content — a shared world resolves to the parent viewport's environment — and
+a viewport surface only ever exists in the 2D workspace, whose canvas mounts no
+`EnvironmentLayer`. That canvas is `flat` (`NoToneMapping`), which is Godot:
+`_render_buffers_post_process_and_tonemap` runs on the 3D buffers and canvas
+items are composited AFTER it.
 
 ## `stretch` forces the viewport's size
 
