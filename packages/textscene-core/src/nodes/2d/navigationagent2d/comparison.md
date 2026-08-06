@@ -56,6 +56,45 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin NavigationAgent2D -->
+Strict parsing format-checks these `NavigationAgent2D` properties, plus 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `avoidance_enabled` | true or false |
+| `avoidance_layers` | 32-bit layer mask (layers 1-32) |
+| `avoidance_mask` | 32-bit layer mask (layers 1-32) |
+| `avoidance_priority` | float 0-1 |
+| `debug_enabled` | true or false |
+| `debug_path_custom_color` | Color(r, g, b, a) |
+| `debug_path_custom_line_width` | float >= -1 |
+| `debug_path_custom_point_size` | float >= 0 |
+| `debug_use_custom` | true or false |
+| `max_neighbors` | integer >= 1 |
+| `max_speed` | float >= 0 |
+| `navigation_layers` | 32-bit layer mask (layers 1-32) |
+| `neighbor_distance` | float >= 0.1 |
+| `path_desired_distance` | float >= 0.1 |
+| `path_max_distance` | float >= 10 |
+| `path_metadata_flags` | bit mask of PATH_METADATA_INCLUDE_TYPES (1) | PATH_METADATA_INCLUDE_RIDS (2) | PATH_METADATA_INCLUDE_OWNERS (4) |
+| `path_postprocessing` | enum 0-2 (PATH_POSTPROCESSING_CORRIDORFUNNEL/PATH_POSTPROCESSING_EDGECENTERED/PATH_POSTPROCESSING_NONE) |
+| `path_return_max_length` | float >= 0 |
+| `path_return_max_radius` | float >= 0 |
+| `path_search_max_distance` | float >= 0 |
+| `path_search_max_polygons` | integer >= 0 |
+| `pathfinding_algorithm` | enum 0-0 (PATHFINDING_ALGORITHM_ASTAR) |
+| `radius` | float >= 0 |
+| `simplify_epsilon` | float >= 0 |
+| `simplify_path` | true or false |
+| `target_desired_distance` | float >= 0.1 |
+| `target_position` | Vector2(x, y) |
+| `time_horizon_agents` | float >= 0 |
+| `time_horizon_obstacles` | float >= 0 |
+| `velocity` | Vector2(x, y) |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-navigationagent2d-parent` | `navigationagent2d-parent-not-node2d` | warning |
 <!-- lint:end -->
 
 The lenient parser (`index.ts`) reuses the generic `parseNode` rather than a

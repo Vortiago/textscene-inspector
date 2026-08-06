@@ -32,21 +32,15 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin Sprite3D -->
-Strict parsing format-checks these `Sprite3D` properties, plus 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Sprite3D` properties, plus 20 inherited from SpriteBase3D, 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
-| `alpha_cut` | enum 0-3 (DISABLED/DISCARD/OPAQUE_PREPASS/HASH) |
-| `axis` | enum 0-2 (X_AXIS/Y_AXIS/Z_AXIS) |
-| `billboard` | enum 0-2 (DISABLED/ENABLED/FIXED_Y) |
 | `frame` | integer >= 0 |
 | `frame_coords` | Vector2i(x, y), both >= 0 |
 | `hframes` | integer > 0 |
-| `modulate` | Color(r, g, b, a) |
-| `offset` | Vector2(x, y) |
-| `pixel_size` | float > 0 |
+| `region_enabled` | true or false |
 | `region_rect` | Rect2(x, y, w, h) |
-| `render_priority` | integer |
 | `texture` | SubResource("id") or ExtResource("id") |
 | `vframes` | integer > 0 |
 

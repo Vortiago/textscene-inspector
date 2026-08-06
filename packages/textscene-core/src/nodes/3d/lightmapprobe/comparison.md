@@ -31,6 +31,12 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin LightmapProbe -->
+Strict parsing format-checks the inherited set (16 inherited from Node3D, 10 inherited from Node); `LightmapProbe` declares none of its own. Every validator failure is an **error**.
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 <!-- lint:end -->
 
 LightmapProbe declares no validator of its own, so nothing strict rejects here is

@@ -33,6 +33,22 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin NavigationObstacle2D -->
+Strict parsing format-checks these `NavigationObstacle2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `affect_navigation_mesh` | true or false |
+| `avoidance_enabled` | true or false |
+| `avoidance_layers` | 32-bit layer mask (layers 1-32) |
+| `carve_navigation_mesh` | true or false |
+| `radius` | float 0-500 |
+| `velocity` | Vector2(x, y) |
+| `vertices` | PackedVector2Array(x, y, …) |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-navigationobstacle2d-carve-navigation-mesh` | `navigationobstacle2d-carve-without-affect` | warning |
 <!-- lint:end -->
 
 The lenient parser registers `parseNode2D` directly (index.ts) rather than a

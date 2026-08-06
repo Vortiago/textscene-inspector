@@ -34,6 +34,13 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin OpenXRVisibilityMask -->
+Strict parsing format-checks the inherited set (1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node); `OpenXRVisibilityMask` declares none of its own. Every validator failure is an **error**.
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-openxrvisibilitymask-parent` | `openxrvisibilitymask-parent-not-xrcamera3d` | warning |
 <!-- lint:end -->
 
 OpenXRVisibilityMask declares no property of its own — its `_bind_methods` body is

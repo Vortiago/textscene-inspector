@@ -31,6 +31,23 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin NavigationLink3D -->
+Strict parsing format-checks these `NavigationLink3D` properties, plus 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `bidirectional` | true or false |
+| `enabled` | true or false |
+| `end_position` | Vector3(x, y, z) |
+| `enter_cost` | float >= 0 |
+| `navigation_layers` | 32-bit layer mask (layers 1-32) |
+| `start_position` | Vector3(x, y, z) |
+| `travel_cost` | float >= 0 |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-navigationlink3d-positions` | `navigationlink3d-start-position-equals-end-position` | warning |
 <!-- lint:end -->
 
 Every property above is specific to NavigationLink3D, and `parser.ts` reuses

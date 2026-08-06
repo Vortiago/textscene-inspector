@@ -32,6 +32,27 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin AnimatedSprite3D -->
+Strict parsing format-checks these `AnimatedSprite3D` properties, plus 20 inherited from SpriteBase3D, 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `animation` | quoted string or &"name" |
+| `autoplay` | quoted string or &"name" |
+| `frame` | integer >= 0 |
+| `frame_progress` | float |
+| `speed_scale` | float |
+| `sprite_frames` | SubResource("id") or ExtResource("id") |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
+|  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
+|  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
+| `valid-animatedsprite3d-properties` | `animatedsprite3d-requires-spriteframes` | warning |
+|  | `animatedsprite3d-autoplay-no-spriteframes` | warning |
+|  | `animatedsprite3d-animation-no-spriteframes` | warning |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D` unchanged, which extracts only `transform` and

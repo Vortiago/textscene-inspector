@@ -78,6 +78,7 @@ reproduced:
 ## 3D
 
 - [AnimatableBody3D](../../packages/textscene-core/src/nodes/physics/3d/animatablebody3d/comparison.md) — nothing (a transform-only group; a StaticBody3D moved by animation)
+- [AnimatedSprite3D](../../packages/textscene-core/src/nodes/3d/animatedsprite3d/comparison.md) — invisible transform-only fallback
 - [AnimationPlayer](../../packages/textscene-core/src/nodes/animation/animationplayer/comparison.md) — no geometry of its own; a working driver of other nodes' properties
 - [AnimationTree](../../packages/textscene-core/src/nodes/animation/animationtree/comparison.md) — no geometry of its own; a working blend-tree driver
 - [Area3D](../../packages/textscene-core/src/nodes/physics/3d/area3d/comparison.md) — an invisible transform-only group
@@ -85,6 +86,7 @@ reproduced:
 - [AudioStreamPlayer3D](../../packages/textscene-core/src/nodes/audio/audiostreamplayer3d/comparison.md) — a selection-gated speaker gizmo
 - [Camera3D](../../packages/textscene-core/src/nodes/3d/camera3d/comparison.md) — a passive THREE.PerspectiveCamera
 - [CharacterBody3D](../../packages/textscene-core/src/nodes/physics/3d/characterbody3d/comparison.md) — a transform-only Node3D group
+- [CollisionPolygon3D](../../packages/textscene-core/src/nodes/physics/3d/collisionpolygon3d/comparison.md) — nothing (a transform-only group)
 - [CollisionShape3D](../../packages/textscene-core/src/nodes/physics/3d/collisionshape3d/comparison.md) — a toggle-gated collision wireframe
 - [ConeTwistJoint3D](../../packages/textscene-core/src/nodes/physics/3d/conetwistjoint3d/comparison.md) — nothing (a transform-only group; a ball joint with a swing cone and twist limit)
 - [CPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/cpuparticles3d/comparison.md) — nothing yet; Godot draws a CPU-simulated particle cloud and the previewer does not
@@ -97,6 +99,7 @@ reproduced:
 - [CSGTorus3D](../../packages/textscene-core/src/nodes/3d/csg/csgtorus3d/comparison.md) — a solid torus mesh
 - [Decal](../../packages/textscene-core/src/nodes/3d/decal/comparison.md) — a texture projected onto the surfaces its box intersects
 - [DirectionalLight3D](../../packages/textscene-core/src/nodes/3d/lights/directionallight3d/comparison.md) — a THREE.DirectionalLight
+- [FogVolume](../../packages/textscene-core/src/nodes/3d/fogvolume/comparison.md) — invisible transform-only fallback
 - [Generic6DOFJoint3D](../../packages/textscene-core/src/nodes/physics/3d/generic6dofjoint3d/comparison.md) — nothing (a transform-only group; per-axis limits, motors and springs)
 - [GPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/gpuparticles3d/comparison.md) — a transform-only group
 - [GPUParticlesAttractorBox3D](../../packages/textscene-core/src/nodes/3d/particles/attractors/gpuparticlesattractorbox3d/comparison.md) — nothing yet; a box-shaped region that pulls or pushes particles
@@ -109,20 +112,28 @@ reproduced:
 - [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md) — a THREE.InstancedMesh per MeshLibrary item
 - [HingeJoint3D](../../packages/textscene-core/src/nodes/physics/3d/hingejoint3d/comparison.md) — nothing (a transform-only group; one rotational axis between two bodies)
 - [Label3D](../../packages/textscene-core/src/nodes/3d/label3d/comparison.md) — a canvas-textured plane
+- [LightmapGI](../../packages/textscene-core/src/nodes/3d/lightmapgi/comparison.md) — invisible transform-only fallback
+- [LightmapProbe](../../packages/textscene-core/src/nodes/3d/lightmapprobe/comparison.md) — invisible transform-only fallback
 - [Marker3D](../../packages/textscene-core/src/nodes/3d/marker3d/comparison.md) — a selection-gated axis-cross gizmo
 - [MeshInstance3D](../../packages/textscene-core/src/nodes/3d/meshinstance3d/comparison.md) — a THREE.Mesh
+- [MultiMeshInstance3D](../../packages/textscene-core/src/nodes/3d/multimeshinstance3d/comparison.md) — nothing yet — Godot draws a batch of mesh instances, the previewer does not
 - [NavigationAgent3D](../../packages/textscene-core/src/nodes/3d/navigationagent3d/comparison.md) — nothing (non-visual navigation helper)
+- [NavigationLink3D](../../packages/textscene-core/src/nodes/3d/navigationlink3d/comparison.md) — nothing (a transform-only group)
 - [NavigationObstacle3D](../../packages/textscene-core/src/nodes/3d/navigationobstacle3d/comparison.md) — a transform-only group (no runtime visual)
 - [NavigationRegion3D](../../packages/textscene-core/src/nodes/3d/navigationregion3d/comparison.md) — a translucent green navmesh overlay
 - [Node3D](../../packages/textscene-core/src/nodes/base/node3d/comparison.md) — an invisible transform group
+- [OccluderInstance3D](../../packages/textscene-core/src/nodes/3d/occluderinstance3d/comparison.md) — nothing (a transform-only group)
 - [OmniLight3D](../../packages/textscene-core/src/nodes/3d/lights/omnilight3d/comparison.md) — a THREE.PointLight
+- [OpenXRVisibilityMask](../../packages/textscene-core/src/nodes/3d/xr/openxrvisibilitymask/comparison.md) — invisible transform-only fallback
 - [Path3D](../../packages/textscene-core/src/nodes/paths/path3d/comparison.md) — a selection-gated curve gizmo
 - [PathFollow3D](../../packages/textscene-core/src/nodes/paths/pathfollow3d/comparison.md) — a curve-positioned transform group
 - [PhysicalBone3D](../../packages/textscene-core/src/nodes/physics/3d/physicalbone3d/comparison.md) — nothing (a transform-only group; one ragdoll bone and its joint)
 - [PinJoint3D](../../packages/textscene-core/src/nodes/physics/3d/pinjoint3d/comparison.md) — nothing (a transform-only group; a ball joint between two bodies)
 - [RayCast3D](../../packages/textscene-core/src/nodes/physics/3d/raycast3d/comparison.md) — nothing (a transform-only group; the ray is an editor gizmo)
+- [ReflectionProbe](../../packages/textscene-core/src/nodes/3d/reflectionprobe/comparison.md) — invisible transform-only fallback
 - [RemoteTransform3D](../../packages/textscene-core/src/nodes/3d/remotetransform3d/comparison.md) — nothing (a transform-only group that drives its target)
 - [RigidBody3D](../../packages/textscene-core/src/nodes/physics/3d/rigidbody3d/comparison.md) — an invisible transform-only group
+- [RootMotionView](../../packages/textscene-core/src/nodes/3d/rootmotionview/comparison.md) — nothing (a transform-only group)
 - [ShapeCast3D](../../packages/textscene-core/src/nodes/physics/3d/shapecast3d/comparison.md) — nothing (a transform-only group; the swept shape is an editor gizmo)
 - [Skeleton3D](../../packages/textscene-core/src/nodes/3d/skeleton3d/comparison.md) — a transform-only group
 - [SliderJoint3D](../../packages/textscene-core/src/nodes/physics/3d/sliderjoint3d/comparison.md) — nothing (a transform-only group; one body slides along an axis of another)
@@ -134,6 +145,8 @@ reproduced:
 - [SubViewport](../../packages/textscene-core/src/nodes/viewport/subviewport/comparison.md) — an offscreen render target, plus a boundary that scopes its canvas subtree
 - [VehicleBody3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclebody3d/comparison.md) — nothing (a transform-only group; its VehicleWheel3D children do the driving)
 - [VehicleWheel3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclewheel3d/comparison.md) — a transform group with a selection-gated wheel gizmo (suspension and traction for its VehicleBody3D parent)
+- [VisibleOnScreenEnabler3D](../../packages/textscene-core/src/nodes/3d/visibleonscreenenabler3d/comparison.md) — nothing (a transform-only group)
+- [VoxelGI](../../packages/textscene-core/src/nodes/3d/voxelgi/comparison.md) — an invisible transform-only fallback
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md) — the scene's background and environment lighting
 - [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md) — a transform-only group (it drives a Skeleton3D's bone poses)
 - [SpringBoneCollision3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollision3d/comparison.md) — a transform-only group (a spring-bone collider)
@@ -178,6 +191,7 @@ reproduced:
 - [CenterContainer](../../packages/textscene-core/src/nodes/2d/ui/centercontainer/comparison.md) — a centering flex container
 - [CheckBox](../../packages/textscene-core/src/nodes/2d/ui/checkbox/comparison.md) — an inline HTML row with a drawn check indicator
 - [CheckButton](../../packages/textscene-core/src/nodes/2d/ui/checkbutton/comparison.md) — nothing yet; a labelled on/off switch
+- [CollisionPolygon2D](../../packages/textscene-core/src/nodes/physics/2d/collisionpolygon2d/comparison.md) — nothing (a transform-only group)
 - [CollisionShape2D](../../packages/textscene-core/src/nodes/physics/2d/collisionshape2d/comparison.md) — a toggle-gated collision outline
 - [ColorRect](../../packages/textscene-core/src/nodes/2d/ui/colorrect/comparison.md) — a color-filled div
 - [CodeEdit](../../packages/textscene-core/src/nodes/2d/ui/codeedit/comparison.md) — nothing yet; a multi-line code editor with gutters and folding
@@ -196,6 +210,9 @@ reproduced:
 - [LineEdit](../../packages/textscene-core/src/nodes/2d/ui/lineedit/comparison.md) — a single-line text box
 - [MarginContainer](../../packages/textscene-core/src/nodes/2d/ui/margincontainer/comparison.md) — a padded flex container
 - [Marker2D](../../packages/textscene-core/src/nodes/2d/marker2d/comparison.md) — a selection-gated cross gizmo
+- [NavigationAgent2D](../../packages/textscene-core/src/nodes/2d/navigationagent2d/comparison.md) — nothing (a transform-only group)
+- [NavigationLink2D](../../packages/textscene-core/src/nodes/2d/navigationlink2d/comparison.md) — nothing (a transform-only group)
+- [NavigationObstacle2D](../../packages/textscene-core/src/nodes/2d/navigationobstacle2d/comparison.md) — nothing (a transform-only group)
 - [NavigationRegion2D](../../packages/textscene-core/src/nodes/2d/navigationregion2d/comparison.md) — a translucent green navigation-mesh overlay
 - [Node2D](../../packages/textscene-core/src/nodes/base/node2d/comparison.md) — a transform-only THREE.Group
 - [OptionButton](../../packages/textscene-core/src/nodes/2d/ui/optionbutton/comparison.md) — a collapsed dropdown div
@@ -224,6 +241,7 @@ reproduced:
 - [Container](../../packages/textscene-core/src/nodes/2d/ui/container/comparison.md) — nothing yet; the base every layout container inherits from
 - [Range](../../packages/textscene-core/src/nodes/2d/ui/range/comparison.md) — nothing yet; the min/max/step base every slider and bar inherits
 - [TextEdit](../../packages/textscene-core/src/nodes/2d/ui/textedit/comparison.md) — nothing yet; the multi-line text base CodeEdit inherits
+- [VisibleOnScreenEnabler2D](../../packages/textscene-core/src/nodes/2d/visibleonscreenenabler2d/comparison.md) — nothing (a transform-only group)
 - [VisibleOnScreenNotifier2D](../../packages/textscene-core/src/nodes/2d/visibleonscreennotifier2d/comparison.md) — a transform-only group (signals when its rect enters view)
 - [BoxContainer](../../packages/textscene-core/src/nodes/2d/ui/boxcontainer/comparison.md) — nothing yet; the row/column base HBox and VBox inherit
 - [FlowContainer](../../packages/textscene-core/src/nodes/2d/ui/flowcontainer/comparison.md) — nothing yet; the wrapping-layout base

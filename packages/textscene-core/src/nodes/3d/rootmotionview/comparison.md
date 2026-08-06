@@ -33,6 +33,20 @@ None visible in this fixture — there is nothing to render in either image.
 ## Linting
 
 <!-- lint:begin RootMotionView -->
+Strict parsing format-checks these `RootMotionView` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `animation_path` | NodePath("path/to/node") |
+| `cell_size` | float >= 0.1 |
+| `color` | Color(r, g, b, a) |
+| `radius` | float >= 0.1 |
+| `zero_y` | true or false |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 <!-- lint:end -->
 
 `parser.ts` reuses `parseNode3D`, which reads only `transform` and `visible` — it

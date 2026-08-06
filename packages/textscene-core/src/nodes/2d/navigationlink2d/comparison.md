@@ -31,6 +31,22 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin NavigationLink2D -->
+Strict parsing format-checks these `NavigationLink2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `bidirectional` | true or false |
+| `enabled` | true or false |
+| `end_position` | Vector2(x, y) |
+| `enter_cost` | float >= 0 |
+| `navigation_layers` | 32-bit layer mask (layers 1-32) |
+| `start_position` | Vector2(x, y) |
+| `travel_cost` | float >= 0 |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-navigationlink2d-endpoints` | `navigationlink2d-coincident-endpoints` | warning |
 <!-- lint:end -->
 
 None of NavigationLink2D's own seven properties feed the lenient parser at all:

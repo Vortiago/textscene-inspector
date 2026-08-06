@@ -82,7 +82,7 @@
       "name": "AnimatedSprite3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SpriteBase3D",
         "GeometryInstance3D",
@@ -524,7 +524,7 @@
       "name": "CollisionPolygon2D",
       "category": "2D",
       "group": "Collision shapes",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -538,7 +538,7 @@
       "name": "CollisionPolygon3D",
       "category": "3D",
       "group": "Collision shapes",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -965,7 +965,7 @@
       "name": "FogVolume",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -1454,7 +1454,7 @@
       "name": "LightmapGI",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -1468,7 +1468,7 @@
       "name": "LightmapProbe",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -1695,7 +1695,7 @@
       "name": "MultiMeshInstance3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GeometryInstance3D",
         "VisualInstance3D",
@@ -1734,7 +1734,7 @@
       "name": "NavigationAgent2D",
       "category": "Other",
       "group": "Navigation",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node",
         "Object"
@@ -1758,7 +1758,7 @@
       "name": "NavigationLink2D",
       "category": "2D",
       "group": "Navigation",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -1772,7 +1772,7 @@
       "name": "NavigationLink3D",
       "category": "3D",
       "group": "Navigation",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -1785,7 +1785,7 @@
       "name": "NavigationObstacle2D",
       "category": "2D",
       "group": "Navigation",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -1889,7 +1889,7 @@
       "name": "OccluderInstance3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -2033,7 +2033,7 @@
       "name": "OpenXRVisibilityMask",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -2405,7 +2405,7 @@
       "name": "ReflectionProbe",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -2517,7 +2517,7 @@
       "name": "RootMotionView",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -3174,7 +3174,7 @@
       "name": "VisibleOnScreenEnabler2D",
       "category": "2D",
       "group": "Visibility",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisibleOnScreenNotifier2D",
         "Node2D",
@@ -3189,7 +3189,7 @@
       "name": "VisibleOnScreenEnabler3D",
       "category": "3D",
       "group": "Visibility",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisibleOnScreenNotifier3D",
         "VisualInstance3D",
@@ -3245,7 +3245,7 @@
       "name": "VoxelGI",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",

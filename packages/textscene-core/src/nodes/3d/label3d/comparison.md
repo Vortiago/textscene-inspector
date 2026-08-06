@@ -49,8 +49,10 @@ Strict parsing format-checks these `Label3D` properties, plus 17 inherited from 
 | `modulate` | Color(r, g, b, a) |
 | `no_depth_test` | true or false |
 | `outline_modulate` | Color(r, g, b, a) |
+| `outline_render_priority` | integer -128-127 |
 | `outline_size` | float >= 0 |
 | `pixel_size` | float |
+| `render_priority` | integer -128-127 |
 | `text` | quoted string |
 
 | Rule | Reports | Severity |

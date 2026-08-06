@@ -29,6 +29,19 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin FogVolume -->
+Strict parsing format-checks these `FogVolume` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `material` | SubResource("id") or ExtResource("id") |
+| `shape` | enum 0-4 (ELLIPSOID/CONE/CYLINDER/BOX/WORLD) |
+| `size` | Vector3(x, y, z), each >= 0 (>= 0.01 recommended; 1024 ceiling is or_greater, so unbounded above) |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-fogvolume-size` | `fogvolume-size-ignored-for-world-shape` | warning |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D`, which reads only `transform` and

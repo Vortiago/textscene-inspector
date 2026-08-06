@@ -30,6 +30,19 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin MultiMeshInstance3D -->
+Strict parsing format-checks these `MultiMeshInstance3D` properties, plus 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `multimesh` | SubResource("id") or ExtResource("id") |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
+|  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
+|  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
 The lenient parser does not call `multimesh`'s validator at all — that path only runs

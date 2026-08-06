@@ -40,6 +40,31 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin ReflectionProbe -->
+Strict parsing format-checks these `ReflectionProbe` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `ambient_color` | Color(r, g, b, a) |
+| `ambient_color_energy` | float 0-16 |
+| `ambient_mode` | enum 0-2 (AMBIENT_DISABLED/AMBIENT_ENVIRONMENT/AMBIENT_COLOR) |
+| `blend_distance` | float >= 0 |
+| `box_projection` | true or false |
+| `cull_mask` | 32-bit layer mask (layers 1-32) |
+| `enable_shadows` | true or false |
+| `intensity` | float 0-1 |
+| `interior` | true or false |
+| `max_distance` | float 0-262144 |
+| `mesh_lod_threshold` | float 0-1024 |
+| `origin_offset` | Vector3(x, y, z) |
+| `reflection_mask` | 32-bit layer mask (layers 1-32) |
+| `size` | Vector3(x, y, z) |
+| `update_mode` | enum 0-1 (UPDATE_ONCE/UPDATE_ALWAYS) |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-reflectionprobe-ambient-mode` | `reflectionprobe-ambient-color-no-effect` | warning |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`

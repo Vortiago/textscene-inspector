@@ -30,6 +30,17 @@ None. The node has no runtime visual in Godot, so there is nothing to diverge on
 ## Linting
 
 <!-- lint:begin VisibleOnScreenEnabler3D -->
+Strict parsing format-checks these `VisibleOnScreenEnabler3D` properties, plus 1 inherited from VisibleOnScreenNotifier3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `enable_mode` | enum 0-2 (ENABLE_MODE_INHERIT/ENABLE_MODE_ALWAYS/ENABLE_MODE_WHEN_PAUSED) |
+| `enable_node_path` | NodePath("path/to/node") |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 <!-- lint:end -->
 
 The lenient parser reuses the base parser here and keeps every key in

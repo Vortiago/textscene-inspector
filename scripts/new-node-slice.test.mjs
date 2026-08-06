@@ -78,11 +78,17 @@ const INVOCATIONS = {
     'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'Button', '--linter',
   ],
   wrongChain: ['ShapeCast3D', '3d', '--intent', 'pending', '--chain', 'Node2D'],
-  tierValidatorsOnly: ['SpriteBase3D', '3d/sprites', '--tier'],
-  tierWithRule: ['SpriteBase3D', '3d/sprites', '--tier', '--rule'],
+  // A category dir NO real slice occupies. These are dry runs so nothing is
+  // written, and the path only has to be free: the scaffold falls back from the
+  // canonical `shared/` to a type-named dir when `shared/` is already taken, so
+  // pointing these at a real family made the assertions depend on that family
+  // being unimplemented — which stopped being true the day SpriteBase3D got its
+  // tier.
+  tierValidatorsOnly: ['SpriteBase3D', '3d/scaffoldcheck', '--tier'],
+  tierWithRule: ['SpriteBase3D', '3d/scaffoldcheck', '--tier', '--rule'],
   tierInstantiable: ['PinJoint2D', 'physics/2d', '--tier'],
   tierUnknown: ['Jiont2D', 'physics/2d', '--tier'],
-  tierWithLeafFlag: ['SpriteBase3D', '3d/sprites', '--tier', '--chain', 'Node3D'],
+  tierWithLeafFlag: ['SpriteBase3D', '3d/scaffoldcheck', '--tier', '--chain', 'Node3D'],
   ruleWithoutTier: ['ShapeCast3D', '3d', '--intent', 'pending', '--chain', 'Node3D', '--rule'],
 };
 
@@ -174,7 +180,7 @@ describe('new-node-slice tier mode', () => {
     // linterParser, so wiring the barrel would be redundant.
     const { ok, out } = results.tierValidatorsOnly;
     expect(ok).toBe(true);
-    expect(out).toMatch(/create {2}nodes\/3d\/sprites\/shared\/linterParser\.ts/);
+    expect(out).toMatch(/create {2}nodes\/3d\/scaffoldcheck\/shared\/linterParser\.ts/);
     expect(out).not.toMatch(/linter\/index\.ts/);
     expect(out).toMatch(/validators-only tier: no barrel entry/);
   });
@@ -184,7 +190,7 @@ describe('new-node-slice tier mode', () => {
     // reports it as declared-but-never-registered.
     const { ok, out } = results.tierWithRule;
     expect(ok).toBe(true);
-    expect(out).toMatch(/create {2}nodes\/3d\/sprites\/shared\/linter\.ts/);
+    expect(out).toMatch(/create {2}nodes\/3d\/scaffoldcheck\/shared\/linter\.ts/);
     expect(out).toMatch(/wire.*linter\/index\.ts/);
   });
 

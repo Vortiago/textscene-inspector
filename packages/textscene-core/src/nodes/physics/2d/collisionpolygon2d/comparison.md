@@ -34,6 +34,24 @@ None — the node draws nothing in both parsers, so there is nothing to diverge 
 ## Linting
 
 <!-- lint:begin CollisionPolygon2D -->
+Strict parsing format-checks these `CollisionPolygon2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `build_mode` | enum 0-1 (BUILD_SOLIDS/BUILD_SEGMENTS) |
+| `disabled` | true or false |
+| `one_way_collision` | true or false |
+| `one_way_collision_margin` | float 0-128 |
+| `polygon` | PackedVector2Array(x, y, …) |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-collisionpolygon2d` | `collisionpolygon2d-no-parent` | warning |
+|  | `collisionpolygon2d-invalid-parent` | warning |
+|  | `collisionpolygon2d-empty-polygon` | warning |
+|  | `collisionpolygon2d-insufficient-points` | warning |
+|  | `collisionpolygon2d-one-way-ignored` | warning |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode2D` verbatim (ADR-0008: transform-only), so

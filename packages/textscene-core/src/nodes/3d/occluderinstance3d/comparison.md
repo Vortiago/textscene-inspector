@@ -27,6 +27,20 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin OccluderInstance3D -->
+Strict parsing format-checks these `OccluderInstance3D` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `bake_mask` | 32-bit layer mask (layers 1-32) |
+| `bake_simplification_distance` | float 0-2 |
+| `occluder` | SubResource("id") or ExtResource("id") |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-occluderinstance3d-configuration` | `occluderinstance3d-empty-bake-mask` | warning |
+|  | `occluderinstance3d-missing-occluder` | warning |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D`, which reads only `transform` and

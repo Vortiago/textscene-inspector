@@ -30,6 +30,25 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin CollisionPolygon3D -->
+Strict parsing format-checks these `CollisionPolygon3D` properties, plus 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `debug_color` | Color(r, g, b, a) |
+| `debug_fill` | true or false |
+| `depth` | float |
+| `disabled` | true or false |
+| `margin` | float 0.001-10 |
+| `polygon` | PackedVector2Array(x, y, …) |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-collisionpolygon3d` | `collisionpolygon3d-no-parent` | warning |
+|  | `collisionpolygon3d-invalid-parent` | warning |
+|  | `collisionpolygon3d-empty-polygon` | warning |
+|  | `collisionpolygon3d-non-uniform-scale` | warning |
 <!-- lint:end -->
 
 `polygon`, `depth`, `margin`, `disabled`, `debug_color`, and `debug_fill` are

@@ -49,6 +49,37 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin LightmapGI -->
+Strict parsing format-checks these `LightmapGI` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `bias` | float >= 0.00001 |
+| `bounce_indirect_energy` | float 0-2 |
+| `bounces` | integer 0-16 |
+| `camera_attributes` | SubResource("id") or ExtResource("id") |
+| `denoiser_range` | integer 1-20 |
+| `denoiser_strength` | float >= 0.001 |
+| `directional` | true or false |
+| `environment_custom_color` | Color(r, g, b, a) |
+| `environment_custom_energy` | float 0-64 |
+| `environment_custom_sky` | SubResource("id") or ExtResource("id") |
+| `environment_mode` | enum 0-3 (DISABLED/SCENE/CUSTOM_SKY/CUSTOM_COLOR) |
+| `generate_probes_subdiv` | enum 0-4 (DISABLED/SUBDIV_4/SUBDIV_8/SUBDIV_16/SUBDIV_32) |
+| `interior` | true or false |
+| `light_data` | SubResource("id") or ExtResource("id") |
+| `max_texture_size` | integer 2048-16384 |
+| `quality` | enum 0-3 (LOW/MEDIUM/HIGH/ULTRA) |
+| `shadowmask_mode` | enum 0-2 (NONE/REPLACE/OVERLAY) |
+| `supersampling` | true or false |
+| `supersampling_factor` | float 1-8 |
+| `texel_scale` | float 0.00999-100 |
+| `use_denoiser` | true or false |
+| `use_texture_for_bounces` | true or false |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D`, which reads only `transform` and

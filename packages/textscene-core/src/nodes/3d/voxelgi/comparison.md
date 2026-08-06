@@ -31,6 +31,19 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin VoxelGI -->
+Strict parsing format-checks these `VoxelGI` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `camera_attributes` | SubResource("id") or ExtResource("id") |
+| `data` | SubResource("id") or ExtResource("id") |
+| `size` | Vector3(x, y, z), each float >= 1 |
+| `subdiv` | enum 0-3 (SUBDIV_64/SUBDIV_128/SUBDIV_256/SUBDIV_512) |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D`, which reads only `transform` and
