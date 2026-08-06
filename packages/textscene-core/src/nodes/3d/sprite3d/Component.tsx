@@ -86,7 +86,11 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   const displayedTexture = useMemo(() => {
     // 'repeat': Sprite3D's material keeps StandardMaterial3D's texture-repeat
     // default, so an oversized region_rect tiles here where the 2D canvas clamps.
-    const cloned = composeFrameTexture(texResult.value, properties, 'repeat');
+    // SRGBColorSpace: Sprite3D draws through Godot's 3D pipeline (always a
+    // hardware sRGB decode before filtering, `canvas2DTextureDecode.ts`), so
+    // it keeps the shared cache entry's own colour space rather than the 2D
+    // canvas's `NoColorSpace` retag.
+    const cloned = composeFrameTexture(texResult.value, properties, 'repeat', THREE.SRGBColorSpace);
     if (!cloned) return undefined;
     if (properties.flip_h) {
       cloned.offset.x += cloned.repeat.x;

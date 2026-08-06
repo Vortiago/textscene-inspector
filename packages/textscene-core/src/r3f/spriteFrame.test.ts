@@ -22,19 +22,19 @@ function baseProps(overrides: Partial<SpriteFrameProps> = {}): SpriteFrameProps 
 
 describe('composeFrameTexture', () => {
   it('returns undefined when no texture is loaded', () => {
-    expect(composeFrameTexture(undefined, baseProps(), 'clamp')).toBeUndefined();
+    expect(composeFrameTexture(undefined, baseProps(), 'clamp', THREE.SRGBColorSpace)).toBeUndefined();
   });
 
   it('clones the texture (never mutates the shared cache entry)', () => {
     const source = makeTexture();
-    const result = composeFrameTexture(source, baseProps({ hframes: 4 }), 'clamp');
+    const result = composeFrameTexture(source, baseProps({ hframes: 4 }), 'clamp', THREE.SRGBColorSpace);
     expect(result).not.toBe(source);
     expect(source.repeat.x).toBe(1); // source untouched
     expect(result?.repeat.x).toBeCloseTo(0.25);
   });
 
   it('leaves UVs at identity for a plain full-image sprite', () => {
-    const result = composeFrameTexture(makeTexture(), baseProps(), 'clamp')!;
+    const result = composeFrameTexture(makeTexture(), baseProps(), 'clamp', THREE.SRGBColorSpace)!;
     expect(result.repeat.x).toBe(1);
     expect(result.repeat.y).toBe(1);
     expect(result.offset.x).toBe(0);
@@ -47,7 +47,7 @@ describe('composeFrameTexture', () => {
     const result = composeFrameTexture(
       makeTexture(100, 80),
       baseProps({ region_enabled: true, region_rect: { x: 10, y: 20, width: 50, height: 40 } }),
-      'clamp'
+      'clamp', THREE.SRGBColorSpace
     )!;
     expect(result.repeat.x).toBeCloseTo(0.5);
     expect(result.repeat.y).toBeCloseTo(0.5);
@@ -61,7 +61,7 @@ describe('composeFrameTexture', () => {
     const result = composeFrameTexture(
       texture,
       baseProps({ region_enabled: true, region_rect: { x: 10, y: 20, width: 50, height: 40 } }),
-      'clamp'
+      'clamp', THREE.SRGBColorSpace
     )!;
     expect(result.repeat.x).toBe(1);
     expect(result.offset.x).toBe(0);
@@ -72,7 +72,7 @@ describe('composeFrameTexture', () => {
     const result = composeFrameTexture(
       makeTexture(),
       baseProps({ hframes: 4, vframes: 2, frame: 5 }),
-      'clamp'
+      'clamp', THREE.SRGBColorSpace
     )!;
     expect(result.repeat.x).toBeCloseTo(0.25);
     expect(result.repeat.y).toBeCloseTo(0.5);
@@ -84,10 +84,18 @@ describe('composeFrameTexture', () => {
     const result = composeFrameTexture(
       makeTexture(),
       baseProps({ hframes: 4, vframes: 2, frame: 5, frame_coords: { x: 3, y: 0 } }),
-      'clamp'
+      'clamp', THREE.SRGBColorSpace
     )!;
     expect(result.offset.x).toBeCloseTo(0.75);
     expect(result.offset.y).toBeCloseTo(0.5); // row 0 = top half
+  });
+
+  it('retags the clone with the caller-supplied colorSpace, independent of the source', () => {
+    const source = makeTexture();
+    source.colorSpace = THREE.SRGBColorSpace;
+    const result = composeFrameTexture(source, baseProps(), 'clamp', THREE.NoColorSpace);
+    expect(result?.colorSpace).toBe(THREE.NoColorSpace);
+    expect(source.colorSpace).toBe(THREE.SRGBColorSpace); // source untouched
   });
 
   it('composes region_rect THEN frame grid (Godot base_rect-then-subdivide)', () => {
@@ -101,7 +109,7 @@ describe('composeFrameTexture', () => {
         vframes: 1,
         frame: 2,
       }),
-      'clamp'
+      'clamp', THREE.SRGBColorSpace
     )!;
     // repeat = region repeat / grid: (1.0/5, 0.5/1)
     expect(result.repeat.x).toBeCloseTo(0.2);
@@ -133,7 +141,7 @@ describe('composeFrameTexture — region_rect larger than its texture', () => {
 
   it('keeps the UV window at the full region — no clipping to the image', () => {
     // 100×80 image, 200-wide region → repeat.x = 2.0, deliberately > 1.
-    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'clamp')!;
+    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'clamp', THREE.SRGBColorSpace)!;
     expect(result.repeat.x).toBeCloseTo(2);
     expect(result.repeat.y).toBeCloseTo(0.5);
     expect(result.offset.x).toBeCloseTo(0);
@@ -141,13 +149,13 @@ describe('composeFrameTexture — region_rect larger than its texture', () => {
   });
 
   it("clamps the overrun on the 2D canvas (Viewport's texture repeat is DISABLED)", () => {
-    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'clamp')!;
+    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'clamp', THREE.SRGBColorSpace)!;
     expect(result.wrapS).toBe(THREE.ClampToEdgeWrapping);
     expect(result.wrapT).toBe(THREE.ClampToEdgeWrapping);
   });
 
   it('tiles the overrun for Sprite3D (StandardMaterial3D keeps FLAG_USE_TEXTURE_REPEAT)', () => {
-    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'repeat')!;
+    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'repeat', THREE.SRGBColorSpace)!;
     expect(result.wrapS).toBe(THREE.RepeatWrapping);
     expect(result.wrapT).toBe(THREE.RepeatWrapping);
   });

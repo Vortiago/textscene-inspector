@@ -33,7 +33,12 @@ legible.
 
 None visible in this fixture: same 3x2 footprint, same reconstructed "F", same
 vacant bottom-right cell, and the atlas blue and the white marker strokes read the
-same in both.
+same in both. `pnpm ref:godot scenes/fixtures/unit-tile-map.tscn --mode 2d`
+against `pnpm ref:ours unit-tile-map.tscn --2d`: mean channel error 0.0010/255,
+max channel difference 2/255, on 0.27 % of pixels — the same class of
+sub-pixel bilinear-filter rounding tie `tilemaplayer/comparison.md` measures
+at its own boundary pixel, smaller here because this fixture reconstructs
+fewer glyph edges.
 
 
 ## Linting

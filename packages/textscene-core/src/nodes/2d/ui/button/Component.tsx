@@ -50,6 +50,7 @@ import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { resolveTexture2DPath } from '../../../../resources/SubResourceResolver';
 import { useResource } from '../../../../resources/useResource';
+import { useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -113,7 +114,10 @@ export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeCont
   const { externalResources, internalResources } = useSceneResources();
   const iconPath = resolveTexture2DPath(props.icon, externalResources, internalResources);
   const iconResult = useResource<THREE.Texture>(iconPath ?? '', 'Texture2D');
-  const iconTexture = iconResult.value;
+  // NoColorSpace: the 2D canvas's hardware filter blends undecoded sRGB
+  // bytes (`canvas2DTextureDecode.ts`); `ControlQuad` decodes the
+  // already-filtered sample once it sees this tag.
+  const iconTexture = useCanvas2DTexture(iconResult.value);
 
   const iconNaturalSize: Vec2 | null = useMemo(() => {
     if (!props.icon || !iconTexture) return null;

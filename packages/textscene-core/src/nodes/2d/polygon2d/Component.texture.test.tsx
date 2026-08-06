@@ -87,7 +87,16 @@ describe('<Polygon2D> textured fill', () => {
   it('binds the resolved texture as the material map', async () => {
     const { renderer, tex } = await render({ polygon: SQUARE, texture: 'ExtResource("1")' });
     const mat = mesh(renderer).material as THREE.MeshBasicMaterial;
-    expect(mat.map).toBe(tex);
+    // Not `toBe(tex)`: the 2D canvas gets its own `NoColorSpace`-retagged
+    // clone of the shared cached texture (`useCanvas2DTexture`,
+    // `canvas2DTextureDecode.ts`) so magnifying it blends undecoded sRGB
+    // bytes, matching Godot's own canvas — a 3D consumer of the same path
+    // must keep sampling the untouched, still-`SRGBColorSpace` original.
+    // The clone shares the decoded `Source`, which is what identifies it as
+    // "the same resolved texture" here.
+    expect(mat.map).not.toBe(tex);
+    expect(mat.map?.source).toBe(tex.source);
+    expect(mat.map?.colorSpace).toBe(THREE.NoColorSpace);
   });
 
   it('maps each `uv` texel to its own vertex, divided by the texture size', async () => {

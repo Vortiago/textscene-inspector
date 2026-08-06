@@ -22,6 +22,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../r3f/godotColor';
+import { useCanvas2DTexture, useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { Vector2 } from '../../base/node2d/types';
@@ -40,7 +41,12 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
 
   // Either an image file or an inline procedural texture; `useTexture2D` hides
   // which, and owns the lifetime of the procedural one it rasterises.
-  const { texture } = useTexture2D(props.texture, externalResources, internalResources);
+  const { texture: resolvedTexture } = useTexture2D(props.texture, externalResources, internalResources);
+  // NoColorSpace: the 2D canvas's hardware filter blends undecoded sRGB
+  // bytes (`canvas2DTextureDecode.ts`); FilledPolygon's material decodes the
+  // already-filtered sample via `useCanvasDecodeDefines`.
+  const texture = useCanvas2DTexture(resolvedTexture);
+  const decodeDefines = useCanvasDecodeDefines(texture);
 
   const rings = useMemo(
     () =>
@@ -86,6 +92,7 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
             vertexColors={geometry.hasAttribute('color')}
             material={material}
             lighting={lighting}
+            decodeDefines={decodeDefines}
           />
         ) : null
       }
@@ -103,6 +110,7 @@ function FilledPolygon({
   vertexColors,
   material,
   lighting,
+  decodeDefines,
 }: {
   geometry: THREE.BufferGeometry;
   tint: CanvasItemTint;
@@ -111,6 +119,7 @@ function FilledPolygon({
   vertexColors: boolean;
   material: CanvasItemMaterialProperties | null;
   lighting: CanvasItemLightingProps;
+  decodeDefines: Record<string, string> | undefined;
 }) {
   // Godot multiplies fill × modulate × self_modulate in one space, then converts
   // once: compose with the tint's sRGB `own` product before sRGB→linear.
@@ -144,6 +153,7 @@ function FilledPolygon({
         transparent
         depthWrite={false}
         side={THREE.DoubleSide}
+        defines={decodeDefines}
         {...blend}
         {...lighting}
       />

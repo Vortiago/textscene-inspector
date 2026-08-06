@@ -25,6 +25,7 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { canvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
 import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
 import { composeFrameTexture, frameSizePx, type SpriteFrameProps } from '../../../r3f/spriteFrame';
+import { useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useAnimationTransport } from '../../../r3f/contexts/AnimationTransportContext';
@@ -168,11 +169,15 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   // composeFrameTexture clones per frame; dispose the prior clone on advance
   // (and unmount) so playback doesn't leak one GPU texture per keyframe.
   const frameProps = useMemo(() => regionFrameProps(frameTex.region), [frameTex]);
+  // NoColorSpace: the 2D canvas's hardware filter blends undecoded sRGB bytes
+  // (`canvas2DTextureDecode.ts`); the material below decodes the
+  // already-filtered sample via `useCanvasDecodeDefines`.
   const displayedTexture = useMemo(
-    () => composeFrameTexture(texResult.value, frameProps, 'clamp'),
+    () => composeFrameTexture(texResult.value, frameProps, 'clamp', THREE.NoColorSpace),
     [texResult.value, frameProps]
   );
   useEffect(() => () => displayedTexture?.dispose(), [displayedTexture]);
+  const decodeDefines = useCanvasDecodeDefines(displayedTexture);
   const { width, height } = useMemo(
     () => frameSizePx(texResult.value, frameProps),
     [texResult.value, frameProps]
@@ -205,6 +210,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
               transparent
               depthWrite={false}
               side={THREE.DoubleSide}
+              defines={decodeDefines}
               {...canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
               {...lighting}
             />

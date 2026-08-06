@@ -25,11 +25,14 @@ and `expand_mode`.
 
 None visible in this fixture. `pnpm ref:godot
 scenes/fixtures/unit-texture-rect.tscn --mode 2d` against `pnpm ref:ours
-unit-texture-rect.tscn --2d` puts 0.107% of the frame (800 px of 1152x648)
-outside the visual harness's tolerance, at a mean channel error of 0.18/255 —
-all of it on the magnified texel edges of the upscaled marker, where the two
-linear samplers land a fraction apart. The letterbox boundaries, the drawn
-rect and the fill colour agree.
+unit-texture-rect.tscn --2d`: mean channel error 0.0057/255, max channel
+difference 2/255, on 1.4 % of pixels — all of it on the magnified texel edges
+of the upscaled marker, the same four-pixel bilinear-ramp residual
+`tilemaplayer/comparison.md` measures at its own boundary pixel (a genuine
+hardware bilinear-filter rounding tie, not a colour-space mismatch — the 2D
+canvas's atlas texture is sampled `NoColorSpace` so the filter blends raw sRGB
+bytes, matching Godot's own canvas). The letterbox boundaries, the drawn rect
+and the fill colour agree.
 
 ## Linting
 

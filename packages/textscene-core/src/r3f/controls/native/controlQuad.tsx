@@ -14,9 +14,17 @@
  * `useControlClipPlanes()` — clip planes are per-MATERIAL state, so every
  * leaf material must carry them even while the list stays empty (see
  * `controlClipping.tsx`).
+ *
+ * `map`'s decode is auto-detected (`useCanvasDecodeDefines`,
+ * `canvas2DTextureDecode.ts`): a `NoColorSpace`-retagged 2D-canvas texture
+ * (TextureRect's image, Button's icon) gets the post-filter decode; a
+ * vendored theme icon or a SubViewport render target — neither retagged —
+ * does not, so this one recipe serves every kind of `map` ControlQuad's
+ * many callers pass without each caller having to know which kind it has.
  */
 import * as THREE from 'three';
 import { useControlClipPlanes } from './controlClipping';
+import { useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
 
 export interface ControlQuadProps {
   width: number;
@@ -43,6 +51,7 @@ export function ControlQuad({
   renderOrder,
 }: ControlQuadProps) {
   const clippingPlanes = useControlClipPlanes();
+  const decodeDefines = useCanvasDecodeDefines(map);
   return (
     <mesh position={[width / 2, -(height / 2), 0]} renderOrder={renderOrder}>
       <planeGeometry args={[width, height]} />
@@ -53,6 +62,7 @@ export function ControlQuad({
         transparent
         depthWrite={false}
         side={THREE.DoubleSide}
+        defines={decodeDefines}
         clippingPlanes={clippingPlanes as THREE.Plane[]}
       />
     </mesh>

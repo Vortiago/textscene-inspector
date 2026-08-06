@@ -28,6 +28,7 @@ import { canvasItemBlendState, type CanvasItemBlendState } from '../../../resour
 import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
 import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
+import { useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { resolveTexture2DPath } from '../../../resources/SubResourceResolver';
@@ -75,8 +76,10 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
       animatedFrame !== null ? { ...props, frame: animatedFrame, frame_coords: undefined } : props;
     // 'clamp': the 2D canvas samples with texture-repeat DISABLED, so a
     // region_rect overrunning the texture stretches its edge texels rather
-    // than tiling.
-    return composeFrameTexture(texResult.value, frameProps, 'clamp');
+    // than tiling. NoColorSpace: the 2D canvas's hardware filter blends
+    // undecoded sRGB bytes (`canvas2DTextureDecode.ts`); QuadMesh's material
+    // decodes the already-filtered sample via `useCanvasDecodeDefines`.
+    return composeFrameTexture(texResult.value, frameProps, 'clamp', THREE.NoColorSpace);
   }, [texResult.value, props, animatedFrame]);
   // composeFrameTexture clones the texture per frame; dispose the prior clone
   // when the frame advances (and on unmount) so playback doesn't leak GPU
@@ -84,6 +87,10 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   useEffect(() => () => composedTexture?.dispose(), [composedTexture]);
 
   const displayedTexture = viewportTexture ?? composedTexture;
+  // A ViewportTexture keeps its publisher's own colour space (never this
+  // module's NoColorSpace retag), so this resolves to `undefined` for it —
+  // exactly as it should, since it isn't part of the retag this pairs with.
+  const decodeDefines = useCanvasDecodeDefines(displayedTexture);
   // Quad size in pixels (1 px = 1 world unit in the 2D canvas). A render
   // target reports its rect through the same `image` shape a loaded texture
   // uses, so the sizing path is shared.
@@ -120,6 +127,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
             props={props}
             blend={canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
             lighting={lighting}
+            decodeDefines={decodeDefines}
           />
         ) : null
       }
@@ -138,6 +146,7 @@ function QuadMesh({
   props,
   blend,
   lighting,
+  decodeDefines,
 }: {
   texture: THREE.Texture;
   color: THREE.Color;
@@ -147,6 +156,7 @@ function QuadMesh({
   props: Sprite2DProperties;
   blend: CanvasItemBlendState;
   lighting: CanvasItemLightingProps;
+  decodeDefines: Record<string, string> | undefined;
 }) {
   // Quad centre in Godot 2D space (+Y down), then Y-negated for the conjugated
   // group frame. centered ⇒ centre at `offset`; otherwise the quad's top-left
@@ -165,6 +175,7 @@ function QuadMesh({
         transparent
         depthWrite={false}
         side={THREE.DoubleSide}
+        defines={decodeDefines}
         {...blend}
         {...lighting}
       />

@@ -1,7 +1,6 @@
 ---
 type: TileMapLayer
 category: 2D
-status: limitation
 fixture: unit-tile-map-layer.tscn
 image: unit-tile-map-layer
 renders_as: batched textured tile quads
@@ -26,14 +25,23 @@ blue field covered by a regular grid of white "F" markers.
 
 Tile positions, the grid, the marker's white and the blue field are exact: the
 stem interior at `128,200` reads `rgb(255, 255, 255)` and the field at `700,380`
-`rgb(45, 108, 223)` on both sides. The magnified EDGES are not. Each 32 px tile
-is drawn at 128 px, so every glyph boundary is a four-pixel bilinear ramp between
-two texels, and the two engines interpolate that ramp in different spaces: the
-sRGB atlas is filtered in linear space here and in sRGB byte space by Godot's
-canvas. Ours therefore reads brighter mid-ramp — at `114,200` Godot
-`rgb(91, 140, 231)` against ours `rgb(116, 149, 230)` — by up to 45/255 at the
-steepest step. Mean channel error 0.375/255 over the frame, 2.2 % of pixels over
-16/255, every one of them on a glyph edge.
+`rgb(45, 108, 223)` on both sides. The 2D canvas's atlas texture is sampled
+`NoColorSpace` (a clone of the shared cached texture, retagged) so its hardware
+bilinear filter blends the raw sRGB bytes — matching Godot's own non-`hdr_2d`
+canvas, which never asks for the atlas's sRGB-typed GPU view — and the shader
+decodes the already-filtered sample afterward, rather than decoding each texel
+before the filter runs.
+
+`pnpm ref:godot scenes/fixtures/unit-tile-map-layer.tscn --mode 2d` against
+`pnpm ref:ours unit-tile-map-layer.tscn --2d`: mean channel error 0.0063/255
+over the frame, no channel over 16/255 anywhere in it, max channel difference
+2/255 on 1.8 % of pixels — every one on the four-pixel bilinear ramp a 32 px
+tile drawn at 128 px produces at a glyph edge. At `114,200` Godot reads
+`rgb(91, 140, 231)` against ours `rgb(91, 140, 230)`: the true blend of the
+two contributing texels' blue channels at this ramp step is exactly `230.5`
+(`227×0.875 + 255×0.125`), a tie the two engines' hardware bilinear filters
+round in opposite directions. The residual is that class of tie, not a
+colour-space mismatch — R and G already match exactly at this same pixel.
 
 ## Linting
 

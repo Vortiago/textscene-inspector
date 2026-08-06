@@ -17,6 +17,7 @@
  */
 
 import * as THREE from 'three';
+import { pinNoColorSpace } from './canvas2DTextureDecode';
 
 /**
  * What shows where a frame's UVs fall outside the texture.
@@ -68,16 +69,35 @@ export interface SpriteFrameProps {
  * returns the same THREE.Texture reference to every consumer of a given path,
  * so mutating in place would clobber other sprites' repeat/offset state.
  *
+ * `colorSpace` is required rather than inherited from the source texture for
+ * the same reason `wrap` is (see `SpriteWrapMode`'s own comment): Sprite2D's
+ * 2D canvas and Sprite3D's 3D billboard sample through Godot's two different
+ * filtering rules (`r3f/canvas2DTextureDecode.ts`) — Sprite2D passes
+ * `THREE.NoColorSpace` (paired with `useCanvasDecodeDefines` at its own
+ * material), Sprite3D passes `THREE.SRGBColorSpace` to keep its current,
+ * already-correct hardware decode. A default here is exactly the silent
+ * hand-syncing this module exists to prevent.
+ *
  * Returns undefined when no texture is loaded yet.
  */
 export function composeFrameTexture(
   texture: THREE.Texture | undefined,
   props: SpriteFrameProps,
-  wrap: SpriteWrapMode
+  wrap: SpriteWrapMode,
+  colorSpace: THREE.ColorSpace
 ): THREE.Texture | undefined {
   if (!texture) return undefined;
 
   const cloned = texture.clone();
+  // `pinNoColorSpace` when the caller wants NoColorSpace: a plain assignment
+  // loses to `@react-three/fiber`'s own auto sRGB-tagging the moment this
+  // clone reaches a `map` JSX prop (see that function's doc comment).
+  // SRGBColorSpace needs no pin — it's what that auto-tagging already forces.
+  if (colorSpace === THREE.NoColorSpace) {
+    pinNoColorSpace(cloned);
+  } else {
+    cloned.colorSpace = colorSpace;
+  }
   cloned.wrapS = WRAP[wrap];
   cloned.wrapT = WRAP[wrap];
 

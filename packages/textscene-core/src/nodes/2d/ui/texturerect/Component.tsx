@@ -28,6 +28,7 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { resolveTexture2DPath } from '../../../../resources/SubResourceResolver';
@@ -75,6 +76,13 @@ export function TextureRect({ solveNode, rect, renderOrder }: NativeControlCompo
   const preparedTexture = useMemo(() => {
     if (!rawTexture || !draw) return null;
     const cloned = rawTexture.clone();
+    // NoColorSpace, pinned: the 2D canvas's hardware filter blends undecoded
+    // sRGB bytes (`canvas2DTextureDecode.ts`); `ControlQuad` decodes the
+    // already-filtered sample once it sees this tag. `pinNoColorSpace` (not a
+    // plain assignment) because this clone reaches `ControlQuad`'s `map` JSX
+    // prop, which `@react-three/fiber`'s own auto sRGB-tagging would
+    // otherwise silently overwrite on commit — see that function's doc.
+    pinNoColorSpace(cloned);
 
     const filter = FILTER[resolveTextureRectFilter(props.textureFilter)];
     cloned.magFilter = filter;
