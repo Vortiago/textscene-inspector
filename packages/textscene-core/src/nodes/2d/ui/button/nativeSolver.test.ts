@@ -228,14 +228,14 @@ describe('buttonMinimumSize — meta carries the shaped TextLayoutResult (ITEM C
 
 describe('buttonTextTheme — font_color / font_disabled_color key mapping', () => {
   it('resolves the theme default control_font_color for the normal state', () => {
-    expect(buttonTextTheme({} as ButtonProperties, 'normal', ctx())).toEqual({
+    expect(buttonTextTheme(node({}), {} as ButtonProperties, 'normal', ctx())).toEqual({
       fontSizePx: 16,
       color: BUTTON_DEFAULT_FONT_COLOR,
     });
   });
 
   it('resolves control_font_disabled_color (control_font_color * Color(1,1,1,0.5)) for the disabled state', () => {
-    expect(buttonTextTheme({} as ButtonProperties, 'disabled', ctx())).toEqual({
+    expect(buttonTextTheme(node({}), {} as ButtonProperties, 'disabled', ctx())).toEqual({
       fontSizePx: 16,
       color: BUTTON_DEFAULT_DISABLED_FONT_COLOR,
     });
@@ -247,13 +247,13 @@ describe('buttonTextTheme — font_color / font_disabled_color key mapping', () 
       name: 'B',
       themeOverrideColors: { font_disabled_color: { r: 1, g: 0, b: 0, a: 1 } },
     };
-    expect(buttonTextTheme(props, 'disabled', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(buttonTextTheme(node(props), props, 'disabled', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 
   it('theme_override_font_sizes/font_size overrides the theme default for BOTH states', () => {
     const props: ButtonProperties = { name: 'B', themeOverrideFontSizes: { font_size: 24 } };
-    expect(buttonTextTheme(props, 'normal', ctx()).fontSizePx).toBe(24);
-    expect(buttonTextTheme(props, 'disabled', ctx()).fontSizePx).toBe(24);
+    expect(buttonTextTheme(node(props), props, 'normal', ctx()).fontSizePx).toBe(24);
+    expect(buttonTextTheme(node(props), props, 'disabled', ctx()).fontSizePx).toBe(24);
   });
 });
 

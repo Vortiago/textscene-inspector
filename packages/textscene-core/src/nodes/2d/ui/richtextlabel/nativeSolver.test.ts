@@ -23,6 +23,7 @@ import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/
 import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontResource } from '../../../../resources/processing/fontProcessing';
+import type { ThemeResource } from '../../../../resources/processing/themeProcessing';
 import * as logger from '../../../../logger';
 import type { RichTextLabelProperties } from './types';
 import {
@@ -40,7 +41,7 @@ import {
   RICH_TEXT_LABEL_UNDERLINE_ALPHA,
 } from './nativeSolver';
 
-function node(props: Partial<RichTextLabelProperties>): SolveNode {
+function node(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveNode> = {}): SolveNode {
   return {
     path: 'RTL',
     node: { name: 'RTL', type: 'RichTextLabel', children: [], properties: { name: 'RTL', ...props } as ControlProperties },
@@ -50,6 +51,7 @@ function node(props: Partial<RichTextLabelProperties>): SolveNode {
     fontOverrides: {},
     themeChain: [],
     projectTheme: null,
+    ...overrides,
   };
 }
 
@@ -230,8 +232,25 @@ describe('richTextLabelTextTheme / RICH_TEXT_LABEL_THEME_KEYS / RICH_TEXT_LABEL_
   });
 
   it("resolves the theme's own default font size absent an override", () => {
-    const resolved = richTextLabelTextTheme({ name: 'RTL' } as RichTextLabelProperties, { theme: nativeTheme(1) });
+    const resolved = richTextLabelTextTheme(node({}), { name: 'RTL' } as RichTextLabelProperties, { theme: nativeTheme(1) });
     expect(resolved).toEqual({ fontSizePx: 16, color: RICH_TEXT_LABEL_DEFAULT_FONT_COLOR });
+  });
+
+  it("(edge) walks the ancestor Theme chain for normal_font_size, same as every other widget's resolveTextTheme (Control::get_theme_font_size, control.cpp:3113-3131)", () => {
+    const theme: ThemeResource = {
+      defaultFont: null,
+      defaultFontSize: 30,
+      fonts: {},
+      fontSizes: {},
+      typeVariations: {},
+      properties: {},
+    };
+    const resolved = richTextLabelTextTheme(
+      node({}, { themeChain: [theme] }),
+      { name: 'RTL' } as RichTextLabelProperties,
+      { theme: nativeTheme(1) }
+    );
+    expect(resolved.fontSizePx).toBe(30);
   });
 });
 
@@ -243,18 +262,18 @@ describe('styledTextRuns', () => {
   const FALLBACK = 16;
 
   it('bbcode disabled: one literal run, no styling, at normalFontSizePx, even if it contains bracket characters', () => {
-    expect(styledTextRuns({ text: '[b]x[/b]', bbcodeEnabled: false } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK)).toEqual([
+    expect(styledTextRuns(node({}), { text: '[b]x[/b]', bbcodeEnabled: false } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK)).toEqual([
       { text: '[b]x[/b]', bold: false, italic: false, underline: false, color: WHITE, fontSizePx: NORMAL },
     ]);
   });
 
   it('bbcode disabled + empty text: no runs', () => {
-    expect(styledTextRuns({ text: '', bbcodeEnabled: false } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK)).toEqual([]);
-    expect(styledTextRuns({ bbcodeEnabled: false } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK)).toEqual([]);
+    expect(styledTextRuns(node({}), { text: '', bbcodeEnabled: false } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK)).toEqual([]);
+    expect(styledTextRuns(node({}), { bbcodeEnabled: false } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK)).toEqual([]);
   });
 
   it('bbcode enabled: [b] and [i] set independent flags, plain runs default to the passed color and normalFontSizePx', () => {
-    const runs = styledTextRuns(
+    const runs = styledTextRuns(node({}), 
       { text: 'plain [b]bold[/b] [i]italic[/i]', bbcodeEnabled: true } as RichTextLabelProperties,
       WHITE,
       NORMAL,
@@ -269,12 +288,12 @@ describe('styledTextRuns', () => {
   });
 
   it('bbcode enabled: nested [b][i] combines both flags on one run (RTL_BOLD_ITALICS_FONT, rich_text_label.cpp:5452-5471)', () => {
-    const runs = styledTextRuns({ text: '[b][i]x[/i][/b]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
+    const runs = styledTextRuns(node({}), { text: '[b][i]x[/i][/b]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
     expect(runs).toEqual([{ text: 'x', bold: true, italic: true, underline: false, color: WHITE, fontSizePx: FALLBACK }]);
   });
 
   it('bbcode enabled: [u] sets the underline flag, independent of bold/italic/color, and does NOT change font size (rich_text_label.cpp:4677 push_underline)', () => {
-    const runs = styledTextRuns(
+    const runs = styledTextRuns(node({}), 
       { text: 'plain [u]underlined[/u] [b][u]bold and underlined[/u][/b]', bbcodeEnabled: true } as RichTextLabelProperties,
       WHITE,
       NORMAL,
@@ -289,7 +308,7 @@ describe('styledTextRuns', () => {
   });
 
   it('bbcode enabled: [color=#e0a030] resolves to that RGBA, overriding the passed default; colour alone does not change font size', () => {
-    const runs = styledTextRuns(
+    const runs = styledTextRuns(node({}), 
       { text: '[color=#e0a030]x[/color]', bbcodeEnabled: true } as RichTextLabelProperties,
       WHITE,
       NORMAL,
@@ -309,7 +328,7 @@ describe('styledTextRuns', () => {
 
   it('bbcode enabled: an unrecognised [color] value falls back to the passed default, not white', () => {
     const fallback = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
-    const runs = styledTextRuns(
+    const runs = styledTextRuns(node({}), 
       { text: '[color=not-a-color]x[/color]', bbcodeEnabled: true } as RichTextLabelProperties,
       fallback,
       NORMAL,
@@ -319,24 +338,24 @@ describe('styledTextRuns', () => {
   });
 
   it('bbcode enabled: drops zero-length runs (adjacent tags with nothing between)', () => {
-    const runs = styledTextRuns({ text: '[b][/b][i]x[/i]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
+    const runs = styledTextRuns(node({}), { text: '[b][/b][i]x[/i]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
     expect(runs).toEqual([{ text: 'x', bold: false, italic: true, underline: false, color: WHITE, fontSizePx: FALLBACK }]);
   });
 
   describe('per-run font size (scene/theme/default_theme.cpp:1199-1202, rich_text_label.cpp:3244-3290)', () => {
     it('a [b] run with no bold_font_size override renders at the FALLBACK size (16), never at normalFontSizePx (18) — Theme::get_font_size falls to ThemeDB::get_fallback_font_size, not to a sibling key', () => {
-      const runs = styledTextRuns({ text: '[b]x[/b]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
+      const runs = styledTextRuns(node({}), { text: '[b]x[/b]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
       expect(runs[0]!.fontSizePx).toBe(FALLBACK);
       expect(runs[0]!.fontSizePx).not.toBe(NORMAL);
     });
 
     it('an [i] run with no italics_font_size override ALSO renders at the fallback size', () => {
-      const runs = styledTextRuns({ text: '[i]x[/i]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
+      const runs = styledTextRuns(node({}), { text: '[i]x[/i]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
       expect(runs[0]!.fontSizePx).toBe(FALLBACK);
     });
 
     it('an explicit bold_font_size override wins over the fallback', () => {
-      const runs = styledTextRuns(
+      const runs = styledTextRuns(node({}), 
         {
           name: 'RTL',
           text: '[b]x[/b]',
@@ -351,7 +370,7 @@ describe('styledTextRuns', () => {
     });
 
     it('a scene that ALSO overrides bold_font_size to match normal_font_size closes the gap (the fixture used to prove this against real Godot)', () => {
-      const runs = styledTextRuns(
+      const runs = styledTextRuns(node({}), 
         {
           name: 'RTL',
           text: '[b]x[/b]',
@@ -366,7 +385,7 @@ describe('styledTextRuns', () => {
     });
 
     it('an italics_font_size override applies only to italic-only runs, not to bold-only ones', () => {
-      const runs = styledTextRuns(
+      const runs = styledTextRuns(node({}), 
         {
           name: 'RTL',
           text: '[b]x[/b][i]y[/i]',
@@ -382,7 +401,7 @@ describe('styledTextRuns', () => {
     });
 
     it('[b][i] combined reads bold_italics_font_size, NOT bold_font_size or italics_font_size', () => {
-      const runs = styledTextRuns(
+      const runs = styledTextRuns(node({}), 
         {
           name: 'RTL',
           text: '[b][i]x[/i][/b]',
@@ -394,6 +413,68 @@ describe('styledTextRuns', () => {
         FALLBACK
       );
       expect(runs[0]!.fontSizePx).toBe(30);
+    });
+
+    it("(edge) a [b] run's fallback ALSO walks the ancestor Theme chain — the SAME ancestor default_font_size a themed normal run resolves to, not just this previewer's flat built-in default. Otherwise a themed RichTextLabel's [b] text would diverge from its own normal text in a way real Godot never does (Theme::get_font_size, theme.cpp:657-664)", () => {
+      const theme: ThemeResource = {
+        defaultFont: null,
+        defaultFontSize: 30,
+        fonts: {},
+        fontSizes: {},
+        typeVariations: {},
+        properties: {},
+      };
+      const runs = styledTextRuns(
+        node({}, { themeChain: [theme] }),
+        { text: '[b]x[/b]', bbcodeEnabled: true } as RichTextLabelProperties,
+        WHITE,
+        NORMAL,
+        FALLBACK
+      );
+      expect(runs[0]!.fontSizePx).toBe(30);
+    });
+
+    it("(edge) an ancestor theme's OWN <RichTextLabel>/font_sizes/bold_font_size entry wins over its default_font_size — the SAME specific-before-default order every other ancestor walk in this codebase follows", () => {
+      const theme: ThemeResource = {
+        defaultFont: null,
+        defaultFontSize: 30,
+        fonts: {},
+        fontSizes: { RichTextLabel: { bold_font_size: 40 } },
+        typeVariations: {},
+        properties: {},
+      };
+      const runs = styledTextRuns(
+        node({}, { themeChain: [theme] }),
+        { text: '[b]x[/b]', bbcodeEnabled: true } as RichTextLabelProperties,
+        WHITE,
+        NORMAL,
+        FALLBACK
+      );
+      expect(runs[0]!.fontSizePx).toBe(40);
+    });
+
+    it('(edge) a node-local bold_font_size override still wins over the ancestor theme entirely, unchanged from the non-ancestor case above', () => {
+      const theme: ThemeResource = {
+        defaultFont: null,
+        defaultFontSize: 30,
+        fonts: {},
+        fontSizes: {},
+        typeVariations: {},
+        properties: {},
+      };
+      const runs = styledTextRuns(
+        node({}, { themeChain: [theme] }),
+        {
+          name: 'RTL',
+          text: '[b]x[/b]',
+          bbcodeEnabled: true,
+          themeOverrideFontSizes: { bold_font_size: 24 },
+        },
+        WHITE,
+        NORMAL,
+        FALLBACK
+      );
+      expect(runs[0]!.fontSizePx).toBe(24);
     });
   });
 });

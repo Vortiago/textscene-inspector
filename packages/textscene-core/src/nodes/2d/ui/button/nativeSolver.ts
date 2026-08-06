@@ -17,6 +17,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   HORIZONTAL_ALIGNMENT_CENTER,
@@ -93,8 +94,9 @@ export function buttonIconColor(props: ButtonProperties, state: ButtonDrawState)
   return props.themeOverrideColors?.[BUTTON_ICON_COLOR_KEYS[state]] ?? BUTTON_ICON_MODULATE[state];
 }
 
-/** Resolves this Button's own theme font size/colour for `state` (overrides, else the theme default / Button's own literal). */
+/** Resolves this Button's own theme font size/colour for `state` (overrides, else the ancestor Theme chain / theme default / Button's own literal — `resolveTextTheme`'s own doc). */
 export function buttonTextTheme(
+  n: SolveNode,
   props: ButtonProperties,
   state: ButtonDrawState,
   ctx: Pick<SolveContext, 'theme'>
@@ -103,7 +105,7 @@ export function buttonTextTheme(
     fontSizePx: ctx.theme.fontSize,
     color: state === 'disabled' ? BUTTON_DEFAULT_DISABLED_FONT_COLOR : BUTTON_DEFAULT_FONT_COLOR,
   };
-  return resolveTextTheme(props, BUTTON_THEME_KEYS[state], defaults);
+  return resolveTextTheme(n, props, BUTTON_THEME_KEYS[state], defaults);
 }
 
 /**
@@ -143,7 +145,7 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const text = props.text ?? '';
   const hasText = text.length > 0;
-  const { fontSizePx } = buttonTextTheme(props, state, ctx);
+  const { fontSizePx } = buttonTextTheme(n, props, state, ctx);
   const fontMetrics = resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY);
   const layout: TextLayoutResult | null =
     hasText && ctx.measureText

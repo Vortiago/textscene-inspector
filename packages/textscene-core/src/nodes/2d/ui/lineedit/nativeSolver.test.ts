@@ -25,6 +25,7 @@ import type { FontResource } from '../../../../resources/processing/fontProcessi
 import * as logger from '../../../../logger';
 import type { LineEditProperties } from './types';
 import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import {
   lineEditMinimumSize,
   lineEditTextTheme,
@@ -145,7 +146,7 @@ describe('resolveLineEditTextState — which theme_override_colors key/default t
 
 describe('lineEditTextTheme — font_color / font_uneditable_color / font_placeholder_color key mapping', () => {
   it('resolves control_font_color (0.875, opaque) for the normal state', () => {
-    expect(lineEditTextTheme({} as LineEditProperties, 'normal', ctx())).toEqual({
+    expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'normal', ctx())).toEqual({
       fontSizePx: 16,
       color: LINE_EDIT_DEFAULT_FONT_COLOR,
     });
@@ -153,14 +154,14 @@ describe('lineEditTextTheme — font_color / font_uneditable_color / font_placeh
   });
 
   it('resolves control_font_disabled_color (alpha 0.5) for font_uneditable_color, the read_only state', () => {
-    expect(lineEditTextTheme({} as LineEditProperties, 'read_only', ctx()).color).toEqual(
+    expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'read_only', ctx()).color).toEqual(
       LINE_EDIT_DEFAULT_UNEDITABLE_COLOR
     );
     expect(LINE_EDIT_DEFAULT_UNEDITABLE_COLOR).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 0.5 });
   });
 
   it('resolves control_font_placeholder_color (alpha 0.6) for the placeholder state', () => {
-    expect(lineEditTextTheme({} as LineEditProperties, 'placeholder', ctx()).color).toEqual(
+    expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'placeholder', ctx()).color).toEqual(
       LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR
     );
     expect(LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 0.6 });
@@ -170,14 +171,14 @@ describe('lineEditTextTheme — font_color / font_uneditable_color / font_placeh
     const props = {
       themeOverrideColors: { font_placeholder_color: { r: 1, g: 0, b: 0, a: 1 } },
     } as unknown as LineEditProperties;
-    expect(lineEditTextTheme(props, 'placeholder', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(lineEditTextTheme(node(props), props, 'placeholder', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 
   it('theme_override_font_sizes/font_size overrides the theme default for EVERY state', () => {
     const props = { themeOverrideFontSizes: { font_size: 24 } } as unknown as LineEditProperties;
-    expect(lineEditTextTheme(props, 'normal', ctx()).fontSizePx).toBe(24);
-    expect(lineEditTextTheme(props, 'read_only', ctx()).fontSizePx).toBe(24);
-    expect(lineEditTextTheme(props, 'placeholder', ctx()).fontSizePx).toBe(24);
+    expect(lineEditTextTheme(node(props), props, 'normal', ctx()).fontSizePx).toBe(24);
+    expect(lineEditTextTheme(node(props), props, 'read_only', ctx()).fontSizePx).toBe(24);
+    expect(lineEditTextTheme(node(props), props, 'placeholder', ctx()).fontSizePx).toBe(24);
   });
 });
 
@@ -192,12 +193,13 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       textWidthPx: 50,
       textHeightPx: 23,
       fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     expect(result.contentRect).toEqual({ x: 4, y: 4, w: 192, h: 22 });
     expect(result.textOffset.x).toBe(4);
     // y_ofs = style->get_offset().y + (y_area - text_height) / 2 (line_edit.cpp:1427), truncated
     // toward zero on assignment to `int y_ofs`: trunc(4 + (22 - 23) / 2) = trunc(3.5) = 3.
-    expect(result.textOffset.y).toBeCloseTo(3 + originCorrectionPx(16), 6);
+    expect(result.textOffset.y).toBeCloseTo(3 + originCorrectionPx(16, OPEN_SANS_FONT_METRICS), 6);
   });
 
   it('y_ofs includes the ACTIVE style\'s own TOP margin — `style->get_offset().y` (style_box.cpp:87-89) — not just the text/area centring term', () => {
@@ -210,9 +212,10 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       textWidthPx: 50,
       textHeightPx: 23,
       fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     // y_area = trunc(38 - 12 - 4) = 22; y_ofs = trunc(12 + (22 - 23) / 2) = trunc(11.5) = 11.
-    expect(result.textOffset.y).toBeCloseTo(11 + originCorrectionPx(16), 6);
+    expect(result.textOffset.y).toBeCloseTo(11 + originCorrectionPx(16, OPEN_SANS_FONT_METRICS), 6);
   });
 
   it('FILL shares LEFT\'s branch exactly (line_edit.cpp:1398-1399 falls through the same case)', () => {
@@ -223,6 +226,7 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       textWidthPx: 50,
       textHeightPx: 23,
       fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     const fill = layoutLineEditContent({
       rectSize: { x: 200, y: 30 },
@@ -231,6 +235,7 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       textWidthPx: 50,
       textHeightPx: 23,
       fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     expect(fill).toEqual(left);
   });
@@ -244,6 +249,7 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       textWidthPx: 50,
       textHeightPx: 23,
       fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     expect(result.textOffset.x).toBe(75);
   });
@@ -256,6 +262,7 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       textWidthPx: 500,
       textHeightPx: 23,
       fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     expect(result.textOffset.x).toBe(4); // MAX(0, negative) -> 0, + marginLeft
   });
@@ -269,6 +276,7 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       textWidthPx: 50,
       textHeightPx: 23,
       fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     expect(result.textOffset.x).toBe(146);
   });
@@ -281,6 +289,7 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       textWidthPx: 500,
       textHeightPx: 23,
       fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     expect(result.textOffset.x).toBe(4);
   });
@@ -293,6 +302,7 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       textWidthPx: 0,
       textHeightPx: 0,
       fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     expect(result.contentRect.w).toBe(0);
     expect(result.contentRect.h).toBe(0);

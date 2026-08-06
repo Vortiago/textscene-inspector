@@ -43,6 +43,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   originCorrectionPx,
@@ -59,6 +60,7 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { ControlColor } from '../control/types';
 import type { OptionButtonProperties } from './types';
 
@@ -88,8 +90,9 @@ const OPTION_BUTTON_THEME_KEYS: Record<ButtonDrawState, TextThemeKeys> = {
   disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
 };
 
-/** Resolves OptionButton's own theme font size/colour for `state` (overrides, else the theme default / OptionButton's own literal). */
+/** Resolves OptionButton's own theme font size/colour for `state` (overrides, else the ancestor Theme chain / theme default / OptionButton's own literal — `resolveTextTheme`'s own doc). */
 export function optionButtonTextTheme(
+  n: SolveNode,
   props: OptionButtonProperties,
   state: ButtonDrawState,
   ctx: Pick<SolveContext, 'theme'>
@@ -98,7 +101,7 @@ export function optionButtonTextTheme(
     fontSizePx: ctx.theme.fontSize,
     color: state === 'disabled' ? OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR : OPTION_BUTTON_DEFAULT_FONT_COLOR,
   };
-  return resolveTextTheme(props, OPTION_BUTTON_THEME_KEYS[state], defaults);
+  return resolveTextTheme(n, props, OPTION_BUTTON_THEME_KEYS[state], defaults);
 }
 
 // --- StyleBox chrome -------------------------------------------------------------
@@ -151,7 +154,7 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.optionButton, state);
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
-  const { fontSizePx } = optionButtonTextTheme(props, state, ctx);
+  const { fontSizePx } = optionButtonTextTheme(n, props, state, ctx);
   const fontMetrics = resolveNodeFontMetrics(n, OPTION_BUTTON_THEME_FONT_KEY);
   const items = props.items ?? [];
   const texts = items.length > 0 ? items.map((item) => item.text) : [''];
@@ -189,6 +192,8 @@ export interface OptionButtonContentInput {
   /** The shaped (selected item's) text natural size — `(0, 0)` when there is no selection. */
   textNaturalSize: Vec2;
   fontSizePx: number;
+  /** This OptionButton's OWN resolved font (`resolveNodeFontMetrics(n, OPTION_BUTTON_THEME_FONT_KEY)`) — gates `originCorrectionPx`'s atlas-bake correction (`fontMetrics.ts`'s `kind` discriminant). Required rather than defaulted: an omitted value silently applying the atlas correction to a scene font is exactly the defect this field closes. */
+  fontMetrics: Pick<FontMetrics, 'kind'>;
 }
 
 export interface OptionButtonContentLayout {
@@ -209,7 +214,7 @@ export interface OptionButtonContentLayout {
  * against the FULL control size.
  */
 export function layoutOptionButtonContent(input: OptionButtonContentInput): OptionButtonContentLayout {
-  const { rectSize, styleMargin, arrowSize, arrowMargin, textNaturalSize, fontSizePx } = input;
+  const { rectSize, styleMargin, arrowSize, arrowMargin, textNaturalSize, fontSizePx, fontMetrics } = input;
 
   const arrowRect: Rect2 = {
     x: Math.floor(rectSize.x - arrowSize.x - arrowMargin),
@@ -221,7 +226,7 @@ export function layoutOptionButtonContent(input: OptionButtonContentInput): Opti
   const customElementHeight = rectSize.y - styleMargin.top - styleMargin.bottom;
   const textOffset: Vec2 = {
     x: styleMargin.left,
-    y: (customElementHeight - textNaturalSize.y) / 2 + styleMargin.top + originCorrectionPx(fontSizePx),
+    y: (customElementHeight - textNaturalSize.y) / 2 + styleMargin.top + originCorrectionPx(fontSizePx, fontMetrics),
   };
 
   return { arrowRect, textOffset };

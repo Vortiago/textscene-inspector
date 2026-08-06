@@ -27,7 +27,7 @@
  */
 
 import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
-import { getFontAscentPx } from './fontMetrics';
+import { getFontAscentPx, type FontMetrics } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 
 /** `getFontAscentPx(OPEN_SANS_FONT_METRICS, fontSizePx)` — the ascent alone, not the ascent+descent+spacing sum `getFontLinePitchPx` returns. */
@@ -36,13 +36,25 @@ export function ascentPxAt(fontSizePx: number): number {
 }
 
 /**
- * Pixels to add to a line's box-top Y so a `<TextRun>` lands where Godot draws.
+ * Pixels to add to a line's box-top Y so a `<TextRun>` lands where Godot draws
+ * — ATLAS-KIND fonts only (`fontMetrics.kind !== 'atlas'` returns `0`).
  *
- * Measured closed against real Godot 4.6.3: a y-scan at x=20 through the
- * autowrap label's first line reports the first non-background row at y=146 on
- * both sides with this applied, where ours previously started at y=144.
+ * The reconciliation this closes is specific to the baked MSDF atlas's own
+ * bake anchor (`OPEN_SANS_ATLAS_INFO.base`, this function's own math below) —
+ * it has no meaning for a canvas-kind run (`runtimeFontMetrics.ts`'s
+ * `CanvasFontMetrics`), which `canvasTextPainter.ts` already anchors at
+ * `layout.baselineOffsetPx`, Godot's own ascent-based convention, with no
+ * atlas bake to reconcile against. Applying this on top of that would
+ * double-offset every scene-authored-font line by `ascentPx - baseAtTargetPx`
+ * — small (≈0.86 Godot px at size 16), systematic, and silent.
+ *
+ * Measured closed against real Godot 4.6.3 for the atlas case: a y-scan at
+ * x=20 through the autowrap label's first line reports the first
+ * non-background row at y=146 on both sides with this applied, where ours
+ * previously started at y=144.
  */
-export function originCorrectionPx(fontSizePx: number): number {
+export function originCorrectionPx(fontSizePx: number, fontMetrics: Pick<FontMetrics, 'kind'>): number {
+  if (fontMetrics.kind !== 'atlas') return 0;
   const baseAtTargetPx = OPEN_SANS_ATLAS_INFO.base * (fontSizePx / OPEN_SANS_ATLAS_INFO.fontSize);
   return ascentPxAt(fontSizePx) - baseAtTargetPx;
 }

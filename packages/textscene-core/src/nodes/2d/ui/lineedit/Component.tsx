@@ -70,7 +70,7 @@ export function LineEdit({ solveNode, rect, renderOrder, theme }: NativeControlC
   const { text, isPlaceholder } = lineEditDisplayText(props);
   const hasText = text.length > 0;
   const textState = resolveLineEditTextState(editable, isPlaceholder);
-  const { fontSizePx, color: baseFontColor } = lineEditTextTheme(props, textState, { theme });
+  const { fontSizePx, color: baseFontColor } = lineEditTextTheme(solveNode, props, textState, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
   // `lineSpacingPx: 0`, not the shared default of 3: `layout.heightPx` is what
@@ -102,8 +102,9 @@ export function LineEdit({ solveNode, rect, renderOrder, theme }: NativeControlC
         textWidthPx: layout?.widthPx ?? 0,
         textHeightPx: layout?.heightPx ?? 0,
         fontSizePx,
+        fontMetrics,
       }),
-    [rect.w, rect.h, baseStyleBox.contentMargin, props.alignment, layout, fontSizePx]
+    [rect.w, rect.h, baseStyleBox.contentMargin, props.alignment, layout, fontSizePx, fontMetrics]
   );
 
   // Text is clipped to the content rect, never the whole widget.

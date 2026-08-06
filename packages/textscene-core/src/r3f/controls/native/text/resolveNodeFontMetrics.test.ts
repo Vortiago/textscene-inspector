@@ -19,7 +19,7 @@ import type { SolveNode } from '../solveTree';
 import { solveNode } from '../testing/solveNode';
 import type { ThemeResource } from '../../../../resources/processing/themeProcessing';
 import type { FontResource } from '../../../../resources/processing/fontProcessing';
-import { resolveNodeFontMetrics } from './resolveNodeFontMetrics';
+import { resolveNodeFontMetrics, resolveNodeFontSizePx } from './resolveNodeFontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import * as logger from '../../../../logger';
 
@@ -104,5 +104,45 @@ describe('resolveNodeFontMetrics', () => {
     // this resolves to no font at all, and no SystemFont warn ever fires.
     expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('resolveNodeFontSizePx — the font-SIZE counterpart join (resolveThemeFontSizePx, walking the SAME SolveNode fields resolveNodeFontMetrics does)', () => {
+  it('returns the built-in default when nothing anywhere defines this size key', () => {
+    expect(resolveNodeFontSizePx(labelNode(), 'font_size', undefined, 16)).toBe(16);
+  });
+
+  it("(happy) a positive node-local override wins outright, bypassing THIS node's own node.type entirely", () => {
+    expect(resolveNodeFontSizePx(labelNode(), 'font_size', 24, 16)).toBe(24);
+  });
+
+  it('an override of 0 does NOT win — falls through to the ancestor walk like an absent one (control.cpp:3117-3120)', () => {
+    const theme: ThemeResource = { ...emptyTheme(), fontSizes: { Label: { font_size: 30 } } };
+    const n = labelNode({ themeChain: [theme] });
+    expect(resolveNodeFontSizePx(n, 'font_size', 0, 16)).toBe(30);
+  });
+
+  it("(happy) an ancestor theme's <nativeType>/font_sizes/<key> entry is found via THIS node's own node.type", () => {
+    const theme: ThemeResource = { ...emptyTheme(), fontSizes: { Label: { font_size: 30 } } };
+    const n = labelNode({ themeChain: [theme] });
+    expect(resolveNodeFontSizePx(n, 'font_size', undefined, 16)).toBe(30);
+  });
+
+  it("an ancestor theme entry registered under a DIFFERENT native type is not found for this node's own type", () => {
+    const theme: ThemeResource = { ...emptyTheme(), fontSizes: { Button: { font_size: 30 } } };
+    const n = labelNode({ themeChain: [theme] });
+    expect(resolveNodeFontSizePx(n, 'font_size', undefined, 16)).toBe(16);
+  });
+
+  it("(edge) falls through to the ancestor theme's OWN default_font_size when no specific <Type>/font_sizes/<key> entry matches", () => {
+    const theme: ThemeResource = { ...emptyTheme(), defaultFontSize: 22 };
+    const n = labelNode({ themeChain: [theme] });
+    expect(resolveNodeFontSizePx(n, 'font_size', undefined, 16)).toBe(22);
+  });
+
+  it('(edge) falls back to the project theme when no ancestor theme in the chain resolves the key', () => {
+    const theme: ThemeResource = { ...emptyTheme(), fontSizes: { Label: { font_size: 20 } } };
+    const n = labelNode({ themeChain: [], projectTheme: theme });
+    expect(resolveNodeFontSizePx(n, 'font_size', undefined, 16)).toBe(20);
   });
 });

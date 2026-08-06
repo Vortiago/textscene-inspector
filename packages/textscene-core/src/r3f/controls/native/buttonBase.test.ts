@@ -15,6 +15,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { StyleBoxFlatData } from './styleBoxFlat';
+import { OPEN_SANS_FONT_METRICS } from './text/openSansFontMetrics';
 import {
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
@@ -114,7 +115,7 @@ describe('fitIconSize (Button::_fit_icon_size, button.cpp:469-479)', () => {
 
 describe('originCorrectionPx', () => {
   it('is 0.8571428571428577 at font size 16 (see module header worked example)', () => {
-    expect(originCorrectionPx(16)).toBeCloseTo(0.8571428571428577, 10);
+    expect(originCorrectionPx(16, OPEN_SANS_FONT_METRICS)).toBeCloseTo(0.8571428571428577, 10);
   });
 });
 
@@ -133,6 +134,7 @@ const BASE_INPUT: ButtonContentInput = {
   hasText: true,
   textNaturalSize: { x: 50, y: 26 },
   fontSizePx: 16,
+  fontMetrics: OPEN_SANS_FONT_METRICS,
 };
 
 describe('layoutButtonContent — text only, no icon', () => {

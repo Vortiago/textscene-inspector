@@ -93,7 +93,7 @@ export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeCont
   // --- Text: theme resolution + shaping ------------------------------------
   const text = props.text ?? '';
   const hasText = text.length > 0;
-  const { fontSizePx, color: baseFontColor } = buttonTextTheme(props, state, { theme });
+  const { fontSizePx, color: baseFontColor } = buttonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(
     () => tintColor(baseFontColor, tint.own),
     [baseFontColor, tint.own]
@@ -146,6 +146,7 @@ export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeCont
         hasText,
         textNaturalSize: layout ? { x: layout.widthPx, y: layout.heightPx } : { x: 0, y: 0 },
         fontSizePx,
+        fontMetrics,
       }),
     [
       rect.w,
@@ -160,6 +161,7 @@ export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeCont
       hasText,
       layout,
       fontSizePx,
+      fontMetrics,
       theme.separation,
     ]
   );

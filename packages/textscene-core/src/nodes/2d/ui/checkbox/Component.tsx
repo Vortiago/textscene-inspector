@@ -69,7 +69,7 @@ export function CheckBox({ solveNode, rect, renderOrder, theme }: NativeControlC
   // --- Text: theme resolution + shaping ------------------------------------
   const text = props.text ?? '';
   const hasText = text.length > 0;
-  const { fontSizePx, color: baseFontColor } = checkBoxTextTheme(props, state, { theme });
+  const { fontSizePx, color: baseFontColor } = checkBoxTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
   // Read INSIDE the render body, not the `useMemo` below — see Label's own
@@ -92,8 +92,9 @@ export function CheckBox({ solveNode, rect, renderOrder, theme }: NativeControlC
         hasText,
         textNaturalSize: layout ? { x: layout.widthPx, y: layout.heightPx } : { x: 0, y: 0 },
         fontSizePx,
+        fontMetrics,
       }),
-    [rect.w, rect.h, theme, iconSize, props, hasText, layout, fontSizePx]
+    [rect.w, rect.h, theme, iconSize, props, hasText, layout, fontSizePx, fontMetrics]
   );
 
   return (

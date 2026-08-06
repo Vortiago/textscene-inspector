@@ -15,7 +15,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
 import {
@@ -97,14 +98,15 @@ const LINE_EDIT_DEFAULT_COLORS: Record<LineEditTextState, ControlColor> = {
   placeholder: LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR,
 };
 
-/** Resolves this LineEdit's own theme font size/colour for `state` (overrides, else the theme default / LineEdit's own literal). */
+/** Resolves this LineEdit's own theme font size/colour for `state` (overrides, else the ancestor Theme chain / theme default / LineEdit's own literal — `resolveTextTheme`'s own doc). */
 export function lineEditTextTheme(
+  n: SolveNode,
   props: LineEditProperties,
   state: LineEditTextState,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: LINE_EDIT_DEFAULT_COLORS[state] };
-  return resolveTextTheme(props, LINE_EDIT_THEME_KEYS[state], defaults);
+  return resolveTextTheme(n, props, LINE_EDIT_THEME_KEYS[state], defaults);
 }
 
 /**
@@ -143,7 +145,7 @@ export function lineEditTextTheme(
  */
 export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LineEditProperties;
-  const { fontSizePx } = lineEditTextTheme(props, 'normal', ctx);
+  const { fontSizePx } = lineEditTextTheme(n, props, 'normal', ctx);
 
   const normalBox = pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'normal');
   const readOnlyBox = pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'read_only');
@@ -183,6 +185,8 @@ export interface LineEditContentInput {
   /** The shaped display text's own natural height. */
   textHeightPx: number;
   fontSizePx: number;
+  /** This LineEdit's OWN resolved font (`resolveNodeFontMetrics(n, LINE_EDIT_THEME_FONT_KEY)`) — gates `originCorrectionPx`'s atlas-bake correction (`fontMetrics.ts`'s `kind` discriminant). Required rather than defaulted: an omitted value silently applying the atlas correction to a scene font is exactly the defect this field closes. */
+  fontMetrics: Pick<FontMetrics, 'kind'>;
 }
 
 export interface LineEditContentLayout {
@@ -205,7 +209,7 @@ export interface LineEditContentLayout {
  * not JavaScript's default).
  */
 export function layoutLineEditContent(input: LineEditContentInput): LineEditContentLayout {
-  const { rectSize, styleMargin, alignment, textWidthPx, textHeightPx, fontSizePx } = input;
+  const { rectSize, styleMargin, alignment, textWidthPx, textHeightPx, fontSizePx, fontMetrics } = input;
 
   let xOfs: number;
   switch (alignment) {
@@ -240,7 +244,7 @@ export function layoutLineEditContent(input: LineEditContentInput): LineEditCont
   // assignment to `int y_ofs`, same as every other `int(...)` cast in this draw path.
   // `originCorrectionPx` is this codebase's own MSDF baseline correction, not part of
   // Godot's formula, so it is added on top of the truncated Godot value rather than inside it.
-  const yOfs = Math.trunc(styleMargin.top + (yArea - textHeightPx) / 2) + originCorrectionPx(fontSizePx);
+  const yOfs = Math.trunc(styleMargin.top + (yArea - textHeightPx) / 2) + originCorrectionPx(fontSizePx, fontMetrics);
 
   const contentRect: Rect2 = {
     x: styleMargin.left,

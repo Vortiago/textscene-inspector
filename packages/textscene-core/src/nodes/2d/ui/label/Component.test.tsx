@@ -16,6 +16,7 @@ import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanv
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { Label, soloLineLayout } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { shapeText, AutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
@@ -103,7 +104,7 @@ describe('<Label> (isolated painter contract)', () => {
     const group = renderer.scene.findAllByType('Group').find((g) => (g.instance as THREE.Group).position.y !== 0)!;
     expect(group).toBeDefined();
     // three's Y is negated Godot px (rect.ts convention): position.y = -y.
-    expect((group.instance as THREE.Group).position.y).toBeCloseTo(-originCorrectionPx(16), 6);
+    expect((group.instance as THREE.Group).position.y).toBeCloseTo(-originCorrectionPx(16, OPEN_SANS_FONT_METRICS), 6);
   });
 
   it('honours uppercase: the SAME source text renders WIDER glyphs than lowercase (A/B are wider than a/b in this atlas)', async () => {

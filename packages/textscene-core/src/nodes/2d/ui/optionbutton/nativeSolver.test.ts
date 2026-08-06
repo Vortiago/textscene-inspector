@@ -32,6 +32,7 @@ import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { resolveButtonDrawState } from '../../../../r3f/controls/native/buttonBase';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontResource } from '../../../../resources/processing/fontProcessing';
 import * as logger from '../../../../logger';
 import type { OptionButtonProperties } from './types';
@@ -166,14 +167,14 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
 
 describe('optionButtonTextTheme', () => {
   it('resolves control_font_color for the normal state', () => {
-    expect(optionButtonTextTheme({} as OptionButtonProperties, 'normal', ctx())).toEqual({
+    expect(optionButtonTextTheme(node({}), {} as OptionButtonProperties, 'normal', ctx())).toEqual({
       fontSizePx: 16,
       color: OPTION_BUTTON_DEFAULT_FONT_COLOR,
     });
   });
 
   it('resolves control_font_disabled_color for the disabled state', () => {
-    expect(optionButtonTextTheme({} as OptionButtonProperties, 'disabled', ctx()).color).toEqual(
+    expect(optionButtonTextTheme(node({}), {} as OptionButtonProperties, 'disabled', ctx()).color).toEqual(
       OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR
     );
   });
@@ -183,7 +184,7 @@ describe('optionButtonTextTheme', () => {
       name: 'O',
       themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
     };
-    expect(optionButtonTextTheme(props, 'normal', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(optionButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 });
 
@@ -202,6 +203,7 @@ describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-2
     arrowMargin: 4,
     textNaturalSize: { x: 60, y: 26 },
     fontSizePx: 16,
+    fontMetrics: OPEN_SANS_FONT_METRICS,
   };
 
   it('the arrow sits at (rect.w - arrowSize.w - arrowMargin), NOT the content-margin edge', () => {

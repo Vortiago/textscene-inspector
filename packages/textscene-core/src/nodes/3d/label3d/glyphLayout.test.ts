@@ -3,6 +3,7 @@ import { AutowrapMode, shapeText } from '../../../r3f/controls/native/text/textL
 import { getLinePitchPx } from '../../../r3f/controls/native/text/openSansMetrics';
 import { originCorrectionPx } from '../../../r3f/controls/native/text/textOrigin';
 import { OPEN_SANS_ATLAS_INFO } from '../../../r3f/controls/native/text/openSansAtlas';
+import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { layoutLabel3DLines, outlineDistanceBias, MAX_DISTANCE_BIAS } from './glyphLayout';
 import { HorizontalAlignment } from './types';
 
@@ -17,7 +18,7 @@ describe('layoutLabel3DLines', () => {
     const layout = shape('Hi');
     const [placement] = layoutLabel3DLines(layout, HorizontalAlignment.CENTER, 0, FONT_SIZE);
     const contentHeightPx = layout.heightPx; // line_spacing 0
-    const expectedY = -contentHeightPx / 2 + originCorrectionPx(FONT_SIZE);
+    const expectedY = -contentHeightPx / 2 + originCorrectionPx(FONT_SIZE, OPEN_SANS_FONT_METRICS);
     expect(placement!.y).toBeCloseTo(expectedY, 6);
   });
 

@@ -14,12 +14,13 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { AutowrapMode, shapeText, type GlyphPlacement, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { getAscentPx, getUnderlinePositionPx, getUnderlineThicknessPx } from '../../../../r3f/controls/native/text/openSansMetrics';
 import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { resolveNodeFontMetrics, resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ControlColor } from '../control/types';
 import type { RichTextLabelProperties } from './types';
 import { hasOpenTag, lastTagValue, parseBBCodeRuns, resolveBBColor } from './bbcode';
@@ -49,13 +50,14 @@ const AUTOWRAP_OFF = 0;
 /** `rich_text_label.h:557`: `TextServer::AutowrapMode autowrap_mode = TextServer::AUTOWRAP_WORD_SMART;` — RichTextLabel's own default, unlike Label's OFF (`label.h`/`Label`'s constructor). */
 const RICH_TEXT_LABEL_DEFAULT_AUTOWRAP = 3;
 
-/** Resolves this RichTextLabel's own theme font size/colour (overrides, else the theme default / RichTextLabel's own white). */
+/** Resolves this RichTextLabel's own theme font size/colour (overrides, else the ancestor Theme chain / theme default / RichTextLabel's own white — `resolveTextTheme`'s own doc). */
 export function richTextLabelTextTheme(
+  n: SolveNode,
   props: RichTextLabelProperties,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: RICH_TEXT_LABEL_DEFAULT_FONT_COLOR };
-  return resolveTextTheme(props, RICH_TEXT_LABEL_THEME_KEYS, defaults);
+  return resolveTextTheme(n, props, RICH_TEXT_LABEL_THEME_KEYS, defaults);
 }
 
 /**
@@ -110,8 +112,8 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
     return wraps ? { x: 1, y: 0 } : { x: 0, y: 0 };
   }
 
-  const { fontSizePx, color } = richTextLabelTextTheme(props, ctx);
-  const runs = styledTextRuns(props, color, fontSizePx, ctx.theme.fontSize);
+  const { fontSizePx, color } = richTextLabelTextTheme(n, props, ctx);
+  const runs = styledTextRuns(n, props, color, fontSizePx, ctx.theme.fontSize);
   const text = runs.map((r) => r.text).join('');
 
   if (text.length === 0) {
@@ -199,21 +201,30 @@ const RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS = {
 
 /**
  * A styled run's own font size — `normalFontSizePx` for a plain run, else the
- * matching `RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS` override or
- * `fallbackFontSizePx` (Godot's `ThemeDB::get_fallback_font_size()`, i.e. this
- * node's own `richTextLabelTextTheme`'s `ctx.theme.fontSize` default — NEVER
- * `normalFontSizePx`, see `RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS`'s own doc).
+ * matching `RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS` key resolved through the
+ * SAME ancestor-Theme walk `richTextLabelTextTheme` uses for
+ * `normal_font_size` (`resolveNodeFontSizePx`/`Theme::get_font_size`,
+ * `scene/resources/theme.cpp:657-664`) — NEVER falling back to
+ * `normalFontSizePx` itself, see `RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS`'s own
+ * doc: a `[b]` span's key is looked up independently, all the way down to
+ * `builtInDefaultPx` (Godot's `ThemeDB::get_fallback_font_size()`), so an
+ * ancestor Theme setting only `default_font_size` resolves the SAME size for
+ * `[b]` text as it does for the surrounding plain text (a scene overriding
+ * ONLY `normal_font_size` locally, by contrast, still leaves `[b]` at the
+ * built-in default — that divergence is Godot's own real behaviour, not a
+ * bug this walk papers over).
  */
 function resolveRunFontSizePx(
   bold: boolean,
   italic: boolean,
   props: RichTextLabelProperties,
   normalFontSizePx: number,
-  fallbackFontSizePx: number
+  n: SolveNode,
+  builtInDefaultPx: number
 ): number {
   if (!bold && !italic) return normalFontSizePx;
   const key = bold && italic ? RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.boldItalic : bold ? RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.bold : RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.italic;
-  return props.themeOverrideFontSizes?.[key] ?? fallbackFontSizePx;
+  return resolveNodeFontSizePx(n, key, props.themeOverrideFontSizes?.[key], builtInDefaultPx);
 }
 
 /**
@@ -233,10 +244,11 @@ function resolveRunFontSizePx(
  * unrecognised tag.
  */
 export function styledTextRuns(
+  n: SolveNode,
   props: RichTextLabelProperties,
   defaultColor: ControlColor,
   normalFontSizePx: number,
-  fallbackFontSizePx: number
+  builtInDefaultPx: number
 ): StyledTextRun[] {
   const raw = props.text ?? '';
   if (!props.bbcodeEnabled) {
@@ -257,7 +269,7 @@ export function styledTextRuns(
         italic,
         underline: hasOpenTag(run.tags, 'u'),
         color: colorValue !== undefined ? resolveBBColor(colorValue, defaultColor) : defaultColor,
-        fontSizePx: resolveRunFontSizePx(bold, italic, props, normalFontSizePx, fallbackFontSizePx),
+        fontSizePx: resolveRunFontSizePx(bold, italic, props, normalFontSizePx, n, builtInDefaultPx),
       };
     });
 }

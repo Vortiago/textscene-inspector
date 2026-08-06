@@ -76,15 +76,15 @@ import type { RichTextLabelProperties } from './types';
 
 export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = solveNode.node.properties as RichTextLabelProperties;
-  const textTheme = useMemo(() => richTextLabelTextTheme(props, { theme }), [props, theme]);
+  const textTheme = useMemo(() => richTextLabelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
 
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
   const clippingPlanes = useControlClipPlanes();
 
   const runs = useMemo(
-    () => styledTextRuns(props, textTheme.color, textTheme.fontSizePx, theme.fontSize),
-    [props, textTheme.color, textTheme.fontSizePx, theme.fontSize]
+    () => styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize),
+    [solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize]
   );
   const plainText = useMemo(() => runs.map((r) => r.text).join(''), [runs]);
   const fontSizePxAt = useMemo(() => fontSizePxAtFromRuns(runs), [runs]);
@@ -108,7 +108,7 @@ export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeCon
   );
 
   const placements = useMemo(() => layoutRichTextRuns(runs, layout), [runs, layout]);
-  const originPx = originCorrectionPx(textTheme.fontSizePx);
+  const originPx = originCorrectionPx(textTheme.fontSizePx, fontMetrics);
 
   return (
     <>

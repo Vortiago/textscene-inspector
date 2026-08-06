@@ -25,6 +25,7 @@ import type { LabelProperties } from './types';
 import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { labelMinimumSize, LABEL_THEME_KEYS, LABEL_THEME_FONT_KEY, LABEL_DEFAULT_FONT_COLOR, labelTextTheme, layoutLabelLines } from './nativeSolver';
 import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { FontResource } from '../../../../resources/processing/fontProcessing';
 import * as logger from '../../../../logger';
@@ -156,7 +157,7 @@ describe('labelTextTheme / LABEL_THEME_KEYS / LABEL_DEFAULT_FONT_COLOR', () => {
   });
 
   it("resolves the theme's own default font size absent an override", () => {
-    const resolved = labelTextTheme({ name: 'L' } as LabelProperties, { theme: nativeTheme(1) });
+    const resolved = labelTextTheme(node({}), { name: 'L' } as LabelProperties, { theme: nativeTheme(1) });
     expect(resolved).toEqual({ fontSizePx: 16, color: LABEL_DEFAULT_FONT_COLOR });
   });
 });
@@ -164,11 +165,11 @@ describe('labelTextTheme / LABEL_THEME_KEYS / LABEL_DEFAULT_FONT_COLOR', () => {
 describe('originCorrectionPx (TextRun box-top vs. Godot baseline-anchored origin, spike S2 residual)', () => {
   it('at size 16: ascentPx(18) - base(45 bake)*scale(16/42) = 0.857142857...', () => {
     // 45 * 16 / 42 = 17.142857142857142; 18 - that = 0.8571428571428577.
-    expect(originCorrectionPx(16)).toBeCloseTo(18 - (45 * 16) / 42, 10);
+    expect(originCorrectionPx(16, OPEN_SANS_FONT_METRICS)).toBeCloseTo(18 - (45 * 16) / 42, 10);
   });
 
   it('is a genuinely nonzero constant (proves the reconciliation is not a no-op)', () => {
-    expect(originCorrectionPx(16)).not.toBe(0);
+    expect(originCorrectionPx(16, OPEN_SANS_FONT_METRICS)).not.toBe(0);
   });
 });
 
@@ -203,7 +204,7 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
   it('vertical TOP (default): line N sits at originCorrectionPx + N*linePitchPx, no vbegin', () => {
     const layout = layoutFor('A\nB\nC');
     const placements = layoutLabelLines(layout, 200, 200, undefined, 0, FONT_SIZE);
-    const origin = originCorrectionPx(FONT_SIZE);
+    const origin = originCorrectionPx(FONT_SIZE, OPEN_SANS_FONT_METRICS);
     expect(placements.map((p) => p.y)).toEqual([origin, origin + PITCH, origin + 2 * PITCH]);
   });
 
@@ -211,21 +212,21 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
     const layout = layoutFor('A\nB'); // 2 lines: contentHeight = 2*26-3 = 49
     const placements = layoutLabelLines(layout, 200, 149, undefined, 1, FONT_SIZE);
     const vbegin = (149 - 49) / 2;
-    expect(placements[0]!.y).toBeCloseTo(vbegin + originCorrectionPx(FONT_SIZE), 6);
+    expect(placements[0]!.y).toBeCloseTo(vbegin + originCorrectionPx(FONT_SIZE, OPEN_SANS_FONT_METRICS), 6);
   });
 
   it('vertical BOTTOM (2): vbegin pins the block against the box bottom', () => {
     const layout = layoutFor('A\nB');
     const placements = layoutLabelLines(layout, 200, 149, undefined, 2, FONT_SIZE);
     const vbegin = 149 - 49;
-    expect(placements[0]!.y).toBeCloseTo(vbegin + originCorrectionPx(FONT_SIZE), 6);
+    expect(placements[0]!.y).toBeCloseTo(vbegin + originCorrectionPx(FONT_SIZE, OPEN_SANS_FONT_METRICS), 6);
   });
 
   it('vertical FILL (3): distributes the box height evenly across N-1 inter-line gaps', () => {
     const layout = layoutFor('A\nB\nC'); // 3 lines, contentHeight = 3*26-3 = 75
     const placements = layoutLabelLines(layout, 200, 175, undefined, 3, FONT_SIZE);
     const vsep = (175 - 75) / 2;
-    const origin = originCorrectionPx(FONT_SIZE);
+    const origin = originCorrectionPx(FONT_SIZE, OPEN_SANS_FONT_METRICS);
     expect(placements[0]!.y).toBeCloseTo(origin, 6);
     expect(placements[1]!.y).toBeCloseTo(origin + PITCH + vsep, 6);
     expect(placements[2]!.y).toBeCloseTo(origin + 2 * (PITCH + vsep), 6);

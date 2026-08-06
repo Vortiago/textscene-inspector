@@ -92,7 +92,7 @@ function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayout
 
 export function Label({ solveNode, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
   const props = solveNode.node.properties as LabelProperties;
-  const textTheme = useMemo(() => labelTextTheme(props, { theme }), [props, theme]);
+  const textTheme = useMemo(() => labelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
 
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
   const tint = useCanvasItemTint(

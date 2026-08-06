@@ -30,7 +30,9 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { fitIconSize, originCorrectionPx, tintColor } from '../../../../r3f/controls/native/buttonBase';
+import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveTextTheme,
@@ -97,8 +99,9 @@ const CHECKBOX_THEME_KEYS: Record<CheckBoxDrawState, TextThemeKeys> = {
   disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
 };
 
-/** Resolves CheckBox's own theme font size/colour for `state` (overrides, else the theme default / CheckBox's own literal). */
+/** Resolves CheckBox's own theme font size/colour for `state` (overrides, else the ancestor Theme chain / theme default / CheckBox's own literal — `resolveTextTheme`'s own doc). */
 export function checkBoxTextTheme(
+  n: SolveNode,
   props: CheckBoxProperties,
   state: CheckBoxDrawState,
   ctx: Pick<SolveContext, 'theme'>
@@ -112,7 +115,7 @@ export function checkBoxTextTheme(
           ? CHECKBOX_DEFAULT_PRESSED_FONT_COLOR
           : CHECKBOX_DEFAULT_FONT_COLOR,
   };
-  return resolveTextTheme(props, CHECKBOX_THEME_KEYS[state], defaults);
+  return resolveTextTheme(n, props, CHECKBOX_THEME_KEYS[state], defaults);
 }
 
 // --- Icon selection ------------------------------------------------------------
@@ -179,7 +182,7 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const text = props.text ?? '';
   const hasText = text.length > 0;
   const state = resolveCheckBoxDrawState(props);
-  const { fontSizePx } = checkBoxTextTheme(props, state, ctx);
+  const { fontSizePx } = checkBoxTextTheme(n, props, state, ctx);
   const fontMetrics = resolveNodeFontMetrics(n, CHECKBOX_THEME_FONT_KEY);
   const textSize = hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
 
@@ -211,6 +214,8 @@ export interface CheckBoxContentInput {
   /** The shaped text's own natural (unwrapped) size — ignored when `hasText` is false. */
   textNaturalSize: Vec2;
   fontSizePx: number;
+  /** This CheckBox's OWN resolved font (`resolveNodeFontMetrics(n, CHECKBOX_THEME_FONT_KEY)`) — gates `originCorrectionPx`'s atlas-bake correction (`fontMetrics.ts`'s `kind` discriminant). Required rather than defaulted: an omitted value silently applying the atlas correction to a scene font is exactly the defect this field closes. */
+  fontMetrics: Pick<FontMetrics, 'kind'>;
 }
 
 export interface CheckBoxContentLayout {
@@ -231,7 +236,8 @@ export interface CheckBoxContentLayout {
  * which never happens here (the icon always occupies non-zero width).
  */
 export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxContentLayout {
-  const { rectSize, margin, iconSize, checkVOffset, hSeparation, hasText, textNaturalSize, fontSizePx } = input;
+  const { rectSize, margin, iconSize, checkVOffset, hSeparation, hasText, textNaturalSize, fontSizePx, fontMetrics } =
+    input;
 
   const iconRect: Rect2 = {
     x: Math.floor(margin),
@@ -245,7 +251,7 @@ export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxCont
     const leftReserved = iconSize.x + hSeparation;
     const customElementHeight = rectSize.y - 2 * margin;
     const x = margin + leftReserved;
-    const y = (customElementHeight - textNaturalSize.y) / 2 + margin + originCorrectionPx(fontSizePx);
+    const y = (customElementHeight - textNaturalSize.y) / 2 + margin + originCorrectionPx(fontSizePx, fontMetrics);
     textOffset = { x, y };
   }
 

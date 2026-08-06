@@ -62,7 +62,7 @@ export function OptionButton({ solveNode, rect, renderOrder, theme }: NativeCont
   // --- Text: the SELECTED item only, never the popup's full list -----------
   const text = resolveOptionButtonSelectedText(props);
   const hasText = text.length > 0;
-  const { fontSizePx, color: baseFontColor } = optionButtonTextTheme(props, state, { theme });
+  const { fontSizePx, color: baseFontColor } = optionButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
   // Read INSIDE the render body, not the `useMemo` below — see Label's own
@@ -85,8 +85,9 @@ export function OptionButton({ solveNode, rect, renderOrder, theme }: NativeCont
         arrowMargin,
         textNaturalSize: layout ? { x: layout.widthPx, y: layout.heightPx } : { x: 0, y: 0 },
         fontSizePx,
+        fontMetrics,
       }),
-    [rect.w, rect.h, baseStyleBox.contentMargin, arrowMargin, layout, fontSizePx]
+    [rect.w, rect.h, baseStyleBox.contentMargin, arrowMargin, layout, fontSizePx, fontMetrics]
   );
 
   return (

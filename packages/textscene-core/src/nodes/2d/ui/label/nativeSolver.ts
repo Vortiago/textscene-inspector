@@ -12,6 +12,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -45,13 +46,14 @@ export const LABEL_DEFAULT_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 }
 
 const AUTOWRAP_OFF = 0;
 
-/** Resolves this Label's own theme font size/colour (overrides, else the theme default / Label's own white). */
+/** Resolves this Label's own theme font size/colour (overrides, else the ancestor Theme chain / theme default / Label's own white — `resolveTextTheme`'s own doc). */
 export function labelTextTheme(
+  n: SolveNode,
   props: LabelProperties,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: LABEL_DEFAULT_FONT_COLOR };
-  return resolveTextTheme(props, LABEL_THEME_KEYS, defaults);
+  return resolveTextTheme(n, props, LABEL_THEME_KEYS, defaults);
 }
 
 /**
@@ -116,7 +118,7 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // spellings happen to match. Emptiness is unaffected by case, so the
   // early-out below reads the same either way.
   const text = props.text ?? '';
-  const { fontSizePx } = labelTextTheme(props, ctx);
+  const { fontSizePx } = labelTextTheme(n, props, ctx);
   const fontMetrics = resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY);
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
 
@@ -261,7 +263,7 @@ export function layoutLabelLines(
   }
 
   const effectivePitchPx = layout.linePitchPx + vsepPx;
-  const originPx = originCorrectionPx(fontSizePx);
+  const originPx = originCorrectionPx(fontSizePx, fontMetrics);
   const isFill = (horizontalAlignment ?? H_LEFT) === H_FILL;
 
   return layout.lines.map((line, lineIndex) => {

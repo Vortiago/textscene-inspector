@@ -32,6 +32,7 @@ import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/n
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { originCorrectionPx } from '../../../../r3f/controls/native/buttonBase';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontResource } from '../../../../resources/processing/fontProcessing';
 import * as logger from '../../../../logger';
 import type { CheckBoxProperties } from './types';
@@ -98,21 +99,21 @@ describe('resolveCheckBoxDrawState', () => {
 
 describe('checkBoxTextTheme', () => {
   it('resolves control_font_color (0.875 opaque) for the normal state', () => {
-    expect(checkBoxTextTheme({} as CheckBoxProperties, 'normal', ctx())).toEqual({
+    expect(checkBoxTextTheme(node({}), {} as CheckBoxProperties, 'normal', ctx())).toEqual({
       fontSizePx: 16,
       color: CHECKBOX_DEFAULT_FONT_COLOR,
     });
   });
 
   it('resolves control_font_pressed_color (opaque white) for the pressed (checked) state', () => {
-    expect(checkBoxTextTheme({} as CheckBoxProperties, 'pressed', ctx()).color).toEqual(
+    expect(checkBoxTextTheme(node({}), {} as CheckBoxProperties, 'pressed', ctx()).color).toEqual(
       CHECKBOX_DEFAULT_PRESSED_FONT_COLOR
     );
     expect(CHECKBOX_DEFAULT_PRESSED_FONT_COLOR).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 
   it('resolves control_font_disabled_color (alpha 0.5) for the disabled state', () => {
-    expect(checkBoxTextTheme({} as CheckBoxProperties, 'disabled', ctx()).color).toEqual(
+    expect(checkBoxTextTheme(node({}), {} as CheckBoxProperties, 'disabled', ctx()).color).toEqual(
       CHECKBOX_DEFAULT_DISABLED_FONT_COLOR
     );
     expect(CHECKBOX_DEFAULT_DISABLED_FONT_COLOR).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 0.5 });
@@ -123,7 +124,7 @@ describe('checkBoxTextTheme', () => {
       name: 'C',
       themeOverrideColors: { font_pressed_color: { r: 1, g: 0, b: 0, a: 1 } },
     };
-    expect(checkBoxTextTheme(props, 'pressed', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(checkBoxTextTheme(node(props), props, 'pressed', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 });
 
@@ -220,6 +221,7 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
     hasText: true,
     textNaturalSize: { x: 90, y: 26 },
     fontSizePx: 16,
+    fontMetrics: OPEN_SANS_FONT_METRICS,
   };
 
   it('icon sits at (margin, vertically centred + check_v_offset)', () => {
@@ -254,7 +256,7 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
   });
 
   it('matches originCorrectionPx(16) exactly (shared text-origin convention with Button/Label)', () => {
-    expect(originCorrectionPx(16)).toBeCloseTo(ORIGIN_16, 10);
+    expect(originCorrectionPx(16, OPEN_SANS_FONT_METRICS)).toBeCloseTo(ORIGIN_16, 10);
   });
 });
 
