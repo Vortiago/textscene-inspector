@@ -501,7 +501,7 @@ describe('styledTextRuns', () => {
       // Correctness is unaffected by memoising — still 6 runs, still resolved individually.
       expect(runs).toHaveLength(6);
       expect(sizeSpy).toHaveBeenCalledTimes(3);
-      const keys = sizeSpy.mock.calls.map((call) => call[1]).sort();
+      const keys = sizeSpy.mock.calls.map((call: unknown[]) => call[1]).sort();
       expect(keys).toEqual(['bold_font_size', 'bold_italics_font_size', 'italics_font_size']);
     });
   });
