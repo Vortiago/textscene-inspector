@@ -119,7 +119,7 @@ renders at Godot's own default for each:
   the pre-MSDF canvas renderer, which treated FILL as `LEFT` instead — fixed as part of
   this rewrite (`glyphLayout.test.ts` pins it against the C++ source).
 
-## Auto-framing (two bugs found while building this — one fixed here, one Label3D-adjacent but NOT this component's to fix)
+## Auto-framing (two bugs found while building this — one fixed here, one Label3D-adjacent, flagged here and fixed subsequently)
 
 ### Bug 1 — a lazily-mounted glyph mesh framed as if the caption were absent (FIXED)
 
@@ -188,7 +188,7 @@ at the node's local origin, and the real (lazily-mounted) glyph mesh is tagged
 incidental async-mount-timing accident (the chunk resolving inside vs. outside `CameraFit`'s
 retry window) would make the auto-fit bounds depend on load speed, deterministic on no host.
 
-### Bug 2 — a pre-existing, NOT Label3D-caused, camera-ANGLE divergence the point-fix exposed for one fixture (flagged, not fixed here)
+### Bug 2 — a pre-existing, NOT Label3D-caused, camera-ANGLE divergence the point-fix exposed for one fixture (CLOSED — the branch has since been deleted)
 
 Fixing bug 1 removed the ONLY thing keeping one fixture,
 `unit-arraymesh-own-material.tscn`, out of `frameSceneBounds.ts`'s separate `isFlat` branch
@@ -205,14 +205,35 @@ diverging sharply from Godot's own reference camera as a result (ratio 5.70, see
 This is not a bug in the point-proxy or in bug 1's fix: measured directly, `isFlat`'s
 head-on branch diverges from Godot's own `--frame` camera UNCONDITIONALLY, independent of
 Label3D entirely — `unit-quadmesh.tscn` (no Label3D anywhere in the fixture) renders
-head-on in this app but obliquely in Godot's own reference. A census of all 97 3D-mode
-golden fixtures found 5 total that ever take the `isFlat` branch — `arraymesh-own-material`,
-`material-emission-texture`, `quadmesh`, `sprite3d`, `sprite3d-region-oversized` — of which
-only `arraymesh-own-material` changed classification as a result of this rewrite; the other
-4 have taken it since before this component existed, and their committed goldens already
-encode a camera Godot does not produce. Removing `isFlat` outright would correct all 5 at
-once, but 4 of those goldens are untouched by this change and outside its scope — recorded
-here as a follow-up, not fixed in this pass.
+head-on in this app but obliquely in Godot's own reference.
+
+**Resolution: the `isFlat` branch was deleted outright.** It turned out to be vestigial, not
+merely mis-scoped. Its stated purpose was 2D-canvas content ("z spread is only `z_index` draw
+steps"), but `frameSceneBounds` is reached only from `TscnCanvas`, and `ViewportArea` mounts
+`TscnCanvas` only outside 2D mode — 2D scenes get `Canvas2DStage`'s orthographic camera, which
+never calls it. The content the branch existed to serve could no longer reach the canvas where
+it ran, so everything it still fired on was a genuinely flat *3D* scene, which Godot frames
+with its ordinary editor orbit.
+
+Arbitration after removal (same restricted-pixel method as below) — every affected fixture
+moved **closer** to Godot, to 2–6% of its previous error:
+
+| Fixture | disagreeing px | baseline Δ | render Δ | ratio |
+| --- | --- | --- | --- | --- |
+| `quadmesh` | 530,956 | 71,897,680 | 2,586,761 | 0.036 |
+| `arraymesh-own-material` | 520,347 | 90,018,273 | 5,552,774 | 0.062 |
+| `material-emission-texture` | 491,622 | 123,703,870 | 4,577,885 | 0.037 |
+| `sprite3d-region-oversized` | 452,851 | 110,966,293 | 2,543,484 | 0.023 |
+
+**Census correction — this sheet previously named 5 fixtures; only 4 ever took the branch.**
+`sprite3d` does not, and did not: one of its `Sprite3D` nodes sets `billboard = 1`, and
+`useBillboard` rotates that mesh's actual `Object3D` transform toward the camera every frame —
+a real world-space rotation, not a shader effect — so its world AABB carries genuine Z depth by
+the time the framing decision runs. Confirmed three independent ways: from the code, by direct
+instrumentation of `frameSceneBounds`, and finally by arbitration returning **0** disagreeing
+pixels. The original census predates that billboard wiring, which is how it went stale
+unnoticed — the same failure mode as the goldens themselves, a record of our own past behaviour
+mistaken for a source of truth.
 
 ## Arbitration (`pnpm ref:godot --frame` vs `pnpm ref:ours --frame`, restricted to disagreeing pixels)
 
