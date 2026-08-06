@@ -47,6 +47,7 @@ import '../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
+import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
 
 const SETTINGS_PREFIX = 'settings/';
 
@@ -127,21 +128,9 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // (skeleton_modifier_3d.h:64), values 0-6 in the BoneDirection declaration
   // order (skeleton_modifier_3d.h:56-62). set_end_bone_direction (:260) stores
   // the static_cast unchecked, so the hint governs the inspector only: warning.
-  'end_bone/direction': v.enumInt(
-    'end_bone/direction',
-    0,
-    6,
-    {
-      0: '+X',
-      1: '-X',
-      2: '+Y',
-      3: '-Y',
-      4: '+Z',
-      5: '-Z',
-      6: 'FromParent',
-    },
-    { hinted: 'chain_ik_3d.cpp:131' }
-  ),
+  'end_bone/direction': v.enumInt('end_bone/direction', 0, 6, BONE_DIRECTION, {
+    hinted: 'chain_ik_3d.cpp:131',
+  }),
 
   // chain_ik_3d.cpp:132, PROPERTY_HINT_RANGE "0,1,0.001,or_greater,suffix:m".
   // `or_greater` opens the max end, so only the floor is reportable, and
@@ -201,3 +190,8 @@ settingsFamily.leaves = [...Object.values(SETTING_LEAVES), jointBoneReadOnly];
 validatorRegistry.registerAll('ChainIK3D', {
   'settings/*': settingsFamily,
 });
+
+// Exported for `settingsFamilySeam.test.ts`, which sweeps every leaf a base
+// declares across every descendant rather than trusting one hand-picked canary.
+// Deriving the sweep from this table is what keeps it 9-of-9 as leaves are added.
+export { SETTING_LEAVES as CHAIN_IK_SETTING_LEAVES };

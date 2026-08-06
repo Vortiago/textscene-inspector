@@ -58,3 +58,22 @@ export const ITEM_CHECKABLE_TYPE = {
   1: 'CHECK_BOX',
   2: 'RADIO_BUTTON',
 } as const;
+
+/**
+ * `Vector3::Axis` declaration order (vector3.h:57-61).
+ *
+ * Core's enum, not any node's, so it has no ancestor slice to hoist onto even
+ * though its three consumers here (`AimModifier3D`, `LookAtModifier3D`,
+ * `ConvertTransformModifier3D`) share one. Each still enforces at its own
+ * `ADD_PROPERTY` hint, and the citation stays at the call site.
+ *
+ * Annotated rather than `as const` like its neighbours above: those are only
+ * ever passed whole to `v.enumInt`, while this one is also indexed by a runtime
+ * axis number to label a diagnostic, and `as const` narrows the keys to literals
+ * that a `number` cannot index.
+ */
+export const VECTOR3_AXIS: Readonly<Record<number, string>> = {
+  0: 'X',
+  1: 'Y',
+  2: 'Z',
+};

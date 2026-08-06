@@ -34,23 +34,8 @@
 import '../skeletonmodifier3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-
-/**
- * `SkeletonModifier3D::get_hint_bone_axis()` (skeleton_modifier_3d.h:52) spells
- * the dropdown "+X,-X,+Y,-Y,+Z,-Z", the BoneAxis declaration order
- * (skeleton_modifier_3d.h:44-50).
- */
-const BONE_AXIS = {
-  0: '+X',
-  1: '-X',
-  2: '+Y',
-  3: '-Y',
-  4: '+Z',
-  5: '-Z',
-} as const;
-
-/** `Vector3::Axis`, hinted "X,Y,Z" at look_at_modifier_3d.cpp:473. */
-const VECTOR3_AXIS = { 0: 'X', 1: 'Y', 2: 'Z' } as const;
+import { BONE_AXIS } from '../skeletonmodifier3d/linterParser.js';
+import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 
 /** `LookAtModifier3D::OriginFrom`, hinted "Self,SpecificBone,ExternalNode" at :478. */
 const ORIGIN_FROM = { 0: 'Self', 1: 'SpecificBone', 2: 'ExternalNode' } as const;

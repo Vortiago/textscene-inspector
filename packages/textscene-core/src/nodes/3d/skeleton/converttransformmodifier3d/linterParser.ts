@@ -61,12 +61,10 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
+import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 
 /** ConvertTransformModifier3D::TransformMode (convert_transform_modifier_3d.h:39-43). */
 const TRANSFORM_MODE = { 0: 'Position', 1: 'Rotation', 2: 'Scale' };
-
-/** Vector3::Axis declaration order (vector3.h:57-61). */
-const VECTOR3_AXIS = { 0: 'X', 1: 'Y', 2: 'Z' };
 
 /**
  * One `apply/` or `reference/` group: an enum pair and a range pair.
@@ -154,6 +152,10 @@ const settingValidator = indexedFamilyValidator({
   leaves: { ...OWN_LEAVES, ...BASE_LEAVES },
   unknownCode: 'INVALID_SETTING_KEY',
   describes: 'setting',
+  // No angle brackets: the sheet generator drops this straight into a Markdown
+  // table cell (lintCoverage.mjs:131), where `<i>` would open italics.
+  accepts:
+    'per-setting apply/ and reference/ transform_mode, axis, range_min, range_max, plus relative, additive and the BoneConstraint3D leaves',
   // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
   // (convert_transform_modifier_3d.cpp:41) and no `is_valid_int` gate, and
   // `_to_int` skips non-digits (ustring.cpp:2268-2298), so `settings/x/relative`
@@ -174,10 +176,6 @@ const settingValidator = indexedFamilyValidator({
 // tag for a router is neither `formatOnly` (it does reject real values) nor a
 // citation (it forwards to seven different ones).
 settingValidator.leaves = Object.values(OWN_LEAVES);
-// No angle brackets: the sheet generator drops this straight into a Markdown
-// table cell, where `<i>` would open italics.
-settingValidator.accepts =
-  'per-setting apply/ and reference/ transform_mode, axis, range_min, range_max, plus relative, additive and the BoneConstraint3D leaves';
 
 validatorRegistry.registerAll('ConvertTransformModifier3D', {
   // convert_transform_modifier_3d.cpp:329, ADD_ARRAY_COUNT (PROPERTY_HINT_NONE,
@@ -189,5 +187,3 @@ validatorRegistry.registerAll('ConvertTransformModifier3D', {
 
   'settings/*': settingValidator,
 });
-
-export { OWN_LEAVES as CONVERT_TRANSFORM_SETTING_LEAVES };

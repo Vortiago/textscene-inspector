@@ -22,6 +22,10 @@ import { validatorRegistry, type PropertyValidator } from '../../../../linter/Va
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { propertyError } from '../../../../linter/validators/propertyError.js';
 import { accepts, v } from '../../../../linter/validators/v.js';
+import {
+  ROTATION_AXIS,
+  SECONDARY_DIRECTION,
+} from '../skeletonmodifier3d/linterParser.js';
 
 /**
  * Why a negative setting index is refused, shared by both levels of the family
@@ -30,26 +34,6 @@ import { accepts, v } from '../../../../linter/validators/v.js';
 const negativeSettingIndex = (index: number): string =>
   `Setting index ${index} must be non-negative; IterateIK3D::_set fails the index check (iterate_ik_3d.cpp:39) before reaching the property, so the write never lands`;
 
-/** PROPERTY_HINT_ENUM "X,Y,Z,All,Custom" (skeleton_modifier_3d.h:87). */
-const ROTATION_AXIS: Record<number, string> = {
-  0: 'X',
-  1: 'Y',
-  2: 'Z',
-  3: 'All',
-  4: 'Custom',
-};
-
-/** PROPERTY_HINT_ENUM "None,+X,-X,+Y,-Y,+Z,-Z,Custom" (skeleton_modifier_3d.h:77). */
-const SECONDARY_DIRECTION: Record<number, string> = {
-  0: 'None',
-  1: '+X',
-  2: '-X',
-  3: '+Y',
-  4: '-Y',
-  5: '+Z',
-  6: '-Z',
-  7: 'Custom',
-};
 
 /**
  * `settings/<i>/joints/<j>/…`, pushed at iterate_ik_3d.cpp:120-125.

@@ -68,20 +68,7 @@ import {
   RESOURCE_REFERENCE_REGEX,
   v,
 } from '../../../../linter/validators/index.js';
-
-/**
- * `SkeletonModifier3D::BoneDirection`, skeleton_modifier_3d.h:55-62, in the
- * order of `get_hint_bone_direction()` (skeleton_modifier_3d.h:64).
- */
-const BONE_DIRECTION: Record<number, string> = {
-  0: '+X',
-  1: '-X',
-  2: '+Y',
-  3: '-Y',
-  4: '+Z',
-  5: '-Z',
-  6: 'FromParent',
-};
+import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
 
 /**
  * `BoneTwistDisperser3D::DisperseMode`, bone_twist_disperser_3d.h:41-45, in the

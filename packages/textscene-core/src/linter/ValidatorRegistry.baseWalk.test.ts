@@ -209,9 +209,21 @@ const INTENTIONAL_OVERRIDES = new Set<string>([
   // `settingsFamilySeam.test.ts` asserts under the full barrel that the base's
   // BOUND still fires through the hop. Delete a delegation and that file goes
   // red, so the exemption cannot quietly become a hole.
+  //
+  // The list is an INVENTORY, so every cooperative pair appears here even when
+  // the two classes spell the wildcard differently — `shadowIdentity` reduces
+  // both spellings to the prefix they match on precisely so a differently-spelled
+  // shadow cannot hide. `ConvertTransformModifier3D:settings/*` over
+  // `BoneConstraint3D:settings/#/*` is a TOTAL shadow (the plain prefix matches a
+  // superset), and `SplineIK3D:settings/#/*` over `ChainIK3D:settings/*` is a
+  // partial one: the glued-index form routes a single leaf segment only, so
+  // ChainIK3D's nested `settings/<i>/joints/<j>/bone` keys reach the base by
+  // base-walk rather than through the subclass at all.
   'AimModifier3D:settings/#/*',
+  'ConvertTransformModifier3D:settings/*',
   'CopyTransformModifier3D:settings/#/*',
   'IterateIK3D:settings/*',
+  'SplineIK3D:settings/#/*',
 ]);
 
 /** Walk the filesystem for all linterParser.ts source files. */
@@ -281,8 +293,29 @@ function extractRegisteredKeys(source: string): Array<{ nodeType: string; keys: 
 }
 
 /**
+ * A key reduced to what it MATCHES ON, so the two spellings of one wildcard
+ * family collide.
+ *
+ * Shadowing is an overlap of matched key SETS, not of registration strings, and
+ * `settings/*` (plain prefix) matches a superset of what `settings/#/*` (glued
+ * index) does. Comparing the literal strings called those two different keys and
+ * saw no shadow: `SplineIK3D:settings/#/*` over `ChainIK3D:settings/*` and
+ * `ConvertTransformModifier3D:settings/*` over `BoneConstraint3D:settings/#/*`
+ * were both invisible, the second a TOTAL shadow. The `*:` namespace keeps a
+ * reduced wildcard from ever colliding with a literal key of the same text.
+ */
+function shadowIdentity(key: string): string {
+  if (key.endsWith('#/*')) return `*:${key.slice(0, -'#/*'.length)}`;
+  if (key.endsWith('*')) return `*:${key.slice(0, -1)}`;
+  return key;
+}
+
+/**
  * The guard itself: every key a registration re-declares while its base chain
  * already carries it is a violation, unless allowlisted as `Type:key`.
+ *
+ * The allowlist is keyed on the LITERAL registration string, not the reduced
+ * one, so an entry is greppable from the source line it exempts.
  */
 function findShadowViolations(
   registrations: Array<{ nodeType: string; keys: string[] }>,
@@ -291,9 +324,9 @@ function findShadowViolations(
 ): string[] {
   const violations: string[] = [];
   for (const { nodeType, keys } of registrations) {
-    const inherited = inheritedKeysOf(nodeType);
+    const inherited = new Set([...inheritedKeysOf(nodeType)].map(shadowIdentity));
     for (const key of keys) {
-      if (inherited.has(key) && !intentionalOverrides.has(`${nodeType}:${key}`)) {
+      if (inherited.has(shadowIdentity(key)) && !intentionalOverrides.has(`${nodeType}:${key}`)) {
         violations.push(`'${nodeType}' re-declares '${key}' which is already in its base chain`);
       }
     }

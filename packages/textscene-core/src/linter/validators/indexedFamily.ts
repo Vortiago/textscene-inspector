@@ -100,8 +100,23 @@ export interface IndexedFamilyOptions {
    * slice would have rejected a write Godot applies.
    */
   indexParse?: 'is_valid_int' | 'to_int';
-  /** What this family accepts, for the generated sheet's Accepts column. */
+  /**
+   * The family's noun, spliced into `Unknown <describes> property: "…"`. Keep it
+   * a bare singular noun (`setting`, `item`, `filter`) — it reads as prose.
+   */
   describes: string;
+  /**
+   * What this family accepts, for the generated sheet's Accepts column,
+   * defaulting to {@link describes}.
+   *
+   * Separate because the two audiences want different text and one of them is
+   * MARKDOWN: the sheet generator drops this straight into a table cell
+   * (`lintCoverage.mjs:131`), where the `<i>` of a natural key shape like
+   * `settings/<i>/<leaf>` opens italics and eats the rest of the row. Two slices
+   * reassigned `.accepts` after construction to work around the conflation
+   * before this existed.
+   */
+  accepts?: string;
   /**
    * The negative-index branch, when the class routes writes through the helper
    * that refuses one. Omit where a slice covers the index range with a semantic
@@ -166,7 +181,7 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
     const leaf = leaves[leafName];
     if (!leaf) return unknown(key, line);
     return leaf(key, value, line);
-  }, describes);
+  }, opts.accepts ?? describes);
 
   if (negativeIndex) {
     validator.grounding = { kind: 'enforced', cite: negativeIndex.cite };

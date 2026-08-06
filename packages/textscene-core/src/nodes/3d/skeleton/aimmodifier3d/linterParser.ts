@@ -43,12 +43,8 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-
-/** SkeletonModifier3D::BoneAxis declaration order (skeleton_modifier_3d.h:45-50). */
-const BONE_AXIS = { 0: '+X', 1: '-X', 2: '+Y', 3: '-Y', 4: '+Z', 5: '-Z' };
-
-/** Vector3::Axis declaration order (vector3.h:57-61). */
-const VECTOR3_AXIS = { 0: 'X', 1: 'Y', 2: 'Z' };
+import { BONE_AXIS } from '../skeletonmodifier3d/linterParser.js';
+import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 
 /**
  * The five leaves AimModifier3D itself pushes (aim_modifier_3d.cpp:91-95).

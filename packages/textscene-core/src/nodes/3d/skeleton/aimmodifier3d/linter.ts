@@ -22,6 +22,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
+import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 
 const SETTING_PREFIX = 'settings/';
 const SETTING_INDEX_RE = /^\d+$/;
@@ -32,22 +34,6 @@ const SETTING_INDEX_RE = /^\d+$/;
 // absent key never trips this rule.
 const DEFAULT_FORWARD_AXIS = 2; // BONE_AXIS_PLUS_Y
 const DEFAULT_PRIMARY_ROTATION_AXIS = 0; // Vector3::AXIS_X
-
-/** BoneAxis labels for the diagnostic (skeleton_modifier_3d.h:45-50). */
-const BONE_AXIS_LABELS = ['+X', '-X', '+Y', '-Y', '+Z', '-Z'];
-/** Vector3::Axis labels (vector3.h:57-61). */
-const VECTOR3_AXIS_LABELS = ['X', 'Y', 'Z'];
-
-/**
- * `SkeletonModifier3D::get_axis_from_bone_axis` (skeleton_modifier_3d.cpp:244-260).
- * The switch has NO default case and seeds `ret` with `AXIS_X`, so a value
- * outside 0-5 resolves to X rather than to nothing, and Godot compares that X
- * against the primary axis exactly as it would a legal one.
- */
-function axisFromBoneAxis(boneAxis: number): number {
-  if (boneAxis < 0 || boneAxis > 5) return 0;
-  return Math.floor(boneAxis / 2);
-}
 
 /**
  * Settings the scene actually declares, in ascending order.
@@ -106,8 +92,8 @@ function checkAimModifier3D(context: RuleContext): Diagnostic[] {
     );
     if (axisFromBoneAxis(forwardAxis) !== primaryAxis) continue;
 
-    const forwardLabel = BONE_AXIS_LABELS[forwardAxis] ?? String(forwardAxis);
-    const primaryLabel = VECTOR3_AXIS_LABELS[primaryAxis] ?? String(primaryAxis);
+    const forwardLabel = BONE_AXIS[forwardAxis] ?? String(forwardAxis);
+    const primaryLabel = VECTOR3_AXIS[primaryAxis] ?? String(primaryAxis);
     diagnostics.push({
       severity: 'warning',
       message: `AimModifier3D '${node.name}' setting ${index} aims along ${forwardLabel} and rotates primarily about ${primaryLabel}, the same axis. With use_euler enabled Godot reports "Forward axis and primary rotation axis must not be parallel in setting ${index}", and the projection it aims with is degenerate. Choose a primary_rotation_axis perpendicular to forward_axis.`,

@@ -20,57 +20,27 @@
  * binds the accessors but never calls the macro, and its XML lists only
  * `mutable_bone_axes`, so the key is TwoBoneIK3D's own.
  *
- * ## Why the family is one hand-rolled dispatcher rather than `indexedFamily` alone
+ * ## Why the family registers as a PLAIN `settings/*` wildcard
  *
- * 12 of the 14 leaves are three segments (`settings/0/target_node`), which
- * `indexedFamilyValidator` handles. The other two are FOUR
- * (`settings/0/end_bone/direction`, `settings/0/end_bone/length`,
- * two_bone_ik_3d.cpp:152-153), and that helper splits at the LAST `/`, so it
- * reads their index as `0/end_bone` and rejects the key outright. Worse,
- * `ValidatorRegistry`'s glued-index matcher runs the same scan, so registering
- * `settings/#/*` would route those two keys to no validator at all and silently
- * accept every value on them.
- *
- * So the family registers as a PLAIN `settings/*` wildcard (matched by
- * `startsWith`, which catches all 14) behind a dispatcher that peels off the
- * `end_bone/<option>` pair and delegates every other key to a real
- * `indexedFamilyValidator`. The original key reaches the diagnostic either way.
+ * 12 of the 14 leaves are three segments (`settings/0/target_node`); the other
+ * two are FOUR (`settings/0/end_bone/direction`, `settings/0/end_bone/length`,
+ * two_bone_ik_3d.cpp:152-153). `indexedFamilyValidator` takes both, since it
+ * ends the index at the FIRST `/` past the prefix and reads everything after it
+ * as the leaf name. `ValidatorRegistry`'s glued-index matcher does NOT: it
+ * routes a single leaf segment only, so a `settings/#/*` registration would
+ * reach the four-segment pair never and silently accept every value on them.
+ * Hence the plain wildcard, matched by prefix, which catches all 14.
  */
 
 import '../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
-import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
-
-/**
- * `SkeletonModifier3D::SecondaryDirection`, skeleton_modifier_3d.h:67-75, in the
- * order of `get_hint_secondary_direction()` (skeleton_modifier_3d.h:77).
- */
-const SECONDARY_DIRECTION: Record<number, string> = {
-  0: 'None',
-  1: '+X',
-  2: '-X',
-  3: '+Y',
-  4: '-Y',
-  5: '+Z',
-  6: '-Z',
-  7: 'Custom',
-};
-
-/**
- * `SkeletonModifier3D::BoneDirection`, skeleton_modifier_3d.h:55-62, in the
- * order of `get_hint_bone_direction()` (skeleton_modifier_3d.h:64).
- */
-const BONE_DIRECTION: Record<number, string> = {
-  0: '+X',
-  1: '-X',
-  2: '+Y',
-  3: '-Y',
-  4: '+Z',
-  5: '-Z',
-  6: 'FromParent',
-};
+import { v } from '../../../../linter/validators/index.js';
+import {
+  BONE_DIRECTION,
+  SECONDARY_DIRECTION,
+} from '../skeletonmodifier3d/linterParser.js';
 
 /** Error code for a `settings/…` key whose shape or leaf name is unrecognised. */
 const UNKNOWN_SETTING_CODE = 'INVALID_SETTING_KEY';
@@ -86,8 +56,8 @@ function negativeIndexMessage(index: number): string {
 }
 
 /**
- * The 12 three-segment leaves, keyed by leaf name, in the order
- * `_get_property_list` pushes them (two_bone_ik_3d.cpp:140-151).
+ * All 14 leaves, keyed by their full path below the index, in the order
+ * `_get_property_list` pushes them (two_bone_ik_3d.cpp:140-153).
  *
  * The three bone INDEX keys carry PROPERTY_HINT_NONE and get a format check
  * only. `set_root_bone`/`set_middle_bone`/`set_end_bone` do reset an index to
@@ -154,19 +124,14 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // two_bone_ik_3d.cpp:151, Variant::BOOL, no hint. set_extend_end_bone
   // (two_bone_ik_3d.cpp:345-357) is a bare assignment.
   extend_end_bone: v.boolean('extend_end_bone'),
-};
-
-/**
- * The two four-segment leaves under `settings/<i>/end_bone/`
- * (two_bone_ik_3d.cpp:152-153), routed by `_set`'s inner `opt` switch
- * (two_bone_ik_3d.cpp:60-69).
- */
-const END_BONE_OPTIONS: Readonly<Record<string, PropertyValidator>> = {
+  // The two four-segment leaves, routed by `_set`'s inner `opt` switch
+  // (two_bone_ik_3d.cpp:60-69) and named here by their full path below the index.
+  //
   // two_bone_ik_3d.cpp:152, Variant::INT, PROPERTY_HINT_ENUM
   // "+X,-X,+Y,-Y,+Z,-Z,FromParent" (skeleton_modifier_3d.h:64), values 0-6.
   // set_end_bone_direction (two_bone_ik_3d.cpp:364-378) static_casts and assigns
   // with no range guard, so out of range is hinted, a warning.
-  direction: v.enumInt('end_bone/direction', 0, 6, BONE_DIRECTION, {
+  'end_bone/direction': v.enumInt('end_bone/direction', 0, 6, BONE_DIRECTION, {
     hinted: 'two_bone_ik_3d.cpp:152',
   }),
   // two_bone_ik_3d.cpp:153, Variant::FLOAT, PROPERTY_HINT_RANGE
@@ -174,11 +139,11 @@ const END_BONE_OPTIONS: Readonly<Record<string, PropertyValidator>> = {
   // 0 floor as the only bound. set_end_bone_length (two_bone_ik_3d.cpp:385-396)
   // assigns straight through with no clamp and no is_finite guard, so a negative
   // length loads and runs: hinted, a warning.
-  length: v.float('end_bone/length', { min: 0, hinted: 'two_bone_ik_3d.cpp:153' }),
+  'end_bone/length': v.float('end_bone/length', { min: 0, hinted: 'two_bone_ik_3d.cpp:153' }),
 };
 
-/** Every `settings/<i>/<leaf>` key whose leaf is a single segment. */
-const flatFamily = indexedFamilyValidator({
+/** The whole `settings/<i>/…` family, flat and nested leaves alike. */
+const settingValidator = indexedFamilyValidator({
   // `_set` reads the index with a BARE `to_int` and no `is_valid_int` gate
   // (two_bone_ik_3d.cpp:37), and `_to_int` skips non-digits (ustring.cpp:2268-2298), so
   // `settings/first/x` resolves to setting 0 and the write LANDS. Reporting it
@@ -188,46 +153,15 @@ const flatFamily = indexedFamilyValidator({
   leaves: SETTING_LEAVES,
   unknownCode: UNKNOWN_SETTING_CODE,
   describes: 'setting',
+  // No angle brackets: the sheet generator drops this straight into a Markdown
+  // table cell (lintCoverage.mjs:131), where `<i>` would open italics.
+  accepts: 'per-setting bone chain, pole direction and virtual end-bone setup',
   negativeIndex: {
     cite: 'two_bone_ik_3d.cpp:39',
     code: NEGATIVE_SETTING_INDEX_CODE,
     message: negativeIndexMessage,
   },
 });
-
-/** `settings/<i>/end_bone/<option>`, the only four-segment shape the class writes. */
-const END_BONE_OPTION_RE = /^settings\/([+-]?\d+)\/end_bone\/(.+)$/;
-
-/**
- * The whole `settings/` family. Four-segment `end_bone/<option>` keys are handled
- * here; everything else goes to `flatFamily`, which owns the index parse, the
- * negative-index refusal and the unknown-leaf message for the common shape.
- */
-const settingValidator = accepts((key, value, line) => {
-  const match = END_BONE_OPTION_RE.exec(key);
-  if (!match) return flatFamily(key, value, line);
-
-  const index = Number(match[1]);
-  if (index < 0) {
-    return propertyError(key, line, negativeIndexMessage(index), NEGATIVE_SETTING_INDEX_CODE);
-  }
-  // hasOwnProperty, so an option named `toString` cannot resolve an inherited
-  // function and get called as a validator.
-  const option = match[2] ?? '';
-  if (!Object.prototype.hasOwnProperty.call(END_BONE_OPTIONS, option)) {
-    return propertyError(key, line, `Unknown setting property: "${key}"`, UNKNOWN_SETTING_CODE);
-  }
-  const leaf = END_BONE_OPTIONS[option];
-  if (!leaf) return propertyError(key, line, `Unknown setting property: "${key}"`, UNKNOWN_SETTING_CODE);
-  return leaf(key, value, line);
-}, 'settings/<i>/<leaf>');
-
-// The negative index is refused by TwoBoneIK3D's own ERR_FAIL_INDEX_V, so this
-// dispatcher rejects a real value and is grounded rather than format-only. The
-// leaves are exposed so `boundGrounding`'s sweep recurses past the dispatcher
-// instead of taking its tag as a vouch for every bound behind it.
-settingValidator.grounding = { kind: 'enforced', cite: 'two_bone_ik_3d.cpp:39' };
-settingValidator.leaves = [flatFamily, ...Object.values(END_BONE_OPTIONS)];
 
 validatorRegistry.registerAll('TwoBoneIK3D', {
   // two_bone_ik_3d.cpp:506, ADD_ARRAY_COUNT (PROPERTY_HINT_NONE, so no hint to

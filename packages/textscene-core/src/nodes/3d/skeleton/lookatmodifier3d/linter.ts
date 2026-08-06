@@ -23,28 +23,14 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
+import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 
 // look_at_modifier_3d.h:52-53, the field initialisers: a key a scene omits
 // carries these, and the pair is not parallel (BONE_AXIS_PLUS_Z maps to AXIS_Z,
 // the default primary axis is AXIS_Y), so two absent keys never trip this rule.
 const DEFAULT_FORWARD_AXIS = 4; // BONE_AXIS_PLUS_Z
 const DEFAULT_PRIMARY_ROTATION_AXIS = 1; // Vector3::AXIS_Y
-
-/** BoneAxis labels for the diagnostic (skeleton_modifier_3d.h:45-50). */
-const BONE_AXIS_LABELS = ['+X', '-X', '+Y', '-Y', '+Z', '-Z'];
-/** Vector3::Axis labels (vector3.h:57-61). */
-const VECTOR3_AXIS_LABELS = ['X', 'Y', 'Z'];
-
-/**
- * `SkeletonModifier3D::get_axis_from_bone_axis` (skeleton_modifier_3d.cpp:244-260).
- * The switch has NO default case and seeds `ret` with `AXIS_X`, so a value
- * outside 0-5 resolves to X rather than to nothing, and Godot compares that X
- * against the primary axis exactly as it would a legal one.
- */
-function axisFromBoneAxis(boneAxis: number): number {
-  if (boneAxis < 0 || boneAxis > 5) return 0;
-  return Math.floor(boneAxis / 2);
-}
 
 /** A property's value, or the engine default when the scene omits it. */
 function axisNumber(
@@ -73,8 +59,8 @@ function checkLookAtModifier3D(context: RuleContext): Diagnostic[] {
   );
   if (axisFromBoneAxis(forwardAxis) !== primaryAxis) return [];
 
-  const forwardLabel = BONE_AXIS_LABELS[forwardAxis] ?? String(forwardAxis);
-  const primaryLabel = VECTOR3_AXIS_LABELS[primaryAxis] ?? String(primaryAxis);
+  const forwardLabel = BONE_AXIS[forwardAxis] ?? String(forwardAxis);
+  const primaryLabel = VECTOR3_AXIS[primaryAxis] ?? String(primaryAxis);
   return [
     {
       severity: 'warning',

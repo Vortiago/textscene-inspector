@@ -54,26 +54,7 @@ import {
   propertyError,
   v,
 } from '../../../../linter/validators/index.js';
-
-/** PROPERTY_HINT_ENUM "X,Y,Z,All,Custom" (skeleton_modifier_3d.h:87). */
-const ROTATION_AXIS: Record<number, string> = {
-  0: 'X',
-  1: 'Y',
-  2: 'Z',
-  3: 'All',
-  4: 'Custom',
-};
-
-/** PROPERTY_HINT_ENUM "+X,-X,+Y,-Y,+Z,-Z,FromParent" (skeleton_modifier_3d.h:64). */
-const BONE_DIRECTION: Record<number, string> = {
-  0: '+X',
-  1: '-X',
-  2: '+Y',
-  3: '-Y',
-  4: '+Z',
-  5: '-Z',
-  6: 'FromParent',
-};
+import { BONE_DIRECTION, ROTATION_AXIS } from '../skeletonmodifier3d/linterParser.js';
 
 /** PROPERTY_HINT_ENUM "WorldOrigin,Node,Bone" (spring_bone_simulator_3d.cpp:300). */
 const CENTER_FROM: Record<number, string> = {
