@@ -30,8 +30,8 @@ framed by the 1152x648 project viewport.
 
 ## Divergences
 
-The whole frame is within a mean channel error of **4.93/255**, with 5.2 % of pixels over
-16/255. Stone, floor and the lit regions all agree closely now:
+The whole frame is within a mean channel error of **5.09/255**, with 5.4 % of pixels over
+16/255. Stone, floor and the lit regions all agree closely:
 
 | Sample | ours | Godot |
 | --- | --- | --- |
@@ -41,41 +41,35 @@ The whole frame is within a mean channel error of **4.93/255**, with 5.2 % of pi
 
 What remains is two things, and neither is draw order.
 
-**The candles are lit, but not at Godot's instant.** `CPUParticles2D` now renders, so every
-flame, glow and sparkle in the map is present. What cannot match is the exact moment: the
-candle sets neither `use_fixed_seed` nor `preprocess`, so Godot randomises the seed at
-construction and never saves it, and its own two consecutive renders of the sub-scene differ
-by 187 pixels. The previewer substitutes a fixed seed and a fixed evaluation time, which makes
-OUR frame stable run to run and puts the particles in plausible places rather than the
-engine's. The Candle section below isolates it at 0.83/255.
+**The candles are lit, but not at Godot's instant.** Every flame, glow and sparkle in the
+map is present. What cannot match is the exact moment: the candle sets neither
+`use_fixed_seed` nor `preprocess`, so Godot randomises the seed at construction and never
+saves it, and its own two consecutive renders of the sub-scene differ by 187 pixels. The
+previewer substitutes a fixed seed and a fixed evaluation time, which makes OUR frame stable
+run to run and puts the particles in plausible places rather than the engine's. The Candle
+section below isolates it at 0.83/255.
 
-**What is left is two opposite errors, not one.** Splitting the 5.2 % of pixels over
-16/255 by sign:
+**The rest is two opposite errors.** Splitting the 5.4 % of pixels over 16/255 by sign:
 
 | | share | mean delta (Godot − ours) | Godot's luminance there |
 | --- | --- | --- | --- |
-| ours too BRIGHT | 62 % | R −23, G −26, B −31 | 73/255 |
-| ours too dark | 38 % | R +20, G +11, B +7 | 119/255 |
+| ours too BRIGHT | 62 % | R −25.7, G −27.5, B −26.5 | 64/255 |
+| ours too dark | 38 % | R +10.7, G +6.6, B +18.6 | 118/255 |
 
-The dominant half is the previewer rendering light where Godot renders dark, clustered
-rather than spread — one region right of centre holds a sixth of all the over-threshold
-pixels. Its deltas are near-uniform across the channels, which points at coverage or alpha
-rather than colour space. The suspects are not the occluder shadows this PR implements (the
-scene has 7 `LightOccluder2D`) but the 38 gradient shadow `Polygon2D`s, which reach the
-canvas through `light_mode = 1` and an entirely different path.
+The dominant half is the previewer rendering light where Godot renders dark, and it is one
+region rather than a spread: roughly x 740–960, y 150–360 — a pillar, the wall top beside it
+and the floor tiles above the rug — where Godot lays a darkening the previewer does not draw.
+On the pillar at `775,300` Godot reads `[38, 79, 142]` against ours `[82, 123, 189]`. The
+deltas are near-uniform across the channels, which points at coverage or alpha rather than
+colour space, but the cause is not identified.
 
-The minority half is the opposite sign and a lopsided signature — red roughly twice green,
-three times blue — on brighter pixels. That one is consistent with the sRGB residual:
-Godot's canvas composites in **sRGB, clamped to [0,1]** (`Viewport.hdr_2d` defaults to
-`false`, so 2D never enters a linear working space) while ours accumulates unclamped and
-encodes on output.
+The minority half is the opposite sign, on brighter pixels, and blue-dominant. That cause is
+not identified either.
 
-Neither is in the light pass, which now agrees with the engine to within a unit or two per
-channel on every isolated fixture. Chasing the 62 % is the next parity win.
-
-The rest of the light pass is now in: `light_mask` against `range_item_cull_mask`,
+Neither is in the light pass, which agrees with the engine to within a unit or two per
+channel on every isolated fixture: `light_mask` against `range_item_cull_mask`,
 `LightOccluder2D` shadow casting with `cull_mode` and `shadow_item_cull_mask`, an
-albedo-free `shadow_color`, and `CanvasItemMaterial.light_mode`, so the scene's `Unshaded`
+albedo-free `shadow_color`, and `CanvasItemMaterial.light_mode` — so the scene's `Unshaded`
 shadow and torch-pool polygons keep their authored colour rather than taking the blue canvas
 tint.
 
@@ -91,8 +85,8 @@ the wrappers in `scenes/isometric/previews/` re-centre them; nothing else is cha
 <!-- compare: image=complex-isometric-dungeon-candle status=limitation fixture=previews/candle_preview.tscn -->
 
 A `Sprite2D` wick, four `CPUParticles2D` (`glow`, `Fire`, `Sparkle`, `flow front`) and two
-`PointLight2D`s. All four emitters render now, so the candle reads as a lit candle: flame body,
-warm glow and rising sparks. Mean channel error **0.83/255**, 0.1 % of pixels over 16.
+`PointLight2D`s. All four emitters render, so the candle reads as a lit candle: flame body,
+warm glow and rising sparks. Mean channel error **0.83/255**, 0.06 % of pixels over 16.
 
 The `Fire` and `Sparkle` emitters both carry a `CanvasItemMaterial` with
 `particles_animation = true` over an 11- and an 8-frame strip. Without that flipbook each
@@ -117,9 +111,9 @@ carries the fixtures that do pin it, where the two sides agree to within 0.6/255
 <!-- compare: image=complex-isometric-dungeon-internal-shadow status=done fixture=previews/internal_shadow_preview.tscn -->
 
 One `Polygon2D` carrying `shadow_gradient.png` through a four-vertex `uv` in texel space that
-runs negative on two corners (`-2, -1`). This is the case that used to draw as a hard navy
-quadrilateral. Mean channel error **0.99/255** with **no pixel over 16** and a worst channel of
-3, so the UV normalisation, the wrap mode and the translucent fill all land.
+runs negative on two corners (`-2, -1`). Mean channel error **0.99/255** with **no pixel over
+16** and a worst channel of 3, so the UV normalisation, the wrap mode and the translucent fill
+all land.
 
 The 0.99 mean is a uniform near-zero offset across the backdrop rather than error concentrated
 in the shadow — the two sides differ by 1 unit of rounding over most of the frame.
@@ -136,26 +130,8 @@ GDScript**. The scene serialises `animation = "front_idle"`, `frame = 8`, and th
 draw. Godot instantiates the scene, `goblin.gd`'s `_physics_process` runs, and its
 `last_direction = Vector2(1, 0)` resolves to `side_right_idle`, which it then `play()`s — so
 the reference shows a right-facing pose from a *different* animation, at whatever frame the
-clock reached. Mean channel error **1.32/255**, 0.5 % of pixels over 16, all of it inside the
+clock reached. Mean channel error **1.31/255**, 0.54 % of pixels over 16, all of it inside the
 128x128 sprite.
 
 A previewer that ran the script would not be more correct here, only differently timed: the
 frame is a function of elapsed time. The authored state is the reproducible thing to draw.
-
-## Fixed since the previous capture
-
-Recorded because the previous revision of this sheet mis-attributed all three:
-
-- **The missing props were not "un-surfaced instanced/animated content."** Every vase, coin
-  pile, bone pile, the fifteen internal shadows and the player were dropped by a draw-order
-  regression: the y-sort pass re-dispatched children through a second renderer that never
-  handled `instance=`, and an instance node carries no `type=` for a registry lookup to hit.
-  48 nodes in this scene. They render now.
-- **The colour shift was not tone mapping of authored 2D content in general.** It was
-  react-three-fiber's default ACES tone mapping on the 2D stage's own `<Canvas>`, compounded
-  by a `CanvasModulate` that did nothing at all because the previewer scoped it to the node's
-  subtree and this scene's CanvasModulate is a childless leaf.
-- **The hard-edged navy, teal and khaki slabs were not a Z-order fault.** They were
-  `Polygon2D` drawing its flat `color` with no `texture`/`uv` mapping and no
-  `CanvasItemMaterial` blending, which turned 38 soft gradient shadows into opaque
-  quadrilaterals and 16 additive torch pools into flat olive rectangles.

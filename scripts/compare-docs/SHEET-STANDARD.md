@@ -119,9 +119,9 @@ constraint is structural rather than visible in the capture. Put it last.
   fails the check. The hand-written lenient-parser prose goes BELOW `lint:end`.
 - **ADR links.** Write `ADR-0025` as plain text; the generator links it. A relative
   path is wrong from a slice, wrong in the gallery, and broken on the deployed site.
-- **Shared causes.** A divergence explained in `docs/comparison/README.md` (2D
-  tonemapping, RemoteTransform relay limits) is written there once. Report your own
-  measured pixels and point at it.
+- **Shared causes.** A divergence explained in `docs/comparison/README.md` (the
+  RemoteTransform relay limits) is written there once. Report your own measured
+  pixels and point at it.
 
 Two sheet kinds carry no `## Linting` block, and the sheets test asserts they have
 no markers: the `complex-*` whole-scene showcases (no single node type), and the

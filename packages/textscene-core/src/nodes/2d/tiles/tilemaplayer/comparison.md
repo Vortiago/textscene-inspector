@@ -1,6 +1,7 @@
 ---
 type: TileMapLayer
 category: 2D
+status: limitation
 fixture: unit-tile-map-layer.tscn
 image: unit-tile-map-layer
 renders_as: batched textured tile quads
@@ -23,11 +24,16 @@ blue field covered by a regular grid of white "F" markers.
 
 ## Divergences
 
-Godot draws the marker's white pixels at full white (~252); ours renders them light
-grey (~223). The tile mesh uses an unlit `meshBasicMaterial` that keeps three's
-default `toneMapped: true`, so the scene tonemapper compresses the bright white —
-Godot's 2D CanvasItem draw is not tonemapped. Tile positions, the grid, and the
-blue background (~214 vs ~223 on the blue channel) all match.
+Tile positions, the grid, the marker's white and the blue field are exact: the
+stem interior at `128,200` reads `rgb(255, 255, 255)` and the field at `700,380`
+`rgb(45, 108, 223)` on both sides. The magnified EDGES are not. Each 32 px tile
+is drawn at 128 px, so every glyph boundary is a four-pixel bilinear ramp between
+two texels, and the two engines interpolate that ramp in different spaces: the
+sRGB atlas is filtered in linear space here and in sRGB byte space by Godot's
+canvas. Ours therefore reads brighter mid-ramp — at `114,200` Godot
+`rgb(91, 140, 231)` against ours `rgb(116, 149, 230)` — by up to 45/255 at the
+steepest step. Mean channel error 0.375/255 over the frame, 2.2 % of pixels over
+16/255, every one of them on a glyph edge.
 
 ## Linting
 

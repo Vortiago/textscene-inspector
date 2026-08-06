@@ -1,6 +1,7 @@
 ---
 type: AnimatedSprite2D
 category: 2D
+status: done
 fixture: unit-animatedsprite2d.tscn
 image: unit-animatedsprite2d
 renders_as: a textured quad
@@ -27,11 +28,7 @@ frame at the same time on each side.
 
 ## Divergences
 
-The sprite reads slightly flatter in the previewer. Its quad uses a tone-mapped
-material, so the preview's tone-mapping compresses the texture's highlights (the
-source's pure-white eye, `(255,255,255)`, renders at `(226,226,226)`) and nudges
-the mid-tones, whereas Godot's 2D canvas blits the texel values unchanged.
-Position, scale, and the played frames match at each moment of the clip.
+None visible in this fixture.
 
 ## Linting
 
