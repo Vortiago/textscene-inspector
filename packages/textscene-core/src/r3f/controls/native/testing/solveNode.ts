@@ -27,9 +27,17 @@
 
 import type { SolveNode } from '../solveTree';
 
-const NO_STYLE_BOXES: SolveNode['styleBoxes'] = {};
-const NO_FONT_OVERRIDES: SolveNode['fontOverrides'] = {};
-const NO_THEME_CHAIN: SolveNode['themeChain'] = [];
+/**
+ * Frozen because they are SHARED across every node this factory builds, where a
+ * hand-written literal used to get a fresh `{}`/`[]` each time. TypeScript's
+ * `readonly` is erased at runtime, so without the freeze an in-place mutation
+ * would silently leak into every other node in the run and surface as an
+ * unrelated test failing far from the mutation. The freeze makes it throw at the
+ * mutation site instead.
+ */
+const NO_STYLE_BOXES: SolveNode['styleBoxes'] = Object.freeze({});
+const NO_FONT_OVERRIDES: SolveNode['fontOverrides'] = Object.freeze({});
+const NO_THEME_CHAIN: SolveNode['themeChain'] = Object.freeze([]);
 
 /**
  * Every field but `path`/`node` — the two a real `SolveNode` always needs a
