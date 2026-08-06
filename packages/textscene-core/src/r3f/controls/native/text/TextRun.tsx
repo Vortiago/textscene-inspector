@@ -1,7 +1,29 @@
 /**
  * Merged glyph quads for one `shapeText` layout — every visible glyph across
- * every line as a SINGLE `THREE.BufferGeometry` + MSDF material, sampled from
- * the vendored Open Sans atlas.
+ * every line as a SINGLE `THREE.BufferGeometry` + material.
+ *
+ * ## Internal dispatch: MSDF atlas vs. canvas-rasterised
+ *
+ * `<TextRun>` is the ONE entry point every text-painting Control
+ * (`label`/`button`/`lineedit`/`richtextlabel`/…) imports; none of them
+ * branch on which font a node resolved, so this component does, reading
+ * `layout.fontMetrics.kind` (`fontMetrics.ts`'s `FontMetricsKind` — the
+ * SAME field `textLayout.ts`'s `shapeText` already echoes back for every
+ * layout, atlas or not):
+ *   - `'atlas'` (default, `OPEN_SANS_FONT_METRICS`) — `buildGlyphQuadArrays`
+ *     below, sampled from the vendored Open Sans MSDF atlas, unchanged from
+ *     before a second `FontMetrics` kind existed.
+ *   - `'canvas'` (`runtimeFontMetrics.ts`'s `CanvasFontMetrics` — a
+ *     scene-authored font with no baked atlas) — `canvasTextPainter.ts`'s
+ *     `buildCanvasTextQuadArrays`/`paintSceneFontCanvas`, ONE textured quad
+ *     rasterised through canvas-2D instead of many atlas-sampled ones (that
+ *     module's own doc has the full reasoning and the CSP constraint that
+ *     rules out a runtime MSDF atlas).
+ * Adding a scene font therefore touches no per-slice `Component.tsx`: a
+ * widget passes `layout`/`fontSizePx`/`tint` exactly as it always has, and
+ * whichever `FontMetrics` `shapeText` shaped against decides the painter.
+ *
+ * ## MSDF atlas geometry
  *
  * Geometry lives in Godot pixels, +Y down, then negates Y once per vertex to
  * land in three-local (Y-up) space — the same convention
@@ -24,6 +46,13 @@ import * as THREE from 'three';
 import { OPEN_SANS_ATLAS_INFO, OPEN_SANS_ATLAS_PNG_DATA_URL } from './openSansAtlas';
 import { getAscentPx } from './openSansMetrics';
 import { createMsdfMaterial } from './msdfMaterial';
+import {
+  computeCanvasTextCanvasLayout,
+  buildCanvasTextQuadArrays,
+  paintSceneFontCanvas,
+  createCanvasTextMaterial,
+} from './canvasTextPainter';
+import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import type { TextLayoutResult } from './textLayout';
 import type { Color } from '../../../../nodes/base/node2d/types';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
@@ -72,7 +101,13 @@ export function buildGlyphQuadArrays(
   skew = 0
 ): GlyphQuadArrays {
   const scale = fontSizePx / OPEN_SANS_ATLAS_INFO.fontSize;
-  const baselineOffsetPx = getAscentPx(fontSizePx);
+  // `layout.baselineOffsetPx` is `shapeText`'s own `getFontAscentPx(fontMetrics,
+  // fontSizePx)` — the SAME quantity `getAscentPx` recomputes below, kept as
+  // a fallback only for a hand-built `TextLayoutResult` (a solo-line wrapper
+  // outside this engine's ownership) that omits it; `textLayout.ts`'s own
+  // doc has why that fallback is safe (those wrappers are Open-Sans-only
+  // today).
+  const baselineOffsetPx = layout.baselineOffsetPx ?? getAscentPx(fontSizePx);
 
   let glyphCount = 0;
   for (const line of layout.lines) {
@@ -185,6 +220,86 @@ export interface TextRunProps {
   frameExcluded?: boolean;
 }
 
+/** One built run — geometry + material, plus (canvas path only) the per-instance texture this component owns and must dispose (the MSDF atlas texture, by contrast, is cached/shared for the process's whole lifetime and must NEVER be disposed by a consumer — `getAtlasTexture`'s own doc). */
+interface BuiltTextRun {
+  geometry: THREE.BufferGeometry;
+  material: THREE.Material;
+  ownedTexture?: THREE.Texture;
+}
+
+/**
+ * The atlas branch is byte-for-byte what this component always did.
+ * The canvas branch (`layout.fontMetrics.kind === 'canvas'`) is the ONLY
+ * place this component's own doc's "internal dispatch" actually happens —
+ * see that doc for why a per-slice `Component.tsx` never needs its own
+ * branch. Outline (`outlineTint`/`outlineBias`) and synthesized-bold
+ * (`distanceBias`) are MSDF-distance-field techniques with no canvas-path
+ * equivalent yet — a canvas-rasterised run ignores both rather than
+ * approximating them, a deliberate, documented scope boundary (see this
+ * packet's own report), not a silent drop of a feature the atlas path still
+ * has.
+ */
+function buildTextRun(
+  layout: TextLayoutResult,
+  fontSizePx: number,
+  tint: Color,
+  skew: number,
+  distanceBias: number,
+  clippingPlanes: readonly THREE.Plane[] | undefined,
+  depthTest: boolean | undefined,
+  side: THREE.Side | undefined,
+  outlineTint: Color | undefined,
+  outlineBias: number | undefined
+): BuiltTextRun {
+  if (isCanvasFontMetrics(layout.fontMetrics)) {
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, skew);
+    const { positions, uvs, indices } = buildCanvasTextQuadArrays(layout, canvasLayout);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+    geo.setIndex(new THREE.BufferAttribute(indices, 1));
+
+    const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout);
+    const texture = new THREE.CanvasTexture(canvas);
+    // Canvas 2D fill colours are sRGB (`canvasTextPainter.ts`'s own doc) —
+    // marking the texture SRGBColorSpace gets three's OWN automatic decode
+    // at sample time, the built-in-material equivalent of `msdfMaterial.ts`'s
+    // hand-written `sRGBToLinearRGB` + `colorspace_fragment` chunk.
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.generateMipmaps = false;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+
+    const material = createCanvasTextMaterial({ map: texture, opacity: tint.a, clippingPlanes, depthTest, side });
+    return { geometry: geo, material, ownedTexture: texture };
+  }
+
+  const { positions, uvs, indices } = buildGlyphQuadArrays(layout, fontSizePx, skew);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  geo.setIndex(new THREE.BufferAttribute(indices, 1));
+
+  const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
+  const outline = outlineTint ? sRGBToLinearRGB(outlineTint.r, outlineTint.g, outlineTint.b) : null;
+  const material = createMsdfMaterial({
+    map: getAtlasTexture(),
+    color: { r, g, b },
+    opacity: tint.a,
+    pxRange: OPEN_SANS_ATLAS_INFO.distanceRange,
+    distanceBias,
+    clippingPlanes,
+    depthTest,
+    side,
+    outlineColor: outline ? { r: outline[0], g: outline[1], b: outline[2] } : undefined,
+    outlineOpacity: outlineTint?.a,
+    outlineBias,
+  });
+  return { geometry: geo, material };
+}
+
 export function TextRun({
   layout,
   fontSizePx,
@@ -199,43 +314,11 @@ export function TextRun({
   outlineBias,
   frameExcluded,
 }: TextRunProps) {
-  const geometry = useMemo(() => {
-    const { positions, uvs, indices } = buildGlyphQuadArrays(layout, fontSizePx, skew);
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-    geo.setIndex(new THREE.BufferAttribute(indices, 1));
-    return geo;
-  }, [layout, fontSizePx, skew]);
-
-  const material = useMemo(() => {
-    const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
-    const outline = outlineTint ? sRGBToLinearRGB(outlineTint.r, outlineTint.g, outlineTint.b) : null;
-    return createMsdfMaterial({
-      map: getAtlasTexture(),
-      color: { r, g, b },
-      opacity: tint.a,
-      pxRange: OPEN_SANS_ATLAS_INFO.distanceRange,
-      distanceBias,
-      clippingPlanes,
-      depthTest,
-      side,
-      outlineColor: outline ? { r: outline[0], g: outline[1], b: outline[2] } : undefined,
-      outlineOpacity: outlineTint?.a,
-      outlineBias,
-    });
-  }, [
-    tint.r,
-    tint.g,
-    tint.b,
-    tint.a,
-    distanceBias,
-    clippingPlanes,
-    depthTest,
-    side,
-    outlineTint,
-    outlineBias,
-  ]);
+  const { geometry, material, ownedTexture } = useMemo(
+    () => buildTextRun(layout, fontSizePx, tint, skew, distanceBias, clippingPlanes, depthTest, side, outlineTint, outlineBias),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `tint` is compared by its own r/g/b/a fields, not object identity (a caller re-creating an equal-valued tint object every render, as several already do, must not rebuild the mesh) -- the SAME per-field contract the pre-dispatch code already had for the material-only memo, now covering geometry/texture too since the canvas branch rasterises `tint` into the texture itself.
+    [layout, fontSizePx, tint.r, tint.g, tint.b, tint.a, skew, distanceBias, clippingPlanes, depthTest, side, outlineTint, outlineBias]
+  );
 
   // R3F does not dispose a geometry/material passed as a PROP (only ones it
   // created from JSX args), so both leak on every rebuild without this. Cheap
@@ -243,6 +326,11 @@ export function TextRun({
   // line and re-shapes on every rect or font change.
   useEffect(() => () => geometry.dispose(), [geometry]);
   useEffect(() => () => material.dispose(), [material]);
+  // The canvas path's per-instance raster texture (`ownedTexture`) is NOT
+  // the shared, cached MSDF atlas texture `getAtlasTexture()` returns (which
+  // must never be disposed by a consumer) — it is fresh on every rebuild of
+  // THIS run and must be disposed the same way geometry/material are.
+  useEffect(() => () => ownedTexture?.dispose(), [ownedTexture]);
 
   return (
     <mesh

@@ -14,13 +14,19 @@
  *    per-implementation copy of that rule is the bug this is structured to
  *    prevent) lives there, once, for every implementation.
  *  - `openSansAtlas.ts`'s `OPEN_SANS_ATLAS_GLYPHS` — the ONLY per-glyph
- *    atlas-bitmap table, read directly below regardless of which
- *    `FontMetrics` shaped the line. This is a deliberate, still-open
- *    boundary: shaping is font-agnostic via `FontMetrics`, but the glyph
- *    PAINTING metadata this module attaches to each placement is not — a
- *    font with no baked MSDF atlas (a future runtime-loaded scene font,
- *    rasterised through canvas-2D instead) would need a different painter,
- *    which is out of this module's scope.
+ *    atlas-bitmap table, consulted ONLY when `options.fontMetrics.kind` is
+ *    `'atlas'` (the default, `OPEN_SANS_FONT_METRICS`). A `'canvas'` metrics
+ *    object (`runtimeFontMetrics.ts`'s `CanvasFontMetrics` — a runtime-loaded
+ *    scene font with no baked atlas) shapes through the exact same line-
+ *    breaking/placement code below but every `GlyphPlacement.glyph` comes
+ *    back `null`: there is no MSDF bitmap for it, and painting it is
+ *    `TextRun.tsx`'s canvas-rasterisation path instead, which reads
+ *    `TextLayoutResult.fontMetrics` (also carried below) to dispatch. Gating
+ *    on `kind` here — rather than leaving the atlas lookup unconditional, as
+ *    it used to be before a second `FontMetrics` implementation existed — is
+ *    what closes the boundary this doc used to call "still open": an atlas
+ *    lookup for a font the atlas was never baked from would otherwise return
+ *    an Open-Sans bitmap for a DIFFERENT font's advances/kerning, silently.
  *
  * Line-breaking is a direct port of two Godot functions:
  *   scene/gui/label.cpp :: Label::_shape() (~209-225) — maps
@@ -68,7 +74,13 @@
  */
 
 import { OPEN_SANS_ATLAS_GLYPHS, type OpenSansGlyph } from './openSansAtlas';
-import { getFontGlyphAdvancePx, getFontKerningAdjustmentPx, getFontLinePitchPx, type FontMetrics } from './fontMetrics';
+import {
+  getFontAscentPx,
+  getFontGlyphAdvancePx,
+  getFontKerningAdjustmentPx,
+  getFontLinePitchPx,
+  type FontMetrics,
+} from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 
 /** Godot `TextServer::AutowrapMode` (`core/templates/rid.h`-adjacent enum; values match the engine's). */
@@ -149,7 +161,7 @@ export interface GlyphPlacement {
    * and this placement pass with no second calculation to drift from it).
    */
   advance: number;
-  /** Atlas bitmap metadata for this glyph, or `null` if the atlas has none (outside the vendored ASCII set). */
+  /** Atlas bitmap metadata for this glyph, or `null` if the atlas has none (outside the vendored ASCII set) OR the line was shaped against a non-`'atlas'` `FontMetrics` (this module's own doc has why). */
   glyph: OpenSansGlyph | null;
 }
 
@@ -169,6 +181,28 @@ export interface TextLayoutResult {
   widthPx: number;
   /** `lines.length * linePitchPx`. */
   heightPx: number;
+  /**
+   * `getFontAscentPx(fontMetrics, fontSizePx)` — where a line's own baseline
+   * sits, measured down from that line's top (`fontMetrics.ts`'s own doc:
+   * the SAME rounded value every other baseline-relative pixel quantity,
+   * e.g. the italic-shear pivot, is measured from). `shapeText` always sets
+   * this; a caller that hand-builds a `TextLayoutResult` by slicing one line
+   * back out of an already-shaped result (`Label`/`RichTextLabel`/`Label3D`'s
+   * own solo-line wrappers) may omit it — optional so those pre-existing
+   * call sites (outside this engine's ownership) need no change; `TextRun.tsx`
+   * falls back to the legacy Open-Sans-specific computation when absent.
+   */
+  baselineOffsetPx?: number;
+  /**
+   * The `FontMetrics` this layout was shaped against — `options.fontMetrics`
+   * echoed back, defaulting to `OPEN_SANS_FONT_METRICS` exactly like shaping
+   * itself. `TextRun.tsx` reads `.kind` off this to dispatch between the MSDF
+   * atlas painter and the canvas-rasterisation painter; optional for the same
+   * hand-built-solo-line reason as `baselineOffsetPx` (its absence means
+   * "paint via the atlas", the pre-existing behaviour every such call site
+   * already assumed).
+   */
+  fontMetrics?: FontMetrics;
 }
 
 /**
@@ -448,6 +482,12 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   const ranges = shapedTextGetLineBreaks(breakGlyphs, effectiveWidth, flags);
   const linePitchPx = getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx);
 
+  // Atlas bitmaps only exist for the ONE font `openSansAtlas.ts` bakes —
+  // looking them up for a DIFFERENT `FontMetrics` (a scene font) would
+  // return Open Sans ink for that font's own advances/kerning. See this
+  // module's own doc for the full reasoning.
+  const isAtlasFont = fontMetrics.kind === 'atlas';
+
   const lines: TextLineLayout[] = ranges.map(([start, end]) => {
     const clampedEnd = Math.min(end, transformed.length);
     const lineText = transformed.slice(start, clampedEnd);
@@ -456,7 +496,12 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     for (let idx = start; idx < clampedEnd; idx++) {
       const ch = transformed[idx]!;
       const bg = breakGlyphs[idx]!;
-      glyphs.push({ char: ch, x: penX, advance: bg.advance, glyph: OPEN_SANS_ATLAS_GLYPHS[ch] ?? null });
+      glyphs.push({
+        char: ch,
+        x: penX,
+        advance: bg.advance,
+        glyph: isAtlasFont ? (OPEN_SANS_ATLAS_GLYPHS[ch] ?? null) : null,
+      });
       penX += bg.advance;
     }
     return { text: lineText, glyphs, widthPx: penX };
@@ -464,6 +509,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
 
   const widthPx = lines.reduce((max, l) => Math.max(max, l.widthPx), 0);
   const heightPx = lines.length * linePitchPx;
+  const baselineOffsetPx = getFontAscentPx(fontMetrics, fontSizePx);
 
-  return { lines, linePitchPx, widthPx, heightPx };
+  return { lines, linePitchPx, widthPx, heightPx, baselineOffsetPx, fontMetrics };
 }

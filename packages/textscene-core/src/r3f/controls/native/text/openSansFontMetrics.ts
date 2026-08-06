@@ -18,6 +18,7 @@ import type { FontMetrics } from './fontMetrics';
 import { OPEN_SANS_METRICS, getGlyphAdvanceUnits, getKerningAdjustmentUnits } from './openSansMetrics';
 
 export const OPEN_SANS_FONT_METRICS: FontMetrics = {
+  kind: 'atlas',
   get unitsPerEm() {
     return OPEN_SANS_METRICS.unitsPerEm;
   },

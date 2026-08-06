@@ -31,6 +31,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { AutowrapMode, shapeText } from './textLayout';
 import { OPEN_SANS_METRICS } from './openSansMetrics';
+import type { FontMetrics } from './fontMetrics';
 
 /** Every line's rendered text, in order — the shape most tests care about. */
 function lineTexts(text: string, boxWidthPx: number, autowrapMode: AutowrapMode, fontSizePx = 16): string[] {
@@ -268,5 +269,37 @@ describe('shapeText — empty text', () => {
     expect(layout.lines).toHaveLength(1);
     expect(layout.lines[0]!.text).toBe('');
     expect(layout.heightPx).toBe(26);
+  });
+});
+
+describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the shaping/painting dispatch seam)', () => {
+  it('echoes back the default OPEN_SANS_FONT_METRICS (kind "atlas") and its own ceil(ascent) as baselineOffsetPx when no fontMetrics option is given', () => {
+    const layout = shapeText('X', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    expect(layout.fontMetrics?.kind).toBe('atlas');
+    // ceil(2189 * 16/2048) = 18 -- OPEN_SANS_METRICS.ascent's own value, same
+    // arithmetic openSansMetrics.ts's getAscentPx documents.
+    expect(layout.baselineOffsetPx).toBe(18);
+  });
+
+  it('a font of kind "canvas" shapes through the SAME line-breaking/placement code but every glyph placement carries no atlas bitmap', () => {
+    const canvasMetrics: FontMetrics = {
+      kind: 'canvas',
+      unitsPerEm: 1000,
+      ascent: 800,
+      descent: 200,
+      getGlyphAdvanceUnits: () => 500,
+      getKerningAdjustmentUnits: () => 0,
+      averageAdvanceUnits: 500,
+    };
+    const layout = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, fontMetrics: canvasMetrics });
+    expect(layout.fontMetrics).toBe(canvasMetrics);
+    for (const gp of layout.lines[0]!.glyphs) {
+      expect(gp.glyph).toBeNull();
+    }
+    // Pen advance still comes from the injected metrics, not the atlas's own
+    // xadvance: 500 design units @ unitsPerEm 1000, size 16 -> 8px.
+    expect(layout.lines[0]!.glyphs[0]!.advance).toBeCloseTo(8, 10);
+    // ceil(800 * 16/1000) = 13.
+    expect(layout.baselineOffsetPx).toBe(13);
   });
 });

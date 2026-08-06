@@ -10,6 +10,7 @@ import { TextRun, buildGlyphQuadArrays, type TextRunProps } from './TextRun';
 import { shapeText, AutowrapMode } from './textLayout';
 import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
+import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 const SCALE = 16 / OPEN_SANS_ATLAS_INFO.fontSize;
@@ -131,5 +132,77 @@ describe('<TextRun>', () => {
     const renderer = await renderTextRun({ layout: layoutFor('A B') });
     const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     expect(geometry.getAttribute('position').count).toBe(2 * 4);
+  });
+});
+
+describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-kind FontMetrics', () => {
+  const CANVAS_METRICS = createRuntimeFontMetrics({
+    scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
+    measureWidthUnits: (text) => text.length * 500,
+    cssFontFamily: 'scene-font-textrun-test',
+  });
+
+  function canvasLayoutFor(text: string) {
+    return shapeText(text, {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      fontMetrics: CANVAS_METRICS,
+    });
+  }
+
+  it('mounts a single mesh with EXACTLY ONE quad (4 verts), unlike the per-glyph atlas path', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextRun layout={canvasLayoutFor('Hello')} fontSizePx={16} tint={WHITE} />
+    );
+    const meshes = renderer.scene.findAllByType('Mesh');
+    expect(meshes).toHaveLength(1);
+    const geometry = (meshes[0]!.instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    expect(geometry.getAttribute('position').count).toBe(4);
+    expect(geometry.getIndex()!.count).toBe(6);
+  });
+
+  it('uses a plain textured material (no MSDF uniforms/shader), sourced from a canvas texture', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={WHITE} />
+    );
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect((mat as unknown as { isShaderMaterial?: boolean }).isShaderMaterial).toBeUndefined();
+    expect(mat.map).toBeInstanceOf(THREE.CanvasTexture);
+    expect(mat.transparent).toBe(true);
+  });
+
+  it('applies tint.a directly as material opacity (the canvas raster is drawn opaque; alpha is not baked into it)', async () => {
+    const tint = { r: 1, g: 1, b: 1, a: 0.4 };
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={tint} />
+    );
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(mat.opacity).toBe(0.4);
+  });
+
+  it('forwards clippingPlanes/depthTest/side to the canvas material, same contract as the MSDF path', async () => {
+    const planes = [new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)];
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextRun
+        layout={canvasLayoutFor('Hi')}
+        fontSizePx={16}
+        tint={WHITE}
+        clippingPlanes={planes}
+        depthTest
+        side={THREE.FrontSide}
+      />
+    );
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(mat.clippingPlanes).toEqual(planes);
+    expect(mat.depthTest).toBe(true);
+    expect(mat.side).toBe(THREE.FrontSide);
+  });
+
+  it('a layout shaped against the DEFAULT (atlas) metrics still takes the MSDF path — dispatch is per-layout, not global', async () => {
+    const renderer = await renderTextRun(); // uses layoutFor('AB'), the default OPEN_SANS_FONT_METRICS
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
+    expect(mat.isShaderMaterial).toBe(true);
+    expect(mat.uniforms.uMap).toBeDefined();
   });
 });

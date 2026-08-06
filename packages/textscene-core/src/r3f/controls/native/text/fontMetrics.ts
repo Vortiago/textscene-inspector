@@ -22,11 +22,29 @@
  */
 
 /**
+ * Which glyph-PAINTING path a `FontMetrics` pairs with — the boundary
+ * `textLayout.ts`'s own doc flags as "still open": shaping (this file) is
+ * font-agnostic, but the bitmap/rasterisation a placed glyph paints from is
+ * NOT, and `TextRun.tsx` needs a way to tell the two painters apart without
+ * re-deriving it from which constant happens to be in scope.
+ *
+ * - `'atlas'` — a pre-baked MSDF atlas (`openSansFontMetrics.ts`, today's
+ *   only `'atlas'` implementation). `shapeText`'s `GlyphPlacement.glyph`
+ *   lookup only fires for this kind.
+ * - `'canvas'` — a runtime-loaded scene font with no atlas
+ *   (`runtimeFontMetrics.ts`'s `CanvasFontMetrics`), rasterised through
+ *   canvas-2D `FontFace` + `measureText` instead.
+ */
+export type FontMetricsKind = 'atlas' | 'canvas';
+
+/**
  * Raw, design-unit font metrics a shaper needs. Every px-facing computation
  * below scales through `unitsPerEm` and the target `fontSizePx` — an
  * implementation never does that scaling itself.
  */
 export interface FontMetrics {
+  /** Which glyph-painting path this metrics object pairs with — see `FontMetricsKind`'s own doc. */
+  readonly kind: FontMetricsKind;
   /** Design units per em (`hhea`/`head` table `unitsPerEm`) — the scale denominator for every raw unit below. */
   readonly unitsPerEm: number;
   /** `hhea` ascender, design units (positive, upward) — FreeType's un-quantized ascent, before the pixel rounding `getFontAscentPx` applies. */
