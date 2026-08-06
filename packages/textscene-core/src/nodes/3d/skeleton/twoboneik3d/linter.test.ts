@@ -143,6 +143,22 @@ describe('TwoBoneIK3D semantic rules', () => {
     );
   });
 
+  it('resolves a PLUS-signed index too, which is_valid_int also accepts', () => {
+    // The sign class must match the sibling regexes: `settings/+0/…` is a legal
+    // spelling, and admitting it in one regex but not the other files the key
+    // under an index its sibling cannot find, warning about a write Godot honours.
+    expectNoDiagnostic(
+      scene(
+        node('TwoBoneIK3D', {
+          setting_count: 1,
+          'settings/+0/pole_direction': 7,
+          'settings/+0/pole_direction_vector': 'Vector3(0, 0, 1)',
+        })
+      ),
+      { ruleName: 'twoboneik3d-pole-direction-vector-ignored' }
+    );
+  });
+
   it('still warns on a padded index when the direction really is not Custom', () => {
     expectDiagnostic(
       scene(

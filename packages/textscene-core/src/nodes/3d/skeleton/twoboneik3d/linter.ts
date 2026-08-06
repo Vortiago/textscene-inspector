@@ -49,12 +49,17 @@ const SETTING_KEY_RE = /^settings\/([+-]?\d+)\//;
 /** The one leaf whose write depends on a sibling. */
 const POLE_VECTOR_KEY_RE = /^settings\/([+-]?\d+)\/pole_direction_vector$/;
 
+/**
+ * The sibling a `pole_direction_vector` write depends on. The sign class matches
+ * the two regexes above deliberately: `is_valid_int` accepts a leading `+`, so
+ * `settings/+0/…` is a real spelling, and admitting it in one regex but not the
+ * other put the key in the map under no index its sibling could look up.
+ */
+const POLE_DIRECTION_KEY_RE = /^settings\/([+-]?\d+)\/pole_direction$/;
+
 /** `SECONDARY_DIRECTION_CUSTOM`, skeleton_modifier_3d.h:75. */
 const SECONDARY_DIRECTION_CUSTOM = 7;
 /** `SecondaryDirection pole_direction = SECONDARY_DIRECTION_NONE`, two_bone_ik_3d.h:53. */
-/** `settings/<i>/pole_direction`, capturing the index text for numeric resolution. */
-const POLE_DIRECTION_KEY_RE = /^settings\/(-?\d+)\/pole_direction$/;
-
 const SECONDARY_DIRECTION_NONE = 0;
 
 function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {

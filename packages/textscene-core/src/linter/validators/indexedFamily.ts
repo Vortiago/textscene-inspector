@@ -47,6 +47,9 @@ import { propertyError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 
+/** `[+-]?`, matching `String::is_valid_int()` (property_list_helper.cpp:53). */
+const INT_RE = /^[+-]?\d+$/;
+
 export interface IndexedFamilyOptions {
   /** The glued prefix, e.g. `item_` for `item_0/text`, `popup/item_` for MenuButton. */
   prefix: string;
@@ -124,6 +127,13 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
   const { prefix, leaves, unknownCode, describes, negativeIndex } = opts;
   const gatesOnValidInt = (opts.indexParse ?? 'is_valid_int') === 'is_valid_int';
 
+  // Both hoisted out of the per-call body. This dispatcher runs once per
+  // `<prefix><i>/<leaf>` key, and a single SpringBoneSimulator3D carries about
+  // forty of them per setting, so a closure and a RegExp object per call are
+  // paid on the success path too. One closure per registered family instead.
+  const unknown = (key: string, line: number): ReturnType<PropertyValidator> =>
+    propertyError(key, line, `Unknown ${describes} property: "${key}"`, unknownCode);
+
   const validator = accepts((key, value, line) => {
     // The FIRST `/` past the prefix, so a leaf may itself contain one. The last
     // `/` would swallow `apply` into the index and `settings/0/apply/axis` would
@@ -131,22 +141,20 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
     const slash = key.indexOf('/', prefix.length);
     const indexText = slash < 0 ? '' : key.slice(prefix.length, slash);
     const leafName = slash < 0 ? '' : key.slice(slash + 1);
-    const unknown = (): ReturnType<PropertyValidator> =>
-      propertyError(key, line, `Unknown ${describes} property: "${key}"`, unknownCode);
+    if (!key.startsWith(prefix) || indexText === '' || leafName === '') {
+      return unknown(key, line);
+    }
 
-    if (!key.startsWith(prefix) || indexText === '' || leafName === '') return unknown();
-
-    // `[+-]?`, matching `String::is_valid_int()` (property_list_helper.cpp:53).
-    if (/^[+-]?\d+$/.test(indexText)) {
+    if (INT_RE.test(indexText)) {
       const index = Number(indexText);
       if (index < 0) {
         // Godot refuses to RESOLVE a negative index under either parse, so
         // `_set` treats the key as unrecognised and the write never lands.
-        if (!negativeIndex) return unknown();
+        if (!negativeIndex) return unknown(key, line);
         return propertyError(key, line, negativeIndex.message(index), negativeIndex.code);
       }
     } else if (gatesOnValidInt) {
-      return unknown();
+      return unknown(key, line);
     }
     // Under `to_int` a non-numeric index falls through uncommented-on: it
     // resolves to SOME setting and the write lands, so the leaf below is the
@@ -154,9 +162,9 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
 
     // hasOwnProperty, so a leaf named `toString` cannot resolve an inherited
     // function and get called as a validator.
-    if (!Object.prototype.hasOwnProperty.call(leaves, leafName)) return unknown();
+    if (!Object.prototype.hasOwnProperty.call(leaves, leafName)) return unknown(key, line);
     const leaf = leaves[leafName];
-    if (!leaf) return unknown();
+    if (!leaf) return unknown(key, line);
     return leaf(key, value, line);
   }, describes);
 
