@@ -22,6 +22,8 @@ import type { FontResource } from '../../../../resources/processing/fontProcessi
 import { resolveNodeFontMetrics, resolveNodeFontSizePx } from './resolveNodeFontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import * as logger from '../../../../logger';
+import * as themeProcessing from '../../../../resources/processing/themeProcessing';
+import * as sceneFontLoader from './sceneFontLoader';
 
 // `sceneFontLoader.ts`'s own warn-dedupe is keyed by RESOURCE OBJECT IDENTITY
 // (a `WeakSet`, module-level, never reset between tests) — a fresh object per
@@ -144,5 +146,52 @@ describe('resolveNodeFontSizePx — the font-SIZE counterpart join (resolveTheme
     const theme: ThemeResource = { ...emptyTheme(), fontSizes: { Label: { font_size: 20 } } };
     const n = labelNode({ themeChain: [], projectTheme: theme });
     expect(resolveNodeFontSizePx(n, 'font_size', undefined, 16)).toBe(20);
+  });
+});
+
+describe('the ancestor-Theme walk is cached PER SolveNode OBJECT, not merely per equal inputs — the property both resolveNodeFontMetrics and resolveNodeFontSizePx must share, since buildSolveTree.ts mints a fresh SolveNode per node per generation and relies on that identity as the cache key', () => {
+  let scopeSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    scopeSpy = vi.spyOn(themeProcessing, 'themeResolutionScope');
+  });
+
+  afterEach(() => {
+    scopeSpy.mockRestore();
+  });
+
+  it('resolving font AND font-size for the SAME node object builds the type-dependency chain ONCE, not twice', () => {
+    const n = labelNode();
+    resolveNodeFontMetrics(n, 'font');
+    resolveNodeFontSizePx(n, 'font_size', undefined, 16);
+    expect(scopeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('repeated lookups against the SAME node object — the solve pass then the paint pass calling this join twice each, four calls total — still build the chain ONCE', () => {
+    const n = labelNode();
+    resolveNodeFontMetrics(n, 'font');
+    resolveNodeFontSizePx(n, 'font_size', undefined, 16);
+    resolveNodeFontMetrics(n, 'font');
+    resolveNodeFontSizePx(n, 'font_size', undefined, 16);
+    expect(scopeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("a DIFFERENT node object with IDENTICAL field values gets its OWN chain build — proves the cache keys on object identity (this generation's node), not on the equal theme/type/variation values, which is what makes a NEW generation (a fresh walk producing new SolveNode objects) see fresh results", () => {
+    const a = labelNode();
+    const b = labelNode();
+    resolveNodeFontMetrics(a, 'font');
+    resolveNodeFontMetrics(b, 'font');
+    expect(scopeSpy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('async freshness survives the cache — only the ancestor-Theme SCOPE is memoised; the final peekSceneFontMetrics lookup must still run on every call so a just-settled font load is observed on the very next render', () => {
+  it('peekSceneFontMetrics is called again on a SECOND resolveNodeFontMetrics call against the SAME node/key, even though the scope is cached', () => {
+    const peekSpy = vi.spyOn(sceneFontLoader, 'peekSceneFontMetrics');
+    const n = labelNode();
+    resolveNodeFontMetrics(n, 'font');
+    resolveNodeFontMetrics(n, 'font');
+    expect(peekSpy).toHaveBeenCalledTimes(2);
+    peekSpy.mockRestore();
   });
 });

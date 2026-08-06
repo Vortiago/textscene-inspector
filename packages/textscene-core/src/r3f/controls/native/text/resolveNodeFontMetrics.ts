@@ -1,14 +1,14 @@
 /**
  * The ONE join point between the theme RESOLUTION half of this feature
- * (`resources/processing/themeProcessing.ts`'s `resolveThemeFont`/
- * `resolveThemeFontSizePx`, walking a `SolveNode`'s `fontOverrides`/
- * `themeChain`/`projectTheme`) and each grain's own consumption half:
- * `resolveNodeFontMetrics` feeds the PAINTING side (`./sceneFontLoader.ts`'s
- * `peekSceneFontMetrics`, turning whatever `FontResource` the font walk lands
- * on into a synchronous `FontMetrics`); `resolveNodeFontSizePx` feeds the
- * SOLVE/paint SIZE both widgets need to agree on (`resolveThemeFontSizePx`'s
- * own doc — `Control::get_theme_font_size`, `scene/gui/control.cpp:
- * 3107-3129`).
+ * (`resources/processing/themeProcessing.ts`'s `resolveThemeFontIn`/
+ * `resolveThemeFontSizeIn`, walking a `SolveNode`'s `fontOverrides`/
+ * `themeChain`/`projectTheme` via a per-node `ThemeResolutionScope`) and each
+ * grain's own consumption half: `resolveNodeFontMetrics` feeds the PAINTING
+ * side (`./sceneFontLoader.ts`'s `peekSceneFontMetrics`, turning whatever
+ * `FontResource` the font walk lands on into a synchronous `FontMetrics`);
+ * `resolveNodeFontSizePx` feeds the SOLVE/paint SIZE both widgets need to
+ * agree on (`resolveThemeFontSizeIn`'s own doc — `Control::get_theme_font_size`,
+ * `scene/gui/control.cpp:3107-3129`).
  *
  * Every text-painting Control's solver (`MinimumSizeFn`) AND painter
  * (`Component.tsx`, for the cases that re-shape locally instead of reading a
@@ -31,44 +31,81 @@
  * `sceneFontLoader.ts`'s real (DOM-gated, silently-short-circuited-under-
  * vitest — that module's own doc) async pipeline, and a second, pure one for
  * the size walk that has no such DOM dependency at all.
+ *
+ * Both share `scopeFor` below, which caches the node's `ThemeResolutionScope`
+ * (the type-dependency chain + theme search order — the part of the walk that
+ * does NOT depend on which item is being looked up) per `SolveNode` object, so
+ * a node resolved from both the solve pass and the paint pass, for both its
+ * font and its font size, builds that chain once instead of up to four times.
  */
 import { controlProps, type SolveNode } from '../solveTree';
-import { resolveThemeFont, resolveThemeFontSizePx } from '../../../../resources/processing/themeProcessing';
+import {
+  resolveThemeFontIn,
+  resolveThemeFontSizeIn,
+  themeResolutionScope,
+  type ThemeResolutionScope,
+} from '../../../../resources/processing/themeProcessing';
 import { peekSceneFontMetrics } from './sceneFontLoader';
 import type { FontMetrics } from './fontMetrics';
 
 /**
+ * `themeResolutionScope`'s own doc: the type-dependency chain and theme
+ * search order are functions of the NODE alone (`node.type`/
+ * `themeTypeVariation`/`themeChain`/`projectTheme`), never of which item
+ * (font vs. font-size, or which key) is being looked up — so a node that gets
+ * looked up from the solve pass AND the paint pass, for BOTH its font and its
+ * font size, needs this built only once.
+ *
+ * Keyed by the `SolveNode` OBJECT itself, not by its field values:
+ * `buildSolveTree.ts`'s `buildForest` mints a brand-new `SolveNode` per node
+ * on every walk, so object identity already IS "this generation's version of
+ * this node" — a `WeakMap` gets the once-per-node-per-generation property for
+ * free, with no cache to invalidate (a new generation simply never produces a
+ * hit) and no lifetime to manage (an old generation's nodes become
+ * unreachable and get collected normally). A hand-built test literal that
+ * happens to have identical field values to another still gets its own entry
+ * here, which is correct: two SEPARATE call sites holding two SEPARATE
+ * `SolveNode` objects must never share a cache slot merely because their
+ * contents currently agree.
+ */
+const scopeCache = new WeakMap<SolveNode, ThemeResolutionScope>();
+
+function scopeFor(n: SolveNode): ThemeResolutionScope {
+  const cached = scopeCache.get(n);
+  if (cached) return cached;
+  const scope = themeResolutionScope(n.node.type, controlProps(n).themeTypeVariation, n.themeChain, n.projectTheme);
+  scopeCache.set(n, scope);
+  return scope;
+}
+
+/**
  * Resolves `n`'s own font for `themeKey` (this widget's local override, else
- * the ancestor theme chain, else the project theme — `resolveThemeFont`'s own
- * doc) and turns it into a `FontMetrics` a synchronous solve/paint pass can
- * shape against — the bundled default while a real scene font is still
+ * the ancestor theme chain, else the project theme — `resolveThemeFontIn`'s
+ * own doc) and turns it into a `FontMetrics` a synchronous solve/paint pass
+ * can shape against — the bundled default while a real scene font is still
  * loading, failed, or unsupported (`peekSceneFontMetrics`'s own doc). Never
  * throws.
+ *
+ * `peekSceneFontMetrics` is called on EVERY invocation, never cached here —
+ * unlike `scopeFor` above, its answer can change from one call to the next
+ * WITHIN the same generation (a font load settling between the solve pass
+ * and the paint pass), and the caller relies on that: see `label/Component.tsx`'s
+ * own doc for why the paint-time read has to stay live.
  */
 export function resolveNodeFontMetrics(n: SolveNode, themeKey: string): FontMetrics {
-  const nativeType = n.node.type;
-  const typeVariation = controlProps(n).themeTypeVariation;
-  const fontResource = resolveThemeFont(
-    themeKey,
-    n.fontOverrides[themeKey],
-    nativeType,
-    typeVariation,
-    n.themeChain,
-    n.projectTheme
-  );
+  const fontResource = resolveThemeFontIn(scopeFor(n), themeKey, n.fontOverrides[themeKey]);
   return peekSceneFontMetrics(fontResource, n.path);
 }
 
 /**
- * The font-SIZE counterpart of `resolveNodeFontMetrics` — same node-context
- * extraction (`n.node.type`/`controlProps(n).themeTypeVariation`/
- * `n.themeChain`/`n.projectTheme`), `resolveThemeFontSizePx`'s ancestor walk
- * instead of `resolveThemeFont`'s. `overridePx` is this widget's OWN
+ * The font-SIZE counterpart of `resolveNodeFontMetrics` — same cached
+ * per-node `scopeFor`, `resolveThemeFontSizeIn`'s ancestor walk instead of
+ * `resolveThemeFontIn`'s. `overridePx` is this widget's OWN
  * `theme_override_font_sizes/<sizeKey>` (a plain, already-parsed number — no
  * loader/cache indirection the way a Font reference needs, so there is no
  * `SolveNode` field for it the way `fontOverrides` exists for fonts; the
  * caller reads it straight off `props.themeOverrideFontSizes`).
- * `builtInDefaultPx` is `resolveThemeFontSizePx`'s own final rung — this
+ * `builtInDefaultPx` is `resolveThemeFontSizeIn`'s own final rung — this
  * previewer's scaled `DEFAULT_FONT_SIZE`, standing in for Godot's
  * `ThemeDB::get_fallback_font_size()`.
  */
@@ -78,7 +115,5 @@ export function resolveNodeFontSizePx(
   overridePx: number | undefined,
   builtInDefaultPx: number
 ): number {
-  const nativeType = n.node.type;
-  const typeVariation = controlProps(n).themeTypeVariation;
-  return resolveThemeFontSizePx(sizeKey, overridePx, nativeType, typeVariation, n.themeChain, n.projectTheme, builtInDefaultPx);
+  return resolveThemeFontSizeIn(scopeFor(n), sizeKey, overridePx, builtInDefaultPx);
 }
