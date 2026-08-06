@@ -17,6 +17,7 @@ import './linterParser';
 /** Every diagnostic the rule reports for the first AimModifier3D in `content`. */
 function warningsFor(content: string) {
   const { scene } = new StrictTscnParser().parse(content);
+  if (!scene) throw new Error("fixture failed to parse");
   const node = scene.nodes[0]?.children[0];
   expect(node?.type, 'the fixture text must contain an AimModifier3D child').toBe('AimModifier3D');
   return aimModifier3DAxisRule.check({ scene, node: node!, properties: node!.properties });

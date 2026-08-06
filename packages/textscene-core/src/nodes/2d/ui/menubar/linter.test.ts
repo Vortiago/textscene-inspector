@@ -108,6 +108,7 @@ describe('MenuBar semantic rules', () => {
     // Parsed through StrictTscnParser rather than a hand-built context, because
     // the thing under test here is the fixture's real child tree.
     const { scene } = new StrictTscnParser().parse(readFixture('unit-menu-bar.tscn'));
+    if (!scene) throw new Error("fixture failed to parse");
     const menuBar = findByType(scene.nodes, 'MenuBar');
     expect(menuBar, 'unit-menu-bar.tscn no longer contains a MenuBar').toBeDefined();
     expect(

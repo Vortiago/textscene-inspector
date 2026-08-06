@@ -85,7 +85,7 @@ describe('BoneConstraint3D settings leaves', () => {
 
   describe('the key shape', () => {
     it('rejects a negative setting index', () => {
-      expect(check('settings/-1/amount')?.severity ?? 'error').toBe('error');
+      expect(check('settings/-1/amount', '0.5')?.severity).toBe('error');
     });
 
     it('rejects an unrecognised leaf', () => {
