@@ -47,7 +47,7 @@ Strict parsing format-checks these `CopyTransformModifier3D` properties, plus 2 
 | Property | Accepts |
 | --- | --- |
 | `setting_count` | integer >= 0 |
-| `settings/#/*` | settings/<i>/ copy, axes, invert (bit masks), relative, additive (bool) |
+| `settings/#/*` | per-setting copy, axes and invert bit masks, plus relative and additive |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
