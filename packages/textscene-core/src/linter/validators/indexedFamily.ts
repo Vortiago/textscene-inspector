@@ -7,12 +7,35 @@
  * unrecognised shape, reject a negative index, look up the leaf, forward. This is
  * that parse, once.
  *
- * It mirrors the engine's own resolution (`PropertyListHelper::_get_property`,
- * `property_list_helper.cpp:47-58`): split at the last `/`, require the head to
- * start with the prefix, require the rest to be an integer, refuse a negative one.
+ * It mirrors the engine's own resolution: require the head to start with the
+ * prefix, read the index that follows, refuse a negative one, look the leaf up.
+ * Godot has TWO such resolutions and they disagree about a non-numeric index, so
+ * which one a class uses is the `indexParse` option rather than a constant here.
  * The high end (index at or past the live element count) is deliberately NOT
- * checked: that is a bound against a sibling count no per-property validator can
- * see, which ADR-0032 leaves to a semantic rule.
+ * checked under either: that is a bound against a sibling count no per-property
+ * validator can see, which ADR-0032 leaves to a semantic rule.
+ *
+ * ## A leaf may be more than one segment
+ *
+ * The index ends at the FIRST `/` after the prefix, and EVERYTHING after that
+ * slash is the leaf name. `PropertyListHelper` only ever writes a one-segment
+ * leaf (`rsplit("/", true, 1)`, `property_list_helper.cpp:47`), but the classes
+ * that build an indexed family by hand do not: a `get_property_list` override
+ * composes its own path, and `ConvertTransformModifier3D`
+ * (`settings/<i>/apply/transform_mode`) and `TwoBoneIK3D`
+ * (`settings/<i>/end_bone/direction`) both nest one level deeper. Splitting at
+ * the LAST `/` instead read an index of `0/apply`, so the key matched no leaf
+ * and every value on it was silently accepted.
+ *
+ * A nested leaf is declared by naming it in full: `'apply/transform_mode'`, the
+ * whole path below the index. Depth is not otherwise special-cased, so a family
+ * declaring only flat leaves behaves exactly as before.
+ *
+ * What this does NOT reach is a leaf whose own path carries an index, such as
+ * `ChainIK3D`'s `settings/<i>/joints/<j>/bone` (chain_ik_3d.cpp) or
+ * `IterateIK3D`'s `settings/<i>/joints/<j>/<leaf>`. Those are a nested indexed
+ * FAMILY, not a static multi-segment leaf name, and both slices still match them
+ * with a regex of their own.
  *
  * Citations stay at the CALL SITE, passed in rather than written here, for two
  * reasons: each class enforces at its own `file:line`, and
@@ -27,10 +50,46 @@ import type { PropertyValidator } from '../ValidatorRegistry.js';
 export interface IndexedFamilyOptions {
   /** The glued prefix, e.g. `item_` for `item_0/text`, `popup/item_` for MenuButton. */
   prefix: string;
-  /** Leaf name to validator, e.g. `{ text: v.quotedString('text') }`. */
+  /**
+   * Leaf name to validator, e.g. `{ text: v.quotedString('text') }`.
+   *
+   * A NESTED leaf is keyed by its full path below the index —
+   * `{ 'apply/transform_mode': … }` matches `settings/0/apply/transform_mode`.
+   *
+   * A family with a nested leaf must register under the PLAIN `<prefix>*`
+   * wildcard, not the glued-index `<prefix>#/*`: `ValidatorRegistry`'s
+   * `matchesIndexedKey` routes a single leaf segment only, so a nested key
+   * registered under `#/*` reaches this dispatcher never and is silently
+   * accepted. `TwoBoneIK3D`, `IterateIK3D` and `ChainIK3D` already register the
+   * plain form for that reason.
+   */
   leaves: Readonly<Record<string, PropertyValidator>>;
   /** Error code for a key whose shape or leaf name is unrecognised. */
   unknownCode: string;
+  /**
+   * Which of Godot's TWO index parses this class uses. They disagree about a
+   * non-numeric index, and the disagreement is a real difference between two
+   * engine code paths rather than a style choice:
+   *
+   * - `'is_valid_int'` (the default) — `PropertyListHelper::_get_property`
+   *   returns `nullptr` unless the index `is_valid_int()`
+   *   (`property_list_helper.cpp:53-55`), so `_set` returns false and the write
+   *   is DROPPED. `item_x/text` is a key Godot refuses, and rejecting it is
+   *   grounded. Every `PropertyListHelper` family is this one: ItemList,
+   *   PopupMenu, OptionButton, MenuButton, TabBar, FileDialog.
+   * - `'to_int'` — a class that hand-rolls `_set` reads the index with a bare
+   *   `path.get_slicec('/', 1).to_int()` and no validity gate, and `_to_int`
+   *   SKIPS non-digits rather than stopping at them (`ustring.cpp:2268-2298`),
+   *   so `"x"` resolves to 0 and `"a1b2"` to 12 and the write LANDS on that
+   *   setting. Nothing refuses the value, so ADR-0032 grounds no diagnostic and
+   *   the index is left alone; the leaf lookup below still decides, because an
+   *   unrecognised leaf is dropped whatever the index resolved to. The whole
+   *   BoneConstraint3D and IK `settings/` family is this one.
+   *
+   * A negative index is refused under BOTH parses (`property_list_helper.cpp:58`
+   * and each class's own `ERR_FAIL_INDEX_V`), so `negativeIndex` is unaffected.
+   */
+  indexParse?: 'is_valid_int' | 'to_int';
   /** What this family accepts, for the generated sheet's Accepts column. */
   describes: string;
   /**
@@ -56,25 +115,35 @@ export interface IndexedFamilyOptions {
  */
 export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyValidator {
   const { prefix, leaves, unknownCode, describes, negativeIndex } = opts;
+  const gatesOnValidInt = (opts.indexParse ?? 'is_valid_int') === 'is_valid_int';
 
   const validator = accepts((key, value, line) => {
-    const slash = key.lastIndexOf('/');
-    const indexText = slash > prefix.length ? key.slice(prefix.length, slash) : '';
-    const leafName = key.slice(slash + 1);
+    // The FIRST `/` past the prefix, so a leaf may itself contain one. The last
+    // `/` would swallow `apply` into the index and `settings/0/apply/axis` would
+    // resolve to nothing.
+    const slash = key.indexOf('/', prefix.length);
+    const indexText = slash < 0 ? '' : key.slice(prefix.length, slash);
+    const leafName = slash < 0 ? '' : key.slice(slash + 1);
     const unknown = (): ReturnType<PropertyValidator> =>
       propertyError(key, line, `Unknown ${describes} property: "${key}"`, unknownCode);
 
     if (!key.startsWith(prefix) || indexText === '' || leafName === '') return unknown();
-    // `[+-]?`, matching `String::is_valid_int()` (property_list_helper.cpp:52).
-    if (!/^[+-]?\d+$/.test(indexText)) return unknown();
 
-    const index = Number(indexText);
-    if (index < 0) {
-      // Godot's helper refuses to RESOLVE a negative index, so `_set` treats the
-      // key as unrecognised and the write never lands.
-      if (!negativeIndex) return unknown();
-      return propertyError(key, line, negativeIndex.message(index), negativeIndex.code);
+    // `[+-]?`, matching `String::is_valid_int()` (property_list_helper.cpp:53).
+    if (/^[+-]?\d+$/.test(indexText)) {
+      const index = Number(indexText);
+      if (index < 0) {
+        // Godot refuses to RESOLVE a negative index under either parse, so
+        // `_set` treats the key as unrecognised and the write never lands.
+        if (!negativeIndex) return unknown();
+        return propertyError(key, line, negativeIndex.message(index), negativeIndex.code);
+      }
+    } else if (gatesOnValidInt) {
+      return unknown();
     }
+    // Under `to_int` a non-numeric index falls through uncommented-on: it
+    // resolves to SOME setting and the write lands, so the leaf below is the
+    // only thing left that Godot can refuse.
 
     // hasOwnProperty, so a leaf named `toString` cannot resolve an inherited
     // function and get called as a validator.
