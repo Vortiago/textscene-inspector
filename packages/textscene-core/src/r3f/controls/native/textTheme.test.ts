@@ -4,7 +4,7 @@
  * to plain data a painter can read. Font SIZE goes through the SAME
  * ancestor-Theme walk `resolveNodeFontMetrics` already performs for the font
  * itself (`resolveNodeFontSizePx`/`Control::get_theme_font_size`,
- * `scene/gui/control.cpp:3113-3131`); colour does not (no `Theme` colour
+ * `scene/gui/control.cpp:3107-3129`); colour does not (no `Theme` colour
  * decode exists in this codebase — `themeProcessing.ts`'s own scope).
  */
 import { describe, expect, it } from 'vitest';
@@ -78,7 +78,7 @@ describe('resolveTextTheme', () => {
     expect(resolved.fontSizePx).toBe(24);
   });
 
-  it('a size override of 0 does NOT win — falls through to the ancestor theme like an absent one (control.cpp:3117-3120)', () => {
+  it('a size override of 0 does NOT win — falls through to the ancestor theme like an absent one (control.cpp:3114-3117)', () => {
     const theme: ThemeResource = { ...emptyTheme(), fontSizes: { Label: { font_size: 30 } } };
     const resolved = resolveTextTheme(
       node({ themeChain: [theme] }),

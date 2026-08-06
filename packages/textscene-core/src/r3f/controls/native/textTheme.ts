@@ -8,14 +8,14 @@
  * straight to `shapeText`/`TextRun`.
  *
  * Font SIZE resolves through Godot's FULL ancestor walk
- * (`Control::get_theme_font_size`, `scene/gui/control.cpp:3113-3131`, via
+ * (`Control::get_theme_font_size`, `scene/gui/control.cpp:3107-3129`, via
  * `resolveNodeFontSizePx`/`resolveThemeFontSizePx`): a POSITIVE node-local
  * `theme_override_font_sizes/<sizeKey>` wins outright (`> 0` — an override of
- * `0` falls through exactly like an absent one, `:3117-3120`); otherwise the
+ * `0` falls through exactly like an absent one, `:3114-3117`); otherwise the
  * nearest ancestor Control's own `theme` (then the project theme) supplies
  * `<nativeType>/font_sizes/<sizeKey>`, or that SAME theme's own
  * `default_font_size` when no more specific entry matches
- * (`Theme::get_font_size`, `scene/resources/theme.cpp:657-664`); otherwise
+ * (`Theme::get_font_size`, `scene/resources/theme.cpp:658-666`); otherwise
  * `defaults.fontSizePx` (this previewer's OWN `ThemeDB::get_fallback_font_size()`
  * stand-in). Colour has NO such ancestor walk — this codebase decodes no
  * `Theme` colour data at all (`themeProcessing.ts`'s own scope), so it stays
@@ -26,7 +26,7 @@ import type { SolveNode } from './solveTree';
 import { resolveNodeFontSizePx } from './text/resolveNodeFontMetrics';
 
 export interface TextThemeKeys {
-  /** `theme_override_font_sizes/<sizeKey>` (e.g. `font_size`, `normal_font_size`) — ALSO the `<Type>/font_sizes/<name>` name `resolveNodeFontSizePx`'s ancestor walk looks up (Godot passes the SAME `StringName` to both the local-override read and `get_theme_font_size`, `control.cpp:3113-3131`). */
+  /** `theme_override_font_sizes/<sizeKey>` (e.g. `font_size`, `normal_font_size`) — ALSO the `<Type>/font_sizes/<name>` name `resolveNodeFontSizePx`'s ancestor walk looks up (Godot passes the SAME `StringName` to both the local-override read and `get_theme_font_size`, `control.cpp:3107-3129`). */
   sizeKey: string;
   /** `theme_override_colors/<colorKey>` (e.g. `font_color`, `default_color`). */
   colorKey: string;

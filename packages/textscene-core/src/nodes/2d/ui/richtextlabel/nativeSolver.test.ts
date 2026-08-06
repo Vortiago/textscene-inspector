@@ -236,7 +236,7 @@ describe('richTextLabelTextTheme / RICH_TEXT_LABEL_THEME_KEYS / RICH_TEXT_LABEL_
     expect(resolved).toEqual({ fontSizePx: 16, color: RICH_TEXT_LABEL_DEFAULT_FONT_COLOR });
   });
 
-  it("(edge) walks the ancestor Theme chain for normal_font_size, same as every other widget's resolveTextTheme (Control::get_theme_font_size, control.cpp:3113-3131)", () => {
+  it("(edge) walks the ancestor Theme chain for normal_font_size, same as every other widget's resolveTextTheme (Control::get_theme_font_size, control.cpp:3107-3129)", () => {
     const theme: ThemeResource = {
       defaultFont: null,
       defaultFontSize: 30,
@@ -415,7 +415,7 @@ describe('styledTextRuns', () => {
       expect(runs[0]!.fontSizePx).toBe(30);
     });
 
-    it("(edge) a [b] run's fallback ALSO walks the ancestor Theme chain — the SAME ancestor default_font_size a themed normal run resolves to, not just this previewer's flat built-in default. Otherwise a themed RichTextLabel's [b] text would diverge from its own normal text in a way real Godot never does (Theme::get_font_size, theme.cpp:657-664)", () => {
+    it("(edge) a [b] run's fallback ALSO walks the ancestor Theme chain — the SAME ancestor default_font_size a themed normal run resolves to, not just this previewer's flat built-in default. Otherwise a themed RichTextLabel's [b] text would diverge from its own normal text in a way real Godot never does (Theme::get_font_size, theme.cpp:658-666)", () => {
       const theme: ThemeResource = {
         defaultFont: null,
         defaultFontSize: 30,

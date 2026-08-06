@@ -513,9 +513,9 @@ export function resolveThemeFont(
 
 /**
  * The font-size counterpart of `resolveThemeFont`
- * (`Control::get_theme_font_size`, `control.cpp:3113-3131`). Godot's local
+ * (`Control::get_theme_font_size`, `control.cpp:3107-3129`). Godot's local
  * override ALSO requires `> 0` (`if (font_size && (*font_size) > 0)`,
- * `control.cpp:3117-3120`) — unlike the font override, a size override of `0`
+ * `control.cpp:3114-3117`) — unlike the font override, a size override of `0`
  * (or absent) does NOT win; it falls through to the ancestor walk exactly
  * like an unauthored one. `builtInDefaultPx` stands in for
  * `ThemeDB::get_fallback_font_size()`, Godot's OWN final rung — this

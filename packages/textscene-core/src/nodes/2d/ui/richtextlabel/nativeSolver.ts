@@ -204,7 +204,7 @@ const RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS = {
  * matching `RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS` key resolved through the
  * SAME ancestor-Theme walk `richTextLabelTextTheme` uses for
  * `normal_font_size` (`resolveNodeFontSizePx`/`Theme::get_font_size`,
- * `scene/resources/theme.cpp:657-664`) — NEVER falling back to
+ * `scene/resources/theme.cpp:658-666`) — NEVER falling back to
  * `normalFontSizePx` itself, see `RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS`'s own
  * doc: a `[b]` span's key is looked up independently, all the way down to
  * `builtInDefaultPx` (Godot's `ThemeDB::get_fallback_font_size()`), so an

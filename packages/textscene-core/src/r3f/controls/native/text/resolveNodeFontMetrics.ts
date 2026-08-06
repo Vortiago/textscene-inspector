@@ -8,7 +8,7 @@
  * on into a synchronous `FontMetrics`); `resolveNodeFontSizePx` feeds the
  * SOLVE/paint SIZE both widgets need to agree on (`resolveThemeFontSizePx`'s
  * own doc — `Control::get_theme_font_size`, `scene/gui/control.cpp:
- * 3113-3131`).
+ * 3107-3129`).
  *
  * Every text-painting Control's solver (`MinimumSizeFn`) AND painter
  * (`Component.tsx`, for the cases that re-shape locally instead of reading a

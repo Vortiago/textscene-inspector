@@ -116,7 +116,7 @@ describe('resolveNodeFontSizePx — the font-SIZE counterpart join (resolveTheme
     expect(resolveNodeFontSizePx(labelNode(), 'font_size', 24, 16)).toBe(24);
   });
 
-  it('an override of 0 does NOT win — falls through to the ancestor walk like an absent one (control.cpp:3117-3120)', () => {
+  it('an override of 0 does NOT win — falls through to the ancestor walk like an absent one (control.cpp:3114-3117)', () => {
     const theme: ThemeResource = { ...emptyTheme(), fontSizes: { Label: { font_size: 30 } } };
     const n = labelNode({ themeChain: [theme] });
     expect(resolveNodeFontSizePx(n, 'font_size', 0, 16)).toBe(30);

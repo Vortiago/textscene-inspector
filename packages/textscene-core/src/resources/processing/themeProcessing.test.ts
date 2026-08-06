@@ -558,7 +558,7 @@ describe('resolveThemeFontSizePx', () => {
     expect(resolveThemeFontSizePx('font_size', 24, 'Label', undefined, [ancestor], null, 16)).toBe(24);
   });
 
-  it('an override of 0 does NOT win — falls through like an absent one (Control::get_theme_font_size, control.cpp:3117-3120)', () => {
+  it('an override of 0 does NOT win — falls through like an absent one (Control::get_theme_font_size, control.cpp:3114-3117)', () => {
     const ancestor = theme({ fontSizes: { Label: { font_size: 30 } } });
     expect(resolveThemeFontSizePx('font_size', 0, 'Label', undefined, [ancestor], null, 16)).toBe(30);
   });
