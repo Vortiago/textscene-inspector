@@ -2628,7 +2628,7 @@
       "name": "SkeletonIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -2772,7 +2772,7 @@
       "name": "SpringBoneCollisionCapsule3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SpringBoneCollision3D",
         "Node3D",
@@ -2786,7 +2786,7 @@
       "name": "SpringBoneCollisionPlane3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SpringBoneCollision3D",
         "Node3D",
@@ -2800,7 +2800,7 @@
       "name": "SpringBoneCollisionSphere3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SpringBoneCollision3D",
         "Node3D",
@@ -3361,7 +3361,7 @@
       "name": "XRBodyModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -3416,7 +3416,7 @@
       "name": "XRHandModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",

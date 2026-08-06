@@ -1,0 +1,14 @@
+[gd_scene format=3]
+; SpringBoneCollisionSphere3D: no visuals, exercises radius and inside, both at
+; non-default values so the file pins the serialised form rather than the defaults
+; Godot omits. Parented under a SpringBoneSimulator3D because a collision anywhere
+; else is inert (SpringBoneCollision3D's linter.ts).
+
+[node name="Root" type="Node3D"]
+
+[node name="Sim" type="SpringBoneSimulator3D" parent="."]
+
+[node name="MySpringBoneCollisionSphere3D" type="SpringBoneCollisionSphere3D" parent="Sim"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+radius = 0.25
+inside = true

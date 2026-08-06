@@ -1,0 +1,15 @@
+[gd_scene format=3]
+; SpringBoneCollisionCapsule3D: no visuals, exercises radius, height, inside.
+; radius stays at or under height * 0.5 in both setter orders, so Godot loads
+; the pair exactly as written (see this slice's linter.ts for the case where it does not).
+; Parented under a SpringBoneSimulator3D, the only place a collision is consulted.
+
+[node name="Root" type="Node3D"]
+
+[node name="Sim" type="SpringBoneSimulator3D" parent="."]
+
+[node name="MySpringBoneCollisionCapsule3D" type="SpringBoneCollisionCapsule3D" parent="Sim"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+radius = 0.15
+height = 1.0
+inside = true

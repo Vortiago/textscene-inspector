@@ -1,0 +1,19 @@
+[gd_scene format=3]
+; SkeletonIK3D: deprecated FABRIK chain solver, draws nothing; carries all nine of its own keys.
+
+[node name="Root" type="Node3D"]
+
+[node name="MySkeletonIK3D" type="SkeletonIK3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+root_bone = &"UpperArm"
+tip_bone = &"Hand"
+target = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.2, 0.25)
+target_node = NodePath("../Target")
+override_tip_basis = false
+use_magnet = true
+magnet = Vector3(0, 0.5, 1)
+min_distance = 0.05
+max_iterations = 16
+
+[node name="Target" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.2, 0.25)

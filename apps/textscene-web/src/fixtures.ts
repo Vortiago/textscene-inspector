@@ -883,6 +883,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Skeleton Ik 3d",
+    "file": "unit-skeleton-ik-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Skeleton Modifier 3d",
     "file": "unit-skeleton-modifier-3d.tscn",
     "category": "Other"
@@ -955,6 +960,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Spring Bone Collision 3d",
     "file": "unit-spring-bone-collision-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spring Bone Collision Capsule 3d",
+    "file": "unit-spring-bone-collision-capsule-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spring Bone Collision Plane 3d",
+    "file": "unit-spring-bone-collision-plane-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spring Bone Collision Sphere 3d",
+    "file": "unit-spring-bone-collision-sphere-3d.tscn",
     "category": "Other"
   },
   {
@@ -1100,6 +1120,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "World Environment No Fog",
     "file": "unit-world-environment-no-fog.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Xr Body Modifier 3d",
+    "file": "unit-xr-body-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Xr Hand Modifier 3d",
+    "file": "unit-xr-hand-modifier-3d.tscn",
     "category": "Other"
   },
   {

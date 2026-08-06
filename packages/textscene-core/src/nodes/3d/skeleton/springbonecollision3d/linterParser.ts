@@ -7,6 +7,10 @@
  * re-declaring an inherited key shadows it and duplicates the rule.
  */
 
+// Chains to its own base, as every other tier does. Without it the chain
+// dead-ends here, so a scoped slice test for any of the three collision
+// shapes resolves no Node3D key and leaves `transform` unchecked.
+import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
