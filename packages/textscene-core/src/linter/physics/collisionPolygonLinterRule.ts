@@ -1,0 +1,200 @@
+/**
+ * Dimension-parameterized semantic linter rule for CollisionPolygon2D / CollisionPolygon3D.
+ *
+ * Both mirror their own class's get_configuration_warnings() —
+ * collision_polygon_2d.cpp:232-257 and collision_polygon_3d.cpp:235-252 — and
+ * every diagnostic in both is a WARNING; neither ever refuses a load, only
+ * shows the editor's warning icon.
+ *
+ * Genuine dimension-specific seams: 2D's build-mode-dependent minimum vertex
+ * count and its one-way-collision-ignored-under-Area2D check
+ * (collision_polygon_2d.cpp:239-254) have no 3D equivalent —
+ * collision_polygon_3d.cpp declares neither a build_mode nor a
+ * one_way_collision property — and 3D's non-uniform-scale check
+ * (collision_polygon_3d.cpp:246-249) has no 2D equivalent. Format validation
+ * stays in each slice's linterParser.ts.
+ */
+
+import type { LintRule, Diagnostic, RuleContext } from '../types.js';
+import { isValidProperties, findParentNode } from '../linterUtils.js';
+import { descendsFrom } from '../nodeBaseTypes.js';
+import { isZeroApprox } from '../../godot/math.js';
+import { basisColumnScales } from './basisColumnScales.js';
+import type { PhysicsDim } from './dim.js';
+import { dimSuffix } from './dim.js';
+
+/**
+ * Matches the same wrapper `v.packedVector2Array` accepts; a value that doesn't
+ * match is malformed, and reporting that is linterParser.ts's job, not this
+ * rule's. Compiled once — a literal inside the function below would rebuild on
+ * every node either dimension's rule visits. No `g` flag, so the shared
+ * instance is stateless under `.exec`.
+ */
+const POLYGON_WRAPPER = /^\s*PackedVector2Array\s*\(([\s\S]*)\)\s*$/;
+
+/**
+ * Number of vertices `polygon` carries, mirroring `polygon.size()`
+ * (collision_polygon_2d.cpp:239, collision_polygon_3d.cpp:242). Godot omits
+ * the property at its `PackedVector2Array()` default, so an absent key means
+ * zero points, same as an explicit empty array. Returns null for a value this
+ * rule cannot read — linterParser.ts's format validator owns reporting that;
+ * treating an unreadable value as a valid non-empty polygon would be wrong.
+ */
+function polygonPointCount(raw: string | undefined): number | null {
+  if (raw === undefined) return 0;
+  const match = POLYGON_WRAPPER.exec(raw);
+  if (!match) return null;
+  const body = match[1]!.trim();
+  if (body === '') return 0;
+  const parts = body.split(',').filter((part) => part.trim().length > 0);
+  // `_build_polygon` pairs consecutive components (collision_polygon_2d.cpp:65-71);
+  // a trailing odd component is not a whole vertex.
+  return Math.floor(parts.length / 2);
+}
+
+export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
+  const type = `CollisionPolygon${dim}`;
+  const prefix = `collisionpolygon${dimSuffix(dim)}`;
+  const collisionObject = `CollisionObject${dim}`;
+  const advice =
+    `${type} only serves to provide a collision shape to a ${collisionObject} derived node. ` +
+    `Please only use it as a child of Area${dim}, StaticBody${dim}, RigidBody${dim}, CharacterBody${dim}, etc. to give them a shape.`;
+
+  function check(context: RuleContext): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+    const { node, scene } = context;
+    if (!isValidProperties(node.properties)) return diagnostics;
+    const rawProps = node.properties;
+
+    // collision_polygon_2d.cpp:235-237 / collision_polygon_3d.cpp:238-240 —
+    // `!Object::cast_to<CollisionObject<dim>>(get_parent())`.
+    const parent = findParentNode(scene.nodes, node);
+    if (!parent) {
+      diagnostics.push({
+        severity: 'warning',
+        message: `${type} '${node.name}' has no parent node. ${advice}`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: `${prefix}-no-parent`,
+      });
+    } else if (!descendsFrom(parent.type, collisionObject)) {
+      diagnostics.push({
+        severity: 'warning',
+        message: `${type} '${node.name}' has parent '${parent.name}' of type '${parent.type}', which is not a ${collisionObject}. ${advice}`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: `${prefix}-invalid-parent`,
+      });
+    }
+
+    // collision_polygon_2d.cpp:239-250 / collision_polygon_3d.cpp:242-244 —
+    // empty polygon, then (2D only) a build-mode-dependent minimum vertex
+    // count. The two are mutually exclusive in 2D's source (the count check
+    // is in the `else` of the emptiness check), so at most one of them fires
+    // there; 3D has no count check at all.
+    const pointCount = polygonPointCount(rawProps.polygon);
+    if (pointCount !== null) {
+      if (pointCount === 0) {
+        diagnostics.push({
+          severity: 'warning',
+          message:
+            dim === '2D'
+              ? `${type} '${node.name}' has an empty polygon, which has no effect on collision.`
+              : `${type} '${node.name}' has an empty polygon. An empty ${type} has no effect on collision.`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: `${prefix}-empty-polygon`,
+        });
+      } else if (dim === '2D') {
+        // build_mode default BUILD_SOLIDS = 0 (collision_polygon_2d.h:48);
+        // absent key means the default, same as every other property this
+        // codebase omits at default.
+        const buildMode = rawProps.build_mode === undefined ? 0 : parseInt(rawProps.build_mode, 10);
+        if (!Number.isNaN(buildMode)) {
+          if (buildMode === 0 && pointCount < 3) {
+            diagnostics.push({
+              severity: 'warning',
+              message: `${type} '${node.name}' has an invalid polygon: at least 3 points are needed in 'Solids' build mode, got ${pointCount}.`,
+              nodeName: node.name,
+              nodeType: node.type,
+              ruleName: `${prefix}-insufficient-points`,
+            });
+          } else if (buildMode !== 0 && pointCount < 2) {
+            diagnostics.push({
+              severity: 'warning',
+              message: `${type} '${node.name}' has an invalid polygon: at least 2 points are needed in 'Segments' build mode, got ${pointCount}.`,
+              nodeName: node.name,
+              nodeType: node.type,
+              ruleName: `${prefix}-insufficient-points`,
+            });
+          }
+        }
+      }
+    }
+
+    // collision_polygon_2d.cpp:252-254 — `one_way_collision && Object::cast_to<Area2D>(get_parent())`.
+    // No 3D equivalent: CollisionPolygon3D has no one_way_collision property.
+    if (dim === '2D' && rawProps.one_way_collision === 'true' && parent && descendsFrom(parent.type, 'Area2D')) {
+      diagnostics.push({
+        severity: 'warning',
+        message: `${type} '${node.name}' has 'one_way_collision' set, but its parent '${parent.name}' is an Area2D. The One Way Collision property will be ignored when the collision object is an Area2D.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: `${prefix}-one-way-ignored`,
+      });
+    }
+
+    // collision_polygon_3d.cpp:246-249 — non-uniform transform scale. No 2D
+    // equivalent: collision_polygon_2d.cpp's get_configuration_warnings()
+    // carries no scale check at all.
+    if (dim === '3D' && rawProps.transform !== undefined) {
+      const scales = basisColumnScales(rawProps.transform);
+      if (scales) {
+        const [sx, sy, sz] = scales;
+        if (!(isZeroApprox(sx - sy) && isZeroApprox(sy - sz))) {
+          diagnostics.push({
+            severity: 'warning',
+            message:
+              `${type} '${node.name}' has a non-uniformly scaled transform ` +
+              `(${sx.toFixed(3)}, ${sy.toFixed(3)}, ${sz.toFixed(3)}), which will probably not ` +
+              "function as expected. Keep its scale uniform and adjust the polygon's vertices instead.",
+            nodeName: node.name,
+            nodeType: node.type,
+            ruleName: `${prefix}-non-uniform-scale`,
+          });
+        }
+      }
+    }
+
+    return diagnostics;
+  }
+
+  const description =
+    dim === '2D'
+      ? `Validates ${type} parent type, polygon vertex count against build mode, and one-way collision applicability`
+      : `Validates ${type} parent node type, polygon emptiness, and transform scale uniformity`;
+
+  return {
+    meta: {
+      name: `valid-${prefix}`,
+      description,
+      category: 'validation',
+      applicableNodeTypes: [type],
+      emits: [
+        { ruleName: `${prefix}-no-parent`, severity: 'warning' },
+        { ruleName: `${prefix}-invalid-parent`, severity: 'warning' },
+        { ruleName: `${prefix}-empty-polygon`, severity: 'warning' },
+        // 2D-only branch (dim === '2D'); never emitted by the 3D instantiation
+        ...(dim === '2D'
+          ? [
+              { ruleName: `${prefix}-insufficient-points`, severity: 'warning' as const },
+              { ruleName: `${prefix}-one-way-ignored`, severity: 'warning' as const },
+            ]
+          : []),
+        // 3D-only branch (dim === '3D'); never emitted by the 2D instantiation
+        ...(dim === '3D' ? [{ ruleName: `${prefix}-non-uniform-scale`, severity: 'warning' as const }] : []),
+      ],
+    },
+    check,
+  };
+}

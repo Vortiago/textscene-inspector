@@ -333,6 +333,70 @@ describe('float-tuple validators accept the renderer float grammar (#190 drift f
       expect(check('PackedVector2Array(0, 1,)')).not.toBeNull();
     });
   });
+
+  const NON_FINITE = ['inf', '-inf', 'inf_neg', 'nan'];
+
+  describe('v.packedVector3Array', () => {
+    const check = (value: string) => v.packedVector3Array('emission_points')('emission_points', value, 1);
+
+    it('accepts vertex triples', () => {
+      expect(check('PackedVector3Array(0, 0, 0, 1, 0, 0)')).toBeNull();
+    });
+
+    it('accepts an EMPTY array, which is how Godot serialises one', () => {
+      expect(check('PackedVector3Array()')).toBeNull();
+    });
+
+    it.each(NON_FINITE)('accepts %s, which rtos_fix writes into a Vector3Array too', (value) => {
+      expect(check(`PackedVector3Array(0, ${value}, 0)`)).toBeNull();
+    });
+
+    it('accepts a count that is not a multiple of 3 (VariantParser truncates via integer division, variant_parser.cpp:1573)', () => {
+      expect(check('PackedVector3Array(0, 0, 1, 0)')).toBeNull();
+    });
+
+    it('rejects a non-numeric entry as a format error', () => {
+      const err = check('PackedVector3Array(0, nope, 0)');
+      expect(err).not.toBeNull();
+      expect(err!.code).toBe('INVALID_EMISSION_POINTS_FORMAT');
+    });
+
+    it('rejects the wrong wrapper', () => {
+      expect(check('PackedColorArray(0, 0, 0, 1)')).not.toBeNull();
+      expect(check('PackedVector2Array(0, 0)')).not.toBeNull();
+    });
+  });
+
+  describe('v.packedColorArray', () => {
+    const check = (value: string) => v.packedColorArray('emission_colors')('emission_colors', value, 1);
+
+    it('accepts RGBA quadruples', () => {
+      expect(check('PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)')).toBeNull();
+    });
+
+    it('accepts an EMPTY array, which is how Godot serialises one', () => {
+      expect(check('PackedColorArray()')).toBeNull();
+    });
+
+    it.each(NON_FINITE)('accepts %s, which rtos_fix writes into a ColorArray too', (value) => {
+      expect(check(`PackedColorArray(1, 1, 1, ${value})`)).toBeNull();
+    });
+
+    it('accepts a count that is not a multiple of 4 (VariantParser truncates via integer division, variant_parser.cpp:1609)', () => {
+      expect(check('PackedColorArray(1, 1, 1)')).toBeNull();
+    });
+
+    it('rejects a non-numeric entry as a format error', () => {
+      const err = check('PackedColorArray(1, 1, 1, nope)');
+      expect(err).not.toBeNull();
+      expect(err!.code).toBe('INVALID_EMISSION_COLORS_FORMAT');
+    });
+
+    it('rejects the wrong wrapper', () => {
+      expect(check('PackedVector3Array(0, 0, 0)')).not.toBeNull();
+    });
+  });
+
   describe('quotedString / stringName grammar', () => {
     const quoted = (value: string) => v.quotedString('title')('title', value, 1);
     const name = (value: string) => v.stringName('bone_name')('bone_name', value, 1);

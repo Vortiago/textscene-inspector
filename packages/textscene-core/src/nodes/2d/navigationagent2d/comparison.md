@@ -94,7 +94,7 @@ Strict parsing format-checks these `NavigationAgent2D` properties, plus 10 inher
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-navigationagent2d-parent` | `navigationagent2d-parent-not-node2d` | warning |
+| `valid-navigationagent2d` | `navigationagent2d-parent-not-node2d` | warning |
 <!-- lint:end -->
 
 The lenient parser (`index.ts`) reuses the generic `parseNode` rather than a

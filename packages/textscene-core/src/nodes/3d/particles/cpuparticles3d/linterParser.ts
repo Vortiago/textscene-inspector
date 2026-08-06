@@ -29,27 +29,23 @@
  * unlike a `radians_as_degrees` hint.
  *
  * `emission_points`/`emission_normals` (PackedVector3Array) and
- * `emission_colors` (PackedColorArray) have no combinator in `v` yet, so this
- * file hand-rolls one generic tuple-array validator for both arities rather
- * than duplicating `v.packedVector2Array`'s body twice.
- *
- * All three setters (cpu_particles_3d.cpp:439-449) are bare assignments and
- * the properties carry no hint, so nothing about their VALUE is checked here.
- * `packedTupleArray` is format-only, and its shape mirrors Godot's own
- * `VariantParser::_parse_construct` (variant_parser.cpp:552-596): a
- * comma-separated constructor body whose every element is a float literal,
- * `inf` / `-inf` / `inf_neg` / `nan` included. A count that isn't a
- * multiple of the tuple arity is NOT rejected by that parser.
- * `parse_value` (variant_parser.cpp:1573 Vector3Array, :1609 ColorArray)
- * divides the flat float count by the arity with integer division and drops
- * the remainder, so `PackedVector3Array(0, 0, 1, 0)` loads as a single
- * `Vector3(0, 0, 1)` with no error.
+ * `emission_colors` (PackedColorArray) go through `v.packedVector3Array` /
+ * `v.packedColorArray`. All three setters (cpu_particles_3d.cpp:439-449) are
+ * bare assignments and the properties carry no hint, so nothing about their
+ * VALUE is checked — the shared combinator is format-only, and its shape
+ * mirrors Godot's own `VariantParser::_parse_construct`
+ * (variant_parser.cpp:552-596): a comma-separated constructor body whose
+ * every element is a float literal, `inf` / `-inf` / `inf_neg` / `nan`
+ * included. A count that isn't a multiple of the tuple arity is NOT rejected
+ * by that parser either: `parse_value` (variant_parser.cpp:1573 Vector3Array,
+ * :1609 ColorArray) divides the flat float count by the arity with integer
+ * division and drops the remainder, so `PackedVector3Array(0, 0, 1, 0)` loads
+ * as a single `Vector3(0, 0, 1)` with no error.
  */
 
 import '../../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v, accepts, propertyError, TSCN_FLOAT_RE } from '../../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
+import { v } from '../../../../linter/validators/index.js';
 
 const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME', 2: 'VIEW_DEPTH' };
 
@@ -62,70 +58,6 @@ const EMISSION_SHAPE = {
   5: 'DIRECTED_POINTS',
   6: 'RING',
 };
-
-/**
- * `Packed<Kind>Array(n1, n2, …)` — an arbitrary-length list of fixed-size
- * TUPLES (3 floats per Vector3, 4 per Color), unlike `v.packedVector2Array`'s
- * hard-coded pair arity.
- *
- * A count that isn't a multiple of `groupSize` used to be reported as a value
- * error (a "truncated final tuple"). It was a false positive: Godot's own
- * `VariantParser::parse_value` builds the typed array with `args.size() /
- * groupSize` (integer division) and simply drops the remainder, so a scene
- * carrying e.g. `PackedVector3Array(0, 0, 1, 0)` loads without complaint as
- * one `Vector3(0, 0, 1)`. Only the format (wrapper shape, all-numeric body)
- * is checked below.
- *
- * Godot serialises an empty array as `Packed<Kind>Array()`, so zero values is
- * legal, same as `v.packedVector2Array`.
- */
-function packedTupleArray(name: string, wrapper: string, groupSize: number, acceptsLabel: string): PropertyValidator {
-  const formatErr = `INVALID_${name.toUpperCase()}_FORMAT`;
-  const WRAPPER_RE = new RegExp(`^\\s*${wrapper}\\s*\\(([\\s\\S]*)\\)\\s*$`);
-  const validator: PropertyValidator = (key, value, line) => {
-    const match = WRAPPER_RE.exec(value);
-    if (!match) {
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' must be a ${wrapper} like ${wrapper}(${Array(groupSize).fill('0').join(', ')}), got: ${value}`,
-        formatErr
-      );
-    }
-    const body = match[1]!.trim();
-    if (body === '') return null;
-
-    const parts = body.split(',');
-    for (const part of parts) {
-      // The component GRAMMAR, not a numeric parse — same reason as
-      // `v.packedVector2Array`: `Number()` refuses the `inf` that `rtos_fix`
-      // writes (variant_parser.cpp:2519, :2534), `parseFloat` accepts trailing
-      // garbage Godot's tokenizer stops at.
-      if (!TSCN_FLOAT_RE.test(part.trim())) {
-        return propertyError(
-          key,
-          line,
-          `Property '${name}' contains a non-numeric value: "${part.trim()}"`,
-          formatErr
-        );
-      }
-    }
-    return null;
-  };
-  // Hand-tagged (not built through `v`): rejects only what Godot's own
-  // constructor parser rejects too (see the block comment above), so it
-  // needs no ADR-0032 citation beyond the one already given there.
-  validator.formatOnly = true;
-  return accepts(validator, acceptsLabel);
-}
-
-function packedVector3Array(name: string): PropertyValidator {
-  return packedTupleArray(name, 'PackedVector3Array', 3, 'PackedVector3Array(x, y, z, …)');
-}
-
-function packedColorArray(name: string): PropertyValidator {
-  return packedTupleArray(name, 'PackedColorArray', 4, 'PackedColorArray(r, g, b, a, …)');
-}
 
 validatorRegistry.registerAll('CPUParticles3D', {
   // cpu_particles_3d.cpp:1555 — PROPERTY_HINT_ONESHOT is an editor icon hint, not a range.
@@ -211,14 +143,14 @@ validatorRegistry.registerAll('CPUParticles3D', {
   emission_box_extents: v.vector3('emission_box_extents'),
   // cpu_particles_3d.cpp:1670 — PACKED_VECTOR3_ARRAY, no hint.
   // set_emission_points:439-441 is a bare assignment: format-only (see
-  // packedTupleArray above).
-  emission_points: packedVector3Array('emission_points'),
+  // v.packedVector3Array).
+  emission_points: v.packedVector3Array('emission_points'),
   // cpu_particles_3d.cpp:1671 — PACKED_VECTOR3_ARRAY, no hint.
   // set_emission_normals:443-445 is a bare assignment: format-only.
-  emission_normals: packedVector3Array('emission_normals'),
+  emission_normals: v.packedVector3Array('emission_normals'),
   // cpu_particles_3d.cpp:1672 — PACKED_COLOR_ARRAY, no hint.
   // set_emission_colors:447-449 is a bare assignment: format-only.
-  emission_colors: packedColorArray('emission_colors'),
+  emission_colors: v.packedColorArray('emission_colors'),
   // cpu_particles_3d.cpp:1673 — VECTOR3, no hint.
   emission_ring_axis: v.vector3('emission_ring_axis'),
   // cpu_particles_3d.cpp:1674 — "0,1000,0.01,or_greater": or_greater lifts the ceiling.

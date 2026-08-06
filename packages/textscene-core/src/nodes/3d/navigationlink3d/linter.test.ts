@@ -58,11 +58,8 @@ describe('NavigationLink3D position rule', () => {
     expect(warnings[0]!.nodeName).toBe('Link');
   });
 
-  it('stays quiet on a bare node with neither position written', () => {
-    // Both default to the same Vector3(0, 0, 0) (doc/classes/NavigationLink3D.xml),
-    // but neither was authored, so there is nothing to contradict — same call
-    // SpringBoneCollisionCapsule3D makes for its own absent-by-default properties.
-    expect(warningsOf(linter.lint(scene('')))).toEqual([]);
+  it('warns on a bare node with neither position written: both resolve to the shared Vector3(0, 0, 0) default, and get_configuration_warnings() compares unconditionally', () => {
+    expect(warningsOf(linter.lint(scene('')))).toHaveLength(1);
   });
 
   it('warns when only end_position is written, leaving start_position at its zero default', () => {

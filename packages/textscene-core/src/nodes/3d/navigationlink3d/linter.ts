@@ -1,10 +1,14 @@
 /**
  * Semantic linter rule for NavigationLink3D — Godot's own configuration
- * warning, `get_configuration_warnings()` (navigation_link_3d.cpp:493-499):
+ * warning, `get_configuration_warnings()` (navigation_link_3d.cpp:494-502):
  *
- *     if (start_position.is_equal_approx(end_position)) {
- *         warnings.push_back(RTR("NavigationLink3D start position should be
- *         different than the end position to be useful."));
+ *     PackedStringArray NavigationLink3D::get_configuration_warnings() const {
+ *         PackedStringArray warnings = Node3D::get_configuration_warnings();
+ *         if (start_position.is_equal_approx(end_position)) {
+ *             warnings.push_back(RTR("NavigationLink3D start position should be
+ *             different than the end position to be useful."));
+ *         }
+ *         return warnings;
  *     }
  *
  * Not cosmetic: a link whose two ends coincide still creates a real
@@ -14,21 +18,33 @@
  * this is a configuration warning, not a load refusal, so this rule is
  * WARNING tier, matching it exactly.
  *
+ * The comparison is UNGATED: no presence check, no `_validate_property`, no
+ * `ADD_PROPERTY_DEFAULT`, and the constructor (:274-285) never touches either
+ * field. `start_position`/`end_position` are declared with no initializer
+ * (navigation_link_3d.h:43-44), so a `Vector3` that a `.tscn` never sets
+ * zero-constructs exactly like one authored as `Vector3(0, 0, 0)` — by the
+ * time this method runs, the two are indistinguishable. This rule mirrors
+ * that: it resolves each side to its documented default, `Vector3(0, 0, 0)`
+ * (doc/classes/NavigationLink3D.xml), when the key is absent, then always
+ * runs the comparison — including on a bare node with NEITHER key written,
+ * which is exactly what a freshly-added NavigationLink3D looks like, and
+ * exactly what the Godot editor's warning triangle flags on it before its
+ * endpoints are dragged apart.
+ *
+ * This does not conflict with "absence is Godot's default form": that
+ * convention forbids treating an absent key as an AUTHORED value or
+ * requiring one to be present. This rule does neither — it fills absence
+ * with the class default and applies the engine's own check to the resolved
+ * value, the same substitution the engine performs internally. (This is a
+ * narrower case than SpringBoneCollisionCapsule3D's cross-field rule, which
+ * legitimately gates on both keys being written: that invariant lives in the
+ * SETTERS, which only run for a key the file actually assigns, so presence
+ * is load-bearing there. `get_configuration_warnings` here reads only the
+ * final resolved members and does not care how they got that value.)
+ *
  * `Vector3::is_equal_approx` (core/math/vector3.cpp:141-143) is
  * per-COMPONENT `Math::is_equal_approx`, which `godot/math.ts` provides — the
  * asymmetric, left-scaled tolerance is documented there.
- *
- * Both properties default to `Vector3(0, 0, 0)` when the `.tscn` omits them
- * (doc/classes/NavigationLink3D.xml). This rule only fires once at least ONE
- * of the two is actually written: with BOTH absent there is nothing authored
- * to contradict, and per this project's convention the serializer's own
- * defaults are never a lint defect — the same call SpringBoneCollisionCapsule3D
- * makes ("stays quiet on a capsule with no properties at all") for its own
- * cross-field rule. But once either key IS written, Godot's own
- * `get_configuration_warnings` still runs against the true default for
- * whichever side stayed unset, so a single written value landing on the
- * other's shared zero default is exactly the case Godot's editor flags, and
- * this rule agrees.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -39,7 +55,7 @@ import { tupleComponent } from '../../../linter/validators/commonValidators.js';
 import { isEqualApprox } from '../../../godot/index.js';
 import type { Vector3 } from '../../../parser/vectors.js';
 
-/** doc/classes/NavigationLink3D.xml: both positions default to Vector3(0, 0, 0). */
+/** navigation_link_3d.h:43-44 declares both fields with no initializer; doc/classes/NavigationLink3D.xml:81,92 confirms the resulting zero-construct as the documented default. */
 const DEFAULT_POSITION: Vector3 = { x: 0, y: 0, z: 0 };
 
 /** The `Vector3(x, y, z)` a property carries, its XML default when absent, or null when malformed. */
@@ -65,12 +81,6 @@ function checkNavigationLink3D(context: RuleContext): Diagnostic[] {
   const properties = isValidProperties(node.properties)
     ? (node.properties as Record<string, string>)
     : {};
-
-  // Absence is Godot's default form: a link that writes NEITHER position has
-  // authored nothing to contradict.
-  if (properties.start_position === undefined && properties.end_position === undefined) {
-    return [];
-  }
 
   const start = readPosition(properties, 'start_position');
   const end = readPosition(properties, 'end_position');

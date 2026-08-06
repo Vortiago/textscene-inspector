@@ -48,7 +48,7 @@ Strict parsing format-checks these `NavigationObstacle2D` properties, plus 12 in
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-navigationobstacle2d-carve-navigation-mesh` | `navigationobstacle2d-carve-without-affect` | warning |
+| `valid-navigationobstacle2d` | `navigationobstacle2d-carve-without-affect` | warning |
 <!-- lint:end -->
 
 The lenient parser registers `parseNode2D` directly (index.ts) rather than a

@@ -1,5 +1,5 @@
 /**
- * Tests for the NavigationAgent2D parent rule (`valid-navigationagent2d-parent`).
+ * Tests for the NavigationAgent2D parent rule (`valid-navigationagent2d`).
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

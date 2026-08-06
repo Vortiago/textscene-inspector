@@ -2,47 +2,7 @@
 
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { accepts, layerBitmask, propertyError, TSCN_FLOAT_RE, v } from '../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-
-/**
- * `PackedVector3Array(x, y, z, …)` has no combinator in `v` yet (only
- * `v.packedVector2Array` exists). Format-only, mirroring
- * `VariantParser::parse_value`'s Vector3Array branch (variant_parser.cpp:1573):
- * every element must be a float literal — `inf` / `-inf` / `inf_neg` / `nan`
- * included — and a count that is not a multiple of 3 is silently truncated by
- * integer division rather than rejected, so it is not flagged here either.
- */
-function packedVector3Array(name: string): PropertyValidator {
-  const formatErr = `INVALID_${name.toUpperCase()}_FORMAT`;
-  const WRAPPER_RE = /^\s*PackedVector3Array\s*\(([\s\S]*)\)\s*$/;
-  const validator: PropertyValidator = (key, value, line) => {
-    const match = WRAPPER_RE.exec(value);
-    if (!match) {
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' must be a PackedVector3Array like PackedVector3Array(0, 0, 0), got: ${value}`,
-        formatErr
-      );
-    }
-    const body = match[1]!.trim();
-    if (body === '') return null;
-    for (const part of body.split(',')) {
-      if (!TSCN_FLOAT_RE.test(part.trim())) {
-        return propertyError(
-          key,
-          line,
-          `Property '${name}' contains a non-numeric value: "${part.trim()}"`,
-          formatErr
-        );
-      }
-    }
-    return null;
-  };
-  validator.formatOnly = true;
-  return accepts(validator, 'PackedVector3Array(x, y, z, …)');
-}
+import { layerBitmask, v } from '../../../linter/validators/index.js';
 
 // Spatial validators (transform/position/...) are inherited from Node3D via
 // the nodeBaseTypes chain — only the type-specific surface is registered here.
@@ -71,7 +31,7 @@ validatorRegistry.registerAll('NavigationObstacle3D', {
   // serialises as PackedVector3Array(...), not Array[Vector3]([...]).
   // set_vertices (:263) only recomputes the clockwise/valid debug flags — no
   // format or range guard.
-  vertices: packedVector3Array('vertices'),
+  vertices: v.packedVector3Array('vertices'),
   avoidance_enabled: v.boolean('avoidance_enabled'),
   // Bare uint32_t assignment (:341): the parameter type is the ceiling.
   avoidance_layers: layerBitmask('avoidance_layers', { hinted: 'navigation_obstacle_3d.cpp:86' }),

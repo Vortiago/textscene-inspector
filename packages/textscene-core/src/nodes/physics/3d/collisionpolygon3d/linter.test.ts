@@ -66,6 +66,20 @@ describe('CollisionPolygon3D Linter', () => {
     );
   });
 
+  it('warns on a single stray coordinate, which forms no complete vertex pair (unified with the 2D vertex-pairing count)', () => {
+    expectDiagnostic(
+      scene(node('StaticBody3D'), node('CollisionPolygon3D', { polygon: 'PackedVector2Array(5)' }, { parent: '.' })),
+      { ruleName: 'collisionpolygon3d-empty-polygon', severity: 'warning' }
+    );
+  });
+
+  it('stays silent on emptiness for a polygon value the format validator itself cannot parse', () => {
+    expectNoDiagnostic(
+      scene(node('StaticBody3D'), node('CollisionPolygon3D', { polygon: 'NodePath("nonsense")' }, { parent: '.' })),
+      { ruleName: 'collisionpolygon3d-empty-polygon' }
+    );
+  });
+
   it('warns on a non-uniformly scaled transform', () => {
     const diag = expectDiagnostic(
       scene(

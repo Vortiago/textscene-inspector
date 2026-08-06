@@ -36,13 +36,14 @@ describe('NavigationLink2D semantic rules', () => {
     );
   });
 
-  it('stays quiet when both are omitted: the serializer omits both at their shared Vector2(0, 0) default, and absence must not read as an authored zero', () => {
-    expectNoDiagnostic(scene(node('NavigationLink2D', {})), { ruleName: RULE_NAME });
+  it('warns on a bare node with neither key written: both resolve to the shared Vector2(0, 0) default, and get_configuration_warnings() compares unconditionally', () => {
+    expectDiagnostic(scene(node('NavigationLink2D', {})), { ruleName: RULE_NAME, severity: 'warning' });
   });
 
-  it('stays quiet when only end_position is set to the shared Vector2(0, 0) default: start_position is still only implied, not authored', () => {
-    expectNoDiagnostic(scene(node('NavigationLink2D', { end_position: 'Vector2(0, 0)' })), {
+  it('warns when only end_position is set to the shared Vector2(0, 0) default, leaving start_position at that same default', () => {
+    expectDiagnostic(scene(node('NavigationLink2D', { end_position: 'Vector2(0, 0)' })), {
       ruleName: RULE_NAME,
+      severity: 'warning',
     });
   });
 

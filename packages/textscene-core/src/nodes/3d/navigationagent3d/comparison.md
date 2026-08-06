@@ -105,7 +105,7 @@ Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inher
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-navigationagent3d-parent` | `navigationagent3d-parent-not-node3d` | warning |
+| `valid-navigationagent3d` | `navigationagent3d-parent-not-node3d` | warning |
 <!-- lint:end -->
 
 The lenient parser (`parser.ts`) only ever read eleven of the class's now 33
