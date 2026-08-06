@@ -262,6 +262,8 @@ function bakeAtlas(ttfBuffer) {
 
 function renderMetricsModule(metrics) {
   return `${GENERATED_HEADER}
+import { getFontAscentPx, getFontLinePitchPx } from './fontMetrics';
+
 /**
  * Font-wide scalar metrics for OpenSans_SemiBold, in font design units
  * (\`unitsPerEm\` = ${metrics.unitsPerEm}), read via \`fontkit\` from the vendored
@@ -371,10 +373,13 @@ export function getGlyphAdvanceUnits(ch: string): number | null {
  * stroke's y) is this plus a further offset, never re-derived.
  *
  * At size 16: ceil(${metrics.ascent} * 16/${metrics.unitsPerEm}) = 18.
+ *
+ * Delegates to \`fontMetrics.ts\`'s \`getFontAscentPx\` — the SAME pixel-
+ * quantization rule any other \`FontMetrics\` implementation goes through, so
+ * this generated convenience function can never drift from it.
  */
 export function getAscentPx(fontSizePx: number): number {
-  const scale = fontSizePx / OPEN_SANS_METRICS.unitsPerEm;
-  return Math.ceil(OPEN_SANS_METRICS.ascent * scale);
+  return getFontAscentPx(OPEN_SANS_METRICS, fontSizePx);
 }
 
 /**
@@ -391,12 +396,13 @@ export function getAscentPx(fontSizePx: number): number {
  *   scale 1.0).
  *
  * At size 16: ${Math.ceil((metrics.ascent * 16) / metrics.unitsPerEm)} + ceil(${metrics.descent} * 16/${metrics.unitsPerEm}) + 3 = 26.
+ *
+ * Delegates to \`fontMetrics.ts\`'s \`getFontLinePitchPx\` — see that
+ * function's own doc for why the independent-ceiling-then-sum rule above
+ * lives there, once, rather than here.
  */
 export function getLinePitchPx(fontSizePx: number, lineSpacingPx = 3): number {
-  const ascentPx = getAscentPx(fontSizePx);
-  const scale = fontSizePx / OPEN_SANS_METRICS.unitsPerEm;
-  const descentPx = Math.ceil(OPEN_SANS_METRICS.descent * scale);
-  return ascentPx + descentPx + lineSpacingPx;
+  return getFontLinePitchPx(OPEN_SANS_METRICS, fontSizePx, lineSpacingPx);
 }
 
 /**

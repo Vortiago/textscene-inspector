@@ -17,7 +17,7 @@
  * reasoning actually called for.
  *
  * The ascent is ceiled at the TARGET size, independently of the descent, for the
- * same reason `getLinePitchPx` ceils both: Godot's TextServer reads FreeType's
+ * same reason `getFontLinePitchPx` ceils both: Godot's TextServer reads FreeType's
  * pixel-quantised size metrics rather than scaling the font tables.
  *
  * Portions ported from Godot Engine (MIT).
@@ -27,11 +27,12 @@
  */
 
 import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
-import { OPEN_SANS_METRICS } from './openSansMetrics';
+import { getFontAscentPx } from './fontMetrics';
+import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 
-/** `ceil(ascent * fontSizePx / unitsPerEm)` — the ascent alone, not the ascent+descent+spacing sum `getLinePitchPx` returns. */
+/** `getFontAscentPx(OPEN_SANS_FONT_METRICS, fontSizePx)` — the ascent alone, not the ascent+descent+spacing sum `getFontLinePitchPx` returns. */
 export function ascentPxAt(fontSizePx: number): number {
-  return Math.ceil(OPEN_SANS_METRICS.ascent * (fontSizePx / OPEN_SANS_METRICS.unitsPerEm));
+  return getFontAscentPx(OPEN_SANS_FONT_METRICS, fontSizePx);
 }
 
 /**
