@@ -15,8 +15,6 @@ import { computeWorldBoundingBox } from './bounds.js';
  * one-sided change there is invisible.
  */
 export const FRAME_MARGIN = 1.6;
-/** A near-flat (2D) scene is viewed head-on and needs far less room. */
-export const FLAT_FRAME_MARGIN = 1.15;
 
 /** Minimal shape we touch on the viewport controls instance for framing. */
 export interface OrbitLike {
@@ -84,26 +82,19 @@ export function frameSceneBounds(
   const maxDim = Math.max(size.x, size.y, size.z);
   if (!Number.isFinite(maxDim) || maxDim <= 0) return;
 
-  // 2D-canvas scenes sit on ~one plane (z spread is only z_index draw steps);
-  // view them straight-on (down -Z, +Y up) instead of the 3D isometric angle,
-  // so sprites read flat and upright rather than tilted in perspective.
-  const maxXY = Math.max(size.x, size.y);
-  const isFlat = size.z <= Math.max(maxXY, 1) * 0.02;
-
   // The only orthographic camera framing ever sees is the editor camera in its
   // Numpad-5 projection, whose frustum is sized from the SAME 70-degree field
   // of view (`GodotEditorControls`); framing it at three's unrelated 50-degree
   // default would leave it zoomed out by half again.
   const persp = camera as THREE.PerspectiveCamera;
   const fov = ((persp.isPerspectiveCamera ? persp.fov : EDITOR_CAMERA_FOV) * Math.PI) / 180;
-  const fitDim = isFlat ? Math.max(maxXY, 0.001) : maxDim;
-  const distance =
-    ((fitDim / 2 / Math.tan(fov / 2)) || fitDim) * (isFlat ? FLAT_FRAME_MARGIN : FRAME_MARGIN);
+  const distance = (maxDim / 2 / Math.tan(fov / 2) || maxDim) * FRAME_MARGIN;
 
   // Godot's own editor viewing angle, so a framed scene presents the same face
-  // it does in the editor (godotEditorCamera.ts). A flat scene is still viewed
-  // head-on — an edge-on plane frames to nothing.
-  const dir = isFlat ? new THREE.Vector3(0, 0, 1) : editorCameraDirection();
+  // it does in the editor (godotEditorCamera.ts) — including a scene that is
+  // dimensionally flat (all its geometry coplanar): Godot's own reference
+  // camera still frames it obliquely, never head-on.
+  const dir = editorCameraDirection();
   camera.position.copy(center.clone().add(dir.multiplyScalar(distance)));
   if (persp.isPerspectiveCamera) {
     // Keep the near plane below the framing distance so microscopic scenes

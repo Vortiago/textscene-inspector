@@ -13,6 +13,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { frameSceneBounds } from './frameSceneBounds';
+import { editorCameraDirection } from './godotEditorCamera';
 
 /** Mirrors TscnCanvas.tsx's `GroundGrid()` — a large, framing-exempt grid. */
 function taggedGrid(): THREE.GridHelper {
@@ -73,5 +74,27 @@ describe('frameSceneBounds — tscnEmptyState exclusion', () => {
     frameSceneBounds(scene, camera, null);
 
     expect(camera.position.length()).toBeGreaterThan(5);
+  });
+});
+
+describe('frameSceneBounds — dimensionally flat scenes use Godot\'s own editor orbit', () => {
+  it('a scene whose geometry is entirely coplanar (z spread 0) still frames from editorCameraDirection(), not head-on', () => {
+    // A quad lying flat in the XY plane — genuinely z-flat, the exact shape
+    // that used to trip frameSceneBounds's now-removed isFlat branch (head-on
+    // dir (0,0,1), a picture Godot's own reference camera never produces: its
+    // editor orbit is fixed regardless of scene flatness).
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
+    const scene = new THREE.Scene();
+    scene.add(mesh);
+
+    const camera = makeCamera();
+    frameSceneBounds(scene, camera, null);
+
+    // The camera must sit along the SAME direction from the origin (the
+    // plane's centre) as Godot's fixed editor orbit — never straight down -Z.
+    const actualDir = camera.position.clone().normalize();
+    const expectedDir = editorCameraDirection();
+    expect(actualDir.dot(expectedDir)).toBeGreaterThan(0.999);
   });
 });
