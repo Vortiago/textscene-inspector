@@ -222,6 +222,12 @@ describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-2
     // customElementHeight = 32-8=24; y = (24-26)/2 + 4 = -1+4 = 3.
     expect(textOffset.y).toBeCloseTo(3, 10);
   });
+
+  it("floors a half-pixel centring remainder DOWN, matching Button's own text_ofs.y (never floored in the source itself, only per-glyph — text_server_adv.cpp:4083) — the ACTUAL 'Normal' item at font size 16 (ascent 18 + descent 5 = 23)", () => {
+    // customElementHeight = 32-8=24; (24-23)/2=0.5; +styleMargin.top(4)=4.5 -> floor 4.
+    const { textOffset } = layoutOptionButtonContent({ ...BASE, textNaturalSize: { x: 60, y: 23 } });
+    expect(textOffset.y).toBe(4);
+  });
 });
 
 describe(`optionButtonMinimumSize — resolves this OptionButton's own theme font key ("${OPTION_BUTTON_THEME_FONT_KEY}", default_theme.cpp:237)`, () => {

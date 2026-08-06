@@ -24,20 +24,19 @@ StyleBox — not the open popup, not the whole list. The fixture centres one
 
 ## Divergences
 
-The label's glyph rows sit 1 px above Godot's. Measured on Godot 4.6.3, `pnpm
-ref:godot scenes/fixtures/unit-optionbutton.tscn --mode 2d --probe <x,y>` against
-`pnpm ref:ours unit-optionbutton.tscn --2d --probe <x,y>`:
+None visible in this fixture. Measured on Godot 4.6.3, `pnpm ref:godot
+scenes/fixtures/unit-optionbutton.tscn --mode 2d --probe <x,y>` against `pnpm
+ref:ours unit-optionbutton.tscn --2d --probe <x,y>`:
 
 | Probe | What it is | Godot | Ours |
 | --- | --- | --- | --- |
-| (564, 309) | the `l` stem's top row — ink here only in ours | rgb(46, 46, 46) | rgb(213, 213, 213) |
-| (511, 321) | the `N` stem's bottom row — ink here only in Godot | rgb(223, 223, 223) | rgb(45, 45, 45) |
+| (564, 315) | the `l` stem, mid-height | rgb(213, 213, 213) | rgb(213, 213, 213) |
+| (511, 318) | the `N` stem, mid-height | rgb(223, 223, 223) | rgb(223, 223, 223) |
 
-That 1 px is the whole of it: the label's ink spans x 510..565 on both sides and
-peaks at rgb(223, 223, 223) on both, so the glyphs are the same shapes at the same
-horizontal positions, one row higher. The arrow's ink spans x 636..645 and
-y 313..318 on both sides and peaks at rgb(158, 158, 158) against rgb(157, 157, 157)
-— the same texture at the same `arrow_margin`.
+The label's ink spans x 510..565 and y 310..321 on both sides, peaking at
+rgb(223, 223, 223) on both — same glyphs, same rows. The arrow's ink spans
+x 636..645 and y 313..318 on both sides and peaks at rgb(158, 158, 158) against
+rgb(157, 157, 157) — the same texture at the same `arrow_margin`.
 
 ## Native (WebGL canvas) painter
 

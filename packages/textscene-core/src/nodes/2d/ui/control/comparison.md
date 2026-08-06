@@ -27,20 +27,20 @@ rect.
 
 ## Divergences
 
-Every widget in the stack draws from the same theme data on both sides, and the
-row stack has the same 35 px pitch. The one difference is that every label's glyph
-rows sit 1 px above Godot's. Measured on Godot 4.6.3, `pnpm ref:godot
-scenes/fixtures/unit-control-state.tscn --mode 2d --probe <x,y>` against
-`pnpm ref:ours unit-control-state.tscn --2d --probe <x,y>`:
+None visible in this fixture. Every widget in the stack draws from the same theme
+data on both sides, the row stack keeps the same 35 px pitch, and every label's
+glyph rows land on Godot's own rows. Measured on Godot 4.6.3, `pnpm ref:godot
+scenes/fixtures/unit-control-state.tscn --mode 2d --probe <x,y>` against `pnpm
+ref:ours unit-control-state.tscn --2d --probe <x,y>`:
 
 | Probe | What it is | Godot | Ours |
 | --- | --- | --- | --- |
-| (9, 149) | the `V` stem's top row — ink here only in ours | rgb(46, 46, 46) | rgb(208, 208, 208) |
-| (12, 161) | the same stem's bottom row — ink here only in Godot | rgb(223, 223, 223) | rgb(45, 45, 45) |
+| (36, 15) | "CHECKED BOX"'s solid glyph stroke | rgb(255, 255, 255) | rgb(255, 255, 255) |
+| (9, 151) | the `V` of "VISIBLE DROPDOWN", one row into its stem | rgb(223, 223, 223) | rgb(223, 223, 223) |
 
-It is the glyphs alone, not the layout: the checked plate's icon rows are 8..21 on
-both sides, while the label beside it runs 10..21 in Godot and 9..20 here, and all
-five text bands carry the same 1 px shift.
+"CHECKED BOX"'s own ink spans y 10..21 at x = 36 on both sides, and the `V`
+stem's ink spans y 150..155 at x = 9 on both, peaking at rgb(223, 223, 223).
+The checked plate's icon rows are 8..21 on both.
 
 **The chevron is drawn**, from the same icon and in the same place: its ink spans
 x 1137..1146 and y 152..157 on both sides and peaks at rgb(158, 158, 158) against

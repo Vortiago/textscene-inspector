@@ -248,7 +248,23 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     }
     textOffsetX += horizontalAlignShift(textNaturalSize.x, drawableWidth, textAlignment);
 
-    let textOffsetY = (drawableHeight - textNaturalSize.y) / 2 + styleMargin.top;
+    // `text_ofs.y` itself (`button.cpp:453`) is never floored in the source —
+    // the floor happens per-glyph, deep in the TextServer, once this offset
+    // has already been baked into the drawn baseline
+    // (`modules/text_server_adv/text_server_adv.cpp:4083`,
+    // `TextServerAdvanced::_font_draw_glyph`: `cpos.y = Math::floor(cpos.y);`,
+    // `cpos` there is `p_pos` = this `text_ofs.y` + the line's ascent). Since
+    // this codebase's ascent (`getFontAscentPx`) is always a whole pixel
+    // already, `floor(text_ofs.y) + ascent === floor(text_ofs.y + ascent)`,
+    // so flooring HERE — before ascent is even added, in `<TextRun>`'s own
+    // per-line math — reaches the identical pixel the source does. Left
+    // unfloored, a box height/text height pairing whose difference is odd
+    // (e.g. this Button's own 32px rect, 16px SemiBold text at 23px tall:
+    // `(24-23)/2=0.5`) lands the glyph's baseline exactly ON a pixel
+    // boundary, which this engine's own WebGL rasteriser resolves upward
+    // instead of down — a full row above Godot's floor, on every affected
+    // Button-family label.
+    let textOffsetY = Math.floor((drawableHeight - textNaturalSize.y) / 2 + styleMargin.top);
     if (iconLayout && verticalIconAlignment === V_TOP) {
       textOffsetY += customElementSize.y - drawableHeight;
     }

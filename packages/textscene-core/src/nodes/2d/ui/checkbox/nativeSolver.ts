@@ -246,7 +246,13 @@ export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxCont
     const leftReserved = iconSize.x + hSeparation;
     const customElementHeight = rectSize.y - 2 * margin;
     const x = margin + leftReserved;
-    const y = (customElementHeight - textNaturalSize.y) / 2 + margin;
+    // Floored for the same reason `buttonBase.ts`'s `layoutButtonContent`
+    // floors its own `textOffsetY` — Button's `text_ofs.y` is never floored
+    // in the source itself, only later, per-glyph
+    // (`modules/text_server_adv/text_server_adv.cpp:4083`,
+    // `cpos.y = Math::floor(cpos.y)`), but this codebase's ascent is always a
+    // whole pixel, so flooring here reaches the identical pixel.
+    const y = Math.floor((customElementHeight - textNaturalSize.y) / 2 + margin);
     textOffset = { x, y };
   }
 

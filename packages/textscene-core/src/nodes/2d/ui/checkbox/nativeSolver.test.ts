@@ -245,6 +245,16 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
     // x = 4 + 8 + 4 = 16.
     expect(textOffset!.x).toBe(16);
   });
+
+  it('floors a half-pixel centring remainder DOWN, matching Button\'s own text_ofs.y (never floored in the source itself, only per-glyph — text_server_adv.cpp:4083)', () => {
+    // customElementHeight = 32-2*4=24; (24-23)/2=0.5; +margin(4)=4.5 -> floor 4.
+    const { textOffset } = layoutCheckBoxContent({
+      ...BASE,
+      rectSize: { x: 150, y: 32 },
+      textNaturalSize: { x: 90, y: 23 },
+    });
+    expect(textOffset!.y).toBe(4);
+  });
 });
 
 describe(`checkBoxMinimumSize — resolves this CheckBox's own theme font key ("${CHECKBOX_THEME_FONT_KEY}", default_theme.cpp:297)`, () => {

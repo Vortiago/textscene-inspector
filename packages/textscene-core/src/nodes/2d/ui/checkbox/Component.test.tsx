@@ -219,13 +219,17 @@ describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => 
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene)!;
     // Scene font at 16px: ascentPx = ceil(800*16/1000) = 13, descentPx =
-    // ceil(200*16/1000) = 4, Label's line_spacing 3 -> linePitchPx = 20, so
-    // textNaturalSize.y = 20. contentMargin 4 -> customElementHeight =
-    // 28 - 2*4 = 20; y = (20 - 20)/2 + 4 = 4. x = margin(4) + icon(16) +
-    // h_separation(4) = 24. three's Y is negated Godot px.
+    // ceil(200*16/1000) = 4; CheckBox is Button-family and reads no
+    // line_spacing (lineSpacingPx: 0), so linePitchPx = 17 and
+    // textNaturalSize.y = 17. contentMargin 4 -> customElementHeight =
+    // 28 - 2*4 = 20; y = floor((20 - 17)/2 + 4) = floor(5.5) = 5 (never
+    // floored in the source itself, only per-glyph downstream —
+    // `buttonBase.ts`'s `layoutButtonContent` has the full citation).
+    // x = margin(4) + icon(16) + h_separation(4) = 24. three's Y is negated
+    // Godot px.
     const group = mesh.parent as THREE.Object3D;
     expect(group.position.x).toBe(24);
-    expect(group.position.y).toBe(-4);
+    expect(group.position.y).toBe(-5);
   });
 
   it("the quad's own top edge is the raster's fixed 4px pad, carrying no font-anchor term of its own", async () => {

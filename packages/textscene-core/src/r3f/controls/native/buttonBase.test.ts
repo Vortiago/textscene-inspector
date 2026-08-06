@@ -203,6 +203,18 @@ describe('layoutButtonContent — vertical_icon_alignment', () => {
   });
 });
 
+describe('layoutButtonContent — vertical centring floors like the per-glyph Math::floor(cpos.y) (text_server_adv.cpp:4083)', () => {
+  it('floors a half-pixel centring remainder DOWN, matching a 32px Button around 23px-tall SemiBold text', () => {
+    // drawableHeight = 32-4-4=24; (24-23)/2=0.5; +styleMargin.top(4)=4.5 -> floor 4.
+    const { text } = layoutButtonContent({
+      ...BASE_INPUT,
+      rectSize: { x: 120, y: 32 },
+      textNaturalSize: { x: 50, y: 23 },
+    });
+    expect(text!.offset.y).toBe(4);
+  });
+});
+
 describe('layoutButtonContent — expand_icon', () => {
   it('scales the icon to fill the remaining box height, preserving aspect, when it fits within the remaining width', () => {
     const { icon } = layoutButtonContent({

@@ -342,11 +342,16 @@ describe('<Button> — scene-font (canvas-kind FontMetrics) text path', () => {
     // ceil(200*16/1000) = 4; Button sets no line_spacing, so linePitchPx = 17
     // and textNaturalSize = (2 chars * 500*16/1000 = 16, 17). Default theme
     // contentMargin 4 -> customElementSize = (112, 24), drawable = the same
-    // (no icon); y = (24 - 17)/2 + 4 = 7.5; alignment defaults to CENTER, so
-    // x = 4 + (112 - 16)/2 = 52. three's Y is negated Godot px.
+    // (no icon); y = floor((24 - 17)/2 + 4) = floor(7.5) = 7 — `text_ofs.y`
+    // itself is never floored in the source, but the per-glyph floor it DOES
+    // apply downstream (`text_server_adv.cpp:4083`) lands on the identical
+    // pixel once ascent (always whole here) is added back, so flooring here
+    // is equivalent (`buttonBase.ts`'s `layoutButtonContent` has the full
+    // citation); alignment defaults to CENTER, so x = 4 + (112 - 16)/2 = 52.
+    // three's Y is negated Godot px.
     const group = mesh.parent as THREE.Object3D;
     expect(group.position.x).toBe(52);
-    expect(group.position.y).toBe(-7.5);
+    expect(group.position.y).toBe(-7);
   });
 
   it("the quad's own top edge is the raster's fixed 4px pad, carrying no font-anchor term of its own", async () => {
