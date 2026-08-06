@@ -1,0 +1,40 @@
+---
+type: VoxelGI
+category: 3D
+status: unimplemented
+fixture: unit-voxel-gi.tscn
+# image: unit-voxel-gi
+renders_as: an invisible transform-only fallback
+---
+
+# VoxelGI
+
+A real-time global illumination probe: it bakes indirect light and reflections from
+static geometry and lights into an octree, then feeds that back to dynamic objects at
+runtime. The previewer parses and validates this node but does not run the bake or
+draw the probe volume yet, so it renders as an invisible transform-only fallback and
+its children still show.
+
+## Properties exercised
+
+| Property | Value | Effect |
+| --- | --- | --- |
+| `subdiv` | `2` | Octree subdivision level (`SUBDIV_256`) — finer voxel detail, slower bake. |
+| `size` | `Vector3(30, 20, 30)` | World-space extents of the baked probe volume. |
+| `camera_attributes` | `SubResource("CameraAttributesPractical_1")` | Exposure settings used to normalize the bake's brightness. |
+| `data` | `SubResource("VoxelGIData_1")` | The baked octree/distance-field data this probe reads at runtime. |
+
+## Divergences
+
+None visible in this fixture.
+
+## Linting
+
+<!-- lint:begin VoxelGI -->
+<!-- lint:end -->
+
+The lenient parser reuses `parseNode3D`, which reads only `transform` and
+`visible` off any node; `subdiv`, `size`, `camera_attributes`, and `data` are
+never inspected at all. A malformed value for any of them — `subdiv = "banana"`,
+`size = "not-a-vector"` — sits untouched in the raw property bag: no crash, no
+substitution, and no rendering effect either way, since nothing here draws yet.

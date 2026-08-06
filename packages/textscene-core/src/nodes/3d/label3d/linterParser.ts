@@ -5,6 +5,10 @@
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import {
+  MATERIAL_RENDER_PRIORITY_MIN,
+  MATERIAL_RENDER_PRIORITY_MAX,
+} from '../../../godot/index.js';
 
 const BILLBOARD = { 0: 'DISABLED', 1: 'ENABLED', 2: 'FIXED_Y' };
 const HORIZONTAL_ALIGNMENT = { 0: 'LEFT', 1: 'CENTER', 2: 'RIGHT', 3: 'FILL' };
@@ -37,4 +41,19 @@ validatorRegistry.registerAll('Label3D', {
     enforced: 'label_3d.cpp:678',
   }),
   no_depth_test: v.boolean('no_depth_test'),
+  // label_3d.cpp:146, PROPERTY_HINT_RANGE built from
+  // RS::MATERIAL_RENDER_PRIORITY_MIN/MAX. set_render_priority:766 opens with
+  // ERR_FAIL_COND on that same range, so the bound is enforced, not hinted:
+  // Godot refuses the write outright rather than clamping it.
+  render_priority: v.int('render_priority', {
+    min: MATERIAL_RENDER_PRIORITY_MIN,
+    max: MATERIAL_RENDER_PRIORITY_MAX,
+    enforced: 'label_3d.cpp:766',
+  }),
+  // label_3d.cpp:147 and set_outline_render_priority:778, the identical shape.
+  outline_render_priority: v.int('outline_render_priority', {
+    min: MATERIAL_RENDER_PRIORITY_MIN,
+    max: MATERIAL_RENDER_PRIORITY_MAX,
+    enforced: 'label_3d.cpp:778',
+  }),
 });

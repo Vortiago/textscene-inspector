@@ -1,0 +1,35 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="MyNavigationAgent2D" type="NavigationAgent2D" parent="."]
+target_position = Vector2(100, 50)
+path_desired_distance = 15.0
+target_desired_distance = 8.0
+path_max_distance = 50.0
+navigation_layers = 4
+pathfinding_algorithm = 0
+path_postprocessing = 1
+path_metadata_flags = 7
+simplify_path = true
+simplify_epsilon = 1.0
+path_return_max_length = 100.0
+path_return_max_radius = 50.0
+path_search_max_polygons = 2048
+path_search_max_distance = 20.0
+avoidance_enabled = true
+velocity = Vector2(10, 0)
+radius = 12.0
+neighbor_distance = 300.0
+max_neighbors = 5
+time_horizon_agents = 1.5
+time_horizon_obstacles = 0.5
+max_speed = 150.0
+avoidance_layers = 2
+avoidance_mask = 3
+avoidance_priority = 0.5
+debug_enabled = true
+debug_use_custom = true
+debug_path_custom_color = Color(1, 0, 0, 1)
+debug_path_custom_point_size = 5.0
+debug_path_custom_line_width = 2.0

@@ -129,12 +129,12 @@ describe('Area3D Linter', () => {
   });
 
   describe('Semantic Validation (CollisionShape3D Children)', () => {
-    it('should warn when Area3D has no CollisionShape3D children', () => {
+    it('should warn when Area3D has no CollisionShape3D or CollisionPolygon3D children', () => {
       expectDiagnostic(scene(node('Area3D')), {
         ruleName: 'area3d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'Area3D',
-        contains: ['no CollisionShape3D children'],
+        contains: ['no CollisionShape3D or CollisionPolygon3D children'],
       });
     });
 

@@ -22,3 +22,26 @@ export const CMP_EPSILON = 0.00001;
 export function isZeroApprox(value: number): boolean {
   return Math.abs(value) < CMP_EPSILON;
 }
+
+/**
+ * `Math::is_equal_approx` (math_funcs.h:529-540): exact equality first, then a
+ * tolerance of `CMP_EPSILON * abs(a)` floored at `CMP_EPSILON`.
+ *
+ * The exact-equality branch is not an optimisation — Godot's own comment says it
+ * is "required to handle 'infinity' values", since `abs(inf - inf)` is NaN and
+ * every comparison against NaN is false. Drop it and two infinities of the same
+ * sign stop comparing equal.
+ *
+ * The tolerance is RELATIVE to the left operand and therefore ASYMMETRIC:
+ * `isEqualApprox(a, b)` is not always `isEqualApprox(b, a)`. That is Godot's
+ * behaviour, not an oversight here, so callers must pass the operands in the
+ * same order the engine does.
+ *
+ * Three sites had hand-rolled this, and one spelled the tolerance as a bare
+ * `1e-5` rather than naming the constant.
+ */
+export function isEqualApprox(a: number, b: number): boolean {
+  if (a === b) return true;
+  const tolerance = Math.max(CMP_EPSILON * Math.abs(a), CMP_EPSILON);
+  return Math.abs(a - b) < tolerance;
+}

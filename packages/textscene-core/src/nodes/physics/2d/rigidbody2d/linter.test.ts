@@ -221,12 +221,12 @@ physics_material_override = ExtResource("ext_mat_1")
   });
 
   describe('Semantic Validation (CollisionShape2D Children)', () => {
-    it('should warn when RigidBody2D has no CollisionShape2D children', () => {
+    it('should warn when RigidBody2D has no CollisionShape2D or CollisionPolygon2D children', () => {
       expectDiagnostic(scene(node('RigidBody2D', { mass: 1.0 })), {
         ruleName: 'rigidbody2d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'RigidBody2D',
-        contains: ['no CollisionShape2D children'],
+        contains: ['no CollisionShape2D or CollisionPolygon2D children'],
       });
     });
 

@@ -30,5 +30,6 @@
  * small and topical. Add a new file rather than a new section.
  */
 
-export { CMP_EPSILON, isZeroApprox } from './math.js';
+export { CMP_EPSILON, isZeroApprox, isEqualApprox } from './math.js';
 export { IS_VALID_INT_RE } from './string.js';
+export { MATERIAL_RENDER_PRIORITY_MIN, MATERIAL_RENDER_PRIORITY_MAX } from './rendering.js';

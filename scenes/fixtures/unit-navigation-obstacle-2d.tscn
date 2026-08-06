@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="MyNavigationObstacle2D" type="NavigationObstacle2D" parent="."]
+position = Vector2(10, 20)
+radius = 50.0
+vertices = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = true
+velocity = Vector2(0, 0)
+avoidance_layers = 3

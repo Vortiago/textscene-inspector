@@ -7,13 +7,15 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { hasDescendantOfType } from './hasDescendantOfType.js';
+import {
+  hasCollisionShapeDescendant,
+  collisionShapeTypesPhrase,
+} from './hasCollisionShapeDescendant.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 
 export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
   const type = `Area${dim}`;
-  const shapeType = `CollisionShape${dim}`;
   const prefix = `area${dimSuffix(dim)}`;
 
   function check(context: RuleContext): Diagnostic[] {
@@ -25,10 +27,10 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
     const rawProps = node.properties as unknown as Record<string, string>;
 
     // Warning: Area without collision shape won't detect anything
-    if (!hasDescendantOfType(node, shapeType)) {
+    if (!hasCollisionShapeDescendant(node, dim)) {
       diagnostics.push({
         severity: 'warning',
-        message: `${type} '${node.name}' has no ${shapeType} children. Areas need collision shapes to detect bodies entering/exiting.`,
+        message: `${type} '${node.name}' has no ${collisionShapeTypesPhrase(dim)} children. Areas need collision shapes to detect bodies entering/exiting.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: `${prefix}-needs-collision-shape`,

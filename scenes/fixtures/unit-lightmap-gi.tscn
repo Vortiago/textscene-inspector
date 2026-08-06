@@ -1,0 +1,34 @@
+[gd_scene format=3]
+
+[sub_resource type="Sky" id="Sky_1"]
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_1"]
+
+[sub_resource type="LightmapGIData" id="LightmapGIData_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="MyLightmapGI" type="LightmapGI" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+quality = 2
+supersampling = true
+supersampling_factor = 4.0
+bounces = 5
+bounce_indirect_energy = 1.5
+directional = true
+shadowmask_mode = 1
+use_texture_for_bounces = false
+interior = true
+use_denoiser = true
+denoiser_strength = 0.05
+denoiser_range = 15
+bias = 0.001
+texel_scale = 2.0
+max_texture_size = 8192
+environment_mode = 3
+environment_custom_sky = SubResource("Sky_1")
+environment_custom_color = Color(0.8, 0.6, 0.4, 1)
+environment_custom_energy = 2.5
+camera_attributes = SubResource("CameraAttributesPractical_1")
+generate_probes_subdiv = 3
+light_data = SubResource("LightmapGIData_1")

@@ -88,6 +88,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animated Sprite 3d",
+    "file": "unit-animated-sprite-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animatedsprite2d Atlas",
     "file": "unit-animatedsprite2d-atlas.tscn",
     "category": "Other"
@@ -348,6 +353,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fog Volume",
+    "file": "unit-fog-volume.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Foldable Container",
     "file": "unit-foldable-container.tscn",
     "category": "Other"
@@ -573,6 +583,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Lightmap Gi",
+    "file": "unit-lightmap-gi.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightmap Probe",
+    "file": "unit-lightmap-probe.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Lightoccluder2d Cull Mode Reversed",
     "file": "unit-lightoccluder2d-cull-mode-reversed.tscn",
     "category": "Other"
@@ -663,6 +683,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Multi Mesh Instance 3d",
+    "file": "unit-multi-mesh-instance-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Nine Patch Rect",
     "file": "unit-nine-patch-rect.tscn",
     "category": "Other"
@@ -678,6 +703,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Occluder Instance 3d",
+    "file": "unit-occluder-instance-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Omni Light 3d",
     "file": "unit-omni-light-3d.tscn",
     "category": "Other"
@@ -690,6 +720,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Open Xr Interaction Profile Editor",
     "file": "unit-open-xr-interaction-profile-editor.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Visibility Mask",
+    "file": "unit-open-xr-visibility-mask.tscn",
     "category": "Other"
   },
   {
@@ -828,6 +863,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Reflection Probe",
+    "file": "unit-reflection-probe.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Remote Transform 2d",
     "file": "unit-remote-transform-2d.tscn",
     "category": "Other"
@@ -850,6 +890,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Rigidbody3d",
     "file": "unit-rigidbody3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Root Motion View",
+    "file": "unit-root-motion-view.tscn",
     "category": "Other"
   },
   {
@@ -1088,6 +1133,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Visible On Screen Enabler 2d",
+    "file": "unit-visible-on-screen-enabler-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Visible On Screen Enabler 3d",
+    "file": "unit-visible-on-screen-enabler-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Visible On Screen Notifier 2d",
     "file": "unit-visible-on-screen-notifier-2d.tscn",
     "category": "Other"
@@ -1100,6 +1155,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Visual Instance 3d",
     "file": "unit-visual-instance-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Voxel Gi",
+    "file": "unit-voxel-gi.tscn",
     "category": "Other"
   },
   {
@@ -1753,6 +1813,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Basic Nodes"
   },
   {
+    "name": "Collision Polygon 2d",
+    "file": "unit-collision-polygon-2d.tscn",
+    "category": "Unit - Physics"
+  },
+  {
+    "name": "Collision Polygon 3d",
+    "file": "unit-collision-polygon-3d.tscn",
+    "category": "Unit - Physics"
+  },
+  {
     "name": "Collision Shapes",
     "file": "unit-collision-shapes.tscn",
     "category": "Unit - Physics"
@@ -1948,8 +2018,28 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Navigation Agent 2d",
+    "file": "unit-navigation-agent-2d.tscn",
+    "category": "Unit - Navigation"
+  },
+  {
     "name": "Navigation Agent 3d",
     "file": "unit-navigation-agent-3d.tscn",
+    "category": "Unit - Navigation"
+  },
+  {
+    "name": "Navigation Link 2d",
+    "file": "unit-navigation-link-2d.tscn",
+    "category": "Unit - Navigation"
+  },
+  {
+    "name": "Navigation Link 3d",
+    "file": "unit-navigation-link-3d.tscn",
+    "category": "Unit - Navigation"
+  },
+  {
+    "name": "Navigation Obstacle 2d",
+    "file": "unit-navigation-obstacle-2d.tscn",
     "category": "Unit - Navigation"
   },
   {

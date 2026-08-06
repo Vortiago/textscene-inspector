@@ -16,6 +16,11 @@
  * SubViewport/Window split that ADR-0008's Viewport tier fixed, one level down.
  */
 
+// The terminal tier. Registration is self-registering on import, so a slice test
+// that loads only this chain must pull `Node` explicitly or every Node-level key
+// (`process_mode`, `process_priority`, the `editor_description`) resolves to null
+// in isolation and only the full barrel sees them.
+import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask } from '../../../linter/validators/layerBitmask.js';
 import { v } from '../../../linter/validators/index.js';

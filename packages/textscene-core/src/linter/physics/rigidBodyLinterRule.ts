@@ -9,7 +9,10 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { checkResourceExists } from '../resourceChecker.js';
-import { hasDescendantOfType } from './hasDescendantOfType.js';
+import {
+  hasCollisionShapeDescendant,
+  collisionShapeTypesPhrase,
+} from './hasCollisionShapeDescendant.js';
 import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
@@ -26,7 +29,6 @@ const MASS_HINT_MIN = 0.001;
 
 export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `RigidBody${dim}`;
-  const shapeType = `CollisionShape${dim}`;
   const prefix = `rigidbody${dimSuffix(dim)}`;
   const massHintCite = dim === '2D' ? 'rigid_body_2d.cpp:742' : 'rigid_body_3d.cpp:764';
 
@@ -53,10 +55,10 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     }
 
     // Warning: RigidBody without collision shape is useless
-    if (!hasDescendantOfType(node, shapeType)) {
+    if (!hasCollisionShapeDescendant(node, dim)) {
       diagnostics.push({
         severity: 'warning',
-        message: `${type} '${node.name}' has no ${shapeType} children. Rigid bodies need collision shapes to function in physics.`,
+        message: `${type} '${node.name}' has no ${collisionShapeTypesPhrase(dim)} children. Rigid bodies need collision shapes to function in physics.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: `${prefix}-needs-collision-shape`,

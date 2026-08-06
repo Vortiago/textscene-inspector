@@ -136,7 +136,7 @@ describe('VehicleBody3D Linter', () => {
       expectNoDiagnostic(content, { ruleName: 'vehiclebody3d-needs-wheels' });
     });
 
-    it('warns when the body has no CollisionShape3D children', () => {
+    it('warns when the body has no CollisionShape3D or CollisionPolygon3D children', () => {
       expectDiagnostic(scene(node('VehicleBody3D', {}, { name: 'Vehicle' }), wheel), {
         ruleName: 'rigidbody3d-needs-collision-shape',
         severity: 'warning',

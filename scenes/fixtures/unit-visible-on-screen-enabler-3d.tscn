@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Target" type="Node3D" parent="."]
+
+[node name="MyVisibleOnScreenEnabler3D" type="VisibleOnScreenEnabler3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+aabb = AABB(-1, -1, -1, 2, 2, 2)
+enable_mode = 2
+enable_node_path = NodePath("../Target")

@@ -1,0 +1,76 @@
+/**
+ * Tests for NavigationLink2D's semantic linter rule (strict parser format
+ * checks live in linterParser.test.ts and are asserted through
+ * validatorRegistry there).
+ *
+ * Uses `Linter` directly (via testkit), not the `linter/index.ts` barrel: that
+ * barrel side-effect-imports every in-flight slice, so pulling it here would
+ * fail flakily on a sibling's half-written file mid-wave.
+ */
+
+import { describe, expect, it } from 'vitest';
+import { node, scene, expectDiagnostic, expectNoDiagnostic, lint } from '../../../linter/testing/testkit';
+import { readFixture } from '../../../linter/testing/fixtureCheck';
+import './linterParser';
+import './linter';
+
+const RULE_NAME = 'navigationlink2d-coincident-endpoints';
+
+describe('NavigationLink2D semantic rules', () => {
+  it('warns when start_position and end_position are explicitly the same point', () => {
+    expectDiagnostic(
+      scene(node('NavigationLink2D', { start_position: 'Vector2(5, 5)', end_position: 'Vector2(5, 5)' })),
+      {
+        ruleName: RULE_NAME,
+        severity: 'warning',
+        nodeType: 'NavigationLink2D',
+        contains: ['start_position', 'end_position'],
+      }
+    );
+  });
+
+  it('warns when both are explicitly authored at the shared Vector2(0, 0) default', () => {
+    expectDiagnostic(
+      scene(node('NavigationLink2D', { start_position: 'Vector2(0, 0)', end_position: 'Vector2(0, 0)' })),
+      { ruleName: RULE_NAME, severity: 'warning' }
+    );
+  });
+
+  it('stays quiet when both are omitted: the serializer omits both at their shared Vector2(0, 0) default, and absence must not read as an authored zero', () => {
+    expectNoDiagnostic(scene(node('NavigationLink2D', {})), { ruleName: RULE_NAME });
+  });
+
+  it('stays quiet when only end_position is set to the shared Vector2(0, 0) default: start_position is still only implied, not authored', () => {
+    expectNoDiagnostic(scene(node('NavigationLink2D', { end_position: 'Vector2(0, 0)' })), {
+      ruleName: RULE_NAME,
+    });
+  });
+
+  it('does not warn when the two positions differ', () => {
+    expectNoDiagnostic(
+      scene(node('NavigationLink2D', { start_position: 'Vector2(0, 0)', end_position: 'Vector2(100, 0)' })),
+      { ruleName: RULE_NAME }
+    );
+  });
+
+  it('does not warn when only one position is set away from the shared default', () => {
+    expectNoDiagnostic(scene(node('NavigationLink2D', { start_position: 'Vector2(10, 20)' })), {
+      ruleName: RULE_NAME,
+    });
+  });
+
+  it('stays quiet on a malformed value, leaving it to the format validator', () => {
+    // linterParser.ts already reports INVALID_START_POSITION_FORMAT for this;
+    // the rule must not ALSO fire off a resolved-to-null comparison.
+    expectNoDiagnostic(scene(node('NavigationLink2D', { start_position: 'not-a-vector', end_position: 'Vector2(0, 0)' })), {
+      ruleName: RULE_NAME,
+    });
+  });
+
+  it('carries zero diagnostics on the committed fixture, through the real Linter', () => {
+    // Stronger than filtering by RULE_NAME: this is the fixture's actual
+    // "zero errors and zero warnings" claim, run against everything this file
+    // imported (strict format validators AND this rule together).
+    expect(lint(readFixture('unit-navigation-link-2d.tscn'))).toEqual([]);
+  });
+});

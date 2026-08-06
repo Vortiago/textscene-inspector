@@ -57,6 +57,10 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
   HSplitContainer: "orientation only; the split keys are SplitContainer's",
   JacobianIK3D:
     "a solver body; the class is a `_solve_iteration` override alone, parameterised entirely by IterateIK3D's keys",
+  LightmapProbe:
+    'a bare position marker: lightmap_probe.h:35-39 is the whole class body and declares no _bind_methods, so GDCLASS never binds one (object.h:526) and no ADD_PROPERTY can exist; LightmapGI reads only its inherited get_global_transform()',
+  OpenXRVisibilityMask:
+    'its _bind_methods body is empty (openxr_visibility_mask.cpp:37-38) and the class declares no property-list override in either spelling; the mask mesh comes from the OpenXR runtime extension, so nothing about it reaches a .tscn',
   SpringBoneCollisionPlane3D:
     'an infinite XZ plane whose normal is +Y through the base offsets, so it needs no extent of its own; the class is a _collide override alone (spring_bone_collision_plane_3d.cpp:31-43) with no _bind_methods under any spelling, which GDCLASS then skips binding (object.h:526), and its XML lists no members',
   PhysicalBoneSimulator3D:
@@ -94,9 +98,9 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
  * `godot-source-decoupling.test.mjs` forbids). Registered leaves: LineEdit 36,
  * RichTextLabel 30, Label 22, ScrollContainer 11, CanvasLayer 9, GridContainer 1.
  *
- * The six tiers below were invisible until this guard closed over the base
- * chain, and each one is worth more than a leaf because its keys reach every
- * descendant: SpriteBase3D 20 (Sprite3D, AnimatedSprite3D), Light2D 15
+ * The tiers below were invisible until this guard closed over the base chain,
+ * and each one is worth more than a leaf because its keys reach every
+ * descendant: Light2D 15
  * (PointLight2D, DirectionalLight2D), AnimationMixer 10 (AnimationPlayer,
  * AnimationTree), CSGShape3D 7 (every CSG node), PhysicsBody3D 6 — the
  * axis_lock set, reaching all four 3D bodies — and CSGPrimitive3D 1.
@@ -110,7 +114,6 @@ const UNDECLARED: readonly string[] = [
   'CanvasLayer',
   'Light2D',
   'PhysicsBody3D',
-  'SpriteBase3D',
 ];
 
 /**
@@ -152,7 +155,7 @@ describe('own-validator coverage', () => {
   it('never lets the undeclared list grow', () => {
     // The ratchet: a new gap cannot be waved through by appending to the list.
     // Each decrement is a type whose properties stopped being silently accepted.
-    expect(UNDECLARED.length).toBeLessThanOrEqual(7);
+    expect(UNDECLARED.length).toBeLessThanOrEqual(6);
   });
 
   it('declares validators for Button, whose 13 members were the trigger', () => {

@@ -213,12 +213,12 @@ describe('CharacterBody2D Linter', () => {
   });
 
   describe('Semantic Validation (CollisionShape2D Children)', () => {
-    it('should warn when CharacterBody2D has no CollisionShape2D children', () => {
+    it('should warn when CharacterBody2D has no CollisionShape2D or CollisionPolygon2D children', () => {
       expectDiagnostic(scene(node('CharacterBody2D')), {
         ruleName: 'characterbody2d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'CharacterBody2D',
-        contains: ['no CollisionShape2D children'],
+        contains: ['no CollisionShape2D or CollisionPolygon2D children'],
       });
     });
 

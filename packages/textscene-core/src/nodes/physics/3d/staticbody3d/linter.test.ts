@@ -197,12 +197,12 @@ physics_material_override = ExtResource("ext_mat_1")
   });
 
   describe('Semantic Validation (CollisionShape3D Children)', () => {
-    it('should warn when StaticBody3D has no CollisionShape3D children', () => {
+    it('should warn when StaticBody3D has no CollisionShape3D or CollisionPolygon3D children', () => {
       expectDiagnostic(scene(node('StaticBody3D')), {
         ruleName: 'staticbody3d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'StaticBody3D',
-        contains: ['no CollisionShape3D children'],
+        contains: ['no CollisionShape3D or CollisionPolygon3D children'],
       });
     });
 

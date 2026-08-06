@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+; OpenXRVisibilityMask binds no property of its own — GDCLASS plus an empty
+; _bind_methods (openxr_visibility_mask.cpp:37-38) — so layers is the sole
+; key VisualInstance3D adds worth exercising here, at a non-default value:
+; the default (1) Godot omits on save would exercise nothing.
+;
+; Parented under an XRCamera3D: Godot's own get_configuration_warnings
+; (openxr_visibility_mask.cpp:70-75) warns a visible mask elsewhere, so this
+; placement is what keeps the fixture's "zero warnings" claim honest rather
+; than accidental.
+
+[node name="Root" type="Node3D"]
+
+[node name="XRCamera3D" type="XRCamera3D" parent="."]
+
+[node name="MyOpenXRVisibilityMask" type="OpenXRVisibilityMask" parent="XRCamera3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+layers = 3

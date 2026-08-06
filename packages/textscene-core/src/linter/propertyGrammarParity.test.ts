@@ -501,16 +501,30 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       // linter (boolean with Godot-default=true, no range constraint).
       'double_sided',
     ],
-    reason: 'Label3D.double_sided is a boolean read by the parser; the linter has no constraint to enforce.',
+    renderGap: [
+      // Material draw ORDER. With a single label nothing moves, but two
+      // overlapping transparent materials resolve in this order, so it is a
+      // real render input rather than an editor-only concern.
+      'outline_render_priority', 'render_priority',
+    ],
+    reason:
+      'Label3D.double_sided is a boolean read by the parser with no constraint to enforce; the two render-order properties are the reverse, validated against the RenderingServer range but unread, so overlapping transparent labels resolve in the wrong order.',
   },
 
   Sprite3D: {
-    parserOnly: [
-      // Properties read by the parser for rendering but not validated by the
-      // linter (booleans with Godot defaults, no range constraints).
-      'centered', 'flip_h', 'flip_v', 'region_enabled', 'double_sided', 'transparent',
+    renderGap: [
+      // SpriteBase3D members the tier now validates and `parser.ts` does not
+      // read. Every one changes the rendered frame, so none of them is a
+      // deliberate scope decision: alpha cutoff/dither/AA change which texels
+      // survive, `shaded` switches lit vs unlit, `no_depth_test` draws on top,
+      // `fixed_size` holds screen size against distance, and `texture_filter`
+      // is nearest vs linear.
+      'alpha_antialiasing_edge', 'alpha_antialiasing_mode', 'alpha_hash_scale',
+      'alpha_scissor_threshold', 'fixed_size', 'no_depth_test', 'shaded',
+      'texture_filter',
     ],
-    reason: 'Sprite3D boolean toggles (centered, flip_h/v, region_enabled, double_sided, transparent) are read for rendering but the linter enforces no constraint on boolean values that are always valid.',
+    reason:
+      'SpriteBase3D material properties the shared tier validates; the Sprite3D parser reads none of them yet, and each one changes what Godot draws.',
   },
 
   CSGBox3D: {
@@ -1029,7 +1043,7 @@ describe('property-grammar parity guard', () => {
   // number rather than a pile. Exact equality, not a ceiling: this list should
   // only move when someone deliberately adds a slice or closes a gap, and
   // either way the diff should say so out loud.
-  const EXPECTED_RENDER_GAP_KEYS = 33;
+  const EXPECTED_RENDER_GAP_KEYS = 43;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
@@ -1062,7 +1076,7 @@ describe('property-grammar parity guard', () => {
    * unmapped chains over-report. That is its own piece of work.
    */
   const SWEPT_SLICES = 74;
-  const PARSER_REUSING_SLICES = 125;
+  const PARSER_REUSING_SLICES = 144;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>
