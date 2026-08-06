@@ -24,12 +24,13 @@ import { nativeTheme } from './nativeTheme';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import type { Rect2 } from './rect';
 import type { SolveNode } from './solveTree';
+import { solveNode } from './testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
 
 function bareSolveNode(node: TscnNode): SolveNode {
-  return { path: node.name, node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...solveNode(), path: node.name, node };
 }
 
 describe('Native Control visibility conformance', () => {

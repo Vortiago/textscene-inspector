@@ -28,6 +28,7 @@ import { nativeTheme } from './nativeTheme';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import type { Rect2 } from './rect';
 import type { SolveNode } from './solveTree';
+import { solveNode } from './testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -38,14 +39,10 @@ const parseWithProbeChild = (type: string): TscnNode => parseWithChild(type, 'Co
 
 function toSolveNode(node: TscnNode, path: string): SolveNode {
   return {
+    ...solveNode(),
     path,
     node,
     children: node.children.map((child) => toSolveNode(child, joinPath(path, child.name))),
-    styleBoxes: {},
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 

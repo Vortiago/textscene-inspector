@@ -28,6 +28,7 @@ import { createSolveContext, solveControlTree } from './controlRectSolver';
 import { nativeTheme } from './nativeTheme';
 import type { Rect2 } from './rect';
 import type { SolveNode } from './solveTree';
+import { solveNode } from './testing/solveNode';
 
 /**
  * The real Godot `Container` subclasses among the 23 registered types — the
@@ -60,7 +61,7 @@ const THEME = nativeTheme(1);
 
 function bareSolveNode(type: string): SolveNode {
   const node = parseBareNode(type);
-  return { path: node.name, node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...solveNode(), path: node.name, node };
 }
 
 /**

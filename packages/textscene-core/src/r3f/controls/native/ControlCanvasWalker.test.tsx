@@ -21,6 +21,7 @@ import { SelectionProvider, useSelection } from '../../contexts/SelectionContext
 import { bandBase } from './controlDrawOrder';
 import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
 import { CanvasLayerIndexProvider, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN, useEffectiveZ } from '../../lighting2d/canvasItemPlacement';
+import { solveNode as emptySolveNode } from './testing/solveNode';
 
 // A stand-in for the real `canvaslayer/Component.tsx` (a different
 // slice's file, not this suite's concern): just enough to prove the WALKER
@@ -43,7 +44,7 @@ function solveNode(
 ): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
-  return { path, node: tscnNode, children, styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...emptySolveNode(), path, node: tscnNode, children };
 }
 
 function HiddenPathSeeder({ paths }: { paths: readonly string[] }) {

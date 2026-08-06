@@ -12,6 +12,7 @@ import type { SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type ContainerLayoutFn, type SolveContext } from './solverRegistry';
 import { combinedMinimumSize, createSolveContext, solveControlTree } from './controlRectSolver';
+import { solveNode } from './testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 
@@ -26,7 +27,7 @@ function node(path: string, type: string, properties: Props, children: SolveNode
     children: [],
     properties: { name, ...properties },
   };
-  return { path, node: tscnNode, children, styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...solveNode(), path, node: tscnNode, children };
 }
 
 function ctx(): SolveContext {
