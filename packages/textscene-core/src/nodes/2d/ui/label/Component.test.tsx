@@ -19,6 +19,7 @@ import { Label, soloLineLayout } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { shapeText, AutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
 import type { CanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -26,7 +27,7 @@ const THEME = nativeTheme(1);
 function solveNode(path: string, properties: Record<string, unknown>): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type: 'Label', children: [], properties: { name, ...properties } };
-  return { path, node: tscnNode, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...emptySolveNode(), path, node: tscnNode };
 }
 
 function expectedLinear(r: number, g: number, b: number): THREE.Color {

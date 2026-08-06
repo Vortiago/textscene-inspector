@@ -17,6 +17,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext, ContainerLayoutResult } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { centerContainerMinimumSize, centerContainerLayout } from './nativeSolver';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /** `centerContainerLayout`'s `rects` half only — see `ContainerLayoutResult`'s own doc for why the union is here at all. */
 function asMap(
@@ -27,19 +28,15 @@ function asMap(
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
+    ...solveNode(),
     path: name,
     node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
-    children: [],
-    styleBoxes: {},
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 
 function container(name: string, props: Partial<CenterContainerProperties>, children: SolveNode[]): SolveNode {
   return {
+    ...solveNode(),
     path: name,
     node: {
       name,
@@ -48,11 +45,6 @@ function container(name: string, props: Partial<CenterContainerProperties>, chil
       properties: { name, ...props } as CenterContainerProperties,
     },
     children,
-    styleBoxes: {},
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 

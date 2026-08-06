@@ -37,6 +37,7 @@ import {
   type SplitChildInput,
 } from './splitContainerSolver';
 import type { SplitContainerProperties } from './splitContainer';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const FILL = 1;
@@ -336,7 +337,7 @@ describe('splitGrabberIconRect', () => {
 function solveNode(path: string, type: string, properties: Record<string, unknown>, children: SolveNode[] = []): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
-  return { path, node: tscnNode, children, styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...emptySolveNode(), path, node: tscnNode, children };
 }
 
 describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registered end-to-end', () => {
@@ -434,7 +435,7 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     function toSolveTree(nodes: readonly TscnNode[], parentPath: string): SolveNode[] {
       return nodes.map((n) => {
         const path = joinPath(parentPath, n.name);
-        return { path, node: n, children: toSolveTree(n.children, path), styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+        return { ...emptySolveNode(), path, node: n, children: toSolveTree(n.children, path) };
       });
     }
 
@@ -465,7 +466,7 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     function toSolveTree(nodes: readonly TscnNode[], parentPath: string): SolveNode[] {
       return nodes.map((n) => {
         const path = joinPath(parentPath, n.name);
-        return { path, node: n, children: toSolveTree(n.children, path), styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+        return { ...emptySolveNode(), path, node: n, children: toSolveTree(n.children, path) };
       });
     }
 

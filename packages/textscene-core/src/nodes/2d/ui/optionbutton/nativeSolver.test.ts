@@ -46,6 +46,7 @@ import {
   OPTION_BUTTON_ARROW_NATURAL_SIZE,
   OPTION_BUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const A_ADVANCE = 1354 * (16 / 2048); // 10.578125
 // 'B's hmtx advance width is 1350 design units, DIFFERENT from 'A's 1354 — the
@@ -56,6 +57,7 @@ const FONT_HEIGHT = 23;
 
 function node(props: Partial<OptionButtonProperties>): SolveNode {
   return {
+    ...solveNode(),
     path: 'O',
     node: {
       name: 'O',
@@ -63,12 +65,6 @@ function node(props: Partial<OptionButtonProperties>): SolveNode {
       children: [],
       properties: { name: 'O', ...props } as OptionButtonProperties,
     },
-    children: [],
-    styleBoxes: {},
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 

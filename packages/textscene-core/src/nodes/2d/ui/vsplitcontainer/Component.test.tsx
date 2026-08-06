@@ -11,6 +11,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { VSplitContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function solveNode(
   name: string,
@@ -19,14 +20,10 @@ function solveNode(
   children: SolveNode[] = []
 ): SolveNode {
   return {
+    ...emptySolveNode(),
     path: name,
     node: { name, type, children: [], properties: { name, ...properties } } as TscnNode,
     children,
-    styleBoxes: {},
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 

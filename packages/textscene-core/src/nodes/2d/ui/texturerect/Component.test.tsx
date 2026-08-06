@@ -23,6 +23,7 @@ import { parseTextureRect } from './parser';
 import { TextureRect } from './Component';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -39,7 +40,7 @@ function textureRectNode(raw: Record<string, string> = {}): TscnNode {
 }
 
 function solveNode(node: TscnNode): SolveNode {
-  return { path: node.name, node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...emptySolveNode(), path: node.name, node };
 }
 
 /** A 320x160 texture — the same non-square size `nativeSolver.test.ts` uses. */

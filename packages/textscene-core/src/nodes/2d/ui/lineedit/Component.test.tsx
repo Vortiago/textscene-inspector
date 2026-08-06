@@ -24,6 +24,7 @@ import { lineEditMinimumSize } from './nativeSolver';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -41,7 +42,7 @@ function solveNode(
     children: [],
     properties: { name: 'MyLineEdit', ...properties } as LineEditProperties,
   };
-  return { path: 'MyLineEdit', node, children: [], styleBoxes, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...emptySolveNode(), path: 'MyLineEdit', node, styleBoxes };
 }
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };

@@ -9,6 +9,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { GridContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function gridSolveNode(): SolveNode {
   const node: TscnNode = {
@@ -17,7 +18,7 @@ function gridSolveNode(): SolveNode {
     children: [],
     properties: { name: 'Grid' },
   };
-  return { path: 'Grid', node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...solveNode(), path: 'Grid', node };
 }
 
 describe('<GridContainer>', () => {

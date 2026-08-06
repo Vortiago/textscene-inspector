@@ -30,6 +30,7 @@ import {
   scrollContainerScrollBars,
   isScrollContainerLayout,
 } from './nativeSolver';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /**
  * `scrollContainerLayout`'s child-rects half only — every test below except the dedicated `meta` describe cares only
@@ -54,14 +55,9 @@ function ctx() {
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
+    ...solveNode(),
     path: name,
     node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
-    children: [],
-    styleBoxes: {},
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 
@@ -70,6 +66,7 @@ function scrollContainer(
   children: SolveNode[]
 ): SolveNode {
   return {
+    ...solveNode(),
     path: 'Scroll',
     node: {
       name: 'Scroll',
@@ -78,11 +75,6 @@ function scrollContainer(
       properties: { name: 'Scroll', ...props } as ScrollContainerProperties,
     },
     children,
-    styleBoxes: {},
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 
@@ -286,6 +278,7 @@ describe('wired through the registry + full solve, against the real fixture numb
     controlSolverRegistry.registerContainerLayout(TYPE, scrollContainerLayout);
     try {
       const content: SolveNode = {
+        ...solveNode(),
         path: 'Root/ScrollContainer/Content',
         node: {
           name: 'Content',
@@ -293,14 +286,9 @@ describe('wired through the registry + full solve, against the real fixture numb
           children: [],
           properties: { name: 'Content', customMinimumSize: { x: 399, y: 800 } } as ControlProperties,
         },
-        children: [],
-        styleBoxes: {},
-        textureSize: null,
-        fontOverrides: {},
-        themeChain: [],
-        projectTheme: null,
       };
       const scroll: SolveNode = {
+        ...solveNode(),
         path: 'Root/ScrollContainer',
         node: {
           name: 'ScrollContainer',
@@ -318,13 +306,9 @@ describe('wired through the registry + full solve, against the real fixture numb
           } as ScrollContainerProperties,
         },
         children: [content],
-        styleBoxes: {},
-        textureSize: null,
-        fontOverrides: {},
-        themeChain: [],
-        projectTheme: null,
       };
       const root: SolveNode = {
+        ...solveNode(),
         path: 'Root',
         node: {
           name: 'Root',
@@ -333,11 +317,6 @@ describe('wired through the registry + full solve, against the real fixture numb
           properties: { name: 'Root', anchorsPreset: 15, anchorRight: 1, anchorBottom: 1 } as ControlProperties,
         },
         children: [scroll],
-        styleBoxes: {},
-        textureSize: null,
-        fontOverrides: {},
-        themeChain: [],
-        projectTheme: null,
       };
 
       const viewport: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };

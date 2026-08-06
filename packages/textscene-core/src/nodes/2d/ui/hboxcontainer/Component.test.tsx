@@ -9,6 +9,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { HBoxContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function hboxSolveNode(): SolveNode {
   const node: TscnNode = {
@@ -17,7 +18,7 @@ function hboxSolveNode(): SolveNode {
     children: [],
     properties: { name: 'Row' },
   };
-  return { path: 'Row', node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...solveNode(), path: 'Row', node };
 }
 
 describe('<HBoxContainer>', () => {

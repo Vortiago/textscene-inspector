@@ -20,6 +20,7 @@ import { createSolveContext, solveControlTree } from '../../../../r3f/controls/n
 import { controlSolverRegistry, type ContainerLayoutResult } from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
 import { panelContainerLayout, panelContainerMinimumSize } from './nativeSolver';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /** `panelContainerLayout`'s `rects` half only — see `ContainerLayoutResult`'s own doc for why the union is here at all. */
 function rects(
@@ -59,7 +60,7 @@ function solveNode(
     children: [],
     properties: { name, ...properties } as ControlProperties,
   };
-  return { path, node, children, styleBoxes, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...emptySolveNode(), path, node, children, styleBoxes };
 }
 
 function ctx() {
@@ -176,6 +177,7 @@ describe('panelContainerLayout wired through the registry + full solve', () => {
     controlSolverRegistry.registerContainerLayout(TYPE, panelContainerLayout);
 
     const child: SolveNode = {
+      ...emptySolveNode(),
       path: 'Panel/Child',
       node: {
         name: 'Child',
@@ -183,14 +185,9 @@ describe('panelContainerLayout wired through the registry + full solve', () => {
         children: [],
         properties: { name: 'Child', customMinimumSize: { x: 10, y: 10 } } as ControlProperties,
       },
-      children: [],
-      styleBoxes: {},
-      textureSize: null,
-      fontOverrides: {},
-      themeChain: [],
-      projectTheme: null,
     };
     const root: SolveNode = {
+      ...emptySolveNode(),
       path: 'Panel',
       node: {
         name: 'Panel',
@@ -200,10 +197,6 @@ describe('panelContainerLayout wired through the registry + full solve', () => {
       },
       children: [child],
       styleBoxes: { panel: styleBox({ left: 10, top: 6, right: 10, bottom: 6 }) },
-      textureSize: null,
-      fontOverrides: {},
-      themeChain: [],
-      projectTheme: null,
     };
 
     const viewport: Rect2 = { x: 0, y: 0, w: 200, h: 100 };

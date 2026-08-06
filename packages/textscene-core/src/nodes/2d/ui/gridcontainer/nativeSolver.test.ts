@@ -18,6 +18,7 @@ import type { SolveContext, ContainerLayoutResult } from '../../../../r3f/contro
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { gridContainerMinimumSize, gridContainerLayout } from './nativeSolver';
 import { solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /** `gridContainerLayout`'s `rects` half only — see `ContainerLayoutResult`'s own doc for why the union is here at all. */
 function asMap(
@@ -28,19 +29,15 @@ function asMap(
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
+    ...solveNode(),
     path: name,
     node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
-    children: [],
-    styleBoxes: {},
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 
 function grid(name: string, props: Partial<GridContainerProperties>, children: SolveNode[]): SolveNode {
   return {
+    ...solveNode(),
     path: name,
     node: {
       name,
@@ -49,11 +46,6 @@ function grid(name: string, props: Partial<GridContainerProperties>, children: S
       properties: { name, ...props } as GridContainerProperties,
     },
     children,
-    styleBoxes: {},
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 

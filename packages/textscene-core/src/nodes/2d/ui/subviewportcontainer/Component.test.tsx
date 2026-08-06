@@ -36,6 +36,7 @@ import {
   useRegisterViewportPass,
 } from '../../../../r3f/contexts/ViewportPassRegistryContext';
 import { SubViewportContainer } from './Component';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function node(name: string, type: string, properties: object, children: TscnNode[] = []): TscnNode {
   return { name, type, children, properties: { name, ...properties } } as TscnNode;
@@ -49,7 +50,7 @@ function containerSolveNode(
   const containerNode = node('Booth', 'SubViewportContainer', containerProps, [
     node('View', 'SubViewport', { size: { x: 200, y: 150 }, transparent_bg: false, ...viewportProps }, viewportChildren),
   ]);
-  return { path: 'Booth', node: containerNode, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...solveNode(), path: 'Booth', node: containerNode };
 }
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 150 };

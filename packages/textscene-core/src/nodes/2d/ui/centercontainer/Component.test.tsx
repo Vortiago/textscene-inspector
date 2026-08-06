@@ -9,10 +9,11 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CenterContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function solveNode(): SolveNode {
   const node: TscnNode = { name: 'C', type: 'CenterContainer', children: [], properties: { name: 'C' } };
-  return { path: 'C', node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...emptySolveNode(), path: 'C', node };
 }
 
 describe('<CenterContainer>', () => {

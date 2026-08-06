@@ -25,17 +25,13 @@ import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import type { ScrollContainerProperties } from './types';
 import { ScrollContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function leaf(name: string, props: Partial<ScrollContainerProperties> = {}): SolveNode {
   return {
+    ...solveNode(),
     path: name,
     node: { name, type: 'Control', children: [], properties: { name, ...props } as ScrollContainerProperties },
-    children: [],
-    styleBoxes: {},
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 
@@ -49,7 +45,7 @@ function scrollNode(
     children: [],
     properties: { name: 'Scroll', ...props } as ScrollContainerProperties,
   };
-  return { path: 'Scroll', node, children, styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...solveNode(), path: 'Scroll', node, children };
 }
 
 /** World-space bounding box of a mesh's geometry, via its (fresh) matrixWorld. */

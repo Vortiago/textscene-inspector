@@ -34,6 +34,7 @@ import {
   LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR,
   LINE_EDIT_THEME_FONT_KEY,
 } from './nativeSolver';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const W_ADVANCE = 1936 * (16 / 2048); // 15.125
 const FONT_HEIGHT = 23; // ceil(2189*16/2048) + ceil(600*16/2048)
@@ -45,14 +46,10 @@ function size(result: Vec2 | MinimumSizeResult): Vec2 {
 
 function node(props: Partial<LineEditProperties>, styleBoxes: Record<string, StyleBoxFlatData> = {}): SolveNode {
   return {
+    ...solveNode(),
     path: 'L',
     node: { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L', ...props } as LineEditProperties },
-    children: [],
     styleBoxes,
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 

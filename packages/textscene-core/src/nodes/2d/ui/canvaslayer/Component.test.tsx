@@ -17,6 +17,7 @@ import { parseCanvasLayer } from './parser';
 import { EffectiveZProvider, useCanvasLayerIndex, useEffectiveZ } from '../../../../r3f/lighting2d/canvasItemPlacement';
 import { CanvasModulateContext, useCanvasModulate } from '../../../../r3f/canvasModulate';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const ZERO_RECT = { x: 0, y: 0, w: 0, h: 0 };
 
@@ -28,7 +29,7 @@ function layerSolveNode(raw: Record<string, string> = {}, rawChildren: TscnNode[
   const heading = { type: 'node', attributes: { type: 'CanvasLayer', name: 'HUD' } };
   const properties = parseCanvasLayer(heading, raw);
   const node: TscnNode = { name: 'HUD', type: 'CanvasLayer', children: rawChildren, properties };
-  return { path: 'HUD', node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...solveNode(), path: 'HUD', node };
 }
 
 function LayerProbe({ testId }: { testId: string }) {

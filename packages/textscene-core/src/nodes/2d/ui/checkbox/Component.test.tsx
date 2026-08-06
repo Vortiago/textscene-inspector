@@ -18,6 +18,7 @@ import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { CheckBox } from './Component';
 import type { CheckBoxProperties } from './types';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
 
@@ -30,7 +31,7 @@ function solveNode(properties: Partial<CheckBoxProperties> = {}): SolveNode {
     children: [],
     properties: { name: 'MyCheckBox', ...properties } as CheckBoxProperties,
   };
-  return { path: 'MyCheckBox', node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...emptySolveNode(), path: 'MyCheckBox', node };
 }
 
 /** The icon `ControlQuad` is a `PlaneGeometry`, identified by its own `.parameters.width` (survives a duplicate-three.js test environment). */

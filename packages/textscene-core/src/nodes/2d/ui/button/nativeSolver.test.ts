@@ -37,6 +37,7 @@ import {
   BUTTON_DEFAULT_FONT_COLOR,
   BUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /** `buttonMinimumSize`'s `size` half only — every test below except the dedicated `meta` describe cares only about this, exactly like before `{ size, meta }` existed. */
 function minSize(...args: Parameters<typeof buttonMinimumSize>): Vec2 {
@@ -63,14 +64,11 @@ function node(
   textureSize: { x: number; y: number } | null = null
 ): SolveNode {
   return {
+    ...solveNode(),
     path: 'B',
     node: { name: 'B', type: 'Button', children: [], properties: { name: 'B', ...props } as ButtonProperties },
-    children: [],
     styleBoxes,
     textureSize,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 

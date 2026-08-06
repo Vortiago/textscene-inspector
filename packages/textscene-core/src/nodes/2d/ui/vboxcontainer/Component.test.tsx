@@ -9,6 +9,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { VBoxContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function vboxSolveNode(): SolveNode {
   const node: TscnNode = {
@@ -17,7 +18,7 @@ function vboxSolveNode(): SolveNode {
     children: [],
     properties: { name: 'Column' },
   };
-  return { path: 'Column', node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...solveNode(), path: 'Column', node };
 }
 
 describe('<VBoxContainer>', () => {

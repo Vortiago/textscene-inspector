@@ -25,6 +25,7 @@ import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanv
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Control } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -37,7 +38,7 @@ function solveNode(
 ): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
-  return { path, node: tscnNode, children, styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...emptySolveNode(), path, node: tscnNode, children };
 }
 
 interface WrapperInstance {

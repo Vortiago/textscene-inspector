@@ -17,6 +17,7 @@ import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { OptionButton } from './Component';
 import type { OptionButtonProperties } from './types';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 32 };
 
@@ -29,7 +30,7 @@ function solveNode(properties: Partial<OptionButtonProperties> = {}): SolveNode 
     children: [],
     properties: { name: 'MyOptionButton', ...properties } as OptionButtonProperties,
   };
-  return { path: 'MyOptionButton', node, children: [], styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...emptySolveNode(), path: 'MyOptionButton', node };
 }
 
 const ITEMS = [

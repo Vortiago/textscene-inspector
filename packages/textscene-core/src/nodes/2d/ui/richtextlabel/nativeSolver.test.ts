@@ -41,17 +41,13 @@ import {
   ITALIC_SKEW,
   RICH_TEXT_LABEL_UNDERLINE_ALPHA,
 } from './nativeSolver';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function node(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveNode> = {}): SolveNode {
   return {
+    ...solveNode(),
     path: 'RTL',
     node: { name: 'RTL', type: 'RichTextLabel', children: [], properties: { name: 'RTL', ...props } as ControlProperties },
-    children: [],
-    styleBoxes: {},
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
     ...overrides,
   };
 }

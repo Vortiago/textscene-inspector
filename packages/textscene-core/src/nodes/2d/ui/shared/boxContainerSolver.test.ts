@@ -30,6 +30,7 @@ import {
   resortBoxContainer,
   type BoxChildInput,
 } from './boxContainerSolver';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const HORIZONTAL = 3; // Control.SIZE_FILL | SIZE_EXPAND
@@ -263,7 +264,7 @@ describe('boxContainerMinimumSize', () => {
 function solveNode(path: string, type: string, properties: Record<string, unknown>, children: SolveNode[] = []): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
-  return { path, node: tscnNode, children, styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+  return { ...emptySolveNode(), path, node: tscnNode, children };
 }
 
 describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered end-to-end via solveControlTree', () => {
@@ -356,7 +357,7 @@ describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered en
     function toSolveTree(nodes: readonly TscnNode[], parentPath: string): SolveNode[] {
       return nodes.map((n) => {
         const path = joinPath(parentPath, n.name);
-        return { path, node: n, children: toSolveTree(n.children, path), styleBoxes: {}, textureSize: null, fontOverrides: {}, themeChain: [], projectTheme: null };
+        return { ...emptySolveNode(), path, node: n, children: toSolveTree(n.children, path) };
       });
     }
 

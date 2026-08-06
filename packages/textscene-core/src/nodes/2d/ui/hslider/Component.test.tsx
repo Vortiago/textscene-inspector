@@ -14,17 +14,13 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { HSlider } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { SLIDER_GRABBER_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function solveNode(properties: Record<string, unknown>): SolveNode {
   return {
+    ...emptySolveNode(),
     path: 'S',
     node: { name: 'S', type: 'HSlider', children: [], properties: { name: 'S', ...properties } } as TscnNode,
-    children: [],
-    styleBoxes: {},
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 

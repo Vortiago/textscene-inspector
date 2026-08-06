@@ -11,17 +11,13 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { vSliderMinimumSize } from './nativeSolver';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function node(): SolveNode {
   return {
+    ...solveNode(),
     path: 'S',
     node: { name: 'S', type: 'VSlider', children: [], properties: { name: 'S' } as ControlProperties },
-    children: [],
-    styleBoxes: {},
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 

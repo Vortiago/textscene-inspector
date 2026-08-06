@@ -46,6 +46,7 @@ import {
   CHECKBOX_ICON_NATURAL_SIZE,
   CHECKBOX_THEME_FONT_KEY,
 } from './nativeSolver';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 // 'A's hmtx advance width is 1354 design units, 'B's is 1350 — a DIFFERENT
 // glyph, so 'AB's width is their SUM (the two only coincided at the OLD
@@ -56,14 +57,9 @@ const FONT_HEIGHT = 23;
 
 function node(props: Partial<CheckBoxProperties>): SolveNode {
   return {
+    ...solveNode(),
     path: 'C',
     node: { name: 'C', type: 'CheckBox', children: [], properties: { name: 'C', ...props } as CheckBoxProperties },
-    children: [],
-    styleBoxes: {},
-    textureSize: null,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 

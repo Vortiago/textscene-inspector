@@ -25,6 +25,7 @@ import {
   resolveTextureRectRepeat,
   applyFlip,
 } from './nativeSolver';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const TEXTURE = { x: 320, y: 160 };
 
@@ -35,6 +36,7 @@ function size(result: Vec2 | MinimumSizeResult): Vec2 {
 
 function node(props: Partial<TextureRectProperties>, textureSize: { x: number; y: number } | null): SolveNode {
   return {
+    ...solveNode(),
     path: 'Portrait',
     node: {
       name: 'Portrait',
@@ -42,12 +44,7 @@ function node(props: Partial<TextureRectProperties>, textureSize: { x: number; y
       children: [],
       properties: { name: 'Portrait', ...props } as ControlProperties,
     },
-    children: [],
-    styleBoxes: {},
     textureSize,
-    fontOverrides: {},
-    themeChain: [],
-    projectTheme: null,
   };
 }
 
@@ -179,14 +176,9 @@ describe('solveControlTree — the real two-pass solve closes the self-reference
 
   it('a tree with no TextureRect at all is unaffected (single pass, unchanged rects)', () => {
     const plain: SolveNode = {
+      ...solveNode(),
       path: 'Plain',
       node: { name: 'Plain', type: 'Control', children: [], properties: { name: 'Plain', anchorRight: 1, anchorBottom: 1 } as ControlProperties },
-      children: [],
-      styleBoxes: {},
-      textureSize: null,
-      fontOverrides: {},
-      themeChain: [],
-      projectTheme: null,
     };
     const solved = solveControlTree([plain], VIEWPORT, createSolveContext(nativeTheme(1)));
     expect(solved.get('Plain')?.rect).toEqual(VIEWPORT);
