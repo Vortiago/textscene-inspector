@@ -31,8 +31,7 @@
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { fitIconSize, originCorrectionPx, tintColor } from '../../../../r3f/controls/native/buttonBase';
-import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
+import { fitIconSize, tintColor } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveTextTheme,
@@ -59,7 +58,7 @@ export const CHECKBOX_THEME_FONT_KEY = 'font';
 
 // Re-exported so NativeComponent.tsx can build on the shared, Button-generic
 // pieces without importing `buttonBase.ts` a second time under a different name.
-export { fitIconSize, originCorrectionPx, tintColor };
+export { fitIconSize, tintColor };
 
 // --- Draw state --------------------------------------------------------------
 
@@ -213,15 +212,12 @@ export interface CheckBoxContentInput {
   hasText: boolean;
   /** The shaped text's own natural (unwrapped) size — ignored when `hasText` is false. */
   textNaturalSize: Vec2;
-  fontSizePx: number;
-  /** This CheckBox's OWN resolved font (`resolveNodeFontMetrics(n, CHECKBOX_THEME_FONT_KEY)`) — gates `originCorrectionPx`'s atlas-bake correction (`fontMetrics.ts`'s `kind` discriminant). Required rather than defaulted: an omitted value silently applying the atlas correction to a scene font is exactly the defect this field closes. */
-  fontMetrics: Pick<FontMetrics, 'kind'>;
 }
 
 export interface CheckBoxContentLayout {
   /** LOCAL to the control's own top-left, Godot px. */
   iconRect: Rect2;
-  /** Pen-origin top-left, LOCAL Godot px, ALREADY including `originCorrectionPx` — feed straight to `<TextRun>`. `null` when there is no text. */
+  /** The text paragraph's own box top-left, LOCAL Godot px — feed straight to `<TextRun>`, which anchors each line at its own baseline from there (`buildGlyphQuadArrays`'s own doc). `null` when there is no text. */
   textOffset: Vec2 | null;
 }
 
@@ -236,8 +232,7 @@ export interface CheckBoxContentLayout {
  * which never happens here (the icon always occupies non-zero width).
  */
 export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxContentLayout {
-  const { rectSize, margin, iconSize, checkVOffset, hSeparation, hasText, textNaturalSize, fontSizePx, fontMetrics } =
-    input;
+  const { rectSize, margin, iconSize, checkVOffset, hSeparation, hasText, textNaturalSize } = input;
 
   const iconRect: Rect2 = {
     x: Math.floor(margin),
@@ -251,7 +246,7 @@ export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxCont
     const leftReserved = iconSize.x + hSeparation;
     const customElementHeight = rectSize.y - 2 * margin;
     const x = margin + leftReserved;
-    const y = (customElementHeight - textNaturalSize.y) / 2 + margin + originCorrectionPx(fontSizePx, fontMetrics);
+    const y = (customElementHeight - textNaturalSize.y) / 2 + margin;
     textOffset = { x, y };
   }
 

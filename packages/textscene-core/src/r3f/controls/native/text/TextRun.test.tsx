@@ -70,22 +70,52 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
       "(0.2 * distance below line top) would shift every ascender-height vertex LEFT, which is the " +
       "wrong direction and (for a run boundary) eats into the space that precedes it.",
     () => {
-      // 'A' (fontSize 16, atlas bake size 42, SCALE = 16/42): yoffset=13, height=34.
-      // topPx = 13 * (16/42) = 4.952380952...; bottomPx = topPx + 34*(16/42) = 17.90476190...
-      // ascentPx at fontSize 16 = ceil(2189 * 16/2048) = ceil(17.1015625) = 18 (getLinePitchPx's
-      // own ascent rounding, openSansMetrics.ts) — 'A' has no descender, so its bottom edge sits
-      // essentially AT the baseline (bottomPx - ascentPx ~= -0.095, not the ~17.9 a line-top pivot
-      // would use), and its top edge sits well ABOVE it (an ascender).
+      // 'A' (fontSize 16, atlas bake size 42, SCALE = 16/42): yoffset=13, height=34,
+      // bake `base` = 45. baselineOffsetPx at fontSize 16 = ceil(2189 * 16/2048) = 18.
+      // topPx = 18 - (45 - 13)*(16/42) = 5.809523809...; bottomPx = topPx + 34*(16/42)
+      // = 18.761904761... — the bitmap's own bottom edge sits a shade BELOW the baseline
+      // (the bake's anti-aliasing padding: 13 + 34 - 45 = 2 bake px), not the ~18.8 below
+      // the line top a top-edge pivot would use.
       const skewed = buildGlyphQuadArrays(layoutFor('A'), 16, 0.2);
       const straight = buildGlyphQuadArrays(layoutFor('A'), 16, 0);
       const topDx = skewed.positions[0]! - straight.positions[0]!;
       const bottomDx = skewed.positions[2 * 3]! - straight.positions[2 * 3]!;
-      // -0.2 * (4.952380952 - 18) = 2.609523809...
-      expect(topDx).toBeCloseTo(2.6095238, 5);
-      // -0.2 * (17.904761904 - 18) = 0.019047619...
-      expect(bottomDx).toBeCloseTo(0.0190476, 5);
+      // -0.2 * (5.809523809 - 18) = 2.438095238...
+      expect(topDx).toBeCloseTo(2.4380952, 5);
+      // -0.2 * (18.761904761 - 18) = -0.152380952...
+      expect(bottomDx).toBeCloseTo(-0.1523809, 5);
     }
   );
+
+  it(
+    "anchors a line at its BASELINE (`layout.baselineOffsetPx` below the line's box top), " +
+      'folding the MSDF bake\'s own line-top anchor (`OPEN_SANS_ATLAS_INFO.base` above that ' +
+      'baseline) in HERE rather than leaving it for a caller to add back — at fontSize 16 the ' +
+      "reconciliation is 18 - 45*(16/42) = 0.857142857... Godot px, and every consumer that used to " +
+      'carry it now positions a line by its box-top Y alone.',
+    () => {
+      const layout = layoutFor('A');
+      const a = OPEN_SANS_ATLAS_GLYPHS.A!;
+      const arrays = buildGlyphQuadArrays(layout, 16);
+      // TL.y is float index 1; geometry Y is negated Godot px.
+      const topPx = -arrays.positions[1]!;
+      expect(layout.baselineOffsetPx).toBe(18);
+      expect(topPx).toBeCloseTo(18 - (OPEN_SANS_ATLAS_INFO.base - a.yoffset) * SCALE, 6);
+      // The reconciliation is genuinely nonzero: the bake anchor and the shaped
+      // ascent are DIFFERENT quantities, so a painter that ignored one would be
+      // wrong by this much on every line.
+      expect(OPEN_SANS_ATLAS_INFO.base * SCALE).not.toBeCloseTo(layout.baselineOffsetPx, 3);
+      expect(18 - OPEN_SANS_ATLAS_INFO.base * SCALE).toBeCloseTo(0.8571428571428577, 10);
+    }
+  );
+
+  it('places line N exactly one linePitchPx below line N-1, with the same per-line baseline anchor', () => {
+    const layout = shapeText('A\nA', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    const arrays = buildGlyphQuadArrays(layout, 16);
+    const firstTop = -arrays.positions[1]!;
+    const secondTop = -arrays.positions[4 * 3 + 1]!;
+    expect(secondTop - firstTop).toBeCloseTo(layout.linePitchPx, 5);
+  });
 });
 
 async function renderTextRun(props: Partial<TextRunProps> = {}) {

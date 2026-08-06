@@ -10,8 +10,9 @@
  * none. 'A' `hmtx` advance width at 16px = 1354*(16/2048) = 10.578125 (the
  * CONTINUOUS source, `openSansMetrics.ts`'s `advanceWidths` — not
  * `openSansAtlas.ts`'s own atlas-bake-resolution-42 `xadvance`); 'AB' =
- * 21.15625; `originCorrectionPx(16) = 0.8571428571428577`
- * (`buttonBase.test.ts`'s own worked example).
+ * 21.15625. `textOffset` is the paragraph's own BOX TOP-LEFT — the MSDF
+ * bake's own line anchor is `<TextRun>`'s to reconcile (`TextRun.test.tsx`
+ * pins it).
  *
  * The OptionButton "normal"/"hover"/"pressed"/"disabled" styleboxes use
  * `2*default_margin(4)=8` horizontal / `default_margin(4)=4` vertical content
@@ -32,7 +33,6 @@ import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { resolveButtonDrawState } from '../../../../r3f/controls/native/buttonBase';
-import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontResource } from '../../../../resources/processing/fontProcessing';
 import * as logger from '../../../../logger';
 import type { OptionButtonProperties } from './types';
@@ -202,8 +202,6 @@ describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-2
     arrowSize: { x: 12, y: 12 },
     arrowMargin: 4,
     textNaturalSize: { x: 60, y: 26 },
-    fontSizePx: 16,
-    fontMetrics: OPEN_SANS_FONT_METRICS,
   };
 
   it('the arrow sits at (rect.w - arrowSize.w - arrowMargin), NOT the content-margin edge', () => {
@@ -225,8 +223,8 @@ describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-2
 
   it('text is vertically centred within the content box (margins symmetric here)', () => {
     const { textOffset } = layoutOptionButtonContent(BASE);
-    // customElementHeight = 32-8=24; y = (24-26)/2 + 4 + origin = -1+4+origin = 3+origin.
-    expect(textOffset.y).toBeCloseTo(3 + 0.8571428571428577, 10);
+    // customElementHeight = 32-8=24; y = (24-26)/2 + 4 = -1+4 = 3.
+    expect(textOffset.y).toBeCloseTo(3, 10);
   });
 });
 

@@ -56,8 +56,15 @@ import type { Label3DProperties } from './types';
  * cumulative Y via the wrapping `<group>`'s own position. Mirrors
  * `nodes/2d/ui/label/Component.tsx`'s `soloLineLayout`.
  */
-function soloLineLayout(line: TextLineLayout, linePitchPx: number): TextLayoutResult {
-  return { lines: [line], linePitchPx, widthPx: line.widthPx, heightPx: linePitchPx };
+export function soloLineLayout(line: TextLineLayout, parent: TextLayoutResult): TextLayoutResult {
+  return {
+    lines: [line],
+    linePitchPx: parent.linePitchPx,
+    widthPx: line.widthPx,
+    heightPx: parent.linePitchPx,
+    baselineOffsetPx: parent.baselineOffsetPx,
+    fontMetrics: parent.fontMetrics,
+  };
 }
 
 export interface LabelGlyphsProps {
@@ -81,13 +88,8 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
 
   const placements = useMemo(
     () =>
-      layoutLabel3DLines(
-        layout,
-        properties.horizontal_alignment,
-        properties.line_spacing,
-        properties.font_size
-      ),
-    [layout, properties.horizontal_alignment, properties.line_spacing, properties.font_size]
+      layoutLabel3DLines(layout, properties.horizontal_alignment, properties.line_spacing),
+    [layout, properties.horizontal_alignment, properties.line_spacing]
   );
 
   const depthTest = !properties.no_depth_test;
@@ -101,7 +103,7 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
   return (
     <>
       {placements.map((placement, index) => {
-        const oneLine = soloLineLayout(placement.line, layout.linePitchPx);
+        const oneLine = soloLineLayout(placement.line, layout);
         return (
           <group key={index} position={[placement.x, -placement.y, 0]}>
             <TextRun

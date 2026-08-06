@@ -46,7 +46,6 @@ import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/nativ
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
-  originCorrectionPx,
   pickButtonStyleBox,
   resolveButtonDrawState,
   tintColor,
@@ -60,13 +59,12 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { ControlColor } from '../control/types';
 import type { OptionButtonProperties } from './types';
 
 // Re-exported so NativeComponent.tsx can build on the shared, Button-generic
 // pieces without importing `buttonBase.ts` a second time under a different name.
-export { originCorrectionPx, pickButtonStyleBox, resolveButtonDrawState, tintColor };
+export { pickButtonStyleBox, resolveButtonDrawState, tintColor };
 export type { ButtonDrawState };
 
 /**
@@ -191,15 +189,12 @@ export interface OptionButtonContentInput {
   arrowMargin: number;
   /** The shaped (selected item's) text natural size — `(0, 0)` when there is no selection. */
   textNaturalSize: Vec2;
-  fontSizePx: number;
-  /** This OptionButton's OWN resolved font (`resolveNodeFontMetrics(n, OPTION_BUTTON_THEME_FONT_KEY)`) — gates `originCorrectionPx`'s atlas-bake correction (`fontMetrics.ts`'s `kind` discriminant). Required rather than defaulted: an omitted value silently applying the atlas correction to a scene font is exactly the defect this field closes. */
-  fontMetrics: Pick<FontMetrics, 'kind'>;
 }
 
 export interface OptionButtonContentLayout {
   /** LOCAL to the control's own top-left, Godot px. */
   arrowRect: Rect2;
-  /** Pen-origin top-left, LOCAL Godot px, ALREADY including `originCorrectionPx`. Always returned — the caller decides whether there is text worth drawing at this offset. */
+  /** The text paragraph's own box top-left, LOCAL Godot px — feed straight to `<TextRun>`, which anchors each line at its own baseline from there (`buildGlyphQuadArrays`'s own doc). Always returned — the caller decides whether there is text worth drawing at this offset. */
   textOffset: Vec2;
 }
 
@@ -214,7 +209,7 @@ export interface OptionButtonContentLayout {
  * against the FULL control size.
  */
 export function layoutOptionButtonContent(input: OptionButtonContentInput): OptionButtonContentLayout {
-  const { rectSize, styleMargin, arrowSize, arrowMargin, textNaturalSize, fontSizePx, fontMetrics } = input;
+  const { rectSize, styleMargin, arrowSize, arrowMargin, textNaturalSize } = input;
 
   const arrowRect: Rect2 = {
     x: Math.floor(rectSize.x - arrowSize.x - arrowMargin),
@@ -226,7 +221,7 @@ export function layoutOptionButtonContent(input: OptionButtonContentInput): Opti
   const customElementHeight = rectSize.y - styleMargin.top - styleMargin.bottom;
   const textOffset: Vec2 = {
     x: styleMargin.left,
-    y: (customElementHeight - textNaturalSize.y) / 2 + styleMargin.top + originCorrectionPx(fontSizePx, fontMetrics),
+    y: (customElementHeight - textNaturalSize.y) / 2 + styleMargin.top,
   };
 
   return { arrowRect, textOffset };

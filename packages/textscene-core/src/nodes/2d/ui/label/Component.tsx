@@ -8,9 +8,9 @@
  * (`Label::_get_line_rect`) — a single merged multi-line `<TextRun>` (sharing
  * one x origin) cannot express that once lines differ in width, so this
  * draws one `<TextRun>` per line, each in its own positioned `<group>`
- * (`nativeSolver.ts`'s `layoutLabelLines`, which also folds in the
- * vertical-origin reconciliation against the atlas's own bake anchor —
- * see `originCorrectionPx`'s doc for the spike S2 residual it closes).
+ * (`nativeSolver.ts`'s `layoutLabelLines`, which returns each line's own box
+ * top — `<TextRun>` anchors the line at its baseline from there itself,
+ * `buildGlyphQuadArrays`'s own doc).
  *
  * Tint: `ControlCanvasWalker` already folds this node's OWN `modulate` into
  * the `Modulate2DContext` value it provides AROUND this painter, so

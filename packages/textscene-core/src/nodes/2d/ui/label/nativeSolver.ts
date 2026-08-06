@@ -14,13 +14,11 @@
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
-import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { AutowrapMode, shapeText, type TextLayoutResult, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import type { ControlColor } from '../control/types';
 import type { LabelProperties } from './types';
-import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 export const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -171,10 +169,10 @@ export interface LabelLinePlacement {
   /** This line's left edge, box-local Godot px. */
   x: number;
   /**
-   * This line's "box top" Y, box-local Godot px, already reconciled via
-   * `originCorrectionPx` — feed straight into a `<TextRun>` for a
-   * single-line layout (`lineIndex` 0 internally): `y + glyph.yoffset*scale`
-   * lands exactly where Godot draws that glyph.
+   * This line's "box top" Y, box-local Godot px — feed straight into a
+   * `<TextRun>` for a single-line layout (`lineIndex` 0 internally), which
+   * anchors the line at its own baseline from there (`buildGlyphQuadArrays`'s
+   * own doc) and lands every glyph exactly where Godot draws it.
    */
   y: number;
   /** This line, ready for its OWN `<TextRun>` (justified in-place for `HORIZONTAL_ALIGNMENT_FILL`, otherwise the original line unchanged). */
@@ -234,10 +232,8 @@ export function layoutLabelLines(
   // it shaped THIS layout against (`textLayout.ts`'s own doc) — reading it
   // back here, rather than taking a second `fontMetrics` parameter, is what
   // keeps this placement math from EVER disagreeing with the layout it is
-  // placing (the only way the two could diverge is a hand-built
-  // `TextLayoutResult` that omits the field, which none of this module's own
-  // callers do).
-  const fontMetrics = layout.fontMetrics ?? OPEN_SANS_FONT_METRICS;
+  // placing.
+  const fontMetrics = layout.fontMetrics;
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
   const lineSpacingPx = getFontLinePitchPx(fontMetrics, fontSizePx) - fontHeightPx;
   // label.cpp:599 etc: `total_h - line_spacing - paragraph_spacing` (single
@@ -263,11 +259,10 @@ export function layoutLabelLines(
   }
 
   const effectivePitchPx = layout.linePitchPx + vsepPx;
-  const originPx = originCorrectionPx(fontSizePx, fontMetrics);
   const isFill = (horizontalAlignment ?? H_LEFT) === H_FILL;
 
   return layout.lines.map((line, lineIndex) => {
-    const y = vbeginPx + originPx + lineIndex * effectivePitchPx;
+    const y = vbeginPx + lineIndex * effectivePitchPx;
     if (isFill) {
       // label.h:46 default `jst_flags`: JUSTIFICATION_SKIP_LAST_LINE, EXCEPT
       // JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE overrides it when there is only

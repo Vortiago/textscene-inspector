@@ -16,9 +16,8 @@
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
+import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -184,15 +183,12 @@ export interface LineEditContentInput {
   textWidthPx: number;
   /** The shaped display text's own natural height. */
   textHeightPx: number;
-  fontSizePx: number;
-  /** This LineEdit's OWN resolved font (`resolveNodeFontMetrics(n, LINE_EDIT_THEME_FONT_KEY)`) — gates `originCorrectionPx`'s atlas-bake correction (`fontMetrics.ts`'s `kind` discriminant). Required rather than defaulted: an omitted value silently applying the atlas correction to a scene font is exactly the defect this field closes. */
-  fontMetrics: Pick<FontMetrics, 'kind'>;
 }
 
 export interface LineEditContentLayout {
   /** The rect glyphs are clipped to — this Control's own rect inset by `styleMargin` on all four sides, floored at `(0, 0)` extent. */
   contentRect: Rect2;
-  /** Pen-origin top-left, LOCAL Godot px, already including `originCorrectionPx` — feed straight to `<TextRun>`. */
+  /** The text paragraph's own box top-left, LOCAL Godot px — feed straight to `<TextRun>`, which anchors each line at its own baseline from there (`buildGlyphQuadArrays`'s own doc). */
   textOffset: Vec2;
 }
 
@@ -209,7 +205,7 @@ export interface LineEditContentLayout {
  * not JavaScript's default).
  */
 export function layoutLineEditContent(input: LineEditContentInput): LineEditContentLayout {
-  const { rectSize, styleMargin, alignment, textWidthPx, textHeightPx, fontSizePx, fontMetrics } = input;
+  const { rectSize, styleMargin, alignment, textWidthPx, textHeightPx } = input;
 
   let xOfs: number;
   switch (alignment) {
@@ -242,9 +238,7 @@ export function layoutLineEditContent(input: LineEditContentInput): LineEditCont
   // get_margin(SIDE_TOP))` — its Y component is the ACTIVE style's own TOP margin, which
   // was missing from this expression entirely. The whole sum truncates toward zero on
   // assignment to `int y_ofs`, same as every other `int(...)` cast in this draw path.
-  // `originCorrectionPx` is this codebase's own MSDF baseline correction, not part of
-  // Godot's formula, so it is added on top of the truncated Godot value rather than inside it.
-  const yOfs = Math.trunc(styleMargin.top + (yArea - textHeightPx) / 2) + originCorrectionPx(fontSizePx, fontMetrics);
+  const yOfs = Math.trunc(styleMargin.top + (yArea - textHeightPx) / 2);
 
   const contentRect: Rect2 = {
     x: styleMargin.left,

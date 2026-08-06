@@ -19,7 +19,6 @@ import { AutowrapMode, shapeText, type GlyphPlacement, type TextLayoutResult } f
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { getAscentPx, getUnderlinePositionPx, getUnderlineThicknessPx } from '../../../../r3f/controls/native/text/openSansMetrics';
 import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
-import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { resolveNodeFontMetrics, resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ControlColor } from '../control/types';
 import type { RichTextLabelProperties } from './types';
@@ -410,7 +409,7 @@ function soloRunLayout(
   runFontSizePx: number
 ): TextLayoutResult {
   const widthPx = glyphs.length ? glyphs[glyphs.length - 1]!.x + glyphs[glyphs.length - 1]!.advance - glyphs[0]!.x : 0;
-  const fontMetrics = parentLayout.fontMetrics ?? OPEN_SANS_FONT_METRICS;
+  const fontMetrics = parentLayout.fontMetrics;
   return {
     lines: [{ text, glyphs, widthPx }],
     linePitchPx: parentLayout.linePitchPx,

@@ -33,10 +33,9 @@
  * RichTextLabel has no `horizontal_alignment`/`vertical_alignment` Control
  * property (unlike Label) — every line is left-aligned, and the paragraph as
  * a whole is top-aligned, so there is no `layoutLabelLines`-style alignment
- * pass here: each line's y is just `originCorrectionPx(fontSizePx) +
- * lineIndex * linePitchPx` (the SAME shared baseline reconciliation Label
- * uses — `textOrigin.ts`'s own doc frames it as a property of the shared
- * drawing convention, not of any one Control).
+ * pass here: each line's y is just `lineIndex * linePitchPx`, its own box
+ * top, which `<TextRun>` anchors at that line's baseline itself
+ * (`buildGlyphQuadArrays`'s own doc).
  *
  * Tint: `ControlCanvasWalker` already folds this node's OWN `modulate` into
  * the `Modulate2DContext` value it provides AROUND this painter, so
@@ -60,7 +59,6 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { AutowrapMode, clampAutowrapMode, shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
 import {
   BOLD_DISTANCE_BIAS,
   ITALIC_SKEW,
@@ -108,13 +106,12 @@ export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeCon
   );
 
   const placements = useMemo(() => layoutRichTextRuns(runs, layout), [runs, layout]);
-  const originPx = originCorrectionPx(textTheme.fontSizePx, fontMetrics);
 
   return (
     <>
       {placements.map((placement, index) => {
         const runTint = multiplyModulate(tint.own, placement.color);
-        const y = originPx + placement.lineIndex * layout.linePitchPx;
+        const y = placement.lineIndex * layout.linePitchPx;
         const underline = placement.underline
           ? underlineRectPx(placement.layout.lines[0]!.glyphs, placement.fontSizePx)
           : null;

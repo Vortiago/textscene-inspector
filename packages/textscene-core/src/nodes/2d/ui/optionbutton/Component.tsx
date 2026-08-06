@@ -84,10 +84,8 @@ export function OptionButton({ solveNode, rect, renderOrder, theme }: NativeCont
         arrowSize: OPTION_BUTTON_ARROW_NATURAL_SIZE,
         arrowMargin,
         textNaturalSize: layout ? { x: layout.widthPx, y: layout.heightPx } : { x: 0, y: 0 },
-        fontSizePx,
-        fontMetrics,
       }),
-    [rect.w, rect.h, baseStyleBox.contentMargin, arrowMargin, layout, fontSizePx, fontMetrics]
+    [rect.w, rect.h, baseStyleBox.contentMargin, arrowMargin, layout]
   );
 
   return (

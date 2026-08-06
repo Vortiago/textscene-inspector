@@ -185,24 +185,24 @@ export interface TextLayoutResult {
    * `getFontAscentPx(fontMetrics, fontSizePx)` — where a line's own baseline
    * sits, measured down from that line's top (`fontMetrics.ts`'s own doc:
    * the SAME rounded value every other baseline-relative pixel quantity,
-   * e.g. the italic-shear pivot, is measured from). `shapeText` always sets
-   * this; a caller that hand-builds a `TextLayoutResult` by slicing one line
-   * back out of an already-shaped result (`Label`/`RichTextLabel`/`Label3D`'s
-   * own solo-line wrappers) may omit it — optional so those pre-existing
-   * call sites (outside this engine's ownership) need no change; `TextRun.tsx`
-   * falls back to the legacy Open-Sans-specific computation when absent.
+   * e.g. the italic-shear pivot, is measured from). BOTH painters anchor a
+   * line here (`TextRun.tsx`'s `buildGlyphQuadArrays`, `canvasTextPainter.ts`'s
+   * `paintSceneFontCanvas`), so it is required rather than optional: a caller
+   * that hand-builds a `TextLayoutResult` by slicing one line back out of an
+   * already-shaped result must state which baseline that line is anchored at,
+   * and a default silently substituted for it is a whole-ascent vertical miss
+   * on the canvas path and a bake-anchor-sized one on the atlas path.
    */
-  baselineOffsetPx?: number;
+  baselineOffsetPx: number;
   /**
    * The `FontMetrics` this layout was shaped against — `options.fontMetrics`
    * echoed back, defaulting to `OPEN_SANS_FONT_METRICS` exactly like shaping
    * itself. `TextRun.tsx` reads `.kind` off this to dispatch between the MSDF
-   * atlas painter and the canvas-rasterisation painter; optional for the same
-   * hand-built-solo-line reason as `baselineOffsetPx` (its absence means
-   * "paint via the atlas", the pre-existing behaviour every such call site
-   * already assumed).
+   * atlas painter and the canvas-rasterisation painter, so an omitted value
+   * would silently force a scene-font layout onto the atlas path (whose
+   * bitmaps that font has none of); required for that reason.
    */
-  fontMetrics?: FontMetrics;
+  fontMetrics: FontMetrics;
 }
 
 /**
@@ -213,14 +213,25 @@ export interface TextLayoutResult {
  * every other painter already casts `solveNode.node.properties`, but this
  * ONE check is cheap and the failure mode of skipping it — rendering
  * whatever `.lines`/`.widthPx` happen to be on an unrelated object — is a
- * silent wrong picture rather than a thrown error, so it is worth the four
+ * silent wrong picture rather than a thrown error, so it is worth the five
  * property reads. Duck-typed, not `instanceof`: a `TextLayoutResult` is
  * plain data with no prototype of its own.
+ *
+ * `fontMetrics` is checked by PRESENCE rather than shape — it is the field
+ * that decides which painter draws the result, so an object carrying the
+ * four numeric/array fields but no metrics is exactly the "plausible but
+ * unrelated" case this guard exists to reject.
  */
 export function isTextLayoutResult(value: unknown): value is TextLayoutResult {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Partial<TextLayoutResult>;
-  return Array.isArray(v.lines) && typeof v.linePitchPx === 'number' && typeof v.widthPx === 'number' && typeof v.heightPx === 'number';
+  return (
+    Array.isArray(v.lines) &&
+    typeof v.linePitchPx === 'number' &&
+    typeof v.widthPx === 'number' &&
+    typeof v.heightPx === 'number' &&
+    'fontMetrics' in v
+  );
 }
 
 interface BreakFlags {

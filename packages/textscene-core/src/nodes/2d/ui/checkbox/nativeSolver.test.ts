@@ -13,8 +13,8 @@
  * `descentPx=ceil(600*16/2048)=5`). `line_spacing` is Label's own theme
  * constant; CheckBox sets none.
  * 'A' advance at 16px = 1354*(16/2048) = 10.578125; 'AB' = (1354+1350)*(16/2048) = 21.125.
- * `originCorrectionPx(16) = 0.8571428571428577` (`buttonBase.test.ts`'s own
- * worked example — same atlas, same function).
+ * `textOffset` is the paragraph's own BOX TOP-LEFT — the MSDF bake's own line
+ * anchor is `<TextRun>`'s to reconcile (`TextRun.test.tsx` pins it).
  *
  * A CHECKED (`button_pressed=true`), non-disabled CheckBox draws `DRAW_PRESSED`
  * per `BaseButton::get_draw_mode` (`base_button.cpp:325-358`) since a static
@@ -31,8 +31,6 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import { originCorrectionPx } from '../../../../r3f/controls/native/buttonBase';
-import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontResource } from '../../../../resources/processing/fontProcessing';
 import * as logger from '../../../../logger';
 import type { CheckBoxProperties } from './types';
@@ -55,7 +53,6 @@ import {
 // a coincidence of that rounding, not a fact about the font).
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 const FONT_HEIGHT = 23;
-const ORIGIN_16 = 0.8571428571428577;
 
 function node(props: Partial<CheckBoxProperties>): SolveNode {
   return {
@@ -220,8 +217,6 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
     hSeparation: 4,
     hasText: true,
     textNaturalSize: { x: 90, y: 26 },
-    fontSizePx: 16,
-    fontMetrics: OPEN_SANS_FONT_METRICS,
   };
 
   it('icon sits at (margin, vertically centred + check_v_offset)', () => {
@@ -234,8 +229,8 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
     const { textOffset } = layoutCheckBoxContent(BASE);
     // x = margin(4) + icon(16) + h_separation(4) = 24.
     expect(textOffset!.x).toBe(24);
-    // customElementHeight = 28-8=20; y = (20-26)/2 + 4 + origin = -3+4+origin = 1+origin.
-    expect(textOffset!.y).toBeCloseTo(1 + ORIGIN_16, 10);
+    // customElementHeight = 28-8=20; y = (20-26)/2 + 4 = -3+4 = 1.
+    expect(textOffset!.y).toBeCloseTo(1, 10);
   });
 
   it('returns textOffset: null when hasText is false (icon still positioned)', () => {
@@ -253,10 +248,6 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
     const { textOffset } = layoutCheckBoxContent({ ...BASE, iconSize: { x: 8, y: 8 } });
     // x = 4 + 8 + 4 = 16.
     expect(textOffset!.x).toBe(16);
-  });
-
-  it('matches originCorrectionPx(16) exactly (shared text-origin convention with Button/Label)', () => {
-    expect(originCorrectionPx(16, OPEN_SANS_FONT_METRICS)).toBeCloseTo(ORIGIN_16, 10);
   });
 });
 

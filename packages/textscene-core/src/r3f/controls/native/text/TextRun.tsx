@@ -32,19 +32,26 @@
  * shared dependency of it.
  *
  * Line vertical placement uses `layout.linePitchPx` (Godot's own ceiling-
- * rounded ascent+descent+spacing) as each line's top, plus the atlas glyph's
- * OWN `yoffset` (offset from ITS bake-time line-top). The atlas's bake-time
- * line metrics (`OPEN_SANS_ATLAS_INFO.lineHeight`/`.base`) are a DIFFERENT
- * quantity and are deliberately not used for this — mixing the two is
- * exactly the source of the ~2px constant vertical-origin residual measured
- * against real Godot (packet P10 spike S2's FINDINGS.md). That residual is
- * left open here: closing it is Label's job (the component that owns
- * vertical alignment), not this engine's.
+ * rounded ascent+descent+spacing) as each line's top, and anchors that line
+ * at ITS BASELINE, `layout.baselineOffsetPx` below the top — Godot's own
+ * convention (`ofs.y += asc` before drawing, `scene/gui/label.cpp:616,823`;
+ * `Button::_notification`'s `text_buf->draw(...)` goes through the identical
+ * TextServer paragraph convention). The MSDF bake measures each glyph's own
+ * `yoffset` from a DIFFERENT reference — its bake-time line top, with
+ * `OPEN_SANS_ATLAS_INFO.base` between that and the baseline — so
+ * `buildGlyphQuadArrays` reconciles the two itself. Both painters therefore
+ * take a line's box-top Y and nothing else, and neither leaks its own
+ * anchor to a caller (`canvasTextPainter.ts` keys off the same
+ * `layout.baselineOffsetPx`).
+ *
+ * Portions ported from Godot Engine (MIT).
+ * Copyright (c) 2014-present Godot Engine contributors.
+ * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+ * See THIRD-PARTY-NOTICES.md.
  */
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { OPEN_SANS_ATLAS_INFO, OPEN_SANS_ATLAS_PNG_DATA_URL } from './openSansAtlas';
-import { getAscentPx } from './openSansMetrics';
 import { createMsdfMaterial } from './msdfMaterial';
 import {
   computeCanvasTextCanvasLayout,
@@ -81,6 +88,13 @@ function atlasUv(x: number, y: number, width: number, height: number) {
  * Builds one merged quad set for `layout`, skipping any placement with no
  * atlas bitmap (whitespace, or a character outside the baked charset).
  *
+ * Each line is anchored at its BASELINE, `layout.baselineOffsetPx` below the
+ * line's own box top (this module's own doc has the citation) — the atlas's
+ * bake anchor (`OPEN_SANS_ATLAS_INFO.base` above that baseline, which every
+ * glyph's `yoffset` is measured down from) is reconciled here rather than
+ * handed to a caller to add back. A consumer therefore positions a line by
+ * its box-top Y alone, identically for either painter.
+ *
  * `skew` shears each vertex around the line's BASELINE, not its top edge:
  * Godot applies its synthesized-italic `Transform2D` via FreeType's
  * `FT_Outline_Transform` (`modules/text_server_adv/text_server_adv.cpp:
@@ -101,13 +115,10 @@ export function buildGlyphQuadArrays(
   skew = 0
 ): GlyphQuadArrays {
   const scale = fontSizePx / OPEN_SANS_ATLAS_INFO.fontSize;
-  // `layout.baselineOffsetPx` is `shapeText`'s own `getFontAscentPx(fontMetrics,
-  // fontSizePx)` — the SAME quantity `getAscentPx` recomputes below, kept as
-  // a fallback only for a hand-built `TextLayoutResult` (a solo-line wrapper
-  // outside this engine's ownership) that omits it; `textLayout.ts`'s own
-  // doc has why that fallback is safe (those wrappers are Open-Sans-only
-  // today).
-  const baselineOffsetPx = layout.baselineOffsetPx ?? getAscentPx(fontSizePx);
+  const baselineOffsetPx = layout.baselineOffsetPx;
+  // How far the bake's own line-top reference (what every `glyph.yoffset` is
+  // measured down from) sits above the baseline, at the TARGET size.
+  const bakeAnchorPx = OPEN_SANS_ATLAS_INFO.base * scale;
 
   let glyphCount = 0;
   for (const line of layout.lines) {
@@ -123,16 +134,16 @@ export function buildGlyphQuadArrays(
   let quad = 0;
   layout.lines.forEach((line, lineIndex) => {
     const lineTopPx = lineIndex * layout.linePitchPx;
+    const baselinePx = lineTopPx + baselineOffsetPx;
     for (const gp of line.glyphs) {
       const glyph = gp.glyph;
       if (!glyph || glyph.width <= 0 || glyph.height <= 0) continue;
 
       const leftPx = gp.x + glyph.xoffset * scale;
-      const topPx = lineTopPx + glyph.yoffset * scale;
+      const topPx = baselinePx - bakeAnchorPx + glyph.yoffset * scale;
       const rightPx = leftPx + glyph.width * scale;
       const bottomPx = topPx + glyph.height * scale;
 
-      const baselinePx = lineTopPx + baselineOffsetPx;
       const dx = (yPx: number): number => -skew * (yPx - baselinePx);
       const tl: [number, number] = [leftPx + dx(topPx), topPx];
       const tr: [number, number] = [rightPx + dx(topPx), topPx];

@@ -24,8 +24,6 @@ import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { LabelProperties } from './types';
 import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { labelMinimumSize, LABEL_THEME_KEYS, LABEL_THEME_FONT_KEY, LABEL_DEFAULT_FONT_COLOR, labelTextTheme, layoutLabelLines } from './nativeSolver';
-import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
-import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { FontResource } from '../../../../resources/processing/fontProcessing';
 import * as logger from '../../../../logger';
@@ -162,17 +160,6 @@ describe('labelTextTheme / LABEL_THEME_KEYS / LABEL_DEFAULT_FONT_COLOR', () => {
   });
 });
 
-describe('originCorrectionPx (TextRun box-top vs. Godot baseline-anchored origin, spike S2 residual)', () => {
-  it('at size 16: ascentPx(18) - base(45 bake)*scale(16/42) = 0.857142857...', () => {
-    // 45 * 16 / 42 = 17.142857142857142; 18 - that = 0.8571428571428577.
-    expect(originCorrectionPx(16, OPEN_SANS_FONT_METRICS)).toBeCloseTo(18 - (45 * 16) / 42, 10);
-  });
-
-  it('is a genuinely nonzero constant (proves the reconciliation is not a no-op)', () => {
-    expect(originCorrectionPx(16, OPEN_SANS_FONT_METRICS)).not.toBe(0);
-  });
-});
-
 describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_rect x)', () => {
   const FONT_SIZE = 16;
   const PITCH = 26; // getLinePitchPx(16)
@@ -201,35 +188,33 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
     expect(placements[0]!.x + placements[0]!.line.widthPx).toBeCloseTo(200, 6);
   });
 
-  it('vertical TOP (default): line N sits at originCorrectionPx + N*linePitchPx, no vbegin', () => {
+  it('vertical TOP (default): line N sits at exactly N*linePitchPx — the pure label.cpp box top, with no painter-side anchor folded in (`<TextRun>` owns that)', () => {
     const layout = layoutFor('A\nB\nC');
     const placements = layoutLabelLines(layout, 200, 200, undefined, 0, FONT_SIZE);
-    const origin = originCorrectionPx(FONT_SIZE, OPEN_SANS_FONT_METRICS);
-    expect(placements.map((p) => p.y)).toEqual([origin, origin + PITCH, origin + 2 * PITCH]);
+    expect(placements.map((p) => p.y)).toEqual([0, PITCH, 2 * PITCH]);
   });
 
   it('vertical CENTER (1): vbegin centers the whole text block in the box', () => {
     const layout = layoutFor('A\nB'); // 2 lines: contentHeight = 2*26-3 = 49
     const placements = layoutLabelLines(layout, 200, 149, undefined, 1, FONT_SIZE);
     const vbegin = (149 - 49) / 2;
-    expect(placements[0]!.y).toBeCloseTo(vbegin + originCorrectionPx(FONT_SIZE, OPEN_SANS_FONT_METRICS), 6);
+    expect(placements[0]!.y).toBeCloseTo(vbegin, 6);
   });
 
   it('vertical BOTTOM (2): vbegin pins the block against the box bottom', () => {
     const layout = layoutFor('A\nB');
     const placements = layoutLabelLines(layout, 200, 149, undefined, 2, FONT_SIZE);
     const vbegin = 149 - 49;
-    expect(placements[0]!.y).toBeCloseTo(vbegin + originCorrectionPx(FONT_SIZE, OPEN_SANS_FONT_METRICS), 6);
+    expect(placements[0]!.y).toBeCloseTo(vbegin, 6);
   });
 
   it('vertical FILL (3): distributes the box height evenly across N-1 inter-line gaps', () => {
     const layout = layoutFor('A\nB\nC'); // 3 lines, contentHeight = 3*26-3 = 75
     const placements = layoutLabelLines(layout, 200, 175, undefined, 3, FONT_SIZE);
     const vsep = (175 - 75) / 2;
-    const origin = originCorrectionPx(FONT_SIZE, OPEN_SANS_FONT_METRICS);
-    expect(placements[0]!.y).toBeCloseTo(origin, 6);
-    expect(placements[1]!.y).toBeCloseTo(origin + PITCH + vsep, 6);
-    expect(placements[2]!.y).toBeCloseTo(origin + 2 * (PITCH + vsep), 6);
+    expect(placements[0]!.y).toBeCloseTo(0, 6);
+    expect(placements[1]!.y).toBeCloseTo(PITCH + vsep, 6);
+    expect(placements[2]!.y).toBeCloseTo(2 * (PITCH + vsep), 6);
   });
 
   it('horizontal FILL (3), single line: widens that line to the box width (JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE, label.h:46)', () => {

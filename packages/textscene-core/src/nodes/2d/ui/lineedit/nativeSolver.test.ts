@@ -24,8 +24,6 @@ import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxF
 import type { FontResource } from '../../../../resources/processing/fontProcessing';
 import * as logger from '../../../../logger';
 import type { LineEditProperties } from './types';
-import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
-import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import {
   lineEditMinimumSize,
   lineEditTextTheme,
@@ -192,14 +190,12 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       alignment: 0,
       textWidthPx: 50,
       textHeightPx: 23,
-      fontSizePx: 16,
-      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     expect(result.contentRect).toEqual({ x: 4, y: 4, w: 192, h: 22 });
     expect(result.textOffset.x).toBe(4);
     // y_ofs = style->get_offset().y + (y_area - text_height) / 2 (line_edit.cpp:1427), truncated
     // toward zero on assignment to `int y_ofs`: trunc(4 + (22 - 23) / 2) = trunc(3.5) = 3.
-    expect(result.textOffset.y).toBeCloseTo(3 + originCorrectionPx(16, OPEN_SANS_FONT_METRICS), 6);
+    expect(result.textOffset.y).toBe(3);
   });
 
   it('y_ofs includes the ACTIVE style\'s own TOP margin — `style->get_offset().y` (style_box.cpp:87-89) — not just the text/area centring term', () => {
@@ -211,11 +207,9 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       alignment: 0,
       textWidthPx: 50,
       textHeightPx: 23,
-      fontSizePx: 16,
-      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     // y_area = trunc(38 - 12 - 4) = 22; y_ofs = trunc(12 + (22 - 23) / 2) = trunc(11.5) = 11.
-    expect(result.textOffset.y).toBeCloseTo(11 + originCorrectionPx(16, OPEN_SANS_FONT_METRICS), 6);
+    expect(result.textOffset.y).toBe(11);
   });
 
   it('FILL shares LEFT\'s branch exactly (line_edit.cpp:1398-1399 falls through the same case)', () => {
@@ -225,8 +219,6 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       alignment: 0,
       textWidthPx: 50,
       textHeightPx: 23,
-      fontSizePx: 16,
-      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     const fill = layoutLineEditContent({
       rectSize: { x: 200, y: 30 },
@@ -234,8 +226,6 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       alignment: 3,
       textWidthPx: 50,
       textHeightPx: 23,
-      fontSizePx: 16,
-      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     expect(fill).toEqual(left);
   });
@@ -248,8 +238,6 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       alignment: 1,
       textWidthPx: 50,
       textHeightPx: 23,
-      fontSizePx: 16,
-      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     expect(result.textOffset.x).toBe(75);
   });
@@ -261,8 +249,6 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       alignment: 1,
       textWidthPx: 500,
       textHeightPx: 23,
-      fontSizePx: 16,
-      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     expect(result.textOffset.x).toBe(4); // MAX(0, negative) -> 0, + marginLeft
   });
@@ -275,8 +261,6 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       alignment: 2,
       textWidthPx: 50,
       textHeightPx: 23,
-      fontSizePx: 16,
-      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     expect(result.textOffset.x).toBe(146);
   });
@@ -288,8 +272,6 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       alignment: 2,
       textWidthPx: 500,
       textHeightPx: 23,
-      fontSizePx: 16,
-      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     expect(result.textOffset.x).toBe(4);
   });
@@ -301,8 +283,6 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       alignment: 0,
       textWidthPx: 0,
       textHeightPx: 0,
-      fontSizePx: 16,
-      fontMetrics: OPEN_SANS_FONT_METRICS,
     });
     expect(result.contentRect.w).toBe(0);
     expect(result.contentRect.h).toBe(0);

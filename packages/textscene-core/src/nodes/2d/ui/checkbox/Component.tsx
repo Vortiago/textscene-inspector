@@ -91,10 +91,8 @@ export function CheckBox({ solveNode, rect, renderOrder, theme }: NativeControlC
         hSeparation: checkBoxHSeparation(props, { theme }),
         hasText,
         textNaturalSize: layout ? { x: layout.widthPx, y: layout.heightPx } : { x: 0, y: 0 },
-        fontSizePx,
-        fontMetrics,
       }),
-    [rect.w, rect.h, theme, iconSize, props, hasText, layout, fontSizePx, fontMetrics]
+    [rect.w, rect.h, theme, iconSize, props, hasText, layout]
   );
 
   return (

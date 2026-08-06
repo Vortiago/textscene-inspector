@@ -23,8 +23,6 @@ import { multiplyModulate, type RGBA } from '../../canvasItemModulate';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 export { tintStyleBox } from './StyleBoxQuad';
 import type { Rect2, Vec2 } from './rect';
-import { originCorrectionPx } from './text/textOrigin';
-import type { FontMetrics } from './text/fontMetrics';
 
 // --- Godot alignment enums (scene/gui/control.h: HorizontalAlignment / VerticalAlignment) ---
 
@@ -80,12 +78,6 @@ export function fitIconSize(size: Vec2, maxWidth: number): Vec2 {
   return size;
 }
 
-// Vertical text-origin reconciliation lives in the text engine — both this
-// family and Label draw through the same TextRun convention.
-export { originCorrectionPx };
-
-
-
 // --- Content layout: icon + text placement within a Button-family control --
 
 export interface ButtonContentInput {
@@ -109,9 +101,6 @@ export interface ButtonContentInput {
   hasText: boolean;
   /** The shaped text's own natural (unwrapped) size — `(0, 0)` when `hasText` is false. */
   textNaturalSize: Vec2;
-  fontSizePx: number;
-  /** This Button's OWN resolved font (`resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY)`) — gates `originCorrectionPx`'s atlas-bake correction (`fontMetrics.ts`'s `kind` discriminant). Required rather than defaulted: an omitted value silently applying the atlas correction to a scene font is exactly the defect this field closes. */
-  fontMetrics: Pick<FontMetrics, 'kind'>;
 }
 
 export interface ButtonIconLayout {
@@ -120,7 +109,7 @@ export interface ButtonIconLayout {
 }
 
 export interface ButtonTextLayout {
-  /** Pen-origin top-left, LOCAL Godot px, ALREADY including `originCorrectionPx` — feed straight to `<TextRun>`. */
+  /** The text paragraph's own box top-left, LOCAL Godot px — feed straight to `<TextRun>`, which anchors each line at its own baseline from there (`buildGlyphQuadArrays`'s own doc). */
   offset: Vec2;
 }
 
@@ -168,8 +157,6 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     iconNaturalSize,
     hasText,
     textNaturalSize,
-    fontSizePx,
-    fontMetrics,
   } = input;
   const hSeparation = Math.max(0, hSeparationRaw);
 
@@ -265,8 +252,6 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     if (iconLayout && verticalIconAlignment === V_TOP) {
       textOffsetY += customElementSize.y - drawableHeight;
     }
-    textOffsetY += originCorrectionPx(fontSizePx, fontMetrics);
-
     textLayout = { offset: { x: textOffsetX, y: textOffsetY } };
   }
 

@@ -7,15 +7,12 @@
  * implementation itself computes them — an independent worked example per
  * `AGENTS.md`'s test-authoring rule.
  *
- * `originCorrectionPx(16)`: atlas `base` = 45, atlas `fontSize` = 42
- * (`text/openSansAtlas.ts`), `unitsPerEm` = 2048, `ascent` = 2189
- * (`text/openSansMetrics.ts`). `ascentPxAt(16) = ceil(2189*16/2048) =
- * ceil(17.1015625) = 18`. `baseAtTargetPx = 45*16/42 = 17.142857142857142`.
- * `originCorrectionPx(16) = 18 - 17.142857142857142 = 0.8571428571428577`.
+ * `text.offset` is the paragraph's own BOX TOP-LEFT, straight out of the
+ * source's formula — the MSDF bake's own line anchor is `<TextRun>`'s to
+ * reconcile (`TextRun.test.tsx` pins it), never something this layout adds.
  */
 import { describe, expect, it } from 'vitest';
 import type { StyleBoxFlatData } from './styleBoxFlat';
-import { OPEN_SANS_FONT_METRICS } from './text/openSansFontMetrics';
 import {
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
@@ -25,7 +22,6 @@ import {
   VERTICAL_ALIGNMENT_TOP,
   fitIconSize,
   layoutButtonContent,
-  originCorrectionPx,
   pickButtonStyleBox,
   resolveButtonDrawState,
   tintColor,
@@ -113,12 +109,6 @@ describe('fitIconSize (Button::_fit_icon_size, button.cpp:469-479)', () => {
   });
 });
 
-describe('originCorrectionPx', () => {
-  it('is 0.8571428571428577 at font size 16 (see module header worked example)', () => {
-    expect(originCorrectionPx(16, OPEN_SANS_FONT_METRICS)).toBeCloseTo(0.8571428571428577, 10);
-  });
-});
-
 // --- layoutButtonContent (button.cpp:233-456) ------------------------------
 
 const BASE_INPUT: ButtonContentInput = {
@@ -133,8 +123,6 @@ const BASE_INPUT: ButtonContentInput = {
   iconNaturalSize: null,
   hasText: true,
   textNaturalSize: { x: 50, y: 26 },
-  fontSizePx: 16,
-  fontMetrics: OPEN_SANS_FONT_METRICS,
 };
 
 describe('layoutButtonContent — text only, no icon', () => {
@@ -142,7 +130,7 @@ describe('layoutButtonContent — text only, no icon', () => {
     const { icon, text } = layoutButtonContent(BASE_INPUT);
     expect(icon).toBeNull();
     expect(text!.offset.x).toBe(4);
-    expect(text!.offset.y).toBeCloseTo(3 + 0.8571428571428577, 10);
+    expect(text!.offset.y).toBeCloseTo(3, 10);
   });
 
   it('CENTER alignment: text centers within the drawable box', () => {
@@ -204,14 +192,14 @@ describe('layoutButtonContent — vertical_icon_alignment', () => {
     const { icon, text } = layoutButtonContent({ ...WITH_ICON, verticalIconAlignment: VERTICAL_ALIGNMENT_TOP });
     expect(icon).toEqual({ rect: { x: 4, y: 4, w: 16, h: 16 } });
     // drawableHeight = 24-16=8; base y=(8-26)/2+4=-5; TOP adds (24-8)=16 -> 11; + origin.
-    expect(text!.offset.y).toBeCloseTo(11 + 0.8571428571428577, 10);
+    expect(text!.offset.y).toBeCloseTo(11, 10);
   });
 
   it('BOTTOM: icon sits flush at the bottom; text does NOT get the extra TOP-only shift', () => {
     const { icon, text } = layoutButtonContent({ ...WITH_ICON, verticalIconAlignment: VERTICAL_ALIGNMENT_BOTTOM });
     expect(icon).toEqual({ rect: { x: 4, y: 12, w: 16, h: 16 } });
     // Same reduced drawableHeight (8) and base y (-5), but no TOP bonus shift.
-    expect(text!.offset.y).toBeCloseTo(-5 + 0.8571428571428577, 10);
+    expect(text!.offset.y).toBeCloseTo(-5, 10);
   });
 });
 

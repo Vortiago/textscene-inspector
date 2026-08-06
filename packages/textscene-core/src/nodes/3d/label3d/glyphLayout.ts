@@ -25,15 +25,13 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { TextLayoutResult, TextLineLayout } from '../../../r3f/controls/native/text/textLayout';
-import { originCorrectionPx } from '../../../r3f/controls/native/text/textOrigin';
 import { OPEN_SANS_ATLAS_INFO } from '../../../r3f/controls/native/text/openSansAtlas';
-import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { HorizontalAlignment } from './types';
 
 export interface Label3DLinePlacement {
   /** This line's own left-edge x offset (`label_3d.cpp:588-599`), Godot px. */
   x: number;
-  /** This line's "box top" Y, Godot px, `TextRun`/`originCorrectionPx` convention (y-down, baseline-anchored). */
+  /** This line's own "box top" Y, Godot px, y-down — `<TextRun>` anchors the line at its baseline from there itself (`buildGlyphQuadArrays`'s own doc). */
   y: number;
   line: TextLineLayout;
 }
@@ -75,22 +73,12 @@ function horizontalOffsetPx(lineWidthPx: number, alignment: HorizontalAlignment)
 export function layoutLabel3DLines(
   layout: TextLayoutResult,
   horizontalAlignment: HorizontalAlignment,
-  lineSpacingPx: number,
-  fontSizePx: number
+  lineSpacingPx: number
 ): Label3DLinePlacement[] {
   const vbeginPx = verticalOffsetPx(layout, lineSpacingPx);
-  // `layout.fontMetrics` is `shapeText`'s own echo of whichever `FontMetrics`
-  // it shaped THIS layout against — `label/nativeSolver.ts`'s
-  // `layoutLabelLines` establishes the same "read it back rather than take a
-  // second parameter" pattern. Label3D never resolves a scene font today (no
-  // `font` property is parsed onto `Label3DProperties`), so this is always
-  // `OPEN_SANS_FONT_METRICS` in practice; the fallback is what a hand-built
-  // `TextLayoutResult` omitting the field still resolves to.
-  const fontMetrics = layout.fontMetrics ?? OPEN_SANS_FONT_METRICS;
-  const originPx = originCorrectionPx(fontSizePx, fontMetrics);
   return layout.lines.map((line, lineIndex) => ({
     x: horizontalOffsetPx(line.widthPx, horizontalAlignment),
-    y: vbeginPx + originPx + lineIndex * layout.linePitchPx,
+    y: vbeginPx + lineIndex * layout.linePitchPx,
     line,
   }));
 }

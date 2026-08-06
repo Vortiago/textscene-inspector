@@ -15,8 +15,6 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
-import { originCorrectionPx } from '../../../../r3f/controls/native/text/textOrigin';
-import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { Label, soloLineLayout } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { shapeText, AutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
@@ -99,12 +97,12 @@ describe('<Label> (isolated painter contract)', () => {
     expect(new Set(xs.map((x) => Math.round(x * 1000))).size).toBeGreaterThan(1);
   });
 
-  it('honours vertical_alignment (default TOP): the first line group sits at exactly originCorrectionPx, no vbegin', async () => {
+  it('honours vertical_alignment (default TOP): the first line group sits at exactly y=0 — no vbegin, and no painter-side anchor folded into the placement', async () => {
     const renderer = await render({ text: 'A' });
-    const group = renderer.scene.findAllByType('Group').find((g) => (g.instance as THREE.Group).position.y !== 0)!;
-    expect(group).toBeDefined();
+    const groups = renderer.scene.findAllByType('Group').map((g) => g.instance as THREE.Group);
+    expect(groups.length).toBeGreaterThan(0);
     // three's Y is negated Godot px (rect.ts convention): position.y = -y.
-    expect((group.instance as THREE.Group).position.y).toBeCloseTo(-originCorrectionPx(16, OPEN_SANS_FONT_METRICS), 6);
+    expect(groups.every((g) => g.position.y === 0)).toBe(true);
   });
 
   it('honours uppercase: the SAME source text renders WIDER glyphs than lowercase (A/B are wider than a/b in this atlas)', async () => {
@@ -218,6 +216,6 @@ describe('soloLineLayout (regression: a scene-font Label must not silently fall 
     const placement = { x: 0, y: 0, line: parent.lines[0]! };
     const solo = soloLineLayout(placement, parent);
     expect(solo.fontMetrics).toBe(parent.fontMetrics);
-    expect(solo.fontMetrics?.kind).toBe('atlas');
+    expect(solo.fontMetrics.kind).toBe('atlas');
   });
 });

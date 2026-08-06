@@ -145,8 +145,6 @@ export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeCont
         iconNaturalSize,
         hasText,
         textNaturalSize: layout ? { x: layout.widthPx, y: layout.heightPx } : { x: 0, y: 0 },
-        fontSizePx,
-        fontMetrics,
       }),
     [
       rect.w,
@@ -160,8 +158,6 @@ export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeCont
       iconNaturalSize,
       hasText,
       layout,
-      fontSizePx,
-      fontMetrics,
       theme.separation,
     ]
   );

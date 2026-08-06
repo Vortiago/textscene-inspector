@@ -101,10 +101,8 @@ export function LineEdit({ solveNode, rect, renderOrder, theme }: NativeControlC
         alignment: props.alignment ?? HORIZONTAL_ALIGNMENT_LEFT,
         textWidthPx: layout?.widthPx ?? 0,
         textHeightPx: layout?.heightPx ?? 0,
-        fontSizePx,
-        fontMetrics,
       }),
-    [rect.w, rect.h, baseStyleBox.contentMargin, props.alignment, layout, fontSizePx, fontMetrics]
+    [rect.w, rect.h, baseStyleBox.contentMargin, props.alignment, layout]
   );
 
   // Text is clipped to the content rect, never the whole widget.

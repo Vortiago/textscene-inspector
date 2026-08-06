@@ -177,7 +177,7 @@ export function paintSceneFontCanvas(
   ctx.font = `${fontSizePx}px "${metrics.cssFontFamily}"`;
   ctx.fillStyle = opaqueCssColor(tint);
 
-  const baselineOffsetPx = layout.baselineOffsetPx ?? 0;
+  const baselineOffsetPx = layout.baselineOffsetPx;
 
   layout.lines.forEach((line, lineIndex) => {
     const lineTopPx = lineIndex * layout.linePitchPx;
