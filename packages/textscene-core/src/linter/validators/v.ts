@@ -664,6 +664,10 @@ export const v = {
    * Not `registerUnavailable`, which models a key that never appears at all and
    * takes exact strings rather than the indexed patterns these keys carry.
    *
+   * The derived `code` keeps the property path INCLUDING any slash, matching the
+   * 68 existing assertions on codes like `INVALID_PARAMS/BIAS_VALUE`. Flattening
+   * a multi-segment name to underscores is the outlier, not the fix.
+   *
    * @param derivedFrom - what the engine computes it from, for the message.
    */
   readOnly(

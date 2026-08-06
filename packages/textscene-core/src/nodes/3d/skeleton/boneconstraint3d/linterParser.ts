@@ -106,6 +106,10 @@ export { SETTING_LEAVES as BONE_CONSTRAINT_SETTING_LEAVES };
  * The first keeps an eighth leaf here from being reported as INVALID_SETTING_KEY
  * by three subclasses; the second makes the delegation independent of which
  * module's registration ran first.
+ *
+ * CALL ONCE AT MODULE LOAD, spread into a `leaves` map. It allocates a closure
+ * and a seven-entry object per call, which is nothing three times at import and
+ * a per-property-per-node cost if it were ever called from a validator body.
  */
 export function boneConstraintBaseLeaves(): Readonly<Record<string, PropertyValidator>> {
   const delegate: PropertyValidator = (key, value, line) =>

@@ -34,8 +34,26 @@
  * What this does NOT reach is a leaf whose own path carries an index, such as
  * `ChainIK3D`'s `settings/<i>/joints/<j>/bone` (chain_ik_3d.cpp) or
  * `IterateIK3D`'s `settings/<i>/joints/<j>/<leaf>`. Those are a nested indexed
- * FAMILY, not a static multi-segment leaf name, and both slices still match them
- * with a regex of their own.
+ * FAMILY, not a static multi-segment leaf name, and four slices still match them
+ * with a regex of their own (`chainik3d`, `iterateik3d`, `springbonesimulator3d`,
+ * `bonetwistdisperser3d`).
+ *
+ * Absorbing them is deliberately NOT done here yet, and any attempt must satisfy
+ * two constraints the obvious `{ nested: { prefix, leaves } }` shape misses:
+ *
+ * 1. **A sub-path may terminate in an INDEX, with no leaf below it.**
+ *    `SpringBoneSimulator3D` addresses `settings/<i>/collisions/<j>` — nothing
+ *    follows the second index. This dispatcher requires a non-empty leaf name
+ *    and resolves by leaf NAME, so a nested option shaped around
+ *    `joints/<j>/<leaf>` still cannot express it.
+ * 2. **Each index position needs its OWN `negativeIndex`.**
+ *    `BoneTwistDisperser3D` reports a negative setting index and a negative joint
+ *    index with different messages and different codes. One block cannot carry
+ *    both.
+ *
+ * Also worth settling first: `chainik3d` matches its joint index with `\d`, while
+ * the other three use `[^/]+` because `to_int` resolves a non-numeric index. That
+ * is the same reasoning reaching two answers inside one family.
  *
  * Citations stay at the CALL SITE, passed in rather than written here, for two
  * reasons: each class enforces at its own `file:line`, and
