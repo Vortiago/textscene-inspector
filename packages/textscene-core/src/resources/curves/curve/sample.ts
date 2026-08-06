@@ -39,9 +39,8 @@
  */
 
 import type { Curve, CurvePoint } from './types';
+import { CMP_EPSILON } from '../../../godot/index.js';
 
-/** Godot's `CMP_EPSILON`, the threshold `Math::is_zero_approx` compares against. */
-const CMP_EPSILON = 0.00001;
 
 /**
  * `Curve::sample` — the value at `offset`. Out-of-range offsets clamp to the

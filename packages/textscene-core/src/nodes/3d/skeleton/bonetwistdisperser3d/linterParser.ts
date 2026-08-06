@@ -62,13 +62,9 @@ import '../skeletonmodifier3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
-import {
-  accepts,
-  propertyError,
-  RESOURCE_REFERENCE_REGEX,
-  v,
-} from '../../../../linter/validators/index.js';
+import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
+import { IS_VALID_INT_RE } from '../../../../godot/index.js';
 
 /**
  * `BoneTwistDisperser3D::DisperseMode`, bone_twist_disperser_3d.h:41-45, in the
@@ -88,9 +84,6 @@ const NEGATIVE_SETTING_INDEX_CODE = 'INVALID_SETTING_INDEX';
 /** Error code for a `settings/<i>/joints/…` key addressing a negative joint. */
 const NEGATIVE_JOINT_INDEX_CODE = 'INVALID_JOINT_INDEX';
 
-/** `[+-]?`, matching `String::to_int()`'s sign handling. */
-const INT_RE = /^[+-]?\d+$/;
-
 function negativeSettingMessage(index: number): string {
   return (
     `Setting index ${index} must be non-negative. BoneTwistDisperser3D::_set opens with ` +
@@ -105,60 +98,6 @@ function negativeJointMessage(index: number): string {
     'ERR_FAIL_INDEX(p_joint, joints.size()) (bone_twist_disperser_3d.cpp:502), so the ' +
     'write is refused'
   );
-}
-
-/**
- * `null`, `SubResource("id")` or `ExtResource("id")`.
- *
- * `damping_curve` is `PROPERTY_HINT_RESOURCE_TYPE, "Curve"`
- * (bone_twist_disperser_3d.cpp:156) and lives outside ClassDB, so the packer
- * cannot recognise a default and writes it on every save the setting is in
- * Custom mode. A null `Ref` reaches the writer as an OBJECT whose
- * `get_validated_object()` is unset, and `VariantWriter` stores the bare token
- * `null` for it (variant_parser.cpp:2184-2185). Rejecting that would fire on
- * every Custom-mode scene Godot itself saved.
- *
- * Format-only: it rejects only a token neither of Godot's writer branches
- * produces. Whether the referenced resource exists is a different rule's job.
- */
-function dampingCurveValidator(name: string): PropertyValidator {
-  const validator = accepts((key, value, line) => {
-    if (value === 'null' || RESOURCE_REFERENCE_REGEX.test(value)) return null;
-    return propertyError(
-      key,
-      line,
-      `Property '${name}' must be null, SubResource("id"), or ExtResource("id"), got: "${value}"`,
-      `INVALID_${name.toUpperCase()}_FORMAT`
-    );
-  }, 'null, SubResource("id"), or ExtResource("id")');
-  validator.formatOnly = true;
-  return validator;
-}
-
-/**
- * A leaf `_get` produces but `_set` refuses, so no value is ever storable.
- *
- * These are the derived, editor-only readouts. `Object::set` reaches `_setv`
- * last (object.cpp), and a `false` return leaves nothing behind but
- * `r_valid = false`, which `SceneState::instantiate` never reads: the write is
- * dropped in silence, which is ADR-0032's error row in its strongest form. It
- * would be a `registerUnavailable` removal if that took patterns, but two of
- * these keys carry indices.
- */
-function derivedReadOnly(source: string, cite: string): PropertyValidator {
-  const validator = accepts(
-    (key, _value, line) =>
-      propertyError(
-        key,
-        line,
-        `Property '${key}' is read-only: BoneTwistDisperser3D derives it from ${source}, and ` +
-          '_set has no branch for it, so the write is dropped',
-        'INVALID_SETTING_READONLY'
-      ),
-    `read-only (derived from ${source})`
-  );
-  validator.grounding = { kind: 'enforced', cite };
-  return validator;
 }
 
 /**
@@ -204,10 +143,11 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // the packer never writes it. _update_reference_bone (:364-387) derives it
   // from end_bone and extend_end_bone, and _set falls through to `return false`
   // (:74) for the key.
-  reference_bone_name: derivedReadOnly(
-    'end_bone and extend_end_bone',
-    'bone_twist_disperser_3d.cpp:74'
-  ),
+  reference_bone_name: v.readOnly('reference_bone_name', {
+    derivedFrom: "BoneTwistDisperser3D's end_bone and extend_end_bone",
+    cite: 'bone_twist_disperser_3d.cpp:74',
+    code: 'INVALID_SETTING_READONLY',
+  }),
 
   // :152, Variant::BOOL, no hint. set_twist_from_rest (:343-347) assigns.
   twist_from_rest: v.boolean('twist_from_rest'),
@@ -235,7 +175,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   }),
 
   // :156, Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE "Curve".
-  damping_curve: dampingCurveValidator('damping_curve'),
+  damping_curve: v.nullableResourceReference('damping_curve'),
 
   // :158, Variant::INT with PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_ARRAY (so
   // it carries STORAGE): the count of the nested joints array. set_joint_count
@@ -254,17 +194,19 @@ const JOINT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // _update_joints (:600-643) walks the skeleton from end_bone up to root_bone
   // and rebuilds the list; _set's joints branch accepts only twist_amount and
   // returns false for anything else (:71).
-  bone_name: derivedReadOnly(
-    'the bone chain between root_bone and end_bone',
-    'bone_twist_disperser_3d.cpp:71'
-  ),
+  bone_name: v.readOnly('bone_name', {
+    derivedFrom: "BoneTwistDisperser3D's bone chain between root_bone and end_bone",
+    cite: 'bone_twist_disperser_3d.cpp:71',
+    code: 'INVALID_SETTING_READONLY',
+  }),
 
   // :162, a bare PROPERTY_USAGE_READ_ONLY usage, which replaces
   // PROPERTY_USAGE_DEFAULT outright and so carries no STORAGE either.
-  bone: derivedReadOnly(
-    'the bone chain between root_bone and end_bone',
-    'bone_twist_disperser_3d.cpp:71'
-  ),
+  bone: v.readOnly('bone', {
+    derivedFrom: "BoneTwistDisperser3D's bone chain between root_bone and end_bone",
+    cite: 'bone_twist_disperser_3d.cpp:71',
+    code: 'INVALID_SETTING_READONLY',
+  }),
 
   // :163, Variant::FLOAT, PROPERTY_HINT_RANGE "0,1,0.001,or_greater,or_less".
   // `or_greater` opens the max end and `or_less` opens the min end, so the hint
@@ -312,7 +254,7 @@ function negativeIndexError(
   message: (index: number) => string,
   code: string
 ) {
-  if (!INT_RE.test(indexText)) return null;
+  if (!IS_VALID_INT_RE.test(indexText)) return null;
   const index = Number(indexText);
   if (index >= 0) return null;
   return propertyError(key, line, message(index), code);

@@ -46,9 +46,7 @@
 import { propertyError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
-
-/** `[+-]?`, matching `String::is_valid_int()` (property_list_helper.cpp:53). */
-const INT_RE = /^[+-]?\d+$/;
+import { IS_VALID_INT_RE } from '../../godot/index.js';
 
 export interface IndexedFamilyOptions {
   /** The glued prefix, e.g. `item_` for `item_0/text`, `popup/item_` for MenuButton. */
@@ -160,7 +158,7 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
       return unknown(key, line);
     }
 
-    if (INT_RE.test(indexText)) {
+    if (IS_VALID_INT_RE.test(indexText)) {
       const index = Number(indexText);
       if (index < 0) {
         // Godot refuses to RESOLVE a negative index under either parse, so

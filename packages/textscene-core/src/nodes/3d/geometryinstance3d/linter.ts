@@ -27,15 +27,16 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
+import { isZeroApprox } from '../../../godot/index.js';
 
 const FADE_SELF = '1';
 const FADE_DEPENDENCIES = '2';
 
-/** `Math::is_zero_approx` stand-in: good enough for a text-value linter, not a bit-exact port. */
+/** `Math::is_zero_approx`, against the engine's own tolerance. */
 function isZeroish(raw: string | undefined): boolean {
   if (raw === undefined) return true;
   const n = parseFloat(raw);
-  return Number.isNaN(n) || Math.abs(n) < 1e-6;
+  return Number.isNaN(n) || isZeroApprox(n);
 }
 
 function checkGeometryInstance3D(context: RuleContext): Diagnostic[] {

@@ -48,13 +48,14 @@ import '../skeletonmodifier3d/linterParser.js';
 import { validatorRegistry, type PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import {
-  RESOURCE_REFERENCE_REGEX,
   VECTOR3_REGEX,
   accepts,
   propertyError,
   v,
 } from '../../../../linter/validators/index.js';
 import { BONE_DIRECTION, ROTATION_AXIS } from '../skeletonmodifier3d/linterParser.js';
+import { CMP_EPSILON } from '../../../../godot/index.js';
+import { IS_VALID_INT_RE } from '../../../../godot/index.js';
 
 /** PROPERTY_HINT_ENUM "WorldOrigin,Node,Bone" (spring_bone_simulator_3d.cpp:300). */
 const CENTER_FROM: Record<number, string> = {
@@ -62,40 +63,6 @@ const CENTER_FROM: Record<number, string> = {
   1: 'Node',
   2: 'Bone',
 };
-
-/**
- * `CMP_EPSILON` (math_defs.h:50), the tolerance `Math::is_zero_approx` compares
- * each component against (math_funcs.h:554-556).
- */
-const CMP_EPSILON = 0.00001;
-
-/**
- * A `Curve` slot, which Godot writes as a bare `null` when it is unset.
- *
- * All four damping curves are `PROPERTY_HINT_RESOURCE_TYPE, "Curve"` OBJECT
- * properties emitted unconditionally by `_get_property_list`
- * (spring_bone_simulator_3d.cpp:308, 310, 312, 314), so every serialised bone
- * chain carries all four whether or not a curve is assigned, and
- * `VariantWriter` stores the string `null` for an OBJECT with no validated
- * object (variant_parser.cpp's `Variant::OBJECT` case). A plain
- * `v.resourceReference` would reject the form the engine itself saves.
- *
- * Format-only: the setters (:656, :690, :724, :758) assign whatever reference
- * they are given, so nothing but an unreadable token is refused.
- */
-function dampingCurve(name: string): PropertyValidator {
-  const validator = accepts((key, value, line) => {
-    if (value === 'null' || RESOURCE_REFERENCE_REGEX.test(value)) return null;
-    return propertyError(
-      key,
-      line,
-      `Property '${name}' must be null, SubResource("id"), or ExtResource("id"), got: "${value}"`,
-      `INVALID_${name.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}_FORMAT`,
-    );
-  }, 'null, SubResource("id"), or ExtResource("id")');
-  validator.formatOnly = true;
-  return validator;
-}
 
 /**
  * A gravity direction, which the setter refuses outright when it is zero.
@@ -233,7 +200,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // :307, PROPERTY_HINT_RANGE "0,1,0.001,or_greater,suffix:m". Open ceiling, and
   // set_radius (:642) assigns straight through: warning on the floor only.
   'radius/value': v.float('radius/value', { min: 0, hinted: 'spring_bone_simulator_3d.cpp:307' }),
-  'radius/damping_curve': dampingCurve('radius/damping_curve'),
+  'radius/damping_curve': v.nullableResourceReference('radius/damping_curve'),
 
   // :309, PROPERTY_HINT_RANGE "0,4,0.01,or_greater". set_stiffness (:676)
   // assigns straight through.
@@ -241,18 +208,18 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
     min: 0,
     hinted: 'spring_bone_simulator_3d.cpp:309',
   }),
-  'stiffness/damping_curve': dampingCurve('stiffness/damping_curve'),
+  'stiffness/damping_curve': v.nullableResourceReference('stiffness/damping_curve'),
 
   // :311, PROPERTY_HINT_RANGE "0,1,0.01,or_greater". set_drag (:710) assigns
   // straight through.
   'drag/value': v.float('drag/value', { min: 0, hinted: 'spring_bone_simulator_3d.cpp:311' }),
-  'drag/damping_curve': dampingCurve('drag/damping_curve'),
+  'drag/damping_curve': v.nullableResourceReference('drag/damping_curve'),
 
   // :313, PROPERTY_HINT_RANGE "0,1,0.01,or_greater,or_less,suffix:m/s". BOTH
   // ends are opened, so there is no bound to report at all: gravity is a signed
   // constant velocity and a negative one is ordinary. Format check only.
   'gravity/value': v.float('gravity/value'),
-  'gravity/damping_curve': dampingCurve('gravity/damping_curve'),
+  'gravity/damping_curve': v.nullableResourceReference('gravity/damping_curve'),
 
   // :315, Variant::VECTOR3, and the one leaf whose setter refuses a value.
   'gravity/direction': nonZeroVector3(
@@ -378,16 +345,13 @@ const JOINT_KEY = /^settings\/([^/]+)\/joints\/[^/]+\/(.+)$/;
 /** `settings/<i>/collisions/<j>` and `settings/<i>/exclude_collisions/<j>`, :332-338. */
 const COLLISION_KEY = /^settings\/([^/]+)\/(?:exclude_)?collisions\/[^/]+$/;
 
-/** `[+-]?`, matching `String::to_int()`'s sign handling. */
-const INT_RE = /^[+-]?\d+$/;
-
 /**
  * The negative-setting-index branch every level shares, or null when the index
  * is not a negative integer. A non-numeric index is left alone: `_to_int`
  * resolves it to some setting and the write lands.
  */
 function negativeIndexError(indexText: string, key: string, line: number) {
-  if (!INT_RE.test(indexText)) return null;
+  if (!IS_VALID_INT_RE.test(indexText)) return null;
   const index = Number(indexText);
   if (index >= 0) return null;
   return propertyError(key, line, negativeSettingIndex(index), 'INVALID_SETTING_INDEX');

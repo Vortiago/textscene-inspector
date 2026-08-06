@@ -23,6 +23,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { arrayBody, INT_ARRAY_FORMS, STRING_ARRAY_FORMS } from './arrayForms.js';
+import { IS_VALID_INT_RE } from '../../../../godot/index.js';
 
 /**
  * Mirrors `is_symbol` (core/string/char_utils.h:113-114): every ASCII
@@ -65,8 +66,6 @@ function parsePackedStringArray(value: string): string[] | null {
   return elements;
 }
 
-const INTEGER_LITERAL_RE = /^[+-]?\d+$/;
-
 /**
  * `line_length_guidelines` — `set_line_length_guidelines`
  * (code_edit.cpp:2499-2502) stores the array verbatim with no per-element check
@@ -89,7 +88,7 @@ function lineLengthGuidelinesValidator(): PropertyValidator {
     if (body === '') return null;
     for (const part of body.split(',')) {
       const trimmed = part.trim();
-      if (!INTEGER_LITERAL_RE.test(trimmed)) {
+      if (!IS_VALID_INT_RE.test(trimmed)) {
         return propertyError(
           key,
           line,

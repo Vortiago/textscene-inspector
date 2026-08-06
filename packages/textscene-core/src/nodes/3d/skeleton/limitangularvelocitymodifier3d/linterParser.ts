@@ -57,7 +57,7 @@ import '../skeletonmodifier3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
-import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
+import { v } from '../../../../linter/validators/index.js';
 
 /**
  * The four `chains/<i>/` leaves, keyed exactly as `_get_property_list` spells
@@ -151,20 +151,11 @@ const chainsFamily = indexedFamilyValidator({
  * names, because an unrecognised leaf under the same prefix meets the identical
  * fall-through and deserves the identical verdict.
  */
-const jointReadOnly: PropertyValidator = accepts(
-  (key, _value, line) =>
-    propertyError(
-      key,
-      line,
-      `Property '${key}' is read-only: LimitAngularVelocityModifier3D derives the joint list from each chain's root_bone and end_bone, and its _set has no joints/ branch, so the write is discarded`,
-      'INVALID_JOINTS_READONLY'
-    ),
-  'read-only (derived from the chains)'
-);
-jointReadOnly.grounding = {
-  kind: 'enforced',
+const jointReadOnly = v.readOnly('joints', {
+  derivedFrom: "LimitAngularVelocityModifier3D's per-chain root_bone and end_bone",
   cite: 'limit_angular_velocity_modifier_3d.cpp:36-53',
-};
+  code: 'INVALID_JOINTS_READONLY',
+});
 
 validatorRegistry.registerAll('LimitAngularVelocityModifier3D', {
   // limit_angular_velocity_modifier_3d.cpp:272, PROPERTY_HINT_RANGE

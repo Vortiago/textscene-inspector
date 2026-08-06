@@ -25,32 +25,8 @@
 import '../graphelement/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
-import { v, accepts, propertyError, RESOURCE_REFERENCE_REGEX } from '../../../../linter/validators/index.js';
+import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-
-/**
- * `SubResource("id")` / `ExtResource("id")`, or the bare `null` Godot's own
- * VariantWriter emits for a null OBJECT (variant_parser.cpp:2184-2185 — the
- * `Variant::OBJECT` case stores `"null"` when `get_validated_object()` is
- * unset). `left_icon`/`right_icon` carry `PROPERTY_USAGE_STORE_IF_NULL`
- * (graph_node.cpp:143,147), and most slots have no custom icon, so `null` is
- * the common case here, not an edge one. Format-only: rejects only a token
- * neither of Godot's own writer branches ever produces for this leaf.
- */
-function slotIconValidator(name: string): PropertyValidator {
-  const code = `INVALID_${name.toUpperCase()}_FORMAT`;
-  const validator = accepts((key, value, line) => {
-    if (value === 'null' || RESOURCE_REFERENCE_REGEX.test(value)) return null;
-    return propertyError(
-      key,
-      line,
-      `Property '${name}' must be null, SubResource("id"), or ExtResource("id"), got: "${value}"`,
-      code
-    );
-  }, 'null, SubResource("id"), or ExtResource("id")');
-  validator.formatOnly = true;
-  return validator;
-}
 
 /**
  * The 9 `slot/<index>/<leaf>` leaves (graph_node.cpp:140-148, in
@@ -75,8 +51,8 @@ const SLOT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   left_color: v.color('left_color'),
   right_color: v.color('right_color'),
   // graph_node.cpp:143,147 — Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE "Texture2D".
-  left_icon: slotIconValidator('left_icon'),
-  right_icon: slotIconValidator('right_icon'),
+  left_icon: v.nullableResourceReference('left_icon'),
+  right_icon: v.nullableResourceReference('right_icon'),
   // graph_node.cpp:148 — Variant::BOOL, no hint.
   draw_stylebox: v.boolean('draw_stylebox'),
 };

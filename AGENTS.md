@@ -132,6 +132,21 @@ real parser instead of the decode/build split. Conformance:
   params with `_`.
 - Self-registration on import — never edit central files beyond the aggregation imports.
   Keep web previewer and VS Code extension at parity via the shared core.
+- **Engine facts live in `packages/textscene-core/src/godot/`, which imports
+  NOTHING** — the one module every domain (linter, parser, resources, nodes, r3f)
+  may import freely, because as a leaf it can never carry one domain's weight
+  into another's bundle. A constant or pure function that describes GODOT rather
+  than this codebase, and that a second domain could want, belongs there:
+  `CMP_EPSILON`/`isZeroApprox` (`math.ts`), `IS_VALID_INT_RE` (`string.ts`).
+  **Before declaring a magic number, threshold, tolerance or engine-grammar regex
+  in a slice, look there first** — six copies of `/^[+-]?\d+$/` and five of
+  `CMP_EPSILON` accumulated one slice at a time, and one of them stood in at
+  `1e-6`, ten times off, rejecting values Godot calls zero. One file per engine
+  area, named for it (`math.ts`, `string.ts`), never one bag of constants: the
+  value is the reasoning attached to each fact, and that survives only while the
+  files stay small and topical. Anything typed in this repo's own vocabulary
+  (`ParseError`, `PropertyValidator`, THREE, React) is a domain concept and must
+  NOT go there; `noDependencies.test.ts` enforces it.
 - Shared deps: pnpm catalog (`pnpm-workspace.yaml`), referenced as `"catalog:"`.
 - Logging: verbose `logger.info` with `[Category]` prefixes in core; host apps filter;
   `error`/`warn` for real problems.

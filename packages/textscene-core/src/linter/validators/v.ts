@@ -34,6 +34,7 @@ import {
   TSCN_FLOAT_RE,
 } from './commonValidators.js';
 import {
+  RESOURCE_REFERENCE_REGEX,
   createNodePathValidator,
   createResourceReferenceValidator,
   createStringValidator,
@@ -625,6 +626,62 @@ export const v = {
     ),
       'SubResource("id") or ExtResource("id")'
     );
+  },
+
+  /**
+   * `SubResource("id")`, `ExtResource("id")` or the literal `null`.
+   *
+   * The spelling Godot writes for an OPTIONAL resource slot: the serialiser
+   * emits `null` rather than omitting the key when a scene has cleared one that
+   * a sibling index still sets. Format-only, so no citation — a setter that
+   * takes a `Ref<T>` takes a null one too.
+   */
+  nullableResourceReference(name: string): PropertyValidator {
+    return shape(
+      accepts((key, value, line) => {
+        if (value === 'null' || RESOURCE_REFERENCE_REGEX.test(value)) return null;
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must be null, SubResource("id"), or ExtResource("id"), got: "${value}"`,
+          formatCode(name)
+        );
+      }, 'null, SubResource("id"), or ExtResource("id")'),
+      'null, SubResource("id"), or ExtResource("id")'
+    );
+  },
+
+  /**
+   * A key Godot SERIALISES but refuses to load back: `_get` produces it and
+   * `_set` has no branch for it, so the write falls through to `return false`
+   * and is dropped in silence.
+   *
+   * `Object::set` reaches `_setv` last (object.cpp:427) and a false return
+   * leaves nothing but `r_valid = false`, which `SceneState::instantiate` passes
+   * and never reads (packed_scene.cpp:492). That is ADR-0032's error row in its
+   * strongest form, so this is `enforced` and takes a required `cite`.
+   *
+   * Not `registerUnavailable`, which models a key that never appears at all and
+   * takes exact strings rather than the indexed patterns these keys carry.
+   *
+   * @param derivedFrom - what the engine computes it from, for the message.
+   */
+  readOnly(
+    name: string,
+    opts: { derivedFrom: string; cite: string; code?: string }
+  ): PropertyValidator {
+    const validator = accepts(
+      (key, _value, line) =>
+        propertyError(
+          key,
+          line,
+          `Property '${key}' is read-only: derived from ${opts.derivedFrom}, and _set has no branch for it, so the write is dropped`,
+          opts.code ?? formatCode(name, 'READONLY')
+        ),
+      `read-only (derived from ${opts.derivedFrom})`
+    );
+    validator.grounding = { kind: 'enforced', cite: opts.cite };
+    return validator;
   },
 
   /** `NodePath("path/to/node")` format. */

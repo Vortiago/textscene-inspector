@@ -7,6 +7,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v, makeFloatTupleRegex, tupleComponent } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import { CMP_EPSILON } from '../../../godot/index.js';
 
 const ANCHOR_MODE = { 0: 'FIXED_TOP_LEFT', 1: 'DRAG_CENTER' };
 const PROCESS_CALLBACK = { 0: 'PHYSICS', 1: 'IDLE' };
@@ -14,11 +15,6 @@ const PROCESS_CALLBACK = { 0: 'PHYSICS', 1: 'IDLE' };
 // Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
 // v.vector2 and the renderer.
 const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
-
-// Godot's own CMP_EPSILON (core/math/math_defs.h), the threshold
-// Math::is_zero_approx compares against. Matches the constant already used in
-// resources/curves/curve/sample.ts for the same engine check.
-const CMP_EPSILON = 0.00001;
 
 // camera_2d.cpp:102-105: set_zoom only ERR_FAIL_COND_MSGs on
 // `Math::is_zero_approx(x) || Math::is_zero_approx(y)`, whose own message says

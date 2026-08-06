@@ -31,9 +31,7 @@
 import { propertyError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
-
-/** One TSCN integer literal. Hoisted: these validators run per property. */
-const INTEGER_LITERAL_RE = /^[+-]?\d+$/;
+import { IS_VALID_INT_RE } from '../../godot/index.js';
 
 /** `LABEL (bit) | LABEL (bit)` for whichever of `labels` appear in `bits`. */
 function describeBits(labels: Record<number, string>, bits: number): string {
@@ -78,7 +76,7 @@ export function maskedBitField(
   const allNames = describe(mask);
 
   const validator = accepts((key, value, line) => {
-    if (!INTEGER_LITERAL_RE.test(value.trim())) {
+    if (!IS_VALID_INT_RE.test(value.trim())) {
       return propertyError(
         key,
         line,
@@ -152,7 +150,7 @@ export function hintedBitField(name: string, opts: HintedBitFieldOptions): Prope
   const allNames = describeBits(opts.labels, hintedBits);
 
   const validator = accepts((key, value, line) => {
-    if (!INTEGER_LITERAL_RE.test(value.trim())) {
+    if (!IS_VALID_INT_RE.test(value.trim())) {
       return propertyError(
         key,
         line,

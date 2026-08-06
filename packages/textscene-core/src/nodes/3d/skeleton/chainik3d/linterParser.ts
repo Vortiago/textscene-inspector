@@ -48,11 +48,9 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
+import { IS_VALID_INT_RE } from '../../../../godot/index.js';
 
 const SETTINGS_PREFIX = 'settings/';
-
-/** `[+-]?`, matching `String::to_int()`'s sign handling. */
-const INT_RE = /^[+-]?\d+$/;
 
 /** `joints/<j>/bone` and `joints/<j>/bone_name`, at any index. */
 const JOINT_BONE_RE = /^joints\/[+-]?\d+\/(?:bone|bone_name)$/;
@@ -78,17 +76,11 @@ const JOINT_BONE_RE = /^joints\/[+-]?\d+\/(?:bone|bone_name)$/;
  * `registerUnavailable` removal if that took patterns, but its keys are exact
  * strings and this one carries two indices.
  */
-const jointBoneReadOnly: PropertyValidator = accepts(
-  (key, _value, line) =>
-    propertyError(
-      key,
-      line,
-      `Property '${key}' is read-only: ChainIK3D derives the joint list from root_bone and end_bone, and refuses the write`,
-      'INVALID_SETTINGS_JOINT_READONLY'
-    ),
-  'read-only (derived from root_bone/end_bone)'
-);
-jointBoneReadOnly.grounding = { kind: 'enforced', cite: 'chain_ik_3d.cpp:62-63' };
+const jointBoneReadOnly = v.readOnly('settings_joint', {
+  derivedFrom: "ChainIK3D's root_bone and end_bone",
+  cite: 'chain_ik_3d.cpp:62-63',
+  code: 'INVALID_SETTINGS_JOINT_READONLY',
+});
 
 /**
  * `settings/<i>/<leaf>` leaves, keyed by the leaf path exactly as
@@ -167,7 +159,7 @@ const settingsFamily: PropertyValidator = accepts((key, value, line) => {
   if (slash <= 0) return null;
 
   const indexText = rest.slice(0, slash);
-  if (!INT_RE.test(indexText)) return null;
+  if (!IS_VALID_INT_RE.test(indexText)) return null;
   if (Number(indexText) < 0) {
     return propertyError(
       key,
