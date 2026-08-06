@@ -19,7 +19,7 @@
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   REPO_ROOT,
   collectSheetFiles,
@@ -73,30 +73,54 @@ const STATUS_LABEL = {
 const rollupStatus = (statuses) =>
   STATUS_ORDER.find((s) => statuses.includes(s)) ?? DEFAULT_STATUS;
 
+// Unanchored, so it also finds a marker the section scan does NOT consume — a
+// stray one with no heading above it, or trailing junk after `-->` on its line.
+// This is the same pattern `parseCompareMarkers` (sheetSources.mjs) treats as
+// the authority on "what markers exist in this body".
+const COMPARE_MARKER_RE = /<!--\s*compare:\s*(.*?)\s*-->/g;
+// Anchored to a whole line, used only to test "is THIS heading's next
+// non-blank line a marker" while walking.
+const COMPARE_MARKER_LINE_RE = /^<!--\s*compare:\s*(.*?)\s*-->$/;
+
 /**
  * Split a sheet body into the intro prose and its per-property comparison
- * sections. A section is a `## Heading` immediately followed by a
- * `<!-- compare: image=… status=… [fixture=…] -->` marker; everything up to the
- * next such heading (or the end) is that section's prose. A sheet with no marker
- * is a legacy single-pair sheet and yields an empty `sections`.
+ * sections. A section is a `## Heading` followed — immediately, or after one or
+ * more blank lines — by a `<!-- compare: image=… status=… [fixture=…] -->`
+ * marker; everything up to the next such heading (or the end) is that section's
+ * prose. A sheet with no marker is a legacy single-pair sheet and yields an
+ * empty `sections`.
  */
-function parseSections(body) {
+export function parseSections(body) {
   const lines = body.split('\n');
   const sections = [];
   const intro = [];
   const trailing = [];
   let cur = null;
   let inTrailing = false;
+  // Line indices consumed as a section's marker, so the orphan scan below
+  // never double-counts one.
+  const consumedMarkerLines = new Set();
   for (let i = 0; i < lines.length; i++) {
     if (inTrailing) {
       trailing.push(lines[i]);
       continue;
     }
     const heading = /^##\s+(.*)$/.exec(lines[i]);
-    const marker =
-      heading && i + 1 < lines.length
-        ? /^<!--\s*compare:\s*(.*?)\s*-->$/.exec(lines[i + 1].trim())
-        : null;
+    let marker = null;
+    let markerLine = i;
+    if (heading) {
+      // A blank line between a heading and its marker is ordinary Markdown —
+      // scan past any run of them for the marker before giving up.
+      let j = i + 1;
+      while (j < lines.length && lines[j].trim() === '') j++;
+      if (j < lines.length) {
+        const m = COMPARE_MARKER_LINE_RE.exec(lines[j].trim());
+        if (m) {
+          marker = m;
+          markerLine = j;
+        }
+      }
+    }
     if (heading && marker) {
       const attrs = Object.fromEntries(
         marker[1].split(/\s+/).map((kv) => kv.split('='))
@@ -109,7 +133,8 @@ function parseSections(body) {
         bodyLines: [],
       };
       sections.push(cur);
-      i++; // consume the marker line
+      consumedMarkerLines.add(markerLine);
+      i = markerLine; // consume through the marker line, skipped blanks included
     } else if (heading && !marker && sections.length > 0) {
       // A markerless `## Heading` after the compare-sections (e.g. a sheet-level
       // "## Known limitations") is trailing content, not part of the last section.
@@ -121,10 +146,22 @@ function parseSections(body) {
       intro.push(lines[i]);
     }
   }
+  // A `<!-- compare: … -->` marker that never became a section is a broken
+  // sheet: everything the section-forming loop above would have given it — its
+  // image, its status, its prose — is silently dropped rather than rendered.
+  // Detected on the whole body (not line-by-line at the point of failure)
+  // because the marker may sit past a `##` heading it isn't attached to, or
+  // never sit under a heading at all — both escape the walk above entirely.
+  const orphaned = [];
+  for (const m of body.matchAll(COMPARE_MARKER_RE)) {
+    const lineIndex = body.slice(0, m.index).split('\n').length - 1;
+    if (!consumedMarkerLines.has(lineIndex)) orphaned.push(m[0]);
+  }
   return {
     intro: intro.join('\n').trim(),
     trailing: trailing.join('\n').trim(),
     sections: sections.map((s) => ({ ...s, body: s.bodyLines.join('\n').trim() })),
+    orphaned,
   };
 }
 
@@ -379,8 +416,13 @@ function loadSharedNotes() {
   return head.join('\n').replace(/^#\s+.*$/m, '').trim();
 }
 
-function build(sheets, inlineImages, fragment) {
+export function build(sheets, inlineImages, fragment) {
   const missing = [];
+  // A DECLARED `<!-- compare: … -->` marker the section scan never consumed —
+  // same failure shape as a declared `image:` with no files on disk, reported
+  // through its own list of the same shape so the two never get confused for
+  // each other in the summary below.
+  const orphanedMarkers = [];
   const catalog = loadCatalog();
   const lintCoverage = loadLintCoverage();
   // Nodes and resources both carry `docs`/`source`; resources are absent from
@@ -397,7 +439,10 @@ function build(sheets, inlineImages, fragment) {
     catalogByType.get(type)?.group ?? metaGroup ?? category;
   const sheetNodes = sheets
     .map(({ meta, body }) => {
-      const { intro, sections, trailing } = parseSections(body);
+      const { intro, sections, trailing, orphaned } = parseSections(body);
+      for (const marker of orphaned) {
+        orphanedMarkers.push(`${meta.type}: orphaned compare marker ${marker}`);
+      }
       const sectioned = sections.length > 0;
       // Section sheets resolve their images per section; a legacy sheet uses the
       // single `image:` frontmatter pair.
@@ -601,7 +646,7 @@ function build(sheets, inlineImages, fragment) {
 
   // Land on a real (implemented) sheet, not the first injected "not implemented" node.
   const firstType = (nodes.find((n) => !n.unimplemented && !n.notes) ?? nodes[0])?.type;
-  return { html: page(nav, panels, firstType, fragment), missing };
+  return { html: page(nav, panels, firstType, fragment), missing, orphanedMarkers };
 }
 
 /**
@@ -810,7 +855,7 @@ function main() {
     }
     seen.set(type, sheetLabel(files[i]));
   }
-  const { html, missing } = build(sheets, args.inline, args.fragment);
+  const { html, missing, orphanedMarkers } = build(sheets, args.inline, args.fragment);
 
   mkdirSync(dirname(args.out), { recursive: true });
   writeFileSync(args.out, html);
@@ -820,6 +865,13 @@ function main() {
     for (const m of missing) console.error(`  ${m}`);
     process.exitCode = 1;
   }
+  if (orphanedMarkers.length) {
+    console.error(`[gallery] ${orphanedMarkers.length} sheet(s) carry an orphaned compare marker:`);
+    for (const m of orphanedMarkers) console.error(`  ${m}`);
+    process.exitCode = 1;
+  }
 }
 
-main();
+// Guarded so importing this module (e.g. from a test) never runs the CLI as an
+// import side effect — only invoking it directly does.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

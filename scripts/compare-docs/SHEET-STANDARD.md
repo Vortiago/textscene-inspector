@@ -72,9 +72,15 @@ Name the property and the concrete fallback value.
 
 A node or resource with several visually distinct features (a StandardMaterial3D
 has metallic, emission, clearcoat, rim, …) gives each its OWN fixture and
-comparison as a **section**. A section is a `##` heading immediately followed by a
-`<!-- compare: … -->` marker; the generator lays out that section's Godot-vs-ours
-pair, status badge, and prose (which runs until the next such heading).
+comparison as a **section**. A section is a `##` heading followed — immediately,
+or after a blank line — by a `<!-- compare: … -->` marker; the generator lays
+out that section's Godot-vs-ours pair, status badge, and prose (which runs
+until the next such heading).
+
+A `<!-- compare: … -->` marker that is not attached to a heading this way —
+stray prose above it, a `###` sub-heading, or no heading at all — fails the
+build rather than rendering silently as plain text. Attach every marker to its
+own `##` heading, with only blank lines (if any) between them.
 
 ```markdown
 ---
