@@ -34,6 +34,7 @@ Strict parsing format-checks these `CollisionShape3D` properties, plus 16 inheri
 | Property | Accepts |
 | --- | --- |
 | `debug_color` | Color(r, g, b, a) |
+| `debug_fill` | true or false |
 | `disabled` | true or false |
 | `shape` | SubResource("id") or ExtResource("id") |
 
@@ -45,6 +46,7 @@ Strict parsing format-checks these `CollisionShape3D` properties, plus 16 inheri
 |  | `valid-collisionshape3d-resources` | error |
 |  | `collisionshape3d-invalid-parent` | warning |
 |  | `collisionshape3d-no-parent` | warning |
+|  | `collisionshape3d-non-uniform-scale` | warning |
 <!-- lint:end -->
 
 `shape` is copied through verbatim whenever present, with no format check.

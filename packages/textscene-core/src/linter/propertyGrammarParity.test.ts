@@ -541,6 +541,40 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'CollisionShape3D.debug_fill switches the collision gizmo between filled and wireframe; the parser reads debug_color for that same gizmo but not this.',
   },
 
+  NavigationAgent3D: {
+    linterOnly: [
+      // Every one of these is pathfinding or avoidance STATE handed to
+      // NavigationServer3D, or debug draw. None reaches a frozen frame: the
+      // agent's own path, avoidance velocity and neighbour search happen at
+      // runtime against a live navigation map the previewer does not simulate,
+      // and the `debug_*` set is gated behind DEBUG_ENABLED plus the
+      // navigation-debug flag, which is editor-gizmo territory (ADR-0018).
+      'avoidance_priority', 'debug_enabled', 'debug_path_custom_color',
+      'debug_path_custom_point_size', 'debug_use_custom', 'keep_y_velocity',
+      'neighbor_distance', 'path_height_offset', 'path_max_distance',
+      'path_metadata_flags', 'path_postprocessing', 'path_return_max_length',
+      'path_return_max_radius', 'path_search_max_distance',
+      'path_search_max_polygons', 'pathfinding_algorithm', 'simplify_epsilon',
+      'simplify_path', 'time_horizon_agents', 'time_horizon_obstacles',
+      'use_3d_avoidance', 'velocity',
+    ],
+    reason:
+      "NavigationAgent3D's pathfinding and avoidance parameters are simulation inputs to NavigationServer3D, and its debug_* set draws only under DEBUG_ENABLED; neither changes a still frame, so parser.ts reads none of them.",
+  },
+
+  NavigationObstacle3D: {
+    linterOnly: [
+      // `velocity` only feeds NavigationServer3D avoidance state. `vertices`
+      // shapes the avoidance region and carves the navigation mesh; the static
+      // obstacle's own debug draw (_update_static_obstacle_debug,
+      // navigation_obstacle_3d.cpp:632) is behind DEBUG_ENABLED plus the
+      // avoidance-debug flag. Neither changes a frozen frame.
+      'velocity', 'vertices',
+    ],
+    reason:
+      "NavigationObstacle3D's velocity and vertices are avoidance-simulation and nav-mesh-carving inputs, drawn only under the debug flags, so parser.ts reads neither.",
+  },
+
   CSGBox3D: {
     linterOnly: [
       // CSG parsers call finishCsgParse which reads material/operation from

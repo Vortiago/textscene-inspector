@@ -2,16 +2,45 @@
  * Dimension-parameterized semantic linter rule for CollisionShape2D / CollisionShape3D.
  *
  * Genuine dimension-specific seams: the valid parent-body types (3D adds
- * VehicleBody3D) and a 2D-only `one_way_collision_margin` check. Format
- * validation stays in each slice's linterParser.ts.
+ * VehicleBody3D), a 2D-only `one_way_collision_margin` check, and a 3D-only
+ * non-uniform-scale check — collision_shape_3d.cpp:153-156 has no 2D
+ * equivalent (collision_shape_2d.cpp's get_configuration_warnings() carries
+ * no scale check at all). Format validation stays in each slice's
+ * linterParser.ts.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { checkResourceExists } from '../resourceChecker.js';
 import { findParentNode } from '../linterUtils.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
+import { parseTransform3D } from '../../utils/transform.js';
+import { isZeroApprox } from '../../godot/math.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
+
+/**
+ * Unsigned basis-column magnitudes of a `Transform3D(...)` literal, or null when
+ * it does not parse — collision_shape_3d.cpp:153, `get_transform().get_basis()`.
+ * `parseTransform3D` returns Godot's Basis ROWS (utils/transform.ts docblock), so
+ * column `i` is the `i`-th component picked from each of the three rows.
+ *
+ * Godot's actual `get_scale()` (basis.cpp:300-321) multiplies these magnitudes
+ * by a single `det_sign` shared across all three axes, which cancels out of
+ * every pairwise difference below — so the unsigned form is exact for this
+ * equality check, never an approximation of it.
+ */
+function basisColumnScales(raw: string): [number, number, number] | null {
+  try {
+    const { basis_x, basis_y, basis_z } = parseTransform3D(raw);
+    return [
+      Math.hypot(basis_x.x, basis_y.x, basis_z.x),
+      Math.hypot(basis_x.y, basis_y.y, basis_z.y),
+      Math.hypot(basis_x.z, basis_y.z, basis_z.z),
+    ];
+  } catch {
+    return null; // malformed literal is linterParser.ts's job, not this rule's
+  }
+}
 
 export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
   const type = `CollisionShape${dim}`;
@@ -79,6 +108,27 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
+    // WARNING: non-uniform scale (3D only — collision_shape_2d.cpp's
+    // get_configuration_warnings() has no equivalent check)
+    if (dim === '3D' && rawProps.transform !== undefined) {
+      const scales = basisColumnScales(rawProps.transform);
+      if (scales) {
+        const [sx, sy, sz] = scales;
+        if (!(isZeroApprox(sx - sy) && isZeroApprox(sy - sz))) {
+          diagnostics.push({
+            severity: 'warning',
+            message:
+              `${type} '${node.name}' has a non-uniformly scaled transform ` +
+              `(${sx.toFixed(3)}, ${sy.toFixed(3)}, ${sz.toFixed(3)}), which will probably not ` +
+              'function as expected. Keep its scale uniform and change the size of its shape resource instead.',
+            nodeName: node.name,
+            nodeType: node.type,
+            ruleName: `${prefix}-non-uniform-scale`,
+          });
+        }
+      }
+    }
+
     // WARNING: one_way_collision_margin set but one_way_collision is false (2D only)
     if (dim === '2D' && rawProps.one_way_collision_margin && rawProps.one_way_collision !== 'true') {
       const margin = parseFloat(rawProps.one_way_collision_margin);
@@ -100,7 +150,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
   const description =
     dim === '2D'
       ? `Validates ${type} shape resource references, parent node types, and one-way collision configuration`
-      : `Validates ${type} shape resource references and parent node types`;
+      : `Validates ${type} shape resource references, parent node types, and transform scale uniformity`;
 
   return {
     meta: {
@@ -115,6 +165,8 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
         { ruleName: `${prefix}-no-parent`, severity: 'warning' },
         // 2D-only branch (dim === '2D'); never emitted by the 3D instantiation
         ...(dim === '2D' ? [{ ruleName: `${prefix}-unused-one-way-margin`, severity: 'warning' as const }] : []),
+        // 3D-only branch (dim === '3D'); never emitted by the 2D instantiation
+        ...(dim === '3D' ? [{ ruleName: `${prefix}-non-uniform-scale`, severity: 'warning' as const }] : []),
       ],
     },
     check,

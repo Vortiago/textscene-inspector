@@ -22,6 +22,8 @@ nothing in a plain capture.
 | --- | --- | --- |
 | `radius` | `1.5` | avoidance region radius — no runtime visual |
 | `height` | `2.0` | avoidance region height — no runtime visual |
+| `vertices` | `PackedVector3Array(-1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1)` | static obstacle polygon — no runtime visual |
+| `velocity` | `Vector3(0.5, 0, 0.25)` | dynamic obstacle velocity hint for avoidance — no runtime visual |
 | `avoidance_enabled` | `true` | enables avoidance for the region — no runtime visual |
 
 ## Divergences
@@ -39,9 +41,11 @@ Strict parsing format-checks these `NavigationObstacle3D` properties, plus 16 in
 | `avoidance_enabled` | true or false |
 | `avoidance_layers` | 32-bit layer mask (layers 1-32) |
 | `carve_navigation_mesh` | true or false |
-| `height` | float >= 0 |
-| `radius` | float >= 0 |
+| `height` | float 0-100 |
+| `radius` | float 0-100 |
 | `use_3d_avoidance` | true or false |
+| `velocity` | Vector3(x, y, z) |
+| `vertices` | PackedVector3Array(x, y, z, …) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
@@ -49,10 +53,13 @@ Strict parsing format-checks these `NavigationObstacle3D` properties, plus 16 in
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 <!-- lint:end -->
 
-All seven properties (`radius`, `height`, `avoidance_enabled`,
+All seven scalar/flag properties (`radius`, `height`, `avoidance_enabled`,
 `avoidance_layers`, `affect_navigation_mesh`, `carve_navigation_mesh`,
 `use_3d_avoidance`) use the optional readers (`parseOptionalFloat` /
 `parseOptionalBool` / `parseOptionalInt`): absent or unparseable values
 leave the property unset, silently, with no warning ever emitted. Strict
-rejects a negative `radius` or `height` as an error; the lenient parser has
-no minimum check and lets a negative value through unchanged.
+rejects a negative `radius` or `height` as an error and warns above their
+hinted 100 ceiling, since the setter never checks it; the lenient parser has
+no bound at all and lets any value through unchanged. `vertices` and
+`velocity` are not read by the lenient parser at all — a malformed value for
+either never reaches a typed field, regardless of what strict reports.

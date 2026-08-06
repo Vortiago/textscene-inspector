@@ -361,6 +361,23 @@ shape = SubResource("capsule_shape")
     });
   });
 
+  describe('Semantic Validation (Transform Scale)', () => {
+    it('does not warn on a non-uniformly scaled node — collision_shape_2d.cpp has no such check', () => {
+      expectNoDiagnostic(
+        scene(
+          rectShape,
+          staticBody,
+          node(
+            'CollisionShape2D',
+            { shape: 'SubResource("shape_1")', scale: 'Vector2(2, 1)' },
+            { name: 'Collision', parent: '.' }
+          )
+        ),
+        { ruleName: 'collisionshape2d-non-uniform-scale' }
+      );
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle multiple validation errors', () => {
       const content = scene(

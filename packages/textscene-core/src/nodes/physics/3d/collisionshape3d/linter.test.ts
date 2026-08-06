@@ -347,6 +347,57 @@ shape = SubResource("shape_1")
     });
   });
 
+  describe('Semantic Validation (Transform Scale)', () => {
+    it('warns on a non-uniformly scaled transform', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="BoxShape3D" id="shape_1"]
+
+[node name="StaticBody" type="StaticBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("shape_1")
+transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+`;
+      const diag = expectDiagnostic(content, {
+        ruleName: 'collisionshape3d-non-uniform-scale',
+        severity: 'warning',
+        nodeType: 'CollisionShape3D',
+        contains: ['non-uniformly scaled'],
+      });
+      expect(diag.nodeName).toBe('Collision');
+    });
+
+    it('does not warn on a uniformly scaled transform', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="BoxShape3D" id="shape_1"]
+
+[node name="StaticBody" type="StaticBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("shape_1")
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 1, 0)
+`;
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-non-uniform-scale' });
+    });
+
+    it('does not warn when transform is absent, since the identity is uniform', () => {
+      expectNoDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="BoxShape3D" id="shape_1"]
+
+[node name="StaticBody" type="StaticBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("shape_1")
+`,
+        { ruleName: 'collisionshape3d-non-uniform-scale' }
+      );
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle multiple validation errors', () => {
       const content = scene(
