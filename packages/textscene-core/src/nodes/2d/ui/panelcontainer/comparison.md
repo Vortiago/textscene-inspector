@@ -40,7 +40,7 @@ against `pnpm ref:ours unit-panel-container.tscn --2d` puts 128 px of 1152x648
 ## Linting
 
 <!-- lint:begin PanelContainer -->
-Strict parsing format-checks the inherited set (33 inherited from Control); `PanelContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (35 inherited from Control); `PanelContainer` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

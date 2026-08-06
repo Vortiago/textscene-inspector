@@ -143,7 +143,7 @@ since it transcribes a Transform2D coefficient directly.
 ## Linting
 
 <!-- lint:begin RichTextLabel -->
-Strict parsing format-checks the inherited set (33 inherited from Control); `RichTextLabel` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (35 inherited from Control); `RichTextLabel` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

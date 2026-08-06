@@ -195,7 +195,7 @@ math, since `useCanvasItemTint`'s own correctness is established elsewhere.
 ## Linting
 
 <!-- lint:begin SubViewportContainer -->
-Strict parsing format-checks these `SubViewportContainer` properties, plus 33 inherited from Control. Every validator failure is an **error**.
+Strict parsing format-checks these `SubViewportContainer` properties, plus 35 inherited from Control. Every validator failure is an **error**.
 
 | Property |
 | --- |

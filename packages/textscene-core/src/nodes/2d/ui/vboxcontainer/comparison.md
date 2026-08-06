@@ -44,7 +44,7 @@ float64 and the two fractions land either side of a whole pixel at 320/3.
 ## Linting
 
 <!-- lint:begin VBoxContainer -->
-Strict parsing format-checks the inherited set (33 inherited from Control); `VBoxContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (35 inherited from Control); `VBoxContainer` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

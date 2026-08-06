@@ -143,7 +143,7 @@ RichTextLabel sheet records, and not a bullet-specific gap.
 ## Linting
 
 <!-- lint:begin LineEdit -->
-Strict parsing format-checks the inherited set (33 inherited from Control); `LineEdit` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (35 inherited from Control); `LineEdit` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

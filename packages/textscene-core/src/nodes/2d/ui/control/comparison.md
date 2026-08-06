@@ -116,11 +116,13 @@ Strict parsing format-checks these `Control` properties. Every validator failure
 | `size_flags_vertical` |
 | `texture_filter` |
 | `texture_repeat` |
+| `theme` |
 | `theme_override_colors/*` |
 | `theme_override_constants/*` |
 | `theme_override_font_sizes/*` |
 | `theme_override_fonts/*` |
 | `theme_override_styles/*` |
+| `theme_type_variation` |
 | `visible` |
 | `z_index` |
 

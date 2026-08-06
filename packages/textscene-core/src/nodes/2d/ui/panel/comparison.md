@@ -37,7 +37,7 @@ limitations (native only)" below).
 ## Linting
 
 <!-- lint:begin Panel -->
-Strict parsing format-checks the inherited set (33 inherited from Control); `Panel` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (35 inherited from Control); `Panel` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

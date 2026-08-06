@@ -1633,6 +1633,10 @@
           "declaredOn": "Control"
         },
         {
+          "property": "theme",
+          "declaredOn": "Control"
+        },
+        {
           "property": "theme_override_colors/*",
           "declaredOn": "Control"
         },
@@ -1650,6 +1654,10 @@
         },
         {
           "property": "theme_override_styles/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_type_variation",
           "declaredOn": "Control"
         },
         {
@@ -1967,6 +1975,10 @@
           "declaredOn": "Control"
         },
         {
+          "property": "theme",
+          "declaredOn": "Control"
+        },
+        {
           "property": "theme_override_colors/*",
           "declaredOn": "Control"
         },
@@ -1984,6 +1996,10 @@
         },
         {
           "property": "theme_override_styles/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_type_variation",
           "declaredOn": "Control"
         },
         {
@@ -4149,6 +4165,10 @@
           "declaredOn": "Control"
         },
         {
+          "property": "theme",
+          "declaredOn": "Control"
+        },
+        {
           "property": "theme_override_colors/*",
           "declaredOn": "Control"
         },
@@ -4166,6 +4186,10 @@
         },
         {
           "property": "theme_override_styles/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_type_variation",
           "declaredOn": "Control"
         },
         {
@@ -4681,6 +4705,10 @@
           "declaredOn": "Control"
         },
         {
+          "property": "theme",
+          "declaredOn": "Control"
+        },
+        {
           "property": "theme_override_colors/*",
           "declaredOn": "Control"
         },
@@ -4698,6 +4726,10 @@
         },
         {
           "property": "theme_override_styles/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_type_variation",
           "declaredOn": "Control"
         },
         {

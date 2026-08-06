@@ -36,7 +36,7 @@ plus the second column starting one pixel apart (x 97 against x 96).
 ## Linting
 
 <!-- lint:begin GridContainer -->
-Strict parsing format-checks the inherited set (33 inherited from Control); `GridContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (35 inherited from Control); `GridContainer` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

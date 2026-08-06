@@ -350,6 +350,23 @@ from the font); line pitch ceiling-rounds ascent and descent to whole pixels
 independently before summing, matching Godot's FreeType-quantized metrics rather
 than a raw float scale.
 
+A scene may also author **its own** font (a `Theme` `.tres` `default_font`, or a
+node's `font` / `theme_override_fonts/*`), whose bytes do not exist until a scene
+opens — so no build-time bake can cover them, and runtime MSDF generation needs
+the same worker the CSP blocks. Those render through a **second painter**:
+`new FontFace(name, bytes)` + `document.fonts.add`, rasterised via canvas-2D, with
+no fetch, worker or blob URL anywhere on the path. Dispatch is internal to
+`TextRun.tsx`, on a `kind: 'atlas' | 'canvas'` discriminant, so no per-slice
+component knows a second path exists.
+
+**The split is in the painter only — shaping is never duplicated.** `textLayout.ts`
+is parameterised over a `FontMetrics` contract and shapes both paths; an
+implementation supplies only raw design-unit data, and every conversion to pixels
+(the line-pitch quantization above included) lives once in `fontMetrics.ts`, where a
+second font cannot silently reimplement and drop it. See
+[ADR-0034](./docs/adr/0034-two-text-painters-one-shaping-engine.md) for the measured
+CSP findings and the `.woff2` limitation.
+
 **One ordered pass driver, not per-publisher `useFrame`s**
 (`r3f/contexts/ViewportPassRegistryContext.tsx`). A `SubViewport`'s offscreen
 render and the native Control-only offscreen pass (the `ViewportTextureRegistry`
@@ -836,7 +853,7 @@ flowchart TB
   CENTER --- CO
 ```
 
-The native Control canvas resolves `layout_mode = 2` (container-managed, the majority case) through the parent's registered `ContainerLayoutFn`, the LayoutPreset 0..15 table into a solved `Rect2`, and StyleBox resources into tessellated mesh geometry — see [ADR-0031](./docs/adr/0031-control-nodes-render-natively-in-the-canvas.md) and CONTEXT.md's **Control rect solve** entry. Text draws from a vendored Open Sans MSDF atlas rather than the host's system fonts, so it renders identically under the VS Code webview and the web app; images load via the host file provider (`useResource`, so VS Code webview CSP is honored) straight into a GL texture, with no `data:`-URL laundering step. Per-app mode persistence behind a `usePersistedMode()` hook (`localStorage` web / webview state API) is **deferred** — the switch is per-session today.
+The native Control canvas resolves `layout_mode = 2` (container-managed, the majority case) through the parent's registered `ContainerLayoutFn`, the LayoutPreset 0..15 table into a solved `Rect2`, and StyleBox resources into tessellated mesh geometry — see [ADR-0031](./docs/adr/0031-control-nodes-render-natively-in-the-canvas.md) and CONTEXT.md's **Control rect solve** entry. Text draws from a vendored Open Sans MSDF atlas rather than the host's system fonts, so it renders identically under the VS Code webview and the web app; a scene that authors its own font is rasterised at runtime through a second painter instead, sharing the one shaping engine ([ADR-0034](./docs/adr/0034-two-text-painters-one-shaping-engine.md)); images load via the host file provider (`useResource`, so VS Code webview CSP is honored) straight into a GL texture, with no `data:`-URL laundering step. Per-app mode persistence behind a `usePersistedMode()` hook (`localStorage` web / webview state API) is **deferred** — the switch is per-session today.
 
 ### Scope (P2 — [ADR-0004](./docs/adr/0004-csg-as-primitive.md), [ADR-0005](./docs/adr/0005-physics-bodies-transform-only.md))
 
