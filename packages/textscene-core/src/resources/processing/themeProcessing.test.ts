@@ -9,7 +9,6 @@ import {
   buildThemeTypeChain,
   resolveThemeFont,
   resolveThemeFontSizePx,
-  isFontUsable,
   type ThemeResource,
   type ThemeAddresses,
 } from './themeProcessing';
@@ -304,66 +303,6 @@ describe('resolveInlineThemeResource', () => {
       new Set()
     );
     expect(resource.properties).toEqual({ 'Panel/styles/panel': 'null' });
-  });
-});
-
-describe('isFontUsable', () => {
-  it('is false for null', () => {
-    expect(isFontUsable(null)).toBe(false);
-  });
-
-  it('is false for a SystemFont — a documented limitation, not a bug', () => {
-    expect(isFontUsable({ kind: 'system', fontNames: ['sans-serif'], properties: {} })).toBe(false);
-  });
-
-  it('is false for an empty SystemFont (bidi.tscn\'s PackedStringArray(""))', () => {
-    expect(isFontUsable({ kind: 'system', fontNames: [''], properties: {} })).toBe(false);
-  });
-
-  it('is true for a FontFile carrying real bytes', () => {
-    expect(isFontUsable(FONT_A)).toBe(true);
-  });
-
-  it('is false for a bytes-less FontFile .tres wrapper with no fallbacks', () => {
-    expect(isFontUsable({ kind: 'file', bytes: undefined, mimeType: undefined, fallbacks: [], properties: {} })).toBe(
-      false
-    );
-  });
-
-  it('is true for a bytes-less FontFile wrapper whose fallback carries bytes', () => {
-    expect(
-      isFontUsable({ kind: 'file', bytes: undefined, mimeType: undefined, fallbacks: [FONT_A], properties: {} })
-    ).toBe(true);
-  });
-
-  it('is false for a FontFile whose fallbacks are all unusable (e.g. only SystemFonts)', () => {
-    expect(
-      isFontUsable({
-        kind: 'file',
-        bytes: undefined,
-        mimeType: undefined,
-        fallbacks: [{ kind: 'system', fontNames: ['serif'], properties: {} }],
-        properties: {},
-      })
-    ).toBe(false);
-  });
-
-  it('is false for a FontVariation with a null baseFont', () => {
-    expect(isFontUsable({ kind: 'variation', baseFont: null, properties: {} })).toBe(false);
-  });
-
-  it('is true for a FontVariation whose baseFont carries real bytes', () => {
-    expect(isFontUsable({ kind: 'variation', baseFont: FONT_A, properties: {} })).toBe(true);
-  });
-
-  it('is false for a FontVariation whose baseFont is itself unusable (a SystemFont)', () => {
-    expect(
-      isFontUsable({
-        kind: 'variation',
-        baseFont: { kind: 'system', fontNames: ['sans-serif'], properties: {} },
-        properties: {},
-      })
-    ).toBe(false);
   });
 });
 

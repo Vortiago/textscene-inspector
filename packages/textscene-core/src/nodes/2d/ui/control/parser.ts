@@ -1,7 +1,7 @@
 /** Base Control parser — layout + theme-override properties shared by all 2D UI nodes. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
-import { unquoteString } from '../../../../parser/utils';
+import { unquoteStringName } from '../../../../parser/utils';
 import type { ControlProperties, ControlColor } from './types';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
 import { intOr, parseOptionalFloat, parseOptionalVector2 } from '../../../../parser/valueParsers';
@@ -54,17 +54,10 @@ function parseThemeOverrides(properties: Record<string, string>): Partial<Contro
   return out;
 }
 
-/**
- * `theme_type_variation` is stored as a StringName literal — `&"HeaderLabel"`,
- * not a plain quoted string — Godot's text saver prefixes any StringName
- * property with `&` (`core/variant/variant_utility.cpp`'s `RTOS`/StringName
- * stringify path). Strip the sigil before unquoting; a bare quoted string
- * (no `&`) passes through unchanged for leniency.
- */
+/** An empty `theme_type_variation` means "no variation", not a variation named "". */
 function parseThemeTypeVariation(value: string | undefined): string | undefined {
   if (value === undefined) return undefined;
-  const unsigiled = value.startsWith('&') ? value.slice(1) : value;
-  const name = unquoteString(unsigiled);
+  const name = unquoteStringName(value);
   return name === '' ? undefined : name;
 }
 

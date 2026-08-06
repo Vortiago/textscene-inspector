@@ -30,7 +30,7 @@
 import type { ParsedTresFile } from '../../parser/tresParser';
 import { parseTresFile } from '../../parser/tresParser';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
-import { unquoteString } from '../../parser/utils';
+import { unquoteStringName } from '../../parser/utils';
 import { parseOptionalFloat } from '../../parser/valueParsers';
 import { NODE_BASE_TYPES } from '../../linter/nodeBaseTypes';
 import { findSubResource, parseResourceReference } from '../SubResourceResolver';
@@ -51,17 +51,6 @@ const FONT_ENTRY = /^([^/]+)\/fonts\/([^/]+)$/;
 const FONT_SIZE_ENTRY = /^([^/]+)\/font_sizes\/([^/]+)$/;
 /** `<variationType>/base_type`. */
 const BASE_TYPE_ENTRY = /^([^/]+)\/base_type$/;
-
-/**
- * Godot's text saver prefixes a StringName-typed property with `&`
- * (`base_type` and `theme_type_variation` are both StringName) —
- * `title_panel/base_type = &"Panel"`. Strip the sigil before unquoting; a
- * bare quoted string passes through unchanged for leniency.
- */
-function unquoteStringName(value: string): string {
-  const unsigiled = value.startsWith('&') ? value.slice(1) : value;
-  return unquoteString(unsigiled);
-}
 
 /**
  * The shape both a file-backed Theme (`T` = address string, resolved later
@@ -380,13 +369,25 @@ export async function buildThemeResource(
 // ---------------------------------------------------------------------------
 
 /** This node's real Godot class name, then its `NODE_BASE_TYPES` ancestry — the native-inheritance half of the type-dependency chain. */
-function nativeTypeChain(nativeType: string): string[] {
+/**
+ * Memoised: a pure function of one type name over the fixed, small
+ * `NODE_BASE_TYPES` table, called for every Control on every theme lookup.
+ * The returned array is shared, so callers must not mutate it — the one
+ * consumer (`buildThemeTypeChain`) spreads it into a fresh array.
+ */
+const nativeTypeChainCache = new Map<string, readonly string[]>();
+
+function nativeTypeChain(nativeType: string): readonly string[] {
+  const cached = nativeTypeChainCache.get(nativeType);
+  if (cached) return cached;
+
   const chain: string[] = [nativeType];
   let base: string | undefined = NODE_BASE_TYPES[nativeType];
   while (base !== undefined) {
     chain.push(base);
     base = NODE_BASE_TYPES[base];
   }
+  nativeTypeChainCache.set(nativeType, chain);
   return chain;
 }
 
@@ -490,6 +491,18 @@ function fontSizeInTheme(theme: ThemeResource, type: string, name: string): numb
  *     built-in-default FONT RESOURCE (only a default SIZE, see
  *     `resolveThemeFontSizePx`); `null` is the signal a painter renders its
  *     own bundled default face for.
+ *
+ * "Resolved" is deliberately NOT "usable". This answers what Godot would
+ * resolve, faithfully — and Godot considers a `SystemFont` a perfectly valid
+ * Font, because the OS resolves the family name at draw time. Only this
+ * previewer, in a browser with no access to the host's installed fonts,
+ * cannot fetch bytes for one. Folding that limitation into the walk would
+ * make it stop early and skip a FARTHER ancestor that might have resolved to
+ * something drawable, which is not what Godot does. Whether the result
+ * carries drawable bytes is a separate predicate the painter applies:
+ * `resolveFontFileBytes` (`r3f/controls/native/text/sceneFontResolution.ts`),
+ * which walks `fallbacks`/`baseFont` — Godot's own "try the next one" chain —
+ * and returns the leaf actually carrying bytes, not necessarily the root.
  */
 export function resolveThemeFont(
   name: string,
@@ -499,11 +512,49 @@ export function resolveThemeFont(
   ancestorThemes: readonly ThemeResource[],
   projectTheme: ThemeResource | null
 ): FontResource | null {
+  return resolveThemeFontIn(
+    themeResolutionScope(nativeType, typeVariation, ancestorThemes, projectTheme),
+    name,
+    override
+  );
+}
+
+/**
+ * The part of a theme lookup that does NOT depend on which item is being
+ * looked up: the type-dependency chain and the ordered list of themes to
+ * search. Both are functions of the NODE alone (its native type, its
+ * `theme_type_variation`, its ancestor themes, the project theme) — never of
+ * the item name — so a node that resolves a font AND a font size, from both
+ * the solve pass and the paint pass, can build this once and do four cheap
+ * leaf lookups against it instead of rebuilding these two arrays four times.
+ */
+export interface ThemeResolutionScope {
+  readonly typeChain: readonly string[];
+  readonly searchOrder: readonly ThemeResource[];
+}
+
+export function themeResolutionScope(
+  nativeType: string,
+  typeVariation: string | undefined,
+  ancestorThemes: readonly ThemeResource[],
+  projectTheme: ThemeResource | null
+): ThemeResolutionScope {
+  return {
+    typeChain: buildThemeTypeChain(nativeType, typeVariation, ancestorThemes, projectTheme),
+    searchOrder: themeSearchOrder(ancestorThemes, projectTheme),
+  };
+}
+
+/** `resolveThemeFont`'s walk against an already-built scope. */
+export function resolveThemeFontIn(
+  scope: ThemeResolutionScope,
+  name: string,
+  override: FontResource | null | undefined
+): FontResource | null {
   if (override !== undefined) return override;
 
-  const typeChain = buildThemeTypeChain(nativeType, typeVariation, ancestorThemes, projectTheme);
-  for (const theme of themeSearchOrder(ancestorThemes, projectTheme)) {
-    for (const type of typeChain) {
+  for (const theme of scope.searchOrder) {
+    for (const type of scope.typeChain) {
       const found = fontInTheme(theme, type, name);
       if (found !== undefined) return found;
     }
@@ -532,11 +583,25 @@ export function resolveThemeFontSizePx(
   projectTheme: ThemeResource | null,
   builtInDefaultPx: number
 ): number {
+  return resolveThemeFontSizeIn(
+    themeResolutionScope(nativeType, typeVariation, ancestorThemes, projectTheme),
+    name,
+    override,
+    builtInDefaultPx
+  );
+}
+
+/** `resolveThemeFontSizePx`'s walk against an already-built scope. */
+export function resolveThemeFontSizeIn(
+  scope: ThemeResolutionScope,
+  name: string,
+  override: number | undefined,
+  builtInDefaultPx: number
+): number {
   if (override !== undefined && override > 0) return override;
 
-  const typeChain = buildThemeTypeChain(nativeType, typeVariation, ancestorThemes, projectTheme);
-  for (const theme of themeSearchOrder(ancestorThemes, projectTheme)) {
-    for (const type of typeChain) {
+  for (const theme of scope.searchOrder) {
+    for (const type of scope.typeChain) {
       const found = fontSizeInTheme(theme, type, name);
       if (found !== undefined) return found;
     }
@@ -544,44 +609,3 @@ export function resolveThemeFontSizePx(
   return builtInDefaultPx;
 }
 
-/**
- * Whether a resolved `FontResource` graph carries anything a painter can
- * actually draw glyphs from — the check `resolveThemeFont`'s caller applies
- * BEFORE using its result, never inside the lookup itself: `resolveThemeFont`
- * answers "what would Godot resolve", faithfully, and Godot considers a
- * `SystemFont` a perfectly valid, loadable Font (the OS resolves the family
- * name at draw time) — it is only THIS PREVIEWER, running in a browser with
- * no access to the host's installed fonts, that cannot fetch bytes for one.
- * Baking that limitation into the walk would make it stop early and skip a
- * FARTHER ancestor/theme that might have resolved to something render-able,
- * which is not what Godot does.
- *
- * `false` for:
- *  - `null` (nothing resolved at all);
- *  - a `SystemFont` (`kind: 'system'`) — see above; a documented limitation,
- *    not a bug (matches the brief: "A SystemFont... takes the same path" as
- *    a missing font);
- *  - a `FontFile` (`kind: 'file'`) with no bytes of its own (a `.tres`
- *    wrapper — see `fontProcessing.ts`) AND no usable fallback anywhere in
- *    its `fallbacks` list;
- *  - a `FontVariation` (`kind: 'variation'`) whose `baseFont` is `null` or
- *    itself not usable.
- *
- * `true` as soon as ANY reachable node in the graph carries real bytes —
- * `fallbacks`/`baseFont` are Godot's own "try the next one" chain, so a
- * painter should draw with whichever usable font this returns `true` for,
- * not necessarily the root of the graph.
- */
-export function isFontUsable(font: FontResource | null): boolean {
-  if (!font) return false;
-  switch (font.kind) {
-    case 'system':
-      return false;
-    case 'file':
-      return font.bytes !== undefined || font.fallbacks.some(isFontUsable);
-    case 'variation':
-      return font.baseFont !== null && isFontUsable(font.baseFont);
-    default:
-      return false;
-  }
-}
