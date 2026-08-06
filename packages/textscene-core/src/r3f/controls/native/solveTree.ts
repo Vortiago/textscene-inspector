@@ -10,6 +10,8 @@
 
 import type { TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
+import type { FontResource } from '../../../resources/processing/fontProcessing';
+import type { ThemeResource } from '../../../resources/processing/themeProcessing';
 import type { Vec2 } from './rect';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 
@@ -32,6 +34,26 @@ export interface SolveNode {
   styleBoxes: Readonly<Record<string, StyleBoxFlatData>>;
   /** `null` until the node's texture (if any) has loaded. */
   textureSize: Vec2 | null;
+  /**
+   * This node's OWN `theme_override_fonts/*`, resolved in ITS scope. Presence
+   * of a key means it was AUTHORED (`Control::get_theme_font`'s local-override
+   * branch has no validity check) — the value is `null` when the ref failed to
+   * resolve. Absent (`undefined`, the type's own default) when `buildSolveTree`
+   * never populated this node, so every existing literal SolveNode fixture
+   * outside this feature stays valid; `buildSolveTree.ts` itself always sets
+   * this to `{}` at minimum.
+   */
+  fontOverrides?: Readonly<Record<string, FontResource | null>>;
+  /**
+   * Nearest-first ancestor Controls' resolved `theme` — this node's own
+   * `theme`, if it has one, is index 0 (`Control::get_theme_font`'s ancestor
+   * walk, `scene/theme/theme_owner.cpp`'s `ThemeOwner::_get_next_owner_node`).
+   * An ancestor Control with NO `theme` set contributes no entry. Feeds
+   * `themeProcessing.ts`'s `resolveThemeFont`/`resolveThemeFontSizePx`.
+   */
+  themeChain?: readonly ThemeResource[];
+  /** The project's default theme (`gui/theme/custom`), resolved; `null` when unset/unresolved/failed. */
+  projectTheme?: ThemeResource | null;
 }
 
 /**

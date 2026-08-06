@@ -2,12 +2,14 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   decodeThemeAddresses,
   resolveThemeResource,
-  resolveThemeResourceFromCache,
+  resolveInlineFontResource,
+  resolveInlineThemeResource,
   createThemeResourceFromContent,
   buildThemeResource,
   buildThemeTypeChain,
   resolveThemeFont,
   resolveThemeFontSizePx,
+  isFontUsable,
   type ThemeResource,
   type ThemeAddresses,
 } from './themeProcessing';
@@ -145,53 +147,223 @@ describe('resolveThemeResource', () => {
   });
 });
 
-describe('resolveThemeResourceFromCache', () => {
-  it('reads a cached font synchronously', () => {
+describe('resolveInlineFontResource', () => {
+  it('resolves an ExtResource ref through the cache', () => {
     const cache = { getCached: (address: string) => (address === 'res://fonts/a.ttf' ? FONT_A : undefined) };
-    const addresses: ThemeAddresses = {
-      defaultFont: 'res://fonts/a.ttf',
-      defaultFontSize: undefined,
-      fonts: {},
-      fontSizes: {},
-      typeVariations: {},
-      properties: {},
-    };
     const pending = new Set<string>();
-    const resource = resolveThemeResourceFromCache(addresses, cache, pending);
-    expect(resource.defaultFont).toBe(FONT_A);
+    const resolved = resolveInlineFontResource(
+      'ExtResource("1")',
+      [{ id: '1', path: 'res://fonts/a.ttf', type: 'FontFile' }],
+      [],
+      cache,
+      pending
+    );
+    expect(resolved).toBe(FONT_A);
     expect(pending.size).toBe(0);
   });
 
-  it('collects an uncached address into pending and treats it as unresolved for this pass', () => {
+  it('collects an uncached ExtResource address into pending and returns null for this pass', () => {
     const cache = { getCached: () => undefined };
-    const addresses: ThemeAddresses = {
-      defaultFont: null,
-      defaultFontSize: undefined,
-      fonts: { Label: { font: 'res://fonts/a.ttf' } },
-      fontSizes: {},
-      typeVariations: {},
-      properties: {},
-    };
     const pending = new Set<string>();
-    const resource = resolveThemeResourceFromCache(addresses, cache, pending);
-    expect(resource.fonts.Label).toBeUndefined();
+    const resolved = resolveInlineFontResource(
+      'ExtResource("1")',
+      [{ id: '1', path: 'res://fonts/a.ttf', type: 'FontFile' }],
+      [],
+      cache,
+      pending
+    );
+    expect(resolved).toBeNull();
     expect(pending.has('res://fonts/a.ttf')).toBe(true);
   });
 
-  it('a previously-failed (cached null) address is omitted, not pending', () => {
+  it('a previously-failed (cached null) address is null, not pending', () => {
     const cache = { getCached: () => null };
-    const addresses: ThemeAddresses = {
-      defaultFont: 'res://fonts/dead.ttf',
-      defaultFontSize: undefined,
-      fonts: {},
-      fontSizes: {},
-      typeVariations: {},
-      properties: {},
-    };
     const pending = new Set<string>();
-    const resource = resolveThemeResourceFromCache(addresses, cache, pending);
-    expect(resource.defaultFont).toBeNull();
+    const resolved = resolveInlineFontResource(
+      'ExtResource("1")',
+      [{ id: '1', path: 'res://fonts/dead.ttf', type: 'FontFile' }],
+      [],
+      cache,
+      pending
+    );
+    expect(resolved).toBeNull();
     expect(pending.size).toBe(0);
+  });
+
+  it('decodes a scene-inline SystemFont sub-resource synchronously, no cache involved', () => {
+    const cache = { getCached: () => undefined };
+    const pending = new Set<string>();
+    const resolved = resolveInlineFontResource(
+      'SubResource("SystemFont_1")',
+      [],
+      [{ id: 'SystemFont_1', type: 'SystemFont', data: { font_names: 'PackedStringArray("sans-serif")' } }],
+      cache,
+      pending
+    );
+    expect(resolved).toEqual({ kind: 'system', fontNames: ['sans-serif'], properties: {} });
+    expect(pending.size).toBe(0);
+  });
+
+  it("decodes a scene-inline FontVariation, recursing into base_font's ExtResource through the cache", () => {
+    const cache = { getCached: (address: string) => (address === 'res://fonts/base.ttf' ? FONT_A : undefined) };
+    const pending = new Set<string>();
+    const resolved = resolveInlineFontResource(
+      'SubResource("FontVariation_1")',
+      [{ id: '1', path: 'res://fonts/base.ttf', type: 'FontFile' }],
+      [{ id: 'FontVariation_1', type: 'FontVariation', data: { base_font: 'ExtResource("1")', spacing_glyph: '-8' } }],
+      cache,
+      pending
+    );
+    expect(resolved).toEqual({ kind: 'variation', baseFont: FONT_A, properties: { spacing_glyph: '-8' } });
+  });
+
+  it('a FontVariation with no base_font resolves to a null baseFont', () => {
+    const cache = { getCached: () => undefined };
+    const pending = new Set<string>();
+    const resolved = resolveInlineFontResource(
+      'SubResource("FontVariation_1")',
+      [],
+      [{ id: 'FontVariation_1', type: 'FontVariation', data: {} }],
+      cache,
+      pending
+    );
+    expect(resolved).toEqual({ kind: 'variation', baseFont: null, properties: {} });
+  });
+
+  it('decodes a scene-inline FontFile, resolving every fallback', () => {
+    const cache = { getCached: (address: string) => (address === 'res://fonts/good.ttf' ? FONT_A : null) };
+    const pending = new Set<string>();
+    const resolved = resolveInlineFontResource(
+      'SubResource("FontFile_1")',
+      [
+        { id: '1', path: 'res://fonts/good.ttf', type: 'FontFile' },
+        { id: '2', path: 'res://fonts/missing.ttf', type: 'FontFile' },
+      ],
+      [
+        {
+          id: 'FontFile_1',
+          type: 'FontFile',
+          data: { fallbacks: 'Array[Font]([ExtResource("1"), ExtResource("2")])' },
+        },
+      ],
+      cache,
+      pending
+    );
+    expect(resolved).toEqual({ kind: 'file', bytes: undefined, mimeType: undefined, fallbacks: [FONT_A], properties: {} });
+  });
+
+  it('returns null for a SubResource id that is not declared', () => {
+    const resolved = resolveInlineFontResource('SubResource("Missing")', [], [], { getCached: () => undefined }, new Set());
+    expect(resolved).toBeNull();
+  });
+
+  it('returns null for a SubResource that is not a Font type', () => {
+    const resolved = resolveInlineFontResource(
+      'SubResource("StyleBoxFlat_1")',
+      [],
+      [{ id: 'StyleBoxFlat_1', type: 'StyleBoxFlat', data: {} }],
+      { getCached: () => undefined },
+      new Set()
+    );
+    expect(resolved).toBeNull();
+  });
+
+  it('returns null for an absent or malformed ref', () => {
+    const cache = { getCached: () => undefined };
+    expect(resolveInlineFontResource(undefined, [], [], cache, new Set())).toBeNull();
+    expect(resolveInlineFontResource('not-a-ref', [], [], cache, new Set())).toBeNull();
+  });
+});
+
+describe('resolveInlineThemeResource', () => {
+  it('resolves default_font and <Type>/fonts/<name> against the scene\'s own scope', () => {
+    const cache = { getCached: (address: string) => (address === 'res://fonts/base.ttf' ? FONT_A : undefined) };
+    const pending = new Set<string>();
+    const resource = resolveInlineThemeResource(
+      {
+        default_font: 'ExtResource("1")',
+        default_font_size: '20',
+        'Label/fonts/font': 'SubResource("SystemFont_1")',
+      },
+      [{ id: '1', path: 'res://fonts/base.ttf', type: 'FontFile' }],
+      [{ id: 'SystemFont_1', type: 'SystemFont', data: { font_names: 'PackedStringArray("monospace")' } }],
+      cache,
+      pending
+    );
+    expect(resource.defaultFont).toBe(FONT_A);
+    expect(resource.defaultFontSize).toBe(20);
+    expect(resource.fonts.Label?.font).toEqual({ kind: 'system', fontNames: ['monospace'], properties: {} });
+  });
+
+  it('leaves non-font properties raw', () => {
+    const resource = resolveInlineThemeResource(
+      { 'Panel/styles/panel': 'null' },
+      [],
+      [],
+      { getCached: () => undefined },
+      new Set()
+    );
+    expect(resource.properties).toEqual({ 'Panel/styles/panel': 'null' });
+  });
+});
+
+describe('isFontUsable', () => {
+  it('is false for null', () => {
+    expect(isFontUsable(null)).toBe(false);
+  });
+
+  it('is false for a SystemFont — a documented limitation, not a bug', () => {
+    expect(isFontUsable({ kind: 'system', fontNames: ['sans-serif'], properties: {} })).toBe(false);
+  });
+
+  it('is false for an empty SystemFont (bidi.tscn\'s PackedStringArray(""))', () => {
+    expect(isFontUsable({ kind: 'system', fontNames: [''], properties: {} })).toBe(false);
+  });
+
+  it('is true for a FontFile carrying real bytes', () => {
+    expect(isFontUsable(FONT_A)).toBe(true);
+  });
+
+  it('is false for a bytes-less FontFile .tres wrapper with no fallbacks', () => {
+    expect(isFontUsable({ kind: 'file', bytes: undefined, mimeType: undefined, fallbacks: [], properties: {} })).toBe(
+      false
+    );
+  });
+
+  it('is true for a bytes-less FontFile wrapper whose fallback carries bytes', () => {
+    expect(
+      isFontUsable({ kind: 'file', bytes: undefined, mimeType: undefined, fallbacks: [FONT_A], properties: {} })
+    ).toBe(true);
+  });
+
+  it('is false for a FontFile whose fallbacks are all unusable (e.g. only SystemFonts)', () => {
+    expect(
+      isFontUsable({
+        kind: 'file',
+        bytes: undefined,
+        mimeType: undefined,
+        fallbacks: [{ kind: 'system', fontNames: ['serif'], properties: {} }],
+        properties: {},
+      })
+    ).toBe(false);
+  });
+
+  it('is false for a FontVariation with a null baseFont', () => {
+    expect(isFontUsable({ kind: 'variation', baseFont: null, properties: {} })).toBe(false);
+  });
+
+  it('is true for a FontVariation whose baseFont carries real bytes', () => {
+    expect(isFontUsable({ kind: 'variation', baseFont: FONT_A, properties: {} })).toBe(true);
+  });
+
+  it('is false for a FontVariation whose baseFont is itself unusable (a SystemFont)', () => {
+    expect(
+      isFontUsable({
+        kind: 'variation',
+        baseFont: { kind: 'system', fontNames: ['sans-serif'], properties: {} },
+        properties: {},
+      })
+    ).toBe(false);
   });
 });
 

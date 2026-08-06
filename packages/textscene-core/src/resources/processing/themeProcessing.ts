@@ -18,6 +18,13 @@
  * Everything else (styles, colors, constants, icons) stays a raw property
  * string for a future consumer, the same shallow-decode contract
  * `materialProcessing.ts` and `fontProcessing.ts` already use.
+ *
+ * Two decode paths, one shared scan (`scanTheme`): a FILE-BACKED `.tres`
+ * decodes to `ThemeAddresses` (font refs left as loader addresses,
+ * `resolveThemeResource` awaits them), a scene's own inline
+ * `[sub_resource type="Theme"]` decodes straight to a `ThemeResource`
+ * (`resolveInlineThemeResource`, synchronous — `buildSolveTree.ts` cannot
+ * `await` mid-walk).
  */
 
 import type { ParsedTresFile } from '../../parser/tresParser';
@@ -26,9 +33,14 @@ import type { TscnExternalResource, TscnInternalResource } from '../../parser/ty
 import { unquoteString } from '../../parser/utils';
 import { parseOptionalFloat } from '../../parser/valueParsers';
 import { NODE_BASE_TYPES } from '../../linter/nodeBaseTypes';
-import { findSubResource } from '../SubResourceResolver';
+import { findSubResource, parseResourceReference } from '../SubResourceResolver';
 import { parseSubResourcePath, resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
-import type { FontLoaderFn, FontResource } from './fontProcessing';
+import {
+  extractResourceRefs,
+  parsePackedStringArray,
+  type FontLoaderFn,
+  type FontResource,
+} from './fontProcessing';
 
 /** The Font sub-resource types a Theme's `default_font`/`<Type>/fonts/<name>` can point at — same set `fontProcessing.ts` resolves. */
 const FONT_SUB_RESOURCE_TYPES: ReadonlySet<string> = new Set(['FontFile', 'SystemFont', 'FontVariation']);
@@ -52,61 +64,51 @@ function unquoteStringName(value: string): string {
 }
 
 /**
- * A Theme's font-relevant data, decoded to typed values but with every Font
- * reference left as a **Sub-resource path** ADDRESS rather than a resolved
- * `FontResource` — the seam between the format-decode (this) and the two
- * different ways an address becomes a resource: `resolveThemeResource`
- * (async, awaits the loader) for a file-backed Theme, and
- * `resolveThemeResourceFromCache` (sync, cache-read + pending) for a
- * scene-inline Theme SubResource, which `buildSolveTree.ts` cannot `await`
- * mid-walk.
+ * The shape both a file-backed Theme (`T` = address string, resolved later
+ * by awaiting the loader) and a scene-inline one (`T` = `FontResource`,
+ * resolved immediately by reading scope) decode to. `ThemeAddresses` and
+ * `ThemeResource` below are this shape at each of those two `T`s.
  */
-export interface ThemeAddresses {
-  /** `default_font`, resolved to an address; null when absent or malformed. */
-  defaultFont: string | null;
-  /** `default_font_size`, gated `> 0` (`Theme::has_default_font_size`, `theme.cpp:274-276`). */
+interface ScannedTheme<T> {
+  defaultFont: T | null;
   defaultFontSize: number | undefined;
-  /** `<Type>/fonts/<name>` → address. Entries with an absent/malformed ref are omitted. */
-  fonts: Readonly<Record<string, Readonly<Record<string, string>>>>;
-  /** `<Type>/font_sizes/<name>` → number, each already gated `> 0`. */
+  fonts: Readonly<Record<string, Readonly<Record<string, T>>>>;
   fontSizes: Readonly<Record<string, Readonly<Record<string, number>>>>;
-  /** `<variationType>/base_type` → the type (or another variation) it derives from. */
   typeVariations: Readonly<Record<string, string>>;
-  /** Every other declared property (styles, colors, constants, icons, …), raw. */
   properties: Readonly<Record<string, string>>;
 }
 
 /**
- * Decode one Theme resource body (a `.tres`'s own `[resource]`, or one of its
- * `[sub_resource]`s, or a scene's own inline `[sub_resource type="Theme"]`)
- * into `ThemeAddresses`. Pure and synchronous — no I/O, so it is the shared
- * core both the file-backed and scene-inline resolution paths call. `selfPath`
- * is the address a `SubResource`-valued font ref resolves against
- * (`resolveRefToResourcePath`'s `res://file.tres::SubId`/`res://scene.tscn::SubId`
- * form) — always the OWNING document, never the Theme's own address.
+ * Walk one Theme resource body's properties, resolving every Font-valued one
+ * (`default_font`, `<Type>/fonts/<name>`) through `resolveRef` — the ONE
+ * `<Type>/<data_type>/<name>` scanning loop (`Theme::_set`/`_get`,
+ * `scene/resources/theme.cpp:36-104`) shared by the file-backed path
+ * (`resolveRef` synthesises an ADDRESS, awaited later by `resolveThemeResource`)
+ * and the scene-inline path (`resolveRef` resolves against scope immediately,
+ * via `resolveInlineFontResource`) — so the regex/property-walking logic
+ * exists exactly once. `resolveRef` returning `null` (an absent/malformed ref,
+ * OR — for the inline path — one that failed to resolve) omits the entry,
+ * matching `Theme::has_font`'s `Ref<Font>::is_valid()` gate
+ * (`scene/resources/theme.cpp:549-552`): a Theme can never distinguish
+ * "explicitly nothing" from "never set" at this level. This collapse is
+ * specific to fonts/font-sizes — colors, constants and styles (kept raw here)
+ * do NOT share it.
  */
-export function decodeThemeAddresses(
-  selfPath: string,
+function scanTheme<T>(
   properties: Record<string, string>,
-  extResources: readonly TscnExternalResource[],
-  subResources: readonly TscnInternalResource[]
-): ThemeAddresses {
-  const extPathById = new Map(extResources.map((r) => [r.id, r.path]));
-  const gate = subResourceTypeGate(subResources, FONT_SUB_RESOURCE_TYPES);
-  const toAddress = (ref: string | undefined): string | null =>
-    resolveRefToResourcePath(ref, extPathById, selfPath, gate);
-
-  const fonts: Record<string, Record<string, string>> = {};
+  resolveRef: (ref: string) => T | null
+): ScannedTheme<T> {
+  const fonts: Record<string, Record<string, T>> = {};
   const fontSizes: Record<string, Record<string, number>> = {};
   const typeVariations: Record<string, string> = {};
   const rest: Record<string, string> = {};
 
-  let defaultFont: string | null = null;
+  let defaultFont: T | null = null;
   let defaultFontSize: number | undefined;
 
   for (const [key, value] of Object.entries(properties)) {
     if (key === 'default_font') {
-      defaultFont = toAddress(value);
+      defaultFont = resolveRef(value);
       continue;
     }
     if (key === 'default_font_size') {
@@ -118,8 +120,8 @@ export function decodeThemeAddresses(
     const fontMatch = key.match(FONT_ENTRY);
     if (fontMatch) {
       const [, type, name] = fontMatch;
-      const address = toAddress(value);
-      if (address) (fonts[type!] ??= {})[name!] = address;
+      const resolved = resolveRef(value);
+      if (resolved !== null) (fonts[type!] ??= {})[name!] = resolved;
       continue;
     }
 
@@ -146,32 +148,35 @@ export function decodeThemeAddresses(
 }
 
 /**
- * A Theme, decoded to the point a font lookup can use it: every Font
- * reference resolved to a `FontResource`, everything else still raw.
- *
- * `fonts`/`defaultFont` collapse "declared but invalid" (a `null` literal, a
- * ref that failed to load, a `SystemFont` this previewer cannot fetch bytes
- * for) to the same absence a NEVER-declared entry has — `Theme::has_font`
- * only tests `Ref<Font>::is_valid()`
- * (`scene/resources/theme.cpp:549-552`), so a Theme can never distinguish
- * "explicitly nothing" from "never set" at this level. This collapse is
- * specific to fonts/font-sizes: colors, constants and styles (kept raw here)
- * do NOT share it, so a future consumer decoding those must not assume it.
+ * A Theme's font-relevant data, decoded to typed values but with every Font
+ * reference left as a **Sub-resource path** ADDRESS rather than a resolved
+ * `FontResource` — the seam between the format-decode (`scanTheme`) and
+ * `resolveThemeResource`, which awaits the loader for each one. Used for a
+ * FILE-BACKED Theme only; a scene-inline one resolves straight to a
+ * `ThemeResource` via `resolveInlineThemeResource` instead (see there for why).
  */
-export interface ThemeResource {
-  /** `default_font`, resolved; null when absent, malformed, or invalid (`Theme::has_default_font`). */
-  defaultFont: FontResource | null;
-  /** `default_font_size`, already `> 0`-gated. */
-  defaultFontSize: number | undefined;
-  /** `<Type>/fonts/<name>` → resolved Font. Presence == usable (see class doc). */
-  fonts: Readonly<Record<string, Readonly<Record<string, FontResource>>>>;
-  /** `<Type>/font_sizes/<name>` → number, each already `> 0`-gated. */
-  fontSizes: Readonly<Record<string, Readonly<Record<string, number>>>>;
-  /** `<variationType>/base_type` → the type (or another variation) it derives from. */
-  typeVariations: Readonly<Record<string, string>>;
-  /** Every other declared property, raw. */
-  properties: Readonly<Record<string, string>>;
+export type ThemeAddresses = ScannedTheme<string>;
+
+/**
+ * Decode one Theme resource body (a `.tres`'s own `[resource]`, or one of its
+ * `[sub_resource]`s) into `ThemeAddresses`. Pure and synchronous — no I/O.
+ * `selfPath` is the address a `SubResource`-valued font ref resolves against
+ * (`resolveRefToResourcePath`'s `res://file.tres::SubId` form) — always the
+ * OWNING `.tres`, never the Theme's own address.
+ */
+export function decodeThemeAddresses(
+  selfPath: string,
+  properties: Record<string, string>,
+  extResources: readonly TscnExternalResource[],
+  subResources: readonly TscnInternalResource[]
+): ThemeAddresses {
+  const extPathById = new Map(extResources.map((r) => [r.id, r.path]));
+  const gate = subResourceTypeGate(subResources, FONT_SUB_RESOURCE_TYPES);
+  return scanTheme(properties, (ref) => resolveRefToResourcePath(ref, extPathById, selfPath, gate));
 }
+
+/** A Theme, decoded to the point a font lookup can use it: every Font reference resolved to a `FontResource`, everything else still raw. See `scanTheme`'s doc for the validity-collapse this shares with `ThemeAddresses`. */
+export type ThemeResource = ScannedTheme<FontResource>;
 
 /**
  * Resolve `ThemeAddresses` into a `ThemeResource` by awaiting `loadFont` for
@@ -217,50 +222,103 @@ export interface FontCacheReader {
 }
 
 /**
- * The synchronous counterpart to `resolveThemeResource`, for a Theme
- * `buildSolveTree.ts` cannot `await` mid-walk — a scene's own inline
- * `[sub_resource type="Theme"]`. Reads each font address off `fontCache`
- * instead of awaiting the loader; an address not yet cached is pushed onto
- * `pending` (mirrors `resolveTextureSize`'s cache-read + pending-collection
- * in that same module) and treated as unresolved for THIS pass — the caller
- * requests it and the next pass, triggered once the `font` processor's
- * `loaded`/`failed` event bumps `generation`, sees the real value.
+ * Resolve a Font-valued reference found in THIS document's OWN scope —
+ * `ExtResource` through the (possibly still-loading) `loader.fonts` cache,
+ * `SubResource` by decoding the sibling sub-resource directly, recursing for
+ * its own `base_font`/`fallbacks` exactly as `fontProcessing.resolveFontResource`
+ * decodes a file-backed Font's, just synchronously instead of `await`ing.
+ * This is the path `fontProcessing.ts`'s own header says a scene's inline
+ * FontFile/SystemFont/FontVariation sub-resource takes ("never addressed
+ * [through the loader] — it resolves synchronously against the scene's own
+ * parsed SubResources") — needed here because BOTH a Control's
+ * `theme_override_fonts/<name>` and an inline Theme's `<Type>/fonts/<name>`
+ * commonly reference one (`scenes/demos/gui/bidi_and_font_features/bidi.tscn`
+ * alone declares 16 such node-local overrides).
+ *
+ * An address not yet cached is pushed onto `pending` (mirrors
+ * `resolveTextureSize`'s cache-read + pending-collection in
+ * `buildSolveTree.ts`) and treated as unresolved for THIS pass; the caller
+ * requests it and the next pass — triggered once the `font` processor's
+ * `loaded`/`failed` event bumps `generation` — sees the real value.
  */
-export function resolveThemeResourceFromCache(
-  addresses: ThemeAddresses,
+export function resolveInlineFontResource(
+  ref: string | undefined,
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[],
   fontCache: FontCacheReader,
   pending: Set<string>
-): ThemeResource {
-  const readFont = (address: string | null): FontResource | null => {
-    if (!address) return null;
-    const cached = fontCache.getCached(address);
+): FontResource | null {
+  if (!ref) return null;
+  const parsed = parseResourceReference(ref);
+  if (!parsed) return null;
+
+  if (parsed.type === 'ExtResource') {
+    const path = externalResources.find((r) => r.id === parsed.id)?.path;
+    if (!path) return null;
+    const cached = fontCache.getCached(path);
     if (cached === undefined) {
-      pending.add(address);
+      pending.add(path);
       return null;
     }
     return cached;
-  };
-
-  const defaultFont = readFont(addresses.defaultFont);
-
-  const fonts: Record<string, Record<string, FontResource>> = {};
-  for (const [type, byName] of Object.entries(addresses.fonts)) {
-    const resolvedByName: Record<string, FontResource> = {};
-    for (const [name, address] of Object.entries(byName)) {
-      const font = readFont(address);
-      if (font) resolvedByName[name] = font;
-    }
-    if (Object.keys(resolvedByName).length) fonts[type] = resolvedByName;
   }
 
-  return {
-    defaultFont,
-    defaultFontSize: addresses.defaultFontSize,
-    fonts,
-    fontSizes: addresses.fontSizes,
-    typeVariations: addresses.typeVariations,
-    properties: addresses.properties,
-  };
+  const sub = findSubResource(internalResources, parsed.id);
+  if (!sub) return null;
+  // `parseInternalResource` echoes the heading's own `id` into `data` — strip
+  // it back out, or it leaks into `properties` as a fake declared property.
+  const { id: _id, ...properties } = sub.data as Record<string, string>;
+  const resolveNested = (nestedRef: string | undefined): FontResource | null =>
+    resolveInlineFontResource(nestedRef, externalResources, internalResources, fontCache, pending);
+
+  switch (sub.type) {
+    case 'SystemFont': {
+      const { font_names, ...rest } = properties;
+      return {
+        kind: 'system',
+        fontNames: font_names !== undefined ? parsePackedStringArray(font_names) : [],
+        properties: rest,
+      };
+    }
+    case 'FontVariation': {
+      const { base_font, ...rest } = properties;
+      return { kind: 'variation', baseFont: resolveNested(base_font), properties: rest };
+    }
+    case 'FontFile': {
+      const { fallbacks, ...rest } = properties;
+      const refs = fallbacks !== undefined ? extractResourceRefs(fallbacks) : [];
+      const resolved = refs.map(resolveNested).filter((f): f is FontResource => f !== null);
+      return { kind: 'file', bytes: undefined, mimeType: undefined, fallbacks: resolved, properties: rest };
+    }
+    default:
+      // Not one of the three Font sub-resource types — same gate
+      // `subResourceTypeGate(FONT_SUB_RESOURCE_TYPES)` applies to the
+      // file-backed path.
+      return null;
+  }
+}
+
+/**
+ * Resolve a scene's own inline `[sub_resource type="Theme"]` straight to a
+ * `ThemeResource`, in one synchronous pass — `buildSolveTree.ts` cannot
+ * `await` mid-walk, and (unlike a file-backed `.tres`) there is no
+ * address-then-load split to make: a `SubResource`-valued font ref inside an
+ * inline Theme addresses a SIBLING sub-resource of the SAME scene, which
+ * `resolveInlineFontResource` reads directly rather than routing through
+ * `loader.fonts` — a `res://scene.tscn::SubId` address could never resolve
+ * there anyway (`parseTresFile` requires a `[gd_resource]` header; a scene's
+ * own `[gd_scene]` header throws).
+ */
+export function resolveInlineThemeResource(
+  properties: Record<string, string>,
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[],
+  fontCache: FontCacheReader,
+  pending: Set<string>
+): ThemeResource {
+  return scanTheme(properties, (ref) =>
+    resolveInlineFontResource(ref, externalResources, internalResources, fontCache, pending)
+  );
 }
 
 /**
@@ -484,4 +542,46 @@ export function resolveThemeFontSizePx(
     }
   }
   return builtInDefaultPx;
+}
+
+/**
+ * Whether a resolved `FontResource` graph carries anything a painter can
+ * actually draw glyphs from — the check `resolveThemeFont`'s caller applies
+ * BEFORE using its result, never inside the lookup itself: `resolveThemeFont`
+ * answers "what would Godot resolve", faithfully, and Godot considers a
+ * `SystemFont` a perfectly valid, loadable Font (the OS resolves the family
+ * name at draw time) — it is only THIS PREVIEWER, running in a browser with
+ * no access to the host's installed fonts, that cannot fetch bytes for one.
+ * Baking that limitation into the walk would make it stop early and skip a
+ * FARTHER ancestor/theme that might have resolved to something render-able,
+ * which is not what Godot does.
+ *
+ * `false` for:
+ *  - `null` (nothing resolved at all);
+ *  - a `SystemFont` (`kind: 'system'`) — see above; a documented limitation,
+ *    not a bug (matches the brief: "A SystemFont... takes the same path" as
+ *    a missing font);
+ *  - a `FontFile` (`kind: 'file'`) with no bytes of its own (a `.tres`
+ *    wrapper — see `fontProcessing.ts`) AND no usable fallback anywhere in
+ *    its `fallbacks` list;
+ *  - a `FontVariation` (`kind: 'variation'`) whose `baseFont` is `null` or
+ *    itself not usable.
+ *
+ * `true` as soon as ANY reachable node in the graph carries real bytes —
+ * `fallbacks`/`baseFont` are Godot's own "try the next one" chain, so a
+ * painter should draw with whichever usable font this returns `true` for,
+ * not necessarily the root of the graph.
+ */
+export function isFontUsable(font: FontResource | null): boolean {
+  if (!font) return false;
+  switch (font.kind) {
+    case 'system':
+      return false;
+    case 'file':
+      return font.bytes !== undefined || font.fallbacks.some(isFontUsable);
+    case 'variation':
+      return font.baseFont !== null && isFontUsable(font.baseFont);
+    default:
+      return false;
+  }
 }

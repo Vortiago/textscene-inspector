@@ -30,9 +30,22 @@ import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import { joinPath } from '../../../utils/nodePath';
-import { resolveInstancePath, resolveTexture2DPath } from '../../../resources/SubResourceResolver';
+import {
+  findSubResource,
+  parseResourceReference,
+  resolveInstancePath,
+  resolveTexture2DPath,
+} from '../../../resources/SubResourceResolver';
 import { useResourceLoader } from '../../../resources/useResource';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
+import type { FontResource } from '../../../resources/processing/fontProcessing';
+import {
+  resolveInlineFontResource,
+  resolveInlineThemeResource,
+  type FontCacheReader,
+  type ThemeResource,
+} from '../../../resources/processing/themeProcessing';
+import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../liveSceneTree';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
@@ -50,6 +63,8 @@ export interface UseBuildSolveTreeResult {
 
 const EMPTY_SCENE_CACHE: CachedSceneSource = { getCached: () => undefined };
 const NO_TEXTURE_CACHE = { getCached: (): THREE.Texture | null | undefined => undefined };
+const NO_THEME_CACHE = { getCached: (): ThemeResource | null | undefined => undefined };
+const NO_FONT_CACHE: FontCacheReader = { getCached: (): FontResource | null | undefined => undefined };
 
 /**
  * Resolve every `theme_override_styles/*` ref on a node, IN ITS OWN SCOPE —
@@ -77,6 +92,8 @@ interface ForestResult {
   tree: SolveNode[];
   pendingScenes: string[];
   pendingTextures: string[];
+  pendingThemes: string[];
+  pendingFonts: string[];
 }
 
 /**
@@ -89,15 +106,92 @@ function buildForest(
   nodes: readonly TscnNode[],
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
-  loader: ResourceLoader | null
+  loader: ResourceLoader | null,
+  projectThemeRef: string | undefined
 ): ForestResult {
   const pendingScenes = new Set<string>();
   const pendingTextures = new Set<string>();
+  const pendingThemes = new Set<string>();
+  const pendingFonts = new Set<string>();
 
   const sceneCache: CachedSceneSource = loader
     ? { getCached: (p: string) => loader.scenes.getCached(p) }
     : EMPTY_SCENE_CACHE;
   const textureCache = loader ? { getCached: (p: string) => loader.textures.getCached(p) } : NO_TEXTURE_CACHE;
+  const themeCache = loader ? { getCached: (p: string) => loader.themes.getCached(p) } : NO_THEME_CACHE;
+  const fontCache: FontCacheReader = loader ? { getCached: (p: string) => loader.fonts.getCached(p) } : NO_FONT_CACHE;
+
+  /**
+   * Resolve a Control's own `theme = ExtResource(...)`/`SubResource(...)` —
+   * `Control::get_theme()` (`scene/gui/control.h`). An ExtResource routes
+   * through `loader.themes` (cache-read + pending, mirroring
+   * `resolveTextureSize`); a SubResource addresses a Theme declared INLINE in
+   * this scene, decoded synchronously via `resolveInlineThemeResource` — a
+   * `res://scene.tscn::id` address could never resolve through `loader.themes`
+   * (`parseTresFile` requires a `[gd_resource]` header; a scene's own
+   * `[gd_scene]` header throws), so it is never attempted.
+   */
+  function resolveOwnTheme(
+    themeRef: string | undefined,
+    ext: readonly TscnExternalResource[],
+    int: readonly TscnInternalResource[]
+  ): ThemeResource | null {
+    if (!themeRef) return null;
+    const parsed = parseResourceReference(themeRef);
+    if (!parsed) return null;
+
+    if (parsed.type === 'ExtResource') {
+      const path = ext.find((r) => r.id === parsed.id)?.path;
+      if (!path) return null;
+      const cached = themeCache.getCached(path);
+      if (cached === undefined) {
+        pendingThemes.add(path);
+        return null;
+      }
+      return cached;
+    }
+
+    const sub = findSubResource(int, parsed.id);
+    if (!sub || sub.type !== 'Theme') return null;
+    // `parseInternalResource` echoes the heading's own `id` into `data` —
+    // strip it back out, or it leaks into `properties` as a fake declared one.
+    const { id: _id, ...properties } = sub.data as Record<string, string>;
+    return resolveInlineThemeResource(properties, ext, int, fontCache, pendingFonts);
+  }
+
+  /**
+   * Resolve every `theme_override_fonts/<name>` ref on a node, IN ITS OWN
+   * SCOPE — `Control::get_theme_font`'s local-override branch
+   * (`scene/gui/control.cpp:3089-3093`). Every declared key stays in the
+   * result even when its ref fails to resolve (`null`): a local override,
+   * once declared, wins UNCONDITIONALLY over any ancestor theme — see
+   * `themeProcessing.resolveThemeFont`'s doc for why key PRESENCE (not the
+   * resolved value) is what encodes "authored".
+   */
+  function resolveFontOverrides(
+    node: TscnNode,
+    ext: readonly TscnExternalResource[],
+    int: readonly TscnInternalResource[]
+  ): Readonly<Record<string, FontResource | null>> {
+    const overrides = (node.properties as ControlProperties).themeOverrideFonts;
+    if (!overrides) return {};
+    const out: Record<string, FontResource | null> = {};
+    for (const [key, ref] of Object.entries(overrides)) {
+      out[key] = resolveInlineFontResource(ref, ext, int, fontCache, pendingFonts);
+    }
+    return out;
+  }
+
+  /** The project's default theme (`gui/theme/custom`) — same for every node, resolved once. */
+  const projectTheme: ThemeResource | null = (() => {
+    if (!projectThemeRef) return null;
+    const cached = themeCache.getCached(projectThemeRef);
+    if (cached === undefined) {
+      pendingThemes.add(projectThemeRef);
+      return null;
+    }
+    return cached;
+  })();
 
   function resolveTextureSize(
     node: TscnNode,
@@ -130,7 +224,12 @@ function buildForest(
     return { x: image?.width ?? 0, y: image?.height ?? 0 };
   }
 
-  function walk(list: readonly TscnNode[], parentPath: string, scope: SceneScope): SolveNode[] {
+  function walk(
+    list: readonly TscnNode[],
+    parentPath: string,
+    scope: SceneScope,
+    themeChain: readonly ThemeResource[]
+  ): SolveNode[] {
     const { externalResources: ext } = scope;
     const out: SolveNode[] = [];
     for (const node of list) {
@@ -151,9 +250,31 @@ function buildForest(
       // ids resolve there; every other node keeps the scope it was authored in.
       const ownScope = mergedGroup ? mergedGroup.scope : scope;
 
-      const children = groups.flatMap((g) => walk(g.children, path, g.scope));
+      const isControl = TWO_D_UI_TYPES.has(collapsed.type);
 
-      if (TWO_D_UI_TYPES.has(collapsed.type)) {
+      // Godot: theme inheritance BREAKS at a non-Control/Window ancestor
+      // (`ThemeOwner::propagate_theme_changed`, `scene/theme/theme_owner.cpp`:
+      // "Theme inheritance chains are broken by nodes that aren't Control or
+      // Window") — the mirror image of this walker's LAYOUT transparency for
+      // the same node (module doc): transparent to layout, but a hard reset
+      // for theme, so a Control nested under e.g. a Node3D never inherits an
+      // ancestor's theme past it.
+      const ownTheme = isControl
+        ? resolveOwnTheme(
+            (collapsed.properties as ControlProperties).theme,
+            ownScope.externalResources,
+            ownScope.internalResources
+          )
+        : null;
+      const nodeThemeChain: readonly ThemeResource[] = !isControl
+        ? []
+        : ownTheme
+          ? [ownTheme, ...themeChain]
+          : themeChain;
+
+      const children = groups.flatMap((g) => walk(g.children, path, g.scope, nodeThemeChain));
+
+      if (isControl) {
         out.push({
           path,
           node: collapsed,
@@ -164,6 +285,9 @@ function buildForest(
             ownScope.externalResources,
             ownScope.internalResources
           ),
+          fontOverrides: resolveFontOverrides(collapsed, ownScope.externalResources, ownScope.internalResources),
+          themeChain: nodeThemeChain,
+          projectTheme,
         });
       } else {
         // Not a genuine Control type — transparent passthrough (see module doc):
@@ -174,8 +298,14 @@ function buildForest(
     return out;
   }
 
-  const tree = walk(nodes, '', { externalResources, internalResources });
-  return { tree, pendingScenes: [...pendingScenes], pendingTextures: [...pendingTextures] };
+  const tree = walk(nodes, '', { externalResources, internalResources }, []);
+  return {
+    tree,
+    pendingScenes: [...pendingScenes],
+    pendingTextures: [...pendingTextures],
+    pendingThemes: [...pendingThemes],
+    pendingFonts: [...pendingFonts],
+  };
 }
 
 export function useBuildSolveTree(
@@ -185,6 +315,11 @@ export function useBuildSolveTree(
 ): UseBuildSolveTreeResult {
   const loader = useResourceLoader();
   const [generation, setGeneration] = useState(0);
+  // `gui/theme/custom` — the project's default theme, the last rung of the
+  // ancestor walk before the built-in default (`ProjectSettingsContext`'s
+  // safe-default value has no `settings`, so this is `undefined` without a
+  // provider, matching every other un-set project setting).
+  const projectThemeRef = useProjectSettings().settings?.['gui/theme/custom']?.trim() || undefined;
 
   useEffect(() => {
     if (!loader) return undefined;
@@ -193,22 +328,31 @@ export function useBuildSolveTree(
     loader.eventBus.on('scene', 'failed', bump);
     loader.eventBus.on('texture', 'loaded', bump);
     loader.eventBus.on('texture', 'failed', bump);
+    loader.eventBus.on('theme', 'loaded', bump);
+    loader.eventBus.on('theme', 'failed', bump);
+    loader.eventBus.on('font', 'loaded', bump);
+    loader.eventBus.on('font', 'failed', bump);
     return () => {
       loader.eventBus.off('scene', 'loaded', bump);
       loader.eventBus.off('scene', 'failed', bump);
       loader.eventBus.off('texture', 'loaded', bump);
       loader.eventBus.off('texture', 'failed', bump);
+      loader.eventBus.off('theme', 'loaded', bump);
+      loader.eventBus.off('theme', 'failed', bump);
+      loader.eventBus.off('font', 'loaded', bump);
+      loader.eventBus.off('font', 'failed', bump);
     };
   }, [loader]);
 
-  const { tree, pendingScenes, pendingTextures } = useMemo(
-    () => buildForest(nodes, externalResources, internalResources, loader),
+  const { tree, pendingScenes, pendingTextures, pendingThemes, pendingFonts } = useMemo(
+    () => buildForest(nodes, externalResources, internalResources, loader, projectThemeRef),
     // `generation` is an intentional cache-buster: it increments each time a
-    // scene/texture load or failure lands so the walk re-derives against the
-    // loader's now-different cache snapshot. Its value is not read inside the
-    // callback — mirrors `useLiveSceneTree.ts`'s identical `version` pattern.
+    // scene/texture/theme/font load or failure lands so the walk re-derives
+    // against the loader's now-different cache snapshot. Its value is not
+    // read inside the callback — mirrors `useLiveSceneTree.ts`'s identical
+    // `version` pattern.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [nodes, externalResources, internalResources, loader, generation]
+    [nodes, externalResources, internalResources, loader, projectThemeRef, generation]
   );
 
   // Kick off loads for anything the walk found uncached — after render, not
@@ -217,7 +361,9 @@ export function useBuildSolveTree(
     if (!loader) return;
     for (const path of pendingScenes) loader.scenes.request(path);
     for (const path of pendingTextures) loader.textures.request(path);
-  }, [loader, pendingScenes, pendingTextures]);
+    for (const path of pendingThemes) loader.themes.request(path);
+    for (const path of pendingFonts) loader.fonts.request(path);
+  }, [loader, pendingScenes, pendingTextures, pendingThemes, pendingFonts]);
 
   return { tree, generation };
 }

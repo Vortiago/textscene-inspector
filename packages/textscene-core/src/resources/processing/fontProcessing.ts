@@ -106,8 +106,10 @@ const FONT_SUB_RESOURCE_TYPES: ReadonlySet<string> = new Set(['FontFile', 'Syste
  * Every `ExtResource(...)`/`SubResource(...)` reference literal inside a value —
  * covers both `fallbacks = Array[Font]([ExtResource("a"), ExtResource("b")])`
  * and a bare single reference the same regex matches as a one-element list.
+ * Exported for `themeProcessing.ts`'s inline (scene-scope) Font resolver —
+ * see `parsePackedStringArray`.
  */
-function extractResourceRefs(value: string): string[] {
+export function extractResourceRefs(value: string): string[] {
   const refs: string[] = [];
   const re = /(?:ExtResource|SubResource)\s*\(\s*"[^"]+"\s*\)/g;
   let match: RegExpExecArray | null;
@@ -115,8 +117,13 @@ function extractResourceRefs(value: string): string[] {
   return refs;
 }
 
-/** `PackedStringArray("a", "b")` → `["a", "b"]`. Godot's own string-escape set, matching `unquoteString`. */
-function parsePackedStringArray(value: string): string[] {
+/**
+ * `PackedStringArray("a", "b")` → `["a", "b"]`. Godot's own string-escape
+ * set, matching `unquoteString`. Exported for `themeProcessing.ts`'s inline
+ * (scene-scope) Font resolver, which decodes a `SystemFont` sub-resource the
+ * same way this file does for a file-backed one.
+ */
+export function parsePackedStringArray(value: string): string[] {
   const match = value.match(/^PackedStringArray\s*\(([\s\S]*)\)$/);
   if (!match) return [];
   const inner = match[1]!.trim();

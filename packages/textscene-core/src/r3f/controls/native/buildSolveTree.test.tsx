@@ -19,8 +19,14 @@ import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource, TscnNode, TscnScene } from '../../../parser/types';
+import { FileEventBus } from '../../../resources/FileEventBus';
+import { ResourceLoader } from '../../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext';
+import type { ThemeResource } from '../../../resources/processing/themeProcessing';
+import type { FontResource } from '../../../resources/processing/fontProcessing';
 import { useBuildSolveTree } from './buildSolveTree';
 
 const LAYER_PATH = 'res://hud-layer.tscn';
@@ -365,5 +371,246 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []));
 
     expect(result.current.tree).toEqual([]);
+  });
+});
+
+const FONT_A: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/ttf', fallbacks: [], properties: {} };
+
+/** An empty `ThemeResource`, overridden per test. */
+function theme(overrides: Partial<ThemeResource> = {}): ThemeResource {
+  return {
+    defaultFont: null,
+    defaultFontSize: undefined,
+    fonts: {},
+    fontSizes: {},
+    typeVariations: {},
+    properties: {},
+    ...overrides,
+  };
+}
+
+function control(name: string, extra: Record<string, unknown> = {}): TscnNode {
+  return node(name, 'Control', { properties: { name, ...extra } as Record<string, unknown> });
+}
+
+describe('useBuildSolveTree — theme resolution', () => {
+  it("resolves a root Control's theme = ExtResource(...) and threads it to a themeless child's themeChain[0] — the corpus's dominant shape", () => {
+    // The brief's central claim: a node-local read returns nothing for this
+    // shape (a themed root, plain Labels beneath it) — only the ancestor
+    // chain does.
+    const loader = createFakeResourceLoader();
+    const rootTheme = theme({ defaultFontSize: 24 });
+    loader.themes.seed('res://theme.tres', rootTheme);
+
+    const nodes = [control('Root', { theme: 'ExtResource("1_theme")' })];
+    (nodes[0] as TscnNode).children = [label('Child')];
+    const externalResources = [{ id: '1_theme', path: 'res://theme.tres', type: 'Theme' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    const root = result.current.tree.find((n) => n.path === 'Root')!;
+    expect(root.themeChain).toEqual([rootTheme]);
+    const child = root.children.find((c) => c.path === 'Root/Child')!;
+    expect(child.themeChain).toEqual([rootTheme]);
+    expect(child.themeChain?.[0]).toBe(rootTheme);
+  });
+
+  it('resolves a root Control theme = SubResource(...) — an inline Theme, the 4-file corpus shape', () => {
+    const loader = createFakeResourceLoader();
+    const fontPath = 'res://fonts/base.ttf';
+    loader.fonts.seed(fontPath, FONT_A);
+
+    const nodes = [control('Root', { theme: 'SubResource("5")' })];
+    (nodes[0] as TscnNode).children = [label('Child')];
+    const internalResources: TscnInternalResource[] = [
+      { id: '5', type: 'Theme', data: { default_font: 'ExtResource("1")', default_font_size: '20' } },
+    ];
+    const externalResources = [{ id: '1', path: fontPath, type: 'FontFile' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, internalResources), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    const root = result.current.tree.find((n) => n.path === 'Root')!;
+    expect(root.themeChain).toHaveLength(1);
+    expect(root.themeChain?.[0]?.defaultFont).toBe(FONT_A);
+    expect(root.themeChain?.[0]?.defaultFontSize).toBe(20);
+  });
+
+  it('the nearest ancestor theme is index 0, a farther one comes after it', () => {
+    const loader = createFakeResourceLoader();
+    const outer = theme({ defaultFontSize: 10 });
+    const inner = theme({ defaultFontSize: 20 });
+    loader.themes.seed('res://outer.tres', outer);
+    loader.themes.seed('res://inner.tres', inner);
+
+    const nodes = [control('Outer', { theme: 'ExtResource("1_outer")' })];
+    (nodes[0] as TscnNode).children = [control('Inner', { theme: 'ExtResource("1_inner")' })];
+    ((nodes[0] as TscnNode).children[0] as TscnNode).children = [label('Leaf')];
+    const externalResources = [
+      { id: '1_outer', path: 'res://outer.tres', type: 'Theme' },
+      { id: '1_inner', path: 'res://inner.tres', type: 'Theme' },
+    ];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    const outerNode = result.current.tree.find((n) => n.path === 'Outer')!;
+    const innerNode = outerNode.children.find((c) => c.path === 'Outer/Inner')!;
+    const leaf = innerNode.children.find((c) => c.path === 'Outer/Inner/Leaf')!;
+    expect(leaf.themeChain).toEqual([inner, outer]);
+  });
+
+  it('theme inheritance BREAKS at a non-Control ancestor (Node3D), matching ThemeOwner::propagate_theme_changed', () => {
+    const loader = createFakeResourceLoader();
+    loader.themes.seed('res://theme.tres', theme({ defaultFontSize: 24 }));
+
+    const nodes = [control('Root', { theme: 'ExtResource("1_theme")' })];
+    (nodes[0] as TscnNode).children = [node('Bridge', 'Node3D', { children: [label('Leaf')] })];
+    const externalResources = [{ id: '1_theme', path: 'res://theme.tres', type: 'Theme' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    // 'Bridge' (Node3D) contributes no SolveNode — its Control descendant
+    // promotes straight to 'Root's children — but the theme chain resets to
+    // empty at that point rather than being inherited through it.
+    const root = result.current.tree.find((n) => n.path === 'Root')!;
+    const leaf = root.children.find((c) => c.path === 'Root/Bridge/Leaf')!;
+    expect(leaf.themeChain).toEqual([]);
+  });
+
+  it("resolves a node-local theme_override_fonts/<name> ref through the font cache, keyed regardless of the theme's key names", () => {
+    const loader = createFakeResourceLoader();
+    const fontPath = 'res://fonts/bold.ttf';
+    loader.fonts.seed(fontPath, FONT_A);
+
+    const nodes = [label('Title', { themeOverrideFonts: { font: 'ExtResource("1_font")' } })];
+    const externalResources = [{ id: '1_font', path: fontPath, type: 'FontFile' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.fontOverrides).toEqual({ font: FONT_A });
+  });
+
+  it('an override key stays PRESENT (value null) while its font is still pending — presence, not the resolved value, encodes "authored"', () => {
+    const loader = createFakeResourceLoader();
+    const nodes = [label('Title', { themeOverrideFonts: { font: 'ExtResource("1_font")' } })];
+    const externalResources = [{ id: '1_font', path: 'res://fonts/bold.ttf', type: 'FontFile' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.fontOverrides).toEqual({ font: null });
+    expect('font' in (result.current.tree[0]?.fontOverrides ?? {})).toBe(true);
+  });
+
+  it('generation bumps and the theme chain updates once a not-yet-cached theme arrives — pendingThemes is requested in the post-render effect, not during the walk', async () => {
+    const loader = createFakeResourceLoader();
+    const nodes = [control('Root', { theme: 'ExtResource("1_theme")' })];
+    const externalResources = [{ id: '1_theme', path: 'res://theme.tres', type: 'Theme' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    const initialGeneration = result.current.generation;
+    // Cold cache: the walk never blocks on the load, so the root Control
+    // still gets a SolveNode — just with an empty theme chain for now.
+    expect(result.current.tree[0]?.themeChain).toEqual([]);
+    // The request only happens in the post-render effect, never inline
+    // during the synchronous walk — asserted the same way the existing
+    // texture/scene generation tests do: nothing resolves until `_resolve`
+    // is called, proving the walk itself never requested it eagerly enough
+    // to already be cached.
+    expect(loader.themes.cache.has('res://theme.tres')).toBe(false);
+
+    const resolved = theme({ defaultFontSize: 24 });
+    await act(async () => {
+      loader.themes._resolve('res://theme.tres', resolved);
+    });
+
+    expect(result.current.generation).toBeGreaterThan(initialGeneration);
+    expect(result.current.tree[0]?.themeChain).toEqual([resolved]);
+  });
+
+  it('generation bumps once a not-yet-cached font arrives, for a theme_override_fonts ref', async () => {
+    const loader = createFakeResourceLoader();
+    const fontPath = 'res://fonts/bold.ttf';
+    const nodes = [label('Title', { themeOverrideFonts: { font: 'ExtResource("1_font")' } })];
+    const externalResources = [{ id: '1_font', path: fontPath, type: 'FontFile' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    const initialGeneration = result.current.generation;
+    expect(result.current.tree[0]?.fontOverrides).toEqual({ font: null });
+
+    await act(async () => {
+      loader.fonts._resolve(fontPath, FONT_A);
+    });
+
+    expect(result.current.generation).toBeGreaterThan(initialGeneration);
+    expect(result.current.tree[0]?.fontOverrides).toEqual({ font: FONT_A });
+  });
+
+  it("wires the project's default theme (gui/theme/custom) as the final rung of a themeless Control's chain", async () => {
+    // End-to-end through the REAL ResourceLoader (not the fake): project.godot
+    // is read via FileEventBus.tryLoad (ProjectSettingsContext), and the
+    // referenced Theme .tres through the real Theme processor.
+    const projectGodot = [
+      'config_version=5',
+      '',
+      '[gui]',
+      '',
+      'theme/custom="res://project_theme.tres"',
+      '',
+    ].join('\n');
+    const themeTres = [
+      '[gd_resource type="Theme" load_steps=1 format=3]',
+      '',
+      '[resource]',
+      'default_font_size = 30',
+      '',
+    ].join('\n');
+    const files: Record<string, string> = {
+      'res://project.godot': projectGodot,
+      'res://project_theme.tres': themeTres,
+    };
+    const provider: ResourceProvider = {
+      async loadResource(path: string) {
+        const content = files[path];
+        if (content === undefined) throw new Error(`Resource not found: ${path}`);
+        return content;
+      },
+    };
+    const bus = new FileEventBus(provider);
+    const loader = new ResourceLoader(bus);
+    loader.setProvider(provider);
+
+    const nodes = [label('Plain')];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ResourceLoaderProvider loader={loader}>
+          <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+        </ResourceLoaderProvider>
+      ),
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.tree[0]?.projectTheme?.defaultFontSize).toBe(30);
   });
 });
