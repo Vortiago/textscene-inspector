@@ -4,7 +4,7 @@
  * render-order assertions only (pixels are a golden-image concern via
  * `pnpm ref:godot`, not this suite).
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -14,6 +14,8 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
+import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { CheckBox } from './Component';
 import type { CheckBoxProperties } from './types';
 
@@ -172,5 +174,64 @@ describe('<CheckBox> (isolated painter contract)', () => {
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     expect(meshes.length).toBeGreaterThan(0);
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(7);
+  });
+});
+
+/**
+ * The SCENE-FONT (canvas-kind `FontMetrics`) path end to end. CheckBox's own
+ * text placement is `check_box.cpp:126-133` + Button's internal-margin
+ * reservation, with NOTHING font-kind-specific in it — this pins that, since
+ * an atlas-bake anchor leaking back into the placement would be invisible on
+ * the atlas path (where it would look like the correct total) and wrong here
+ * by `ascentPx - base*fontSizePx/42` px.
+ */
+describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    controlSolverRegistry.clear();
+  });
+
+  async function renderWithSceneFont() {
+    vi.spyOn(sceneFontLoader, 'peekSceneFontMetrics').mockReturnValue(TEST_SCENE_FONT_METRICS);
+    return ReactThreeTestRenderer.create(
+      <CheckBox {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+    );
+  }
+
+  /** The canvas painter's mesh — a plain `MeshBasicMaterial` over a `CanvasTexture`, never the MSDF `ShaderMaterial` `findTextMesh` looks for. */
+  function findCanvasTextMesh(scene: Rendered['scene']) {
+    return scene
+      .findAllByType('Mesh')
+      .map((m) => m.instance as THREE.Mesh)
+      .find((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.CanvasTexture);
+  }
+
+  it('paints the label through the canvas rasteriser — ONE quad, not one per glyph, and no MSDF material', async () => {
+    const renderer = await renderWithSceneFont();
+    const mesh = findCanvasTextMesh(renderer.scene);
+    expect(mesh).toBeDefined();
+    expect(mesh!.geometry.getAttribute('position').count).toBe(4);
+    expect(findTextMesh(renderer.scene)).toBeUndefined();
+  });
+
+  it('places the text at the pure check_box.cpp offset — no atlas-bake anchor anywhere in it', async () => {
+    const renderer = await renderWithSceneFont();
+    const mesh = findCanvasTextMesh(renderer.scene)!;
+    // Scene font at 16px: ascentPx = ceil(800*16/1000) = 13, descentPx =
+    // ceil(200*16/1000) = 4, Label's line_spacing 3 -> linePitchPx = 20, so
+    // textNaturalSize.y = 20. contentMargin 4 -> customElementHeight =
+    // 28 - 2*4 = 20; y = (20 - 20)/2 + 4 = 4. x = margin(4) + icon(16) +
+    // h_separation(4) = 24. three's Y is negated Godot px.
+    const group = mesh.parent as THREE.Object3D;
+    expect(group.position.x).toBe(24);
+    expect(group.position.y).toBe(-4);
+  });
+
+  it("the quad's own top edge is the raster's fixed 4px pad, carrying no font-anchor term of its own", async () => {
+    const renderer = await renderWithSceneFont();
+    const mesh = findCanvasTextMesh(renderer.scene)!;
+    const position = mesh.geometry.getAttribute('position');
+    // Vertex order TL, TR, BL, BR; canvasTextPainter.ts's VERTICAL_PAD_PX is 4.
+    expect(position.getY(0)).toBeCloseTo(4, 6);
   });
 });

@@ -4,7 +4,7 @@
  * Structure/tint/render-order assertions only (pixels are a golden-image
  * concern via `pnpm ref:godot`, not this suite).
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -24,6 +24,8 @@ import type { ButtonProperties } from './types';
 import { Button } from './Component';
 import { buttonMinimumSize } from './nativeSolver';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
+import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
@@ -292,5 +294,64 @@ describe('<Button> registered through <ControlCanvasWalker> (end-to-end walker p
 
     controlComponentRegistry.clear();
     controlSolverRegistry.clear();
+  });
+});
+
+/**
+ * The SCENE-FONT (canvas-kind `FontMetrics`) path end to end. Button's own
+ * text placement is `button.cpp:233-456` (`buttonBase.ts`'s
+ * `layoutButtonContent`), with NOTHING font-kind-specific in it — this pins
+ * that, since an atlas-bake anchor leaking back into the placement would be
+ * invisible on the atlas path (where it would read as the correct total) and
+ * wrong here by `ascentPx - base*fontSizePx/42` px.
+ */
+describe('<Button> — scene-font (canvas-kind FontMetrics) text path', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    controlSolverRegistry.clear();
+  });
+
+  async function renderWithSceneFont() {
+    vi.spyOn(sceneFontLoader, 'peekSceneFontMetrics').mockReturnValue(TEST_SCENE_FONT_METRICS);
+    return ReactThreeTestRenderer.create(
+      <Button {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+    );
+  }
+
+  /** The canvas painter's mesh — a plain `MeshBasicMaterial` over a `CanvasTexture`, never the MSDF `ShaderMaterial` `findTextMesh` looks for. */
+  function findCanvasTextMesh(scene: Rendered['scene']) {
+    return scene
+      .findAllByType('Mesh')
+      .map((m) => m.instance as THREE.Mesh)
+      .find((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.CanvasTexture);
+  }
+
+  it('paints the label through the canvas rasteriser — ONE quad, not one per glyph, and no MSDF material', async () => {
+    const renderer = await renderWithSceneFont();
+    const mesh = findCanvasTextMesh(renderer.scene);
+    expect(mesh).toBeDefined();
+    expect(mesh!.geometry.getAttribute('position').count).toBe(4);
+    expect(findTextMesh(renderer.scene)).toBeUndefined();
+  });
+
+  it('places the text at the pure button.cpp offset — no atlas-bake anchor anywhere in it', async () => {
+    const renderer = await renderWithSceneFont();
+    const mesh = findCanvasTextMesh(renderer.scene)!;
+    // Scene font at 16px: ascentPx = ceil(800*16/1000) = 13, descentPx =
+    // ceil(200*16/1000) = 4; Button sets no line_spacing, so linePitchPx = 17
+    // and textNaturalSize = (2 chars * 500*16/1000 = 16, 17). Default theme
+    // contentMargin 4 -> customElementSize = (112, 24), drawable = the same
+    // (no icon); y = (24 - 17)/2 + 4 = 7.5; alignment defaults to CENTER, so
+    // x = 4 + (112 - 16)/2 = 52. three's Y is negated Godot px.
+    const group = mesh.parent as THREE.Object3D;
+    expect(group.position.x).toBe(52);
+    expect(group.position.y).toBe(-7.5);
+  });
+
+  it("the quad's own top edge is the raster's fixed 4px pad, carrying no font-anchor term of its own", async () => {
+    const renderer = await renderWithSceneFont();
+    const mesh = findCanvasTextMesh(renderer.scene)!;
+    // Vertex order TL, TR, BL, BR; canvasTextPainter.ts's VERTICAL_PAD_PX is 4.
+    expect(mesh.geometry.getAttribute('position').getY(0)).toBeCloseTo(4, 6);
   });
 });

@@ -4,7 +4,7 @@
  * tint/clip/render-order assertions only (pixels are a golden-image concern
  * via `pnpm ref:godot`, not this suite).
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -22,6 +22,8 @@ import type { LineEditProperties } from './types';
 import { LineEdit } from './Component';
 import { lineEditMinimumSize } from './nativeSolver';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
+import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -348,5 +350,63 @@ describe('<LineEdit> registered through <ControlCanvasWalker> (end-to-end walker
 
     controlComponentRegistry.clear();
     controlSolverRegistry.clear();
+  });
+});
+
+/**
+ * The SCENE-FONT (canvas-kind `FontMetrics`) path end to end. LineEdit's own
+ * text placement is `line_edit.cpp:1392-1427`'s `x_ofs`/`y_ofs`, with NOTHING
+ * font-kind-specific in it — this pins that, since an atlas-bake anchor
+ * leaking back into the placement would be invisible on the atlas path (where
+ * it would read as the correct total) and wrong here by
+ * `ascentPx - base*fontSizePx/42` px.
+ */
+describe('<LineEdit> — scene-font (canvas-kind FontMetrics) text path', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    controlSolverRegistry.clear();
+  });
+
+  async function renderWithSceneFont() {
+    vi.spyOn(sceneFontLoader, 'peekSceneFontMetrics').mockReturnValue(TEST_SCENE_FONT_METRICS);
+    return ReactThreeTestRenderer.create(
+      <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+    );
+  }
+
+  /** The canvas painter's mesh — a plain `MeshBasicMaterial` over a `CanvasTexture`, never the MSDF `ShaderMaterial` `findTextMesh` looks for. */
+  function findCanvasTextMesh(scene: Rendered['scene']) {
+    return scene
+      .findAllByType('Mesh')
+      .map((m) => m.instance as THREE.Mesh)
+      .find((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.CanvasTexture);
+  }
+
+  it('paints the run through the canvas rasteriser — ONE quad, not one per glyph, and no MSDF material', async () => {
+    const renderer = await renderWithSceneFont();
+    const mesh = findCanvasTextMesh(renderer.scene);
+    expect(mesh).toBeDefined();
+    expect(mesh!.geometry.getAttribute('position').count).toBe(4);
+    expect(findTextMesh(renderer.scene)).toBeUndefined();
+  });
+
+  it('places the text at the pure line_edit.cpp offset — no atlas-bake anchor anywhere in it', async () => {
+    const renderer = await renderWithSceneFont();
+    const mesh = findCanvasTextMesh(renderer.scene)!;
+    // Scene font at 16px: ascentPx = ceil(800*16/1000) = 13, descentPx =
+    // ceil(200*16/1000) = 4; LineEdit sets no line_spacing, so linePitchPx =
+    // 17 and textHeightPx = 17. contentMargin 4 -> y_area = trunc(30-4-4) = 22,
+    // y_ofs = trunc(4 + (22-17)/2) = trunc(6.5) = 6; x_ofs = 4 (LEFT).
+    // three's Y is negated Godot px.
+    const group = mesh.parent as THREE.Object3D;
+    expect(group.position.x).toBe(4);
+    expect(group.position.y).toBe(-6);
+  });
+
+  it("the quad's own top edge is the raster's fixed 4px pad, carrying no font-anchor term of its own", async () => {
+    const renderer = await renderWithSceneFont();
+    const mesh = findCanvasTextMesh(renderer.scene)!;
+    // Vertex order TL, TR, BL, BR; canvasTextPainter.ts's VERTICAL_PAD_PX is 4.
+    expect(mesh.geometry.getAttribute('position').getY(0)).toBeCloseTo(4, 6);
   });
 });

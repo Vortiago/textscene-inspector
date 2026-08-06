@@ -4,7 +4,7 @@
  * pair. Assertions are scene-graph structure and material properties, never
  * pixels — `pnpm ref:godot` is the pixel-measurement tool.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -16,6 +16,8 @@ import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanv
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
+import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { BOLD_DISTANCE_BIAS, ITALIC_SKEW, RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nativeSolver';
 import { RichTextLabel } from './Component';
 
@@ -226,5 +228,56 @@ describe('<RichTextLabel> registered through <ControlCanvasWalker> (end-to-end w
 
     controlComponentRegistry.clear();
     controlSolverRegistry.clear();
+  });
+});
+
+/**
+ * The SCENE-FONT (canvas-kind `FontMetrics`) path end to end. RichTextLabel
+ * has no alignment pass at all — a line's y is its own box top,
+ * `lineIndex * linePitchPx` — so this pins that the placement carries no
+ * atlas-bake anchor, which would be invisible on the atlas path (where it
+ * would read as the correct total) and wrong here by
+ * `ascentPx - base*fontSizePx/42` px.
+ */
+describe('<RichTextLabel> — scene-font (canvas-kind FontMetrics) text path', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  async function renderWithSceneFont(properties: Record<string, unknown>) {
+    vi.spyOn(sceneFontLoader, 'peekSceneFontMetrics').mockReturnValue(TEST_SCENE_FONT_METRICS);
+    return render(properties);
+  }
+
+  function canvasMeshes(renderer: Awaited<ReturnType<typeof render>>): THREE.Mesh[] {
+    return meshesOf(renderer).filter((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.CanvasTexture);
+  }
+
+  it('paints each run through the canvas rasteriser — ONE quad per run, not one per glyph, and no MSDF material', async () => {
+    const renderer = await renderWithSceneFont({ text: 'Hello', bbcodeEnabled: false });
+    const meshes = canvasMeshes(renderer);
+    expect(meshes).toHaveLength(1);
+    expect(meshes[0]!.geometry.getAttribute('position').count).toBe(4);
+    expect(meshesOf(renderer).every((m) => (m.material as THREE.ShaderMaterial).uniforms === undefined)).toBe(true);
+  });
+
+  it('steps line N down by exactly one linePitchPx from its own box top, with nothing added to line 0', async () => {
+    const renderer = await renderWithSceneFont({ text: 'Hi\nHo', bbcodeEnabled: false });
+    const meshes = canvasMeshes(renderer);
+    expect(meshes).toHaveLength(2);
+    // Scene font at 16px: ascentPx = ceil(800*16/1000) = 13, descentPx =
+    // ceil(200*16/1000) = 4; RichTextLabel's own line_separation default is 0
+    // (default_theme.cpp:1217), so linePitchPx = 17. three's Y is negated
+    // Godot px, and line 0 sits at its own box top with NO offset of any kind.
+    const ys = meshes.map((m) => (m.parent as THREE.Object3D).position.y);
+    expect(ys[0]).toBeCloseTo(0, 10);
+    expect(ys[1]).toBeCloseTo(-17, 10);
+  });
+
+  it("each quad's own top edge is the raster's fixed 4px pad, carrying no font-anchor term of its own", async () => {
+    const renderer = await renderWithSceneFont({ text: 'Hi', bbcodeEnabled: false });
+    const mesh = canvasMeshes(renderer)[0]!;
+    // Vertex order TL, TR, BL, BR; canvasTextPainter.ts's VERTICAL_PAD_PX is 4.
+    expect(mesh.geometry.getAttribute('position').getY(0)).toBeCloseTo(4, 6);
   });
 });
