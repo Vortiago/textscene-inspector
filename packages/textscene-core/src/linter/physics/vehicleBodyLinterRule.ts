@@ -16,6 +16,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
+import { tupleComponent } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 
@@ -28,12 +29,16 @@ const SCALE_EPSILON = 0.05;
  * Basis column lengths of a `Transform3D(...)` literal, or null if unparsable.
  * The first nine numbers are the basis ROWS (utils/transform.ts documents the
  * convention); column length is the scale along each axis.
+ *
+ * A non-finite entry is a value, not a parse failure: Godot's own check is
+ * `abs(scale.axis - 1) > 0.05` on those same lengths, which is TRUE for an
+ * infinite column and FALSE for a `nan` one. Reading the components with
+ * `parseFloat` collapsed both to NaN and skipped the check entirely.
  */
 function basisScale(raw: string): [number, number, number] | null {
   const match = TRANSFORM3D_REGEX.exec(raw);
   if (!match) return null;
-  const n = match.slice(1, 10).map((v) => parseFloat(v ?? ''));
-  if (n.some((v) => Number.isNaN(v))) return null;
+  const n = match.slice(1, 10).map(tupleComponent);
   const col = (i: number): number => Math.hypot(n[i]!, n[i + 3]!, n[i + 6]!);
   return [col(0), col(1), col(2)];
 }

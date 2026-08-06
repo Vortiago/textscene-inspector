@@ -4,7 +4,7 @@
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v, makeFloatTupleRegex } from '../../../linter/validators/index.js';
+import { v, makeFloatTupleRegex, tupleComponent } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
@@ -30,8 +30,8 @@ const zoomValidator: PropertyValidator = (key, value, line) => {
     return propertyError(key, line, `Property 'zoom' must be Vector2 with 2 numbers like Vector2(1, 1), got: "${value}"`, 'INVALID_ZOOM_FORMAT');
   }
 
-  const x = parseFloat(match[1]);
-  const y = parseFloat(match[2]);
+  const x = tupleComponent(match[1]);
+  const y = tupleComponent(match[2]);
 
   if (Math.abs(x) < CMP_EPSILON || Math.abs(y) < CMP_EPSILON) {
     return propertyError(key, line, `Property 'zoom' components must be non-zero (got Vector2(${x}, ${y})). Godot allows negative zoom (it flips the view); only a (near-)zero component is invalid.`, 'INVALID_ZOOM_VALUE');

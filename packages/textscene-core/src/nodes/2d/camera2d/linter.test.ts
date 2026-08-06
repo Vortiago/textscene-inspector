@@ -562,4 +562,19 @@ describe('Camera2D Linter — lenient float grammar (#190 #7 follow-up)', () => 
   it('accepts zoom with leading-dot / trailing-dot floats', () => {
     expectClean(scene(node('Camera2D', { zoom: 'Vector2(.5, 2.)' })));
   });
+
+  // camera_2d.cpp:102-105 fails only on `is_zero_approx`, i.e. `abs(v) <
+  // CMP_EPSILON`, which no non-finite component satisfies, so Godot assigns them.
+  it('accepts a non-finite zoom component, which Godot stores as written', () => {
+    expectClean(scene(node('Camera2D', { zoom: 'Vector2(inf, inf_neg)' })));
+    expectClean(scene(node('Camera2D', { zoom: 'Vector2(nan, 1)' })));
+  });
+
+  it('names the non-finite component as a number when the OTHER one is zero', () => {
+    const diagnostic = expectDiagnostic(scene(node('Camera2D', { zoom: 'Vector2(inf, 0)' })), {
+      prop: 'zoom',
+      contains: ['zoom', 'non-zero'],
+    });
+    expect(diagnostic.message).toContain('Vector2(Infinity, 0)');
+  });
 });

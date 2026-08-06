@@ -71,6 +71,19 @@ physics_material_override = SubResource("mat_1")
         expectClean(scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(0, 0, 0)' }), collisionShape3d));
       });
 
+      // physics_body_3d.cpp's setter is a bare assignment and the property
+      // carries no hint, so an infinite component is stored: the advisory is
+      // about the velocity being non-zero, which an infinite one is.
+      it('warns on a non-finite constant_linear_velocity without calling it malformed', () => {
+        expectNoErrors(
+          scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(inf, 0, 0)' }), collisionShape3d)
+        );
+        expectDiagnostic(
+          scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(inf, 0, 0)' }), collisionShape3d),
+          { ruleName: 'staticbody3d-constant-velocity-warning', severity: 'warning' }
+        );
+      });
+
       it('should reject invalid constant_linear_velocity format', () => {
         expectDiagnostic(
           scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1, 2)' })),

@@ -11,6 +11,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { hasDescendantOfType } from './hasDescendantOfType.js';
 import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
 import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
+import { tupleComponent } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { rangeAdvisories } from '../rangeAdvisory.js';
@@ -90,10 +91,10 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
     if (rawProps.up_direction !== undefined) {
       const match = upDirRegex.exec(rawProps.up_direction);
       if (match) {
-        const x = parseFloat(match[1] || '0');
-        const y = parseFloat(match[2] || '0');
+        const x = tupleComponent(match[1]);
+        const y = tupleComponent(match[2]);
         const isStandard =
-          dim === '2D' ? x === 0 && y === -1 : x === 0 && y === 1 && parseFloat(match[3] || '0') === 0;
+          dim === '2D' ? x === 0 && y === -1 : x === 0 && y === 1 && tupleComponent(match[3]) === 0;
         if (!isStandard) {
           diagnostics.push({
             severity: 'warning',

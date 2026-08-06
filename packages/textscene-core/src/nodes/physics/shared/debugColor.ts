@@ -15,7 +15,7 @@
 
 import type { Color } from '../../../utils/colorParser';
 import { colorOr } from '../../../utils/colorParser';
-import { propertyError } from '../../../linter/validators/index.js';
+import { v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 /** ProjectSettings `debug/shapes/collision/shape_color`. */
@@ -31,30 +31,20 @@ export function parseDebugColor(raw: string | undefined): Color {
 }
 
 /**
- * Strict validator for `debug_color`. Bespoke rather than `v.color` because
- * Godot accepts BOTH `Color(r, g, b)` and `Color(r, g, b, a)` here, while
- * `v.color` requires exactly four components.
+ * Strict validator for `debug_color`.
+ *
+ * The shared `Color` grammar, not a bespoke one. It used to be a hand-rolled
+ * `[\d.]+`-per-channel regex that also allowed a three-argument spelling, and it
+ * was wrong at both ends: `VariantParser::parse_value` refuses a `Color` whose
+ * argument count is not 4 (`variant_parser.cpp:913`), while a channel is a plain
+ * float, so the negative/overbright, scientific and non-finite forms `rtos_fix`
+ * writes (`:2145`) all load and were being reported.
+ *
+ * Both CollisionShape2D::set_debug_color (collision_shape_2d.cpp:235-241) and
+ * CollisionShape3D::set_debug_color (collision_shape_3d.cpp:252-262) are bare
+ * assignments, and `debug_color`'s ADD_PROPERTY (collision_shape_2d.cpp:296,
+ * collision_shape_3d.cpp:182) carries PROPERTY_HINT_NONE: no hint string, so no
+ * component range to ground. This only rejects a malformed Color literal, which
+ * is what `v.color` is.
  */
-const COLOR_3_OR_4_REGEX =
-  /^Color\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(?:,\s*[\d.]+\s*)?\)$/;
-
-export const debugColorValidator: PropertyValidator = (key, value, line) => {
-  if (!COLOR_3_OR_4_REGEX.test(value)) {
-    return propertyError(
-      key,
-      line,
-      `Property 'debug_color' must be in Color(r, g, b) or Color(r, g, b, a) format, got: "${value}"`,
-      'INVALID_DEBUG_COLOR_FORMAT'
-    );
-  }
-  return null;
-};
-
-// Shown in each sheet's generated `## Linting` table.
-debugColorValidator.accepts = 'Color(r, g, b, a)';
-// Both CollisionShape2D::set_debug_color (collision_shape_2d.cpp:235-241) and
-// CollisionShape3D::set_debug_color (collision_shape_3d.cpp:252-262) are bare
-// assignments, and `debug_color`'s ADD_PROPERTY (collision_shape_2d.cpp:296,
-// collision_shape_3d.cpp:182) carries PROPERTY_HINT_NONE: no hint string, so
-// no component range to ground. This only rejects a malformed Color literal.
-debugColorValidator.formatOnly = true;
+export const debugColorValidator: PropertyValidator = v.color('debug_color');

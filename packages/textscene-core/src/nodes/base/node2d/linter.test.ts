@@ -156,6 +156,23 @@ describe('Node2D Linter', () => {
       });
     });
 
+    // node_2d.cpp:194-198's guard is `is_zero_approx`, i.e. `abs(v) <
+    // CMP_EPSILON`, which is false for an infinite component and false for a
+    // `nan` one, so Godot assigns both unaltered.
+    it('tolerates a non-finite scale component, which Godot stores as written', () => {
+      expectClean(scene(node('Node2D', { scale: 'Vector2(inf, inf_neg)' })));
+      expectClean(scene(node('Node2D', { scale: 'Vector2(nan, 1)' })));
+    });
+
+    it('names the non-finite component as a number when the OTHER one is zero', () => {
+      const diagnostic = expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(inf, 0)' })), {
+        ruleName: 'strict-parser',
+        severity: 'error',
+        contains: ['scale', 'non-zero'],
+      });
+      expect(diagnostic.message).toContain('Vector2(Infinity, 0)');
+    });
+
     it('should detect invalid scale format', () => {
       expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(1)' })), {
         ruleName: 'strict-parser',

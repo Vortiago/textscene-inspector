@@ -13,12 +13,13 @@
 
 import '../../canvasitem/shared/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v, makeFloatTupleRegex } from '../../../linter/validators/index.js';
+import { v, makeFloatTupleRegex, tupleComponent } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
-// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific) so the
-// bespoke `scale` validator stays as lenient as the renderer and v.vector2.
+// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific, plus the
+// non-finite spellings Godot writes) so the bespoke `scale` validator stays as
+// lenient as v.vector2.
 const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 
 // Godot's own CMP_EPSILON (core/math/math_defs.h), the threshold
@@ -36,8 +37,8 @@ const scaleValidator: PropertyValidator = (key, value, line) => {
     return propertyError(key, line, `Property 'scale' must be Vector2 with 2 numbers like Vector2(1, 1), got: "${value}"`, 'INVALID_SCALE_FORMAT');
   }
 
-  const x = parseFloat(match[1] || '0');
-  const y = parseFloat(match[2] || '0');
+  const x = tupleComponent(match[1]);
+  const y = tupleComponent(match[2]);
 
   if (Math.abs(x) < CMP_EPSILON || Math.abs(y) < CMP_EPSILON) {
     return propertyError(key, line, `Property 'scale' must have non-zero values, got: Vector2(${x}, ${y}). Zero scale causes rendering issues.`, 'INVALID_SCALE_VALUE');

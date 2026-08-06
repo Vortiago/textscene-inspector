@@ -12,6 +12,7 @@ import { checkResourceExists } from '../resourceChecker.js';
 import { hasDescendantOfType } from './hasDescendantOfType.js';
 import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
 import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
+import { tupleComponent } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
@@ -31,7 +32,7 @@ export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
       return false;
     }
     for (let i = 1; i <= vectorArity; i++) {
-      if (parseFloat(match[i] || '0') !== 0) {
+      if (tupleComponent(match[i]) !== 0) {
         return true;
       }
     }

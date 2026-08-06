@@ -2,6 +2,7 @@
 
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
+import { FLOAT_PATTERN_SOURCE } from '../../parser/vectors.js';
 
 /**
  * The float spellings Godot's parser accepts that `parseFloat` does not.
@@ -24,6 +25,56 @@ const NON_FINITE_FLOATS: Readonly<Record<string, number>> = {
 };
 
 /**
+ * One float COMPONENT of a composite literal, as Godot's tokenizer reads it:
+ * the renderer's finite grammar plus the four spellings above.
+ *
+ * `_parse_construct` (`variant_parser.cpp:552-596`) accepts any constructor
+ * argument that is a number OR an identifier `stor_fix` recognises, and the
+ * writer puts every component of every real-typed composite through `rtos_fix`
+ * (`Vector2` :2040, `Rect2` :2048, `Vector3` :2056, `Vector4` :2064, `Plane`
+ * :2072, `AABB` :2076, `Quaternion` :2080, `Transform2D` :2090, `Basis` :2104,
+ * `Transform3D` :2119, `Projection` :2135, `Color` :2145, and the packed float
+ * / vector / colour arrays :2459-2549). So every one of those can carry `inf`.
+ * The `i`-suffixed composites cannot: they serialise through `itos`.
+ *
+ * DELIBERATELY not the renderer's grammar. `parser/vectors.ts` keeps
+ * {@link FLOAT_PATTERN_SOURCE} finite because a component that reaches three.js
+ * as `Infinity` yields NaN geometry, and the lenient parser's warn-then-unset
+ * fallback (a documented default) is the better render of a value no viewport
+ * can show. That split already exists for SCALARS — `floatOr` in
+ * `parser/valueParsers.ts` falls back on `inf` while `v.float` accepts it — and
+ * this is the same split for composites. The linter's job is to report what
+ * Godot refuses, and Godot refuses none of these.
+ *
+ * Derived from the finite grammar and from {@link NON_FINITE_FLOATS}'s keys, so
+ * the pattern cannot come to accept a spelling `parseGodotFloat` does not read,
+ * or vice versa. Longest key first, so `inf_neg` is never shadowed by `inf`
+ * (the alternation is leftmost-first). The keys are literal-safe: letters,
+ * an underscore and a leading `-`, none of them regex metacharacters outside a
+ * character class.
+ *
+ * Adds no quantifier, so the ReDoS shape the finite grammar is careful about
+ * (see its docblock) is untouched: the four alternatives are fixed-length
+ * literals, and none of them can start where the numeric branch can, since that
+ * branch needs a digit or `.` after its optional sign. At most one alternative
+ * is viable at any position, so this stays a constant factor on a linear match
+ * rather than a new backtracking dimension.
+ *
+ * No capture group — callers wrap it in `(…)` and read `match[1..arity]`.
+ */
+export const TSCN_FLOAT_PATTERN_SOURCE = `(?:${Object.keys(NON_FINITE_FLOATS)
+  .sort((a, b) => b.length - a.length)
+  .join('|')}|${FLOAT_PATTERN_SOURCE})`;
+
+/**
+ * ONE float literal, anchored — the same grammar as a tuple component, for the
+ * arbitrary-length packed arrays, whose elements are checked one at a time
+ * rather than through a fixed-arity regex. Compiled once and shared; no `g`
+ * flag, so `.test()` on the shared instance is stateless.
+ */
+export const TSCN_FLOAT_RE = new RegExp(`^${TSCN_FLOAT_PATTERN_SOURCE}$`);
+
+/**
  * A TSCN float literal as a number, or `null` when the text is not one.
  *
  * `null` rather than NaN is the miss signal precisely because `nan` is itself a
@@ -43,6 +94,20 @@ export function parseGodotFloat(value: string): number | null {
   }
   const num = parseFloat(trimmed);
   return Number.isNaN(num) ? null : num;
+}
+
+/**
+ * One capture group of an ALREADY-MATCHED float tuple, as a number.
+ *
+ * The component grammar and {@link parseGodotFloat} are derived from the same
+ * table, so a component the regex matched always reads: the NaN is unreachable,
+ * and every comparison against it is false anyway, which is what a validator
+ * wants for a component it cannot place on the number line. Use this rather
+ * than `parseFloat` wherever a matched component is compared, or `inf` reads as
+ * NaN and a bound silently stops applying to it.
+ */
+export function tupleComponent(text: string | undefined): number {
+  return parseGodotFloat(text ?? '') ?? NaN;
 }
 
 /**

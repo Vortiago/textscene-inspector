@@ -181,6 +181,24 @@ describe('CPUParticles3D strict validators', () => {
       expect(check('emission_points', 'not-an-array')?.code).toBe('INVALID_EMISSION_POINTS_FORMAT');
     });
 
+    // variant_parser.cpp:2519 (points/normals) and :2534 (colors) put every
+    // component through `rtos_fix`, which writes `inf` / `inf_neg` / `nan`
+    // (:1985-1997). `Number()` reads none of them, so they were format errors on
+    // arrays Godot itself wrote.
+    it('accepts a non-finite component, which the array writer emits', () => {
+      expect(check('emission_points', 'PackedVector3Array(0, inf, 0)')).toBeNull();
+      expect(check('emission_normals', 'PackedVector3Array(0, inf_neg, nan)')).toBeNull();
+      expect(check('emission_colors', 'PackedColorArray(1, 1, 1, -inf)')).toBeNull();
+    });
+
+    it('still rejects an element with trailing garbage', () => {
+      // `parseFloat` would read `1abc` as 1; Godot's tokenizer stops the number
+      // at `a` and then fails on the unexpected identifier.
+      expect(check('emission_points', 'PackedVector3Array(0, 1abc, 0)')?.code).toBe(
+        'INVALID_EMISSION_POINTS_FORMAT'
+      );
+    });
+
     // variant_parser.cpp:1573 divides the flat float count by 3 with integer
     // division and drops the remainder, so a count that isn't a multiple of 3
     // still loads (as a shorter array) rather than failing to parse.

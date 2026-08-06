@@ -32,6 +32,17 @@ describe('rangeAdvisories', () => {
   describe('over arm', () => {
     const table: RangeAdvisoryTable = { x: [{ over: 10, ruleName: 'x-over', message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }] };
 
+    // `inf` is a legal literal Godot stores unaltered (variant_parser.cpp:150-155),
+    // and it is above every bound. `parseFloat` read it as NaN, which the
+    // non-numeric guard then dropped, so the advisory silently stopped applying.
+    it('trips on inf, which is above every bound', () => {
+      expect(rangeAdvisories(nodeWith({ x: 'inf' }), table)).toHaveLength(1);
+    });
+
+    it('stays silent on nan, whose every comparison is false', () => {
+      expect(rangeAdvisories(nodeWith({ x: 'nan' }), table)).toEqual([]);
+    });
+
     it('trips strictly above the bound', () => {
       expect(rangeAdvisories(nodeWith({ x: '11' }), table)).toHaveLength(1);
     });

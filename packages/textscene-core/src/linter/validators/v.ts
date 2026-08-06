@@ -30,6 +30,8 @@ import {
   createNumericRangeValidator,
   createPositiveIntegerValidator,
   parseGodotFloat,
+  tupleComponent,
+  TSCN_FLOAT_RE,
 } from './commonValidators.js';
 import {
   createNodePathValidator,
@@ -580,7 +582,7 @@ export const v = {
           formatCode(name)
         );
       }
-      const parts = [match[1], match[2], match[3]].map((c) => parseFloat(c ?? '0'));
+      const parts = [match[1], match[2], match[3]].map(tupleComponent);
       const belowMin = min !== undefined && parts.some((c) => c < min);
       const aboveMax = max !== undefined && parts.some((c) => c > max);
       if (belowMin || aboveMax) {
@@ -763,7 +765,8 @@ export const v = {
    * the grammar parsed fine and the content is wrong.
    *
    * Godot serialises an empty array as `PackedVector2Array()`, so zero values is legal.
-   * Godot writes signed, scientific (`4.37114e-08`) and whitespace-padded numbers.
+   * Godot writes signed, scientific (`4.37114e-08`), whitespace-padded and
+   * non-finite (`inf` / `inf_neg` / `nan`) numbers.
    *
    * Implemented standalone rather than reusing `parsePackedVector2Array` from the
    * resources layer: that helper throws on bad input instead of returning a ParseError,
@@ -788,8 +791,11 @@ export const v = {
 
       const parts = body.split(',');
       for (const part of parts) {
-        const n = Number(part.trim());
-        if (part.trim() === '' || !Number.isFinite(n)) {
+        // The component GRAMMAR, not a numeric parse: `Number()` refuses `inf`,
+        // which `rtos_fix` writes into these arrays too (variant_parser.cpp:2504),
+        // while `parseFloat` would accept the trailing garbage in `1abc` that
+        // Godot's tokenizer stops at.
+        if (!TSCN_FLOAT_RE.test(part.trim())) {
           return propertyError(
             key,
             line,

@@ -14,6 +14,7 @@
 import type { Diagnostic } from './types.js';
 import type { TscnNode } from '../parser/types.js';
 import { isValidProperties } from './linterUtils.js';
+import { parseGodotFloat } from './validators/commonValidators.js';
 
 interface ArmBase {
   /** Rule name carried on the emitted diagnostic (may be shared across a property's arms). */
@@ -64,8 +65,11 @@ export function rangeAdvisories(node: TscnNode, table: RangeAdvisoryTable): Diag
   for (const [property, arms] of Object.entries(table)) {
     const raw = props[property];
     if (raw === undefined) continue;
-    const value = parseFloat(raw);
-    if (Number.isNaN(value)) continue;
+    // `parseGodotFloat`, not `parseFloat`: `inf` is a value above every bound,
+    // not an unreadable property. `nan` reads as NaN and trips nothing, since
+    // every comparison against it is false.
+    const value = parseGodotFloat(raw);
+    if (value === null) continue;
 
     for (const arm of arms) {
       const tripped =

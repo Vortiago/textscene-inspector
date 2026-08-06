@@ -2,18 +2,24 @@
 
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
-import { FLOAT_PATTERN_SOURCE } from '../../parser/vectors.js';
+import { TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.js';
 
 /**
  * Build the anchored regex for a fixed-arity float tuple like `Vector3(x, y, z)`
- * or `Color(r, g, b, a)`. Each component uses the canonical
- * {@link FLOAT_PATTERN_SOURCE} shared with the renderer (parser/vectors.ts), so
- * the linter accepts exactly what the renderer parses — `.5`, `5.`, `+5` and
- * scientific notation included. Each component is a capture group, so callers
- * that `.exec()` the returned regex still read `match[1..arity]`.
+ * or `Color(r, g, b, a)`. Each component is a capture group, so callers that
+ * `.exec()` the returned regex still read `match[1..arity]`.
+ *
+ * Components use {@link TSCN_FLOAT_PATTERN_SOURCE} — Godot's tokenizer grammar,
+ * which is the renderer's `FLOAT_PATTERN_SOURCE` (`.5`, `5.`, `+5`, scientific
+ * notation) PLUS `inf` / `-inf` / `inf_neg` / `nan`. The linter deliberately
+ * accepts MORE than the renderer parses here: Godot writes a non-finite
+ * component into every real-typed composite, so reporting one is a false
+ * positive, while feeding `Infinity` to three.js is NaN geometry. The renderer
+ * keeps its finite grammar and substitutes its documented default instead;
+ * `TSCN_FLOAT_PATTERN_SOURCE`'s docblock holds the full argument.
  */
 export function makeFloatTupleRegex(typeName: string, arity: number): RegExp {
-  const component = `(${FLOAT_PATTERN_SOURCE})`;
+  const component = `(${TSCN_FLOAT_PATTERN_SOURCE})`;
   const body = Array.from({ length: arity }, () => component).join('\\s*,\\s*');
   return new RegExp(`^${typeName}\\(\\s*${body}\\s*\\)$`);
 }

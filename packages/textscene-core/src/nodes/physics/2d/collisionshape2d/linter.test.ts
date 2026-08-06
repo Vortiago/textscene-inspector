@@ -114,10 +114,24 @@ describe('CollisionShape2D Linter', () => {
         },
         {
           prop: 'debug_color',
-          valid: ['Color(1, 0, 0)', 'Color(0, 0.6, 0.7, 0.42)', 'Color( 0.5 , 0.5 , 0.5 , 1.0 )'],
+          valid: [
+            'Color(0, 0.6, 0.7, 0.42)',
+            'Color( 0.5 , 0.5 , 0.5 , 1.0 )',
+            // Every component is a plain float the setter assigns unaltered, and
+            // `rtos_fix` writes all three of these forms: an overbright/negative
+            // channel, the scientific notation Godot emits for small values, and
+            // a non-finite channel (variant_parser.cpp:2145).
+            'Color(-0.5, 0, 0, 1)',
+            'Color(1e-05, 0, 0, 1)',
+            'Color(inf, 0, 0, 1)',
+          ],
           invalid: [
             { value: '"red"', ruleName: 'strict-parser', contains: ['debug_color', 'Color'] },
             { value: 'Color(1, 0)', contains: ['debug_color'] },
+            // variant_parser.cpp:913 — `args.size() != 4` is ERR_PARSE_ERROR, so
+            // the three-argument spelling GDScript allows does not load from a
+            // .tscn at all. The renderer's COLOR_RE has always required four.
+            { value: 'Color(1, 0, 0)', contains: ['debug_color'] },
           ],
         },
       ]

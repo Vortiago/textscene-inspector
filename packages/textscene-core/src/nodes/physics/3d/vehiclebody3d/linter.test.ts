@@ -175,6 +175,41 @@ describe('VehicleBody3D Linter', () => {
       expectNoDiagnostic(content, { ruleName: 'vehiclebody3d-scaled-transform' });
     });
 
+    // rigid_body_3d.cpp:665-667 measures `get_basis().get_scale()` and warns when
+    // any axis is further than 0.05 from 1. An infinite basis entry makes that
+    // column's length infinite, so Godot warns; a `nan` one makes every
+    // comparison false, so it does not.
+    it('warns on an infinite basis component, which Godot measures as scaled', () => {
+      const diagnostic = expectDiagnostic(
+        scene(
+          node(
+            'VehicleBody3D',
+            { transform: 'Transform3D(inf, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)' },
+            { name: 'Vehicle' }
+          ),
+          wheel,
+          collisionShape3d
+        ),
+        { ruleName: 'vehiclebody3d-scaled-transform', severity: 'warning' }
+      );
+      // The measured column lengths, never NaN — the message is the only place
+      // the read shows, and `parseFloat` used to make it unreachable entirely.
+      expect(diagnostic.message).toContain('(Infinity, 1, 1)');
+    });
+
+    it('stays quiet on a nan basis component, whose comparisons are all false', () => {
+      const content = scene(
+        node(
+          'VehicleBody3D',
+          { transform: 'Transform3D(nan, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)' },
+          { name: 'Vehicle' }
+        ),
+        wheel,
+        collisionShape3d
+      );
+      expectNoDiagnostic(content, { ruleName: 'vehiclebody3d-scaled-transform' });
+    });
+
     it('stays quiet on an unscaled translated transform', () => {
       const content = scene(
         node(

@@ -36,8 +36,9 @@
  * All three setters (cpu_particles_3d.cpp:439-449) are bare assignments and
  * the properties carry no hint, so nothing about their VALUE is checked here.
  * `packedTupleArray` is format-only, and its shape mirrors Godot's own
- * `VariantParser::_parse_construct` (variant_parser.cpp:552-591): a
- * comma-separated, all-numeric constructor body. A count that isn't a
+ * `VariantParser::_parse_construct` (variant_parser.cpp:552-596): a
+ * comma-separated constructor body whose every element is a float literal,
+ * `inf` / `-inf` / `inf_neg` / `nan` included. A count that isn't a
  * multiple of the tuple arity is NOT rejected by that parser.
  * `parse_value` (variant_parser.cpp:1573 Vector3Array, :1609 ColorArray)
  * divides the flat float count by the arity with integer division and drops
@@ -47,7 +48,7 @@
 
 import '../../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v, accepts, propertyError } from '../../../../linter/validators/index.js';
+import { v, accepts, propertyError, TSCN_FLOAT_RE } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME', 2: 'VIEW_DEPTH' };
@@ -96,8 +97,11 @@ function packedTupleArray(name: string, wrapper: string, groupSize: number, acce
 
     const parts = body.split(',');
     for (const part of parts) {
-      const n = Number(part.trim());
-      if (part.trim() === '' || !Number.isFinite(n)) {
+      // The component GRAMMAR, not a numeric parse — same reason as
+      // `v.packedVector2Array`: `Number()` refuses the `inf` that `rtos_fix`
+      // writes (variant_parser.cpp:2519, :2534), `parseFloat` accepts trailing
+      // garbage Godot's tokenizer stops at.
+      if (!TSCN_FLOAT_RE.test(part.trim())) {
         return propertyError(
           key,
           line,

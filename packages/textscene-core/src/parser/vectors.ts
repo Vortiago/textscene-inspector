@@ -21,6 +21,14 @@ export interface Vector3 {
  * (e.g. a long digit run in untrusted .tscn input) backtracks quadratically —
  * a ReDoS. `\d+(?:\.\d*)?` matches the SAME language but consumes each digit
  * run in one `\d+`, keeping the match linear.
+ *
+ * FINITE by choice, and therefore NARROWER than Godot's own tokenizer: `inf`,
+ * `-inf`, `inf_neg` and `nan` are legal components that Godot writes, and this
+ * pattern refuses them so the decoders warn-then-fall-back to a documented
+ * default rather than handing three.js an `Infinity` it renders as NaN
+ * geometry. The linter must NOT report those, so it has its own widened
+ * pattern, derived from this one: `TSCN_FLOAT_PATTERN_SOURCE` in
+ * `linter/validators/commonValidators.ts`.
  */
 export const FLOAT_PATTERN_SOURCE = String.raw`[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?`;
 
