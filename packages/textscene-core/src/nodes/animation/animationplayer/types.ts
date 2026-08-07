@@ -49,8 +49,12 @@ export interface AnimationPlayerProperties extends Node3DProperties {
   /** Method call mode (default: DEFERRED). */
   method_call_mode: MethodCallMode;
 
-  /** Whether the player is currently active (default: true). */
-  playback_active: boolean;
+  /**
+   * AnimationMixer.active — whether the mixer applies anything at all
+   * (animation_mixer.cpp:2458, default true at animation_mixer.h:137). The
+   * deprecated `playback_active` key is the SAME field, not a second property.
+   */
+  active: boolean;
 
   /** Name of the animation to play automatically on ready (empty = none). */
   autoplay: string;

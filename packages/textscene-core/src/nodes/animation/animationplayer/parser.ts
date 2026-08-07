@@ -37,7 +37,7 @@ export function parseAnimationPlayer(
       MethodCallMode.DEFERRED,
       [MethodCallMode.DEFERRED, MethodCallMode.IMMEDIATE]
     ),
-    playback_active: boolOr(properties.playback_active, true),
+    active: isActive(properties),
     autoplay: stripQuotes(properties.autoplay ?? ''),
     current_animation: stripQuotes(properties.current_animation ?? ''),
     current_animation_length: floatOr(properties.current_animation_length, 0.0),
@@ -45,6 +45,26 @@ export function parseAnimationPlayer(
     root_node: properties.root_node ?? 'NodePath("..")',
     libraries,
   };
+}
+
+/**
+ * Godot's `AnimationMixer::is_active()` — whether the mixer applies anything at
+ * all (animation_mixer.cpp:2458, defaulting to true at animation_mixer.h:137,
+ * so Godot omits the key unless it is false).
+ *
+ * `active` and `playback_active` are ONE field, not two: AnimationPlayer's
+ * deprecated `_set`/`_get` alias forwards straight into `set_active`/`is_active`
+ * (animation_player.cpp:59,98) and is never pushed by `_get_property_list`, so
+ * only a 3.x scene carries it. Godot resolves a scene holding both by file
+ * order, since both calls land on the same setter; preferring the modern key
+ * here is our choice for a shape Godot never writes, not the engine's rule.
+ *
+ * Exported so the semantic rule reads the field the same way the renderer does
+ * — they disagreed once, and the linter was reporting only the spelling Godot
+ * never writes.
+ */
+export function isActive(properties: Record<string, string>): boolean {
+  return boolOr(properties.active ?? properties.playback_active, true);
 }
 
 const SUB_RESOURCE_REF = /^SubResource\("([^"]+)"\)$/;

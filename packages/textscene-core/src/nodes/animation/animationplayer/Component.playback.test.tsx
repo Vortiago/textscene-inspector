@@ -64,7 +64,7 @@ function makeAP(overrides: Partial<AnimationPlayerProperties> = {}): TscnNode {
     playback_default_blend_time: 0.0,
     playback_process_mode: AnimationProcessMode.IDLE,
     method_call_mode: MethodCallMode.DEFERRED,
-    playback_active: true,
+    active: true,
     autoplay: '',
     current_animation: '',
     current_animation_length: 0.0,
@@ -175,10 +175,33 @@ describe('AnimationPlayer playback (E)', () => {
 
   it('does not drive the scene while another node is selected (C)', async () => {
     const renderer = await mountScene({}, INTERNAL, { select: 'Root/SomethingElse' });
-    // Even if the transport is told to play, an inactive player ignores it.
+    // Even if the transport is told to play, a deselected player ignores it.
     await ReactThreeTestRenderer.act(async () => transport.play());
     await renderer.advanceFrames(2, 0.5);
     expect(targetX(renderer)).toBeCloseTo(0);
+  });
+
+  it('applies nothing while `active` is false, however it is told to play', async () => {
+    // animation_player.cpp:664 — `seek_internal` opens with `if (!active) {
+    // return; }`, so the scrub this transport performs is refused outright,
+    // not merely the runtime process callback (animation_mixer.cpp:446-455).
+    const renderer = await mountScene({ active: false });
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(2, 0.5);
+    expect(targetX(renderer)).toBeCloseTo(0);
+  });
+
+  it('refuses a paused scrub while `active` is false', async () => {
+    const renderer = await mountScene({ active: false });
+    await ReactThreeTestRenderer.act(async () => transport.pause());
+    await ReactThreeTestRenderer.act(async () => transport.seek(0.8));
+    await renderer.advanceFrames(1, 0);
+    expect(targetX(renderer)).toBeCloseTo(0);
+  });
+
+  it('still registers an inactive player\'s clips — Godot lists them, it only refuses to seek', async () => {
+    await mountScene({ active: false });
+    expect(transport.clips).toEqual(['slide']);
   });
 
   it('stops and restores the authored pose when it loses selection (C)', async () => {

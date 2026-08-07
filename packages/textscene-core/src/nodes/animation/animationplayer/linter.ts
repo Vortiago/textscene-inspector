@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
-import { extractLibraries, stripQuotes } from './parser.js';
+import { extractLibraries, isActive, stripQuotes } from './parser.js';
 import { resolveAnimations } from './animationResolver.js';
 
 /**
@@ -147,11 +147,16 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
     })
   );
 
-  // Warning: playback_active is false
-  if (rawProps.playback_active === 'false') {
+  // WARNING: the mixer is switched off. Godot raises no configuration warning
+  // for this — AnimationMixer declares no get_configuration_warnings() override
+  // — but it is not a style opinion either: seek_internal returns immediately
+  // on `!active` (animation_player.cpp:664), so nothing this node declares can
+  // ever reach the scene. Read through `isActive` so the advisory and the
+  // renderer cannot disagree about which key spells it.
+  if (!isActive(rawProps)) {
     diagnostics.push({
       severity: 'warning',
-      message: `AnimationPlayer 'playback_active' is set to false. Animations will not play until this is set to true at runtime.`,
+      message: `AnimationPlayer 'active' is set to false. Animations will not play until this is set to true at runtime.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'animationplayer-inactive',

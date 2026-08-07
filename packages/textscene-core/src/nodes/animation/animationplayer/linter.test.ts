@@ -39,6 +39,41 @@ describe('AnimationPlayer Linter', () => {
     });
   });
 
+  describe('the inactive-player advisory', () => {
+    // `active` and `playback_active` are ONE field (animation_player.cpp:59,98
+    // forward the deprecated alias into set_active), and only the deprecated
+    // spelling was ever checked — so the key Godot actually writes went by
+    // unreported.
+    const withActive = (properties: Record<string, string>) =>
+      scene(node('AnimationPlayer', { 'anims/idle': 'SubResource("Animation_1")', ...properties }, { name: 'Anim' }));
+
+    const INACTIVE = { ruleName: 'animationplayer-inactive' };
+
+    it('reports the modern key Godot writes', () => {
+      expectDiagnostic(withActive({ active: 'false' }), {
+        ...INACTIVE,
+        severity: 'warning',
+        contains: ['active', 'false', 'will not play'],
+      });
+    });
+
+    it('reports the deprecated playback_active alias too', () => {
+      expectDiagnostic(withActive({ playback_active: 'false' }), INACTIVE);
+    });
+
+    it('stays quiet when the key is absent, which is Godot\'s default-true form', () => {
+      expectNoDiagnostic(withActive({}), INACTIVE);
+    });
+
+    it('stays quiet on an explicit true', () => {
+      expectNoDiagnostic(withActive({ active: 'true' }), INACTIVE);
+    });
+
+    it('lets the modern key settle a scene carrying both', () => {
+      expectNoDiagnostic(withActive({ active: 'true', playback_active: 'false' }), INACTIVE);
+    });
+  });
+
   describe('Strict Parser Validation (Format)', () => {
     it('should pass validation for valid AnimationPlayer properties', () => {
       expectClean(
@@ -292,21 +327,8 @@ describe('AnimationPlayer Linter', () => {
       });
     });
 
-    describe('playback_active warning', () => {
-      it('should warn when playback_active is false', () => {
-        expectDiagnostic(scene(node('AnimationPlayer', { playback_active: false })), {
-          prop: 'playback_active',
-          severity: 'warning',
-          contains: ['playback_active', 'false', 'will not play'],
-        });
-      });
-
-      it('should not provide info when playback_active is true', () => {
-        expectNoDiagnostic(scene(node('AnimationPlayer', { playback_active: true })), {
-          prop: 'playback_active',
-        });
-      });
-    });
+    // The inactive-player advisory lives in its own describe above: it covers
+    // both spellings of the one field, which is what this block missed.
 
     describe('root_node path validation', () => {
       it('should warn for unusual root_node path format', () => {

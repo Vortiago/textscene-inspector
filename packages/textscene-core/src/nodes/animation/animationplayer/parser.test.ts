@@ -22,7 +22,7 @@ describe('parseAnimationPlayer defaults', () => {
     expect(props.playback_default_blend_time).toBe(0.0);
     expect(props.playback_process_mode).toBe(AnimationProcessMode.IDLE);
     expect(props.method_call_mode).toBe(MethodCallMode.DEFERRED);
-    expect(props.playback_active).toBe(true);
+    expect(props.active).toBe(true);
     expect(props.autoplay).toBe('');
     expect(props.current_animation).toBe('');
     expect(props.current_animation_length).toBe(0.0);
@@ -67,9 +67,21 @@ describe('parseAnimationPlayer properties', () => {
     expect(props.method_call_mode).toBe(MethodCallMode.IMMEDIATE);
   });
 
-  it('parses playback_active = false', () => {
+  it('parses active = false', () => {
+    const props = parseAnimationPlayer(HEADING, { active: 'false' });
+    expect(props.active).toBe(false);
+  });
+
+  it('reads the deprecated playback_active alias into the same field', () => {
+    // animation_player.cpp:59/:98 forward `playback_active` straight into
+    // set_active/is_active, so it is not a second property.
     const props = parseAnimationPlayer(HEADING, { playback_active: 'false' });
-    expect(props.playback_active).toBe(false);
+    expect(props.active).toBe(false);
+  });
+
+  it('prefers the modern active key when a scene carries both', () => {
+    const props = parseAnimationPlayer(HEADING, { active: 'true', playback_active: 'false' });
+    expect(props.active).toBe(true);
   });
 
   it('strips quotes from autoplay animation name', () => {

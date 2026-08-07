@@ -14,7 +14,7 @@ function makeProps(overrides: Partial<AnimationPlayerProperties> = {}): Animatio
     playback_default_blend_time: 0.0,
     playback_process_mode: AnimationProcessMode.IDLE,
     method_call_mode: MethodCallMode.DEFERRED,
-    playback_active: true,
+    active: true,
     autoplay: '',
     current_animation: '',
     current_animation_length: 0.0,
@@ -87,7 +87,7 @@ describe('formatAnimationPlayerProperties', () => {
   });
 
   it('shows active = false correctly', () => {
-    const sections = formatAnimationPlayerProperties(makeProps({ playback_active: false }));
+    const sections = formatAnimationPlayerProperties(makeProps({ active: false }));
     const playback = sections.find((s) => s.title === 'Playback');
     const activeItem = playback?.items.find((i) => i.label === 'Active');
     expect(activeItem?.value).toBe('false');

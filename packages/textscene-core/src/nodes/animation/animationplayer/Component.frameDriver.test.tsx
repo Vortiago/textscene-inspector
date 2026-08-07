@@ -65,7 +65,7 @@ function makeAP(): TscnNode {
     playback_default_blend_time: 0.0,
     playback_process_mode: AnimationProcessMode.IDLE,
     method_call_mode: MethodCallMode.DEFERRED,
-    playback_active: true,
+    active: true,
     autoplay: 'spin',
     current_animation: '',
     current_animation_length: 0.0,

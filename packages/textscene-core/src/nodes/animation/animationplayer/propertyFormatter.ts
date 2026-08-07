@@ -15,7 +15,7 @@ export function formatAnimationPlayerProperties(
     title: 'Playback',
     items: [
       { label: 'Speed Scale', value: properties.speed_scale.toFixed(3) },
-      { label: 'Active', value: properties.playback_active ? 'true' : 'false' },
+      { label: 'Active', value: properties.active ? 'true' : 'false' },
       { label: 'Autoplay', value: properties.autoplay.length > 0 ? properties.autoplay : '(none)' },
       {
         label: 'Current Animation',
