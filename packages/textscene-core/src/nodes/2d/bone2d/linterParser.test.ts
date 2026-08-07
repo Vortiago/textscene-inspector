@@ -32,7 +32,9 @@ function check(property: string, value: string) {
  *
  * Two routes, not one: `rest` is the single ADD_PROPERTY (skeleton_2d.cpp:380),
  * and the other four arrive through the hand-rolled `_get_property_list`
- * (`:86`, `:88`, `:89`, `:93`).
+ * (`:86`, `:88`, `:89`, `:93`). `default_length` is a FIFTH: a legacy alias for
+ * `length` reached only through `_set`/`_get` (`:48-49`, `:70-71`), never
+ * pushed into `_get_property_list` at all.
  */
 const KEYS: string[] = [
   'rest',
@@ -40,6 +42,7 @@ const KEYS: string[] = [
   'length',
   'bone_angle',
   'editor_settings/show_bone_gizmo',
+  'default_length',
 ];
 /** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
@@ -186,10 +189,26 @@ describe('Bone2D strict validators', () => {
     });
 
     it('leaves a key no ancestor declares unresolved', () => {
-      // `default_length` is readable through `_set`/`_get` (skeleton_2d.cpp:48,
-      // :70) but is never pushed into `_get_property_list`, so it never
-      // serialises and gets no validator; an old scene carrying it lints clean.
-      expect(validatorRegistry.findValidator('Bone2D', 'default_length')).toBeNull();
+      expect(validatorRegistry.findValidator('Bone2D', 'not_a_real_bone2d_key')).toBeNull();
+    });
+  });
+
+  describe('default_length', () => {
+    it.each(['1', '1024'])('accepts the inclusive hint bound %s (skeleton_2d.cpp:88, shared with length)', (value) => {
+      expect(check('default_length', value)).toBeNull();
+    });
+
+    it.each(['0.5', '1024.5'])('warns rather than errors outside the hint (%s)', (value) => {
+      // skeleton_2d.cpp:48-49 aliases straight into set_length (:463-469),
+      // a bare assignment with no clamp and no ERR_FAIL — the same bound
+      // `length` itself carries, so out of range is a warning.
+      const error = check('default_length', value);
+      expect(error?.severity).toBe('warning');
+      expect(error?.message).toContain('default_length');
+    });
+
+    it('rejects text that is not a float at all', () => {
+      expect(check('default_length', 'long')?.severity).toBe('error');
     });
   });
 });

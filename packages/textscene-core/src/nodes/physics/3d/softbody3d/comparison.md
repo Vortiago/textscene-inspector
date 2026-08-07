@@ -39,10 +39,11 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin SoftBody3D -->
-Strict parsing format-checks these `SoftBody3D` properties, plus 4 inherited from MeshInstance3D, 17 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `SoftBody3D` properties, plus 5 inherited from MeshInstance3D, 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
+| `attachments/*` | attachment |
 | `collision_layer` | 32-bit layer mask (layers 1-32) |
 | `collision_mask` | 32-bit layer mask (layers 1-32) |
 | `damping_coefficient` | float >= 0 |
@@ -50,6 +51,7 @@ Strict parsing format-checks these `SoftBody3D` properties, plus 4 inherited fro
 | `drag_coefficient` | float 0-1 |
 | `linear_stiffness` | float 0-1 |
 | `parent_collision_ignore` | NodePath("path/to/node") |
+| `pinned_points` | int array ([…] or PackedInt32Array(…)) |
 | `pressure_coefficient` | float |
 | `ray_pickable` | true or false |
 | `shrinking_factor` | float |

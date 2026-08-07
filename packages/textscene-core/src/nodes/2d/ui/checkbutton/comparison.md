@@ -30,7 +30,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin CheckButton -->
-Strict parsing format-checks the inherited set (13 inherited from Button, 10 inherited from BaseButton, 28 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `CheckButton` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (13 inherited from Button, 10 inherited from BaseButton, 28 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `CheckButton` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

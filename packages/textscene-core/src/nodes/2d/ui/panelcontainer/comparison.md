@@ -36,7 +36,7 @@ position, size, dark slate fill, 6 px corners, padding and both-axis centring ma
 ## Linting
 
 <!-- lint:begin PanelContainer -->
-Strict parsing format-checks the inherited set (28 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `PanelContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (28 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `PanelContainer` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

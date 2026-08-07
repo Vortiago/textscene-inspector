@@ -23,11 +23,15 @@ describe('GeometryInstance3D strict validators', () => {
     expect(validatorRegistry.getOwnKeys('GeometryInstance3D')).not.toEqual([]);
   });
 
-  it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases follow.
+  it('rejects a malformed value on every property it validates, except the honestly-permissive instance_shader_parameters/* family', () => {
+    // A validator that accepts arbitrary prose is not validating a format —
+    // except `instance_shader_parameters/*`, whose whole point is that no
+    // format is checkable from the .tscn alone (the type comes from the
+    // attached shader's own uniform declarations at runtime). Same shape as
+    // ShaderGlobalsOverride's params/*.
     const accepted = validatorRegistry
       .getOwnKeys('GeometryInstance3D')
+      .filter((property) => property !== 'instance_shader_parameters/*')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
     expect(accepted).toEqual([]);
   });
@@ -248,6 +252,14 @@ describe('GeometryInstance3D strict validators', () => {
 
     it('rejects a non-boolean token', () => {
       expect(check('sorting_use_aabb_center', '0')).not.toBeNull();
+    });
+  });
+
+  describe('instance_shader_parameters/<name>', () => {
+    it('accepts any value (visual_instance_3d.cpp:301-364, shader-typed)', () => {
+      expect(check('instance_shader_parameters/roughness_offset', '0.5')).toBeNull();
+      expect(check('instance_shader_parameters/tint', 'Color(1, 0, 0, 1)')).toBeNull();
+      expect(check('instance_shader_parameters/anything', 'definitely-not-a-valid-value')).toBeNull();
     });
   });
 });

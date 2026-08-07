@@ -30,7 +30,7 @@ properties describe is not simulated by either at load time.
 ## Linting
 
 <!-- lint:begin StaticBody2D -->
-Strict parsing format-checks these `StaticBody2D` properties, plus 5 inherited from CollisionObject2D, 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `StaticBody2D` properties, plus 5 inherited from CollisionObject2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

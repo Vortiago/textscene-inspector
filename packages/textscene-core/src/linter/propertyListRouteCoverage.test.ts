@@ -167,28 +167,24 @@ const ROWS: readonly RouteRow[] = [
   {
     // #ifndef DISABLE_DEPRECATED (on by default). Never enumerated by
     // _get_property_list, so a 3.x scene's `anims/Walk = SubResource(...)` is
-    // read by _set alone (animation_mixer.cpp:58-71) and reaches no validator:
-    // AnimationMixer has no linterParser.ts slice of its own at all.
+    // read by _set alone (animation_mixer.cpp:58-71). Registered under the
+    // new abstract 'AnimationMixer' tier (nodes/animation/animationmixer/),
+    // the same shared-key shape canvasitem/shared uses for CanvasItem.
     type: 'AnimationMixer',
     at: 'animation_mixer.cpp:58-71',
     route: 'set-get',
     sample: 'anims/Walk',
-    verdict: {
-      unimplemented:
-        'legacy per-animation compat key with no PropertyInfo of its own; needs a resourceReference-shaped check, matching libraries/<name> below',
-    },
+    verdict: { validated: true },
   },
   {
     // Bare "libraries" replaces the whole AnimationLibrary set as one
     // Dictionary (animation_mixer.cpp:72-81), also DISABLE_DEPRECATED-gated.
+    // Dictionary-shape check only, the same depth GraphEdit's type_names uses.
     type: 'AnimationMixer',
     at: 'animation_mixer.cpp:72-81',
     route: 'set-get',
     sample: 'libraries',
-    verdict: {
-      unimplemented:
-        'legacy whole-Dictionary compat key with no PropertyInfo; needs at minimum a Dictionary-shape format check',
-    },
+    verdict: { validated: true },
   },
   {
     // _get_libraries_property_usage() (animation_mixer.cpp:125-127) returns
@@ -198,23 +194,22 @@ const ROWS: readonly RouteRow[] = [
     at: 'animation_mixer.cpp:129-134',
     route: 'property-list',
     sample: 'libraries/Main',
-    verdict: {
-      unimplemented:
-        'AnimationLibrary resource reference per library name; needs a resourceReference validator like surface_material_override/* has',
-    },
+    verdict: { validated: true },
   },
   {
     // "For backward compatibility." (animation_player.cpp:38-39,71-73). Never
     // pushed by _get_property_list, so only a hand-edited/legacy scene's
-    // playback/play key ever reaches _set.
+    // playback/play key ever reaches _set — straight into set_current_animation,
+    // the SAME field `current_animation` sets. `current_animation` itself is
+    // `v.any()`, not quotedString (this row's original note was stale: no
+    // quotedString check exists on it to match), so the alias gets the SAME
+    // permissive `v.any()` rather than a stricter one — registering a tighter
+    // check on the alias than the canonical key would itself be a bug.
     type: 'AnimationPlayer',
     at: 'animation_player.cpp:38-39',
     route: 'set-get',
     sample: 'playback/play',
-    verdict: {
-      unimplemented:
-        'backward-compat alias for current_animation; needs the same quotedString check current_animation already has',
-    },
+    verdict: { validated: true },
   },
   {
     // Conditionally pushed: only for an animation with a "next" override set
@@ -224,22 +219,20 @@ const ROWS: readonly RouteRow[] = [
     at: 'animation_player.cpp:130-138',
     route: 'property-list',
     sample: 'next/Attack',
-    verdict: {
-      unimplemented: 'per-animation "next" override, an animation name; needs a quotedString check',
-    },
+    verdict: { validated: true },
   },
   {
     // Flat Array of (from, to, time) triples. ERR_FAIL_COND_V(len % 3, false)
     // (animation_player.cpp:46) is a real enforced whole-value bound: a
-    // malformed length is refused outright, not merely hinted.
+    // malformed length is refused outright, not merely hinted. Only the COUNT
+    // is checked — `Variant::operator StringName()`/`operator float()` both
+    // coerce a mismatched element rather than failing (variant.cpp:1545-1553),
+    // so Godot itself loads a non-string/non-number element without complaint.
     type: 'AnimationPlayer',
     at: 'animation_player.cpp:144',
     route: 'property-list',
     sample: 'blend_times',
-    verdict: {
-      unimplemented:
-        'flat Array of (from, to, time) triples; ERR_FAIL_COND_V(len % 3) at animation_player.cpp:46 is an enforced bound nothing here checks',
-    },
+    verdict: { validated: true },
   },
   {
     // method_call_mode / playback_process_mode / playback_active — three
@@ -268,10 +261,7 @@ const ROWS: readonly RouteRow[] = [
     at: 'animation_tree.cpp:969-977',
     route: 'property-list',
     sample: 'parameters/conditions/idle',
-    verdict: {
-      unimplemented:
-        'per-AnimationNode dynamic parameter tree; type/hint vary by node (StateMachine/BlendTree/Animation/…), so at minimum a permissive validator like params/* is missing',
-    },
+    verdict: { validated: true },
   },
 
   // --- 2D transform-adjacent hand-rolled keys ---
@@ -307,9 +297,7 @@ const ROWS: readonly RouteRow[] = [
     at: 'skeleton_2d.cpp:48-49',
     route: 'set-get',
     sample: 'default_length',
-    verdict: {
-      unimplemented: 'legacy alias for length with no PropertyInfo; needs the same float check length has',
-    },
+    verdict: { validated: true },
   },
   {
     type: 'Skeleton2D',
@@ -357,9 +345,7 @@ const ROWS: readonly RouteRow[] = [
     at: 'soft_body_3d.cpp:176',
     route: 'property-list',
     sample: 'pinned_points',
-    verdict: {
-      unimplemented: 'PackedInt32Array of point indices; no clamp in the setter, so at minimum a format check is missing',
-    },
+    verdict: { validated: true },
   },
   {
     // point_index/spatial_attachment_path/offset per pinned point
@@ -367,28 +353,29 @@ const ROWS: readonly RouteRow[] = [
     // _set_property_pinned_points_attachment has no branch for it and falls to
     // `return false` (soft_body_3d.cpp:238-239) even though the key carries
     // storage and is read back — the same "setter refuses" shape ChainIK3D's
-    // joints/<j>/bone already has a readOnly-style validator for.
+    // joints/<j>/bone already has a readOnly-style validator for. (Unlike
+    // ChainIK3D's joints, which carry NO storage bit and so never actually
+    // reach a real .tscn, point_index genuinely does — every SoftBody3D with
+    // pinned points writes it, redundantly mirroring pinned_points[i], so no
+    // data is actually lost, just this one echo key.)
     type: 'SoftBody3D',
     at: 'soft_body_3d.cpp:178-183',
     route: 'property-list',
     sample: 'attachments/0/spatial_attachment_path',
-    verdict: {
-      unimplemented:
-        'NodePath/Vector3 per pinned point; point_index is pushed with storage but the setter has no case for it (soft_body_3d.cpp:238-239) and drops the write, deserving a readOnly-style rejection like ChainIK3D\'s joints family',
-    },
+    verdict: { validated: true },
   },
   {
     // Packed cell dictionary: 2 ints key + 1 int cell value per entry.
-    // ERR_FAIL_COND_V(amount % 3, false) (grid_map.cpp, inside the "data"
-    // branch) is a real enforced whole-value bound.
+    // ERR_FAIL_COND_V(amount % 3, false) at grid_map.cpp:71 (inside the "data"
+    // branch of _set, guarded by d.has("cells") at :67) is a real enforced
+    // whole-value bound. `at` below is the _get_property_list push (:158)
+    // that introduces the family; the enforced bound's own line is :71, not
+    // :158 as this row originally had it.
     type: 'GridMap',
     at: 'grid_map.cpp:158',
     route: 'property-list',
     sample: 'data',
-    verdict: {
-      unimplemented:
-        "packed cell Dictionary (2-int key + 1-int cell per entry); the setter's ERR_FAIL_COND_V(amount % 3) is an enforced bound nothing here checks",
-    },
+    verdict: { validated: true },
   },
   {
     // Conditionally pushed only when baked_meshes.size() > 0 (grid_map.cpp:154-156).
@@ -396,10 +383,7 @@ const ROWS: readonly RouteRow[] = [
     at: 'grid_map.cpp:154-156',
     route: 'property-list',
     sample: 'baked_meshes',
-    verdict: {
-      unimplemented:
-        'Array of baked ArrayMesh resources; a null mesh is silently dropped per-element (ERR_CONTINUE), unchecked here',
-    },
+    verdict: { validated: true },
   },
   {
     // Seven PropertyListHelper leaves per TileMapLayer (name, enabled,
@@ -410,10 +394,7 @@ const ROWS: readonly RouteRow[] = [
     at: 'tile_map.cpp:1023-1043',
     route: 'PropertyListHelper',
     sample: 'layer_0/name',
-    verdict: {
-      unimplemented:
-        'seven glued-index leaves (name/enabled/modulate/y_sort_enabled/y_sort_origin/z_index/navigation_enabled) plus tile_data, none validated, unlike the sibling format key',
-    },
+    verdict: { validated: true },
   },
   {
     // Explicitly pushed OUTSIDE the PropertyListHelper family
@@ -435,10 +416,7 @@ const ROWS: readonly RouteRow[] = [
     at: 'canvas_item.cpp:637-656',
     route: 'property-list',
     sample: 'instance_shader_parameters/tint',
-    verdict: {
-      unimplemented:
-        'shader-reflected instance uniform, unbounded name/type; needs at minimum a permissive validator like ShaderGlobalsOverride\'s params/*',
-    },
+    verdict: { validated: true },
   },
   {
     // Same InstanceUniforms engine class as CanvasItem, reached through the 3D
@@ -447,10 +425,7 @@ const ROWS: readonly RouteRow[] = [
     at: 'visual_instance_3d.cpp:346-364',
     route: 'property-list',
     sample: 'instance_shader_parameters/roughness_offset',
-    verdict: {
-      unimplemented:
-        'shader-reflected instance uniform (3D RS surface), unbounded name/type; same missing permissive validator as CanvasItem',
-    },
+    verdict: { validated: true },
   },
   {
     type: 'MeshInstance3D',
@@ -468,10 +443,7 @@ const ROWS: readonly RouteRow[] = [
     at: 'mesh_instance_3d.cpp:102-103',
     route: 'property-list',
     sample: 'blend_shapes/Smile',
-    verdict: {
-      unimplemented:
-        'per-blend-shape weight named from the Mesh resource; PROPERTY_HINT_RANGE -1..1 is never enforced by the setter, so at minimum a float format check is missing',
-    },
+    verdict: { validated: true },
   },
   {
     type: 'ShaderGlobalsOverride',
@@ -660,15 +632,12 @@ const ROWS: readonly RouteRow[] = [
     at: 'tab_container.cpp:1270-1276',
     route: 'PropertyListHelper',
     sample: 'tab_0/title',
-    verdict: {
-      unimplemented:
-        "TabContainer's OWN glued-index family (title/icon/disabled/hidden), a separate PropertyListHelper instance from TabBar's already-validated one; nothing here is registered",
-    },
+    verdict: { validated: true },
   },
 ];
 
 /** Rows counted as a live gap; only ever moves down as one is fixed. */
-const UNIMPLEMENTED_COUNT = 17;
+const UNIMPLEMENTED_COUNT = 0;
 
 type Verdict = RouteRow['verdict'];
 

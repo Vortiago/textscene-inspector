@@ -49,17 +49,19 @@ not exercise is where the real gaps are, so they are listed rather than shown:
 ## Linting
 
 <!-- lint:begin AnimationPlayer -->
-Strict parsing format-checks these `AnimationPlayer` properties, plus 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AnimationPlayer` properties, plus 13 inherited from AnimationMixer, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
 | `autoplay` | quoted string or &"name" |
+| `blend_times` | Array literal of (from, to, time) triples |
 | `current_animation` | any value (no format constraint) |
 | `method_call_mode` | enum 0-1 (DEFERRED/IMMEDIATE) |
+| `next/*` | quoted string or &"name" |
+| `playback/play` | any value (no format constraint) |
 | `playback_active` | true or false |
 | `playback_default_blend_time` | float |
 | `playback_process_mode` | enum 0-2 (PHYSICS/IDLE/MANUAL) |
-| `root_node` | NodePath("path/to/node") |
 | `speed_scale` | float |
 
 | Rule | Reports | Severity |

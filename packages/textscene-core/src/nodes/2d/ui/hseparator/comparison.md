@@ -29,7 +29,7 @@ Not captured yet: nothing renders, so there is nothing to compare pixels against
 ## Linting
 
 <!-- lint:begin HSeparator -->
-Strict parsing format-checks the inherited set (28 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node); `HSeparator` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (28 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `HSeparator` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

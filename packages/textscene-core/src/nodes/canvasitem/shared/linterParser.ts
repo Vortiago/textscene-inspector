@@ -23,7 +23,7 @@
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask } from '../../../linter/validators/layerBitmask.js';
-import { v } from '../../../linter/validators/index.js';
+import { shape, v } from '../../../linter/validators/index.js';
 import { CLIP_CHILDREN_MODES } from '../../../godot/canvasItem.js';
 import { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX } from '../../../godot/rendering.js';
 
@@ -80,4 +80,17 @@ validatorRegistry.registerAll('CanvasItem', {
   texture_repeat: v.enumInt('texture_repeat', 0, 3, TEXTURE_REPEAT, { enforced: 'canvas_item.cpp:1720' }),
   material: v.resourceReference('material'),
   use_parent_material: v.boolean('use_parent_material'),
+
+  // canvas_item.cpp:604-656, a FOURTH hand-rolled `_set`/`_get`/`_get_property_list`
+  // route on top of ADD_PROPERTY: storage is per-instance-state (:637-656,
+  // granted only once an override for the name actually exists locally), and
+  // the base type/hint come from RS::canvas_item_get_instance_shader_parameter_list
+  // at runtime, from whatever the attached shader declares — information that
+  // lives outside any .tscn this linter reads. Same shape as
+  // ShaderGlobalsOverride's params/* (shaderglobalsoverride/linterParser.ts):
+  // the only honest claim from the file alone is that the key exists.
+  'instance_shader_parameters/*': shape(
+    () => null,
+    "any Variant — the type comes from the attached shader's uniform declarations, not the .tscn"
+  ),
 });

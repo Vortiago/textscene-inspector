@@ -27,7 +27,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin CollisionShape2D -->
-Strict parsing format-checks these `CollisionShape2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `CollisionShape2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

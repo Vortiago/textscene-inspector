@@ -23,7 +23,7 @@
 
 import '../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v } from '../../../linter/validators/index.js';
+import { shape, v } from '../../../linter/validators/index.js';
 
 const CAST_SHADOW = { 0: 'OFF', 1: 'ON', 2: 'DOUBLE_SIDED', 3: 'SHADOWS_ONLY' };
 const GI_MODE = { 0: 'DISABLED', 1: 'STATIC', 2: 'DYNAMIC' };
@@ -147,4 +147,14 @@ validatorRegistry.registerAll('GeometryInstance3D', {
   // scene/3d/visual_instance_3d.cpp: VisualInstance3D's own ADD_PROPERTY gives
   // "sorting_use_aabb_center" PROPERTY_HINT_NONE — a plain BOOL, no range to check.
   sorting_use_aabb_center: v.boolean('sorting_use_aabb_center'),
+
+  // visual_instance_3d.cpp:301-364, the SAME InstanceUniforms engine class as
+  // CanvasItem's own instance_shader_parameters (canvasitem/shared/linterParser.ts),
+  // reached through the 3D RenderingServer surface instead. The base type/hint
+  // come from the attached shader's own uniform declarations at runtime, not
+  // from anything a .tscn carries, so this is the same permissive wildcard.
+  'instance_shader_parameters/*': shape(
+    () => null,
+    "any Variant — the type comes from the attached shader's uniform declarations, not the .tscn"
+  ),
 });

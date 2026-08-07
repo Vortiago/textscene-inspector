@@ -36,6 +36,7 @@ const CANVAS_ITEM_KEYS = [
   'texture_repeat',
   'material',
   'use_parent_material',
+  'instance_shader_parameters/*',
 ] as const;
 
 describe('CanvasItem shared validators', () => {
@@ -88,6 +89,17 @@ describe('CanvasItem shared validators', () => {
     expect(lightMask('light_mask', '-1', 1)?.severity).toBe('warning');
     expect(visibilityLayer('visibility_layer', '4294967296', 1)?.severity).toBe('warning');
   });
+
+  it.each(['Sprite2D', 'Label'])(
+    'accepts any value for instance_shader_parameters/<name> on %s (canvas_item.cpp:604-656, shader-typed)',
+    (nodeType) => {
+      const validator = validatorRegistry.findValidator(nodeType, 'instance_shader_parameters/tint')!;
+      expect(validator).not.toBeNull();
+      expect(validator('instance_shader_parameters/tint', 'Color(1, 0, 0, 1)', 1)).toBeNull();
+      expect(validator('instance_shader_parameters/speed', '2.5', 1)).toBeNull();
+      expect(validator('instance_shader_parameters/enabled', 'true', 1)).toBeNull();
+    }
+  );
 
   it('leaves each family its own keys', () => {
     // Node2D keeps the 2D transform; Control keeps anchors. Neither should have

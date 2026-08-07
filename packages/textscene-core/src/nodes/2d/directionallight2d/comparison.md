@@ -25,7 +25,7 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin DirectionalLight2D -->
-Strict parsing format-checks these `DirectionalLight2D` properties, plus 15 inherited from Light2D, 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `DirectionalLight2D` properties, plus 15 inherited from Light2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

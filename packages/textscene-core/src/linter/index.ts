@@ -114,6 +114,7 @@ import '../nodes/2d/lightoccluder2d/index.linter.js';
 import '../nodes/2d/pointlight2d/index.linter.js';
 import '../nodes/2d/cpuparticles2d/index.linter.js';
 
+import '../nodes/animation/animationmixer/index.linter.js';
 import '../nodes/animation/animationplayer/index.linter.js';
 import '../nodes/animation/animationtree/index.linter.js';
 import '../nodes/audio/audiostreamplayer/index.linter.js';

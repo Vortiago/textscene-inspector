@@ -41,11 +41,12 @@ See "Why 2D colours read paler in our captures" in docs/comparison/README.md.
 ## Linting
 
 <!-- lint:begin TileMap -->
-Strict parsing format-checks these `TileMap` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `TileMap` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
 | `format` | integer |
+| `layer_#/*` | layer |
 | `tile_set` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |

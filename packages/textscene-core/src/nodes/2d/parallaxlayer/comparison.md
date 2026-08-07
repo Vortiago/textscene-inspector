@@ -56,7 +56,7 @@ rather than the copied child.
 ## Linting
 
 <!-- lint:begin ParallaxLayer -->
-Strict parsing format-checks these `ParallaxLayer` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `ParallaxLayer` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

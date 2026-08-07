@@ -28,7 +28,7 @@ There is no runtime output to compare — the node draws nothing in either Godot
 ## Linting
 
 <!-- lint:begin AudioListener2D -->
-Strict parsing format-checks these `AudioListener2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AudioListener2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

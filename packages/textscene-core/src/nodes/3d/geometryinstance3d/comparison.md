@@ -57,6 +57,7 @@ Strict parsing format-checks these `GeometryInstance3D` properties, plus 1 inher
 | `gi_lightmap_texel_scale` | float >= 0.01 |
 | `gi_mode` | enum 0-2 (DISABLED/STATIC/DYNAMIC) |
 | `ignore_occlusion_culling` | true or false |
+| `instance_shader_parameters/*` | any Variant — the type comes from the attached shader's uniform declarations, not the .tscn |
 | `lod_bias` | float 0-128 |
 | `material_overlay` | SubResource("id") or ExtResource("id") |
 | `material_override` | SubResource("id") or ExtResource("id") |

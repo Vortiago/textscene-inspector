@@ -47,12 +47,13 @@ previewer is not the editor, so there is no runtime geometry to diverge on.
 ## Linting
 
 <!-- lint:begin Bone2D -->
-Strict parsing format-checks these `Bone2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Bone2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
 | `auto_calculate_length_and_angle` | true or false |
 | `bone_angle` | float -360-360 |
+| `default_length` | float 1-1024 |
 | `editor_settings/show_bone_gizmo` | true or false |
 | `length` | float 1-1024 |
 | `rest` | Transform2D(6 floats) |

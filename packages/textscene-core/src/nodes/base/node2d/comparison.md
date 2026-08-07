@@ -33,7 +33,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin Node2D -->
-Strict parsing format-checks these `Node2D` properties, plus 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Node2D` properties, plus 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

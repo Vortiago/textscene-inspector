@@ -45,7 +45,7 @@ output; the Below sprite is that shift plus the tint multiply, not a separate
 ## Linting
 
 <!-- lint:begin Sprite2D -->
-Strict parsing format-checks these `Sprite2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Sprite2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

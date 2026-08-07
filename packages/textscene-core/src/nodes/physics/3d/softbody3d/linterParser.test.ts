@@ -259,4 +259,73 @@ describe('SoftBody3D strict validators', () => {
       expect(check('total_mass', '5000')).toBeNull();
     });
   });
+
+  describe('pinned_points', () => {
+    it('accepts an empty bare array', () => {
+      expect(check('pinned_points', '[]')).toBeNull();
+    });
+
+    it('accepts a bare int array (the actual serialised form: the GETTER returns an untyped Array)', () => {
+      expect(check('pinned_points', '[0, 3, 7]')).toBeNull();
+    });
+
+    it('accepts the declared PackedInt32Array spelling too (Variant::operator Array() converts it)', () => {
+      expect(check('pinned_points', 'PackedInt32Array(0, 3, 7)')).toBeNull();
+    });
+
+    it('rejects a non-integer element', () => {
+      expect(check('pinned_points', '[0, 1.5]')?.code).toBe('INVALID_PINNED_POINTS_FORMAT');
+    });
+
+    it('rejects a value that is neither array spelling', () => {
+      expect(check('pinned_points', '5')?.code).toBe('INVALID_PINNED_POINTS_FORMAT');
+    });
+  });
+
+  describe('attachments/<i>/*', () => {
+    function checkAttachment(key: string, value: string) {
+      const validator = validatorRegistry.findValidator('SoftBody3D', key);
+      expect(validator, `no validator resolved for SoftBody3D.${key}`).not.toBeNull();
+      return validator!(key, value, 1);
+    }
+
+    it('accepts point_index: Godot writes the key itself, even though the setter drops it', () => {
+      // `_set_property_pinned_points_attachment` has no branch for it and falls
+      // to `return false` (soft_body_3d.cpp:238-239), so the write is dropped —
+      // but the PropertyInfo at :180 carries no usage argument, so it defaults
+      // to STORAGE and Godot's own exporter emits it. Rejecting it would reject
+      // the engine's own output; scenes/demos/3d/soft_body_physics/test.tscn
+      // carries four, all written by Godot.
+      expect(checkAttachment('attachments/0/point_index', '3')).toBeNull();
+    });
+
+    it('still rejects a non-integer point_index', () => {
+      expect(checkAttachment('attachments/0/point_index', 'not-an-int')).not.toBeNull();
+    });
+
+    it('accepts a NodePath for spatial_attachment_path', () => {
+      expect(checkAttachment('attachments/0/spatial_attachment_path', 'NodePath("../Anchor")')).toBeNull();
+    });
+
+    it('accepts the default empty NodePath for spatial_attachment_path', () => {
+      expect(checkAttachment('attachments/0/spatial_attachment_path', 'NodePath("")')).toBeNull();
+    });
+
+    it('accepts a Vector3 offset', () => {
+      expect(checkAttachment('attachments/0/offset', 'Vector3(0, 0, 0)')).toBeNull();
+    });
+
+    it('resolves a non-numeric index (bare to_int, no is_valid_int gate) rather than treating it as unknown', () => {
+      // soft_body_3d.cpp:137: `to_int()` skips non-digits rather than
+      // refusing them, so the index resolves to SOME attachment and the leaf
+      // lookup is the only thing left to reject.
+      expect(checkAttachment('attachments/x/offset', 'Vector3(0, 0, 0)')).toBeNull();
+    });
+
+    it('rejects an unrecognised leaf name', () => {
+      const error = checkAttachment('attachments/0/not_a_real_leaf', '1');
+      expect(error?.severity).toBe('error');
+      expect(error?.code).toBe('INVALID_ATTACHMENT_KEY');
+    });
+  });
 });

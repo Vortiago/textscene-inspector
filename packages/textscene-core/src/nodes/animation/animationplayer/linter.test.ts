@@ -18,6 +18,27 @@ import './linterParser';
 import './linter';
 
 describe('AnimationPlayer Linter', () => {
+  describe('the next/<name> property-list family', () => {
+    // It reaches a `.tscn` only through `_set`/`_get` (animation_player.cpp:40,
+    // :75), so no ADD_PROPERTY or XML sweep sees it — and it had no test at
+    // all until a `quotedString` validator shipped and errored on Godot's own
+    // output across the corpus.
+    const withNext = (value: string) =>
+      scene(node('AnimationPlayer', { 'next/walk': value }, { name: 'Anim' }));
+
+    it("accepts the StringName form Godot writes, since animation_get_next returns StringName", () => {
+      expectNoErrors(withNext('&"idle"'));
+    });
+
+    it('accepts the plain quoted form the variant parser also reads', () => {
+      expectNoErrors(withNext('"idle"'));
+    });
+
+    it('still rejects an unquoted bare word', () => {
+      expectSeverity(withNext('idle'), 'error');
+    });
+  });
+
   describe('Strict Parser Validation (Format)', () => {
     it('should pass validation for valid AnimationPlayer properties', () => {
       expectClean(

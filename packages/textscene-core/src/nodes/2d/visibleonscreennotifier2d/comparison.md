@@ -33,7 +33,7 @@ None visible in this fixture — the node draws nothing in either engine.
 ## Linting
 
 <!-- lint:begin VisibleOnScreenNotifier2D -->
-Strict parsing format-checks these `VisibleOnScreenNotifier2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `VisibleOnScreenNotifier2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

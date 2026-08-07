@@ -18,6 +18,11 @@
  * `auto_calculate_length_and_angle` is false (skeleton_2d.cpp:87): with
  * autocalculation on, Godot recomputes both from the first child Bone2D and
  * neither serialises.
+ *
+ * `default_length` is a FIFTH property, a legacy alias for `length` with no
+ * `PropertyInfo` of its own (skeleton_2d.cpp:48-49,70-71): never pushed by
+ * `_get_property_list`, so only a hand-edited/legacy scene reaches it. See
+ * propertyListRouteCoverage.test.ts.
  */
 
 import '../../base/node2d/linterParser.js';
@@ -55,4 +60,11 @@ validatorRegistry.registerAll('Bone2D', {
   // write `.tscn` files at all, so a scene saved with the bone gizmo toggled
   // off stores the key.
   'editor_settings/show_bone_gizmo': v.boolean('editor_settings/show_bone_gizmo'),
+
+  // skeleton_2d.cpp:48-49 (`_set`) / :70-71 (`_get`): a bare alias for `length`
+  // with no PropertyInfo of its own, so it shares `length`'s hint
+  // (skeleton_2d.cpp:88, "1, 1024, 1") and its bare-assignment setter — the
+  // SAME bound, a warning rather than an error. Named `default_length` here
+  // (not `length`) so the diagnostic names the key the scene actually carries.
+  default_length: v.float('default_length', { min: 1, max: 1024, hinted: 'skeleton_2d.cpp:88' }),
 });

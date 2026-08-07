@@ -34,7 +34,7 @@ None — the node draws nothing in both parsers, so there is nothing to diverge 
 ## Linting
 
 <!-- lint:begin CollisionPolygon2D -->
-Strict parsing format-checks these `CollisionPolygon2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `CollisionPolygon2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

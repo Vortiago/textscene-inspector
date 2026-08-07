@@ -8,11 +8,54 @@
  *
  * Container itself has no own members (no linterParser.ts in ../container), so
  * this imports Control's directly, matching the scaffold.
+ *
+ * `tab_<i>/*` is TabContainer's OWN `PropertyListHelper` family
+ * (tab_container.cpp:1270-1276) — a SEPARATE `PropertyListHelper` instance
+ * from TabBar's already-validated one (tabbar/linterParser.ts), with its own
+ * leaf set (title/icon/disabled/hidden, no tooltip). See
+ * propertyListRouteCoverage.test.ts.
  */
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
+import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
+
+/**
+ * `tab_<idx>/<leaf>` leaves, exactly the four
+ * `base_property_helper.register_property` calls at tab_container.cpp:1272-1275.
+ */
+const TAB_LEAVES: Readonly<Record<string, PropertyValidator>> = {
+  // tab_container.cpp:1272, Variant::STRING, no hint. set_tab_title
+  // (tab_container.cpp:883) assigns any string past an ERR_FAIL on the tab
+  // CONTROL, never on the text.
+  title: v.quotedString('title'),
+  // tab_container.cpp:1273, Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE "Texture2D".
+  icon: v.resourceReference('icon'),
+  // tab_container.cpp:1274, Variant::BOOL, no hint.
+  disabled: v.boolean('disabled'),
+  // tab_container.cpp:1275, Variant::BOOL, no hint.
+  hidden: v.boolean('hidden'),
+};
+
+const tabValidator = indexedFamilyValidator({
+  prefix: 'tab_',
+  leaves: TAB_LEAVES,
+  unknownCode: 'INVALID_TABCONTAINER_TAB_KEY',
+  describes: 'tab',
+  // `_set` is `property_helper.property_set_value` verbatim, whose
+  // `_get_property` returns nullptr unless the index `is_valid_int()`
+  // (property_list_helper.cpp:53-55), the same shape TabBar's own tab_<i>/*
+  // family uses.
+  indexParse: 'is_valid_int',
+  negativeIndex: {
+    cite: 'property_list_helper.cpp:58',
+    code: 'INVALID_TABCONTAINER_TAB_INDEX',
+    message: (index) =>
+      `Tab index ${index} must be non-negative. TabContainer routes every tab_<idx>/<leaf> write through PropertyListHelper::_get_property, which returns nullptr for a negative index (property_list_helper.cpp:58), so TabContainer's own _set reports the key as unhandled and the value is silently dropped`,
+  },
+});
 
 validatorRegistry.registerAll('TabContainer', {
   // tab_container.cpp:1208, ADD_PROPERTY(..., "tab_alignment", PROPERTY_HINT_ENUM,
@@ -95,4 +138,7 @@ validatorRegistry.registerAll('TabContainer', {
   // tab_container.cpp:1219, plain BOOL, no hint. set_deselect_enabled
   // delegates to TabBar's own, which bare-assigns (tab_bar.cpp:2038).
   deselect_enabled: v.boolean('deselect_enabled'),
+
+  // tab_container.cpp:1270-1276: see tabValidator.
+  'tab_#/*': tabValidator,
 });

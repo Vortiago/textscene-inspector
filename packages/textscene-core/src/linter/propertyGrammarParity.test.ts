@@ -163,8 +163,14 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       // than per node in three.js.
       'top_level', 'visibility_layer', 'clip_children',
       'texture_filter', 'texture_repeat',
+      // canvas_item.cpp:637-656: a shader-reflected instance uniform, typed by
+      // whatever GLSL the attached ShaderMaterial declares. This previewer has
+      // no ShaderMaterial resource slice at all (no custom-shader rendering
+      // surface exists), so there is nothing for any parser to reflect a
+      // uniform override onto.
+      'instance_shader_parameters/*',
     ],
-    reason: 'The CanvasItem base has no parser of its own; these five are culling, clipping and sampler settings the r3f renderer expresses per material or not at all, while the keys it DOES render (visible, modulate, z_index, material…) are read by each family parser.',
+    reason: 'The CanvasItem base has no parser of its own; these six are culling, clipping, sampler and shader-uniform settings the r3f renderer expresses per material, has no surface for, or not at all, while the keys it DOES render (visible, modulate, z_index, material…) are read by each family parser.',
   },
 
   Node: {
@@ -509,7 +515,18 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   TileMap: {
-    reason: 'No unique asymmetries; transform/position covered by Node2D base on both sides.',
+    linterOnly: [
+      // tile_map.cpp:1023-1043's PropertyListHelper family. parser.ts (its
+      // own LAYER_KEY_RE loop over Object.keys(properties)) genuinely reads
+      // name/enabled/modulate/z_index/tile_data for rendering — the scrape's
+      // literal properties.X pattern just cannot see a loop-built key, the
+      // same blind spot as MeshInstance3D's surface_material_override/*.
+      // y_sort_enabled and navigation_enabled are the two leaves the parser
+      // truly has no use for: neither changes which tile draws where in a
+      // static frame.
+      'layer_#/*',
+    ],
+    reason: 'layer_<i>/* is read through a loop the scrape cannot match; parser.ts genuinely reads five of its seven leaves (name/enabled/modulate/z_index/tile_data), and y_sort_enabled/navigation_enabled have no bearing on a static frame. instance_shader_parameters/* is covered by the inherited CanvasItem entry.',
   },
 
   // -------------------------------------------------------------------------
@@ -517,13 +534,16 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
   // -------------------------------------------------------------------------
 
   GridMap: {
-    parserOnly: [
-      // Godot GridMap cell dictionary (`{ "cells": PackedInt32Array(...) }`):
-      // decoded by extractCells; no linter format validator for packed cell
-      // data exists.
-      'data',
+    linterOnly: [
+      // grid_map.cpp:84-106/:138-145/:154-156: a pre-baked ArrayMesh cache
+      // Godot writes after `make_baked_meshes()` groups identical cell
+      // instances into one draw call. Purely a rendering OPTIMISATION over the
+      // same `data` cell dictionary the parser already decodes directly — the
+      // baked meshes reproduce, not add to, what `data` already draws — so no
+      // parser needs to read this cache to render the grid correctly.
+      'baked_meshes',
     ],
-    reason: 'data is a packed cell dictionary decoded by a bespoke helper; transform is covered by Node3D base on both parser and validator sides.',
+    reason: 'data is a packed cell dictionary decoded by a bespoke helper (extractCells) — now symmetric on both sides; baked_meshes is a rendering-optimisation cache over the same cell data, so nothing needs to read it.',
   },
 
   Label3D: {
@@ -658,8 +678,14 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'visibility_range_begin', 'visibility_range_begin_margin',
       'visibility_range_end', 'visibility_range_end_margin',
       'visibility_range_fade_mode',
+      // visual_instance_3d.cpp:301-364: the SAME InstanceUniforms engine
+      // class as CanvasItem's own instance_shader_parameters, reached via the
+      // 3D RenderingServer surface. Same reason: no ShaderMaterial resource
+      // slice exists in this previewer, so there is no surface to reflect a
+      // shader uniform override onto.
+      'instance_shader_parameters/*',
     ],
-    reason: 'The geometry base has no parser of its own, so every key it registers is linter-only there; each leaf parser reads the subset it renders and the remainder are bake/cull/draw-order settings a static preview cannot honour.',
+    reason: 'The geometry base has no parser of its own, so every key it registers is linter-only there; each leaf parser reads the subset it renders, the bake/cull/draw-order settings are a static preview cannot honour, and instance_shader_parameters has no ShaderMaterial rendering surface to land on at all.',
   },
 
   // The container bases have no parser.ts of their own — they reuse parseControl
@@ -744,8 +770,19 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       // a pattern; parser reads via a loop over Object.keys and is not
       // captured by the properties.X scrape pattern.
       'surface_material_override/*',
+      // canvas_item.cpp's InstanceUniforms sibling for the 3D RS surface — see
+      // the GeometryInstance3D entry, which this inherits.
+      'instance_shader_parameters/*',
     ],
-    reason: 'MeshInstance3D linter uses a wildcard pattern for surface_material_override/N; the parser reads those via an Object.keys loop not captured by the scrape.',
+    renderGap: [
+      // mesh_instance_3d.cpp:102-103: a per-blend-shape morph-target weight.
+      // Godot genuinely redraws the mesh deformed by this weight; this
+      // previewer implements no blend-shape/morph-target rendering at all,
+      // so every MeshInstance3D with blend shapes renders its rest pose here
+      // regardless of the authored weights.
+      'blend_shapes/*',
+    ],
+    reason: 'MeshInstance3D linter uses a wildcard pattern for surface_material_override/N and instance_shader_parameters/N; the parser reads the former via an Object.keys loop not captured by the scrape and has no rendering surface for the latter at all. blend_shapes/<name> is a real, unimplemented morph-target rendering gap.',
   },
 
 
@@ -753,11 +790,39 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
   // Animation
   // -------------------------------------------------------------------------
 
+  // AnimationMixer has no parser.ts of its own (an abstract tier, like
+  // CanvasItem/GeometryInstance3D above), so every key it registers is
+  // linter-only from its own perspective; both AnimationPlayer and
+  // AnimationTree inherit this entry via the base-walk.
+  AnimationMixer: {
+    linterOnly: [
+      // animation_mixer.cpp:72-81: read literally (properties.libraries) by
+      // AnimationPlayer's own parser.ts — symmetric there already — but
+      // AnimationTree never touches libraries at all: it resolves clips
+      // through the referenced AnimationPlayer instead.
+      'libraries',
+      // animation_mixer.cpp:129-134: read through a loop over
+      // Object.keys(properties) (AnimationPlayer's extractLibraries), the
+      // same computed-key blind spot as OptionButton's popup/item_#/* above —
+      // the parser DOES read it, just not visibly to the scrape.
+      // AnimationTree, again, has no use for it directly.
+      'libraries/*',
+    ],
+    renderGap: [
+      // animation_mixer.cpp:58-71: a legacy 3.x per-animation compat key.
+      // Godot itself resolves and plays these clips through the default
+      // library; AnimationPlayer's parser.ts never extracts anims/<name> at
+      // all (only linter.ts's semantic existence-check ever reads it), so a
+      // hand-authored legacy scene shows NO animations here though Godot
+      // plays them fine — a real, unimplemented rendering gap, not a
+      // deliberate scope decision.
+      'anims/*',
+    ],
+    reason: 'The AnimationMixer base has no parser of its own. libraries/libraries* are read by AnimationPlayer (directly or through a scrape-blind loop) but not by AnimationTree, which needs neither; anims/<name> is a genuine legacy-format rendering gap nothing currently closes.',
+  },
+
   AnimationPlayer: {
     parserOnly: [
-      // Complex multi-form dictionary: parsed by extractLibraries via
-      // Object.keys loop and dict matching; no linter validator exists.
-      'libraries',
       // animation_player.cpp:1038-1039: PROPERTY_HINT_NONE + PROPERTY_USAGE_NONE
       // with an empty setter method name, getter-only, never serialised into a
       // real .tscn, so the linter carries no validator for either. The parser
@@ -765,7 +830,58 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'current_animation_length',
       'current_animation_position',
     ],
-    reason: 'AnimationPlayer.libraries uses a bespoke dictionary decoder that the properties.X scrape cannot see; current_animation_length/current_animation_position are getter-only and PROPERTY_USAGE_NONE in Godot, so they can never appear in a real .tscn and carry no validator.',
+    linterOnly: [
+      // animation_player.cpp:38-39,71-73: legacy back-compat alias for
+      // current_animation, which the parser already reads directly and
+      // literally (properties.current_animation). Never pushed by
+      // _get_property_list, so Godot itself never writes this key; only a
+      // hand-edited scene using ONLY the alias (never current_animation
+      // itself) would differ, which is not a shape any real export produces.
+      'playback/play',
+      // animation_player.cpp:130-138: a per-animation "next" override — pure
+      // playback SEQUENCING, no bearing on which single frame is shown.
+      'next/*',
+      // animation_player.cpp:144: cross-fade duration between two clips — a
+      // transition property with no effect on a frozen single-clip frame.
+      'blend_times',
+      // AnimationMixer's own members, inherited through the tier. None of the
+      // five below moves a frozen frame: `deterministic` and `reset_on_save`
+      // are editor/runtime bookkeeping, the two root-motion keys describe
+      // movement a static preview never applies, `audio_max_polyphony` is a
+      // voice budget, and the three callback modes only decide WHEN the mixer
+      // updates, not what it produces.
+      'deterministic',
+      'reset_on_save',
+      'root_motion_track',
+      'root_motion_local',
+      'audio_max_polyphony',
+      'callback_mode_process',
+      'callback_mode_method',
+      'callback_mode_discrete',
+    ],
+    renderGap: [
+      // `active` DOES move the frame: AnimationMixer applies nothing while it
+      // is false, so an inactive player should leave every track's target at
+      // its authored value. AnimationTree's parser already models exactly this
+      // (animationtree/parser.ts:28, defaulting to true because Godot omits the
+      // key at its default); AnimationPlayer's parser never reads it, so the
+      // previewer drives properties Godot would leave alone.
+      'active',
+    ],
+    reason: 'current_animation_length/current_animation_position are getter-only and PROPERTY_USAGE_NONE in Godot, so they can never appear in a real .tscn and carry no validator; playback/play, next/<name>, blend_times and the inherited AnimationMixer members have no bearing on which single frame a static preview shows — except `active`, which is a real render gap.',
+  },
+
+  AnimationTree: {
+    linterOnly: [
+      // animation_tree.cpp:969-977: a per-AnimationNode dynamic parameter
+      // tree (StateMachine current-state, BlendTree blend amounts, …). These
+      // ARE runtime playback inputs, not fixed content: a static preview
+      // shows the tree's initial pose regardless of a live parameter's value,
+      // the same "runtime state, not content" shape AnimatedSprite2D's
+      // autoplay/playing/speed_scale already have above.
+      'parameters/*',
+    ],
+    reason: "AnimationTree's parameters/<path> tree is live playback STATE (current blend weight, active state-machine node), not authored content a static frame renders differently for.",
   },
 
 
@@ -1122,7 +1238,7 @@ describe('property-grammar parity guard', () => {
   // number rather than a pile. Exact equality, not a ceiling: this list should
   // only move when someone deliberately adds a slice or closes a gap, and
   // either way the diff should say so out loud.
-  const EXPECTED_RENDER_GAP_KEYS = 46;
+  const EXPECTED_RENDER_GAP_KEYS = 49;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
@@ -1165,7 +1281,12 @@ describe('property-grammar parity guard', () => {
    * rather than being smuggled into a wave.
    */
   const SWEPT_SLICES = 74;
-  const PARSER_REUSING_SLICES = 172;
+  // +1: nodes/animation/animationmixer/ — a new abstract tier (linterParser.ts
+  // only, no parser.ts of its own, same shape as canvasitem/shared/), added to
+  // register anims/<name>/libraries/libraries/<name> once for both
+  // AnimationPlayer and AnimationTree rather than duplicating the three
+  // validators across both concrete slices.
+  const PARSER_REUSING_SLICES = 173;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>

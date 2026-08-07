@@ -30,7 +30,7 @@ None. The node has no runtime visual in Godot, so there is nothing to diverge on
 ## Linting
 
 <!-- lint:begin VisibleOnScreenEnabler2D -->
-Strict parsing format-checks these `VisibleOnScreenEnabler2D` properties, plus 2 inherited from VisibleOnScreenNotifier2D, 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `VisibleOnScreenEnabler2D` properties, plus 2 inherited from VisibleOnScreenNotifier2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

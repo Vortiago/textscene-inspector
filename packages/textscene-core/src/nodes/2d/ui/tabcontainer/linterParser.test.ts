@@ -13,6 +13,9 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
+// Only for the "separate PropertyListHelper instance" assertion below: this
+// slice's own module graph never otherwise imports TabBar.
+import '../tabbar/linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -249,5 +252,37 @@ describe('TabContainer strict validators', () => {
 
   it('inherits CanvasItem keys through the base-walk', () => {
     expect(validatorRegistry.findValidator('TabContainer', 'modulate')).not.toBeNull();
+  });
+
+  describe('tab_<i>/* (tab_container.cpp:1270-1276, own PropertyListHelper family)', () => {
+    it('accepts a quoted title', () => {
+      expect(check('tab_0/title', '"General"')).toBeNull();
+    });
+
+    it('accepts a resource reference for icon', () => {
+      expect(check('tab_0/icon', 'SubResource("PlaceholderTexture2D_1")')).toBeNull();
+    });
+
+    it('accepts disabled/hidden booleans', () => {
+      expect(check('tab_0/disabled', 'true')).toBeNull();
+      expect(check('tab_1/hidden', 'false')).toBeNull();
+    });
+
+    it('rejects an unrecognised leaf (tooltip belongs to TabBar, not TabContainer)', () => {
+      const error = check('tab_0/tooltip', '"nope"');
+      expect(error?.severity).toBe('error');
+      expect(error?.code).toBe('INVALID_TABCONTAINER_TAB_KEY');
+    });
+
+    it('rejects a negative tab index (property_list_helper.cpp:58)', () => {
+      const error = check('tab_-1/title', '"X"');
+      expect(error?.severity).toBe('error');
+      expect(error?.code).toBe('INVALID_TABCONTAINER_TAB_INDEX');
+    });
+
+    it('does not shadow TabBar\'s own tab_<i>/* family (a separate PropertyListHelper instance)', () => {
+      // TabBar accepts `tooltip`; TabContainer does not.
+      expect(validatorRegistry.findValidator('TabBar', 'tab_0/tooltip')).not.toBeNull();
+    });
   });
 });

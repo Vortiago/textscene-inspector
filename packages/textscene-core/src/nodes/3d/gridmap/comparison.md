@@ -38,10 +38,12 @@ Strict parsing format-checks these `GridMap` properties, plus 16 inherited from 
 
 | Property | Accepts |
 | --- | --- |
+| `baked_meshes` | Array of resource references ([SubResource("id"), …]) |
 | `cell_center_x` | true or false |
 | `cell_center_y` | true or false |
 | `cell_center_z` | true or false |
 | `cell_size` | Vector3(x, y, z) |
+| `data` | Dictionary literal { "cells": PackedInt32Array(...) } |
 | `mesh_library` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |

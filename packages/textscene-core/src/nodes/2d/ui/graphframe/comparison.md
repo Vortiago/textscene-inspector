@@ -32,7 +32,7 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin GraphFrame -->
-Strict parsing format-checks these `GraphFrame` properties, plus 6 inherited from GraphElement, 28 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `GraphFrame` properties, plus 6 inherited from GraphElement, 28 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

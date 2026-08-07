@@ -39,7 +39,7 @@ Not captured yet: nothing renders, so there is nothing to compare pixels against
 ## Linting
 
 <!-- lint:begin TabContainer -->
-Strict parsing format-checks these `TabContainer` properties, plus 28 inherited from Control, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `TabContainer` properties, plus 28 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
@@ -49,6 +49,7 @@ Strict parsing format-checks these `TabContainer` properties, plus 28 inherited 
 | `deselect_enabled` | true or false |
 | `drag_to_rearrange_enabled` | true or false |
 | `switch_on_drag_hover` | true or false |
+| `tab_#/*` | tab |
 | `tab_alignment` | enum 0-2 (Left/Center/Right) |
 | `tab_focus_mode` | enum 0-2 (None/Click/All) |
 | `tabs_position` | enum 0-1 (Top/Bottom) |

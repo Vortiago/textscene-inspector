@@ -25,7 +25,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin AnimatableBody2D -->
-Strict parsing format-checks these `AnimatableBody2D` properties, plus 3 inherited from StaticBody2D, 5 inherited from CollisionObject2D, 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AnimatableBody2D` properties, plus 3 inherited from StaticBody2D, 5 inherited from CollisionObject2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

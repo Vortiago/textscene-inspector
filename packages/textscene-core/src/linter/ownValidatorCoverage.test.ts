@@ -108,19 +108,23 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
  *
  * The tiers below were invisible until this guard closed over the base chain,
  * and each one is worth more than a leaf because its keys reach every
- * descendant: AnimationMixer 10 (AnimationPlayer, AnimationTree), CSGShape3D 7
- * (every CSG node), PhysicsBody3D 6 — the axis_lock set, reaching all four 3D
- * bodies — and CSGPrimitive3D 1.
+ * descendant: CSGShape3D 7 (every CSG node), PhysicsBody3D 6 — the axis_lock
+ * set, reaching all four 3D bodies — and CSGPrimitive3D 1.
+ *
+ * `AnimationMixer` left this list once `anims/<name>`, `libraries` and
+ * `libraries/<name>` were declared (propertyListRouteCoverage.test.ts) — but
+ * that closes only the hand-rolled route. Its TEN `ADD_PROPERTY` members
+ * (`active`, `deterministic`, `root_motion_track`, `reset_on_save`,
+ * `root_motion_local`, `callback_mode_process`, `callback_mode_method`,
+ * `callback_mode_discrete`, `audio_max_polyphony`, `root_node` — all currently
+ * declared only on `AnimationTree`, never on `AnimationMixer` itself, so
+ * `AnimationPlayer` inherits none of them) are a real, separate, still-open gap
+ * this coarser guard can no longer see once ANY own key exists: it counts
+ * types with zero own validators, not missing members by name.
  *
  * Removing an entry (by declaring its validators) is the only correct edit.
  */
-const UNDECLARED: readonly string[] = [
-  'AnimationMixer',
-  'CSGPrimitive3D',
-  'CSGShape3D',
-  'CanvasLayer',
-  'PhysicsBody3D',
-];
+const UNDECLARED: readonly string[] = ['CSGPrimitive3D', 'CSGShape3D', 'CanvasLayer', 'PhysicsBody3D'];
 
 /**
  * Every type this guard holds to account: the registry, closed over the base
@@ -161,7 +165,7 @@ describe('own-validator coverage', () => {
   it('never lets the undeclared list grow', () => {
     // The ratchet: a new gap cannot be waved through by appending to the list.
     // Each decrement is a type whose properties stopped being silently accepted.
-    expect(UNDECLARED.length).toBeLessThanOrEqual(6);
+    expect(UNDECLARED.length).toBeLessThanOrEqual(4);
   });
 
   it('declares validators for Button, whose 13 members were the trigger', () => {
