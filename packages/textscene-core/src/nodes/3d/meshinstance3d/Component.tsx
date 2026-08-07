@@ -45,6 +45,11 @@ import { decodeSceneArrayMesh } from '../../../resources/meshes/arrayMeshDecode'
 import { buildArrayMeshGeometry } from '../../../resources/meshes/arrayMeshGeometry';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
+import {
+  GODOT_DEFAULT_ALBEDO,
+  GODOT_DEFAULT_METALLIC,
+  GODOT_DEFAULT_ROUGHNESS,
+} from '../../../r3f/materials/godotDefaultMaterial';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { applyUVTransform } from './applyUVTransform';
 import { repackAnisotropyFlowmap } from './repackFlowmap';
@@ -577,6 +582,10 @@ interface SecondarySurfaceMaterialProps {
  * Scalar properties only — texture slots are unwired, not unreachable. This is a
  * component rendered once per surface, so it may call `useResource` itself, as
  * `ExternalMaterialSlot` does for the external-ArrayMesh path.
+ *
+ * An unpopulated slot gets Godot's default 3D material: the renderer's fallback
+ * is per surface index, not per mesh, so a slot past the material array is
+ * exactly the material-less case surface 0 would hit.
  */
 function SecondarySurfaceMaterial({
   attach,
@@ -587,9 +596,9 @@ function SecondarySurfaceMaterial({
     return (
       <meshStandardMaterial
         attach={attach}
-        color={0xcccccc}
-        metalness={0.3}
-        roughness={0.7}
+        color={GODOT_DEFAULT_ALBEDO}
+        metalness={GODOT_DEFAULT_METALLIC}
+        roughness={GODOT_DEFAULT_ROUGHNESS}
         shadowSide={shadowSide ?? null}
       />
     );

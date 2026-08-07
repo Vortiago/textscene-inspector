@@ -11,37 +11,12 @@
 
 import * as THREE from 'three';
 import { resolveEmission } from '../../resources/materials/standardmaterial3d/emission';
+import {
+  GODOT_DEFAULT_ALBEDO,
+  GODOT_DEFAULT_METALLIC,
+  GODOT_DEFAULT_ROUGHNESS,
+} from './godotDefaultMaterial';
 import type { StandardMaterial3DScalars } from './standardMaterialScalars';
-
-/**
- * Godot's default 3D material — what a mesh with no material actually gets.
- *
- * It is NOT a `StandardMaterial3D` with default properties. Every backend
- * binds a hardcoded shader instead
- * (`scene_shader_forward_clustered.cpp`, and identically in the Mobile and
- * Compatibility renderers):
- *
- *     void vertex()   { ROUGHNESS = 0.8; }
- *     void fragment() { ALBEDO = vec3(0.6); ROUGHNESS = 0.8; METALLIC = 0.2; }
- *
- * so an unmaterialed mesh is a mid-grey, slightly metallic, mostly-rough
- * surface — not the white matte a default-constructed StandardMaterial3D
- * would give. Reading it as white made every such mesh reflect roughly 1/0.6
- * too much ambient, which is what blew out the ground plane in
- * `unit-preview-lighting` against Godot's own render of it.
- *
- * `ALBEDO` is a shader constant, so 0.6 is LINEAR. It has to be built with an
- * explicit colour space — three decodes a plain hex literal as sRGB, which
- * would land at 0.318 linear instead.
- */
-const DEFAULT_MATERIAL_ALBEDO = new THREE.Color().setRGB(
-  0.6,
-  0.6,
-  0.6,
-  THREE.LinearSRGBColorSpace
-);
-const DEFAULT_MATERIAL_ROUGHNESS = 0.8;
-const DEFAULT_MATERIAL_METALLIC = 0.2;
 
 export interface StandardMaterialSlotProps {
   scalars: StandardMaterial3DScalars | null;
@@ -102,9 +77,9 @@ export function StandardMaterialSlot({
     return (
       <meshStandardMaterial
         attach={attach}
-        color={DEFAULT_MATERIAL_ALBEDO}
-        metalness={DEFAULT_MATERIAL_METALLIC}
-        roughness={DEFAULT_MATERIAL_ROUGHNESS}
+        color={GODOT_DEFAULT_ALBEDO}
+        metalness={GODOT_DEFAULT_METALLIC}
+        roughness={GODOT_DEFAULT_ROUGHNESS}
         side={THREE.FrontSide}
         shadowSide={shadowSide ?? null}
       />

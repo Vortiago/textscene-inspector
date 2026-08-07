@@ -266,13 +266,21 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     );
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    const materials = renderer.scene.findAllByType('MeshStandardMaterial');
-    const colours = materials.map((m) =>
-      materialInstanceAs<THREE.MeshStandardMaterial>(m).color.getHex()
-    );
-    // The material's albedo, not ExternalMaterialSlot's 0xffffff default.
-    expect(colours).not.toContain(0xffffff);
-    expect(colours.some((c) => c !== 0xffffff)).toBe(true);
+    const materials = renderer.scene
+      .findAllByType('MeshStandardMaterial')
+      .map((m) => materialInstanceAs<THREE.MeshStandardMaterial>(m));
+    expect(materials.length).toBeGreaterThan(0);
+    // The sub_resource's own albedo — a near-black blue at roughness 0.6 — not
+    // the mid-grey 0.6/0.8/0.2 Godot binds for a surface with no material.
+    for (const material of materials) {
+      const rgb = material.color.getRGB(
+        { r: 0, g: 0, b: 0 } as THREE.Color,
+        THREE.LinearSRGBColorSpace
+      );
+      expect(rgb.b).toBeGreaterThan(rgb.r);
+      expect(rgb.b).toBeLessThan(0.1);
+      expect(material.roughness).toBeCloseTo(0.6, 5);
+    }
   });
 
   it('shows the placeholder when a scene ArrayMesh sub_resource carries no surfaces', async () => {

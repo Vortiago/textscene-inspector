@@ -1,10 +1,10 @@
 /**
  * CSG `material` accepts an ExtResource `.tres`, not just a SubResource.
  *
- * `resolveStandardMaterial` only understands `SubResource("id")`, so every CSG
- * node in scenes/demos/3d/csg/csg.tscn — 33 `material = ExtResource(...)` lines
- * — rendered as Godot's default white. Both existing CSG fixtures declare their
- * materials inline as sub-resources, so no golden could see it.
+ * `resolveStandardMaterial` understands only `SubResource("id")`, so a CSG node
+ * pointing at a `.tres` fell through to the default-material path instead. Every
+ * CSG fixture in the golden bag declares its material inline as a sub-resource,
+ * so no golden can see the external path at all — which is why it lives here.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -68,7 +68,13 @@ describe('<CsgPrimitive> material resolution', () => {
 
   it('shows the unresolved-resource placeholder while the .tres has not loaded', async () => {
     const renderer = await render('ExtResource("1_blue")');
-    expect(materialOf(renderer).color.getHex()).toBe(0xffffff);
+    // The pending placeholder IS the default material — an unresolved path is the
+    // same case as no material at all, so it must not be a distinct colour.
+    const linear = materialOf(renderer).color.getRGB(
+      { r: 0, g: 0, b: 0 } as THREE.Color,
+      THREE.LinearSRGBColorSpace
+    );
+    expect(linear.r).toBeCloseTo(0.6, 5);
   });
 
   it('falls back to Godot’s default material shader when no material is declared', async () => {
