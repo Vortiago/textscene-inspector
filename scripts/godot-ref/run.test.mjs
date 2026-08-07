@@ -36,6 +36,8 @@ import { bootstrapScript,
   EDITOR_FOV,
   FRAME_MARGIN,
   parseArgs,
+  REFERENCE_FIXED_FPS,
+  renderArgv,
   resolveProjectRoot,
   projectConfig,
   probePixels,
@@ -458,5 +460,57 @@ describe('physics pause follows the previews flag', () => {
     expect(pauseLine).toBeGreaterThan(-1);
     expect(lines[pauseLine - 1].trim()).toBe('if PREVIEWS:');
     expect(script(false)).toContain('const PREVIEWS := false');
+  });
+});
+
+/**
+ * The pause keeps the reference at the load instant for everything driven by
+ * NOTIFICATION_*_PROCESS, but NOTIFICATION_DRAW is not pause-gated, so a node
+ * that catches up at first draw still reads one process delta. `--fixed-fps`
+ * makes that delta a constant instead of "how long this host took to reach the
+ * first frame", which is the difference between a reference image that is
+ * reproducible and one that is merely reproducible HERE.
+ */
+describe('the reference renders on a fixed clock', () => {
+  it('passes --fixed-fps to the render pass', () => {
+    const argv = renderArgv('/tmp/work');
+    const at = argv.indexOf('--fixed-fps');
+    expect(at).toBeGreaterThan(-1);
+    expect(argv[at + 1]).toBe(String(REFERENCE_FIXED_FPS));
+  });
+
+  it('keeps the delta under a frame of any emitter that pins its own step', () => {
+    // `CPUParticles2D::_update_internal` advances past `preprocess` by whole
+    // `1/fixed_fps` steps while `todo >= frame_time`. The corpus pins emitters
+    // at 30; a delta below that frame floors the step count to zero, which is
+    // what puts both harnesses on the same simulated frame.
+    expect(1 / REFERENCE_FIXED_FPS).toBeLessThan(1 / 30);
+  });
+
+  it('refuses a non-zero settle without blaming the missing flag', () => {
+    // The refusal outlived its first reason: the delta IS fixed now. What
+    // stops a non-zero window is the pause plus the previewer's missing hook,
+    // and the message has to say so or the next reader adds a flag that is
+    // already there.
+    const ask = () =>
+      bootstrapScript({
+        scenePath: 'res://x.tscn',
+        previews: true,
+        simSeconds: 0.5,
+        camera: null,
+        lookAt: null,
+        frame: false,
+        sceneCamera: false,
+        sceneCameraPath: null,
+        mode: 'auto',
+        out: '/tmp/o.png',
+        boundsOut: null,
+        modeOut: '/tmp/m.txt',
+        fov: 70,
+        fovExplicit: false,
+        canvas2DSize: { width: 640, height: 360 },
+      });
+    expect(ask).toThrow(/paused before the scene is ever instantiated/);
+    expect(ask).toThrow(/preprocess/);
   });
 });

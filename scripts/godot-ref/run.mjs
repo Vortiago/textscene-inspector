@@ -71,6 +71,31 @@ const DEFAULT_HEIGHT = CANVAS_CAPTURE.height;
 export const EDITOR_FOV = 70;
 
 /**
+ * Godot's `--fixed-fps`, which replaces `get_process_delta_time()` with a
+ * constant and skips `add_frame_delay` (`main/main.cpp:1902,4830,5071`).
+ *
+ * The settle contract puts the shutter at the scene's load instant, and the
+ * pause-before-instantiate keeps it there for anything driven by
+ * NOTIFICATION_*_PROCESS. NOTIFICATION_DRAW is NOT pause-gated, though, so a
+ * node that catches up at first draw still reads one process delta — and
+ * without this flag that delta is wall clock, i.e. how long this host took to
+ * reach the first frame. `CPUParticles2D::_update_internal` is the measured
+ * case: past the authored `preprocess` it advances by `delta`, quantized to
+ * whole `1/fixed_fps` steps when the emitter sets one. A host slow enough to
+ * cross that threshold jumps the reference a full step, silently, and only
+ * sometimes — a reference image that is reproducible here and different there.
+ *
+ * 1000 puts the constant delta at 1 ms: below `1/fixed_fps` for any emitter
+ * that does not ask for four-figure rates, so the quantized branch floors to
+ * zero steps, and negligible in the unquantized one. Higher is not better —
+ * the point is a delta small enough to round away, not a large frame count.
+ *
+ * This pins the reference to its own host, and nothing else: it changes what
+ * Godot BELIEVES elapsed, never how many frames run or what is drawn.
+ */
+export const REFERENCE_FIXED_FPS = 1000;
+
+/**
  * `Node3DEditorViewport::Cursor()` — where the editor opens EVERY scene,
  * whatever is in it. Mirrors `godotEditorCamera.ts`, which is what the
  * previewer opens at, so a bare `ref:godot` and a bare `ref:ours` frame the
@@ -396,10 +421,14 @@ export function bootstrapScript({
   if (simSeconds !== 0) {
     throw new Error(
       `settle contract asks for ${simSeconds}s of simulated time, and this harness cannot ` +
-        'reach it: Godot\'s process delta is wall-clock, so advancing a FIXED window needs ' +
-        '`--fixed-fps` stepping that does not exist here — and the previewer has no ' +
-        'driveable elapsed-time hook to meet it at, so the pair would not be comparable ' +
-        'even if it did.'
+        'reach it: the tree is paused before the scene is ever instantiated, so no ' +
+        'simulated time accrues at all. `--fixed-fps` makes the delta a constant rather ' +
+        'than wall clock, but that pins the instant, it does not advance it — a fixed ' +
+        'window would mean unpausing and counting frames. And the previewer still has no ' +
+        'driveable elapsed-time hook to meet one at, so the pair would not be comparable ' +
+        'even then. A scene that wants a LATER instant says so in the file: an emitter\'s ' +
+        '`preprocess` is a serialised fixed-step advance both sides already honour at ' +
+        'settle 0.'
     );
   }
   return `extends Node3D
@@ -752,6 +781,16 @@ const MAIN_SCENE = `[gd_scene load_steps=2 format=3]
 script = ExtResource("1")
 `;
 
+/**
+ * The render pass's argv. Split out so the flag set is assertable without an
+ * engine: dropping `--fixed-fps` costs nothing visible here and everything
+ * later, since the reference keeps rendering — just against this host's frame
+ * timing instead of a constant.
+ */
+export function renderArgv(work) {
+  return ['--path', work, '--fixed-fps', String(REFERENCE_FIXED_FPS), '--quit-after', '400'];
+}
+
 function runGodot(args, { display }) {
   const command = display ? 'xvfb-run' : 'godot';
   const argv = display ? ['-a', 'godot', ...args] : args;
@@ -861,7 +900,7 @@ async function renderInto(
   // a scene with no importable assets legitimately has nothing to do.
   runGodot(['--headless', '--path', work, '--import'], { display: false });
 
-  const render = runGodot(['--path', work, '--quit-after', '400'], { display: true });
+  const render = runGodot(renderArgv(work), { display: true });
   if (!existsSync(resolve(out))) {
     // Surface the spawn error (missing godot/xvfb-run, timeout) that a bare
     // "produced no image" would otherwise hide with empty stderr.
