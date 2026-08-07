@@ -492,11 +492,23 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
     );
   }
 
-  // The comparison sheet is slice content (SHEET-STANDARD.md). `image:` ships
-  // commented out: a declared-but-uncaptured basename fails build-gallery (and
-  // so the web build), while recapture only collects sheets that DO declare one.
-  // So the order is: uncomment the line, then `pnpm recapture --only <basename>`.
-  // Until then the gallery shows its "not captured yet" placeholder.
+  // The comparison sheet is slice content (SHEET-STANDARD.md). It ships with NO
+  // `image:` key at all — never a commented-out one. A commented line reads, to
+  // a human skimming the file, as an already-known value; but parseFrontmatter's
+  // key regex is anchored at the start of the line, so a `#`-prefixed line can
+  // never match, and the key is silently invisible to every tool that reads
+  // `meta` (recapture never has a target, build-gallery never has a basename).
+  // A sheet with no key at all is at least honest: nothing claims a value that
+  // isn't there, and `pnpm test:unit`'s frontmatter-comment guard (sheets.test.mjs)
+  // catches the commented-key shape wherever it appears, including by accident.
+  //
+  // Declaring the key honestly, before the first capture runs, is not the fix
+  // either: build-gallery treats a declared image with no file on disk as a
+  // broken reference and fails the build, and that failure reaches (via the web
+  // app's own build) the very capture step that would have produced the file —
+  // there is no order of operations that gets past it today. So the key stays
+  // absent until a human adds it by hand as the last step of finishing the
+  // slice, right before running recapture.
   //
   // `category` is a best guess — 2D/3D from the type suffix, Other for a
   // non-visual node; the corpus is genuinely mixed here (AnimationPlayer is 3D,
@@ -518,7 +530,6 @@ type: ${typeName}
 category: ${sheetCategory}
 status: unreviewed
 fixture: ${fixtureName}
-# image: ${imageBasename}
 renders_as: ${transformOnly ? 'a transform-only group' : 'TBD — one short noun phrase'}
 ---
 
@@ -575,7 +586,9 @@ the property and the value the lenient parser falls back to.
      rewrite the lenient-parser prose under it. CI checks both.
   3. pnpm type-check && pnpm --filter @textscene/core test
   4. pnpm build:linter && pnpm lint:tscn scenes/fixtures/${fixtureName}
-  5. Uncomment \`image:\` in comparison.md, then pnpm recapture --only ${imageBasename}`);
+  5. Add \`image: ${imageBasename}\` to comparison.md's frontmatter (a real key,
+     never commented out — see the note above the frontmatter block), then
+     pnpm recapture --only ${imageBasename}`);
 }
 
 main();

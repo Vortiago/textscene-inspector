@@ -110,6 +110,29 @@ describe('build() orphaned-marker failure', () => {
   });
 });
 
+describe('build() missing-image reporting', () => {
+  const minimalSheet = (meta, body = '# FakeType\n\nSome prose.\n') => ({
+    meta: { type: 'FakeType', category: 'Other', ...meta },
+    body,
+  });
+
+  it('reports a declared image with no captured file on disk', () => {
+    const { missing } = build([minimalSheet({ image: 'unit-nonexistent-for-this-test' })], false, false);
+    expect(missing).toHaveLength(1);
+    expect(missing[0]).toContain('unit-nonexistent-for-this-test');
+  });
+
+  it('stays empty for a sheet that declares no image at all', () => {
+    // The state a freshly scaffolded slice ships in: no capture target for
+    // recapture, and no broken reference for build-gallery to report. Adding
+    // the `image:` key by hand is what asks for the first capture, so a
+    // declared-but-absent image has to stay non-fatal — see the reasoning at
+    // the `missing` push in build-gallery.mjs.
+    const { missing } = build([minimalSheet({})], false, false);
+    expect(missing).toEqual([]);
+  });
+});
+
 describe('PointLight2D comparison.md (the fixture that surfaced this bug)', () => {
   it('every compare marker attaches to a section — none swallowed into prose', () => {
     const file = collectSheetFiles().find((f) => f.includes('pointlight2d/comparison.md'));

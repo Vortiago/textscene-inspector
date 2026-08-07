@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url';
 import {
   LINT_EXEMPT_CATEGORIES as LINT_EXEMPT,
   collectSheetFiles,
+  findCommentedFrontmatterKeys,
   findImage,
   findScene,
   parseCompareMarkers,
@@ -59,6 +60,7 @@ const sheets = await Promise.all(
       meta: parsed?.meta ?? {},
       body: parsed?.body ?? '',
       hasFrontmatter: Boolean(parsed),
+      text,
     };
   })
 );
@@ -86,6 +88,22 @@ describe('comparison sheets', () => {
         .map((k) => `${s.label}: ${k}`)
     );
     expect(unknown.sort()).toEqual([]);
+  });
+
+  it('hides no known frontmatter key behind a comment', () => {
+    // `# image: unit-foo` reads, to a human skimming the file, as an already-set
+    // value — but `parseFrontmatter`'s key regex cannot match past the `#`, so
+    // the key is silently absent from `meta` for every consumer (recapture has
+    // no target, build-gallery has no basename). A freshly scaffolded slice
+    // ships with the key OMITTED entirely, never commented out; this is the
+    // loud backstop for that convention slipping (a hand-edit, a stale scaffold,
+    // a copy-paste from an older sheet).
+    const bad = sheets.flatMap((s) =>
+      findCommentedFrontmatterKeys(s.text)
+        .filter((k) => KNOWN_KEYS.has(k))
+        .map((k) => `${s.label}: # ${k}`)
+    );
+    expect(bad.sort()).toEqual([]);
   });
 
   it('uses only known status and category values', () => {

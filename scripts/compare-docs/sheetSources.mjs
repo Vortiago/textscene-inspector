@@ -82,6 +82,28 @@ export function parseFrontmatter(text) {
   return { meta, body: match[2] };
 }
 
+/**
+ * Frontmatter keys hidden behind a `#` comment, e.g. `# image: unit-foo`.
+ *
+ * `parseFrontmatter`'s key regex is anchored at the start of the (trimmed)
+ * line, so a `#`-prefixed line never matches — the key is absent from `meta`
+ * for every consumer (recapture, build-gallery, this module's own callers).
+ * A human skimming the raw file sees what looks like an already-known value,
+ * so the gap is easy to miss: nothing errors, the sheet just quietly never
+ * gets a capture target. Scanned only inside the `---`-delimited block; a `#`
+ * heading in the body is ordinary Markdown, not a commented-out pair.
+ */
+export function findCommentedFrontmatterKeys(text) {
+  const match = /^---\n([\s\S]*?)\n---\n/.exec(text);
+  if (!match) return [];
+  const found = [];
+  for (const line of match[1].split('\n')) {
+    const commented = /^#\s*(\w+):/.exec(line.trim());
+    if (commented) found.push(commented[1]);
+  }
+  return found;
+}
+
 /** Every `<!-- compare: image=… status=… fixture=… -->` marker in a sheet body. */
 export function parseCompareMarkers(body) {
   return [...body.matchAll(/<!--\s*compare:\s*(.*?)\s*-->/g)].map((m) =>

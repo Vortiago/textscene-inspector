@@ -463,9 +463,19 @@ export function build(sheets, inlineImages, fragment) {
         godot = imageSrc(meta.image, 'godot', inlineImages);
         ours = imageSrc(meta.image, 'ours', inlineImages);
         // A DECLARED `image:` whose files are absent is a broken reference and
-        // fails the build. No `image:` at all is a sheet whose capture has not
-        // been run yet (a freshly scaffolded slice) — that renders the
+        // is REPORTED, not fatal. No `image:` at all is a sheet whose capture
+        // has not been run yet (a freshly scaffolded slice) — that renders the
         // "not captured yet" placeholder instead of breaking every consumer.
+        //
+        // Fatal here would be a cycle rather than a gate: this generator runs
+        // inside the web app's `prebuild`, `ensureWebBuilt` runs that same
+        // build before every capture, and a capture target exists only for a
+        // sheet that already declares `image:`. So declaring the key — the one
+        // way to ask for the capture — would block the capture that creates
+        // the file. The condition is still enforced, by the corpus test that
+        // asserts every referenced image exists; that runs under `test:unit`,
+        // where a docs-content gap reports as a docs-content gap instead of
+        // killing `validate` at its build step.
         if (meta.visual !== 'false' && (!godot || !ours)) {
           missing.push(`${meta.type} (${meta.image})`);
         }
@@ -861,9 +871,9 @@ function main() {
   writeFileSync(args.out, html);
   console.log(`[gallery] ${sheets.length} sheet(s) → ${args.out}`);
   if (missing.length) {
-    console.error(`[gallery] ${missing.length} sheet(s) reference a MISSING image:`);
-    for (const m of missing) console.error(`  ${m}`);
-    process.exitCode = 1;
+    console.warn(`[gallery] ${missing.length} sheet(s) reference a MISSING image:`);
+    for (const m of missing) console.warn(`  ${m}`);
+    console.warn('[gallery] run the capture for these; the corpus test fails until they exist');
   }
   if (orphanedMarkers.length) {
     console.error(`[gallery] ${orphanedMarkers.length} sheet(s) carry an orphaned compare marker:`);

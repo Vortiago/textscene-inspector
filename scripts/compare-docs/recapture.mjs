@@ -64,8 +64,17 @@ function parseArgs(argv) {
   return a;
 }
 
-/** Every (image, fixture, camera) the sheets reference — legacy pair + sections. */
-function collectTargets() {
+/**
+ * Every (image, fixture, camera) the sheets reference — legacy pair + sections.
+ *
+ * Exported for the pure test coverage in collectTargets.test.mjs: this is one
+ * side of a bootstrap cycle with build-gallery.mjs — a sheet with no `image:`
+ * produces no target here, so a freshly scaffolded slice cannot be recaptured,
+ * while build-gallery treats a DECLARED image with no captured file as a
+ * broken reference and fails the build that `captureOurs` (below) needs in
+ * order to produce that very file.
+ */
+export function collectTargets() {
   const byImage = new Map();
   for (const file of collectSheetFiles()) {
     const text = readFileSync(file, 'utf8');
