@@ -47,6 +47,10 @@
  * 2. **It strips `default_environment`.** A project-level default environment
  *    would light the scene through a channel the previewer has no notion of,
  *    silently biasing every comparison.
+ *
+ * `--particles <seconds>` is the third: the editor ANIMATES particles (there is
+ * no `is_editor_hint` guard on the process path), so a paused reference draws a
+ * pose the editor never sits on. See `PARTICLES_PROCESS_DEFAULT`.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -96,6 +100,47 @@ export const EDITOR_FOV = 70;
 export const REFERENCE_FIXED_FPS = 1000;
 
 /**
+ * How many seconds of particle simulation `--particles` advances by, when the
+ * caller does not say. ZERO, i.e. the reference keeps drawing the pose it draws
+ * today unless someone asks for another one.
+ *
+ * Off by default even though this is the EDITOR-mirroring harness, and the two
+ * other editor behaviours (`--no-previews`) are on by default. The asymmetry is
+ * the point:
+ *
+ *  - The preview sun has ONE value Godot itself defines
+ *    (`_load_default_preview_settings`), so defaulting to it copies the engine.
+ *    A particle instant has no such value. The editor runs the emitter on wall
+ *    clock — `set_process_internal(emitting)` at `cpu_particles_2d.cpp:1262` has
+ *    no `is_editor_hint` guard — so "what the editor shows" is a different
+ *    picture every frame and cannot be a default.
+ *  - Any derived default (`preprocess`, else one lifetime) would be OUR
+ *    previewer's convention written into the reference, which is the one thing
+ *    a reference must never carry: it would then agree with us by construction.
+ *  - A non-zero default would silently move every reference image already
+ *    arbitrated against this harness.
+ *
+ * So the caller names the instant, in seconds, and the fixture header and the
+ * comparison sheet record the number they named. Godot executes it through its
+ * OWN loop — see `_advance_particles` in the bootstrap.
+ *
+ * ADDS to an authored `preprocess` rather than replacing it: `_update_internal`
+ * seeds `todo` from the request and then adds `pre_process_time` on top when
+ * `time == 0` (`cpu_particles_2d.cpp:727-731`). So `--particles 2` on an emitter
+ * that writes `preprocess = 1.5` settles at 3.5 s, and the flag is "further",
+ * not "at". An emitter with no `preprocess` — the case this exists for — has
+ * nothing to add, so there the two readings coincide.
+ *
+ * SCENE-WIDE, deliberately: one number reaches every emitter. The previewer's
+ * substituted window is PER EMITTER (one `lifetime` each), so a scene whose
+ * emitters carry different lifetimes settles to several instants at once and no
+ * single value here addresses it. Such a scene is not arbitrable through this
+ * flag; arbitrate the behaviour on a fixture holding one instant instead of
+ * picking a value and calling the residual a measurement.
+ */
+export const PARTICLES_PROCESS_DEFAULT = 0;
+
+/**
  * `Node3DEditorViewport::Cursor()` — where the editor opens EVERY scene,
  * whatever is in it. Mirrors `godotEditorCamera.ts`, which is what the
  * previewer opens at, so a bare `ref:godot` and a bare `ref:ours` frame the
@@ -130,6 +175,15 @@ function positiveNumber(flag, raw) {
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) {
     throw new Error(`${flag} needs a positive number, got "${raw}"`);
+  }
+  return value;
+}
+
+/** Like `positiveNumber`, but 0 is a meaningful value rather than a mistake. */
+function nonNegativeNumber(flag, raw) {
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${flag} needs a non-negative number, got "${raw}"`);
   }
   return value;
 }
@@ -175,6 +229,7 @@ export function parseArgs(argv) {
     lookAt: null,
     probes: [],
     patch: 1,
+    particles: PARTICLES_PROCESS_DEFAULT,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -230,6 +285,9 @@ export function parseArgs(argv) {
         break;
       case '--patch':
         args.patch = positiveNumber('--patch', argv[++i]);
+        break;
+      case '--particles':
+        args.particles = nonNegativeNumber('--particles', argv[++i]);
         break;
       default:
         if (arg.startsWith('--')) throw new Error(`Unknown flag ${arg}`);
@@ -417,18 +475,20 @@ export function bootstrapScript({
   fov,
   fovExplicit,
   canvas2DSize,
+  particles = PARTICLES_PROCESS_DEFAULT,
 }) {
   if (simSeconds !== 0) {
     throw new Error(
       `settle contract asks for ${simSeconds}s of simulated time, and this harness cannot ` +
-        'reach it: the tree is paused before the scene is ever instantiated, so no ' +
-        'simulated time accrues at all. `--fixed-fps` makes the delta a constant rather ' +
-        'than wall clock, but that pins the instant, it does not advance it — a fixed ' +
-        'window would mean unpausing and counting frames. And the previewer still has no ' +
-        'driveable elapsed-time hook to meet one at, so the pair would not be comparable ' +
-        'even then. A scene that wants a LATER instant says so in the file: an emitter\'s ' +
-        '`preprocess` is a serialised fixed-step advance both sides already honour at ' +
-        'settle 0.'
+        'reach it as a WHOLE-SCENE quantity: the tree is paused before the scene is ever ' +
+        'instantiated, so no simulated time accrues at all, and unpausing to accrue it ' +
+        'would also fall every body and advance every animation past the authored pose. ' +
+        'The previewer has no driveable elapsed-time hook to meet a scene-wide instant at ' +
+        'either, so the pair would not be comparable even then. Simulated time is ' +
+        'therefore advanced PER SUBSYSTEM, through whatever fixed-step API Godot itself ' +
+        'exposes for it, so the instant is named in that subsystem\'s own units: an ' +
+        "emitter's `preprocess` is one such advance and is serialised in the file; " +
+        '`--particles <seconds>` is the same advance asked for from outside.'
     );
   }
   return `extends Node3D
@@ -442,6 +502,7 @@ const MODE := "${mode}"
 const SCENE_CAMERA := ${sceneCamera ? 'true' : 'false'}
 const SCENE_CAMERA_PATH := ${gdString(sceneCameraPath ?? '')}
 const FOV := ${fov}
+const PARTICLES_PROCESS := ${particles}
 const CANVAS_2D_SIZE := Vector2i(${canvas2DSize.width}, ${canvas2DSize.height})
 const CLEAR_2D := ${gdColor(CANVAS_2D_CAPTURE.clearColor)}
 
@@ -484,6 +545,7 @@ func _is_canvas_scene(target: Node) -> bool:
 
 func _render_3d(target: Node) -> void:
 	add_child(target)
+	_advance_particles(target)
 	if PREVIEWS:
 		_freeze_game_logic(target)
 		_apply_preview_lighting(target)
@@ -508,6 +570,7 @@ func _render_2d(target: Node) -> void:
 	if not SCENE_CAMERA:
 		_disable_2d_cameras(target)
 	vp.add_child(target)
+	_advance_particles(target)
 	if PREVIEWS:
 		_freeze_game_logic(target)
 	await _converge()
@@ -560,6 +623,46 @@ func _freeze_game_logic(node: Node) -> void:
 		(node as SoftBody3D).process_mode = Node.PROCESS_MODE_DISABLED
 	for child in node.get_children():
 		_freeze_game_logic(child)
+
+# EDITOR-MODE PARTICLES. The pause above stops game logic, which is what the
+# Node3D editor does — except for one thing it does NOT do: particles keep
+# running there. CPUParticles2D::_notification's ENTER_TREE arm is a bare
+# set_process_internal(emitting) (cpu_particles_2d.cpp:1262) with no
+# is_editor_hint guard, so an emitter animates while you look at the scene, and
+# a reference that draws a paused frame 0 draws a pose nobody in the editor
+# sees. Only INTERNAL_PROCESS is pause-gated, though — NOTIFICATION_DRAW is not,
+# and its "if (emitting && time == 0)" arm calls _update_internal() exactly once,
+# at first draw (:1279-1282). That single call is the seam this uses.
+#
+# request_particles_process() is Godot's own API for "advance this emitter by N
+# seconds inside one frame" (cpu_particles_2d.cpp:630, and the identical
+# CPUParticles3D::request_particles_process). _update_internal picks the request
+# up as todo, ADDS any authored pre_process_time on top (:727-731), and spends
+# the sum through the SAME loop preprocess alone would use —
+# while (todo > 0) { _particles_process(frame_time); todo -= frame_time; }
+# (:733-736) — at the emitter's own frame_time, with speed_scale forced to 1 and
+# the last step overshooting rather than being shortened. So the instant this
+# reaches is defined entirely by the engine; the harness contributes only the
+# number of seconds, and the caller names that.
+#
+# Asked for BEFORE any frame runs, because _update_internal zeroes
+# _requested_process_time on the way past: it is a one-shot request, not a rate.
+# Not gated on PREVIEWS — the pause is what makes it a single deterministic
+# advance, but a caller who asks for N seconds of --no-previews runtime means
+# the same N seconds.
+#
+# CPUParticles only. GPUParticles2D/3D carry the same method, but the previewer
+# draws a GPUParticles node as a bare transform group (ADR-0008), so there is no
+# pose on our side for an advanced one to be measured against.
+func _advance_particles(node: Node) -> void:
+	if PARTICLES_PROCESS <= 0.0:
+		return
+	if node is CPUParticles2D:
+		(node as CPUParticles2D).request_particles_process(PARTICLES_PROCESS)
+	elif node is CPUParticles3D:
+		(node as CPUParticles3D).request_particles_process(PARTICLES_PROCESS)
+	for child in node.get_children():
+		_advance_particles(child)
 
 # CONVERGENCE, not the settle contract — do not "align" this count with
 # anything on the previewer side. These frames exist so the picture stops
@@ -825,6 +928,7 @@ export async function renderReference({
   boundsOut = null,
   fov = EDITOR_FOV,
   fovExplicit = false,
+  particles = PARTICLES_PROCESS_DEFAULT,
   keepWork = false,
 }) {
   const scenePath = resolve(scene);
@@ -837,7 +941,7 @@ export async function renderReference({
   const work = await mkdtemp(join(tmpdir(), 'godot-ref-'));
   try {
     return await renderInto(work, { root, scenePath, out, width, height, previews, camera,
-      lookAt, frame, sceneCamera, sceneCameraPath, mode, boundsOut, fov, fovExplicit });
+      lookAt, frame, sceneCamera, sceneCameraPath, mode, boundsOut, fov, fovExplicit, particles });
   } finally {
     // Each run copies the whole res:// root, and `keepWork` is the only reason
     // to hold one afterwards. On a tmpfs /tmp these accumulate in RAM: 236 of
@@ -852,7 +956,7 @@ async function renderInto(
   work,
   {
     root, scenePath, out, width, height, previews, camera, lookAt, frame, sceneCamera, sceneCameraPath,
-    mode, boundsOut, fov, fovExplicit,
+    mode, boundsOut, fov, fovExplicit, particles,
   }
 ) {
   await cp(root, work, { recursive: true, dereference: true });
@@ -882,6 +986,7 @@ async function renderInto(
       boundsOut: boundsOut ? resolve(boundsOut) : null,
       modeOut,
       fov,
+      particles,
       canvas2DSize: projectViewportSizeFromIni(sourceIni),
     })
   );
@@ -923,6 +1028,10 @@ async function main() {
     console.error(
       `       [--mode ${RENDER_MODES.join('|')}]  (2d renders the project viewport, ` +
         `${CANVAS_2D_CAPTURE.width}x${CANVAS_2D_CAPTURE.height}; --width/--height size the 3D frame)`
+    );
+    console.error(
+      '       [--particles seconds]  (advances every CPUParticles emitter that much ' +
+        'FURTHER through Godot\'s own settle loop, on top of any authored preprocess)'
     );
     process.exit(2);
   }

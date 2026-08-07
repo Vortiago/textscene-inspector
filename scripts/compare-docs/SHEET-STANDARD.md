@@ -105,7 +105,16 @@ What the fixture sets and what the two images show; fold any limitation in here.
 ```
 
 - Marker attributes: `image=` (required — the basename), `status=` (see below),
-  `fixture=` (optional — the live `?fixture=` deep link).
+  `fixture=` (optional — the live `?fixture=` deep link), `particles=` (optional
+  — seconds).
+- `particles=` is for a section whose subject is a CPUParticles emitter that
+  authors no `preprocess`. The Godot editor animates particles, so a paused
+  reference render draws frame 0 while the previewer draws its substituted
+  settle, and the pair would show two different instants. The value is handed to
+  `pnpm ref:godot --particles`, which advances the emitters through Godot's own
+  settle loop. Set it to the seconds the previewer settles to (one `lifetime`,
+  half for a `one_shot`) and say the number in the prose — an instant nobody
+  names is not a measurement.
 - A sectioned sheet needs NO top-level `image:` frontmatter; each section supplies
   its own. Legacy single-pair sheets (one `image:`, no markers) still work unchanged.
 - A sectioned sheet carries NO top-level `status:` frontmatter either — forbidden,

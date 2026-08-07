@@ -28,7 +28,6 @@ import { SelectionProvider } from '../r3f/contexts/SelectionContext';
 import { CanvasWorkspaceProvider } from '../r3f/contexts/CanvasWorkspaceContext';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
-import { nativeTheme } from '../r3f/controls/native/nativeTheme';
 import { painterEnv } from '../r3f/controls/native/testing/painterProps';
 import { solveNode as emptySolveNode } from '../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../r3f/controls/native/solveTree';
@@ -87,6 +86,16 @@ function provide(children: ReactNode, workspace?: '2d') {
   );
 }
 
+/**
+ * A decoded texture's pixel dimensions. `THREE.Texture.image` is `unknown` in
+ * three's types, since it can be an ImageData, a canvas or a video element;
+ * every texture these cases produce is a rasterised gradient, which carries a
+ * width and a height.
+ */
+function imageSize(texture: THREE.Texture): { width: number; height: number } {
+  return texture.image as { width: number; height: number };
+}
+
 /** Every `map`/`uCookie` texture bound anywhere in the rendered subtree. */
 function mapsIn(renderer: Awaited<ReturnType<typeof provide>>): THREE.Texture[] {
   return renderer.scene
@@ -105,7 +114,7 @@ function placeholderCount(renderer: Awaited<ReturnType<typeof provide>>): number
     }).length;
 }
 
-function node(type: string, properties: Record<string, unknown>): TscnNode {
+function node(type: string, properties: TscnNode['properties']): TscnNode {
   return { name: 'N', type, children: [], properties };
 }
 
@@ -129,8 +138,8 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
     expect(placeholderCount(renderer)).toBe(0);
     const maps = mapsIn(renderer);
     expect(maps).toHaveLength(1);
-    expect(maps[0]!.image.width).toBe(256);
-    expect(maps[0]!.image.height).toBe(256);
+    expect(imageSize(maps[0]!).width).toBe(256);
+    expect(imageSize(maps[0]!).height).toBe(256);
   });
 
   it('Sprite2D — the centre texel is the gradient stop, at 8-bit', async () => {
@@ -184,7 +193,7 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
     expect(placeholderCount(renderer)).toBe(0);
     const maps = mapsIn(renderer);
     expect(maps).toHaveLength(1);
-    expect(maps[0]!.image.width).toBe(256);
+    expect(imageSize(maps[0]!).width).toBe(256);
   });
 
   it('TextureRect — paints its quad from the inline gradient', async () => {
@@ -198,7 +207,7 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
 
     const maps = mapsIn(renderer);
     expect(maps).toHaveLength(1);
-    expect(maps[0]!.image.width).toBe(256);
+    expect(imageSize(maps[0]!).width).toBe(256);
   });
 
   it('Button — paints its icon slot from the inline gradient', async () => {
@@ -215,7 +224,7 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
     };
     const renderer = await provide(
       <Button
-        {...painterEnv({ theme: nativeTheme(1) })}
+        {...painterEnv()}
         solveNode={solved}
         rect={RECT}
         renderOrder={0}
@@ -225,7 +234,7 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
 
     const maps = mapsIn(renderer);
     expect(maps).toHaveLength(1);
-    expect(maps[0]!.image.width).toBe(256);
+    expect(imageSize(maps[0]!).width).toBe(256);
   });
 
   it('Decal — projects the inline gradient onto a receiver surface', async () => {
@@ -256,6 +265,6 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
       if (map) projected.push(map);
     });
     expect(projected).toHaveLength(1);
-    expect(projected[0]!.image.width).toBe(256);
+    expect(imageSize(projected[0]!).width).toBe(256);
   });
 });

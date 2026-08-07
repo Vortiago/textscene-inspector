@@ -1,14 +1,14 @@
 /**
  * CPUParticles2D's simulation, evaluated ONCE to a frozen pose.
  *
- * This is a port of `CPUParticles2D::_particles_process` plus the preprocess
- * loop `_update_internal` runs when `time == 0`. It is deliberately not a live
- * emitter:
+ * This is a port of `CPUParticles2D::_particles_process` plus the settle loop
+ * `_update_internal` spends `pre_process_time` through. It is deliberately not
+ * a live emitter:
  *
- *  - Godot's own preprocess steps at a FIXED 1/30 s (or `fixed_fps`) and runs
- *    only at `time == 0` (`cpu_particles_2d.cpp:732-753`), so a preprocessed
- *    pose is a pure function of the scene file — `preprocess` is serialised,
- *    unlike the constructor's randomised `seed`.
+ *  - That settle steps at a FIXED 1/30 s (or `fixed_fps`) with `speed_scale`
+ *    forced to 1 (`cpu_particles_2d.cpp:727-738`), so the pose it reaches is a
+ *    pure function of the scene file and a named number of seconds — nothing in
+ *    it reads a clock.
  *  - The golden-image harness fails a scene that never settles, and the
  *    isometric dungeon instances a candle, so a running emitter would make a
  *    shipped golden permanently unstable.
@@ -16,13 +16,22 @@
  *    (ADR-0012); particles belong to neither half of that contract, and a
  *    second always-on clock is the cross-cutting machinery it exists to avoid.
  *
- * Godot's own output is NOT reproducible for a scene that sets neither
- * `use_fixed_seed` nor `preprocess` — the emitter seeds from an unserialised
- * global RNG, and two consecutive reference renders of the same scene differ.
- * What IS reproducible is OURS: a fixed substitute seed and a fixed evaluation
- * window, so the same file always renders the same pixels. Where the scene
- * does pin its seed and preprocess, the shared PCG32 port (godotRng.ts) puts
- * the particles in Godot's actual places rather than statistically similar ones.
+ * The instant it freezes at is `settleSeconds` — the authored `preprocess`, or
+ * one lifetime substituted for a scene that authors none. Godot's editor has no
+ * such instant: `set_process_internal(emitting)` (`:1262`) carries no
+ * `is_editor_hint` guard, so an emitter animates on wall clock while you look at
+ * it, and the pose it happens to hold is not something a file, a reference
+ * render or a golden can name. What CAN be named is a settle, which is why the
+ * substituted window is one. `pnpm ref:godot --particles <seconds>` asks the
+ * real engine for the same settle, through `request_particles_process`, so a
+ * substituted pose is measurable against Godot rather than merely plausible.
+ *
+ * The `seed` behind it is a different matter: Godot's is randomised in the
+ * constructor and unserialised, so a scene without `use_fixed_seed` renders
+ * differently in Godot every run. Ours substitutes a constant, which is what
+ * makes the same file always render the same pixels. Where the scene does pin
+ * its seed, the shared PCG32 port (godotRng.ts) puts the particles in Godot's
+ * actual places rather than statistically similar ones.
  *
  * A pure function of its input, and React-free — `Component.tsx` turns the
  * returned poses into geometry. Not THREE-free, though: `sampleGradientColor`
@@ -164,38 +173,32 @@ interface Particle {
 const MIN_LIFETIME = 0.01;
 
 /**
- * How long to simulate, and at what rate.
+ * How many seconds of settle the frozen pose sits at.
  *
- * An authored `preprocess` is Godot's own settle, and Godot runs it with
- * `speed_scale` forced to 1 so the step bookkeeping stays honest
- * (`cpu_particles_2d.cpp:744-746`) — so `speed_scale` genuinely does not affect
- * a preprocessed pose. With no preprocess we are inventing the moment to freeze,
- * and there the right model is ordinary frames: one lifetime reaches a
- * continuous emitter's steady state, and those frames DO honour `speed_scale`.
- * A `one_shot` burst is caught at half a lifetime instead — a full one would
- * leave every particle a frame from death, i.e. an emitter that reads as empty.
+ * `preprocess` when the scene authors one — that is Godot's own settle and the
+ * only instant the file itself names. Otherwise one lifetime, which is where a
+ * continuous emitter reaches steady state, halved for a `one_shot` burst so it
+ * is caught mid-flight rather than a frame from death.
  *
- * That difference decides `wholeSteps` too. Replaying Godot's settle means
- * replaying how it ends: it steps a full frame while any time remains and lets
- * the last one overshoot, so a window that is not an exact multiple of the step
- * lands PAST where it asked for. An invented window has no engine behaviour to
- * match and every reason to land exactly on the moment it names — one lifetime
- * of full frames overshoots by one, which is the "every particle a frame from
- * death" pose the half-lifetime rule above exists to avoid.
+ * Whichever it is, it is spent the SAME way: `_update_internal` runs both an
+ * authored `preprocess` and an externally requested advance through one loop —
+ * `while (todo > 0) { _particles_process(frame_time); todo -= frame_time; }`
+ * with `speed_scale` saved, forced to 1, and restored afterwards
+ * (`cpu_particles_2d.cpp:727-738`). So `speed_scale` does not move a settled
+ * pose at all, and a window that is not an exact multiple of `frame_time` lands
+ * PAST the number it names, because the last step is a whole frame rather than
+ * the remainder.
+ *
+ * That is why the substituted window is a `preprocess` in everything but where
+ * the number came from: it is the only shape an instant can have and still be
+ * measurable against the engine. `request_particles_process` is the API that
+ * asks Godot for one from outside, and `pnpm ref:godot --particles <seconds>`
+ * is how a reference render is taken at the same instant this returns.
  */
-export function evaluationWindow(props: CPUParticles2DProperties): {
-  seconds: number;
-  speedScale: number;
-  wholeSteps: boolean;
-} {
-  if (props.preprocess > 0)
-    return { seconds: props.preprocess, speedScale: 1, wholeSteps: true };
+export function settleSeconds(props: CPUParticles2DProperties): number {
+  if (props.preprocess > 0) return props.preprocess;
   const lifetime = Math.max(MIN_LIFETIME, props.lifetime);
-  return {
-    seconds: props.one_shot ? lifetime * 0.5 : lifetime,
-    speedScale: props.speed_scale,
-    wholeSteps: false,
-  };
+  return props.one_shot ? lifetime * 0.5 : lifetime;
 }
 
 /**
@@ -214,7 +217,6 @@ export function simulateFrozenPose(input: ParticleSimInput): RenderedParticle[] 
 
   const lifetime = Math.max(MIN_LIFETIME, props.lifetime);
   const frameTime = props.fixed_fps > 0 ? 1 / props.fixed_fps : 1 / 30;
-  const { seconds, speedScale, wholeSteps } = evaluationWindow(props);
 
   const state: SimState = {
     time: 0,
@@ -232,11 +234,12 @@ export function simulateFrozenPose(input: ParticleSimInput): RenderedParticle[] 
   // frame_time; }` (`cpu_particles_2d.cpp:733-736`). It never shortens the final
   // step to the remainder, so shortening ours puts a replayed settle up to a
   // full frame behind the engine — a 1.0 s window over a 1/30 s step is 31 full
-  // frames there, i.e. 1.0333 s. An invented window lands on its own number.
-  let todo = seconds;
+  // frames there, i.e. 1.0333 s. `speed_scale` is forced to 1 around the loop
+  // (`:732,738`), so it scales how fast wall clock reaches a settle, never the
+  // pose the settle arrives at.
+  let todo = settleSeconds(props);
   for (let step = 0; todo > 0 && step < MAX_SIM_STEPS; step++) {
-    const delta = wholeSteps ? frameTime : Math.min(frameTime, todo);
-    particlesProcess(state, input, delta * speedScale);
+    particlesProcess(state, input, frameTime);
     todo -= frameTime;
   }
 
@@ -274,7 +277,11 @@ function newParticle(): Particle {
   };
 }
 
-/** `CPUParticles2D::_particles_process`. `delta` already carries `speed_scale`. */
+/**
+ * `CPUParticles2D::_particles_process`. Its first line is `p_delta *=
+ * speed_scale`, which is absent here because every call site is inside Godot's
+ * settle, where `speed_scale` is held at 1.
+ */
 function particlesProcess(state: SimState, input: ParticleSimInput, delta: number): void {
   const { props } = input;
   const { lifetime } = state;

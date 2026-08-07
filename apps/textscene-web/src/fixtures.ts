@@ -198,6 +198,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles2d Unpreprocessed",
+    "file": "unit-cpuparticles2d-unpreprocessed.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Cpuparticles2d Unpreviewable",
     "file": "unit-cpuparticles2d-unpreviewable.tscn",
     "category": "Other"

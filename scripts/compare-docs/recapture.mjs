@@ -27,7 +27,7 @@ import {
   readFileSync,
   writeFileSync,
 } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { renderReference } from '../godot-ref/run.mjs';
 import {
@@ -65,7 +65,22 @@ function parseArgs(argv) {
 }
 
 /**
- * Every (image, fixture, camera) the sheets reference — legacy pair + sections.
+ * Seconds of particle settle from a `particles=` attribute. A typo would
+ * otherwise coerce to 0 and render Godot's frame 0 beside our settled pose —
+ * a wrong side-by-side that reports itself as a successful capture.
+ */
+function particleSeconds(raw, file) {
+  if (raw === undefined || raw === '') return 0;
+  const seconds = Number(raw);
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    throw new Error(`${relative(REPO_ROOT, file)}: particles= needs seconds, got "${raw}"`);
+  }
+  return seconds;
+}
+
+/**
+ * Every (image, fixture, camera, particles) the sheets reference — legacy pair
+ * + sections.
  *
  * Exported for the pure test coverage in collectTargets.test.mjs: this is one
  * side of a bootstrap cycle with build-gallery.mjs — a sheet with no `image:`
@@ -82,6 +97,11 @@ export function collectTargets() {
     if (!parsed) continue;
     const { meta } = parsed;
     const camera = meta.camera || '';
+    // Seconds of particle settle the Godot side must be advanced by, so a
+    // section whose subject is an emitter with no `preprocess` shows the same
+    // instant on both sides instead of our substituted pose beside Godot's
+    // frame 0. Per section, because the instant belongs to the picture.
+    const particles = particleSeconds(meta.particles, file);
     // The frontmatter pair and the section markers are BOTH sources, never
     // either/or: a sheet that gains its first section must not lose the image
     // its own header still displays. Taking only the sections silently orphans
@@ -91,10 +111,16 @@ export function collectTargets() {
     // name; the Map collapses the duplicate.
     if (meta.visual !== 'false' && meta.image && meta.fixture) {
       // A no-visual sheet renders a "draws nothing" note, not its image — skip it.
-      byImage.set(meta.image, { fixture: meta.fixture, camera });
+      byImage.set(meta.image, { fixture: meta.fixture, camera, particles });
     }
     for (const attrs of parseCompareMarkers(parsed.body)) {
-      if (attrs.image && attrs.fixture) byImage.set(attrs.image, { fixture: attrs.fixture, camera });
+      if (attrs.image && attrs.fixture) {
+        byImage.set(attrs.image, {
+          fixture: attrs.fixture,
+          camera,
+          particles: attrs.particles === undefined ? particles : particleSeconds(attrs.particles, file),
+        });
+      }
     }
   }
   return [...byImage.entries()].map(([image, t]) => ({ image, ...t })).sort((a, b) => a.image.localeCompare(b.image));
@@ -131,6 +157,7 @@ async function captureGodot(targets) {
         scene: godotScenePath(t.fixture),
         out: imgPath(t.image, 'godot'),
         sceneCamera: Boolean(t.camera),
+        particles: t.particles,
       });
       if (mode) modes.set(t.image, mode);
       console.log(`ok (${mode ?? '?'})`);

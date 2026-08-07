@@ -475,6 +475,12 @@ export const GOLDEN_SCENES = [
   // `emitting = false` draws nothing. Script-triggered one-shot emitters ship
   // this way, so a regression that started drawing them would be widespread.
   { name: 'cpuparticles2d-not-emitting', file: 'unit-cpuparticles2d-not-emitting.tscn', mode: '2d', maxDiffPct: 0.5 },
+  // The one emitter that authors no `preprocess`, so it is the only one whose
+  // instant the previewer substitutes rather than reads. Its lifetime is
+  // deliberately not a multiple of the step, so the settle's whole-frame
+  // overshoot is in the picture. Arbitrated against Godot at the same instant
+  // via `--particles 0.95`; the fixture header carries the command.
+  { name: 'cpuparticles2d-unpreprocessed', file: 'unit-cpuparticles2d-unpreprocessed.tscn', mode: '2d', maxDiffPct: 0.5 },
   // The one emitter here that does NOT pin its seed, so it is the only one that
   // exercises the substituted one. Godot cannot draw this scene the same way
   // twice; the previewer must, and this baseline is the whole assertion of that.

@@ -27,7 +27,12 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
   through real Godot 4.6 and prints exact pixels — measure, never derive. Needs local
   `godot` + `xvfb-run`, so it is a tool, not a gate. It injects the editor preview
   sun/environment per Godot's yield rule (ADR-0025); `--no-previews` gives runtime
-  semantics.
+  semantics. The editor also ANIMATES particles, which a paused reference cannot show:
+  `--particles <seconds>` advances every CPUParticles emitter that much FURTHER through
+  Godot's own settle loop — on top of any authored `preprocess`, which it adds to rather
+  than replaces — so the caller names the instant and both sides can be measured at it.
+  Default 0; never derive it from the scene, and note it is one number for the whole
+  scene while the previewer's substituted window is per emitter.
 
 ## Vertical slices
 

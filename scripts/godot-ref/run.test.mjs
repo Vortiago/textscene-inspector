@@ -35,6 +35,7 @@ import { bootstrapScript,
   EDITOR_CAMERA_DISTANCE,
   EDITOR_FOV,
   FRAME_MARGIN,
+  PARTICLES_PROCESS_DEFAULT,
   parseArgs,
   REFERENCE_FIXED_FPS,
   renderArgv,
@@ -45,6 +46,27 @@ import { bootstrapScript,
 } from './run.mjs';
 
 const REPO_ROOT = join(import.meta.dirname, '..', '..');
+
+/** The generated bootstrap, with only the field under test spelled out. */
+function bootstrap(overrides = {}) {
+  return bootstrapScript({
+    scenePath: 'res://x.tscn',
+    previews: true,
+    camera: null,
+    lookAt: null,
+    frame: false,
+    sceneCamera: false,
+    sceneCameraPath: null,
+    mode: 'auto',
+    out: '/tmp/o.png',
+    boundsOut: null,
+    modeOut: '/tmp/m.txt',
+    fov: 70,
+    fovExplicit: false,
+    canvas2DSize: { width: 640, height: 360 },
+    ...overrides,
+  });
+}
 
 /**
  * The harness hand-mirrors the previewer's editor-camera constants because it
@@ -420,23 +442,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
  * runtime that never steps physics is not one: a body is supposed to fall there.
  */
 describe('physics pause follows the previews flag', () => {
-  const script = (previews) =>
-    bootstrapScript({
-      scenePath: 'res://x.tscn',
-      previews,
-      camera: null,
-      lookAt: null,
-      frame: false,
-      sceneCamera: false,
-      sceneCameraPath: null,
-      mode: 'auto',
-      out: '/tmp/o.png',
-      boundsOut: null,
-      modeOut: '/tmp/m.txt',
-      fov: 70,
-      fovExplicit: false,
-      canvas2DSize: { width: 640, height: 360 },
-    });
+  const script = (previews) => bootstrap({ previews });
 
   it('pauses under the editor previews, so the authored pose is what renders', () => {
     expect(script(true)).toContain('get_tree().paused = true');
@@ -489,28 +495,67 @@ describe('the reference renders on a fixed clock', () => {
 
   it('refuses a non-zero settle without blaming the missing flag', () => {
     // The refusal outlived its first reason: the delta IS fixed now. What
-    // stops a non-zero window is the pause plus the previewer's missing hook,
-    // and the message has to say so or the next reader adds a flag that is
-    // already there.
-    const ask = () =>
-      bootstrapScript({
-        scenePath: 'res://x.tscn',
-        previews: true,
-        simSeconds: 0.5,
-        camera: null,
-        lookAt: null,
-        frame: false,
-        sceneCamera: false,
-        sceneCameraPath: null,
-        mode: 'auto',
-        out: '/tmp/o.png',
-        boundsOut: null,
-        modeOut: '/tmp/m.txt',
-        fov: 70,
-        fovExplicit: false,
-        canvas2DSize: { width: 640, height: 360 },
-      });
+    // stops a SCENE-WIDE window is the pause plus the previewer's missing hook,
+    // and the message has to say so — while pointing at the per-subsystem
+    // advance that does exist, or the next reader adds a flag that is already
+    // there.
+    const ask = () => bootstrap({ simSeconds: 0.5 });
     expect(ask).toThrow(/paused before the scene is ever instantiated/);
-    expect(ask).toThrow(/preprocess/);
+    expect(ask).toThrow(/--particles/);
+  });
+});
+
+/**
+ * EDITOR-MODE PARTICLES. The Node3D editor runs no game logic, which the pause
+ * mirrors — except for particles, which it does run: `set_process_internal` is
+ * called unconditionally on ENTER_TREE. `--particles <seconds>` is how a caller
+ * asks for a NAMED instant of that, spent through Godot's own settle loop.
+ */
+describe('--particles advances the emitters by a named number of seconds', () => {
+  it('defaults to zero, so no reference already taken through this harness moves', () => {
+    expect(PARTICLES_PROCESS_DEFAULT).toBe(0);
+    expect(parseArgs(['scene.tscn']).particles).toBe(0);
+  });
+
+  it('reads a fractional number of seconds', () => {
+    expect(parseArgs(['scene.tscn', '--particles', '0.95']).particles).toBe(0.95);
+  });
+
+  it('takes an explicit zero rather than treating it as a missing value', () => {
+    expect(parseArgs(['scene.tscn', '--particles', '0']).particles).toBe(0);
+  });
+
+  it('rejects a negative advance instead of rendering an unmoved emitter', () => {
+    expect(() => parseArgs(['scene.tscn', '--particles', '-1'])).toThrow(/non-negative/);
+  });
+
+  it('emits no request at all at the default, so the generated script is inert', () => {
+    // The guard is inside `_advance_particles`, so the walk still appears in
+    // the source. What must not appear is a call reaching an emitter.
+    expect(bootstrap({ particles: 0 })).toContain('const PARTICLES_PROCESS := 0');
+  });
+
+  it('asks Godot for the advance through its own API, before any frame runs', () => {
+    const lines = bootstrap({ particles: 0.95 }).split('\n');
+    expect(lines).toContain('const PARTICLES_PROCESS := 0.95');
+    // `_update_internal` zeroes `_requested_process_time` on the way past, so a
+    // request placed after the first frame is spent on nothing. Both render
+    // paths therefore ask immediately after the subtree enters the tree.
+    for (const parent of ['\tadd_child(target)', '\tvp.add_child(target)']) {
+      const at = lines.indexOf(parent);
+      expect(at).toBeGreaterThan(-1);
+      expect(lines[at + 1]).toBe('\t_advance_particles(target)');
+    }
+    expect(lines.some((l) => l.includes('request_particles_process(PARTICLES_PROCESS)'))).toBe(
+      true
+    );
+  });
+
+  it('advances CPUParticles only, since a GPU emitter has no pose on our side', () => {
+    const body = bootstrap({ particles: 0.5 });
+    expect(body).toContain('node is CPUParticles2D');
+    expect(body).toContain('node is CPUParticles3D');
+    expect(body).not.toContain('GPUParticles2D)');
+    expect(body).not.toContain('GPUParticles3D)');
   });
 });

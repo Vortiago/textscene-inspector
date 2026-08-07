@@ -4,7 +4,7 @@ import { parseCPUParticles2D } from './parser';
 import {
   IDENTITY_AFFINE,
   MAX_SIM_STEPS,
-  evaluationWindow,
+  settleSeconds,
   simulateFrozenPose,
   type ParticleSimInput,
 } from './simulate';
@@ -36,34 +36,69 @@ function input(overrides: Partial<ParticleSimInput> = {}): ParticleSimInput {
   };
 }
 
-describe('evaluationWindow', () => {
-  it('uses the authored preprocess at Godot’s own 1x rate (happy path)', () => {
-    expect(evaluationWindow(props({ preprocess: '2.5', speed_scale: '3.0' }))).toEqual({
-      seconds: 2.5,
-      speedScale: 1,
-      wholeSteps: true,
-    });
+describe('settleSeconds', () => {
+  it('uses the authored preprocess (happy path)', () => {
+    expect(settleSeconds(props({ preprocess: '2.5', speed_scale: '3.0' }))).toBe(2.5);
   });
 
-  it('substitutes one lifetime, at the node’s speed_scale, when no preprocess is set', () => {
-    expect(evaluationWindow(props({ preprocess: '0', lifetime: '0.8', speed_scale: '2' }))).toEqual({
-      seconds: 0.8,
-      speedScale: 2,
-      wholeSteps: false,
-    });
+  it('substitutes one lifetime when no preprocess is set', () => {
+    expect(settleSeconds(props({ preprocess: '0', lifetime: '0.8', speed_scale: '2' }))).toBe(0.8);
   });
 
   it('substitutes half a lifetime for a one_shot burst so it is caught mid-flight', () => {
-    expect(evaluationWindow(props({ preprocess: '0', lifetime: '0.4', one_shot: 'true' }))).toEqual({
-      seconds: 0.2,
-      speedScale: 1,
-      wholeSteps: false,
-    });
+    expect(settleSeconds(props({ preprocess: '0', lifetime: '0.4', one_shot: 'true' }))).toBe(0.2);
   });
 
   it('never returns a non-positive window for a degenerate lifetime (edge case)', () => {
-    const window = evaluationWindow(props({ preprocess: '0', lifetime: '0' }));
-    expect(window.seconds).toBeGreaterThan(0);
+    expect(settleSeconds(props({ preprocess: '0', lifetime: '0' }))).toBeGreaterThan(0);
+  });
+});
+
+describe('the substituted window is one of Godot’s own settles', () => {
+  // `_update_internal` spends an externally requested advance and an authored
+  // `preprocess` through the SAME loop, at the same `frame_time`, with
+  // `speed_scale` forced to 1 and the last step overshooting
+  // (`cpu_particles_2d.cpp:727-738`). So a window we invent is only comparable
+  // against Godot if it is that same kind of advance. Measured: a fixture with
+  // its `preprocess` line deleted, rendered through
+  // `pnpm ref:godot … --particles <that preprocess>`, is byte-identical to the
+  // fixture rendered with the line in place.
+  it('matches the pose the same emitter would settle to with `preprocess = lifetime`', () => {
+    const substituted = simulateFrozenPose(
+      input({ props: props({ preprocess: '0', lifetime: '0.95' }) })
+    );
+    const authored = simulateFrozenPose(
+      input({ props: props({ preprocess: '0.95', lifetime: '0.95' }) })
+    );
+    expect(substituted).toEqual(authored);
+    expect(substituted.length).toBeGreaterThan(0);
+  });
+
+  it('ignores speed_scale, because Godot’s settle forces it to 1', () => {
+    const fast = simulateFrozenPose(input({ props: props({ preprocess: '0', speed_scale: '3' }) }));
+    const plain = simulateFrozenPose(input({ props: props({ preprocess: '0', speed_scale: '1' }) }));
+    expect(fast).toEqual(plain);
+    expect(plain.length).toBeGreaterThan(0);
+  });
+
+  it('runs whole frames, so a window that is not a multiple of the step overshoots', () => {
+    // At `fixed_fps = 30` both 0.95 s (28.5 steps) and 0.96 s (28.8) are spent
+    // as 29 WHOLE frames and land on the identical pose, 0.9667 s in. Shortening
+    // the last step to the remainder would separate them and put each a fraction
+    // of a frame behind the engine — the arithmetic that cost `emission-shapes`
+    // 234 px before the preprocess branch was corrected. 0.9 s is 27 frames and
+    // must not land there, or this would pass on any two inputs.
+    const substituted = simulateFrozenPose(
+      input({ props: props({ preprocess: '0', lifetime: '0.95' }) })
+    );
+    const sameBucket = simulateFrozenPose(
+      input({ props: props({ preprocess: '0.96', lifetime: '0.95' }) })
+    );
+    const earlier = simulateFrozenPose(
+      input({ props: props({ preprocess: '0.9', lifetime: '0.95' }) })
+    );
+    expect(substituted).toEqual(sameBucket);
+    expect(substituted).not.toEqual(earlier);
   });
 });
 

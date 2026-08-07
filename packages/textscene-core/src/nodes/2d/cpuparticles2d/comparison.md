@@ -53,6 +53,7 @@ Companion fixtures, one behaviour each:
 | `unit-cpuparticles2d-curves.tscn` | the `min/max/curve` parameter mechanism, on `scale_amount` and `angle` |
 | `unit-cpuparticles2d-color-ramp.tscn` | `color_ramp` (by age) against `color_initial_ramp` (once at birth) |
 | `unit-cpuparticles2d-local-coords.tscn` | why a scaled emitter's particles do NOT scale with it by default |
+| `unit-cpuparticles2d-unpreprocessed.tscn` | no `preprocess`, so the settle window is substituted rather than read |
 | `unit-cpuparticles2d-unpreviewable.tscn` | the two settings that raise an advisory warning |
 
 ## Emission shapes
@@ -67,6 +68,31 @@ Companion fixtures, one behaviour each:
 ## local_coords
 <!-- compare: image=unit-cpuparticles2d-local-coords status=done fixture=unit-cpuparticles2d-local-coords.tscn -->
 
+## No preprocess
+<!-- compare: image=unit-cpuparticles2d-unpreprocessed status=done fixture=unit-cpuparticles2d-unpreprocessed.tscn particles=0.95 -->
+
+An emitter that authors no `preprocess` names no instant, so the previewer picks
+one: **one `lifetime`**, where a continuous emitter reaches steady state, halved
+for a `one_shot` burst so it is caught mid-flight. This fixture's lifetime is
+`0.95 s`, and the pair above is both sides AT that instant — Godot was asked for
+it explicitly, with `pnpm ref:godot … --particles 0.95`.
+
+That flag exists because the two Godots disagree. `godot --path` runs the GAME,
+where a paused emitter sits at frame 0; the EDITOR animates it, since
+`CPUParticles2D`'s ENTER_TREE arm is a bare `set_process_internal(emitting)` with
+no `is_editor_hint` guard. The previewer mirrors the editor, so the reference has
+to move rather than the pose being bent to a picture Godot never shows anyone.
+`request_particles_process` is Godot's own API for asking an emitter to spend a
+named number of seconds inside one frame, through the identical loop it spends
+`preprocess` through. Measured: deleting a fixture's `preprocess` line and
+passing that same number to `--particles` renders **byte-identical** pixels, so
+the substituted window is a `preprocess` in everything except where the number
+came from.
+
+Which is what makes the substituted window a settle rather than "some frames in":
+whole `fixed_fps` steps, `speed_scale` held at 1, the last step overshooting.
+`0.95 s` at 30 fps is 28.5 steps, so both sides take 29 and land at `0.9667 s`.
+
 ## emitting = false
 <!-- compare: image=unit-cpuparticles2d-not-emitting status=done fixture=unit-cpuparticles2d-not-emitting.tscn -->
 
@@ -79,35 +105,24 @@ one-shots that ship this way, so an empty frame here is the correct frame.
 Measured whole-frame against Godot 4.6.3, `pnpm ref:godot <fixture> --mode 2d` against
 `pnpm ref:ours <fixture> --2d`, 1152x648:
 
-| Fixture | Differing pixels |
-| --- | --- |
-| `unit-cpuparticles2d-emission-shapes.tscn` | 0 (0.000 %) |
-| `unit-cpuparticles2d.tscn` | 1398 (0.187 %) |
-| `unit-cpuparticles2d-color-ramp.tscn` | 3490 (0.468 %) |
-| `unit-cpuparticles2d-local-coords.tscn` | 4777 (0.640 %) |
+| Fixture | Instant | Differing pixels |
+| --- | --- | --- |
+| `unit-cpuparticles2d-emission-shapes.tscn` | `preprocess = 0.0334` | 0 (0.000 %) |
+| `unit-cpuparticles2d-unpreprocessed.tscn` | `--particles 0.95` | 873 (0.117 %) |
+| `unit-cpuparticles2d.tscn` | `preprocess = 1.5` | 1398 (0.187 %) |
+| `unit-cpuparticles2d-color-ramp.tscn` | `preprocess = 2.0` | 3490 (0.468 %) |
+| `unit-cpuparticles2d-local-coords.tscn` | `preprocess = 1.0` | 4777 (0.640 %) |
 
 The zero is the load-bearing one: it is the same simulation on both sides, stepped the same
-way, landing on the same pose to the pixel. So the other three are not the emitter's motion —
-they are what those fixtures add on top of it. In `local_coords`, the largest, the two streams
+way, landing on the same pose to the pixel. So the rest is not the emitter's motion — it is
+what those fixtures add on top of it. In `local_coords`, the largest, the two streams
 have the same extent and position on both sides but ours breaks into a comb of separate quads
-where Godot's is one solid bar, i.e. our particles sit further apart along the stream.
+where Godot's is one solid bar, i.e. our particles sit further apart along the stream. The
+unpreprocessed fixture's 873 px are the same class, confined to `x 530..622, y 288..437` —
+the spray column itself, with every backdrop pixel matching.
 
-Three more things are structural rather than a capture artefact:
+Two more things are structural rather than a capture artefact:
 
-- **The moment, and only when the scene does not name one.** Neither side shows
-  a running emitter. Both are captured at the scene's load instant, where Godot
-  has run the single update it does at time zero — the authored `preprocess`, at
-  a fixed `1/30 s` step or `fixed_fps`, then one process delta the reference pins
-  at a millisecond and which quantizes to whole steps when the emitter sets
-  `fixed_fps`. So an emitter that names a later moment is MET, not approximated:
-  `preprocess` is a serialised fixed-step advance, both sides step whole frames
-  over it, and both let the last step overshoot. `unit-cpuparticles2d-emission-shapes.tscn`
-  measures that exactly — **0 px of 1152x648 against Godot 4.6.3**, the engine's
-  own pose to the pixel. An emitter that names no moment has accumulated nothing there,
-  while the previewer substitutes one `lifetime`, a continuous emitter's steady
-  state, or half a lifetime for a `one_shot` burst, which a full lifetime would
-  catch a frame from death. The isometric dungeon's candle is that case, and its
-  flame is ours alone.
 - **The seed.** Godot randomises `seed` in the constructor unless
   `use_fixed_seed` is set, and never saves it, so an unseeded emitter that has
   a `preprocess` to simulate draws a different reference every run. Every
@@ -115,9 +130,15 @@ Three more things are structural rather than a capture artefact:
   The previewer substitutes a fixed constant, which makes its own output stable
   but means an unseeded emitter's particles are in plausible places rather than
   the engine's.
-- **`speed_scale` on a preprocessed emitter.** Godot forces `speed_scale` to 1
-  while it preprocesses, so the property genuinely does not move a preprocessed
-  pose; it applies only to the substituted window described above.
+- **A scene whose emitters carry different lifetimes holds several instants at
+  once.** The substituted window is per emitter, so a candle with a 0.8 s flame
+  beside a 1.0 s sparkle settles each to its own lifetime — which is what a
+  viewer expects of a scene where every emitter is simply running. A reference
+  render cannot be asked for that: `--particles` is one number for the whole
+  scene. Such a scene is therefore not arbitrable as a whole, and the behaviour
+  is measured on a single-instant fixture instead. Scenes that author
+  `preprocess` are unaffected, since each emitter's instant is then in the file
+  and Godot reads it per node.
 
 ## Linting
 
@@ -227,3 +248,7 @@ and the linter says nothing.
 - **`one_shot` completion.** The emitter stops after its first cycle exactly as
   Godot does, but nothing restarts it, so a burst is only ever seen at the
   substituted moment.
+- **The pose does not move over time.** Godot's editor animates an emitter on
+  wall clock; the previewer settles it once and holds it. `speed_scale` is
+  therefore invisible here — Godot itself forces it to 1 while it settles, so it
+  decides how fast a running emitter reaches a pose, never which pose that is.

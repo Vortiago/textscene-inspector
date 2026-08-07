@@ -35,6 +35,21 @@ describe('collectTargets', () => {
     expect(sampled).toBeGreaterThan(0);
   });
 
+  it('carries a section\u2019s particles= through, so both sides render the same instant', () => {
+    // A CPUParticles emitter with no `preprocess` settles to a window the
+    // previewer picks. Godot has to be asked for that same window explicitly,
+    // or its side of the pair is frame 0 beside our settled pose.
+    const byImage = new Map(collectTargets().map((t) => [t.image, t]));
+    const declared = [...byImage.values()].filter((t) => t.particles > 0);
+    expect(declared.length).toBeGreaterThan(0);
+    for (const target of declared) expect(Number.isFinite(target.particles)).toBe(true);
+  });
+
+  it('leaves every other target at zero, so no existing reference silently moves', () => {
+    const zeroed = collectTargets().filter((t) => t.particles === 0);
+    expect(zeroed.length).toBeGreaterThan(0);
+  });
+
   it('produces no target for a sheet that declares no image (the freshly-scaffolded shape)', () => {
     const targets = collectTargets();
     const byImage = new Map(targets.map((t) => [t.image, t]));

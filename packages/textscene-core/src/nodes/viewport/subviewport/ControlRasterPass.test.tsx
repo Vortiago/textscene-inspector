@@ -204,12 +204,15 @@ offset_bottom = 100.5
       // the test renderer's own tree — the pass hands it to `gl.render`, so
       // that call is where a test can reach it.
       const gl = capturedGl.current!;
-      let portalScene: THREE.Object3D | null = null;
+      // Held on an object rather than in a `let`: a local assigned only from
+      // inside a callback stays narrowed to its initialiser, so `portalScene`
+      // would read as `null` at every use below.
+      const captured: { portalScene: THREE.Object3D | null } = { portalScene: null };
       const originalSet = gl.setRenderTarget;
       const originalRender = gl.render;
       gl.setRenderTarget = (() => undefined) as typeof gl.setRenderTarget;
       gl.render = ((rendered: THREE.Object3D) => {
-        portalScene ??= rendered;
+        captured.portalScene ??= rendered;
       }) as typeof gl.render;
       try {
         await renderer.advanceFrames(1, 16);
@@ -219,7 +222,7 @@ offset_bottom = 100.5
       }
 
       let group: THREE.Object3D | undefined;
-      portalScene?.traverse((o) => {
+      captured.portalScene?.traverse((o) => {
         if (o.name === 'ColorRect:Bar') group = o;
       });
 
