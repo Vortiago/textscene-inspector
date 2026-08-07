@@ -27,7 +27,7 @@ const DETERMINISTIC = {
   use_fixed_seed: 'true',
   seed: '4242',
   fixed_fps: '30',
-  preprocess: '1.0',
+  preprocess: '0.95',
 };
 
 function node(raw: Record<string, string> = {}, children: TscnNode[] = []): TscnNode {
@@ -182,14 +182,28 @@ describe('<CPUParticles2D>', () => {
     );
     const without = await render(node({ amount: '16' }));
 
-    const spread = (r: Rendered): number => {
-      const geometry = particleMesh(r)!.geometry;
-      geometry.computeBoundingBox();
-      const box = geometry.boundingBox!;
-      return box.max.x - box.min.x;
+    // Measure the NARROWEST quad, not the pose's bounding box. The box is set
+    // by whichever particle reaches furthest, and the curve leaves the youngest
+    // one at full scale — so a box-width comparison only sees the curve when an
+    // old particle happens to sit at the edge, which is a property of the seed
+    // rather than of the curve.
+    const narrowestQuad = (r: Rendered): number => {
+      const position = particleMesh(r)!.geometry.getAttribute('position');
+      let narrowest = Infinity;
+      for (let quad = 0; quad * 4 < position.count; quad++) {
+        let min = Infinity;
+        let max = -Infinity;
+        for (let corner = 0; corner < 4; corner++) {
+          const x = position.getX(quad * 4 + corner);
+          min = Math.min(min, x);
+          max = Math.max(max, x);
+        }
+        narrowest = Math.min(narrowest, max - min);
+      }
+      return narrowest;
     };
-    // A shrinking curve narrows the oldest quads, so the pose is not the same.
-    expect(spread(withCurve)).not.toBeCloseTo(spread(without), 3);
+    // The curve runs 1 → 0 over a lifetime, so the oldest quad is a sliver.
+    expect(narrowestQuad(withCurve)).toBeLessThan(narrowestQuad(without) / 2);
   });
 
   it('cancels the node’s own scale under Godot’s default global coords', async () => {

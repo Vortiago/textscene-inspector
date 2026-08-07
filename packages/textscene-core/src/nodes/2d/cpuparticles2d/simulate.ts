@@ -174,16 +174,27 @@ const MIN_LIFETIME = 0.01;
  * continuous emitter's steady state, and those frames DO honour `speed_scale`.
  * A `one_shot` burst is caught at half a lifetime instead — a full one would
  * leave every particle a frame from death, i.e. an emitter that reads as empty.
+ *
+ * That difference decides `wholeSteps` too. Replaying Godot's settle means
+ * replaying how it ends: it steps a full frame while any time remains and lets
+ * the last one overshoot, so a window that is not an exact multiple of the step
+ * lands PAST where it asked for. An invented window has no engine behaviour to
+ * match and every reason to land exactly on the moment it names — one lifetime
+ * of full frames overshoots by one, which is the "every particle a frame from
+ * death" pose the half-lifetime rule above exists to avoid.
  */
 export function evaluationWindow(props: CPUParticles2DProperties): {
   seconds: number;
   speedScale: number;
+  wholeSteps: boolean;
 } {
-  if (props.preprocess > 0) return { seconds: props.preprocess, speedScale: 1 };
+  if (props.preprocess > 0)
+    return { seconds: props.preprocess, speedScale: 1, wholeSteps: true };
   const lifetime = Math.max(MIN_LIFETIME, props.lifetime);
   return {
     seconds: props.one_shot ? lifetime * 0.5 : lifetime,
     speedScale: props.speed_scale,
+    wholeSteps: false,
   };
 }
 
@@ -203,7 +214,7 @@ export function simulateFrozenPose(input: ParticleSimInput): RenderedParticle[] 
 
   const lifetime = Math.max(MIN_LIFETIME, props.lifetime);
   const frameTime = props.fixed_fps > 0 ? 1 / props.fixed_fps : 1 / 30;
-  const { seconds, speedScale } = evaluationWindow(props);
+  const { seconds, speedScale, wholeSteps } = evaluationWindow(props);
 
   const state: SimState = {
     time: 0,
@@ -216,9 +227,16 @@ export function simulateFrozenPose(input: ParticleSimInput): RenderedParticle[] 
     emissionXform: props.local_coords ? IDENTITY_AFFINE : input.emissionTransform,
   };
 
+  // Godot's settle steps a whole frame while any time remains and lets the last
+  // one overshoot: `while (todo > 0) { _particles_process(frame_time); todo -=
+  // frame_time; }` (`cpu_particles_2d.cpp:733-736`). It never shortens the final
+  // step to the remainder, so shortening ours puts a replayed settle up to a
+  // full frame behind the engine — a 1.0 s window over a 1/30 s step is 31 full
+  // frames there, i.e. 1.0333 s. An invented window lands on its own number.
   let todo = seconds;
   for (let step = 0; todo > 0 && step < MAX_SIM_STEPS; step++) {
-    particlesProcess(state, input, Math.min(frameTime, todo) * speedScale);
+    const delta = wholeSteps ? frameTime : Math.min(frameTime, todo);
+    particlesProcess(state, input, delta * speedScale);
     todo -= frameTime;
   }
 

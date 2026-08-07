@@ -44,9 +44,9 @@ What remains is two things, and neither is draw order.
 sparks here; the reference shows the same wick and the same warm `PointLight2D` pool with
 nothing above it. Both sides are captured at the scene's load instant, and a Godot
 `CPUParticles2D` has emitted nothing visible by then — it runs one update at its first draw,
-which is the authored `preprocess` (0 on this candle) plus a single frame. The previewer
-runs no clock at all and evaluates each emitter once to a settled pose instead. The Candle
-section below isolates it at 0.91/255.
+which is the authored `preprocess`, 0 on this candle, plus one process delta the reference
+pins at a millisecond. The previewer runs no clock at all and evaluates each emitter once to
+a settled pose instead. The Candle section below isolates it at 0.91/255.
 
 **The rest is two opposite errors.** Splitting the 5.5 % of pixels over 16/255 by sign:
 
@@ -90,10 +90,13 @@ draws in the reference, which is the whole of the divergence: mean channel error
 **0.91/255**, 0.19 % of pixels over 16 — all of them in the flame and the glow around it,
 and all of them ours being the brighter side.
 
-Neither side is showing a running emitter. Both are captured at the scene's load instant,
-where Godot has run the single update it does at time zero, from the emitter's first draw —
-the authored `preprocess` plus one frame delta — and this candle sets `preprocess = 0`, so
-nothing has accumulated. The previewer has no clock to be at that instant with: it evaluates
+Neither side is showing a running emitter. Both are captured at the scene's load instant.
+Godot runs one update there, from the emitter's first draw: the authored `preprocess` plus a
+single process delta, which the reference pins at a millisecond rather than letting the host's
+frame timing set it. This candle sets `preprocess = 0`, so nothing has accumulated. An emitter
+that names a later moment — `preprocess` with a `fixed_fps` to pin the step — is met exactly,
+because that advance is serialised in the file and both sides run the same fixed-step loop
+over it. The previewer has no clock to be at any other instant with: it evaluates
 each emitter once to a settled pose, over one lifetime, with a fixed substitute seed because the
 scene sets no `use_fixed_seed`. So the flame stands in plausible places rather than the
 engine's, and it is identical run to run.

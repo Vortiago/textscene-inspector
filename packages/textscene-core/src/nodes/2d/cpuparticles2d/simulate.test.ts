@@ -20,7 +20,7 @@ function props(overrides: Record<string, string> = {}): CPUParticles2DProperties
     use_fixed_seed: 'true',
     seed: '4242',
     fixed_fps: '30',
-    preprocess: '1.0',
+    preprocess: '0.95',
     ...overrides,
   });
 }
@@ -41,6 +41,7 @@ describe('evaluationWindow', () => {
     expect(evaluationWindow(props({ preprocess: '2.5', speed_scale: '3.0' }))).toEqual({
       seconds: 2.5,
       speedScale: 1,
+      wholeSteps: true,
     });
   });
 
@@ -48,6 +49,7 @@ describe('evaluationWindow', () => {
     expect(evaluationWindow(props({ preprocess: '0', lifetime: '0.8', speed_scale: '2' }))).toEqual({
       seconds: 0.8,
       speedScale: 2,
+      wholeSteps: false,
     });
   });
 
@@ -55,6 +57,7 @@ describe('evaluationWindow', () => {
     expect(evaluationWindow(props({ preprocess: '0', lifetime: '0.4', one_shot: 'true' }))).toEqual({
       seconds: 0.2,
       speedScale: 1,
+      wholeSteps: false,
     });
   });
 

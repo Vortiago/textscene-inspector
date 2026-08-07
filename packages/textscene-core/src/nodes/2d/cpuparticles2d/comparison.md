@@ -76,18 +76,38 @@ one-shots that ship this way, so an empty frame here is the correct frame.
 
 ## Divergences
 
-Three things are structural rather than a capture artefact:
+Measured whole-frame against Godot 4.6.3, `pnpm ref:godot <fixture> --mode 2d` against
+`pnpm ref:ours <fixture> --2d`, 1152x648:
 
-- **The moment.** Neither side shows a running emitter. Both are captured at
-  the scene's load instant, where Godot has run the single update it does at
-  time zero: the authored `preprocess`, at a fixed `1/30 s` step (or
-  `fixed_fps`), plus one frame delta. So an emitter that sets `preprocess` — as
-  every fixture here does — stands at the engine's own at-rest pose on both
-  sides. An emitter that does not has accumulated nothing there, while the
-  previewer substitutes one `lifetime`, a continuous emitter's steady state, or
-  half a lifetime for a `one_shot` burst, which a full lifetime would catch a
-  frame from death. The isometric dungeon's candle is that case, and its flame
-  is ours alone.
+| Fixture | Differing pixels |
+| --- | --- |
+| `unit-cpuparticles2d-emission-shapes.tscn` | 0 (0.000 %) |
+| `unit-cpuparticles2d.tscn` | 1398 (0.187 %) |
+| `unit-cpuparticles2d-color-ramp.tscn` | 3490 (0.468 %) |
+| `unit-cpuparticles2d-local-coords.tscn` | 4777 (0.640 %) |
+
+The zero is the load-bearing one: it is the same simulation on both sides, stepped the same
+way, landing on the same pose to the pixel. So the other three are not the emitter's motion —
+they are what those fixtures add on top of it. In `local_coords`, the largest, the two streams
+have the same extent and position on both sides but ours breaks into a comb of separate quads
+where Godot's is one solid bar, i.e. our particles sit further apart along the stream.
+
+Three more things are structural rather than a capture artefact:
+
+- **The moment, and only when the scene does not name one.** Neither side shows
+  a running emitter. Both are captured at the scene's load instant, where Godot
+  has run the single update it does at time zero — the authored `preprocess`, at
+  a fixed `1/30 s` step or `fixed_fps`, then one process delta the reference pins
+  at a millisecond and which quantizes to whole steps when the emitter sets
+  `fixed_fps`. So an emitter that names a later moment is MET, not approximated:
+  `preprocess` is a serialised fixed-step advance, both sides step whole frames
+  over it, and both let the last step overshoot. `unit-cpuparticles2d-emission-shapes.tscn`
+  measures that exactly — **0 px of 1152x648 against Godot 4.6.3**, the engine's
+  own pose to the pixel. An emitter that names no moment has accumulated nothing there,
+  while the previewer substitutes one `lifetime`, a continuous emitter's steady
+  state, or half a lifetime for a `one_shot` burst, which a full lifetime would
+  catch a frame from death. The isometric dungeon's candle is that case, and its
+  flame is ours alone.
 - **The seed.** Godot randomises `seed` in the constructor unless
   `use_fixed_seed` is set, and never saves it, so an unseeded emitter that has
   a `preprocess` to simulate draws a different reference every run. Every
