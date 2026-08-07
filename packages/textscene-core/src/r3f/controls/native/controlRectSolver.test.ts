@@ -38,6 +38,9 @@ describe('solveControlTree — LayoutPreset table (control.cpp::set_anchors_pres
   // scene/gui/control.cpp :: Control::set_anchors_preset (:1114-1229) — the four
   // per-edge switches this table transcribes. No offsets/custom minimum size, so
   // the resolved rect IS the anchor fraction times the 1152x648 viewport.
+  // `layout_mode` is UNCONTROLLED (3) throughout: a parentless Control's stored
+  // mode, and one of the two `_set_anchors_layout_preset` does not bail on
+  // (control.cpp:990-993), so the preset is operational here.
   const presetRects: Record<number, Rect2> = {
     0: { x: 0, y: 0, w: 0, h: 0 }, // TOP_LEFT
     1: { x: 1152, y: 0, w: 0, h: 0 }, // TOP_RIGHT
@@ -59,7 +62,7 @@ describe('solveControlTree — LayoutPreset table (control.cpp::set_anchors_pres
 
   for (const [preset, expected] of Object.entries(presetRects)) {
     it(`preset ${preset} resolves to ${JSON.stringify(expected)}`, () => {
-      const root = node('Root', 'Control', { anchorsPreset: Number(preset) });
+      const root = node('Root', 'Control', { layoutMode: 3, anchorsPreset: Number(preset) });
       const solved = solveControlTree([root], VIEWPORT, ctx());
       expect(solved.get('Root')?.rect).toEqual(expected);
     });
@@ -105,13 +108,17 @@ describe('solveControlTree — explicit anchor_* + offset_* (incl. negative offs
 
 describe('solveControlTree — size floored at custom_minimum_size', () => {
   it('clamps size up to custom_minimum_size, position unchanged under the default GROW_DIRECTION_END', () => {
-    // control.cpp:1773-1797. Raw rect from anchorsPreset=8 (CENTER) with a
-    // 10x10 offset box: x=571,y=319,w=10,h=10 (see the preset-table describe
-    // block for the base 576,324 CENTER point). custom_minimum_size (80,24) >
-    // (10,10) on both axes; GROW_DIRECTION_END (control.h:209-210, the
-    // default) leaves position alone and only grows the size.
+    // control.cpp:1773-1797. Raw rect from centred anchors and a 10x10 offset
+    // box: x=571,y=319,w=10,h=10. custom_minimum_size (80,24) > (10,10) on
+    // both axes; GROW_DIRECTION_END (control.h:209-210, the default) leaves
+    // position alone and only grows the size. The anchors are the explicit
+    // four floats rather than the CENTER preset so that grow really is at that
+    // default — the preset would have implied BOTH on both axes.
     const root = node('Root', 'Control', {
-      anchorsPreset: 8,
+      anchorLeft: 0.5,
+      anchorTop: 0.5,
+      anchorRight: 0.5,
+      anchorBottom: 0.5,
       offsetLeft: -5,
       offsetTop: -5,
       offsetRight: 5,
@@ -126,7 +133,10 @@ describe('solveControlTree — size floored at custom_minimum_size', () => {
     // Same raw 10x10 box at (571,319). growHorizontal=BEGIN(0): x += 10-80 = -70 → 501.
     // growVertical=BOTH(2): y += 0.5*(10-24) = -7 → 312.
     const root = node('Root', 'Control', {
-      anchorsPreset: 8,
+      anchorLeft: 0.5,
+      anchorTop: 0.5,
+      anchorRight: 0.5,
+      anchorBottom: 0.5,
       offsetLeft: -5,
       offsetTop: -5,
       offsetRight: 5,
@@ -235,10 +245,13 @@ describe('solveControlTree — grow direction derived from anchors_preset', () =
     expect(solved.get('Root')?.rect).toEqual({ x: 516, y: 308, w: 120, h: 32 });
   });
 
-  it('the same CENTER-preset node keeps GROW_DIRECTION_END when layout_mode is absent', () => {
-    // `_set_anchors_layout_preset` bails before `set_grow_direction_preset`
-    // outside ANCHORS/UNCONTROLLED (control.cpp:991-993), so the preset implies
-    // nothing about grow and the position holds at the raw 308.
+  it('the same CENTER-preset node is wholly non-operational when layout_mode is absent', () => {
+    // `_set_anchors_layout_preset` bails outside ANCHORS/UNCONTROLLED before
+    // `set_anchors_preset` AND before `set_grow_direction_preset`
+    // (control.cpp:990-993), and `stored_layout_mode` defaults to POSITION
+    // (control.h:201), so a scene authoring no `layout_mode` line gets neither
+    // half: anchors stay (0,0,0,0), so the raw box is the offsets themselves at
+    // (-60,-16,120,32), and grow stays END, so the 35 minimum grows downward.
     const root = node('Root', 'Control', {
       anchorsPreset: 8,
       offsetLeft: -60,
@@ -248,7 +261,7 @@ describe('solveControlTree — grow direction derived from anchors_preset', () =
       customMinimumSize: { x: 0, y: 35 },
     });
     const solved = solveControlTree([root], VIEWPORT, ctx());
-    expect(solved.get('Root')?.rect).toEqual({ x: 516, y: 308, w: 120, h: 35 });
+    expect(solved.get('Root')?.rect).toEqual({ x: -60, y: -16, w: 120, h: 35 });
   });
 
   it('an authored grow_vertical still wins over the preset it contradicts', () => {
@@ -290,7 +303,7 @@ describe('solveControlTree — grow direction derived from anchors_preset', () =
 
 describe('solveControlTree — nested free Controls resolve against their parent rect', () => {
   it("a FULL_RECT child under a free Control fills the PARENT's rect, not the viewport", () => {
-    const child = node('Root/Child', 'Control', { anchorsPreset: 15 });
+    const child = node('Root/Child', 'Control', { layoutMode: 1, anchorsPreset: 15 });
     const root = node(
       'Root',
       'Control',
@@ -314,7 +327,7 @@ describe('solveControlTree — nested free Controls resolve against their parent
       offsetRight: 10,
       offsetBottom: 10,
     });
-    const child = node('Root/Child', 'Control', { anchorsPreset: 15 }, [grandchild]);
+    const child = node('Root/Child', 'Control', { layoutMode: 1, anchorsPreset: 15 }, [grandchild]);
     const root = node(
       'Root',
       'Control',
@@ -443,11 +456,11 @@ describe('solveControlTree — a registered ContainerLayoutFn overrides its chil
 
     // This child's own anchors say FULL_RECT — if honoured, it would be
     // (0,0,1152,648), not the container's (0,0,1152,10).
-    const child0 = node('Stack/Child0', 'Control', { anchorsPreset: 15 });
-    const child1 = node('Stack/Child1', 'Control', { anchorsPreset: 15 });
+    const child0 = node('Stack/Child0', 'Control', { layoutMode: 1, anchorsPreset: 15 });
+    const child1 = node('Stack/Child1', 'Control', { layoutMode: 1, anchorsPreset: 15 });
     // The container itself still solves as a free Control — FULL_RECT so its
     // own rect (and so contentRect) is the 1152x648 viewport.
-    const root = node('Stack', TYPE, { anchorsPreset: 15 }, [child0, child1]);
+    const root = node('Stack', TYPE, { layoutMode: 3, anchorsPreset: 15 }, [child0, child1]);
 
     const solved = solveControlTree([root], VIEWPORT, ctx());
     expect(solved.get('Stack/Child0')?.rect).toEqual({ x: 0, y: 0, w: 1152, h: 10 });
@@ -509,9 +522,9 @@ describe('solveControlTree — a registered ContainerLayoutFn overrides its chil
     };
     controlSolverRegistry.registerContainerLayout(TYPE, stack);
 
-    const grandchild = node('Stack/Child/Grandchild', 'Control', { anchorsPreset: 15 });
-    const child = node('Stack/Child', 'Control', { anchorsPreset: 15 }, [grandchild]);
-    const root = node('Stack', TYPE, { anchorsPreset: 15 }, [child]);
+    const grandchild = node('Stack/Child/Grandchild', 'Control', { layoutMode: 1, anchorsPreset: 15 });
+    const child = node('Stack/Child', 'Control', { layoutMode: 1, anchorsPreset: 15 }, [grandchild]);
+    const root = node('Stack', TYPE, { layoutMode: 3, anchorsPreset: 15 }, [child]);
 
     const solved = solveControlTree([root], VIEWPORT, ctx());
     expect(solved.get('Stack/Child')?.rect).toEqual({ x: 0, y: 0, w: 1152, h: 20 });
@@ -530,7 +543,7 @@ describe('solveControlTree — a registered canvas boundary (CanvasLayer)', () =
   it('fills the rect it was handed instead of the (0,0) its absent anchors would give', () => {
     controlSolverRegistry.registerCanvasBoundary(BOUNDARY);
     const layer = node('Root/HUD', BOUNDARY, {});
-    const root = node('Root', 'Control', { anchorsPreset: 15 }, [layer]);
+    const root = node('Root', 'Control', { layoutMode: 3, anchorsPreset: 15 }, [layer]);
 
     const solved = solveControlTree([root], VIEWPORT, ctx());
     expect(solved.get('Root/HUD')?.rect).toEqual({ x: 0, y: 0, w: 1152, h: 648 });
@@ -548,7 +561,7 @@ describe('solveControlTree — a registered canvas boundary (CanvasLayer)', () =
       offsetBottom: 32,
     });
     const layer = node('Root/HUD', BOUNDARY, {}, [score]);
-    const root = node('Root', 'Control', { anchorsPreset: 15 }, [layer]);
+    const root = node('Root', 'Control', { layoutMode: 3, anchorsPreset: 15 }, [layer]);
 
     const solved = solveControlTree([root], VIEWPORT, ctx());
     expect(solved.get('Root/HUD/Score')?.rect).toEqual({ x: 1032, y: 8, w: 112, h: 24 });
@@ -564,7 +577,7 @@ describe('solveControlTree — a registered canvas boundary (CanvasLayer)', () =
     });
 
     const layer = node('Box/HUD', BOUNDARY, {});
-    const box = node('Box', CONTAINER, { anchorsPreset: 15 }, [layer]);
+    const box = node('Box', CONTAINER, { layoutMode: 3, anchorsPreset: 15 }, [layer]);
 
     const solved = solveControlTree([box], VIEWPORT, ctx());
     expect(solved.get('Box/HUD')?.rect).toEqual({ x: 0, y: 0, w: 1152, h: 648 });

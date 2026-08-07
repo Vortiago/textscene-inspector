@@ -1,0 +1,68 @@
+[gd_scene format=3]
+
+; ONE variable: the `offset_*` side effect an operational `anchors_preset` has.
+; `Control::_set_anchors_layout_preset` does not only set anchors — it calls
+; `set_offsets_preset` too, which writes all four offsets from the node's
+; minimum size AT THAT INSTANT (an orphan with no children and none of its own
+; type's properties set yet, so a Button's is its StyleBox margins alone).
+;
+; Those offsets are normally invisible, because they place a rect exactly where
+; the min-size floor would have placed it using the SAME preset's grow
+; directions. They move a pixel only when a scene authors a `grow_*` that
+; CONTRADICTS its preset — so each cell below holds one wide-preset Button, and
+; the cells differ only in whether that contradiction is present:
+;   Agreeing     grow left to the preset (BOTH) — the side effect cancels out
+;   ContradictV  grow_vertical = END against HCENTER_WIDE's BOTH
+;   ContradictH  grow_horizontal = END against VCENTER_WIDE's BOTH
+;
+; A regression here is invisible in every other scene: no fixture and no demo
+; in the corpus pairs an operational preset with a contradicting `grow_*` on a
+; type that has a non-zero minimum size of its own, which is the only shape
+; where these offsets survive the floor.
+
+[node name="Root" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="AgreeingCell" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 552.0
+offset_bottom = 240.0
+color = Color(0.35, 0.2, 0.45, 1)
+
+[node name="Agreeing" type="Button" parent="AgreeingCell"]
+layout_mode = 1
+anchors_preset = 14
+text = "hcenter wide, grow as the preset implies"
+
+[node name="ContradictVCell" type="ColorRect" parent="."]
+offset_left = 600.0
+offset_top = 40.0
+offset_right = 1112.0
+offset_bottom = 240.0
+color = Color(0.2, 0.35, 0.45, 1)
+
+[node name="ContradictV" type="Button" parent="ContradictVCell"]
+layout_mode = 1
+anchors_preset = 14
+grow_vertical = 1
+text = "hcenter wide, grow_vertical = END"
+
+[node name="ContradictHCell" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 300.0
+offset_right = 552.0
+offset_bottom = 500.0
+color = Color(0.45, 0.35, 0.2, 1)
+
+[node name="ContradictH" type="Button" parent="ContradictHCell"]
+layout_mode = 1
+anchors_preset = 13
+grow_horizontal = 1
+text = "vcenter"

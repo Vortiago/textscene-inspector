@@ -28,7 +28,7 @@ import {
   type SolveContext,
   type TextMeasurer,
 } from './solverRegistry';
-import { resolveAnchors, resolveGrowDirection } from '../controlAnchors.js';
+import { resolveAnchors, resolveGrowDirection, resolveOffsets } from '../controlAnchors.js';
 
 export interface SolvedControl {
   rect: Rect2;
@@ -86,12 +86,9 @@ export interface SolvedControl {
  * top-left, not an absolute viewport position. RTL is out of scope (no
  * `layout_direction` is modelled).
  */
-function computeAnchoredRect(p: ControlProperties, parentRect: Rect2): Rect2 {
+function computeAnchoredRect(p: ControlProperties, parentRect: Rect2, presetTimeMinimumSize: () => Vec2): Rect2 {
   const [al, at, ar, ab] = resolveAnchors(p);
-  const offsetLeft = p.offsetLeft ?? 0;
-  const offsetTop = p.offsetTop ?? 0;
-  const offsetRight = p.offsetRight ?? 0;
-  const offsetBottom = p.offsetBottom ?? 0;
+  const [offsetLeft, offsetTop, offsetRight, offsetBottom] = resolveOffsets(p, presetTimeMinimumSize);
 
   const left = offsetLeft + al * parentRect.w;
   const top = offsetTop + at * parentRect.h;
@@ -197,6 +194,40 @@ function combinedMinimumSizeWithMeta(n: SolveNode, ctx: SolveContext): { size: V
  */
 export function combinedMinimumSize(n: SolveNode, ctx: SolveContext): Vec2 {
   return combinedMinimumSizeWithMeta(n, ctx).size;
+}
+
+/**
+ * `Control::get_minimum_size()` as it reads at the instant `anchors_preset` is
+ * applied — the one input `resolveOffsets` needs that is not a property of the
+ * node.
+ *
+ * Two things separate it from `combinedMinimumSize`, both because
+ * `SceneState::instantiate` sets a node's properties before it is ever added
+ * to a parent (`scene/resources/packed_scene.cpp:492` vs `:541`) and walks
+ * them in the order the scene lists them, `Control`'s ahead of any subclass's:
+ * the node has NO children yet, and none of its own type's properties are set.
+ * So the registered `MinimumSizeFn` runs against a childless node carrying
+ * only a name — an empty Label, a text-less Button — and
+ * `custom_minimum_size`, which `get_minimum_size()` excludes anyway
+ * (`control.cpp:1744-1758` folds it in one level up), never enters.
+ *
+ * Theme resources stay: a Control's theme comes from its class's default,
+ * which the orphan already has.
+ *
+ * The result is bounded above by the node's real combined minimum for every
+ * monotone `MinimumSizeFn` — stripping content cannot enlarge a minimum — so
+ * the offsets this feeds can only ever place a rect the min-size floor then
+ * re-clamps, never one that overshoots it.
+ */
+function presetTimeMinimumSize(n: SolveNode, ctx: SolveContext): Vec2 {
+  const typeFn = controlSolverRegistry.minimumSize(n.node.type);
+  if (!typeFn) return { x: 0, y: 0 };
+  const bare: SolveNode = {
+    ...n,
+    node: { ...n.node, children: [], properties: { name: n.node.name } },
+    children: [],
+  };
+  return normalizeMinimumSizeResult(typeFn(bare, ctx)).size;
 }
 
 /**
@@ -342,7 +373,11 @@ function solveFree(
   const props = controlProps(n);
   const rect = controlSolverRegistry.isCanvasBoundary(n.node.type)
     ? canvasBoundaryRect(parentRect)
-    : floorAtMinimumSize(computeAnchoredRect(props, parentRect), minSize, ...resolveGrowDirection(props));
+    : floorAtMinimumSize(
+        computeAnchoredRect(props, parentRect, () => presetTimeMinimumSize(n, ctx)),
+        minSize,
+        ...resolveGrowDirection(props)
+      );
   record(n, rect, minSize, paintIndexOf, out, ctx.minimumSizeMeta?.(n));
   dispatchChildren(n, rect, ctx, paintIndexOf, out);
 }

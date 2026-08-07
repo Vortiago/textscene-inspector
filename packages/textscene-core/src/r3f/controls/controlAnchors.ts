@@ -37,11 +37,47 @@ export const PRESET_ANCHORS: Record<number, [number, number, number, number]> = 
 };
 
 /**
+ * Whether `anchors_preset` is OPERATIONAL on a node, i.e. whether
+ * `Control::_set_anchors_layout_preset` — the setter actually bound to that
+ * property — gets past its two early returns (`scene/gui/control.cpp:983-993`)
+ * and applies anything at all.
+ *
+ * The gate reads `data.stored_layout_mode`, whose struct default is
+ * `LAYOUT_MODE_POSITION` (0) (`control.h:201`), and a scene's properties are
+ * applied while the node is still an orphan — `SceneState::instantiate` sets
+ * every property before the `_add_child_nocheck` that would let
+ * `NOTIFICATION_PARENTED` recompute the stored mode
+ * (`scene/resources/packed_scene.cpp:492` vs `:541`). So the serialized
+ * `layout_mode` line IS the gate: only `LAYOUT_MODE_ANCHORS` (1) and
+ * `LAYOUT_MODE_UNCONTROLLED` (3) open it, and a node that authors no
+ * `layout_mode` at all — like every container-managed child, which authors
+ * `LAYOUT_MODE_CONTAINER` (2) — leaves the preset non-operational, "in other
+ * modes the anchor preset is non-operational and shouldn't be set to
+ * anything".
+ *
+ * Both halves of the setter's effect — anchors and grow direction — are behind
+ * this single gate, so both resolvers below share it.
+ */
+function presetApplies(p: ControlProperties): boolean {
+  return p.layoutMode === 1 || p.layoutMode === 3;
+}
+
+/**
  * Explicit `anchor_*` properties win over `anchors_preset` (the scene file
  * carries both once a preset is applied in the editor, but the four explicit
- * floats are what `Control::_size_changed` actually reads); absent either,
- * anchors default to `(0, 0, 0, 0)` — `layout_mode = 0` (Position) leaves
- * anchors at that default and encodes position/size entirely through offsets.
+ * floats are what `Control::_size_changed` actually reads, and `set_anchor`
+ * carries no `layout_mode` check of its own so an authored float lands
+ * whatever the mode); absent either, anchors default to `(0, 0, 0, 0)`.
+ *
+ * The preset is consulted only through `presetApplies` — the same gate
+ * `resolveGrowDirection` uses, since one setter applies both. A preset outside
+ * 0..15, notably the `-1` custom-anchors sentinel, likewise leaves anchors at
+ * the default: `_set_anchors_layout_preset` returns on `-1` before doing
+ * anything (`control.cpp:983-989`), and `set_anchors_preset` rejects anything
+ * else out of range outright (`ERR_FAIL_INDEX((int)p_preset, 16)`).
+ *
+ * The setter's third effect — `set_offsets_preset` rewriting `offset_*` — is
+ * `resolveOffsets` below.
  */
 export function resolveAnchors(p: ControlProperties): [number, number, number, number] {
   const hasExplicit =
@@ -52,10 +88,84 @@ export function resolveAnchors(p: ControlProperties): [number, number, number, n
   if (hasExplicit) {
     return [p.anchorLeft ?? 0, p.anchorTop ?? 0, p.anchorRight ?? 0, p.anchorBottom ?? 0];
   }
-  if (p.anchorsPreset !== undefined && PRESET_ANCHORS[p.anchorsPreset]) {
+  if (presetApplies(p) && p.anchorsPreset !== undefined && PRESET_ANCHORS[p.anchorsPreset]) {
     return PRESET_ANCHORS[p.anchorsPreset]!;
   }
   return [0, 0, 0, 0];
+}
+
+/**
+ * The seven presets `_set_anchors_layout_preset` passes to `set_offsets_preset`
+ * as `PRESET_MODE_MINSIZE` rather than `PRESET_MODE_KEEP_SIZE`
+ * (`control.cpp:1007-1029`): the wide ones, LEFT_WIDE through FULL_RECT. The
+ * distinction is which `new_size` the offsets are computed from — the node's
+ * minimum size for these, its current `get_size()` for the other nine.
+ */
+const MINSIZE_PRESETS = new Set([9, 10, 11, 12, 13, 14, 15]);
+
+/**
+ * The `offset_left/top/right/bottom` a preset writes as a side effect —
+ * `set_offsets_preset` (`control.cpp:1231-1345`), which
+ * `_set_anchors_layout_preset` calls right after `set_anchors_preset`.
+ *
+ * `presetTimeMinimumSize` is `get_minimum_size()` — the type's OWN virtual
+ * contribution, NOT `get_combined_minimum_size()`, so `custom_minimum_size`
+ * does not enter — evaluated in the state the node is in when the property is
+ * applied: an orphan with none of its own type's properties set yet, since
+ * `SceneState::instantiate` walks a node's properties in the order the scene
+ * lists them and a subclass's come after `Control`'s. It is a thunk because
+ * only the seven wide presets read it, and computing it means running a
+ * registered `MinimumSizeFn` a second time — work every other node, which is
+ * nearly all of them, would throw away.
+ *
+ * That orphanhood is what collapses the four per-edge `switch`es to one line
+ * per side. Each reads `parent_rect = get_parent_anchorable_rect()`, which is
+ * `Rect2()` outside the tree, so every `parent_rect`-scaled term vanishes and
+ * only the `new_size` term survives; and each switch's three case lists are
+ * edge-for-edge the SAME partition `set_anchors_preset` uses, so "which list
+ * this preset is in" is exactly "what this preset anchors that edge at". The
+ * begin/centre/end constants that remain are `0 / -size/2 / -size` on the
+ * left and top, and `+size / +size/2 / 0` on the right and bottom.
+ *
+ * An authored `offset_*` wins per side: the four floats are serialized after
+ * `anchors_preset` (`control.cpp`'s `ADD_PROPERTY` order), so they are applied
+ * on top of whatever the preset wrote. The gate is `presetApplies` again, and
+ * a preset outside 0..15 writes nothing for the same reasons the anchors half
+ * does.
+ *
+ * This matters where the min-size floor does not already reproduce it. Because
+ * the offsets place a rect of the VIRTUAL minimum where the floor would place
+ * one of the COMBINED minimum — never smaller — the two agree whenever the
+ * grow directions the floor uses are the preset's own. They part company when
+ * a scene authors a `grow_horizontal`/`grow_vertical` that CONTRADICTS its
+ * preset, which is the only case where these offsets move a pixel.
+ */
+export function resolveOffsets(
+  p: ControlProperties,
+  presetTimeMinimumSize: () => { x: number; y: number }
+): [number, number, number, number] {
+  const authored: [number, number, number, number] = [
+    p.offsetLeft ?? 0,
+    p.offsetTop ?? 0,
+    p.offsetRight ?? 0,
+    p.offsetBottom ?? 0,
+  ];
+  const preset = p.anchorsPreset;
+  if (!presetApplies(p) || preset === undefined || !PRESET_ANCHORS[preset]) return authored;
+
+  const [al, at, ar, ab] = PRESET_ANCHORS[preset]!;
+  // `KEEP_SIZE` reads `get_size()`, which is (0, 0) on a node that has never
+  // been in a tree — so only the wide presets carry a non-zero `new_size`.
+  const size = MINSIZE_PRESETS.has(preset) ? presetTimeMinimumSize() : { x: 0, y: 0 };
+
+  // Written as `0 - …` rather than a unary minus so a zero-size begin edge
+  // yields +0: negative zero is a distinct value to a deep-equality assertion.
+  return [
+    p.offsetLeft ?? 0 - size.x * al,
+    p.offsetTop ?? 0 - size.y * at,
+    p.offsetRight ?? size.x * (1 - ar),
+    p.offsetBottom ?? size.y * (1 - ab),
+  ];
 }
 
 /** `Control::GrowDirection` (`control.h:59-62`). */
@@ -127,18 +237,15 @@ export const PRESET_GROW_VERTICAL: Record<number, number> = {
  * wins (it is written only when it CONTRADICTS the preset), and otherwise the
  * preset's own table supplies it.
  *
- * Derivation is gated exactly as Godot gates it (`control.cpp:991-993`):
- * `layout_mode` must be `LAYOUT_MODE_ANCHORS` (1) or `LAYOUT_MODE_UNCONTROLLED`
- * (3), else the preset is non-operational and the whole setter returns early —
- * a container-managed child (2) or a free one (0) keeps the raw struct default
- * even with an `anchors_preset` on the node. A preset outside 0..15 — notably
- * the `-1` custom-anchors sentinel, which `_set_anchors_layout_preset` returns
- * on before doing anything (`:983-989`) — likewise leaves it at that default,
- * matching two `switch`es that carry no `default:` case.
+ * Derivation is gated by `presetApplies`, exactly as Godot gates it — the same
+ * early return that gates `resolveAnchors`, since one setter applies both. A
+ * preset outside 0..15 — notably the `-1` custom-anchors sentinel, which
+ * `_set_anchors_layout_preset` returns on before doing anything (`:983-989`) —
+ * likewise leaves it at the struct default, matching two `switch`es that carry
+ * no `default:` case.
  */
 export function resolveGrowDirection(p: ControlProperties): [number, number] {
-  const presetApplies = p.layoutMode === 1 || p.layoutMode === 3;
-  const preset = presetApplies ? p.anchorsPreset : undefined;
+  const preset = presetApplies(p) ? p.anchorsPreset : undefined;
   const h = preset !== undefined ? PRESET_GROW_HORIZONTAL[preset] : undefined;
   const v = preset !== undefined ? PRESET_GROW_VERTICAL[preset] : undefined;
   return [p.growHorizontal ?? h ?? GROW_DIRECTION_END, p.growVertical ?? v ?? GROW_DIRECTION_END];

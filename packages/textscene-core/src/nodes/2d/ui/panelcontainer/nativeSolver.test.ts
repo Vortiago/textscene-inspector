@@ -193,7 +193,9 @@ describe('panelContainerLayout wired through the registry + full solve', () => {
         name: 'Panel',
         type: TYPE,
         children: [],
-        properties: { name: 'Panel', anchorsPreset: 15 } as ControlProperties, // FULL_RECT
+        // scene/gui/control.cpp Control::_get_layout_mode: a parentless Control reports
+        // UNCONTROLLED, one of the two modes in which an anchors preset applies at all.
+        properties: { name: 'Panel', layoutMode: 3, anchorsPreset: 15 } as ControlProperties, // FULL_RECT
       },
       children: [child],
       styleBoxes: { panel: styleBox({ left: 10, top: 6, right: 10, bottom: 6 }) },
