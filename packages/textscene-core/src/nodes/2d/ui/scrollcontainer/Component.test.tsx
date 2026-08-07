@@ -14,7 +14,7 @@
  * grabber), so a bounding-box check is what actually proves the flip is
  * correct rather than merely present.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -26,6 +26,23 @@ import type { ScrollContainerProperties } from './types';
 import { ScrollContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+
+// This painter reads `gui/common/snap_controls_to_pixels` off the project
+// settings, exactly as `ControlCanvasWalker` does for a Control's own group;
+// nothing else here needs the real provider's async load.
+const projectSettingsMock = vi.hoisted(() => ({
+  settings: null as Record<string, string> | null,
+  viewportSize: { width: 1152, height: 648 },
+  themeScale: 1,
+}));
+
+vi.mock('../../../../r3f/contexts/ProjectSettingsContext', () => ({
+  useProjectSettings: () => projectSettingsMock,
+}));
+
+beforeEach(() => {
+  projectSettingsMock.settings = null;
+});
 
 function leaf(name: string, props: Partial<ScrollContainerProperties> = {}): SolveNode {
   return {
@@ -183,6 +200,92 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
     // then +0.5 for the AA feather ring's outward growth (see the two tests
     // above) -> -47.5.
     expect(box.max.y).toBeCloseTo(-47.5, 1);
+  });
+});
+
+/**
+ * Godot's `h_scroll`/`v_scroll` are real HScrollBar/VScrollBar Controls added
+ * as `INTERNAL_MODE_BACK` children (`scene/gui/scroll_container.cpp:919,924`),
+ * so each is its OWN CanvasItem and `Control::_update_canvas_item_transform`
+ * floors each one's translation independently of the container's.
+ *
+ * These assert the DRAWN group's world position rather than a bounding box:
+ * the styleboxes' anti-aliasing feather grows every box by 0.5px outward (see
+ * the two track/grabber tests above), which is the same magnitude as the snap
+ * being measured and would swamp it.
+ *
+ * `scenes/fixtures/unit-scroll-container-bar-snap.tscn` carries these exact
+ * numbers, arbitrated against Godot 4.6.3 at `--mode 2d`: at the container's
+ * integer origin (100, 20) the horizontal bar's top edge is crisp between
+ * y = 612 (rgb(242, 230, 64), the fill) and y = 613 (rgb(113, 108, 42), the
+ * track), and the vertical bar's left edge between x = 992 and x = 993 — the
+ * whole-pixel 593/893 below, never the solved 592.5/892.5. That render also
+ * shows the feather IS live (the grabber's own fractional right edge at 765.8
+ * reads the predicted 0.8-coverage blend), so those crisp edges are a snap and
+ * not an absent antialiaser.
+ */
+describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
+  // 900.5 x 600.5: the bar thickness is a whole 8 px at every theme scale, so
+  // both bar origins land exactly half a pixel off — the largest error the
+  // snap can produce — while the container's own origin stays whole and
+  // cannot mask it.
+  const FRACTIONAL_RECT: Rect2 = { x: 0, y: 0, w: 900.5, h: 600.5 };
+
+  function overflowing(props: Partial<ScrollContainerProperties> = {}): SolveNode {
+    return scrollNode(props, [leaf('Scroll/Content', { customMinimumSize: { x: 1200, y: 900 } })]);
+  }
+
+  /** Every drawn mesh's world position, keyed by the renderOrder that names its role. */
+  async function drawnMeshes(node: SolveNode, rect: Rect2) {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ScrollContainer {...painterEnv()} solveNode={node} rect={rect} renderOrder={0} />
+    );
+    return renderer.scene.findAllByType('Mesh').map((m) => {
+      const mesh = m.instance as THREE.Mesh;
+      mesh.updateWorldMatrix(true, false);
+      return { renderOrder: mesh.renderOrder, position: mesh.getWorldPosition(new THREE.Vector3()) };
+    });
+  }
+
+  /** The two tracks (renderOrder +0.25), left-to-right: horizontal bar first, vertical second. */
+  function tracks(meshes: { renderOrder: number; position: THREE.Vector3 }[]) {
+    return meshes.filter((m) => m.renderOrder === 0.25).sort((a, b) => a.position.x - b.position.x);
+  }
+
+  it('floors each bar origin to whole pixels — horizontal top 592.5 -> 593, vertical left 892.5 -> 893', async () => {
+    const [horizontal, vertical] = tracks(await drawnMeshes(overflowing(), FRACTIONAL_RECT));
+    expect(horizontal!.position.x).toBeCloseTo(0, 6);
+    expect(horizontal!.position.y).toBeCloseTo(-593, 6);
+    expect(vertical!.position.x).toBeCloseTo(893, 6);
+    expect(vertical!.position.y).toBeCloseTo(0, 6);
+  });
+
+  it('leaves a whole-pixel bar origin exactly where it was — the snap is a no-op on integers', async () => {
+    const [horizontal, vertical] = tracks(await drawnMeshes(overflowing(), { x: 0, y: 0, w: 600, h: 500 }));
+    expect(horizontal!.position.y).toBeCloseTo(-492, 6);
+    expect(vertical!.position.x).toBeCloseTo(592, 6);
+  });
+
+  it('composes the grabber onto the SNAPPED bar origin while keeping its own fractional offset', async () => {
+    // The grabber is drawn by `ScrollBar`'s own NOTIFICATION_DRAW inside the
+    // bar's CanvasItem (`scroll_bar.cpp:326-344` — a plain `Rect2` from
+    // `get_grabber_offset()`, no cast, no rounding), so it is never snapped a
+    // second time. range 1200, area 892.5 - 8 = 884.5, ratio 100/1200 ->
+    // offset 73.7083333, on top of the snapped 593.
+    const meshes = await drawnMeshes(overflowing({ scrollHorizontal: 100 }), FRACTIONAL_RECT);
+    // Left-to-right: the horizontal bar's grabber sits at its own 73.7 offset,
+    // the vertical bar's at the vertical bar's own snapped 893.
+    const grabbers = meshes.filter((m) => m.renderOrder === 0.5).sort((a, b) => a.position.x - b.position.x);
+    const horizontal = grabbers[0]!;
+    expect(horizontal.position.x).toBeCloseTo(73.7083333, 5);
+    expect(horizontal.position.y).toBeCloseTo(-593, 6);
+  });
+
+  it('honours `gui/common/snap_controls_to_pixels = false` — both bars stay on the solved fraction', async () => {
+    projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'false' };
+    const [horizontal, vertical] = tracks(await drawnMeshes(overflowing(), FRACTIONAL_RECT));
+    expect(horizontal!.position.y).toBeCloseTo(-592.5, 6);
+    expect(vertical!.position.x).toBeCloseTo(892.5, 6);
   });
 });
 

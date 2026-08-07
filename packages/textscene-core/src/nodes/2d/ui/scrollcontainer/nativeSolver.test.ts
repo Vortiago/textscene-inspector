@@ -189,6 +189,20 @@ describe('scrollContainerScrollBars (scroll_container.cpp::_update_scrollbars/_u
     // range=800, area=200-8=192; ratio=clamp(200/800,0,1)=0.25; offset=192*0.25=48.
     expect(out.vertical.grabberRect.y).toBeCloseTo(48, 6);
   });
+
+  it('keeps a fractional bar rect at FULL precision — the whole-pixel snap belongs to the drawn transform, not the solve', () => {
+    // `Control::_update_canvas_item_transform` floors the CANVAS ITEM's
+    // translation and leaves `get_rect()` untouched, so a ScrollBar whose own
+    // origin lands on a half pixel still reports that half pixel — the
+    // container's own reservation arithmetic below reads these numbers, and
+    // rounding them here would feed the solve its own rendering compromise.
+    const child = leaf('Scroll/Content', { customMinimumSize: { x: 1200, y: 900 } });
+    const n = scrollContainer({}, [child]);
+    const out = scrollContainerScrollBars(n, ctx(), { x: 0, y: 0, w: 900.5, h: 600.5 });
+    expect(out.horizontal.rect).toEqual({ x: 0, y: 592.5, w: 892.5, h: 8 });
+    expect(out.vertical.rect).toEqual({ x: 892.5, y: 0, w: 8, h: 592.5 });
+    expect(out.contentSize).toEqual({ x: 892.5, y: 592.5 });
+  });
 });
 
 describe('scrollContainerLayout (scroll_container.cpp::_reposition_children)', () => {

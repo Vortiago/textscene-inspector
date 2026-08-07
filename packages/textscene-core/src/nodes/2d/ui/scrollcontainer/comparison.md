@@ -12,6 +12,10 @@ A container that clips its single child and scrolls when the child overflows. Th
 previewer clips the content to the container's own rect and draws the theme's
 scrollbar track and grabber on whichever axis overflows; here the content VBox is
 forced to 800 px tall inside a ~608 px viewport, so the vertical axis overflows.
+Each bar is placed on a whole pixel of its own, independently of the container —
+Godot's `h_scroll`/`v_scroll` are Control nodes and so are separately snapped
+CanvasItems — while the grabber inside a bar keeps its fractional offset,
+because Godot draws it into the bar's own canvas item rather than as a node.
 
 ## Properties exercised
 

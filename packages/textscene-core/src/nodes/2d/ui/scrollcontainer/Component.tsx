@@ -14,10 +14,15 @@
  * `useWorldClipPlanes` (`native/controlClipping.tsx`) turns that rect into the
  * 4 world-space planes and merges them onto whatever this node inherited; the
  * result is published to the subtree through `ControlClipProvider` below.
- * `anchorRef` carries no local transform of its own, so its `matrixWorld`
- * equals the walker's outer group for this node (rect.x, -rect.y, composed
- * through every ancestor) — exactly "this node's local origin, in world
- * space", which is the frame the rect handed to the hook is expressed in.
+ * `anchorRef` carries no local transform of its own, so its `matrixWorld` is
+ * the walker's outer group for this node, composed through every ancestor —
+ * exactly "this node's local origin, in world space", which is the frame the
+ * rect handed to the hook is expressed in. That origin is the WHOLE-PIXEL
+ * snapped one (`native/controlPixelSnap.ts`), while `ownRect` below stays the
+ * full-precision `{0, 0, rect.w, rect.h}`, and the pair is deliberate: Godot
+ * clips to `Rect2(Point2(), get_size())` — an unrounded size — evaluated
+ * inside a canvas item whose translation has already been floored, so the clip
+ * edge lands on `floor(position + 0.5) + size`, not on `position + size`.
  *
  * SCROLLBAR GEOMETRY. Reads `meta` (`ContainerLayoutResult.meta`, from this
  * type's registered `ContainerLayoutFn` — `nativeSolver.ts`'s
@@ -76,6 +81,12 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { createSolveContext } from '../../../../r3f/controls/native/controlRectSolver';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import {
+  snapControlsToPixelsEnabled,
+  snappedControlOrigin,
+  type ControlDrawTransform,
+} from '../../../../r3f/controls/native/controlPixelSnap';
+import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -87,6 +98,20 @@ import {
 } from './nativeSolver';
 
 
+/**
+ * A ScrollBar's effective `ControlDrawTransform`. `h_scroll`/`v_scroll` are
+ * constructed by `ScrollContainer`'s own constructor and placed purely through
+ * `set_anchor_and_offset` (`_update_scrollbar_position`), so neither ever
+ * carries an authored rotation, scale or pivot — the composite the snap floors
+ * is the bar's position alone. Hoisted to a module constant because it is a
+ * fact about the engine's own nodes, not a per-render value.
+ */
+const SCROLL_BAR_DRAW_TRANSFORM: ControlDrawTransform = {
+  rotation: 0,
+  scale: { x: 1, y: 1 },
+  pivot: { x: 0, y: 0 },
+};
+
 interface ScrollBarChromeProps {
   bar: ScrollBarPlacement;
   track: StyleBoxFlatData;
@@ -95,6 +120,8 @@ interface ScrollBarChromeProps {
   color: RGBA;
   /** `subtreeChromeRenderOrder` (or its fallback) — see this module's own DRAW ORDER doc. */
   chromeRenderOrder: number;
+  /** `gui/common/snap_controls_to_pixels`, read once by the painter and passed down. */
+  snapToPixels: boolean;
 }
 
 /**
@@ -128,14 +155,33 @@ interface ScrollBarChromeProps {
  * reason position is handled by an enclosing group: passing this bar's
  * ALREADY-absolute rect verbatim would double-count that offset once the
  * mesh sits inside a group that already carries it.
+ *
+ * PIXEL SNAP. `h_scroll`/`v_scroll` are real `HScrollBar`/`VScrollBar` Control
+ * nodes (`scene/gui/scroll_container.cpp:919,924`), so each is its OWN
+ * CanvasItem and `Control::_update_canvas_item_transform` floors each one's
+ * translation INDEPENDENTLY of the ScrollContainer's — a bar under a snapped
+ * container still snaps again on its own account. This group is that bar's
+ * canvas item, so its position goes through the same
+ * `snappedControlOrigin` port the walker uses for every other Control, never a
+ * hand-rolled floor. `bar.rect` itself stays at full precision:
+ * `_update_scrollbar_position` sets anchors and offsets, `get_rect()` reports
+ * what they resolve to, and only the drawn transform is floored — the
+ * container's own reservation arithmetic reads the unsnapped numbers.
+ *
+ * The GRABBER is NOT a node. `ScrollBar`'s own `NOTIFICATION_DRAW`
+ * (`scene/gui/scroll_bar.cpp:326-344`) builds a `Rect2` straight from
+ * `get_grabber_offset()` — no int cast, no rounding — and draws it into the
+ * bar's canvas item, so it inherits the bar's snap and never gets a second one
+ * of its own. Nesting its group inside the snapped one is exactly that.
  */
-function ScrollBarChrome({ bar, track, grabber, color, chromeRenderOrder }: ScrollBarChromeProps) {
+function ScrollBarChrome({ bar, track, grabber, color, chromeRenderOrder, snapToPixels }: ScrollBarChromeProps) {
   if (!bar.visible) return null;
+  const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
   // Position only. `StyleBoxQuad` now takes just the size from the rect it is
   // handed and applies the Godot→three y flip itself, so a caller supplies the
   // offset through a group and nothing else.
   return (
-    <group position={[bar.rect.x, -bar.rect.y, 0]}>
+    <group position={[origin.x, -origin.y, 0]}>
       <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={chromeRenderOrder + 0.25} />
       <group position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}>
         <StyleBoxQuad styleBox={grabber} color={color} rect={bar.grabberRect} renderOrder={chromeRenderOrder + 0.5} />
@@ -173,6 +219,10 @@ export function ScrollContainer({
 
   const selfModulate = props.selfModulate ?? WHITE_MODULATE;
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+  // The bars are separate CanvasItems, so the walker's snap of THIS node's own
+  // group does not reach them — read the same setting the walker reads and
+  // snap each bar on its own account (see `ScrollBarChrome`'s PIXEL SNAP doc).
+  const snapToPixels = snapControlsToPixelsEnabled(useProjectSettings().settings);
 
   // The whole widget rect clips its subtree — the planes go into the Provider below.
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
@@ -187,6 +237,7 @@ export function ScrollContainer({
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
           chromeRenderOrder={subtreeChromeRenderOrder}
+          snapToPixels={snapToPixels}
         />
         <ScrollBarChrome
           bar={layout.vertical}
@@ -194,6 +245,7 @@ export function ScrollContainer({
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
           chromeRenderOrder={subtreeChromeRenderOrder}
+          snapToPixels={snapToPixels}
         />
         {children}
       </ControlClipProvider>
