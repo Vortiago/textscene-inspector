@@ -294,6 +294,34 @@ function compareToBaseline(scene, actualBuffer) {
   return { status: 'pass', detail: `${diffPixels} px differ (${diffPct.toFixed(3)}%)` };
 }
 
+/**
+ * Whether two PNG buffers decode to the same pixels.
+ *
+ * A byte compare answers a different question. Re-encoding an unchanged render
+ * routinely produces different PNG bytes, and `--update` writes every scene
+ * unconditionally — so a rebaseline that moved four images arrives as thirteen
+ * changed binaries, and "eyeball the rebaselined images" turns into finding the
+ * four that mean something. An unintended baseline rides along unnoticed in
+ * that noise, which is the whole failure mode baselines-are-committed exists to
+ * prevent.
+ *
+ * Returns false for a missing or unreadable baseline, so anything we cannot
+ * prove identical gets written.
+ */
+export function pixelsMatchBaseline(baselineBuffer, actualBuffer) {
+  if (!baselineBuffer) return false;
+  let expected;
+  let actual;
+  try {
+    expected = PNG.sync.read(baselineBuffer);
+    actual = PNG.sync.read(actualBuffer);
+  } catch {
+    return false;
+  }
+  if (expected.width !== actual.width || expected.height !== actual.height) return false;
+  return expected.data.equals(actual.data);
+}
+
 function writeFailureArtifacts(scene, actualBuffer, result) {
   mkdirSync(OUTPUT_DIR, { recursive: true });
   writeFileSync(join(OUTPUT_DIR, `${scene.name}.actual.png`), actualBuffer);
@@ -380,8 +408,14 @@ async function main() {
           });
           continue;
         }
+        const baselinePath = join(BASELINE_DIR, `${scene.name}.png`);
+        const existing = existsSync(baselinePath) ? readFileSync(baselinePath) : null;
+        if (pixelsMatchBaseline(existing, buffer)) {
+          results.push({ scene, status: 'unchanged', detail: 'pixels identical — not rewritten' });
+          continue;
+        }
         mkdirSync(BASELINE_DIR, { recursive: true });
-        writeFileSync(join(BASELINE_DIR, `${scene.name}.png`), buffer);
+        writeFileSync(baselinePath, buffer);
         results.push({ scene, status: 'updated', detail: `${buffer.length} bytes` });
         continue;
       }
@@ -398,14 +432,17 @@ async function main() {
   const pad = Math.max(...results.map((r) => r.scene.name.length));
   let failed = 0;
   for (const r of results) {
-    const ok = r.status === 'pass' || r.status === 'updated';
+    const ok = r.status === 'pass' || r.status === 'updated' || r.status === 'unchanged';
     if (!ok) failed++;
     const mark = ok ? '✓' : '✗';
     console.log(`  ${mark} ${r.scene.name.padEnd(pad)}  ${r.status.toUpperCase()}  ${r.detail}`);
   }
   if (opts.update) {
+    const written = results.filter((r) => r.status === 'updated').length;
+    const unchanged = results.filter((r) => r.status === 'unchanged').length;
     console.log(
-      `\n[visual] baselines written to scripts/visual/baselines/ — eyeball them, then commit.`
+      `\n[visual] ${written} baseline(s) written to scripts/visual/baselines/, ${unchanged} left ` +
+        'alone (pixels identical) — eyeball the written ones, then commit.'
     );
   }
   if (failed > 0) {

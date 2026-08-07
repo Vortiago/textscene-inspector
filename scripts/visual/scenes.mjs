@@ -470,6 +470,11 @@ export const GOLDEN_SCENES = [
   // `emitting = false` draws nothing. Script-triggered one-shot emitters ship
   // this way, so a regression that started drawing them would be widespread.
   { name: 'cpuparticles2d-not-emitting', file: 'unit-cpuparticles2d-not-emitting.tscn', mode: '2d', maxDiffPct: 0.5 },
+  // The one emitter here that does NOT pin its seed, so it is the only one that
+  // exercises the substituted one. Godot cannot draw this scene the same way
+  // twice; the previewer must, and this baseline is the whole assertion of that.
+  // Its image records OUR pose and is not arbitrable against a reference.
+  { name: 'cpuparticles2d-unseeded', file: 'unit-cpuparticles2d-unseeded.tscn', mode: '2d', maxDiffPct: 0 },
   // Baseline corrected in the Y-flip fix: a NavigationPolygon's vertices are
   // Godot canvas pixels (+Y DOWN), and this overlay was the one 2D geometry
   // path that skipped the negation — so the navmesh used to sit ABOVE the

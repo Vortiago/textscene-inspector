@@ -33,7 +33,7 @@ vi.mock('./previewServer.mjs', async (importOriginal) => {
 });
 
 import { findCaptureTarget, gotoFixture, settleCanvas } from './previewServer.mjs';
-import { captureScene, isUniformImage } from './run.mjs';
+import { captureScene, isUniformImage, pixelsMatchBaseline } from './run.mjs';
 
 function uniformPngBuffer(width, height, [r, g, b, a] = [30, 60, 90, 255]) {
   const png = new PNG({ width, height });
@@ -185,5 +185,51 @@ describe('captureScene console-error gate', () => {
     });
 
     expect(result.buffer).not.toBeNull();
+  });
+});
+
+/**
+ * `--update` writes every scene, so without this guard a rebaseline that moved
+ * four images arrives as thirteen changed binaries and "eyeball the rebaselined
+ * images" turns into finding the four that mean something. Measured on the
+ * cpuparticles2d rebaseline: seven of the nine collateral scenes read 0 px
+ * differ in the very same run — identical pixels, different PNG bytes.
+ */
+describe('pixelsMatchBaseline', () => {
+  it('sees through an encode that changed the bytes but not the pixels', () => {
+    const png = new PNG({ width: 16, height: 16 });
+    for (let i = 0; i < png.data.length; i += 4) {
+      png.data[i] = (i * 7) % 256;
+      png.data[i + 1] = (i * 13) % 256;
+      png.data[i + 2] = (i * 29) % 256;
+      png.data[i + 3] = 255;
+    }
+    const original = PNG.sync.write(png);
+    // Same pixels, different row filter — the cheap byte compare calls these
+    // different files, which is the wrong answer for a baseline.
+    const reencoded = PNG.sync.write(PNG.sync.read(original), { filterType: 0 });
+    expect(reencoded.equals(original)).toBe(false);
+    expect(pixelsMatchBaseline(original, reencoded)).toBe(true);
+  });
+
+  it('reports a single changed pixel, so a real move is never skipped', () => {
+    const baseline = uniformPngBuffer(8, 8);
+    const png = PNG.sync.read(baseline);
+    png.data[(4 * 8 + 4) * 4] = 255;
+    expect(pixelsMatchBaseline(baseline, PNG.sync.write(png))).toBe(false);
+  });
+
+  it('reports a size change rather than comparing mismatched buffers', () => {
+    expect(pixelsMatchBaseline(uniformPngBuffer(8, 8), uniformPngBuffer(8, 16))).toBe(false);
+  });
+
+  it('writes when there is no baseline to compare against (edge case)', () => {
+    expect(pixelsMatchBaseline(null, uniformPngBuffer(8, 8))).toBe(false);
+  });
+
+  it('writes when the existing baseline cannot be decoded (error case)', () => {
+    // A truncated or non-PNG baseline must not throw mid-run and must not be
+    // mistaken for a match — anything unprovable gets rewritten.
+    expect(pixelsMatchBaseline(Buffer.from('not a png'), uniformPngBuffer(8, 8))).toBe(false);
   });
 });
