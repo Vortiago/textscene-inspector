@@ -7,7 +7,7 @@
  * scene-graph structure (names/positions/visibility/rotation), never pixels —
  * this is a happy-dom-free but still non-visual test.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useEffect } from 'react';
@@ -32,6 +32,18 @@ const StubCanvasLayerNative: NativeControlComponent = ({ solveNode, children }) 
   const layer = (solveNode.node.properties as { layer?: number }).layer ?? 1;
   return <CanvasLayerIndexProvider value={layer}>{children}</CanvasLayerIndexProvider>;
 };
+
+// The walker reads `gui/common/snap_controls_to_pixels` off the project
+// settings; nothing else here needs the real provider's async load.
+const projectSettingsMock = vi.hoisted(() => ({
+  settings: null as Record<string, string> | null,
+  viewportSize: { width: 1152, height: 648 },
+  themeScale: 1,
+}));
+
+vi.mock('../../contexts/ProjectSettingsContext', () => ({
+  useProjectSettings: () => projectSettingsMock,
+}));
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -70,6 +82,7 @@ describe('<ControlCanvasWalker>', () => {
   afterEach(() => {
     controlSolverRegistry.clear();
     controlComponentRegistry.clear();
+    projectSettingsMock.settings = null;
   });
 
   it('emits one named group per Control, at its solved rect (Godot pixels, +Y down → three -y)', async () => {
@@ -420,6 +433,119 @@ describe('<ControlCanvasWalker>', () => {
         .find((g) => g.name.startsWith('zprop:'))!.name;
 
       expect(name).toBe('zprop:prop=9,ambient=5');
+    });
+  });
+
+  // `Control::_update_canvas_item_transform` floors the canvas item's
+  // translation to whole pixels; the solved rect keeps full precision.
+  describe('whole-pixel snap of the drawn origin', () => {
+    function freeAt(x: number, y: number, extra: Record<string, unknown> = {}): SolveNode {
+      return solveNode('Root', 'TestType', {
+        anchorLeft: 0,
+        anchorTop: 0,
+        anchorRight: 0,
+        anchorBottom: 0,
+        offsetLeft: x,
+        offsetTop: y,
+        offsetRight: x + 80,
+        offsetBottom: y + 40,
+        ...extra,
+      });
+    }
+
+    async function rootPosition(node: SolveNode) {
+      const renderer = await ReactThreeTestRenderer.create(
+        <ControlCanvasWalker tree={[node]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      );
+      return namedGroup(renderer.scene, 'TestType:Root')!.position;
+    }
+
+    it('floors a fractional origin the way Godot does — `(xform[2] + Vector2(0.5, 0.5)).floor()`', async () => {
+      const position = await rootPosition(freeAt(516.5, 306.5));
+
+      expect(position.x).toBeCloseTo(517);
+      expect(position.y).toBeCloseTo(-307);
+    });
+
+    it('floors in Godot +Y-down space, negating only afterwards (a negated floor would give -306)', async () => {
+      // floor(-0.6 + 0.5) = -1 on BOTH axes in Godot space; the emitted
+      // three-space y is the negation of that, +1.
+      const position = await rootPosition(freeAt(-0.6, -0.6));
+
+      expect(position.x).toBeCloseTo(-1);
+      expect(position.y).toBeCloseTo(1);
+    });
+
+    it('leaves an already-whole origin untouched', async () => {
+      const position = await rootPosition(freeAt(100, 50));
+
+      expect(position.x).toBeCloseTo(100);
+      expect(position.y).toBeCloseTo(-50);
+    });
+
+    it('still snaps at a rotation that is a multiple of 45° (sin(rotation * 4) vanishes)', async () => {
+      const position = await rootPosition(freeAt(10.5, 20.5, { rotation: Math.PI / 4 }));
+
+      expect(position.x).toBeCloseTo(11);
+      expect(position.y).toBeCloseTo(-21);
+    });
+
+    it('does NOT snap at a rotation that is not a multiple of 45°', async () => {
+      const position = await rootPosition(freeAt(10.5, 20.5, { rotation: 0.3 }));
+
+      expect(position.x).toBeCloseTo(10.5);
+      expect(position.y).toBeCloseTo(-20.5);
+    });
+
+    it('snaps the composite origin — position plus the pivot/scale transform’s own translation', async () => {
+      // Measured through Godot 4.6.3: a ColorRect at (100, 100) with
+      // pivot_offset (10.25, 10.25) and scale (2, 2) draws its top-left at
+      // exactly 90 with no half-pixel blend, i.e. floor(100 - 10.25 + 0.5).
+      // The inner pivot groups contribute that -10.25, so the OUTER group
+      // carries the snapped total minus it.
+      const position = await rootPosition(
+        freeAt(100, 100, { pivotOffset: { x: 10.25, y: 10.25 }, scale: { x: 2, y: 2 } })
+      );
+
+      expect(position.x).toBeCloseTo(100.25);
+      expect(position.y).toBeCloseTo(-100.25);
+    });
+
+    it("snaps a container child even when it carries its own rotation (fit_child_in_rect resets it)", async () => {
+      const TYPE = 'TestSnapContainer';
+      controlSolverRegistry.registerContainerLayout(TYPE, (_n, children, contentRect) => {
+        const out = new Map<string, Rect2>();
+        children.forEach((c) => out.set(c.node.path, { ...contentRect, x: 40.5, y: 60.5 }));
+        return out;
+      });
+
+      const child = solveNode('Stack/Child', 'TestType', { rotation: 0.3, scale: { x: 2, y: 2 } });
+      const root = solveNode('Stack', TYPE, { anchorsPreset: 15 }, [child]);
+
+      const renderer = await ReactThreeTestRenderer.create(
+        <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      );
+
+      const position = namedGroup(renderer.scene, 'TestType:Child')!.position;
+      expect(position.x).toBeCloseTo(41);
+      expect(position.y).toBeCloseTo(-61);
+    });
+
+    it('honours `gui/common/snap_controls_to_pixels = false`', async () => {
+      projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'false' };
+
+      const position = await rootPosition(freeAt(516.5, 306.5));
+
+      expect(position.x).toBeCloseTo(516.5);
+      expect(position.y).toBeCloseTo(-306.5);
+    });
+
+    it('snaps when the project sets the key to true, and when it sets nothing at all', async () => {
+      projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'true' };
+      expect((await rootPosition(freeAt(516.5, 306.5))).x).toBeCloseTo(517);
+
+      projectSettingsMock.settings = {};
+      expect((await rootPosition(freeAt(516.5, 306.5))).x).toBeCloseTo(517);
     });
   });
 });

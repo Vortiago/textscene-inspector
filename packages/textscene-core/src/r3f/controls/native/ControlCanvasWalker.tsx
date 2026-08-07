@@ -6,6 +6,12 @@
  * conjugation the way Node2D needs — see `node2dTransform.ts` — because
  * nothing here shears).
  *
+ * That emitted origin is SNAPPED to whole pixels (`controlPixelSnap.ts`, the
+ * port of `Control::_update_canvas_item_transform`) while the solved rect it
+ * comes from stays fractional — Godot rounds the canvas item, never
+ * `get_rect()`, and the solve's own arithmetic depends on the full-precision
+ * value.
+ *
  * A registered painter (`ControlComponentRegistry`) draws the node's own
  * chrome; `<ControlFallback>` draws an outline instead when none is
  * registered yet. Children render as siblings of the painter, not passed
@@ -42,6 +48,8 @@ import { ControlFallback } from './ControlFallback';
 import { Modulate2DContext, useControlTint } from './useControlTint';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { controlRenderOrder } from './controlDrawOrder';
+import { snapControlsToPixelsEnabled, snappedControlOrigin } from './controlPixelSnap';
+import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import {
   accumulateCanvasItemZ,
   EffectiveZProvider,
@@ -63,6 +71,10 @@ const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
 
 export function ControlCanvasWalker({ tree, generation, viewport, theme, measurer }: ControlCanvasWalkerProps) {
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
+  // Read once for the whole tree: the setting is a per-viewport flag in Godot
+  // (`Viewport::snap_controls_to_pixels`), not a per-node one, so every node
+  // below answers to the same value.
+  const snapToPixels = snapControlsToPixelsEnabled(useProjectSettings().settings);
 
   const solved = useMemo(() => {
     const ctx = createSolveContext(theme, measurer);
@@ -85,6 +97,7 @@ export function ControlCanvasWalker({ tree, generation, viewport, theme, measure
           isFreeParent
           theme={theme}
           measureText={measurer}
+          snapToPixels={snapToPixels}
         />
       ))}
     </>
@@ -99,6 +112,8 @@ interface ControlNodeGroupProps {
   isFreeParent: boolean;
   theme: NativeTheme;
   measureText: TextMeasurer | null;
+  /** `Viewport::is_snap_controls_to_pixels_enabled()` — see `controlPixelSnap.ts`. */
+  snapToPixels: boolean;
 }
 
 function ControlNodeGroup({
@@ -108,6 +123,7 @@ function ControlNodeGroup({
   isFreeParent,
   theme,
   measureText,
+  snapToPixels,
 }: ControlNodeGroupProps) {
   const props = solveNode.node.properties as ControlProperties;
   const tint = useControlTint(props.modulate, props.selfModulate);
@@ -146,12 +162,26 @@ function ControlNodeGroup({
   // the LAST paint index in this node's own subtree rather than its own.
   const subtreeChromeRenderOrder = controlRenderOrder(layer, solvedEntry?.subtreeLastPaintIndex ?? 0);
 
-  const rotation = props.rotation ?? 0;
-  const scaleX = props.scale?.x ?? 1;
-  const scaleY = props.scale?.y ?? 1;
-  const hasOwnTransform = isFreeParent && (rotation !== 0 || scaleX !== 1 || scaleY !== 1);
+  // `Container::fit_child_in_rect` resets a container child's transform, so a
+  // node whose parent imposes a layout has an EFFECTIVE rotation of 0 and an
+  // effective scale of 1 whatever it authored — which the pixel snap's own
+  // rotation gate must see too, not just the inner group below.
+  const rotation = isFreeParent ? (props.rotation ?? 0) : 0;
+  const scaleX = isFreeParent ? (props.scale?.x ?? 1) : 1;
+  const scaleY = isFreeParent ? (props.scale?.y ?? 1) : 1;
+  const hasOwnTransform = rotation !== 0 || scaleX !== 1 || scaleY !== 1;
   const pivotX = (props.pivotOffset?.x ?? 0) + (props.pivotOffsetRatio?.x ?? 0) * rect.w;
   const pivotY = (props.pivotOffset?.y ?? 0) + (props.pivotOffsetRatio?.y ?? 0) * rect.h;
+
+  // Godot floors the CANVAS ITEM's translation to whole pixels, leaving
+  // `get_rect()` — everything the solve above consumed — at full precision.
+  // The inner pivot/rotation/scale groups contribute their own translation to
+  // the same composite, so this is the outer half of an origin snapped as one.
+  const origin = snappedControlOrigin(
+    rect,
+    { rotation, scale: { x: scaleX, y: scaleY }, pivot: { x: pivotX, y: pivotY } },
+    snapToPixels
+  );
 
   const Painter = controlComponentRegistry.get(solveNode.node.type) ?? ControlFallback;
   // Whether THIS node's own children are free — mirrors dispatchChildren's
@@ -176,6 +206,7 @@ function ControlNodeGroup({
           isFreeParent={childIsFreeParent}
           theme={theme}
           measureText={measureText}
+          snapToPixels={snapToPixels}
         />
       ))}
     </EffectiveZProvider>
@@ -233,7 +264,7 @@ function ControlNodeGroup({
   return (
     <group
       name={`${solveNode.node.type}:${solveNode.node.name}`}
-      position={[rect.x, -rect.y, 0]}
+      position={[origin.x, -origin.y, 0]}
       visible={isVisible}
     >
       <Modulate2DContext.Provider value={tint.inherited}>
