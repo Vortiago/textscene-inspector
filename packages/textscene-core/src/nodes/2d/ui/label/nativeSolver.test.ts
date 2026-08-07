@@ -217,6 +217,42 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
     expect(placements[2]!.y).toBeCloseTo(2 * (PITCH + vsep), 6);
   });
 
+  // `Label::get_layout_data` declares `int vbegin = 0, vsep = 0;` and assigns
+  // the floating-point alignment expressions into them, so both land on whole
+  // pixels with C++'s truncation-toward-zero. Expected rows below come from a
+  // Godot 4.6.3 render of a Label whose box is 100px tall around one 23px line
+  // of 16px text: its glyphs land on the SAME row as the identical Label in a
+  // 99px box, which only a truncated offset can produce.
+  it('vertical CENTER (1) truncates a half-pixel offset: a 100px box and a 99px box around the same 23px line place their text on the SAME row (38, not 38.5)', () => {
+    const layout = layoutFor('A'); // one line: contentHeight = 26 - 3 = 23
+    const odd = layoutLabelLines(layout, 200, 99, undefined, 1, FONT_SIZE);
+    const even = layoutLabelLines(layout, 200, 100, undefined, 1, FONT_SIZE);
+    expect(odd[0]!.y).toBe(38);
+    expect(even[0]!.y).toBe(38);
+  });
+
+  it('vertical BOTTOM (2) truncates too — a fractional box height cannot put the text on a fractional row', () => {
+    const layout = layoutFor('A');
+    const placements = layoutLabelLines(layout, 200, 100.75, undefined, 2, FONT_SIZE);
+    expect(placements[0]!.y).toBe(77);
+  });
+
+  it('vertical FILL (3) truncates the SEPARATION, not the accumulated pitch: four lines in a 205px box sit 60px apart, so the last line lands on 180 rather than drifting to 182', () => {
+    const layout = layoutFor('A\nB\nC\nD'); // 4 lines: contentHeight = 4*26-3 = 101
+    // (205 - 101) / 3 = 34.666..., truncated to 34, on top of the 26px pitch.
+    const placements = layoutLabelLines(layout, 200, 205, undefined, 3, FONT_SIZE);
+    expect(placements.map((p) => p.y)).toEqual([0, 60, 120, 180]);
+  });
+
+  it('truncates TOWARD ZERO, not toward minus infinity, when the box is SHORTER than the text (C++ `int` conversion, not a floor)', () => {
+    const layout = layoutFor('A'); // contentHeight 23
+    // (10 - 23) / 2 = -6.5 -> -6 under an int conversion; a floor would give -7.
+    expect(layoutLabelLines(layout, 200, 10, undefined, 1, FONT_SIZE)[0]!.y).toBe(-6);
+    // FILL's separation goes the same way: (10 - 101) / 3 = -30.333... -> -30.
+    const four = layoutFor('A\nB\nC\nD');
+    expect(layoutLabelLines(four, 200, 10, undefined, 3, FONT_SIZE)[1]!.y).toBe(PITCH - 30);
+  });
+
   it('horizontal FILL (3), single line: widens that line to the box width (JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE, label.h:46)', () => {
     const layout = layoutFor('A B');
     const placements = layoutLabelLines(layout, 200, 200, 3, undefined, FONT_SIZE);

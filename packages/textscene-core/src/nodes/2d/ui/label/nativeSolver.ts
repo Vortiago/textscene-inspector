@@ -241,17 +241,27 @@ export function layoutLabelLines(
   // correction `labelMinimumSize` applies to `ctx.measureText`'s own sum.
   const contentHeightPx = layout.heightPx - lineSpacingPx;
 
+  // `Label::get_layout_data` declares BOTH of these as `int vbegin = 0, vsep = 0`
+  // (`label.cpp:591`) and assigns the floating-point expressions below straight
+  // into them, so each lands on a whole pixel before it is ever added to a
+  // baseline — `Math.trunc`, not `Math.floor`, because a C++ int conversion
+  // rounds toward zero and a box SHORTER than its text makes both negative.
+  // The engine's rasteriser floors again per glyph (`text_server_adv.cpp`'s
+  // `TextServerAdvanced::_font_draw_glyph`, `cpos.y = Math::floor(cpos.y)`), so
+  // an offset kept fractional here does not merely blur one line: under FILL it
+  // is a per-gap separation, and its fraction accumulates into whole-row drift
+  // by the last line.
   let vbeginPx = 0;
   let vsepPx = 0;
   switch (verticalAlignment ?? V_TOP) {
     case V_CENTER:
-      vbeginPx = (boxHeightPx - contentHeightPx) / 2;
+      vbeginPx = Math.trunc((boxHeightPx - contentHeightPx) / 2);
       break;
     case V_BOTTOM:
-      vbeginPx = boxHeightPx - contentHeightPx;
+      vbeginPx = Math.trunc(boxHeightPx - contentHeightPx);
       break;
     case V_FILL:
-      vsepPx = lineCount > 1 ? (boxHeightPx - contentHeightPx) / (lineCount - 1) : 0;
+      vsepPx = lineCount > 1 ? Math.trunc((boxHeightPx - contentHeightPx) / (lineCount - 1)) : 0;
       break;
     case V_TOP:
     default:

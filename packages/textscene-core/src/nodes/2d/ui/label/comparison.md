@@ -41,6 +41,17 @@ panes, and the pitch tracks the size: 31 px at `font_size = 20` (line tops
 55 / 86 / 117 / 148 in Godot, 54 / 85 / 116 / 147 here) and 42 px at 28, where the
 five line tops are 344 / 386 / 428 / 470 / 512 on BOTH sides with no offset at all.
 
+`unit-label-2d-valign.tscn` covers the three non-default `vertical_alignment`
+branches, which every other Control fixture leaves at TOP. Godot rounds the
+alignment offset to a whole pixel before it reaches a baseline (`int vbegin = 0,
+vsep = 0` in `Label::get_layout_data`), and so does the previewer: measured on
+Godot 4.6.3 with `pnpm ref:godot scenes/fixtures/unit-label-2d-valign.tscn
+--mode 2d --out …`, a 23px line centred in a 100px box and the same line centred
+in a 99px box both start their ink on row 68 against the zero-offset pane's 30,
+i.e. an offset of exactly 38 for both; the BOTTOM pane's is 77; and the FILL
+pane's four lines sit a flat 60 px apart (a separation of 34 on top of the 26px
+line pitch) rather than drifting by the two-thirds pixel that 104/3 would leave.
+
 Label's own `font_color` default is opaque white, the fixed point of the sRGB
 transfer curve, so this fixture's glyphs peak at rgb(255, 255, 255) in both
 images.
