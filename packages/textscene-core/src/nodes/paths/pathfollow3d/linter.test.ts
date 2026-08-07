@@ -26,6 +26,16 @@ const follow = (props: Record<string, PropValue> = {}) =>
 /** Compose a valid Path3D-parented scene around the PathFollow3D under test. */
 const pathScene = (props: Record<string, PropValue> = {}) => scene(curveSub, path, follow(props));
 
+/**
+ * The same scene, but with the parent's curve explicitly opting OUT of up
+ * vectors — the only state in which Godot's ROTATION_ORIENTED warning fires
+ * (path_3d.cpp:362). `curveSub` above omits the key, and the default is `true`
+ * (curve.h:299), so the ordinary scene must stay silent about that mode.
+ */
+const noUpVectorCurve = '[sub_resource type="Curve3D" id="curve_1"]\nup_vector_enabled = false';
+const noUpVectorScene = (props: Record<string, PropValue> = {}) =>
+  scene(noUpVectorCurve, path, follow(props));
+
 describe('PathFollow3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
     it('should pass validation for valid PathFollow3D properties', () => {
@@ -201,20 +211,22 @@ describe('PathFollow3D Linter', () => {
       expectClean(pathScene({ progress: '0.0' }));
     });
 
-    it('should error when PathFollow3D has no parent', () => {
+    it('should warn when PathFollow3D has no parent', () => {
+      // Advisory, not an error: Godot raises this as a configuration warning
+      // (path_3d.cpp:359) and the file itself is perfectly well-formed.
       const parentError = expectDiagnostic(
         scene(node('PathFollow3D', { progress: '0.0' }, { name: 'PathFollow' })),
         {
           ruleName: 'pathfollow3d-no-parent',
-          severity: 'error',
+          severity: 'warning',
           nodeType: 'PathFollow3D',
-          contains: ['no parent', 'MUST be a direct child of a Path3D'],
+          contains: ['the scene root', 'direct child of a Path3D'],
         }
       );
       expect(parentError.nodeName).toBe('PathFollow');
     });
 
-    it('should error when parent is not Path3D', () => {
+    it('should warn when parent is not Path3D', () => {
       const parentError = expectDiagnostic(
         scene(
           node('Node3D', {}, { name: 'Node3D' }),
@@ -222,15 +234,15 @@ describe('PathFollow3D Linter', () => {
         ),
         {
           ruleName: 'pathfollow3d-invalid-parent',
-          severity: 'error',
+          severity: 'warning',
           nodeType: 'PathFollow3D',
-          contains: ['Node3D', 'MUST be a direct child of a Path3D'],
+          contains: ['a child of a Node3D node', 'direct child of a Path3D'],
         }
       );
       expect(parentError.nodeName).toBe('PathFollow');
     });
 
-    it('should error when parent is MeshInstance3D', () => {
+    it('should warn when parent is MeshInstance3D', () => {
       expectDiagnostic(
         scene(
           '[sub_resource type="BoxMesh" id="mesh_1"]',
@@ -326,8 +338,14 @@ describe('PathFollow3D Linter', () => {
   });
 
   describe('Semantic Validation (Rotation Mode)', () => {
-    it('should warn when rotation_mode is ORIENTED (4)', () => {
-      const warning = expectDiagnostic(pathScene({ rotation_mode: 4 }), {
+    it('stays quiet on ORIENTED when the curve keeps its default up vectors', () => {
+      expectNoDiagnostic(pathScene({ rotation_mode: 4 }), {
+        ruleName: 'pathfollow3d-oriented-mode-requires-up-vector',
+      });
+    });
+
+    it('warns on ORIENTED only when the parent curve disables up vectors', () => {
+      const warning = expectDiagnostic(noUpVectorScene({ rotation_mode: 4 }), {
         ruleName: 'pathfollow3d-oriented-mode-requires-up-vector',
         severity: 'warning',
         nodeType: 'PathFollow3D',
@@ -349,7 +367,7 @@ describe('PathFollow3D Linter', () => {
       expectNoErrors(pathScene());
     });
 
-    it('should handle multiple validation errors', () => {
+    it('reports every independent problem at once', () => {
       const diagnostics = lint(
         scene(
           node('Node3D', {}, { name: 'InvalidParent' }),
@@ -374,9 +392,12 @@ describe('PathFollow3D Linter', () => {
       const ratioWarning = diagnostics.find(d => d.ruleName === 'pathfollow3d-progress-ratio-out-of-range');
       expect(ratioWarning).toBeDefined();
 
-      // Should have oriented mode warning
+      // But NOT the oriented-mode warning. Godot's ROTATION_ORIENTED check sits
+      // in the `else` branch of the parent test (path_3d.cpp:360-365), so a node
+      // that failed the parent test never reaches it — and with no Path3D there
+      // is no curve to ask about up vectors anyway.
       const orientedWarning = diagnostics.find(d => d.ruleName === 'pathfollow3d-oriented-mode-requires-up-vector');
-      expect(orientedWarning).toBeDefined();
+      expect(orientedWarning).toBeUndefined();
     });
 
     it('should handle deeply nested PathFollow3D', () => {

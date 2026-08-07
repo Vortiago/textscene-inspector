@@ -1,13 +1,50 @@
 /**
- * Semantic linter rules for PathFollow3D
+ * Semantic linter rules for PathFollow3D, from Godot's own configuration
+ * warnings (`path_3d.cpp:354-369`) plus the cross-field checks its properties
+ * invite.
  *
- * Note: Format validation is handled by linterParser.ts during strict parsing.
- * This file focuses on semantic validation requiring full context.
+ * Format validation lives in linterParser.ts; this file is the part that needs
+ * the rest of the scene.
+ *
+ * Two things here were wrong for a long time and are worth naming, since the
+ * shapes recur:
+ *
+ * - The placement rules reported `error`. Godot's signal is a configuration
+ *   warning, which is advisory by construction, and ADR-0032 reserves `error`
+ *   for a setter that refuses or alters the value. A misplaced PathFollow3D
+ *   loads fine and every property in the file is well-formed.
+ * - The ROTATION_ORIENTED rule fired on `rotation_mode = 4` alone. Godot's guard
+ *   is `curve.is_valid() && !curve->is_up_vector_enabled() && rotation_mode ==
+ *   ROTATION_ORIENTED` (path_3d.cpp:362), and `up_vector_enabled` defaults to
+ *   true (curve.h:299) — so the rule warned about exactly the configuration that
+ *   is correct, and stayed silent about nothing.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
+import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties, findParentNode } from '../../../linter/linterUtils.js';
+import { isValidProperties } from '../../../linter/linterUtils.js';
+import { parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
+import { resolveSubResourceRef } from '../../../resources/SubResourceResolver.js';
+
+/** `PathFollow3D::ROTATION_ORIENTED` (path_3d.h), the mode that needs up vectors. */
+const ROTATION_ORIENTED = 4;
+
+/**
+ * True only when the parent Path3D's curve is visible in THIS file and says
+ * `up_vector_enabled = false`.
+ *
+ * Deliberately false for a curve behind an `ExtResource`, and for an absent
+ * key: absence is Godot's default form and the default is `true`, so a missing
+ * `up_vector_enabled` means up vectors ARE enabled and there is nothing to warn
+ * about.
+ */
+function parentCurveDisablesUpVector(scene: TscnScene, parent: { properties: unknown }): boolean {
+  const curveRef = (parent.properties as Record<string, string>)?.curve;
+  const curve = resolveSubResourceRef(curveRef, scene.internalResources ?? []);
+  const enabled = curve?.data?.up_vector_enabled;
+  return enabled === false || enabled === 'false';
+}
 
 /**
  * Validate PathFollow3D semantic rules
@@ -24,22 +61,22 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // CRITICAL: Check parent is Path3D (most common mistake with PathFollow3D)
-  const parent = findParentNode(scene.nodes, node);
-  if (!parent) {
-    // PathFollow3D at root level (no parent)
+  // path_3d.cpp:359 — the placement Godot itself flags. `parentTypeVerdict`
+  // supplies the instanced/untyped-parent exemption: a parent whose type lives
+  // in a sub-scene the linter never opens may well BE a Path3D.
+  const placement = parentTypeVerdict(scene, node, 'Path3D');
+  if (placement.kind === 'root') {
     diagnostics.push({
-      severity: 'error',
-      message: `PathFollow3D '${node.name}' has no parent node. PathFollow3D MUST be a direct child of a Path3D node to function.`,
+      severity: 'warning',
+      message: `PathFollow3D '${node.name}' is the scene root. It only works as a direct child of a Path3D node, and follows nothing here.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'pathfollow3d-no-parent',
     });
-  } else if (parent.type !== 'Path3D') {
-    // Parent exists but is not Path3D
+  } else if (placement.kind === 'mismatch') {
     diagnostics.push({
-      severity: 'error',
-      message: `PathFollow3D '${node.name}' has parent '${parent.name}' of type '${parent.type}'. PathFollow3D MUST be a direct child of a Path3D node to function.`,
+      severity: 'warning',
+      message: `PathFollow3D '${node.name}' is ${placementPhrase(placement)}. It only works as a direct child of a Path3D node, and follows nothing here.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'pathfollow3d-invalid-parent',
@@ -52,7 +89,7 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
     if (!isNaN(progress) && progress < 0) {
       diagnostics.push({
         severity: 'warning',
-        message: `PathFollow3D 'progress' is negative (${progress}). Godot will clamp this to 0. Consider using 0 or a positive value.`,
+        message: `PathFollow3D 'progress' is negative (${progress}). Godot resolves it against the curve's length once the node enters the tree — wrapping it when 'loop' is on, clamping it to 0 when off — so the value in the file is not the one that takes effect.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'pathfollow3d-negative-progress',
@@ -87,19 +124,21 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // WARNING: rotation_mode ORIENTED requires Curve3D.up_vector_enabled
-  if (rawProps.rotation_mode !== undefined) {
-    const rotationMode = parseInt(rawProps.rotation_mode, 10);
-    if (!isNaN(rotationMode) && rotationMode === 4) {
-      // ROTATION_ORIENTED = 4
-      diagnostics.push({
-        severity: 'warning',
-        message: `PathFollow3D uses ROTATION_ORIENTED mode (rotation_mode=4). This requires the parent Path3D's Curve3D to have 'up_vector_enabled' set to true.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'pathfollow3d-oriented-mode-requires-up-vector',
-      });
-    }
+  // path_3d.cpp:362 — all three conjuncts, not just the mode. The curve must be
+  // readable here AND say up vectors are off; a curve behind an ExtResource, or
+  // one that simply omits the key, is the default `true` and is fine.
+  if (
+    parseInt(rawProps.rotation_mode ?? '', 10) === ROTATION_ORIENTED &&
+    placement.kind === 'satisfied' &&
+    parentCurveDisablesUpVector(scene, placement.parent)
+  ) {
+    diagnostics.push({
+      severity: 'warning',
+      message: `PathFollow3D '${node.name}' uses ROTATION_ORIENTED, but its parent Path3D's Curve3D sets 'up_vector_enabled = false'. Godot needs up vectors for that mode.`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'pathfollow3d-oriented-mode-requires-up-vector',
+    });
   }
 
   return diagnostics;
@@ -115,8 +154,8 @@ const pathFollow3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['PathFollow3D'],
     emits: [
-      { ruleName: 'pathfollow3d-no-parent', severity: 'error' },
-      { ruleName: 'pathfollow3d-invalid-parent', severity: 'error' },
+      { ruleName: 'pathfollow3d-no-parent', severity: 'warning' },
+      { ruleName: 'pathfollow3d-invalid-parent', severity: 'warning' },
       { ruleName: 'pathfollow3d-negative-progress', severity: 'warning' },
       { ruleName: 'pathfollow3d-progress-ratio-out-of-range', severity: 'warning' },
       { ruleName: 'pathfollow3d-both-progress-properties', severity: 'warning' },

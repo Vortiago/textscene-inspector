@@ -16,8 +16,16 @@ import type { TscnScene } from '../parser/types.js';
  * choose, and a union makes it choose out loud.
  */
 export type ParentVerdict =
-  /** The parent is, or descends from, the wanted type. */
-  | { kind: 'satisfied' }
+  /**
+   * The parent is, or descends from, the wanted type.
+   *
+   * It carries the node because several of Godot's warnings are not about
+   * placement at all once placement is right — they ask something about the
+   * parent. `PathFollow3D`'s ROTATION_ORIENTED check reads the parent Path3D's
+   * `curve`, and re-running `findParentNode` to get it would walk the tree a
+   * second time for a node this verdict already had in hand.
+   */
+  | { kind: 'satisfied'; parent: TscnNode }
   /** No parent: this node is the scene root. */
   | { kind: 'root' }
   /**
@@ -48,7 +56,7 @@ export function parentTypeVerdict(
   const parent = findParentNode(scene.nodes, node);
   if (!parent) return { kind: 'root' };
   if (parent.instance || !parent.type) return { kind: 'unknowable' };
-  if (descendsFrom(parent.type, wantedType)) return { kind: 'satisfied' };
+  if (descendsFrom(parent.type, wantedType)) return { kind: 'satisfied', parent };
   return { kind: 'mismatch', parent };
 }
 
