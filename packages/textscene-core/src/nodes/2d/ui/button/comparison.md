@@ -32,7 +32,8 @@ Measured on Godot 4.6.3, `pnpm ref:godot scenes/fixtures/unit-button.tscn --mode
 | --- | --- | --- | --- |
 | (583, 370) | a solid stroke of the **Disabled** label | rgb(142, 142, 142) | rgb(142, 142, 142) |
 | (544, 362) | the same stroke where Godot's glyph sits, a residual sub-pixel gap | rgb(142, 142, 142) | rgb(138, 138, 138) |
-| (519, 308) | **Styled**'s top-left corner arc, one row into our rect | rgb(51, 128, 89) | rgb(64, 100, 82) — see "StyleBox corner anti-aliasing" below: entangled with the "Styled sits one row low" offset at this exact probe |
+| (576, 306) | the row above **Styled**'s top edge, on the straight part away from both corner arcs | rgb(76, 76, 76) | rgb(64, 102, 83) — see "Styled's rect sits half a pixel high" below |
+| (576, 341) | **Styled**'s bottom fill row, same column | rgb(51, 128, 89) | rgb(64, 102, 83) — the same half-pixel offset at the other edge |
 
 Chrome colours are exact. The unthemed **Click Me** fill is the default theme's
 charcoal on both sides (rgb(46, 46, 46) against rgb(45, 45, 45) — one step of
@@ -48,13 +49,25 @@ matched on both sides.
 
 All three buttons carry authored offsets 32 px apart, and both engines keep
 that: **Click Me** spans y 264..295 and **Disabled** y 352..383, identically.
-**Styled**'s own StyleBox sets `content_margin_top/bottom = 6`: Godot's rect is
-35 px (12 + a 23 px font height), and ours is 35 too.
+**Styled**'s own StyleBox sets `content_margin_top/bottom = 6`, so its minimum
+height is 35 px (12 + a 23 px font height) against an authored 32, and that 35 px
+rect is the same height on both sides. All three span x 516..635 on both.
 
-**Styled sits one row low**: y 308..342 here against Godot's y 307..341. The height
-is right and the other two buttons are on Godot's exact rows, so this is a
-placement term specific to a button carrying its own StyleBox content margins, not
-the minimum size.
+**Styled's rect sits half a pixel high**: `anchors_preset = 8` (CENTER) grows
+BOTH ways, so the 3 px the minimum size adds is split evenly
+(`scene/gui/control.cpp:1789-1797`) and the rect solves to y 306.5..341.5. We
+paint exactly that: at x 560, 576 and 600 alike our boundary rows 306 and 341
+read rgb(64, 102, 83) — a clean half-and-half of the rgb(76, 76, 76) backdrop and
+the rgb(51, 128, 89) fill — with rows 307 and 340 just inside them solid fill.
+Godot at those same columns has no feather at all: rows 306 and 342 are backdrop,
+rows 307 and 341 solid fill, a rect of y 307..342. It lands there because
+`Control::_update_canvas_item_transform` rounds a Control's canvas transform to
+whole pixels — `(xform[2] + Vector2(0.5, 0.5)).floor()`,
+`scene/gui/control.cpp:727-737`, gated on `gui/common/snap_controls_to_pixels`,
+which defaults to `true` (`core/config/project_settings.cpp:1808`) — so 306.5
+becomes 307. **Click Me** and **Disabled** solve to whole pixels already and have
+nothing to snap, which is why this is the only button that moves. Same height,
+same columns; the whole divergence is that half-pixel vertical translation.
 
 A glyph's edge pixel still parts by a residual sub-pixel: probe (544, 362), a
 stroke where Godot's glyph sits, reads rgb(138, 138, 138) against Godot's
@@ -110,16 +123,16 @@ whole rect's boundary gets a `aa_size / 2` = 0.5 px feather. On the straight top
 edge, away from the corner arc, `--probe 576,308` reads `rgb(51, 128, 89)` on both
 sides — pixel-exact.
 
-The corner probe (`--probe 519,308`, top-left arc, `corner_radius = 6`) reads
-Godot `rgb(51, 128, 89)` against ours `rgb(64, 100, 82)` — this probe sits exactly
-on the row where **Styled sits one row low** (above) puts our rect's top edge one
-row below Godot's, so Godot's rect already reads full fill a row earlier than ours
-at this x. Sampling one row further down the same arc, `--probe 519,309`, is
-pixel-exact on both sides (`rgb(51, 128, 89)`); `--probe 520,308` (one column
-right, same row) closes most of the way too — `rgb(55, 118, 87)` against Godot's
-`rgb(51, 128, 89)`. So the AA ring itself is doing its job on this arc; what is
-left at the original probe is the pre-existing row offset compounding with it,
-not a remaining AA gap.
+On the top-left arc (`corner_radius = 6`), `--probe 519,308`, `--probe 519,309`
+and `--probe 520,308` all read `rgb(51, 128, 89)` on both sides.
+
+Where the arc does part it parts in the direction the half-pixel offset above
+predicts. `--probe 519,307` reads Godot `rgb(65, 99, 81)` against ours
+`rgb(53, 125, 89)` — ours carries more ink, its rect having started half a pixel
+earlier. `--probe 519,341` reads Godot `rgb(65, 99, 81)` against ours
+`rgb(76, 76, 76)` — ours carries none, its rect having already ended. Extra
+coverage at the top end and missing coverage at the bottom is the signature of
+that translation, so these numbers do not isolate the ring from the placement.
 
 ## Linting
 
