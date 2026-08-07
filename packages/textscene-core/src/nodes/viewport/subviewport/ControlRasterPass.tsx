@@ -150,6 +150,11 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
         viewport={solveViewport}
         theme={theme}
         measurer={measureText}
+        // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on
+        // every Viewport, and only the root window is ever handed
+        // `gui/common/snap_controls_to_pixels` (`main/main.cpp`). A project
+        // that opts out therefore leaves a SubViewport's own Controls snapped.
+        snapToPixels
       />
     </SceneResourcesProvider>,
     portalScene

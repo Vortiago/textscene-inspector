@@ -222,6 +222,12 @@ function ViewportSurfaceNative({
           viewport={controlsViewport}
           theme={theme}
           measurer={measureText}
+          // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on
+          // every Viewport, and only the root window is ever handed
+          // `gui/common/snap_controls_to_pixels` (`main/main.cpp`). These are
+          // the sub-viewport's OWN Controls, so the project's opt-out — which
+          // is the root window's alone — never reaches them.
+          snapToPixels
         />
       </ControlClipProvider>
     </group>

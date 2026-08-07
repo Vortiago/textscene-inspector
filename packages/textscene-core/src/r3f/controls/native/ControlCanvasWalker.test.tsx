@@ -453,9 +453,16 @@ describe('<ControlCanvasWalker>', () => {
       });
     }
 
-    async function rootPosition(node: SolveNode) {
+    async function rootPosition(node: SolveNode, snapToPixels?: boolean) {
       const renderer = await ReactThreeTestRenderer.create(
-        <ControlCanvasWalker tree={[node]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+        <ControlCanvasWalker
+          tree={[node]}
+          generation={0}
+          viewport={VIEWPORT}
+          theme={THEME}
+          measurer={null}
+          snapToPixels={snapToPixels}
+        />
       );
       return namedGroup(renderer.scene, 'TestType:Root')!.position;
     }
@@ -546,6 +553,28 @@ describe('<ControlCanvasWalker>', () => {
 
       projectSettingsMock.settings = {};
       expect((await rootPosition(freeAt(516.5, 306.5))).x).toBeCloseTo(517);
+    });
+
+    // `Viewport::snap_controls_to_pixels` is a per-VIEWPORT flag defaulting to
+    // true (`scene/main/viewport.h`), and `main/main.cpp` hands the project
+    // setting to the ROOT window only. A caller that owns its own viewport
+    // therefore states the flag rather than inheriting the project's.
+    it('lets a caller override the project setting for its own viewport', async () => {
+      projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'false' };
+
+      expect((await rootPosition(freeAt(516.5, 306.5), true)).x).toBeCloseTo(517);
+    });
+
+    it('lets a caller turn the snap off while the project leaves it on', async () => {
+      projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'true' };
+
+      expect((await rootPosition(freeAt(516.5, 306.5), false)).x).toBeCloseTo(516.5);
+    });
+
+    it('falls back to the project setting when the caller states nothing', async () => {
+      projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'false' };
+
+      expect((await rootPosition(freeAt(516.5, 306.5), undefined)).x).toBeCloseTo(516.5);
     });
   });
 });

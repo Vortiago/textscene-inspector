@@ -143,6 +143,26 @@ reaches the quad as rgb(162, 162, 162), and the default-theme Panel composited
 over it as rgb(84, 84, 84). A pre-tonemapped raster would land them near
 rgb(196)/rgb(107).
 
+**The whole-pixel Control snap is ON here whatever the project says.**
+`Viewport::snap_controls_to_pixels` is a per-viewport member initialised to
+`true` (`scene/main/viewport.h`), and `main/main.cpp` hands
+`gui/common/snap_controls_to_pixels` to `sml->get_root()` and to nothing else —
+so a project that opts out turns the snap off for the ROOT WINDOW alone, and
+Controls inside any `SubViewport` keep snapping. Both walker mounts that draw
+into a sub-viewport (this pass, and `SubViewportContainer`'s own live Controls
+arm) therefore state the flag rather than reading the project setting.
+Measured through Godot 4.6.3 on
+`scenes/fixtures/subviewport-snap-off/unit-subviewport-snap-off.tscn`, whose
+project sets the key to `false`:
+
+| Where the Control lives | `is_snap_controls_to_pixels_enabled()` | Leaf of a four-deep 0.5-offset chain draws at |
+| --- | --- | --- |
+| root window | `false` | (102, 62) — unsnapped |
+| its `SubViewport` | `true` | (104, 64) — `floor(x + 0.5)` at each of the four levels |
+
+`get_global_position()` reports (102, 62) for both: the snap lands on the canvas
+item transform, never on `get_rect()`.
+
 The pass registers with the ordered viewport-pass driver
 (`ViewportPassRegistryContext.tsx`) exactly like the 3D/2D pass — dependencies
 (any viewport nested in ITS subtree) render first, every frame, so a Control

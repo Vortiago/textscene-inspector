@@ -37,6 +37,31 @@ Measured through Godot 4.6.3 with a 300×200 container at (100, 80) holding a
 | `false` | 200×150 at the container's top-left | `SubViewport.size` |
 | `true` | 300×200 (the container's rect) | `get_size() / stretch_shrink` |
 
+## Minimum size
+
+`SubViewportContainer::get_minimum_size()` is `Size2()` when `stretch`, else the
+componentwise **max** over its `SubViewport` children's own `get_size()`.
+`stretch_shrink` never enters it — that divides the already-solved container
+rect (`recalc_force_viewport_sizes`), which is downstream.
+
+It decides nothing while the container's rect comes from its own anchors and
+offsets, and everything once a parent DISTRIBUTES space. Measured through Godot
+4.6.3 on `unit-sub-viewport-container-centred.tscn` — an offsetless container
+holding a 300×180 sub-viewport, inside a `CenterContainer` occupying
+(100, 80) 800×480:
+
+| Reported minimum size | Solved container rect | Surface |
+| --- | --- | --- |
+| 300×180 (Godot, and ours) | (350, 230) 300×180 | orange spans x 350..649, y 230..409 |
+| 0×0 | (500, 320) 300×180 | displaced by (150, 90) — exactly half the sub-viewport |
+
+`CenterContainer` offsets by `floor((parent - minsize) / 2)`, so a zero minimum
+size puts the container's TOP-LEFT where its centre belongs, and the surface
+right edge then clips against the project viewport rather than merely moving.
+Every other `SubViewportContainer` fixture pins the container with explicit
+offsets, where the anchor formula never reads the minimum size at all once the
+authored rect already exceeds it — hence the dedicated fixture.
+
 ## What the surface shows
 
 A viewport target has two kinds of source, and the painter draws both, since
@@ -159,9 +184,6 @@ math, since `useCanvasItemTint`'s own correctness is established elsewhere.
   content outside the target simply was never rendered, because the texture is
   only `size` pixels. A surface may legitimately overflow the container's own
   box, since Godot Controls do not clip unless `clip_contents`.
-- **`get_minimum_size()`** is `Size2()` when `stretch`, else the **max** over its
-  `SubViewport` children's sizes — load-bearing when the container sits inside a
-  layout container.
 - **It mutates its children.** On enter-tree and visibility change it forces
   `render_target_update_mode = ALWAYS` and `handle_input_locally = false` on
   every `SubViewport` child, so those authored values never take effect here.

@@ -22,6 +22,19 @@ vi.mock('../../../../logger.js', async (importOriginal) => {
   };
 });
 
+// `gui/common/snap_controls_to_pixels` is the ROOT window's setting; this
+// painter's Controls live in a SubViewport, which never receives it.
+const projectSettingsMock = vi.hoisted(() => ({
+  settings: null as Record<string, string> | null,
+  viewportSize: { width: 1152, height: 648 },
+  themeScale: 1,
+}));
+
+vi.mock('../../../../r3f/contexts/ProjectSettingsContext', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../r3f/contexts/ProjectSettingsContext')>();
+  return { ...actual, useProjectSettings: () => projectSettingsMock };
+});
+
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -112,6 +125,52 @@ describe('<SubViewportContainer>', () => {
       .map((n) => n.instance as THREE.Mesh)
       .filter((m) => (m.material as THREE.MeshBasicMaterial | undefined)?.map instanceof THREE.Texture);
     expect(textured).toHaveLength(0);
+  });
+
+  /**
+   * `scene/main/viewport.h` initialises `snap_controls_to_pixels` to `true` on
+   * every Viewport, and `main/main.cpp` hands the project setting to
+   * `sml->get_root()` alone — so a project that opts out leaves a
+   * SubViewport's own Controls snapped.
+   *
+   * Measured through Godot 4.6.3 on
+   * `scenes/fixtures/subviewport-snap-off/unit-subviewport-snap-off.tscn`
+   * (root window reporting `is_snap_controls_to_pixels_enabled() == false`,
+   * its SubViewport reporting `true`): a four-deep chain of 0.5 offsets draws
+   * its leaf at (102, 62) in the root window and at (104, 64) inside the
+   * sub-viewport.
+   */
+  it('snaps its sub-viewport’s own Controls even when the project opts out', async () => {
+    projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'false' };
+    try {
+      const bar = node('Bar', 'ColorRect', {
+        anchorLeft: 0,
+        anchorTop: 0,
+        anchorRight: 0,
+        anchorBottom: 0,
+        offsetLeft: 100.5,
+        offsetTop: 60.5,
+        offsetRight: 140.5,
+        offsetBottom: 100.5,
+      });
+      const renderer = await mount(
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode({}, {}, [bar])}
+          rect={RECT}
+          renderOrder={0}
+        />
+      );
+      const group = renderer.scene
+        .findAll(() => true)
+        .map((n) => n.instance as THREE.Object3D)
+        .find((o) => o.name === 'ColorRect:Bar');
+
+      expect(group?.position.x).toBeCloseTo(101);
+      expect(group?.position.y).toBeCloseTo(-61);
+    } finally {
+      projectSettingsMock.settings = null;
+    }
   });
 
   describe('a cyclic pass', () => {

@@ -64,17 +64,40 @@ export interface ControlCanvasWalkerProps {
   viewport: Rect2;
   theme: NativeTheme;
   measurer: TextMeasurer | null;
+  /**
+   * `Viewport::is_snap_controls_to_pixels_enabled()` for the viewport THIS
+   * walk draws into. Omitted means "the root window's", i.e. the project
+   * setting — see the walker's own body for why a caller that owns a
+   * different viewport must state it.
+   */
+  snapToPixels?: boolean;
 }
 
 const NO_HIDDEN: ReadonlySet<string> = new Set();
 const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
 
-export function ControlCanvasWalker({ tree, generation, viewport, theme, measurer }: ControlCanvasWalkerProps) {
+export function ControlCanvasWalker({
+  tree,
+  generation,
+  viewport,
+  theme,
+  measurer,
+  snapToPixels,
+}: ControlCanvasWalkerProps) {
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
-  // Read once for the whole tree: the setting is a per-viewport flag in Godot
-  // (`Viewport::snap_controls_to_pixels`), not a per-node one, so every node
-  // below answers to the same value.
-  const snapToPixels = snapControlsToPixelsEnabled(useProjectSettings().settings);
+  // Resolved once for the whole tree: the flag is per-VIEWPORT in Godot
+  // (`Viewport::snap_controls_to_pixels`, `scene/main/viewport.h`), not
+  // per-node, so every node below answers to the same value.
+  //
+  // The project setting is the ROOT window's value and nothing else's:
+  // `main/main.cpp` does `sml->get_root()->set_snap_controls_to_pixels(
+  // GLOBAL_GET("gui/common/snap_controls_to_pixels"))`, while every other
+  // Viewport keeps the member's own `= true` initialiser. So a project that
+  // opts out turns the snap off for the root viewport ALONE, and a caller
+  // walking into a viewport of its own states the flag rather than inheriting
+  // a value that was never propagated there.
+  const projectSnapToPixels = snapControlsToPixelsEnabled(useProjectSettings().settings);
+  const snapEnabled = snapToPixels ?? projectSnapToPixels;
 
   const solved = useMemo(() => {
     const ctx = createSolveContext(theme, measurer);
@@ -97,7 +120,7 @@ export function ControlCanvasWalker({ tree, generation, viewport, theme, measure
           isFreeParent
           theme={theme}
           measureText={measurer}
-          snapToPixels={snapToPixels}
+          snapToPixels={snapEnabled}
         />
       ))}
     </>

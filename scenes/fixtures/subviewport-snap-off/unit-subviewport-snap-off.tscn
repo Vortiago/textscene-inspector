@@ -1,0 +1,124 @@
+; `gui/common/snap_controls_to_pixels = false`, with the SAME Control chain
+; drawn once in the root viewport and once inside a SubViewport.
+;
+; The one variable: which viewport a Control lives in. Both arms are
+; byte-identical four-deep chains of half-pixel offsets, both under the same
+; project, so the only thing that can separate them is whether the snap is in
+; force where each one draws.
+;
+; It is not. `Viewport::snap_controls_to_pixels` is a per-viewport member
+; initialised to `true` (`scene/main/viewport.h`), and `main/main.cpp` hands
+; the project setting to `sml->get_root()` and to nothing else. The opt-out is
+; therefore the ROOT WINDOW's alone: Controls inside any SubViewport keep
+; snapping however the project is configured. A previewer that reads the
+; project setting and applies it everywhere agrees with Godot in every project
+; that leaves the default on, and disagrees only here.
+;
+; WHY FOUR HALVES. `Control::_update_canvas_item_transform` snaps each
+; CanvasItem's OWN transform, so a chain of four 0.5 offsets accumulates
+; 4 x 0.5 = 2 px of difference between snapped and unsnapped — and both
+; endpoints are whole numbers, so each arm's edges land on pixel boundaries
+; and neither reading depends on a rasteriser's fill rule. A single 0.5 offset
+; would be invisible: floor(x + 0.5) moves a rect by at most half a pixel, and
+; a solid rect's own edge coverage rounds to nearest too, so both placements
+; cover exactly the same pixels.
+;
+; Measured through Godot 4.6.3 at the 1152x648 project viewport, with the root
+; window reporting `is_snap_controls_to_pixels_enabled() == false` and its
+; SubViewport reporting `true`:
+;
+;   RootArm  Bar unsnapped at 100.5 + 0.5 + 0.5 + 0.5 = (102, 62), so the
+;            green square spans x 102..141, y 62..101.
+;   Booth    Bar snapped at 101 + 1 + 1 + 1 = (104, 64) INSIDE the
+;            sub-viewport, which sits at (400, 300), so the green square spans
+;            x 504..543, y 364..403.
+;
+; Read the pair as one number: the two arms are 2 px apart in each axis, and
+; applying the project's opt-out inside the sub-viewport closes that gap to 0.
+;
+; Both `get_global_position()` calls still report (102, 62). The snap lands on
+; the CANVAS ITEM transform and never on `get_rect()`, so only the drawn pixels
+; separate the two arms — which is why this fixture measures an image rather
+; than a reported rect.
+;
+; ARBITRATE THIS ONE BY RUNNING GODOT DIRECTLY, not through the 2D reference
+; capture. That capture renders the whole scene inside a SubViewport of the
+; project-viewport size, so under it BOTH arms are inside a sub-viewport and
+; both read (104, 64) — the root window's opt-out is unreachable there by
+; construction, and the fixture's whole variable collapses.
+;
+; The sub-viewport holds Controls only, so its surface is filled by the
+; Control-raster pass.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="RootArm" type="Control" parent="."]
+offset_left = 100.5
+offset_top = 60.5
+offset_right = 300.5
+offset_bottom = 200.5
+
+[node name="Link1" type="Control" parent="RootArm"]
+offset_left = 0.5
+offset_top = 0.5
+offset_right = 180.5
+offset_bottom = 120.5
+
+[node name="Link2" type="Control" parent="RootArm/Link1"]
+offset_left = 0.5
+offset_top = 0.5
+offset_right = 160.5
+offset_bottom = 100.5
+
+[node name="Bar" type="ColorRect" parent="RootArm/Link1/Link2"]
+offset_left = 0.5
+offset_top = 0.5
+offset_right = 40.5
+offset_bottom = 40.5
+color = Color(0, 1, 0, 1)
+
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 400.0
+offset_top = 300.0
+offset_right = 700.0
+offset_bottom = 480.0
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+size = Vector2i(300, 180)
+render_target_update_mode = 4
+
+[node name="NestedArm" type="Control" parent="Booth/SubViewport"]
+offset_left = 100.5
+offset_top = 60.5
+offset_right = 300.5
+offset_bottom = 200.5
+
+[node name="Link1" type="Control" parent="Booth/SubViewport/NestedArm"]
+offset_left = 0.5
+offset_top = 0.5
+offset_right = 180.5
+offset_bottom = 120.5
+
+[node name="Link2" type="Control" parent="Booth/SubViewport/NestedArm/Link1"]
+offset_left = 0.5
+offset_top = 0.5
+offset_right = 160.5
+offset_bottom = 100.5
+
+[node name="Bar" type="ColorRect" parent="Booth/SubViewport/NestedArm/Link1/Link2"]
+offset_left = 0.5
+offset_top = 0.5
+offset_right = 40.5
+offset_bottom = 40.5
+color = Color(0, 1, 0, 1)

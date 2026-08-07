@@ -5,10 +5,23 @@
  * `<SubViewport>`'s own 3D/2D pass uses, so every viewport kind now publishes
  * a texture consumers sample directly — no CPU round trip, no `readPixels`.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+
+// `gui/common/snap_controls_to_pixels` is the ROOT window's setting; the
+// Controls this pass rasterises live in a SubViewport, which never gets it.
+const projectSettingsMock = vi.hoisted(() => ({
+  settings: null as Record<string, string> | null,
+  viewportSize: { width: 1152, height: 648 },
+  themeScale: 1,
+}));
+
+vi.mock('../../../r3f/contexts/ProjectSettingsContext', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../r3f/contexts/ProjectSettingsContext')>();
+  return { ...actual, useProjectSettings: () => projectSettingsMock };
+});
 
 import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnScene } from '../../../parser/types';
@@ -144,6 +157,77 @@ describe('<ControlRasterPasses>', () => {
     expect(seenAtBind).toBe(THREE.NoToneMapping);
     // Restored after the pass, exactly like the 3D/2D pass restores its own.
     expect(gl.toneMapping).toBe(THREE.CustomToneMapping);
+  });
+
+  /**
+   * `scene/main/viewport.h` initialises `snap_controls_to_pixels` to `true` on
+   * every Viewport, and `main/main.cpp` hands the project setting to
+   * `sml->get_root()` alone — so a project that opts out leaves a
+   * SubViewport's own Controls snapped.
+   *
+   * Measured through Godot 4.6.3 on
+   * `scenes/fixtures/subviewport-snap-off/unit-subviewport-snap-off.tscn`
+   * (root window reporting `is_snap_controls_to_pixels_enabled() == false`,
+   * its SubViewport reporting `true`): a four-deep chain of 0.5 offsets draws
+   * its leaf at (102, 62) in the root window and at (104, 64) inside the
+   * sub-viewport.
+   */
+  it('snaps the rasterised Controls even when the project opts out', async () => {
+    projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'false' };
+    try {
+      const capturedGl: { current: THREE.WebGLRenderer | null } = { current: null };
+      const scene = parse(`[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(320, 240)
+
+[node name="Bar" type="ColorRect" parent="SubViewport"]
+anchors_preset = 0
+offset_left = 100.5
+offset_top = 60.5
+offset_right = 140.5
+offset_bottom = 100.5
+`);
+      const renderer = await ReactThreeTestRenderer.create(
+        <ViewportTextureProvider>
+          <ViewportPassProvider>
+            <ControlRasterPasses viewports={walk(scene)} />
+            <GlSpy captured={capturedGl} />
+            <ViewportPassOrchestrator />
+          </ViewportPassProvider>
+        </ViewportTextureProvider>
+      );
+
+      // The walker mounts into a DETACHED portal scene, which never appears in
+      // the test renderer's own tree — the pass hands it to `gl.render`, so
+      // that call is where a test can reach it.
+      const gl = capturedGl.current!;
+      let portalScene: THREE.Object3D | null = null;
+      const originalSet = gl.setRenderTarget;
+      const originalRender = gl.render;
+      gl.setRenderTarget = (() => undefined) as typeof gl.setRenderTarget;
+      gl.render = ((rendered: THREE.Object3D) => {
+        portalScene ??= rendered;
+      }) as typeof gl.render;
+      try {
+        await renderer.advanceFrames(1, 16);
+      } finally {
+        gl.setRenderTarget = originalSet;
+        gl.render = originalRender;
+      }
+
+      let group: THREE.Object3D | undefined;
+      portalScene?.traverse((o) => {
+        if (o.name === 'ColorRect:Bar') group = o;
+      });
+
+      expect(group?.position.x).toBeCloseTo(101);
+      expect(group?.position.y).toBeCloseTo(-61);
+    } finally {
+      projectSettingsMock.settings = null;
+    }
   });
 
   it('unregisters on unmount, so a removed sub-viewport stops resolving', async () => {
