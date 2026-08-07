@@ -18,6 +18,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Complex 2d Gui",
+    "file": "complex-2d-gui.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Nested Leaf Orange Sphere",
     "file": "nested-leaf-orange-sphere.tscn",
     "category": "Other"
@@ -205,6 +210,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Cpuparticles2d",
     "file": "unit-cpuparticles2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Gradienttexture",
+    "file": "unit-decal-gradienttexture.tscn",
     "category": "Other"
   },
   {
@@ -548,6 +558,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite3d Gradienttexture",
+    "file": "unit-sprite3d-gradienttexture.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite3d Region Oversized",
     "file": "unit-sprite3d-region-oversized.tscn",
     "category": "Other"
@@ -575,6 +590,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Surface Material Override",
     "file": "unit-surface-material-override.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Texturerect Gradienttexture",
+    "file": "unit-texturerect-gradienttexture.tscn",
     "category": "Other"
   },
   {
@@ -953,6 +973,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Sprite2d Gradienttexture",
+    "file": "unit-sprite2d-gradienttexture.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Magnified",
+    "file": "unit-sprite2d-magnified.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Sprite2d Region Oversized",
     "file": "unit-sprite2d-region-oversized.tscn",
     "category": "Unit - 2D Canvas"
@@ -1088,6 +1118,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Audio"
   },
   {
+    "name": "Button Icon Gradienttexture",
+    "file": "unit-button-icon-gradienttexture.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Button States",
     "file": "unit-button-states.tscn",
     "category": "Unit - 2D UI Controls"
@@ -1108,6 +1143,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Checkbox Icon Magnified",
+    "file": "unit-checkbox-icon-magnified.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Checkbox",
     "file": "unit-checkbox.tscn",
     "category": "Unit - 2D UI Controls"
@@ -1115,6 +1155,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Color Rect",
     "file": "unit-color-rect.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Anchors Preset Gate",
+    "file": "unit-control-anchors-preset-gate.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Anchors Preset Offsets",
+    "file": "unit-control-anchors-preset-offsets.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -1180,6 +1230,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Hbox Container",
     "file": "unit-hbox-container.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Label 2d Valign",
+    "file": "unit-label-2d-valign.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
