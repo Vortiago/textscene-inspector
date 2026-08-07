@@ -1,14 +1,15 @@
 /**
  * Validators shared by every Light2D-derived node.
  *
- * Registered under the abstract key 'Light2D', which Godot cannot
- * instantiate, so it appears in no .tscn and owns no slice. It reaches its
- * 2 subclasses through the
- * NODE_BASE_TYPES base-walk.
+ * Registered under the abstract key 'Light2D', which Godot cannot instantiate,
+ * so it appears in no .tscn and owns no slice. It reaches PointLight2D and
+ * DirectionalLight2D through the NODE_BASE_TYPES base-walk.
  *
- * Declare only Light2D's OWN members: the ones doc/classes/Light2D.xml
- * lists without an `overrides=` attribute, cross-checked against ADD_PROPERTY
- * in the .cpp. Quote the governing source line beside every non-obvious bound.
+ * Only Light2D's OWN members belong here. `height` in particular does NOT:
+ * both subclasses declare their own on the same inherited setter, and the hints
+ * differ — PointLight2D's 0..1024 opens its ceiling (light_2d.cpp:480) while
+ * DirectionalLight2D's 0..1 is closed (light_2d.cpp:503) — so hoisting it would
+ * give one of them a bound Godot does not apply.
  */
 
 // The base chain. Registration happens on import, so a test that loads only
@@ -46,10 +47,11 @@ validatorRegistry.registerAll('Light2D', {
   // silence.
   range_z_min: v.int('range_z_min', { min: CANVAS_ITEM_Z_MIN, max: CANVAS_ITEM_Z_MAX, hinted: 'light_2d.cpp:309' }),
   range_z_max: v.int('range_z_max', { min: CANVAS_ITEM_Z_MIN, max: CANVAS_ITEM_Z_MAX, hinted: 'light_2d.cpp:310' }),
-  // light_2d.cpp:311-312 hints CANVAS_LAYER_MIN..MAX, which is int32's own
-  // span (see the constant's docblock): the hint excludes nothing an int
-  // property can legally hold, so this stays format-only rather than carrying
-  // a bound that can never fire.
+  // light_2d.cpp:311-312 hints RS::CANVAS_LAYER_MIN..MAX
+  // (rendering_server.h:105-106), which are int32's own limits rather than a
+  // narrower engine rule: the hint excludes nothing an int property can legally
+  // hold. Format-only, then — a bound here could never fire, and the absence is
+  // deliberate rather than an oversight.
   range_layer_min: v.int('range_layer_min'),
   range_layer_max: v.int('range_layer_max'),
   // light_2d.cpp:313/320, PROPERTY_HINT_LAYERS_2D_RENDER on both — not a

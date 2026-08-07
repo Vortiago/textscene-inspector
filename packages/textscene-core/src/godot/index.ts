@@ -37,7 +37,5 @@ export {
   MATERIAL_RENDER_PRIORITY_MAX,
   CANVAS_ITEM_Z_MIN,
   CANVAS_ITEM_Z_MAX,
-  CANVAS_LAYER_MIN,
-  CANVAS_LAYER_MAX,
 } from './rendering.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MODES } from './canvasItem.js';

@@ -25,6 +25,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask } from '../../../linter/validators/layerBitmask.js';
 import { v } from '../../../linter/validators/index.js';
 import { CLIP_CHILDREN_MODES } from '../../../godot/canvasItem.js';
+import { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX } from '../../../godot/rendering.js';
 
 // scene/main/canvas_item.cpp:1486, and BIND_ENUM_CONSTANT at :1510-1516.
 const TEXTURE_FILTER = {
@@ -59,11 +60,14 @@ validatorRegistry.registerAll('CanvasItem', {
   // canvas_item.cpp:1478, same PROPERTY_HINT_LAYERS_2D_RENDER shape.
   // set_visibility_layer (canvas_item.cpp:1598-1602) assigns unconditionally.
   visibility_layer: layerBitmask('visibility_layer', { hinted: 'canvas_item.cpp:1478' }),
-  // scene/main/canvas_item.cpp:1481 takes its bounds from the rendering server:
-  // servers/rendering/rendering_server.h:103, CANVAS_ITEM_Z_MIN = -4096, and
-  // CANVAS_ITEM_Z_MAX its positive mirror. set_z_index
-  // (canvas_item.cpp:668-669) ERR_FAIL_CONDs both ends.
-  z_index: v.strictInt('z_index', { min: -4096, max: 4096, enforced: 'canvas_item.cpp:668' }),
+  // scene/main/canvas_item.cpp:1481 builds the hint from the rendering server's
+  // own constants, and set_z_index (canvas_item.cpp:668-669) ERR_FAIL_CONDs
+  // against the same two — so this is enforced, not merely hinted.
+  z_index: v.strictInt('z_index', {
+    min: CANVAS_ITEM_Z_MIN,
+    max: CANVAS_ITEM_Z_MAX,
+    enforced: 'canvas_item.cpp:668',
+  }),
   z_as_relative: v.boolean('z_as_relative'),
   y_sort_enabled: v.boolean('y_sort_enabled'),
   // canvas_item.cpp:1486, ENUM 7 labels (matches TEXTURE_FILTER_MAX=7,

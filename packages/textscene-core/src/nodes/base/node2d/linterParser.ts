@@ -18,10 +18,10 @@ import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { CMP_EPSILON } from '../../../godot/index.js';
 
-// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific, plus the
-// non-finite spellings Godot writes) so the bespoke `scale` validator stays as
-// lenient as v.vector2.
-
+// Matched against the shared VECTOR2_REGEX so this bespoke validator stays
+// exactly as lenient as v.vector2 — the canonical float grammar, which accepts
+// .5 / 5. / +5 / scientific and the non-finite spellings Godot writes.
+//
 // node_2d.cpp:187-199: set_scale substitutes CMP_EPSILON for a component that
 // `Math::is_zero_approx`s ("Avoid having 0 scale values, can lead to errors in
 // physics and rendering."), a silent correction ADR-0032 treats the same as an

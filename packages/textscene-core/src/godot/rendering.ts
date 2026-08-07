@@ -37,17 +37,3 @@ export const MATERIAL_RENDER_PRIORITY_MAX = 127;
 export const CANVAS_ITEM_Z_MIN = -4096;
 /** See {@link CANVAS_ITEM_Z_MIN}. */
 export const CANVAS_ITEM_Z_MAX = 4096;
-
-/**
- * `RenderingServer::CANVAS_LAYER_MIN` / `_MAX`
- * (`servers/rendering/rendering_server.h:105-106`).
- *
- * These are int32's own limits, not a narrower engine rule: the hint they build
- * spans every value the field can hold, so it excludes nothing an int property
- * could legally carry. A validator that "enforces" them therefore adds no check
- * beyond the integer format itself — they are here so a reader can see that the
- * hint is vacuous rather than assume a bound was overlooked.
- */
-export const CANVAS_LAYER_MIN = -2147483648;
-/** See {@link CANVAS_LAYER_MIN}. */
-export const CANVAS_LAYER_MAX = 2147483647;

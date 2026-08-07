@@ -16,9 +16,6 @@ import { CMP_EPSILON } from '../../../godot/index.js';
 const ANCHOR_MODE = { 0: 'FIXED_TOP_LEFT', 1: 'DRAG_CENTER' };
 const PROCESS_CALLBACK = { 0: 'PHYSICS', 1: 'IDLE' };
 
-// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
-// v.vector2 and the renderer.
-
 // camera_2d.cpp:102-105: set_zoom only ERR_FAIL_COND_MSGs on
 // `Math::is_zero_approx(x) || Math::is_zero_approx(y)`, whose own message says
 // "Zoom level must be different from 0 (can be negative)." Negative zoom

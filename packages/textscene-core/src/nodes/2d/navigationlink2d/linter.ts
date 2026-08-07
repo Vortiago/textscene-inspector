@@ -49,7 +49,6 @@ import { isEqualApprox } from '../../../godot/index.js';
 
 const RULE_NAME = 'navigationlink2d-coincident-endpoints';
 
-
 interface Vec2 {
   x: number;
   y: number;

@@ -42,8 +42,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { findParentNode } from '../../../../linter/linterUtils.js';
-import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { isExplicitlyHidden, parentTypeVerdict } from '../../../../linter/parentType.js';
 
 const PARENT_RULE = 'xrcamera3d-parent-not-xrorigin3d';
 
@@ -51,22 +50,19 @@ function checkXRCamera3DParent(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
   const properties = node.properties as unknown as Record<string, string>;
 
-  // Node3D::is_visible() (node_3d.cpp:1127-1130): an explicitly hidden camera
-  // never reaches Godot's own check either.
-  if (properties.visible === 'false') return [];
+  // An explicitly hidden camera never reaches Godot's own check either.
+  if (isExplicitlyHidden(properties)) return [];
 
-  const parent = findParentNode(scene.nodes, node);
+  const verdict = parentTypeVerdict(scene, node, 'XROrigin3D');
   // xr_nodes.cpp:97's `if (parent && ...)`: no parent at all, no warning —
-  // the one place this rule diverges from the NavigationAgent/OpenXR shape.
-  if (!parent) return [];
-  // An instanced parent's type lives in another file the linter never opens.
-  if (parent.instance || !parent.type) return [];
-  if (descendsFrom(parent.type, 'XROrigin3D')) return [];
+  // the one place this rule diverges from the OpenXR/BoneAttachment shape,
+  // which both warn at the root.
+  if (verdict.kind !== 'mismatch') return [];
 
   return [
     {
       severity: 'warning',
-      message: `XRCamera3D '${node.name}' is a child of a ${parent.type} node. XRCamera3D may not function as expected without an XROrigin3D node as its parent, the same configuration warning Godot's own editor reports.`,
+      message: `XRCamera3D '${node.name}' is a child of a ${verdict.parent.type} node. XRCamera3D may not function as expected without an XROrigin3D node as its parent, the same configuration warning Godot's own editor reports.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: PARENT_RULE,

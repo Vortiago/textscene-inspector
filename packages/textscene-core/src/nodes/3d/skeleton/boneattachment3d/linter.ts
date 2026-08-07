@@ -38,8 +38,9 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { findParentNode, extractNodePath } from '../../../../linter/linterUtils.js';
+import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 
 const PARENT_RULE = 'boneattachment3d-parent-not-skeleton3d';
 const EXTERNAL_RULE = 'boneattachment3d-external-skeleton-unset';
@@ -47,16 +48,14 @@ const EXTERNAL_RULE = 'boneattachment3d-external-skeleton-unset';
 function checkBoneAttachment3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
   const properties = node.properties as unknown as Record<string, string>;
-  const parent = findParentNode(scene.nodes, node);
-
   if (properties.use_external_skeleton === 'true') {
     // `extractNodePath` returns null for a non-literal and for NodePath(""),
     // which is exactly the "no path" case the engine's null cache covers.
     if (extractNodePath(properties.external_skeleton ?? '') !== null) return [];
-    // An instanced parent's type lives in another file; it may well be the
-    // BoneAttachment3D this one would inherit a skeleton from.
-    if (parent && (parent.instance || !parent.type)) return [];
-    if (parent && descendsFrom(parent.type, 'BoneAttachment3D')) return [];
+    // An unknowable parent may well BE the BoneAttachment3D this one would
+    // inherit a skeleton from, so it is not something to warn about.
+    const inherited = parentTypeVerdict(scene, node, 'BoneAttachment3D');
+    if (inherited.kind === 'satisfied' || inherited.kind === 'unknowable') return [];
 
     return [
       {
@@ -69,10 +68,10 @@ function checkBoneAttachment3D(context: RuleContext): Diagnostic[] {
     ];
   }
 
-  if (parent && (parent.instance || !parent.type)) return [];
-  if (parent && descendsFrom(parent.type, 'Skeleton3D')) return [];
+  const attached = parentTypeVerdict(scene, node, 'Skeleton3D');
+  if (attached.kind === 'satisfied' || attached.kind === 'unknowable') return [];
 
-  const where = parent ? `a child of a ${parent.type} node` : 'the scene root';
+  const where = placementPhrase(attached);
   return [
     {
       severity: 'warning',

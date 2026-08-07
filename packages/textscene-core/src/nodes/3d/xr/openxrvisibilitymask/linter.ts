@@ -24,8 +24,11 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { findParentNode } from '../../../../linter/linterUtils.js';
-import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import {
+  isExplicitlyHidden,
+  parentTypeVerdict,
+  placementPhrase,
+} from '../../../../linter/parentType.js';
 
 const PARENT_RULE = 'openxrvisibilitymask-parent-not-xrcamera3d';
 
@@ -33,16 +36,15 @@ function checkOpenXRVisibilityMask(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
   const properties = node.properties as unknown as Record<string, string>;
 
-  // Node3D::is_visible() (node_3d.cpp:1127-1130): an explicitly hidden mask
-  // never reaches Godot's own check either.
-  if (properties.visible === 'false') return [];
+  // An explicitly hidden mask never reaches Godot's own check either.
+  if (isExplicitlyHidden(properties)) return [];
 
-  const parent = findParentNode(scene.nodes, node);
-  // An instanced parent's type lives in another file the linter never opens.
-  if (parent && (parent.instance || !parent.type)) return [];
-  if (parent && descendsFrom(parent.type, 'XRCamera3D')) return [];
+  const verdict = parentTypeVerdict(scene, node, 'XRCamera3D');
+  // Unlike XRCamera3D, this one DOES warn at the root: its own check casts
+  // unconditionally, so a null parent fails it.
+  if (verdict.kind === 'satisfied' || verdict.kind === 'unknowable') return [];
 
-  const where = parent ? `a child of a ${parent.type} node` : 'the scene root';
+  const where = placementPhrase(verdict);
   return [
     {
       severity: 'warning',
