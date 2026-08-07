@@ -38,6 +38,8 @@ Strict parsing format-checks these `MeshInstance2D` properties, plus 12 inherite
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
 Given `mesh = "res://quad.tres"` (a bare string instead of a `SubResource`/`ExtResource`

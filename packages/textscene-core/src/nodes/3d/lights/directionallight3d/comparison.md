@@ -57,6 +57,7 @@ Strict parsing format-checks these `DirectionalLight3D` properties, plus 15 inhe
 |  | `directionallight3d-negative-shadow-distance` | warning |
 |  | `directionallight3d-shadow-split-order` | error |
 |  | `directionallight3d-unused-splits` | warning |
+| `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
 The lenient parser reads only two of these nine properties: `directional_shadow_mode`

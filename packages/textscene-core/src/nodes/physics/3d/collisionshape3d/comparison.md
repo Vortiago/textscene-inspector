@@ -47,6 +47,9 @@ Strict parsing format-checks these `CollisionShape3D` properties, plus 16 inheri
 |  | `collisionshape3d-invalid-parent` | warning |
 |  | `collisionshape3d-no-parent` | warning |
 |  | `collisionshape3d-non-uniform-scale` | warning |
+|  | `collisionshape3d-concave-under-rigidbody` | warning |
+|  | `collisionshape3d-worldboundary-under-rigidbody` | warning |
+|  | `collisionshape3d-concave-under-characterbody` | warning |
 <!-- lint:end -->
 
 `shape` is copied through verbatim whenever present, with no format check.

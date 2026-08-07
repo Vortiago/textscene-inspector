@@ -8,7 +8,11 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { rangeAdvisories } from '../../../../linter/rangeAdvisory.js';
-import { lightEnergyArms, spotRangeArms } from '../shared/linterChecks.js';
+import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { lightEnergyArms, spotRangeArms, projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
+
+/** `Light3D::set_param` default for `PARAM_SPOT_ANGLE` (light_3d.cpp:480). */
+const DEFAULT_SPOT_ANGLE = 45;
 
 /**
  * Validate SpotLight3D semantic rules
@@ -17,11 +21,16 @@ import { lightEnergyArms, spotRangeArms } from '../shared/linterChecks.js';
  * hints "-10,10,0.01,or_greater,or_less" (light_3d.cpp:673) so both ends are
  * open, and `spot_angle_attenuation` is PROPERTY_HINT_EXP_EASING (:675), which
  * states no range at all.
+ *
+ * light_3d.cpp:655: `shadow_enabled` true and `spot_angle >= 90` — the guard is
+ * `>=` even though the message says "wider than". light_3d.cpp:659-661:
+ * `light_projector` set while `shadow_enabled` is not true, same shape as
+ * OmniLight3D's.
  */
 function checkSpotLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
-  return rangeAdvisories(node, {
+  const diagnostics = rangeAdvisories(node, {
     light_energy: lightEnergyArms('spotlight3d'),
     spot_range: spotRangeArms('spotlight3d'),
     spot_angle: [
@@ -42,6 +51,27 @@ function checkSpotLight3D(context: RuleContext): Diagnostic[] {
       },
     ],
   });
+
+  if (isValidProperties(node.properties)) {
+    const properties = node.properties as Record<string, string>;
+    const spotAngle =
+      properties.spot_angle !== undefined ? parseFloat(properties.spot_angle) : DEFAULT_SPOT_ANGLE;
+
+    if (properties.shadow_enabled === 'true' && !isNaN(spotAngle) && spotAngle >= 90) {
+      diagnostics.push({
+        severity: 'warning',
+        message: `SpotLight3D '${node.name}' has shadow_enabled with a spot_angle of ${spotAngle} degrees. An angle wider than 90 degrees cannot cast shadows.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: 'spotlight3d-shadow-angle-too-wide',
+      });
+    }
+  }
+
+  const projectorDiagnostic = projectorWithoutShadowDiagnostic(node, 'spotlight3d');
+  if (projectorDiagnostic) diagnostics.push(projectorDiagnostic);
+
+  return diagnostics;
 }
 
 /**
@@ -57,6 +87,8 @@ const spotLight3DValidationRule: LintRule = {
       { ruleName: 'spotlight3d-negative-energy', severity: 'warning' },
       { ruleName: 'spotlight3d-negative-range', severity: 'warning' },
       { ruleName: 'spotlight3d-spot-angle-out-of-range', severity: 'warning' },
+      { ruleName: 'spotlight3d-shadow-angle-too-wide', severity: 'warning' },
+      { ruleName: 'spotlight3d-projector-without-shadow', severity: 'warning' },
     ],
   },
   check: checkSpotLight3D,

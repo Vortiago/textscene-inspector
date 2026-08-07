@@ -15,7 +15,9 @@
 // render-only (ADR-0003) — they carry no index.linter.ts of their own unless
 // they gain type-specific validators or semantic rules.
 import '../nodes/node/index.linter.js';
+import '../nodes/canvasitem/shared/index.linter.js';
 import '../nodes/2d/ui/control/index.linter.js';
+import '../nodes/2d/ui/container/index.linter.js';
 import '../nodes/2d/ui/subviewportcontainer/index.linter.js';
 import '../nodes/2d/ui/basebutton/index.linter.js';
 import '../nodes/2d/ui/button/index.linter.js';
@@ -71,6 +73,7 @@ import '../nodes/2d/ui/menubar/index.linter.js';
 import '../nodes/2d/ui/tabbar/index.linter.js';
 import '../nodes/2d/ui/tree/index.linter.js';
 import '../nodes/2d/ui/videostreamplayer/index.linter.js';
+import '../nodes/viewport/shared/index.linter.js';
 import '../nodes/viewport/subviewport/index.linter.js';
 import '../nodes/base/node3d/index.linter.js';
 import '../nodes/base/node2d/index.linter.js';
@@ -82,10 +85,12 @@ import '../nodes/3d/csg/csgtorus3d/index.linter.js';
 import '../nodes/3d/csg/csgcombiner3d/index.linter.js';
 import '../nodes/3d/csg/csgmesh3d/index.linter.js';
 import '../nodes/3d/csg/csgpolygon3d/index.linter.js';
+import '../nodes/3d/csg/index.linter.js';
 import '../nodes/3d/lights/omnilight3d/index.linter.js';
 import '../nodes/3d/lights/directionallight3d/index.linter.js';
 import '../nodes/3d/lights/spotlight3d/index.linter.js';
 import '../nodes/3d/lights/arealight3d/index.linter.js';
+import '../nodes/3d/lights/shared/index.linter.js';
 import '../nodes/3d/camera3d/index.linter.js';
 import '../nodes/3d/label3d/index.linter.js';
 import '../nodes/3d/particles/gpuparticles3d/index.linter.js';

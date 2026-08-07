@@ -174,6 +174,8 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-cpuparticles2d-preview` | `cpuparticles2d-nondeterministic-emission-shape` | warning |
 |  | `cpuparticles2d-fract-delta-ignored` | warning |
 <!-- lint:end -->

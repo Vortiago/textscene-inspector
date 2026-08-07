@@ -51,6 +51,8 @@ Strict parsing format-checks these `Parallax2D` properties, plus 12 inherited fr
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
 `parser.ts` reuses `parseNode2D` unchanged, which reads only Node2D's own keys

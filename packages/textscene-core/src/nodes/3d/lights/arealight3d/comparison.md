@@ -51,6 +51,7 @@ Strict parsing format-checks these `AreaLight3D` properties, plus 15 inherited f
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 | `valid-arealight3d-properties` | `arealight3d-negative-energy` | warning |
+| `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
 Strict rejects a non-positive `area_range`, a malformed `area_size`, or a non-boolean

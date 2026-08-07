@@ -47,6 +47,8 @@ Strict parsing format-checks these `Line2D` properties, plus 12 inherited from N
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
 Strict rejects a non-numeric `width` or `sharp_limit`; the lenient parser warns and falls

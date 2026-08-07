@@ -49,6 +49,8 @@ Strict parsing format-checks these `TouchScreenButton` properties, plus 12 inher
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
 This slice has no `parser.ts`: `index.ts` registers `parseNode2D`, which reads

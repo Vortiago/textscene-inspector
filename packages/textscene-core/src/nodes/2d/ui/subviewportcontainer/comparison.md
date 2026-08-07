@@ -184,7 +184,11 @@ Strict parsing format-checks these `SubViewportContainer` properties, plus 28 in
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 | `valid-subviewportcontainer-children` | `subviewportcontainer-no-viewport` | warning |
+|  | `subviewportcontainer-non-arrow-cursor` | warning |
 <!-- lint:end -->
 
 Strict and lenient parsing diverge on `stretch_shrink`: the strict parser errors

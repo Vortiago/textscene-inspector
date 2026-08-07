@@ -31,7 +31,8 @@ export type ParentVerdict =
   /**
    * The parent's type is not knowable from this file. An instanced parent's
    * type lives in the scene it was instanced from, which the linter never
-   * opens, and a node with no `type` at all inherits one the same way.
+   * opens, and a node that only OVERRIDES one already at its path inherits its
+   * type the same way.
    */
   | { kind: 'unknowable' }
   /** A real, typed parent that is not the wanted type. */
@@ -47,6 +48,17 @@ export type ParentVerdict =
  * versus a standalone `parent.instance || !parent.type` leaning on an earlier
  * `if (!parent)`). Two spellings of one rule is how the fifth copy silently
  * drops it and starts warning about parents it cannot see.
+ *
+ * **`overridesExistingNode` is the third arm, and testing `!parent.type` alone
+ * does not cover it.** A heading with neither `type=` nor `instance=` overrides
+ * a node that already exists at that path inside an instanced ancestor — but
+ * `NodeRegistry.ts:109` defaults a missing type to `'Node'`, so the parsed node
+ * reads as a plain Node rather than as untyped. Every rule that asked
+ * `!parent.type` therefore saw a confident, wrong answer. Godot's own ragdoll
+ * demo is the witness: its `PhysicalBoneSimulator3D` hangs off a `Skeleton3D`
+ * override inside an instanced character, and the missing arm made the linter
+ * announce that a shipped Godot scene had put a skeleton modifier in the wrong
+ * place.
  */
 export function parentTypeVerdict(
   scene: TscnScene,
@@ -55,7 +67,9 @@ export function parentTypeVerdict(
 ): ParentVerdict {
   const parent = findParentNode(scene.nodes, node);
   if (!parent) return { kind: 'root' };
-  if (parent.instance || !parent.type) return { kind: 'unknowable' };
+  if (parent.instance || !parent.type || parent.overridesExistingNode) {
+    return { kind: 'unknowable' };
+  }
   if (descendsFrom(parent.type, wantedType)) return { kind: 'satisfied', parent };
   return { kind: 'mismatch', parent };
 }
@@ -81,4 +95,42 @@ export function placementPhrase(verdict: ParentVerdict): string {
  */
 export function isExplicitlyHidden(properties: Record<string, string>): boolean {
   return properties.visible === 'false';
+}
+
+/**
+ * What a rule can say about `CanvasItem::is_visible_in_tree()`
+ * (`canvas_item.cpp:62-64`: `visible && parent_visible_in_tree`), computed
+ * statically.
+ *
+ * `parent_visible_in_tree` cascades down from the nearest CanvasItem ancestor's
+ * own `is_visible_in_tree()`, or a `CanvasLayer`'s own `is_visible()`
+ * (`canvas_item.cpp:315,328`) — both are just the ancestor's own `visible` key,
+ * which `CanvasLayer` exposes too (`canvas_layer.cpp:341`). So one uniform walk
+ * of every ancestor's OWN `visible` key, ANDed together, reproduces the whole
+ * cascade: the result is hidden the moment any one of them is explicitly
+ * `false`, and visible only if none of them are.
+ */
+export type VisibilityVerdict =
+  /** Neither the node nor any ancestor is explicitly `visible = false`. */
+  | 'visible'
+  /** The node, or some ancestor, sets `visible = false`. */
+  | 'hidden'
+  /** An ancestor's type — and so its own visibility — is not knowable from this file. */
+  | 'unknowable';
+
+/**
+ * Walks from `node` up to the root. An `instance=`/untyped ancestor could be
+ * hidden from a scene this linter never opens, so the walk stops there and
+ * reports `unknowable` rather than assuming visible.
+ */
+export function visibleInTreeVerdict(scene: TscnScene, node: TscnNode): VisibilityVerdict {
+  if (isExplicitlyHidden(node.properties as unknown as Record<string, string>)) return 'hidden';
+
+  let current = findParentNode(scene.nodes, node);
+  while (current) {
+    if (current.instance || !current.type) return 'unknowable';
+    if (isExplicitlyHidden(current.properties as unknown as Record<string, string>)) return 'hidden';
+    current = findParentNode(scene.nodes, current);
+  }
+  return 'visible';
 }

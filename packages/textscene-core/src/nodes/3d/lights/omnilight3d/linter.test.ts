@@ -217,6 +217,35 @@ describe('OmniLight3D Linter', () => {
     });
   });
 
+  // light_3d.cpp:623-625
+  describe('projector without shadow', () => {
+    it('warns when light_projector is set and shadow_enabled is not true', () => {
+      expectDiagnostic(
+        scene(node('OmniLight3D', { light_projector: 'ExtResource("1_proj")', omni_range: 5.0 })),
+        { ruleName: 'omnilight3d-projector-without-shadow', severity: 'warning' }
+      );
+    });
+
+    it('does not warn when light_projector is set and shadow_enabled is true', () => {
+      expectNoDiagnostic(
+        scene(
+          node('OmniLight3D', {
+            light_projector: 'ExtResource("1_proj")',
+            shadow_enabled: true,
+            omni_range: 5.0,
+          })
+        ),
+        { ruleName: 'omnilight3d-projector-without-shadow' }
+      );
+    });
+
+    it('does not warn when light_projector is absent', () => {
+      expectNoDiagnostic(scene(node('OmniLight3D', { omni_range: 5.0 })), {
+        ruleName: 'omnilight3d-projector-without-shadow',
+      });
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle node with no properties', () => {
       expectClean(scene(node('OmniLight3D')));

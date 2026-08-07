@@ -3,12 +3,14 @@
 
 [node name="Root" type="Node3D"]
 
-[node name="MySkeletonIK3D" type="SkeletonIK3D" parent="."]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MySkeletonIK3D" type="SkeletonIK3D" parent="Skeleton3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 root_bone = &"UpperArm"
 tip_bone = &"Hand"
 target = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.2, 0.25)
-target_node = NodePath("../Target")
+target_node = NodePath("../../Target")
 override_tip_basis = false
 use_magnet = true
 magnet = Vector3(0, 0.5, 1)

@@ -63,6 +63,7 @@ Strict parsing format-checks these `LimitAngularVelocityModifier3D` properties, 
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D`, which reads exactly `transform` and

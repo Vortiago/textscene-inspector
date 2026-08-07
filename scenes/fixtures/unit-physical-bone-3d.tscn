@@ -1,4 +1,13 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3]
+
+; PhysicalBone3D collision_object_3d.cpp:739 ("needs a collision shape") warns
+; without one, so both bones below carry a CollisionShape3D child — the real
+; ragdoll corpus (demos/3d/ragdoll_physics) pairs every PhysicalBone3D with
+; exactly one too.
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_bone"]
+radius = 0.1
+height = 0.4
 
 [node name="Root" type="Node3D"]
 
@@ -27,6 +36,9 @@ joint_constraints/bias = 0.3
 joint_constraints/softness = 0.8
 joint_constraints/relaxation = 1.0
 
+[node name="MyPhysicalBone3DCollision" type="CollisionShape3D" parent="MyPhysicalBone3D"]
+shape = SubResource("CapsuleShape3D_bone")
+
 [node name="MyPhysicalBone3DSixDOF" type="PhysicalBone3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0.3)
 joint_type = 5
@@ -35,3 +47,6 @@ joint_constraints/x/angular_limit_enabled = false
 joint_constraints/x/angular_limit_upper = 45.0
 joint_constraints/y/linear_spring_enabled = false
 joint_constraints/z/angular_spring_enabled = true
+
+[node name="MyPhysicalBone3DSixDOFCollision" type="CollisionShape3D" parent="MyPhysicalBone3DSixDOF"]
+shape = SubResource("CapsuleShape3D_bone")

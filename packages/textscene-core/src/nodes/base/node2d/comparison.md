@@ -53,6 +53,8 @@ Strict parsing format-checks these `Node2D` properties, plus 15 inherited from C
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
 `transform` (a `Transform2D`) takes priority when present: a malformed matrix

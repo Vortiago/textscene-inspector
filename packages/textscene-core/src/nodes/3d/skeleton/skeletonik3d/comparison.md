@@ -26,7 +26,7 @@ whole story.
 | `root_bone` | `&"UpperArm"` | first bone of the chain, by name |
 | `tip_bone` | `&"Hand"` | last bone, the one placed on the target |
 | `target` | `Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.2, 0.25)` | fallback goal, used whenever `target_node` does not resolve |
-| `target_node` | `NodePath("../Target")` | the sibling whose transform overrides `target` |
+| `target_node` | `NodePath("../../Target")` | the node (a sibling of the required Skeleton3D parent) whose transform overrides `target` |
 | `override_tip_basis` | `false` | the tip keeps its own rotation instead of the target's |
 | `use_magnet` | `true` | the solver consults the pole target |
 | `magnet` | `Vector3(0, 0.5, 1)` | pole position that decides which way the chain bends |
@@ -58,6 +58,7 @@ Strict parsing format-checks these `SkeletonIK3D` properties, plus 2 inherited f
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D`, so it reads the node's transform and

@@ -144,7 +144,12 @@ describe('VehicleBody3D Linter', () => {
     });
   });
 
-  describe('Semantic Validation (Scaled Transform)', () => {
+  describe('Semantic Validation (Scaled Transform, inherited from RigidBody3D)', () => {
+    // rigid_body_3d.cpp:667 is RigidBodyLinterRule's (rigidbody3d-scale-overridden-at-runtime),
+    // which reaches VehicleBody3D through the same `descendsFrom` matcher as
+    // the rest of the shared body set — this slice used to carry its own copy
+    // (`vehiclebody3d-scaled-transform`), retired once that reach landed so a
+    // scaled VehicleBody3D is not warned about twice under two rule names.
     it('warns on a scaled transform — the physics engine overrides it at runtime', () => {
       expectDiagnostic(
         scene(
@@ -156,7 +161,7 @@ describe('VehicleBody3D Linter', () => {
           wheel,
           collisionShape3d
         ),
-        { ruleName: 'vehiclebody3d-scaled-transform', severity: 'warning' }
+        { ruleName: 'rigidbody3d-scale-overridden-at-runtime', severity: 'warning' }
       );
     });
 
@@ -172,7 +177,7 @@ describe('VehicleBody3D Linter', () => {
         wheel,
         collisionShape3d
       );
-      expectNoDiagnostic(content, { ruleName: 'vehiclebody3d-scaled-transform' });
+      expectNoDiagnostic(content, { ruleName: 'rigidbody3d-scale-overridden-at-runtime' });
     });
 
     // rigid_body_3d.cpp:665-667 measures `get_basis().get_scale()` and warns when
@@ -190,7 +195,7 @@ describe('VehicleBody3D Linter', () => {
           wheel,
           collisionShape3d
         ),
-        { ruleName: 'vehiclebody3d-scaled-transform', severity: 'warning' }
+        { ruleName: 'rigidbody3d-scale-overridden-at-runtime', severity: 'warning' }
       );
       // The measured column lengths, never NaN — the message is the only place
       // the read shows, and `parseFloat` used to make it unreachable entirely.
@@ -207,7 +212,7 @@ describe('VehicleBody3D Linter', () => {
         wheel,
         collisionShape3d
       );
-      expectNoDiagnostic(content, { ruleName: 'vehiclebody3d-scaled-transform' });
+      expectNoDiagnostic(content, { ruleName: 'rigidbody3d-scale-overridden-at-runtime' });
     });
 
     it('stays quiet on an unscaled translated transform', () => {
@@ -220,7 +225,7 @@ describe('VehicleBody3D Linter', () => {
         wheel,
         collisionShape3d
       );
-      expectNoDiagnostic(content, { ruleName: 'vehiclebody3d-scaled-transform' });
+      expectNoDiagnostic(content, { ruleName: 'rigidbody3d-scale-overridden-at-runtime' });
     });
   });
 

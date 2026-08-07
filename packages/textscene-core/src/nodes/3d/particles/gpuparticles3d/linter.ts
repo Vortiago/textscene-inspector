@@ -63,6 +63,28 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
     }
   }
 
+  // gpu_particles_3d.cpp:342-363: `meshes_found` scans every draw_pass_N mesh
+  // in `draw_passes` (size defaults to 1, gpu_particles_3d.cpp:898) and warns
+  // if none is set. A `draw_pass_N` key can only be present in a `.tscn` for
+  // an index the author's own `draw_passes` count made visible
+  // (`_validate_property`, gpu_particles_3d.cpp:462-466), so any present
+  // `draw_pass_N` key is in scope regardless of what `draw_passes` says here —
+  // this stays a simple "no key at all has a mesh" scan rather than also
+  // re-deriving that bound.
+  const hasDrawPassMesh = Object.keys(rawProps).some(
+    (key) => /^draw_pass_\d+$/.test(key) && rawProps[key]
+  );
+  if (!hasDrawPassMesh) {
+    diagnostics.push({
+      severity: 'warning',
+      message:
+        'GPUParticles3D has no mesh assigned to any draw pass. Nothing is visible until at least one draw_pass_N mesh is set.',
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'gpuparticles3d-no-draw-pass-mesh',
+    });
+  }
+
   // Validate trail configuration
   if (rawProps.trail_lifetime) {
     const trailLifetime = parseFloat(rawProps.trail_lifetime);
@@ -139,6 +161,7 @@ const gpuParticles3DValidationRule: LintRule = {
       { ruleName: 'gpuparticles3d-missing-process-material', severity: 'warning' },
       { ruleName: 'valid-gpuparticles3d-process-material', severity: 'error' },
       { ruleName: 'valid-gpuparticles3d-resources', severity: 'error' },
+      { ruleName: 'gpuparticles3d-no-draw-pass-mesh', severity: 'warning' },
       { ruleName: 'valid-gpuparticles3d-trail-config', severity: 'error' },
       { ruleName: 'valid-gpuparticles3d-sub-emitter', severity: 'error' },
       { ruleName: 'gpuparticles3d-performance', severity: 'warning' },

@@ -2,6 +2,34 @@
  * Semantic linter rules for the legacy TileMap. Format validation lives in
  * linterParser.ts; these rules use scene context and the shared tile-data
  * decoder, walking the dynamic `layer_N/...` property groups.
+ *
+ * Four of these mirror `TileMap::get_configuration_warnings()`
+ * (tile_map.cpp:840-899):
+ *
+ *     warnings.push_back(RTR("The TileMap node is deprecated ..."));  // :843, unconditional
+ *
+ *     RBSet<int> y_sorted_z_index;
+ *     for (layer : layers) if (layer->is_y_sort_enabled()) y_sorted_z_index.insert(layer->get_z_index());
+ *     for (layer : layers) if (!layer->is_y_sort_enabled() && y_sorted_z_index.has(layer->get_z_index())) {
+ *         warnings.push_back(...); break;                             // :856
+ *     }
+ *
+ *     if (!is_y_sort_enabled()) {
+ *         for (layer : layers) if (layer->is_y_sort_enabled()) { warnings.push_back(...); break; }   // :865
+ *     } else {
+ *         bool need_warning = true;
+ *         for (layer : layers) if (layer->is_y_sort_enabled()) { need_warning = false; break; }
+ *         if (need_warning) warnings.push_back(...);                  // :879
+ *     }
+ *
+ * `layers` is read through the `layer_<i>/...` `PropertyListHelper` group
+ * (tile_map.cpp:1028-1035): `y_sort_enabled` defaults false, `z_index` 0
+ * (`TileMapLayer`'s own field defaults), so a layer with neither key present
+ * still counts, at its defaults — exactly like the engine's constructor-created
+ * `Layer0`, which starts with zero own keys until an author touches it.
+ * `tile_map.cpp:896`'s isometric-without-Y-sort check needs the referenced
+ * TileSet's `tile_shape` VALUE, resource content this linter does not resolve,
+ * so it is out of scope here.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -10,6 +38,17 @@ import { checkResourceExists } from '../../../../linter/resourceChecker.js';
 import { decodeLegacyTileData } from '../shared/tileData.js';
 
 const LAYER_DATA_KEY_RE = /^layer_(\d+)\/tile_data$/;
+const LAYER_KEY_RE = /^layer_(\d+)\//;
+
+/** Every layer index that has AT LEAST ONE `layer_<i>/...` key present, ascending. */
+function layerIndices(rawProps: Record<string, string>): number[] {
+  const indices = new Set<number>();
+  for (const key of Object.keys(rawProps)) {
+    const match = LAYER_KEY_RE.exec(key);
+    if (match) indices.add(parseInt(match[1]!, 10));
+  }
+  return [...indices].sort((a, b) => a - b);
+}
 
 function checkTileMap(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -18,6 +57,54 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
   const rawProps = node.properties as unknown as Record<string, string>;
   const layerData = Object.entries(rawProps).filter(([key]) => LAYER_DATA_KEY_RE.test(key));
   const format = rawProps.format !== undefined ? parseInt(rawProps.format, 10) : 0;
+
+  // tile_map.cpp:843 — unconditional; every TileMap node carries this, whatever
+  // it's configured with.
+  diagnostics.push({
+    severity: 'warning',
+    message: `TileMap '${node.name}' is deprecated, superseded by TileMapLayer nodes. Use the editor's "Extract TileMap layers as individual TileMapLayer nodes" action to convert it.`,
+    nodeName: node.name,
+    nodeType: node.type,
+    ruleName: 'tilemap-deprecated',
+  });
+
+  const indices = layerIndices(rawProps);
+  const isLayerYSorted = (i: number) => rawProps[`layer_${i}/y_sort_enabled`] === 'true';
+  const layerZIndex = (i: number) => parseInt(rawProps[`layer_${i}/z_index`] ?? '0', 10) || 0;
+  const nodeYSorted = rawProps.y_sort_enabled === 'true'; // inherited Node2D key, own node
+
+  // tile_map.cpp:850-858
+  const ySortedZIndices = new Set(indices.filter(isLayerYSorted).map(layerZIndex));
+  if (indices.some((i) => !isLayerYSorted(i) && ySortedZIndices.has(layerZIndex(i)))) {
+    diagnostics.push({
+      severity: 'warning',
+      message: `TileMap '${node.name}' has a Y-sorted layer sharing a Z-index with a non-Y-sorted layer. The non-Y-sorted layer will be Y-sorted as a whole alongside tiles from the Y-sorted layer.`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'tilemap-y-sort-z-index-conflict',
+    });
+  }
+
+  // tile_map.cpp:860-882
+  if (!nodeYSorted) {
+    if (indices.some(isLayerYSorted)) {
+      diagnostics.push({
+        severity: 'warning',
+        message: `TileMap '${node.name}' has a layer with y_sort_enabled, but y_sort_enabled is not set on the TileMap node itself.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: 'tilemap-layer-y-sort-without-node',
+      });
+    }
+  } else if (!indices.some(isLayerYSorted)) {
+    diagnostics.push({
+      severity: 'warning',
+      message: `TileMap '${node.name}' has y_sort_enabled set, but no layer has y_sort_enabled.`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'tilemap-node-y-sort-without-layer',
+    });
+  }
 
   if (layerData.length > 0 && !rawProps.tile_set) {
     diagnostics.push({
@@ -69,10 +156,15 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
 const tileMapValidationRule: LintRule = {
   meta: {
     name: 'valid-tilemap',
-    description: 'Validates TileMap tile_set assignment, data format, and per-layer tile data',
+    description:
+      'Validates TileMap tile_set assignment, data format, per-layer tile data, deprecation, and Y-sort/Z-index consistency',
     category: 'validation',
     applicableNodeTypes: ['TileMap'],
     emits: [
+      { ruleName: 'tilemap-deprecated', severity: 'warning' },
+      { ruleName: 'tilemap-y-sort-z-index-conflict', severity: 'warning' },
+      { ruleName: 'tilemap-layer-y-sort-without-node', severity: 'warning' },
+      { ruleName: 'tilemap-node-y-sort-without-layer', severity: 'warning' },
       { ruleName: 'tilemap-requires-tileset', severity: 'warning' },
       { ruleName: 'valid-tilemap-resources', severity: 'error' },
       { ruleName: 'tilemap-unsupported-format', severity: 'warning' },

@@ -28,6 +28,10 @@ Strict parsing format-checks the inherited set (28 inherited from Control, 15 in
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-container-script` | `container-no-script` | warning |
 <!-- lint:end -->
 
 Container registers no validators or semantic rules of its own yet, so the strict

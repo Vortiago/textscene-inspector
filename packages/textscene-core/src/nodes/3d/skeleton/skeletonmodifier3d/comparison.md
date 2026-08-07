@@ -39,6 +39,7 @@ Strict parsing format-checks these `SkeletonModifier3D` properties, plus 16 inhe
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
 SkeletonModifier3D has no `parser.ts` of its own: it registers `parseNode3D` directly

@@ -43,6 +43,8 @@ Strict parsing format-checks these `VisibleOnScreenNotifier2D` properties, plus 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
 A malformed `rect` (not a `Rect2(...)` literal) or `show_rect` (not `true`/`false`)

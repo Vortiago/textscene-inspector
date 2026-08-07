@@ -45,6 +45,7 @@ Strict parsing format-checks these `RetargetModifier3D` properties, plus 2 inher
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 | `valid-retargetmodifier3d-child-skeleton` (type-family match) | `retargetmodifier3d-no-child-skeleton` | warning |
 <!-- lint:end -->
 

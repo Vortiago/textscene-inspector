@@ -54,6 +54,8 @@ Strict parsing format-checks these `CharacterBody2D` properties, plus 5 inherite
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-characterbody2d` | `characterbody2d-needs-collision-shape` | warning |
 |  | `characterbody2d-floor-props-in-floating-mode` | warning |
 |  | `characterbody2d-zero-collision-layer` | warning |

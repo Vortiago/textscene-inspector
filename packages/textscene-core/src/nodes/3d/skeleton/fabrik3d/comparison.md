@@ -40,6 +40,8 @@ Strict parsing format-checks the inherited set (6 inherited from IterateIK3D, 1 
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
+| `valid-iterateik3d-target-node` (type-family match) | `iterateik3d-setting-missing-target-node` | warning |
 <!-- lint:end -->
 
 FABRIK3D declares no validator of its own, because Godot gives it no property of its

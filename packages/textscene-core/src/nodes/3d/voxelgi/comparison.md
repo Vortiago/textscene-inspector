@@ -44,6 +44,7 @@ Strict parsing format-checks these `VoxelGI` properties, plus 1 inherited from V
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-voxelgi-data` | `voxelgi-missing-data` | warning |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D`, which reads only `transform` and

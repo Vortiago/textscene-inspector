@@ -40,6 +40,8 @@ Strict parsing format-checks these `VisibleOnScreenEnabler2D` properties, plus 2
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
 The lenient parser reuses the base parser here and keeps every key in

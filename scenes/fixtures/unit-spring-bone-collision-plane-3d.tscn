@@ -7,9 +7,11 @@
 
 [node name="Root" type="Node3D"]
 
-[node name="Sim" type="SpringBoneSimulator3D" parent="."]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
 
-[node name="MySpringBoneCollisionPlane3D" type="SpringBoneCollisionPlane3D" parent="Sim"]
+[node name="Sim" type="SpringBoneSimulator3D" parent="Skeleton3D"]
+
+[node name="MySpringBoneCollisionPlane3D" type="SpringBoneCollisionPlane3D" parent="Skeleton3D/Sim"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 bone_name = &"Head"
 bone = 0

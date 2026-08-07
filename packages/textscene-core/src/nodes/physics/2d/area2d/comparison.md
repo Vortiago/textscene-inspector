@@ -60,6 +60,8 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-area2d` | `area2d-needs-collision-shape` | warning |
 |  | `area2d-inactive` | warning |
 |  | `area2d-monitoring-zero-layer` | warning |

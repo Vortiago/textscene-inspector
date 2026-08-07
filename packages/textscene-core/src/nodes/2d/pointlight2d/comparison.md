@@ -286,6 +286,8 @@ Strict parsing format-checks these `PointLight2D` properties, plus 15 inherited 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-pointlight2d-ranges` | `pointlight2d-requires-texture` | warning |
 |  | `pointlight2d-inverted-z-range` | warning |
 |  | `pointlight2d-inverted-layer-range` | warning |

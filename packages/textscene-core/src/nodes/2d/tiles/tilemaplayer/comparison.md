@@ -42,6 +42,8 @@ Strict parsing format-checks these `TileMapLayer` properties, plus 12 inherited 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-tilemaplayer` | `tilemaplayer-requires-tileset` | warning |
 |  | `valid-tilemaplayer-resources` | error |
 |  | `tilemaplayer-empty` | warning |

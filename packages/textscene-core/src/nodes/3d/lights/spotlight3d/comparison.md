@@ -57,6 +57,9 @@ Strict parsing format-checks these `SpotLight3D` properties, plus 15 inherited f
 | `valid-spotlight3d-properties` | `spotlight3d-negative-energy` | warning |
 |  | `spotlight3d-negative-range` | warning |
 |  | `spotlight3d-spot-angle-out-of-range` | warning |
+|  | `spotlight3d-shadow-angle-too-wide` | warning |
+|  | `spotlight3d-projector-without-shadow` | warning |
+| `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
 None of the four spot properties is enforced by Godot (`Light3D::set_param` guards the

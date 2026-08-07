@@ -398,6 +398,139 @@ shape = SubResource("shape_1")
     });
   });
 
+  describe('Semantic Validation (Shape/Body Compatibility)', () => {
+    it('warns on a ConcavePolygonShape3D under a RigidBody3D', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="ConcavePolygonShape3D" id="concave_1"]
+
+[node name="Ball" type="RigidBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("concave_1")
+`;
+      const diag = expectDiagnostic(content, {
+        ruleName: 'collisionshape3d-concave-under-rigidbody',
+        severity: 'warning',
+        nodeType: 'CollisionShape3D',
+        contains: ['ConcavePolygonShape3D', 'RigidBody3D'],
+      });
+      expect(diag.nodeName).toBe('Collision');
+    });
+
+    it('names VehicleBody3D specifically, since it is also a RigidBody3D', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="ConcavePolygonShape3D" id="concave_1"]
+
+[node name="Vehicle" type="VehicleBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("concave_1")
+`;
+      const diag = expectDiagnostic(content, {
+        ruleName: 'collisionshape3d-concave-under-rigidbody',
+        contains: ['VehicleBody3D'],
+      });
+      // Godot picks the more specific name once cast_to<VehicleBody3D> succeeds
+      // (collision_shape_3d.cpp:137-140); the generic "RigidBody3D" never appears.
+      expect(diag.message).not.toContain('RigidBody3D');
+    });
+
+    it('warns unconditionally regardless of freeze/freeze_mode ("except when frozen" is message prose only)', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="ConcavePolygonShape3D" id="concave_1"]
+
+[node name="Ball" type="RigidBody3D"]
+freeze = true
+freeze_mode = 0
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("concave_1")
+`;
+      expectDiagnostic(content, { ruleName: 'collisionshape3d-concave-under-rigidbody' });
+    });
+
+    it('warns on a WorldBoundaryShape3D under a RigidBody3D', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="WorldBoundaryShape3D" id="wb_1"]
+
+[node name="Ball" type="RigidBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("wb_1")
+`;
+      const diag = expectDiagnostic(content, {
+        ruleName: 'collisionshape3d-worldboundary-under-rigidbody',
+        severity: 'warning',
+        contains: ['WorldBoundaryShape3D', 'RigidBody3D'],
+      });
+      expect(diag.nodeName).toBe('Collision');
+    });
+
+    it('warns on a ConcavePolygonShape3D under a CharacterBody3D', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="ConcavePolygonShape3D" id="concave_1"]
+
+[node name="Player" type="CharacterBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("concave_1")
+`;
+      const diag = expectDiagnostic(content, {
+        ruleName: 'collisionshape3d-concave-under-characterbody',
+        severity: 'warning',
+        contains: ['ConcavePolygonShape3D', 'CharacterBody3D'],
+      });
+      expect(diag.nodeName).toBe('Collision');
+    });
+
+    it('does not warn about WorldBoundaryShape3D under a CharacterBody3D (Godot has no such check)', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="WorldBoundaryShape3D" id="wb_1"]
+
+[node name="Player" type="CharacterBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("wb_1")
+`;
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-worldboundary-under-rigidbody' });
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-concave-under-characterbody' });
+    });
+
+    it('does not warn on a ConcavePolygonShape3D under a StaticBody3D, which suits it', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="ConcavePolygonShape3D" id="concave_1"]
+
+[node name="Ground" type="StaticBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("concave_1")
+`;
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-concave-under-rigidbody' });
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-concave-under-characterbody' });
+    });
+
+    it('does not warn on a Convex shape under a RigidBody3D', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="ConvexPolygonShape3D" id="convex_1"]
+
+[node name="Ball" type="RigidBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("convex_1")
+`;
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-concave-under-rigidbody' });
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-worldboundary-under-rigidbody' });
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle multiple validation errors', () => {
       const content = scene(

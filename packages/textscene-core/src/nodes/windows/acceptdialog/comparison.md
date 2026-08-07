@@ -42,6 +42,7 @@ Strict parsing format-checks these `AcceptDialog` properties, plus 45 inherited 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-viewport-size` (type-family match) | `viewport-size-too-small` | warning |
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | warning |
 <!-- lint:end -->
 

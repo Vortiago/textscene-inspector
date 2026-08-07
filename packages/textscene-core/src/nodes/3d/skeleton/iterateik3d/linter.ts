@@ -1,0 +1,79 @@
+/**
+ * Semantic linter rule for IterateIK3D, from Godot's own configuration
+ * warning, `IterateIK3D::get_configuration_warnings()` (iterate_ik_3d.cpp:158-167):
+ *
+ *     for (uint32_t i = 0; i < iterate_settings.size(); i++) {
+ *         if (iterate_settings[i]->target_node.is_empty()) {
+ *             warnings.push_back(RTR("Detecting settings with no target set! "
+ *                                    "IterateIK3D must have a target to work."));
+ *             break;
+ *         }
+ *     }
+ *
+ * Registered under the abstract key `IterateIK3D`, which Godot cannot
+ * instantiate (no `.tscn` ever names it — see `iterateik3d/linterParser.ts`'s
+ * docblock), so `applicableNodeTypeMatcher` + `descendsFrom` reaches its 3
+ * concrete subclasses: CCDIK3D, FABRIK3D, JacobianIK3D. None of them override
+ * `get_configuration_warnings`, so all 3 inherit this check unchanged.
+ *
+ * Not cosmetic: `_process_ik` resolves `target_node` and abandons the setting
+ * when nothing comes back (iterate_ik_3d.cpp:509-511, `if (!target || ...)
+ * continue; // Abort.`), so a target-less setting iterates never — the modifier
+ * looks configured while doing nothing for that chain.
+ */
+
+import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
+import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
+import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+
+const RULE_NAME = 'iterateik3d-setting-missing-target-node';
+
+function checkIterateIK3D(context: RuleContext): Diagnostic[] {
+  const { node } = context;
+  if (!isValidProperties(node.properties)) return [];
+  const rawProps = node.properties as Record<string, string>;
+
+  // Absent means zero: the setting array starts empty (ik_modifier_3d.h:69),
+  // which is the XML's default="0" for setting_count.
+  const countRaw = rawProps.setting_count;
+  const count = countRaw === undefined ? 0 : parseInt(countRaw, 10);
+  // A malformed setting_count is the validator's own diagnostic.
+  if (Number.isNaN(count)) return [];
+
+  const missing: number[] = [];
+  for (let index = 0; index < count; index++) {
+    const raw = rawProps[`settings/${index}/target_node`];
+    if (raw === undefined || extractNodePath(raw) === null) missing.push(index);
+  }
+  if (missing.length === 0) return [];
+
+  return [
+    {
+      severity: 'warning',
+      message:
+        `${node.type} '${node.name}' setting(s) ${missing.join(', ')} have no target_node. ` +
+        "IterateIK3D resolves 'settings/<i>/target_node' during IK solving and skips a setting " +
+        'with none (iterate_ik_3d.cpp:511), so this chain of bones is never posed.',
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: RULE_NAME,
+    },
+  ];
+}
+
+const iterateIK3DTargetRule: LintRule = {
+  meta: {
+    name: 'valid-iterateik3d-target-node',
+    description:
+      'Warns when an IterateIK3D-family setting names no target_node, the configuration Godot itself flags and then skips',
+    category: 'validation',
+    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'IterateIK3D'),
+    emits: [{ ruleName: RULE_NAME, severity: 'warning' }],
+  },
+  check: checkIterateIK3D,
+};
+
+ruleRegistry.register(iterateIK3DTargetRule);
+
+export { iterateIK3DTargetRule };

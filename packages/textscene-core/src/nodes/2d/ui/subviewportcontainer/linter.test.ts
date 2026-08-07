@@ -91,6 +91,40 @@ size = Vector2i(200, 150)
       );
     });
 
+    it('warns when mouse_default_cursor_shape is set away from Arrow (subviewport_container.cpp:283)', () => {
+      const content = containerScene(`
+mouse_default_cursor_shape = 2
+[node name="View" type="SubViewport" parent="Booth"]
+size = Vector2i(200, 150)
+`);
+      expectDiagnostic(content, {
+        ruleName: 'subviewportcontainer-non-arrow-cursor',
+        severity: 'warning',
+      });
+      expectNoErrors(content);
+    });
+
+    it('stays silent when mouse_default_cursor_shape is absent (defaults to Arrow, control.h:245)', () => {
+      expectNoDiagnostic(
+        containerScene(`
+[node name="View" type="SubViewport" parent="Booth"]
+size = Vector2i(200, 150)
+`),
+        { ruleName: 'subviewportcontainer-non-arrow-cursor' }
+      );
+    });
+
+    it('stays silent when mouse_default_cursor_shape is explicitly Arrow (0)', () => {
+      expectNoDiagnostic(
+        containerScene(`
+mouse_default_cursor_shape = 0
+[node name="View" type="SubViewport" parent="Booth"]
+size = Vector2i(200, 150)
+`),
+        { ruleName: 'subviewportcontainer-non-arrow-cursor' }
+      );
+    });
+
     it('stays silent when a child is an instance — the file cannot see inside it', () => {
       // Instance-opaque linting (CONTEXT.md): the instanced sub-scene's root may
       // well BE a SubViewport, and the linter never resolves across an instance

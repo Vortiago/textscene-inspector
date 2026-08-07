@@ -21,8 +21,8 @@ show, and that absence is the whole story.
 | Property | Value | Effect |
 | --- | --- | --- |
 | `setting_count` | `1` | one solver chain on this node |
-| `settings/0/target_node` | `NodePath("../Target")` | the node the end bone reaches for |
-| `settings/0/pole_node` | `NodePath("../Pole")` | the node the pole is aimed at, fixing the elbow plane |
+| `settings/0/target_node` | `NodePath("../../Target")` | the node the end bone reaches for |
+| `settings/0/pole_node` | `NodePath("../../Pole")` | the node the pole is aimed at, fixing the elbow plane |
 | `settings/0/root_bone_name` | `"UpperArm"` | shoulder joint, by name |
 | `settings/0/root_bone` | `0` | the same joint as a bone index |
 | `settings/0/middle_bone_name` | `"LowerArm"` | elbow joint, by name |
@@ -54,8 +54,10 @@ Strict parsing format-checks these `TwoBoneIK3D` properties, plus 1 inherited fr
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 | `valid-twoboneik3d-settings` (type-family match) | `twoboneik3d-setting-index-out-of-range` | warning |
 |  | `twoboneik3d-pole-direction-vector-ignored` | warning |
+|  | `twoboneik3d-setting-missing-target-node` | warning |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D`, so it reads the node's transform and

@@ -280,6 +280,70 @@ describe('SpotLight3D Linter', () => {
     });
   });
 
+  // light_3d.cpp:655: `has_shadow() && get_param(PARAM_SPOT_ANGLE) >= 90.0`
+  describe('shadow angle too wide', () => {
+    it('warns when shadow_enabled is true and spot_angle is exactly 90', () => {
+      expectDiagnostic(scene(node('SpotLight3D', { shadow_enabled: true, spot_angle: 90 })), {
+        ruleName: 'spotlight3d-shadow-angle-too-wide',
+        severity: 'warning',
+      });
+    });
+
+    it('warns when shadow_enabled is true and spot_angle is above 90', () => {
+      expectDiagnostic(scene(node('SpotLight3D', { shadow_enabled: true, spot_angle: 150 })), {
+        ruleName: 'spotlight3d-shadow-angle-too-wide',
+        severity: 'warning',
+      });
+    });
+
+    it('does not warn when shadow_enabled is true and spot_angle is below 90', () => {
+      expectNoDiagnostic(scene(node('SpotLight3D', { shadow_enabled: true, spot_angle: 89 })), {
+        ruleName: 'spotlight3d-shadow-angle-too-wide',
+      });
+    });
+
+    it('does not warn when shadow_enabled is false, regardless of spot_angle', () => {
+      expectNoDiagnostic(scene(node('SpotLight3D', { shadow_enabled: false, spot_angle: 150 })), {
+        ruleName: 'spotlight3d-shadow-angle-too-wide',
+      });
+    });
+
+    it('does not warn when shadow_enabled is true and spot_angle is absent (default 45)', () => {
+      expectNoDiagnostic(scene(node('SpotLight3D', { shadow_enabled: true })), {
+        ruleName: 'spotlight3d-shadow-angle-too-wide',
+      });
+    });
+  });
+
+  // light_3d.cpp:659-661, same shape as OmniLight3D's
+  describe('projector without shadow', () => {
+    it('warns when light_projector is set and shadow_enabled is not true', () => {
+      expectDiagnostic(
+        scene(node('SpotLight3D', { light_projector: 'ExtResource("1_proj")', spot_angle: 45.0 })),
+        { ruleName: 'spotlight3d-projector-without-shadow', severity: 'warning' }
+      );
+    });
+
+    it('does not warn when light_projector is set and shadow_enabled is true', () => {
+      expectNoDiagnostic(
+        scene(
+          node('SpotLight3D', {
+            light_projector: 'ExtResource("1_proj")',
+            shadow_enabled: true,
+            spot_angle: 45.0,
+          })
+        ),
+        { ruleName: 'spotlight3d-projector-without-shadow' }
+      );
+    });
+
+    it('does not warn when light_projector is absent', () => {
+      expectNoDiagnostic(scene(node('SpotLight3D', { spot_angle: 45.0 })), {
+        ruleName: 'spotlight3d-projector-without-shadow',
+      });
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle node with no properties', () => {
       expectClean(scene(node('SpotLight3D')));

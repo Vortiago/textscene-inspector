@@ -1,38 +1,71 @@
 /**
  * Semantic linter rules for SubViewportContainer.
  *
- * The one condition worth flagging is structural: the container exists solely to
- * display its SubViewport children, so one with none draws nothing at all. No
- * format check can see that — it is a fact about the node's CHILDREN.
+ * 1. The structural check: the container exists solely to display its
+ * SubViewport children, so one with none draws nothing at all. No format
+ * check can see that — it is a fact about the node's CHILDREN.
  *
  * Deliberately NOT a rule: more than one SubViewport child. Godot's
  * `NOTIFICATION_DRAW` loops every SubViewport child and draws each, stacked in
  * tree order, so multiple children are legal rather than suspicious.
+ *
+ * 2. `SubViewportContainer::get_configuration_warnings()`
+ * (subviewport_container.cpp:268-286) also checks:
+ *
+ *     if (get_default_cursor_shape() != Control::CURSOR_ARROW) {
+ *         warnings.push_back(RTR("The default mouse cursor shape of
+ *             SubViewportContainer has no effect.\nConsider leaving it at its
+ *             initial value `CURSOR_ARROW`."));
+ *     }
+ *
+ * `mouse_default_cursor_shape` field-initialises to `CURSOR_ARROW` (0)
+ * (control.h:245), so an absent key means ARROW and never warns.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { isValidProperties } from '../../../../linter/linterUtils.js';
+
+// control.h:100-101, Control::CursorShape: CURSOR_ARROW = 0.
+const CURSOR_ARROW = 0;
 
 function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
   const children = node.children ?? [];
-  if (children.some((child) => child.type === 'SubViewport')) return diagnostics;
-
+  const hasSubViewport = children.some((child) => child.type === 'SubViewport');
   // Instance-opaque linting (CONTEXT.md): an `instance=` child is a childless,
   // typeless node here, and the sub-scene it points at may well be rooted at a
   // SubViewport. Staying silent beats false-positiving on a normal Godot idiom.
-  if (children.some((child) => child.instance)) return diagnostics;
+  const hasOpaqueChild = children.some((child) => child.instance);
 
-  diagnostics.push({
-    severity: 'warning',
-    message:
-      "SubViewportContainer has no SubViewport child, so it displays nothing. Add a SubViewport beneath it, or use a plain Container.",
-    nodeName: node.name,
-    nodeType: node.type,
-    ruleName: 'subviewportcontainer-no-viewport',
-  });
+  if (!hasSubViewport && !hasOpaqueChild) {
+    diagnostics.push({
+      severity: 'warning',
+      message:
+        "SubViewportContainer has no SubViewport child, so it displays nothing. Add a SubViewport beneath it, or use a plain Container.",
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'subviewportcontainer-no-viewport',
+    });
+  }
+
+  const props = isValidProperties(node.properties) ? node.properties : {};
+  const cursorRaw = props.mouse_default_cursor_shape;
+  if (cursorRaw !== undefined) {
+    const cursor = parseInt(cursorRaw, 10);
+    if (Number.isFinite(cursor) && cursor !== CURSOR_ARROW) {
+      diagnostics.push({
+        severity: 'warning',
+        message: `SubViewportContainer '${node.name}' sets 'mouse_default_cursor_shape' away from Arrow, but it has no effect on this node. Consider leaving it at its initial value.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: 'subviewportcontainer-non-arrow-cursor',
+      });
+    }
+  }
+
   return diagnostics;
 }
 
@@ -40,10 +73,13 @@ const subViewportContainerRule: LintRule = {
   meta: {
     name: 'valid-subviewportcontainer-children',
     description:
-      'Flags a SubViewportContainer with no SubViewport child, which renders an empty surface',
+      'Flags a SubViewportContainer with no SubViewport child, or a mouse_default_cursor_shape override that has no effect',
     category: 'validation',
     applicableNodeTypes: ['SubViewportContainer'],
-    emits: [{ ruleName: 'subviewportcontainer-no-viewport', severity: 'warning' }],
+    emits: [
+      { ruleName: 'subviewportcontainer-no-viewport', severity: 'warning' },
+      { ruleName: 'subviewportcontainer-non-arrow-cursor', severity: 'warning' },
+    ],
   },
   check: checkSubViewportContainer,
 };

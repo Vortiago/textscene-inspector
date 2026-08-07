@@ -9,51 +9,31 @@
  * ONLY what a VehicleBody3D adds to a RigidBody3D. `rigidBodyLinterRule` matches
  * on `descendsFrom`, so it already reaches this type and supplies the whole
  * shared body set (the physics_material_override reference, the collision-shape
- * requirement, the mass/damping bounds, the zero layer/mask advisories) exactly
- * once; repeating any of them here would report one condition under two rule
- * names. AnimatableBody3D relies on staticBodyLinterRule the same way.
+ * requirement, the mass/damping bounds, the zero layer/mask advisories, and —
+ * as of rigid_body_3d.cpp:667's per-axis scale check — the runtime-overridden-
+ * scale warning too) exactly once; repeating any of them here would report one
+ * condition under two rule names. AnimatableBody3D relies on staticBodyLinterRule
+ * the same way.
+ *
+ * This rule used to carry its own copy of the scale check
+ * (`vehiclebody3d-scaled-transform`), because `rigidBodyLinterRule` had not
+ * implemented rigid_body_3d.cpp:667 yet. Now that it has (reaching VehicleBody3D
+ * through the same `descendsFrom` matcher as everything else in this list), the
+ * copy here retired rather than double-warning every scaled VehicleBody3D.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
-import { tupleComponent } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 
-const TRANSFORM3D_REGEX = makeFloatTupleRegex('Transform3D', 12);
-
-/** Godot's own tolerance in RigidBody3D::get_configuration_warnings(). */
-const SCALE_EPSILON = 0.05;
-
-/**
- * Basis column lengths of a `Transform3D(...)` literal, or null if unparsable.
- * The first nine numbers are the basis ROWS (utils/transform.ts documents the
- * convention); column length is the scale along each axis.
- *
- * A non-finite entry is a value, not a parse failure: Godot's own check is
- * `abs(scale.axis - 1) > 0.05` on those same lengths, which is TRUE for an
- * infinite column and FALSE for a `nan` one. Reading the components with
- * `parseFloat` collapsed both to NaN and skipped the check entirely.
- */
-function basisScale(raw: string): [number, number, number] | null {
-  const match = TRANSFORM3D_REGEX.exec(raw);
-  if (!match) return null;
-  const n = match.slice(1, 10).map(tupleComponent);
-  const col = (i: number): number => Math.hypot(n[i]!, n[i + 3]!, n[i + 6]!);
-  return [col(0), col(1), col(2)];
-}
-
 export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `VehicleBody${dim}`;
-  const shapeType = `CollisionShape${dim}`;
   const wheelType = `VehicleWheel${dim}`;
   const prefix = `vehiclebody${dimSuffix(dim)}`;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     const { node } = context;
-
-    const rawProps = node.properties as unknown as Record<string, string>;
 
     // A vehicle body is driven entirely by its wheels: with none, engine_force
     // and steering do nothing at all and the body behaves as a plain RigidBody3D.
@@ -73,23 +53,9 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
-    // Godot warns on this for every RigidBody3D, and VehicleBody3D inherits it:
-    // "Scale changes to RigidBody3D will be overridden by the physics engine when
-    // running. Please change the size in children collision shapes instead."
-    // rigidBodyLinterRule does not implement it, so it is this rule's to carry.
-    if (rawProps.transform !== undefined) {
-      const scale = basisScale(rawProps.transform);
-      if (scale !== null && scale.some((s) => Math.abs(s - 1) > SCALE_EPSILON)) {
-        const shown = scale.map((s) => Number(s.toFixed(3))).join(', ');
-        diagnostics.push({
-          severity: 'warning',
-          message: `${type} '${node.name}' has a scaled transform (${shown}). The physics engine overrides scale on a body at runtime; size the child ${shapeType} instead.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-scaled-transform`,
-        });
-      }
-    }
+    // The scale check (rigid_body_3d.cpp:667) used to live here — see this
+    // file's docblock for why it moved to `rigidBodyLinterRule`, which now
+    // reaches VehicleBody3D on its own.
 
     return diagnostics;
   }
@@ -97,13 +63,10 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
   return {
     meta: {
       name: `valid-${prefix}`,
-      description: `Validates that a ${type} has wheels and an unscaled transform`,
+      description: `Validates that a ${type} has wheels`,
       category: 'validation',
       applicableNodeTypes: [type],
-      emits: [
-        { ruleName: `${prefix}-needs-wheels`, severity: 'warning' },
-        { ruleName: `${prefix}-scaled-transform`, severity: 'warning' },
-      ],
+      emits: [{ ruleName: `${prefix}-needs-wheels`, severity: 'warning' }],
     },
     check,
   };

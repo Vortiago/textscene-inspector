@@ -18,6 +18,9 @@ import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
 import { rangeAdvisories } from '../rangeAdvisory.js';
+import { basisColumnScalesGodotFloat } from './basisColumnScales.js';
+import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
+import { tupleComponent } from '../validators/commonValidators.js';
 
 /**
  * `mass` hint, rigid_body_2d.cpp:742 / rigid_body_3d.cpp:764 —
@@ -26,6 +29,36 @@ import { rangeAdvisories } from '../rangeAdvisory.js';
  * ERR_FAIL_COND in the setter (:318 / :334) and is linterParser.ts's error.
  */
 const MASS_HINT_MIN = 0.001;
+
+/**
+ * Per-axis scale tolerance, shared by both dimensions: rigid_body_3d.cpp:667
+ * and rigid_body_2d.cpp:648, `Math::abs(scale.n - 1.0) > 0.05`. NOT the
+ * pairwise x≈y≈z uniformity test `collisionobject3d-non-uniform-scale` and
+ * `collisionshape3d-non-uniform-scale` run (collision_object_3d.cpp:744,
+ * collision_shape_3d.cpp:155) — a UNIFORM (2,2,2) scale trips this one too.
+ *
+ * Declared locally (matching `MASS_HINT_MIN` above) rather than in
+ * `godot/math.ts`: this repo's engine-facts module has no home for it yet,
+ * flagged as a `godot/math.ts` candidate rather than added here on this
+ * rule's own authority.
+ */
+const RIGID_BODY_SCALE_TOLERANCE = 0.05;
+
+const SCALE_VECTOR2_RE = makeFloatTupleRegex('Vector2', 2);
+
+/**
+ * Node2D's own `scale` (node_2d.cpp:499), defaulting to `(1, 1)` when absent —
+ * the field default (node_2d.h:39) and the serialised default agree, so an
+ * absent key is never the trigger. `transform` is NOT read as a fallback:
+ * unlike Node3D, Node2D's `transform` ADD_PROPERTY carries
+ * `PROPERTY_USAGE_NONE` (node_2d.cpp:501) and is never written by the engine.
+ */
+function parseScale2D(raw: string | undefined): { x: number; y: number } {
+  if (raw === undefined) return { x: 1, y: 1 };
+  const match = SCALE_VECTOR2_RE.exec(raw);
+  if (!match) return { x: 1, y: 1 }; // malformed is linterParser.ts's job, not this rule's
+  return { x: tupleComponent(match[1]), y: tupleComponent(match[2]) };
+}
 
 export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `RigidBody${dim}`;
@@ -105,6 +138,63 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
 
     pushZeroCollisionLayerMaskWarnings(diagnostics, node, rawProps, type, prefix);
 
+    // Warning: per-axis scale the physics engine overrides at runtime (3D —
+    // rigid_body_3d.cpp:667; the 2D counterpart is the branch below). Reaches
+    // VehicleBody3D too, via the matcher below.
+    if (dim === '3D' && rawProps.transform !== undefined) {
+      // Godot-float-grammar parsing, not `basisColumnScales`: rigid_body_3d.cpp:667
+      // measures `abs(scale.axis - 1) > 0.05`, which is true for an infinite
+      // basis column and false for a `nan` one — a distinction
+      // `basisColumnScales.ts`'s docblock explains this variant exists to keep.
+      const scales = basisColumnScalesGodotFloat(rawProps.transform);
+      if (scales) {
+        const [sx, sy, sz] = scales;
+        const overridden =
+          Math.abs(sx - 1) > RIGID_BODY_SCALE_TOLERANCE ||
+          Math.abs(sy - 1) > RIGID_BODY_SCALE_TOLERANCE ||
+          Math.abs(sz - 1) > RIGID_BODY_SCALE_TOLERANCE;
+        if (overridden) {
+          const shown = [sx, sy, sz].map((s) => Number(s.toFixed(3))).join(', ');
+          diagnostics.push({
+            severity: 'warning',
+            message:
+              `${type} '${node.name}' has a scaled transform (${shown}). ` +
+              'Scale changes to RigidBody3D will be overridden by the physics engine when running. ' +
+              'Change the size in its children collision shapes instead.',
+            nodeName: node.name,
+            nodeType: node.type,
+            ruleName: `${prefix}-scale-overridden-at-runtime`,
+          });
+        }
+      }
+    }
+
+    // Warning: per-axis scale the physics engine overrides at runtime (2D —
+    // rigid_body_2d.cpp:648, `Math::abs(t.columns[n].length() - 1.0) > 0.05`).
+    // `columns[n].length()` is the UNSIGNED axis magnitude, which for a
+    // discrete position/rotation/scale/skew transform equals `|scale.n|`
+    // regardless of rotation or skew (neither changes a column's length) — so
+    // reading `scale` directly reproduces it without composing a matrix.
+    // Reaches PhysicalBone2D too, which inherits this check unchanged
+    // (physical_bone_2d.cpp:109, `RigidBody2D::get_configuration_warnings()`).
+    if (dim === '2D') {
+      const scale = parseScale2D(rawProps.scale);
+      const sx = Math.abs(scale.x);
+      const sy = Math.abs(scale.y);
+      if (Math.abs(sx - 1) > RIGID_BODY_SCALE_TOLERANCE || Math.abs(sy - 1) > RIGID_BODY_SCALE_TOLERANCE) {
+        diagnostics.push({
+          severity: 'warning',
+          message:
+            `${type} '${node.name}' has scale (${scale.x}, ${scale.y}). ` +
+            'Size changes to RigidBody2D will be overridden by the physics engine when running. ' +
+            'Change the size in its children collision shapes instead.',
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: `${prefix}-scale-overridden-at-runtime`,
+        });
+      }
+    }
+
     return diagnostics;
   }
 
@@ -121,6 +211,8 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
         { ruleName: `${prefix}-max-contacts-without-monitor`, severity: 'warning' },
         { ruleName: `${prefix}-zero-collision-layer`, severity: 'warning' },
         { ruleName: `${prefix}-zero-collision-mask`, severity: 'warning' },
+        // Dimension-gated: each instantiation emits only its own branch above.
+        { ruleName: `${prefix}-scale-overridden-at-runtime`, severity: 'warning' },
       ],
     },
     check,

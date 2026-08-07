@@ -60,6 +60,11 @@ Strict parsing format-checks these `Bone2D` properties, plus 12 inherited from N
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-bone2d-ancestry` | `bone2d-chain-does-not-terminate` | warning |
+|  | `bone2d-invalid-parent` | warning |
+|  | `bone2d-missing-rest-pose` | warning |
 <!-- lint:end -->
 
 Nothing here is a rendering breaker, so the two parsers part company quietly.

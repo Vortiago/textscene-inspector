@@ -195,6 +195,69 @@ describe('TwoBoneIK3D semantic rules', () => {
     expect(diagnostic.message).toContain('setting(s) 1 ');
   });
 
+  it('warns once when a setting has no target_node at all (key absent)', () => {
+    const diagnostic = expectDiagnostic(
+      scene(node('TwoBoneIK3D', { setting_count: 1, 'settings/0/root_bone': 0 })),
+      { ruleName: 'twoboneik3d-setting-missing-target-node', severity: 'warning' }
+    );
+    expect(diagnostic.message).toContain('setting(s) 0');
+  });
+
+  it('warns on an explicitly empty NodePath, the same unset value as absence', () => {
+    expectDiagnostic(
+      scene(node('TwoBoneIK3D', { setting_count: 1, 'settings/0/target_node': 'NodePath("")' })),
+      { ruleName: 'twoboneik3d-setting-missing-target-node' }
+    );
+  });
+
+  it('names every setting missing a target, not just the first', () => {
+    const diagnostic = expectDiagnostic(
+      scene(
+        node('TwoBoneIK3D', {
+          setting_count: 3,
+          'settings/1/target_node': 'NodePath("../Target")',
+        })
+      ),
+      { ruleName: 'twoboneik3d-setting-missing-target-node' }
+    );
+    expect(diagnostic.message).toContain('0, 2');
+  });
+
+  it('emits ONE diagnostic, never a second "pole target" one — Godot\'s second loop is a copy-paste bug that never reads pole_node', () => {
+    const diagnostics = lint(
+      scene(
+        node('TwoBoneIK3D', {
+          setting_count: 1,
+          // pole_node is present and non-empty; only target_node is missing.
+          'settings/0/pole_node': 'NodePath("../Pole")',
+        })
+      )
+    );
+    const missingTargetWarnings = diagnostics.filter(
+      (d) => d.ruleName === 'twoboneik3d-setting-missing-target-node'
+    );
+    expect(missingTargetWarnings).toHaveLength(1);
+  });
+
+  it('stays quiet when target_node resolves for every setting in range', () => {
+    expectNoDiagnostic(scene(node('TwoBoneIK3D', VALID_SETTING)), {
+      ruleName: 'twoboneik3d-setting-missing-target-node',
+    });
+  });
+
+  it('does not double-report a setting already out of range', () => {
+    // Index 1 is both out of range AND would otherwise read as target-less;
+    // only the out-of-range diagnostic should name it.
+    const diagnostics = lint(
+      scene(node('TwoBoneIK3D', { setting_count: 1, 'settings/1/target_node': 'NodePath("../Target")' }))
+    );
+    const missingTargetWarning = diagnostics.find(
+      (d) => d.ruleName === 'twoboneik3d-setting-missing-target-node'
+    );
+    // Setting 0 (the only one IN range) has no target_node key, so it still warns.
+    expect(missingTargetWarning?.message).toContain('setting(s) 0');
+  });
+
   it('stays clean with setting_count set and no settings/<i>/… keys at all', () => {
     expectClean(scene(node('TwoBoneIK3D', { setting_count: 0 })));
   });

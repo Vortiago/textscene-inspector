@@ -180,20 +180,17 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'skeleton_2d.cpp:418',
       says: 'this Bone2D chain should end at a Skeleton2D node',
-      verdict: { unimplemented: 'ancestor walk through zero-or-more Bone2D to a terminating Skeleton2D' },
+      verdict: { rule: 'bone2d-chain-does-not-terminate' },
     },
     {
       at: 'skeleton_2d.cpp:420',
       says: 'a Bone2D only works with a Skeleton2D or another Bone2D as parent',
-      verdict: { unimplemented: 'parent must be Skeleton2D or Bone2D' },
+      verdict: { rule: 'bone2d-invalid-parent' },
     },
     {
       at: 'skeleton_2d.cpp:425',
       says: 'this bone lacks a proper REST pose',
-      verdict: {
-        unimplemented:
-          'rest is the all-zero Transform2D, not the identity default (skeleton_2d.h:48); an absent key must not warn',
-      },
+      verdict: { rule: 'bone2d-missing-rest-pose' },
     },
   ],
 
@@ -235,15 +232,12 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'canvas_item.cpp:1309',
       says: 'an ancestor clips its children, so this node cannot clip its own',
-      verdict: {
-        unimplemented:
-          'gated on the node\'s own clip_children_mode != DISABLED (canvas_item.cpp:1302), then an ancestor walk; reaches every CanvasItem descendant, both the Node2D and Control trees',
-      },
+      verdict: { rule: 'canvasitem-ancestor-clips-children' },
     },
     {
       at: 'canvas_item.cpp:1315',
       says: 'an ancestor is a CanvasGroup, so this node cannot clip its own children',
-      verdict: { unimplemented: 'same ancestor walk as :1309, stopping at the first CanvasGroup' },
+      verdict: { rule: 'canvasitem-ancestor-is-canvasgroup' },
     },
   ],
 
@@ -313,19 +307,13 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'collision_object_3d.cpp:739',
       says: 'needs a collision shape to detect anything',
-      verdict: {
-        unimplemented:
-          'PhysicalBone3D has no linter.ts of its own (chain is PhysicsBody3D -> CollisionObject3D) and no family rule reaches it',
-      },
+      verdict: { rule: 'physicalbone3d-needs-collision-shape' },
       appliesTo: ['PhysicalBone3D'],
     },
     {
       at: 'collision_object_3d.cpp:744',
       says: 'non-uniform scale will probably not function as expected',
-      verdict: {
-        unimplemented:
-          "the body's own transform scale, non-uniform across x/y/z; reuse basisColumnScales()+isZeroApprox as collisionShapeLinterRule.ts does; must reach Area3D, StaticBody3D, AnimatableBody3D, CharacterBody3D, PhysicalBone3D, RigidBody3D, VehicleBody3D",
-      },
+      verdict: { rule: 'collisionobject3d-non-uniform-scale' },
     },
   ],
 
@@ -389,17 +377,12 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'collision_shape_2d.cpp:182',
       says: 'One Way Collision is ignored under an Area2D',
-      verdict: {
-        unimplemented:
-          'one_way_collision true with an Area2D parent — distinct from the shipped one_way_collision_margin/one_way_collision pairing check',
-      },
+      verdict: { rule: 'collisionshape2d-one-way-ignored-under-area2d' },
     },
     {
       at: 'collision_shape_2d.cpp:188',
       says: 'has limited editing for polygon-based shapes, consider CollisionPolygon2D',
-      verdict: {
-        unimplemented: 'shape resolves to Convex/ConcavePolygonShape2D; suggest CollisionPolygon2D instead',
-      },
+      verdict: { rule: 'collisionshape2d-polygon-shape-limited-editing' },
     },
   ],
 
@@ -417,22 +400,17 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'collision_shape_3d.cpp:141',
       says: 'ConcavePolygonShape3D will likely not behave well for a RigidBody3D/VehicleBody3D',
-      verdict: {
-        unimplemented:
-          'shape resolves to ConcavePolygonShape3D under a RigidBody3D/VehicleBody3D parent; use referencedResourceType() as shapecast3d-concave-shape does — the guard is unconditional on freeze state, the "except when frozen" clause is message text only',
-      },
+      verdict: { rule: 'collisionshape3d-concave-under-rigidbody' },
     },
     {
       at: 'collision_shape_3d.cpp:143',
       says: "WorldBoundaryShape3D doesn't support RigidBody3D in a non-static mode",
-      verdict: {
-        unimplemented: 'shape resolves to WorldBoundaryShape3D under a RigidBody3D/VehicleBody3D parent',
-      },
+      verdict: { rule: 'collisionshape3d-worldboundary-under-rigidbody' },
     },
     {
       at: 'collision_shape_3d.cpp:149',
       says: 'ConcavePolygonShape3D will likely not behave well for a CharacterBody3D',
-      verdict: { unimplemented: 'shape resolves to ConcavePolygonShape3D under a CharacterBody3D parent' },
+      verdict: { rule: 'collisionshape3d-concave-under-characterbody' },
     },
     {
       at: 'collision_shape_3d.cpp:155',
@@ -445,7 +423,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'container.cpp:211',
       says: "plain Container doesn't display anything on its own",
-      verdict: { unimplemented: 'guard is the EXACT-class check get_class() == "Container" (container.cpp:210)' },
+      verdict: { rule: 'container-no-script' },
       appliesTo: ['Container'],
     },
   ],
@@ -454,10 +432,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'control.cpp:252',
       says: "tooltip won't be displayed because Mouse Filter is Ignore",
-      verdict: {
-        unimplemented:
-          "tooltip set while the node's OWN resolved mouse_filter is IGNORE; the default is per-subclass (Control itself STOP, Label and NinePatchRect override to IGNORE in their constructors) — resolve per-subclass the way basebutton/linter.ts's TOGGLE_MODE_ON_BY_DEFAULT does",
-      },
+      verdict: { rule: 'control-tooltip-ignored-by-mouse-filter' },
     },
   ],
 
@@ -516,14 +491,12 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'decal.cpp:188',
       says: 'has a Normal/ORM texture but no Albedo texture',
-      verdict: { unimplemented: 'texture_normal or texture_orm set while texture_albedo is absent' },
+      verdict: { rule: 'decal-normal-orm-without-albedo' },
     },
     {
       at: 'decal.cpp:192',
       says: "Cull Mask has no bits enabled, so the decal won't paint anything",
-      verdict: {
-        unimplemented: 'cull_mask == 0; layerBitmask validation range-checks only, never flags an all-zero mask',
-      },
+      verdict: { rule: 'decal-empty-cull-mask' },
     },
   ],
 
@@ -610,9 +583,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'gpu_particles_3d.cpp:363',
       says: 'nothing is visible because meshes have not been assigned to draw passes',
-      verdict: {
-        unimplemented: 'every draw_pass_N absent; today only a SET draw_pass_1 is validated, not "no pass at all"',
-      },
+      verdict: { rule: 'gpuparticles3d-no-draw-pass-mesh' },
     },
     {
       at: 'gpu_particles_3d.cpp:367',
@@ -668,10 +639,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'iterate_ik_3d.cpp:162',
       says: 'a setting has no target set',
-      verdict: {
-        unimplemented:
-          'any setting with empty target_node; CCDIK3D/FABRIK3D/JacobianIK3D override nothing, so all 3 inherit it — matcher on descendsFrom(t, "IterateIK3D")',
-      },
+      verdict: { rule: 'iterateik3d-setting-missing-target-node' },
     },
   ],
 
@@ -753,9 +721,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'label.cpp:634',
       says: 'autowrap under a Container needs a custom minimum size',
-      verdict: {
-        unimplemented: 'autowrap_mode set, under a Container parent, with custom_minimum_size still (0,0)',
-      },
+      verdict: { rule: 'label-autowrap-needs-custom-minimum-size' },
     },
     {
       at: 'label.cpp:655',
@@ -773,10 +739,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'light_3d.cpp:184',
       says: "a light's scale does not affect its visual size",
-      verdict: {
-        unimplemented:
-          "own scale != (1,1,1); reaches DirectionalLight3D, OmniLight3D, SpotLight3D via descendsFrom",
-      },
+      verdict: { rule: 'light3d-non-unit-scale' },
     },
   ],
 
@@ -810,7 +773,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'light_occluder_2d.cpp:270',
       says: 'an occluder polygon must be set to take effect',
-      verdict: { unimplemented: 'occluder resource property absent' },
+      verdict: { rule: 'lightoccluder2d-requires-occluder' },
     },
     {
       at: 'light_occluder_2d.cpp:274',
@@ -914,22 +877,17 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'navigation_obstacle_2d.cpp:333',
       says: 'does not support negative or zero global scaling',
-      verdict: {
-        unimplemented:
-          'reads get_global_scale(); needs a Node2D ancestor-transform composition helper (position/rotation/scale/skew are each serialised, node_2d.cpp:499-503)',
-      },
+      verdict: { rule: 'navigationobstacle2d-non-positive-global-scale' },
     },
     {
       at: 'navigation_obstacle_2d.cpp:337',
       says: 'agent radius can only be scaled uniformly',
-      verdict: {
-        unimplemented: 'non-uniform global scale with radius set; gated on the node\'s own radius > 0 (default 0.0, navigation_obstacle_2d.h:46)',
-      },
+      verdict: { rule: 'navigationobstacle2d-non-uniform-global-scale' },
     },
     {
       at: 'navigation_obstacle_2d.cpp:341',
       says: 'skew has no effect on the agent radius',
-      verdict: { unimplemented: 'global skew set with radius > 0' },
+      verdict: { rule: 'navigationobstacle2d-global-skew-ignored' },
     },
   ],
 
@@ -955,10 +913,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'navigation_region_2d.cpp:304',
       says: 'a NavigationPolygon resource must be set or created',
-      verdict: {
-        unimplemented:
-          'navigation_polygon absent, gated on visibility; Godot does NOT bake one at runtime — navigationRegionLinterRule.ts:6\'s comment claiming otherwise is wrong',
-      },
+      verdict: { rule: 'navigationregion2d-requires-navigation-polygon' },
     },
   ],
 
@@ -1014,9 +969,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'light_3d.cpp:624',
       says: 'projector texture only works with shadows active',
-      verdict: {
-        unimplemented: 'light_projector set (key is light_projector, light_3d.cpp:393) while shadow_enabled is false',
-      },
+      verdict: { rule: 'omnilight3d-projector-without-shadow' },
     },
     {
       at: 'light_3d.cpp:628',
@@ -1193,7 +1146,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'range.cpp:76',
       says: 'Exp Edit requires Min Value >= 0',
-      verdict: { unimplemented: 'exp_edit true with min_value < 0 (range.cpp:75); reaches Range and its concrete descendants' },
+      verdict: { rule: 'range-exp-edit-negative-min' },
     },
   ],
 
@@ -1201,7 +1154,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'remote_transform_2d.cpp:217',
       says: 'Path property must point to a valid Node2D node',
-      verdict: { unimplemented: 'remote_path absent, unresolvable, or not a Node2D' },
+      verdict: { rule: 'remotetransform2d-invalid-remote-path' },
     },
   ],
 
@@ -1209,7 +1162,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'remote_transform_3d.cpp:209',
       says: 'Remote Path property must point to a valid Node3D node',
-      verdict: { unimplemented: 'remote_path absent, unresolvable, or not a Node3D' },
+      verdict: { rule: 'remotetransform3d-invalid-remote-path' },
     },
   ],
 
@@ -1225,10 +1178,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'rigid_body_2d.cpp:648',
       says: 'size changes are overridden by the physics engine at runtime',
-      verdict: {
-        unimplemented:
-          'per-axis |scale-1| > 0.05; Node2D serialises scale directly (node_2d.cpp:502), there is no combined transform key',
-      },
+      verdict: { rule: 'rigidbody2d-scale-overridden-at-runtime' },
     },
   ],
 
@@ -1236,9 +1186,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'rigid_body_3d.cpp:667',
       says: 'scale changes are overridden by the physics engine at runtime',
-      verdict: {
-        unimplemented: 'per-axis |scale-1| > 0.05 (not the x=y=z uniformity test); reaches RigidBody3D + VehicleBody3D',
-      },
+      verdict: { rule: 'rigidbody3d-scale-overridden-at-runtime' },
     },
   ],
 
@@ -1246,10 +1194,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'scroll_container.cpp:784',
       says: 'is intended to work with a single child control',
-      verdict: {
-        unimplemented:
-          'more than one sortable Control child; as_sortable_control checks is_visible() LOCALLY, not is_visible_in_tree (container.cpp:143-155)',
-      },
+      verdict: { rule: 'scrollcontainer-not-single-child' },
     },
   ],
 
@@ -1286,10 +1231,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'skeleton_modifier_3d.cpp:36',
       says: 'Skeleton3D node not set; must be a child of Skeleton3D',
-      verdict: {
-        unimplemented:
-          'direct parent is not Skeleton3D (skeleton_modifier_3d.cpp:47-55); reuse parentTypeVerdict; largest gap, 19 concrete descendants',
-      },
+      verdict: { rule: 'skeletonmodifier3d-parent-not-skeleton3d' },
     },
   ],
 
@@ -1313,14 +1255,12 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'light_3d.cpp:656',
       says: 'an angle wider than 90 degrees cannot cast shadows',
-      verdict: {
-        unimplemented: 'shadow_enabled true and spot_angle >= 90 (guard is >=; message says "wider than")',
-      },
+      verdict: { rule: 'spotlight3d-shadow-angle-too-wide' },
     },
     {
       at: 'light_3d.cpp:660',
       says: 'projector texture only works with shadows active',
-      verdict: { unimplemented: 'light_projector set while shadow_enabled is false, same shape as OmniLight3D:624' },
+      verdict: { rule: 'spotlight3d-projector-without-shadow' },
     },
     {
       at: 'light_3d.cpp:664',
@@ -1346,7 +1286,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'subviewport_container.cpp:284',
       says: 'default mouse cursor shape has no effect',
-      verdict: { unimplemented: 'mouse_default_cursor_shape != ARROW (CURSOR_ARROW)' },
+      verdict: { rule: 'subviewportcontainer-non-arrow-cursor' },
     },
   ],
 
@@ -1354,25 +1294,22 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'tile_map.cpp:843',
       says: 'deprecated, superseded by TileMapLayer nodes',
-      verdict: { unimplemented: 'unconditional — every TileMap node' },
+      verdict: { rule: 'tilemap-deprecated' },
     },
     {
       at: 'tile_map.cpp:856',
       says: 'a Y-sorted layer shares a Z-index with a non-Y-sorted layer',
-      verdict: {
-        unimplemented:
-          'cross-layer y_sort/z_index consistency across layer_N/... (PropertyListHelper prefix "layer_", tile_map.cpp:1028-1035)',
-      },
+      verdict: { rule: 'tilemap-y-sort-z-index-conflict' },
     },
     {
       at: 'tile_map.cpp:865',
       says: 'a layer is Y-sorted, but Y-sort is not enabled on the TileMap itself',
-      verdict: { unimplemented: 'layer_N/y_sort_enabled true while the TileMap\'s own y_sort_enabled is false' },
+      verdict: { rule: 'tilemap-layer-y-sort-without-node' },
     },
     {
       at: 'tile_map.cpp:879',
       says: 'the TileMap is Y-sorted, but no layer has Y-sort enabled',
-      verdict: { unimplemented: "TileMap's own y_sort_enabled true while every layer_N/y_sort_enabled is false" },
+      verdict: { rule: 'tilemap-node-y-sort-without-layer' },
     },
     {
       at: 'tile_map.cpp:896',
@@ -1388,10 +1325,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'timer.cpp:205',
       says: 'very low wait times behave differently across frame rates',
-      verdict: {
-        unimplemented:
-          'wait_time < 0.05 - CMP_EPSILON and > 0 (timer.cpp:204); the <= 0 case is already an error via v.positiveFloat',
-      },
+      verdict: { rule: 'timer-low-wait-time' },
     },
   ],
 
@@ -1399,10 +1333,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'two_bone_ik_3d.cpp:196',
       says: 'a setting has no target set',
-      verdict: {
-        unimplemented:
-          'any setting with empty target_node; the second loop (two_bone_ik_3d.cpp:200-204, "no pole target set") re-tests target_node.is_empty() instead of pole_node — Godot\'s own copy-paste bug — so emit ONE diagnostic for the shared condition, not two',
-      },
+      verdict: { rule: 'twoboneik3d-setting-missing-target-node' },
     },
   ],
 
@@ -1410,10 +1341,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'viewport.cpp:3711',
       says: 'size must be at least 2 pixels on both dimensions to render anything',
-      verdict: {
-        unimplemented:
-          'size.x <= 1 || size.y <= 1; reaches SubViewport and the whole Window family (Window does not override get_configuration_warnings), 9 concrete types',
-      },
+      verdict: { rule: 'viewport-size-too-small' },
     },
   ],
 
@@ -1431,9 +1359,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'voxel_gi.cpp:548',
       says: 'no VoxelGI data set, so the node is disabled',
-      verdict: {
-        unimplemented: 'the ADD_PROPERTY name is data (voxel_gi.cpp:573), not the C++ member probe_data',
-      },
+      verdict: { rule: 'voxelgi-missing-data' },
     },
   ],
 
@@ -1551,8 +1477,15 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
  * Rows still in the `unimplemented` arm. Can only go DOWN: an entry leaves this
  * arm by becoming `{ rule }` once a `LintRule` exists and reaches every
  * concrete heir, never by being deleted or re-typed to a decline.
+ *
+ * Down from 45 in one pass. The one that remains is `CSGShape3D`'s
+ * empty-or-non-manifold check, and it is close to permanent: Godot decides it
+ * from the combined boolean brush (`csg_shape.cpp:981`, after `_get_brush()`
+ * folds the subtree at `:453-511`), which no scene file describes. A narrower
+ * rule for a CSG leaf's OWN degenerate geometry ships beside it, but that is a
+ * different condition and is deliberately not credited to this row.
  */
-const UNIMPLEMENTED_COUNT = 45;
+const UNIMPLEMENTED_COUNT = 1;
 
 /** Concrete, registered types a row applies to. */
 function concreteHeirs(declaringClass: string, row?: WarningRow): string[] {

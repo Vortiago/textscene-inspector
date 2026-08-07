@@ -41,6 +41,7 @@ Strict parsing format-checks these `ModifierBoneTarget3D` properties, plus 2 inh
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
 ModifierBoneTarget3D has no `parser.ts` of its own: `index.ts` registers `parseNode3D`

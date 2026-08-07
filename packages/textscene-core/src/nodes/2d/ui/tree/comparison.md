@@ -57,6 +57,9 @@ Strict parsing format-checks these `Tree` properties, plus 28 inherited from Con
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 | `valid-tree-scroll-hint` | `tree-tile-scroll-hint-without-hints` | warning |
 <!-- lint:end -->
 

@@ -53,6 +53,7 @@ Strict parsing format-checks these `CopyTransformModifier3D` properties, plus 2 
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
 CopyTransformModifier3D has no `parser.ts` of its own: it registers `parseNode3D` directly

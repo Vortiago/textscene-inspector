@@ -9,10 +9,15 @@
 ; `enable_all_child_collisions` is absent on setting 1, its default true, so the
 ; exclude list is the live one there and the explicit collision list is setting
 ; 0's.
+;
+; settings/1/center_node = NodePath("..") is one hop from the simulator itself,
+; so it resolves to Skeleton3D — the modifier's own required direct parent.
 
 [node name="Root" type="Node3D"]
 
-[node name="MySpringBoneSimulator3D" type="SpringBoneSimulator3D" parent="."]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MySpringBoneSimulator3D" type="SpringBoneSimulator3D" parent="Skeleton3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 external_force = Vector3(0, 0, 0.1)
 mutable_bone_axes = false
@@ -71,6 +76,6 @@ settings/1/joints/1/gravity_direction = Vector3(0, -1, 0)
 settings/1/exclude_collision_count = 1
 settings/1/exclude_collisions/0 = NodePath("Sphere")
 
-[node name="Sphere" type="SpringBoneCollisionSphere3D" parent="MySpringBoneSimulator3D"]
+[node name="Sphere" type="SpringBoneCollisionSphere3D" parent="Skeleton3D/MySpringBoneSimulator3D"]
 bone_name = &"Bone0"
 bone = 0

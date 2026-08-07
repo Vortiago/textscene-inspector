@@ -14,11 +14,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0)
 [node name="Pole" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1)
 
-[node name="MyTwoBoneIK3D" type="TwoBoneIK3D" parent="."]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyTwoBoneIK3D" type="TwoBoneIK3D" parent="Skeleton3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 setting_count = 1
-settings/0/target_node = NodePath("../Target")
-settings/0/pole_node = NodePath("../Pole")
+settings/0/target_node = NodePath("../../Target")
+settings/0/pole_node = NodePath("../../Pole")
 settings/0/root_bone_name = "UpperArm"
 settings/0/root_bone = 0
 settings/0/middle_bone_name = "LowerArm"

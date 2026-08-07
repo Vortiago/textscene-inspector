@@ -57,6 +57,8 @@ Strict parsing format-checks these `CanvasModulate` properties, plus 12 inherite
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
 `color` is the only property, and the lenient parser's `parseColor` falls back to white

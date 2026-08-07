@@ -52,6 +52,8 @@ Strict parsing format-checks these `OmniLight3D` properties, plus 15 inherited f
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 | `valid-omnilight3d-properties` | `omnilight3d-negative-energy` | warning |
 |  | `omnilight3d-negative-range` | warning |
+|  | `omnilight3d-projector-without-shadow` | warning |
+| `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
 Strict rejects only an `omni_shadow_mode` outside 0-1 as an error; `omni_range` and

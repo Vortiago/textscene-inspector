@@ -5,3 +5,4 @@
  * React/THREE-free.
  */
 import './linterParser.js';
+import './linter.js';

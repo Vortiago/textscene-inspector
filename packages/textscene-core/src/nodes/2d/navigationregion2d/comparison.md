@@ -39,7 +39,10 @@ Strict parsing format-checks these `NavigationRegion2D` properties, plus 12 inhe
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-navigationregion2d-resources` | `valid-navigationregion2d-resources` | error |
+|  | `navigationregion2d-requires-navigation-polygon` | warning |
 <!-- lint:end -->
 
 `navigation_polygon` has no fallback of its own: the parser passes the raw

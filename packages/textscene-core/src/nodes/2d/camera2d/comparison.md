@@ -69,6 +69,8 @@ Strict parsing format-checks these `Camera2D` properties, plus 12 inherited from
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-camera2d-properties` | `camera2d-multiple-enabled` | warning |
 |  | `camera2d-invalid-horizontal-limits` | warning |
 |  | `camera2d-invalid-vertical-limits` | warning |

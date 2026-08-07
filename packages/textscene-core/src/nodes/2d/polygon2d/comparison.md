@@ -66,6 +66,8 @@ Strict parsing format-checks these `Polygon2D` properties, plus 12 inherited fro
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
 Strict rejects a non-numeric `internal_vertex_count` or `invert_border`; the lenient

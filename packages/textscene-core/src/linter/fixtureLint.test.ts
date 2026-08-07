@@ -67,9 +67,22 @@ const UNIT_FIXTURE_WARNINGS: Readonly<Record<string, { rules: readonly string[];
     rules: ['staticbody3d-needs-collision-shape'],
     reason: 'the StaticBody3D holds CSG geometry rather than a CollisionShape3D; the fixture is about CSG boolean output, not collision',
   },
+  'unit-csg-mesh.tscn': {
+    rules: ['csgmesh3d-requires-mesh'],
+    reason: 'the NoMesh node is deliberately meshless, to pin that Godot renders nothing rather than crashing or showing a placeholder',
+  },
   'unit-animation-tree-stateless.tscn': {
     rules: ['animationtree-inactive'],
     reason: 'named for it: the tree is inactive on purpose, which is the advisory',
+  },
+  'unit-container.tscn': {
+    rules: ['container-no-script'],
+    reason:
+      'demonstrates the bare Container type itself — no script attached is exactly what container.cpp:210-211 warns about, and this fixture exists to show that a plain, unscripted Container renders as nothing',
+  },
+  'unit-tile-map.tscn': {
+    rules: ['tilemap-deprecated'],
+    reason: 'TileMap itself is unconditionally deprecated (tile_map.cpp:843); the fixture demonstrates the legacy type, not a defect',
   },
 };
 

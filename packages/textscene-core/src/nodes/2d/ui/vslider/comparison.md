@@ -52,7 +52,11 @@ Strict parsing format-checks the inherited set (5 inherited from Slider, 9 inher
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 | `valid-range-bounds` (type-family match) | `range-max-below-min` | warning |
+|  | `range-exp-edit-negative-min` | warning |
 <!-- lint:end -->
 
 `VSlider` has no strict counterpart for the `Range` or `Slider` properties, and

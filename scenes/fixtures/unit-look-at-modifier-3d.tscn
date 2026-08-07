@@ -15,10 +15,12 @@
 [node name="Target" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -3)
 
-[node name="MyLookAtModifier3D" type="LookAtModifier3D" parent="."]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyLookAtModifier3D" type="LookAtModifier3D" parent="Skeleton3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 influence = 0.75
-target_node = NodePath("../Target")
+target_node = NodePath("../../Target")
 bone_name = "Head"
 bone = 3
 forward_axis = 4

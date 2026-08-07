@@ -255,6 +255,64 @@ physics_material_override = ExtResource("ext_mat_1")
     });
   });
 
+  describe('Semantic Validation (Scale Overridden at Runtime — rigid_body_2d.cpp:648)', () => {
+    it('warns when scale.x is more than 0.05 away from 1', () => {
+      expectDiagnostic(
+        scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2(1.2, 1)' }), collisionShape2d),
+        {
+          ruleName: 'rigidbody2d-scale-overridden-at-runtime',
+          severity: 'warning',
+          contains: ['1.2', 'overridden by the physics engine'],
+        }
+      );
+    });
+
+    it('warns when scale.y is more than 0.05 away from 1', () => {
+      expectDiagnostic(
+        scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2(1, 2)' }), collisionShape2d),
+        { ruleName: 'rigidbody2d-scale-overridden-at-runtime', severity: 'warning' }
+      );
+    });
+
+    it('warns on a mirrored (negative) scale, since length() is unsigned', () => {
+      // scale.x = -1 has |scale.x| == 1, so it must NOT trip on x; only y does.
+      expectDiagnostic(
+        scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2(-1, -2)' }), collisionShape2d),
+        { ruleName: 'rigidbody2d-scale-overridden-at-runtime', severity: 'warning' }
+      );
+    });
+
+    it('says nothing about a pure mirror (scale (-1, 1)) — |scale| is 1 on both axes', () => {
+      const diagnostics = lint(
+        scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2(-1, 1)' }), collisionShape2d)
+      );
+      expect(diagnostics.filter((d) => d.ruleName === 'rigidbody2d-scale-overridden-at-runtime')).toEqual(
+        []
+      );
+    });
+
+    it('says nothing when scale is absent (default (1, 1))', () => {
+      expectClean(scene(node('RigidBody2D', { mass: 1.0 }), collisionShape2d));
+    });
+
+    it('says nothing when scale sits within the 0.05 tolerance', () => {
+      expectClean(
+        scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2(1.04, 0.96)' }), collisionShape2d)
+      );
+    });
+
+    // physical_bone_2d.cpp:109: `RigidBody2D::get_configuration_warnings()`,
+    // called as the base of PhysicalBone2D's own override, unchanged — this
+    // repo's `applicableNodeTypeMatcher` mirrors that by reaching every
+    // RigidBody2D descendant, not just the exact type.
+    it('reaches PhysicalBone2D, which inherits this check from RigidBody2D unchanged', () => {
+      expectDiagnostic(
+        scene(node('PhysicalBone2D', { scale: 'Vector2(2, 2)' }), collisionShape2d),
+        { ruleName: 'rigidbody2d-scale-overridden-at-runtime', severity: 'warning' }
+      );
+    });
+  });
+
   describe('Semantic Validation (Contact Monitor)', () => {
     it('should warn when max_contacts_reported set but contact_monitor=false', () => {
       expectDiagnostic(

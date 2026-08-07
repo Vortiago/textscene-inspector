@@ -37,17 +37,32 @@
  * exactly that state, so a scene Godot wrote never carries the pair, and
  * `get_pole_direction_vector` returns the axis the enum names rather than the
  * stored vector: what the file says and what the node does diverge silently.
+ *
+ * ## A setting with no target
+ *
+ * `get_configuration_warnings()` (two_bone_ik_3d.cpp:194-206) runs TWO loops
+ * over `tb_settings`, each testing `target_node.is_empty()`:
+ *
+ *   for (...) if (tb_settings[i]->target_node.is_empty()) { push("no target set"); break; }
+ *   for (...) if (tb_settings[i]->target_node.is_empty()) { push("no pole target set"); break; }
+ *
+ * The second loop is Godot's own copy-paste bug — it re-tests `target_node`
+ * and never looks at `pole_node` at all, so "no pole target set" can never
+ * fire for a reason distinct from the first message. One shared condition,
+ * emitted as ONE diagnostic here rather than two mirroring the duplicated text.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 
 /** Any `settings/<i>/…` leaf, whatever its depth. */
 const SETTING_KEY_RE = /^settings\/([+-]?\d+)\//;
 /** The one leaf whose write depends on a sibling. */
 const POLE_VECTOR_KEY_RE = /^settings\/([+-]?\d+)\/pole_direction_vector$/;
+/** `target_node`, indexed canonically like `POLE_DIRECTION_KEY_RE` below. */
+const TARGET_NODE_KEY_RE = /^settings\/([+-]?\d+)\/target_node$/;
 
 /**
  * The sibling a `pole_direction_vector` write depends on. The sign class matches
@@ -78,6 +93,25 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
 
   const outOfRange = new Set<number>();
   const ignoredVectors = new Set<number>();
+  const missingTargets = new Set<number>();
+
+  // `target_node`, indexed canonically for the same reason `poleDirections`
+  // below is: `_set`'s bare `to_int` (two_bone_ik_3d.cpp:37) resolves
+  // `settings/00/…` to the same setting as `settings/0/…`.
+  const targetNodes = new Map<number, string>();
+  for (const key of Object.keys(rawProps)) {
+    const m = TARGET_NODE_KEY_RE.exec(key);
+    if (!m) continue;
+    const at = Number(m[1]);
+    if (Number.isFinite(at)) targetNodes.set(at, rawProps[key]!);
+  }
+  // Absence is the trigger too — `target_node` is empty by default
+  // (two_bone_ik_3d.h) — so this walks every setting IN RANGE rather than
+  // only the keys a scene happens to write.
+  for (let i = 0; i < count; i++) {
+    const raw = targetNodes.get(i);
+    if (raw === undefined || extractNodePath(raw) === null) missingTargets.add(i);
+  }
 
   // `pole_direction` indexed CANONICALLY, by the number `_set` resolves the
   // index to, not by its text. `_set` reads it with a bare `to_int`
@@ -126,6 +160,19 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
     });
   }
 
+  if (missingTargets.size > 0) {
+    const indices = [...missingTargets].sort((a, b) => a - b).join(', ');
+    diagnostics.push({
+      severity: 'warning',
+      message:
+        `TwoBoneIK3D setting(s) ${indices} have no target_node. TwoBoneIK3D must have a target ` +
+        'to work (two_bone_ik_3d.cpp:196).',
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'twoboneik3d-setting-missing-target-node',
+    });
+  }
+
   if (ignoredVectors.size > 0) {
     const indices = [...ignoredVectors].sort((a, b) => a - b).join(', ');
     diagnostics.push({
@@ -154,6 +201,7 @@ const twoBoneIK3DValidationRule: LintRule = {
     emits: [
       { ruleName: 'twoboneik3d-setting-index-out-of-range', severity: 'warning' },
       { ruleName: 'twoboneik3d-pole-direction-vector-ignored', severity: 'warning' },
+      { ruleName: 'twoboneik3d-setting-missing-target-node', severity: 'warning' },
     ],
   },
   check: checkTwoBoneIK3D,

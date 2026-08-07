@@ -39,6 +39,8 @@ Strict parsing format-checks these `MultiMeshInstance2D` properties, plus 12 inh
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
 Given `multimesh = "res://grass.tres"` (a bare string instead of a `SubResource`/

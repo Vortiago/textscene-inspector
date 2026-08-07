@@ -17,7 +17,7 @@ Rotates one skeleton bone to face a target node. It draws nothing at runtime, so
 | Property | Value | Effect |
 | --- | --- | --- |
 | `influence` | `0.75` | SkeletonModifier3D's blend weight, reached through the base-walk rather than declared here |
-| `target_node` | `NodePath("../Target")` | the node the bone turns towards |
+| `target_node` | `NodePath("../../Target")` | the node the bone turns towards |
 | `bone_name` | `"Head"` | the bone the modifier drives |
 | `bone` | `3` | the index Godot resolves that name to |
 | `forward_axis` | `4` | +Z, the bone axis pointed at the target |
@@ -89,6 +89,7 @@ Strict parsing format-checks these `LookAtModifier3D` properties, plus 2 inherit
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 | `valid-lookatmodifier3d-rotation-axes` | `lookatmodifier3d-parallel-rotation-axes` | warning |
 <!-- lint:end -->
 

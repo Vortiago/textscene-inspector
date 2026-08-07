@@ -47,6 +47,8 @@ Strict parsing format-checks these `Skeleton2D` properties, plus 12 inherited fr
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
 Skeleton2D serialises exactly one key of its own, and it is easy to miss: `_bind_methods`

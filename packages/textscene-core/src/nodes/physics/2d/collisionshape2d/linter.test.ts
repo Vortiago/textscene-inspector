@@ -361,6 +361,80 @@ shape = SubResource("capsule_shape")
     });
   });
 
+  describe('One Way Collision ignored under Area2D (collisionshape2d-one-way-ignored-under-area2d)', () => {
+    it('warns when one_way_collision is true under an Area2D parent', () => {
+      const content = scene(
+        rectShape,
+        node('Area2D', {}, { name: 'Trigger' }),
+        node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: true }, { name: 'Collision', parent: '.' })
+      );
+      const diagnostic = expectDiagnostic(content, {
+        ruleName: 'collisionshape2d-one-way-ignored-under-area2d',
+        severity: 'warning',
+        nodeType: 'CollisionShape2D',
+        contains: ['Trigger', 'ignored'],
+      });
+      expect(diagnostic.nodeName).toBe('Collision');
+    });
+
+    it('says nothing when one_way_collision is false under an Area2D', () => {
+      expectNoDiagnostic(
+        scene(
+          rectShape,
+          node('Area2D', {}, { name: 'Trigger' }),
+          node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: '.' })
+        ),
+        { ruleName: 'collisionshape2d-one-way-ignored-under-area2d' }
+      );
+    });
+
+    it('says nothing when one_way_collision is true under a StaticBody2D', () => {
+      expectNoDiagnostic(
+        scene(
+          rectShape,
+          staticBody,
+          node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: true }, { name: 'Collision', parent: '.' })
+        ),
+        { ruleName: 'collisionshape2d-one-way-ignored-under-area2d' }
+      );
+    });
+  });
+
+  describe('polygon shape limited editing (collisionshape2d-polygon-shape-limited-editing)', () => {
+    it('warns when shape resolves to a ConvexPolygonShape2D', () => {
+      expectDiagnostic(
+        scene(
+          sub('ConvexPolygonShape2D', 'convex'),
+          staticBody,
+          node('CollisionShape2D', { shape: 'SubResource("convex")' }, { name: 'Collision', parent: '.' })
+        ),
+        {
+          ruleName: 'collisionshape2d-polygon-shape-limited-editing',
+          severity: 'warning',
+          contains: ['ConvexPolygonShape2D', 'CollisionPolygon2D'],
+        }
+      );
+    });
+
+    it('warns when shape resolves to a ConcavePolygonShape2D', () => {
+      expectDiagnostic(
+        scene(
+          sub('ConcavePolygonShape2D', 'concave'),
+          staticBody,
+          node('CollisionShape2D', { shape: 'SubResource("concave")' }, { name: 'Collision', parent: '.' })
+        ),
+        { ruleName: 'collisionshape2d-polygon-shape-limited-editing', severity: 'warning' }
+      );
+    });
+
+    it('says nothing for a RectangleShape2D', () => {
+      expectNoDiagnostic(
+        scene(rectShape, staticBody, node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: '.' })),
+        { ruleName: 'collisionshape2d-polygon-shape-limited-editing' }
+      );
+    });
+  });
+
   describe('Semantic Validation (Transform Scale)', () => {
     it('does not warn on a non-uniformly scaled node — collision_shape_2d.cpp has no such check', () => {
       expectNoDiagnostic(
@@ -416,14 +490,15 @@ shape = SubResource("capsule_shape")
     });
 
     it('should handle all common 2D shape types', () => {
+      // Convex/ConcavePolygonShape2D are exercised separately below — Godot
+      // itself warns on them (collision_shape_2d.cpp:184-189), so they are not
+      // an "accept clean" case any more.
       const content = `[gd_scene format=3]
 
 [sub_resource type="RectangleShape2D" id="rectangle"]
 [sub_resource type="CircleShape2D" id="circle"]
 [sub_resource type="CapsuleShape2D" id="capsule"]
 [sub_resource type="SegmentShape2D" id="segment"]
-[sub_resource type="ConvexPolygonShape2D" id="convex"]
-[sub_resource type="ConcavePolygonShape2D" id="concave"]
 
 [node name="StaticBody" type="StaticBody2D"]
 
@@ -438,12 +513,6 @@ shape = SubResource("capsule")
 
 [node name="SegmentCollision" type="CollisionShape2D" parent="."]
 shape = SubResource("segment")
-
-[node name="ConvexCollision" type="CollisionShape2D" parent="."]
-shape = SubResource("convex")
-
-[node name="ConcaveCollision" type="CollisionShape2D" parent="."]
-shape = SubResource("concave")
 `;
       expectClean(content);
     });

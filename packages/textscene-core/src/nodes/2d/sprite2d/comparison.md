@@ -64,6 +64,8 @@ Strict parsing format-checks these `Sprite2D` properties, plus 12 inherited from
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-sprite2d-resources` | `sprite2d-requires-texture` | warning |
 |  | `valid-sprite2d-resources` | error |
 |  | `sprite2d-frame-range` | warning |

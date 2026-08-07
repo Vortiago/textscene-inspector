@@ -54,6 +54,10 @@ Strict parsing format-checks these `ScrollContainer` properties, plus 28 inherit
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-scrollcontainer-single-child` | `scrollcontainer-not-single-child` | warning |
 <!-- lint:end -->
 
 `ScrollContainer` doesn't validate its scroll-mode enums either: `horizontal_scroll_mode`

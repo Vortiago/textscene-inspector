@@ -13,12 +13,23 @@ import { StrictTscnParser } from '../../../../linter/StrictTscnParser';
 import { readFixture } from '../../../../linter/testing/fixtureCheck';
 import { lookAtModifier3DAxisRule } from './linter';
 import './linterParser';
+import type { TscnNode } from '../../../../parser/types';
+
+/** Depth-first search for the first node of `type`, at any depth. */
+function findByType(node: TscnNode, type: string): TscnNode | undefined {
+  if (node.type === type) return node;
+  for (const child of node.children) {
+    const found = findByType(child, type);
+    if (found) return found;
+  }
+  return undefined;
+}
 
 /** Every diagnostic the rule reports for the LookAtModifier3D in `content`. */
 function warningsFor(content: string) {
   const { scene } = new StrictTscnParser().parse(content);
   if (!scene) throw new Error('fixture failed to parse');
-  const node = scene.nodes[0]?.children.find((child) => child.type === 'LookAtModifier3D');
+  const node = scene.nodes[0] && findByType(scene.nodes[0], 'LookAtModifier3D');
   expect(node, 'the fixture text must contain a LookAtModifier3D child').toBeDefined();
   return lookAtModifier3DAxisRule.check({ scene, node: node!, properties: node!.properties });
 }

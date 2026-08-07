@@ -35,7 +35,7 @@ means to the solver.
 | `settings/0/root_bone_name` | `"Root"` | the chain's first bone (ChainIK3D's half of the family) |
 | `settings/0/end_bone_name` | `"Tip"` | the chain's last bone |
 | `settings/0/end_bone/length` | `0.1` | 0.1 m of extension past the end bone |
-| `settings/0/target_node` | `NodePath("../Target")` | what the effector reaches for (IterateIK3D's half) |
+| `settings/0/target_node` | `NodePath("../../Target")` | what the effector reaches for (IterateIK3D's half) |
 
 `angular_delta_limit` is the one to read twice. Its hint is `"0,180,0.001,
 radians_as_degrees"`, so the inspector shows degrees while the `.tscn` stores radians:
@@ -58,6 +58,8 @@ Strict parsing format-checks the inherited set (6 inherited from IterateIK3D, 1 
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
+| `valid-iterateik3d-target-node` (type-family match) | `iterateik3d-setting-missing-target-node` | warning |
 <!-- lint:end -->
 
 JacobianIK3D declares no validators and no semantic rules, and never will: the class

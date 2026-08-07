@@ -47,6 +47,8 @@ Strict parsing format-checks these `CanvasGroup` properties, plus 12 inherited f
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-canvasgroup-ancestry` | `canvasgroup-ancestor-clips-children` | warning |
 |  | `canvasgroup-nested-in-canvasgroup` | warning |
 <!-- lint:end -->

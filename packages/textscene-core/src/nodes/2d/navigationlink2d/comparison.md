@@ -46,6 +46,8 @@ Strict parsing format-checks these `NavigationLink2D` properties, plus 12 inheri
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-navigationlink2d-endpoints` | `navigationlink2d-coincident-endpoints` | warning |
 <!-- lint:end -->
 

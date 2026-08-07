@@ -32,7 +32,7 @@ mesh = SubResource("PlaneMesh_shared")
 surface_material_override/0 = SubResource("Material_ao_disabled")
 
 [node name="DirectionalLight" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.707, -0.5, 0.5, 0, 0.707, 0.707, -0.707, -0.5, 0.5, 0, 8, 4)
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 0, 8, 4)
 light_energy = 2.0
 
 [node name="Title" type="Label3D" parent="."]

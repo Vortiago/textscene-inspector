@@ -46,6 +46,8 @@ Strict parsing format-checks these `RayCast2D` properties, plus 12 inherited fro
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-raycast2d` | `raycast2d-no-collide-target` | warning |
 |  | `raycast2d-zero-mask` | warning |
 <!-- lint:end -->

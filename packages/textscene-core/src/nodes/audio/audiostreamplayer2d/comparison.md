@@ -51,6 +51,8 @@ Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inh
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-audiostreamplayer2d-properties` | `audiostreamplayer2d-missing-stream` | warning |
 |  | `audiostreamplayer2d-missing-stream-resource` | error |
 |  | `audiostreamplayer2d-autoplay-without-stream` | warning |

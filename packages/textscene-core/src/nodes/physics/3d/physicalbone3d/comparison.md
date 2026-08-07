@@ -70,6 +70,8 @@ Strict parsing format-checks these `PhysicalBone3D` properties, plus 6 inherited
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-collisionobject3d-scale` (type-family match) | `collisionobject3d-non-uniform-scale` | warning |
+| `valid-physicalbone3d-collision-shape` | `physicalbone3d-needs-collision-shape` | warning |
 <!-- lint:end -->
 
 PhysicalBone3D has no `parser.ts` of its own: it registers `parseNode3D` directly

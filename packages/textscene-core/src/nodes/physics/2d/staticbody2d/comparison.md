@@ -41,6 +41,8 @@ Strict parsing format-checks these `StaticBody2D` properties, plus 5 inherited f
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-staticbody2d` (type-family match) | `valid-staticbody2d-resources` | error |
 |  | `staticbody2d-needs-collision-shape` | warning |
 |  | `staticbody2d-constant-velocity-warning` | warning |

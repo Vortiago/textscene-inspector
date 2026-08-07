@@ -67,3 +67,54 @@ describe('Range bounds rule', () => {
     expect(namesOf(content)).not.toContain('range-max-below-min');
   });
 });
+
+describe('Range exp_edit rule (range-exp-edit-negative-min)', () => {
+  let linter: Linter;
+
+  beforeEach(() => {
+    linter = new Linter();
+  });
+
+  const namesOf = (content: string) => linter.lint(content).map((d) => d.ruleName);
+  const severitiesOf = (content: string, ruleName: string) =>
+    linter.lint(content).filter((d) => d.ruleName === ruleName).map((d) => d.severity);
+
+  it('warns when exp_edit is true with a negative min_value', () => {
+    const content = scene('exp_edit = true\nmin_value = -50.0\n');
+    expect(namesOf(content)).toContain('range-exp-edit-negative-min');
+    expect(severitiesOf(content, 'range-exp-edit-negative-min')).toEqual(['warning']);
+  });
+
+  it('stays silent when exp_edit is true but min_value is 0 or positive', () => {
+    expect(namesOf(scene('exp_edit = true\nmin_value = 0.0\n'))).not.toContain(
+      'range-exp-edit-negative-min'
+    );
+    expect(namesOf(scene('exp_edit = true\nmin_value = 5.0\n'))).not.toContain(
+      'range-exp-edit-negative-min'
+    );
+  });
+
+  it('stays silent when exp_edit is false, regardless of min_value', () => {
+    expect(namesOf(scene('exp_edit = false\nmin_value = -50.0\n'))).not.toContain(
+      'range-exp-edit-negative-min'
+    );
+  });
+
+  it('stays silent when exp_edit is absent — its default is false (range.h:44)', () => {
+    expect(namesOf(scene('min_value = -50.0\n'))).not.toContain('range-exp-edit-negative-min');
+  });
+
+  it('stays silent when min_value is absent — its default is 0.0 (range.h:40)', () => {
+    expect(namesOf(scene('exp_edit = true\n'))).not.toContain('range-exp-edit-negative-min');
+  });
+
+  it('never raises an ERROR — this is a hinted advisory, not an engine-enforced bound', () => {
+    const diagnostics = linter.lint(scene('exp_edit = true\nmin_value = -50.0\n'));
+    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+  });
+
+  it('reaches a concrete Range descendant (HSlider), not just the Range base', () => {
+    const content = `[gd_scene format=3]\n\n[node name="Root" type="Control"]\n\n[node name="MySlider" type="HSlider" parent="."]\nexp_edit = true\nmin_value = -10.0\n`;
+    expect(namesOf(content)).toContain('range-exp-edit-negative-min');
+  });
+});

@@ -341,6 +341,52 @@ physics_material_override = ExtResource("ext_mat_1")
     });
   });
 
+  describe('Semantic Validation (Runtime-Overridden Scale)', () => {
+    it('warns when an axis deviates from 1.0 by more than 0.05', () => {
+      expectDiagnostic(
+        scene(
+          node(
+            'RigidBody3D',
+            { mass: 1.0, transform: 'Transform3D(1.2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)' },
+          ),
+          collisionShape3d
+        ),
+        {
+          ruleName: 'rigidbody3d-scale-overridden-at-runtime',
+          severity: 'warning',
+          nodeType: 'RigidBody3D',
+          contains: ['overridden by the physics engine'],
+        }
+      );
+    });
+
+    it('warns on a UNIFORM scale too — not the pairwise x=y=z test collisionshape3d-non-uniform-scale runs', () => {
+      expectDiagnostic(
+        scene(
+          node('RigidBody3D', { mass: 1.0, transform: 'Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)' }),
+          collisionShape3d
+        ),
+        { ruleName: 'rigidbody3d-scale-overridden-at-runtime' }
+      );
+    });
+
+    it('stays within tolerance comfortably under 0.05', () => {
+      expectClean(
+        scene(
+          node(
+            'RigidBody3D',
+            { mass: 1.0, transform: 'Transform3D(1.04, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)' },
+          ),
+          collisionShape3d
+        )
+      );
+    });
+
+    it('does not warn with no transform at all (identity)', () => {
+      expectClean(scene(node('RigidBody3D', { mass: 1.0 }), collisionShape3d));
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle multiple validation errors', () => {
       const diagnostics = lint(

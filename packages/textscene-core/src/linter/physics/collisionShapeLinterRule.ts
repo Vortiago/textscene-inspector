@@ -10,7 +10,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { checkResourceExists } from '../resourceChecker.js';
+import { checkResourceExists, referencedResourceType } from '../resourceChecker.js';
 import { findParentNode } from '../linterUtils.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
 import { isZeroApprox } from '../../godot/math.js';
@@ -84,6 +84,53 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
+    // WARNING: ConcavePolygonShape3D / WorldBoundaryShape3D under a body they
+    // do not suit (3D only — collision_shape_2d.cpp has no equivalent check).
+    // collision_shape_3d.cpp:135-149: `Object::cast_to<RigidBody3D>(col_object)`
+    // succeeds for VehicleBody3D too (it extends RigidBody3D), which is why
+    // Godot's own message picks `body_type` from a nested VehicleBody3D cast.
+    // The push is UNCONDITIONAL on freeze/freeze_mode — "except when frozen" in
+    // Godot's own string is message prose, not part of the guard.
+    if (dim === '3D' && parent && rawProps.shape) {
+      const shapeType = referencedResourceType(scene, rawProps.shape);
+      if (descendsFrom(parent.type, 'RigidBody3D')) {
+        const bodyType = descendsFrom(parent.type, 'VehicleBody3D') ? 'VehicleBody3D' : 'RigidBody3D';
+        if (shapeType === 'ConcavePolygonShape3D') {
+          diagnostics.push({
+            severity: 'warning',
+            message:
+              `${type} '${node.name}' uses a ConcavePolygonShape3D under a ${bodyType} ('${parent.name}'). ` +
+              `ConcavePolygonShape3D is intended for static bodies like StaticBody3D and will likely not ` +
+              `behave well for a ${bodyType}, except when frozen with freeze_mode set to Static.`,
+            nodeName: node.name,
+            nodeType: node.type,
+            ruleName: `${prefix}-concave-under-rigidbody`,
+          });
+        } else if (shapeType === 'WorldBoundaryShape3D') {
+          diagnostics.push({
+            severity: 'warning',
+            message:
+              `${type} '${node.name}' uses a WorldBoundaryShape3D under a ${bodyType} ('${parent.name}'). ` +
+              `WorldBoundaryShape3D doesn't support ${bodyType} in a non-static mode.`,
+            nodeName: node.name,
+            nodeType: node.type,
+            ruleName: `${prefix}-worldboundary-under-rigidbody`,
+          });
+        }
+      } else if (descendsFrom(parent.type, 'CharacterBody3D') && shapeType === 'ConcavePolygonShape3D') {
+        diagnostics.push({
+          severity: 'warning',
+          message:
+            `${type} '${node.name}' uses a ConcavePolygonShape3D under a CharacterBody3D ('${parent.name}'). ` +
+            `ConcavePolygonShape3D is intended for static bodies like StaticBody3D and will likely not ` +
+            `behave well for a CharacterBody3D.`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: `${prefix}-concave-under-characterbody`,
+        });
+      }
+    }
+
     // WARNING: non-uniform scale (3D only — collision_shape_2d.cpp's
     // get_configuration_warnings() has no equivalent check)
     if (dim === '3D' && rawProps.transform !== undefined) {
@@ -102,6 +149,37 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
             ruleName: `${prefix}-non-uniform-scale`,
           });
         }
+      }
+    }
+
+    // WARNING: One Way Collision is ignored under an Area2D (2D only —
+    // collision_shape_2d.cpp:182, `one_way_collision && cast_to<Area2D>(col_object)`).
+    // Distinct from the `unused-one-way-margin` check below: that one fires
+    // regardless of parent type when the margin is set without the flag; this
+    // one fires on the flag itself, gated on the PARENT being an Area2D, which
+    // ignores one-way collision entirely (it has no solid faces to be one-way about).
+    if (dim === '2D' && rawProps.one_way_collision === 'true' && parent && descendsFrom(parent.type, 'Area2D')) {
+      diagnostics.push({
+        severity: 'warning',
+        message: `${type} '${node.name}' has 'one_way_collision' enabled under an Area2D ('${parent.name}'). One Way Collision is ignored when the collision object is an Area2D.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: `${prefix}-one-way-ignored-under-area2d`,
+      });
+    }
+
+    // WARNING: shape resolves to a polygon-based Shape2D with limited editing
+    // (2D only — collision_shape_2d.cpp:184-189).
+    if (dim === '2D' && rawProps.shape) {
+      const shapeType = referencedResourceType(scene, rawProps.shape);
+      if (shapeType === 'ConvexPolygonShape2D' || shapeType === 'ConcavePolygonShape2D') {
+        diagnostics.push({
+          severity: 'warning',
+          message: `${type} '${node.name}' uses a ${shapeType}, which has limited editing options in CollisionShape2D. Consider using a CollisionPolygon2D node instead.`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: `${prefix}-polygon-shape-limited-editing`,
+        });
       }
     }
 
@@ -140,9 +218,22 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
         { ruleName: `${prefix}-invalid-parent`, severity: 'warning' },
         { ruleName: `${prefix}-no-parent`, severity: 'warning' },
         // 2D-only branch (dim === '2D'); never emitted by the 3D instantiation
-        ...(dim === '2D' ? [{ ruleName: `${prefix}-unused-one-way-margin`, severity: 'warning' as const }] : []),
+        ...(dim === '2D'
+          ? [
+              { ruleName: `${prefix}-unused-one-way-margin`, severity: 'warning' as const },
+              { ruleName: `${prefix}-one-way-ignored-under-area2d`, severity: 'warning' as const },
+              { ruleName: `${prefix}-polygon-shape-limited-editing`, severity: 'warning' as const },
+            ]
+          : []),
         // 3D-only branch (dim === '3D'); never emitted by the 2D instantiation
-        ...(dim === '3D' ? [{ ruleName: `${prefix}-non-uniform-scale`, severity: 'warning' as const }] : []),
+        ...(dim === '3D'
+          ? [
+              { ruleName: `${prefix}-non-uniform-scale`, severity: 'warning' as const },
+              { ruleName: `${prefix}-concave-under-rigidbody`, severity: 'warning' as const },
+              { ruleName: `${prefix}-worldboundary-under-rigidbody`, severity: 'warning' as const },
+              { ruleName: `${prefix}-concave-under-characterbody`, severity: 'warning' as const },
+            ]
+          : []),
       ],
     },
     check,

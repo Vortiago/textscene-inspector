@@ -67,6 +67,10 @@ Strict parsing format-checks these `Label` properties, plus 28 inherited from Co
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-label-autowrap-sizing` | `label-autowrap-needs-custom-minimum-size` | warning |
 <!-- lint:end -->
 
 Label's own 22 members (everything `doc/classes/Label.xml` lists without

@@ -17,49 +17,115 @@
  * `carve_navigation_mesh` is simply dead configuration until
  * `affect_navigation_mesh` is also on.
  *
+ * The 2D instantiation ALSO carries `NavigationObstacle2D::get_configuration_warnings()`
+ * (navigation_obstacle_2d.cpp:328-345), via `node2dGlobalTransform.ts`'s static
+ * ancestor-transform walk — see that module's docblock for exactly what it
+ * composes and where it gives up:
+ *
+ *     const Vector2 global_scale = get_global_scale();
+ *     if (global_scale.x < 0.001 || global_scale.y < 0.001) { ... }                      // :331-333
+ *     if (radius > 0.0 && !get_global_transform().is_conformal()) { ... }                // :336-338
+ *     if (radius > 0.0 && get_global_skew() != 0.0) { ... }                              // :340-342
+ *
  * NOT ported here: NavigationObstacle3D's `get_configuration_warnings()`
- * (navigation_obstacle_3d.cpp:408-425) also warns on non-y-axis GLOBAL
- * rotation, zero/negative GLOBAL scale, and non-uniform GLOBAL scale with a
- * radius set; NavigationObstacle2D's (navigation_obstacle_2d.cpp:328-345)
- * warns on zero/negative GLOBAL scale, non-uniform GLOBAL scale with a radius
- * set, and skew with a radius set — three conditions each, none shared
- * verbatim (2D has no rotation check, 3D has no skew check). Every one of
- * them reads `get_global_*` state, which requires walking the node's full
- * ancestor chain to compute. That is unlike CollisionShape3D's non-uniform
- * -scale check (collision_shape_3d.cpp:153, plain `get_transform()`, LOCAL
- * to the node's own serialized `transform` property) — this linter has no
- * ancestor-chain walk, so none of the six conditions are statically
- * derivable from a single node's own properties the way this rule's gate is.
+ * (navigation_obstacle_3d.cpp:408-425) warns on non-y-axis GLOBAL rotation,
+ * zero/negative GLOBAL scale, and non-uniform GLOBAL scale with a radius set —
+ * declined as runtime-only in this repo's coverage table rather than answered
+ * with this same helper, out of this batch's scope.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { isValidProperties } from '../linterUtils.js';
+import {
+  resolveGlobalTransform2D,
+  globalScale,
+  isConformal,
+  hasZeroGlobalSkew,
+} from '../node2dGlobalTransform.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
+
+/**
+ * `navigation_obstacle_2d.cpp:332`, the floor `get_global_scale()` must clear
+ * on both axes. The SAME literal also floors the "safe scale" `get_global_scale().abs().maxf(0.001)`
+ * used at `:254`, `:367`, `:431`, `:445` — a single magic number, not
+ * independently chosen per call site — so it belongs in a shared
+ * `godot/navigation.ts` rather than being re-declared per consumer; flagged in
+ * the batch report as that candidate rather than added here on this rule's
+ * own authority.
+ */
+const MIN_GLOBAL_SCALE = 0.001;
 
 export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
   const type = `NavigationObstacle${dim}`;
   const prefix = `navigationobstacle${dimSuffix(dim)}`;
   const ruleName = `${prefix}-carve-without-affect`;
+  const scaleRuleName = `${prefix}-non-positive-global-scale`;
+  const nonUniformScaleRuleName = `${prefix}-non-uniform-global-scale`;
+  const skewRuleName = `${prefix}-global-skew-ignored`;
 
   function check(context: RuleContext): Diagnostic[] {
-    const { node } = context;
-    if (!isValidProperties(node.properties)) return [];
+    const { node, scene } = context;
+    const diagnostics: Diagnostic[] = [];
+    if (!isValidProperties(node.properties)) return diagnostics;
     const props = node.properties;
 
     if (props.carve_navigation_mesh === 'true' && props.affect_navigation_mesh !== 'true') {
-      return [
-        {
-          severity: 'warning',
-          message: `${type} '${node.name}' has 'carve_navigation_mesh' enabled but 'affect_navigation_mesh' is not. Navmesh baking checks 'affect_navigation_mesh' first and returns before carving is ever considered, so 'carve_navigation_mesh' has no effect.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName,
-        },
-      ];
+      diagnostics.push({
+        severity: 'warning',
+        message: `${type} '${node.name}' has 'carve_navigation_mesh' enabled but 'affect_navigation_mesh' is not. Navmesh baking checks 'affect_navigation_mesh' first and returns before carving is ever considered, so 'carve_navigation_mesh' has no effect.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName,
+      });
     }
 
-    return [];
+    if (dim === '2D') {
+      const verdict = resolveGlobalTransform2D(scene, node);
+      if (verdict.kind === 'known') {
+        const scale = globalScale(verdict.transform);
+
+        // navigation_obstacle_2d.cpp:331-333
+        if (scale.x < MIN_GLOBAL_SCALE || scale.y < MIN_GLOBAL_SCALE) {
+          diagnostics.push({
+            severity: 'warning',
+            message: `${type} '${node.name}' has global scale (${scale.x.toFixed(3)}, ${scale.y.toFixed(3)}). NavigationObstacle2D does not support negative or zero scaling.`,
+            nodeName: node.name,
+            nodeType: node.type,
+            ruleName: scaleRuleName,
+          });
+        }
+
+        // radius > 0.0 gate: navigation_obstacle_2d.h:46 defaults radius to
+        // 0.0, so a bare node never reaches either of the next two checks.
+        const radius = props.radius !== undefined ? parseFloat(props.radius) : 0;
+        if (Number.isFinite(radius) && radius > 0) {
+          // navigation_obstacle_2d.cpp:336-338
+          if (!isConformal(verdict.transform)) {
+            diagnostics.push({
+              severity: 'warning',
+              message: `${type} '${node.name}' has radius ${radius} but a non-uniformly-scaled global transform. The agent radius can only be scaled uniformly; the largest value along the two axes of the global scale will be used to scale the radius, which may change in unexpected ways when the node is rotated.`,
+              nodeName: node.name,
+              nodeType: node.type,
+              ruleName: nonUniformScaleRuleName,
+            });
+          }
+
+          // navigation_obstacle_2d.cpp:340-342
+          if (!hasZeroGlobalSkew(verdict.transform)) {
+            diagnostics.push({
+              severity: 'warning',
+              message: `${type} '${node.name}' has radius ${radius} but a skewed global transform. Skew has no effect on the agent radius.`,
+              nodeName: node.name,
+              nodeType: node.type,
+              ruleName: skewRuleName,
+            });
+          }
+        }
+      }
+    }
+
+    return diagnostics;
   }
 
   return {
@@ -68,7 +134,17 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
       description: `Warns when ${type}'s carve_navigation_mesh is enabled without affect_navigation_mesh, where it has no effect`,
       category: 'validation',
       applicableNodeTypes: [type],
-      emits: [{ ruleName, severity: 'warning' }],
+      emits: [
+        { ruleName, severity: 'warning' },
+        // 2D-only branch (dim === '2D'); never emitted by the 3D instantiation
+        ...(dim === '2D'
+          ? [
+              { ruleName: scaleRuleName, severity: 'warning' as const },
+              { ruleName: nonUniformScaleRuleName, severity: 'warning' as const },
+              { ruleName: skewRuleName, severity: 'warning' as const },
+            ]
+          : []),
+      ],
     },
     check,
   };

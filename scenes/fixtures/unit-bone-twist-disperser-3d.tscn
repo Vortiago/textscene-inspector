@@ -18,7 +18,9 @@
 
 [node name="Root" type="Node3D"]
 
-[node name="MyBoneTwistDisperser3D" type="BoneTwistDisperser3D" parent="."]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyBoneTwistDisperser3D" type="BoneTwistDisperser3D" parent="Skeleton3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 mutable_bone_axes = false
 setting_count = 2

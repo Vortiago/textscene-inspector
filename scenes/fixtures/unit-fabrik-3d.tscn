@@ -2,5 +2,7 @@
 
 [node name="Root" type="Node3D"]
 
-[node name="MyFABRIK3D" type="FABRIK3D" parent="."]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyFABRIK3D" type="FABRIK3D" parent="Skeleton3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)

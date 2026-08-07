@@ -3,8 +3,24 @@
  *
  * Format validation (size/modulate/fade ranges, cull_mask bounds) lives in
  * linterParser.ts. This file covers scene-context checks: that referenced
- * textures resolve, and that a decal projects at least one texture (a decal
- * with no textures is valid in Godot but renders nothing — worth a warning).
+ * textures resolve, and three of Decal's own `get_configuration_warnings()`
+ * checks (decal.cpp:184-193):
+ *
+ *     if (textures[TEXTURE_ALBEDO].is_null() && textures[TEXTURE_NORMAL].is_null()
+ *             && textures[TEXTURE_ORM].is_null() && textures[TEXTURE_EMISSION].is_null()) {
+ *         warnings.push_back(RTR("no textures loaded ..."));
+ *     }
+ *     if ((textures[TEXTURE_NORMAL].is_valid() || textures[TEXTURE_ORM].is_valid())
+ *             && textures[TEXTURE_ALBEDO].is_null()) {
+ *         warnings.push_back(RTR("has a Normal and/or ORM texture, but no Albedo texture ..."));
+ *     }
+ *     if (cull_mask == 0) {
+ *         warnings.push_back(RTR("Cull Mask has no bits enabled ..."));
+ *     }
+ *
+ * The renderer-method check at decal.cpp:179 (`gl_compatibility`/`dummy`) is
+ * runtime-only and not modelled — same as `decal-requires-texture` already
+ * ignores its own EARLY RETURN in that branch (decal.cpp:180).
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -53,17 +69,46 @@ function checkDecal(context: RuleContext): Diagnostic[] {
     }
   }
 
+  // decal.cpp:188: a Normal/ORM map blends onto the Albedo texture's alpha
+  // channel, so it does nothing without one.
+  if ((rawProps.texture_normal || rawProps.texture_orm) && !rawProps.texture_albedo) {
+    diagnostics.push({
+      severity: 'warning',
+      message:
+        'Decal has a Normal and/or ORM texture, but no Albedo texture. An Albedo texture with an alpha channel is required to blend the normal/ORM maps onto the underlying surface.',
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'decal-normal-orm-without-albedo',
+    });
+  }
+
+  // decal.cpp:191-192. Default cull_mask is (1 << 20) - 1 (decal.h:54), so an
+  // absent key never trips this — only an explicit 0.
+  if (rawProps.cull_mask !== undefined && parseInt(rawProps.cull_mask, 10) === 0) {
+    diagnostics.push({
+      severity: 'warning',
+      message:
+        "Decal's Cull Mask has no bits enabled, so the decal will not paint objects on any layer. Enable at least one bit in the Cull Mask property.",
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'decal-empty-cull-mask',
+    });
+  }
+
   return diagnostics;
 }
 
 const decalValidationRule: LintRule = {
   meta: {
     name: 'valid-decal-resources',
-    description: 'Validates Decal texture references resolve and that a decal projects at least one texture',
+    description:
+      'Validates Decal texture references resolve, and three of get_configuration_warnings\' own checks: at least one texture, Normal/ORM without Albedo, and an empty Cull Mask',
     category: 'validation',
     emits: [
       { ruleName: 'decal-requires-texture', severity: 'warning' },
       { ruleName: 'valid-decal-resources', severity: 'error' },
+      { ruleName: 'decal-normal-orm-without-albedo', severity: 'warning' },
+      { ruleName: 'decal-empty-cull-mask', severity: 'warning' },
     ],
     applicableNodeTypes: ['Decal'],
   },

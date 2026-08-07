@@ -147,6 +147,8 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
 | `valid-decal-resources` | `decal-requires-texture` | warning |
 |  | `valid-decal-resources` | error |
+|  | `decal-normal-orm-without-albedo` | warning |
+|  | `decal-empty-cull-mask` | warning |
 <!-- lint:end -->
 
 `size` falls back to Godot's default `Vector3(2, 2, 2)` with a `[Decal] Failed to parse size` warning when present but malformed. The five fade/blend floats (`albedo_mix`, `emission_energy`, `normal_fade`, `upper_fade`, `lower_fade`) and `cull_mask` fall back the same way, via `floatOr`/`intOr`, to `1`, `1`, `0`, `0.3`, `0.3`, and `1048575`; `upper_fade` and `lower_fade` are additionally clamped at ≥ 0, as `Decal::set_upper_fade` clamps them, so a negative authored exponent cannot reach `pow` and produce NaN. The distance-fade triple falls back to `false`, `40` and `10`. `modulate` falls back to opaque white on any malformed `Color`, but silently, since `parseColor` never warns. The four `texture_*` references are copied through unvalidated whenever present and simply omitted when absent; the lenient parser never rejects a malformed resource path the way `valid-decal-resources` does.

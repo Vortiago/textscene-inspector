@@ -1,5 +1,7 @@
 /**
- * Semantic rule for Range — an authored max_value below min_value.
+ * Semantic rules for Range.
+ *
+ * 1. An authored max_value below min_value.
  *
  * Advisory (WARNING, never error): this is legal Godot. `Range::set_max`
  * clamps rather than rejects (scene/gui/range.cpp:229:
@@ -11,6 +13,17 @@
  * min_value)`, i.e. the range collapses to a single point at `min_value`
  * rather than the (still-legal) inverted numbers the .tscn keeps showing.
  * The warning exists because that collapse is otherwise invisible.
+ *
+ * 2. `Range::get_configuration_warnings()` (range.cpp:71-79):
+ *
+ *     if (shared->exp_ratio && shared->min < 0) {
+ *         warnings.push_back(RTR("If \"Exp Edit\" is enabled, \"Min Value\" must
+ *             be greater or equal to 0."));
+ *     }
+ *
+ * `exp_edit` (ADD_PROPERTY name for `exp_ratio`, range.cpp:411) defaults false
+ * and `min_value` defaults 0.0 (range.h:40,44), so an absent key on either side
+ * cannot trigger this — both must be authored.
  *
  * Format validation lives in linterParser.ts.
  */
@@ -24,36 +37,52 @@ function checkRangeBounds(context: RuleContext): Diagnostic[] {
   const { node } = context;
   if (!isValidProperties(node.properties)) return [];
 
+  const diagnostics: Diagnostic[] = [];
   const props = node.properties as Record<string, string>;
   const minRaw = props.min_value;
   const maxRaw = props.max_value;
-  if (minRaw === undefined || maxRaw === undefined) return [];
 
-  const min = parseFloat(minRaw);
-  const max = parseFloat(maxRaw);
-  if (isNaN(min) || isNaN(max)) return [];
+  if (minRaw !== undefined && maxRaw !== undefined) {
+    const min = parseFloat(minRaw);
+    const max = parseFloat(maxRaw);
+    if (!isNaN(min) && !isNaN(max) && max < min) {
+      diagnostics.push({
+        severity: 'warning',
+        message: `Range 'max_value = ${maxRaw}' is below 'min_value = ${minRaw}'. Godot's Range::set_max clamps max_value up to min_value rather than honouring the inverted pair, so the range collapses to a single point at ${minRaw} instead of spanning what's authored.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: 'range-max-below-min',
+      });
+    }
+  }
 
-  if (max >= min) return [];
+  if (props.exp_edit === 'true' && minRaw !== undefined) {
+    const min = parseFloat(minRaw);
+    if (!isNaN(min) && min < 0) {
+      diagnostics.push({
+        severity: 'warning',
+        message: `Range '${node.name}' has 'exp_edit' enabled with 'min_value = ${minRaw}'. Exp Edit requires Min Value to be greater than or equal to 0.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: 'range-exp-edit-negative-min',
+      });
+    }
+  }
 
-  return [
-    {
-      severity: 'warning',
-      message: `Range 'max_value = ${maxRaw}' is below 'min_value = ${minRaw}'. Godot's Range::set_max clamps max_value up to min_value rather than honouring the inverted pair, so the range collapses to a single point at ${minRaw} instead of spanning what's authored.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'range-max-below-min',
-    },
-  ];
+  return diagnostics;
 }
 
 const rangeBoundsRule: LintRule = {
   meta: {
     name: 'valid-range-bounds',
     description:
-      'Flags a Range whose max_value is authored below min_value — Godot clamps the range to a single point rather than rejecting it',
+      'Flags a Range whose max_value is authored below min_value, or whose Exp Edit is enabled with a negative min_value',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Range'),
-    emits: [{ ruleName: 'range-max-below-min', severity: 'warning' }],
+    emits: [
+      { ruleName: 'range-max-below-min', severity: 'warning' },
+      { ruleName: 'range-exp-edit-negative-min', severity: 'warning' },
+    ],
   },
   check: checkRangeBounds,
 };

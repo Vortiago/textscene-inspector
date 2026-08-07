@@ -51,7 +51,13 @@ Strict parsing format-checks these `TileMap` properties, plus 12 inherited from 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-tilemap` | `tilemap-requires-tileset` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-tilemap` | `tilemap-deprecated` | warning |
+|  | `tilemap-y-sort-z-index-conflict` | warning |
+|  | `tilemap-layer-y-sort-without-node` | warning |
+|  | `tilemap-node-y-sort-without-layer` | warning |
+|  | `tilemap-requires-tileset` | warning |
 |  | `valid-tilemap-resources` | error |
 |  | `tilemap-unsupported-format` | warning |
 |  | `tilemap-invalid-tile-data` | error |

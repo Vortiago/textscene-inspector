@@ -77,6 +77,9 @@ Strict parsing format-checks these `TabBar` properties, plus 28 inherited from C
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 | `valid-tabbar-properties` | `tabbar-current-tab-out-of-range` | warning |
 |  | `tabbar-tab-index-out-of-range` | warning |
 <!-- lint:end -->

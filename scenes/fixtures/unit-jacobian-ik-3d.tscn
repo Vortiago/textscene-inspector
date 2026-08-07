@@ -7,7 +7,9 @@
 [node name="Target" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 
-[node name="MyJacobianIK3D" type="JacobianIK3D" parent="."]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyJacobianIK3D" type="JacobianIK3D" parent="Skeleton3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 active = true
 influence = 0.75
@@ -20,4 +22,4 @@ setting_count = 1
 settings/0/root_bone_name = "Root"
 settings/0/end_bone_name = "Tip"
 settings/0/end_bone/length = 0.1
-settings/0/target_node = NodePath("../Target")
+settings/0/target_node = NodePath("../../Target")

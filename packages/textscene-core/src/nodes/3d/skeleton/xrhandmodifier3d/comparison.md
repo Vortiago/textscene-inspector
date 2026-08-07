@@ -42,6 +42,7 @@ Strict parsing format-checks these `XRHandModifier3D` properties, plus 2 inherit
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
 XRHandModifier3D reuses `parseNode3D` (the Node3D base parser) rather than a parser

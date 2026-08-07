@@ -18,7 +18,13 @@ import './linter';
 
 /** Sub-resource heading the kit can't model; appended so accept cases have a valid process_material. */
 const PROCESS_MATERIAL = '[sub_resource type="ParticleProcessMaterial" id="process_1"]';
-const withMaterial = { process_material: 'SubResource("process_1")' };
+/** A mesh sub-resource so accept cases also carry a draw_pass_1, quieting gpuparticles3d-no-draw-pass-mesh. */
+const DRAW_PASS_MESH = '[sub_resource type="QuadMesh" id="mesh_1"]';
+const RESOURCES = `${PROCESS_MATERIAL}\n\n${DRAW_PASS_MESH}`;
+const withMaterial = {
+  process_material: 'SubResource("process_1")',
+  draw_pass_1: 'SubResource("mesh_1")',
+};
 
 /** Raw fixture with the required process_material; used where extra resources/sections are needed. */
 const createTestScene = (properties: string): string => {
@@ -47,16 +53,17 @@ describe('GPUParticles3D Linter', () => {
               speed_scale: 1.0,
               explosiveness: 0.5,
               randomness: 0.3,
+              draw_pass_1: 'SubResource("mesh_1")',
             },
             { name: 'ValidParticles' }
           ),
-          PROCESS_MATERIAL
+          RESOURCES
         )
       );
     });
 
     runPropertyValidation(
-      { nodeType: 'GPUParticles3D', acceptChild: PROCESS_MATERIAL, baseProps: withMaterial },
+      { nodeType: 'GPUParticles3D', acceptChild: RESOURCES, baseProps: withMaterial },
       [
       {
         prop: 'emitting',
@@ -195,10 +202,11 @@ describe('GPUParticles3D Linter', () => {
       it('should accept valid resource reference format', () => {
         expectClean(`[gd_scene format=3]
 
-[sub_resource type="ParticleProcessMaterial" id="process_1"]
+${RESOURCES}
 
 [node name="ValidMaterial" type="GPUParticles3D"]
 process_material = SubResource("process_1")
+draw_pass_1 = SubResource("mesh_1")
 `);
       });
 
@@ -206,9 +214,11 @@ process_material = SubResource("process_1")
         expectClean(`[gd_scene format=3]
 
 [ext_resource type="ParticleProcessMaterial" id="ext_process" path="res://materials/particle.tres"]
+${DRAW_PASS_MESH}
 
 [node name="ExtMaterial" type="GPUParticles3D"]
 process_material = ExtResource("ext_process")
+draw_pass_1 = SubResource("mesh_1")
 `);
       });
 
@@ -250,7 +260,15 @@ draw_pass_1 = SubResource("mesh_1")
       });
 
       it('should accept empty NodePath', () => {
-        expectClean(createTestScene('sub_emitter = NodePath("")'));
+        expectClean(`[gd_scene format=3]
+
+${RESOURCES}
+
+[node name="TestParticles" type="GPUParticles3D"]
+process_material = SubResource("process_1")
+draw_pass_1 = SubResource("mesh_1")
+sub_emitter = NodePath("")
+`);
       });
 
       it('should reject invalid NodePath format', () => {
@@ -293,10 +311,11 @@ process_material = SubResource("nonexistent")
     it('should pass when process_material resource exists', () => {
       expectClean(`[gd_scene format=3]
 
-[sub_resource type="ParticleProcessMaterial" id="process_1"]
+${RESOURCES}
 
 [node name="ValidParticles" type="GPUParticles3D"]
 process_material = SubResource("process_1")
+draw_pass_1 = SubResource("mesh_1")
 `);
     });
 
@@ -327,6 +346,53 @@ draw_pass_1 = SubResource("mesh_1")
     });
   });
 
+  describe('Semantic Validation (Draw Passes)', () => {
+    // gpu_particles_3d.cpp:342-363
+    it('warns when no draw_pass_N key carries a mesh', () => {
+      expectDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="ParticleProcessMaterial" id="process_1"]
+
+[node name="NoDrawPass" type="GPUParticles3D"]
+process_material = SubResource("process_1")
+`,
+        { ruleName: 'gpuparticles3d-no-draw-pass-mesh', severity: 'warning' }
+      );
+    });
+
+    it('does not warn when draw_pass_1 carries a mesh', () => {
+      expectNoDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="ParticleProcessMaterial" id="process_1"]
+[sub_resource type="QuadMesh" id="mesh_1"]
+
+[node name="HasDrawPass" type="GPUParticles3D"]
+process_material = SubResource("process_1")
+draw_pass_1 = SubResource("mesh_1")
+`,
+        { ruleName: 'gpuparticles3d-no-draw-pass-mesh' }
+      );
+    });
+
+    it('does not warn when a later draw_pass_N (not draw_pass_1) carries a mesh', () => {
+      expectNoDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="ParticleProcessMaterial" id="process_1"]
+[sub_resource type="QuadMesh" id="mesh_1"]
+
+[node name="HasLaterDrawPass" type="GPUParticles3D"]
+process_material = SubResource("process_1")
+draw_passes = 2
+draw_pass_2 = SubResource("mesh_1")
+`,
+        { ruleName: 'gpuparticles3d-no-draw-pass-mesh' }
+      );
+    });
+  });
+
   describe('Semantic Validation (Trail Configuration)', () => {
     it('should error when trail_lifetime is set but trail_enabled is false', () => {
       expectDiagnostic(
@@ -346,10 +412,11 @@ trail_lifetime = 1.0
     it('should pass when trail_lifetime is set and trail_enabled is true', () => {
       expectClean(`[gd_scene format=3]
 
-[sub_resource type="ParticleProcessMaterial" id="process_1"]
+${RESOURCES}
 
 [node name="ValidTrail" type="GPUParticles3D"]
 process_material = SubResource("process_1")
+draw_pass_1 = SubResource("mesh_1")
 trail_enabled = true
 trail_lifetime = 1.0
 `);
@@ -358,10 +425,11 @@ trail_lifetime = 1.0
     it('should pass when trail_enabled is false and trail_lifetime is not set', () => {
       expectClean(`[gd_scene format=3]
 
-[sub_resource type="ParticleProcessMaterial" id="process_1"]
+${RESOURCES}
 
 [node name="NoTrail" type="GPUParticles3D"]
 process_material = SubResource("process_1")
+draw_pass_1 = SubResource("mesh_1")
 trail_enabled = false
 `);
     });
@@ -405,14 +473,17 @@ sub_emitter = NodePath("WrongType")
 
 [sub_resource type="ParticleProcessMaterial" id="process_1"]
 [sub_resource type="ParticleProcessMaterial" id="process_2"]
+${DRAW_PASS_MESH}
 
 [node name="Root" type="Node3D"]
 
 [node name="SubEmitter" type="GPUParticles3D" parent="."]
 process_material = SubResource("process_2")
+draw_pass_1 = SubResource("mesh_1")
 
 [node name="MainParticles" type="GPUParticles3D" parent="."]
 process_material = SubResource("process_1")
+draw_pass_1 = SubResource("mesh_1")
 sub_emitter = NodePath("SubEmitter")
 `);
     });
@@ -420,10 +491,11 @@ sub_emitter = NodePath("SubEmitter")
     it('should pass when sub_emitter is empty NodePath', () => {
       expectClean(`[gd_scene format=3]
 
-[sub_resource type="ParticleProcessMaterial" id="process_1"]
+${RESOURCES}
 
 [node name="NoSubEmitter" type="GPUParticles3D"]
 process_material = SubResource("process_1")
+draw_pass_1 = SubResource("mesh_1")
 sub_emitter = NodePath("")
 `);
     });
@@ -488,10 +560,11 @@ amount = 1500000
     it.each([75000, 1000000])('says nothing about amount %s', (amount) => {
       expectClean(`[gd_scene format=3]
 
-[sub_resource type="ParticleProcessMaterial" id="process_1"]
+${RESOURCES}
 
 [node name="InBandCount" type="GPUParticles3D"]
 process_material = SubResource("process_1")
+draw_pass_1 = SubResource("mesh_1")
 amount = ${amount}
 `);
     });
@@ -501,10 +574,11 @@ amount = ${amount}
     it('says nothing about a long effective lifetime', () => {
       expectClean(`[gd_scene format=3]
 
-[sub_resource type="ParticleProcessMaterial" id="process_1"]
+${RESOURCES}
 
 [node name="LongLifetime" type="GPUParticles3D"]
 process_material = SubResource("process_1")
+draw_pass_1 = SubResource("mesh_1")
 lifetime = 100.0
 speed_scale = 0.5
 `);
@@ -513,10 +587,11 @@ speed_scale = 0.5
     it('should not warn for reasonable particle count', () => {
       const diagnostics = lint(`[gd_scene format=3]
 
-[sub_resource type="ParticleProcessMaterial" id="process_1"]
+${RESOURCES}
 
 [node name="ReasonableParticles" type="GPUParticles3D"]
 process_material = SubResource("process_1")
+draw_pass_1 = SubResource("mesh_1")
 amount = 10000
 `);
       const perfWarning = diagnostics.find(d => d.severity === 'warning');
@@ -547,6 +622,7 @@ explosiveness = 2.0
 
 [node name="SubEmitter" type="GPUParticles3D" parent="."]
 process_material = SubResource("process_1")
+draw_pass_1 = SubResource("mesh_1")
 
 [node name="ComplexParticles" type="GPUParticles3D" parent="."]
 emitting = true

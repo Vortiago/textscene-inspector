@@ -37,6 +37,8 @@ Strict parsing format-checks these `AudioListener2D` properties, plus 12 inherit
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
 The strict parser checks `current` as a bool and inherits the rest from the Node2D base.

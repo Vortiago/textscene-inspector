@@ -100,6 +100,9 @@ Strict parsing format-checks these `LightOccluder2D` properties, plus 12 inherit
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-lightoccluder2d-occluder` | `lightoccluder2d-requires-occluder` | warning |
 <!-- lint:end -->
 
 Strict rejects a non-numeric `light_mask` or `occluder_light_mask`; the lenient parser
