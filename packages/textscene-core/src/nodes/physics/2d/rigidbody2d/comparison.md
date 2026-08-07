@@ -65,8 +65,6 @@ Strict parsing format-checks these `RigidBody2D` properties, plus 5 inherited fr
 |  | `rigidbody2d-needs-collision-shape` | warning |
 |  | `rigidbody2d-mass-too-low` | warning |
 |  | `rigidbody2d-max-contacts-without-monitor` | warning |
-|  | `rigidbody2d-zero-collision-layer` | warning |
-|  | `rigidbody2d-zero-collision-mask` | warning |
 |  | `rigidbody2d-scale-overridden-at-runtime` | warning |
 <!-- lint:end -->
 

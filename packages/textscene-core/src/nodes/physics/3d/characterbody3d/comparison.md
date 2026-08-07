@@ -55,8 +55,6 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | `valid-collisionobject3d-scale` (type-family match) | `collisionobject3d-non-uniform-scale` | warning |
 | `valid-characterbody3d` | `characterbody3d-needs-collision-shape` | warning |
 |  | `characterbody3d-floor-props-in-floating-mode` | warning |
-|  | `characterbody3d-zero-collision-layer` | warning |
-|  | `characterbody3d-zero-collision-mask` | warning |
 |  | `characterbody3d-non-standard-up-direction` | warning |
 |  | `characterbody3d-safe-margin-too-small` | warning |
 |  | `characterbody3d-safe-margin-too-large` | warning |

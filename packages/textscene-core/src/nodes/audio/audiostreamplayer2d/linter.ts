@@ -14,6 +14,7 @@ import {
   player2DVolumeArms,
   player2DPitchArms,
   checkInvalidMaxPolyphony,
+  isDrivenByAnimationAudioTrack,
 } from '../sharedLinterChecks.js';
 
 // audio_stream_player_2d.cpp:436, max_distance PROPERTY_HINT_RANGE
@@ -37,17 +38,25 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
+  // A stream can also arrive through an AnimationPlayer audio track that
+  // targets this node (animation_mixer.cpp:889-897 builds its own polyphonic
+  // playback and never reads the node's `stream`), so a node driven that way
+  // is not silent despite having no `stream` of its own.
+  const drivenByAnimation = rawProps.stream === undefined && isDrivenByAnimationAudioTrack(scene, node);
+
   // Advisory, not an error: audio_stream_player_2d.cpp defines no
   // configuration warning, and a player with no stream is valid Godot; a script
   // may assign one at runtime.
   if (rawProps.stream === undefined) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `AudioStreamPlayer2D '${node.name}' has no 'stream', so it will not play anything until one is assigned.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'audiostreamplayer2d-missing-stream',
-    });
+    if (!drivenByAnimation) {
+      diagnostics.push({
+        severity: 'warning',
+        message: `AudioStreamPlayer2D '${node.name}' has no 'stream', so it will not play anything until one is assigned.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: 'audiostreamplayer2d-missing-stream',
+      });
+    }
   } else {
     // ERROR: stream resource doesn't exist
     if (!checkResourceExists(scene, rawProps.stream)) {
@@ -62,7 +71,7 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
   }
 
   // WARNING: autoplay enabled but no stream set
-  if (rawProps.autoplay === 'true' && rawProps.stream === undefined) {
+  if (rawProps.autoplay === 'true' && rawProps.stream === undefined && !drivenByAnimation) {
     diagnostics.push({
       severity: 'warning',
       message: `Property 'autoplay' is enabled but no 'stream' is set. Audio will not play automatically.`,

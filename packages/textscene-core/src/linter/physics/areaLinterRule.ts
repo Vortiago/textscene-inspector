@@ -37,7 +37,12 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
-    // Warning: Both monitoring and monitorable false - area does nothing
+    // Godot raises no warning for this either — no `get_configuration_warnings()`
+    // override checks it. Grounded instead in what the two flags DO
+    // (area_2d.cpp / area_3d.cpp: `monitoring` drives whether the area
+    // scans for bodies/areas, `monitorable` whether other monitors can find
+    // it): with both false, the node can neither detect anything nor be
+    // detected by anything, so it is provably inert.
     const monitoring = rawProps.monitoring ?? 'true'; // Default is true in Godot
     const monitorable = rawProps.monitorable ?? 'true'; // Default is true in Godot
     if (monitoring === 'false' && monitorable === 'false') {
@@ -58,20 +63,13 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
     // ("0,1024,0.001,or_greater") and are rejected by each slice's format
     // validator instead.
 
-    // Warning: collision_layer is 0 and monitoring is true (won't detect on any layer)
+    // No `collision_layer == 0` + monitoring check: no engine warning exists
+    // for it, AND the premise was wrong — Area monitoring matches a target
+    // body's `collision_layer` against the AREA's `collision_mask`, not
+    // against the area's own `collision_layer`, so the area's layer has no
+    // bearing on what it detects. Fired on dodge-the-creeps' Coin and
+    // squash-the-creeps' MobDetector, both deliberately `collision_layer = 0`.
     const collisionLayer = rawProps.collision_layer;
-    if (monitoring === 'true' && collisionLayer !== undefined) {
-      const layer = parseInt(collisionLayer, 10);
-      if (!isNaN(layer) && layer === 0) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `${type} '${node.name}' has 'monitoring' enabled but 'collision_layer' is 0. The area won't be on any collision layer.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-monitoring-zero-layer`,
-        });
-      }
-    }
 
     // Warning: collision_mask is 0 and monitoring is true (won't detect anything)
     const collisionMask = rawProps.collision_mask;
@@ -128,7 +126,6 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
       emits: [
         { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
         { ruleName: `${prefix}-inactive`, severity: 'warning' },
-        { ruleName: `${prefix}-monitoring-zero-layer`, severity: 'warning' },
         { ruleName: `${prefix}-monitoring-zero-mask`, severity: 'warning' },
         { ruleName: `${prefix}-monitoring-no-collision`, severity: 'warning' },
         { ruleName: `${prefix}-audio-override-missing-name`, severity: 'warning' },

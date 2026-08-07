@@ -27,6 +27,8 @@ interface SceneIndex {
   byName: Map<string, TscnNode[]>;
   /** Nodes that have an ANCESTOR (not themselves) with `instance` set. */
   underInstanceAncestor: Set<TscnNode>;
+  /** type -> how many nodes in the whole tree carry it. */
+  countByType: Map<string, number>;
 }
 
 /**
@@ -44,6 +46,7 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
   const parentOf = new Map<TscnNode, TscnNode | null>();
   const byName = new Map<string, TscnNode[]>();
   const underInstanceAncestor = new Set<TscnNode>();
+  const countByType = new Map<string, number>();
 
   const walk = (nodes: TscnNode[], parent: TscnNode | null, ancestorIsInstance: boolean): void => {
     for (const node of nodes) {
@@ -52,6 +55,8 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
       const named = byName.get(node.name);
       if (named) named.push(node);
       else byName.set(node.name, [node]);
+
+      countByType.set(node.type, (countByType.get(node.type) ?? 0) + 1);
 
       if (ancestorIsInstance) underInstanceAncestor.add(node);
 
@@ -65,7 +70,7 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
   // contract) — freezing here makes that contract enforced, not just documented.
   for (const matches of byName.values()) Object.freeze(matches);
 
-  return { parentOf, byName, underInstanceAncestor };
+  return { parentOf, byName, underInstanceAncestor, countByType };
 }
 
 function getSceneIndex(roots: TscnNode[]): SceneIndex {
@@ -75,6 +80,24 @@ function getSceneIndex(roots: TscnNode[]): SceneIndex {
     sceneIndexCache.set(roots, index);
   }
   return index;
+}
+
+/**
+ * How many nodes of `type` the scene contains, counted once per scene.
+ *
+ * Several of Godot's configuration warnings are "only the first of these has an
+ * effect" — `WorldEnvironment`, `ShaderGlobalsOverride`, `CanvasModulate`,
+ * `Camera2D`. Each rule answered it by recursing the whole tree inside `check`,
+ * which the linter calls once per matching node: O(matches x nodes), and the
+ * pathological input is precisely the case those rules exist to detect. The
+ * count comes off the cached per-scene index instead, built in the same single
+ * walk that already produces the parent and name maps.
+ *
+ * Exact-name, not base-walked: Godot's own checks compare `get_class()` or scan
+ * a type-keyed group, never a subclass closure.
+ */
+export function countNodesOfType(roots: TscnNode[], type: string): number {
+  return getSceneIndex(roots).countByType.get(type) ?? 0;
 }
 
 /**

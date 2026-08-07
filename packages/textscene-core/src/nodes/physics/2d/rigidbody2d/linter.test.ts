@@ -340,27 +340,21 @@ physics_material_override = ExtResource("ext_mat_1")
     });
   });
 
+  // No `collision_layer == 0` / `collision_mask == 0` checks: no engine
+  // warning exists for either, and `collision_layer = 0` is the standard
+  // "hits things, is never hit" one-way projectile pattern (the platformer's
+  // Bullet).
   describe('Semantic Validation (Collision Layers)', () => {
-    it('should warn when collision_layer is 0', () => {
-      expectDiagnostic(scene(node('RigidBody2D', { mass: 1.0, collision_layer: 0 }), collisionShape2d), {
-        ruleName: 'rigidbody2d-zero-collision-layer',
-        severity: 'warning',
-        nodeType: 'RigidBody2D',
-        contains: ['collision_layer set to 0'],
-      });
+    it('stays quiet when collision_layer is 0', () => {
+      expectClean(scene(node('RigidBody2D', { mass: 1.0, collision_layer: 0 }), collisionShape2d));
     });
 
     it('should not warn when collision_layer is non-zero', () => {
       expectClean(scene(node('RigidBody2D', { mass: 1.0, collision_layer: 1 }), collisionShape2d));
     });
 
-    it('should warn when collision_mask is 0', () => {
-      expectDiagnostic(scene(node('RigidBody2D', { mass: 1.0, collision_mask: 0 }), collisionShape2d), {
-        ruleName: 'rigidbody2d-zero-collision-mask',
-        severity: 'warning',
-        nodeType: 'RigidBody2D',
-        contains: ['collision_mask set to 0'],
-      });
+    it('stays quiet when collision_mask is 0', () => {
+      expectClean(scene(node('RigidBody2D', { mass: 1.0, collision_mask: 0 }), collisionShape2d));
     });
 
     it('should not warn when collision_mask is non-zero', () => {
@@ -466,12 +460,12 @@ max_contacts_reported = 10
           collisionShape2d
         )
       );
-      // Warnings: zero collision_layer and max_contacts without monitor. mass
-      // 0.001 sits exactly on the hint's bottom (:742) and linear_damp 20 is under
-      // its open top (:763), so neither of those contributes any more.
+      // Warning: max_contacts without monitor. mass 0.001 sits exactly on the
+      // hint's bottom (:742), linear_damp 20 is under its open top (:763), and
+      // collision_layer = 0 carries no check (RigidBody2D) — none of those
+      // contribute any more.
       expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
         'rigidbody2d-max-contacts-without-monitor',
-        'rigidbody2d-zero-collision-layer',
       ]);
       expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
     });

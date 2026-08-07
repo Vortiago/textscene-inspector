@@ -49,8 +49,6 @@ Strict parsing format-checks these `PhysicalBone2D` properties, plus 15 inherite
 |  | `rigidbody2d-needs-collision-shape` | warning |
 |  | `rigidbody2d-mass-too-low` | warning |
 |  | `rigidbody2d-max-contacts-without-monitor` | warning |
-|  | `rigidbody2d-zero-collision-layer` | warning |
-|  | `rigidbody2d-zero-collision-mask` | warning |
 |  | `rigidbody2d-scale-overridden-at-runtime` | warning |
 | `valid-physicalbone2d` | `physicalbone2d-missing-skeleton-parent` | warning |
 |  | `physicalbone2d-missing-bone-index` | warning |

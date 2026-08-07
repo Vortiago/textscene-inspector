@@ -10,7 +10,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { checkResourceExists, referencedResourceType } from '../resourceChecker.js';
+import { referencedResourceType } from '../resourceChecker.js';
 import { findParentNode } from '../linterUtils.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
 import { isZeroApprox } from '../../godot/math.js';
@@ -38,6 +38,12 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // Access raw properties from the node (Record<string, string>)
     const rawProps = node.properties as unknown as Record<string, string>;
 
+    // Resolved once. `referencedResourceType` and `checkResourceExists` both
+    // funnel through one linear scan of the scene's resource tables, so asking
+    // separately for existence and for type scanned the same tables twice on
+    // every shape-bearing node in the corpus.
+    const shapeType = rawProps.shape ? referencedResourceType(scene, rawProps.shape) : undefined;
+
     // ERROR: shape property is REQUIRED
     if (!rawProps.shape) {
       diagnostics.push({
@@ -47,18 +53,15 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
         nodeType: node.type,
         ruleName: `${prefix}-requires-shape`,
       });
-    } else {
-      // ERROR: Check if shape resource exists in scene
-      const resourceExists = checkResourceExists(scene, rawProps.shape);
-      if (!resourceExists) {
-        diagnostics.push({
-          severity: 'error',
-          message: `Shape resource not found: ${rawProps.shape}. The referenced shape resource must exist in the scene.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `valid-${prefix}-resources`,
-        });
-      }
+    } else if (shapeType === undefined) {
+      // `undefined` from the single resolve above IS "resolves to nothing".
+      diagnostics.push({
+        severity: 'error',
+        message: `Shape resource not found: ${rawProps.shape}. The referenced shape resource must exist in the scene.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: `valid-${prefix}-resources`,
+      });
     }
 
     // WARNING: Check if parent is a valid physics body type
@@ -92,7 +95,6 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // The push is UNCONDITIONAL on freeze/freeze_mode — "except when frozen" in
     // Godot's own string is message prose, not part of the guard.
     if (dim === '3D' && parent && rawProps.shape) {
-      const shapeType = referencedResourceType(scene, rawProps.shape);
       if (descendsFrom(parent.type, 'RigidBody3D')) {
         const bodyType = descendsFrom(parent.type, 'VehicleBody3D') ? 'VehicleBody3D' : 'RigidBody3D';
         if (shapeType === 'ConcavePolygonShape3D') {
@@ -171,7 +173,6 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // WARNING: shape resolves to a polygon-based Shape2D with limited editing
     // (2D only — collision_shape_2d.cpp:184-189).
     if (dim === '2D' && rawProps.shape) {
-      const shapeType = referencedResourceType(scene, rawProps.shape);
       if (shapeType === 'ConvexPolygonShape2D' || shapeType === 'ConcavePolygonShape2D') {
         diagnostics.push({
           severity: 'warning',

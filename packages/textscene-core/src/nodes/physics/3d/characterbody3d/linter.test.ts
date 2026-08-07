@@ -331,35 +331,12 @@ describe('CharacterBody3D Linter', () => {
   });
 
   describe('Semantic Validation (Collision Layers)', () => {
-    it('should warn when collision_layer is 0', () => {
-      expectDiagnostic(scene(node('CharacterBody3D', { collision_layer: 0 }), collisionShape3d), {
-        ruleName: 'characterbody3d-zero-collision-layer',
-        severity: 'warning',
-        nodeType: 'CharacterBody3D',
-        contains: ['collision_layer set to 0'],
-      });
+    // No `collision_layer == 0` check on CharacterBody3D: no engine warning
+    // exists for it, and the voxel demo's Player ships with it deliberately.
+    it('stays quiet when collision_layer is 0', () => {
+      expectClean(scene(node('CharacterBody3D', { collision_layer: 0 }), collisionShape3d));
     });
 
-    it('should not warn when collision_layer is non-zero', () => {
-      expectNoDiagnostic(scene(node('CharacterBody3D', { collision_layer: 1 }), collisionShape3d), {
-        ruleName: 'characterbody3d-zero-collision-layer',
-      });
-    });
-
-    it('should warn when collision_mask is 0', () => {
-      expectDiagnostic(scene(node('CharacterBody3D', { collision_mask: 0 }), collisionShape3d), {
-        ruleName: 'characterbody3d-zero-collision-mask',
-        severity: 'warning',
-        nodeType: 'CharacterBody3D',
-        contains: ['collision_mask set to 0'],
-      });
-    });
-
-    it('should not warn when collision_mask is non-zero', () => {
-      expectNoDiagnostic(scene(node('CharacterBody3D', { collision_mask: 1 }), collisionShape3d), {
-        ruleName: 'characterbody3d-zero-collision-mask',
-      });
-    });
   });
 
   describe('Edge Cases', () => {

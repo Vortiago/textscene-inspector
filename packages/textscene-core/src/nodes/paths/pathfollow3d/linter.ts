@@ -18,6 +18,14 @@
  *   ROTATION_ORIENTED` (path_3d.cpp:362), and `up_vector_enabled` defaults to
  *   true (curve.h:299) — so the rule warned about exactly the configuration that
  *   is correct, and stayed silent about nothing.
+ * - The both-progress-properties message claimed `progress_ratio` "takes
+ *   precedence". Neither half was true: `PackedScene::instantiate` applies a
+ *   node's stored properties in FILE ORDER through a plain sequential `set()`
+ *   loop (packed_scene.cpp:365-381), so whichever key appears LAST in the file
+ *   wins, not `progress_ratio` unconditionally — and Godot's own saver can
+ *   never produce this state to begin with, since `progress_ratio` is declared
+ *   `PROPERTY_USAGE_EDITOR` with no `PROPERTY_USAGE_STORAGE` bit (path_3d.cpp:433),
+ *   so the dual-key file only arises when a human hand-writes both keys.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -113,11 +121,15 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Warning: Both progress and progress_ratio set (progress_ratio takes precedence)
+  // Warning: both progress and progress_ratio set. Neither always wins: Godot
+  // applies stored properties in FILE ORDER (packed_scene.cpp:365-381), so
+  // whichever key comes last takes effect — and this file could only exist
+  // hand-written, since progress_ratio carries no PROPERTY_USAGE_STORAGE bit
+  // (path_3d.cpp:433) and Godot's own saver never writes it.
   if (rawProps.progress !== undefined && rawProps.progress_ratio !== undefined) {
     diagnostics.push({
       severity: 'warning',
-      message: `PathFollow3D has both 'progress' and 'progress_ratio' set. Note that 'progress_ratio' takes precedence and 'progress' will be ignored.`,
+      message: `PathFollow3D has both 'progress' and 'progress_ratio' set. Godot applies stored properties in file order (packed_scene.cpp:365-381), so whichever key appears LAST in the file wins — not always 'progress_ratio'. Godot's own saver never writes both: 'progress_ratio' has no PROPERTY_USAGE_STORAGE bit (path_3d.cpp:433), so this state only arises in a hand-written file.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'pathfollow3d-both-progress-properties',

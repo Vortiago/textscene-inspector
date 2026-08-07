@@ -38,7 +38,11 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // "-4,4,0.001,or_less,or_greater", so BOTH ends are open, and set_speed_scale
   // (:648) is a bare assignment. Negative is reverse playback; 0 pauses.
 
-  // WARNING: No animations defined (AnimationPlayer without animations is useless)
+  // WARNING: No animations defined (AnimationPlayer without animations is useless).
+  // Godot raises no warning for this — AnimationPlayer declares no
+  // get_configuration_warnings() override at all. Grounded instead in the
+  // node being unable to do anything: with no clip source there is nothing
+  // `play()` could ever resolve.
   // Note: In TSCN format, animations are typically stored in the anims/ section
   // We can check if there are any properties starting with "anims/"
   const hasAnimations = Object.keys(rawProps).some(key => key.startsWith('anims/'));
@@ -90,6 +94,10 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
 
   // WARNING: autoplay references animation that may not exist (an empty StringName `&""` means
   // "no autoplay" — guard on the STRIPPED name, like current_animation below, not the raw value).
+  // Godot raises no warning for this: `NOTIFICATION_READY`
+  // (animation_player.cpp:149-155) gates the whole autoplay dispatch on
+  // `animation_set.has(autoplay)`, so a name that resolves to nothing simply
+  // never calls `play()` — no error, no log, nothing.
   if (canCheckExistence && rawProps.autoplay !== undefined) {
     const autoplayName = stripQuotes(rawProps.autoplay);
     if (autoplayName.length > 0 && !knownClips.has(autoplayName)) {

@@ -133,6 +133,22 @@ export interface RuleMeta {
    * reverse order silently mispairs a severity.
    */
   emits?: ReadonlyArray<{ ruleName: string; severity: Severity }>;
+  /**
+   * `file:line` of the engine guard that confines this rule to ONE exact class,
+   * when Godot itself does not extend the condition to that class's subclasses.
+   *
+   * `ruleCoverage` otherwise fails a rule that names a type with descendants,
+   * because exact-match applicability means it goes silent on every one of them
+   * — which is nearly always a defect. `container.cpp:210` is the exception
+   * that proves it: Godot guards with `get_class() == "Container"`, so a bare
+   * unscripted Container warns and a VBoxContainer does not.
+   *
+   * Declared here rather than in a list inside the guard, for the same reason
+   * `Grounding` and `RangeArm.cite` are declared on the thing they describe: a
+   * second such rule should be able to state its own exemption in its own file,
+   * instead of discovering that a test elsewhere keeps a parallel roster.
+   */
+  exactClassByDesign?: string;
 }
 
 /**

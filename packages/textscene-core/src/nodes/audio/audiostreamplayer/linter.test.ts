@@ -58,6 +58,35 @@ describe('AudioStreamPlayer semantic rules', () => {
     });
   });
 
+  it('stays silent when an AnimationPlayer audio track targets this node', () => {
+    // The coin.tscn shape, ported to the non-positional player:
+    // animation_mixer.cpp:889-897 builds its own polyphonic playback for the
+    // track's target and never reads the node's `stream`.
+    expectClean(
+      scene(
+        audioStream,
+        `[sub_resource type="Animation" id="anim1"]
+tracks/0/type = "audio"
+tracks/0/path = NodePath("Pickup")
+tracks/0/keys = {
+"clips": [{
+"end_offset": 0.0,
+"start_offset": 0.0,
+"stream": ExtResource("1_abc")
+}],
+"times": PackedFloat32Array(0)
+}`,
+        `[sub_resource type="AnimationLibrary" id="lib"]
+_data = {
+&"picked": SubResource("anim1")
+}`,
+        node('Node', {}, { name: 'Root' }),
+        node('AnimationPlayer', { 'libraries/': 'SubResource("lib")' }, { parent: '.' }),
+        node('AudioStreamPlayer', { autoplay: true }, { name: 'Pickup', parent: '.' })
+      )
+    );
+  });
+
   it('warns on an extreme volume_db (stream present)', () => {
     expectDiagnostic(
       scene(

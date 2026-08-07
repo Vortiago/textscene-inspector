@@ -62,7 +62,9 @@ function checkRemoteTransform3D(context: RuleContext): Diagnostic[] {
     ];
   }
 
-  if (target.status === 'found' && target.node.type !== 'Node3D' && !descendsFrom(target.node.type, 'Node3D')) {
+  // `descendsFrom` is reflexive (nodeBaseTypes.ts), so it already answers the
+  // exact-match case; spelling that out separately only reads as extra work.
+  if (target.status === 'found' && !descendsFrom(target.node.type, 'Node3D')) {
     return [
       {
         severity: 'warning',

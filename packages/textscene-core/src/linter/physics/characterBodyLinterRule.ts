@@ -12,7 +12,6 @@ import {
   hasCollisionShapeDescendant,
   collisionShapeTypesPhrase,
 } from './hasCollisionShapeDescendant.js';
-import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
 import { VECTOR2_REGEX, VECTOR3_REGEX } from '../validators/vectorValidators.js';
 import { tupleComponent } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
@@ -87,8 +86,6 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
       }
     }
 
-    pushZeroCollisionLayerMaskWarnings(diagnostics, node, rawProps, type, prefix);
-
     // Warning: Unusual up_direction (not the standard value for this dimension)
     if (rawProps.up_direction !== undefined) {
       const match = upDirRegex.exec(rawProps.up_direction);
@@ -148,8 +145,6 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
       emits: [
         { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
         { ruleName: `${prefix}-floor-props-in-floating-mode`, severity: 'warning' },
-        { ruleName: `${prefix}-zero-collision-layer`, severity: 'warning' },
-        { ruleName: `${prefix}-zero-collision-mask`, severity: 'warning' },
         { ruleName: `${prefix}-non-standard-up-direction`, severity: 'warning' },
         { ruleName: `${prefix}-safe-margin-too-small`, severity: 'warning' },
         { ruleName: `${prefix}-safe-margin-too-large`, severity: 'warning' },

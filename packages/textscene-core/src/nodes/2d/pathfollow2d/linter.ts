@@ -4,6 +4,15 @@
  * Format validation is in linterParser.ts. This file covers context-dependent
  * checks: PathFollow2D MUST be a direct child of a Path2D, and progress values
  * outside their valid ranges are flagged (Godot clamps them).
+ *
+ * The both-progress-properties message used to claim `progress_ratio` "takes
+ * precedence" over `progress`. Neither half holds: `PackedScene::instantiate`
+ * applies a node's stored properties in FILE ORDER through a plain sequential
+ * `set()` loop (packed_scene.cpp:365-381), so whichever key appears LAST in
+ * the file wins — and Godot's own saver can never write both, since
+ * `progress_ratio` is declared `PROPERTY_USAGE_EDITOR` with no
+ * `PROPERTY_USAGE_STORAGE` bit (path_2d.cpp:416), so the dual-key file only
+ * arises when a human hand-writes both keys.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -62,10 +71,15 @@ function checkPathFollow2D(context: RuleContext): Diagnostic[] {
     }
   }
 
+  // Neither always wins: Godot applies stored properties in FILE ORDER
+  // (packed_scene.cpp:365-381), so whichever key comes last takes effect —
+  // and this file could only exist hand-written, since progress_ratio carries
+  // no PROPERTY_USAGE_STORAGE bit (path_2d.cpp:416) and Godot's own saver
+  // never writes it.
   if (rawProps.progress !== undefined && rawProps.progress_ratio !== undefined) {
     diagnostics.push({
       severity: 'warning',
-      message: `PathFollow2D has both 'progress' and 'progress_ratio' set. Note that 'progress_ratio' takes precedence and 'progress' will be ignored.`,
+      message: `PathFollow2D has both 'progress' and 'progress_ratio' set. Godot applies stored properties in file order (packed_scene.cpp:365-381), so whichever key appears LAST in the file wins — not always 'progress_ratio'. Godot's own saver never writes both: 'progress_ratio' has no PROPERTY_USAGE_STORAGE bit (path_2d.cpp:416), so this state only arises in a hand-written file.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'pathfollow2d-both-progress-properties',

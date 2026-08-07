@@ -25,6 +25,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { isTypeUnknowable } from '../../../../linter/parentType.js';
 
 // control.h:100-101, Control::CursorShape: CURSOR_ARROW = 0.
 const CURSOR_ARROW = 0;
@@ -35,10 +36,11 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
 
   const children = node.children ?? [];
   const hasSubViewport = children.some((child) => child.type === 'SubViewport');
-  // Instance-opaque linting (CONTEXT.md): an `instance=` child is a childless,
-  // typeless node here, and the sub-scene it points at may well be rooted at a
-  // SubViewport. Staying silent beats false-positiving on a normal Godot idiom.
-  const hasOpaqueChild = children.some((child) => child.instance);
+  // Instance-opaque linting (CONTEXT.md): a child whose type comes from another
+  // scene may well be rooted at a SubViewport, so staying silent beats
+  // false-positiving on a normal Godot idiom. Testing `instance` alone missed
+  // the override-heading case, which parses as a confident `'Node'`.
+  const hasOpaqueChild = children.some(isTypeUnknowable);
 
   if (!hasSubViewport && !hasOpaqueChild) {
     diagnostics.push({

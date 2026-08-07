@@ -1,6 +1,10 @@
 /**
  * Path2D linter tests — curve resource validation + the missing-curve
  * divergence from Path3D (warning, not error; suppressed when a script is set).
+ *
+ * No PathFollow2D-child check: `path_2d.h`/`path_2d.cpp` declare a
+ * `get_configuration_warnings()` override only on `PathFollow2D`, never on
+ * `Path2D` itself, so a followerless Path2D carries no diagnostic.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -14,21 +18,20 @@ import './linterParser';
 import './linter';
 
 describe('Path2D Linter', () => {
-  it('passes a Path2D with a valid Curve2D SubResource and a PathFollow2D child', () => {
+  it('passes a Path2D with a valid Curve2D SubResource', () => {
     const content = scene(
       '[sub_resource type="Curve2D" id="curve_1"]',
-      node('Path2D', { curve: 'SubResource("curve_1")' }),
-      node('PathFollow2D', {}, { parent: '.' })
+      node('Path2D', { curve: 'SubResource("curve_1")' })
     );
     const diagnostics = lint(content);
     expect(diagnostics.filter((d) => d.nodeType === 'Path2D')).toHaveLength(0);
   });
 
   it('warns (not errors) when a Path2D has no curve and no script', () => {
-    expectDiagnostic(
-      scene(node('Path2D'), node('PathFollow2D', {}, { parent: '.' })),
-      { ruleName: 'path2d-missing-curve', severity: 'warning' }
-    );
+    expectDiagnostic(scene(node('Path2D')), {
+      ruleName: 'path2d-missing-curve',
+      severity: 'warning',
+    });
   });
 
   it('suppresses the missing-curve warning when the node has a script (runtime-assigned)', () => {
@@ -38,29 +41,25 @@ describe('Path2D Linter', () => {
 
 [node name="Path2D" type="Path2D"]
 script = ExtResource("1")
-
-[node name="PathFollow2D" type="PathFollow2D" parent="."]
 `;
     expectNoDiagnostic(content, { ruleName: 'path2d-missing-curve' });
   });
 
   it('errors when the curve reference points at a non-existent resource', () => {
-    expectDiagnostic(
-      scene(
-        node('Path2D', { curve: 'SubResource("does_not_exist")' }),
-        node('PathFollow2D', {}, { parent: '.' })
-      ),
-      { ruleName: 'valid-path2d-resources', severity: 'error' }
-    );
+    expectDiagnostic(scene(node('Path2D', { curve: 'SubResource("does_not_exist")' })), {
+      ruleName: 'valid-path2d-resources',
+      severity: 'error',
+    });
   });
 
-  it('warns when a Path2D has no PathFollow2D child', () => {
-    expectDiagnostic(
-      scene(
-        '[sub_resource type="Curve2D" id="curve_1"]',
-        node('Path2D', { curve: 'SubResource("curve_1")' })
-      ),
-      { ruleName: 'path2d-unused' }
-    );
+  it('has no diagnostic at all for a curve-having Path2D with no PathFollow2D child', () => {
+    expect(
+      lint(
+        scene(
+          '[sub_resource type="Curve2D" id="curve_1"]',
+          node('Path2D', { curve: 'SubResource("curve_1")' })
+        )
+      )
+    ).toHaveLength(0);
   });
 });

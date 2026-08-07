@@ -44,7 +44,6 @@ Strict parsing format-checks these `Path2D` properties, plus 12 inherited from N
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-path2d` | `path2d-missing-curve` | warning |
 |  | `valid-path2d-resources` | error |
-|  | `path2d-unused` | warning |
 <!-- lint:end -->
 
 Path2D carries a single property of its own, `curve`. The lenient parser only checks

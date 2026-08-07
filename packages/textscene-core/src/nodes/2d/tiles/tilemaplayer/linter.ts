@@ -35,6 +35,9 @@ function checkTileMapLayer(context: RuleContext): Diagnostic[] {
     });
   }
 
+  // Godot raises no warning for this — TileMapLayer declares no
+  // get_configuration_warnings() override at all (tile_map_layer.h/.cpp);
+  // grounded instead in the node drawing nothing with no cell data to render.
   if (rawProps.tile_map_data === undefined) {
     diagnostics.push({
       severity: 'warning',

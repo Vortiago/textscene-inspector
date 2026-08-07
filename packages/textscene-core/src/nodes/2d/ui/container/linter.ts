@@ -52,6 +52,7 @@ const containerScriptRule: LintRule = {
     description:
       'Flags a plain Container (the exact class, not a subclass) with no script attached — it places no children on its own',
     category: 'validation',
+    exactClassByDesign: 'container.cpp:210',
     applicableNodeTypes: ['Container'],
     emits: [{ ruleName: 'container-no-script', severity: 'warning' }],
   },

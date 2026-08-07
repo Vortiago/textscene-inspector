@@ -319,7 +319,10 @@ describe('PathFollow3D Linter', () => {
         ruleName: 'pathfollow3d-both-progress-properties',
         severity: 'warning',
         nodeType: 'PathFollow3D',
-        contains: ['both', 'takes precedence'],
+        // packed_scene.cpp:365-381: file order decides the winner, not
+        // 'progress_ratio' unconditionally — and path_3d.cpp:433 means Godot's
+        // own saver never writes this dual-key state to begin with.
+        contains: ['both', 'file order', 'LAST', 'hand-written'],
       });
       expect(warning.nodeName).toBe('PathFollow');
     });

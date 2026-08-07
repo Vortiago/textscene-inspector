@@ -145,7 +145,11 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Warning: active = false
+  // Warning: active = false. Not a port of get_configuration_warnings() —
+  // AnimationTree has none. The wording is adapted from
+  // `get_editor_error_message()` (animation_tree.cpp:995-997), a
+  // `TOOLS_ENABLED`-only method Godot calls to render text INSIDE the
+  // blend-tree graph editor, not from `get_configuration_warnings()`.
   if (rawProps.active === 'false') {
     diagnostics.push({
       severity: 'warning',

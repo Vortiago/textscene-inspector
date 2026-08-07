@@ -10,13 +10,14 @@
 import '../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
 
 /**
  * PI/2 plus `v.radians`' round-trip epsilon (v.ts), so the float32 value
  * Godot's own serialiser writes for the exact boundary does not warn against
  * a bound it produced itself.
  */
-const PI_OVER_2 = Math.PI / 2 + 0.0001;
+const PI_OVER_2 = Math.PI / 2 + RADIAN_ROUNDTRIP_EPSILON;
 
 validatorRegistry.registerAll('OpenXRCompositionLayerEquirect', {
   // openxr_composition_layer_equirect.cpp:76, PROPERTY_HINT_NONE.

@@ -45,8 +45,6 @@ Strict parsing format-checks these `StaticBody3D` properties, plus 6 inherited f
 | `valid-staticbody3d` (type-family match) | `valid-staticbody3d-resources` | error |
 |  | `staticbody3d-needs-collision-shape` | warning |
 |  | `staticbody3d-constant-velocity-warning` | warning |
-|  | `staticbody3d-zero-collision-layer` | warning |
-|  | `staticbody3d-zero-collision-mask` | warning |
 <!-- lint:end -->
 
 StaticBody3D has no `parser.ts`: it reuses `parseNode3D` directly, so none of

@@ -314,26 +314,8 @@ physics_material_override = ExtResource("ext_mat_1")
   });
 
   describe('Semantic Validation (Collision Layers)', () => {
-    it('should warn when collision_layer is 0', () => {
-      expectDiagnostic(scene(node('RigidBody3D', { mass: 1.0, collision_layer: 0 }), collisionShape3d), {
-        ruleName: 'rigidbody3d-zero-collision-layer',
-        severity: 'warning',
-        nodeType: 'RigidBody3D',
-        contains: ['collision_layer set to 0'],
-      });
-    });
-
     it('should not warn when collision_layer is non-zero', () => {
       expectClean(scene(node('RigidBody3D', { mass: 1.0, collision_layer: 1 }), collisionShape3d));
-    });
-
-    it('should warn when collision_mask is 0', () => {
-      expectDiagnostic(scene(node('RigidBody3D', { mass: 1.0, collision_mask: 0 }), collisionShape3d), {
-        ruleName: 'rigidbody3d-zero-collision-mask',
-        severity: 'warning',
-        nodeType: 'RigidBody3D',
-        contains: ['collision_mask set to 0'],
-      });
     });
 
     it('should not warn when collision_mask is non-zero', () => {
@@ -461,26 +443,5 @@ custom_integrator = false
       );
     });
 
-    it('should handle combination of warnings and errors', () => {
-      const diagnostics = lint(
-        scene(
-          node('RigidBody3D', {
-            mass: 0.001,
-            linear_damp: 20.0,
-            collision_layer: 0,
-            max_contacts_reported: 10,
-          }),
-          collisionShape3d
-        )
-      );
-      // Warnings: zero collision_layer and max_contacts without monitor. mass
-      // 0.001 sits exactly on the hint's bottom (:764) and linear_damp 20 is under
-      // its open top (:785), so neither of those contributes any more.
-      expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
-        'rigidbody3d-max-contacts-without-monitor',
-        'rigidbody3d-zero-collision-layer',
-      ]);
-      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
-    });
   });
 });

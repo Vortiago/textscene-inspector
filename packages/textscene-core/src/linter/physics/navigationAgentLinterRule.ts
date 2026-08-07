@@ -26,6 +26,7 @@ import { findParentNode } from '../linterUtils.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
+import { isTypeUnknowable } from '../parentType.js';
 
 export function makeNavigationAgentLinterRule(dim: PhysicsDim): LintRule {
   const type = `NavigationAgent${dim}`;
@@ -38,7 +39,7 @@ export function makeNavigationAgentLinterRule(dim: PhysicsDim): LintRule {
     const parent = findParentNode(scene.nodes, node);
 
     // An instanced parent's type lives in another file; the linter never opens it.
-    if (parent && (parent.instance || !parent.type)) return [];
+    if (parent && isTypeUnknowable(parent)) return [];
     if (parent && descendsFrom(parent.type, parentType)) return [];
 
     const where = parent ? `a child of a ${parent.type} node` : 'the scene root';

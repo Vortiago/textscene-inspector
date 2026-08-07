@@ -3,29 +3,20 @@
  *
  * Note: Format validation (curve resource reference format) is handled by linterParser.ts
  * during strict parsing. This file focuses on semantic validation that requires
- * full scene context (e.g., curve resource exists, PathFollow3D children).
+ * full scene context (e.g., curve resource exists).
+ *
+ * No "no PathFollow3D children" check: `path_3d.h`/`path_3d.cpp` declare a
+ * `get_configuration_warnings()` override only on `PathFollow3D`, never on
+ * `Path3D` itself — Godot raises no warning for a followerless Path3D. A
+ * CSGPolygon3D in PATH mode extruding along a `path_node`, or a SplineIK3D
+ * naming one through its indexed settings, are both first-class consumers
+ * that need no PathFollow3D at all.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnInternalResource, TscnNode, TscnScene } from '../../../parser/types.js';
+import type { TscnInternalResource } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
-
-/**
- * Check if a node has any PathFollow3D children
- */
-function hasPathFollowChildren(node: TscnNode): boolean {
-  for (const child of node.children) {
-    if (child.type === 'PathFollow3D') {
-      return true;
-    }
-    // Recursively check nested children
-    if (hasPathFollowChildren(child)) {
-      return true;
-    }
-  }
-  return false;
-}
 
 /**
  * Validate Path3D semantic rules
@@ -62,21 +53,6 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
     } else {
       diagnostics.push(...checkCurve3DData(context, rawProps.curve));
     }
-  }
-
-  // WARNING: nothing in the scene appears to consume this path.
-  // PathFollow3D descendants are the usual consumer, but a CSGPolygon3D in PATH
-  // mode extrudes along a Path3D it names through `path_node` and needs no
-  // PathFollow3D at all — a first-class Godot pattern that two vendored scenes
-  // use, and that this rule used to warn about.
-  if (!hasPathFollowChildren(node) && !isReferencedByAnyConsumer(context.scene, node.name)) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Path3D '${node.name}' has no PathFollow3D children. While paths can be used programmatically, they are typically followed by PathFollow3D nodes. Consider adding a PathFollow3D child if you intend to animate objects along this path.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'path3d-unused',
-    });
   }
 
   return diagnostics;
@@ -169,13 +145,12 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
 const path3DValidationRule: LintRule = {
   meta: {
     name: 'valid-path3d',
-    description: 'Validates Path3D curve resource references and checks for PathFollow3D children',
+    description: 'Validates Path3D curve resource references',
     category: 'validation',
     applicableNodeTypes: ['Path3D'],
     emits: [
       { ruleName: 'path3d-requires-curve', severity: 'warning' },
       { ruleName: 'valid-path3d-resources', severity: 'error' },
-      { ruleName: 'path3d-unused', severity: 'warning' },
       { ruleName: 'curve3d-loadable', severity: 'error' },
     ],
   },
@@ -187,53 +162,3 @@ ruleRegistry.register(path3DValidationRule);
 
 // Export for testing
 export { path3DValidationRule };
-
-/**
- * The indexed key shape that names a Path3D.
- *
- * `path_node` is CSGPolygon3D's and is read directly. `settings/<i>/path_3d` is
- * SplineIK3D's, which consumes a Path3D through its indexed setting family and
- * needs no PathFollow3D either (`spline_ik_3d.cpp:83`); scanning only
- * `path_node` warned on every scene using that pattern.
- */
-const INDEXED_CONSUMER_RE = /^settings\/\d+\/path_3d$/;
-
-/**
- * Does any node in the scene name this Path3D through a Path3D-consuming key?
- *
- * Matched by the NodePath's FINAL SEGMENT rather than resolved properly: the
- * linter reads a single static scene, where an instanced sub-scene's internals
- * are opaque and a relative NodePath may leave the file entirely. A false
- * negative (staying quiet about a genuinely unused path) is much cheaper here
- * than warning about a correct scene.
- */
-function isReferencedByAnyConsumer(scene: TscnScene, pathName: string): boolean {
-  const names = (raw: unknown): boolean =>
-    typeof raw === 'string' && nodePathLeaf(raw) === pathName;
-
-  // Direct reads before any iteration: this runs for every node of every scene,
-  // once per Path3D, so materialising key/value pairs per node would allocate
-  // across the whole tree to find a key that is usually absent. `for...in`
-  // costs nothing when the guard fails, and `endsWith` rejects almost every key
-  // before the regex runs.
-  const visit = (nodes: readonly TscnNode[]): boolean => {
-    for (const n of nodes) {
-      const props = n.properties as Record<string, unknown>;
-      if (names(props['path_node'])) return true;
-      for (const key in props) {
-        if (!key.endsWith('/path_3d') || !INDEXED_CONSUMER_RE.test(key)) continue;
-        if (names(props[key])) return true;
-      }
-      if (n.children.length > 0 && visit(n.children)) return true;
-    }
-    return false;
-  };
-  return visit(scene.nodes);
-}
-
-/** Last segment of a `NodePath("a/b/Target")` literal, or the raw string. */
-function nodePathLeaf(raw: string): string {
-  const inner = raw.match(/^NodePath\s*\(\s*"([^"]*)"\s*\)$/)?.[1] ?? raw;
-  const segments = inner.split('/').filter((s) => s.length > 0 && s !== '..' && s !== '.');
-  return segments[segments.length - 1] ?? '';
-}

@@ -13,7 +13,6 @@ import {
   hasCollisionShapeDescendant,
   collisionShapeTypesPhrase,
 } from './hasCollisionShapeDescendant.js';
-import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
@@ -136,8 +135,6 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       }
     }
 
-    pushZeroCollisionLayerMaskWarnings(diagnostics, node, rawProps, type, prefix);
-
     // Warning: per-axis scale the physics engine overrides at runtime (3D —
     // rigid_body_3d.cpp:667; the 2D counterpart is the branch below). Reaches
     // VehicleBody3D too, via the matcher below.
@@ -209,9 +206,6 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
         { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
         { ruleName: `${prefix}-mass-too-low`, severity: 'warning' },
         { ruleName: `${prefix}-max-contacts-without-monitor`, severity: 'warning' },
-        { ruleName: `${prefix}-zero-collision-layer`, severity: 'warning' },
-        { ruleName: `${prefix}-zero-collision-mask`, severity: 'warning' },
-        // Dimension-gated: each instantiation emits only its own branch above.
         { ruleName: `${prefix}-scale-overridden-at-runtime`, severity: 'warning' },
       ],
     },

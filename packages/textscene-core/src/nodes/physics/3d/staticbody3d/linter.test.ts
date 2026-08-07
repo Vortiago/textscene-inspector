@@ -279,26 +279,14 @@ physics_material_override = ExtResource("ext_mat_1")
   });
 
   describe('Semantic Validation (Collision Layers)', () => {
-    it('should warn when collision_layer is 0', () => {
-      expectDiagnostic(scene(node('StaticBody3D', { collision_layer: 0 }), collisionShape3d), {
-        ruleName: 'staticbody3d-zero-collision-layer',
-        severity: 'warning',
-        nodeType: 'StaticBody3D',
-        contains: ['collision_layer set to 0'],
-      });
-    });
-
     it('should not warn when collision_layer is non-zero', () => {
       expectClean(scene(node('StaticBody3D', { collision_layer: 1 }), collisionShape3d));
     });
 
-    it('should warn when collision_mask is 0', () => {
-      expectDiagnostic(scene(node('StaticBody3D', { collision_mask: 0 }), collisionShape3d), {
-        ruleName: 'staticbody3d-zero-collision-mask',
-        severity: 'warning',
-        nodeType: 'StaticBody3D',
-        contains: ['collision_mask set to 0'],
-      });
+    // No `collision_mask == 0` check: no engine warning exists for it, and it
+    // is the standard "only needs to BE detected" static configuration.
+    it('stays quiet when collision_mask is 0', () => {
+      expectClean(scene(node('StaticBody3D', { collision_mask: 0 }), collisionShape3d));
     });
 
     it('should not warn when collision_mask is non-zero', () => {

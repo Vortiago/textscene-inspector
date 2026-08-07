@@ -214,12 +214,13 @@ describe('Area2D Linter', () => {
   });
 
   describe('Semantic Validation (Collision Layers)', () => {
-    it('should warn when collision_layer is 0 and monitoring is true', () => {
-      expectDiagnostic(scene(node('Area2D', { monitoring: true, collision_layer: 0 }), collisionShape2d), {
-        ruleName: 'area2d-monitoring-zero-layer',
-        severity: 'warning',
-        nodeType: 'Area2D',
-      });
+    // No `collision_layer == 0` + monitoring check: no engine warning exists
+    // for it, AND the premise was wrong — Area monitoring matches a target
+    // body's `collision_layer` against the AREA's `collision_mask`, not the
+    // area's own `collision_layer`, so the area's own layer has no bearing on
+    // what it detects. dodge-the-creeps' Coin ships with it deliberately.
+    it('stays quiet when collision_layer is 0 and monitoring is true', () => {
+      expectClean(scene(node('Area2D', { monitoring: true, collision_layer: 0 }), collisionShape2d));
     });
 
     it('should warn when collision_mask is 0 and monitoring is true', () => {

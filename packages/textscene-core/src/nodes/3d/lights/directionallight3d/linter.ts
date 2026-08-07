@@ -80,7 +80,12 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Validate shadow_mode consistency with splits
+  // Godot raises no warning for this — it just hides the field. Grounded in
+  // `_validate_property` (light_3d.cpp:542-551): under `ORTHOGONAL`,
+  // `directional_shadow_split_1`/`directional_shadow_blend_splits` get
+  // `PROPERTY_USAGE_NO_EDITOR`; under `ORTHOGONAL` or `PARALLEL_2_SPLITS`,
+  // `directional_shadow_split_2`/`directional_shadow_split_3` do too — the
+  // inspector simply stops showing the now-inapplicable split fields.
   const shadowMode = rawProps.directional_shadow_mode ? parseInt(rawProps.directional_shadow_mode, 10) : undefined;
 
   if (shadowMode !== undefined && !isNaN(shadowMode)) {

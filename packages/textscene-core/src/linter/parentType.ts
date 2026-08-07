@@ -1,4 +1,12 @@
-/** Shared parent-type resolution for the semantic linters. */
+/**
+ * What the semantic linters can and cannot know about a node's neighbours in
+ * the tree: its parent's type, and whether it is visible.
+ *
+ * Both answers run into the same wall, which is why they share a module:
+ * a `.tscn` describes only its own nodes, and a node that comes from somewhere
+ * else — instanced, or an override of one inside an instance — takes its type
+ * and its properties from a scene this linter never opens.
+ */
 
 import type { TscnNode } from '../parser/types.js';
 import { findParentNode } from './linterUtils.js';
@@ -39,26 +47,44 @@ export type ParentVerdict =
   | { kind: 'mismatch'; parent: TscnNode };
 
 /**
+ * True when this node's `type` is not what it says, because the node comes from
+ * a scene the linter never opens.
+ *
+ * Three ways that happens, and testing fewer than all three is a bug that reads
+ * as correct:
+ *
+ * - `instance=` — the node IS another scene, whose root type lives there.
+ * - no `type=` and no `instance=` — Godot's marker for "override the node
+ *   already at this path", inside an instanced ancestor.
+ * - a genuinely absent type on a malformed heading.
+ *
+ * The middle case is the trap. `NodeRegistry.ts:109` defaults a missing type to
+ * `'Node'`, so an override heading parses as a confident, wrong `'Node'` and a
+ * check of `!node.type` sails past it. That is not hypothetical: it made the
+ * linter report a misplaced skeleton modifier in Godot's own shipped ragdoll
+ * demo, whose `PhysicalBoneSimulator3D` hangs off a `Skeleton3D` override
+ * inside an instanced character.
+ *
+ * This is a function rather than three inline conditions because the inline
+ * form had already been written five ways across the linter — parent-side and
+ * child-side, some testing two arms, some one, one testing none — and fixing
+ * the middle case in `parentTypeVerdict` did not fix it in
+ * `visibleInTreeVerdict` sixty lines below, in the same commit.
+ */
+export function isTypeUnknowable(node: TscnNode): boolean {
+  return Boolean(node.instance) || !node.type || Boolean(node.overridesExistingNode);
+}
+
+/**
  * Resolve `node`'s parent against `wantedType`, subclasses included.
  *
- * The instanced/untyped exemption is the reason this exists. It was written
- * out by hand at four call sites — `XRCamera3D`, `OpenXRVisibilityMask` and
- * both arms of `BoneAttachment3D` — byte-identical each time, and it had
- * already drifted in FORM between them (`parent && (parent.instance || !parent.type)`
- * versus a standalone `parent.instance || !parent.type` leaning on an earlier
+ * The exemption is the reason this exists. It was written out by hand at four
+ * call sites — `XRCamera3D`, `OpenXRVisibilityMask` and both arms of
+ * `BoneAttachment3D` — byte-identical each time, and it had already drifted in
+ * FORM between them (`parent && (parent.instance || !parent.type)` versus a
+ * standalone `parent.instance || !parent.type` leaning on an earlier
  * `if (!parent)`). Two spellings of one rule is how the fifth copy silently
  * drops it and starts warning about parents it cannot see.
- *
- * **`overridesExistingNode` is the third arm, and testing `!parent.type` alone
- * does not cover it.** A heading with neither `type=` nor `instance=` overrides
- * a node that already exists at that path inside an instanced ancestor — but
- * `NodeRegistry.ts:109` defaults a missing type to `'Node'`, so the parsed node
- * reads as a plain Node rather than as untyped. Every rule that asked
- * `!parent.type` therefore saw a confident, wrong answer. Godot's own ragdoll
- * demo is the witness: its `PhysicalBoneSimulator3D` hangs off a `Skeleton3D`
- * override inside an instanced character, and the missing arm made the linter
- * announce that a shipped Godot scene had put a skeleton modifier in the wrong
- * place.
  */
 export function parentTypeVerdict(
   scene: TscnScene,
@@ -67,9 +93,7 @@ export function parentTypeVerdict(
 ): ParentVerdict {
   const parent = findParentNode(scene.nodes, node);
   if (!parent) return { kind: 'root' };
-  if (parent.instance || !parent.type || parent.overridesExistingNode) {
-    return { kind: 'unknowable' };
-  }
+  if (isTypeUnknowable(parent)) return { kind: 'unknowable' };
   if (descendsFrom(parent.type, wantedType)) return { kind: 'satisfied', parent };
   return { kind: 'mismatch', parent };
 }
@@ -128,7 +152,7 @@ export function visibleInTreeVerdict(scene: TscnScene, node: TscnNode): Visibili
 
   let current = findParentNode(scene.nodes, node);
   while (current) {
-    if (current.instance || !current.type) return 'unknowable';
+    if (isTypeUnknowable(current)) return 'unknowable';
     if (isExplicitlyHidden(current.properties as unknown as Record<string, string>)) return 'hidden';
     current = findParentNode(scene.nodes, current);
   }

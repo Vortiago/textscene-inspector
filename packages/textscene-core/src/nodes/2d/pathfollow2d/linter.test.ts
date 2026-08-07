@@ -57,7 +57,10 @@ progress_ratio = 0.5
       {
         ruleName: 'pathfollow2d-both-progress-properties',
         severity: 'warning',
-        contains: ['both', 'takes precedence'],
+        // packed_scene.cpp:365-381: file order decides the winner, not
+        // 'progress_ratio' unconditionally — and path_2d.cpp:416 means Godot's
+        // own saver never writes this dual-key state to begin with.
+        contains: ['both', 'file order', 'LAST', 'hand-written'],
       }
     );
   });

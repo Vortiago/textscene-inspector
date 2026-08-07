@@ -1474,18 +1474,19 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
 };
 
 /**
- * Rows still in the `unimplemented` arm. Can only go DOWN: an entry leaves this
- * arm by becoming `{ rule }` once a `LintRule` exists and reaches every
- * concrete heir, never by being deleted or re-typed to a decline.
+ * Every row still in the `unimplemented` arm, by declaring class and source
+ * line. Named rather than counted: a count says nothing when one gap is fixed
+ * and another added in the same edit, and cannot distinguish a gap that became
+ * a rule from one quietly re-typed to a decline.
  *
- * Down from 45 in one pass. The one that remains is `CSGShape3D`'s
- * empty-or-non-manifold check, and it is close to permanent: Godot decides it
- * from the combined boolean brush (`csg_shape.cpp:981`, after `_get_brush()`
- * folds the subtree at `:453-511`), which no scene file describes. A narrower
- * rule for a CSG leaf's OWN degenerate geometry ships beside it, but that is a
- * different condition and is deliberately not credited to this row.
+ * Down from 45 in one pass. The one that remains is close to permanent: Godot
+ * decides `CSGShape3D`'s empty-or-non-manifold check from the combined boolean
+ * brush (`csg_shape.cpp:981`, after `_get_brush()` folds the subtree at
+ * `:453-511`), which no scene file describes. A narrower rule for a CSG leaf's
+ * OWN degenerate geometry ships beside it, but that is a different condition
+ * and is deliberately not credited to this row.
  */
-const UNIMPLEMENTED_COUNT = 1;
+const UNIMPLEMENTED_ROWS: readonly string[] = ['CSGShape3D csg_shape.cpp:982'];
 
 /** Concrete, registered types a row applies to. */
 function concreteHeirs(declaringClass: string, row?: WarningRow): string[] {
@@ -1562,15 +1563,16 @@ describe('Godot configuration-warning coverage', () => {
     expect(thin).toEqual([]);
   });
 
-  it('the unimplemented count only ever goes down', () => {
-    const unimplemented: string[] = [];
-    for (const [cls, rows] of Object.entries(WARNINGS)) {
-      for (const row of rows) {
-        if ('unimplemented' in row.verdict) {
-          unimplemented.push(`${cls} ${row.at}: ${row.verdict.unimplemented}`);
-        }
-      }
-    }
-    expect(unimplemented.length, unimplemented.join('\n')).toBe(UNIMPLEMENTED_COUNT);
+  it('names exactly the rows still outstanding, not merely how many', () => {
+    // The IDENTITIES, not a count. A bare integer cannot tell "a gap became a
+    // rule" from "a gap was quietly re-typed to a decline", and says nothing at
+    // all when one row is fixed while another is added in the same edit.
+    // Pinning the `at` values makes every one of those show up as a diff here.
+    const outstanding = Object.entries(WARNINGS)
+      .flatMap(([cls, rows]) =>
+        rows.filter((r) => 'unimplemented' in r.verdict).map((r) => `${cls} ${r.at}`)
+      )
+      .sort();
+    expect(outstanding).toEqual(UNIMPLEMENTED_ROWS);
   });
 });

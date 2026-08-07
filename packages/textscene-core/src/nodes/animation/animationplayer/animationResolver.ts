@@ -79,6 +79,51 @@ export function resolveAnimations(
   return animations;
 }
 
+/**
+ * Raw (unresolved) relative NodePath strings on every 'audio' track across the
+ * given libraries' Animation resources. Used by the AudioStreamPlayer /
+ * AudioStreamPlayer2D / AudioStreamPlayer3D linters: `AnimationMixer` builds
+ * its own polyphonic playback bound to an audio track's target node and never
+ * reads that node's own `stream` property (animation_mixer.cpp:889-897), so a
+ * node driven this way is not silent even with no `stream` of its own.
+ *
+ * Deliberately separate from `resolveAnimations`/`parseTracks`, which drop
+ * 'audio' tracks entirely (THREE's AnimationMixer drives transforms only) —
+ * this never touches the render path.
+ */
+export function resolveAudioTrackPaths(
+  libraries: readonly AnimationLibraryRef[],
+  internalResources: readonly TscnInternalResource[]
+): string[] {
+  const paths: string[] = [];
+  for (const lib of libraries) {
+    const libResource = findById(internalResources, lib.subResourceId);
+    if (!libResource || libResource.type !== 'AnimationLibrary') continue;
+
+    const dataStr = asString(libResource.data['_data']);
+    if (!dataStr) continue;
+
+    for (const [, animId] of parseLibraryData(dataStr)) {
+      const animResource = findById(internalResources, animId);
+      if (!animResource || animResource.type !== 'Animation') continue;
+      paths.push(...audioTrackPaths(animResource.data));
+    }
+  }
+  return paths;
+}
+
+/** Every audio track's raw NodePath inner string within one Animation resource's data. */
+function audioTrackPaths(data: Record<string, unknown>): string[] {
+  const paths: string[] = [];
+  for (let i = 0; data[`tracks/${i}/type`] !== undefined; i++) {
+    const type = stripQuotes(asString(data[`tracks/${i}/type`]) ?? '');
+    if (type !== 'audio') continue;
+    const inner = extractNodePathInner(asString(data[`tracks/${i}/path`]) ?? '');
+    if (inner !== null) paths.push(inner);
+  }
+  return paths;
+}
+
 const SUB_RESOURCE_ENTRY = /"([^"]+)":\s*SubResource\("([^"]+)"\)/g;
 
 function parseLibraryData(dataStr: string): Array<[string, string]> {

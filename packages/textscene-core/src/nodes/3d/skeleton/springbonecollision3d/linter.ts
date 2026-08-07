@@ -22,13 +22,14 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { findParentNode } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { isTypeUnknowable } from '../../../../linter/parentType.js';
 
 function checkSpringBoneCollision3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
 
   const parent = findParentNode(scene.nodes, node);
   // An instanced parent's type lives in another file; treat it as unknown.
-  if (parent && (parent.instance || !parent.type)) return [];
+  if (parent && isTypeUnknowable(parent)) return [];
   if (parent?.type === 'SpringBoneSimulator3D') return [];
 
   const where = parent ? `a child of a ${parent.type} node` : 'the scene root';

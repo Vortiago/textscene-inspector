@@ -14,6 +14,7 @@ import {
   player3DVolumeArms,
   player3DPitchArms,
   checkInvalidMaxPolyphony,
+  isDrivenByAnimationAudioTrack,
 } from '../sharedLinterChecks.js';
 
 // audio_stream_player_3d.cpp:885, unit_size PROPERTY_HINT_RANGE
@@ -36,17 +37,25 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
+  // A stream can also arrive through an AnimationPlayer audio track that
+  // targets this node (animation_mixer.cpp:889-897 builds its own polyphonic
+  // playback and never reads the node's `stream`), so a node driven that way
+  // is not silent despite having no `stream` of its own.
+  const drivenByAnimation = rawProps.stream === undefined && isDrivenByAnimationAudioTrack(scene, node);
+
   // Advisory, not an error: audio_stream_player_3d.cpp defines no
   // configuration warning, and a player with no stream is valid Godot; a script
   // may assign one at runtime.
   if (rawProps.stream === undefined) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `AudioStreamPlayer3D '${node.name}' has no 'stream', so it will not play anything until one is assigned.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'audiostreamplayer3d-missing-stream',
-    });
+    if (!drivenByAnimation) {
+      diagnostics.push({
+        severity: 'warning',
+        message: `AudioStreamPlayer3D '${node.name}' has no 'stream', so it will not play anything until one is assigned.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: 'audiostreamplayer3d-missing-stream',
+      });
+    }
   } else {
     // ERROR: stream resource doesn't exist
     if (!checkResourceExists(scene, rawProps.stream)) {

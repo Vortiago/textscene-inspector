@@ -20,8 +20,10 @@
  * NodePath is. `extractNodePath` already returns null for `NodePath("")`, so
  * an explicit empty override falls out of this check for free too.
  *
- * Forced to `warning` severity (not `error`, unlike the dangling-skeleton
- * rule) per this task's brief.
+ * `warning`, not the `error` the dangling-skeleton rule uses. Godot raises this
+ * as a configuration warning, and ADR-0032 reserves `error` for a setter that
+ * refuses or alters a value — the scene loads and every property here is
+ * well-formed.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';

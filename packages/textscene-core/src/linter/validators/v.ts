@@ -334,6 +334,24 @@ function numericRange(kind: 'float' | 'integer', min?: number, max?: number): st
 /**
  * The declarative validator namespace. Use as `v.float`, `v.enum`, etc.
  */
+/**
+ * How far past a radian bound a value may sit before it is out of range.
+ *
+ * Not an engine constant — a tolerance this repo picks. Godot stores these
+ * properties as float32 and writes them back in decimal, so a value the editor
+ * set to exactly `PI` or exactly `PI/2` reloads a hair off, and a bound derived
+ * from JavaScript's float64 `Math.PI` would reject the number Godot's own
+ * serialiser produced. Comfortably wider than a float32 ULP near PI (~2.4e-7),
+ * because the cost of being generous here is missing an absurd value nobody
+ * writes, while the cost of being tight is rejecting real scenes.
+ *
+ * Exported because `v.radians` sets the convention and other bounds have to
+ * match it: a slice comparing against a radian ceiling of its own is
+ * compensating for exactly this, and typing `0.0001` again is how the two
+ * drift apart.
+ */
+export const RADIAN_ROUNDTRIP_EPSILON = 0.0001;
+
 export const v = {
   /**
    * Float in a range. Either bound is optional.
@@ -377,9 +395,9 @@ export const v = {
    *   range such as `"0,180,…"`.
    */
   radians(name: string, opts: { minDeg?: number; maxDeg: number } & Grounding): PropertyValidator {
-    const EPSILON = 0.0001;
-    const max = (opts.maxDeg * Math.PI) / 180 + EPSILON;
-    const min = opts.minDeg === undefined ? 0 : (opts.minDeg * Math.PI) / 180 - EPSILON;
+    const max = (opts.maxDeg * Math.PI) / 180 + RADIAN_ROUNDTRIP_EPSILON;
+    const min =
+      opts.minDeg === undefined ? 0 : (opts.minDeg * Math.PI) / 180 - RADIAN_ROUNDTRIP_EPSILON;
     const lowDeg = opts.minDeg ?? 0;
     return ground(
       accepts(

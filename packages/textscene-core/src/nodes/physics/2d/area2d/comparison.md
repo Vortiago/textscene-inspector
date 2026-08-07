@@ -64,7 +64,6 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-area2d` | `area2d-needs-collision-shape` | warning |
 |  | `area2d-inactive` | warning |
-|  | `area2d-monitoring-zero-layer` | warning |
 |  | `area2d-monitoring-zero-mask` | warning |
 |  | `area2d-monitoring-no-collision` | warning |
 |  | `area2d-audio-override-missing-name` | warning |

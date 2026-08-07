@@ -41,6 +41,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { isTypeUnknowable } from '../../../../linter/parentType.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 
 /** `as_sortable_control(child, VISIBLE)` is non-null, per container.cpp:143-155. */
@@ -60,7 +61,7 @@ function checkScrollContainer(context: RuleContext): Diagnostic[] {
   // real class lives in a sub-scene this linter never opens, so it may or may
   // not be the one sortable Control this rule is counting for. Staying silent
   // beats guessing the count wrong in either direction.
-  if (children.some((child) => child.instance || !child.type)) return [];
+  if (children.some(isTypeUnknowable)) return [];
 
   const sortableCount = children.filter(isSortableControl).length;
   if (sortableCount === 1) return [];

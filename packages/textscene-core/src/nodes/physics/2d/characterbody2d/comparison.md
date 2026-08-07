@@ -58,8 +58,6 @@ Strict parsing format-checks these `CharacterBody2D` properties, plus 5 inherite
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-characterbody2d` | `characterbody2d-needs-collision-shape` | warning |
 |  | `characterbody2d-floor-props-in-floating-mode` | warning |
-|  | `characterbody2d-zero-collision-layer` | warning |
-|  | `characterbody2d-zero-collision-mask` | warning |
 |  | `characterbody2d-non-standard-up-direction` | warning |
 |  | `characterbody2d-safe-margin-too-small` | warning |
 |  | `characterbody2d-safe-margin-too-large` | warning |

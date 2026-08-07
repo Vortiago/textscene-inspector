@@ -486,32 +486,22 @@ describe('validator coverage meta-guard', () => {
     expect(untested).toEqual([]);
   });
 
-  /**
-   * Rules Godot itself confines to one exact class, so going silent on the
-   * subclasses is the correct behaviour rather than the defect below.
-   *
-   * Vanishingly rare, and it must stay that way: an entry here is a claim about
-   * the ENGINE, and it needs the `file.cpp:line` of the guard that makes it
-   * true. "The subclasses felt out of scope" is not a reason — that is exactly
-   * the silence this test exists to catch.
-   */
-  const EXACT_CLASS_BY_DESIGN: Readonly<Record<string, string>> = {
-    'valid-container-script':
-      'container.cpp:210 guards with `get_class() == "Container"`, an exact-class test, so Godot raises this for a bare Container ONLY. Every descendant — VBoxContainer, GridContainer, the split and flow containers — arranges its children in C++ and needs no script, so warning about them would invent a defect the engine does not recognise',
-  };
-
-  it('every exact-class exemption is real and cites the engine guard', () => {
-    // A stale exemption is worse than none: it silently excuses a rule that has
-    // since grown a matcher, or one whose name changed out from under it.
-    const problems: string[] = [];
-    for (const [ruleName, reason] of Object.entries(EXACT_CLASS_BY_DESIGN)) {
-      const rule = ruleRegistry.getRules().find((r) => r.meta.name === ruleName);
-      if (!rule) problems.push(`${ruleName}: exempted but not registered`);
-      else if (rule.meta.applicableNodeTypeMatcher) {
-        problems.push(`${ruleName}: exempted as exact-class but declares a matcher`);
-      }
-      if (!/\.(cpp|h):\d+/.test(reason)) problems.push(`${ruleName}: reason cites no engine line`);
-    }
+  it('every exact-class exemption cites an engine guard and needs no matcher', () => {
+    // The claim lives on the rule (`RuleMeta.exactClassByDesign`), so a stale
+    // one cannot outlive its rule the way a name-keyed list elsewhere could.
+    // What still needs checking is that it is a real claim: an engine citation,
+    // and no matcher — a rule with a matcher is not exact-class at all.
+    const problems = ruleRegistry
+      .getRules()
+      .filter((r) => r.meta.exactClassByDesign)
+      .flatMap((r) => [
+        ...(/\.(cpp|h):\d+/.test(r.meta.exactClassByDesign!)
+          ? []
+          : [`${r.meta.name}: exactClassByDesign cites no engine line`]),
+        ...(r.meta.applicableNodeTypeMatcher
+          ? [`${r.meta.name}: claims exact-class but declares a matcher`]
+          : []),
+      ]);
     expect(problems).toEqual([]);
   });
 
@@ -541,7 +531,7 @@ describe('validator coverage meta-guard', () => {
 
     const unreachable = ruleRegistry.getRules().flatMap((rule) => {
       const { name, applicableNodeTypes, applicableNodeTypeMatcher } = rule.meta;
-      if (name in EXACT_CLASS_BY_DESIGN) return [];
+      if (rule.meta.exactClassByDesign) return [];
       if (applicableNodeTypeMatcher) {
         return catalog.nodes
           .filter((n) => applicableNodeTypeMatcher(n.name))

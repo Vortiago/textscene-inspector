@@ -207,12 +207,13 @@ describe('Area3D Linter', () => {
   });
 
   describe('Semantic Validation (Collision Layers)', () => {
-    it('should warn when collision_layer is 0 and monitoring is true', () => {
-      expectDiagnostic(scene(node('Area3D', { monitoring: true, collision_layer: 0 }), collisionShape3d), {
-        ruleName: 'area3d-monitoring-zero-layer',
-        severity: 'warning',
-        nodeType: 'Area3D',
-      });
+    // No `collision_layer == 0` + monitoring check: no engine warning exists
+    // for it, AND the premise was wrong — Area monitoring matches a target
+    // body's `collision_layer` against the AREA's `collision_mask`, not the
+    // area's own `collision_layer`. squash-the-creeps' MobDetector ships with
+    // it deliberately.
+    it('stays quiet when collision_layer is 0 and monitoring is true', () => {
+      expectClean(scene(node('Area3D', { monitoring: true, collision_layer: 0 }), collisionShape3d));
     });
 
     it('should warn when collision_mask is 0 and monitoring is true', () => {

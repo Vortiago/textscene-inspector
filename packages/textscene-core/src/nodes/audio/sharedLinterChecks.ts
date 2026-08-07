@@ -18,6 +18,49 @@
 
 import type { Diagnostic } from '../../linter/types.js';
 import type { RangeArm } from '../../linter/rangeAdvisory.js';
+import type { TscnNode, TscnScene } from '../../parser/types.js';
+import { isValidProperties, resolveNodePathTarget } from '../../linter/linterUtils.js';
+import { extractLibraries } from '../animation/animationplayer/parser.js';
+import { resolveAudioTrackPaths } from '../animation/animationplayer/animationResolver.js';
+
+/**
+ * True when some AnimationPlayer anywhere in the scene drives `node` through
+ * an `audio` track — `animation_mixer.cpp:889-897` builds a separate
+ * polyphonic playback bound to the track's target and never reads that
+ * node's own `stream` property, so such a node is not silent even with no
+ * `stream` of its own. The `missing-stream` / `autoplay-without-stream`
+ * rules must stay quiet about it (verified against
+ * `scenes/demos/2d/platformer/level/coin.tscn`'s `Pickup` node).
+ *
+ * Resolution reuses `resolveNodePathTarget`'s confidence bar (final-segment
+ * name match, scene-wide, refusing `..` and instance-scoped paths): a track
+ * whose target can't be resolved confidently is treated as NOT driving this
+ * node — a missed warning beats a wrong one.
+ */
+export function isDrivenByAnimationAudioTrack(scene: TscnScene, node: TscnNode): boolean {
+  for (const player of collectByType(scene.nodes, 'AnimationPlayer')) {
+    if (!isValidProperties(player.properties)) continue;
+    const libraries = extractLibraries(player.properties as Record<string, string>);
+    for (const rawPath of resolveAudioTrackPaths(libraries, scene.internalResources)) {
+      const target = resolveNodePathTarget(scene.nodes, player, rawPath);
+      if (target.status === 'found' && target.node === node) return true;
+    }
+  }
+  return false;
+}
+
+/** Every node of `type` anywhere in the scene tree (depth-first). */
+function collectByType(nodes: readonly TscnNode[], type: string): TscnNode[] {
+  const out: TscnNode[] = [];
+  const walk = (list: readonly TscnNode[]): void => {
+    for (const n of list) {
+      if (n.type === type) out.push(n);
+      walk(n.children);
+    }
+  };
+  walk(nodes);
+  return out;
+}
 
 /**
  * `volume_db`'s **Range advisory** for the plain AudioStreamPlayer.

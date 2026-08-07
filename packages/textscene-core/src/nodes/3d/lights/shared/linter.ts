@@ -36,27 +36,15 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
-import { isEqualApprox } from '../../../../godot/math.js';
-import { parseTransform3D, decomposeTransform3D } from '../../../../utils/transform.js';
+import { hasNonUnitScale3D } from '../../../../utils/transform.js';
 
 const SCALE_RULE = 'light3d-non-unit-scale';
-
-/** `!get_scale().is_equal_approx(Vector3(1, 1, 1))` (light_3d.cpp:183-184). */
-function hasNonUnitScale(rawTransform: string | undefined): boolean {
-  if (rawTransform === undefined) return false;
-  try {
-    const { scale } = decomposeTransform3D(parseTransform3D(rawTransform));
-    return !isEqualApprox(scale.x, 1) || !isEqualApprox(scale.y, 1) || !isEqualApprox(scale.z, 1);
-  } catch {
-    return false; // malformed literal is linterParser.ts's job, not this rule's
-  }
-}
 
 function checkLight3DScale(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const properties = node.properties as unknown as Record<string, string>;
 
-  if (!hasNonUnitScale(properties.transform)) return [];
+  if (!hasNonUnitScale3D(properties.transform)) return [];
 
   return [
     {

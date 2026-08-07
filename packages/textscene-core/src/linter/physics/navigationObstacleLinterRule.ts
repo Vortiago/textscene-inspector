@@ -30,8 +30,10 @@
  * NOT ported here: NavigationObstacle3D's `get_configuration_warnings()`
  * (navigation_obstacle_3d.cpp:408-425) warns on non-y-axis GLOBAL rotation,
  * zero/negative GLOBAL scale, and non-uniform GLOBAL scale with a radius set —
- * declined as runtime-only in this repo's coverage table rather than answered
- * with this same helper, out of this batch's scope.
+ * declined as runtime-only in this repo's coverage table. The 3D twin needs a
+ * Transform3D composition this helper does not do — Node3D serialises one
+ * `transform` where Node2D serialises position/rotation/scale/skew separately —
+ * so answering it is a real piece of work, not a call away.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
@@ -49,10 +51,9 @@ import { dimSuffix } from './dim.js';
  * `navigation_obstacle_2d.cpp:332`, the floor `get_global_scale()` must clear
  * on both axes. The SAME literal also floors the "safe scale" `get_global_scale().abs().maxf(0.001)`
  * used at `:254`, `:367`, `:431`, `:445` — a single magic number, not
- * independently chosen per call site — so it belongs in a shared
- * `godot/navigation.ts` rather than being re-declared per consumer; flagged in
- * the batch report as that candidate rather than added here on this rule's
- * own authority.
+ * independently chosen per call site. It stays local all the same: `src/godot/`
+ * admits a fact only when more than one DOMAIN needs it, and this one has a
+ * single consumer. Move it there when a second turns up, not before.
  */
 const MIN_GLOBAL_SCALE = 0.001;
 

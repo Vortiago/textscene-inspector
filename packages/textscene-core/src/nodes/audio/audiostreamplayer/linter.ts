@@ -10,7 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
-import { basePlayerVolumeArms } from '../sharedLinterChecks.js';
+import { basePlayerVolumeArms, isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
 
 function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -34,8 +34,17 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // WARNING: autoplay is on but no stream is set
-  if (rawProps.autoplay === 'true' && rawProps.stream === undefined) {
+  // WARNING: autoplay is on but no stream is set. Godot raises no warning for
+  // this: `play_basic()` (audio_stream_player_internal.cpp:137-141) returns a
+  // null playback the instant `stream` is null and never logs anything, so
+  // autoplay silently does nothing. Suppressed when some AnimationPlayer
+  // audio track drives this node instead (its own `stream` is then beside
+  // the point).
+  if (
+    rawProps.autoplay === 'true' &&
+    rawProps.stream === undefined &&
+    !isDrivenByAnimationAudioTrack(scene, node)
+  ) {
     diagnostics.push({
       severity: 'warning',
       message: `Autoplay is enabled but no stream is set. The player will have no audio source.`,

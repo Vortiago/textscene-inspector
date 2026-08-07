@@ -4,6 +4,7 @@
 
 import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
 import { warn } from '../logger';
+import { isEqualApprox } from '../godot/math.js';
 
 /**
  * Parse Transform3D from string format.
@@ -215,5 +216,28 @@ export function parseOptionalTransform(
       }`
     );
     return identityTransform3D();
+  }
+}
+
+/**
+ * Whether a serialised `Transform3D`'s scale differs from `(1, 1, 1)`.
+ *
+ * Godot asks this in several unrelated configuration warnings —
+ * `Light3D`'s "a light's scale does not affect the visual size of the light"
+ * (`light_3d.cpp:183`) and `XROrigin3D`'s "changing the scale is not supported"
+ * (`xr_nodes.cpp:698`) among them — always as
+ * `!get_scale().is_equal_approx(Vector3(1, 1, 1))` on the node's OWN local
+ * transform, never a composed global one.
+ *
+ * A malformed literal answers `false`: rejecting it is the strict parser's job,
+ * and a semantic rule that also complained would report one defect twice.
+ */
+export function hasNonUnitScale3D(rawTransform: string | undefined): boolean {
+  if (rawTransform === undefined) return false;
+  try {
+    const { scale } = decomposeTransform3D(parseTransform3D(rawTransform));
+    return !isEqualApprox(scale.x, 1) || !isEqualApprox(scale.y, 1) || !isEqualApprox(scale.z, 1);
+  } catch {
+    return false;
   }
 }

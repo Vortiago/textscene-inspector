@@ -20,6 +20,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { isTypeUnknowable } from '../../../../linter/parentType.js';
 
 function checkMenuBarChildren(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -30,7 +31,7 @@ function checkMenuBarChildren(context: RuleContext): Diagnostic[] {
   // Instance-opaque linting (CONTEXT.md): an `instance=` child is typeless
   // here, and the sub-scene it points at may well be rooted at a PopupMenu.
   // Staying silent beats false-positiving on a normal Godot idiom.
-  if (children.some((child) => child.instance)) return [];
+  if (children.some(isTypeUnknowable)) return [];
 
   return [
     {

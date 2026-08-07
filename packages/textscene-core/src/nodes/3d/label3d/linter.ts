@@ -34,7 +34,10 @@ function checkLabel3D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // WARN: Empty text
+  // WARN: Empty text. Godot raises no warning for this — Label3D declares no
+  // get_configuration_warnings() override at all (label_3d.h) — grounded
+  // instead in the node being unable to draw anything: TextServer shapes
+  // zero glyphs from an empty string, so the label is invisible.
   if (rawProps.text !== undefined) {
     const text = unquoteString(rawProps.text);
     if (text === '') {

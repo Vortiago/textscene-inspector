@@ -29,6 +29,37 @@ function bare(props: Record<string, PropValue> = {}): string {
   return scene(node('AudioStreamPlayer2D', props, { name: 'AudioPlayer' }));
 }
 
+/**
+ * An AnimationPlayer with one Animation carrying a single 'audio' track whose
+ * NodePath targets `targetName`, plus an AudioStreamPlayer2D of that name with
+ * no `stream` of its own — the `coin.tscn` `Pickup` shape (its stream arrives
+ * through the track's `clips`, not the node's own `stream`). Uses the
+ * empty-name default library (`libraries/ =`), the form Godot actually writes.
+ */
+function drivenByAudioTrack(targetName: string, playerProps: Record<string, PropValue> = {}): string {
+  return scene(
+    audioStream,
+    `[sub_resource type="Animation" id="anim1"]
+tracks/0/type = "audio"
+tracks/0/path = NodePath("${targetName}")
+tracks/0/keys = {
+"clips": [{
+"end_offset": 0.0,
+"start_offset": 0.0,
+"stream": ExtResource("1_abc")
+}],
+"times": PackedFloat32Array(0)
+}`,
+    `[sub_resource type="AnimationLibrary" id="lib"]
+_data = {
+&"picked": SubResource("anim1")
+}`,
+    node('Node2D', {}, { name: 'Root' }),
+    node('AnimationPlayer', { 'libraries/': 'SubResource("lib")' }, { parent: '.' }),
+    node('AudioStreamPlayer2D', playerProps, { name: 'Pickup', parent: '.' })
+  );
+}
+
 describe('AudioStreamPlayer2D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
     it('should pass validation for valid AudioStreamPlayer2D properties', () => {
@@ -171,6 +202,21 @@ describe('AudioStreamPlayer2D Linter', () => {
       it('should not error when stream is present', () => {
         expectClean(withStream());
       });
+
+      it('stays silent when an AnimationPlayer audio track targets this node', () => {
+        // coin.tscn's Pickup: the stream arrives through the animation's audio
+        // track (animation_mixer.cpp:889-897 builds its own polyphonic playback
+        // for the track's target and never reads the node's `stream`).
+        expectClean(drivenByAudioTrack('Pickup'));
+      });
+
+      it('still warns when the audio track targets a DIFFERENT node', () => {
+        expectDiagnostic(drivenByAudioTrack('SomeOtherNode'), {
+          ruleName: 'audiostreamplayer2d-missing-stream',
+          severity: 'warning',
+          nodeType: 'AudioStreamPlayer2D',
+        });
+      });
     });
 
     describe('missing stream resource error', () => {
@@ -200,6 +246,10 @@ describe('AudioStreamPlayer2D Linter', () => {
 
       it('should not warn when autoplay is enabled with stream', () => {
         expectClean(withStream({ autoplay: true }));
+      });
+
+      it('stays silent when an AnimationPlayer audio track targets this node', () => {
+        expectClean(drivenByAudioTrack('Pickup', { autoplay: true }));
       });
     });
 

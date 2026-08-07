@@ -2,28 +2,23 @@
  * Semantic linter rules for Path2D.
  *
  * Format validation (the `curve` reference format) is handled by linterParser.ts
- * during strict parsing. This file covers semantic checks that need scene
- * context: the referenced Curve2D exists, and the path is actually followed.
+ * during strict parsing. This file covers the one semantic check that needs
+ * scene context: the referenced Curve2D exists.
  *
  * Divergence from Path3D (which ERRORs on a missing curve): in real 2D games a
  * Path2D's curve is frequently assigned at runtime via an attached script (e.g.
  * godot-open-rpg's gamepiece.tscn), so a missing `curve` is a WARNING and is
  * suppressed entirely when the node has a `script`.
+ *
+ * No "no PathFollow2D children" check: `path_2d.h`/`path_2d.cpp` declare a
+ * `get_configuration_warnings()` override only on `PathFollow2D`, never on
+ * `Path2D` itself — Godot raises no warning for a followerless Path2D, and
+ * Godot's own tween demo deliberately drives one from script with no follower.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
-
-/** Does this node have any PathFollow2D descendant? */
-function hasPathFollowChildren(node: TscnNode): boolean {
-  for (const child of node.children) {
-    if (child.type === 'PathFollow2D') return true;
-    if (hasPathFollowChildren(child)) return true;
-  }
-  return false;
-}
 
 function checkPath2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -52,29 +47,18 @@ function checkPath2D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  if (!hasPathFollowChildren(node)) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Path2D '${node.name}' has no PathFollow2D children. Paths are typically followed by a PathFollow2D; add one if you intend to move a node along this path.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'path2d-unused',
-    });
-  }
-
   return diagnostics;
 }
 
 const path2DValidationRule: LintRule = {
   meta: {
     name: 'valid-path2d',
-    description: 'Validates Path2D curve resource references and checks for PathFollow2D children',
+    description: 'Validates Path2D curve resource references',
     category: 'validation',
     applicableNodeTypes: ['Path2D'],
     emits: [
       { ruleName: 'path2d-missing-curve', severity: 'warning' },
       { ruleName: 'valid-path2d-resources', severity: 'error' },
-      { ruleName: 'path2d-unused', severity: 'warning' },
     ],
   },
   check: checkPath2D,

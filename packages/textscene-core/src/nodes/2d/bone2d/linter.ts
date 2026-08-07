@@ -34,6 +34,7 @@ import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { findParentNode, isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
+import { isTypeUnknowable } from '../../../linter/parentType.js';
 import { makeFloatTupleRegex } from '../../../linter/validators/floatTupleValidator.js';
 
 const CHAIN_RULE = 'bone2d-chain-does-not-terminate';
@@ -55,11 +56,11 @@ function ancestryVerdict(scene: TscnScene, node: TscnNode): AncestryVerdict {
   let current = findParentNode(scene.nodes, node);
   if (!current) return 'invalid-parent'; // root: parent_bone and skeleton both stay null
 
-  if (current.instance || !current.type) return 'unknowable';
+  if (isTypeUnknowable(current)) return 'unknowable';
   const parentIsBone2D = descendsFrom(current.type, 'Bone2D');
 
   while (current) {
-    if (current.instance || !current.type) return 'unknowable';
+    if (isTypeUnknowable(current)) return 'unknowable';
     if (descendsFrom(current.type, 'Skeleton2D')) return 'satisfied';
     if (!descendsFrom(current.type, 'Bone2D')) break;
     current = findParentNode(scene.nodes, current);

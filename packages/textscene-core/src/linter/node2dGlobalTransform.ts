@@ -59,6 +59,7 @@
 
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import { findParentNode, isValidProperties } from './linterUtils.js';
+import { isTypeUnknowable } from './parentType.js';
 import { descendsFrom } from './nodeBaseTypes.js';
 import { makeFloatTupleRegex } from './validators/floatTupleValidator.js';
 import { TSCN_FLOAT_RE, parseGodotFloat, tupleComponent } from './validators/commonValidators.js';
@@ -156,7 +157,7 @@ export function resolveGlobalTransform2D(scene: TscnScene, node: TscnNode): Glob
   while (!isTopLevel(current)) {
     const parent = findParentNode(scene.nodes, current);
     if (!parent) break; // scene root: nothing more to compose
-    if (parent.instance || !parent.type) return { kind: 'unknowable' };
+    if (isTypeUnknowable(parent)) return { kind: 'unknowable' };
     if (!descendsFrom(parent.type, 'CanvasItem')) break; // known terminus: Node, CanvasLayer, ...
     if (!descendsFrom(parent.type, 'Node2D')) return { kind: 'unknowable' }; // Control: composes, undecodable here
     chain.push(parent);

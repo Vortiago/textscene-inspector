@@ -20,27 +20,12 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-
-/** Count every ShaderGlobalsOverride node anywhere in the scene tree. */
-function countShaderGlobalsOverrides(scene: TscnScene): number {
-  let count = 0;
-
-  function traverse(nodes: TscnScene['nodes']): void {
-    for (const node of nodes) {
-      if (node.type === 'ShaderGlobalsOverride') count++;
-      if (node.children && node.children.length > 0) traverse(node.children);
-    }
-  }
-
-  traverse(scene.nodes);
-  return count;
-}
+import { countNodesOfType } from '../../../linter/linterUtils.js';
 
 function checkShaderGlobalsOverride(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  const total = countShaderGlobalsOverrides(scene);
+  const total = countNodesOfType(scene.nodes, 'ShaderGlobalsOverride');
   if (total <= 1) return [];
 
   return [

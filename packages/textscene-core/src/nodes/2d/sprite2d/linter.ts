@@ -96,7 +96,10 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Validate region_rect requires region_enabled
+  // Godot raises no warning for this. Grounded in `_get_rects()`
+  // (sprite_2d.cpp:96-105): `region_rect` is read into `base_rect` only
+  // inside the `if (region_enabled)` branch, so it is unconditionally
+  // ignored whenever `region_enabled` is false or absent (its own default).
   if (rawProps.region_rect !== undefined && rawProps.region_enabled === undefined) {
     diagnostics.push({
       severity: 'warning',

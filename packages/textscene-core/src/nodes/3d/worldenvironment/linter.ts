@@ -7,9 +7,10 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode, TscnScene } from '../../../parser/types.js';
+import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { countNodesOfType } from '../../../linter/linterUtils.js';
 import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver.js';
 
 /**
@@ -27,20 +28,6 @@ function getEnvironmentSkyReference(
   const env = findSubResource(scene.internalResources ?? [], parsed.id);
   const sky = env?.data?.sky;
   return typeof sky === 'string' ? sky : undefined;
-}
-
-/**
- * Count WorldEnvironment nodes in the scene tree
- */
-function countWorldEnvironmentNodes(nodes: TscnNode[]): number {
-  let count = 0;
-  for (const node of nodes) {
-    if (node.type === 'WorldEnvironment') {
-      count++;
-    }
-    count += countWorldEnvironmentNodes(node.children);
-  }
-  return count;
 }
 
 /**
@@ -113,7 +100,7 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
   }
 
   // Check if there are multiple WorldEnvironment nodes (only one should be active)
-  const worldEnvCount = countWorldEnvironmentNodes(scene.nodes);
+  const worldEnvCount = countNodesOfType(scene.nodes, 'WorldEnvironment');
   if (worldEnvCount > 1) {
     diagnostics.push({
       severity: 'warning',

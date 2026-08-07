@@ -53,10 +53,9 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isExplicitlyHidden } from '../../../../linter/parentType.js';
+import { isExplicitlyHidden, isTypeUnknowable } from '../../../../linter/parentType.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
-import { isEqualApprox } from '../../../../godot/math.js';
-import { parseTransform3D, decomposeTransform3D } from '../../../../utils/transform.js';
+import { hasNonUnitScale3D } from '../../../../utils/transform.js';
 
 const CAMERA_CHILD_RULE = 'xrorigin3d-missing-camera-child';
 const SCALE_RULE = 'xrorigin3d-unsupported-scale';
@@ -69,7 +68,7 @@ const SCALE_RULE = 'xrorigin3d-unsupported-scale';
 function cameraChildVerdict(node: TscnNode): 'satisfied' | 'unknowable' | 'missing' {
   let unknown = false;
   for (const child of node.children) {
-    if (child.instance || !child.type) {
+    if (isTypeUnknowable(child)) {
       unknown = true;
       continue;
     }
@@ -90,16 +89,6 @@ function cameraChildVerdict(node: TscnNode): 'satisfied' | 'unknowable' | 'missi
  * an origin's transform, so this stays with the shared, tested decomposition
  * rather than hand-rolling a determinant-sign special case for it.
  */
-function hasNonIdentityScale(rawTransform: string | undefined): boolean {
-  if (rawTransform === undefined) return false;
-  try {
-    const { scale } = decomposeTransform3D(parseTransform3D(rawTransform));
-    return !isEqualApprox(scale.x, 1) || !isEqualApprox(scale.y, 1) || !isEqualApprox(scale.z, 1);
-  } catch {
-    return false; // malformed literal is linterParser.ts's job, not this rule's
-  }
-}
-
 function checkXROrigin3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const properties = node.properties as unknown as Record<string, string>;
@@ -119,7 +108,7 @@ function checkXROrigin3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  if (hasNonIdentityScale(properties.transform)) {
+  if (hasNonUnitScale3D(properties.transform)) {
     diagnostics.push({
       severity: 'warning',
       message: `XROrigin3D '${node.name}' has a non-identity scale. Changing the scale on the XROrigin3D node is not supported, change the World Scale (world_scale) instead — the same configuration warning Godot's own editor reports.`,

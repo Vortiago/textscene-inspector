@@ -229,30 +229,6 @@ describe('VehicleBody3D Linter', () => {
     });
   });
 
-  describe('Semantic Validation (Collision Layers)', () => {
-    it('warns on a zero collision_layer', () => {
-      expectDiagnostic(
-        scene(
-          node('VehicleBody3D', { collision_layer: 0 }, { name: 'Vehicle' }),
-          wheel,
-          collisionShape3d
-        ),
-        { ruleName: 'rigidbody3d-zero-collision-layer', severity: 'warning' }
-      );
-    });
-
-    it('warns on a zero collision_mask', () => {
-      expectDiagnostic(
-        scene(
-          node('VehicleBody3D', { collision_mask: 0 }, { name: 'Vehicle' }),
-          wheel,
-          collisionShape3d
-        ),
-        { ruleName: 'rigidbody3d-zero-collision-mask', severity: 'warning' }
-      );
-    });
-  });
-
   describe('Edge Cases', () => {
     it('leaves a bare VehicleBody3D free of ERRORS (warnings are advisory)', () => {
       const diagnostics = lint(scene(node('VehicleBody3D', {}, { name: 'Vehicle' })));

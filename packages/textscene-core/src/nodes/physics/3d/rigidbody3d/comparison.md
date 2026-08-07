@@ -65,8 +65,6 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited fr
 |  | `rigidbody3d-needs-collision-shape` | warning |
 |  | `rigidbody3d-mass-too-low` | warning |
 |  | `rigidbody3d-max-contacts-without-monitor` | warning |
-|  | `rigidbody3d-zero-collision-layer` | warning |
-|  | `rigidbody3d-zero-collision-mask` | warning |
 |  | `rigidbody3d-scale-overridden-at-runtime` | warning |
 <!-- lint:end -->
 

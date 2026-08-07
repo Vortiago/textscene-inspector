@@ -19,6 +19,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { isTypeUnknowable } from '../../../linter/parentType.js';
 
 /** The node that holds `target` in its `children`, or null when it is a root. */
 function findParent(nodes: readonly TscnNode[], target: TscnNode): TscnNode | null {
@@ -35,7 +36,7 @@ function checkParallaxLayer(context: RuleContext): Diagnostic[] {
 
   const parent = findParent(scene.nodes, node);
   // An instanced parent's type lives in another file; treat it as unknown.
-  if (parent && (parent.instance || !parent.type)) return [];
+  if (parent && isTypeUnknowable(parent)) return [];
   if (parent?.type === 'ParallaxBackground') return [];
 
   const where = parent ? `a ${parent.type} node` : 'the scene root';

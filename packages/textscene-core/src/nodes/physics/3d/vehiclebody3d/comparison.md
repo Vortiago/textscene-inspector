@@ -56,8 +56,6 @@ Strict parsing format-checks these `VehicleBody3D` properties, plus 19 inherited
 |  | `rigidbody3d-needs-collision-shape` | warning |
 |  | `rigidbody3d-mass-too-low` | warning |
 |  | `rigidbody3d-max-contacts-without-monitor` | warning |
-|  | `rigidbody3d-zero-collision-layer` | warning |
-|  | `rigidbody3d-zero-collision-mask` | warning |
 |  | `rigidbody3d-scale-overridden-at-runtime` | warning |
 | `valid-vehiclebody3d` | `vehiclebody3d-needs-wheels` | warning |
 <!-- lint:end -->

@@ -39,8 +39,6 @@ Strict parsing format-checks these `AnimatableBody2D` properties, plus 3 inherit
 | `valid-staticbody2d` (type-family match) | `valid-staticbody2d-resources` | error |
 |  | `staticbody2d-needs-collision-shape` | warning |
 |  | `staticbody2d-constant-velocity-warning` | warning |
-|  | `staticbody2d-zero-collision-layer` | warning |
-|  | `staticbody2d-zero-collision-mask` | warning |
 <!-- lint:end -->
 
 `sync_to_physics` is not read by the lenient parser at all: AnimatableBody2D reuses

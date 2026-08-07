@@ -51,10 +51,6 @@ const UNIT_FIXTURE_WARNINGS: Readonly<Record<string, { rules: readonly string[];
     ],
     reason: 'named for the two advisories it carries; they are the fixture',
   },
-  'unit-path3d.tscn': {
-    rules: ['path3d-unused'],
-    reason: 'a Path3D with no follower is exactly what this fixture demonstrates',
-  },
   'unit-pathfollow-3d.tscn': {
     rules: ['pathfollow3d-both-progress-properties'],
     reason: 'sets both progress properties deliberately, to pin which one wins',

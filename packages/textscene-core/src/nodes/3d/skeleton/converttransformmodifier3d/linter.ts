@@ -42,6 +42,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { rangeAdvisories, type RangeArm } from '../../../../linter/rangeAdvisory.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
 
 const RULE_NAME = 'converttransformmodifier3d-range-outside-mode-hint';
 
@@ -56,7 +57,7 @@ const TRANSFORM_MODE_ROTATION = 1;
  * PI plus the epsilon `v.radians` uses, so the `3.1415927` Godot's own
  * serialiser writes does not warn against a bound it produced.
  */
-const ROTATION_LIMIT = Math.PI + 0.0001;
+const ROTATION_LIMIT = Math.PI + RADIAN_ROUNDTRIP_EPSILON;
 
 /** Arms for HINT_ROTATION: both ends closed, in radians rather than the hint's degrees. */
 function rotationArms(key: string): RangeArm[] {

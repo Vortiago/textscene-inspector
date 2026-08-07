@@ -46,8 +46,6 @@ Strict parsing format-checks these `StaticBody2D` properties, plus 5 inherited f
 | `valid-staticbody2d` (type-family match) | `valid-staticbody2d-resources` | error |
 |  | `staticbody2d-needs-collision-shape` | warning |
 |  | `staticbody2d-constant-velocity-warning` | warning |
-|  | `staticbody2d-zero-collision-layer` | warning |
-|  | `staticbody2d-zero-collision-mask` | warning |
 <!-- lint:end -->
 
 Both collision keys go through `layerBitmask`, so a value outside a 32-bit mask

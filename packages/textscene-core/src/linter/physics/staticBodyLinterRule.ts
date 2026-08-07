@@ -13,7 +13,6 @@ import {
   hasCollisionShapeDescendant,
   collisionShapeTypesPhrase,
 } from './hasCollisionShapeDescendant.js';
-import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
 import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
 import { tupleComponent } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
@@ -106,7 +105,13 @@ export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
       }
     }
 
-    pushZeroCollisionLayerMaskWarnings(diagnostics, node, rawProps, type, prefix);
+    // Neither `collision_layer == 0` nor `collision_mask == 0` gets a check.
+    // Godot has no such warning for ANY type — grepping `scene/` and `modules/`
+    // for a zero comparison on either property returns nothing — and both are
+    // ordinary shipped configurations: a static body that only needs to BE
+    // detected carries `collision_mask = 0` (squash-the-creeps' Ground/Walls,
+    // the platformer's PlatformStatic), and a projectile that only needs to
+    // detect carries `collision_layer = 0` (the platformer's Bullet).
 
     return diagnostics;
   }
@@ -121,8 +126,6 @@ export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
         { ruleName: `valid-${prefix}-resources`, severity: 'error' },
         { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
         { ruleName: `${prefix}-constant-velocity-warning`, severity: 'warning' },
-        { ruleName: `${prefix}-zero-collision-layer`, severity: 'warning' },
-        { ruleName: `${prefix}-zero-collision-mask`, severity: 'warning' },
       ],
     },
     check,
