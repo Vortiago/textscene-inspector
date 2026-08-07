@@ -1,7 +1,8 @@
 /**
- * Godot's Control anchor model, as plain data and one pure resolver: which
+ * Godot's Control anchor model, as plain data and two pure resolvers: which
  * four fractions a node's `anchors_preset` / `anchor_*` pair actually means,
- * resolved by `native/controlRectSolver.ts` into a numeric `Rect2`.
+ * and which grow direction that same preset implies, both resolved by
+ * `native/controlRectSolver.ts` into a numeric `Rect2`.
  *
  * Framework-free (a type import only), so the `.ts`-only consumers that must
  * not pull in React can read it.
@@ -55,4 +56,90 @@ export function resolveAnchors(p: ControlProperties): [number, number, number, n
     return PRESET_ANCHORS[p.anchorsPreset]!;
   }
   return [0, 0, 0, 0];
+}
+
+/** `Control::GrowDirection` (`control.h:59-62`). */
+const GROW_DIRECTION_BEGIN = 0;
+const GROW_DIRECTION_END = 1;
+const GROW_DIRECTION_BOTH = 2;
+
+/**
+ * `Control::LayoutPreset` (0..15) → the `grow_horizontal` it implies.
+ * Transcribed from the first `switch` in `scene/gui/control.cpp::Control::
+ * set_grow_direction_preset` (:1375-1399): the LEFT-edge presets grow END
+ * (away from the left anchor), the RIGHT-edge ones grow BEGIN, and every
+ * horizontally-centred or horizontally-spanning one grows BOTH.
+ */
+export const PRESET_GROW_HORIZONTAL: Record<number, number> = {
+  0: GROW_DIRECTION_END, // TOP_LEFT
+  1: GROW_DIRECTION_BEGIN, // TOP_RIGHT
+  2: GROW_DIRECTION_END, // BOTTOM_LEFT
+  3: GROW_DIRECTION_BEGIN, // BOTTOM_RIGHT
+  4: GROW_DIRECTION_END, // CENTER_LEFT
+  5: GROW_DIRECTION_BOTH, // CENTER_TOP
+  6: GROW_DIRECTION_BEGIN, // CENTER_RIGHT
+  7: GROW_DIRECTION_BOTH, // CENTER_BOTTOM
+  8: GROW_DIRECTION_BOTH, // CENTER
+  9: GROW_DIRECTION_END, // LEFT_WIDE
+  10: GROW_DIRECTION_BOTH, // TOP_WIDE
+  11: GROW_DIRECTION_BEGIN, // RIGHT_WIDE
+  12: GROW_DIRECTION_BOTH, // BOTTOM_WIDE
+  13: GROW_DIRECTION_BOTH, // VCENTER_WIDE
+  14: GROW_DIRECTION_BOTH, // HCENTER_WIDE
+  15: GROW_DIRECTION_BOTH, // FULL_RECT
+};
+
+/**
+ * `Control::LayoutPreset` (0..15) → the `grow_vertical` it implies. The
+ * second `switch` in the same function (`control.cpp:1401-1427`), by the
+ * mirrored rule: TOP-edge presets grow END, BOTTOM-edge ones BEGIN, and every
+ * vertically-centred or vertically-spanning one BOTH.
+ */
+export const PRESET_GROW_VERTICAL: Record<number, number> = {
+  0: GROW_DIRECTION_END, // TOP_LEFT
+  1: GROW_DIRECTION_END, // TOP_RIGHT
+  2: GROW_DIRECTION_BEGIN, // BOTTOM_LEFT
+  3: GROW_DIRECTION_BEGIN, // BOTTOM_RIGHT
+  4: GROW_DIRECTION_BOTH, // CENTER_LEFT
+  5: GROW_DIRECTION_END, // CENTER_TOP
+  6: GROW_DIRECTION_BOTH, // CENTER_RIGHT
+  7: GROW_DIRECTION_BEGIN, // CENTER_BOTTOM
+  8: GROW_DIRECTION_BOTH, // CENTER
+  9: GROW_DIRECTION_BOTH, // LEFT_WIDE
+  10: GROW_DIRECTION_END, // TOP_WIDE
+  11: GROW_DIRECTION_BOTH, // RIGHT_WIDE
+  12: GROW_DIRECTION_BEGIN, // BOTTOM_WIDE
+  13: GROW_DIRECTION_BOTH, // VCENTER_WIDE
+  14: GROW_DIRECTION_BOTH, // HCENTER_WIDE
+  15: GROW_DIRECTION_BOTH, // FULL_RECT
+};
+
+/**
+ * `[grow_horizontal, grow_vertical]` — which way a Control's rect moves when
+ * `Control::_size_changed`'s floor (`control.cpp:1773-1797`) has to clamp it
+ * up to its combined minimum size.
+ *
+ * A scene file rarely says: applying `anchors_preset` sets the grow direction
+ * as a SIDE EFFECT, since `Control::_set_anchors_layout_preset` — the setter
+ * actually bound to that property — ends by calling `set_grow_direction_preset`
+ * (`control.cpp:1032`), and the editor re-derives rather than re-serializes the
+ * implied value. So an explicitly authored `grow_horizontal`/`grow_vertical`
+ * wins (it is written only when it CONTRADICTS the preset), and otherwise the
+ * preset's own table supplies it.
+ *
+ * Derivation is gated exactly as Godot gates it (`control.cpp:991-993`):
+ * `layout_mode` must be `LAYOUT_MODE_ANCHORS` (1) or `LAYOUT_MODE_UNCONTROLLED`
+ * (3), else the preset is non-operational and the whole setter returns early —
+ * a container-managed child (2) or a free one (0) keeps the raw struct default
+ * even with an `anchors_preset` on the node. A preset outside 0..15 — notably
+ * the `-1` custom-anchors sentinel, which `_set_anchors_layout_preset` returns
+ * on before doing anything (`:983-989`) — likewise leaves it at that default,
+ * matching two `switch`es that carry no `default:` case.
+ */
+export function resolveGrowDirection(p: ControlProperties): [number, number] {
+  const presetApplies = p.layoutMode === 1 || p.layoutMode === 3;
+  const preset = presetApplies ? p.anchorsPreset : undefined;
+  const h = preset !== undefined ? PRESET_GROW_HORIZONTAL[preset] : undefined;
+  const v = preset !== undefined ? PRESET_GROW_VERTICAL[preset] : undefined;
+  return [p.growHorizontal ?? h ?? GROW_DIRECTION_END, p.growVertical ?? v ?? GROW_DIRECTION_END];
 }

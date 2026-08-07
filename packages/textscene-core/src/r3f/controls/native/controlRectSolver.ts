@@ -28,7 +28,7 @@ import {
   type SolveContext,
   type TextMeasurer,
 } from './solverRegistry';
-import { resolveAnchors } from '../controlAnchors.js';
+import { resolveAnchors, resolveGrowDirection } from '../controlAnchors.js';
 
 export interface SolvedControl {
   rect: Rect2;
@@ -342,12 +342,7 @@ function solveFree(
   const props = controlProps(n);
   const rect = controlSolverRegistry.isCanvasBoundary(n.node.type)
     ? canvasBoundaryRect(parentRect)
-    : floorAtMinimumSize(
-        computeAnchoredRect(props, parentRect),
-        minSize,
-        props.growHorizontal ?? 1,
-        props.growVertical ?? 1
-      );
+    : floorAtMinimumSize(computeAnchoredRect(props, parentRect), minSize, ...resolveGrowDirection(props));
   record(n, rect, minSize, paintIndexOf, out, ctx.minimumSizeMeta?.(n));
   dispatchChildren(n, rect, ctx, paintIndexOf, out);
 }
@@ -419,7 +414,7 @@ function dispatchChildren(
     const childProps = controlProps(child);
     const childRect = controlSolverRegistry.isCanvasBoundary(child.node.type)
       ? canvasBoundaryRect(rect)
-      : floorAtMinimumSize(assigned, minSize, childProps.growHorizontal ?? 1, childProps.growVertical ?? 1);
+      : floorAtMinimumSize(assigned, minSize, ...resolveGrowDirection(childProps));
     record(child, childRect, minSize, paintIndexOf, out, meta);
     dispatchChildren(child, childRect, ctx, paintIndexOf, out);
   }

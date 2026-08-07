@@ -140,6 +140,154 @@ describe('solveControlTree — size floored at custom_minimum_size', () => {
   });
 });
 
+describe('solveControlTree — grow direction derived from anchors_preset', () => {
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  // `Control::_set_anchors_layout_preset` (control.cpp:982-1032) ends by calling
+  // `set_grow_direction_preset` (:1373-1428), so a scene that authors only
+  // `anchors_preset` still gets a non-END grow — Godot's editor does not
+  // re-serialize the implied value, it re-derives it on load. Every expected
+  // rect in this block was measured through real Godot 4.6.3 (`Control::get_rect()`
+  // on a settled SubViewport of exactly this VIEWPORT size), not derived from
+  // this solver.
+
+  // One 10x10 raw box per preset, floored against a 40x40 custom_minimum_size so
+  // the grow branch fires on BOTH axes for every row. The two WIDE-preset offsets
+  // differ because a wide anchor pair would otherwise span the viewport and never
+  // reach its minimum on that axis.
+  const growMatrix: Array<{
+    preset: number;
+    label: string;
+    anchors: [number, number, number, number];
+    offsets: [number, number, number, number];
+    expected: Rect2;
+  }> = [
+    // TOP_LEFT: (END, END) — the corpus's most common preset, and the guard that
+    // the table's first entry did not shift: END already leaves position alone.
+    { preset: 0, label: 'TOP_LEFT', anchors: [0, 0, 0, 0], offsets: [-5, -5, 5, 5], expected: { x: -5, y: -5, w: 40, h: 40 } },
+    // TOP_RIGHT: (BEGIN, END) — x shifts back by the full 30px shortfall.
+    { preset: 1, label: 'TOP_RIGHT', anchors: [1, 0, 1, 0], offsets: [-5, -5, 5, 5], expected: { x: 1117, y: -5, w: 40, h: 40 } },
+    // BOTTOM_RIGHT: (BEGIN, BEGIN) — both axes shift back.
+    { preset: 3, label: 'BOTTOM_RIGHT', anchors: [1, 1, 1, 1], offsets: [-5, -5, 5, 5], expected: { x: 1117, y: 613, w: 40, h: 40 } },
+    // CENTER_TOP: (BOTH, END) — x splits the shortfall (571 - 15), y holds.
+    { preset: 5, label: 'CENTER_TOP', anchors: [0.5, 0, 0.5, 0], offsets: [-5, -5, 5, 5], expected: { x: 556, y: -5, w: 40, h: 40 } },
+    // CENTER_BOTTOM: (BOTH, BEGIN).
+    { preset: 7, label: 'CENTER_BOTTOM', anchors: [0.5, 1, 0.5, 1], offsets: [-5, -5, 5, 5], expected: { x: 556, y: 613, w: 40, h: 40 } },
+    // LEFT_WIDE: (END, BOTH) — the only row whose vertical anchors span the
+    // viewport, so its offsets pull the raw box back to 10px tall (319..329).
+    { preset: 9, label: 'LEFT_WIDE', anchors: [0, 0, 0, 1], offsets: [-5, 319, 5, -319], expected: { x: -5, y: 304, w: 40, h: 40 } },
+  ];
+
+  for (const { preset, label, anchors, offsets, expected } of growMatrix) {
+    it(`preset ${preset} (${label}) floors to ${JSON.stringify(expected)} under layout_mode 1`, () => {
+      const root = node('Root', 'Control', {
+        layoutMode: 1,
+        anchorsPreset: preset,
+        anchorLeft: anchors[0],
+        anchorTop: anchors[1],
+        anchorRight: anchors[2],
+        anchorBottom: anchors[3],
+        offsetLeft: offsets[0],
+        offsetTop: offsets[1],
+        offsetRight: offsets[2],
+        offsetBottom: offsets[3],
+        customMinimumSize: { x: 40, y: 40 },
+      });
+      const solved = solveControlTree([root], VIEWPORT, ctx());
+      expect(solved.get('Root')?.rect).toEqual(expected);
+    });
+  }
+
+  it('a CENTER-preset node taller than its anchored box centres on the half-pixel', () => {
+    // The shape a themed Button takes when its StyleBox content margins push its
+    // combined minimum height past its anchored height. Raw box:
+    // x = -60 + 0.5*1152 = 516, w = 120; y = -16 + 0.5*648 = 308, h = 32.
+    // CENTER (8) implies v_grow = BOTH, so y += 0.5*(32 - 35) = -1.5 → 306.5,
+    // a genuine half-pixel top. Real Godot's own get_rect() for this shape.
+    const root = node('Root', 'Control', {
+      layoutMode: 1,
+      anchorsPreset: 8,
+      offsetLeft: -60,
+      offsetTop: -16,
+      offsetRight: 60,
+      offsetBottom: 16,
+      customMinimumSize: { x: 0, y: 35 },
+    });
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Root')?.rect).toEqual({ x: 516, y: 306.5, w: 120, h: 35 });
+  });
+
+  it('the same CENTER-preset node is untouched when its minimum fits inside the anchored box', () => {
+    // Grow direction is inert unless the floor branch fires — the raw anchored
+    // rect stands whatever the preset implies.
+    const root = node('Root', 'Control', {
+      layoutMode: 1,
+      anchorsPreset: 8,
+      offsetLeft: -60,
+      offsetTop: -16,
+      offsetRight: 60,
+      offsetBottom: 16,
+      customMinimumSize: { x: 0, y: 0 },
+    });
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Root')?.rect).toEqual({ x: 516, y: 308, w: 120, h: 32 });
+  });
+
+  it('the same CENTER-preset node keeps GROW_DIRECTION_END when layout_mode is absent', () => {
+    // `_set_anchors_layout_preset` bails before `set_grow_direction_preset`
+    // outside ANCHORS/UNCONTROLLED (control.cpp:991-993), so the preset implies
+    // nothing about grow and the position holds at the raw 308.
+    const root = node('Root', 'Control', {
+      anchorsPreset: 8,
+      offsetLeft: -60,
+      offsetTop: -16,
+      offsetRight: 60,
+      offsetBottom: 16,
+      customMinimumSize: { x: 0, y: 35 },
+    });
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Root')?.rect).toEqual({ x: 516, y: 308, w: 120, h: 35 });
+  });
+
+  it('an authored grow_vertical still wins over the preset it contradicts', () => {
+    // Same node as the half-pixel case, with grow_vertical = END (1) authored:
+    // the position holds at 308 despite CENTER implying BOTH.
+    const root = node('Root', 'Control', {
+      layoutMode: 1,
+      anchorsPreset: 8,
+      offsetLeft: -60,
+      offsetTop: -16,
+      offsetRight: 60,
+      offsetBottom: 16,
+      customMinimumSize: { x: 0, y: 35 },
+      growVertical: 1,
+    });
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Root')?.rect).toEqual({ x: 516, y: 308, w: 120, h: 35 });
+  });
+
+  it("a container child's own preset-derived grow re-floors the cell it was handed", () => {
+    // `Container::fit_child_in_rect` ends in `Control::set_rect` → `_size_changed`,
+    // so a child handed a cell smaller than its own minimum still grows per its
+    // OWN grow direction. Cell (0,0,10,10) against a 40x40 minimum, CENTER_TOP (5)
+    // → (BOTH, END): x += 0.5*(10-40) = -15, y holds.
+    const layout: ContainerLayoutFn = (n) =>
+      new Map(n.children.map((child) => [child.path, { x: 0, y: 0, w: 10, h: 10 }]));
+    controlSolverRegistry.registerContainerLayout('GrowCellContainer', layout);
+
+    const child = node('Box/Child', 'Control', {
+      layoutMode: 1,
+      anchorsPreset: 5,
+      customMinimumSize: { x: 40, y: 40 },
+    });
+    const root = node('Box', 'GrowCellContainer', { anchorsPreset: 15 }, [child]);
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Box/Child')?.rect).toEqual({ x: -15, y: 0, w: 40, h: 40 });
+  });
+});
+
 describe('solveControlTree — nested free Controls resolve against their parent rect', () => {
   it("a FULL_RECT child under a free Control fills the PARENT's rect, not the viewport", () => {
     const child = node('Root/Child', 'Control', { anchorsPreset: 15 });
