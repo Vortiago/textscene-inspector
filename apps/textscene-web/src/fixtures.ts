@@ -538,6 +538,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Http Request",
+    "file": "unit-http-request.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Importer Mesh Instance 3d",
+    "file": "unit-importer-mesh-instance-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Instance Child",
     "file": "unit-instance-child.tscn",
     "category": "Other"
@@ -708,6 +718,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Multiplayer Spawner",
+    "file": "unit-multiplayer-spawner.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Multiplayer Synchronizer",
+    "file": "unit-multiplayer-synchronizer.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Nine Patch Rect",
     "file": "unit-nine-patch-rect.tscn",
     "category": "Other"
@@ -738,8 +758,38 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Open Xr Composition Layer Cylinder",
+    "file": "unit-open-xr-composition-layer-cylinder.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Composition Layer Equirect",
+    "file": "unit-open-xr-composition-layer-equirect.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Composition Layer Quad",
+    "file": "unit-open-xr-composition-layer-quad.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Hand",
+    "file": "unit-open-xr-hand.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Open Xr Interaction Profile Editor",
     "file": "unit-open-xr-interaction-profile-editor.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Render Model Manager",
+    "file": "unit-open-xr-render-model-manager.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Render Model",
+    "file": "unit-open-xr-render-model.tscn",
     "category": "Other"
   },
   {
@@ -898,6 +948,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Resource Preloader",
+    "file": "unit-resource-preloader.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Retarget Modifier 3d",
     "file": "unit-retarget-modifier-3d.tscn",
     "category": "Other"
@@ -920,6 +975,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Script Create Dialog",
     "file": "unit-script-create-dialog.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Shader Globals Override",
+    "file": "unit-shader-globals-override.tscn",
     "category": "Other"
   },
   {
@@ -1068,6 +1128,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Status Indicator",
+    "file": "unit-status-indicator.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Subtree Under Leaf Nodes",
     "file": "unit-subtree-under-leaf-nodes.tscn",
     "category": "Other"
@@ -1208,6 +1273,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Xr Anchor 3d",
+    "file": "unit-xr-anchor-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Xr Body Modifier 3d",
     "file": "unit-xr-body-modifier-3d.tscn",
     "category": "Other"
@@ -1218,6 +1288,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Xr Controller 3d",
+    "file": "unit-xr-controller-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Xr Face Modifier 3d",
+    "file": "unit-xr-face-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Xr Hand Modifier 3d",
     "file": "unit-xr-hand-modifier-3d.tscn",
     "category": "Other"
@@ -1225,6 +1305,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Xr Node 3d",
     "file": "unit-xr-node-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Xr Origin 3d",
+    "file": "unit-xr-origin-3d.tscn",
     "category": "Other"
   },
   {

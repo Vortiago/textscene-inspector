@@ -4,18 +4,26 @@
  *
  * Godot states these itself. `Joint2D::_update_joint` walks a chain of cases
  * and stores the failure in `warning`, which `get_configuration_warnings`
- * surfaces (scene/2d/physics/joints/joint_2d.cpp:78-90, and the 3D twin at
- * :76-88). Two of its five cases are decidable from the scene text alone and
- * are the two implemented here:
+ * surfaces (scene/2d/physics/joints/joint_2d.cpp:78-91, and the 3D twin at
+ * joint_3d.cpp:76-88). Two of its five cases are decidable from the scene text
+ * alone and are the two implemented here:
  *
- *   "Joint is not connected to two PhysicsBody2Ds"  — a node path is missing
- *   "Node A and Node B must be different …"          — both name the same node
+ *   "Joint is not connected to …"            — a node path is missing
+ *   "Node A and Node B must be different …"  — both name the same node
  *
  * The other three ("Node A must be a PhysicsBody2D", and its two variants) ask
  * what TYPE the path resolves to. That is a live-tree question: a NodePath can
  * cross into an instanced sub-scene whose contents this linter cannot see, so
  * answering it statically produces false positives on exactly the scenes people
  * write. They are deliberately not implemented rather than approximated.
+ *
+ * **The two dimensions disagree on the first case, and the difference is not a
+ * typo to normalise away.** 2D warns on `!body_a || !body_b` — "not connected to
+ * TWO PhysicsBody2Ds" (joint_2d.cpp:84-85) — so one loose end is enough. 3D
+ * warns on `!body_a && !body_b` — "not connected to ANY PhysicsBody3Ds"
+ * (joint_3d.cpp:82-83) — so a 3D joint anchored to the world by one body is a
+ * configuration Godot accepts in silence. Reading the two as one rule is what
+ * produced a warning on scenes 4.6.3 says nothing about.
  *
  * ONE rule rather than one per dimension or one per joint type. The dimension
  * changes a noun in the message and nothing else, and
@@ -50,13 +58,16 @@ function checkJoint(context: RuleContext): Diagnostic[] {
   const b = props.node_b ? extractNodePath(props.node_b) : null;
 
   // Exclusive, as in Godot's own chain: an unset end is reported once, and the
-  // same-body case cannot arise while an end is unset.
-  if (!a || !b) {
+  // same-body case cannot arise while an end is unset. How many ends have to be
+  // unset differs by dimension — see the docblock.
+  const unconnected = dim === '2D' ? !a || !b : !a && !b;
+  if (unconnected) {
     const which = !a && !b ? "'node_a' and 'node_b' are" : `'${!a ? 'node_a' : 'node_b'}' is`;
+    const howMany = dim === '2D' ? 'two' : 'any';
     return [
       {
         severity: 'warning',
-        message: `${node.type} '${node.name}' is not connected to two ${bodyType}s: ${which} unset, so the joint does nothing.`,
+        message: `${node.type} '${node.name}' is not connected to ${howMany} ${bodyType}s: ${which} unset, so the joint does nothing.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'joint-not-connected',

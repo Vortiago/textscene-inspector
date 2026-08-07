@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node"]
+
+[node name="MyHTTPRequest" type="HTTPRequest" parent="."]
+accept_gzip = true
+body_size_limit = -1
+download_chunk_size = 65536
+download_file = "res://downloads/file.zip"
+max_redirects = 8
+timeout = 10.0
+use_threads = false

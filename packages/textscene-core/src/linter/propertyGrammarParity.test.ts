@@ -1165,7 +1165,7 @@ describe('property-grammar parity guard', () => {
    * rather than being smuggled into a wave.
    */
   const SWEPT_SLICES = 74;
-  const PARSER_REUSING_SLICES = 154;
+  const PARSER_REUSING_SLICES = 172;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>

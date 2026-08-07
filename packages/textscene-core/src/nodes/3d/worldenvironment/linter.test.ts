@@ -148,8 +148,24 @@ camera_attributes = invalid
           {
             ruleName: 'worldenvironment-requires-environment',
             severity: 'warning',
-            contains: ["requires an 'environment' property", 'does nothing'],
+            contains: ["neither an 'environment' nor a 'camera_attributes'", 'no visible effect'],
           }
+        );
+      });
+
+      it('stays quiet on a camera_attributes-only node, which Godot accepts', () => {
+        // world_environment.cpp:187 guards on `environment.is_null() &&
+        // camera_attributes.is_null()`. Either resource gives the node an
+        // effect; testing `environment` alone warned about a valid scene.
+        expectNoDiagnostic(
+          `[gd_scene load_steps=2 format=3]
+
+[sub_resource type="CameraAttributesPractical" id="Cam_1"]
+
+[node name="WorldEnvironment" type="WorldEnvironment"]
+camera_attributes = SubResource("Cam_1")
+`,
+          { ruleName: 'worldenvironment-requires-environment' }
         );
       });
 

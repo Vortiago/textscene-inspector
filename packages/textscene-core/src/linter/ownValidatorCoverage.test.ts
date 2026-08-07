@@ -89,6 +89,12 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
   VSplitContainer: "orientation only; the split keys are SplitContainer's",
   XRCamera3D:
     'the headset drives its transform, so it declares nothing of its own: xr_nodes.cpp has no XRCamera3D::_bind_methods at all, and its single XML member is physics_interpolation_mode carrying overrides=Node. Its _validate_property (xr_nodes.cpp:39-47) only sets PROPERTY_USAGE_NO_EDITOR on five inherited Camera3D keys, and only under is_editor_hint(), so those keys still serialise and Camera3D still validates them',
+  XRAnchor3D:
+    'a tracked-anchor transform relay: _bind_methods (xr_nodes.cpp:660-663) binds get_size and get_plane as METHODS and nothing else, with no ADD_PROPERTY and no property-list override under either spelling, and its XML carries no members block. Everything it serialises is XRNode3D\'s',
+  XRController3D:
+    'a tracked-controller input reader: _bind_methods (xr_nodes.cpp:524-538) binds is_button_pressed/get_input/get_float/get_vector2/get_tracker_hand as METHODS plus four signals, with no ADD_PROPERTY and no property-list override under either spelling. Its XML carries no members block, and everything it serialises is XRNode3D\'s',
+  OpenXRRenderModel:
+    'its one member, render_model (openxr_render_model.cpp:46), is a Variant::RID. RID is not excluded by grammar — VariantWriter::write puts it in the ordinary misc-types branch (variant_parser.cpp:2157-2163), not the SIGNAL/CALLABLE "do not really store" bucket, and its usage carries STORAGE. What rules it out is ownership: the only path that sets a non-default value is OpenXRRenderModelManager::_update_models (openxr_render_model_manager.cpp:93-96), which memnew/add_child()es these nodes without ever calling set_owner(), so packed_scene.cpp:797 discards them before any save. A hand-placed node keeps the RID() default, and only non-default values are written',
 };
 
 /**

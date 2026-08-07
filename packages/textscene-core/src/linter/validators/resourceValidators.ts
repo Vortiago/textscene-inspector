@@ -48,17 +48,18 @@ export function createNodePathValidator(
   };
 }
 
-/**
- * Creates a string validator (accepts any non-empty string)
+/*
+ * There is deliberately no bare "non-empty string" validator here.
+ *
+ * One existed, and `Area2D`/`Area3D.audio_bus_name` were its only callers. It
+ * tested `value.trim().length === 0` and nothing else, so an unquoted bare word
+ * passed — while both properties are `Variant::STRING_NAME` (area_2d.cpp:670,
+ * area_3d.cpp:800) and serialise as `&"Master"` or `"Master"`. The validator
+ * therefore accepted a form Godot's own text parser rejects, which is the exact
+ * opposite of what a format check is for. Both sites now use `v.stringName`.
+ *
+ * A string property in a `.tscn` is always quoted. Reach for `v.quotedString`
+ * or `v.stringName` by the getter's type; if neither fits, the honest spelling
+ * is `v.any()`, which says "no format constraint" out loud instead of implying
+ * a check that is not there.
  */
-export function createStringValidator(
-  propertyName: string,
-  errorCode: string = 'INVALID_STRING_FORMAT'
-): (key: string, value: string, line: number) => ParseError | null {
-  return (key, value, line) => {
-    if (typeof value !== 'string' || value.trim().length === 0) {
-      return propertyError(key, line, `Property '${propertyName}' must be a non-empty string, got: "${value}"`, errorCode);
-    }
-    return null;
-  };
-}

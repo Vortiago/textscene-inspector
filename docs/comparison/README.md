@@ -112,6 +112,7 @@ reproduced:
 - [GPUParticlesCollisionSphere3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionsphere3d/comparison.md) — nothing yet; a sphere particles collide with
 - [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md) — a THREE.InstancedMesh per MeshLibrary item
 - [HingeJoint3D](../../packages/textscene-core/src/nodes/physics/3d/hingejoint3d/comparison.md) — nothing (a transform-only group; one rotational axis between two bodies)
+- [ImporterMeshInstance3D](../../packages/textscene-core/src/nodes/3d/importermeshinstance3d/comparison.md) — nothing (a transform-only group; an import-pipeline placeholder that is never a VisualInstance3D at run time)
 - [Label3D](../../packages/textscene-core/src/nodes/3d/label3d/comparison.md) — a canvas-textured plane
 - [LightmapGI](../../packages/textscene-core/src/nodes/3d/lightmapgi/comparison.md) — invisible transform-only fallback
 - [LightmapProbe](../../packages/textscene-core/src/nodes/3d/lightmapprobe/comparison.md) — invisible transform-only fallback
@@ -125,6 +126,12 @@ reproduced:
 - [Node3D](../../packages/textscene-core/src/nodes/base/node3d/comparison.md) — an invisible transform group
 - [OccluderInstance3D](../../packages/textscene-core/src/nodes/3d/occluderinstance3d/comparison.md) — nothing (a transform-only group)
 - [OmniLight3D](../../packages/textscene-core/src/nodes/3d/lights/omnilight3d/comparison.md) — a THREE.PointLight
+- [OpenXRCompositionLayerCylinder](../../packages/textscene-core/src/nodes/3d/xr/openxrcompositionlayercylinder/comparison.md) — nothing yet; outside an OpenXR session Godot draws a curved cylinder section and the previewer does not
+- [OpenXRCompositionLayerEquirect](../../packages/textscene-core/src/nodes/3d/xr/openxrcompositionlayerequirect/comparison.md) — nothing yet; outside an OpenXR session Godot draws an equirectangular sphere section and the previewer does not
+- [OpenXRCompositionLayerQuad](../../packages/textscene-core/src/nodes/3d/xr/openxrcompositionlayerquad/comparison.md) — nothing yet; outside an OpenXR session Godot draws a flat quad and the previewer does not
+- [OpenXRHand](../../packages/textscene-core/src/nodes/3d/xr/openxrhand/comparison.md) — nothing (a transform-only group; it poses a hand skeleton from runtime tracking data)
+- [OpenXRRenderModel](../../packages/textscene-core/src/nodes/3d/xr/openxrrendermodel/comparison.md) — nothing (a transform-only group; the mesh is a glTF scene the XR runtime supplies, so no .tscn describes it)
+- [OpenXRRenderModelManager](../../packages/textscene-core/src/nodes/3d/xr/openxrrendermodelmanager/comparison.md) — nothing (a transform-only group; it spawns OpenXRRenderModel children at run time)
 - [OpenXRVisibilityMask](../../packages/textscene-core/src/nodes/3d/xr/openxrvisibilitymask/comparison.md) — invisible transform-only fallback
 - [Path3D](../../packages/textscene-core/src/nodes/paths/path3d/comparison.md) — a selection-gated curve gizmo
 - [PathFollow3D](../../packages/textscene-core/src/nodes/paths/pathfollow3d/comparison.md) — a curve-positioned transform group
@@ -149,10 +156,13 @@ reproduced:
 - [VisibleOnScreenEnabler3D](../../packages/textscene-core/src/nodes/3d/visibleonscreenenabler3d/comparison.md) — nothing (a transform-only group)
 - [VoxelGI](../../packages/textscene-core/src/nodes/3d/voxelgi/comparison.md) — an invisible transform-only fallback
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md) — the scene's background and environment lighting
+- [XRAnchor3D](../../packages/textscene-core/src/nodes/3d/xr/xranchor3d/comparison.md) — nothing (a transform-only group; a spatially-tracked anchor)
 - [XRCamera3D](../../packages/textscene-core/src/nodes/3d/xr/xrcamera3d/comparison.md) — nothing (a transform-only group; the headset-driven camera, which Godot expects under an XROrigin3D)
 - [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md) — a transform-only group (it drives a Skeleton3D's bone poses)
 - [SpringBoneCollision3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollision3d/comparison.md) — a transform-only group (a spring-bone collider)
 - [VisualInstance3D](../../packages/textscene-core/src/nodes/3d/visualinstance3d/comparison.md) — a transform-only group (the render-layer/AABB base for 3D visuals)
+- [XRController3D](../../packages/textscene-core/src/nodes/3d/xr/xrcontroller3d/comparison.md) — nothing (a transform-only group; a tracked controller and its inputs)
+- [XRFaceModifier3D](../../packages/textscene-core/src/nodes/3d/xr/xrfacemodifier3d/comparison.md) — nothing (a transform-only group; it drives blend shapes from face tracking)
 - [XRNode3D](../../packages/textscene-core/src/nodes/3d/xr/xrnode3d/comparison.md) — a transform-only group (an XR-tracked transform)
 - [BoneConstraint3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneconstraint3d/comparison.md) — a transform-only group (the base for bone constraints)
 - [GeometryInstance3D](../../packages/textscene-core/src/nodes/3d/geometryinstance3d/comparison.md) — a transform-only group (the shadow/LOD/GI base for 3D visuals)
@@ -179,6 +189,7 @@ reproduced:
 - [AimModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/aimmodifier3d/comparison.md) — a transform-only group (points a bone at a reference)
 - [ConvertTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/converttransformmodifier3d/comparison.md) — a transform-only group (maps one transform component onto another)
 - [CopyTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/copytransformmodifier3d/comparison.md) — a transform-only group (copies a reference transform onto a bone)
+- [XROrigin3D](../../packages/textscene-core/src/nodes/3d/xr/xrorigin3d/comparison.md) — nothing (a transform-only group; the origin the XR play space is measured from)
 
 ## 2D
 
@@ -194,6 +205,7 @@ reproduced:
 - [CanvasModulate](../../packages/textscene-core/src/nodes/2d/canvasmodulate/comparison.md) — a colour multiply applied to the whole canvas
 - [CanvasGroup](../../packages/textscene-core/src/nodes/2d/canvasgroup/comparison.md) — nothing yet; Godot composites its children into one buffer, so overlapping translucency blends once against the background rather than layer by layer
 - [CenterContainer](../../packages/textscene-core/src/nodes/2d/ui/centercontainer/comparison.md) — a centering flex container
+- [CharacterBody2D](../../packages/textscene-core/src/nodes/physics/2d/characterbody2d/comparison.md) — a transform-only group (a script-moved 2D body)
 - [CheckBox](../../packages/textscene-core/src/nodes/2d/ui/checkbox/comparison.md) — an inline HTML row with a drawn check indicator
 - [CheckButton](../../packages/textscene-core/src/nodes/2d/ui/checkbutton/comparison.md) — nothing yet; a labelled on/off switch
 - [CollisionPolygon2D](../../packages/textscene-core/src/nodes/physics/2d/collisionpolygon2d/comparison.md) — nothing (a transform-only group)
@@ -238,9 +250,11 @@ reproduced:
 - [RayCast2D](../../packages/textscene-core/src/nodes/physics/2d/raycast2d/comparison.md) — nothing (a transform-only group; the ray is an editor gizmo)
 - [RemoteTransform2D](../../packages/textscene-core/src/nodes/2d/remotetransform2d/comparison.md) — nothing itself; it copies its transform onto its remote_path target
 - [RichTextLabel](../../packages/textscene-core/src/nodes/2d/ui/richtextlabel/comparison.md) — a positioned HTML div of styled text
+- [RigidBody2D](../../packages/textscene-core/src/nodes/physics/2d/rigidbody2d/comparison.md) — a transform-only group (a solver-moved 2D body)
 - [ScrollContainer](../../packages/textscene-core/src/nodes/2d/ui/scrollcontainer/comparison.md) — an overflow-scrolling DOM container
 - [ShapeCast2D](../../packages/textscene-core/src/nodes/physics/2d/shapecast2d/comparison.md) — nothing (a transform-only group; the swept shape is an editor gizmo)
 - [Sprite2D](../../packages/textscene-core/src/nodes/2d/sprite2d/comparison.md) — an unlit textured quad
+- [StaticBody2D](../../packages/textscene-core/src/nodes/physics/2d/staticbody2d/comparison.md) — a transform-only group (a non-moving 2D body)
 - [SubViewportContainer](../../packages/textscene-core/src/nodes/2d/ui/subviewportcontainer/comparison.md) — a clipped surface showing its SubViewport children's targets
 - [TextureRect](../../packages/textscene-core/src/nodes/2d/ui/texturerect/comparison.md) — an HTML img element
 - [TileMap](../../packages/textscene-core/src/nodes/2d/tiles/tilemap/comparison.md) — batched textured tile quads
@@ -294,7 +308,13 @@ reproduced:
 ## Other
 
 - [AudioStreamPlayer](../../packages/textscene-core/src/nodes/audio/audiostreamplayer/comparison.md) — nothing (a non-spatial audio node)
+- [HTTPRequest](../../packages/textscene-core/src/nodes/networking/httprequest/comparison.md) — nothing (a non-visual HTTP client node)
+- [MultiplayerSpawner](../../packages/textscene-core/src/nodes/networking/multiplayerspawner/comparison.md) — nothing (a non-visual scene-replication node)
+- [MultiplayerSynchronizer](../../packages/textscene-core/src/nodes/networking/multiplayersynchronizer/comparison.md) — nothing (a non-visual property-replication node)
 - [Node](../../packages/textscene-core/src/nodes/node/comparison.md) — nothing; the non-spatial base every other node descends from
+- [ResourcePreloader](../../packages/textscene-core/src/nodes/resources/resourcepreloader/comparison.md) — nothing (a non-visual resource cache)
+- [ShaderGlobalsOverride](../../packages/textscene-core/src/nodes/rendering/shaderglobalsoverride/comparison.md) — nothing itself; Godot applies its params/* to other materials and the previewer has no global-shader-parameter path
+- [StatusIndicator](../../packages/textscene-core/src/nodes/os/statusindicator/comparison.md) — nothing in the viewport (an OS tray icon)
 - [Timer](../../packages/textscene-core/src/nodes/timers/timer/comparison.md) — nothing (a countdown timer node)
 - [Window](../../packages/textscene-core/src/nodes/windows/window/comparison.md) — nothing yet; parsed and validated but not drawn
 - [AcceptDialog](../../packages/textscene-core/src/nodes/windows/acceptdialog/comparison.md) — nothing yet; a dialog Window with an OK button

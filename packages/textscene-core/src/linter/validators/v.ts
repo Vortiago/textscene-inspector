@@ -37,7 +37,6 @@ import {
   RESOURCE_REFERENCE_REGEX,
   createNodePathValidator,
   createResourceReferenceValidator,
-  createStringValidator,
 } from './resourceValidators.js';
 import {
   createRect2Validator,
@@ -522,11 +521,6 @@ export const v = {
    */
   any(): PropertyValidator {
     return shape(() => null, 'any value (no format constraint)');
-  },
-
-  /** Non-empty string (anything that isn't whitespace-only). */
-  string(name: string): PropertyValidator {
-    return shape(createStringValidator(name, formatCode(name)), 'non-empty string');
   },
 
   /**

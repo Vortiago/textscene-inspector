@@ -277,6 +277,28 @@ describe('comparison sheets', () => {
    * mesh it carries. Only the registry claim is machine-checkable, so only it is
    * asserted; whether to show an image pair stays an editorial call per sheet.
    */
+  /**
+   * The `index.r3f.ts` that registers a slice's component, or null.
+   *
+   * Usually the slice's own. But a family whose members differ only by name
+   * registers once in a loop from the directory ABOVE — `physics/2d/index.r3f.ts`
+   * does exactly that for StaticBody2D, RigidBody2D and CharacterBody2D, which
+   * therefore own no `index.r3f.ts` at all. Reading only the slice directory
+   * called that "no registration", so those three could never claim
+   * `linter-only` however honestly they drew nothing. That is the same
+   * loop-registration blind spot the coverage scrape had, one directory up.
+   *
+   * Walking to the nearest ancestor is sound because these loops register one
+   * intent for the whole family: whatever it says is what every member gets.
+   */
+  function registrationFileFor(sliceDir) {
+    for (let dir = sliceDir; dir.includes(`${sep}nodes`); dir = dirname(dir)) {
+      const candidate = join(dir, 'index.r3f.ts');
+      if (existsSync(candidate)) return candidate;
+    }
+    return null;
+  }
+
   describe('status agrees with the render registration', () => {
     /** Slice-backed sheets only; the `complex-*` showcases have no slice. */
     // Filter first, then read once per slice: the two directional assertions
@@ -284,13 +306,12 @@ describe('comparison sheets', () => {
     const sliceSheets = sheets
       .filter((s) => s.file.includes(`${sep}nodes${sep}`))
       .map((s) => {
-        const r3f = join(dirname(s.file), 'index.r3f.ts');
-        const hasComponent = existsSync(r3f);
+        const r3f = registrationFileFor(dirname(s.file));
         return {
           ...s,
-          hasComponent,
+          hasComponent: r3f !== null,
           transformOnly:
-            hasComponent && /renderIntent:\s*'transform-only'/.test(readFileSync(r3f, 'utf8')),
+            r3f !== null && /renderIntent:\s*'transform-only'/.test(readFileSync(r3f, 'utf8')),
         };
       });
 
@@ -355,16 +376,35 @@ describe('hand-maintained docs stay in step with the sheets', () => {
     expect(stale).toEqual([]);
   });
 
-  it("states a node count the ledger agrees with, rounded to the README's own phrasing", () => {
-    // The README says "Around N node types". N is allowed to trail the true
-    // count by the rounding the word "Around" implies, but not to drift by a
-    // whole wave, which is what silently happened before this existed.
-    const claimed = Number(
-      /Around (\d+) node types/.exec(readFileSync(ROOT_README, 'utf8'))?.[1] ?? NaN
-    );
-    const actual = new Set(
+  it("states a node count the ledger agrees with, held to the README's own phrasing", () => {
+    // Two phrasings, two standards, because the README's claim changed in kind
+    // once coverage completed. While it read "Around N node types", N was
+    // allowed to trail the truth by the rounding "Around" implies — but not by a
+    // whole wave, which is what silently happened before this existed. Now that
+    // it claims ALL of them, hedging is gone and so is the tolerance: an exact
+    // claim that is off by one is simply false.
+    const readme = readFileSync(ROOT_README, 'utf8');
+    const sheetTypes = new Set(
       sheets.filter((s) => s.file.includes(`${sep}nodes${sep}`) && s.meta.type).map((s) => s.meta.type)
-    ).size;
-    expect(Math.abs(claimed - actual)).toBeLessThanOrEqual(5);
+    );
+
+    const exact = /All (\d+) of Godot [\d.]+'s instantiable node types/.exec(readme);
+    if (exact) {
+      // Count against ClassDB, not against the sheet directory. `AreaLight3D`
+      // has a slice and a sheet but is absent from 4.6.3's ClassDB entirely, so
+      // it is not one of the types this sentence is counting — including it
+      // would make an exact claim off by one for a node Godot does not have.
+      const catalogued = new Set(
+        JSON.parse(readFileSync(join(HERE, 'node-catalog.json'), 'utf8')).nodes.map((n) => n.name)
+      );
+      const instantiable = [...sheetTypes].filter((t) => catalogued.has(t));
+      expect(Number(exact[1])).toBe(instantiable.length);
+      return;
+    }
+
+    const actual = sheetTypes.size;
+
+    const around = Number(/Around (\d+) node types/.exec(readme)?.[1] ?? NaN);
+    expect(Math.abs(around - actual)).toBeLessThanOrEqual(5);
   });
 });

@@ -227,6 +227,18 @@ import '../nodes/3d/audiolistener3d/index.linter.js';
 // alone; AudioListener2D serialises `current` through _get_property_list, which
 // neither its class reference nor an ADD_PROPERTY grep shows.
 import '../nodes/3d/xr/xrcamera3d/index.linter.js';
+import '../nodes/3d/xr/shared/index.linter.js';
+import '../nodes/3d/xr/openxrcompositionlayerquad/index.linter.js';
+import '../nodes/3d/xr/openxrcompositionlayercylinder/index.linter.js';
+import '../nodes/3d/xr/openxrcompositionlayerequirect/index.linter.js';
+import '../nodes/3d/xr/openxrhand/index.linter.js';
+import '../nodes/3d/xr/openxrrendermodel/index.linter.js';
+import '../nodes/3d/xr/openxrrendermodelmanager/index.linter.js';
+import '../nodes/3d/xr/xranchor3d/index.linter.js';
+import '../nodes/3d/xr/xrcontroller3d/index.linter.js';
+import '../nodes/3d/xr/xrorigin3d/index.linter.js';
+import '../nodes/3d/xr/xrfacemodifier3d/index.linter.js';
+import '../nodes/3d/importermeshinstance3d/index.linter.js';
 import '../nodes/2d/audiolistener2d/index.linter.js';
 import '../nodes/2d/particles/gpuparticles2d/index.linter.js';
 import '../nodes/2d/bone2d/index.linter.js';
@@ -242,6 +254,12 @@ import '../nodes/2d/backbuffercopy/index.linter.js';
 import '../nodes/2d/canvasgroup/index.linter.js';
 import '../nodes/2d/parallax2d/index.linter.js';
 import '../nodes/2d/touchscreenbutton/index.linter.js';
+import '../nodes/networking/httprequest/index.linter.js';
+import '../nodes/networking/multiplayerspawner/index.linter.js';
+import '../nodes/networking/multiplayersynchronizer/index.linter.js';
+import '../nodes/rendering/shaderglobalsoverride/index.linter.js';
+import '../nodes/resources/resourcepreloader/index.linter.js';
+import '../nodes/os/statusindicator/index.linter.js';
 
 // Re-export core linter classes
 export { Linter } from './Linter.js';

@@ -65,5 +65,8 @@ validatorRegistry.registerAll('Area2D', {
   }),
   priority: v.float('priority'),
   audio_bus_override: v.boolean('audio_bus_override'),
-  audio_bus_name: v.string('audio_bus_name'),
+  // area_2d.cpp:670 declares Variant::STRING_NAME, and the getter returns
+  // StringName (area_2d.cpp:534), so the serialised form is &"Master" or the
+  // plain "Master" the text parser also accepts — never a bare word.
+  audio_bus_name: v.stringName('audio_bus_name'),
 });

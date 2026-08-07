@@ -54,9 +54,30 @@ describe('joint dead-configuration rule', () => {
   });
 
   it('treats an empty NodePath as unset, which is how Godot serialises "none"', () => {
-    expectDiagnostic(scene(node('PinJoint3D', { node_a: 'NodePath("")', node_b: 'NodePath("../B")' })), {
+    expectDiagnostic(scene(node('PinJoint2D', { node_a: 'NodePath("")', node_b: 'NodePath("../B")' })), {
       ruleName: 'joint-not-connected',
     });
+  });
+
+  it('holds each dimension to its own threshold, because Godot does', () => {
+    // 2D warns on `!body_a || !body_b` (joint_2d.cpp:84), so ONE loose end is
+    // enough. 3D warns on `!body_a && !body_b` (joint_3d.cpp:82), so a joint
+    // anchored to the world by a single body is a configuration 4.6.3 accepts in
+    // silence. Reading the two as one rule warned about scenes Godot does not.
+    const oneEnd = { node_b: 'NodePath("../BodyB")' };
+    expectDiagnostic(scene(node('PinJoint2D', oneEnd)), { ruleName: 'joint-not-connected' });
+    expectNoDiagnostic(scene(node('PinJoint3D', oneEnd)), { ruleName: 'joint-not-connected' });
+
+    // With BOTH ends unset the dimensions agree again.
+    expectDiagnostic(scene(node('PinJoint3D', {})), { ruleName: 'joint-not-connected' });
+  });
+
+  it('says "two" in 2D and "any" in 3D, matching each engine string', () => {
+    const twoD = expectDiagnostic(scene(node('PinJoint2D', {})), { ruleName: 'joint-not-connected' });
+    expect(twoD.message).toContain('not connected to two PhysicsBody2Ds');
+
+    const threeD = expectDiagnostic(scene(node('PinJoint3D', {})), { ruleName: 'joint-not-connected' });
+    expect(threeD.message).toContain('not connected to any PhysicsBody3Ds');
   });
 
   it('flags both ends pointing at the same body', () => {

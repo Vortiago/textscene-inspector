@@ -54,35 +54,47 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // Check if environment property exists (REQUIRED)
-  if (!rawProps.environment) {
+  // Godot's guard is a conjunction: `environment.is_null() &&
+  // camera_attributes.is_null()` (world_environment.cpp:187). EITHER resource
+  // gives the node a visible effect, so a camera_attributes-only
+  // WorldEnvironment is a valid configuration the engine says nothing about.
+  // Testing `environment` alone warned about exactly those scenes.
+  if (!rawProps.environment && !rawProps.camera_attributes) {
     diagnostics.push({
       severity: 'warning',
-      message: `WorldEnvironment requires an 'environment' property. A WorldEnvironment without an Environment resource does nothing.`,
+      message: `WorldEnvironment has neither an 'environment' nor a 'camera_attributes' resource, so it has no visible effect.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'worldenvironment-requires-environment',
     });
-  } else if (!checkResourceExists(scene, rawProps.environment)) {
-    diagnostics.push({
-      severity: 'error',
-      message: `Environment resource not found: ${rawProps.environment}`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'valid-worldenvironment-resources',
-    });
-  } else {
-    // The Environment subresource may reference a Sky subresource; existence-check
-    // it like the environment reference itself (the render parser reads sky too).
-    const skyRef = getEnvironmentSkyReference(scene, rawProps.environment);
-    if (skyRef && !checkResourceExists(scene, skyRef)) {
+  }
+
+  // Guarded on its own presence rather than chained to the warning above: since
+  // that warning became a conjunction, "no environment" no longer implies the
+  // node was reported, and a camera_attributes-only node would have reached here
+  // with nothing to resolve.
+  if (rawProps.environment) {
+    if (!checkResourceExists(scene, rawProps.environment)) {
       diagnostics.push({
         severity: 'error',
-        message: `Sky resource not found: ${skyRef}`,
+        message: `Environment resource not found: ${rawProps.environment}`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'valid-worldenvironment-resources',
       });
+    } else {
+      // The Environment subresource may reference a Sky subresource; existence-check
+      // it like the environment reference itself (the render parser reads sky too).
+      const skyRef = getEnvironmentSkyReference(scene, rawProps.environment);
+      if (skyRef && !checkResourceExists(scene, skyRef)) {
+        diagnostics.push({
+          severity: 'error',
+          message: `Sky resource not found: ${skyRef}`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: 'valid-worldenvironment-resources',
+        });
+      }
     }
   }
 

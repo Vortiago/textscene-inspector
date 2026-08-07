@@ -36,7 +36,7 @@ Strict parsing format-checks these `Area3D` properties, plus 6 inherited from Co
 | --- | --- |
 | `angular_damp` | float >= 0 |
 | `angular_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
-| `audio_bus_name` | non-empty string |
+| `audio_bus_name` | quoted string or &"name" |
 | `audio_bus_override` | true or false |
 | `gravity` | float |
 | `gravity_direction` | Vector3(x, y, z) |

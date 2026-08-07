@@ -1369,7 +1369,7 @@
       "name": "HTTPRequest",
       "category": "Other",
       "group": "Networking",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node",
         "Object"
@@ -1381,7 +1381,7 @@
       "name": "ImporterMeshInstance3D",
       "category": "3D",
       "group": "Import / editor internals",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -1710,7 +1710,7 @@
       "name": "MultiplayerSpawner",
       "category": "Other",
       "group": "Networking",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node",
         "Object"
@@ -1722,7 +1722,7 @@
       "name": "MultiplayerSynchronizer",
       "category": "Other",
       "group": "Networking",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node",
         "Object"
@@ -1934,7 +1934,7 @@
       "name": "OpenXRCompositionLayerCylinder",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "OpenXRCompositionLayer",
         "Node3D",
@@ -1948,7 +1948,7 @@
       "name": "OpenXRCompositionLayerEquirect",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "OpenXRCompositionLayer",
         "Node3D",
@@ -1962,7 +1962,7 @@
       "name": "OpenXRCompositionLayerQuad",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "OpenXRCompositionLayer",
         "Node3D",
@@ -1976,7 +1976,7 @@
       "name": "OpenXRHand",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -2007,7 +2007,7 @@
       "name": "OpenXRRenderModel",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -2020,7 +2020,7 @@
       "name": "OpenXRRenderModelManager",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -2446,7 +2446,7 @@
       "name": "ResourcePreloader",
       "category": "Other",
       "group": "Resources",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node",
         "Object"
@@ -2562,7 +2562,7 @@
       "name": "ShaderGlobalsOverride",
       "category": "Other",
       "group": "Rendering globals",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node",
         "Object"
@@ -2889,7 +2889,7 @@
       "name": "StatusIndicator",
       "category": "Other",
       "group": "OS integration",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node",
         "Object"
@@ -3347,7 +3347,7 @@
       "name": "XRAnchor3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "XRNode3D",
         "Node3D",
@@ -3389,7 +3389,7 @@
       "name": "XRController3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "XRNode3D",
         "Node3D",
@@ -3403,7 +3403,7 @@
       "name": "XRFaceModifier3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -3443,7 +3443,7 @@
       "name": "XROrigin3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",

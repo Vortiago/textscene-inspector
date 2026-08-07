@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_1"]
+
+[node name="Root" type="Node"]
+
+[node name="MyMultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+root_path = NodePath("SyncTarget")
+replication_interval = 0.1
+delta_interval = 0.05
+replication_config = SubResource("SceneReplicationConfig_1")
+visibility_update_mode = 1
+public_visibility = true
+
+[node name="SyncTarget" type="Node" parent="MyMultiplayerSynchronizer"]

@@ -23,7 +23,8 @@ primitive nodes.*
 
 ## What it renders
 
-Around 223 node types, each a self-registering vertical slice.
+All 240 of Godot 4.6.3's instantiable node types, each a self-registering
+vertical slice.
 
 Coverage is broader than what draws: some node types are parsed and fully
 lint-checked while drawing nothing — either because that is correct (a Timer, a

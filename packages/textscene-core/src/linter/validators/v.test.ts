@@ -128,16 +128,6 @@ describe('v.boolean', () => {
   });
 });
 
-describe('v.string', () => {
-  it('accepts non-empty', () => {
-    expect(v.string('audio_bus_name')('audio_bus_name', 'master', 1)).toBeNull();
-  });
-
-  it('rejects whitespace-only', () => {
-    expect(v.string('audio_bus_name')('audio_bus_name', '   ', 1)).not.toBeNull();
-  });
-});
-
 describe('v.vector2 / v.vector2i / v.vector3', () => {
   it('vector2 accepts Vector2(x, y)', () => {
     expect(v.vector2('size')('size', 'Vector2(1.5, -2)', 1)).toBeNull();
