@@ -3,7 +3,7 @@ type: SubViewportContainer
 category: 2D
 status: unreviewed
 fixture: unit-sub-viewport-container.tscn
-# image: unit-sub-viewport-container
+image: unit-sub-viewport-container
 renders_as: a clipped surface showing its SubViewport children's targets
 ---
 

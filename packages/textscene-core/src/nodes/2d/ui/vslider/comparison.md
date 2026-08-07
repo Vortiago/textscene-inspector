@@ -3,7 +3,7 @@ type: VSlider
 category: 2D
 status: unreviewed
 fixture: unit-vslider.tscn
-# image: unit-vslider
+image: unit-vslider
 renders_as: a vertical track with a round grabber
 ---
 

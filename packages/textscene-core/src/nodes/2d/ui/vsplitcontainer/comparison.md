@@ -3,6 +3,7 @@ type: VSplitContainer
 category: 2D
 status: unreviewed
 fixture: unit-split-container-vertical.tscn
+image: unit-split-container-vertical
 renders_as: two children stacked, split at a computed offset
 ---
 

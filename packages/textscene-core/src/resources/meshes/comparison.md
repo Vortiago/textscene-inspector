@@ -1,6 +1,8 @@
 ---
 type: ArrayMesh
 category: Resources
+fixture: unit-arraymesh.tscn
+image: unit-arraymesh
 renders_as: one merged THREE.BufferGeometry with a draw group per surface
 ---
 

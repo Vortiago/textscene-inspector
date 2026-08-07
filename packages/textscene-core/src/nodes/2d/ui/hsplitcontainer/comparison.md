@@ -3,6 +3,7 @@ type: HSplitContainer
 category: 2D
 status: unreviewed
 fixture: unit-split-container.tscn
+image: unit-split-container
 renders_as: two children side by side, split at a computed offset
 ---
 

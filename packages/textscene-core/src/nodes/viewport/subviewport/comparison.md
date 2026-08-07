@@ -3,7 +3,7 @@ type: SubViewport
 category: 3D
 status: unreviewed
 fixture: unit-sub-viewport.tscn
-# image: unit-sub-viewport
+image: unit-sub-viewport
 renders_as: an offscreen render target, plus a boundary that scopes its canvas subtree
 ---
 

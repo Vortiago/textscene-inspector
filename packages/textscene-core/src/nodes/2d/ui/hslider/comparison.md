@@ -3,7 +3,7 @@ type: HSlider
 category: 2D
 status: unreviewed
 fixture: unit-hslider.tscn
-# image: unit-hslider
+image: unit-hslider
 renders_as: a horizontal track with a round grabber
 ---
 

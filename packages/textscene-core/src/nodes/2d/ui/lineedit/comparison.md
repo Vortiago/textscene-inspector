@@ -3,7 +3,7 @@ type: LineEdit
 category: 2D
 status: unreviewed
 fixture: unit-lineedit.tscn
-# image: unit-lineedit
+image: unit-lineedit
 renders_as: a single-line text box
 ---
 

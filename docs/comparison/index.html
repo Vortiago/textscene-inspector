@@ -399,12 +399,24 @@ tr:last-child td{border-bottom:0}
         <span class="renders">renders as one merged THREE.BufferGeometry with a draw group per surface</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_arraymesh.html" target="_blank" rel="noopener" title="Godot class reference for ArrayMesh">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/resources/mesh.h" target="_blank" rel="noopener" title="Godot engine source for ArrayMesh">source ↗</a>
-        
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-arraymesh.tscn" target="_blank" rel="noopener" title="Open unit-arraymesh.tscn in the previewer"><code>unit-arraymesh.tscn</code> ↗</a>
         <span class="status st-unreviewed">Unreviewed</span>
       </header>
       <div class="status-note st-unreviewed"></div>
       
-      <div class="novisual">Comparison images not captured yet for ArrayMesh.</div>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-arraymesh-godot.png" alt="Godot render of ArrayMesh">
+          <img class="img-ours" src="images/unit-arraymesh-ours.png" alt="Our render of ArrayMesh">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
       <div class="prose"><p>A baked mesh. Each surface's geometry is a set of base64 <code>PackedByteArray</code> blobs whose layout the surface's uint64 <code>format</code> bitfield describes. Decoding recovers what Godot's <code>surface_get_arrays()</code> returns; all surfaces merge into one <code>BufferGeometry</code>, one draw group each, so MeshInstance3D can give every surface its own material.</p>
 <h3>Buffer layout</h3>
 <p><code>vertex_data</code> = positions, then normal/tangent frames — two concatenated regions, not interleaved. <code>attribute_data</code> is interleaved: COLOR, UV1, UV2. Bytes per vertex:</p>
@@ -686,11 +698,11 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>text</code></td><td><code>"Click Me"</code> / <code>"Styled"</code> / <code>"Disabled"</code></td><td>the label on each of the three buttons</td></tr><tr><td><code>theme_override_styles/normal</code></td><td>green <code>StyleBoxFlat</code></td><td>replaces the default chrome on <strong>Styled</strong> — <code>bg_color = Color(0.2,0.5,0.35,1)</code> green fill, <code>corner_radius = 6</code> rounded corners, <code>content_margin 14/6</code> padding</td></tr><tr><td><code>disabled</code></td><td><code>true</code></td><td>switches <strong>Disabled</strong> to the lighter disabled StyleBox and mutes its label</td></tr><tr><td><code>alignment</code></td><td><code>1</code> (CENTER)</td><td>centres the <strong>Styled</strong> label — Godot's Button default, so no visible change</td></tr></tbody></table></div>
 <h3>Divergences</h3>
 <p>Measured on Godot 4.6.3, <code>pnpm ref:godot scenes/fixtures/unit-button.tscn --mode 2d --probe &lt;x,y&gt;</code> against <code>pnpm ref:ours unit-button.tscn --2d --probe &lt;x,y&gt;</code>:</p>
-<div class="tablewrap"><table><thead><tr><th>Probe</th><th>What it is</th><th>Godot</th><th>Ours</th></tr></thead><tbody><tr><td>(583, 370)</td><td>a solid stroke of the <strong>Disabled</strong> label</td><td>rgb(142, 142, 142)</td><td>rgb(142, 142, 142)</td></tr><tr><td>(544, 362)</td><td>the same stroke where Godot's glyph sits, a residual sub-pixel gap</td><td>rgb(142, 142, 142)</td><td>rgb(138, 138, 138)</td></tr><tr><td>(519, 308)</td><td><strong>Styled</strong>'s top-left corner arc, one row into our rect</td><td>rgb(51, 128, 89)</td><td>rgb(64, 100, 82) — see "StyleBox corner anti-aliasing" below: entangled with the "Styled sits one row low" offset at this exact probe</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Probe</th><th>What it is</th><th>Godot</th><th>Ours</th></tr></thead><tbody><tr><td>(583, 370)</td><td>a solid stroke of the <strong>Disabled</strong> label</td><td>rgb(142, 142, 142)</td><td>rgb(142, 142, 142)</td></tr><tr><td>(544, 362)</td><td>the same stroke where Godot's glyph sits, a residual sub-pixel gap</td><td>rgb(142, 142, 142)</td><td>rgb(138, 138, 138)</td></tr><tr><td>(576, 306)</td><td>the row above <strong>Styled</strong>'s top edge, on the straight part away from both corner arcs</td><td>rgb(76, 76, 76)</td><td>rgb(64, 102, 83) — see "Styled's rect sits half a pixel high" below</td></tr><tr><td>(576, 341)</td><td><strong>Styled</strong>'s bottom fill row, same column</td><td>rgb(51, 128, 89)</td><td>rgb(64, 102, 83) — the same half-pixel offset at the other edge</td></tr></tbody></table></div>
 <p>Chrome colours are exact. The unthemed <strong>Click Me</strong> fill is the default theme's charcoal on both sides (rgb(46, 46, 46) against rgb(45, 45, 45) — one step of rounding on a StyleBox whose colour is itself an alpha blend over the backdrop), <strong>Styled</strong> is pixel-exact rgb(51, 128, 89) green, and <strong>Disabled</strong> takes the lighter rgb(61, 61, 61) disabled StyleBox on both. Both labels sit in the same place to within a pixel: <strong>Click Me</strong>'s ink spans x 544..606, y 274..285 in Godot and x 544..607, y 273..286 here.</p>
 <p><code>font_disabled_color</code> is <code>control_font_color × Color(1, 1, 1, 0.5)</code>, and Godot's 142 at (583, 370) is exactly <code>223 × 0.5 + 61 × 0.5</code> over the disabled fill — matched on both sides.</p>
-<p>All three buttons carry authored offsets 32 px apart, and both engines keep that: <strong>Click Me</strong> spans y 264..295 and <strong>Disabled</strong> y 352..383, identically. <strong>Styled</strong>'s own StyleBox sets <code>content_margin_top/bottom = 6</code>: Godot's rect is 35 px (12 + a 23 px font height), and ours is 35 too.</p>
-<p><strong>Styled sits one row low</strong>: y 308..342 here against Godot's y 307..341. The height is right and the other two buttons are on Godot's exact rows, so this is a placement term specific to a button carrying its own StyleBox content margins, not the minimum size.</p>
+<p>All three buttons carry authored offsets 32 px apart, and both engines keep that: <strong>Click Me</strong> spans y 264..295 and <strong>Disabled</strong> y 352..383, identically. <strong>Styled</strong>'s own StyleBox sets <code>content_margin_top/bottom = 6</code>, so its minimum height is 35 px (12 + a 23 px font height) against an authored 32, and that 35 px rect is the same height on both sides. All three span x 516..635 on both.</p>
+<p><strong>Styled's rect sits half a pixel high</strong>: <code>anchors_preset = 8</code> (CENTER) grows BOTH ways, so the 3 px the minimum size adds is split evenly (<code>scene/gui/control.cpp:1789-1797</code>) and the rect solves to y 306.5..341.5. We paint exactly that: at x 560, 576 and 600 alike our boundary rows 306 and 341 read rgb(64, 102, 83) — a clean half-and-half of the rgb(76, 76, 76) backdrop and the rgb(51, 128, 89) fill — with rows 307 and 340 just inside them solid fill. Godot at those same columns has no feather at all: rows 306 and 342 are backdrop, rows 307 and 341 solid fill, a rect of y 307..342. It lands there because <code>Control::_update_canvas_item_transform</code> rounds a Control's canvas transform to whole pixels — <code>(xform[2] + Vector2(0.5, 0.5)).floor()</code>, <code>scene/gui/control.cpp:727-737</code>, gated on <code>gui/common/snap_controls_to_pixels</code>, which defaults to <code>true</code> (<code>core/config/project_settings.cpp:1808</code>) — so 306.5 becomes 307. <strong>Click Me</strong> and <strong>Disabled</strong> solve to whole pixels already and have nothing to snap, which is why this is the only button that moves. Same height, same columns; the whole divergence is that half-pixel vertical translation.</p>
 <p>A glyph's edge pixel still parts by a residual sub-pixel: probe (544, 362), a stroke where Godot's glyph sits, reads rgb(138, 138, 138) against Godot's rgb(142, 142, 142), while (583, 370), a solid interior stroke, matches exactly on both sides. The <strong>Disabled</strong> label's last glyph stem sits at x 606 in Godot and x 607 here — a steady 1 px residual. The RichTextLabel sheet has the mechanism (<code>openSansMetrics.ts</code>'s continuous per-glyph <code>advanceWidths</code> as the shaping source).</p>
 <h3>Native (WebGL canvas) painter</h3>
 <p><code>nativeSolver.ts</code> registers <code>Button::get_minimum_size_for_text_and_icon</code> (<code>controlSolverRegistry.registerMinimumSize</code>); <code>Component.tsx</code> draws the chrome (a <code>StyleBoxQuad</code>, skipped when <code>flat</code>), the label (<code>&lt;TextRun&gt;</code>, centred/ aligned per <code>alignment</code>), and an optional icon (<code>&lt;ControlQuad&gt;</code>, honouring <code>icon_alignment</code>/<code>vertical_icon_alignment</code>/<code>expand_icon</code>) — Button is the first native *composite* painter, so the shared chrome-tint/content-layout math lives in <code>r3f/controls/native/buttonBase.ts</code> for CheckBox/OptionButton (both <code>Button</code> subclasses in Godot itself) to reuse rather than re-derive. Draw state is <code>disabled</code> vs. everything else — no hover/pressed/focus: this is a static viewer, not an interactive control.</p>
@@ -700,7 +712,8 @@ tr:last-child td{border-bottom:0}
 <p>### StyleBox corner anti-aliasing</p>
 <p><code>styleBoxFlatGeometry.ts</code> (this painter's chrome, shared with every other native StyleBox consumer — <code>panel/comparison.md</code> measures the same arc on a 40 px radius) builds the same AA feather rings <code>StyleBoxFlat::draw</code> does (<code>scene/resources/style_box_flat.cpp:511-630</code>), driven by <code>StyleBoxFlatData</code>'s <code>anti_aliased</code>/<code>aa_size</code> fields (defaults <code>true</code>/<code>1</code>, <code>scene/resources/style_box_flat.h:49,54</code>).</p>
 <p><strong>Styled</strong>'s own StyleBox draws no border, so this is the fill-only AA branch — the whole rect's boundary gets a <code>aa_size / 2</code> = 0.5 px feather. On the straight top edge, away from the corner arc, <code>--probe 576,308</code> reads <code>rgb(51, 128, 89)</code> on both sides — pixel-exact.</p>
-<p>The corner probe (<code>--probe 519,308</code>, top-left arc, <code>corner_radius = 6</code>) reads Godot <code>rgb(51, 128, 89)</code> against ours <code>rgb(64, 100, 82)</code> — this probe sits exactly on the row where <strong>Styled sits one row low</strong> (above) puts our rect's top edge one row below Godot's, so Godot's rect already reads full fill a row earlier than ours at this x. Sampling one row further down the same arc, <code>--probe 519,309</code>, is pixel-exact on both sides (<code>rgb(51, 128, 89)</code>); <code>--probe 520,308</code> (one column right, same row) closes most of the way too — <code>rgb(55, 118, 87)</code> against Godot's <code>rgb(51, 128, 89)</code>. So the AA ring itself is doing its job on this arc; what is left at the original probe is the pre-existing row offset compounding with it, not a remaining AA gap.</p>
+<p>On the top-left arc (<code>corner_radius = 6</code>), <code>--probe 519,308</code>, <code>--probe 519,309</code> and <code>--probe 520,308</code> all read <code>rgb(51, 128, 89)</code> on both sides.</p>
+<p>Where the arc does part it parts in the direction the half-pixel offset above predicts. <code>--probe 519,307</code> reads Godot <code>rgb(65, 99, 81)</code> against ours <code>rgb(53, 125, 89)</code> — ours carries more ink, its rect having started half a pixel earlier. <code>--probe 519,341</code> reads Godot <code>rgb(65, 99, 81)</code> against ours <code>rgb(76, 76, 76)</code> — ours carries none, its rect having already ended. Extra coverage at the top end and missing coverage at the bottom is the signature of that translation, so these numbers do not isolate the ring from the placement.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks the inherited set (35 inherited from Control); <code>Button</code> declares none of its own. Every validator failure is an <strong>error</strong>.</p>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>warning</td></tr></tbody></table></div>
@@ -1423,8 +1436,11 @@ tr:last-child td{border-bottom:0}
       </div>
         <div class="prose"><p>Godot draws nothing for an emitter that is neither active nor emitting, and neither does the previewer. Six of the corpus's eleven <code>CPUParticles2D</code> nodes are script-triggered one-shots that ship this way, so an empty frame here is the correct frame.</p></div>
       </section><div class="prose"><h3>Divergences</h3>
-<p>Three things are structural rather than a capture artefact:</p>
-<ul><li><strong>The moment.</strong> Neither side shows a running emitter. Both are captured at the scene's load instant, where Godot has run the single update it does at time zero: the authored <code>preprocess</code>, at a fixed <code>1/30 s</code> step (or <code>fixed_fps</code>), plus one frame delta. So an emitter that sets <code>preprocess</code> — as every fixture here does — stands at the engine's own at-rest pose on both sides. An emitter that does not has accumulated nothing there, while the previewer substitutes one <code>lifetime</code>, a continuous emitter's steady state, or half a lifetime for a <code>one_shot</code> burst, which a full lifetime would catch a frame from death. The isometric dungeon's candle is that case, and its flame is ours alone.</li><li><strong>The seed.</strong> Godot randomises <code>seed</code> in the constructor unless <code>use_fixed_seed</code> is set, and never saves it, so an unseeded emitter that has a <code>preprocess</code> to simulate draws a different reference every run. Every fixture here pins both, which is what makes these poses comparable at all. The previewer substitutes a fixed constant, which makes its own output stable but means an unseeded emitter's particles are in plausible places rather than the engine's.</li><li><strong><code>speed_scale</code> on a preprocessed emitter.</strong> Godot forces <code>speed_scale</code> to 1 while it preprocesses, so the property genuinely does not move a preprocessed pose; it applies only to the substituted window described above.</li></ul>
+<p>Measured whole-frame against Godot 4.6.3, <code>pnpm ref:godot &lt;fixture&gt; --mode 2d</code> against <code>pnpm ref:ours &lt;fixture&gt; --2d</code>, 1152x648:</p>
+<div class="tablewrap"><table><thead><tr><th>Fixture</th><th>Differing pixels</th></tr></thead><tbody><tr><td><code>unit-cpuparticles2d-emission-shapes.tscn</code></td><td>0 (0.000 %)</td></tr><tr><td><code>unit-cpuparticles2d.tscn</code></td><td>1398 (0.187 %)</td></tr><tr><td><code>unit-cpuparticles2d-color-ramp.tscn</code></td><td>3490 (0.468 %)</td></tr><tr><td><code>unit-cpuparticles2d-local-coords.tscn</code></td><td>4777 (0.640 %)</td></tr></tbody></table></div>
+<p>The zero is the load-bearing one: it is the same simulation on both sides, stepped the same way, landing on the same pose to the pixel. So the other three are not the emitter's motion — they are what those fixtures add on top of it. In <code>local_coords</code>, the largest, the two streams have the same extent and position on both sides but ours breaks into a comb of separate quads where Godot's is one solid bar, i.e. our particles sit further apart along the stream.</p>
+<p>Three more things are structural rather than a capture artefact:</p>
+<ul><li><strong>The moment, and only when the scene does not name one.</strong> Neither side shows a running emitter. Both are captured at the scene's load instant, where Godot has run the single update it does at time zero — the authored <code>preprocess</code>, at a fixed <code>1/30 s</code> step or <code>fixed_fps</code>, then one process delta the reference pins at a millisecond and which quantizes to whole steps when the emitter sets <code>fixed_fps</code>. So an emitter that names a later moment is MET, not approximated: <code>preprocess</code> is a serialised fixed-step advance, both sides step whole frames over it, and both let the last step overshoot. <code>unit-cpuparticles2d-emission-shapes.tscn</code> measures that exactly — <strong>0 px of 1152x648 against Godot 4.6.3</strong>, the engine's own pose to the pixel. An emitter that names no moment has accumulated nothing there, while the previewer substitutes one <code>lifetime</code>, a continuous emitter's steady state, or half a lifetime for a <code>one_shot</code> burst, which a full lifetime would catch a frame from death. The isometric dungeon's candle is that case, and its flame is ours alone.</li><li><strong>The seed.</strong> Godot randomises <code>seed</code> in the constructor unless <code>use_fixed_seed</code> is set, and never saves it, so an unseeded emitter that has a <code>preprocess</code> to simulate draws a different reference every run. Every fixture here pins both, which is what makes these poses comparable at all. The previewer substitutes a fixed constant, which makes its own output stable but means an unseeded emitter's particles are in plausible places rather than the engine's.</li><li><strong><code>speed_scale</code> on a preprocessed emitter.</strong> Godot forces <code>speed_scale</code> to 1 while it preprocesses, so the property genuinely does not move a preprocessed pose; it applies only to the substituted window described above.</li></ul>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>CPUParticles2D</code> properties, plus 18 inherited from Node2D. Every validator failure is an <strong>error</strong>.</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th></tr></thead><tbody><tr><td><code>amount</code></td></tr><tr><td><code>angle_curve</code></td></tr><tr><td><code>angle_max</code></td></tr><tr><td><code>angle_min</code></td></tr><tr><td><code>angular_velocity_curve</code></td></tr><tr><td><code>angular_velocity_max</code></td></tr><tr><td><code>angular_velocity_min</code></td></tr><tr><td><code>anim_offset_curve</code></td></tr><tr><td><code>anim_offset_max</code></td></tr><tr><td><code>anim_offset_min</code></td></tr><tr><td><code>anim_speed_curve</code></td></tr><tr><td><code>anim_speed_max</code></td></tr><tr><td><code>anim_speed_min</code></td></tr><tr><td><code>color</code></td></tr><tr><td><code>color_initial_ramp</code></td></tr><tr><td><code>color_ramp</code></td></tr><tr><td><code>damping_curve</code></td></tr><tr><td><code>damping_max</code></td></tr><tr><td><code>damping_min</code></td></tr><tr><td><code>direction</code></td></tr><tr><td><code>emission_normals</code></td></tr><tr><td><code>emission_points</code></td></tr><tr><td><code>emission_rect_extents</code></td></tr><tr><td><code>emission_ring_inner_radius</code></td></tr><tr><td><code>emission_ring_radius</code></td></tr><tr><td><code>emission_shape</code></td></tr><tr><td><code>emission_sphere_radius</code></td></tr><tr><td><code>emitting</code></td></tr><tr><td><code>explosiveness</code></td></tr><tr><td><code>fixed_fps</code></td></tr><tr><td><code>fract_delta</code></td></tr><tr><td><code>gravity</code></td></tr><tr><td><code>hue_variation_curve</code></td></tr><tr><td><code>hue_variation_max</code></td></tr><tr><td><code>hue_variation_min</code></td></tr><tr><td><code>initial_velocity_max</code></td></tr><tr><td><code>initial_velocity_min</code></td></tr><tr><td><code>lifetime</code></td></tr><tr><td><code>lifetime_randomness</code></td></tr><tr><td><code>linear_accel_curve</code></td></tr><tr><td><code>linear_accel_max</code></td></tr><tr><td><code>linear_accel_min</code></td></tr><tr><td><code>local_coords</code></td></tr><tr><td><code>one_shot</code></td></tr><tr><td><code>orbit_velocity_curve</code></td></tr><tr><td><code>orbit_velocity_max</code></td></tr><tr><td><code>orbit_velocity_min</code></td></tr><tr><td><code>particle_flag_align_y</code></td></tr><tr><td><code>preprocess</code></td></tr><tr><td><code>radial_accel_curve</code></td></tr><tr><td><code>radial_accel_max</code></td></tr><tr><td><code>radial_accel_min</code></td></tr><tr><td><code>randomness</code></td></tr><tr><td><code>scale_amount_curve</code></td></tr><tr><td><code>scale_amount_max</code></td></tr><tr><td><code>scale_amount_min</code></td></tr><tr><td><code>scale_curve_x</code></td></tr><tr><td><code>scale_curve_y</code></td></tr><tr><td><code>seed</code></td></tr><tr><td><code>speed_scale</code></td></tr><tr><td><code>split_scale</code></td></tr><tr><td><code>spread</code></td></tr><tr><td><code>tangential_accel_curve</code></td></tr><tr><td><code>tangential_accel_max</code></td></tr><tr><td><code>tangential_accel_min</code></td></tr><tr><td><code>texture</code></td></tr><tr><td><code>use_fixed_seed</code></td></tr></tbody></table></div>
@@ -2565,7 +2581,19 @@ tr:last-child td{border-bottom:0}
       </header>
       <div class="status-note st-unreviewed"></div>
       
-      <div class="novisual">Comparison images not captured yet for HSlider.</div>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-hslider-godot.png" alt="Godot render of HSlider">
+          <img class="img-ours" src="images/unit-hslider-ours.png" alt="Our render of HSlider">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
       <div class="prose"><p>A horizontal slider over a <code>Range</code>. The previewer draws the same four parts Godot does — the <code>slider</code> track, the <code>grabber_area</code> fill, any tick marks, and the grabber — placing each with the expressions from <code>Slider::_notification(NOTIFICATION_DRAW)</code>. The grabber's left edge sits at <code>ratio * (width - grabber)</code>, so the default <code>value = min_value</code> puts it hard against the left end.</p>
 <p>Every px below is the <code>gui/theme/default_theme_scale = 1</code> case. Godot bakes that scale into the theme it builds at startup — rounding each stylebox margin and radius by it, and rasterising each icon at it — so a project setting 2.0 gets a 16px track and a 32px grabber, and the previewer reads the same scaled metrics.</p>
 <h3>Properties exercised</h3>
@@ -2595,7 +2623,19 @@ tr:last-child td{border-bottom:0}
       </header>
       <div class="status-note st-unreviewed"></div>
       
-      <div class="novisual">Comparison images not captured yet for HSplitContainer.</div>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-split-container-godot.png" alt="Godot render of HSplitContainer">
+          <img class="img-ours" src="images/unit-split-container-ours.png" alt="Our render of HSplitContainer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
       <div class="prose"><p>A SplitContainer is not a flow container. Where a BoxContainer places children one after another and lets each child's size flags size it, <code>_resort</code> solves for ONE number and derives both rects from it (<code>scene/gui/split_container.cpp</code>):</p>
 <p>``<code>cpp fit_child_in_rect(first,  Rect2(Point2(0, 0), Size2(computed_split_offset, get_size().height))); int sofs = computed_split_offset + sep; fit_child_in_rect(second, Rect2(Point2(sofs, 0), Size2(get_size().width - sofs, get_size().height))); </code>``</p>
 <p>A child's own flags never size it here; they only choose how it sits inside the rect it was handed.</p>
@@ -2670,7 +2710,7 @@ tr:last-child td{border-bottom:0}
 <p>The whole frame is within a mean channel error of <strong>5.02/255</strong>, with 5.5 % of pixels over 16/255. Stone, floor and the lit regions all agree closely:</p>
 <div class="tablewrap"><table><thead><tr><th>Sample</th><th>ours</th><th>Godot</th></tr></thead><tbody><tr><td><code>300,120</code> unlit wall</td><td><code>[29, 68, 129]</code></td><td><code>[35, 71, 130]</code></td></tr><tr><td><code>420,300</code> lit floor</td><td><code>[11, 76, 151]</code></td><td><code>[25, 82, 152]</code></td></tr><tr><td><code>880,470</code> floor in shadow</td><td><code>[3, 31, 84]</code></td><td><code>[7, 35, 84]</code></td></tr></tbody></table></div>
 <p>What remains is two things, and neither is draw order.</p>
-<p><strong>The candles burn in our frame only.</strong> A wall candle draws its flame, warm glow and rising sparks here; the reference shows the same wick and the same warm <code>PointLight2D</code> pool with nothing above it. Both sides are captured at the scene's load instant, and a Godot <code>CPUParticles2D</code> has emitted nothing visible by then — it runs one update at its first draw, which is the authored <code>preprocess</code> (0 on this candle) plus a single frame. The previewer runs no clock at all and evaluates each emitter once to a settled pose instead. The Candle section below isolates it at 0.91/255.</p>
+<p><strong>The candles burn in our frame only.</strong> A wall candle draws its flame, warm glow and rising sparks here; the reference shows the same wick and the same warm <code>PointLight2D</code> pool with nothing above it. Both sides are captured at the scene's load instant, and a Godot <code>CPUParticles2D</code> has emitted nothing visible by then — it runs one update at its first draw, which is the authored <code>preprocess</code>, 0 on this candle, plus one process delta the reference pins at a millisecond. The previewer runs no clock at all and evaluates each emitter once to a settled pose instead. The Candle section below isolates it at 0.91/255.</p>
 <p><strong>The rest is two opposite errors.</strong> Splitting the 5.5 % of pixels over 16/255 by sign:</p>
 <div class="tablewrap"><table><thead><tr><th></th><th>share</th><th>mean delta (Godot − ours)</th><th>Godot's luminance there</th></tr></thead><tbody><tr><td>ours too BRIGHT</td><td>51 %</td><td>R −24.0, G −27.0, B −25.2</td><td>66/255</td></tr><tr><td>ours too dark</td><td>49 %</td><td>R +12.1, G +10.0, B +20.9</td><td>106/255</td></tr></tbody></table></div>
 <p>The bright half is the previewer rendering light where Godot renders dark, and it is one region rather than a spread: 68 % of it falls in x 740–960, y 150–360 — a pillar, the wall top beside it and the floor tiles above the rug — where Godot lays a darkening the previewer does not draw. On the pillar at <code>775,300</code> Godot reads <code>[38, 79, 142]</code> against ours <code>[82, 123, 189]</code>. The deltas are near-uniform across the channels, which points at coverage or alpha rather than colour space, but the cause is not identified.</p>
@@ -2707,7 +2747,7 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>A <code>Sprite2D</code> wick, four <code>CPUParticles2D</code> (<code>glow</code>, <code>Fire</code>, <code>Sparkle</code>, <code>flow front</code>) and two <code>PointLight2D</code>s. The wick and both light pools match to within a unit or two per channel. All four emitters draw here — flame body, warm glow and rising sparks — and none of them draws in the reference, which is the whole of the divergence: mean channel error <strong>0.91/255</strong>, 0.19 % of pixels over 16 — all of them in the flame and the glow around it, and all of them ours being the brighter side.</p>
-<p>Neither side is showing a running emitter. Both are captured at the scene's load instant, where Godot has run the single update it does at time zero, from the emitter's first draw — the authored <code>preprocess</code> plus one frame delta — and this candle sets <code>preprocess = 0</code>, so nothing has accumulated. The previewer has no clock to be at that instant with: it evaluates each emitter once to a settled pose, over one lifetime, with a fixed substitute seed because the scene sets no <code>use_fixed_seed</code>. So the flame stands in plausible places rather than the engine's, and it is identical run to run.</p>
+<p>Neither side is showing a running emitter. Both are captured at the scene's load instant. Godot runs one update there, from the emitter's first draw: the authored <code>preprocess</code> plus a single process delta, which the reference pins at a millisecond rather than letting the host's frame timing set it. This candle sets <code>preprocess = 0</code>, so nothing has accumulated. An emitter that names a later moment — <code>preprocess</code> with a <code>fixed_fps</code> to pin the step — is met exactly, because that advance is serialised in the file and both sides run the same fixed-step loop over it. The previewer has no clock to be at any other instant with: it evaluates each emitter once to a settled pose, over one lifetime, with a fixed substitute seed because the scene sets no <code>use_fixed_seed</code>. So the flame stands in plausible places rather than the engine's, and it is identical run to run.</p>
 <p>That is a property of this scene, not of particles in general: <code>preprocess</code> IS serialised and is applied at that same first draw, so an emitter that sets it reaches a well-defined at-rest pose on both sides. The <code>CPUParticles2D</code> sheet carries the fixtures that pin it, where the two sides agree to within 0.6/255.</p>
 <p>The <code>Fire</code> and <code>Sparkle</code> emitters both carry a <code>CanvasItemMaterial</code> with <code>particles_animation = true</code> over an 11- and an 8-frame strip. Without that flipbook each particle draws the WHOLE strip, which renders as a row of eleven flames beside the wick — visibly worse than drawing nothing. It is implemented for <code>CPUParticles2D</code>; it remains inert for <code>GPUParticles2D</code>, which is still unimplemented.</p></div>
       </section>
@@ -3120,7 +3160,19 @@ tr:last-child td{border-bottom:0}
       </header>
       <div class="status-note st-unreviewed"></div>
       
-      <div class="novisual">Comparison images not captured yet for LineEdit.</div>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-lineedit-godot.png" alt="Godot render of LineEdit">
+          <img class="img-ours" src="images/unit-lineedit-ours.png" alt="Our render of LineEdit">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
       <div class="prose"><p>A single-line text field. The previewer draws its stylebox and one clipped run of text on the canvas — whichever string Godot's <code>_shape()</code> would paint, in whichever colour that string's state calls for. Being a static viewer, it renders no caret, no selection and no clear button.</p>
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>placeholder_text</code></td><td><code>Enter text here...</code></td><td>drawn dimmed on <code>Placeholder</code>, which sets no <code>text</code></td></tr><tr><td><code>text</code></td><td><code>Ada Lovelace</code> on <code>Filled</code></td><td>replaces the placeholder entirely and draws at full font colour</td></tr><tr><td><code>secret</code></td><td><code>true</code> on <code>Secret</code></td><td>echoes <code>hunter2</code> as seven bullets instead of the plaintext</td></tr><tr><td><code>editable</code></td><td><code>false</code> on <code>ReadOnly</code></td><td>swaps the <code>normal</code> stylebox for the fainter <code>read_only</code> one and dims the text</td></tr><tr><td><code>flat</code></td><td><code>true</code> on <code>Flat</code></td><td>drops the stylebox, leaving text on the bare panel</td></tr><tr><td><code>alignment</code></td><td><code>1</code> on <code>Centred</code></td><td>centres the run in the box instead of left-aligning it</td></tr><tr><td><code>theme_override_constants/separation</code></td><td><code>12</code></td><td>the gap between the six fields</td></tr></tbody></table></div>
@@ -5584,7 +5636,19 @@ tr:last-child td{border-bottom:0}
       </header>
       <div class="status-note st-unreviewed"></div>
       
-      <div class="novisual">Comparison images not captured yet for SubViewport.</div>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-sub-viewport-godot.png" alt="Godot render of SubViewport">
+          <img class="img-ours" src="images/unit-sub-viewport-ours.png" alt="Our render of SubViewport">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
       <div class="prose"><p>A Viewport that renders its subtree into an offscreen target. It draws nothing itself; what it does is decide <strong>where its subtree draws</strong> — see <a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0033-subviewport-is-a-canvas-boundary.md" target="_blank" rel="noopener">ADR-0033</a> — and publish what it rendered for a <code>ViewportTexture</code> consumer to sample.</p>
 <p>A sub-viewport is a <strong>canvas boundary, not a world boundary</strong>. Godot's <code>Viewport</code> constructor always instantiates its own <code>World2D</code>, so <code>find_world_2d</code> never walks up to the parent: CanvasItem descendants (2D world *and* Control UI) draw nowhere in the parent. But <code>find_world_3d</code> falls through to <code>parent-&gt;find_world_3d()</code> unless <code>own_world_3d</code> is set, so <strong>Node3D descendants do draw in the parent's 3D view</strong>, exactly as through a plain <code>Node</code>. Measured against Godot 4.6.3, not derived.</p>
 <p>The previewer gets both halves from the registration rather than from branching code: the slice registers with neither <code>canvasItem</code> nor <code>container</code>, so <code>NodeDispatcher</code>'s existing workspace rules pass it through in the 3D workspace and drop its whole subtree in the 2D one.</p>
@@ -5623,7 +5687,19 @@ tr:last-child td{border-bottom:0}
       </header>
       <div class="status-note st-unreviewed"></div>
       
-      <div class="novisual">Comparison images not captured yet for SubViewportContainer.</div>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-sub-viewport-container-godot.png" alt="Godot render of SubViewportContainer">
+          <img class="img-ours" src="images/unit-sub-viewport-container-ours.png" alt="Our render of SubViewportContainer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
       <div class="prose"><p>The Control that displays its <code>SubViewport</code> children's render targets — a <strong>viewport surface</strong> (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0033-subviewport-is-a-canvas-boundary.md" target="_blank" rel="noopener">ADR-0033</a>), and the one place a sub-viewport's canvas subtree is drawn.</p>
 <p>It draws <strong>every</strong> <code>SubViewport</code> child, stacked in tree order — not just the first. From <code>SubViewportContainer::_notification(NOTIFICATION_DRAW)</code>:</p>
 <p>``<code>cpp if (stretch) draw_texture_rect(c-&gt;get_texture(), Rect2(Vector2(), get_size())); else         draw_texture_rect(c-&gt;get_texture(), Rect2(Vector2(), c-&gt;get_size())); </code>``</p>
@@ -6321,7 +6397,19 @@ tr:last-child td{border-bottom:0}
       </header>
       <div class="status-note st-unreviewed"></div>
       
-      <div class="novisual">Comparison images not captured yet for VSlider.</div>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-vslider-godot.png" alt="Godot render of VSlider">
+          <img class="img-ours" src="images/unit-vslider-ours.png" alt="Our render of VSlider">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
       <div class="prose"><p>A vertical slider over a <code>Range</code>, drawn from the same four parts as HSlider. The axis is what differs: Godot places the grabber at <code>size.height - ratio * areasize - grabber_height</code>, which measured from the bottom edge is <code>ratio * areasize</code> — so <code>value = min_value</code> sits at the BOTTOM and <code>max_value</code> at the top, and the <code>grabber_area</code> fills upward from the bottom.</p>
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td>(defaults) on <code>AtBottom</code></td><td>value 0, min 0, max 100</td><td>grabber at the bottom, fill reduced to its half-grabber stub</td></tr><tr><td><code>value</code></td><td><code>50.0</code> on <code>AtMiddle</code></td><td>grabber mid-track, fill covering the lower half</td></tr><tr><td><code>value</code></td><td><code>100.0</code> on <code>AtTop</code></td><td>grabber at the top, track fully filled</td></tr><tr><td><code>tick_count</code> + <code>ticks_on_borders</code></td><td><code>5</code> + <code>true</code> on <code>TickedAtMiddle</code></td><td>five tick bars across the track</td></tr><tr><td><code>alignment</code></td><td><code>1</code> on the HBoxContainer</td><td>centres the four sliders as a group</td></tr><tr><td><code>theme_override_constants/separation</code></td><td><code>48</code></td><td>the gap between them</td></tr></tbody></table></div>
@@ -6351,7 +6439,19 @@ tr:last-child td{border-bottom:0}
       </header>
       <div class="status-note st-unreviewed"></div>
       
-      <div class="novisual">Comparison images not captured yet for VSplitContainer.</div>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-split-container-vertical-godot.png" alt="Godot render of VSplitContainer">
+          <img class="img-ours" src="images/unit-split-container-vertical-ours.png" alt="Our render of VSplitContainer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
       <div class="prose"><p>The same class as <code>HSplitContainer</code> with <code>vertical = true</code>; the solve, the properties and the divergences are all documented there. <code>_resort</code> swaps which axis the computed offset sizes:</p>
 <p>``<code>cpp fit_child_in_rect(first,  Rect2(Point2(0, 0), Size2(get_size().width, computed_split_offset))); int sofs = computed_split_offset + sep; fit_child_in_rect(second, Rect2(Point2(0, sofs), Size2(get_size().width, get_size().height - sofs))); </code>``</p>
 <p>The axis is load-bearing beyond the obvious, because <code>_compute_split_offset</code> reads <code>SIZE_EXPAND</code> on the SPLIT axis only:</p>
