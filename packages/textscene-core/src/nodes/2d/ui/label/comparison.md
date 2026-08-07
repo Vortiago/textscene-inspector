@@ -41,6 +41,59 @@ panes, and the pitch tracks the size: 31 px at `font_size = 20` (line tops
 55 / 86 / 117 / 148 in Godot, 54 / 85 / 116 / 147 here) and 42 px at 28, where the
 five line tops are 344 / 386 / 428 / 470 / 512 on BOTH sides with no offset at all.
 
+`unit-label-autowrap-in-container.tscn` is the container case: a wrapping Label
+has no width of its own (`Label::get_minimum_size` returns `Size2(1, height)`),
+so the container decides it, and only then is the number of lines — and
+therefore the height the container has to reserve — a known quantity. The
+previewer resolves that the way Godot does across frames, by asking again once
+a width exists (`SolveContext.tentativeRect`, one bounded second solve pass);
+the Label's own width floor is 1 on both passes, so the width it is handed back
+is the final one. Measured on Godot 4.6.3 by instantiating the scene in a
+1152x648 `SubViewport` and reading `Control.get_rect()` after the reference
+harness's own settle: `Card` (64, 64, 400, 130), `Column` (12, 12, 376, 106),
+`Heading` (0, 0, 376, 23), `Body` (0, 31, 376, 75) — three wrapped lines at
+`3 * 26 - 3`. The previewer's solve returns the same four rects. The same
+reading on `complex-2d-gui.tscn` gives its `Subtitle` (0, 41, 640, 49) inside a
+114-tall `HeaderCard`, and its `SquadNote` (0, 102, 282, 49).
+
+That second pass is bounded at one correction, and Godot's own loop is not:
+`Label::_shape` calls `update_minimum_size()`, which invalidates the cached
+minimum up the ancestor chain and emits `minimum_size_changed`, which
+`Container::_child_minsize_changed` answers with `queue_sort()` — so the engine
+re-sorts as many frames as it takes to settle. One correction is exact whenever
+the width a container hands the Label does not itself react to the Label's
+height, which covers every container in this repo's scenes. It is one re-ask
+short where the width DOES react: an autowrapping Label inside a
+`ScrollContainer` whose vertical scrollbar appears only because the corrected
+height overflowed it is then measured against a width that still includes the
+bar's own width, and reads one line too short. Nothing measured here hits that —
+`complex-2d-gui.tscn`'s two wrapping Labels are both outside its `ScrollContainer`.
+
+Godot breaks lines at an `int` width (`Label::_shape`'s
+`int width = get_size().width - normal_style->get_minimum_size().width`; Label's
+default style is a `StyleBoxEmpty`, so the second term is zero), so a container
+handing out a fractional width still wraps against the whole pixel below it.
+Both the height the solver floors against and the layout the painter draws
+truncate the same way. `_shape` justifies with that same truncated width, while
+`_get_line_rect` aligns against the raw `get_size()` — the two are genuinely
+different numbers, and the previewer keeps them apart. Measured on Godot 4.6.3
+with a `HORIZONTAL_ALIGNMENT_FILL` Label, walking `get_character_bounds` across
+its first line: a 300.7px box stretches that line to a right edge of exactly
+300.0, and a 301.4px box to 301.0.
+
+Per-line horizontal origins are whole pixels in the engine and here.
+`Label::_get_line_rect` writes H_CENTER as `int(size.width - line_size.width) / 2`
+and H_RIGHT as `int(size.width - margin - line_size.width)`, truncating toward
+zero rather than flooring. Measured on Godot 4.6.3 with a Label whose single
+line is exactly 70px wide, reading `Label.get_character_bounds(0).position.x`:
+H_CENTER lands on 65 for every box width from 200 through 201.5 and on 66 from
+202 through 203.5; H_RIGHT lands on 130 at both 200 and 200.5, and 131 at both
+201 and 201.5. With `clip_text` dropping the width floor so the box can be
+narrower than the line, H_RIGHT reads -50 at box 20 and -49 at box 20.5 — a
+floor would give -50 for both. The previewer reproduces every one of those.
+H_CENTER's two roundings are not separable from a single truncation of the
+halved difference at any width, odd difference or even.
+
 `unit-label-2d-valign.tscn` covers the three non-default `vertical_alignment`
 branches, which every other Control fixture leaves at TOP. Godot rounds the
 alignment offset to a whole pixel before it reaches a baseline (`int vbegin = 0,

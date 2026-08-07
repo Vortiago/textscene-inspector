@@ -49,7 +49,7 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { LABEL_THEME_FONT_KEY, labelTextTheme, layoutLabelLines, type LabelLinePlacement } from './nativeSolver';
+import { LABEL_THEME_FONT_KEY, labelShapingWidthPx, labelTextTheme, layoutLabelLines, type LabelLinePlacement } from './nativeSolver';
 import type { LabelProperties } from './types';
 
 
@@ -118,7 +118,7 @@ export function Label({ solveNode, rect, renderOrder, theme, meta }: NativeContr
     if (cachedLayout) return cachedLayout;
     return shapeText(text, {
       fontSizePx: textTheme.fontSizePx,
-      boxWidthPx: rect.w,
+      boxWidthPx: labelShapingWidthPx(rect.w),
       autowrapMode,
       uppercase: props.uppercase,
       fontMetrics,

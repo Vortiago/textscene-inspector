@@ -15,7 +15,7 @@ import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/nativ
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { AutowrapMode, shapeText, type TextLayoutResult, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { AutowrapMode, clampAutowrapMode, shapeText, type TextLayoutResult, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import type { ControlColor } from '../control/types';
 import type { LabelProperties } from './types';
@@ -42,8 +42,6 @@ export const LABEL_THEME_FONT_KEY = 'font';
  */
 export const LABEL_DEFAULT_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 
-const AUTOWRAP_OFF = 0;
-
 /** Resolves this Label's own theme font size/colour (overrides, else the ancestor Theme chain / theme default / Label's own white — `resolveTextTheme`'s own doc). */
 export function labelTextTheme(
   n: SolveNode,
@@ -52,6 +50,27 @@ export function labelTextTheme(
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: LABEL_DEFAULT_FONT_COLOR };
   return resolveTextTheme(n, props, LABEL_THEME_KEYS, defaults);
+}
+
+/**
+ * The width `Label::_shape` breaks lines at (`label.cpp:581`):
+ *
+ *     int width = (get_size().width - style->get_minimum_size().width);
+ *
+ * `style` is `theme_cache.normal_style`, Label's own `StyleBoxEmpty`
+ * (`default_theme.cpp:379`), so the second term is zero and no chrome is
+ * subtracted. The `int` is the part that matters: a container routinely hands a
+ * Control a fractional width, and a word that fits in 320.6px but not in 320
+ * wraps in the engine.
+ *
+ * Lives here, and is called by `Component.tsx` as well as by
+ * `labelMinimumSize`, because the two must agree exactly — the height the
+ * solver floors this Label's box against is the height of the lines the painter
+ * then draws, and a rule spelled out twice agrees only for as long as both
+ * spellings happen to match.
+ */
+export function labelShapingWidthPx(controlWidthPx: number): number {
+  return Math.trunc(controlWidthPx);
 }
 
 /**
@@ -65,13 +84,37 @@ export function labelTextTheme(
  *   is `_update_visible`'s per-line sum (below).
  * - autowrap ON (`:984-991`): ALWAYS `Size2(1, height)` — a wrapping Label's
  *   own width floor is 1px regardless of its text; the box comes entirely
- *   from anchors/containers. `height` still needs a "current size" (how many
- *   lines the text wraps into at ITS OWN width) that does not exist yet in a
- *   bottom-up minimum-size pass with no rect assigned — the identical
- *   self-reference `texturerect/nativeSolver.ts`'s FIT_WIDTH/FIT_HEIGHT
- *   divergence already documents and resolves the same way: substitute the
- *   one non-circular natural quantity on hand (the UNWRAPPED height) rather
- *   than iterate the solver to a fixed point.
+ *   from anchors/containers. `height`, though, is the height of the text AS
+ *   WRAPPED: `_shape` (`:581,:227`) breaks lines at
+ *   `int width = get_size().width - normal_style->get_minimum_size().width`
+ *   and `_update_visible` (`:344-388`) sums the lines that came out, so a
+ *   Label whose container narrowed it to two lines reports two lines' height.
+ *   (`min_size.height = 1` and the `max_lines_visible` clamp above it need
+ *   `clip` or an `overrun_behavior` other than `OVERRUN_NO_TRIMMING`; both
+ *   are off by default and neither is modelled here.)
+ *
+ *   That width is the control's OWN resolved size, which a bottom-up
+ *   minimum-size pass has not assigned yet — the identical self-reference
+ *   `texturerect/nativeSolver.ts`'s FIT_WIDTH/FIT_HEIGHT carries, closed the
+ *   same way: `SolveContext.tentativeRect` (`solverRegistry.ts`'s own doc)
+ *   hands back the width a COMPLETED prior pass resolved, and
+ *   `solveControlTree` runs that second pass because this type is registered
+ *   via `controlSolverRegistry.registerSizeDependentMinimum` (`index.r3f.ts`).
+ *   Reading the width from a finished pass rather than from the pass in
+ *   flight is what keeps this non-circular: on the first pass there is no
+ *   rect at all and the UNWRAPPED height stands in, exactly as before; on the
+ *   second, `tentative.w` IS Godot's `get_size().width`. One extra pass
+ *   suffices because this Label's own width floor is 1 on EVERY pass, so
+ *   nothing it reports can change the width it is handed back — the width
+ *   chain is identical between the two passes, and the corrected height is
+ *   therefore computed against the final width, not a stale one.
+ *
+ *   In real Godot the same exchange is spread over frames rather than passes:
+ *   `Control::_size_changed` -> `NOTIFICATION_RESIZED` (`:901-905`, which only
+ *   marks the paragraphs dirty) -> the next `_ensure_shaped` -> `_shape`'s own
+ *   `update_minimum_size()` (`:339-341`) -> `Control::_update_minimum_size`'s
+ *   `minimum_size_changed` -> `Container::_child_minsize_changed`'s
+ *   `queue_sort` (`container.cpp:33-36`).
  *
  * `_update_visible` (`:344-388`) sums `asc + dsc + line_spacing` per line then
  * subtracts ONE trailing `line_spacing` — N lines carry only (N-1) inter-line
@@ -95,6 +138,9 @@ export function labelTextTheme(
  * this minimum is what the painter reads back as its layout, so the casing
  * rule has to live in exactly one place or the two can disagree silently.
  *
+ * The shaping width goes through `labelShapingWidthPx` (its own doc), the one
+ * spelling of `_shape`'s `int width` this slice has.
+ *
  * Shapes via `shapeText` DIRECTLY rather than through `ctx.measureText`
  * (still the presence GATE — an absent measurer still means "text
  * contributes nothing", exactly as before) so this function can attach the
@@ -103,10 +149,12 @@ export function labelTextTheme(
  * `boxWidthPx`, so THIS shape (unconstrained, `lineSpacingPx` = Label's own
  * 3px) is the IDENTICAL layout `Label`'s painter (`Component.tsx`) would
  * compute for the OFF case (its own default) — reused instead of re-shaped.
- * The autowrap-ON branch never attaches meta: its own minimum size already
- * substitutes the UNWRAPPED height for the unavailable "current width", so
- * the shape behind it is NOT what a box-constrained painter needs — no
- * reuse is correct there, and none is attempted.
+ * The autowrap-ON branch never attaches meta: its shape is taken at whatever
+ * width the PREVIOUS pass resolved, and this pass may still move that width
+ * (its own corrected height grows an ancestor container, and a split or a
+ * scrollbar appearing inside one narrows what is below it) — so the painter
+ * re-shapes at the rect it is actually handed rather than reuse a layout that
+ * is only usually the same one.
  */
 export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LabelProperties;
@@ -134,10 +182,15 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // recovers exactly `getFontLinePitchPx`'s own default (3) rather than a
   // hardcoded literal.
   const lineSpacingPx = getFontLinePitchPx(fontMetrics, fontSizePx) - fontHeightPx;
+  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
+  // This control's own resolved width, or `undefined` on the first pass, where
+  // no rect exists yet.
+  const shapedWidthPx =
+    autowrapMode === AutowrapMode.OFF ? undefined : ctx.tentativeRect?.(n)?.w;
   const layout = shapeText(text, {
     fontSizePx,
-    boxWidthPx: 0,
-    autowrapMode: AutowrapMode.OFF,
+    boxWidthPx: shapedWidthPx === undefined ? 0 : labelShapingWidthPx(shapedWidthPx),
+    autowrapMode: shapedWidthPx === undefined ? AutowrapMode.OFF : autowrapMode,
     lineSpacingPx,
     uppercase: props.uppercase,
     fontMetrics,
@@ -145,7 +198,7 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const measuredY = Math.max(0, layout.heightPx - lineSpacingPx);
   const height = Math.max(measuredY, fontHeightPx);
 
-  if ((props.autowrapMode ?? AUTOWRAP_OFF) !== AUTOWRAP_OFF) {
+  if (autowrapMode !== AutowrapMode.OFF) {
     return { size: { x: 1, y: height } };
   }
   return { size: { x: layout.widthPx, y: height }, meta: layout };
@@ -179,7 +232,18 @@ export interface LabelLinePlacement {
   line: TextLineLayout;
 }
 
-/** Redistributes `line`'s slack width evenly across its word-boundary gaps (`TextServer::shaped_text_fit_to_width`'s `JUSTIFICATION_WORD_BOUND`, Latin/ASCII subset — no kashida elongation, out of scope). A no-op if there is no slack or no gap to grow. */
+/**
+ * Redistributes `line`'s slack width evenly across its word-boundary gaps
+ * (`TextServer::shaped_text_fit_to_width`'s `JUSTIFICATION_WORD_BOUND`,
+ * Latin/ASCII subset — no kashida elongation, out of scope). A no-op if there
+ * is no slack or no gap to grow.
+ *
+ * `boxWidthPx` here is the TRUNCATED control width: `_shape` justifies with the
+ * same `int width` it broke the lines at (`label.cpp:297,331` —
+ * `shaped_text_fit_to_width(para.lines_rid[i], width, line_jst_flags)`), not
+ * with the raw `get_size()` that `_get_line_rect` reads. The two genuinely
+ * differ, which is why the caller passes a different number to each.
+ */
 function justifyLine(line: TextLineLayout, boxWidthPx: number): TextLineLayout {
   const slackPx = boxWidthPx - line.widthPx;
   const gapCount = line.glyphs.filter((g) => g.char === ' ').length;
@@ -195,12 +259,35 @@ function justifyLine(line: TextLineLayout, boxWidthPx: number): TextLineLayout {
   return { ...line, glyphs, widthPx: boxWidthPx };
 }
 
+/**
+ * `Label::_get_line_rect`'s x, non-RTL (`label.cpp:487-512`). Both non-zero
+ * branches land on a WHOLE pixel in the engine, and neither does so by
+ * rounding: H_CENTER writes `int(size.width - line_size.width) / 2` — a C++
+ * `int` conversion followed by C++ integer division, each truncating TOWARD
+ * ZERO — and H_RIGHT writes `int(size.width - margin - line_size.width)`.
+ * Toward zero, not `Math.floor`: a box NARROWER than its line (only reachable
+ * with `clip_text`, which drops Label's own width floor to 1) makes the
+ * difference negative, and there the two disagree by a full pixel.
+ *
+ * `margin` is `theme_cache.normal_style`'s `SIDE_RIGHT`, and Label's own
+ * default-theme style is a `StyleBoxEmpty` (`default_theme.cpp:379`) — zero,
+ * so it drops out, exactly as `style->get_offset().x` does from the LEFT/FILL
+ * branch returning 0 below.
+ *
+ * H_CENTER's two truncations are transcribed as the source writes them. They
+ * are not, in fact, separable from a single truncation of the halved
+ * difference — for every real d, `trunc(trunc(d) / 2) === trunc(d / 2)`, since
+ * halving an integer moves it by less than 1 and can never cross a truncation
+ * boundary — and Godot's own measured origins agree at odd differences as
+ * well as even ones. The double step stays because it is what `_get_line_rect`
+ * does; nothing downstream depends on the two being distinguishable.
+ */
 function horizontalOffsetPx(lineWidthPx: number, boxWidthPx: number, alignment: number | undefined): number {
   switch (alignment ?? H_LEFT) {
     case H_CENTER:
-      return (boxWidthPx - lineWidthPx) / 2;
+      return Math.trunc(Math.trunc(boxWidthPx - lineWidthPx) / 2);
     case H_RIGHT:
-      return boxWidthPx - lineWidthPx;
+      return Math.trunc(boxWidthPx - lineWidthPx);
     case H_LEFT:
     case H_FILL:
     default:
@@ -278,7 +365,10 @@ export function layoutLabelLines(
       // JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE overrides it when there is only
       // one line total (that line is both first and last).
       const skipJustify = lineCount > 1 && lineIndex === lineCount - 1;
-      return { x: 0, y, line: skipJustify ? line : justifyLine(line, boxWidthPx) };
+      // `labelShapingWidthPx`, not the raw `boxWidthPx` the alignment branch
+      // below uses — see `justifyLine`'s own doc for why Godot reads two
+      // different widths here.
+      return { x: 0, y, line: skipJustify ? line : justifyLine(line, labelShapingWidthPx(boxWidthPx)) };
     }
     return { x: horizontalOffsetPx(line.widthPx, boxWidthPx, horizontalAlignment), y, line };
   });

@@ -1,0 +1,97 @@
+; The one variable: the HEIGHT an autowrapped Label reports to the container
+; that decided its width.
+;
+; A Label with autowrap on has no width of its own — `Label::get_minimum_size`
+; returns `Size2(1, height)`, so the box comes entirely from the container. The
+; height, though, is the height of the text AS WRAPPED at that same box width
+; (`Label::_shape` breaks lines at `int width = get_size().width`, and
+; `_update_visible` sums the lines that came out), which is a quantity that does
+; not exist until the width has been decided. Report a one-line height there and
+; every container above the Label believes a three-line paragraph fits in one
+; line's worth of space.
+;
+; The card is the witness. `Card` authors `offset_bottom == offset_top`, so its
+; rect has NO height of its own: what the StyleBoxFlat plate draws is exactly
+; the minimum size the Label handed up through the VBoxContainer. A one-line
+; answer paints the plate 52px short and leaves the paragraph's last two lines
+; hanging below its bottom edge, with the border crossing the glyphs — the
+; failure is the plate, not a subtly shifted baseline.
+;
+; Why no other scene can see it. unit-label-2d-wrap.tscn is the only other
+; autowrapping scene, and every Label in it is anchor-driven: its rect comes
+; from its own offsets, so nothing ever asks it for a height and a wrong answer
+; changes nothing on screen. unit-vbox-container-pitch.tscn and
+; unit-panel-styleboxes.tscn do ask their children for heights, but no child of
+; either wraps, so the height they ask for is a constant. It takes a wrapping
+; Label INSIDE a container — the pair — and that pair exists in no unit scene.
+;
+; Deliberately minimal beyond that: one PanelContainer, one VBoxContainer, one
+; unwrapped Label for the heading and one wrapped Label for the body. The
+; heading is here so the card's height is a SUM the container had to compose
+; (heading + separation + wrapped body + the plate's own content margins) rather
+; than a single passthrough, which is the arithmetic a container actually gets
+; wrong. Nothing here is animated, textured or timed.
+;
+; Measured against Godot 4.6.3 at `--mode 2d` (1152x648 project viewport),
+; reading `Control.get_rect()` after the reference harness's own 6-frame settle:
+;
+;   node    rect, parent-relative      combined minimum size   lines
+;   Card    (64, 64, 400, 130)         (189, 130)
+;   Column  (12, 12, 376, 106)         (165, 106)
+;   Heading (0, 0, 376, 23)            (165, 23)               1
+;   Body    (0, 31, 376, 75)           (1, 75)                 3
+;
+; 75 is three lines: 3 * 26 - 3 (Label's own `line_spacing` separates lines
+; without adding a trailing gap). A Label reporting one line would make that 23
+; and the card 78 tall instead of 130 — 52px of paragraph outside its plate.
+
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_plate"]
+bg_color = Color(0.12, 0.14, 0.19, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.45, 0.72, 0.85, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12.0
+content_margin_top = 12.0
+content_margin_right = 12.0
+content_margin_bottom = 12.0
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.05, 0.06, 0.08, 1)
+
+[node name="Card" type="PanelContainer" parent="."]
+anchors_preset = 0
+offset_left = 64.0
+offset_top = 64.0
+offset_right = 464.0
+offset_bottom = 64.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_plate")
+
+[node name="Column" type="VBoxContainer" parent="Card"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Heading" type="Label" parent="Card/Column"]
+layout_mode = 2
+text = "Container-sized wrap"
+
+[node name="Body" type="Label" parent="Card/Column"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.68, 0.74, 1)
+text = "This paragraph has no width of its own. The container decides how wide it is, and only then can it say how tall it needs to be."
+autowrap_mode = 3
