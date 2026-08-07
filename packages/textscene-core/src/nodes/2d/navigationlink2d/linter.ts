@@ -44,12 +44,11 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { makeFloatTupleRegex, tupleComponent } from '../../../linter/validators/index.js';
+import { VECTOR2_REGEX, tupleComponent } from '../../../linter/validators/index.js';
 import { isEqualApprox } from '../../../godot/index.js';
 
 const RULE_NAME = 'navigationlink2d-coincident-endpoints';
 
-const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 
 interface Vec2 {
   x: number;

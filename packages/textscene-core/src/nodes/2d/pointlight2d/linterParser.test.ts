@@ -1,10 +1,18 @@
 /**
  * PointLight2D linterParser validators — exercises the validators through
  * the Linter class (source includes /Linter to satisfy ruleCoverage).
+ *
+ * `enabled`, `color`, `energy`, `blend_mode`, the range/shadow family — all
+ * Light2D's OWN properties — moved to `nodes/2d/lights/shared/linterParser.ts`
+ * and reach PointLight2D through the base-walk. The behavioural cases below
+ * are kept because a leaf's `Linter` output is the same either way; the block
+ * at the bottom is the extra proof that the base-walk, not a shadow copy on
+ * PointLight2D, is what delivers them now.
  */
 
 import { describe, it, expect } from 'vitest';
 import { Linter } from '../../../linter/Linter';
+import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import '../../../linter/index';
 
 function lintErrors(raw: string): number {
@@ -71,8 +79,30 @@ describe('PointLight2D linterParser validators', () => {
     expect(lintErrors(`[gd_scene format=3]\n[node name="L" type="PointLight2D"]\ntexture = ExtResource("1")`)).toBe(0);
   });
 
+  it('warns (not errors) on a negative height (light_2d.cpp:89-92 assigns unconditionally)', () => {
+    const scene = `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nheight = -1`;
+    expect(lintWarnings(scene)).toBeGreaterThan(0);
+    expect(lintErrors(scene)).toBe(0);
+  });
+
+  it('accepts valid height', () => {
+    expect(lintErrors(`[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nheight = 100`)).toBe(0);
+  });
+
+  it('accepts a height past the hint ceiling, which is open (or_greater)', () => {
+    const scene = `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\ntexture = ExtResource("1")\nheight = 99999`;
+    expect(lintErrors(scene)).toBe(0);
+    expect(lintWarnings(scene)).toBe(0);
+  });
+
+  it('rejects a non-numeric height', () => {
+    expect(
+      lintErrors(`[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nheight = "tall"`)
+    ).toBeGreaterThan(0);
+  });
+
   const withScale = (value: string) =>
-    `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\ntexture_scale = ${value}`;
+    `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\ntexture = ExtResource("1")\ntexture_scale = ${value}`;
 
   it('errors on texture_scale exactly 0, the one value set_texture_scale alters', () => {
     // light_2d.cpp:444-446 replaces 0 with CMP_EPSILON, so the value in the file
@@ -134,17 +164,17 @@ describe('PointLight2D linterParser validators', () => {
     ).toBe(0);
   });
 
-  it('accepts a window Godot itself would not clamp', () => {
+  it('warns but never errors past the z hint, and stays silent on the layer hint (int32 span)', () => {
     // `Light2D::set_z_range_min` assigns and forwards, with no CLAMP and no
-    // reordering (`scene/2d/light_2d.cpp`), which 4.6.3 confirms; the layer pair
-    // is a full int32 range. An out-of-inspector-hint value is therefore legal
-    // input rather than a parse error.
-    expect(
-      lintErrors(
-        `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\n` +
-          `range_z_min = -99999\nrange_layer_max = 2147483647`
-      )
-    ).toBe(0);
+    // reordering (`scene/2d/light_2d.cpp`), which 4.6.3 confirms, so -99999 past
+    // the closed -4096..4096 hint loads and runs — a warning under ADR-0032, not
+    // an error. The layer hint spans the whole of int32, so 2147483647 excludes
+    // nothing and adds no warning of its own.
+    const scene =
+      `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\n` +
+      `range_z_min = -99999\nrange_layer_max = 2147483647`;
+    expect(lintErrors(scene)).toBe(0);
+    expect(lintWarnings(scene)).toBeGreaterThan(0);
   });
 
   it('rejects a non-integer range window', () => {
@@ -154,5 +184,38 @@ describe('PointLight2D linterParser validators', () => {
     expect(
       lintErrors(`[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nrange_layer_min = abc`)
     ).toBeGreaterThan(0);
+  });
+});
+
+describe('PointLight2D keys hoisted to the Light2D tier', () => {
+  it("registers only its own 4 keys directly", () => {
+    expect(validatorRegistry.getOwnKeys('PointLight2D').sort()).toEqual(
+      ['height', 'offset', 'texture', 'texture_scale'].sort()
+    );
+  });
+
+  const HOISTED = [
+    'enabled',
+    'editor_only',
+    'color',
+    'energy',
+    'blend_mode',
+    'range_z_min',
+    'range_z_max',
+    'range_layer_min',
+    'range_layer_max',
+    'range_item_cull_mask',
+    'shadow_enabled',
+    'shadow_color',
+    'shadow_filter',
+    'shadow_filter_smooth',
+    'shadow_item_cull_mask',
+  ];
+
+  it.each(HOISTED)("resolves '%s' to Light2D's own validator through the base-walk", (key) => {
+    const owned = validatorRegistry.findValidator('Light2D', key);
+    expect(owned, `Light2D does not declare '${key}'`).not.toBeNull();
+    // The SAME function, not a shadowing copy that could drift from the tier's rule.
+    expect(validatorRegistry.findValidator('PointLight2D', key)).toBe(owned);
   });
 });

@@ -32,4 +32,12 @@
 
 export { CMP_EPSILON, isZeroApprox, isEqualApprox } from './math.js';
 export { IS_VALID_INT_RE } from './string.js';
-export { MATERIAL_RENDER_PRIORITY_MIN, MATERIAL_RENDER_PRIORITY_MAX } from './rendering.js';
+export {
+  MATERIAL_RENDER_PRIORITY_MIN,
+  MATERIAL_RENDER_PRIORITY_MAX,
+  CANVAS_ITEM_Z_MIN,
+  CANVAS_ITEM_Z_MAX,
+  CANVAS_LAYER_MIN,
+  CANVAS_LAYER_MAX,
+} from './rendering.js';
+export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MODES } from './canvasItem.js';

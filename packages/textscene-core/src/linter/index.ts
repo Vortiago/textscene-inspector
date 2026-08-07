@@ -221,6 +221,13 @@ import '../nodes/3d/occluderinstance3d/index.linter.js';
 import '../nodes/3d/rootmotionview/index.linter.js';
 import '../nodes/3d/navigationlink3d/index.linter.js';
 import '../nodes/3d/visibleonscreenenabler3d/index.linter.js';
+import '../nodes/3d/audiolistener3d/index.linter.js';
+// Registered by hand, both scaffolded without --linter on the belief that they
+// declare nothing. XRCamera3D genuinely does, and its lint surface is a rule
+// alone; AudioListener2D serialises `current` through _get_property_list, which
+// neither its class reference nor an ADD_PROPERTY grep shows.
+import '../nodes/3d/xr/xrcamera3d/index.linter.js';
+import '../nodes/2d/audiolistener2d/index.linter.js';
 import '../nodes/2d/particles/gpuparticles2d/index.linter.js';
 import '../nodes/2d/bone2d/index.linter.js';
 import '../nodes/2d/skeleton2d/index.linter.js';
@@ -228,6 +235,13 @@ import '../nodes/2d/navigationagent2d/index.linter.js';
 import '../nodes/2d/navigationlink2d/index.linter.js';
 import '../nodes/2d/navigationobstacle2d/index.linter.js';
 import '../nodes/2d/visibleonscreenenabler2d/index.linter.js';
+import '../nodes/2d/directionallight2d/index.linter.js';
+import '../nodes/2d/meshinstance2d/index.linter.js';
+import '../nodes/2d/multimeshinstance2d/index.linter.js';
+import '../nodes/2d/backbuffercopy/index.linter.js';
+import '../nodes/2d/canvasgroup/index.linter.js';
+import '../nodes/2d/parallax2d/index.linter.js';
+import '../nodes/2d/touchscreenbutton/index.linter.js';
 
 // Re-export core linter classes
 export { Linter } from './Linter.js';

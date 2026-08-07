@@ -87,6 +87,8 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
   VSeparator: 'a themed Separator; its constructor only sets a protected orientation field, not a property',
   VSlider: "orientation only; the slider keys are Slider's",
   VSplitContainer: "orientation only; the split keys are SplitContainer's",
+  XRCamera3D:
+    'the headset drives its transform, so it declares nothing of its own: xr_nodes.cpp has no XRCamera3D::_bind_methods at all, and its single XML member is physics_interpolation_mode carrying overrides=Node. Its _validate_property (xr_nodes.cpp:39-47) only sets PROPERTY_USAGE_NO_EDITOR on five inherited Camera3D keys, and only under is_editor_hint(), so those keys still serialise and Camera3D still validates them',
 };
 
 /**
@@ -100,10 +102,9 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
  *
  * The tiers below were invisible until this guard closed over the base chain,
  * and each one is worth more than a leaf because its keys reach every
- * descendant: Light2D 15
- * (PointLight2D, DirectionalLight2D), AnimationMixer 10 (AnimationPlayer,
- * AnimationTree), CSGShape3D 7 (every CSG node), PhysicsBody3D 6 — the
- * axis_lock set, reaching all four 3D bodies — and CSGPrimitive3D 1.
+ * descendant: AnimationMixer 10 (AnimationPlayer, AnimationTree), CSGShape3D 7
+ * (every CSG node), PhysicsBody3D 6 — the axis_lock set, reaching all four 3D
+ * bodies — and CSGPrimitive3D 1.
  *
  * Removing an entry (by declaring its validators) is the only correct edit.
  */
@@ -112,7 +113,6 @@ const UNDECLARED: readonly string[] = [
   'CSGPrimitive3D',
   'CSGShape3D',
   'CanvasLayer',
-  'Light2D',
   'PhysicsBody3D',
 ];
 

@@ -13,7 +13,7 @@
 
 import '../../canvasitem/shared/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v, makeFloatTupleRegex, tupleComponent } from '../../../linter/validators/index.js';
+import { v, VECTOR2_REGEX, tupleComponent } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { CMP_EPSILON } from '../../../godot/index.js';
@@ -21,7 +21,6 @@ import { CMP_EPSILON } from '../../../godot/index.js';
 // Shared canonical float grammar (accepts .5 / 5. / +5 / scientific, plus the
 // non-finite spellings Godot writes) so the bespoke `scale` validator stays as
 // lenient as v.vector2.
-const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 
 // node_2d.cpp:187-199: set_scale substitutes CMP_EPSILON for a component that
 // `Math::is_zero_approx`s ("Avoid having 0 scale values, can lead to errors in

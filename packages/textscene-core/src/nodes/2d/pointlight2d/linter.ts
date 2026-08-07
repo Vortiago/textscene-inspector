@@ -2,8 +2,16 @@
  * PointLight2D semantic rules.
  *
  * Format validation lives in `linterParser.ts`; this file is for what only the
- * whole node says. There is exactly one such thing here: a range window whose
- * minimum is above its maximum.
+ * whole node says. Two things live here.
+ *
+ * `PointLight2D::get_configuration_warnings` (light_2d.cpp:431-439) warns in
+ * Godot's own editor when `texture` is unset, because the light then has no
+ * shape to draw. Absence is Godot's default serialised form for an unset
+ * `Ref`, so this keys on the property being MISSING, not on any value — a
+ * scene that never authors `texture` is legal input, just one the engine
+ * itself flags.
+ *
+ * The other is a range window whose minimum is above its maximum.
  *
  * Godot tests both windows inclusively (`_record_item_commands` in
  * `drivers/gles3/rasterizer_canvas_gles3.cpp` for z, `_draw_viewport`'s
@@ -11,7 +19,8 @@
  * and never swaps an inverted pair — `Light2D`'s four setters assign and
  * forward, nothing more. So `min > max` is an EMPTY interval: the light stays
  * enabled, still costs its own accumulation pass, and reaches nothing at all.
- * That is authoring error rather than a malformed file, so it warns.
+ * That is an authoring mistake this previewer flags, not a complaint Godot's
+ * own editor makes, so it warns rather than errors.
  *
  * The comparison uses Godot's defaults for whichever half is absent, because
  * `range_z_max = -2000` alone — already empty against the default `range_z_min`
@@ -59,6 +68,23 @@ function checkPointLight2D(context: RuleContext): Diagnostic[] {
   const props = node.properties as Record<string, string>;
 
   const diagnostics: Diagnostic[] = [];
+
+  // light_2d.cpp:431-439: PointLight2D::get_configuration_warnings pushes this
+  // exact message when `texture` is null. A `.tscn` that never authors the key
+  // IS that null default, so absence is the trigger.
+  if (props.texture === undefined) {
+    diagnostics.push({
+      severity: 'warning',
+      message:
+        "PointLight2D has no 'texture': Godot's own editor warning is " +
+        '"A texture with the shape of the light must be supplied to the ' +
+        '\'Texture\' property."',
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'pointlight2d-requires-texture',
+    });
+  }
+
   for (const window of WINDOWS) {
     const min = bound(props[window.min], window.minDefault);
     const max = bound(props[window.max], window.maxDefault);
@@ -81,10 +107,11 @@ const pointLight2DValidationRule: LintRule = {
   meta: {
     name: 'valid-pointlight2d-ranges',
     description:
-      "Validates PointLight2D's z and layer range windows, which reach nothing when inverted",
+      "Validates PointLight2D has a texture, and that its z and layer range windows don't invert",
     category: 'validation',
     applicableNodeTypes: ['PointLight2D'],
     emits: [
+      { ruleName: 'pointlight2d-requires-texture', severity: 'warning' },
       { ruleName: 'pointlight2d-inverted-z-range', severity: 'warning' },
       { ruleName: 'pointlight2d-inverted-layer-range', severity: 'warning' },
     ],

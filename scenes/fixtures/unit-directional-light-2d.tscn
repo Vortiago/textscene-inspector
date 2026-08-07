@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Sun" type="DirectionalLight2D" parent="."]
+height = 0.5
+max_distance = 2000.0

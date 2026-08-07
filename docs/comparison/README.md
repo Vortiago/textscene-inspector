@@ -83,6 +83,7 @@ reproduced:
 - [AnimationTree](../../packages/textscene-core/src/nodes/animation/animationtree/comparison.md) — no geometry of its own; a working blend-tree driver
 - [Area3D](../../packages/textscene-core/src/nodes/physics/3d/area3d/comparison.md) — an invisible transform-only group
 - [AreaLight3D](../../packages/textscene-core/src/nodes/3d/lights/arealight3d/comparison.md) — a THREE.RectAreaLight
+- [AudioListener3D](../../packages/textscene-core/src/nodes/3d/audiolistener3d/comparison.md) — nothing (a transform-only group; the ear 3D audio is panned from, overriding the current Camera3D)
 - [AudioStreamPlayer3D](../../packages/textscene-core/src/nodes/audio/audiostreamplayer3d/comparison.md) — a selection-gated speaker gizmo
 - [Camera3D](../../packages/textscene-core/src/nodes/3d/camera3d/comparison.md) — a passive THREE.PerspectiveCamera
 - [CharacterBody3D](../../packages/textscene-core/src/nodes/physics/3d/characterbody3d/comparison.md) — a transform-only Node3D group
@@ -148,6 +149,7 @@ reproduced:
 - [VisibleOnScreenEnabler3D](../../packages/textscene-core/src/nodes/3d/visibleonscreenenabler3d/comparison.md) — nothing (a transform-only group)
 - [VoxelGI](../../packages/textscene-core/src/nodes/3d/voxelgi/comparison.md) — an invisible transform-only fallback
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md) — the scene's background and environment lighting
+- [XRCamera3D](../../packages/textscene-core/src/nodes/3d/xr/xrcamera3d/comparison.md) — nothing (a transform-only group; the headset-driven camera, which Godot expects under an XROrigin3D)
 - [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md) — a transform-only group (it drives a Skeleton3D's bone poses)
 - [SpringBoneCollision3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollision3d/comparison.md) — a transform-only group (a spring-bone collider)
 - [VisualInstance3D](../../packages/textscene-core/src/nodes/3d/visualinstance3d/comparison.md) — a transform-only group (the render-layer/AABB base for 3D visuals)
@@ -183,11 +185,14 @@ reproduced:
 - [AnimatableBody2D](../../packages/textscene-core/src/nodes/physics/2d/animatablebody2d/comparison.md) — nothing (a transform-only group; a StaticBody2D moved by animation)
 - [AnimatedSprite2D](../../packages/textscene-core/src/nodes/2d/animatedsprite2d/comparison.md) — a textured quad
 - [Area2D](../../packages/textscene-core/src/nodes/physics/2d/area2d/comparison.md) — a transform-only Node2D group
+- [AudioListener2D](../../packages/textscene-core/src/nodes/2d/audiolistener2d/comparison.md) — nothing (a transform-only group; the point 2D audio is panned from)
 - [AudioStreamPlayer2D](../../packages/textscene-core/src/nodes/audio/audiostreamplayer2d/comparison.md) — an invisible Node2D transform group
 - [Button](../../packages/textscene-core/src/nodes/2d/ui/button/comparison.md) — a positioned HTML div
+- [BackBufferCopy](../../packages/textscene-core/src/nodes/2d/backbuffercopy/comparison.md) — nothing (a transform-only group; it copies a screen region into the back buffer for shaders to sample)
 - [Camera2D](../../packages/textscene-core/src/nodes/2d/camera2d/comparison.md) — a 2D view frame with no drawn geometry
 - [CanvasLayer](../../packages/textscene-core/src/nodes/2d/ui/canvaslayer/comparison.md) — a full-rect passthrough layer hosting Control children
 - [CanvasModulate](../../packages/textscene-core/src/nodes/2d/canvasmodulate/comparison.md) — a colour multiply applied to the whole canvas
+- [CanvasGroup](../../packages/textscene-core/src/nodes/2d/canvasgroup/comparison.md) — nothing yet; Godot composites its children into one buffer, so overlapping translucency blends once against the background rather than layer by layer
 - [CenterContainer](../../packages/textscene-core/src/nodes/2d/ui/centercontainer/comparison.md) — a centering flex container
 - [CheckBox](../../packages/textscene-core/src/nodes/2d/ui/checkbox/comparison.md) — an inline HTML row with a drawn check indicator
 - [CheckButton](../../packages/textscene-core/src/nodes/2d/ui/checkbutton/comparison.md) — nothing yet; a labelled on/off switch
@@ -197,6 +202,7 @@ reproduced:
 - [CodeEdit](../../packages/textscene-core/src/nodes/2d/ui/codeedit/comparison.md) — nothing yet; a multi-line code editor with gutters and folding
 - [Control](../../packages/textscene-core/src/nodes/2d/ui/control/comparison.md) — a full-rect layout region
 - [CPUParticles2D](../../packages/textscene-core/src/nodes/2d/cpuparticles2d/comparison.md) — one merged quad mesh holding a frozen particle pose
+- [DirectionalLight2D](../../packages/textscene-core/src/nodes/2d/directionallight2d/comparison.md) — nothing yet; a sun-like 2D light cast at a uniform angle across the canvas
 - [DampedSpringJoint2D](../../packages/textscene-core/src/nodes/physics/2d/dampedspringjoint2d/comparison.md) — nothing (a transform-only group; a spring between two bodies)
 - [GPUParticles2D](../../packages/textscene-core/src/nodes/2d/particles/gpuparticles2d/comparison.md) — nothing yet; a GPU-simulated 2D particle cloud
 - [GridContainer](../../packages/textscene-core/src/nodes/2d/ui/gridcontainer/comparison.md) — a CSS grid container
@@ -209,6 +215,8 @@ reproduced:
 - [Line2D](../../packages/textscene-core/src/nodes/2d/line2d/comparison.md) — a stroked mesh polyline
 - [LineEdit](../../packages/textscene-core/src/nodes/2d/ui/lineedit/comparison.md) — a single-line text box
 - [MarginContainer](../../packages/textscene-core/src/nodes/2d/ui/margincontainer/comparison.md) — a padded flex container
+- [MeshInstance2D](../../packages/textscene-core/src/nodes/2d/meshinstance2d/comparison.md) — nothing yet; a Mesh drawn flat on the canvas with an optional texture
+- [MultiMeshInstance2D](../../packages/textscene-core/src/nodes/2d/multimeshinstance2d/comparison.md) — nothing yet; one MultiMesh drawn as many batched 2D instances
 - [Marker2D](../../packages/textscene-core/src/nodes/2d/marker2d/comparison.md) — a selection-gated cross gizmo
 - [NavigationAgent2D](../../packages/textscene-core/src/nodes/2d/navigationagent2d/comparison.md) — nothing (a transform-only group)
 - [NavigationLink2D](../../packages/textscene-core/src/nodes/2d/navigationlink2d/comparison.md) — nothing (a transform-only group)
@@ -220,6 +228,7 @@ reproduced:
 - [PanelContainer](../../packages/textscene-core/src/nodes/2d/ui/panelcontainer/comparison.md) — a StyleBox panel around its child
 - [ParallaxBackground](../../packages/textscene-core/src/nodes/2d/parallaxbackground/comparison.md) — a viewport-anchored group holding its ParallaxLayer children
 - [ParallaxLayer](../../packages/textscene-core/src/nodes/2d/parallaxlayer/comparison.md) — a Node2D transform group, repeated once per mirrored axis
+- [Parallax2D](../../packages/textscene-core/src/nodes/2d/parallax2d/comparison.md) — nothing yet; scrolls and repeats its own subtree against the camera
 - [Path2D](../../packages/textscene-core/src/nodes/2d/path2d/comparison.md) — nothing at runtime; a selection-gated curve gizmo
 - [PathFollow2D](../../packages/textscene-core/src/nodes/2d/pathfollow2d/comparison.md) — a transform-only follower with a selection-gated dot
 - [PhysicalBone2D](../../packages/textscene-core/src/nodes/physics/2d/physicalbone2d/comparison.md) — nothing (a transform-only group; one Skeleton2D bone driven by physics)
@@ -236,6 +245,7 @@ reproduced:
 - [TextureRect](../../packages/textscene-core/src/nodes/2d/ui/texturerect/comparison.md) — an HTML img element
 - [TileMap](../../packages/textscene-core/src/nodes/2d/tiles/tilemap/comparison.md) — batched textured tile quads
 - [TileMapLayer](../../packages/textscene-core/src/nodes/2d/tiles/tilemaplayer/comparison.md) — batched textured tile quads
+- [TouchScreenButton](../../packages/textscene-core/src/nodes/2d/touchscreenbutton/comparison.md) — nothing yet; a touch-input button drawn from its normal and pressed textures
 - [VBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/vboxcontainer/comparison.md) — a CSS flex-column `<div>`
 - [BaseButton](../../packages/textscene-core/src/nodes/2d/ui/basebutton/comparison.md) — nothing yet; the base every button inherits from
 - [Container](../../packages/textscene-core/src/nodes/2d/ui/container/comparison.md) — nothing yet; the base every layout container inherits from

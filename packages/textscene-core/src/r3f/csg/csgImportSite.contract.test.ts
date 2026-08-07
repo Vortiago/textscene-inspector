@@ -2,10 +2,9 @@
  * `three-bvh-csg` must be imported from exactly one file, and only dynamically.
  *
  * A static import anywhere puts the CSG core plus `three-mesh-bvh` on the webview's
- * initial-paint path. `check:bundle-size` reports 77 kB of headroom against a 600 kB
- * gzipped budget, and those two would consume most of it for a feature most scenes never
- * touch. The budget guard would eventually catch that, but only after a full extension
- * build, and it would report a size rather than the mistake.
+ * initial-paint path — tens of kB gzipped, paid by every scene for a feature most
+ * scenes never touch. The budget guard would eventually catch that, but only after a
+ * full extension build, and it would report a size rather than the mistake.
  *
  * Scanning the source says WHICH file broke the rule, immediately.
  */

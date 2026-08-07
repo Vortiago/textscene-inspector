@@ -11,6 +11,17 @@ import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.
  */
 export const VECTOR3_REGEX = makeFloatTupleRegex('Vector3', 3);
 
+/**
+ * Vector2 format: Vector2(x, y), for the callers that `.exec()` it directly to
+ * reach the two components rather than just validating the shape.
+ *
+ * Exported for the same reason as VECTOR3_REGEX, and belatedly: five call sites
+ * had each built their own `makeFloatTupleRegex('Vector2', 2)` — camera2d,
+ * navigationlink2d, parallax2d, the Node2D base and characterBodyLinterRule.
+ * Identical today, and identical only for as long as nobody edits one.
+ */
+export const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
+
 /** Vector2i format: Vector2i(x, y) - two comma-separated integers */
 export const VECTOR2I_REGEX = /^Vector2i\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/;
 

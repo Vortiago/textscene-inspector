@@ -24,9 +24,7 @@ import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask } from '../../../linter/validators/layerBitmask.js';
 import { v } from '../../../linter/validators/index.js';
-
-// scene/main/canvas_item.cpp:1476, PROPERTY_HINT_ENUM "Disabled,Clip Only,Clip + Draw"
-const CLIP_CHILDREN = { 0: 'DISABLED', 1: 'ONLY', 2: 'AND_DRAW' };
+import { CLIP_CHILDREN_MODES } from '../../../godot/canvasItem.js';
 
 // scene/main/canvas_item.cpp:1486, and BIND_ENUM_CONSTANT at :1510-1516.
 const TEXTURE_FILTER = {
@@ -51,7 +49,7 @@ validatorRegistry.registerAll('CanvasItem', {
   // canvas_item.cpp:1476, ENUM 3 labels (matches CLIP_CHILDREN_MAX=3,
   // canvas_item.h:71-75). set_clip_children_mode (canvas_item.cpp:1731-1733)
   // ERR_FAIL_CONDs against CLIP_CHILDREN_MAX.
-  clip_children: v.enumInt('clip_children', 0, 2, CLIP_CHILDREN, { enforced: 'canvas_item.cpp:1731' }),
+  clip_children: v.enumInt('clip_children', 0, 2, CLIP_CHILDREN_MODES, { enforced: 'canvas_item.cpp:1731' }),
   // canvas_item.cpp:1477, PROPERTY_HINT_LAYERS_2D_RENDER — not a
   // PROPERTY_HINT_RANGE, so there is no numeric hint to ground a bound on.
   // set_light_mask (canvas_item.cpp:589-596) assigns unconditionally, no

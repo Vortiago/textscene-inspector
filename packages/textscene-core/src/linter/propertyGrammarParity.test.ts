@@ -214,6 +214,30 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'Light3D base validators live in 3d/lights/shared/linterParser.ts and reach every concrete light via the base-walk; bake/cull-mask and fine shadow-tuning keys are runtime-only, so the shared parser helpers never read them.',
   },
 
+  Light2D: {
+    renderGap: [
+      // Godot DISABLES the light outside the editor when this is set
+      // (`_update_light_visibility`, light_2d.cpp — the non-TOOLS branch sets
+      // editor_ok = false), so a scene with an editor-only light renders darker
+      // in game than in the editor. This previewer always draws the light.
+      'editor_only',
+    ],
+    reason: 'Light2D base validators live in 2d/lights/shared/linterParser.ts and reach PointLight2D and DirectionalLight2D via the base-walk; editor_only gates the light at runtime and no parser here reads it.',
+  },
+
+  PointLight2D: {
+    renderGap: [
+      // The light's Z, and it is NOT inert in Godot: it reaches the canvas
+      // shader as the third light-vector component on two paths — the
+      // normal-map branch (canvas.glsl:808) and the custom-light-shader branch
+      // (LIGHT_CODE_USED, canvas.glsl:799). This previewer implements neither,
+      // so the value changes nothing HERE while changing the picture in Godot,
+      // which is a gap rather than deliberate scope.
+      'height',
+    ],
+    reason: 'height only alters the picture through normal mapping or a custom light shader, neither of which this previewer implements, so its cookie render never reads the key.',
+  },
+
   Node2D: {
     parserOnly: [
       // y_sort_origin only meaningful for TileMapLayer tiles; no linter
@@ -1098,7 +1122,7 @@ describe('property-grammar parity guard', () => {
   // number rather than a pile. Exact equality, not a ceiling: this list should
   // only move when someone deliberately adds a slice or closes a gap, and
   // either way the diff should say so out loud.
-  const EXPECTED_RENDER_GAP_KEYS = 44;
+  const EXPECTED_RENDER_GAP_KEYS = 46;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
@@ -1141,7 +1165,7 @@ describe('property-grammar parity guard', () => {
    * rather than being smuggled into a wave.
    */
   const SWEPT_SLICES = 74;
-  const PARSER_REUSING_SLICES = 144;
+  const PARSER_REUSING_SLICES = 154;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>

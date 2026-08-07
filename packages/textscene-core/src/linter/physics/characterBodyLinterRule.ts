@@ -13,7 +13,7 @@ import {
   collisionShapeTypesPhrase,
 } from './hasCollisionShapeDescendant.js';
 import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
-import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
+import { VECTOR2_REGEX, VECTOR3_REGEX } from '../validators/vectorValidators.js';
 import { tupleComponent } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
@@ -34,7 +34,7 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
   const safeMarginHintCite = dim === '2D' ? 'character_body_2d.cpp:757' : 'character_body_3d.cpp:942';
 
   // up_direction seam: 2D is Vector2(0, -1) (screen space), 3D is Vector3(0, 1, 0).
-  const upDirRegex = dim === '2D' ? makeFloatTupleRegex('Vector2', 2) : makeFloatTupleRegex('Vector3', 3);
+  const upDirRegex = dim === '2D' ? VECTOR2_REGEX : VECTOR3_REGEX;
   const upStandard = dim === '2D' ? 'Vector2(0, -1)' : 'Vector3(0, 1, 0)';
 
   function check(context: RuleContext): Diagnostic[] {

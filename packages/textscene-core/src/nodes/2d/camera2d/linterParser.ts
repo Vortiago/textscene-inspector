@@ -8,7 +8,7 @@
 // without this line just the full barrel ever registers it.
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v, makeFloatTupleRegex, tupleComponent } from '../../../linter/validators/index.js';
+import { v, VECTOR2_REGEX, tupleComponent } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { CMP_EPSILON } from '../../../godot/index.js';
@@ -18,7 +18,6 @@ const PROCESS_CALLBACK = { 0: 'PHYSICS', 1: 'IDLE' };
 
 // Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
 // v.vector2 and the renderer.
-const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 
 // camera_2d.cpp:102-105: set_zoom only ERR_FAIL_COND_MSGs on
 // `Math::is_zero_approx(x) || Math::is_zero_approx(y)`, whose own message says

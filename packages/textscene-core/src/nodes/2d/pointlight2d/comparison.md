@@ -274,32 +274,20 @@ What is left unimplemented:
 ## Linting
 
 <!-- lint:begin PointLight2D -->
-Strict parsing format-checks these `PointLight2D` properties, plus 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `PointLight2D` properties, plus 15 inherited from Light2D, 12 inherited from Node2D, 15 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
-| `blend_mode` | enum 0-2 (ADD/SUB/MIX) |
-| `color` | Color(r, g, b, a) |
-| `enabled` | true or false |
-| `energy` | float >= 0 |
+| `height` | float >= 0 |
 | `offset` | Vector2(x, y) |
-| `range_item_cull_mask` | 32-bit layer mask (layers 1-32) |
-| `range_layer_max` | integer |
-| `range_layer_min` | integer |
-| `range_z_max` | integer |
-| `range_z_min` | integer |
-| `shadow_color` | Color(r, g, b, a) |
-| `shadow_enabled` | true or false |
-| `shadow_filter` | enum 0-2 (NONE/PCF5/PCF13) |
-| `shadow_filter_smooth` | float 0-64 |
-| `shadow_item_cull_mask` | 32-bit layer mask (layers 1-32) |
 | `texture` | SubResource("id") or ExtResource("id") |
 | `texture_scale` | float 0.01-50, never exactly 0 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-pointlight2d-ranges` | `pointlight2d-inverted-z-range` | warning |
+| `valid-pointlight2d-ranges` | `pointlight2d-requires-texture` | warning |
+|  | `pointlight2d-inverted-z-range` | warning |
 |  | `pointlight2d-inverted-layer-range` | warning |
 <!-- lint:end -->
 

@@ -168,7 +168,7 @@
       "name": "AudioListener2D",
       "category": "2D",
       "group": "Audio",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -182,7 +182,7 @@
       "name": "AudioListener3D",
       "category": "3D",
       "group": "Audio",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -234,7 +234,7 @@
       "name": "BackBufferCopy",
       "category": "2D",
       "group": "Canvas effects",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -374,7 +374,7 @@
       "name": "CanvasGroup",
       "category": "2D",
       "group": "Canvas effects",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -887,7 +887,7 @@
       "name": "DirectionalLight2D",
       "category": "2D",
       "group": "Lighting",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Light2D",
         "Node2D",
@@ -1638,7 +1638,7 @@
       "name": "MeshInstance2D",
       "category": "2D",
       "group": "2D rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -1681,7 +1681,7 @@
       "name": "MultiMeshInstance2D",
       "category": "2D",
       "group": "2D rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -2092,7 +2092,7 @@
       "name": "Parallax2D",
       "category": "2D",
       "group": "Parallax & scrolling",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -3056,7 +3056,7 @@
       "name": "TouchScreenButton",
       "category": "2D",
       "group": "Touch input",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -3375,7 +3375,7 @@
       "name": "XRCamera3D",
       "category": "3D",
       "group": "Cameras",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Camera3D",
         "Node3D",

@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="MyBackBufferCopy" type="BackBufferCopy" parent="."]
+position = Vector2(10, 20)
+copy_mode = 2
+rect = Rect2(-50, -50, 100, 100)

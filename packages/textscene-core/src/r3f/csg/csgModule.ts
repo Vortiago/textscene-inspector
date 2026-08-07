@@ -2,9 +2,9 @@
  * The one and only place `three-bvh-csg` is imported, and it is imported LAZILY.
  *
  * Static-importing it would put the CSG core plus `three-mesh-bvh` on the webview's
- * initial-paint path. `check:bundle-size` currently reports 77 kB of headroom against a
- * 600 kB gzipped budget, and those two together would eat most of it for a feature most
- * scenes never touch.
+ * initial-paint path — tens of kB gzipped, spent on every scene for a feature most
+ * scenes never touch. `check:bundle-size` reports the headroom of the day; the point
+ * here is that this cost is avoidable entirely, not that it currently fits.
  *
  * Keeping it to a single call site is what makes that enforceable rather than aspirational:
  * `csgImportSite.contract.test.ts` asserts no other file mentions the package, so the

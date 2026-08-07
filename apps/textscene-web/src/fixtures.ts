@@ -178,6 +178,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Back Buffer Copy",
+    "file": "unit-back-buffer-copy.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Base Button",
     "file": "unit-base-button.tscn",
     "category": "Other"
@@ -200,6 +205,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Bone Twist Disperser 3d",
     "file": "unit-bone-twist-disperser-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Canvas Group",
+    "file": "unit-canvas-group.tscn",
     "category": "Other"
   },
   {
@@ -325,6 +335,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Decal",
     "file": "unit-decal.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directional Light 2d",
+    "file": "unit-directional-light-2d.tscn",
     "category": "Other"
   },
   {
@@ -680,6 +695,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Multi Camera",
     "file": "unit-multi-camera.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Multi Mesh Instance 2d",
+    "file": "unit-multi-mesh-instance-2d.tscn",
     "category": "Other"
   },
   {
@@ -1093,6 +1113,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Touch Screen Button",
+    "file": "unit-touch-screen-button.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Tree",
     "file": "unit-tree.tscn",
     "category": "Other"
@@ -1185,6 +1210,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Xr Body Modifier 3d",
     "file": "unit-xr-body-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Xr Camera 3d",
+    "file": "unit-xr-camera-3d.tscn",
     "category": "Other"
   },
   {
@@ -1503,6 +1533,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Parallax 2d",
+    "file": "unit-parallax-2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Parallax Background",
     "file": "unit-parallax-background.tscn",
     "category": "Unit - 2D Canvas"
@@ -1618,6 +1653,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Mesh Instance 2d",
+    "file": "unit-mesh-instance-2d.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Mesh Instance Basic",
     "file": "unit-mesh-instance-basic.tscn",
     "category": "Unit - Primitive Meshes"
@@ -1661,6 +1701,16 @@ export const fixtures: Fixture[] = [
     "name": "Torus Mesh",
     "file": "unit-torus-mesh.tscn",
     "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Audio Listener 2d",
+    "file": "unit-audio-listener-2d.tscn",
+    "category": "Unit - Audio"
+  },
+  {
+    "name": "Audio Listener 3d",
+    "file": "unit-audio-listener-3d.tscn",
+    "category": "Unit - Audio"
   },
   {
     "name": "Audio Stream Player 2d",
