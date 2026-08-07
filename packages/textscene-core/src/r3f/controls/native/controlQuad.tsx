@@ -17,10 +17,11 @@
  *
  * `map`'s decode is auto-detected (`useCanvasDecodeDefines`,
  * `canvas2DTextureDecode.ts`): a `NoColorSpace`-retagged 2D-canvas texture
- * (TextureRect's image, Button's icon) gets the post-filter decode; a
- * vendored theme icon or a SubViewport render target — neither retagged —
- * does not, so this one recipe serves every kind of `map` ControlQuad's
- * many callers pass without each caller having to know which kind it has.
+ * (TextureRect's image, Button's icon, a vendored theme icon) gets the
+ * post-filter decode; a SubViewport render target — which keeps its
+ * publisher's own colour space — does not, so this one recipe serves every
+ * kind of `map` ControlQuad's many callers pass without each caller having
+ * to know which kind it has.
  */
 import * as THREE from 'three';
 import { useControlClipPlanes } from './controlClipping';

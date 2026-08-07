@@ -27,9 +27,12 @@
  * three's default 3D-oriented pipeline disagree on.
  *
  * Only the 2D-canvas's own "unlit 2D material recipe" (`meshBasicMaterial` +
- * `map`) needs this pair. A texture this module never touches (a vendored
- * theme icon, a SubViewport render target, PointLight2D's cookie shader,
- * every 3D material slot) keeps sampling the shared cache entry unchanged.
+ * `map`) needs this pair. A texture this module never touches (a SubViewport
+ * render target, PointLight2D's cookie shader, every 3D material slot) keeps
+ * sampling the shared cache entry unchanged. `useIconTexture` reaches the
+ * same tag through `pinNoColorSpace` directly: the vendored theme icons come
+ * from their own loader, never from the `res://` resource cache this module's
+ * clone is keyed off.
  */
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
@@ -92,9 +95,9 @@ const DECODE_DEFINES: Readonly<Record<string, string>> = { DECODE_VIDEO_TEXTURE:
  * `defines` for a `meshBasicMaterial` sampling `texture` as `map`: the decode
  * three's `map_fragment` chunk applies only under `DECODE_VIDEO_TEXTURE`,
  * turned on exactly when `texture` is one of this module's `NoColorSpace`
- * retags (never for a texture this module didn't touch, so a vendored icon or
- * a SubViewport target sharing the same `<meshBasicMaterial>` recipe is
- * unaffected). Memoised so the object identity is stable across re-renders
+ * retags, `pinNoColorSpace` included (never for a texture left in its own
+ * space, so a SubViewport target sharing the same `<meshBasicMaterial>`
+ * recipe is unaffected). Memoised so the object identity is stable across re-renders
  * with the same texture — required because R3F never bumps
  * `material.needsUpdate` on its own, so a materially different `defines`
  * value would only reach the GPU on the next-mounted material.

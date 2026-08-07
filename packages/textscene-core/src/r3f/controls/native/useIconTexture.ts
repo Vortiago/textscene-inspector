@@ -13,6 +13,12 @@
  * it is a GPU resource, and every painter that draws a themed icon needs
  * exactly this lifecycle.
  *
+ * It is tagged for the 2D canvas's sampling colour space, not a 3D
+ * consumer's — see the tag's own comment below. This loader is wholly
+ * separate from the `res://` resource pipeline, so nothing
+ * `canvas2DTextureDecode.ts`'s `useCanvas2DTexture` does for a user-authored
+ * image reaches an icon; the tag has to be applied here.
+ *
  * Passing `null` yields `null` and allocates nothing. That exists because a
  * painter cannot put this call behind its own early return — hook order is
  * fixed — so a widget whose icon is conditionally drawn would otherwise decode
@@ -22,13 +28,26 @@
  */
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
+import { pinNoColorSpace } from '../../canvas2DTextureDecode';
 
 export function useOptionalIconTexture(dataUrl: string | null): THREE.Texture | null {
   const texture = useMemo(() => {
     if (dataUrl === null) return null;
+    // A theme icon is drawn by the 2D canvas and nothing else, so it wants the
+    // canvas's sampling colour space rather than the sRGB tag a 3D consumer
+    // needs: `rendering/viewport/hdr_2d` off (`rendering_server.cpp:3771`)
+    // makes Godot's canvas bind the PLAIN, non-sRGB-typed GPU view of every
+    // texture it samples (`texture_storage.cpp:754`), so its hardware
+    // magnification filter blends the ENCODED bytes and the decode happens
+    // after. `NoColorSpace` is what keeps WebGL from uploading this as
+    // `SRGB8_ALPHA8` and decoding each texel BEFORE the filter — the opposite
+    // order, and a visibly different ramp wherever an icon is magnified.
+    // Pinned rather than assigned because these land on a `map` prop, which
+    // `@react-three/fiber` re-tags `SRGBColorSpace` on every commit; the
+    // matching post-filter decode is `useCanvasDecodeDefines`, which
+    // `ControlQuad` already applies off this very tag.
     const tex = new THREE.TextureLoader().load(dataUrl);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    return tex;
+    return pinNoColorSpace(tex);
   }, [dataUrl]);
   useEffect(() => (texture ? () => texture.dispose() : undefined), [texture]);
   return texture;

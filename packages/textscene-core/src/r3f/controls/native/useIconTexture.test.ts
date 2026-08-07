@@ -8,10 +8,17 @@
  *
  * These pin the null path, which is the part with no visible symptom when it
  * regresses — a wasted decode looks identical on screen.
+ *
+ * They also pin the sampling colour space and the decode that must accompany
+ * it. That pair has no visible symptom either until an icon is MAGNIFIED: the
+ * two orderings — decode each texel then filter, versus filter the encoded
+ * bytes then decode — agree exactly wherever the filter lands on a texel
+ * centre, and diverge only across the ramp between two texels.
  */
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import * as THREE from 'three';
+import { useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
 import { useIconTexture, useOptionalIconTexture } from './useIconTexture';
 
 const ICON = 'data:image/svg+xml;base64,PHN2Zy8+';
@@ -28,11 +35,25 @@ describe('useIconTexture', () => {
     expect(load).not.toHaveBeenCalled();
   });
 
-  it('loads once for a url and hands back a texture in sRGB', () => {
+  it('loads once for a url and hands back a texture the 2D canvas samples undecoded', () => {
     const { result } = renderHook(() => useIconTexture(ICON));
 
     expect(result.current).not.toBeNull();
-    expect(result.current!.colorSpace).toBe(THREE.SRGBColorSpace);
+    expect(result.current!.colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it('holds that tag against a reassignment, which a `map` gets on every commit', () => {
+    const { result } = renderHook(() => useIconTexture(ICON));
+
+    result.current!.colorSpace = THREE.SRGBColorSpace;
+
+    expect(result.current!.colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it('turns on the post-filter decode every painter draws it through', () => {
+    const { result } = renderHook(() => useCanvasDecodeDefines(useIconTexture(ICON)));
+
+    expect(result.current).toEqual({ DECODE_VIDEO_TEXTURE: '' });
   });
 
   it('memoises on the url, so a re-render with the same icon does not reload', () => {
