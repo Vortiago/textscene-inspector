@@ -43,6 +43,7 @@ import {
   resolveTexture2DPath,
 } from '../../../resources/SubResourceResolver';
 import { useResourceLoader } from '../../../resources/useResource';
+import { proceduralTexture2DSize } from '../../../resources/useTexture2D';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { FontResource } from '../../../resources/processing/fontProcessing';
 import {
@@ -213,6 +214,14 @@ function buildForest(
     const props = node.properties as Record<string, unknown>;
     const ref = props.texture ?? props.icon;
     if (typeof ref !== 'string' || ref === '') return null;
+
+    // An inline procedural texture is described entirely by the scene, so its
+    // size is known here and now — no path, no cache, no pending load. This
+    // walk cannot call `useTexture2D` (it is not a component), which is
+    // precisely why the size question has a React-free answer of its own.
+    const procedural = proceduralTexture2DSize(ref, int);
+    if (procedural) return procedural;
+
     // `resolveTexture2DPath`, not `resolveExtResourcePath`: the painters resolve
     // the same property through it (`texturerect/NativeComponent.tsx`), so it
     // also unwraps a `SubResource(...)` texture. Resolving only ExtResource here

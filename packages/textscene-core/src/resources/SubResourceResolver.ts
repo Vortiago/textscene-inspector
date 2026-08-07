@@ -83,8 +83,8 @@ export function resolveSubResourceRef(
 }
 
 /**
- * Resolve a **Texture2D-valued** property to the `res://` path of the image to
- * sample. Covers all three forms such a slot can carry:
+ * Resolve a **Texture2D-valued** property to the `res://` path of a FILE to
+ * load. Covers the forms of such a slot that name one:
  *
  *   `res://path`        — passes straight through
  *   `ExtResource("id")` — an external image or `.tres`
@@ -95,6 +95,13 @@ export function resolveSubResourceRef(
  *
  * `resolveExtResourcePath` alone returns null for the SubResource form, which
  * renders a CanvasTexture-textured node as a missing-resource placeholder.
+ *
+ * NOT the resolver a node component should reach for. A Texture2D slot can
+ * also hold a texture with no file behind it at all — an inline
+ * `GradientTexture2D`, described entirely by the scene — and this returns null
+ * for every one of those, because there is no path to return. Components ask
+ * `useTexture2D` for a texture instead; this is the path-only half it delegates
+ * to, useful on its own only where the caller genuinely wants a file path.
  */
 export function resolveTexture2DPath(
   ref: string | null | undefined,

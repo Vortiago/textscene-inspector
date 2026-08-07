@@ -2,10 +2,11 @@
  * <Sprite3D> — billboarded 2D texture rendered in 3D space.
  *
  * Architecture:
- *   - Texture state machine: `useResource('Texture2D')` against the
- *     resolved ExtResource path. Pending → render nothing (lets the
- *     scene continue); missing/error → magenta placeholder mesh +
- *     drei `<Text>` label naming the path (matches MeshInstance3D UX).
+ *   - Texture state machine: `useTexture2D`, which covers an image
+ *     file, an inline procedural texture and a CanvasTexture alike.
+ *     Pending → render nothing (lets the scene continue);
+ *     missing/error → magenta placeholder mesh + drei `<Text>` label
+ *     naming the path (matches MeshInstance3D UX).
  *   - Quad geometry: `<planeGeometry>` sized by `pixel_size` × the
  *     active texture region (full image, sprite-sheet tile, or
  *     `region_rect` sub-image). Same pattern as Label3D's textured
@@ -44,8 +45,7 @@ import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { resolveTexture2DPath } from '../../../resources/SubResourceResolver';
-import { useResource } from '../../../resources/useResource';
+import { useTexture2D } from '../../../resources/useTexture2D';
 import {
   AlphaCutMode,
   type Sprite3DProperties,
@@ -68,16 +68,14 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     [properties]
   );
 
-  // Resolve `texture = ExtResource("id")` → res:// path via the scene's
-  // external-resource table. Empty string short-circuits the hook (per
-  // useResource's contract) so we keep the hook-call count stable when
-  // texture is absent.
-  const texturePath = useMemo(
-    () => resolveTexture2DPath(properties.texture, externalResources, internalResources),
-    [properties.texture, externalResources, internalResources]
+  // `texture` may be an image file, or a procedural texture described entirely
+  // inside the scene; `useTexture2D` resolves either and reports a reference it
+  // cannot resolve as `missing`.
+  const { texture: sourceTexture, missing: textureMissing } = useTexture2D(
+    properties.texture,
+    externalResources,
+    internalResources
   );
-
-  const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
 
   // Compose the visible texture (shared spriteFrame module clones + windows
   // the UVs to the region/frame), then mirror via UV negation: flip the
@@ -90,7 +88,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     // hardware sRGB decode before filtering, `canvas2DTextureDecode.ts`), so
     // it keeps the shared cache entry's own colour space rather than the 2D
     // canvas's `NoColorSpace` retag.
-    const cloned = composeFrameTexture(texResult.value, properties, 'repeat', THREE.SRGBColorSpace);
+    const cloned = composeFrameTexture(sourceTexture ?? undefined, properties, 'repeat', THREE.SRGBColorSpace);
     if (!cloned) return undefined;
     if (properties.flip_h) {
       cloned.offset.x += cloned.repeat.x;
@@ -101,14 +99,14 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       cloned.repeat.y = -cloned.repeat.y;
     }
     return cloned;
-  }, [texResult.value, properties]);
+  }, [sourceTexture, properties]);
 
   // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback
   // before the image loads keeps the placeholder at expected scale).
   const { width, height } = useMemo(() => {
-    const px = frameSizePx(texResult.value, properties);
+    const px = frameSizePx(sourceTexture ?? undefined, properties);
     return { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
-  }, [texResult.value, properties]);
+  }, [sourceTexture, properties]);
 
   // Modulate RGB and effective opacity. Transparency property is
   // additive: opacity = modulate.a * (1 - transparency). Godot stores modulate
@@ -163,10 +161,10 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       </group>
     );
 
-  // No texture path requested at all: render a stub placeholder so users
+  // No texture referenced at all: render a stub placeholder so users
   // see that the sprite node exists in the scene even without a texture.
   // (Linter would already flag this as `sprite3d-requires-texture`.)
-  if (!texturePath) {
+  if (!properties.texture) {
     return (
       <>
         <MissingResourcePlaceholder
@@ -183,7 +181,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
 
   // Texture failed to load: magenta-quad placeholder. The in-3D path
   // label was moved to the DOM `<MissingResourcesPanel>`.
-  if (texResult.status === 'unavailable') {
+  if (textureMissing) {
     return (
       <>
         <MissingResourcePlaceholder
@@ -199,7 +197,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   }
 
   // Pending: render nothing visible yet. Wait for the texture to arrive
-  // (which `useResource` will pick up automatically on the next render
+  // (which `useTexture2D` will pick up automatically on the next render
   // cycle once the host provides the file).
   if (!displayedTexture) {
     return (

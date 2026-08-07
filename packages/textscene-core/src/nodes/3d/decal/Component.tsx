@@ -37,8 +37,8 @@ import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree';
-import { resolveTexture2DPath } from '../../../resources/SubResourceResolver';
-import { useResource, useResourceLoader } from '../../../resources/useResource';
+import { useResourceLoader } from '../../../resources/useResource';
+import { useTexture2D } from '../../../resources/useTexture2D';
 import type { Color } from '../../../utils/colorParser';
 import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';
@@ -72,15 +72,18 @@ export function Decal({ node, children }: NodeComponentProps) {
   }, []);
   useEffect(() => () => boxEdges.dispose(), [boxEdges]);
 
-  // Resolve `texture_albedo = ExtResource("id")` → res:// path. Empty string
-  // short-circuits useResource (its contract) so the hook count stays stable
-  // whether or not an albedo texture is present.
-  const texturePath = useMemo(
-    () => resolveTexture2DPath(properties.texture_albedo, externalResources, internalResources),
-    [properties.texture_albedo, externalResources, internalResources]
+  // `useTexture2D`, not the path-only resolver: `texture_albedo` may name an
+  // inline procedural texture, which is described entirely by the scene and
+  // has no file to load. The projection material below borrows this texture as
+  // its `map` and never disposes it — `Material.dispose()` releases the
+  // material only — so the shared cache entry behind it stays valid for every
+  // other consumer.
+  const { texture: albedoTexture } = useTexture2D(
+    properties.texture_albedo,
+    externalResources,
+    internalResources
   );
-  const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
-  const albedo = texResult.value ?? null;
+  const albedo = albedoTexture ?? null;
 
   // An active AnimationPlayer can drive `modulate` and `size` (ADR-0017); `null`
   // means none is, so the authored value shows. The projection maths is

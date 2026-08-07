@@ -1,8 +1,9 @@
 /**
  * `<TextureRect>` — the native (WebGL canvas) painter for TextureRect:
  * one `<ControlQuad>` (`native/controlQuad.tsx`) sized/positioned per the
- * `stretch_mode` draw-rect math in `nativeSolver.ts`, textured through the
- * `useResource`/`resolveTexture2DPath` path.
+ * `stretch_mode` draw-rect math in `nativeSolver.ts`, textured through
+ * `useTexture2D` — so an image file and an inline procedural texture reach it
+ * the same way.
  * `expand_mode`'s minimum-size contribution is a SEPARATE concern, registered
  * from `index.r3f.ts` via `controlSolverRegistry.registerMinimumSize`; this
  * component only draws.
@@ -31,8 +32,7 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { resolveTexture2DPath } from '../../../../resources/SubResourceResolver';
-import { useResource } from '../../../../resources/useResource';
+import { useTexture2D } from '../../../../resources/useTexture2D';
 import { textureRectDraw, resolveTextureRectFilter, resolveTextureRectRepeat, applyFlip } from './nativeSolver';
 import type { TextureRectProperties } from './types';
 
@@ -58,9 +58,9 @@ export function TextureRect({ solveNode, rect, renderOrder }: NativeControlCompo
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
 
   const { externalResources, internalResources } = useSceneResources();
-  const path = resolveTexture2DPath(props.texture, externalResources, internalResources);
-  const texResult = useResource<THREE.Texture>(path ?? '', 'Texture2D');
-  const rawTexture = texResult.value;
+  // `useTexture2D`, not the path-only resolver: `texture` may be an inline
+  // procedural texture, which has no path and rasterises out of the scene.
+  const { texture: rawTexture } = useTexture2D(props.texture, externalResources, internalResources);
 
   const draw = useMemo(() => {
     const image = rawTexture?.image as ImageLike | undefined;
@@ -69,8 +69,9 @@ export function TextureRect({ solveNode, rect, renderOrder }: NativeControlCompo
     return { textureSize, ...textureRectDraw({ x: rect.w, y: rect.h }, textureSize, props.stretchMode) };
   }, [rawTexture, rect.w, rect.h, props.stretchMode]);
 
-  // Clone: `useResource` hands out the SAME cached THREE.Texture to every
-  // consumer of this path, and every mutation below (filter, wrap, UV
+  // Clone: the resolved texture is a SHARED cache entry — the loader's for an
+  // image, the procedural cache's for a rasterised one — handed to every
+  // consumer of it, and every mutation below (filter, wrap, UV
   // repeat/offset for a crop, tile, or flip) is per-CONSUMER sampler state —
   // the identical reason `composeFrameTexture` clones (`r3f/spriteFrame.ts`).
   const preparedTexture = useMemo(() => {

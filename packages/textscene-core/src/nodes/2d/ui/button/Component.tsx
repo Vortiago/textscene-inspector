@@ -43,13 +43,11 @@
  * `HSplitContainer`'s custom-minimum-size fallback does.
  */
 import { useMemo } from 'react';
-import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { resolveTexture2DPath } from '../../../../resources/SubResourceResolver';
-import { useResource } from '../../../../resources/useResource';
+import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -112,12 +110,13 @@ export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeCont
 
   // --- Icon: resolve + load the referenced texture -------------------------
   const { externalResources, internalResources } = useSceneResources();
-  const iconPath = resolveTexture2DPath(props.icon, externalResources, internalResources);
-  const iconResult = useResource<THREE.Texture>(iconPath ?? '', 'Texture2D');
+  // `useTexture2D`, not the path-only resolver: an icon may be an inline
+  // procedural texture, which has no path to load from.
+  const { texture: iconSource } = useTexture2D(props.icon, externalResources, internalResources);
   // NoColorSpace: the 2D canvas's hardware filter blends undecoded sRGB
   // bytes (`canvas2DTextureDecode.ts`); `ControlQuad` decodes the
   // already-filtered sample once it sees this tag.
-  const iconTexture = useCanvas2DTexture(iconResult.value);
+  const iconTexture = useCanvas2DTexture(iconSource);
 
   const iconNaturalSize: Vec2 | null = useMemo(() => {
     if (!props.icon || !iconTexture) return null;

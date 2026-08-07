@@ -29,6 +29,15 @@ import type { ThemeResource } from '../../../resources/processing/themeProcessin
 import type { FontResource } from '../../../resources/processing/fontProcessing';
 import { resolveSceneFontMetrics } from './text/sceneFontLoader';
 import { useBuildSolveTree } from './buildSolveTree';
+import { TscnParser } from '../../../parser/TscnParser';
+import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
+import { nativeTheme } from './nativeTheme';
+import type { Rect2 } from './rect';
+// Side-effect imports: the node parsers that turn the `.tscn` text below into
+// typed Control properties, and the solvers/minimum-size functions the solved
+// rects come from.
+import '../../nodes/index';
+import '../index';
 
 const LAYER_PATH = 'res://hud-layer.tscn';
 const BADGE_PATH = 'res://hud-badge.tscn';
@@ -295,6 +304,61 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
 
     expect(result.current.tree).toHaveLength(1);
     expect(result.current.tree[0]?.textureSize).toEqual({ x: 24, y: 24 });
+  });
+
+  it("takes a TextureRect's textureSize from an INLINE GradientTexture2D, with no loader round trip", () => {
+    // An inline procedural texture never reaches the loader, so a path-only
+    // resolution leaves this null and the node's minimum size collapses to
+    // (0, 0) — inside a container that moves every sibling below it, not just
+    // this node's own pixels. Measured against Godot 4.6.3: a
+    // 160x160 GradientTexture2D in a VBoxContainer pushes the ColorRect below
+    // it down by 160 px.
+    const loader = createFakeResourceLoader();
+    const internalResources: TscnInternalResource[] = [
+      { id: 'Gradient_1', type: 'Gradient', data: { colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)' } },
+      {
+        id: 'GradientTexture2D_1',
+        type: 'GradientTexture2D',
+        data: { gradient: 'SubResource("Gradient_1")', width: '160', height: '160' },
+      },
+    ];
+    const nodes = [
+      node('Ramp', 'TextureRect', {
+        properties: { name: 'Ramp', texture: 'SubResource("GradientTexture2D_1")' },
+      }),
+    ];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], internalResources), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.textureSize).toEqual({ x: 160, y: 160 });
+  });
+
+  it("takes a Button's textureSize from an INLINE GradientTexture2D icon", () => {
+    // The icon slot resolves separately from every other Texture2D slot, and
+    // feeds `buttonMinimumSize`. Measured against Godot 4.6.3: a 96x96 inline
+    // icon plus 8 px content margins gives the Button a 112 px height.
+    const loader = createFakeResourceLoader();
+    const internalResources: TscnInternalResource[] = [
+      { id: 'Gradient_1', type: 'Gradient', data: { colors: 'PackedColorArray(1, 1, 0, 1, 1, 0, 0, 1)' } },
+      {
+        id: 'GradientTexture2D_1',
+        type: 'GradientTexture2D',
+        data: { gradient: 'SubResource("Gradient_1")', width: '96', height: '96', fill: '1' },
+      },
+    ];
+    const nodes = [
+      node('IconButton', 'Button', {
+        properties: { name: 'IconButton', icon: 'SubResource("GradientTexture2D_1")' },
+      }),
+    ];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], internalResources), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.textureSize).toEqual({ x: 96, y: 96 });
   });
 
   it('leaves textureSize null for a Button with no icon at all (no `texture`/`icon` property to resolve)', () => {
@@ -652,5 +716,138 @@ describe('useBuildSolveTree — theme resolution', () => {
     });
 
     expect(result.current.tree[0]?.projectTheme?.defaultFontSize).toBe(30);
+  });
+});
+
+/**
+ * The inline-procedural texture's minimum-size contribution, end to end:
+ * `.tscn` text → `useBuildSolveTree` → `solveControlTree`. The unit test above
+ * proves `SolveNode.textureSize` is populated; this proves the number reaches
+ * a SOLVED RECT, which is the part a purely visual check would attribute to
+ * the painter.
+ *
+ * Expected positions are Godot 4.6.3's, read off a render of
+ * `scenes/fixtures/unit-texturerect-gradienttexture.tscn` and
+ * `unit-button-icon-gradienttexture.tscn` at the project viewport (1152x648).
+ */
+describe('useBuildSolveTree — an inline procedural texture moves the solved rect', () => {
+  const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
+
+  function solveTscn(tscn: string): ReadonlyMap<string, SolvedControl> {
+    const scene = new TscnParser().parse(tscn);
+    const loader = createFakeResourceLoader();
+    const { result } = renderHook(
+      () => useBuildSolveTree(scene.nodes, scene.externalResources, scene.internalResources),
+      { wrapper: wrapperFor(loader.loader) }
+    );
+    return solveControlTree(result.current.tree, VIEWPORT, createSolveContext(nativeTheme(1)));
+  }
+
+  /**
+   * A solved rect is PARENT-relative; Godot's probe coordinates are viewport
+   * coordinates. The column is the only container between the two here, so
+   * adding its own top is the whole conversion.
+   */
+  function absoluteTop(solved: ReadonlyMap<string, SolvedControl>, path: string): number {
+    return (solved.get('Root/Column')?.rect.y ?? NaN) + (solved.get(path)?.rect.y ?? NaN);
+  }
+
+  it('gives a TextureRect the gradient\'s 160 px height and pushes its sibling to y = 288', () => {
+    const solved = solveTscn(`[gd_scene load_steps=3 format=3]
+
+[sub_resource type="Gradient" id="Gradient_ramp"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.9, 0.2, 0.2, 1, 0.2, 0.2, 0.9, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_ramp"]
+gradient = SubResource("Gradient_ramp")
+width = 160
+height = 160
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Column" type="VBoxContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 420.0
+offset_bottom = 600.0
+
+[node name="Above" type="ColorRect" parent="Column"]
+custom_minimum_size = Vector2(0, 40)
+color = Color(0.15, 0.6, 0.3, 1)
+
+[node name="InlineGradient" type="TextureRect" parent="Column"]
+texture = SubResource("GradientTexture2D_ramp")
+
+[node name="Below" type="ColorRect" parent="Column"]
+custom_minimum_size = Vector2(0, 40)
+color = Color(0.95, 0.85, 0.1, 1)
+`);
+
+    // 80 (column top) + 40 (Above) + 4 (separation) = 124, then 160 of texture.
+    expect(solved.get('Root/Column/InlineGradient')?.rect.h).toBe(160);
+    expect(absoluteTop(solved, 'Root/Column/InlineGradient')).toBe(124);
+    // Godot paints the yellow `Below` rect at (110, 300); an unresolved
+    // texture would leave it at y = 128 and that probe would read the
+    // viewport background instead.
+    expect(solved.get('Root/Column/Below')?.rect.h).toBe(40);
+    expect(absoluteTop(solved, 'Root/Column/Below')).toBe(288);
+  });
+
+  it("gives a Button the icon's 96 px plus its content margins and pushes its sibling to y = 196", () => {
+    const solved = solveTscn(`[gd_scene load_steps=4 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.2, 0.5, 0.35, 1)
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+
+[sub_resource type="Gradient" id="Gradient_icon"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 0.85, 0.2, 1, 0.8, 0.1, 0.1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_icon"]
+gradient = SubResource("Gradient_icon")
+width = 96
+height = 96
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Column" type="VBoxContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 460.0
+offset_bottom = 600.0
+
+[node name="IconButton" type="Button" parent="Column"]
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button")
+icon = SubResource("GradientTexture2D_icon")
+
+[node name="Below" type="ColorRect" parent="Column"]
+custom_minimum_size = Vector2(0, 40)
+color = Color(0.95, 0.85, 0.1, 1)
+`);
+
+    // 96 icon + 8 top + 8 bottom content margin = 112.
+    expect(solved.get('Root/Column/IconButton')?.rect.h).toBe(112);
+    expect(absoluteTop(solved, 'Root/Column/IconButton')).toBe(80);
+    // Godot paints the yellow `Below` rect at (110, 215); with no icon size the
+    // Button would be 16 px tall and `Below` would start at y = 100.
+    expect(solved.get('Root/Column/Below')?.rect.h).toBe(40);
+    expect(absoluteTop(solved, 'Root/Column/Below')).toBe(196);
   });
 });

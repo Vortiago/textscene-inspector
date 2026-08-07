@@ -11,19 +11,27 @@
  *                               rasterises synchronously with no file at all
  *
  * The path-based `resolveTexture2DPath` + `useResource` pair covers the first
- * two and returns nothing for the third, which is why the isometric dungeon's
- * 23 PointLight2Ds — every one of them a GradientTexture2D cookie — resolved to
- * a missing-resource placeholder. The rasteriser for them already existed but
- * was reachable only from MeshInstance3D.
+ * two and returns nothing for the third: a `SubResource` survives it only when
+ * it happens to CARRY a path (a `CanvasTexture`'s `diffuse_texture`), so every
+ * inline procedural texture resolved to a missing-resource placeholder. The
+ * rasteriser for them already existed but was reachable only from
+ * MeshInstance3D.
  *
  * This hook hides the distinction: callers ask for a texture and get one (or a
- * status explaining why not).
+ * status explaining why not). It is the ONE resolver every Texture2D-valued
+ * slot should go through; `resolveTexture2DPath` is the path-only half of it,
+ * correct only where the caller genuinely wants a file path.
+ *
+ * `proceduralTexture2DSize` answers the sibling question — how big is it —
+ * for the one caller that cannot use a hook, and lives here so the two answers
+ * cannot drift apart again.
  */
 
 import { useMemo } from 'react';
 import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
-import { resolveTexture2DPath } from './SubResourceResolver.js';
+import { resolveSubResourceRef, resolveTexture2DPath } from './SubResourceResolver.js';
+import { parseGradientTexture2D } from './textures/gradienttexture2d/parser.js';
 import { useProceduralTexture } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
 
@@ -55,4 +63,39 @@ export function useTexture2D(
   if (!ref) return { texture: null, missing: false };
   if (!path) return { texture: null, missing: true };
   return { texture: loaded.value ?? null, missing: loaded.status === 'unavailable' };
+}
+
+/** Pixel dimensions of a Texture2D slot, in the `Vec2` shape the rect solver uses. */
+export interface Texture2DSize {
+  x: number;
+  y: number;
+}
+
+/**
+ * The pixel size of an inline procedural texture, without rasterising it and
+ * without React — the answer a Control's minimum-size solve needs, which runs
+ * outside any component and so cannot call `useTexture2D`. Null for every
+ * reference form whose size only the loader knows (an image path, an
+ * `ExtResource`, a `CanvasTexture` wrapping one), leaving the caller's cache
+ * lookup to answer those.
+ *
+ * Read from the DECLARED `width`/`height` rather than from a rasterised
+ * texture, for two reasons:
+ *
+ *  - `GradientTexture2D::get_width`/`get_height`
+ *    (`scene/resources/gradient_texture.cpp`) return the authored members
+ *    directly and never consult `gradient`, so a texture whose gradient does
+ *    not resolve still occupies its full declared size in a container.
+ *  - Rasterising here would mint a `proceduralTextureCache` entry with no
+ *    mounted consumer to pin it, and capacity eviction would then dispose it
+ *    out from under a component that IS holding it.
+ */
+export function proceduralTexture2DSize(
+  ref: string | undefined,
+  internalResources: readonly TscnInternalResource[]
+): Texture2DSize | null {
+  const resource = resolveSubResourceRef(ref, internalResources);
+  if (resource?.type !== 'GradientTexture2D') return null;
+  const { width, height } = parseGradientTexture2D(resource.data as Record<string, string>);
+  return { x: width, y: height };
 }

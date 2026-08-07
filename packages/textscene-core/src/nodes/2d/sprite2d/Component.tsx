@@ -6,7 +6,9 @@
  * (p.x, -p.y), so the quad centre is computed in Godot 2D space (+Y down) then
  * Y-negated.
  *
- * Surface handled: texture (ExtResource), centered/offset, flip_h/flip_v
+ * Surface handled: texture (an image file, an inline procedural texture, or a
+ * SubViewport's own target — `useTexture2D` and `useViewportTextureSlot`
+ * between them cover the three), centered/offset, flip_h/flip_v
  * (mirror via mesh scale, which flips the texture too — matching Godot),
  * region_rect, hframes/vframes/frame/frame_coords sprite-sheet slicing, and the
  * CanvasItem `modulate` tint. Material is unlit (meshBasicMaterial) like Godot's
@@ -31,12 +33,11 @@ import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
-import { resolveTexture2DPath } from '../../../resources/SubResourceResolver';
 import {
   isViewportTextureRef,
   useViewportTextureSlot,
 } from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
-import { useResource } from '../../../resources/useResource';
+import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { Sprite2DProperties } from './types';
 
@@ -60,14 +61,14 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     internalResources
   );
 
-  const texturePath = useMemo(
-    () =>
-      isViewportSlot
-        ? null
-        : resolveTexture2DPath(props.texture, externalResources, internalResources),
-    [isViewportSlot, props.texture, externalResources, internalResources]
+  // `useTexture2D`, not the path-only resolver: `texture` may name an inline
+  // procedural texture (a GradientTexture2D), which has no path to resolve to
+  // and rasterises straight out of the scene.
+  const { texture: sourceTexture, missing: textureMissing } = useTexture2D(
+    isViewportSlot ? undefined : props.texture,
+    externalResources,
+    internalResources
   );
-  const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
 
   // A driven `frame` overrides the authored `frame` AND any authored
   // `frame_coords` (in Godot the two are the same value), so the animation wins.
@@ -79,8 +80,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     // than tiling. NoColorSpace: the 2D canvas's hardware filter blends
     // undecoded sRGB bytes (`canvas2DTextureDecode.ts`); QuadMesh's material
     // decodes the already-filtered sample via `useCanvasDecodeDefines`.
-    return composeFrameTexture(texResult.value, frameProps, 'clamp', THREE.NoColorSpace);
-  }, [texResult.value, props, animatedFrame]);
+    return composeFrameTexture(sourceTexture ?? undefined, frameProps, 'clamp', THREE.NoColorSpace);
+  }, [sourceTexture, props, animatedFrame]);
   // composeFrameTexture clones the texture per frame; dispose the prior clone
   // when the frame advances (and on unmount) so playback doesn't leak GPU
   // textures (~one per keyframe otherwise).
@@ -95,8 +96,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // target reports its rect through the same `image` shape a loaded texture
   // uses, so the sizing path is shared.
   const { width, height } = useMemo(
-    () => frameSizePx(viewportTexture ?? texResult.value, props),
-    [viewportTexture, texResult.value, props]
+    () => frameSizePx(viewportTexture ?? sourceTexture ?? undefined, props),
+    [viewportTexture, sourceTexture, props]
   );
 
   // Placeholder when no texture is referenced or it failed to load. A
@@ -108,7 +109,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // never render — so it gets the same placeholder, not permanent silence.
   const showPlaceholder = isViewportSlot
     ? viewportCyclic
-    : !texturePath || texResult.status === 'unavailable';
+    : !props.texture || textureMissing;
 
   return (
     <CanvasItem2D

@@ -1,0 +1,37 @@
+[gd_scene load_steps=3 format=3 uid="uid://unitsprite2dgradtex"]
+
+; ONE VARIABLE: a Sprite2D whose `texture` is an INLINE GradientTexture2D
+; sub-resource rather than an image file.
+;
+; Every other Sprite2D scene points `texture` at an ExtResource image (or, in
+; `unit-sprite2d-canvastexture`, at a CanvasTexture that WRAPS one), so all of
+; them resolve through the path branch. A regression that loses the inline
+; procedural branch leaves each of those pixel-identical and is invisible in
+; them; here the sprite disappears entirely and a magenta missing-resource
+; placeholder takes its place.
+;
+; Radial fill, opaque centre to fully transparent edge, so the quad's alpha
+; ramp is part of what the frame proves — a resolved-but-wrongly-oriented or
+; wrongly-decoded gradient does not read as a clean circle.
+
+[sub_resource type="Gradient" id="Gradient_disc"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.1, 0.6, 0.9, 1, 0.1, 0.6, 0.9, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_disc"]
+gradient = SubResource("Gradient_disc")
+width = 256
+height = 256
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[node name="Root" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+color = Color(0.85, 0.85, 0.8, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="InlineGradient" type="Sprite2D" parent="."]
+position = Vector2(576, 324)
+texture = SubResource("GradientTexture2D_disc")

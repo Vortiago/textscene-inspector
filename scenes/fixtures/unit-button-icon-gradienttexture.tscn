@@ -1,0 +1,55 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitbtnicongradtex"]
+
+; ONE VARIABLE: a Button whose `icon` is an INLINE GradientTexture2D
+; sub-resource rather than an image file.
+;
+; The icon slot is resolved separately from every other Texture2D slot in the
+; UI stack, and it feeds the Button's minimum size — so the sibling ColorRect
+; below the button in the VBoxContainer moves by the icon's height when the
+; inline texture fails to resolve. `unit-button` and `unit-button-states` carry
+; no icon at all, and no other Control scene puts an inline procedural texture
+; in an icon slot, so a regression here shows up in nothing else.
+;
+; The StyleBoxFlat override pins the button's own box so the frame's only
+; unpinned contributor is the icon.
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.2, 0.5, 0.35, 1)
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+
+[sub_resource type="Gradient" id="Gradient_icon"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 0.85, 0.2, 1, 0.8, 0.1, 0.1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_icon"]
+gradient = SubResource("Gradient_icon")
+width = 96
+height = 96
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Column" type="VBoxContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 460.0
+offset_bottom = 600.0
+
+[node name="IconButton" type="Button" parent="Column"]
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button")
+icon = SubResource("GradientTexture2D_icon")
+
+[node name="Below" type="ColorRect" parent="Column"]
+custom_minimum_size = Vector2(0, 40)
+color = Color(0.95, 0.85, 0.1, 1)
