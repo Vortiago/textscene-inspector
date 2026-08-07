@@ -250,6 +250,11 @@ export const GOLDEN_SCENES = [
   // texture (deterministic local SVG, gated by the two-identical-frames settle);
   // the projection edges are AA-sensitive, hence the relaxed threshold.
   { name: 'decal', file: 'unit-decal.tscn', maxDiffPct: 0.3 },
+  // Decal `texture_albedo` as an INLINE GradientTexture2D. The albedo is the
+  // only thing a decal projects, so an unresolved slot leaves the floor bare —
+  // indistinguishable from a plain plane, which is why no other scene flags it.
+  // Projection edges are antialiasing-sensitive, same threshold as `decal`.
+  { name: 'decal-gradienttexture', file: 'unit-decal-gradienttexture.tscn', maxDiffPct: 0.3 },
   // `anisotropy_flowmap` as a real PNG — the ONLY scene where a decoded image
   // reaches the anisotropy channel repack (Godot keeps per-pixel strength in
   // ALPHA, three.js reads it from BLUE), which needs a canvas readback that no
@@ -524,6 +529,26 @@ export const GOLDEN_SCENES = [
 
   // --- Sprite2D/Sprite3D + 3D physics-body roundout ---
   { name: 'sprite2d', file: 'unit-sprite2d.tscn', mode: '2d' },
+  // The ONE variable: a Sprite2D that MAGNIFIES its texture. Every other sprite
+  // scene draws at 1:1, where a bilinear filter lands on texel centres and
+  // never blends two texels, so the colour space the canvas blends in cannot
+  // move a pixel in any of them. Godot's 64px ramp across one hard
+  // black/white boundary is linear in the ENCODED bytes — rgb(129) at the
+  // midpoint against the 189 a decode-before-filter order gives.
+  { name: 'sprite2d-magnified', file: 'unit-sprite2d-magnified.tscn', mode: '2d' },
+  // A Sprite2D whose `texture` is an INLINE GradientTexture2D — no file, no
+  // path, rasterised out of the scene. Every other sprite scene points at an
+  // image, so a regression in the procedural branch leaves all of them
+  // pixel-identical while this one loses its quad to a placeholder.
+  {
+    name: 'sprite2d-gradienttexture',
+    file: 'unit-sprite2d-gradienttexture.tscn',
+    mode: '2d',
+  },
+  // The 3D half of that variable: Sprite3D decodes sRGB in hardware before
+  // filtering, the opposite convention to the 2D canvas, so a procedural
+  // texture can resolve correctly for Sprite2D and still be tagged wrongly here.
+  { name: 'sprite3d-gradienttexture', file: 'unit-sprite3d-gradienttexture.tscn' },
   { name: 'sprite3d', file: 'unit-sprite3d.tscn' },
   // A region_rect bigger than its texture. Godot clips neither the region nor
   // the quad, so the overrun is decided by the sampler — and the two families
@@ -600,6 +625,10 @@ export const GOLDEN_SCENES = [
   { name: 'vbox-container-pitch', file: 'unit-vbox-container-pitch.tscn', mode: '2d' },
   { name: 'panel-styleboxes', file: 'unit-panel-styleboxes.tscn', mode: '2d' },
   { name: 'label-wrap', file: 'unit-label-2d-wrap.tscn', mode: '2d' },
+  // The ONE variable: `vertical_alignment`. Every other Label in the bag is
+  // V_TOP, where the offset is zero and Godot's int conversion of it is a
+  // no-op, so the CENTER/BOTTOM/FILL branches are drawn by nothing else.
+  { name: 'label-valign', file: 'unit-label-2d-valign.tscn', mode: '2d' },
   // `label-wrap` above (and every other Control golden) renders through the
   // bundled default MSDF atlas — none of them authors a Theme or a scene
   // font. This is the first: a Theme `.tres`'s `default_font`/
@@ -619,6 +648,49 @@ export const GOLDEN_SCENES = [
   // terms against Godot, never against the sibling's baseline.
   { name: 'control-scene-font-woff2', file: 'unit-control-scene-font-woff2.tscn', mode: '2d' },
   { name: 'button-states', file: 'unit-button-states.tscn', mode: '2d' },
+  // The ONE variable each: `anchors_preset` authored WITHOUT any explicit
+  // `anchor_*` and without a `layout_mode`. Godot's setter is non-operational
+  // in that state and ours applied it anyway; an editor-saved scene always
+  // writes the matching `anchor_*` alongside the preset, so no other scene in
+  // the bag can reach the gated path.
+  {
+    name: 'control-anchors-preset-gate',
+    file: 'unit-control-anchors-preset-gate.tscn',
+    mode: '2d',
+  },
+  // Its sibling: the preset's OFFSET side effect, in the only shape where it
+  // survives the minimum-size floor — an authored `grow_*` that contradicts the
+  // preset, so the rewritten offsets are not a fixed point.
+  {
+    name: 'control-anchors-preset-offsets',
+    file: 'unit-control-anchors-preset-offsets.tscn',
+    mode: '2d',
+  },
+  // The ONE variable: a vendored default-theme icon drawn MAGNIFIED. The theme
+  // icons come from their own loader rather than the res:// resource pipeline,
+  // and every other Control scene draws them at their natural size, so no
+  // golden here can see their sampling colour space. Godot's ramp at the
+  // checked icon's left edge dips to rgb(72) BELOW the 76 backdrop — a
+  // signature only blending the encoded bytes produces.
+  {
+    name: 'checkbox-icon-magnified',
+    file: 'unit-checkbox-icon-magnified.tscn',
+    mode: '2d',
+  },
+  // A TextureRect and a Button icon fed by an INLINE GradientTexture2D. The
+  // texture drives each node's MINIMUM SIZE as well as its pixels, so the
+  // container sibling below it moves too — these report a layout regression,
+  // not only a paint one.
+  {
+    name: 'texturerect-gradienttexture',
+    file: 'unit-texturerect-gradienttexture.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'button-icon-gradienttexture',
+    file: 'unit-button-icon-gradienttexture.tscn',
+    mode: '2d',
+  },
   { name: 'scroll-container-clip', file: 'unit-scroll-container-clip.tscn', mode: '2d' },
   // The two SubViewportContainer surfaces. `sub-viewport-texture` above is a
   // SubViewport sampled by a MESH, which is a different consumer entirely — it
@@ -638,4 +710,41 @@ export const GOLDEN_SCENES = [
     file: 'unit-sub-viewport-container-2d-content.tscn',
     mode: '2d',
   },
+  // Both scenes above place their container at the scene origin, where a rect
+  // solved half its own size off is indistinguishable from the surface being
+  // authored there — which is exactly how a missing `get_minimum_size` port
+  // stayed invisible. This one takes its rect from a size-consuming parent
+  // instead of its own offsets, so the minimum size is load-bearing.
+  {
+    name: 'sub-viewport-container-centred',
+    file: 'unit-sub-viewport-container-centred.tscn',
+    mode: '2d',
+  },
+  // The ONE variable: a Label that AUTOWRAPS inside a container that sizes to
+  // it. `label-wrap` above puts its wrapped Labels at authored widths with
+  // nothing above them to be wrong against, so a wrapped height that never
+  // reaches its parent moves no pixel there. Here the card's own height is the
+  // measurement.
+  {
+    name: 'label-autowrap-in-container',
+    file: 'unit-label-autowrap-in-container.tscn',
+    mode: '2d',
+  },
+  // The ONE variable: a ScrollContainer whose bar rects land on a FRACTION.
+  // `scroll-container-clip` above is 600x500 with an even bar thickness, so its
+  // bar origins are whole numbers and the per-canvas-item snap is a no-op in
+  // it — it cannot see this at all.
+  {
+    name: 'scroll-container-bar-snap',
+    file: 'unit-scroll-container-bar-snap.tscn',
+    mode: '2d',
+  },
+  // The composition scene. It deliberately breaks the one-variable rule every
+  // entry above follows: it moves many at once and can never localise a
+  // regression, and the `unit-*` fixture that owns a type is still where one
+  // gets localised. It exists to catch the interactions a single-variable scene
+  // has, by construction, nothing to interact with — the two faults it found on
+  // its first capture were each invisible to all 23 single-widget scenes.
+  // Text-dense, so MSDF stem antialiasing dominates its diff.
+  { name: 'complex-2d-gui', file: 'complex-2d-gui.tscn', mode: '2d', maxDiffPct: 0.5 },
 ];

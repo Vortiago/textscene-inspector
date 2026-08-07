@@ -75,6 +75,20 @@ a success and rendering invisibly. An `attribute_data` record narrower than the 
 implies costs that surface its UVs only; a wider one is an unmodelled CUSTOM channel and
 reads fine.
 
+## Divergences
+
+The decoded mesh is at parity and the frame's residual is not the mesh.
+`pnpm ref:diff scenes/fixtures/unit-arraymesh.tscn` reports 1.384 % (9991 px of
+955x756); 9990 of those pixels are the fixture's two Label3D captions — 6521 px in
+the title band `y 85..138` and 3469 px in the description band `y 543..568` — against
+1 px anywhere on the quad. Both are the outline-dilation and `modulate` divergences
+measured on the Label3D sheet, not this resource's.
+
+The quad's own silhouette agrees to the row: at `x 478` the first and last inked
+rows are 307 and 598 on both sides. Its interior carries Godot's material-less
+default, `rgb(93, 99, 111)` in Godot against `rgb(93, 99, 110)`–`rgb(94, 100, 111)`
+here.
+
 ## Known limitations
 
 - **Texture slots on a scene SubResource material are unwired**, on every surface —

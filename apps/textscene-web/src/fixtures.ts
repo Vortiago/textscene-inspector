@@ -313,6 +313,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Autowrap In Container",
+    "file": "unit-label-autowrap-in-container.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d Legible",
     "file": "unit-label3d-legible.tscn",
     "category": "Other"
@@ -1278,6 +1283,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Scroll Container Bar Snap",
+    "file": "unit-scroll-container-bar-snap.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Scroll Container Clip",
     "file": "unit-scroll-container-clip.tscn",
     "category": "Unit - 2D UI Controls"
@@ -1545,6 +1555,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Container Camera 2d",
     "file": "unit-sub-viewport-container-camera-2d.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Container Centred",
+    "file": "unit-sub-viewport-container-centred.tscn",
     "category": "Unit - Viewports"
   },
   {

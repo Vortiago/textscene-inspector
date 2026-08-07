@@ -31,16 +31,20 @@ Placement, size, `flip_h`, and `rotation` agree pixel-for-pixel: the five marker
 the same spots at the same size, the left marker's F is mirrored in both, and the group
 child is tilted identically.
 
-Colour diverges. The previewer dims the entire 2D output — no pixel in ours reaches pure
-white, so the marker F's cap at a light grey `[226, 226, 226]` where Godot's white texels
-render `[255, 255, 255]`. On the unmodulated blue field the shift is small (ours
-`[44, 115, 214]` vs Godot `[45, 108, 223]`), but on the red-`modulate` **Below** sprite it
-is stark: ours `[22, 34, 111]` against Godot `[45, 54, 112]` — red and green roughly half
-of Godot's while blue matches — and its glyph reads a muddy salmon `[238, 151, 146]`
-rather than Godot's brighter pink `[255, 128, 128]`. The Center sprite sets no `modulate`
-yet still caps below white, so this is a pipeline-wide colour shift in the previewer's 2D
-output; the Below sprite is that shift plus the tint multiply, not a separate
-`modulate`-only defect.
+Colour agrees too. `pnpm ref:godot scenes/fixtures/unit-sprite2d.tscn --mode 2d`
+against `pnpm ref:ours unit-sprite2d.tscn --2d` differs by 0 px at the harness
+threshold. The marker's white texels reach pure `rgb(255, 255, 255)` on both sides,
+over the same 3289 px in the same box (`x 415..736, y 181..351`); the unmodulated
+blue field is `rgb(45, 108, 223)` on both; the `modulate = Color(1, 0.5, 0.5)`
+**Below** sprite's glyph is `rgb(255, 128, 128)` on both; the backdrop is
+`rgb(76, 76, 76)` on both.
+
+Two residuals remain, both sub-perceptual. The **Below** sprite's tinted field reads
+`rgb(45, 54, 112)` in Godot against `rgb(45, 50, 111)` here — 4/255 of green over
+its 8162 px, the tint multiply rounding a step low. And the rotated
+`Group/ChildSprite`'s antialiased edge parts by more than 8/255 on 299 px, three
+per row down its 131-row diagonal, where the two rasterisers place the same edge
+in adjacent columns.
 
 ## Linting
 

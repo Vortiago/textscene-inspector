@@ -30,18 +30,20 @@ Measured on Godot 4.6.3, `pnpm ref:godot scenes/fixtures/unit-button.tscn --mode
 
 | Probe | What it is | Godot | Ours |
 | --- | --- | --- | --- |
-| (583, 370) | a solid stroke of the **Disabled** label | rgb(142, 142, 142) | rgb(142, 142, 142) |
-| (544, 362) | the same stroke where Godot's glyph sits, a residual sub-pixel gap | rgb(142, 142, 142) | rgb(138, 138, 138) |
-| (576, 306) | the row above **Styled**'s top edge, on the straight part away from both corner arcs | rgb(76, 76, 76) | rgb(64, 102, 83) — see "Styled's rect sits half a pixel high" below |
-| (576, 341) | **Styled**'s bottom fill row, same column | rgb(51, 128, 89) | rgb(64, 102, 83) — the same half-pixel offset at the other edge |
+| (583, 370) | a solid stroke of the **Disabled** label | rgb(142, 142, 142) | rgb(139, 139, 139) |
+| (544, 362) | the same stroke where Godot's glyph sits, one column left of ours | rgb(142, 142, 142) | rgb(95, 95, 95) |
+| (576, 306) | the row above **Styled**'s top edge, on the straight part away from both corner arcs | rgb(76, 76, 76) | rgb(76, 76, 76) |
+| (576, 341) | **Styled**'s bottom fill row, same column | rgb(51, 128, 89) | rgb(51, 128, 89) |
 
 Chrome colours are exact. The unthemed **Click Me** fill is the default theme's
 charcoal on both sides (rgb(46, 46, 46) against rgb(45, 45, 45) — one step of
 rounding on a StyleBox whose colour is itself an alpha blend over the backdrop),
 **Styled** is pixel-exact rgb(51, 128, 89) green, and **Disabled** takes the lighter
-rgb(61, 61, 61) disabled StyleBox on both. Both labels sit in the same place to
-within a pixel: **Click Me**'s ink spans x 544..606, y 274..285 in Godot and
-x 544..607, y 273..286 here.
+rgb(61, 61, 61) disabled StyleBox on both. Every label sits on the same rows and
+one column right: **Click Me**'s ink spans x 544..605, y 274..285 in Godot and
+x 545..606, y 274..285 here; **Disabled**'s x 544..606 against x 545..607;
+**Styled**'s x 553..597 against x 553..598. The whole frame parts by 313 px
+(0.042 %), every one of them inside those three label rows.
 
 `font_disabled_color` is `control_font_color × Color(1, 1, 1, 0.5)`, and Godot's
 142 at (583, 370) is exactly `223 × 0.5 + 61 × 0.5` over the disabled fill —
@@ -51,29 +53,15 @@ All three buttons carry authored offsets 32 px apart, and both engines keep
 that: **Click Me** spans y 264..295 and **Disabled** y 352..383, identically.
 **Styled**'s own StyleBox sets `content_margin_top/bottom = 6`, so its minimum
 height is 35 px (12 + a 23 px font height) against an authored 32, and that 35 px
-rect is the same height on both sides. All three span x 516..635 on both.
+rect is the same height on both sides. All three span x 516..635 on both, and
+**Styled**'s solves to y 307..341 on both.
 
-**Styled's rect sits half a pixel high**: `anchors_preset = 8` (CENTER) grows
-BOTH ways, so the 3 px the minimum size adds is split evenly
-(`scene/gui/control.cpp:1789-1797`) and the rect solves to y 306.5..341.5. We
-paint exactly that: at x 560, 576 and 600 alike our boundary rows 306 and 341
-read rgb(64, 102, 83) — a clean half-and-half of the rgb(76, 76, 76) backdrop and
-the rgb(51, 128, 89) fill — with rows 307 and 340 just inside them solid fill.
-Godot at those same columns has no feather at all: rows 306 and 342 are backdrop,
-rows 307 and 341 solid fill, a rect of y 307..342. It lands there because
-`Control::_update_canvas_item_transform` rounds a Control's canvas transform to
-whole pixels — `(xform[2] + Vector2(0.5, 0.5)).floor()`,
-`scene/gui/control.cpp:727-737`, gated on `gui/common/snap_controls_to_pixels`,
-which defaults to `true` (`core/config/project_settings.cpp:1808`) — so 306.5
-becomes 307. **Click Me** and **Disabled** solve to whole pixels already and have
-nothing to snap, which is why this is the only button that moves. Same height,
-same columns; the whole divergence is that half-pixel vertical translation.
-
-A glyph's edge pixel still parts by a residual sub-pixel: probe (544, 362), a
-stroke where Godot's glyph sits, reads rgb(138, 138, 138) against Godot's
-rgb(142, 142, 142), while (583, 370), a solid interior stroke, matches exactly
-on both sides. The **Disabled** label's last glyph stem sits at x 606 in Godot
-and x 607 here — a steady 1 px residual. The RichTextLabel sheet has the
+A glyph's edge pixel parts by a residual sub-pixel: probe (544, 362), a
+stroke where Godot's glyph sits and ours does not, reads rgb(95, 95, 95) against
+Godot's rgb(142, 142, 142), while (583, 370), a solid interior stroke, reads
+rgb(139, 139, 139) against rgb(142, 142, 142). The **Disabled** label's last glyph
+stem sits at x 606 in Godot and x 607 here — a steady 1 px residual. The
+RichTextLabel sheet has the
 mechanism (`openSansMetrics.ts`'s continuous per-glyph `advanceWidths` as the
 shaping source).
 

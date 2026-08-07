@@ -1,7 +1,7 @@
 ---
 type: Complex 2D GUI
 category: Complex Scenes
-status: unreviewed
+status: limitation
 fixture: complex-2d-gui.tscn
 image: complex-2d-gui
 renders_as: a composed settings/HUD panel — 23 Control types in one tree
@@ -60,39 +60,33 @@ seed. The picture at settle 0 is the only picture it has.
 
 ## Divergences
 
-Two are measured and open. Both are invisible to every `unit-*` fixture in the
-bag, which is what this scene exists for.
+The whole frame differs by 11,453 px (1.534 %) in 520 clusters, none of them
+bigger than 456 px. Composition is not what moves: every card plate, split
+gutter, clip edge, scrollbar rect, stylebox colour and `modulate` product lands
+on the same pixel on both sides, including the composited SubViewport surface
+and the two bars whose tint is chained. One rect and the text account for all of
+it.
 
-**The composited SubViewport surface is displaced by exactly half its own size.**
-The map's corridor bar spans `x 821..1072, y 155..174` in Godot and
-`x 971..1151, y 245..264` here — a translation of `+150, +90` against a
-SubViewport authored `300x180`, which is `+w/2, +h/2` to the pixel. The right
-edge is then clipped by the project viewport, so the objective marker
-`rgb(224, 163, 61)` is present in Godot at `x 1035..1054, y 149..168` and absent
-here altogether. The MapCard panel behind it is drawn in the right place and
-empty: only the sampled surface moves. The arithmetic points at a quad centred
-at its own half-extent without the matching corner correction, so the surface
-lands with its top-left where its centre belongs — but that is the shape of the
-number, not a confirmed cause.
+**A GridContainer's second column starts one pixel left.** The systems grid's
+widget column opens at `x 176` in Godot and `x 175` here, and everything the
+column holds moves with it — the LineEdit and OptionButton plates, both slider
+tracks, the music slider's tick marks, and the CheckBox's icon. The column's
+RIGHT edge is `x 727` on both, so the column is one pixel wider rather than
+translated, and the label column beside it is untouched.
 
-**A PanelContainer sized to a wrapped Label reserves one line where Godot
-reserves two.** The header card's subtitle wraps to two lines in both images,
-identically broken, but the card is 26 px shorter here — one line pitch — and
-its second line `corridor closes.` is drawn outside the panel it belongs to,
-with the card's bottom border crossing the glyphs. Everything below shifts up by
-the same amount: the `Master volume` row sits at `y 176` in Godot and `y 150`
-here. So the autowrapped Label's minimum HEIGHT reaches its container as a
-single line while its paint uses the wrapped count. Width-dependent height needs
-the container to solve width first and re-ask, which is the two-pass shape this
-solve does not currently have.
+Everything else is glyph rasterisation, the standing MSDF-atlas residual: a
+text run lands within one column of Godot's in either direction while its rows
+and its wrap points match exactly. `Apply` inks `x 28..70` in Godot against
+`x 28..71` here; the header subtitle `x 101..669` against `x 101..668`, wrapping
+on the same word at the same two rows; the status column's squad note
+`x 834..1100` against `x 833..1099`, likewise. The concentration is the briefing
+RichTextLabel at `y 380..420`, which is the densest text in the frame.
 
-The whole frame differs by 78,826 px (10.56 %), and both divergences above are
-inside that number. The CanvasLayer alert strip is `x 0..1151, y 612..647` on
-both sides, and the shield bar agrees within 1 px, so the layer banding and the
-box flow beside these two faults are not implicated.
+Its `[u]` rule is the one text feature that is not just antialiasing: at `x 500`
+Godot draws one crisp row at `y 418` and we draw a two-row feather at
+`y 416..417`, so the underline sits two pixels high and half a level soft.
 
-The probes below name what each remaining measurement targets; those pixels are
-taken in a later pass, with
+Probes below, from
 `pnpm ref:godot scenes/fixtures/complex-2d-gui.tscn --mode 2d --probe <x,y>`
 against `pnpm ref:ours complex-2d-gui.tscn --2d --probe <x,y>`.
 
@@ -100,56 +94,56 @@ against `pnpm ref:ours complex-2d-gui.tscn --2d --probe <x,y>`.
 
 | Probe | What it targets | Godot | Ours |
 | --- | --- | --- | --- |
-| | the HSplitContainer boundary between the two columns | | |
-| | the VSplitContainer boundary between map card and status card | | |
-| | the header card's left plate edge, i.e. the outer MarginContainer inset | | |
-| | the systems grid's column boundary — label column against widget column | | |
-| | the grid row pitch, where `v_separation` meets the card's content margin | | |
-| | the CenterContainer's placement of the fixed-size map surface | | |
-| | the action row's right edge, set by the expanding spacer Control | | |
+| (766, 400) | the HSplitContainer boundary between the two columns | rgb(26, 31, 41) | rgb(26, 31, 41) |
+| (950, 318) | the VSplitContainer boundary between map card and status card | rgb(13, 15, 20) | rgb(13, 15, 20) |
+| (24, 80) | the header card's left plate edge, i.e. the outer MarginContainer inset | rgb(33, 43, 56) | rgb(33, 43, 56) |
+| (176, 176) | the systems grid's column boundary — label column against widget column | rgb(86, 88, 93) | rgb(118, 119, 121) — the column opens a pixel early |
+| (600, 175) / (600, 208) | the grid row pitch, where `v_separation` meets the card's content margin | rgb(26, 28, 32) both rows | rgb(26, 28, 32) both rows |
+| (900, 81) | the CenterContainer's placement of the fixed-size map surface | rgb(18, 41, 38) | rgb(18, 41, 38) |
+| (750, 517) | the action row's right edge, set by the expanding spacer Control | rgb(115, 115, 116) | rgb(115, 115, 116) |
 
 ### Clipping and draw order
 
 | Probe | What it targets | Godot | Ours |
 | --- | --- | --- | --- |
-| | the ScrollContainer's bottom clip edge, on the keybinds card | | |
-| | the vertical scrollbar track inside the scroll region | | |
-| | the alert strip over the Control tree beneath it | | |
-| | the alert strip's alpha against the card it covers | | |
+| (400, 611) | the ScrollContainer's bottom clip edge, on the keybinds card | rgb(26, 31, 41) | rgb(26, 31, 41) |
+| (750, 590) | the vertical scrollbar track inside the scroll region | rgb(21, 22, 24) | rgb(21, 21, 23) |
+| (200, 630) | the alert strip over the Control tree beneath it | rgb(112, 35, 32) | rgb(112, 35, 32) |
+| (900, 630) | the alert strip's alpha against the card it covers | rgb(112, 35, 32) | rgb(112, 35, 32) |
 
 ### Modulate chaining
 
 | Probe | What it targets | Godot | Ours |
 | --- | --- | --- | --- |
-| | the action row's plain button under the row's alpha alone | | |
-| | the tinted button under row alpha times its own tint | | |
-| | the ammunition bar, a Panel tinted against its untinted sibling | | |
+| (30, 519) | the action row's plain button under the row's alpha alone | rgb(182, 182, 182) | rgb(182, 183, 183) |
+| (645, 519) | the tinted button under row alpha times its own tint | rgb(63, 49, 40) | rgb(111, 85, 64) — a glyph edge one column over |
+| (1000, 427) / (1000, 375) | the ammunition bar, a Panel tinted against its untinted sibling | rgb(70, 95, 33) / rgb(74, 158, 130) | rgb(70, 95, 33) / rgb(74, 158, 130) |
 
 ### Text inside a layout
 
 | Probe | What it targets | Godot | Ours |
 | --- | --- | --- | --- |
-| | the subtitle Label's wrap point, set by the header row's residual width | | |
-| | the briefing's coloured BBCode span | | |
-| | the briefing's underlined span | | |
-| | the squad note's wrap point inside the narrower status column | | |
+| ink box | the subtitle Label's wrap point, set by the header row's residual width | x 101..669, y 83..120 | x 101..668, y 83..120 |
+| (270, 389) | the briefing's coloured BBCode span | rgb(224, 160, 48) | rgb(224, 160, 48) |
+| x 500, the rule's row | the briefing's underlined span | y 418, rgb(118, 124, 132) | y 416..417, rgb(95, 101, 110) / rgb(49, 55, 64) |
+| ink box | the squad note's wrap point inside the narrower status column | x 834..1100, y 448..489 | x 833..1099, y 448..489 |
 
 ### Widgets sized by a container
 
 | Probe | What it targets | Godot | Ours |
 | --- | --- | --- | --- |
-| | the master volume grabber, at `value` along a grid-cell width | | |
-| | the music slider's tick marks | | |
-| | the gain VSlider grabber, measured up from the bottom of a box cell | | |
-| | the LineEdit's text baseline inside its stylebox | | |
-| | the CheckBox's tick beside its label | | |
-| | the OptionButton's selected item and its arrow | | |
+| (565, 175) | the master volume grabber, at `value` along a grid-cell width | rgb(220, 220, 220) | rgb(220, 220, 221) |
+| (318, 214) | the music slider's tick marks | rgb(83, 87, 95) | rgb(26, 31, 41) — the tick is at x 316..317 here |
+| (797, 452) | the gain VSlider grabber, measured up from the bottom of a box cell | rgb(197, 197, 198) | rgb(197, 197, 198) |
+| (200, 288) | the LineEdit's text baseline inside its stylebox | rgb(113, 114, 116) | rgb(223, 223, 223) |
+| (184, 328) | the CheckBox's tick beside its label | rgb(26, 26, 26) | rgb(36, 36, 36) |
+| (716, 245) | the OptionButton's selected item and its arrow | rgb(155, 155, 156) | rgb(154, 155, 155) |
 
 ### The sub-viewport surface
 
 | Probe | What it targets | Godot | Ours |
 | --- | --- | --- | --- |
-| | the map backdrop inside the render target | | |
-| | the objective marker, off-centre in both axes so a flip is visible | | |
-| | the readout Panel's stylebox inside the target | | |
-| | the card plate outside the surface, where the target does not reach | | |
+| (850, 120) | the map backdrop inside the render target | rgb(18, 41, 38) | rgb(18, 41, 38) |
+| (1045, 158) | the objective marker, off-centre in both axes so a flip is visible | rgb(224, 163, 61) | rgb(224, 163, 61) |
+| (815, 234) | the readout Panel's stylebox inside the target | rgb(16, 26, 30) | rgb(16, 26, 30) |
+| (780, 170) | the card plate outside the surface, where the target does not reach | rgb(26, 31, 41) | rgb(26, 31, 41) |
