@@ -54,7 +54,7 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { PNG } from 'pngjs';
-import { CANVAS_2D_CAPTURE, CANVAS_CAPTURE } from '../visual/previewServer.mjs';
+import { CANVAS_2D_CAPTURE, CANVAS_CAPTURE, SETTLE_SIM_SECONDS } from '../visual/previewServer.mjs';
 import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 
 /**
@@ -367,10 +367,19 @@ const gdString = (s) =>
 /**
  * The bootstrap scene's script. Instantiates the target scene, picks the 2D or
  * 3D path for it, and writes one settled frame.
+ *
+ * `simSeconds` is the shared settle contract (`SETTLE_SIM_SECONDS`), i.e. how
+ * far the scene's own clock has run when the shutter opens. It is a parameter
+ * only so a test can drive the refusal below; the single definition is the
+ * default. Both sides refuse a non-zero value, because neither can honour one
+ * yet and each would otherwise sample a different instant — see the constant's
+ * own doc. It governs the EDITOR-preview path; `--no-previews` deliberately
+ * renders a live runtime, where "the authored instant" is not the question.
  */
 export function bootstrapScript({
   scenePath,
   previews,
+  simSeconds = SETTLE_SIM_SECONDS,
   camera,
   lookAt,
   frame,
@@ -384,6 +393,15 @@ export function bootstrapScript({
   fovExplicit,
   canvas2DSize,
 }) {
+  if (simSeconds !== 0) {
+    throw new Error(
+      `settle contract asks for ${simSeconds}s of simulated time, and this harness cannot ` +
+        'reach it: Godot\'s process delta is wall-clock, so advancing a FIXED window needs ' +
+        '`--fixed-fps` stepping that does not exist here — and the previewer has no ' +
+        'driveable elapsed-time hook to meet it at, so the pair would not be comparable ' +
+        'even if it did.'
+    );
+  }
   return `extends Node3D
 
 const SCENE_PATH := ${gdString(scenePath)}
@@ -399,10 +417,17 @@ const CANVAS_2D_SIZE := Vector2i(${canvas2DSize.width}, ${canvas2DSize.height})
 const CLEAR_2D := ${gdColor(CANVAS_2D_CAPTURE.clearColor)}
 
 func _ready() -> void:
-	# Before anything is instantiated: pausing deactivates the physics servers,
-	# so no body is ever stepped and no state callback ever fires. Set here, not
-	# after add_child(), because entering the tree is itself enough to schedule
-	# the first step. See _freeze_game_logic() for why this is the catch-all.
+	# This is where the settle contract is honoured. SETTLE_SIM_SECONDS is 0, and
+	# pausing BEFORE the scene is instantiated is how the reference advances
+	# exactly that much of the scene's own clock — the same instant the previewer
+	# captures at. Nothing later can put simulated time back, so it has to be
+	# first; the generator refuses any other value outright rather than emit a
+	# pause that no longer means what this comment says.
+	#
+	# Pausing also deactivates the physics servers, so no body is ever stepped
+	# and no state callback ever fires. Set here, not after add_child(), because
+	# entering the tree is itself enough to schedule the first step. See
+	# _freeze_game_logic() for why this is the catch-all.
 	#
 	# Gated on PREVIEWS, which is what selects between the harness's two jobs:
 	# the default mirrors the Node3D EDITOR, which never runs game logic, so the
@@ -434,7 +459,7 @@ func _render_3d(target: Node) -> void:
 		_freeze_game_logic(target)
 		_apply_preview_lighting(target)
 	_place_camera(target)
-	await _settle()
+	await _converge()
 	get_viewport().get_texture().get_image().save_png(OUT)
 	_write_bounds(target)
 
@@ -456,7 +481,7 @@ func _render_2d(target: Node) -> void:
 	vp.add_child(target)
 	if PREVIEWS:
 		_freeze_game_logic(target)
-	await _settle()
+	await _converge()
 	vp.get_texture().get_image().save_png(OUT)
 
 # An enabled Camera2D becomes current the moment it enters the tree and offsets
@@ -471,10 +496,11 @@ func _disable_2d_cameras(node: Node) -> void:
 	for child in node.get_children():
 		_disable_2d_cameras(child)
 
-# The reference must show the AUTHORED pose, not a running game. _settle() steps
-# six process frames, which would let physics FALL a body and autoplay /
-# AnimationTree clips ADVANCE past their rest pose. The Node3DEditor preview our
-# previewer mirrors never runs game logic, so we stop it before settling.
+# The reference must show the AUTHORED pose, not a running game. The frames
+# _converge() steps would otherwise let physics FALL a body and autoplay /
+# AnimationTree clips ADVANCE past their rest pose — i.e. carry the scene past
+# the instant the settle contract names. The Node3DEditor preview our previewer
+# mirrors never runs game logic, so we stop it before converging.
 #
 # The catch-all is SceneTree.paused, set before the scene is ever instantiated:
 # SceneTree::set_pause() calls PhysicsServer3D/2D::set_active(false), so the
@@ -506,7 +532,15 @@ func _freeze_game_logic(node: Node) -> void:
 	for child in node.get_children():
 		_freeze_game_logic(child)
 
-func _settle() -> void:
+# CONVERGENCE, not the settle contract — do not "align" this count with
+# anything on the previewer side. These frames exist so the picture stops
+# moving: an import lands, the first draw completes, shaped text finally
+# measures. They carry no simulated time, because the tree is paused before the
+# scene exists, so no number of them moves the instant being captured. Our side
+# reaches the same standstill by a different route (screenshots until two are
+# byte-identical) and that asymmetry is correct — a stopping test has no
+# semantics to share.
+func _converge() -> void:
 	for _i in 6:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
@@ -522,7 +556,7 @@ func _write_mode(two_d: bool) -> void:
 
 # The scene's world-space AABB — a true read of the FINAL scene bounds, but
 # NOT necessarily the number that placed --frame's camera: this runs AFTER
-# _settle() (six process frames + frame_post_draw), while _place_camera runs
+# _converge() (six process frames + frame_post_draw), while _place_camera runs
 # synchronously right after add_child(), before any frame has settled. For a
 # scene holding a Label3D the two calls can disagree, because a fresh
 # Label3D's shaped-text AABB is not available synchronously on add_child()

@@ -312,6 +312,44 @@ export const CANVAS_2D_TESTIDS = {
  */
 export const CANVAS_CAPTURE = { width: 955, height: 756 };
 export const NETWORK_IDLE_MS = 20000; // ceiling for the app's own resource chain to go quiet
+
+/**
+ * THE SETTLE CONTRACT — the simulated moment in the scene's own clock at which
+ * BOTH harnesses open the shutter, in seconds. Defined once, here, and read by
+ * the Godot side (`scripts/godot-ref/run.mjs`) and by our side below.
+ *
+ * Two things get called "settling" in these harnesses and they are NOT the same
+ * knob:
+ *
+ *  - CONVERGENCE — how many frames until the picture stops changing (a texture
+ *    import lands, the first draw completes, shaped text finally measures).
+ *    This is allowed to differ per side and does: Godot steps a fixed count of
+ *    process frames, we take screenshots until two are byte-identical. It is a
+ *    stopping test with no semantic content, so no shared number is meaningful.
+ *  - THIS — where the scene's simulated clock sits when the picture is taken.
+ *    It carries all the meaning. Two sides that converge cleanly but sample
+ *    different instants produce an apples-to-oranges measurement even though
+ *    each side is individually deterministic, and nothing in either harness
+ *    fails.
+ *
+ * Zero is not a placeholder, it is the contract: the previewer runs no
+ * simulated clock at all. The animation transport starts stopped (ADR-0011 /
+ * ADR-0012), there is no physics and no GDScript, and nothing in the render
+ * path reads a wall clock. So the only simulated instant our side can be
+ * asked for is its load instant, and the reference harness matches it by
+ * pausing the SceneTree before the scene is ever instantiated.
+ *
+ * Raising this needs work on BOTH sides that does not exist yet: Godot would
+ * have to advance the window under `--fixed-fps` (its delta is wall-clock
+ * otherwise), and the previewer would have to grow a driveable global
+ * elapsed-time hook. Both harnesses therefore REFUSE a non-zero value rather
+ * than each interpreting it their own way — a silent divergence here is
+ * invisible in every image it corrupts.
+ */
+export const SETTLE_SIM_SECONDS = 0;
+
+// Convergence knobs — how long our side waits for the picture to stop moving.
+// Deliberately unrelated to SETTLE_SIM_SECONDS above; see its doc.
 export const SETTLE_INITIAL_MS = 1200; // covers the last CameraFit reframe at 1100 ms
 export const SETTLE_INTERVAL_MS = 350;
 export const SETTLE_MAX_ATTEMPTS = 12;
@@ -572,8 +610,28 @@ export async function findCaptureTarget(page, { canvas2D = false } = {}) {
  * byte-identical captures. A scene that never settles is a measurement that
  * cannot be trusted, so it returns a reason rather than whatever frame was up —
  * flakiness is rejected here, not absorbed by tolerance downstream.
+ *
+ * Two identical frames is a CONVERGENCE test, not a clock reading: it proves
+ * the picture stopped moving, which for a side that runs no simulated clock is
+ * the same thing as standing at `SETTLE_SIM_SECONDS` = 0, and for any other
+ * value proves nothing at all. So the contract is asserted rather than assumed
+ * — the alternative is this side quietly sampling its load instant while the
+ * reference samples a later one, which corrupts every measurement made from
+ * the pair and shows up in none of them.
  */
-export async function settleCanvas(page, canvas, { screenshotTimeout } = {}) {
+export async function settleCanvas(
+  page,
+  canvas,
+  { screenshotTimeout, simSeconds = SETTLE_SIM_SECONDS } = {}
+) {
+  if (simSeconds !== 0) {
+    throw new Error(
+      `settle contract asks for ${simSeconds}s of simulated time, and this side cannot reach ` +
+        'it: the previewer runs no global clock (the animation transport starts stopped, ' +
+        'nothing steps physics or GDScript) and settling is a convergence test, not a seek. ' +
+        'Reaching a non-zero settle needs a driveable elapsed-time hook in the renderer first.'
+    );
+  }
   // A whole game world under SwiftShader can take longer to rasterise ONE frame
   // than Playwright's default action timeout allows, which surfaces as a
   // screenshot timeout rather than as "never settled". Raising it per scene

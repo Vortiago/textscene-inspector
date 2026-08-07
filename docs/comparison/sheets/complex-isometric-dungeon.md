@@ -29,7 +29,7 @@ framed by the 1152x648 project viewport.
 
 ## Divergences
 
-The whole frame is within a mean channel error of **5.09/255**, with 5.4 % of pixels over
+The whole frame is within a mean channel error of **5.02/255**, with 5.5 % of pixels over
 16/255. Stone, floor and the lit regions all agree closely:
 
 | Sample | ours | Godot |
@@ -40,29 +40,29 @@ The whole frame is within a mean channel error of **5.09/255**, with 5.4 % of pi
 
 What remains is two things, and neither is draw order.
 
-**The candles are lit, but not at Godot's instant.** Every flame, glow and sparkle in the
-map is present. What cannot match is the exact moment: the candle sets neither
-`use_fixed_seed` nor `preprocess`, so Godot randomises the seed at construction and never
-saves it, and its own two consecutive renders of the sub-scene differ by 187 pixels. The
-previewer substitutes a fixed seed and a fixed evaluation time, which makes OUR frame stable
-run to run and puts the particles in plausible places rather than the engine's. The Candle
-section below isolates it at 0.83/255.
+**The candles burn in our frame only.** A wall candle draws its flame, warm glow and rising
+sparks here; the reference shows the same wick and the same warm `PointLight2D` pool with
+nothing above it. Both sides are captured at the scene's load instant, and a Godot
+`CPUParticles2D` has emitted nothing visible by then — it runs one update at its first draw,
+which is the authored `preprocess` (0 on this candle) plus a single frame. The previewer
+runs no clock at all and evaluates each emitter once to a settled pose instead. The Candle
+section below isolates it at 0.91/255.
 
-**The rest is two opposite errors.** Splitting the 5.4 % of pixels over 16/255 by sign:
+**The rest is two opposite errors.** Splitting the 5.5 % of pixels over 16/255 by sign:
 
 | | share | mean delta (Godot − ours) | Godot's luminance there |
 | --- | --- | --- | --- |
-| ours too BRIGHT | 62 % | R −25.7, G −27.5, B −26.5 | 64/255 |
-| ours too dark | 38 % | R +10.7, G +6.6, B +18.6 | 118/255 |
+| ours too BRIGHT | 51 % | R −24.0, G −27.0, B −25.2 | 66/255 |
+| ours too dark | 49 % | R +12.1, G +10.0, B +20.9 | 106/255 |
 
-The dominant half is the previewer rendering light where Godot renders dark, and it is one
-region rather than a spread: roughly x 740–960, y 150–360 — a pillar, the wall top beside it
-and the floor tiles above the rug — where Godot lays a darkening the previewer does not draw.
-On the pillar at `775,300` Godot reads `[38, 79, 142]` against ours `[82, 123, 189]`. The
-deltas are near-uniform across the channels, which points at coverage or alpha rather than
-colour space, but the cause is not identified.
+The bright half is the previewer rendering light where Godot renders dark, and it is one
+region rather than a spread: 68 % of it falls in x 740–960, y 150–360 — a pillar, the wall
+top beside it and the floor tiles above the rug — where Godot lays a darkening the previewer
+does not draw. On the pillar at `775,300` Godot reads `[38, 79, 142]` against ours
+`[82, 123, 189]`. The deltas are near-uniform across the channels, which points at coverage
+or alpha rather than colour space, but the cause is not identified.
 
-The minority half is the opposite sign, on brighter pixels, and blue-dominant. That cause is
+The other half is the opposite sign, on brighter pixels, and blue-dominant. That cause is
 not identified either.
 
 Neither is in the light pass, which agrees with the engine to within a unit or two per
@@ -84,27 +84,30 @@ the wrappers in `scenes/isometric/previews/` re-centre them; nothing else is cha
 <!-- compare: image=complex-isometric-dungeon-candle status=limitation fixture=previews/candle_preview.tscn -->
 
 A `Sprite2D` wick, four `CPUParticles2D` (`glow`, `Fire`, `Sparkle`, `flow front`) and two
-`PointLight2D`s. All four emitters render, so the candle reads as a lit candle: flame body,
-warm glow and rising sparks. Mean channel error **0.83/255**, 0.06 % of pixels over 16.
+`PointLight2D`s. The wick and both light pools match to within a unit or two per channel.
+All four emitters draw here — flame body, warm glow and rising sparks — and none of them
+draws in the reference, which is the whole of the divergence: mean channel error
+**0.91/255**, 0.19 % of pixels over 16 — all of them in the flame and the glow around it,
+and all of them ours being the brighter side.
+
+Neither side is showing a running emitter. Both are captured at the scene's load instant,
+where Godot has run the single update it does at time zero, from the emitter's first draw —
+the authored `preprocess` plus one frame delta — and this candle sets `preprocess = 0`, so
+nothing has accumulated. The previewer has no clock to be at that instant with: it evaluates
+each emitter once to a settled pose, over one lifetime, with a fixed substitute seed because the
+scene sets no `use_fixed_seed`. So the flame stands in plausible places rather than the
+engine's, and it is identical run to run.
+
+That is a property of this scene, not of particles in general: `preprocess` IS serialised
+and is applied at that same first draw, so an emitter that sets it reaches a well-defined
+at-rest pose on both sides. The `CPUParticles2D` sheet carries the fixtures that pin it,
+where the two sides agree to within 0.6/255.
 
 The `Fire` and `Sparkle` emitters both carry a `CanvasItemMaterial` with
 `particles_animation = true` over an 11- and an 8-frame strip. Without that flipbook each
 particle draws the WHOLE strip, which renders as a row of eleven flames beside the wick —
 visibly worse than drawing nothing. It is implemented for `CPUParticles2D`; it remains inert
 for `GPUParticles2D`, which is still unimplemented.
-
-The Godot side of this pair is **not reproducible**, which is worth knowing before reading a
-number off it. The reference harness settles for six real process frames and deliberately does
-not freeze particles, and `CPUParticles2D` seeds itself from an unserialised global RNG unless
-the scene opts into `use_fixed_seed`, which this one does not. Two consecutive reference
-renders of this same scene differ by 187 pixels with a worst channel of 20, so the flame has no
-probe number the way every other sample on this sheet does. The previewer pins a fixed seed and
-a fixed evaluation time, so OUR frame is stable run to run.
-
-That is a property of this scene, not of particles in general: `preprocess` IS serialised, and
-Godot evaluates it at a fixed 1/30 s step before the first visible frame, so an emitter that
-sets it has a well-defined at-rest pose. This candle leaves it at 0. The `CPUParticles2D` sheet
-carries the fixtures that do pin it, where the two sides agree to within 0.6/255.
 
 ## Internal shadow
 <!-- compare: image=complex-isometric-dungeon-internal-shadow status=done fixture=previews/internal_shadow_preview.tscn -->
@@ -121,16 +124,19 @@ in the shadow — the two sides differ by 1 unit of rounding over most of the fr
 <!-- compare: image=complex-isometric-dungeon-goblin status=limitation fixture=previews/goblin_preview.tscn -->
 
 A `CharacterBody2D` with a `Sprite2D` drop shadow, an `AnimatedSprite2D` over a 40-animation
-`SpriteFrames`, a `Camera2D` and a hidden `LightOccluder2D`. The sprite, the gradient shadow
-and the atlas region all match.
+`SpriteFrames`, a `Camera2D` and a hidden `LightOccluder2D`. Both sides draw the authored
+pose — `animation = "front_idle"`, `frame = 8` — and the sprite and its atlas region match
+across the whole 128x128 body. Mean channel error **1.02/255**, 0.05 % of pixels over 16.
 
-The pose does not, and the cause is not the renderer: **the previewer does not execute
-GDScript**. The scene serialises `animation = "front_idle"`, `frame = 8`, and that is what we
-draw. Godot instantiates the scene, `goblin.gd`'s `_physics_process` runs, and its
-`last_direction = Vector2(1, 0)` resolves to `side_right_idle`, which it then `play()`s — so
-the reference shows a right-facing pose from a *different* animation, at whatever frame the
-clock reached. Mean channel error **1.31/255**, 0.54 % of pixels over 16, all of it inside the
-128x128 sprite.
-
-A previewer that ran the script would not be more correct here, only differently timed: the
-frame is a function of elapsed time. The authored state is the reproducible thing to draw.
+**The drop shadow is missing.** The `Shadow` node is a `Sprite2D` whose texture is a
+`GradientTexture2D` with `fill = 1` (radial from the centre), squashed by
+`scale = Vector2(0.78125, 0.362305)` into an ellipse and tinted through
+`modulate = Color(0.129412, 0.0745098, 0.192157, 0.647059)`. Godot lays that ellipse under
+the feet — `[48, 39, 61]` at its centre against the `[76, 76, 81]` backdrop — and the
+previewer leaves the backdrop untouched at `[77, 77, 82]`. The cause is the slot, not the
+gradient: `Sprite2D` resolves a `SubResource` texture only when it is a `CanvasTexture`, so
+a gradient written inline in the scene resolves to nothing and the node falls back to a
+placeholder that is sub-pixel at 2D scale. An inline `GradientTexture2D` in a
+`PointLight2D`'s cookie slot does rasterise — that is what lights this dungeon's 23 lamps
+and the candle's warm pool. That ellipse is the whole of the over-16 count; what is left
+outside it is single pixels along the sprite's silhouette.

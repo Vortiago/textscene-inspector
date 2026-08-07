@@ -76,21 +76,25 @@ one-shots that ship this way, so an empty frame here is the correct frame.
 
 ## Divergences
 
-Three differences are structural rather than a capture artefact, and hold for
-every scene:
+Three things are structural rather than a capture artefact:
 
-- **No motion.** Godot's emitter runs; the previewer shows one moment of it.
-  The moment is Godot's own when the scene sets `preprocess` (Godot simulates
-  exactly that long before its first frame, at a fixed `1/30 s` step, and only
-  at time zero). When it does not, the previewer substitutes one `lifetime` —
-  a continuous emitter's steady state — or half a lifetime for a `one_shot`
-  burst, which a full lifetime would catch a frame from death.
+- **The moment.** Neither side shows a running emitter. Both are captured at
+  the scene's load instant, where Godot has run the single update it does at
+  time zero: the authored `preprocess`, at a fixed `1/30 s` step (or
+  `fixed_fps`), plus one frame delta. So an emitter that sets `preprocess` — as
+  every fixture here does — stands at the engine's own at-rest pose on both
+  sides. An emitter that does not has accumulated nothing there, while the
+  previewer substitutes one `lifetime`, a continuous emitter's steady state, or
+  half a lifetime for a `one_shot` burst, which a full lifetime would catch a
+  frame from death. The isometric dungeon's candle is that case, and its flame
+  is ours alone.
 - **The seed.** Godot randomises `seed` in the constructor unless
-  `use_fixed_seed` is set, and never saves it, so two runs of GODOT differ:
-  two consecutive reference renders of the isometric candle differ by 187
-  pixels, worst channel 20. The previewer substitutes a fixed constant, which
-  makes its own output stable but means an unseeded emitter's particles are in
-  plausible places rather than the engine's.
+  `use_fixed_seed` is set, and never saves it, so an unseeded emitter that has
+  a `preprocess` to simulate draws a different reference every run. Every
+  fixture here pins both, which is what makes these poses comparable at all.
+  The previewer substitutes a fixed constant, which makes its own output stable
+  but means an unseeded emitter's particles are in plausible places rather than
+  the engine's.
 - **`speed_scale` on a preprocessed emitter.** Godot forces `speed_scale` to 1
   while it preprocesses, so the property genuinely does not move a preprocessed
   pose; it applies only to the substituted window described above.
