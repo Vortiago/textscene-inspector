@@ -8,12 +8,12 @@
  * even though a faithful rasteriser for it already existed — reachable only
  * from MeshInstance3D.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { proceduralTexture2DSize, useTexture2D } from './useTexture2D';
+import { inlineTexture2DSize, useTexture2D } from './useTexture2D';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { TscnParser } from '../parser/TscnParser';
 import { NodeDispatcher } from '../r3f/NodeDispatcher';
@@ -225,6 +225,29 @@ describe('useTexture2D — reference forms', () => {
     expect(result.current.missing).toBe(false);
   });
 
+  it('rasterises a GradientTexture2D wrapped in a CanvasTexture', () => {
+    // A CanvasTexture is a Texture2D wrapper; Godot draws its `diffuse_texture`,
+    // whatever that is. Resolving the wrapper to a PATH can only see the map
+    // that HAS one, so an inline diffuse resolved to nothing at all.
+    const wrapped: TscnInternalResource[] = [
+      ...gradientResources,
+      {
+        id: 'CanvasTexture_a',
+        type: 'CanvasTexture',
+        data: { diffuse_texture: 'SubResource("GradientTexture2D_a")' },
+      },
+    ];
+
+    const { result } = renderHook(
+      () => useTexture2D('SubResource("CanvasTexture_a")', [], wrapped),
+      { wrapper: withLoader() }
+    );
+
+    expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
+    expect((result.current.texture as THREE.DataTexture).image.width).toBe(16);
+    expect(result.current.missing).toBe(false);
+  });
+
   it('reports a reference it cannot resolve as missing', () => {
     const { result } = renderHook(
       () => useTexture2D('ExtResource("404")', [], gradientResources),
@@ -252,7 +275,7 @@ describe('useTexture2D — reference forms', () => {
  * "how big" and "what pixels" drifting apart is the whole defect this module
  * exists to close.
  */
-describe('proceduralTexture2DSize', () => {
+describe('inlineTexture2DSize', () => {
   const resources: TscnInternalResource[] = [
     {
       id: 'Gradient_a',
@@ -275,17 +298,41 @@ describe('proceduralTexture2DSize', () => {
       data: { gradient: 'SubResource("Gradient_a")' },
     },
     { id: 'CanvasTexture_a', type: 'CanvasTexture', data: { diffuse_texture: 'ExtResource("1")' } },
+    {
+      id: 'CanvasTexture_gradient',
+      type: 'CanvasTexture',
+      data: { diffuse_texture: 'SubResource("GradientTexture2D_a")' },
+    },
+    {
+      id: 'AtlasTexture_cell',
+      type: 'AtlasTexture',
+      data: { atlas: 'ExtResource("1")', region: 'Rect2(32, 32, 64, 64)' },
+    },
+    {
+      id: 'AtlasTexture_margined',
+      type: 'AtlasTexture',
+      data: {
+        atlas: 'ExtResource("1")',
+        region: 'Rect2(96, 0, 32, 32)',
+        margin: 'Rect2(8, 6, 16, 20)',
+      },
+    },
+    {
+      id: 'AtlasTexture_wholesheet',
+      type: 'AtlasTexture',
+      data: { atlas: 'ExtResource("1")' },
+    },
   ];
 
   it("reports an inline GradientTexture2D's declared pixel size", () => {
-    expect(proceduralTexture2DSize('SubResource("GradientTexture2D_a")', resources)).toEqual({
+    expect(inlineTexture2DSize('SubResource("GradientTexture2D_a")', resources)).toEqual({
       x: 160,
       y: 96,
     });
   });
 
   it('falls back to the 64x64 a GradientTexture2D is constructed with', () => {
-    expect(proceduralTexture2DSize('SubResource("GradientTexture2D_default")', resources)).toEqual({
+    expect(inlineTexture2DSize('SubResource("GradientTexture2D_default")', resources)).toEqual({
       x: 64,
       y: 64,
     });
@@ -298,20 +345,186 @@ describe('proceduralTexture2DSize', () => {
     // `get_width`/`get_height` read the authored members and never consult the
     // gradient. Tying the size to a successful rasterisation would collapse
     // the node's layout on a resource error.
-    expect(proceduralTexture2DSize('SubResource("GradientTexture2D_bare")', resources)).toEqual({
+    expect(inlineTexture2DSize('SubResource("GradientTexture2D_bare")', resources)).toEqual({
       x: 160,
       y: 96,
     });
   });
 
-  it('declines a sub-resource that is not procedural, leaving the loader to answer', () => {
-    expect(proceduralTexture2DSize('SubResource("CanvasTexture_a")', resources)).toBeNull();
+  it('declines a CanvasTexture wrapping an image, leaving the loader to answer', () => {
+    expect(inlineTexture2DSize('SubResource("CanvasTexture_a")', resources)).toBeNull();
+  });
+
+  it("reports a CanvasTexture-wrapped gradient's declared size", () => {
+    // One `diffuse_texture` level off, then the same declared-size read: the
+    // wrapper changes nothing about how big the slot is.
+    expect(inlineTexture2DSize('SubResource("CanvasTexture_gradient")', resources)).toEqual({
+      x: 160,
+      y: 96,
+    });
+  });
+
+  it("reports an AtlasTexture's REGION size, never the sheet's", () => {
+    // `get_width`/`get_height` (`atlas_texture.cpp:33-53`) read the region, so
+    // the answer needs no atlas image and is available before any load.
+    expect(inlineTexture2DSize('SubResource("AtlasTexture_cell")', resources)).toEqual({
+      x: 64,
+      y: 64,
+    });
+  });
+
+  it('adds margin.size to the reported box', () => {
+    expect(inlineTexture2DSize('SubResource("AtlasTexture_margined")', resources)).toEqual({
+      x: 48,
+      y: 52,
+    });
+  });
+
+  it('declines an AtlasTexture whose region falls back to the atlas size', () => {
+    // A zero-size axis reports `atlas->get_width()` (:34-38) — only the loaded
+    // sheet knows that, so this answer belongs to the cache lookup instead.
+    expect(inlineTexture2DSize('SubResource("AtlasTexture_wholesheet")', resources)).toBeNull();
   });
 
   it('declines an ExtResource, a res:// path, an unknown id and an absent reference', () => {
-    expect(proceduralTexture2DSize('ExtResource("1")', resources)).toBeNull();
-    expect(proceduralTexture2DSize('res://icon.png', resources)).toBeNull();
-    expect(proceduralTexture2DSize('SubResource("nope")', resources)).toBeNull();
-    expect(proceduralTexture2DSize(undefined, resources)).toBeNull();
+    expect(inlineTexture2DSize('ExtResource("1")', resources)).toBeNull();
+    expect(inlineTexture2DSize('res://icon.png', resources)).toBeNull();
+    expect(inlineTexture2DSize('SubResource("nope")', resources)).toBeNull();
+    expect(inlineTexture2DSize(undefined, resources)).toBeNull();
+  });
+});
+
+/**
+ * An inline `AtlasTexture` — a sprite-sheet cell — in a PLAIN Texture2D slot.
+ *
+ * Godot presents one as a texture of the REGION's size that draws the sheet's
+ * sub-rectangle, so the slot must hand its consumer a texture of that size: a
+ * consumer reads `image.width`/`image.height` for its own sizing and overwrites
+ * `repeat`/`offset` for its own cropping, so a shared sheet handed over with
+ * pre-windowed UVs paints the WHOLE sheet at the WHOLE sheet's size.
+ */
+describe('useTexture2D — inline AtlasTexture', () => {
+  const externalResources: TscnExternalResource[] = [
+    { id: '1_sheet', type: 'Texture2D', path: 'res://sheet.png' },
+  ];
+  const resources: TscnInternalResource[] = [
+    {
+      id: 'AtlasTexture_cell',
+      type: 'AtlasTexture',
+      data: { atlas: 'ExtResource("1_sheet")', region: 'Rect2(32, 32, 64, 64)' },
+    },
+    {
+      id: 'AtlasTexture_orphan',
+      type: 'AtlasTexture',
+      data: { region: 'Rect2(0, 0, 8, 8)' },
+    },
+    {
+      id: 'AtlasTexture_unknownsheet',
+      type: 'AtlasTexture',
+      data: { atlas: 'ExtResource("404")', region: 'Rect2(0, 0, 8, 8)' },
+    },
+  ];
+
+  function sheet(): THREE.Texture {
+    const texture = new THREE.Texture();
+    (texture as unknown as { image: { width: number; height: number } }).image = {
+      width: 128,
+      height: 128,
+    };
+    return texture;
+  }
+
+  /**
+   * happy-dom has no 2D context, so the crop is recorded through one — faked on
+   * the prototype rather than by replacing `createElement`, which every other
+   * element in the tree (and the R3F renderer's own canvas) still needs.
+   */
+  function stubCanvas() {
+    const calls: number[][] = [];
+    const cut = { canvas: null as HTMLCanvasElement | null };
+    const ctx = {
+      imageSmoothingEnabled: true,
+      drawImage: (_image: unknown, ...args: number[]) => void calls.push(args),
+    };
+    const proto = globalThis.HTMLCanvasElement.prototype;
+    const original = proto.getContext;
+    vi.spyOn(proto, 'getContext').mockImplementation(function (
+      this: HTMLCanvasElement,
+      type: string,
+      ...rest: unknown[]
+    ) {
+      if (type !== '2d') return (original as (...args: unknown[]) => unknown).call(this, type, ...rest);
+      cut.canvas = this;
+      return ctx as unknown as CanvasRenderingContext2D;
+    } as typeof proto.getContext);
+    return { calls, cut };
+  }
+
+  function withLoader(seeded?: { path: string; texture: THREE.Texture }) {
+    const fake = createFakeResourceLoader();
+    if (seeded) fake.textures.seed(seeded.path, seeded.texture);
+    return function Wrapper({ children }: { children: ReactNode }) {
+      return <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>;
+    };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('crops the sheet to the region, at the region size', () => {
+    const { calls, cut } = stubCanvas();
+    const { result } = renderHook(
+      () => useTexture2D('SubResource("AtlasTexture_cell")', externalResources, resources),
+      { wrapper: withLoader({ path: 'res://sheet.png', texture: sheet() }) }
+    );
+
+    expect(result.current.texture).toBeInstanceOf(THREE.CanvasTexture);
+    expect(result.current.texture!.image).toBe(cut.canvas);
+    expect([cut.canvas!.width, cut.canvas!.height]).toEqual([64, 64]);
+    expect(calls[0]).toEqual([32, 32, 64, 64, 0, 0, 64, 64]);
+    expect(result.current.missing).toBe(false);
+  });
+
+  it('shares ONE crop between consumers of the same cell', () => {
+    stubCanvas();
+    const wrapper = withLoader({ path: 'res://sheet.png', texture: sheet() });
+    const first = renderHook(
+      () => useTexture2D('SubResource("AtlasTexture_cell")', externalResources, resources),
+      { wrapper }
+    );
+    const second = renderHook(
+      () => useTexture2D('SubResource("AtlasTexture_cell")', externalResources, resources),
+      { wrapper }
+    );
+
+    expect(second.result.current.texture).toBe(first.result.current.texture);
+  });
+
+  it('shows nothing — not a placeholder — while the sheet is still loading', () => {
+    stubCanvas();
+    const { result } = renderHook(
+      () => useTexture2D('SubResource("AtlasTexture_cell")', externalResources, resources),
+      { wrapper: withLoader() }
+    );
+
+    expect(result.current.texture).toBeNull();
+    expect(result.current.missing).toBe(false);
+  });
+
+  it('reports an unresolvable or absent sheet as missing', () => {
+    stubCanvas();
+    const wrapper = withLoader();
+    const unknown = renderHook(
+      () => useTexture2D('SubResource("AtlasTexture_unknownsheet")', externalResources, resources),
+      { wrapper }
+    );
+    const orphan = renderHook(
+      () => useTexture2D('SubResource("AtlasTexture_orphan")', externalResources, resources),
+      { wrapper }
+    );
+
+    expect(unknown.result.current.missing).toBe(true);
+    expect(orphan.result.current.missing).toBe(true);
   });
 });

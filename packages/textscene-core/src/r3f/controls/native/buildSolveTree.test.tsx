@@ -335,6 +335,50 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     expect(result.current.tree[0]?.textureSize).toEqual({ x: 160, y: 160 });
   });
 
+  it("takes a TextureRect's textureSize from an inline AtlasTexture's REGION, never the sheet's size", () => {
+    // `AtlasTexture::get_width`/`get_height` (`scene/resources/atlas_texture.cpp`
+    // :33-53) report `rounded_region.size + margin.size`, so the cell — not the
+    // 1024x1024 sheet — is what a Control reserves. Resolving the slot to the
+    // sheet's PATH would answer 1024x1024 here, which is worse than the (0, 0)
+    // an unresolved slot gives: it would push every sibling below it a
+    // thousand pixels down.
+    const loader = createFakeResourceLoader();
+    const sheetPath = 'res://sheet.png';
+    loader.textures.seed(sheetPath, { image: { width: 1024, height: 1024 } } as unknown as THREE.Texture);
+    const internalResources: TscnInternalResource[] = [
+      {
+        id: 'AtlasTexture_cell',
+        type: 'AtlasTexture',
+        data: { atlas: 'ExtResource("1")', region: 'Rect2(64, 128, 48, 24)' },
+      },
+      {
+        id: 'AtlasTexture_margined',
+        type: 'AtlasTexture',
+        data: {
+          atlas: 'ExtResource("1")',
+          region: 'Rect2(0, 0, 48, 24)',
+          margin: 'Rect2(4, 4, 16, 8)',
+        },
+      },
+    ];
+    const nodes = [
+      node('Cell', 'TextureRect', {
+        properties: { name: 'Cell', texture: 'SubResource("AtlasTexture_cell")' },
+      }),
+      node('Padded', 'TextureRect', {
+        properties: { name: 'Padded', texture: 'SubResource("AtlasTexture_margined")' },
+      }),
+    ];
+
+    const { result } = renderHook(
+      () => useBuildSolveTree(nodes, [{ id: '1', path: sheetPath, type: 'Texture2D' }], internalResources),
+      { wrapper: wrapperFor(loader.loader) }
+    );
+
+    expect(result.current.tree[0]?.textureSize).toEqual({ x: 48, y: 24 });
+    expect(result.current.tree[1]?.textureSize).toEqual({ x: 64, y: 32 });
+  });
+
   it("takes a Button's textureSize from an INLINE GradientTexture2D icon", () => {
     // The icon slot resolves separately from every other Texture2D slot, and
     // feeds `buttonMinimumSize`. Measured against Godot 4.6.3: a 96x96 inline

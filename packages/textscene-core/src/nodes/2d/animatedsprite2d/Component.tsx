@@ -8,9 +8,10 @@
  * the transport playhead (`frameAtTime` maps time → frame — no THREE mixer). It
  * draws the current frame like a Sprite2D (centered/offset/flip, inherited
  * modulate via CanvasItem2D). The SpriteFrames may be embedded (SubResource) or
- * an external `.tres` (ExtResource); frames may be standalone textures
- * (ExtResource) or AtlasTexture cells (SubResource atlas + region) — see
- * `useSpriteFrames` / `resolveFrameTexture`.
+ * an external `.tres` (ExtResource); a frame is an ordinary Texture2D reference
+ * resolved against whichever of those two homes the SpriteFrames came from —
+ * `useSpriteFrames` for the pools, `useTexture2D` for the texture, so a sheet
+ * cell (AtlasTexture) arrives here already windowed, at the cell's own size.
  *
  * The per-frame transport-actuation decision is delegated to the pure
  * `stepPlayback` reducer; this component is a thin adapter that actuates the
@@ -26,17 +27,31 @@ import { canvasItemBlendState } from '../../../resources/materials/canvasitemmat
 import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
 import { composeFrameTexture, frameSizePx, type SpriteFrameProps } from '../../../r3f/spriteFrame';
 import { useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
-import { useResource } from '../../../resources/useResource';
+import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useAnimationTransport } from '../../../r3f/contexts/AnimationTransportContext';
 import { stepPlayback } from '../../../r3f/animation/stepPlayback';
 import { loopsUnderOverride } from '../../../r3f/animation/loopOverride';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
-import { resolveFrameTexture, type FrameTextureRegion } from './frameTexture';
 import { useSpriteFrames } from './useSpriteFrames';
 import { frameAtTime, clipDuration, type SpriteFramesAnimation } from './spriteFrames';
 import type { AnimatedSprite2DProperties } from './types';
+import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
+
+/**
+ * A frame is the whole of whatever texture it names — a sheet cell arrives as
+ * its own texture, cropped by the resolver, so nothing is windowed here.
+ * Module-scope so the memos below see one stable identity.
+ */
+const WHOLE_FRAME: SpriteFrameProps = {
+  region_enabled: false,
+  hframes: 1,
+  vframes: 1,
+  frame: 0,
+};
+const NO_EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [];
+const NO_INTERNAL_RESOURCES: readonly TscnInternalResource[] = [];
 
 export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as AnimatedSprite2DProperties;
@@ -155,39 +170,35 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const frame = frameCount > 0 ? Math.min(Math.max(rawFrame, 0), frameCount - 1) : 0;
   const frameRef = currentAnim?.frames[frame] ?? null;
 
-  // Resolve the current frame's source image + optional atlas region against
-  // the SpriteFrames' own resource pools (the scene's, or the .tres's).
-  const frameTex = useMemo(
-    () =>
-      resolved ? resolveFrameTexture(frameRef, resolved.subResources, resolved.externalResources) : { path: null },
-    [frameRef, resolved]
+  // Resolve the current frame against the SpriteFrames' OWN resource pools (the
+  // scene's, or the .tres's — a frame's ids are scoped to its home).
+  const { texture: frameTexture, missing: frameMissing } = useTexture2D(
+    frameRef ?? undefined,
+    resolved?.externalResources ?? NO_EXTERNAL_RESOURCES,
+    resolved?.subResources ?? NO_INTERNAL_RESOURCES
   );
-  const texturePath = frameTex.path;
-  const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
 
-  // Window the loaded image to the frame (full image, or an AtlasTexture cell).
-  // composeFrameTexture clones per frame; dispose the prior clone on advance
-  // (and unmount) so playback doesn't leak one GPU texture per keyframe.
-  const frameProps = useMemo(() => regionFrameProps(frameTex.region), [frameTex]);
+  // composeFrameTexture clones per frame (sampler state is per consumer);
+  // dispose the prior clone on advance (and unmount) so playback doesn't leak
+  // one GPU texture per keyframe.
   // NoColorSpace: the 2D canvas's hardware filter blends undecoded sRGB bytes
   // (`canvas2DTextureDecode.ts`); the material below decodes the
   // already-filtered sample via `useCanvasDecodeDefines`.
   const displayedTexture = useMemo(
-    () => composeFrameTexture(texResult.value, frameProps, 'clamp', THREE.NoColorSpace),
-    [texResult.value, frameProps]
+    () => composeFrameTexture(frameTexture ?? undefined, WHOLE_FRAME, 'clamp', THREE.NoColorSpace),
+    [frameTexture]
   );
   useEffect(() => () => displayedTexture?.dispose(), [displayedTexture]);
   const decodeDefines = useCanvasDecodeDefines(displayedTexture);
   const { width, height } = useMemo(
-    () => frameSizePx(texResult.value, frameProps),
-    [texResult.value, frameProps]
+    () => frameSizePx(frameTexture ?? undefined, WHOLE_FRAME),
+    [frameTexture]
   );
 
   // While an external `.tres` SpriteFrames is still loading, render nothing
   // rather than the missing-resource placeholder (matches Sprite2D's pending
   // UX); the placeholder is for genuinely-absent/failed resources.
-  const showPlaceholder =
-    spriteFramesStatus !== 'pending' && (!texturePath || texResult.status === 'unavailable');
+  const showPlaceholder = spriteFramesStatus !== 'pending' && (!frameRef || frameMissing);
 
   const cgx = props.offset.x + (props.centered ? 0 : width / 2);
   const cgy = props.offset.y + (props.centered ? 0 : height / 2);
@@ -221,17 +232,6 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
       {children}
     </CanvasItem2D>
   );
-}
-
-/**
- * A frame's window as SpriteFrameProps for the shared composeFrameTexture /
- * frameSizePx: an AtlasTexture cell maps to a region_rect; a whole-image frame
- * uses the full texture (no region, single frame).
- */
-function regionFrameProps(region?: FrameTextureRegion): SpriteFrameProps {
-  return region
-    ? { region_enabled: true, region_rect: region, hframes: 1, vframes: 1, frame: 0 }
-    : { region_enabled: false, hframes: 1, vframes: 1, frame: 0 };
 }
 
 /** Pick the named animation, falling back to the first declared one. */

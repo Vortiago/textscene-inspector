@@ -83,39 +83,60 @@ export function resolveSubResourceRef(
 }
 
 /**
+ * Peel one `CanvasTexture` wrapper off a Texture2D reference.
+ *
+ * A `CanvasTexture` is a first-class Texture2D that wraps a `diffuse_texture`
+ * (plus normal/specular maps we do not sample); Godot draws that diffuse map,
+ * whatever kind of texture it is. Returning the INNER reference rather than a
+ * path is what lets the wrapper compose with every other form: an image, or an
+ * inline `GradientTexture2D` with no file behind it at all.
+ *
+ * Every non-CanvasTexture reference passes through unchanged, so callers can
+ * apply this unconditionally. A wrapper with no `diffuse_texture` returns
+ * undefined — it names nothing to draw.
+ */
+export function unwrapCanvasTextureRef(
+  ref: string | null | undefined,
+  internalResources: readonly TscnInternalResource[]
+): string | undefined {
+  if (!ref) return undefined;
+  const sub = resolveSubResourceRef(ref, internalResources);
+  if (sub?.type !== 'CanvasTexture') return ref;
+  const diffuse = (sub.data as { diffuse_texture?: unknown }).diffuse_texture;
+  return typeof diffuse === 'string' ? diffuse : undefined;
+}
+
+/**
  * Resolve a **Texture2D-valued** property to the `res://` path of a FILE to
  * load. Covers the forms of such a slot that name one:
  *
  *   `res://path`        — passes straight through
  *   `ExtResource("id")` — an external image or `.tres`
- *   `SubResource("id")` — a `CanvasTexture`, a first-class Texture2D that wraps
- *                         a `diffuse_texture` (plus normal/specular maps we do
- *                         not sample) — Godot draws its diffuse map, so that is
- *                         what the slot resolves to
+ *   `SubResource("id")` — a `CanvasTexture`, unwrapped to its `diffuse_texture`
  *
  * `resolveExtResourcePath` alone returns null for the SubResource form, which
  * renders a CanvasTexture-textured node as a missing-resource placeholder.
  *
- * NOT the resolver a node component should reach for. A Texture2D slot can
- * also hold a texture with no file behind it at all — an inline
- * `GradientTexture2D`, described entirely by the scene — and this returns null
- * for every one of those, because there is no path to return. Components ask
- * `useTexture2D` for a texture instead; this is the path-only half it delegates
- * to, useful on its own only where the caller genuinely wants a file path.
+ * NOT the resolver a node component should reach for. A Texture2D slot can also
+ * hold a texture with no file behind it at all — an inline `GradientTexture2D`,
+ * described entirely by the scene — and this returns null for every one of
+ * those, because there is no path to return. Components ask `useTexture2D` for
+ * a texture instead; this is the path-only half it delegates to, useful on its
+ * own only where the caller genuinely wants a file path.
+ *
+ * An `AtlasTexture` deliberately resolves to NULL rather than to its sheet.
+ * The sheet's path is a fine thing to load, but this resolver's answer is also
+ * read as "how big is this slot" (a Control's minimum size, via the loader
+ * cache), and an AtlasTexture is the size of its REGION, never of the sheet.
+ * `useTexture2D` unwraps it explicitly and windows the sheet it loads;
+ * `inlineTexture2DSize` answers the size half from the region alone.
  */
 export function resolveTexture2DPath(
   ref: string | null | undefined,
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[]
 ): string | null {
-  if (!ref) return null;
-  const parsed = parseResourceReference(ref);
-  if (parsed?.type === 'SubResource') {
-    const sub = findSubResource(internalResources, parsed.id);
-    const diffuse = (sub?.data as { diffuse_texture?: string } | undefined)?.diffuse_texture;
-    return diffuse ? resolveExtResourcePath(diffuse, externalResources) : null;
-  }
-  return resolveExtResourcePath(ref, externalResources);
+  return resolveExtResourcePath(unwrapCanvasTextureRef(ref, internalResources), externalResources);
 }
 
 /**
