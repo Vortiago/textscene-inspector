@@ -54,3 +54,26 @@ export function arrayBody(value: string, forms: readonly RegExp[]): string | und
   }
   return undefined;
 }
+
+const PACKED_STRING_ARRAY_BODY_RE = /^"(?:[^"\\]|\\[\s\S])*"(?:\s*,\s*"(?:[^"\\]|\\[\s\S])*")*$/;
+const QUOTED_ELEMENT_CAPTURE_RE = /"((?:[^"\\]|\\[\s\S])*)"/g;
+
+/**
+ * Any of the three string-array spellings into raw (unescaped) elements, or
+ * `null` if the literal is malformed — the element grammar mirrors
+ * `variant_parser.cpp:1500-1533`'s PackedStringArray branch, which requires
+ * every element to be a TK_STRING token. No `v.ts` combinator covers this shape
+ * (only `packedVector2Array` exists), matching `FileDialog.filters`
+ * (nodes/windows/filedialog/linterParser.ts).
+ */
+export function parsePackedStringArray(value: string): string[] | null {
+  const body = arrayBody(value, STRING_ARRAY_FORMS);
+  if (body === undefined) return null;
+  if (body === '') return [];
+  if (!PACKED_STRING_ARRAY_BODY_RE.test(body)) return null;
+  const elements: string[] = [];
+  for (const m of body.matchAll(QUOTED_ELEMENT_CAPTURE_RE)) {
+    elements.push((m[1] ?? '').replace(/\\(.)/g, '$1'));
+  }
+  return elements;
+}

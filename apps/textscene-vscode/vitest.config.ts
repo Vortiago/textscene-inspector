@@ -22,7 +22,19 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.{test,spec}.ts', 'src/test-setup.ts']
+      // The setup file and the mock modules it assembles are test scaffolding,
+      // not extension code — counting them would report the harness as
+      // uncovered production source.
+      exclude: [
+        'src/**/*.{test,spec}.ts',
+        'src/**/*.testkit.ts',
+        'src/test-setup.ts',
+        'src/vscodeMocks.ts',
+        'src/vscodeMockClasses.ts',
+        'src/vscodeWorkspaceMock.ts',
+        'src/vscodeWindowMock.ts',
+        'src/mockPanel.ts'
+      ]
     }
   }
 });

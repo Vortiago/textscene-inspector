@@ -1,0 +1,123 @@
+/**
+ * Linter: turning a strict-parser `ParseError` into a diagnostic — position,
+ * severity, code and the `strict-parser` rule name.
+ */
+
+import { describe, it, expect, beforeEach } from 'vitest';
+import { Linter } from './Linter.js';
+
+describe('Linter', () => {
+  let linter: Linter;
+
+  beforeEach(() => {
+    linter = new Linter();
+  });
+
+  describe('Parse Error to Diagnostic Conversion', () => {
+    it('should convert parse error to diagnostic format', () => {
+      const content = `[gd_scene load_steps=1 format=3]
+
+[node name="Root"]
+`;
+
+      const diagnostics = linter.lint(content);
+
+      expect(diagnostics.length).toBeGreaterThan(0);
+      const diagnostic = diagnostics[0]!;
+
+      expect(diagnostic).toHaveProperty('severity');
+      expect(diagnostic).toHaveProperty('message');
+      expect(diagnostic).toHaveProperty('nodeName');
+      expect(diagnostic).toHaveProperty('nodeType');
+      expect(diagnostic).toHaveProperty('ruleName');
+      expect(diagnostic).toHaveProperty('location');
+    });
+
+    it('should set ruleName to "strict-parser" for parse errors', () => {
+      const content = `[gd_scene load_steps=1 format=3]
+
+[node name="Root"]
+`;
+
+      const diagnostics = linter.lint(content);
+
+      expect(diagnostics.length).toBeGreaterThan(0);
+      diagnostics.forEach(d => {
+        expect(d.ruleName).toBe('strict-parser');
+      });
+    });
+
+    it('should set nodeName to "<unknown>" for parse errors', () => {
+      const content = `[gd_scene load_steps=1 format=3]
+
+[node name="Root"]
+`;
+
+      const diagnostics = linter.lint(content);
+
+      expect(diagnostics.length).toBeGreaterThan(0);
+      diagnostics.forEach(d => {
+        expect(d.nodeName).toBe('<unknown>');
+      });
+    });
+
+    it('should set nodeType to "<unknown>" for parse errors', () => {
+      const content = `[gd_scene load_steps=1 format=3]
+
+[node name="Root"]
+`;
+
+      const diagnostics = linter.lint(content);
+
+      expect(diagnostics.length).toBeGreaterThan(0);
+      diagnostics.forEach(d => {
+        expect(d.nodeType).toBe('<unknown>');
+      });
+    });
+
+    it('should preserve line and column information', () => {
+      const content = `[gd_scene load_steps=1 format=3]
+
+[node name="Root"]
+`;
+
+      const diagnostics = linter.lint(content);
+
+      expect(diagnostics.length).toBeGreaterThan(0);
+      const diagnostic = diagnostics[0]!;
+
+      expect(diagnostic.location).toBeDefined();
+      expect(diagnostic.location!.line).toBe(3);
+      expect(diagnostic.location!.column).toBe(1);
+    });
+
+    it('should preserve error severity', () => {
+      const content = `[gd_scene load_steps=1 format=3]
+
+[node name="Root"]
+`;
+
+      const diagnostics = linter.lint(content);
+
+      expect(diagnostics.length).toBeGreaterThan(0);
+      diagnostics.forEach(d => {
+        expect(d.severity).toBe('error');
+      });
+    });
+
+    it('should preserve error message', () => {
+      const content = `[gd_scene load_steps=1 format=3]
+
+[node name="Root"]
+`;
+
+      const diagnostics = linter.lint(content);
+
+      expect(diagnostics.length).toBeGreaterThan(0);
+      const diagnostic = diagnostics[0]!;
+
+      expect(diagnostic.message).toBeTruthy();
+      expect(typeof diagnostic.message).toBe('string');
+    });
+  });
+});

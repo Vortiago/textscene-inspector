@@ -1,0 +1,68 @@
+/**
+ * What a property validator IS, and what it declares about itself.
+ *
+ * Split out from `ValidatorRegistry.ts` because the type is the wider surface of
+ * the two: every slice's `linterParser.ts` writes one, while only the linter
+ * itself touches the registry that stores them. `ValidatorRegistry.ts` re-exports
+ * it, so the import path a slice already uses is unchanged.
+ */
+
+import type { ParseError } from './types.js';
+
+/**
+ * Property validator function
+ * @param key - Property key
+ * @param value - Property value (raw string)
+ * @param line - Line number in source file
+ * @returns ParseError if validation fails, null if valid
+ */
+export type PropertyValidator = ((
+  key: string,
+  value: string,
+  line: number
+) => ParseError | null) & {
+  /**
+   * What this validator accepts, in one short human phrase — `float 0–1`,
+   * `enum 0–3 (OFF/ON/…)`, `Vector3(x, y, z)`, `32-bit layer mask`.
+   *
+   * A validator is otherwise an opaque closure, so the generated `## Linting`
+   * table could only list property NAMES and a reader had no way to see the
+   * bounds. The `v` DSL knows them at construction time, so it tags them here
+   * and `lintCoverage.mjs` renders them. Untagged validators simply render
+   * blank rather than being guessed at.
+   */
+  accepts?: string;
+
+  /**
+   * True when the ONLY thing this validator rejects is a value Godot's own
+   * parser could not read either — `Color(1, 1)`, `not-a-float`, an unquoted
+   * string. Such a rejection needs no citation, because no `.tscn` the engine
+   * loads carries the value.
+   *
+   * It is a positive declaration rather than an inference: a validator with
+   * neither this flag nor `grounding` is one nobody has classified, and
+   * `boundGrounding.test.ts` fails on it. That is what stops a hand-rolled
+   * validator from rejecting real values with nothing behind it — the failure
+   * mode that let `GPUParticles3D.visibility_aabb` reject an extent Godot
+   * assigns unaltered.
+   */
+  formatOnly?: boolean;
+
+  /**
+   * The per-sub-property validators a WILDCARD dispatcher forwards to.
+   *
+   * A key like `angular_limit_x/*` registers one dispatcher, and the sweep sees
+   * only that function: tagging it satisfies the guard while an ungrounded leaf
+   * sits behind it, checking `upper_angle` against a bound nobody verified.
+   * Exposing the leaves is what lets the sweep recurse past the dispatcher.
+   */
+  leaves?: readonly PropertyValidator[];
+
+  /**
+   * Why the bound is the bound (ADR-0032), with the governing `file:line`.
+   * `enforced` = Godot's setter refuses or alters the value, so out of range is
+   * an error. `hinted` = only the PROPERTY_HINT_RANGE says so, so it is a
+   * warning. Absent means the bound has not been audited yet.
+   */
+  grounding?: { kind: 'enforced' | 'hinted'; cite: string };
+};

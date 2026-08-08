@@ -1,68 +1,20 @@
 /**
  * Registry for property validators used by strict TSCN parser
+ *
+ * The registry is the storage and the resolution order; the three things it
+ * resolves TO live beside it — `propertyValidator.ts` (what a validator is and
+ * declares), `wildcardIndex.ts` (the two wildcard key shapes Godot writes) and
+ * `unavailableKey.ts` (a key a type takes away from its base). All three are
+ * re-exported here, so no importer moves.
  */
 
-import type { ParseError } from './types.js';
-import { propertyError } from './validators/propertyError.js';
 import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
+import type { PropertyValidator } from './propertyValidator.js';
+import { buildWildcardIndex, matchesIndexedKey, type WildcardEntry } from './wildcardIndex.js';
+import { unavailableValidator, type Removal } from './unavailableKey.js';
 
-/**
- * Property validator function
- * @param key - Property key
- * @param value - Property value (raw string)
- * @param line - Line number in source file
- * @returns ParseError if validation fails, null if valid
- */
-export type PropertyValidator = ((
-  key: string,
-  value: string,
-  line: number
-) => ParseError | null) & {
-  /**
-   * What this validator accepts, in one short human phrase — `float 0–1`,
-   * `enum 0–3 (OFF/ON/…)`, `Vector3(x, y, z)`, `32-bit layer mask`.
-   *
-   * A validator is otherwise an opaque closure, so the generated `## Linting`
-   * table could only list property NAMES and a reader had no way to see the
-   * bounds. The `v` DSL knows them at construction time, so it tags them here
-   * and `lintCoverage.mjs` renders them. Untagged validators simply render
-   * blank rather than being guessed at.
-   */
-  accepts?: string;
-
-  /**
-   * True when the ONLY thing this validator rejects is a value Godot's own
-   * parser could not read either — `Color(1, 1)`, `not-a-float`, an unquoted
-   * string. Such a rejection needs no citation, because no `.tscn` the engine
-   * loads carries the value.
-   *
-   * It is a positive declaration rather than an inference: a validator with
-   * neither this flag nor `grounding` is one nobody has classified, and
-   * `boundGrounding.test.ts` fails on it. That is what stops a hand-rolled
-   * validator from rejecting real values with nothing behind it — the failure
-   * mode that let `GPUParticles3D.visibility_aabb` reject an extent Godot
-   * assigns unaltered.
-   */
-  formatOnly?: boolean;
-
-  /**
-   * The per-sub-property validators a WILDCARD dispatcher forwards to.
-   *
-   * A key like `angular_limit_x/*` registers one dispatcher, and the sweep sees
-   * only that function: tagging it satisfies the guard while an ungrounded leaf
-   * sits behind it, checking `upper_angle` against a bound nobody verified.
-   * Exposing the leaves is what lets the sweep recurse past the dispatcher.
-   */
-  leaves?: readonly PropertyValidator[];
-
-  /**
-   * Why the bound is the bound (ADR-0032), with the governing `file:line`.
-   * `enforced` = Godot's setter refuses or alters the value, so out of range is
-   * an error. `hinted` = only the PROPERTY_HINT_RANGE says so, so it is a
-   * warning. Absent means the bound has not been audited yet.
-   */
-  grounding?: { kind: 'enforced' | 'hinted'; cite: string };
-};
+export type { PropertyValidator } from './propertyValidator.js';
+export type { Removal } from './unavailableKey.js';
 
 /**
  * How many base-chain hops `findValidator` will walk before giving up.
@@ -71,92 +23,6 @@ export type PropertyValidator = ((
  * practice while still terminating on a malformed hand-built registry.
  */
 const MAX_BASE_CHAIN_HOPS = 32;
-
-/**
- * A wildcard registration with its prefix already sliced off the pattern.
- *
- * The prefix used to be re-derived on every lookup (`pattern.slice(0, -2) + '/'`,
- * two allocations per candidate) and a miss is the common case, so the work
- * landed on the hot path for every unregistered property of every node. Slicing
- * once at registration makes the lookup a `startsWith` against a retained
- * string. It also lets the loop skip EXACT keys entirely: `Control` registers
- * far more of those than the six `theme_override_*` wildcards every Control
- * descendant inherits.
- */
-interface WildcardEntry {
-  /** `bones/` for `bones/*`, `item_` for `item_#/*`. */
-  prefix: string;
-  /** True for the `#/*` shape, whose index is glued to the prefix. */
-  indexed: boolean;
-  validator: PropertyValidator;
-}
-
-/** Extract the wildcard patterns from a type's own validators, prefixes pre-sliced. */
-function buildWildcardIndex(own: Record<string, PropertyValidator>): WildcardEntry[] {
-  const entries: WildcardEntry[] = [];
-  for (const pattern in own) {
-    if (!pattern.endsWith('/*')) continue;
-    const validator = own[pattern];
-    if (!validator) continue;
-    const indexed = pattern.endsWith('#/*');
-    entries.push({
-      prefix: indexed ? pattern.slice(0, -3) : pattern.slice(0, -2) + '/',
-      indexed,
-      validator,
-    });
-  }
-  return entries;
-}
-
-/**
- * Whether `key` is `<prefix><index>/<leaf>`, the shape Godot's
- * `PropertyListHelper` writes for an indexed property array.
- *
- * This is ROUTING, not acceptance, and the two are deliberately different
- * widths. The engine splits the key at the LAST `/`
- * (`property_list_helper.cpp:47`) and requires what sits between the prefix and
- * that slash to be `is_valid_int()` (`:53`); when it is not, `_get_property`
- * returns nullptr, `_set` returns false, and the write is DROPPED. That drop is
- * exactly the ADR-0032 error tier, so the key has to REACH the family's
- * dispatcher for anything to report it. Matching the engine's acceptance here
- * instead is how `item_x/text` reached no validator and read as clean, the same
- * failure a leading sign once had: `item_-1/text` routed nowhere, so the
- * dispatcher's negative-index diagnostic could never fire.
- *
- * So the index half is matched by SHAPE alone — non-empty, and no `/` of its
- * own. Whether those characters are an integer, and what a non-integer means,
- * belongs to the dispatcher: Godot has two index parses and they disagree about
- * it (`indexedFamily.ts`'s `indexParse`), which is a per-class fact this matcher
- * cannot know.
- *
- * The no-`/` rule is the engine's `rsplit(…, 1)` restated: `item_0/deep/text`
- * puts `item_0/deep` in the index half, which is no integer under either parse,
- * so `#/*` addresses ONE leaf segment. A family whose leaves nest deeper
- * registers the plain `<prefix>*` wildcard instead.
- *
- * `lastIndexOf` plus `indexOf` rather than `split`, because `findOwnValidator`
- * runs for every property of every node and a miss must not allocate.
- */
-function matchesIndexedKey(key: string, prefix: string): boolean {
-  if (!key.startsWith(prefix)) return false;
-  const slash = key.lastIndexOf('/');
-  // The leaf must be non-empty, and the index must sit between the two.
-  if (slash <= prefix.length || slash === key.length - 1) return false;
-  // No `/` inside the index half, which is what makes that last slash the
-  // engine's rsplit point rather than one buried in a nested leaf name.
-  return key.indexOf('/', prefix.length) === slash;
-}
-
-/**
- * A key a concrete type takes away from its base, and the engine guard that
- * takes it away. `reason` reaches the scene author; `cite` is what makes the
- * claim checkable, exactly as `PropertyValidator.grounding` does for a bound.
- */
-export interface Removal {
-  reason: string;
-  /** `file:line` of the guard that refuses the write. */
-  cite: string;
-}
 
 /**
  * Registry for property validators by node type
@@ -374,37 +240,6 @@ export class ValidatorRegistry {
     this.unavailable.clear();
     this.wildcards.clear();
   }
-}
-
-/**
- * The validator a removed key resolves to: it rejects every value, because the
- * key's presence is itself the defect. Memoised per (type, reason) so repeated
- * lookups of the same removal return the same function, which keeps identity
- * comparisons in the tests meaningful.
- */
-const unavailableValidators = new Map<string, PropertyValidator>();
-
-function unavailableValidator(nodeType: string, removal: Removal): PropertyValidator {
-  // The CITE is part of the identity, not just the reason: the validator now
-  // records `grounding.cite`, so two removals on one type sharing a reason but
-  // citing different lines would otherwise both get whichever was memoised
-  // first, and the second would report a citation for the wrong guard.
-  const cacheKey = `${nodeType}\u0000${removal.reason}\u0000${removal.cite}`;
-  const cached = unavailableValidators.get(cacheKey);
-  if (cached) return cached;
-  const validator: PropertyValidator = (key, _value, line) =>
-    propertyError(
-      key,
-      line,
-      `Property '${key}' cannot be set on ${nodeType}: ${removal.reason}`,
-      `UNAVAILABLE_${key.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}`
-    );
-  validator.accepts = 'not available on this type';
-  // A removal refuses every value of a key a scene may legitimately carry, so it
-  // is a grounded rejection (ADR-0032), not a format check.
-  validator.grounding = { kind: 'enforced', cite: removal.cite };
-  unavailableValidators.set(cacheKey, validator);
-  return validator;
 }
 
 /**

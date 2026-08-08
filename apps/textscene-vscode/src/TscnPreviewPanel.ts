@@ -1,57 +1,23 @@
 /**
  * Manages TSCN preview webview panel lifecycle.
+ *
+ * The three things the panel does that are not lifecycle live beside it:
+ * `webviewDispatch` (routing an inbound message), `jumpToNodeDefinition`
+ * (the editor navigation), `hostLogRelay` (the output channel) and
+ * `panelHtml` (the document the webview mounts).
  */
 
 import * as vscode from 'vscode';
-import { generateWebviewHtml, generateNonce, type WebviewInitialConfig } from './webview/webviewHtml';
-import type { MissingResource } from '@textscene/core/parser';
 import type { HostToWebviewMessage, WebviewToHostMessage } from './protocol';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
-import { findNodeHeadingLine } from './nodeHeadingResolver';
-import * as logger from './logger';
+import { buildPanelHtml } from './panelHtml';
+import { dispatchWebviewMessage, type WebviewMessageHandlers } from './webviewDispatch';
+import { jumpToNodeDefinition } from './jumpToNodeDefinition';
+import { relayMissingResource, relayWebviewLog } from './hostLogRelay';
 import { encodeResourceResponse } from './wireCodec';
 
-// ============================================================================
-// Dispatch table
-// ============================================================================
-
-/**
- * Exhaustive handler table over the webview-to-host protocol union.
- * Adding a new message type to `WebviewToHostMessage` without adding a handler
- * here is a compile error — the mapped type guarantees coverage.
- */
-type WebviewMessageHandlers = {
-  [K in WebviewToHostMessage['type']]: (
-    msg: Extract<WebviewToHostMessage, { type: K }>
-  ) => void;
-};
-
-/**
- * Route `msg` to the corresponding handler in `handlers`.
- * Both the production `onDidReceiveMessage` listener and tests go through
- * this function, so the two paths cannot drift.
- */
-export function dispatchWebviewMessage(
-  msg: WebviewToHostMessage,
-  handlers: WebviewMessageHandlers
-): void {
-  // The webview is an untrusted runtime source: a message whose `type` is
-  // outside the protocol union — including inherited-property names like
-  // `__proto__`, `constructor`, or `toString` — has no OWN entry in the
-  // handler table. Gate on hasOwnProperty rather than a truthy lookup: a bare
-  // `handlers[msg.type]` would resolve those inherited members (throwing on
-  // `__proto__`, invoking a builtin on `toString`), whereas this makes every
-  // unknown type fall through silently, matching the old switch's default case.
-  if (!Object.prototype.hasOwnProperty.call(handlers, msg.type)) {
-    return;
-  }
-  const handler = handlers[msg.type] as (m: WebviewToHostMessage) => void;
-  handler(msg);
-}
-
-// ============================================================================
-// Panel class
-// ============================================================================
+export { dispatchWebviewMessage } from './webviewDispatch';
+export type { WebviewMessageHandlers } from './webviewDispatch';
 
 export class TscnPreviewPanel {
   public static readonly viewType = 'tscnPreview';
@@ -117,7 +83,7 @@ export class TscnPreviewPanel {
     this._currentResource = resource;
 
     // Set HTML only once during construction
-    this._panel.webview.html = this._getHtmlForWebview(this._panel.webview);
+    this._panel.webview.html = buildPanelHtml(this._panel.webview, this._extensionUri);
 
     // Load initial content
     this._loadTscnContent(resource);
@@ -137,16 +103,16 @@ export class TscnPreviewPanel {
         vscode.window.showErrorMessage(msg.message);
       },
       jumpToNode: (msg) => {
-        void this._jumpToNodeDefinition(msg.nodeName, msg.parent);
+        void jumpToNodeDefinition(this._currentResource, msg.nodeName, msg.parent);
       },
       loadResource: (msg) => {
         void this._handleLoadResource(msg.path, msg.resourceType, msg.requestId);
       },
       resourceNeeded: (msg) => {
-        this._handleResourceNeeded(msg.resource);
+        relayMissingResource(msg.resource);
       },
       log: (msg) => {
-        this._handleLog(msg.level, msg.message, msg.args);
+        relayWebviewLog(msg.level, msg.message, msg.args);
       },
     };
 
@@ -279,71 +245,6 @@ export class TscnPreviewPanel {
     }
   }
 
-  private _getHtmlForWebview(webview: vscode.Webview): string {
-    // The webview build lives in `dist/webview/` (ESM + splitting)
-    // so lazy-loaded chunks live alongside the entry script and import
-    // each other via relative URIs.
-    const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'webview.js')
-    ).toString();
-    const cssUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'webview.css')
-    ).toString();
-
-    const nonce = generateNonce();
-    return generateWebviewHtml({
-      scriptUri,
-      cssUri,
-      nonce,
-      cspSource: webview.cspSource,
-      initialConfig: this._getInitialConfig(),
-    });
-  }
-
-  /**
-   * Read the settings the webview needs at mount. Read once per panel
-   * creation (baked into the HTML, not reactive) — like `nonce`, this is
-   * fixed for the panel's lifetime; a setting change takes effect on the
-   * next preview opened, not the current one.
-   */
-  private _getInitialConfig(): WebviewInitialConfig {
-    const viewportMode = vscode.workspace
-      .getConfiguration('textscene')
-      .get<'auto' | '2D' | '3D'>('defaultViewportMode', 'auto');
-    return { viewportMode };
-  }
-
-  private async _jumpToNodeDefinition(nodeName: string, expectedParent?: string): Promise<void> {
-    try {
-      const document = await vscode.workspace.openTextDocument(this._currentResource);
-      const text = document.getText();
-      const lines = text.split('\n');
-
-      const targetLine = findNodeHeadingLine(lines, nodeName, expectedParent);
-
-      if (targetLine === -1) {
-        vscode.window.showWarningMessage(`Could not find node "${nodeName}" in file`);
-        return;
-      }
-
-      // Open the document and jump to the line
-      const editor = await vscode.window.showTextDocument(document, {
-        viewColumn: vscode.ViewColumn.One,
-        preserveFocus: false,
-      });
-
-      // Set selection to the line with the node definition
-      const position = new vscode.Position(targetLine, 0);
-      const range = new vscode.Range(position, position);
-      editor.selection = new vscode.Selection(range.start, range.end);
-      editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
-    } catch (error) {
-      vscode.window.showErrorMessage(
-        `Failed to jump to node: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  }
-
   private async _handleLoadResource(
     resourcePath: string,
     resourceType: string,
@@ -374,60 +275,5 @@ export class TscnPreviewPanel {
 
   private _postMessageToWebview(message: HostToWebviewMessage): void {
     this._panel.webview.postMessage(message);
-  }
-
-  private _handleResourceNeeded(resource: MissingResource): void {
-    const channel = logger.getChannel();
-    if (channel) {
-      channel.warn(`Missing resource: ${resource.path} (${resource.type})`);
-      channel.warn(`  Referenced by node: ${resource.referencedBy}`);
-      channel.warn(`  Error: ${resource.error}`);
-
-      // Show the output channel so user can see the error
-      logger.show();
-    }
-  }
-
-  private _handleLog(level: string, message: string, args: unknown[]): void {
-    const channel = logger.getChannel();
-    if (!channel) {
-      return;
-    }
-
-    // Format args for display
-    const formattedArgs = args.map((arg) => {
-      if (typeof arg === 'object' && arg !== null) {
-        try {
-          return JSON.stringify(arg);
-        } catch {
-          return String(arg);
-        }
-      }
-      return String(arg);
-    });
-
-    const fullMessage = formattedArgs.length > 0
-      ? `${message} ${formattedArgs.join(' ')}`
-      : message;
-
-    switch (level) {
-      case 'trace':
-        channel.trace(fullMessage);
-        break;
-      case 'debug':
-        channel.debug(fullMessage);
-        break;
-      case 'info':
-        channel.info(fullMessage);
-        break;
-      case 'warn':
-        channel.warn(fullMessage);
-        break;
-      case 'error':
-        channel.error(fullMessage);
-        break;
-      default:
-        channel.info(fullMessage);
-    }
   }
 }
