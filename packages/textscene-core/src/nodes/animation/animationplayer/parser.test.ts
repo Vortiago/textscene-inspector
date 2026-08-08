@@ -20,8 +20,8 @@ describe('parseAnimationPlayer defaults', () => {
     const props = parseAnimationPlayer(HEADING, {});
     expect(props.speed_scale).toBe(1.0);
     expect(props.playback_default_blend_time).toBe(0.0);
-    expect(props.playback_process_mode).toBe(AnimationProcessMode.IDLE);
-    expect(props.method_call_mode).toBe(MethodCallMode.DEFERRED);
+    expect(props.callback_mode_process).toBe(AnimationProcessMode.IDLE);
+    expect(props.callback_mode_method).toBe(MethodCallMode.DEFERRED);
     expect(props.active).toBe(true);
     expect(props.autoplay).toBe('');
     expect(props.current_animation).toBe('');
@@ -47,24 +47,24 @@ describe('parseAnimationPlayer properties', () => {
     expect(props.playback_default_blend_time).toBe(0.3);
   });
 
-  it('parses playback_process_mode enum — PHYSICS', () => {
-    const props = parseAnimationPlayer(HEADING, { playback_process_mode: '0' });
-    expect(props.playback_process_mode).toBe(AnimationProcessMode.PHYSICS);
+  it('parses callback_mode_process enum — PHYSICS', () => {
+    const props = parseAnimationPlayer(HEADING, { callback_mode_process: '0' });
+    expect(props.callback_mode_process).toBe(AnimationProcessMode.PHYSICS);
   });
 
-  it('parses playback_process_mode enum — MANUAL', () => {
-    const props = parseAnimationPlayer(HEADING, { playback_process_mode: '2' });
-    expect(props.playback_process_mode).toBe(AnimationProcessMode.MANUAL);
+  it('parses callback_mode_process enum — MANUAL', () => {
+    const props = parseAnimationPlayer(HEADING, { callback_mode_process: '2' });
+    expect(props.callback_mode_process).toBe(AnimationProcessMode.MANUAL);
   });
 
-  it('clamps out-of-range playback_process_mode to IDLE default', () => {
-    const props = parseAnimationPlayer(HEADING, { playback_process_mode: '9' });
-    expect(props.playback_process_mode).toBe(AnimationProcessMode.IDLE);
+  it('clamps out-of-range callback_mode_process to IDLE default', () => {
+    const props = parseAnimationPlayer(HEADING, { callback_mode_process: '9' });
+    expect(props.callback_mode_process).toBe(AnimationProcessMode.IDLE);
   });
 
-  it('parses method_call_mode — IMMEDIATE', () => {
-    const props = parseAnimationPlayer(HEADING, { method_call_mode: '1' });
-    expect(props.method_call_mode).toBe(MethodCallMode.IMMEDIATE);
+  it('parses callback_mode_method — IMMEDIATE', () => {
+    const props = parseAnimationPlayer(HEADING, { callback_mode_method: '1' });
+    expect(props.callback_mode_method).toBe(MethodCallMode.IMMEDIATE);
   });
 
   it('parses active = false', () => {
@@ -72,16 +72,34 @@ describe('parseAnimationPlayer properties', () => {
     expect(props.active).toBe(false);
   });
 
-  it('reads the deprecated playback_active alias into the same field', () => {
-    // animation_player.cpp:59/:98 forward `playback_active` straight into
-    // set_active/is_active, so it is not a second property.
-    const props = parseAnimationPlayer(HEADING, { playback_active: 'false' });
-    expect(props.active).toBe(false);
+  // The three `#ifndef DISABLE_DEPRECATED` keys at animation_player.cpp:54-61
+  // forward into the canonical setter, so each pair is one field. Godot never
+  // writes the deprecated spelling, but a 3.x scene still carries it.
+  it.each([
+    ['playback_process_mode', '0', 'callback_mode_process', AnimationProcessMode.PHYSICS],
+    ['method_call_mode', '1', 'callback_mode_method', MethodCallMode.IMMEDIATE],
+    ['playback_active', 'false', 'active', false],
+  ] as const)('reads the deprecated %s into %s', (deprecated, raw, canonical, expected) => {
+    const props = parseAnimationPlayer(HEADING, { [deprecated]: raw });
+    expect(props[canonical]).toBe(expected);
   });
 
-  it('prefers the modern active key when a scene carries both', () => {
-    const props = parseAnimationPlayer(HEADING, { active: 'true', playback_active: 'false' });
-    expect(props.active).toBe(true);
+  it.each([
+    ['callback_mode_process', '2', 'playback_process_mode', '0', AnimationProcessMode.MANUAL],
+    ['callback_mode_method', '1', 'method_call_mode', '0', MethodCallMode.IMMEDIATE],
+    ['active', 'true', 'playback_active', 'false', true],
+  ] as const)('prefers %s over the deprecated %s when a scene carries both', (
+    canonical,
+    canonicalRaw,
+    deprecated,
+    deprecatedRaw,
+    expected
+  ) => {
+    const props = parseAnimationPlayer(HEADING, {
+      [canonical]: canonicalRaw,
+      [deprecated]: deprecatedRaw,
+    });
+    expect(props[canonical]).toBe(expected);
   });
 
   it('strips quotes from autoplay animation name', () => {

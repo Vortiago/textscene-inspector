@@ -26,7 +26,7 @@ and `modulate` through a separate push registry (ADR-0016, ADR-0017).
 | --- | --- | --- |
 | `autoplay` | `spin` | names the clip that would auto-run; the still shows the rest pose because the capture stops it |
 | `speed_scale` | `1.0` | normal playback rate |
-| `playback_active` | `true` | the deprecated 3.x spelling of `active`, the same field; the mixer applies its clips |
+| `active` | `true` | the mixer applies its clips |
 | `libraries/` | `bob`, `spin` | two clips are available to the transport |
 | clip `spin` | rotation Y `0 → 2π`, `length 2.0`, `loop` | turns the box once per loop — the motion the GIF compares |
 | clip `bob` | position Y `0.5 → 1.0 → 0.5`, `length 1.0`, `loop` | bobs the box up and down |
@@ -80,15 +80,16 @@ Strict parsing format-checks these `AnimationPlayer` properties, plus 13 inherit
 as a float, which is all strict checks too: the hint is open at both ends and the
 setter is a bare assignment, so `0` and an extreme speed are both legal.
 `playback_default_blend_time` falls back to `0.0` the same way; strict warns
-rather than errors when it sits outside 0-4096. `playback_process_mode` and
-`method_call_mode` do re-enforce strict's enum membership via `enumOr`,
+rather than errors when it sits outside 0-4096. `callback_mode_process` and
+`callback_mode_method` do re-enforce strict's enum membership via `enumOr`,
 warning and substituting `IDLE` (1) or `DEFERRED` (0) for any value outside
 `0`-`2`/`0`-`1`. `active` falls back to `true`, which is also Godot's default,
-so an absent key means the mixer runs; `playback_active` is read into that same
-field rather than a second one, because Godot's deprecated `_set` forwards it
-straight to `set_active` (animation_player.cpp:59). Both the renderer and the
-`animationplayer-inactive` advisory go through one helper, so they cannot
-disagree about which spelling counts. `autoplay` and
+so an absent key means the mixer runs. Those three keys each have a deprecated
+3.x spelling — `playback_process_mode`, `method_call_mode` and
+`playback_active` — which Godot's `_set` forwards into the same setter
+(animation_player.cpp:54-61), so the parser reads each pair into one field,
+canonical key first, and strict format-checks both spellings independently
+because either can appear in a file on disk. `autoplay` and
 `current_animation` go through `stripQuotes`, which only strips
 quote/StringName/NodePath sigil characters; an empty result is kept, and
 strict accepts it too, because `set_autoplay` (animation_player.cpp:775)

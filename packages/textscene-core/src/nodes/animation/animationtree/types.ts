@@ -42,7 +42,7 @@ export interface AnimationTreeProperties extends Node3DProperties {
   /** NodePath to the AnimationPlayer that provides animations. */
   anim_player: string;
 
-  /** Whether the tree is currently processing (default: false). */
+  /** Whether the mixer applies anything (default: true, animation_mixer.h:137). */
   active: boolean;
 
   /** Process callback mode (default: IDLE). */

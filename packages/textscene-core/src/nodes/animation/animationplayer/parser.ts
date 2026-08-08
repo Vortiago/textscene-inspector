@@ -27,13 +27,19 @@ export function parseAnimationPlayer(
     ...baseProps,
     speed_scale: floatOr(properties.speed_scale, 1.0),
     playback_default_blend_time: floatOr(properties.playback_default_blend_time, 0.0),
-    playback_process_mode: enumOr(
-      properties.playback_process_mode,
+    // Three `#ifndef DISABLE_DEPRECATED` keys forward straight into the
+    // canonical setter (animation_player.cpp:54-61,93-100), so each pair below
+    // is ONE field, not two. `_get_property_list` never pushes the deprecated
+    // spelling, so only a 3.x scene carries it; Godot resolves a file holding
+    // both by line order, and preferring the canonical key is our choice for a
+    // shape Godot never writes.
+    callback_mode_process: enumOr(
+      properties.callback_mode_process ?? properties.playback_process_mode,
       AnimationProcessMode.IDLE,
       [AnimationProcessMode.PHYSICS, AnimationProcessMode.IDLE, AnimationProcessMode.MANUAL]
     ),
-    method_call_mode: enumOr(
-      properties.method_call_mode,
+    callback_mode_method: enumOr(
+      properties.callback_mode_method ?? properties.method_call_mode,
       MethodCallMode.DEFERRED,
       [MethodCallMode.DEFERRED, MethodCallMode.IMMEDIATE]
     ),
@@ -50,18 +56,10 @@ export function parseAnimationPlayer(
 /**
  * Godot's `AnimationMixer::is_active()` — whether the mixer applies anything at
  * all (animation_mixer.cpp:2458, defaulting to true at animation_mixer.h:137,
- * so Godot omits the key unless it is false).
+ * so Godot omits the key unless it is false). `playback_active` is the same
+ * field, per the deprecated-alias note above.
  *
- * `active` and `playback_active` are ONE field, not two: AnimationPlayer's
- * deprecated `_set`/`_get` alias forwards straight into `set_active`/`is_active`
- * (animation_player.cpp:59,98) and is never pushed by `_get_property_list`, so
- * only a 3.x scene carries it. Godot resolves a scene holding both by file
- * order, since both calls land on the same setter; preferring the modern key
- * here is our choice for a shape Godot never writes, not the engine's rule.
- *
- * Exported so the semantic rule reads the field the same way the renderer does
- * — they disagreed once, and the linter was reporting only the spelling Godot
- * never writes.
+ * Exported so the semantic rule reads the field the same way the renderer does.
  */
 export function isActive(properties: Record<string, string>): boolean {
   return boolOr(properties.active ?? properties.playback_active, true);

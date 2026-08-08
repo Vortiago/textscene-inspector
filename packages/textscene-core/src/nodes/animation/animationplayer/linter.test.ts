@@ -327,9 +327,6 @@ describe('AnimationPlayer Linter', () => {
       });
     });
 
-    // The inactive-player advisory lives in its own describe above: it covers
-    // both spellings of the one field, which is what this block missed.
-
     describe('root_node path validation', () => {
       it('should warn for unusual root_node path format', () => {
         expectDiagnostic(scene(node('AnimationPlayer', { root_node: 'NodePath("@invalid@path")' })), {

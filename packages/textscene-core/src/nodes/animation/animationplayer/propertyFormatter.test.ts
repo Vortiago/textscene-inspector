@@ -12,8 +12,8 @@ function makeProps(overrides: Partial<AnimationPlayerProperties> = {}): Animatio
     name: 'AnimationPlayer',
     speed_scale: 1.0,
     playback_default_blend_time: 0.0,
-    playback_process_mode: AnimationProcessMode.IDLE,
-    method_call_mode: MethodCallMode.DEFERRED,
+    callback_mode_process: AnimationProcessMode.IDLE,
+    callback_mode_method: MethodCallMode.DEFERRED,
     active: true,
     autoplay: '',
     current_animation: '',
@@ -79,7 +79,7 @@ describe('formatAnimationPlayerProperties', () => {
 
   it('shows process mode as human-readable string', () => {
     const sections = formatAnimationPlayerProperties(
-      makeProps({ playback_process_mode: AnimationProcessMode.PHYSICS })
+      makeProps({ callback_mode_process: AnimationProcessMode.PHYSICS })
     );
     const playback = sections.find((s) => s.title === 'Playback');
     const modeItem = playback?.items.find((i) => i.label === 'Process Mode');

@@ -845,19 +845,20 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       // transition property with no effect on a frozen single-clip frame.
       'blend_times',
       // AnimationMixer's own members, inherited through the tier. None of the
-      // eight below moves a frozen frame: `deterministic` and `reset_on_save`
+      // six below moves a frozen frame: `deterministic` and `reset_on_save`
       // are editor/runtime bookkeeping, the two root-motion keys describe
       // movement a static preview never applies, `audio_max_polyphony` is a
-      // voice budget, and the three callback modes only decide WHEN the mixer
-      // updates, not what it produces. `active` is NOT among them — it decides
-      // WHETHER the mixer applies anything, and the parser reads it.
+      // voice budget, and `callback_mode_discrete` only decides WHEN the mixer
+      // updates, not what it produces. `active` is not among them — it decides
+      // WHETHER the mixer applies anything — and neither are the other two
+      // callback modes, which the parser reads for the inspector as the
+      // canonical spelling of its deprecated `playback_process_mode` /
+      // `method_call_mode` keys.
       'deterministic',
       'reset_on_save',
       'root_motion_track',
       'root_motion_local',
       'audio_max_polyphony',
-      'callback_mode_process',
-      'callback_mode_method',
       'callback_mode_discrete',
     ],
     reason: 'current_animation_length/current_animation_position are getter-only and PROPERTY_USAGE_NONE in Godot, so they can never appear in a real .tscn and carry no validator; playback/play, next/<name>, blend_times and the inherited AnimationMixer members have no bearing on which single frame a static preview shows.',

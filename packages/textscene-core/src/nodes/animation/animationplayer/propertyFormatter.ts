@@ -25,8 +25,8 @@ export function formatAnimationPlayerProperties(
         label: 'Blend Time (s)',
         value: properties.playback_default_blend_time.toFixed(3),
       },
-      { label: 'Process Mode', value: processModeName(properties.playback_process_mode) },
-      { label: 'Method Call Mode', value: methodCallModeName(properties.method_call_mode) },
+      { label: 'Process Mode', value: processModeName(properties.callback_mode_process) },
+      { label: 'Method Call Mode', value: methodCallModeName(properties.callback_mode_method) },
     ],
   });
 

@@ -68,6 +68,8 @@ libraries = {
 }
 autoplay = "spin"
 speed_scale = 1.0
+; The one fixture left on the deprecated 3.x spelling of `active`, so the alias
+; keeps end-to-end coverage; every other AnimationPlayer fixture uses `active`.
 playback_active = true
 
 [node name="Title" type="Label3D" parent="."]

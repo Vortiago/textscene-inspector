@@ -151,8 +151,7 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // for this — AnimationMixer declares no get_configuration_warnings() override
   // — but it is not a style opinion either: seek_internal returns immediately
   // on `!active` (animation_player.cpp:664), so nothing this node declares can
-  // ever reach the scene. Read through `isActive` so the advisory and the
-  // renderer cannot disagree about which key spells it.
+  // ever reach the scene.
   if (!isActive(rawProps)) {
     diagnostics.push({
       severity: 'warning',
