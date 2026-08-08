@@ -1513,6 +1513,34 @@ describe('Godot configuration-warning coverage', () => {
     expect(missing).toEqual([]);
   });
 
+  // A `get_configuration_warnings()` entry is advisory BY CONSTRUCTION: Godot
+  // shows it in the editor dock and loads the scene regardless, so ADR-0032
+  // puts every one of them at `warning` and none at `error`. That needs no
+  // per-row data — it follows from the row being in this table at all.
+  //
+  // Without this, a row could claim `implemented` while its rule reported at a
+  // tier the engine never justifies. PathFollow2D did exactly that, keeping
+  // `error` after the PathFollow3D sibling was corrected, and every existing
+  // check here passed: the rule existed, emitted the name and reached the type.
+  it('every implemented row is reported at warning, never error', () => {
+    const miscased: string[] = [];
+    for (const [cls, rows] of Object.entries(WARNINGS)) {
+      for (const row of rows) {
+        if (!('rule' in row.verdict)) continue;
+        const ruleName = row.verdict.rule;
+        for (const owner of rulesEmitting(ruleName)) {
+          const emitted = owner.meta.emits?.find((e) => e.ruleName === ruleName);
+          if (emitted && emitted.severity !== 'warning') {
+            miscased.push(
+              `${cls} ${row.at} '${ruleName}' is declared '${emitted.severity}' by ${owner.meta.name}; a configuration warning is advisory (ADR-0032)`
+            );
+          }
+        }
+      }
+    }
+    expect(miscased).toEqual([]);
+  });
+
   it('every implemented row reaches every concrete heir of its declaring class', () => {
     const gaps: string[] = [];
     for (const [cls, rows] of Object.entries(WARNINGS)) {
