@@ -62,8 +62,8 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   const properties = node.properties as AnimationPlayerProperties;
   const { internalResources } = useSceneResources();
 
-  // Selection-driven (ADR-0012): this player owns the transport and builds its
-  // mixer only while it is the node selected in the tree.
+  // Selection-driven (ADR-0012): this player owns the transport only while it
+  // is the node selected in the tree.
   const nodePath = useNodePath();
   const selectedNodePath = useOptionalSelection()?.selectedNodePath ?? null;
   const isSelected = nodePath !== null && nodePath === selectedNodePath;
@@ -72,11 +72,14 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   // `seek_internal` returns immediately on `!active` (animation_player.cpp:664),
   // so the scrub this transport performs is refused, not merely the runtime
   // process callback (animation_mixer.cpp:446-455). An inactive player leaves
-  // every track target at its authored value. It still REGISTERS its clips
-  // below, because Godot lists an inactive player's animations too, and it
-  // still publishes them to the driver registry, because an AnimationTree
-  // reading them through `anim_player` is gated by the TREE's own active flag
-  // and not by this one (ADR-0019).
+  // every track target at its authored value, so it also builds no mixer.
+  //
+  // It still REGISTERS its clips, because Godot lists an inactive player's
+  // animations too, and it still publishes them to the driver registry,
+  // because an AnimationTree reading them through `anim_player` is gated by
+  // the TREE's own active flag and not by this one (ADR-0019). That is why
+  // registration stays on `isSelected` while everything that applies a pose
+  // moves to `isDriving`.
   const isDriving = isSelected && properties.active;
 
   const transport = useAnimationTransport();
@@ -155,6 +158,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     clips,
     nodePath,
     isActive: isSelected,
+    buildMixer: isDriving,
     autoplay: properties.autoplay || undefined,
     durations,
     onMixerBuilt,

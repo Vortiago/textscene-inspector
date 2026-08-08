@@ -11,9 +11,10 @@
  *     so an AnimationTree whose `anim_player` resolves here can root its
  *     blended mixer even if this driver is never selected by the user.
  *  3. Build the THREE.AnimationMixer + actions map whenever the driver is
- *     selected AND the object + clips are ready (ADR-0012). Only the active
- *     driver pays the build cost; a scene full of GLBs never-selected never
- *     allocates a mixer.
+ *     selected AND the object + clips are ready (ADR-0012), or on the narrower
+ *     `buildMixer` when the caller has one. Only a driver that could actually
+ *     play pays the build cost; a scene full of never-selected GLBs allocates
+ *     no mixer.
  *  4. On deselect/unmount: stop all actions, call the driver's `restore`
  *     callback (restores the authored pose), unregister from the registry.
  *
@@ -46,11 +47,24 @@ export interface UseAnimationDriverMountParams {
   /** This driver's node path in the scene tree; null outside a NodePathProvider. */
   nodePath: string | null;
   /**
-   * Whether this driver is currently the selected node. When false the mixer
-   * is not built (inactive drivers pay no allocation cost) and the transport
-   * is not registered (the Animation tab won't show for this driver).
+   * Whether this driver is currently the selected node. When false the
+   * transport is not registered (the Animation tab won't show for this
+   * driver), and no mixer is built unless `buildMixer` says otherwise.
    */
   isActive: boolean;
+  /**
+   * Whether to build the mixer, when that is narrower than `isActive`.
+   * Defaults to `isActive`.
+   *
+   * AnimationPlayer needs the two apart: Godot lists an inactive player's
+   * clips, and an AnimationTree consuming them through `anim_player` is gated
+   * by the TREE's own flag (ADR-0019), so registration follows selection —
+   * but `AnimationMixer.active = false` means `seek_internal` refuses every
+   * scrub (animation_player.cpp:664), so the mixer it would build can never be
+   * evaluated. Building it anyway costs a PropertyBinding and an Interpolant
+   * per track, plus the caller's pose snapshot, on every selection.
+   */
+  buildMixer?: boolean;
   /**
    * Clip name to pre-select when the driver registers with the transport
    * (`autoplay` in Godot terms). Passed through to `registerPlayer`.
@@ -84,6 +98,7 @@ export function useAnimationDriverMount(
   params: UseAnimationDriverMountParams
 ): UseAnimationDriverMountResult {
   const { object, clips, nodePath, isActive, autoplay, durations, onMixerBuilt, restore } = params;
+  const buildMixer = params.buildMixer ?? isActive;
 
   const transport = useAnimationTransport();
   const registerDriver = useRegisterDriver();
@@ -110,14 +125,14 @@ export function useAnimationDriverMount(
     return registerDriver(nodePath, { object, clips });
   }, [object, clips, nodePath, registerDriver]);
 
-  // 3. Build the THREE.AnimationMixer + actions while active AND loaded.
-  //    Gating on isActive means inactive drivers pay no allocation cost.
+  // 3. Build the THREE.AnimationMixer + actions while the driver would use one
+  //    AND is loaded, so a driver that cannot play pays no allocation cost.
   //    Teardown (deselect/unmount) is stop-then-restore, matching
   //    usePlaybackLoop's stop path: stopping first lets THREE run its own
   //    binding-state restore on action deactivation, then the driver's
   //    snapshot restore wins.
   useEffect(() => {
-    if (!isActive || !object || clips.length === 0) return;
+    if (!buildMixer || !object || clips.length === 0) return;
 
     const mixer = new AnimationMixer(object);
     const actions = new Map<string, AnimationAction>();
@@ -136,7 +151,7 @@ export function useAnimationDriverMount(
       mixerRef.current = null;
       actionsRef.current = new Map();
     };
-  }, [isActive, object, clips, onMixerBuilt, restore]);
+  }, [buildMixer, object, clips, onMixerBuilt, restore]);
 
   return { mixerRef, actionsRef };
 }

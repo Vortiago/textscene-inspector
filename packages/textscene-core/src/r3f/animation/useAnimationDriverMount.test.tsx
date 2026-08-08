@@ -57,6 +57,7 @@ interface HarnessProps {
   object: THREE.Object3D | null;
   clips: THREE.AnimationClip[];
   isActive: boolean;
+  buildMixer?: boolean;
   autoplay?: string;
   durations?: Record<string, number>;
   onMixerBuilt?: (obj: THREE.Object3D) => void;
@@ -86,6 +87,7 @@ function Harness({
   object,
   clips,
   isActive,
+  buildMixer,
   autoplay,
   durations,
   onMixerBuilt,
@@ -108,6 +110,7 @@ function Harness({
     clips,
     nodePath: NODE_PATH,
     isActive,
+    buildMixer,
     autoplay,
     durations: computedDurations,
     onMixerBuilt: stableOnMixerBuilt,
@@ -486,5 +489,60 @@ describe('useAnimationDriverMount — combined effects', () => {
     expect(capturedDriver).not.toBeNull();
 
     await renderer.unmount();
+  });
+
+  describe('buildMixer', () => {
+    it('defaults to isActive, so a caller that omits it is unaffected', async () => {
+      const renderer = await mountHarness({ object: makeObject(), clips: [makeClip('idle')], isActive: true });
+      expect(capturedResult.mixerRef.current).not.toBeNull();
+      await renderer.unmount();
+    });
+
+    it('skips the mixer when narrower than isActive, but still registers the clips', async () => {
+      const onMixerBuilt = vi.fn();
+      const renderer = await mountHarness({
+        object: makeObject(),
+        clips: [makeClip('idle')],
+        isActive: true,
+        buildMixer: false,
+        onMixerBuilt,
+      });
+
+      // No mixer, no actions, no pose snapshot: nothing could evaluate them.
+      expect(capturedResult.mixerRef.current).toBeNull();
+      expect(capturedResult.actionsRef.current.size).toBe(0);
+      expect(onMixerBuilt).not.toHaveBeenCalled();
+
+      // Registration is independent — the Animation tab still lists the clips
+      // and the driver registry still publishes them (ADR-0019).
+      expect(capturedTransport.hasPlayer).toBe(true);
+      expect(capturedDriver).not.toBeNull();
+
+      await renderer.unmount();
+    });
+
+    it('builds the mixer once it turns true', async () => {
+      const object = makeObject();
+      const clips = [makeClip('idle')];
+      const renderer = await mountHarness({ object, clips, isActive: true, buildMixer: false });
+      expect(capturedResult.mixerRef.current).toBeNull();
+
+      await renderer.update(
+        <SelectionProvider>
+          <AnimationTransportProvider>
+            <AnimationDriverProvider>
+              <Capture />
+              <DriverCapture />
+              <NodePathProvider path={NODE_PATH}>
+                <Harness object={object} clips={clips} isActive={true} buildMixer={true} />
+              </NodePathProvider>
+            </AnimationDriverProvider>
+          </AnimationTransportProvider>
+        </SelectionProvider>
+      );
+
+      expect(capturedResult.mixerRef.current).not.toBeNull();
+      await renderer.unmount();
+    });
   });
 });

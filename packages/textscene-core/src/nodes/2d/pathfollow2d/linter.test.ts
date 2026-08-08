@@ -22,20 +22,41 @@ progress_ratio = 0.5
     expect(diagnostics.filter((d) => d.nodeType === 'PathFollow2D')).toHaveLength(0);
   });
 
-  it('errors when the parent is not a Path2D', () => {
+  // path_2d.cpp:385 is a get_configuration_warnings() entry, so it is advisory
+  // (ADR-0032) — the same tier the Path3D sibling reports at.
+  it('warns when the parent is not a Path2D', () => {
     expectDiagnostic(
       scene(
         node('Node2D', {}, { name: 'Root' }),
         node('PathFollow2D', {}, { parent: '.' })
       ),
-      { ruleName: 'pathfollow2d-invalid-parent', severity: 'error' }
+      {
+        ruleName: 'pathfollow2d-invalid-parent',
+        severity: 'warning',
+        contains: ['a child of a Node2D node', 'direct child of a Path2D'],
+      }
     );
   });
 
-  it('errors when PathFollow2D is at the scene root (no parent)', () => {
+  it('warns when PathFollow2D is at the scene root (no parent)', () => {
     expectDiagnostic(scene(node('PathFollow2D')), {
       ruleName: 'pathfollow2d-no-parent',
+      severity: 'warning',
+      contains: ['the scene root', 'direct child of a Path2D'],
     });
+  });
+
+  it('stays quiet when the parent is instanced, since its type lives in another file', () => {
+    const content = `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://track.tscn" id="1_track"]
+
+[node name="Track" instance=ExtResource("1_track")]
+
+[node name="PathFollow2D" type="PathFollow2D" parent="."]
+`;
+    const diagnostics = lint(content);
+    expect(diagnostics.filter((d) => d.ruleName?.startsWith('pathfollow2d-'))).toHaveLength(0);
   });
 
   it('warns when progress_ratio is outside 0-1', () => {

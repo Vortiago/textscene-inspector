@@ -17,7 +17,8 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties, findParentNode } from '../../../linter/linterUtils.js';
+import { isValidProperties } from '../../../linter/linterUtils.js';
+import { parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 
 function checkPathFollow2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -26,19 +27,24 @@ function checkPathFollow2D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  const parent = findParentNode(scene.nodes, node);
-  if (!parent) {
+  // path_2d.cpp:385 — the placement Godot itself flags, and it is a
+  // get_configuration_warnings() entry, so it is advisory (ADR-0032) rather
+  // than a setter that refuses a value. `parentTypeVerdict` supplies the
+  // instanced/untyped-parent exemption: a parent whose type lives in a
+  // sub-scene the linter never opens may well BE a Path2D.
+  const placement = parentTypeVerdict(scene, node, 'Path2D');
+  if (placement.kind === 'root') {
     diagnostics.push({
-      severity: 'error',
-      message: `PathFollow2D '${node.name}' has no parent node. PathFollow2D MUST be a direct child of a Path2D node to function.`,
+      severity: 'warning',
+      message: `PathFollow2D '${node.name}' is the scene root. It only works as a direct child of a Path2D node, and follows nothing here.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'pathfollow2d-no-parent',
     });
-  } else if (parent.type !== 'Path2D') {
+  } else if (placement.kind === 'mismatch') {
     diagnostics.push({
-      severity: 'error',
-      message: `PathFollow2D '${node.name}' has parent '${parent.name}' of type '${parent.type}'. PathFollow2D MUST be a direct child of a Path2D node to function.`,
+      severity: 'warning',
+      message: `PathFollow2D '${node.name}' is ${placementPhrase(placement)}. It only works as a direct child of a Path2D node, and follows nothing here.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'pathfollow2d-invalid-parent',
@@ -96,8 +102,8 @@ const pathFollow2DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['PathFollow2D'],
     emits: [
-      { ruleName: 'pathfollow2d-no-parent', severity: 'error' },
-      { ruleName: 'pathfollow2d-invalid-parent', severity: 'error' },
+      { ruleName: 'pathfollow2d-no-parent', severity: 'warning' },
+      { ruleName: 'pathfollow2d-invalid-parent', severity: 'warning' },
       { ruleName: 'pathfollow2d-negative-progress', severity: 'warning' },
       { ruleName: 'pathfollow2d-progress-ratio-out-of-range', severity: 'warning' },
       { ruleName: 'pathfollow2d-both-progress-properties', severity: 'warning' },
