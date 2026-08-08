@@ -132,7 +132,7 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
   if (outOfRangeSettings.size > 0) {
     const indices = [...outOfRangeSettings].sort((a, b) => a - b).join(', ');
     diagnostics.push({
-      severity: 'warning',
+      severity: 'error',
       message:
         `BoneTwistDisperser3D setting index(es) ${indices} fall outside setting_count ` +
         `(${settingCount}). BoneTwistDisperser3D::_set opens with ERR_FAIL_INDEX_V(which, ` +
@@ -151,7 +151,7 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
       .map(([setting, joint]) => `${setting}/${joint}`)
       .join(', ');
     diagnostics.push({
-      severity: 'warning',
+      severity: 'error',
       message:
         `BoneTwistDisperser3D joint(s) ${pairs} (setting/joint) ` +
         'set twist_amount past their own joint_count. set_joint_twist_amount guards with ' +
@@ -176,12 +176,12 @@ const boneTwistDisperser3DValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'bonetwistdisperser3d-setting-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'bone_twist_disperser_3d.cpp:39' },
       },
       {
         ruleName: 'bonetwistdisperser3d-joint-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'bone_twist_disperser_3d.cpp:502' },
       },
     ],

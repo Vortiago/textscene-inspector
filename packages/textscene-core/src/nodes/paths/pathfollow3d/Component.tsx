@@ -2,8 +2,10 @@
  * <PathFollow3D> — positions its children along the parent Path3D's curve.
  *
  * It reads the nearest ancestor Path3D's curve via Path3DCurveContext, samples
- * the point at `progress_ratio` (preferred) or absolute `progress` (looping when
- * `loop`), orients children to the tangent per `rotation_mode` (model front is
+ * the point at absolute `progress` — the only one of the two position keys a
+ * scene file can carry, and unwrapped whatever `loop` says, for the reason
+ * `computeFollowTransform` gives —
+ * orients children to the tangent per `rotation_mode` (model front is
  * -Z, or +Z with `use_model_front`), and nudges by `h_offset`/`v_offset` along
  * the oriented right/up axes. That computed transform drives the group (Godot
  * derives the follower's transform from the curve, overriding the authored one).
@@ -82,15 +84,14 @@ function computeFollowTransform(
 ): FollowTransform | null {
   if (!sampler || sampler.length <= 0) return null;
 
-  const rawDistance =
-    props.progress_ratio !== undefined
-      ? props.progress_ratio * sampler.length
-      : props.progress ?? 0;
-  const distance = props.loop
-    ? ((rawDistance % sampler.length) + sampler.length) % sampler.length
-    : rawDistance;
-
-  const sample = sampler.sampleAt(distance);
+  // `progress` alone, unwrapped. Godot applies a node's stored properties
+  // BEFORE parenting it (packed_scene.cpp:492 sets, :541 parents) and binds
+  // `PathFollow3D::path` only on enter-tree, so `set_progress_ratio` refuses
+  // every authored ratio (path_3d.cpp:503) and `set_progress`'s own wrap/clamp
+  // branch is skipped for want of a curve. What is left is the raw value and
+  // the sampler's clamp (curve.cpp:2024) — which is why `loop` does not wrap a
+  // scene-loaded progress either, measured both ways against 4.6.3.
+  const sample = sampler.sampleAt(props.progress ?? 0);
   const forward = new THREE.Vector3(sample.tangent.x, sample.tangent.y, sample.tangent.z);
 
   const quaternion = new THREE.Quaternion();

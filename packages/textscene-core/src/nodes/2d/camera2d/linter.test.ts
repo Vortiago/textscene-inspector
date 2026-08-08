@@ -303,13 +303,21 @@ describe('Camera2D Linter', () => {
     });
 
     describe('position smoothing warnings', () => {
-      it('should warn (not format-error) when position_smoothing_speed is zero', () => {
-        // camera_2d.cpp:703 clamps to MAX(0, p_speed), so 0 is a legal value at
-        // the format level; only the semantic "won't smooth" advisory fires.
+      it('warns when position_smoothing_speed is zero, the value Godot keeps', () => {
+        // MAX(0, 0) is 0, so nothing is refused or altered; what the zero does
+        // is make the interpolation factor zero (camera_2d.cpp:199-200).
         expectDiagnostic(scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: 0 })), {
-          ruleName: 'camera2d-smoothing-speed-invalid',
+          ruleName: 'camera2d-smoothing-speed-zero',
           severity: 'warning',
           contains: ['position_smoothing_speed'],
+        });
+      });
+
+      it('errors when position_smoothing_speed is negative, which MAX overwrites', () => {
+        expectDiagnostic(scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: -4 })), {
+          ruleName: 'camera2d-smoothing-speed-negative',
+          severity: 'error',
+          contains: ['position_smoothing_speed', 'never applies'],
         });
       });
 
@@ -319,13 +327,21 @@ describe('Camera2D Linter', () => {
     });
 
     describe('rotation smoothing warnings', () => {
-      it('should warn (not format-error) when rotation_smoothing_speed is zero', () => {
-        // camera_2d.cpp:715 clamps to MAX(0, p_speed), so 0 is a legal value at
-        // the format level; only the semantic "won't smooth" advisory fires.
+      it('warns when rotation_smoothing_speed is zero, the value Godot keeps', () => {
+        // Mirror of the position case: MAX(0, 0) stores 0, and the zero step
+        // pins lerp_angle where it started (camera_2d.cpp:216-217).
         expectDiagnostic(scene(node('Camera2D', { rotation_smoothing_enabled: true, rotation_smoothing_speed: 0 })), {
-          ruleName: 'camera2d-rotation-smoothing-speed-invalid',
+          ruleName: 'camera2d-rotation-smoothing-speed-zero',
           severity: 'warning',
           contains: ['rotation_smoothing_speed'],
+        });
+      });
+
+      it('errors when rotation_smoothing_speed is negative, which MAX overwrites', () => {
+        expectDiagnostic(scene(node('Camera2D', { rotation_smoothing_enabled: true, rotation_smoothing_speed: -2.5 })), {
+          ruleName: 'camera2d-rotation-smoothing-speed-negative',
+          severity: 'error',
+          contains: ['rotation_smoothing_speed', 'never applies'],
         });
       });
 

@@ -43,6 +43,26 @@ function countEnabledCameras(scene: TscnScene): number {
 }
 
 /**
+ * Which tier a smoothing speed falls in, or null when it is fine or absent.
+ *
+ * Only the CLASSIFICATION is shared between the two axes. Each `ruleName` stays
+ * a literal at its push site, because `ruleCoverage.test.ts` pairs `severity:`
+ * with the next `ruleName:` by reading the source — a name reached through a
+ * config object is a name the guard cannot see, so it reads as invented.
+ */
+function smoothingSpeedTier(
+  rawProps: Record<string, string>,
+  enabledKey: string,
+  speedKey: string
+): { tier: 'negative' | 'zero'; speed: number } | null {
+  const raw = rawProps[speedKey];
+  if (rawProps[enabledKey] !== 'true' || raw === undefined) return null;
+  const speed = parseFloat(raw);
+  if (isNaN(speed) || speed > 0) return null;
+  return { tier: speed < 0 ? 'negative' : 'zero', speed };
+}
+
+/**
  * Validate Camera2D semantic rules
  */
 function checkCamera2D(context: RuleContext): Diagnostic[] {
@@ -103,38 +123,55 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: position_smoothing_enabled with a speed that cannot smooth
-  if (
-    rawProps.position_smoothing_enabled === 'true' &&
-    rawProps.position_smoothing_speed !== undefined
-  ) {
-    const speed = parseFloat(rawProps.position_smoothing_speed);
-    if (!isNaN(speed) && speed <= 0) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `Camera2D has 'position_smoothing_enabled' set to true but 'position_smoothing_speed' is ${speed}. Speed must be greater than 0 for smoothing to work.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'camera2d-smoothing-speed-invalid',
-      });
-    }
+  // Zero and negative are two ADR-0032 tiers, not one condition. The setters
+  // store `MAX(0, p_speed)` (camera_2d.cpp:703, :715): a NEGATIVE speed is
+  // overwritten before it reaches the field, which is the error tier, while
+  // ZERO is stored exactly as written and only makes the interpolation factor
+  // zero, freezing the smoothed position where it started (:199-200, :216-217).
+  const position = smoothingSpeedTier(
+    rawProps,
+    'position_smoothing_enabled',
+    'position_smoothing_speed'
+  );
+  if (position?.tier === 'negative') {
+    diagnostics.push({
+      severity: 'error',
+      message: `Camera2D has 'position_smoothing_enabled' set to true but 'position_smoothing_speed' is ${position.speed}. Godot stores 0 instead, so the authored value never applies.`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'camera2d-smoothing-speed-negative',
+    });
+  } else if (position?.tier === 'zero') {
+    diagnostics.push({
+      severity: 'warning',
+      message: `Camera2D has 'position_smoothing_enabled' set to true but 'position_smoothing_speed' is 0. The value is kept, but it makes the interpolation factor 0, so the smoothed position never follows the camera.`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'camera2d-smoothing-speed-zero',
+    });
   }
 
-  // WARNING: rotation_smoothing_enabled with a speed that cannot smooth
-  if (
-    rawProps.rotation_smoothing_enabled === 'true' &&
-    rawProps.rotation_smoothing_speed !== undefined
-  ) {
-    const speed = parseFloat(rawProps.rotation_smoothing_speed);
-    if (!isNaN(speed) && speed <= 0) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `Camera2D has 'rotation_smoothing_enabled' set to true but 'rotation_smoothing_speed' is ${speed}. Speed must be greater than 0 for rotation smoothing to work.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'camera2d-rotation-smoothing-speed-invalid',
-      });
-    }
+  const rotation = smoothingSpeedTier(
+    rawProps,
+    'rotation_smoothing_enabled',
+    'rotation_smoothing_speed'
+  );
+  if (rotation?.tier === 'negative') {
+    diagnostics.push({
+      severity: 'error',
+      message: `Camera2D has 'rotation_smoothing_enabled' set to true but 'rotation_smoothing_speed' is ${rotation.speed}. Godot stores 0 instead, so the authored value never applies.`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'camera2d-rotation-smoothing-speed-negative',
+    });
+  } else if (rotation?.tier === 'zero') {
+    diagnostics.push({
+      severity: 'warning',
+      message: `Camera2D has 'rotation_smoothing_enabled' set to true but 'rotation_smoothing_speed' is 0. The value is kept, but it makes the step 0, so the smoothed rotation never follows the camera.`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'camera2d-rotation-smoothing-speed-zero',
+    });
   }
 
   return diagnostics;
@@ -178,14 +215,32 @@ const camera2DValidationRule: LintRule = {
         },
       },
       {
-        ruleName: 'camera2d-smoothing-speed-invalid',
-        severity: 'warning',
+        ruleName: 'camera2d-smoothing-speed-negative',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'camera_2d.cpp:703' },
       },
       {
-        ruleName: 'camera2d-rotation-smoothing-speed-invalid',
+        ruleName: 'camera2d-smoothing-speed-zero',
         severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'camera_2d.cpp:199',
+          unused: 'a zero factor leaves the smoothed position where it started',
+        },
+      },
+      {
+        ruleName: 'camera2d-rotation-smoothing-speed-negative',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'camera_2d.cpp:715' },
+      },
+      {
+        ruleName: 'camera2d-rotation-smoothing-speed-zero',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'camera_2d.cpp:216',
+          unused: 'a zero step leaves lerp_angle at the angle it started from',
+        },
       },
     ],
   },

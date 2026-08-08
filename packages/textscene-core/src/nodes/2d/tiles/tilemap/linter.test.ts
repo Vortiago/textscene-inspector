@@ -42,7 +42,7 @@ describe('TileMap lint rules', () => {
         `tile_set = SubResource("TileSet_a")\nformat = 1\nlayer_0/tile_data = PackedInt32Array(0, 0)`,
         TILESET_RESOURCES
       ),
-      { ruleName: 'tilemap-unsupported-format', severity: 'warning' }
+      { ruleName: 'tilemap-unsupported-format', severity: 'error' }
     );
   });
 

@@ -13,24 +13,26 @@
  * ordering this rule's `node.properties` bag cannot see (it holds only the
  * final key/value pairs):
  *
- * - `item_count` applied first (Godot's own writer order, and the order this
- *   slice's fixture uses): by the time `selected` lands, `initialized` is
- *   already true, so the `p_which >= popup->get_item_count()` branch just
- *   returns, the write is silently dropped and `current` keeps its previous
- *   value (option_button.cpp:436-441).
- * - `selected` applied first: the SAME branch instead stashes the value in
- *   `queued_current` (option_button.cpp:437-438), and the pending
- *   `set_item_count` call later assigns it straight to `current`
+ * - `selected` applied first — which is Godot's OWN writer order; a packed
+ *   OptionButton saves `selected` above `item_count`. `initialized` is still
+ *   false, so the `p_which >= popup->get_item_count()` branch stashes the
+ *   value in `queued_current` (option_button.cpp:437-438), and the later
+ *   `set_item_count` assigns it straight to `current`
  *   (option_button.cpp:329-334) with NO bounds check at all, bypassing the
  *   `ERR_FAIL_INDEX` that guards every other path into `_select`
  *   (option_button.cpp:416). `current` ends up permanently out of range, and
  *   `get_selected()`/`get_selected_id()` return it as-is.
+ * - `item_count` applied first: by the time `selected` lands, `initialized`
+ *   is already true, so the SAME branch just returns, the write is silently
+ *   dropped and `current` keeps its previous value
+ *   (option_button.cpp:436-441).
  *
- * Neither outcome selects the intended item, so this warns regardless of
- * which shape a real file turns out to be. Warning, not error, because the
- * common (canonical-order) outcome is a no-op rather than a corrupted state,
- * and because the rule cannot know which shape applies without the file's
- * own property order.
+ * Neither outcome selects the intended item, so this reports regardless of
+ * which shape a real file turns out to be. Warning rather than error, and
+ * this is the ADR-0032 reading that decides it: in the canonical order the
+ * authored value is neither refused nor altered — it is stored verbatim, and
+ * only unusable. The refusal exists solely in the other order, so the error
+ * tier is not available to a rule that cannot see which order applies.
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';

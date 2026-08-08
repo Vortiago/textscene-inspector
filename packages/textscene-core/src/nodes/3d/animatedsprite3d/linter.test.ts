@@ -17,23 +17,32 @@ import './linter';
 
 const RULE_NAME = 'valid-animatedsprite3d-properties';
 
-/** Build a minimal RuleContext for one AnimatedSprite3D node with the given raw properties. */
-function context(properties: Record<string, string>): RuleContext {
+/**
+ * Build a minimal RuleContext for one AnimatedSprite3D node.
+ *
+ * `declared` lists the SubResource ids the scene holds, since the
+ * dangling-reference arm resolves `sprite_frames` against them.
+ */
+function context(properties: Record<string, string>, declared: string[] = ['frames_1']): RuleContext {
   const node: TscnNode = {
     name: 'MyAnimatedSprite3D',
     type: 'AnimatedSprite3D',
     children: [],
     properties: properties as unknown as Record<string, unknown>,
   };
-  const scene: TscnScene = { nodes: [node], externalResources: [], internalResources: [] };
+  const scene: TscnScene = {
+    nodes: [node],
+    externalResources: [],
+    internalResources: declared.map((id) => ({ id, type: 'SpriteFrames', data: {} })),
+  };
   return { scene, node, properties: node.properties };
 }
 
 /** Run AnimatedSprite3D's registered rule against a raw property bag. */
-function lint(properties: Record<string, string>) {
+function lint(properties: Record<string, string>, declared?: string[]) {
   const rule = ruleRegistry.getRule(RULE_NAME);
   expect(rule, `rule '${RULE_NAME}' is not registered`).toBeDefined();
-  return rule!.check(context(properties));
+  return rule!.check(context(properties, declared));
 }
 
 describe('AnimatedSprite3D semantic rule', () => {
@@ -61,12 +70,29 @@ describe('AnimatedSprite3D semantic rule', () => {
     });
   });
 
+  describe('dangling sprite_frames', () => {
+    it('errors when the reference names an id the file never declares', () => {
+      const diagnostics = lint({ sprite_frames: 'SubResource("frames_1")' }, []);
+      expect(diagnostics).toContainEqual(
+        expect.objectContaining({
+          severity: 'error',
+          ruleName: 'valid-animatedsprite3d-resources',
+        })
+      );
+    });
+
+    it('stays quiet when the scene declares it', () => {
+      const diagnostics = lint({ sprite_frames: 'SubResource("frames_1")' });
+      expect(diagnostics.some((d) => d.ruleName === 'valid-animatedsprite3d-resources')).toBe(false);
+    });
+  });
+
   describe('animation-no-spriteframes', () => {
-    it('warns when animation is set without sprite_frames', () => {
+    it('errors when animation is set without sprite_frames, since Godot clears it', () => {
       const diagnostics = lint({ animation: '&"walk"' });
       expect(diagnostics).toContainEqual(
         expect.objectContaining({
-          severity: 'warning',
+          severity: 'error',
           ruleName: 'animatedsprite3d-animation-no-spriteframes',
         })
       );

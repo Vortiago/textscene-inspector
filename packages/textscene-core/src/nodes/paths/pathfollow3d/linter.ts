@@ -18,14 +18,15 @@
  *   ROTATION_ORIENTED` (path_3d.cpp:362), and `up_vector_enabled` defaults to
  *   true (curve.h:299) — so the rule warned about exactly the configuration that
  *   is correct, and stayed silent about nothing.
- * - The both-progress-properties message claimed `progress_ratio` "takes
- *   precedence". Neither half was true: `PackedScene::instantiate` applies a
- *   node's stored properties in FILE ORDER through a plain sequential `set()`
- *   loop (packed_scene.cpp:365-381), so whichever key appears LAST in the file
- *   wins, not `progress_ratio` unconditionally — and Godot's own saver can
- *   never produce this state to begin with, since `progress_ratio` is declared
- *   `PROPERTY_USAGE_EDITOR` with no `PROPERTY_USAGE_STORAGE` bit (path_3d.cpp:433),
- *   so the dual-key file only arises when a human hand-writes both keys.
+ *
+ * `progress` and `progress_ratio` are NOT two spellings of one value at load
+ * time. `PackedScene::instantiate` applies a node's stored properties BEFORE
+ * adding it to its parent (packed_scene.cpp:492 sets, :541 parents), and
+ * `PathFollow3D::path` is only assigned on NOTIFICATION_ENTER_TREE. So
+ * `set_progress` finds `path == nullptr`, skips the wrap/clamp branch and
+ * stores whatever was written; `set_progress_ratio` opens with
+ * `ERR_FAIL_NULL_MSG(path)` (path_3d.cpp:503) and drops EVERY authored ratio,
+ * in range or not. File order decides no contest between them.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -99,13 +100,15 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: progress < 0 (will be clamped to 0 by Godot)
+  // The value survives; what does not survive is the travel it asks for. Every
+  // sampler clamps the offset into the curve, so the follower parks at the
+  // start rather than extrapolating backwards off the end.
   if (rawProps.progress !== undefined) {
     const progress = parseFloat(rawProps.progress);
     if (!isNaN(progress) && progress < 0) {
       diagnostics.push({
         severity: 'warning',
-        message: `PathFollow3D 'progress' is negative (${progress}). Godot resolves it against the curve's length once the node enters the tree — wrapping it when 'loop' is on, clamping it to 0 when off — so the value in the file is not the one that takes effect.`,
+        message: `PathFollow3D 'progress' is negative (${progress}). Godot keeps the value, but clamps it when sampling the curve, so the follower sits at the start of the path.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'pathfollow3d-negative-progress',
@@ -113,34 +116,14 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: progress_ratio outside 0-1 range (will be clamped)
+  // Unconditional: the guard is on the missing parent, not on the value.
   if (rawProps.progress_ratio !== undefined) {
-    const progressRatio = parseFloat(rawProps.progress_ratio);
-    if (!isNaN(progressRatio)) {
-      if (progressRatio < 0 || progressRatio > 1) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `PathFollow3D 'progress_ratio' is outside the 0-1 range (${progressRatio}). Godot will clamp this value. Valid range: 0.0 (start) to 1.0 (end).`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'pathfollow3d-progress-ratio-out-of-range',
-        });
-      }
-    }
-  }
-
-  // Warning: both progress and progress_ratio set. Neither always wins: Godot
-  // applies stored properties in FILE ORDER (packed_scene.cpp:365-381), so
-  // whichever key comes last takes effect — and this file could only exist
-  // hand-written, since progress_ratio carries no PROPERTY_USAGE_STORAGE bit
-  // (path_3d.cpp:433) and Godot's own saver never writes it.
-  if (rawProps.progress !== undefined && rawProps.progress_ratio !== undefined) {
     diagnostics.push({
-      severity: 'warning',
-      message: `PathFollow3D has both 'progress' and 'progress_ratio' set. Godot applies stored properties in file order (packed_scene.cpp:365-381), so whichever key appears LAST in the file wins — not always 'progress_ratio'. Godot's own saver never writes both: 'progress_ratio' has no PROPERTY_USAGE_STORAGE bit (path_3d.cpp:433), so this state only arises in a hand-written file.`,
+      severity: 'error',
+      message: `PathFollow3D 'progress_ratio' is set. A scene file cannot carry it: the setter needs a Path3D parent that is already in the tree, and properties are applied before the node is parented, so Godot drops it. Use 'progress' instead.`,
       nodeName: node.name,
       nodeType: node.type,
-      ruleName: 'pathfollow3d-both-progress-properties',
+      ruleName: 'pathfollow3d-progress-ratio-ignored',
     });
   }
 
@@ -180,21 +163,16 @@ const pathFollow3DValidationRule: LintRule = {
       {
         ruleName: 'pathfollow3d-negative-progress',
         severity: 'warning',
-        grounding: { kind: 'engine', at: 'path_3d.cpp:461' },
-      },
-      {
-        ruleName: 'pathfollow3d-progress-ratio-out-of-range',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'path_3d.cpp:466' },
-      },
-      {
-        ruleName: 'pathfollow3d-both-progress-properties',
-        severity: 'warning',
         grounding: {
           kind: 'engine-inert',
-          at: 'packed_scene.cpp:369',
-          unused: 'properties apply in file order, so the earlier key is overwritten',
+          at: 'curve.cpp:2024',
+          unused: 'the sampler clamps the offset, so travel before the start moves nothing',
         },
+      },
+      {
+        ruleName: 'pathfollow3d-progress-ratio-ignored',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'path_3d.cpp:503' },
       },
       { ruleName: 'pathfollow3d-oriented-mode-requires-up-vector', severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],

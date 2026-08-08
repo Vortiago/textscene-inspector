@@ -197,10 +197,10 @@ describe('AnimatedSprite2D Linter', () => {
   });
 
   describe('Semantic Validation (Animation Properties)', () => {
-    it('should warn when animation is set but sprite_frames is not', () => {
+    it('errors when animation is set but sprite_frames is not, since Godot clears it', () => {
       expectDiagnostic(scene(node('AnimatedSprite2D', { animation: '"walk"' })), {
         ruleName: 'animatedsprite2d-animation-no-spriteframes',
-        severity: 'warning',
+        severity: 'error',
         contains: ['animation', "sprite_frames' is not set"],
       });
     });

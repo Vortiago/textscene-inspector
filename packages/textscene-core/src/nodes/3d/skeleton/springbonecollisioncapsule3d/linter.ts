@@ -52,7 +52,7 @@ function checkSpringBoneCollisionCapsule3D(context: RuleContext): Diagnostic[] {
 
   return [
     {
-      severity: 'warning',
+      severity: 'error',
       // The literals as written, not the parsed numbers, so `inf` reads as `inf`.
       message: `SpringBoneCollisionCapsule3D '${node.name}' sets radius ${rawRadius.trim()} on height ${rawHeight.trim()}. Godot keeps a capsule's radius at or below half its height, so loading this scene rewrites one of the two and the shape will not be the one written.`,
       nodeName: node.name,
@@ -72,7 +72,7 @@ const springBoneCollisionCapsule3DShapeRule: LintRule = {
     emits: [
       {
         ruleName: 'springbonecollisioncapsule3d-radius-exceeds-half-height',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'spring_bone_collision_capsule_3d.cpp:38' },
       },
     ],

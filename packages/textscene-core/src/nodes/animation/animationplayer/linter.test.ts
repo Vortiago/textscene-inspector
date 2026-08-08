@@ -229,7 +229,10 @@ describe('AnimationPlayer Linter', () => {
     });
 
     describe('current_animation existence', () => {
-      it('should warn when current_animation references missing animation', () => {
+      it('errors when current_animation names an animation no library holds', () => {
+        // Unlike autoplay, which NOTIFICATION_READY simply skips, this one is
+        // applied through play() and hits ERR_FAIL_COND_MSG at
+        // animation_player.cpp:429, so the property loads empty.
         expectDiagnostic(
           scene(
             node('AnimationPlayer', {
@@ -237,7 +240,11 @@ describe('AnimationPlayer Linter', () => {
               'anims/idle': 'SubResource("Animation_1")',
             })
           ),
-          { prop: 'current_animation', severity: 'warning', contains: ['current_animation', 'may not exist', 'walk'] }
+          {
+            prop: 'current_animation',
+            severity: 'error',
+            contains: ['current_animation', 'refuses the assignment', 'walk'],
+          }
         );
       });
 

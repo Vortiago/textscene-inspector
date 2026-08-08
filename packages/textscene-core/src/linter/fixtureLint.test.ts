@@ -51,10 +51,6 @@ const UNIT_FIXTURE_WARNINGS: Readonly<Record<string, { rules: readonly string[];
     ],
     reason: 'named for the two advisories it carries; they are the fixture',
   },
-  'unit-pathfollow-3d.tscn': {
-    rules: ['pathfollow3d-both-progress-properties'],
-    reason: 'sets both progress properties deliberately, to pin which one wins',
-  },
   'unit-instance-child.tscn': {
     rules: ['area3d-needs-collision-shape'],
     reason: "the Area3D root is a coin pickup whose shape comes from the scene that instances it; the fixture is about the instanced child's transform",

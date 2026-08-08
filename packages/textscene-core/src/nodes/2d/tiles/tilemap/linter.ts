@@ -130,12 +130,16 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
     });
   }
 
+  // The decoder for the older formats is compiled in, but the guard above it
+  // is not: tile_map.cpp:71 refuses anything but the newest format whenever
+  // DISABLE_DEPRECATED is UNSET, which is every stock build. So the layer's
+  // tile data is dropped whole, rather than decoded through the legacy path.
   if (layerData.length > 0 && format !== 2) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'error',
       message:
-        `TileMap 'format = ${format}' is a Godot 3 tile data format — ` +
-        `only format 2 (Godot 4) renders.`,
+        `TileMap 'format = ${format}' is a Godot 3 tile data format. ` +
+        `Godot refuses the tile data outright, so the layer loads empty.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'tilemap-unsupported-format',
@@ -189,7 +193,7 @@ const tileMapValidationRule: LintRule = {
       },
       {
         ruleName: 'tilemap-unsupported-format',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'tile_map.cpp:71' },
       },
       {

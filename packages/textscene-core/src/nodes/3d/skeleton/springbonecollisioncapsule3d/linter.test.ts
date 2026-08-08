@@ -14,7 +14,7 @@ import './linter';
 
 const RULE = 'springbonecollisioncapsule3d-radius-exceeds-half-height';
 
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
+function reportsOf(diagnostics: ReturnType<Linter['lint']>) {
   return diagnostics.filter((d) => d.ruleName === RULE);
 }
 
@@ -46,20 +46,22 @@ describe('SpringBoneCollisionCapsule3D shape rule', () => {
   it('accepts a radius at exactly half the height', () => {
     // `if (radius > height * 0.5)` is strict on both setters
     // (spring_bone_collision_capsule_3d.cpp:37, :51), so equality is untouched.
-    expect(warningsOf(linter.lint(scene('radius = 0.5\nheight = 1.0\n')))).toEqual([]);
+    expect(reportsOf(linter.lint(scene('radius = 0.5\nheight = 1.0\n')))).toEqual([]);
   });
 
   it('accepts a radius comfortably under half the height', () => {
-    expect(warningsOf(linter.lint(scene('radius = 0.15\nheight = 1.0\n')))).toEqual([]);
+    expect(reportsOf(linter.lint(scene('radius = 0.15\nheight = 1.0\n')))).toEqual([]);
   });
 
-  it('warns when the radius exceeds half the height, quoting both values as written', () => {
-    const warnings = warningsOf(linter.lint(scene('radius = 0.6\nheight = 0.8\n')));
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]!.severity).toBe('warning');
-    expect(warnings[0]!.message).toContain('0.6');
-    expect(warnings[0]!.message).toContain('0.8');
-    expect(warnings[0]!.nodeName).toBe('Capsule');
+  it('errors when the radius exceeds half the height, quoting both values as written', () => {
+    const reports = reportsOf(linter.lint(scene('radius = 0.6\nheight = 0.8\n')));
+    expect(reports).toHaveLength(1);
+    // ADR-0032 error tier: `set_height` rewrites `radius` to half the height
+    // rather than keeping what was authored.
+    expect(reports[0]!.severity).toBe('error');
+    expect(reports[0]!.message).toContain('0.6');
+    expect(reports[0]!.message).toContain('0.8');
+    expect(reports[0]!.nodeName).toBe('Capsule');
   });
 
   it('stays quiet when only radius is written, since the written value survives', () => {
@@ -67,32 +69,32 @@ describe('SpringBoneCollisionCapsule3D shape rule', () => {
     // (spring_bone_collision_capsule_3d.cpp:36-38), so a file naming radius
     // alone loads with that radius intact. Warning here would fire on a scene
     // whose every written value Godot honours.
-    expect(warningsOf(linter.lint(scene('radius = 4.0\n')))).toEqual([]);
+    expect(reportsOf(linter.lint(scene('radius = 4.0\n')))).toEqual([]);
   });
 
   it('stays quiet when only height is written', () => {
     // Mirror case: `set_height` moves `radius`, never its own argument (:50-52).
-    expect(warningsOf(linter.lint(scene('height = 0.02\n')))).toEqual([]);
+    expect(reportsOf(linter.lint(scene('height = 0.02\n')))).toEqual([]);
   });
 
   it('stays quiet on a capsule with no properties at all', () => {
-    expect(warningsOf(linter.lint(scene('')))).toEqual([]);
+    expect(reportsOf(linter.lint(scene('')))).toEqual([]);
   });
 
   it('stays quiet on nan, which trips no comparison', () => {
-    expect(warningsOf(linter.lint(scene('radius = nan\nheight = 1.0\n')))).toEqual([]);
+    expect(reportsOf(linter.lint(scene('radius = nan\nheight = 1.0\n')))).toEqual([]);
   });
 
   it('warns on an infinite radius, which exceeds half of any finite height', () => {
     // `inf` is a legal literal Godot writes and reloads
     // (variant_parser.cpp:150-155), and it is a real value on the number line.
-    const warnings = warningsOf(linter.lint(scene('radius = inf\nheight = 1.0\n')));
+    const warnings = reportsOf(linter.lint(scene('radius = inf\nheight = 1.0\n')));
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.message).toContain('inf');
   });
 
   it('ignores an unreadable value rather than guessing at it', () => {
-    expect(warningsOf(linter.lint(scene('radius = 0.6\nheight = "tall"\n')))).toEqual([]);
+    expect(reportsOf(linter.lint(scene('radius = 0.6\nheight = "tall"\n')))).toEqual([]);
   });
 
   it('does not fire on another SpringBoneCollision3D carrying the same keys', () => {
@@ -106,6 +108,6 @@ describe('SpringBoneCollisionCapsule3D shape rule', () => {
 radius = 4.0
 height = 0.1
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content))).toEqual([]);
   });
 });

@@ -36,13 +36,18 @@ describe('Range bounds rule', () => {
   it('warns when max_value is below min_value', () => {
     const content = scene('min_value = 10\nmax_value = 5\n');
     expect(namesOf(content)).toContain('range-max-below-min');
-    expect(severitiesOf(content, 'range-max-below-min')).toEqual(['warning']);
+    expect(severitiesOf(content, 'range-max-below-min')).toEqual(['error']);
     expect(linter.lint(content)[0]!.message).toContain('max_value');
   });
 
-  it('never raises an ERROR — Godot clamps rather than rejects (severity contract)', () => {
+  it('reports exactly one error and nothing else (severity contract)', () => {
+    // `set_max` stores MAX(p_max, shared->min) and `set_min` re-raises max the
+    // same way (range.cpp:217, :229), so the inverted pair is rewritten in
+    // either load order: the ADR-0032 error tier, not an advisory.
     const diagnostics = linter.lint(scene('min_value = 10\nmax_value = 5\n'));
-    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expect(diagnostics.map((d) => [d.ruleName, d.severity])).toEqual([
+      ['range-max-below-min', 'error'],
+    ]);
   });
 
   it('stays silent when max_value equals min_value — a zero-width range is legal Godot (edge case)', () => {

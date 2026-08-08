@@ -70,7 +70,7 @@ describe('SpringBoneSimulator3D semantic rules', () => {
         ),
         {
           ruleName: 'springbonesimulator3d-setting-index-out-of-range',
-          severity: 'warning',
+          severity: 'error',
           nodeType: 'SpringBoneSimulator3D',
           contains: ['1', 'setting_count (1)', 'spring_bone_simulator_3d.cpp:44'],
         }
@@ -80,7 +80,7 @@ describe('SpringBoneSimulator3D semantic rules', () => {
     it('warns when setting_count is absent, since settings starts empty', () => {
       expectDiagnostic(
         scene(node('SpringBoneSimulator3D', { 'settings/0/individual_config': false })),
-        { ruleName: 'springbonesimulator3d-setting-index-out-of-range', severity: 'warning' }
+        { ruleName: 'springbonesimulator3d-setting-index-out-of-range', severity: 'error' }
       );
     });
 
@@ -122,7 +122,7 @@ describe('SpringBoneSimulator3D semantic rules', () => {
         ),
         {
           ruleName: 'springbonesimulator3d-shared-config-ignored',
-          severity: 'warning',
+          severity: 'error',
           nodeType: 'SpringBoneSimulator3D',
           contains: ['spring_bone_simulator_3d.cpp:644'],
         }
@@ -153,7 +153,7 @@ describe('SpringBoneSimulator3D semantic rules', () => {
         ),
         {
           ruleName: 'springbonesimulator3d-joint-config-ignored',
-          severity: 'warning',
+          severity: 'error',
           contains: ['spring_bone_simulator_3d.cpp:914'],
         }
       );
@@ -218,7 +218,7 @@ describe('SpringBoneSimulator3D semantic rules', () => {
         ),
         {
           ruleName: 'springbonesimulator3d-collision-list-ignored',
-          severity: 'warning',
+          severity: 'error',
           contains: ['spring_bone_simulator_3d.cpp:1150-1152'],
         }
       );

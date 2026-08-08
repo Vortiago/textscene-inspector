@@ -44,7 +44,10 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Validate frame is within valid range (frame < hframes * vframes)
+  // `set_frame` opens with ERR_FAIL_INDEX (sprite_2d.cpp:296), and `hframes`
+  // and `vframes` are declared ahead of `frame` (:543-545), so the guard sees
+  // the authored grid and the out-of-range write is refused at load, not at
+  // some later runtime call.
   if (rawProps.frame !== undefined) {
     const frame = parseInt(rawProps.frame, 10);
     const hframes = rawProps.hframes !== undefined ? parseInt(rawProps.hframes, 10) : 1;
@@ -54,8 +57,8 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
       const maxFrame = hframes * vframes;
       if (frame >= maxFrame) {
         diagnostics.push({
-          severity: 'warning',
-          message: `Frame ${frame} is out of range. Maximum frame is ${maxFrame - 1} (hframes=${hframes}, vframes=${vframes})`,
+          severity: 'error',
+          message: `Frame ${frame} is out of range. Maximum frame is ${maxFrame - 1} (hframes=${hframes}, vframes=${vframes}). Godot refuses the assignment, so the sprite loads on frame 0.`,
           nodeName: node.name,
           nodeType: node.type,
           ruleName: 'sprite2d-frame-range',
@@ -76,8 +79,8 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
       if (!isNaN(coordX) && !isNaN(coordY) && !isNaN(hframes) && !isNaN(vframes)) {
         if (coordX >= hframes) {
           diagnostics.push({
-            severity: 'warning',
-            message: `frame_coords.x (${coordX}) is out of range. Maximum is ${hframes - 1} (hframes=${hframes})`,
+            severity: 'error',
+            message: `frame_coords.x (${coordX}) is out of range. Maximum is ${hframes - 1} (hframes=${hframes}). Godot refuses the assignment, so the sprite loads on frame 0.`,
             nodeName: node.name,
             nodeType: node.type,
             ruleName: 'sprite2d-frame-coords-range',
@@ -85,8 +88,8 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
         }
         if (coordY >= vframes) {
           diagnostics.push({
-            severity: 'warning',
-            message: `frame_coords.y (${coordY}) is out of range. Maximum is ${vframes - 1} (vframes=${vframes})`,
+            severity: 'error',
+            message: `frame_coords.y (${coordY}) is out of range. Maximum is ${vframes - 1} (vframes=${vframes}). Godot refuses the assignment, so the sprite loads on frame 0.`,
             nodeName: node.name,
             nodeType: node.type,
             ruleName: 'sprite2d-frame-coords-range',
@@ -155,12 +158,12 @@ const sprite2DValidationRule: LintRule = {
       },
       {
         ruleName: 'sprite2d-frame-range',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'sprite_2d.cpp:296' },
       },
       {
         ruleName: 'sprite2d-frame-coords-range',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'sprite_2d.cpp:312' },
       },
       {

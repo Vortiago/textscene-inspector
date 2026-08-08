@@ -68,7 +68,7 @@ function checkItemList(context: RuleContext): Diagnostic[] {
 
   const indices = [...offending].sort((a, b) => a - b).join(', ');
   diagnostics.push({
-    severity: 'warning',
+    severity: 'error',
     message:
       `ItemList item index(es) ${indices} fall outside item_count (${count}). ` +
       'PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for ' +
@@ -91,7 +91,7 @@ const itemListValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'itemlist-item-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
       },
     ],

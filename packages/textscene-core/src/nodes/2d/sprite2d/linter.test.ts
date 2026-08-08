@@ -192,7 +192,7 @@ describe('Sprite2D Linter', () => {
     it('should detect frame out of range (frame >= hframes * vframes)', () => {
       expectDiagnostic(scene(node('Sprite2D', { hframes: 4, vframes: 3, frame: 12 })), {
         ruleName: 'sprite2d-frame-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'Sprite2D',
         contains: ['out of range', 'Maximum frame is 11'],
       });
@@ -237,7 +237,7 @@ describe('Sprite2D Linter', () => {
     it('should detect frame_coords.x out of range', () => {
       expectDiagnostic(scene(node('Sprite2D', { hframes: 4, frame_coords: 'Vector2i(4, 0)' })), {
         ruleName: 'sprite2d-frame-coords-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'Sprite2D',
         contains: ['frame_coords.x', 'out of range'],
       });
@@ -246,7 +246,7 @@ describe('Sprite2D Linter', () => {
     it('should detect frame_coords.y out of range', () => {
       expectDiagnostic(scene(node('Sprite2D', { vframes: 3, frame_coords: 'Vector2i(0, 3)' })), {
         ruleName: 'sprite2d-frame-coords-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'Sprite2D',
         contains: ['frame_coords.y', 'out of range'],
       });

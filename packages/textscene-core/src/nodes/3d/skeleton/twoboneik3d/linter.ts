@@ -148,7 +148,7 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   if (outOfRange.size > 0) {
     const indices = [...outOfRange].sort((a, b) => a - b).join(', ');
     diagnostics.push({
-      severity: 'warning',
+      severity: 'error',
       message:
         `TwoBoneIK3D setting index(es) ${indices} fall outside setting_count (${count}). ` +
         'TwoBoneIK3D::_set opens with ERR_FAIL_INDEX_V(which, settings.size(), false) ' +
@@ -176,7 +176,7 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   if (ignoredVectors.size > 0) {
     const indices = [...ignoredVectors].sort((a, b) => a - b).join(', ');
     diagnostics.push({
-      severity: 'warning',
+      severity: 'error',
       message:
         `TwoBoneIK3D setting(s) ${indices} set pole_direction_vector while pole_direction is ` +
         'not Custom (7). set_pole_direction_vector returns before assigning unless the ' +
@@ -201,12 +201,12 @@ const twoBoneIK3DValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'twoboneik3d-setting-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'two_bone_ik_3d.cpp:39' },
       },
       {
         ruleName: 'twoboneik3d-pole-direction-vector-ignored',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'two_bone_ik_3d.cpp:446' },
       },
       { ruleName: 'twoboneik3d-setting-missing-target-node', severity: 'warning', grounding: { kind: 'configuration-warning' } },

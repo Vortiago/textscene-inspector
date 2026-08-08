@@ -6,21 +6,19 @@
  * absence of a property, or a relationship between two properties on the same
  * node — so it stays intentionally small.
  *
- * All warnings, per the settled severity policy (missing-resource advisories,
- * `-spriteframes` named explicitly among them, are warnings, not errors: the
- * runtime-assignment-via-script idiom is valid Godot, so absence at authoring
- * time is not itself a mistake). A dangling `sprite_frames` reference (present
- * but unresolvable) would be the ADR-0032 "error" arm, matching
- * AnimatedSprite2D's `valid-animatedsprite2d-resources` rule — out of scope
- * here; see the task report.
+ * An ABSENT `sprite_frames` is a warning: assigning one from a script at runtime
+ * is valid Godot, so authoring-time absence is not itself a mistake. A present
+ * but unresolvable one is the ADR-0032 error arm, and so is an `animation` named
+ * with no SpriteFrames to hold it — Godot clears that name back to empty.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { checkResourceExists } from '../../../linter/resourceChecker.js';
 
 function checkAnimatedSprite3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node } = context;
+  const { node, scene } = context;
   const rawProps = node.properties as unknown as Record<string, string>;
 
   if (!rawProps.sprite_frames) {
@@ -31,12 +29,22 @@ function checkAnimatedSprite3D(context: RuleContext): Diagnostic[] {
       nodeType: node.type,
       ruleName: 'animatedsprite3d-requires-spriteframes',
     });
+  } else if (!checkResourceExists(scene, rawProps.sprite_frames)) {
+    diagnostics.push({
+      severity: 'error',
+      message: `SpriteFrames resource not found: ${rawProps.sprite_frames}`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'valid-animatedsprite3d-resources',
+    });
   }
 
+  // `sprite_frames` is declared ahead of `animation` (sprite_3d.cpp:1539-1540),
+  // so a null SpriteFrames at this point is the authored absence, not load order.
   if (rawProps.animation && !rawProps.sprite_frames) {
     diagnostics.push({
-      severity: 'warning',
-      message: `Property 'animation' is set to "${rawProps.animation}" but 'sprite_frames' is not set. Animation cannot play without a SpriteFrames resource.`,
+      severity: 'error',
+      message: `Property 'animation' is set to "${rawProps.animation}" but 'sprite_frames' is not set. Godot clears 'animation' back to empty, so the authored name never applies.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'animatedsprite3d-animation-no-spriteframes',
@@ -50,14 +58,23 @@ const animatedSprite3DValidationRule: LintRule = {
   meta: {
     name: 'valid-animatedsprite3d-properties',
     description:
-      "Warns when AnimatedSprite3D has no SpriteFrames, or sets animation without one",
+      "Validates AnimatedSprite3D SpriteFrames references and animation names",
     category: 'validation',
     applicableNodeTypes: ['AnimatedSprite3D'],
     emits: [
       { ruleName: 'animatedsprite3d-requires-spriteframes', severity: 'warning', grounding: { kind: 'configuration-warning' } },
       {
+        ruleName: 'valid-animatedsprite3d-resources',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the file declares no ExtResource or SubResource carrying that id',
+        },
+      },
+      {
         ruleName: 'animatedsprite3d-animation-no-spriteframes',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'sprite_3d.cpp:1441' },
       },
     ],

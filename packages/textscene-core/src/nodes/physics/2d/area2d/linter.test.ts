@@ -173,10 +173,10 @@ describe('Area2D Linter', () => {
   describe('Semantic Validation (Monitoring Configuration)', () => {
     it('should warn when both monitoring and monitorable are false', () => {
       expectDiagnostic(scene(node('Area2D', { monitoring: false, monitorable: false }), collisionShape2d), {
-        ruleName: 'area2d-inactive',
+        ruleName: 'area2d-detects-nothing',
         severity: 'warning',
         nodeType: 'Area2D',
-        contains: ['both', 'cannot detect'],
+        contains: ['both', 'detects no bodies', 'overrides still apply'],
       });
     });
 
@@ -324,7 +324,7 @@ describe('Area2D Linter', () => {
       );
       expect(diagnostics.length).toBeGreaterThan(0);
       const hasFormatError = diagnostics.some(d => d.message.includes('greater than 0'));
-      const hasSemanticError = diagnostics.some(d => d.ruleName === 'area2d-inactive');
+      const hasSemanticError = diagnostics.some(d => d.ruleName === 'area2d-detects-nothing');
       const hasMissingShape = diagnostics.some(d => d.ruleName === 'area2d-needs-collision-shape');
       expect(hasFormatError || hasSemanticError || hasMissingShape).toBe(true);
     });

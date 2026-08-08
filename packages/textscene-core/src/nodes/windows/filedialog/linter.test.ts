@@ -24,7 +24,7 @@ describe('FileDialog semantic rules', () => {
       ),
       {
         ruleName: 'filedialog-option-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'FileDialog',
         contains: ['1', 'option_count (1)'],
       }
@@ -40,7 +40,7 @@ describe('FileDialog semantic rules', () => {
       ),
       {
         ruleName: 'filedialog-option-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'FileDialog',
       }
     );
@@ -56,7 +56,7 @@ describe('FileDialog semantic rules', () => {
       ),
       {
         ruleName: 'filedialog-option-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'FileDialog',
       }
     );

@@ -54,7 +54,7 @@ function checkZoomLimits(context: RuleContext): Diagnostic[] {
 
   return [
     {
-      severity: 'warning',
+      severity: 'error',
       message: `GraphEdit 'zoom_min = ${minRaw}' is above 'zoom_max = ${maxRaw}'. set_zoom_min refuses a minimum above the current maximum and set_zoom_max refuses a maximum below the current minimum, so whichever the loader applies second is dropped and one of the two limits silently stays at its constructor default.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -73,7 +73,7 @@ const graphEditZoomLimitsRule: LintRule = {
     emits: [
       {
         ruleName: 'graphedit-zoom-min-above-max',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'graph_edit.cpp:2480' },
       },
     ],

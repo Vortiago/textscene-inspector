@@ -31,7 +31,7 @@ describe('ItemList semantic rules', () => {
       ),
       {
         ruleName: 'itemlist-item-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'ItemList',
         contains: ['2', 'item_count (2)'],
       }
@@ -50,7 +50,7 @@ describe('ItemList semantic rules', () => {
       ),
       {
         ruleName: 'itemlist-item-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'ItemList',
       }
     );
@@ -115,7 +115,7 @@ describe('ItemList semantic rules', () => {
           'item_7/text': '"Elixir"',
         })
       ),
-      { ruleName: 'itemlist-item-index-out-of-range', severity: 'warning' }
+      { ruleName: 'itemlist-item-index-out-of-range', severity: 'error' }
     );
     // One diagnostic listing both indices, not one per key.
     if (!diagnostic.message.includes('4, 7')) {

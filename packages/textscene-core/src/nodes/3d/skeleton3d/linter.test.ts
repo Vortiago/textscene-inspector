@@ -163,7 +163,7 @@ describe('Skeleton3D Linter', () => {
       it('warns on a negative motion_scale, which the setter also replaces', () => {
         expectDiagnostic(scene(node('Skeleton3D', { motion_scale: '-1.0' })), {
           ruleName: 'valid-skeleton3d-motion-scale',
-          severity: 'warning',
+          severity: 'error',
           contains: ['Godot replaces it with 1.0'],
         });
       });

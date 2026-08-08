@@ -151,7 +151,7 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
 
   if (outOfRange.size > 0) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'error',
       message:
         `SpringBoneSimulator3D setting index(es) ${list(outOfRange)} fall outside ` +
         `setting_count (${count}). SpringBoneSimulator3D::_set opens with ` +
@@ -165,7 +165,7 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
 
   if (sharedIgnored.size > 0) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'error',
       message:
         `SpringBoneSimulator3D setting(s) ${list(sharedIgnored)} carry the shared ` +
         'rotation_axis/radius/stiffness/drag/gravity block while individual_config is true. ' +
@@ -180,7 +180,7 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
 
   if (jointIgnored.size > 0) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'error',
       message:
         `SpringBoneSimulator3D setting(s) ${list(jointIgnored)} tune ` +
         'settings/<i>/joints/<j>/… while individual_config is false. set_joint_radius and ' +
@@ -195,7 +195,7 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
 
   if (collisionIgnored.size > 0) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'error',
       message:
         `SpringBoneSimulator3D setting(s) ${list(collisionIgnored)} carry an explicit ` +
         'collision list while enable_all_child_collisions is true (its default, ' +
@@ -210,7 +210,7 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
 
   if (excludeIgnored.size > 0) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'error',
       message:
         `SpringBoneSimulator3D setting(s) ${list(excludeIgnored)} carry an exclude ` +
         'collision list while enable_all_child_collisions is false. ' +
@@ -238,22 +238,22 @@ const springBoneSimulator3DValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'springbonesimulator3d-setting-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:44' },
       },
       {
         ruleName: 'springbonesimulator3d-shared-config-ignored',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:644' },
       },
       {
         ruleName: 'springbonesimulator3d-joint-config-ignored',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:914' },
       },
       {
         ruleName: 'springbonesimulator3d-collision-list-ignored',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:1150' },
       },
     ],

@@ -43,11 +43,12 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Warn if animation is set but sprite_frames is not set
+  // `sprite_frames` is declared ahead of `animation` (animated_sprite_2d.cpp:671-672),
+  // so a null SpriteFrames at this point is the authored absence, not load order.
   if (rawProps.animation && !rawProps.sprite_frames) {
     diagnostics.push({
-      severity: 'warning',
-      message: `Property 'animation' is set to "${rawProps.animation}" but 'sprite_frames' is not set. Animation cannot play without a SpriteFrames resource.`,
+      severity: 'error',
+      message: `Property 'animation' is set to "${rawProps.animation}" but 'sprite_frames' is not set. Godot clears 'animation' back to empty, so the authored name never applies.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'animatedsprite2d-animation-no-spriteframes',
@@ -84,7 +85,7 @@ const animatedSprite2DValidationRule: LintRule = {
       },
       {
         ruleName: 'animatedsprite2d-animation-no-spriteframes',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'animated_sprite_2d.cpp:563' },
       },
     ],

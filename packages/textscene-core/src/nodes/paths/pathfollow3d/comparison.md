@@ -20,8 +20,11 @@ only the box the follower carries.
 | Property | Value | Effect |
 | --- | --- | --- |
 | `progress` | `3.0528675` | absolute distance in metres along the curve; at instantiation Godot honours this value, placing the follower at the arc-length midpoint — the bottom of the U at `(0, 0, -1.4)` |
-| `progress_ratio` | `0.5` | the same midpoint expressed as a fraction of arc length; the fixture pins it to agree with `progress` so both renderers resolve the follower to one point |
 | `transform` | translation `(0, 0, -1.4)` | normally overridden by `progress`, but authored to the same midpoint so any resolution path lands the box identically |
+
+`progress_ratio` is deliberately absent. It is the one position key a scene file
+cannot carry: Godot binds the parent Path3D on enter-tree, after a node's
+properties are applied, so its setter refuses every stored ratio.
 
 ## Divergences
 

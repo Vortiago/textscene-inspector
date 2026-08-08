@@ -38,7 +38,7 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
     const motionScale = parseFloat(rawProps.motion_scale);
     if (!isNaN(motionScale) && motionScale <= 0) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'error',
         message: `motion_scale is ${motionScale}. Godot replaces it with 1.0, so the authored value never applies.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -86,7 +86,7 @@ const skeleton3DValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'valid-skeleton3d-motion-scale',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'skeleton_3d.cpp:586' },
       },
       {

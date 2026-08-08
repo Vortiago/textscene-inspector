@@ -47,7 +47,7 @@ describe('TwoBoneIK3D semantic rules', () => {
       ),
       {
         ruleName: 'twoboneik3d-setting-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'TwoBoneIK3D',
         contains: ['1', 'setting_count (1)'],
       }
@@ -63,7 +63,7 @@ describe('TwoBoneIK3D semantic rules', () => {
       ),
       {
         ruleName: 'twoboneik3d-setting-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'TwoBoneIK3D',
       }
     );
@@ -106,7 +106,7 @@ describe('TwoBoneIK3D semantic rules', () => {
       ),
       {
         ruleName: 'twoboneik3d-pole-direction-vector-ignored',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'TwoBoneIK3D',
         contains: ['two_bone_ik_3d.cpp:446'],
       }
@@ -121,7 +121,7 @@ describe('TwoBoneIK3D semantic rules', () => {
           'settings/0/pole_direction_vector': 'Vector3(0, 0, 1)',
         })
       ),
-      { ruleName: 'twoboneik3d-pole-direction-vector-ignored', severity: 'warning' }
+      { ruleName: 'twoboneik3d-pole-direction-vector-ignored', severity: 'error' }
     );
   });
 
@@ -168,7 +168,7 @@ describe('TwoBoneIK3D semantic rules', () => {
           'settings/00/pole_direction_vector': 'Vector3(0, 0, 1)',
         })
       ),
-      { ruleName: 'twoboneik3d-pole-direction-vector-ignored', severity: 'warning' }
+      { ruleName: 'twoboneik3d-pole-direction-vector-ignored', severity: 'error' }
     );
   });
 

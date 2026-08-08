@@ -102,12 +102,18 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
           ruleName: 'valid-gpuparticles3d-sub-emitter',
         });
       } else if (target.status === 'found' && target.node.type !== 'GPUParticles3D') {
+        // A separate rule name from the dangling case above, because the two
+        // are different ADR-0032 tiers. The path RESOLVES here; what says it
+        // must resolve to a GPUParticles3D is only the property's
+        // PROPERTY_HINT_NODE_PATH_VALID_TYPES, which constrains the inspector's
+        // node picker. Godot stores the path either way and simply emits
+        // nothing, so this is a hint violation - a warning.
         diagnostics.push({
-          severity: 'error',
-          message: `Sub-emitter property points to a ${target.node.type} node, but must point to a GPUParticles3D node`,
+          severity: 'warning',
+          message: `Sub-emitter property points to a ${target.node.type} node, but must point to a GPUParticles3D node. Godot keeps the path and emits no sub-particles.`,
           nodeName: node.name,
           nodeType: node.type,
-          ruleName: 'valid-gpuparticles3d-sub-emitter',
+          ruleName: 'gpuparticles3d-sub-emitter-wrong-type',
         });
       }
     }
@@ -165,6 +171,15 @@ const gpuParticles3DValidationRule: LintRule = {
       {
         ruleName: 'valid-gpuparticles3d-sub-emitter',
         severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the sub_emitter NodePath names a node this scene never declares',
+        },
+      },
+      {
+        ruleName: 'gpuparticles3d-sub-emitter-wrong-type',
+        severity: 'warning',
         grounding: { kind: 'engine', at: 'gpu_particles_3d.cpp:823' },
       },
       {

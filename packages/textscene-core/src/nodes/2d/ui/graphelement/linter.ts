@@ -56,7 +56,7 @@ function checkSelectedRequiresSelectable(context: RuleContext): Diagnostic[] {
 
   return [
     {
-      severity: 'warning',
+      severity: 'error',
       message:
         "GraphElement has 'selected = true' alongside 'selectable = false'. Godot's " +
         'GraphElement::set_selectable forces set_selected(false) whenever selectable ' +
@@ -80,7 +80,7 @@ const selectedRequiresSelectableRule: LintRule = {
     emits: [
       {
         ruleName: 'graph-element-selected-not-selectable',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'graph_element.cpp:207' },
       },
     ],

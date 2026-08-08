@@ -37,7 +37,7 @@ describe('GraphElement selection rule', () => {
   it('warns when selected = true is authored alongside selectable = false', () => {
     const content = scene('selectable = false\nselected = true\n');
     expect(namesOf(content)).toContain('graph-element-selected-not-selectable');
-    expect(severitiesOf(content, 'graph-element-selected-not-selectable')).toEqual(['warning']);
+    expect(severitiesOf(content, 'graph-element-selected-not-selectable')).toEqual(['error']);
     expect(linter.lint(content)[0]!.message).toContain('selectable');
   });
 
@@ -46,9 +46,14 @@ describe('GraphElement selection rule', () => {
     expect(namesOf(content)).toContain('graph-element-selected-not-selectable');
   });
 
-  it('never raises an ERROR — Godot silently clamps rather than rejecting (severity contract)', () => {
+  it('reports exactly one error and nothing else (severity contract)', () => {
+    // `set_selectable(false)` calls `set_selected(false)` unconditionally
+    // (graph_element.cpp:207), so the authored `selected` is overwritten — the
+    // ADR-0032 error tier, and the only diagnostic this scene should produce.
     const diagnostics = linter.lint(scene('selectable = false\nselected = true\n'));
-    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expect(diagnostics.map((d) => [d.ruleName, d.severity])).toEqual([
+      ['graph-element-selected-not-selectable', 'error'],
+    ]);
   });
 
   it('stays silent when selectable = false and selected = false — nothing forced, nothing to warn about (edge case)', () => {

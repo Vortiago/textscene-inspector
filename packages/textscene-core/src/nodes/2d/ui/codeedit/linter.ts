@@ -69,7 +69,7 @@ function checkCodeEdit(context: RuleContext): Diagnostic[] {
   if (shared.length === 0) return diagnostics;
 
   diagnostics.push({
-    severity: 'warning',
+    severity: 'error',
     message:
       `CodeEdit delimiter_strings and delimiter_comments both declare the start key(s) ${shared.map((k) => `"${k}"`).join(', ')}. ` +
       'CodeEdit::_set_delimiters stores both in one shared delimiters Vector (code_edit.cpp:3490-3508), and ' +
@@ -94,7 +94,7 @@ const codeEditDelimiterCollisionRule: LintRule = {
     emits: [
       {
         ruleName: 'codeedit-delimiter-start-key-collision',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'code_edit.cpp:3436' },
       },
     ],

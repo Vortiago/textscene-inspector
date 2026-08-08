@@ -166,10 +166,10 @@ describe('Area3D Linter', () => {
   describe('Semantic Validation (Monitoring Configuration)', () => {
     it('should warn when both monitoring and monitorable are false', () => {
       expectDiagnostic(scene(node('Area3D', { monitoring: false, monitorable: false }), collisionShape3d), {
-        ruleName: 'area3d-inactive',
+        ruleName: 'area3d-detects-nothing',
         severity: 'warning',
         nodeType: 'Area3D',
-        contains: ['both', 'cannot detect'],
+        contains: ['both', 'detects no bodies', 'overrides still apply'],
       });
     });
 
@@ -319,7 +319,7 @@ describe('Area3D Linter', () => {
       // Should have format error for zero distance + semantic errors
       expect(diagnostics.length).toBeGreaterThan(0);
       const hasFormatError = diagnostics.some(d => d.message.includes('greater than 0'));
-      const hasSemanticError = diagnostics.some(d => d.ruleName === 'area3d-inactive');
+      const hasSemanticError = diagnostics.some(d => d.ruleName === 'area3d-detects-nothing');
       const hasMissingShape = diagnostics.some(d => d.ruleName === 'area3d-needs-collision-shape');
       expect(hasFormatError || hasSemanticError || hasMissingShape).toBe(true);
     });

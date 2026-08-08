@@ -16,7 +16,7 @@ describe('PathFollow2D Linter', () => {
 curve = SubResource("curve_1")
 
 [node name="PathFollow2D" type="PathFollow2D" parent="."]
-progress_ratio = 0.5
+progress = 50.0
 `;
     const diagnostics = lint(content);
     expect(diagnostics.filter((d) => d.nodeType === 'PathFollow2D')).toHaveLength(0);
@@ -99,44 +99,38 @@ progress_ratio = 0.5
     });
   });
 
-  it('warns when progress_ratio is outside 0-1', () => {
+  it('errors on progress_ratio even at a perfectly in-range value', () => {
+    // The range is beside the point. `set_progress_ratio` opens with
+    // ERR_FAIL_NULL_MSG(path) (path_2d.cpp:472) and `path` is bound on
+    // enter-tree, which is after the loader applies properties — so 0.5 is
+    // dropped exactly as 1.5 is.
     expectDiagnostic(
-      scene(
-        node('Path2D'),
-        node('PathFollow2D', { progress_ratio: 1.5 }, { parent: '.' })
-      ),
-      { ruleName: 'pathfollow2d-progress-ratio-out-of-range', severity: 'warning' }
+      scene(node('Path2D'), node('PathFollow2D', { progress_ratio: 0.5 }, { parent: '.' })),
+      { ruleName: 'pathfollow2d-progress-ratio-ignored', severity: 'error' }
     );
   });
 
-  it('warns when both progress and progress_ratio are set', () => {
+  it('errors on an out-of-range progress_ratio under the same rule', () => {
+    expectDiagnostic(
+      scene(node('Path2D'), node('PathFollow2D', { progress_ratio: 1.5 }, { parent: '.' })),
+      { ruleName: 'pathfollow2d-progress-ratio-ignored', severity: 'error' }
+    );
+  });
+
+  it('still errors when progress is authored alongside it, since progress wins', () => {
     expectDiagnostic(
       scene(
         node('Path2D'),
         node('PathFollow2D', { progress: 50.0, progress_ratio: 0.5 }, { parent: '.' })
       ),
-      {
-        ruleName: 'pathfollow2d-both-progress-properties',
-        severity: 'warning',
-        // packed_scene.cpp:365-381: file order decides the winner, not
-        // 'progress_ratio' unconditionally — and path_2d.cpp:416 means Godot's
-        // own saver never writes this dual-key state to begin with.
-        contains: ['both', 'file order', 'LAST', 'hand-written'],
-      }
+      { ruleName: 'pathfollow2d-progress-ratio-ignored', severity: 'error' }
     );
   });
 
-  it('does not warn when only progress is set', () => {
+  it('says nothing about progress_ratio when the file never mentions it', () => {
     expectNoDiagnostic(
       scene(node('Path2D'), node('PathFollow2D', { progress: 50.0 }, { parent: '.' })),
-      { ruleName: 'pathfollow2d-both-progress-properties' }
-    );
-  });
-
-  it('does not warn when only progress_ratio is set', () => {
-    expectNoDiagnostic(
-      scene(node('Path2D'), node('PathFollow2D', { progress_ratio: 0.5 }, { parent: '.' })),
-      { ruleName: 'pathfollow2d-both-progress-properties' }
+      { ruleName: 'pathfollow2d-progress-ratio-ignored' }
     );
   });
 

@@ -95,13 +95,16 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: current_animation references animation that may not exist
+  // Unlike `autoplay`, which is only skipped, `current_animation` is applied
+  // through `play()`: the ERR_FAIL_COND_MSG at animation_player.cpp:429 aborts
+  // the assignment, and the property loads empty. Only claimed where the clip
+  // set is fully enumerable, per `canCheckExistence` above.
   if (canCheckExistence && rawProps.current_animation !== undefined) {
     const currentName = stripQuotes(rawProps.current_animation);
     if (currentName.length > 0 && !knownClips.has(currentName)) {
       diagnostics.push({
-        severity: 'warning',
-        message: `AnimationPlayer 'current_animation' references animation "${currentName}" which may not exist. Ensure this animation is defined in the AnimationLibrary or anims/ section.`,
+        severity: 'error',
+        message: `AnimationPlayer 'current_animation' references animation "${currentName}", which no library this file declares holds. Godot refuses the assignment, so the property loads empty.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'animationplayer-current-animation-missing',
@@ -174,7 +177,7 @@ const animationPlayerValidationRule: LintRule = {
       },
       {
         ruleName: 'animationplayer-current-animation-missing',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'animation_player.cpp:429' },
       },
       {

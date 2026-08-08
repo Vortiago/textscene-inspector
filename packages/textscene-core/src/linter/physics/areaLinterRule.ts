@@ -51,16 +51,23 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
     // (area_2d.cpp / area_3d.cpp: `monitoring` drives whether the area
     // scans for bodies/areas, `monitorable` whether other monitors can find
     // it): with both false, the node can neither detect anything nor be
-    // detected by anything, so it is provably inert.
+    // detected by anything.
+    //
+    // DETECTION only, which is why this is not called "inactive". The pair's
+    // `has_space_override` is computed from the gravity/damp override modes
+    // alone and `pre_solve` calls `body->add_area(area)` on that flag
+    // (godot_area_pair_2d.cpp:41-50, :68-71); `has_monitor_callback()` gates
+    // nothing but the body-to-query call beside it. A non-monitoring area is
+    // still a working gravity, damping and audio-bus zone.
     const monitoring = rawProps.monitoring ?? 'true'; // Default is true in Godot
     const monitorable = rawProps.monitorable ?? 'true'; // Default is true in Godot
     if (monitoring === 'false' && monitorable === 'false') {
       diagnostics.push({
         severity: 'warning',
-        message: `${type} '${node.name}' has both 'monitoring' and 'monitorable' set to false. This area cannot detect other bodies and cannot be detected by other areas.`,
+        message: `${type} '${node.name}' has both 'monitoring' and 'monitorable' set to false, so it detects no bodies or areas and no other area detects it. Its gravity, damping and audio-bus overrides still apply.`,
         nodeName: node.name,
         nodeType: node.type,
-        ruleName: `${prefix}-inactive`,
+        ruleName: `${prefix}-detects-nothing`,
       });
     }
 
@@ -114,7 +121,7 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
           grounding: { kind: 'configuration-warning' },
         },
         {
-          ruleName: `${prefix}-inactive`,
+          ruleName: `${prefix}-detects-nothing`,
           severity: 'warning',
           grounding: {
             kind: 'engine-inert',

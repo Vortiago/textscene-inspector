@@ -171,7 +171,7 @@ pixel_size = 0.01
         scene(node('Sprite3D', { hframes: 4, vframes: 3, frame: 12 }, { name: 'FrameOutOfRange' })),
         {
           ruleName: 'sprite3d-frame-range',
-          severity: 'warning',
+          severity: 'error',
           contains: ['out of range', 'Maximum frame is 11'],
         }
       );

@@ -71,14 +71,9 @@ describe('PathFollow3D Linter', () => {
     });
 
     describe('progress_ratio property validation', () => {
-      it('should accept valid progress_ratio in 0-1 range', () => {
-        expectClean(pathScene({ progress_ratio: '0.5' }));
-      });
-
-      it('should accept progress_ratio at boundaries', () => {
-        expectClean(pathScene({ progress_ratio: '1.0' }));
-      });
-
+      // No "accepts a valid ratio" case: there is no such thing in a scene
+      // file. Every stored progress_ratio is dropped, and the semantic rule
+      // below reports all of them; only the FORMAT check lives here.
       it('should reject non-numeric progress_ratio', () => {
         expectDiagnostic(pathScene({ progress_ratio: '"half"' }), {
           prop: 'progress_ratio',
@@ -330,65 +325,32 @@ describe('PathFollow3D Linter', () => {
       });
     });
 
-    it('should warn when progress_ratio is below 0', () => {
-      const warning = expectDiagnostic(pathScene({ progress_ratio: '-0.5' }), {
-        ruleName: 'pathfollow3d-progress-ratio-out-of-range',
-        severity: 'warning',
-        nodeType: 'PathFollow3D',
-        contains: ['outside the 0-1 range'],
-      });
-      expect(warning.nodeName).toBe('PathFollow');
+    it('errors on progress_ratio at every value, in range or not', () => {
+      // The range is beside the point. `set_progress_ratio` opens with
+      // ERR_FAIL_NULL_MSG(path) (path_3d.cpp:503) and `path` is bound on
+      // enter-tree, which is after the loader applies properties — so a
+      // textbook 0.5 is dropped exactly as -0.5 and 1.5 are.
+      for (const ratio of ['-0.5', '0.0', '0.5', '1.0', '1.5']) {
+        const report = expectDiagnostic(pathScene({ progress_ratio: ratio }), {
+          ruleName: 'pathfollow3d-progress-ratio-ignored',
+          severity: 'error',
+          nodeType: 'PathFollow3D',
+          contains: ["Use 'progress' instead"],
+        });
+        expect(report.nodeName).toBe('PathFollow');
+      }
     });
 
-    it('should warn when progress_ratio is above 1', () => {
-      expectDiagnostic(pathScene({ progress_ratio: '1.5' }), {
-        ruleName: 'pathfollow3d-progress-ratio-out-of-range',
-        contains: ['outside the 0-1 range'],
-      });
-    });
-
-    it('should not warn when progress_ratio is exactly 0', () => {
-      expectNoDiagnostic(pathScene({ progress_ratio: '0.0' }), {
-        ruleName: 'pathfollow3d-progress-ratio-out-of-range',
-      });
-    });
-
-    it('should not warn when progress_ratio is exactly 1', () => {
-      expectNoDiagnostic(pathScene({ progress_ratio: '1.0' }), {
-        ruleName: 'pathfollow3d-progress-ratio-out-of-range',
+    it('still errors when progress is authored alongside it, since progress wins', () => {
+      expectDiagnostic(pathScene({ progress: '50.0', progress_ratio: '0.5' }), {
+        ruleName: 'pathfollow3d-progress-ratio-ignored',
+        severity: 'error',
       });
     });
 
-    it('should not warn when progress_ratio is in valid range', () => {
-      expectNoDiagnostic(pathScene({ progress_ratio: '0.5' }), {
-        ruleName: 'pathfollow3d-progress-ratio-out-of-range',
-      });
-    });
-  });
-
-  describe('Semantic Validation (Conflicting Properties)', () => {
-    it('should warn when both progress and progress_ratio are set', () => {
-      const warning = expectDiagnostic(pathScene({ progress: '50.0', progress_ratio: '0.5' }), {
-        ruleName: 'pathfollow3d-both-progress-properties',
-        severity: 'warning',
-        nodeType: 'PathFollow3D',
-        // packed_scene.cpp:365-381: file order decides the winner, not
-        // 'progress_ratio' unconditionally — and path_3d.cpp:433 means Godot's
-        // own saver never writes this dual-key state to begin with.
-        contains: ['both', 'file order', 'LAST', 'hand-written'],
-      });
-      expect(warning.nodeName).toBe('PathFollow');
-    });
-
-    it('should not warn when only progress is set', () => {
+    it('says nothing about progress_ratio when the file never mentions it', () => {
       expectNoDiagnostic(pathScene({ progress: '50.0' }), {
-        ruleName: 'pathfollow3d-both-progress-properties',
-      });
-    });
-
-    it('should not warn when only progress_ratio is set', () => {
-      expectNoDiagnostic(pathScene({ progress_ratio: '0.5' }), {
-        ruleName: 'pathfollow3d-both-progress-properties',
+        ruleName: 'pathfollow3d-progress-ratio-ignored',
       });
     });
   });
@@ -444,9 +406,9 @@ describe('PathFollow3D Linter', () => {
       const progressWarning = diagnostics.find(d => d.ruleName === 'pathfollow3d-negative-progress');
       expect(progressWarning).toBeDefined();
 
-      // Should have out of range progress_ratio warning
-      const ratioWarning = diagnostics.find(d => d.ruleName === 'pathfollow3d-progress-ratio-out-of-range');
-      expect(ratioWarning).toBeDefined();
+      // Should have the dropped-progress_ratio error
+      const ratioReport = diagnostics.find(d => d.ruleName === 'pathfollow3d-progress-ratio-ignored');
+      expect(ratioReport).toBeDefined();
 
       // But NOT the oriented-mode warning. Godot's ROTATION_ORIENTED check sits
       // in the `else` branch of the parent test (path_3d.cpp:360-365), so a node
@@ -497,7 +459,7 @@ describe('PathFollow3D Linter', () => {
           node('Path3D', { curve: 'SubResource("camera_path")' }, { name: 'CameraRail', parent: '.' }),
           node(
             'PathFollow3D',
-            { progress_ratio: '0.0', rotation_mode: 3, cubic_interp: true, loop: false },
+            { progress: '0.0', rotation_mode: 3, cubic_interp: true, loop: false },
             { name: 'CameraFollow', parent: 'CameraRail' }
           ),
           node('Camera3D', {}, { name: 'Camera', parent: 'CameraRail/CameraFollow' })
@@ -533,12 +495,12 @@ describe('PathFollow3D Linter', () => {
           node('Path3D', { curve: 'SubResource("patrol_path")' }, { name: 'PatrolPath', parent: '.' }),
           node(
             'PathFollow3D',
-            { progress_ratio: '0.0', rotation_mode: 1, loop: true },
+            { progress: '0.0', rotation_mode: 1, loop: true },
             { name: 'Enemy1', parent: 'PatrolPath' }
           ),
           node(
             'PathFollow3D',
-            { progress_ratio: '0.5', rotation_mode: 1, loop: true },
+            { progress: '5.0', rotation_mode: 1, loop: true },
             { name: 'Enemy2', parent: 'PatrolPath' }
           )
         )

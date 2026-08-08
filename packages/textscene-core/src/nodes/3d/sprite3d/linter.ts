@@ -44,7 +44,9 @@ function checkSprite3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Validate frame is within valid range (frame < hframes * vframes)
+  // `set_frame` opens with ERR_FAIL_INDEX (sprite_3d.cpp:878), and `hframes`
+  // and `vframes` are declared ahead of `frame` (:1014-1016), so the guard sees
+  // the authored grid and the out-of-range write is refused at load.
   if (rawProps.frame !== undefined) {
     const frame = parseInt(rawProps.frame, 10);
     const hframes = rawProps.hframes !== undefined ? parseInt(rawProps.hframes, 10) : 1;
@@ -54,8 +56,8 @@ function checkSprite3D(context: RuleContext): Diagnostic[] {
       const maxFrame = hframes * vframes;
       if (frame >= maxFrame) {
         diagnostics.push({
-          severity: 'warning',
-          message: `Frame ${frame} is out of range. Maximum frame is ${maxFrame - 1} (hframes=${hframes}, vframes=${vframes})`,
+          severity: 'error',
+          message: `Frame ${frame} is out of range. Maximum frame is ${maxFrame - 1} (hframes=${hframes}, vframes=${vframes}). Godot refuses the assignment, so the sprite loads on frame 0.`,
           nodeName: node.name,
           nodeType: node.type,
           ruleName: 'sprite3d-frame-range',
@@ -120,7 +122,7 @@ const sprite3DValidationRule: LintRule = {
       },
       {
         ruleName: 'sprite3d-frame-range',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'sprite_3d.cpp:878' },
       },
       {

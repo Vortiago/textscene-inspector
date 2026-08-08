@@ -73,7 +73,7 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
     // the legal deselect sentinel, so only a non-negative index is compared.
     if (!Number.isNaN(current) && current >= 0 && current >= count) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'error',
         message:
           `TabBar '${node.name}' selects tab ${current} but declares only ${count} tab(s) (tab_count). ` +
           'set_current_tab reaches ERR_FAIL_INDEX(p_current, get_tab_count()) (tab_bar.cpp:804) ' +
@@ -99,7 +99,7 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
   if (offending.size > 0) {
     const indices = [...offending].sort((a, b) => a - b).join(', ');
     diagnostics.push({
-      severity: 'warning',
+      severity: 'error',
       message:
         `TabBar '${node.name}' sets properties on tab index(es) ${indices} but declares only ${count} tab(s) (tab_count). ` +
         'PropertyListHelper::_get_property returns null for an index at or past the array length ' +
@@ -123,12 +123,12 @@ const tabBarValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'tabbar-current-tab-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'tab_bar.cpp:804' },
       },
       {
         ruleName: 'tabbar-tab-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
       },
     ],

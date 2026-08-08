@@ -42,11 +42,13 @@ describe('GraphEdit zoom-limit rule', () => {
     expect(diagnostics[0]!.message).toContain('zoom_max');
   });
 
-  it('never raises an error, only a warning', () => {
-    // Both values are things Godot's parser reads perfectly well; what breaks
-    // is that one of the two SETTERS refuses its write. That is invisible
-    // rather than malformed, so it is advisory.
-    expect(diagnose('zoom_min = 4.0\nzoom_max = 0.25\n')[0]!.severity).toBe('warning');
+  it('reports an error, because a setter refuses one of the two writes', () => {
+    // Both values are things Godot's parser reads perfectly well, so this is
+    // not a format failure. It is the ADR-0032 error tier all the same:
+    // set_zoom_min / set_zoom_max guard against each other, so whichever the
+    // loader applies second is dropped and that limit keeps its constructor
+    // default rather than the authored one.
+    expect(diagnose('zoom_min = 4.0\nzoom_max = 0.25\n')[0]!.severity).toBe('error');
   });
 
   it('stays silent on an equal pair, which both guards permit', () => {

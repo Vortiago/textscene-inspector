@@ -66,7 +66,7 @@ function checkFileDialog(context: RuleContext): Diagnostic[] {
 
   const indices = [...offending].sort((a, b) => a - b).join(', ');
   diagnostics.push({
-    severity: 'warning',
+    severity: 'error',
     message:
       `FileDialog option index(es) ${indices} fall outside option_count (${count}). ` +
       `PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for ` +
@@ -89,7 +89,7 @@ const fileDialogValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'filedialog-option-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
       },
     ],

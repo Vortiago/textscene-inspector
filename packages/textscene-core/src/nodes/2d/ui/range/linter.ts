@@ -47,7 +47,7 @@ function checkRangeBounds(context: RuleContext): Diagnostic[] {
     const max = parseFloat(maxRaw);
     if (!isNaN(min) && !isNaN(max) && max < min) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'error',
         message: `Range 'max_value = ${maxRaw}' is below 'min_value = ${minRaw}'. Godot's Range::set_max clamps max_value up to min_value rather than honouring the inverted pair, so the range collapses to a single point at ${minRaw} instead of spanning what's authored.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -82,7 +82,7 @@ const rangeBoundsRule: LintRule = {
     emits: [
       {
         ruleName: 'range-max-below-min',
-        severity: 'warning',
+        severity: 'error',
         grounding: { kind: 'engine', at: 'range.cpp:229' },
       },
       { ruleName: 'range-exp-edit-negative-min', severity: 'warning', grounding: { kind: 'configuration-warning' } },

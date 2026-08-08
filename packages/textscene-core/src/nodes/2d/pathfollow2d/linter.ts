@@ -2,17 +2,23 @@
  * Semantic linter rules for PathFollow2D (mirrors PathFollow3D, adapted to 2D).
  *
  * Format validation is in linterParser.ts. This file covers context-dependent
- * checks: PathFollow2D MUST be a direct child of a Path2D, and progress values
- * outside their valid ranges are flagged (Godot clamps them).
+ * checks: PathFollow2D MUST be a direct child of a Path2D, and the two ways of
+ * authoring a position along the curve behave nothing alike in a `.tscn`.
  *
- * The both-progress-properties message used to claim `progress_ratio` "takes
- * precedence" over `progress`. Neither half holds: `PackedScene::instantiate`
- * applies a node's stored properties in FILE ORDER through a plain sequential
- * `set()` loop (packed_scene.cpp:365-381), so whichever key appears LAST in
- * the file wins — and Godot's own saver can never write both, since
- * `progress_ratio` is declared `PROPERTY_USAGE_EDITOR` with no
- * `PROPERTY_USAGE_STORAGE` bit (path_2d.cpp:416), so the dual-key file only
- * arises when a human hand-writes both keys.
+ * `progress` and `progress_ratio` are NOT two spellings of one value at load
+ * time. `PackedScene::instantiate` applies a node's stored properties BEFORE
+ * adding it to its parent (packed_scene.cpp:492 sets, :541 parents), and
+ * `PathFollow2D::path` is only assigned on NOTIFICATION_ENTER_TREE
+ * (path_2d.cpp:347). So:
+ *
+ *   - `set_progress` finds `path == nullptr`, skips the wrap/clamp branch
+ *     entirely, and stores whatever was written — including a negative value,
+ *     which nothing later rewrites;
+ *   - `set_progress_ratio` opens with `ERR_FAIL_NULL_MSG(path)`
+ *     (path_2d.cpp:472), so EVERY authored ratio is dropped, in range or not.
+ *
+ * Which is why file order does not decide a contest between them: `progress`
+ * wins even when `progress_ratio` is written after it.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -56,12 +62,15 @@ function checkPathFollow2D(context: RuleContext): Diagnostic[] {
     }
   }
 
+  // The value survives; what does not survive is the travel it asks for. Every
+  // sampler clamps the offset into the curve, so the follower parks at the
+  // start rather than extrapolating backwards off the end.
   if (rawProps.progress !== undefined) {
     const progress = parseFloat(rawProps.progress);
     if (!Number.isNaN(progress) && progress < 0) {
       diagnostics.push({
         severity: 'warning',
-        message: `PathFollow2D 'progress' is negative (${progress}). Godot will clamp this to 0. Consider using 0 or a positive value.`,
+        message: `PathFollow2D 'progress' is negative (${progress}). Godot keeps the value, but clamps it when sampling the curve, so the follower sits at the start of the path.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'pathfollow2d-negative-progress',
@@ -69,31 +78,14 @@ function checkPathFollow2D(context: RuleContext): Diagnostic[] {
     }
   }
 
+  // Unconditional: the guard is on the missing parent, not on the value.
   if (rawProps.progress_ratio !== undefined) {
-    const ratio = parseFloat(rawProps.progress_ratio);
-    if (!Number.isNaN(ratio) && (ratio < 0 || ratio > 1)) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `PathFollow2D 'progress_ratio' is outside the 0-1 range (${ratio}). Godot will clamp this value. Valid range: 0.0 (start) to 1.0 (end).`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'pathfollow2d-progress-ratio-out-of-range',
-      });
-    }
-  }
-
-  // Neither always wins: Godot applies stored properties in FILE ORDER
-  // (packed_scene.cpp:365-381), so whichever key comes last takes effect —
-  // and this file could only exist hand-written, since progress_ratio carries
-  // no PROPERTY_USAGE_STORAGE bit (path_2d.cpp:416) and Godot's own saver
-  // never writes it.
-  if (rawProps.progress !== undefined && rawProps.progress_ratio !== undefined) {
     diagnostics.push({
-      severity: 'warning',
-      message: `PathFollow2D has both 'progress' and 'progress_ratio' set. Godot applies stored properties in file order (packed_scene.cpp:365-381), so whichever key appears LAST in the file wins — not always 'progress_ratio'. Godot's own saver never writes both: 'progress_ratio' has no PROPERTY_USAGE_STORAGE bit (path_2d.cpp:416), so this state only arises in a hand-written file.`,
+      severity: 'error',
+      message: `PathFollow2D 'progress_ratio' is set. A scene file cannot carry it: the setter needs a Path2D parent that is already in the tree, and properties are applied before the node is parented, so Godot drops it. Use 'progress' instead.`,
       nodeName: node.name,
       nodeType: node.type,
-      ruleName: 'pathfollow2d-both-progress-properties',
+      ruleName: 'pathfollow2d-progress-ratio-ignored',
     });
   }
 
@@ -112,21 +104,16 @@ const pathFollow2DValidationRule: LintRule = {
       {
         ruleName: 'pathfollow2d-negative-progress',
         severity: 'warning',
-        grounding: { kind: 'engine', at: 'path_2d.cpp:437' },
-      },
-      {
-        ruleName: 'pathfollow2d-progress-ratio-out-of-range',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'path_2d.cpp:437' },
-      },
-      {
-        ruleName: 'pathfollow2d-both-progress-properties',
-        severity: 'warning',
         grounding: {
           kind: 'engine-inert',
-          at: 'packed_scene.cpp:369',
-          unused: 'properties apply in file order, so the earlier key is overwritten',
+          at: 'curve.cpp:1079',
+          unused: 'the sampler clamps the offset, so travel before the start moves nothing',
         },
+      },
+      {
+        ruleName: 'pathfollow2d-progress-ratio-ignored',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'path_2d.cpp:472' },
       },
     ],
   },

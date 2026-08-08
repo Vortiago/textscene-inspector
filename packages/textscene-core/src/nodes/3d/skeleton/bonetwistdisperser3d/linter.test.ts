@@ -59,7 +59,7 @@ describe('BoneTwistDisperser3D semantic rules', () => {
       ),
       {
         ruleName: 'bonetwistdisperser3d-setting-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'BoneTwistDisperser3D',
         contains: ['bone_twist_disperser_3d.cpp:39', 'setting_count (1)'],
       }
@@ -71,7 +71,7 @@ describe('BoneTwistDisperser3D semantic rules', () => {
     // (bone_twist_disperser_3d.h:86), so nothing is addressable.
     expectDiagnostic(
       scene(node('BoneTwistDisperser3D', { 'settings/0/twist_from_rest': true })),
-      { ruleName: 'bonetwistdisperser3d-setting-index-out-of-range', severity: 'warning' }
+      { ruleName: 'bonetwistdisperser3d-setting-index-out-of-range', severity: 'error' }
     );
   });
 
@@ -114,7 +114,7 @@ describe('BoneTwistDisperser3D semantic rules', () => {
       ),
       {
         ruleName: 'bonetwistdisperser3d-joint-index-out-of-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'BoneTwistDisperser3D',
         contains: ['bone_twist_disperser_3d.cpp:502', '0/5'],
       }
@@ -132,7 +132,7 @@ describe('BoneTwistDisperser3D semantic rules', () => {
           'settings/0/joints/0/twist_amount': 0.5,
         })
       ),
-      { ruleName: 'bonetwistdisperser3d-joint-index-out-of-range', severity: 'warning' }
+      { ruleName: 'bonetwistdisperser3d-joint-index-out-of-range', severity: 'error' }
     );
   });
 

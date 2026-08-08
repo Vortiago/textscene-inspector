@@ -30,11 +30,12 @@ field, so its position and colour report the whole story.
 **Marker colour.** Godot fills the square with `(76, 204, 255)`, the exact sRGB of
 `Color(0.3, 0.8, 1)`; ours renders a paler `(134, 207, 225)`. See "Why 2D colours read paler in our captures" in docs/comparison/README.md.
 
-The follow position now agrees — both draw the square at the path midpoint. The
-fixture drives the follower with absolute `progress`, which both renderers honour
-at load; `progress_ratio` would still diverge, since Godot binds the parent Path2D
-only on enter-tree and drops a ratio set during scene load, while ours applies it
-directly.
+The follow position agrees — both draw the square at the path midpoint. `progress`
+is the only position key a scene file can carry: Godot binds the parent Path2D on
+enter-tree, which is after a node's properties are applied, so a stored
+`progress_ratio` is refused outright and a stored `progress` skips the wrap/clamp
+branch and survives raw. Ours resolves the follower the same way, from `progress`
+alone and without wrapping it for `loop`.
 
 
 ## Linting
@@ -68,3 +69,5 @@ Strict parsing format-checks these `PathFollow2D` properties, plus 12 inherited 
 and `v_offset` fall back to `0`. `progress` and `progress_ratio` stay `undefined`
 when absent, so the component can tell which one the scene authored, but if present
 with an unparseable value each falls to `0` with a warning instead of staying unset.
+The lenient parser still reads `progress_ratio` even though nothing positions from
+it, so a bad value is reported rather than skipped for being unusable anyway.
