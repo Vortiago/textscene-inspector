@@ -187,11 +187,11 @@ function ViewportSurfaceNative({
   // mechanism) to match; the pixel arm's own geometry is already exactly this
   // size, so it needs none.
   const clipRect = useMemo(() => ({ x: 0, y: 0, w: renderedWidth, h: renderedHeight }), [renderedWidth, renderedHeight]);
-  const { anchorRef, clippingPlanes } = useWorldClipPlanes(clipRect);
+  const { anchorRef, clip } = useWorldClipPlanes(clipRect);
 
   return (
     <group ref={anchorRef} scale={[scale, scale, 1]}>
-      <ControlClipProvider value={clippingPlanes}>
+      <ControlClipProvider value={clip}>
         {cyclic ? (
           <ControlFallback
             solveNode={fallbackSolveNode}

@@ -49,7 +49,7 @@ describe('every native quad primitive spreads useControlClipPlanes()', () => {
   it('<StyleBoxQuad> carries the provided planes on its material', async () => {
     const planes = marker();
     const renderer = await ReactThreeTestRenderer.create(
-      <ControlClipProvider value={planes}>
+      <ControlClipProvider value={{ planes, rect: null }}>
         <StyleBoxQuad styleBox={STYLE_BOX} rect={RECT} renderOrder={0} />
       </ControlClipProvider>
     );
@@ -68,7 +68,7 @@ describe('every native quad primitive spreads useControlClipPlanes()', () => {
   it('<ControlQuad> carries the provided planes on its material', async () => {
     const planes = marker();
     const renderer = await ReactThreeTestRenderer.create(
-      <ControlClipProvider value={planes}>
+      <ControlClipProvider value={{ planes, rect: null }}>
         <ControlQuad width={40} height={20} color={new THREE.Color(1, 1, 1)} opacity={1} renderOrder={0} />
       </ControlClipProvider>
     );

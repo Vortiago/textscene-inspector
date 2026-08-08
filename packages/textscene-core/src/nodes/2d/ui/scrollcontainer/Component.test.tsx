@@ -366,7 +366,7 @@ describe('<ScrollContainer> — clip planes', () => {
     let captured: readonly THREE.Plane[] = [];
     const inheritedPlane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);
     await ReactThreeTestRenderer.create(
-      <ControlClipProvider value={[inheritedPlane]}>
+      <ControlClipProvider value={{ planes: [inheritedPlane], rect: null }}>
         <ScrollContainer {...painterEnv()} solveNode={scrollNode({}, [])} rect={{ x: 0, y: 0, w: 300, h: 200 }} renderOrder={0}>
           <ClipProbe onPlanes={(p) => (captured = p)} />
         </ScrollContainer>
@@ -396,8 +396,10 @@ describe('<ScrollContainer> — clip planes', () => {
         </group>
       </ScrollContainer>
     );
-    // 4 outer + 4 inner, concatenated (ScrollContainer never REPLACES what it inherited).
-    expect(captured).toHaveLength(8);
+    // One rect, four planes, however deep the nesting goes: Godot resolves a
+    // nested clip to a single `final_clip_rect` intersected against the
+    // enclosing one, and that rect alone becomes the scissor.
+    expect(captured).toHaveLength(4);
 
     const insideBoth = new THREE.Vector3(380, -80, 0);
     expect(captured.every((p) => p.distanceToPoint(insideBoth) >= 0)).toBe(true);

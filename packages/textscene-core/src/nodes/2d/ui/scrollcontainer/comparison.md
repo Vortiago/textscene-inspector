@@ -17,6 +17,17 @@ Godot's `h_scroll`/`v_scroll` are Control nodes and so are separately snapped
 CanvasItems — while the grabber inside a bar keeps its fractional offset,
 because Godot draws it into the bar's own canvas item rather than as a node.
 
+The clip is a whole-pixel rect rather than a cut at the fractional edge. Godot
+resolves a clipping canvas item to one `final_clip_rect`, intersects it with the
+enclosing clipper's, and then rounds its position and its size SEPARATELY before
+either reaches a scissor, so the far edge is `round(position) + round(size)` and
+never `round(position + size)`. The two rules agree for every size fraction once
+the origin is whole — which a Control's own pixel snap normally guarantees — and
+part company by a full column or row as soon as an ancestor's scale puts the
+clip origin on a fraction. A container at world (698.75, 361.25) sized
+402.5 x 243.75 keeps columns 699..1101 and rows 361..604 on both sides, with no
+partial column or row at any of the four boundaries.
+
 ## Properties exercised
 
 | Property | Value | Effect |
@@ -68,3 +79,20 @@ and `vertical_scroll_mode` go through the optional-int reader, which accepts any
 parseable integer, including an out-of-range value like `99`. That value passes
 straight to the component's `switch`, which falls through to its `default` case and
 renders the axis as `auto` overflow, the same as an absent value.
+
+## Known limitations
+
+Two parts of Godot's clip-rect resolution are outside the previewer's model, both
+reachable only through a fractional clip origin — which needs an ancestor scale,
+a rotation, or `gui/common/snap_controls_to_pixels = false`:
+
+- Godot intersects an outermost clipper against the VIEWPORT rect before
+  rounding. A clipper that starts off the top or left of the viewport therefore
+  rounds a start clamped to the viewport's own whole-pixel edge, where the
+  previewer rounds the unclamped one; the two can pick different roundings and
+  differ by a column or a row at the far edge.
+- Godot's clip rect is `Transform2D::xform(Rect2)`, the bounding box of the
+  transformed rect, so a ROTATED clipper scissors its axis-aligned bounding box
+  and shows the corners of its subtree that a rotated outline would cut. The
+  previewer clips a rotated chain against the rotated outline, and skips the
+  whole-pixel quantization there because there is no axis-aligned rect to round.

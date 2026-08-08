@@ -11,18 +11,20 @@
  * `scroll_container.cpp`'s constructor says outright that the scrolled child
  * and the focus border share one CanvasItem and its ONE clip).
  *
- * `useWorldClipPlanes` (`native/controlClipping.tsx`) turns that rect into the
- * 4 world-space planes and merges them onto whatever this node inherited; the
- * result is published to the subtree through `ControlClipProvider` below.
- * `anchorRef` carries no local transform of its own, so its `matrixWorld` is
- * the walker's outer group for this node, composed through every ancestor —
- * exactly "this node's local origin, in world space", which is the frame the
- * rect handed to the hook is expressed in. That origin is the WHOLE-PIXEL
- * snapped one (`native/controlPixelSnap.ts`), while `ownRect` below stays the
+ * `useWorldClipPlanes` (`native/controlClipping.tsx`) resolves that rect
+ * against the canvas, intersects it with whatever this node inherited and
+ * quantizes the result to whole pixels; what comes back is published to the
+ * subtree through `ControlClipProvider` below. `anchorRef` carries no local
+ * transform of its own, so its `matrixWorld` is the walker's outer group for
+ * this node, composed through every ancestor — exactly "this node's local
+ * origin, in world space", which is the frame the rect handed to the hook is
+ * expressed in. That origin is the WHOLE-PIXEL snapped one
+ * (`native/controlPixelSnap.ts`), while `ownRect` below stays the
  * full-precision `{0, 0, rect.w, rect.h}`, and the pair is deliberate: Godot
  * clips to `Rect2(Point2(), get_size())` — an unrounded size — evaluated
  * inside a canvas item whose translation has already been floored, so the clip
- * edge lands on `floor(position + 0.5) + size`, not on `position + size`.
+ * rect's own position is whole and its size is not, which is exactly the pair
+ * the scissor's separate roundings consume.
  *
  * SCROLLBAR GEOMETRY. Reads `meta` (`ContainerLayoutResult.meta`, from this
  * type's registered `ContainerLayoutFn` — `nativeSolver.ts`'s
@@ -225,11 +227,11 @@ export function ScrollContainer({
 
   // The whole widget rect clips its subtree — the planes go into the Provider below.
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
-  const { anchorRef, clippingPlanes } = useWorldClipPlanes(ownRect);
+  const { anchorRef, clip } = useWorldClipPlanes(ownRect);
 
   return (
     <group ref={anchorRef}>
-      <ControlClipProvider value={clippingPlanes}>
+      <ControlClipProvider value={clip}>
         <ScrollBarChrome
           bar={layout.horizontal}
           track={theme.widgets.scrollBar.scrollHorizontal}
