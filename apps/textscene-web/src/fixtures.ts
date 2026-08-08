@@ -603,6 +603,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Texturerect Atlastexture",
+    "file": "unit-texturerect-atlastexture.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Texturerect Gradienttexture",
     "file": "unit-texturerect-gradienttexture.tscn",
     "category": "Other"
@@ -1048,6 +1053,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Arraymesh Surface Override",
+    "file": "unit-arraymesh-surface-override.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Arraymesh Uv",
     "file": "unit-arraymesh-uv.tscn",
     "category": "Unit - Primitive Meshes"
@@ -1290,6 +1300,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Scroll Container Bar Snap",
     "file": "unit-scroll-container-bar-snap.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Scroll Container Clip Quantize",
+    "file": "unit-scroll-container-clip-quantize.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

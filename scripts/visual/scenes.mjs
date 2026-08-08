@@ -124,6 +124,14 @@ export const GOLDEN_SCENES = [
   // one's material is the ExtResource control, so a regression turns only the
   // RIGHT plate white.
   { name: 'arraymesh-own-material', file: 'unit-arraymesh-own-material.tscn' },
+  // A node-level `surface_material_override/N` in front of a baked mesh's own
+  // surface material — the ONE variable, and one no other fixture carries: the
+  // ArrayMesh scenes above all take their surfaces' materials straight off the
+  // mesh, so every one of them draws the same picture whether the override path
+  // exists or not. Two quads on one material, surface 1 overridden and surface 0
+  // left alone, so a leak onto every surface, a dropped override and a
+  // wrong-index override are three distinguishable images.
+  { name: 'arraymesh-surface-override', file: 'unit-arraymesh-surface-override.tscn' },
   { name: 'grid-map', file: 'unit-grid-map.tscn' },
   // `grid-map` above is GridMap-ONLY, so the camera auto-fit reframes any
   // uniform shift of the whole grid into an identical image — it cannot see a
@@ -671,6 +679,27 @@ export const GOLDEN_SCENES = [
     file: 'unit-button-icon-gradienttexture.tscn',
     mode: '2d',
   },
+  // Three TextureRects fed by INLINE AtlasTextures — cells windowed out of one
+  // sprite sheet. The cell's region drives the node's minimum size as well as
+  // its pixels, and each rect shrinks to that minimum, so a wrong region shows
+  // as a wrong rect in both axes AND moves the sibling below it. The sheet is
+  // four flat colours, so which cell was sampled is unmistakable; the third
+  // cell carries a `margin`, which widens the reported box and insets the
+  // region inside it.
+  {
+    name: 'texturerect-atlastexture',
+    file: 'unit-texturerect-atlastexture.tscn',
+    mode: '2d',
+  },
+  // The same atlas decode reached through SpriteFrames instead of a plain
+  // Texture2D slot. The two share the decode but not the resource pools it
+  // resolves against, so the entry above can be exact while this one draws
+  // nothing.
+  {
+    name: 'animatedsprite2d-atlas',
+    file: 'unit-animatedsprite2d-atlas.tscn',
+    mode: '2d',
+  },
   { name: 'scroll-container-clip', file: 'unit-scroll-container-clip.tscn', mode: '2d' },
   // The two SubViewportContainer surfaces. `sub-viewport-texture` above is a
   // SubViewport sampled by a MESH, which is a different consumer entirely — it
@@ -717,6 +746,19 @@ export const GOLDEN_SCENES = [
   {
     name: 'scroll-container-bar-snap',
     file: 'unit-scroll-container-bar-snap.tscn',
+    mode: '2d',
+  },
+  // The ONE variable: a canvas clip quantized to a WHOLE pixel from a position
+  // and a size rounded SEPARATELY. `scroll-container-bar-snap` above puts its
+  // clip at a fractional edge but a whole-pixel ORIGIN, where the two roundings
+  // collapse into one and agree for every size fraction — it cannot tell the
+  // separate rounding from an edge rounding. This scene reaches a fractional
+  // origin through a scaled ancestor, which is the only place they differ.
+  // Measured against Godot 4.6.3 at `--mode 2d` before its baseline was
+  // written: pixel-identical to the engine over the whole frame.
+  {
+    name: 'scroll-container-clip-quantize',
+    file: 'unit-scroll-container-clip-quantize.tscn',
     mode: '2d',
   },
   // The composition scene. It deliberately breaks the one-variable rule every
