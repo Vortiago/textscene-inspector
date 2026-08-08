@@ -45,3 +45,26 @@ export function isEqualApprox(a: number, b: number): boolean {
   const tolerance = Math.max(CMP_EPSILON * Math.abs(a), CMP_EPSILON);
   return Math.abs(a - b) < tolerance;
 }
+
+/**
+ * `Math::smoothstep` (math_funcs.h:568-577), the clamping Hermite interpolation
+ * GLSL spells the same way.
+ *
+ * The degenerate branch is the whole reason this is not two lines. Godot guards
+ * it with `is_equal_approx`, not `==`, so edges merely CLOSE together take the
+ * step rather than dividing by a near-zero span; and it compares `p_s <= p_from`,
+ * so `x` exactly at the edge reads 0 rather than 1. It also answers an INVERTED
+ * pair (`p_from > p_to`) from the other side, which a single `x < from` cannot.
+ *
+ * Two domains had hand-rolled this — the noise-texture layer blend and the
+ * decal's geometric fade — and both got all three of those wrong the same way,
+ * having been written from the formula rather than from the engine.
+ */
+export function smoothstep(from: number, to: number, x: number): number {
+  if (isEqualApprox(from, to)) {
+    if (from <= to) return x <= from ? 0 : 1;
+    return x <= to ? 1 : 0;
+  }
+  const s = Math.min(1, Math.max(0, (x - from) / (to - from)));
+  return s * s * (3 - 2 * s);
+}
