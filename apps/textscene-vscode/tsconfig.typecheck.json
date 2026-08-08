@@ -17,6 +17,10 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
+    // Incremental so the pre-commit hook can afford to run this per package.
+    // The buildinfo is gitignored (`*.tsbuildinfo`).
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.cache/tsc/typecheck.tsbuildinfo",
     "composite": false,
     "declaration": false,
     "declarationMap": false,

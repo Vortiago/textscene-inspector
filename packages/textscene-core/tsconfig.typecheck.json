@@ -15,6 +15,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
+    // Incremental so the pre-commit hook can afford to run this: the check is
+    // ~20s cold and a couple of seconds warm, which is the difference between
+    // a gate that runs on every commit and one that only runs on push. The
+    // buildinfo is gitignored (`*.tsbuildinfo`).
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.cache/tsc/typecheck.tsbuildinfo",
     // The build config is `composite` for project references, which requires
     // declaration emit — meaningless here and illegal alongside `noEmit`.
     "composite": false,
