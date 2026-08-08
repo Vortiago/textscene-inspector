@@ -127,7 +127,15 @@ appearance.
 Godot's `heightmap_*` is texture-space parallax — the silhouette stays a smooth
 sphere. three.js has no parallax; it maps to `displacementMap`, which moves real
 vertices, so the sphere deforms into a lumpy blob (and the depth scale is in world
-units, a different space than Godot's).
+units, a different space than Godot's). 23351 px differ (3.234 %), almost all of
+it silhouette.
+
+The height texture is sampled RAW, like every non-colour map: Godot's
+`texture_heightmap` carries `hint_default_black` and no `source_color`
+(`scene/resources/material.cpp:1172`), so the sRGB bytes ARE the heights.
+Decoding them would darken the midtones and displace less, which reads closer to
+Godot's undeformed sphere — closer for the wrong reason, and only because the
+parallax gap above dominates this fixture.
 
 ## Known limitations
 
