@@ -170,6 +170,17 @@ jobs:
         if: runner.os != 'Linux'
         run: pnpm --filter textscene-inspector test:integration
 
+      # Proves text actually paints inside the webview, which the extension-host
+      # suite above cannot see into. It drives VS Code over CDP and so needs a
+      # display — the driver wraps its own launch in xvfb-run, hence no wrapper
+      # here — and connects to VS Code's own Chromium, so no `playwright install`
+      # is needed. Linux-only because the driver has only ever been exercised
+      # under Xvfb; the macOS/Windows window and binary layouts are unverified,
+      # and claiming them here would be claiming something untested.
+      - name: Webview CSP + glyph gate (Linux)
+        if: runner.os == 'Linux'
+        run: pnpm test:vscode:csp
+
       - name: Upload test results on failure
         if: failure()
         uses: actions/upload-artifact@v7
@@ -178,6 +189,7 @@ jobs:
           path: |
             apps/textscene-vscode/.test-workspace/
             apps/textscene-vscode/out/
+            scripts/vscode/output/csp-gate/
 
   vsix-verification:
     name: VSIX Package Verification (${{ matrix.os }})

@@ -11,8 +11,15 @@ only that the panel loads and completes its handshake — never that a pixel
 landed. **Ink** is the missing evidence: attach a debugger to the real VS Code,
 walk into the frame, and count the pixels that differ from the background.
 
-`scripts/vscode/drive-vscode.mjs` does the driving; this skill is how to use it
-and what it already knows.
+`scripts/vscode/driveScene.mjs` does the driving. Two callers sit on it:
+`drive-vscode.mjs` (`pnpm drive:vscode`), the CLI for screenshots and one-off
+measurements, and `webview-csp-gate.mjs` (`pnpm test:vscode:csp`), the automated
+regression gate. This skill is how to use them and what they already know.
+
+**Reach for the gate first when the question is "did text paint under the CSP".**
+It answers that in one command with no eyeballing, and it is the thing CI runs.
+Reach for the CLI when you need a picture, a custom `--eval`, or a scene the gate
+does not drive.
 
 ## Steps
 
@@ -45,11 +52,51 @@ and what it already knows.
    `diffPixels` is non-zero and its `bbox` sits where the feature belongs — and
    when the mask, eyeballed, shows the feature's shape and nothing else.
 
+## The gate
+
+`pnpm test:vscode:csp` drives two scenes, one launch each: `unit-label-2d.tscn`
+verbatim, and its text-free twin — derived from that same file at run time by
+emptying every `text = "…"`, never committed, so it cannot drift away from the
+fixture. It then requires, per run: the preview opened via the contributed
+command, a **sized** canvas (asserted separately, because a failed WebGL context
+also reads back zero ink and must not look like "no glyphs"), a canvas that
+settled (two byte-identical consecutive readbacks — the signal that replaces a
+fixed sleep), and zero CSP violations, failed requests and console errors
+**scoped to the webview frame**. Across the pair: ink ≥ 100 with text, exactly 0
+without.
+
+Scoping is the part to not get wrong. Page-wide counts are never zero — VS Code's
+own startup contributes a marketplace 404 and `main.vscode-cdn.net`. `report.webview`
+carries the filtered slice; assert on that, never on `report.cspViolations`.
+
+Measured here, VS Code 1.131.0 / Linux / Xvfb, reproduced exactly across runs:
+canvas 235x357, **252 ink with text, 0 without**, and the webview's only request
+host is `file+.vscode-resource.vscode-cdn.net`. The gate runs no layout commands
+(each `palette()` call is a fuzzy match that could invoke something else), so the
+preview shares the editor area with the source document — hence the small canvas.
+The floor (100) sits far below 252 on purpose: the canvas scales with whatever
+virtual display the run gets, while the failure it guards takes ink to 0 on any
+of them.
+
+**Xvfb geometry is not reaching the server here.** Every `Xvfb` this machine
+spawns runs `-screen 0 640x480x24` — the xvfb-run default — despite the driver's
+`--server-args=-screen 0 1920x1080x24`, which `getopt` does parse. So VS Code's
+window is clamped to 640x480 and the CLI baseline below (measured on a roomier
+display) does not reproduce here. Pre-existing, unrelated to what the gate
+asserts; investigate it before trusting any absolute pixel count from this
+driver, and note the gate is built not to care.
+
+`--skip-build` reuses the current `dist/`; without it the gate builds the
+extension first, so a fresh checkout works on the first invocation.
+
 ## What the driver already handles
 
 - **The VS Code binary** lives at
-  `apps/textscene-vscode/.vscode-test/vscode-<platform>-<version>/code`, put
-  there by a `test:integration` run. Missing? Run that suite once.
+  `apps/textscene-vscode/.vscode-test/vscode-<platform>-<version>/code`. A
+  `test:integration` run puts it there; the gate falls back to
+  `downloadAndUnzipVSCode` into that same cache, so it needs no warm-up run. The
+  CLI deliberately does not download — it fails fast and tells you to run the
+  suite once, rather than stalling minutes on a typo'd path.
 - **`xvfb-run`** wraps the launch whenever `--headed` is absent, and software GL
   is mandatory under it: without `--no-sandbox --disable-gpu-sandbox` plus
   `SWIFTSHADER_GL_ARGS` (from `scripts/showcase/browser.mjs`), every WebGL
@@ -59,7 +106,9 @@ and what it already knows.
   *installed* ones. Same combination the integration suite uses.
 - **A throwaway `--user-data-dir`** with `workbench.startupEditor: none`,
   telemetry and update checks off. It also makes the Chat side-bar toggle
-  deterministic (visible on every first launch).
+  deterministic (visible on every first launch). A caller can merge its own
+  settings in (`settings:`) — the gate hides the secondary bar and activity bar
+  that way rather than clicking for it.
 - **Cleanup** is SIGKILL on the process group plus a `pkill` matched on the
   absolute user-data-dir. SIGTERM leaves orphaned renderers and an Xvfb behind,
   and the absolute path keeps a concurrent run in a sibling worktree safe.
@@ -101,7 +150,9 @@ treat an `evaluate` that throws as a detached or still-navigating frame.
   the palette, retries it four times, and records the winning path in
   `report.openedVia`.
 - Toasts (git prompts, extension notices) float over the webview and land in the
-  screenshot; the driver clears them before capturing.
+  screenshot; the CLI clears them before capturing. The gate does not — they
+  cannot reach the canvas readback, and every palette call it skips is one fewer
+  fuzzy match that could fire the wrong command.
 
 ## The CSP
 
@@ -118,6 +169,9 @@ which directives actually blocked it — read it before proposing a CSP widening
 
 ## Measured baseline
 
+The CLI's configuration — layout commands run, so the webview fills the editor
+area. The gate's window is smaller and its numbers differ; see above.
+
 `scenes/fixtures/unit-label-2d.tscn`, VS Code 1.131.0, Linux/Xvfb — repeated
 runs reproduce these exactly: canvas readback 767x764 with **1275 opaque / 1497 ink** pixels;
 webview screenshot 1092x808 with 318,858 ink. A copy of that scene with every
@@ -132,7 +186,10 @@ failed requests, zero page errors. Glyphs paint, offline, under the real CSP.
 documentation screenshots (`docs/screenshots/vscode/`) and resolves a VS Code
 binary across platforms. Reach for it when the goal is a pretty picture of
 committed example scenes; reach for `drive-vscode.mjs` when the goal is a
-number. Neither runs in CI (the only VS Code job there is `xvfb-run -a … pnpm
---filter textscene-inspector test:integration`), and `drive-vscode.mjs` has been
-exercised only on Linux under Xvfb — its `--headed` path and the macOS/Windows
-binary layouts are unverified.
+number.
+
+CI runs two VS Code jobs, both in `integration-tests`: the extension-host suite
+on all three OSes, and `pnpm test:vscode:csp` on Linux only. The CLI and the
+showcase capture do not run there. Linux-only is deliberate: this driver has been
+exercised only under Xvfb, so its `--headed` path and the macOS/Windows window
+and binary layouts are unverified.

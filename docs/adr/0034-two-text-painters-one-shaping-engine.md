@@ -84,6 +84,16 @@ drop it.
 
 ## Consequences
 
+- **The CSP claim is now guarded at the real origin, not only replicated.** The spike
+  above ran in a plain headless page that reproduced the directives by hand; it never
+  loaded at `vscode-webview://`. `pnpm test:vscode:csp` closes that: it opens the Control
+  label fixture through the extension's own preview command in a real desktop VS Code and
+  reads the canvas back over CDP, requiring ink from the glyph atlas, exactly zero ink
+  from the same scene with every `text` emptied, and zero CSP violations, failed requests
+  and console errors inside the preview frame. Dropping `data:` from `img-src` takes it
+  from 252 ink pixels to 0 — on the reference display; the count scales with the window,
+  the zero does not — with a violation naming the atlas. So a CSP edit, a bundler change
+  or an asset-loading refactor that re-breaks this fails loudly instead of silently.
 - **Scene fonts are not scale-invariant.** A canvas raster is resolution-dependent
   where an MSDF atlas is not. Acceptable: the 2D parity capture renders at zoom 1.
 - **`.woff2` cannot be table-parsed in-browser.** The SFNT reader takes `head`/`hhea`

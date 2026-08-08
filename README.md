@@ -122,6 +122,19 @@ pnpm --filter textscene-inspector test:integration
 CI runs that suite on Ubuntu, macOS, and Windows — `xvfb-run` for headless
 Linux — and verifies VSIX installation on each.
 
+That suite runs *in* the extension host, which cannot see inside the preview's
+sandboxed webview. A second gate does:
+
+```bash
+pnpm test:vscode:csp     # glyphs paint in the real webview, offline, under the real CSP
+```
+
+It opens a Control fixture through the extension's own preview command in a real
+desktop VS Code, reads the WebGL canvas back over CDP, and requires ink from the
+text pipeline, exactly zero ink from the same scene with every label emptied, and
+zero CSP violations or network attempts inside the preview frame. CI runs it on
+Linux only.
+
 <details>
 <summary>Debugging the integration tests</summary>
 

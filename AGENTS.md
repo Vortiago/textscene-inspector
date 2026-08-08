@@ -25,6 +25,11 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
   capture** — the project-viewport rectangle at zoom 1, chrome hidden, Godot's own
   clear colour — instead of the default 3D one, so a Control's golden and its
   `comparison.md` describe the same picture.
+- Changed the webview CSP, its bundle/asset loading, or the text pipeline:
+  `pnpm test:vscode:csp` — drives a real desktop VS Code, opens a Control fixture through
+  the extension's own preview command and reads the canvas back over CDP. Requires ink
+  with text, exactly 0 with every label emptied, and zero CSP violations or network
+  attempts inside the preview frame. Linux/Xvfb; CI runs it there.
 - Parity questions: `pnpm ref:godot <scene.tscn> [--camera x,y,z] [--probe x,y]` renders
   through real Godot 4.6 and prints exact pixels — measure, never derive. Needs local
   `godot` + `xvfb-run`, so it is a tool, not a gate. It injects the editor preview
