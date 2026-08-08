@@ -34,11 +34,15 @@ import { bootstrapScript,
   EDITOR_CAMERA_DIRECTION,
   EDITOR_CAMERA_DISTANCE,
   EDITOR_FOV,
+  ENGINE_KILL_AFTER_S,
+  ENGINE_TIMEOUT_S,
   FRAME_MARGIN,
+  godotSpawnPlan,
   PARTICLES_PROCESS_DEFAULT,
   parseArgs,
   REFERENCE_FIXED_FPS,
   renderArgv,
+  SPAWN_BACKSTOP_MS,
   resolveProjectRoot,
   projectConfig,
   probePixels,
@@ -709,6 +713,70 @@ describe('physics pause follows the previews flag', () => {
     expect(pauseLine).toBeGreaterThan(-1);
     expect(lines[pauseLine - 1].trim()).toBe('if PREVIEWS:');
     expect(script(false)).toContain('const PREVIEWS := false');
+  });
+});
+
+/**
+ * A pass that outlives its budget has to die WITH the engine it started. The
+ * wrapper is the whole problem: under a display the harness's direct child is
+ * `xvfb-run`, so signalling that child leaves `godot` running, reparented to
+ * init, holding an X display lock that blocks the number for every later run.
+ */
+describe('an expired engine pass is reaped as a process group', () => {
+  it('runs the display arm under the group killer, not bare xvfb-run', () => {
+    const plan = godotSpawnPlan(['--path', '/tmp/work'], { display: true });
+    // `timeout` is what makes the reap a GROUP reap: coreutils' `timeout.c`
+    // calls `setpgid` unless `--foreground`, then signals the group on expiry.
+    expect(plan.command).toBe('timeout');
+    expect(plan.argv.slice(0, 3)).toEqual([
+      '-k',
+      String(ENGINE_KILL_AFTER_S),
+      String(ENGINE_TIMEOUT_S),
+    ]);
+    // The engine still runs under a display, behind the wrapper.
+    expect(plan.argv.slice(3, 5)).toEqual(['xvfb-run', '-a']);
+    expect(plan.argv).toContain('godot');
+  });
+
+  it('escalates to SIGKILL for an engine that ignores the first signal', () => {
+    const plan = godotSpawnPlan([], { display: true });
+    expect(plan.argv[0]).toBe('-k');
+    expect(Number(plan.argv[1])).toBeGreaterThan(0);
+  });
+
+  it('leaves spawnSync a strictly longer backstop, so it never pre-empts the group kill', () => {
+    // A backstop at or below the group budget would fire FIRST and signal the
+    // wrapper alone — reintroducing the orphan it exists to prevent.
+    expect(SPAWN_BACKSTOP_MS).toBeGreaterThan((ENGINE_TIMEOUT_S + ENGINE_KILL_AFTER_S) * 1000);
+    expect(godotSpawnPlan([], { display: true }).timeoutMs).toBe(SPAWN_BACKSTOP_MS);
+  });
+
+  it('keeps the screen flag between the wrapper and the engine when one is asked for', () => {
+    const plan = godotSpawnPlan(['--path', '/tmp/work'], {
+      display: true,
+      screen: { width: 1152, height: 648 },
+    });
+    const s = plan.argv.indexOf('-s');
+    expect(plan.argv[s + 1]).toBe('-screen 0 1152x648x24');
+    // Ordering is load-bearing: xvfb-run's own flags must precede `godot`.
+    expect(s).toBeGreaterThan(plan.argv.indexOf('xvfb-run'));
+    expect(s).toBeLessThan(plan.argv.indexOf('godot'));
+  });
+
+  it('still runs the headless import arm, which has no wrapper to orphan', () => {
+    const plan = godotSpawnPlan(['--headless', '--import'], { display: false });
+    expect(plan.command).toBe('timeout');
+    expect(plan.argv).not.toContain('xvfb-run');
+    expect(plan.argv[plan.argv.indexOf('godot') + 1]).toBe('--headless');
+  });
+
+  it('falls back to spawning the engine directly where the group killer is absent', () => {
+    const plan = godotSpawnPlan(['--path', '/tmp/work'], {
+      display: true,
+      groupTimeout: false,
+    });
+    expect(plan.command).toBe('xvfb-run');
+    expect(plan.argv).not.toContain('timeout');
   });
 });
 

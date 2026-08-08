@@ -1162,7 +1162,29 @@ export function renderArgv(work) {
   return ['--path', work, '--fixed-fps', String(REFERENCE_FIXED_FPS), '--quit-after', '400'];
 }
 
+/** Seconds a single engine pass may run before the harness reaps it. */
+export const ENGINE_TIMEOUT_S = 300;
+/** Seconds between the group's SIGTERM and its SIGKILL. */
+export const ENGINE_KILL_AFTER_S = 10;
 /**
+ * `spawnSync`'s own timer, strictly longer than the group killer's whole
+ * budget so it can only ever fire as a backstop — never in place of it.
+ */
+export const SPAWN_BACKSTOP_MS = (ENGINE_TIMEOUT_S + ENGINE_KILL_AFTER_S + 30) * 1000;
+
+/**
+ * Builds the argv for one engine pass. Split out from the spawn so the reaping
+ * contract is assertable without an engine, an X server, or a 300-second wait.
+ *
+ * Every pass goes through `timeout(1)` rather than relying on `spawnSync`'s
+ * timer alone. Under a display the direct child is `xvfb-run`, a WRAPPER:
+ * `spawnSync` signals that wrapper, and the `godot` it launched survives,
+ * reparents to init and keeps rendering forever — as does the `Xvfb` whose
+ * display lock then blocks the number for every later run. `timeout` puts the
+ * command in its own process group and signals the GROUP on expiry (coreutils
+ * `timeout.c` calls `setpgid` unless `--foreground`), so the engine dies with
+ * its wrapper. `-k` follows with SIGKILL for an engine ignoring SIGTERM.
+ *
  * `screen` sizes the virtual X screen for this run. Only the root-window arm
  * passes one: its capture IS the window, so a project viewport larger than
  * xvfb-run's own default screen would leave the window clipped to the screen
@@ -1170,16 +1192,43 @@ export function renderArgv(work) {
  * screen under a render that does not depend on it is one more variable in a
  * reference nobody asked to move.
  */
-function runGodot(args, { display, screen = null }) {
-  const command = display ? 'xvfb-run' : 'godot';
+export function godotSpawnPlan(args, { display, screen = null, groupTimeout = true }) {
   const screenArgs = screen ? ['-s', `-screen 0 ${screen.width}x${screen.height}x24`] : [];
-  const argv = display ? ['-a', ...screenArgs, 'godot', ...args] : args;
-  const result = spawnSync(command, argv, { encoding: 'utf8', timeout: 300_000 });
-  // `error` carries a spawn failure (ENOENT when godot/xvfb-run is missing, or a
-  // timeout) that `status` alone (null in that case) does not — callers surface it.
+  const engine = display ? ['xvfb-run', '-a', ...screenArgs, 'godot', ...args] : ['godot', ...args];
+  const argv = groupTimeout
+    ? ['timeout', '-k', String(ENGINE_KILL_AFTER_S), String(ENGINE_TIMEOUT_S), ...engine]
+    : engine;
+  return { command: argv[0], argv: argv.slice(1), timeoutMs: SPAWN_BACKSTOP_MS };
+}
+
+/** `timeout(1)`'s expiry codes: 124 on SIGTERM, 137 once it escalates. */
+const TIMEOUT_EXIT_CODES = new Set([124, 137]);
+
+/** Memoised so the probe costs one spawn per process, not one per pass. */
+let groupTimeoutAvailable = null;
+function hasGroupTimeout() {
+  if (groupTimeoutAvailable === null) {
+    groupTimeoutAvailable =
+      spawnSync('timeout', ['--version'], { encoding: 'utf8' }).status === 0;
+  }
+  return groupTimeoutAvailable;
+}
+
+function runGodot(args, { display, screen = null }) {
+  const plan = godotSpawnPlan(args, { display, screen, groupTimeout: hasGroupTimeout() });
+  const result = spawnSync(plan.command, plan.argv, {
+    encoding: 'utf8',
+    timeout: plan.timeoutMs,
+  });
+  // `error` carries a spawn failure (ENOENT when godot/xvfb-run is missing, or
+  // the backstop firing) that `status` alone (null in that case) does not —
+  // callers surface it. `timedOut` names the group killer's own expiry, which
+  // reports as an ordinary non-zero exit and would otherwise read as an engine
+  // crash.
   return {
     status: result.status,
     error: result.error ?? null,
+    timedOut: TIMEOUT_EXIT_CODES.has(result.status),
     stdout: result.stdout ?? '',
     stderr: result.stderr ?? '',
   };
@@ -1300,9 +1349,14 @@ async function renderInto(
     screen: rootWindow ? canvas2DSize : null,
   });
   if (!existsSync(resolve(out))) {
-    // Surface the spawn error (missing godot/xvfb-run, timeout) that a bare
-    // "produced no image" would otherwise hide with empty stderr.
-    const why = render.error ? `\n${render.error.message}` : '';
+    // Surface the spawn error (missing godot/xvfb-run, the backstop firing)
+    // that a bare "produced no image" would otherwise hide with empty stderr,
+    // and name an expiry rather than letting its exit code read as a crash.
+    const why = render.timedOut
+      ? `\nThe engine did not finish within ${ENGINE_TIMEOUT_S}s and its process group was reaped.`
+      : render.error
+        ? `\n${render.error.message}`
+        : '';
     throw new Error(
       `Godot produced no image for ${basename(scenePath)} (exit ${render.status}).${why}\n${render.stdout}\n${render.stderr}`
     );
