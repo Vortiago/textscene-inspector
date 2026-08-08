@@ -35,10 +35,22 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('textscene.openPreviewToSide', () => {
+    // `resource` is what VS Code hands a menu contribution: the clicked file
+    // for `explorer/context`, the tab's file for `editor/title`. It is the
+    // authority whenever present, since the file the user clicked and the file
+    // that happens to be focused are routinely different — and an explorer
+    // click on a scene that was never opened has no active editor at all.
+    // Only the command palette invokes this bare, and there the active editor
+    // is the sole thing the user could have meant.
+    vscode.commands.registerCommand('textscene.openPreviewToSide', (resource?: vscode.Uri) => {
       const activeEditor = vscode.window.activeTextEditor;
-      if (activeEditor && activeEditor.document.fileName.endsWith('.tscn')) {
-        getOrCreatePanel(activeEditor.document.uri);
+      const target =
+        resource?.fsPath?.endsWith('.tscn') ? resource
+        : !resource && activeEditor?.document.fileName.endsWith('.tscn') ? activeEditor.document.uri
+        : undefined;
+
+      if (target) {
+        getOrCreatePanel(target);
       } else {
         vscode.window.showInformationMessage('Open a .tscn file to preview it.');
       }

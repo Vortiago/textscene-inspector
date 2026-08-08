@@ -175,6 +175,69 @@ describe('Extension', () => {
       );
     });
 
+    // VS Code passes the clicked resource as the handler's first argument for
+    // `explorer/context`, `editor/context` and `editor/title` contributions.
+    // Resolving from `activeTextEditor` instead previews whatever happens to be
+    // focused, which is a different file than the one the user clicked.
+    it('previews the clicked file, not the active one, when a uri is passed', () => {
+      const active = {
+        uri: createMockUri('/workspace/active.tscn'),
+        fileName: '/workspace/active.tscn',
+      };
+      (vscode.window.activeTextEditor as any) = { document: active };
+
+      activate(mockContext);
+
+      const clicked = createMockUri('/workspace/clicked.tscn');
+      commandHandlers.get('textscene.openPreviewToSide')?.(clicked);
+
+      expect(TscnPreviewPanel.create).toHaveBeenCalledWith(mockContext.extensionUri, clicked);
+    });
+
+    it('previews a clicked file that is not open in any editor', () => {
+      // The explorer entry point: right-clicking a `.tscn` that was never
+      // opened leaves `activeTextEditor` undefined, or pointing at something
+      // else entirely.
+      (vscode.window.activeTextEditor as any) = undefined;
+
+      activate(mockContext);
+
+      const clicked = createMockUri('/workspace/never-opened.tscn');
+      commandHandlers.get('textscene.openPreviewToSide')?.(clicked);
+
+      expect(TscnPreviewPanel.create).toHaveBeenCalledWith(mockContext.extensionUri, clicked);
+      expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the active editor when invoked with no argument', () => {
+      // The command palette passes nothing, so the active editor stays the
+      // resolution source for that entry point.
+      const active = {
+        uri: createMockUri('/workspace/active.tscn'),
+        fileName: '/workspace/active.tscn',
+      };
+      (vscode.window.activeTextEditor as any) = { document: active };
+
+      activate(mockContext);
+
+      commandHandlers.get('textscene.openPreviewToSide')?.();
+
+      expect(TscnPreviewPanel.create).toHaveBeenCalledWith(mockContext.extensionUri, active.uri);
+    });
+
+    it('ignores a non-tscn argument rather than previewing it', () => {
+      (vscode.window.activeTextEditor as any) = undefined;
+
+      activate(mockContext);
+
+      commandHandlers.get('textscene.openPreviewToSide')?.(createMockUri('/workspace/notes.txt'));
+
+      expect(TscnPreviewPanel.create).not.toHaveBeenCalled();
+      expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+        'Open a .tscn file to preview it.'
+      );
+    });
+
     it('should show info message when no active editor', () => {
       (vscode.window.activeTextEditor as any) = undefined;
 
