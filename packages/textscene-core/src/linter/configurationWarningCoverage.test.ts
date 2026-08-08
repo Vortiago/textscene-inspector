@@ -1083,11 +1083,20 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     },
   ],
 
+  // `cast_to<Path2D>(get_parent())` is null at the scene root too, so one
+  // push_back covers both placements; this repo phrases the parentless case as
+  // its own rule name, which is the split the row model already allows.
   PathFollow2D: [
     {
       at: 'path_2d.cpp:386',
       says: 'only works as a child of a Path2D node',
       verdict: { rule: 'pathfollow2d-invalid-parent' },
+      gate: 'visible-in-tree',
+    },
+    {
+      at: 'path_2d.cpp:386',
+      says: 'only works as a child of a Path2D node',
+      verdict: { rule: 'pathfollow2d-no-parent' },
       gate: 'visible-in-tree',
     },
   ],
@@ -1097,6 +1106,12 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
       at: 'path_3d.cpp:359',
       says: 'only works as a child of a Path3D node',
       verdict: { rule: 'pathfollow3d-invalid-parent' },
+      gate: 'visible-in-tree',
+    },
+    {
+      at: 'path_3d.cpp:359',
+      says: 'only works as a child of a Path3D node',
+      verdict: { rule: 'pathfollow3d-no-parent' },
       gate: 'visible-in-tree',
     },
     {
