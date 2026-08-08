@@ -28,9 +28,10 @@ export interface OpenSansGlyph {
    * vendored font; msdf-bmfont-xml's own `roundDecimal` option, which would
    * explain an INTENTIONAL round, defaults to `null`/off). NOT the glyph
    * shaper's advance source: `openSansMetrics.ts`'s `getGlyphAdvanceUnits`
-   * (backed by this SAME `hmtx` table, at full floating-point precision) is
-   * — see that function's own doc for why the atlas-bake-resolution rounding
-   * here is a real, measured source of drift a shaper must not inherit. Kept
+   * (this SAME `hmtx` table, raw and at no size, quantized by
+   * `fontMetrics.ts` at the size actually shaped) is — see that function's
+   * own doc for why the atlas-bake-resolution rounding here is a real,
+   * measured source of drift a shaper must not inherit. Kept
    * only as atlas metadata a consumer might reasonably expect a glyph-info
    * table to carry; `textLayout.ts` never reads this field.
    */

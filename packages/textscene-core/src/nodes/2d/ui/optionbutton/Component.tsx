@@ -33,7 +33,10 @@ import { OPTION_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons'
 import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  shapedTextSizeWidthPx,
+  type TextLayoutResult,
+} from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   layoutOptionButtonContent,
@@ -87,7 +90,15 @@ export function OptionButton({ solveNode, rect, renderOrder, theme }: NativeCont
         styleMargin: baseStyleBox.contentMargin,
         arrowSize: OPTION_BUTTON_ARROW_NATURAL_SIZE,
         arrowMargin,
-        textNaturalSize: layout ? { x: layout.widthPx, y: layout.heightPx } : { x: 0, y: 0 },
+        // Godot's draw path reads the same ceiled `text_buf->get_size()` its
+        // minimum size does (`scene/gui/button.cpp:343,349`), so the alignment
+        // shift is computed against the ceiled width, not the raw pen advance.
+        // Only the width needs it: `Size2::ceil()` ceils both components, but
+        // the line pitch is already a sum of independently-ceiled ascent and
+        // descent plus an integral theme spacing, so the height is integral.
+        textNaturalSize: layout
+          ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
+          : { x: 0, y: 0 },
       }),
     [rect.w, rect.h, baseStyleBox.contentMargin, arrowMargin, layout]
   );

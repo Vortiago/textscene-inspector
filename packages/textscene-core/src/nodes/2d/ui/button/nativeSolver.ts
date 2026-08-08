@@ -36,6 +36,7 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ControlColor } from '../control/types';
 import type { ButtonProperties } from './types';
@@ -152,7 +153,12 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
     hasText && ctx.measureText
       ? shapeButtonLabel(text, fontSizePx, fontMetrics)
       : null;
-  const textSize = layout ? { x: layout.widthPx, y: layout.heightPx } : { x: 0, y: 0 };
+  // `minsize` starts from `paragraph->get_size()` (`button.cpp:492`), a max
+  // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`)
+  // — the CEILED extent, not the raw pen advance.
+  const textSize = layout
+    ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
+    : { x: 0, y: 0 };
 
   let width = textSize.x;
   let height = textSize.y;

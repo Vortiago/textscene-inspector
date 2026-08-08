@@ -67,10 +67,21 @@ describe('measureText', () => {
     expect(two.y).toBe(one.y * 2);
   });
 
-  it('scales with font size', () => {
+  it('scales with font size — but NOT proportionally once Godot stops positioning glyphs subpixel-precisely', () => {
+    // 'A'/'B' hmtx advances 1354/1350 design units, unitsPerEm 2048.
+    //
+    // At 16 (`fontUsesSubpixelPositioning` true) each glyph keeps its own
+    // 26.6 advance: 677/64 + 675/64 = 21.125.
+    //
+    // At 32 the same two glyphs quantize to 1354/64 = 21.15625 and 1350/64 =
+    // 21.09375 — exactly double, since x_scale is 1.0 — but the size is above
+    // `SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE`, so each is rounded to a whole
+    // pixel with the remainder carried: 21 (carry +0.15625), then
+    // round(21.09375 + 0.15625) = 21. 42, not 42.25.
     const small = measureText('AB', 16);
     const large = measureText('AB', 32);
-    expect(large.x).toBeCloseTo(small.x * 2, 10);
+    expect(small.x).toBe(21.125);
+    expect(large.x).toBe(42);
     expect(large.y).toBeGreaterThan(small.y);
   });
 

@@ -53,6 +53,10 @@ const A_ADVANCE = 1354 * (16 / 2048); // 10.578125
 // two only coincided at the OLD atlas-bake-resolution-42 xadvance (both
 // rounded to the integer 28), not a fact about the font.
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
+// The SHAPED size of 'AB' — `TS->shaped_text_get_size(...).x` ceils the pen
+// advance to a whole pixel (`text_server_adv.cpp:7524-7537`), and every
+// minimum size below is built from that, not from the fractional sum.
+const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
 const FONT_HEIGHT = 23;
 
 function node(props: Partial<OptionButtonProperties>): SolveNode {
@@ -132,7 +136,7 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
     ];
     const result = minSize(optionButtonMinimumSize(node({ items, selected: 0 }), ctx()));
     // width = 16 (margin) + 21.125 (widest item) + 12 (arrow) + 4 (h_separation).
-    expect(result.x).toBeCloseTo(16 + AB_WIDTH + 12 + 4, 6);
+    expect(result.x).toBeCloseTo(16 + AB_SHAPED_WIDTH + 12 + 4, 6);
   });
 
   it('height is 8 (marginY) + max(tallest item text height, arrow height 12) — the 23px font height wins', () => {
@@ -152,7 +156,7 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
     const result = minSize(
       optionButtonMinimumSize(node({ items, selected: 0, themeOverrideConstants: { h_separation: 10 } }), ctx())
     );
-    expect(result.x).toBeCloseTo(16 + A_ADVANCE + 12 + 10, 6);
+    expect(result.x).toBe(16 + Math.ceil(A_ADVANCE) + 12 + 10);
   });
 
   it('uses the DISABLED stylebox margin once disabled=true (same margins in the default theme, so no numeric change)', () => {
@@ -253,5 +257,30 @@ describe(`optionButtonMinimumSize — resolves this OptionButton's own theme fon
     const n: SolveNode = { ...node({}), fontOverrides: { normal_font: systemFont } };
     optionButtonMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * `OptionButton` sizes to its WIDEST item through
+ * `Button::get_minimum_size_for_text_and_icon` (`button.cpp:492`), whose
+ * `paragraph->get_size()` is a max over
+ * `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`) —
+ * `Size2(sd->width, ...).ceil()` (`text_server_adv.cpp:7524-7537`).
+ *
+ * Godot 4.6.3, `scenes/fixtures/complex-2d-gui.tscn` in a 1152x648
+ * SubViewport:
+ *
+ *   SystemsGrid/Difficulty  items "Recon"/"Standard"/"Blackout"  min = (103, 31)
+ */
+describe('optionButtonMinimumSize — the shaped item extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
+  it("reaches Godot's own whole-pixel minimum width 103 for the Recon/Standard/Blackout item set", () => {
+    const n = node({
+      items: [
+        { text: 'Recon', id: 0 },
+        { text: 'Standard', id: 1 },
+        { text: 'Blackout', id: 2 },
+      ],
+    });
+    expect(minSize(optionButtonMinimumSize(n, ctx())).x).toBe(103);
   });
 });

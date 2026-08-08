@@ -64,17 +64,14 @@ The whole frame differs by 11,453 px (1.534 %) in 520 clusters, none of them
 bigger than 456 px. Composition is not what moves: every card plate, split
 gutter, clip edge, scrollbar rect, stylebox colour and `modulate` product lands
 on the same pixel on both sides, including the composited SubViewport surface
-and the two bars whose tint is chained. One rect and the text account for all of
-it.
+and the two bars whose tint is chained. Layout carries none of it either: a
+scratch project instantiating the scene in a 1152x648 `SubViewport` and printing
+`Control.get_rect()` per node gives 55 rects, and the previewer's own solve
+reproduces every one of them exactly — the systems grid's widget column, the
+action row's split, and the status column's box flow included. The text accounts
+for all of it.
 
-**A GridContainer's second column starts one pixel left.** The systems grid's
-widget column opens at `x 176` in Godot and `x 175` here, and everything the
-column holds moves with it — the LineEdit and OptionButton plates, both slider
-tracks, the music slider's tick marks, and the CheckBox's icon. The column's
-RIGHT edge is `x 727` on both, so the column is one pixel wider rather than
-translated, and the label column beside it is untouched.
-
-Everything else is glyph rasterisation, the standing MSDF-atlas residual: a
+The rest is glyph rasterisation, the standing MSDF-atlas residual: a
 text run lands within one column of Godot's in either direction while its rows
 and its wrap points match exactly. `Apply` inks `x 28..70` in Godot against
 `x 28..71` here; the header subtitle `x 101..669` against `x 101..668`, wrapping

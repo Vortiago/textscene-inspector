@@ -55,6 +55,7 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import {
   isTextLayoutResult,
+  shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -146,7 +147,15 @@ export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeCont
         expandIcon: props.expandIcon === true,
         iconNaturalSize,
         hasText,
-        textNaturalSize: layout ? { x: layout.widthPx, y: layout.heightPx } : { x: 0, y: 0 },
+        // Godot's draw path reads the same ceiled `text_buf->get_size()` its
+        // minimum size does (`scene/gui/button.cpp:343,349`), so the alignment
+        // shift is computed against the ceiled width, not the raw pen advance.
+        // Only the width needs it: `Size2::ceil()` ceils both components, but
+        // the line pitch is already a sum of independently-ceiled ascent and
+        // descent plus an integral theme spacing, so the height is integral.
+        textNaturalSize: layout
+          ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
+          : { x: 0, y: 0 },
       }),
     [
       rect.w,

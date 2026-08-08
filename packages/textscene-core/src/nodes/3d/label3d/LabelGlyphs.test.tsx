@@ -61,14 +61,20 @@ describe('<LabelGlyphs>', () => {
     expect(mesh.geometry.getAttribute('position').count).toBe(0);
   });
 
-  it('scales glyph geometry proportionally to font_size', async () => {
+  it('scales glyph geometry with font_size — to within the whole-pixel advance round, which is not proportional', async () => {
     const small = await render(props({ text: 'Hello', font_size: 32 }));
     const large = await render(props({ text: 'Hello', font_size: 64 }));
     const smallMesh = small.scene.findByType('Mesh').instance as THREE.Mesh;
     const largeMesh = large.scene.findByType('Mesh').instance as THREE.Mesh;
     const smallSize = boundingSize(smallMesh);
     const largeSize = boundingSize(largeMesh);
-    expect(largeSize.x).toBeCloseTo(smallSize.x * 2, 1);
+    // Both sizes are above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so each
+    // glyph advance is rounded to a WHOLE pixel with the rounding remainder
+    // carried (`text_server_adv.cpp:7079-7084`) — independently at each size,
+    // and the two need not land on the same fractions. Doubling the size
+    // therefore does not exactly double the pen extent; the residual is
+    // bounded by the rounding, not by the scale.
+    expect(Math.abs(largeSize.x - smallSize.x * 2)).toBeLessThan(2);
     expect(largeSize.y).toBeCloseTo(smallSize.y * 2, 1);
   });
 

@@ -66,6 +66,10 @@ function ctx(withMeasurer = true): SolveContext {
 // to the same integer 28 — a coincidence of that rounding, not a fact about
 // the font).
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
+// The SHAPED size of 'AB' — `TS->shaped_text_get_size(...).x` ceils the pen
+// advance to a whole pixel (`text_server_adv.cpp:7524-7537`), and every
+// minimum size below is built from that, not from the fractional sum.
+const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
 
 describe('labelMinimumSize (label.cpp:973-998)', () => {
   it('is (1, fontHeightPx) for empty text (label.cpp:239-241, get_line_height with no lines falls to font->get_height, no line_spacing)', () => {
@@ -75,7 +79,7 @@ describe('labelMinimumSize (label.cpp:973-998)', () => {
 
   it('autowrap OFF: width is the longest UNWRAPPED line, height is a single line (23px, no spacing to subtract)', () => {
     const result = minSize(node({ text: 'AB', autowrapMode: 0 }), ctx());
-    expect(result.x).toBeCloseTo(AB_WIDTH, 6);
+    expect(result.x).toBeCloseTo(AB_SHAPED_WIDTH, 6);
     expect(result.y).toBe(23);
   });
 
@@ -83,7 +87,7 @@ describe('labelMinimumSize (label.cpp:973-998)', () => {
     const result = minSize(node({ text: 'A\nAB', autowrapMode: 0 }), ctx());
     expect(result.y).toBe(49);
     // width floors to the WIDER of the two unwrapped lines ('AB'), not 'A'.
-    expect(result.x).toBeCloseTo(AB_WIDTH, 6);
+    expect(result.x).toBeCloseTo(AB_SHAPED_WIDTH, 6);
   });
 
   it('autowrap ON (any non-zero mode): width floors to 1px regardless of text (label.cpp:984-991, always Size2(1, ...))', () => {
@@ -121,7 +125,7 @@ describe('labelMinimumSize (label.cpp:973-998)', () => {
     // (narrower), 'AB' -> uppercase glyphs (wider, this atlas's own advances).
     const lower = minSize(node({ text: 'ab', autowrapMode: 0 }), ctx());
     const upper = minSize(node({ text: 'ab', uppercase: true, autowrapMode: 0 }), ctx());
-    expect(upper.x).toBeCloseTo(AB_WIDTH, 6);
+    expect(upper.x).toBeCloseTo(AB_SHAPED_WIDTH, 6);
     expect(upper.x).toBeGreaterThan(lower.x);
   });
 });
@@ -650,5 +654,81 @@ describe(`labelMinimumSize — resolves this Label's own theme font key ("${LABE
     const n = { ...node({}), fontOverrides: { normal_font: systemFont } };
     labelMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The whole-pixel shaped extent, end to end through `labelMinimumSize`.
+ *
+ * `Label::_shape` folds `TS->shaped_text_get_size(line_rid).x` into
+ * `minsize.width` (`label.cpp:252-257`), and that accessor returns
+ * `Size2(sd->width, ...).ceil()` (`text_server_adv.cpp:7524-7537`) — so a
+ * Label's own minimum width is a WHOLE number however fractional its pen
+ * advances are. Godot 4.6.3, `scenes/fixtures/complex-2d-gui.tscn` in a
+ * 1152x648 SubViewport, `Control.get_combined_minimum_size()` per node:
+ *
+ *   MasterLabel      "Master volume"     min.x = 116
+ *   MusicLabel       "Music bed"         min.x = 79
+ *   CallsignLabel    "Callsign"          min.x = 60
+ *   SubtitlesLabel   "Comms"             min.x = 59
+ *   DifficultyLabel  "Threat level"      min.x = 92
+ *   Title            "FIELD OPERATIONS"  min.x = 257  (font_size 28)
+ *
+ * The same engine's `get_string_size` on those strings returns 116/79/60/59
+ * while its own per-character advance sums are 115.875/78.453125/59.671875/
+ * 58.234375 — the ceil, not the advances, is what makes them integers.
+ *
+ * These are the numbers a GridContainer's `Size2i` column bookkeeping
+ * (`grid_container.cpp:290`) truncates: a minimum a fraction below the whole
+ * pixel truncates a whole pixel DOWN, and every column past it opens one
+ * pixel early.
+ */
+describe('labelMinimumSize — the shaped extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
+  it.each([
+    ['Master volume', 116],
+    ['Music bed', 79],
+    ['Callsign', 60],
+    ['Comms', 59],
+    // 'l' (571 design units) and 'T' (1157) both have ODD advances, which
+    // FreeType's 26.6 grid rounds UP where a continuous scale leaves them
+    // between two steps: the pen sum is 91.03125, not the 91.0 flat scaling
+    // gives, and only the former ceils to Godot's own 92.
+    ['Threat level', 92],
+  ])('%p floors this Label at Godot\'s own whole-pixel minimum width %p', (text, expected) => {
+    expect(minSize(node({ text, autowrapMode: 0 }), ctx()).x).toBe(expected);
+  });
+
+  it('a font_size above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE floors on WHOLE-pixel advances, which is NARROWER than the fractional sum', () => {
+    const n = node({ text: 'FIELD OPERATIONS', autowrapMode: 0, themeOverrideFontSizes: { font_size: 28 } });
+    // Godot rounds each advance to a whole pixel with the remainder carried
+    // (text_server_adv.cpp:7079-7084), summing to exactly 257 — where the
+    // unrounded 26.6 advances sum to 257.140625 and a flat scale of the hmtx
+    // table to 257.099609375, both of which would ceil to 258.
+    expect(minSize(n, ctx()).x).toBe(257);
+  });
+
+  it("is strictly wider than the raw pen advance whenever that advance is fractional — the fraction is what a container's Size2i truncation would otherwise lose", () => {
+    const raw = shapeText('Master volume', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    }).widthPx;
+    // Real Godot 4.6.3 reports the same fractional extent for this string:
+    // `ThemeDB.fallback_font.get_string_size("Master volume",
+    // HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x` is 116, and summing the same
+    // font's own `get_char_size(c, 16).x` over the characters gives 115.875.
+    expect(raw).toBeCloseTo(115.875, 6);
+    expect(Math.trunc(raw)).toBe(115);
+    expect(minSize(node({ text: 'Master volume', autowrapMode: 0 }), ctx()).x).toBe(116);
+  });
+
+  it('takes the ceil of the WIDEST line, not the sum of per-line ceils, for a hard-broken Label', () => {
+    const twoLines = minSize(node({ text: 'Callsign\nComms', autowrapMode: 0 }), ctx());
+    expect(twoLines.x).toBe(60);
+  });
+
+  it('leaves the 1px autowrap-ON width floor alone — that branch never reads a shaped size at all (label.cpp:984-991)', () => {
+    expect(minSize(node({ text: 'Master volume', autowrapMode: 2 }), ctx()).x).toBe(1);
   });
 });

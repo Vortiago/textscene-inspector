@@ -27,11 +27,13 @@ the rows to the top.
 
 ## Divergences
 
-None visible in this fixture. `pnpm ref:godot
-scenes/fixtures/unit-grid-container.tscn --mode 2d` against `pnpm ref:ours
-unit-grid-container.tscn --2d` differs at a mean channel error of 0.15/255 over
-the 1152x648 frame — glyph edges, plus the second column starting one pixel
-apart (x 97 against x 96).
+None visible in this fixture. The column geometry is exact: a scratch project
+instantiating the fixture in a 1152x648 `SubViewport` and printing
+`Control.get_rect()` puts every cell at `89 px` wide with the second column
+opening at `x 97` (`col_minw[0]` 89 + `h_separation` 8), and the previewer's
+own solve reports the same four rects. What remains between the two renders is
+glyph-edge antialiasing — the standing MSDF-atlas residual the RichTextLabel
+sheet has the mechanism for.
 
 ## Linting
 

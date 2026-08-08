@@ -322,7 +322,7 @@ describe('<LineEdit> — content-rect clipping', () => {
   it('merges its own content-rect planes onto whatever it inherited from an ancestor', async () => {
     const inheritedPlane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);
     const renderer = await ReactThreeTestRenderer.create(
-      <ControlClipProvider value={[inheritedPlane]}>
+      <ControlClipProvider value={{ planes: [inheritedPlane], rect: null }}>
         <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
       </ControlClipProvider>
     );

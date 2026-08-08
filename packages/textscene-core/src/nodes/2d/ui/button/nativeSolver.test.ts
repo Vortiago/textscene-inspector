@@ -56,6 +56,10 @@ function minMeta(...args: Parameters<typeof buttonMinimumSize>): unknown {
 // atlas-bake-resolution-42 xadvance, where both rounded to the integer 28 —
 // a coincidence of that rounding, not a fact about the font).
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
+// The SHAPED size of 'AB' — `TS->shaped_text_get_size(...).x` ceils the pen
+// advance to a whole pixel (`text_server_adv.cpp:7524-7537`), and every
+// minimum size below is built from that, not from the fractional sum.
+const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
 const FONT_HEIGHT = 23;
 
 function node(
@@ -87,7 +91,7 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
 
   it('adds the measured text size on top of the margin', () => {
     const result = minSize(node({ text: 'AB' }), ctx());
-    expect(result.x).toBeCloseTo(8 + AB_WIDTH, 6);
+    expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH, 6);
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
@@ -135,7 +139,7 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
     // width: 21.125 (text) + 20 (icon) + 4 (h_separation default) = 45.125.
     const result = minSize(node({ text: 'AB' }, {}, { x: 20, y: 20 }), ctx());
     expect(result.y).toBe(8 + FONT_HEIGHT);
-    expect(result.x).toBeCloseTo(8 + AB_WIDTH + 20 + 4, 6);
+    expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH + 20 + 4, 6);
   });
 
   it('vertical_icon_alignment CENTER: a TALLER icon floors the height instead of the text', () => {
@@ -176,7 +180,7 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
 
   it('an unresolved icon (textureSize still null) contributes nothing, exactly like TextureRect before its texture loads', () => {
     const result = minSize(node({ text: 'AB' }, {}, null), ctx());
-    expect(result.x).toBeCloseTo(8 + AB_WIDTH, 6);
+    expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH, 6);
   });
 
   it('h_separation theme_override_constants wins over the theme default', () => {
@@ -184,7 +188,7 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
       node({ text: 'AB', themeOverrideConstants: { h_separation: 12 } }, {}, { x: 20, y: 20 }),
       ctx()
     );
-    expect(result.x).toBeCloseTo(8 + AB_WIDTH + 20 + 12, 6);
+    expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH + 20 + 12, 6);
   });
 
   it('icon_max_width theme_override_constants clamps the icon before it contributes', () => {
@@ -193,7 +197,7 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
       ctx()
     );
     // fitIconSize(20x20, 10) = 10x10 (aspect-preserving clamp).
-    expect(result.x).toBeCloseTo(8 + AB_WIDTH + 10 + 4, 6);
+    expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH + 10 + 4, 6);
     expect(result.y).toBe(8 + FONT_HEIGHT); // 10 < 23, height still floored by text
   });
 });
@@ -300,5 +304,43 @@ describe(`buttonMinimumSize — resolves this Button's own theme font key ("${BU
     const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { normal_font: systemFont } };
     buttonMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The whole-pixel shaped extent, end to end through `buttonMinimumSize`.
+ *
+ * `Button::get_minimum_size_for_text_and_icon` starts from
+ * `paragraph->get_size()` (`button.cpp:492`), and `TextParagraph::get_size`
+ * is a max over `TS->shaped_text_get_size(lines_rid[i])`
+ * (`text_paragraph.cpp:601-608`), which returns `Size2(sd->width, ...).ceil()`
+ * (`text_server_adv.cpp:7524-7537`) — so a Button's minimum width is the
+ * CEILED text extent plus its whole-pixel StyleBox margins, never a
+ * fractional pen advance.
+ *
+ * Godot 4.6.3, `scenes/fixtures/complex-2d-gui.tscn` in a 1152x648
+ * SubViewport, `Control.get_combined_minimum_size()` per node:
+ *
+ *   Actions/Apply    "Apply"                min = (52, 31)
+ *   Actions/Restore  "Restore defaults"     min = (135, 31)
+ *   Actions/Back     "Back to bridge"       min = (119, 31)
+ *
+ * The buttons there carry no StyleBox override, so the default theme's
+ * `content_margin` 4 (both sides, 8 total) is all that is added to the text.
+ */
+describe('buttonMinimumSize — the shaped text extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
+  it.each([
+    ['Apply', 52],
+    ['Restore defaults', 135],
+    ['Back to bridge', 119],
+  ])('%p reaches Godot\'s own whole-pixel minimum width %p', (text, expected) => {
+    expect(minSize(node({ text }), ctx()).x).toBe(expected);
+  });
+
+  it('adds the margin to the CEILED text width, not the ceil of the margined width — both are whole here, and the text is what carries the fraction', () => {
+    const withText = minSize(node({ text: 'Apply' }), ctx()).x;
+    const empty = minSize(node({}), ctx()).x;
+    expect(empty).toBe(8);
+    expect(withText - empty).toBe(44);
   });
 });

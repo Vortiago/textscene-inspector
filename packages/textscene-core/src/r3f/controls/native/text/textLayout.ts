@@ -75,6 +75,7 @@
 
 import { OPEN_SANS_ATLAS_GLYPHS, type OpenSansGlyph } from './openSansAtlas';
 import {
+  fontUsesSubpixelPositioning,
   getFontAscentPx,
   getFontGlyphAdvancePx,
   getFontKerningAdjustmentPx,
@@ -178,8 +179,41 @@ export interface TextLineLayout {
   /** The rendered text of this line, edge-space-trimmed per Label's default. */
   text: string;
   glyphs: GlyphPlacement[];
-  /** Sum of every glyph's advance on this line, target px. */
+  /**
+   * Sum of every glyph's advance on this line, target px — the raw pen
+   * extent, Godot's `sd->width` / `TextServer::shaped_text_get_width`. A
+   * widget that wants the SIZE the engine reports for this line
+   * (`shaped_text_get_size`, a different accessor) must put it through
+   * `shapedTextSizeWidthPx`.
+   */
   widthPx: number;
+}
+
+/**
+ * `TextServerAdvanced::_shaped_text_get_size`
+ * (`modules/text_server_adv/text_server_adv.cpp:7524-7537`): the size a
+ * shaped line reports back is `Size2(sd->width, ascent + descent).ceil()` —
+ * a WHOLE number of pixels, even though the pen advance it is derived from
+ * is fractional. Godot exposes both quantities and they are NOT
+ * interchangeable: `shaped_text_get_width` returns the raw `sd->width` (what
+ * `shaped_text_fit_to_width` justifies against), while every widget that
+ * floors a minimum size or aligns a line reads the ceiled
+ * `shaped_text_get_size`. `TextLineLayout.widthPx` and
+ * `TextLayoutResult.widthPx` are the RAW one, so this is the conversion at
+ * that seam rather than a rounding baked into shaping.
+ *
+ * `Math.ceil`, matching `Vector2::ceil()`'s own `Math::ceil` per component:
+ * toward POSITIVE infinity, so a degenerate negative extent rounds toward
+ * zero rather than away from it.
+ *
+ * The ceil is not a rounding nicety — it is load-bearing at the container
+ * seam. `GridContainer` folds each child's minimum into `Size2i col_minw`
+ * (`grid_container.cpp:290`), truncating it; a minimum left a fraction below
+ * the whole pixel therefore truncates a whole pixel DOWN, and every column
+ * past it opens one pixel early.
+ */
+export function shapedTextSizeWidthPx(widthPx: number): number {
+  return Math.ceil(widthPx);
 }
 
 export interface TextLayoutResult {
@@ -328,14 +362,15 @@ interface BreakGlyph {
 }
 
 /**
- * `metrics.getGlyphAdvanceUnits` (the font's own CONTINUOUS `hmtx`-style
- * advance, design units) scaled to `fontSizePx` via `fontMetrics.ts`'s
- * shared `getFontGlyphAdvancePx` — deliberately NOT `openSansAtlas.ts`'s own
- * `xadvance` (that table's own doc, and `OpenSansMetrics.advanceWidths`'s,
- * both have the full citation: msdf-bmfont-xml rounds its OWN glyph table to
- * whole pixels at the atlas's bake size before this repo's bake script ever
- * reads it back, and Godot's real per-glyph advance at any UI font size is
- * never rounded at all).
+ * `metrics.getGlyphAdvanceUnits` (the font's own `hmtx`-style advance, design
+ * units) put through `fontMetrics.ts`'s shared `getFontGlyphAdvancePx` —
+ * FreeType's and HarfBuzz's own fixed-point chain to a whole number of 1/64
+ * px, that function's own doc has the citations. Deliberately NOT
+ * `openSansAtlas.ts`'s own `xadvance`, which is a different quantization
+ * entirely: msdf-bmfont-xml rounds its OWN glyph table to whole pixels at
+ * the atlas's bake size (42) before this repo's bake script ever reads it
+ * back, so the error it carries is fixed in ATLAS pixels and does not shrink
+ * when a caller scales down to a UI size.
  *
  * A character outside `metrics`'s own charset draws no ink (there is no
  * atlas bitmap to place — `OPEN_SANS_ATLAS_GLYPHS`'s own doc lists what IS
@@ -346,6 +381,34 @@ interface BreakGlyph {
  */
 function glyphAdvancePx(ch: string, fontSizePx: number, metrics: FontMetrics): number {
   return getFontGlyphAdvancePx(metrics, ch, fontSizePx);
+}
+
+/**
+ * Unicode general category Zs (SPACE SEPARATOR) — ICU's `u_isblank()` is
+ * exactly "Zs, or U+0009 CHARACTER TABULATION", and that is half of
+ * `text_server_adv.cpp:7057`'s advance-remainder reset predicate.
+ *
+ * Deliberately NOT `isWhitespace()` above, which is Godot's own
+ * `is_whitespace()` and a WIDER set: it also carries U+200B ZERO WIDTH SPACE
+ * (category Cf, a format character with no width to reset around) and the
+ * U+2028/U+2029 line/paragraph separators (Zl/Zp, which reach the reset
+ * through `is_linebreak()` instead).
+ */
+function isSpaceSeparator(cp: number): boolean {
+  return (
+    cp === 0x0020 ||
+    cp === 0x00a0 ||
+    cp === 0x1680 ||
+    (cp >= 0x2000 && cp <= 0x200a) ||
+    cp === 0x202f ||
+    cp === 0x205f ||
+    cp === 0x3000
+  );
+}
+
+/** `Math::round` (`core/math/math_funcs.h`) — half away from zero, unlike JS's `Math.round`, which breaks ties toward positive infinity. */
+function godotRound(value: number): number {
+  return Math.sign(value) * Math.round(Math.abs(value));
 }
 
 /** `metrics.getKerningAdjustmentUnits`, design units, scaled to `fontSizePx` via `fontMetrics.ts`'s shared `getFontKerningAdjustmentPx`. */
@@ -387,13 +450,61 @@ function toBreakGlyphs(
   // size boundary (see this function's own doc) — moot for the vendored
   // Open Sans charset today (no `kern` feature, `openSansMetrics.ts`'s own
   // doc), kept for whichever font/kerning table lands next.
+  //
+  // Folded in BEFORE the whole-pixel round below, because Godot never sees
+  // the two separately: a GPOS pair adjustment is already inside HarfBuzz's
+  // `x_advance` by the time `text_server_adv.cpp:7077` reads it. Where inside
+  // HarfBuzz's own fixed-point the pair adjustment gets quantized is not
+  // pinned here — the vendored font has no `kern` feature and no legacy
+  // `kern` table, so there is no pair to measure it against.
   for (let i = 0; i + 1 < text.length; i++) {
     const sizeI = sizeAt(i);
     if (sizeI !== sizeAt(i + 1)) continue;
     glyphs[i]!.advance += kerningAdjustmentPx(text[i]!, text[i + 1]!, sizeI, metrics);
   }
+  roundAdvancesToWholePixels(glyphs, text, sizeAt);
   glyphs.push({ start: text.length, end: text.length + 1, advance: 0, isSpace: true, isHardBreak: false });
   return glyphs;
+}
+
+/**
+ * `text_server_adv.cpp:7079-7084` — above `fontUsesSubpixelPositioning`'s
+ * threshold Godot does NOT place glyphs subpixel-precisely: every advance is
+ * `Math::round`ed to a whole pixel, and the rounding remainder is carried
+ * into the next glyph (`fd->keep_rounding_remainders`, whose default is true
+ * — `text_server_adv.h:344,618` — and which no `FontFile` in this repo's
+ * scenes turns off). The carry is what keeps a long line from drifting: each
+ * glyph's own advance is off by up to half a pixel, but every PREFIX sum is
+ * within half a pixel of the unrounded one, so the line's total width is the
+ * unrounded total rounded once.
+ *
+ * The carry is reset, per `:7057`, on a tab, an ICU `u_isblank()` character
+ * (`isSpaceSeparator`), or a line break — so a word's rounding error never
+ * leaks across the space that follows it. It is also reset at a font-size
+ * change, because `adv_rem` is a local of `_shape_run` (`:7011`): a
+ * RichTextLabel `[b]`/`[i]` span is its own shaped run, with its own `subpos`
+ * decision and its own remainder starting at zero.
+ *
+ * Mutates `glyphs` in place, after kerning has been folded in — see the
+ * caller's own comment for why the two cannot be rounded separately.
+ */
+function roundAdvancesToWholePixels(
+  glyphs: BreakGlyph[],
+  text: string,
+  sizeAt: (charIndex: number) => number
+): void {
+  let advanceRemainder = 0;
+  for (let i = 0; i < text.length; i++) {
+    const sizePx = sizeAt(i);
+    if (i > 0 && sizePx !== sizeAt(i - 1)) advanceRemainder = 0;
+    if (fontUsesSubpixelPositioning(sizePx)) continue;
+    const cp = text[i]!.codePointAt(0)!;
+    if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;
+    const fullAdvance = advanceRemainder + glyphs[i]!.advance;
+    const rounded = godotRound(fullAdvance);
+    glyphs[i]!.advance = rounded;
+    advanceRemainder = fullAdvance - rounded;
+  }
 }
 
 /**

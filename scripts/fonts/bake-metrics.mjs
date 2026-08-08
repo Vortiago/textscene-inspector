@@ -147,25 +147,33 @@ function bakeKerning(font) {
 
 /**
  * Per-glyph `hmtx` advance width, design units, over the SAME `CHARSET` the
- * atlas bakes — the CONTINUOUS source `textLayout.ts`'s `glyphAdvancePx` now
- * scales directly, instead of `openSansAtlas.ts`'s `xadvance` (msdf-bmfont-xml's
- * OWN atlas-bake-resolution-42 glyph table, INTEGER-rounded at that bake size
+ * atlas bakes — the RAW, UNQUANTIZED source `fontMetrics.ts`'s
+ * `getFontGlyphAdvancePx` puts through FreeType's own fixed-point chain,
+ * instead of `openSansAtlas.ts`'s `xadvance` (msdf-bmfont-xml's OWN
+ * atlas-bake-resolution-42 glyph table, INTEGER-rounded at that bake size
  * before this script ever sees it — confirmed empirically: msdf-bmfont-xml's
  * `roundDecimal` option defaults to `null` — no rounding — yet its own output
  * for this font is already whole pixels at size 42, so the rounding is
- * upstream, in the atlas-bake tool itself). Godot's real advance at ANY UI
- * font size (`text_server_adv.cpp:7078`, `subpos` true whenever
- * `SUBPIXEL_POSITIONING_AUTO` and `font_size <= 20` — true for every theme
- * default and every fixture this repo ships) is NEVER rounded per glyph: it
- * is HarfBuzz's `x_advance`, itself FreeType's UNHINTED (`hb-ft.cc:115`'s
- * default `FT_LOAD_NO_HINTING`) advance — a plain proportional scale of this
- * SAME `hmtx` table, continuous down to floating-point precision. Baking a
- * SEPARATE continuous table (rather than reusing the atlas's own
- * bake-size-42-quantized one) closes that residual: measured on
+ * upstream, in the atlas-bake tool itself).
+ *
+ * The two are not the same kind of number, which is the whole reason this
+ * table exists separately. Godot's advance is HarfBuzz's `x_advance`
+ * (`text_server_adv.cpp:7077`), which IS quantized — `hb-ft.cc:523`'s
+ * `(v + (1<<9)) >> 10` lands it on a whole number of 1/64 px at the TARGET
+ * font size — but quantized at the size the text is actually shaped at, from
+ * this raw table (`ftadvanc.c:52`'s `FT_MulFix(1024 * advance, x_scale)`,
+ * FreeType's unhinted `hmtx` fast path, `hb-ft.cc:115`). The atlas's
+ * `xadvance` is quantized at bake size 42 instead, so its error is fixed in
+ * ATLAS pixels and survives the scale down to a 14-28px UI size at full
+ * magnitude. Baking this table closed that residual: measured on
  * `unit-rich-text-label.tscn`'s 45-character line against real Godot 4.6.3,
  * reusing the atlas's own `xadvance` left the line's ink 1px wider than
  * Godot's own render even after the (much larger) per-style-run font-size fix
  * (nativeSolver.ts's `resolveRunFontSizePx`) closed the rest.
+ *
+ * Nothing here is pre-scaled or pre-rounded: the quantization is a function
+ * of the target size, so it can only be applied at shaping time, and
+ * `fontMetrics.ts` is where it lives.
  */
 function bakeAdvanceWidths(font) {
   const advanceWidths = {};
@@ -275,9 +283,9 @@ import { getFontAscentPx, getFontLinePitchPx } from './fontMetrics';
  * source": that table is the atlas tool's OWN glyph geometry (bitmap
  * placement inside the PNG, at the atlas's bake-size-42 resolution), rounded
  * to whole atlas-bake pixels by msdf-bmfont-xml itself before this script
- * ever reads it back, where THIS advance is a direct, unrounded \`hmtx\` scale
- * — see \`getGlyphAdvanceUnits\`'s own doc for why a shaper never wants the
- * ATLAS's rounded copy.
+ * ever reads it back, where THIS one is the RAW \`hmtx\` value, quantized by
+ * nothing and at no size — see \`getGlyphAdvanceUnits\`'s own doc for why a
+ * shaper never wants the ATLAS's copy.
  */
 export interface OpenSansMetrics {
   /** \`font.unitsPerEm\` (fontkit) — hhea/head design units per em. */
@@ -307,16 +315,21 @@ export interface OpenSansMetrics {
    */
   advanceWidths: Record<string, number>;
   /**
-   * \`post\` table \`underlinePosition\`, design units — the top of the underline
-   * stroke relative to the baseline, POSITIVE = above baseline (the \`post\`
-   * table's own Y-up convention; typically negative for a below-baseline
-   * underline). Read via \`fontkit\`'s \`TTFFont#underlinePosition\`
-   * (\`fontkit/src/TTFFont.js:192-194\`, itself \`post.underlinePosition\`),
-   * matching FreeType's \`face->underline_position\` — the same field
-   * \`text_server_adv.cpp:1517\` scales to pixels for \`shaped_text_get_underline_position\`.
+   * \`post\` table \`underlinePosition\`, design units — the TOP EDGE of the
+   * underline stroke relative to the baseline, POSITIVE = above baseline (the
+   * \`post\` table's own Y-up convention; typically negative for a
+   * below-baseline underline). Read via \`fontkit\`'s
+   * \`TTFFont#underlinePosition\` (\`fontkit/src/TTFFont.js:192-194\`, itself
+   * \`post.underlinePosition\`).
+   *
+   * This is the RAW table value, NOT FreeType's \`face->underline_position\`:
+   * FreeType re-bases it from that top edge onto the stroke's CENTRE before
+   * publishing it (\`freetype/src/sfnt/sfobjs.c:1424-1425\`), which is the
+   * value \`text_server_adv.cpp:1517\` then scales. \`getUnderlinePositionPx\`
+   * applies that conversion; nothing should read this field without it.
    */
   underlinePosition: number;
-  /** \`post\` table \`underlineThickness\`, design units — see \`underlinePosition\`'s doc; scaled by \`text_server_adv.cpp:1518\`. */
+  /** \`post\` table \`underlineThickness\`, design units — FreeType publishes it unchanged (\`sfobjs.c:1426\`); scaled by \`text_server_adv.cpp:1518\`. */
   underlineThickness: number;
   /**
    * OS/2 \`xAvgCharWidth\`, design units — this font's own "typical glyph
@@ -340,23 +353,27 @@ export function getKerningAdjustmentUnits(a: string, b: string): number {
  * \`textLayout.ts\`'s \`glyphAdvancePx\` falls back to \`getAverageAdvancePx\` in
  * that case, unchanged from before this table existed).
  *
- * This is the CONTINUOUS source \`textLayout.ts\` scales to a target pixel
- * size — never \`openSansAtlas.ts\`'s own \`xadvance\`, which is msdf-bmfont-xml's
- * OWN atlas-bake-resolution glyph table (bake size 42, INTEGER-rounded at
- * THAT resolution before this repo's bake script ever sees it) and therefore
+ * This is the RAW design-unit value, at no size and quantized by nothing —
+ * never \`openSansAtlas.ts\`'s own \`xadvance\`, which is msdf-bmfont-xml's OWN
+ * atlas-bake-resolution glyph table (bake size 42, INTEGER-rounded at THAT
+ * resolution before this repo's bake script ever sees it) and therefore
  * carries roughly 1/2 an atlas-bake-pixel of quantization noise per glyph —
  * negligible at the atlas's own 42px bake size, but the SAME absolute error
- * persists after scaling down to a UI font size (16-18px), where it is a much
+ * persists after scaling down to a UI font size (14-28px), where it is a much
  * larger fraction of each glyph's own advance and accumulates roughly
- * linearly with line length. Godot's own real per-glyph advance
- * (\`text_server_adv.cpp:7078\`) is HarfBuzz's unrounded \`x_advance\` whenever
- * \`subpos\` is true — true for \`SUBPIXEL_POSITIONING_AUTO\` (Godot's own
- * default) at every font size this engine ships (\`<=\`
- * \`SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE\`, 20px, \`servers/text/
- * text_server.h:172\`) — itself FreeType's UNHINTED advance
- * (\`thirdparty/harfbuzz/src/hb-ft.cc:115\`'s default \`FT_LOAD_NO_HINTING\`), a
- * plain proportional scale of this SAME \`hmtx\` table with no rounding
- * anywhere in the chain. This getter is that same continuous scale.
+ * linearly with line length.
+ *
+ * Godot's own per-glyph advance is quantized too, just at the TARGET size
+ * rather than the atlas's: \`text_server_adv.cpp:7077\` reads HarfBuzz's
+ * \`x_advance\`, which \`thirdparty/harfbuzz/src/hb-ft.cc:523\` has already
+ * rounded to a whole number of 1/64 px (26.6) after
+ * \`thirdparty/freetype/src/base/ftadvanc.c:52\` scaled THIS table's raw value
+ * by FreeType's \`x_scale\`; and above
+ * \`SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE\` (20px, \`servers/text/
+ * text_server.h:172\`) \`text_server_adv.cpp:7080\` rounds it again, to a
+ * whole pixel. Neither rounding can be baked into this table — both depend
+ * on the size the text is shaped at — so both live in
+ * \`fontMetrics.ts\`/\`textLayout.ts\`, and this getter stays raw.
  */
 export function getGlyphAdvanceUnits(ch: string): number | null {
   return OPEN_SANS_METRICS.advanceWidths[ch] ?? null;
@@ -406,21 +423,38 @@ export function getLinePitchPx(fontSizePx: number, lineSpacingPx = 3): number {
 }
 
 /**
- * \`text_server_adv.cpp:1517\`: \`fd->underline_position = (-FT_MulFix(face->underline_position,
- * size->metrics.y_scale) / 64.0) * fd->scale\` — a plain proportional scale of
- * the \`post\` table value (NOT ceiling-rounded like ascent/descent; FreeType's
- * \`y_scale\` here is the raw 26.6 size scale, not a hinted metric), NEGATED so
- * a below-baseline \`post\` value (negative, that table's Y-up convention)
- * becomes a positive DOWNWARD pixel offset from the baseline —
- * \`rich_text_label.cpp:1242-1244\`'s \`y_off = upos\` is added directly to the
- * baseline y (\`off_step.y\`, itself \`off.y\` after \`+= l_ascent\`) with no
- * further sign flip.
+ * Downward pixel offset from a line's baseline to the CENTRE of its underline
+ * stroke — Godot's \`shaped_text_get_underline_position\`, which a stroke
+ * drawer (\`rich_text_label.cpp:1242-1244\`'s \`y_off = upos\`) adds straight
+ * onto the baseline y with no further sign flip.
  *
- * At size 16: -(-100) * 16/2048 = 0.78125.
+ * Two conversions sit between the \`post\` table and that number, and dropping
+ * either moves the rule a whole pixel row at UI sizes:
+ *
+ * 1. \`freetype/src/sfnt/sfobjs.c:1424-1425\` — FreeType re-bases the table's
+ *    TOP-EDGE convention onto the stroke's centre before publishing
+ *    \`face->underline_position\`:
+ *    \`post.underlinePosition - post.underlineThickness / 2\`, an integer
+ *    division on \`FT_Short\`. Half a stroke is only a fraction of a pixel at
+ *    a UI size, but the rule is snapped to whole rows downstream, so it is
+ *    the fraction that decides which row.
+ * 2. \`text_server_adv.cpp:1517\` — \`(-FT_MulFix(face->underline_position,
+ *    size->metrics.y_scale) / 64.0) * fd->scale\`, a plain proportional scale
+ *    (NOT ceiling-rounded like ascent/descent), NEGATED so a below-baseline
+ *    (negative) table value becomes a positive DOWNWARD offset.
+ *
+ * FreeType's own scale quantizes to 26.6 fixed point, which this does not
+ * reproduce — the same approximation \`getFontAscentPx\` already makes, and
+ * bounded by 1/64 px (0.016), well under the half-pixel that would move a
+ * snapped row at any size this atlas serves.
+ *
+ * At size 16: -(-100 - 50/2) * 16/2048 = 0.9765625.
  */
 export function getUnderlinePositionPx(fontSizePx: number): number {
   const scale = fontSizePx / OPEN_SANS_METRICS.unitsPerEm;
-  return -OPEN_SANS_METRICS.underlinePosition * scale;
+  const centreUnits =
+    OPEN_SANS_METRICS.underlinePosition - Math.trunc(OPEN_SANS_METRICS.underlineThickness / 2);
+  return -centreUnits * scale;
 }
 
 /**
@@ -482,9 +516,10 @@ export interface OpenSansGlyph {
    * vendored font; msdf-bmfont-xml's own \`roundDecimal\` option, which would
    * explain an INTENTIONAL round, defaults to \`null\`/off). NOT the glyph
    * shaper's advance source: \`openSansMetrics.ts\`'s \`getGlyphAdvanceUnits\`
-   * (backed by this SAME \`hmtx\` table, at full floating-point precision) is
-   * — see that function's own doc for why the atlas-bake-resolution rounding
-   * here is a real, measured source of drift a shaper must not inherit. Kept
+   * (this SAME \`hmtx\` table, raw and at no size, quantized by
+   * \`fontMetrics.ts\` at the size actually shaped) is — see that function's
+   * own doc for why the atlas-bake-resolution rounding here is a real,
+   * measured source of drift a shaper must not inherit. Kept
    * only as atlas metadata a consumer might reasonably expect a glyph-info
    * table to carry; \`textLayout.ts\` never reads this field.
    */

@@ -2,14 +2,21 @@
  * `shapeText` — a framework-free port of Godot's Label line-shaping, against
  * the vendored Open Sans SemiBold atlas/metrics (packet P10). Every expected
  * pixel width below is hand-derived from `openSansMetrics.ts`'s
- * `OPEN_SANS_METRICS.advanceWidths[ch]` (the font's own CONTINUOUS `hmtx`
- * advance width, design units) scaled to the target font size
- * (`fontSizePx / OPEN_SANS_METRICS.unitsPerEm`) — an independent source of
+ * `OPEN_SANS_METRICS.advanceWidths[ch]` (the font's own `hmtx` advance width,
+ * design units) put through the target font size — an independent source of
  * truth from the line-breaking algorithm under test, never the algorithm's
  * own arithmetic fed back at itself, and NOT `openSansAtlas.ts`'s own
  * `xadvance` (that table's own doc has the citation for why it is the wrong
  * source for a glyph's advance: it is msdf-bmfont-xml's OWN atlas-bake-
  * resolution-42 glyph table, integer-rounded at THAT resolution).
+ *
+ * Where a case below writes the scale as the plain `units * 16/2048`, that is
+ * shorthand for a value where FreeType's 26.6 quantization
+ * (`fontMetrics.ts`'s `getFontGlyphAdvancePx`) happens to land on the same
+ * number — true of every EVEN design-unit advance at `unitsPerEm` 2048 and
+ * size 16, which is what those cases pick. The two DO diverge in general, and
+ * the suite at the bottom of this file pins that divergence against real
+ * Godot glyph advances at both sides of the subpixel-positioning size branch.
  *
  * Citations:
  *   scene/gui/label.cpp :: Label::_shape() (~209-225) -- AUTOWRAP_* -> break
@@ -29,7 +36,7 @@
  *     is still zero on the current line (no word boundary found yet).
  */
 import { afterEach, describe, expect, it } from 'vitest';
-import { AutowrapMode, shapeText, soloLineLayout } from './textLayout';
+import { AutowrapMode, shapeText, shapedTextSizeWidthPx, soloLineLayout } from './textLayout';
 import { OPEN_SANS_METRICS } from './openSansMetrics';
 import type { FontMetrics } from './fontMetrics';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
@@ -190,6 +197,13 @@ describe('shapeText — fontSizePxAt (per-character size override)', () => {
     // 'A' hmtx advance width 1354 design units, unitsPerEm 2048. First char at
     // 16px, second at 18px — two DIFFERENT scales of the same glyph, an
     // independent worked example from `glyphAdvancePx`'s own arithmetic.
+    //
+    // At 16 the fixed-point chain (`getFontGlyphAdvancePx`) lands exactly on
+    // the continuous scale, 1354*16/2048 = 10.578125 = 677/64: x_scale is
+    // 0.5 in 16.16, so the 16.16 advance is a whole multiple of 1024 and the
+    // 26.6 round has nothing to round. At 18 it does not — x_scale is 0.5625,
+    // the 16.16 advance is 779904, and (779904 + 512) >> 10 = 762 gives
+    // 762/64 = 11.90625 against a continuous 1354*18/2048 = 11.900390625.
     const layout = shapeText('AA', {
       fontSizePx: 16,
       boxWidthPx: 0,
@@ -200,7 +214,7 @@ describe('shapeText — fontSizePxAt (per-character size override)', () => {
     const [a0, a1] = layout.lines[0]!.glyphs;
     expect(a0!.advance).toBeCloseTo((1354 * 16) / 2048, 10);
     expect(a1!.x).toBeCloseTo((1354 * 16) / 2048, 10);
-    expect(a1!.advance).toBeCloseTo((1354 * 18) / 2048, 10);
+    expect(a1!.advance).toBe(762 / 64);
   });
 
   it('is a pure additive option: omitting it reproduces the flat-fontSizePx result exactly', () => {
@@ -358,5 +372,100 @@ describe('soloLineLayout — re-wrapping one line of an already-shaped result', 
     const solo = soloLineLayout(parent.lines[0]!, parent, 99);
     expect(solo.baselineOffsetPx).toBe(99);
     expect(solo.fontMetrics).toBe(parent.fontMetrics);
+  });
+});
+
+/**
+ * `shapedTextSizeWidthPx` vs Godot 4.6.3
+ * (`modules/text_server_adv/text_server_adv.cpp:7524-7537`). Corroborated
+ * against the running engine: `ThemeDB.fallback_font.get_string_size(text,
+ * HORIZONTAL_ALIGNMENT_LEFT, -1, 16)` at font size 16 returns a WHOLE number
+ * for every string, while summing the same font's `get_char_size(c, 16).x`
+ * over the same characters does not —
+ *
+ *   "Master volume"  char-advance sum 115.875    get_string_size 116
+ *   "Music bed"      char-advance sum  78.453125 get_string_size  79
+ *   "Threat level"   char-advance sum  91.03125  get_string_size  92
+ *   "Ma"             char-advance sum  24.03125  get_string_size  25
+ *   "M"              char-advance sum  14.75     get_string_size  15
+ *
+ * — i.e. the engine ceils, and does so even for a 0.03 px overhang.
+ */
+describe('shapedTextSizeWidthPx (text_server_adv.cpp:7524-7537)', () => {
+  it('ceils a fractional pen advance to the next whole pixel', () => {
+    expect(shapedTextSizeWidthPx(115.875)).toBe(116);
+    expect(shapedTextSizeWidthPx(91.03125)).toBe(92);
+  });
+
+  it('leaves a whole-pixel advance alone — an integral sum is already the shaped size', () => {
+    expect(shapedTextSizeWidthPx(70)).toBe(70);
+    expect(shapedTextSizeWidthPx(0)).toBe(0);
+  });
+
+  it('ceils TOWARD POSITIVE INFINITY, so a negative width rounds up to zero rather than away from it', () => {
+    expect(shapedTextSizeWidthPx(-0.5)).toBe(-0);
+    expect(shapedTextSizeWidthPx(-2.25)).toBe(-2);
+  });
+
+  it("is the ceil of shapeText's own raw advance sum, for real vendored-atlas text", () => {
+    const layout = shapeText('Master volume', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
+    expect(layout.widthPx).toBeCloseTo(115.875, 6);
+    expect(shapedTextSizeWidthPx(layout.widthPx)).toBe(116);
+  });
+});
+
+/**
+ * Per-glyph advances against real Godot 4.6.3, read out of the running engine
+ * rather than derived from this repo's own arithmetic: a scratch project
+ * shapes the same string through `TextServer.shaped_text_add_string` +
+ * `shaped_text_get_glyphs` at the same font size, against the SAME vendored
+ * Open Sans SemiBold (`ThemeDB.fallback_font`), and prints each glyph's
+ * `advance`. Both strings below are real `Label.text` values from this repo's
+ * composition fixture, and each pins one side of the size branch at
+ * `text_server_adv.cpp:6936`:
+ *
+ * - size 16 (`subpos` TRUE — `SUBPIXEL_POSITIONING_AUTO`, `fs <=
+ *   SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE`): every advance is a whole
+ *   number of 1/64 px, FreeType's 26.6 fixed point, and NOT a continuous
+ *   `hmtx` scale — `l` measures 4.46875 (286/64) where a raw scale of its
+ *   571 design units gives 4.4609375.
+ * - size 28 (`subpos` FALSE): every advance is a WHOLE pixel
+ *   (`text_server_adv.cpp:7080`'s `Math::round`), with the rounding
+ *   remainder carried into the next glyph — which is why the two `E`s of
+ *   "FIELD OPERATIONS" measure 16 and 15 despite being the same glyph at
+ *   the same size.
+ */
+describe('shapeText — glyph advances vs real Godot (text_server_adv.cpp:6936,7077-7084)', () => {
+  it('size 16, subpixel positioning ON: each advance is FreeType 26.6-quantized, not a continuous hmtx scale', () => {
+    const layout = shapeText('Threat level', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
+    expect(layout.lines[0]!.glyphs.map((g) => g.advance)).toEqual([
+      9.046875, 10.171875, 6.90625, 9.21875, 9.28125, 6.328125, 4.15625, 4.46875, 9.21875, 8.546875, 9.21875, 4.46875,
+    ]);
+    expect(layout.widthPx).toBe(91.03125);
+    expect(shapedTextSizeWidthPx(layout.widthPx)).toBe(92);
+  });
+
+  it('size 28, subpixel positioning OFF: each advance is a whole pixel, with the rounding remainder carried forward', () => {
+    const layout = shapeText('FIELD OPERATIONS', {
+      fontSizePx: 28,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
+    expect(layout.lines[0]!.glyphs.map((g) => g.advance)).toEqual([
+      15, 8, 16, 15, 21, 7, 22, 18, 15, 18, 19, 15, 9, 22, 22, 15,
+    ]);
+    expect(layout.widthPx).toBe(257);
+    expect(shapedTextSizeWidthPx(layout.widthPx)).toBe(257);
   });
 });

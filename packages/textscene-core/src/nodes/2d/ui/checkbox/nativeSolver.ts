@@ -41,6 +41,7 @@ import {
 } from '../../../../r3f/controls/native/textTheme';
 import type { CheckBoxIcons } from '../../../../r3f/controls/native/themeIcons';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { ControlColor } from '../control/types';
 import type { CheckBoxProperties } from './types';
 
@@ -183,7 +184,12 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const state = resolveCheckBoxDrawState(props);
   const { fontSizePx } = checkBoxTextTheme(n, props, state, ctx);
   const fontMetrics = resolveNodeFontMetrics(n, CHECKBOX_THEME_FONT_KEY);
-  const textSize = hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
+  // `Button::get_minimum_size` (`button.cpp:492`) reads `paragraph->get_size()`,
+  // the CEILED shaped extent (`text_paragraph.cpp:601-608` ->
+  // `text_server_adv.cpp:7524-7537`); CheckBox's icon and separation are added
+  // to that whole-pixel width, outside the ceil (`check_box.cpp:63-73`).
+  const measured = hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
+  const textSize = { x: shapedTextSizeWidthPx(measured.x), y: measured.y };
 
   const iconSize = fitIconSize(CHECKBOX_ICON_NATURAL_SIZE, checkBoxIconMaxWidth(props));
   const hSeparation = checkBoxHSeparation(props, ctx);

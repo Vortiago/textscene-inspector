@@ -15,7 +15,7 @@ import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/nativ
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { AutowrapMode, clampAutowrapMode, shapeText, type TextLayoutResult, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { AutowrapMode, clampAutowrapMode, shapeText, shapedTextSizeWidthPx, type TextLayoutResult, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import type { ControlColor } from '../control/types';
 import type { LabelProperties } from './types';
@@ -206,7 +206,11 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   if (autowrapMode !== AutowrapMode.OFF) {
     return { size: { x: 1, y: height } };
   }
-  return { size: { x: layout.widthPx, y: height }, meta: layout };
+  // `minsize.width` is the widest line's `shaped_text_get_size(...).x`
+  // (`label.cpp:252-257`), i.e. the CEILED extent, not the pen advance —
+  // `max` over per-line ceils and the ceil of the max agree, so the widest
+  // raw line converts once here rather than per line.
+  return { size: { x: shapedTextSizeWidthPx(layout.widthPx), y: height }, meta: layout };
 };
 
 // --- Draw-time layout: per-line placement + the vertical-origin reconciliation ---
@@ -367,6 +371,9 @@ export function layoutLabelLines(
       // different widths here.
       return { x: 0, y, line: skipJustify ? line : justifyLine(line, labelShapingWidthPx(boxWidthPx)) };
     }
-    return { x: horizontalOffsetPx(line.widthPx, boxWidthPx, horizontalAlignment), y, line };
+    // `_get_line_rect` aligns against `line_size = TS->shaped_text_get_size(rid)`
+    // (`label.cpp:478`), the ceiled extent — NOT the raw pen advance
+    // `justifyLine` above needs.
+    return { x: horizontalOffsetPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, horizontalAlignment), y, line };
   });
 }

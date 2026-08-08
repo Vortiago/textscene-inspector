@@ -116,9 +116,15 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
 
   it('a theme_override_font_sizes/font_size override changes BOTH the W-advance and the font height', () => {
     const result = size(lineEditMinimumSize(node({ themeOverrideFontSizes: { font_size: 32 } }), ctx()));
-    const wAdvance32 = 1936 * (32 / 2048);
+    // 'W' hmtx advance 1936 design units quantizes to 1936/64 = 30.25 at size
+    // 32, but 32 is above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so the
+    // engine reports a WHOLE-pixel advance — `_font_get_glyph_advance`'s own
+    // `.round()` branch, text_server_adv.cpp:3282-3283. Confirmed against
+    // real Godot 4.6.3: `ThemeDB.fallback_font.get_char_size(0x57, 32).x` is
+    // 30.0 and a bare LineEdit at `font_size` 32 has minimum size (128, 53).
+    const wAdvance32 = 30;
     const fontHeight32 = Math.ceil(2189 * (32 / 2048)) + Math.ceil(600 * (32 / 2048));
-    expect(result.x).toBeCloseTo(8 + 4 * wAdvance32, 6);
+    expect(result.x).toBe(8 + 4 * wAdvance32);
     expect(result.y).toBe(8 + fontHeight32);
   });
 });

@@ -20,11 +20,21 @@
  * both duplicate that engine and miss `GPOS`, the table modern fonts
  * actually carry (`OPEN_SANS_METRICS`'s own doc: even the vendored Open Sans
  * has no legacy `kern` table at all, only `mark`/`mkmk` GPOS features).
- * Godot does not pixel-round advances either (`bake-metrics.mjs`'s
- * `bakeAdvanceWidths` doc), so a continuous canvas measurement is the
- * low-risk half of this font's parity story — see `sceneFontLoader.ts`'s own
- * doc for the fallback path's measured risk (font-wide ascent/descent, for a
- * font this repo cannot table-parse at all).
+ *
+ * Canvas measures a CONTINUOUS width, where Godot's advance is quantized —
+ * FreeType's 26.6 grid, and a whole pixel above
+ * `fontUsesSubpixelPositioning`'s threshold. That is not a mismatch here:
+ * this module reports DESIGN UNITS, exactly like the baked table does
+ * (`sceneFontLoader.ts` measures at `fontSizePx === unitsPerEm` so the two
+ * coincide), and `fontMetrics.ts`'s `getFontGlyphAdvancePx` applies the same
+ * quantization to whatever units it is given. What canvas cannot supply is
+ * the font's own INTEGER `hmtx` value: a browser's measurement of a single
+ * character is already a float, so the units this reports can carry a
+ * fraction the real table does not, and the quantized result can differ by
+ * one 1/64 step from what FreeType would compute for the same glyph. That
+ * residual is this path's, not the shaper's — see `sceneFontLoader.ts`'s own
+ * doc for the fallback path's other measured risk (font-wide ascent/descent,
+ * for a font this repo cannot table-parse at all).
  *
  * ## `getGlyphAdvanceUnits` never returns `null`
  *

@@ -60,6 +60,7 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { ControlColor } from '../control/types';
 import type { OptionButtonProperties } from './types';
 
@@ -164,7 +165,11 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
     for (const text of texts) {
       if (!text) continue;
       const size = ctx.measureText(text, fontSizePx, 0, fontMetrics);
-      textW = Math.max(textW, size.x);
+      // Each item goes through `Button::get_minimum_size_for_text_and_icon`
+      // (`button.cpp:492`), whose `paragraph->get_size()` is already ceiled
+      // (`text_paragraph.cpp:601-608` -> `text_server_adv.cpp:7524-7537`), so
+      // the max is taken over WHOLE-pixel item widths.
+      textW = Math.max(textW, shapedTextSizeWidthPx(size.x));
       textH = Math.max(textH, size.y);
     }
   }

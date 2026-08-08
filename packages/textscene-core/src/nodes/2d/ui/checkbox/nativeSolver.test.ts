@@ -53,6 +53,10 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 // atlas-bake-resolution-42 xadvance, where both rounded to the integer 28 —
 // a coincidence of that rounding, not a fact about the font).
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
+// The SHAPED size of 'AB' — `TS->shaped_text_get_size(...).x` ceils the pen
+// advance to a whole pixel (`text_server_adv.cpp:7524-7537`), and every
+// minimum size below is built from that, not from the fractional sum.
+const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
 const FONT_HEIGHT = 23;
 
 function node(props: Partial<CheckBoxProperties>): SolveNode {
@@ -173,7 +177,7 @@ describe('checkBoxMinimumSize — with text', () => {
   it('adds text width + h_separation(4) alongside the icon width; height floors on the taller of text/icon', () => {
     const result = size(checkBoxMinimumSize(node({ text: 'AB' }), ctx()));
     // width = 8 (2*margin) + 21.125 (text) + 4 (h_separation) + 16 (icon) = 49.125.
-    expect(result.x).toBeCloseTo(8 + AB_WIDTH + 4 + 16, 6);
+    expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH + 4 + 16, 6);
     // height = 8 + max(23, 16) = 31.
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
@@ -185,7 +189,7 @@ describe('checkBoxMinimumSize — with text', () => {
 
   it('h_separation theme_override_constants wins over the theme default', () => {
     const result = size(checkBoxMinimumSize(node({ text: 'AB', themeOverrideConstants: { h_separation: 12 } }), ctx()));
-    expect(result.x).toBeCloseTo(8 + AB_WIDTH + 12 + 16, 6);
+    expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH + 12 + 16, 6);
   });
 
   it('icon_max_width theme_override_constants clamps the (16x16) icon before it contributes', () => {
@@ -193,7 +197,7 @@ describe('checkBoxMinimumSize — with text', () => {
       checkBoxMinimumSize(node({ text: 'AB', themeOverrideConstants: { icon_max_width: 8 } }), ctx())
     );
     // fitIconSize(16x16, 8) = 8x8.
-    expect(result.x).toBeCloseTo(8 + AB_WIDTH + 4 + 8, 6);
+    expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH + 4 + 8, 6);
     expect(result.y).toBe(8 + FONT_HEIGHT); // 8 < 23, text still floors height
   });
 });
@@ -287,5 +291,28 @@ describe(`checkBoxMinimumSize — resolves this CheckBox's own theme font key ("
     const n: SolveNode = { ...node({}), fontOverrides: { [CHECKBOX_THEME_FONT_KEY]: systemFont } };
     checkBoxMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * `CheckBox::get_minimum_size` adds its icon and separation to
+ * `Button::get_minimum_size`'s already-CEILED text extent
+ * (`button.cpp:492` -> `text_paragraph.cpp:601-608` ->
+ * `text_server_adv.cpp:7524-7537`, `Size2(sd->width, ...).ceil()`).
+ *
+ * Godot 4.6.3, `scenes/fixtures/complex-2d-gui.tscn` in a 1152x648
+ * SubViewport:
+ *
+ *   SystemsGrid/Subtitles  "Transcribe squad chatter"  min = (222, 31)
+ */
+describe('checkBoxMinimumSize — the shaped text extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
+  it("'Transcribe squad chatter' reaches Godot's own whole-pixel minimum width 222", () => {
+    expect(size(checkBoxMinimumSize(node({ text: 'Transcribe squad chatter' }), ctx())).x).toBe(222);
+  });
+
+  it('keeps the icon and separation OUT of the ceil — an empty CheckBox is unchanged by it', () => {
+    expect(size(checkBoxMinimumSize(node({}), ctx())).x).toBe(
+      size(checkBoxMinimumSize(node({ text: '' }), ctx())).x
+    );
   });
 });
