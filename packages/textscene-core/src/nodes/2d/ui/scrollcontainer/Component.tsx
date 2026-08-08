@@ -82,11 +82,9 @@ import { createSolveContext } from '../../../../r3f/controls/native/controlRectS
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import {
-  snapControlsToPixelsEnabled,
   snappedControlOrigin,
   type ControlDrawTransform,
 } from '../../../../r3f/controls/native/controlPixelSnap';
-import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -195,6 +193,7 @@ export function ScrollContainer({
   rect,
   subtreeChromeRenderOrder,
   theme,
+  snapToPixels,
   children,
   meta,
 }: NativeControlComponentProps) {
@@ -220,9 +219,9 @@ export function ScrollContainer({
   const selfModulate = props.selfModulate ?? WHITE_MODULATE;
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
   // The bars are separate CanvasItems, so the walker's snap of THIS node's own
-  // group does not reach them — read the same setting the walker reads and
-  // snap each bar on its own account (see `ScrollBarChrome`'s PIXEL SNAP doc).
-  const snapToPixels = snapControlsToPixelsEnabled(useProjectSettings().settings);
+  // group does not reach them — each is snapped on its own account (see
+  // `ScrollBarChrome`'s PIXEL SNAP doc) using the walker's OWN resolved value,
+  // which is the only one correct inside a SubViewport.
 
   // The whole widget rect clips its subtree — the planes go into the Provider below.
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);

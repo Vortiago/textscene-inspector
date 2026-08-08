@@ -262,6 +262,7 @@ function ControlNodeGroup({
       effectiveZ={effectiveZ}
       theme={theme}
       measureText={measureText}
+      snapToPixels={snapToPixels}
       childRects={childRects}
       meta={solvedEntry?.meta}
     >
@@ -277,6 +278,7 @@ function ControlNodeGroup({
         effectiveZ={effectiveZ}
         theme={theme}
         measureText={measureText}
+        snapToPixels={snapToPixels}
         childRects={childRects}
         meta={solvedEntry?.meta}
       />

@@ -36,6 +36,19 @@ export interface NativeControlComponentProps {
    */
   theme: NativeTheme;
   /**
+   * Whether Controls in THIS viewport snap their drawn transform to whole
+   * pixels — the walker's own resolved value, not the project setting.
+   *
+   * The two differ: `gui/common/snap_controls_to_pixels` is the ROOT window's
+   * value alone (`main/main.cpp` sets it on `sml->get_root()`), while every
+   * other Viewport keeps `= true` from its own member initialiser. A painter
+   * re-reading project settings therefore gets the wrong answer for its own
+   * subtree the moment it sits inside a SubViewport. Painters need it because
+   * a widget's SIBLING CanvasItems — a ScrollContainer's bars — are snapped
+   * on their own account, outside the walker's snap of this node's group.
+   */
+  snapToPixels: boolean;
+  /**
    * Text measurement, or `null` before the metrics are available. The same
    * measurer the solve used, so a painter's own layout of a string agrees with
    * the minimum size that string produced.

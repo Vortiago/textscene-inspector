@@ -215,8 +215,14 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     const material = findMaterial(renderer);
     expect(material).toBeDefined();
     expect(material!.normalMap).toBeDefined();
-    // Identity UV transform — the same THREE.Texture flows through.
-    expect(material!.normalMap).toBe(normal);
+    // NOT identity, unlike the colour maps: a normal map is sampled RAW
+    // (`texture_normal : hint_roughness_normal`, no `source_color` —
+    // `StandardMaterialSlot.colorSpace.test.tsx` has the full citation), so
+    // the slot hands the material an undecoded CLONE. The clone shares the
+    // decoded `Source`, which is what identifies it as this same texture.
+    expect(material!.normalMap).not.toBe(normal);
+    expect(material!.normalMap!.source).toBe(normal.source);
+    expect(material!.normalMap!.colorSpace).toBe(THREE.NoColorSpace);
   });
 
   it('forces emissive to 0x000000 when emission_enabled is false', async () => {

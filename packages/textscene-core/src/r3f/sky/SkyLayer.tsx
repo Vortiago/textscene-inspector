@@ -9,12 +9,12 @@
  * sub-scene, or a GLB.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import type { SkyProperties } from '../../resources/sky/types';
-import { useResource, useResourceLoader } from '../../resources/useResource';
-import { resolveTexture2DPath } from '../../resources/SubResourceResolver';
+import { useResourceLoader } from '../../resources/useResource';
+import { useTexture2D } from '../../resources/useTexture2D';
 import { useSceneResources } from '../SceneResourcesContext';
 import { useLiveTreeVersion } from '../useLiveSceneTree';
 import { buildSkyEnvironment } from './skyEnvironment';
@@ -60,16 +60,16 @@ export function SkyLayer({
   const loader = useResourceLoader();
   const { externalResources, internalResources } = useSceneResources();
 
-  // A PanoramaSkyMaterial's equirectangular texture is an ordinary
-  // ExtResource; every other sky kind resolves to no path and the hook idles.
-  const panoramaPath = useMemo(
-    () =>
-      sky.kind === 'panorama' && sky.panorama
-        ? resolveTexture2DPath(sky.panorama, externalResources, internalResources)
-        : null,
-    [sky, externalResources, internalResources]
-  );
-  const panorama = useResource<THREE.Texture>(panoramaPath ?? '', 'Texture2D').value ?? null;
+  // `useTexture2D`, not the path-only resolver: a PanoramaSkyMaterial's
+  // equirectangular texture may be an inline procedural one (a
+  // GradientTexture2D sub-resource), which has no path to load from. Every
+  // other sky kind passes `undefined` and the hook idles.
+  const panorama =
+    useTexture2D(
+      sky.kind === 'panorama' ? sky.panorama : undefined,
+      externalResources,
+      internalResources
+    ).texture ?? null;
   // The live tree GROWS as sub-scenes and GLBs load, and a light arriving late
   // changes the sky. This is the same tick every other live-tree reader uses.
   const treeVersion = useLiveTreeVersion(loader);

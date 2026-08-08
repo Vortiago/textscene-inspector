@@ -34,58 +34,24 @@
  * from their own loader, never from the `res://` resource cache this module's
  * clone is keyed off.
  */
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
+import { pinNoColorSpace, useUndecodedTexture } from './undecodedTexture';
+
+// Re-exported: this module was the tag's original home, and its 2D consumers
+// still reach for it here. The definition lives in `undecodedTexture.ts`
+// because 3D material data maps need the same primitive.
+export { pinNoColorSpace };
 
 /**
- * Permanently pins `texture.colorSpace` to `NoColorSpace`, immune to
- * `@react-three/fiber`'s OWN automatic sRGB tagging: `applyProps`
- * (`@react-three/fiber`'s `events-*.js`, the `colorMaps.includes(key)`
- * branch — `colorMaps = ['map', 'emissiveMap', 'sheenColorMap',
- * 'specularColorMap', 'envMap']`) force-rewrites ANY 8-bit RGBA texture
- * assigned to one of those JSX props back to `SRGBColorSpace`, on every
- * commit, whenever the R3F root is not in `linear` mode — which this
- * codebase's `<Canvas>`s are not (`rootState.linear` defaults `false`, never
- * overridden). That auto-tagging is invisible everywhere else in this
- * codebase because every OTHER texture already wants `SRGBColorSpace`; a
- * deliberately `NoColorSpace` `map` is the first thing here it fights. A
- * plain assignment loses that fight silently on the very next commit — this
- * pins the getter so the fight has no effect, rather than depending on
- * REACT's effect ordering to win it back after the fact.
- */
-export function pinNoColorSpace(texture: THREE.Texture): THREE.Texture {
-  Object.defineProperty(texture, 'colorSpace', {
-    get: () => THREE.NoColorSpace,
-    set: () => {
-      // Discard `@react-three/fiber`'s own reassignment attempt — see the
-      // function doc comment above.
-    },
-    configurable: true,
-    enumerable: true,
-  });
-  return texture;
-}
-
-/**
- * A 2D-canvas-only GPU texture for a shared, cache-identity texture: a clone
- * retagged `NoColorSpace` (pinned, see `pinNoColorSpace`), memoised on the
- * input's identity and disposed on replacement/unmount. `useResource` hands
- * out the SAME cached `THREE.Texture` to every consumer of a path, so
- * mutating its `colorSpace` in place would flip it for every 3D consumer of
- * that same path too — the clone is what keeps this 2D-only.
+ * A 2D-canvas-only GPU texture for a shared, cache-identity texture — the
+ * undecoded view (`undecodedTexture.ts`), named for the 2D-canvas reason this
+ * module's own doc gives.
  *
  * Returns `null` while there is nothing to show yet.
  */
 export function useCanvas2DTexture(texture: THREE.Texture | null | undefined): THREE.Texture | null {
-  const cloned = useMemo(() => {
-    if (!texture) return null;
-    const clone = texture.clone();
-    pinNoColorSpace(clone);
-    clone.needsUpdate = true;
-    return clone;
-  }, [texture]);
-  useEffect(() => (cloned ? () => cloned.dispose() : undefined), [cloned]);
-  return cloned;
+  return useUndecodedTexture(texture);
 }
 
 /** Reused across every call — `DECODE_VIDEO_TEXTURE` needs no per-consumer state. */

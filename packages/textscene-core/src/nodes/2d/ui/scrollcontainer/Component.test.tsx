@@ -236,9 +236,15 @@ describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
   }
 
   /** Every drawn mesh's world position, keyed by the renderOrder that names its role. */
-  async function drawnMeshes(node: SolveNode, rect: Rect2) {
+  async function drawnMeshes(node: SolveNode, rect: Rect2, snapToPixels = true) {
     const renderer = await ReactThreeTestRenderer.create(
-      <ScrollContainer {...painterEnv()} solveNode={node} rect={rect} renderOrder={0} />
+      <ScrollContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={rect}
+        renderOrder={0}
+        snapToPixels={snapToPixels}
+      />
     );
     return renderer.scene.findAllByType('Mesh').map((m) => {
       const mesh = m.instance as THREE.Mesh;
@@ -281,9 +287,14 @@ describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
     expect(horizontal.position.y).toBeCloseTo(-593, 6);
   });
 
-  it('honours `gui/common/snap_controls_to_pixels = false` — both bars stay on the solved fraction', async () => {
-    projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'false' };
-    const [horizontal, vertical] = tracks(await drawnMeshes(overflowing(), FRACTIONAL_RECT));
+  it('honours a snap resolved OFF by the walker — both bars stay on the solved fraction', async () => {
+    // The painter takes the walker's OWN resolved value rather than re-reading
+    // `gui/common/snap_controls_to_pixels`: that project setting is the root
+    // window's alone (`main/main.cpp`), so a painter reading it directly is
+    // wrong for every Control inside a SubViewport.
+    const [horizontal, vertical] = tracks(
+      await drawnMeshes(overflowing(), FRACTIONAL_RECT, false)
+    );
     expect(horizontal!.position.y).toBeCloseTo(-592.5, 6);
     expect(vertical!.position.x).toBeCloseTo(892.5, 6);
   });

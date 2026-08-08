@@ -202,6 +202,10 @@ function ViewportSurfaceNative({
             // this surface — so the fallback's own slot IS its subtree's last.
             subtreeChromeRenderOrder={renderOrder}
             theme={theme}
+            // A SubViewport is never the root window, so it keeps
+            // `Viewport::snap_controls_to_pixels`' own `= true` initialiser
+            // (`scene/main/viewport.h`) whatever the project setting says.
+            snapToPixels
             measureText={measureText}
             childRects={NO_CHILD_RECTS}
             meta={undefined}

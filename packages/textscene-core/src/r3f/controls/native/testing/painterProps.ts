@@ -38,10 +38,21 @@ const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
  * z-shifting ancestor. A painter that opts into 2D lighting must pass it to
  * `useCanvasItemLighting` explicitly, since that parameter's own fallback
  * reads the ambient context, which is the PARENT's z.
+ *
+ * `snapToPixels` defaults to `true`: Godot's own
+ * `Viewport::snap_controls_to_pixels` initialiser (`scene/main/viewport.h`),
+ * which every viewport keeps unless it is the root window and the project
+ * opted out. A painter asserting the OFF case states it.
  */
 export function painterEnv(): Pick<
   NativeControlComponentProps,
-  'theme' | 'measureText' | 'childRects' | 'subtreeChromeRenderOrder' | 'effectiveZ' | 'meta'
+  | 'theme'
+  | 'measureText'
+  | 'childRects'
+  | 'subtreeChromeRenderOrder'
+  | 'effectiveZ'
+  | 'snapToPixels'
+  | 'meta'
 > {
   return {
     theme: nativeTheme(1),
@@ -49,6 +60,7 @@ export function painterEnv(): Pick<
     childRects: NO_CHILD_RECTS,
     subtreeChromeRenderOrder: 0,
     effectiveZ: 0,
+    snapToPixels: true,
     meta: undefined,
   };
 }
