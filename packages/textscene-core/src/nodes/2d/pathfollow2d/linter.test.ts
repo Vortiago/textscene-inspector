@@ -59,6 +59,46 @@ progress_ratio = 0.5
     expect(diagnostics.filter((d) => d.ruleName?.startsWith('pathfollow2d-'))).toHaveLength(0);
   });
 
+  // path_2d.cpp:384 wraps the whole check in `is_visible_in_tree() &&
+  // is_inside_tree()`, so a hidden PathFollow2D is not misplaced as far as
+  // Godot is concerned.
+  describe('the visibility gate', () => {
+    it('stays quiet when the node itself is hidden', () => {
+      expectNoDiagnostic(
+        scene(node('Node2D', {}, { name: 'Root' }), node('PathFollow2D', { visible: false }, { parent: '.' })),
+        { ruleName: 'pathfollow2d-invalid-parent' }
+      );
+    });
+
+    it('stays quiet at the scene root when hidden', () => {
+      expectNoDiagnostic(scene(node('PathFollow2D', { visible: false })), {
+        ruleName: 'pathfollow2d-no-parent',
+      });
+    });
+
+    it('stays quiet when a CanvasItem ancestor is hidden', () => {
+      expectNoDiagnostic(
+        scene(
+          node('Node2D', { visible: false }, { name: 'Root' }),
+          node('Node2D', {}, { name: 'Mid', parent: '.' }),
+          node('PathFollow2D', {}, { parent: 'Mid' })
+        ),
+        { ruleName: 'pathfollow2d-invalid-parent' }
+      );
+    });
+
+    it('still warns when a plain Node breaks the CanvasItem chain below the hidden ancestor', () => {
+      expectDiagnostic(
+        scene(
+          node('Node2D', { visible: false }, { name: 'Root' }),
+          node('Node', {}, { name: 'Plain', parent: '.' }),
+          node('PathFollow2D', {}, { parent: 'Plain' })
+        ),
+        { ruleName: 'pathfollow2d-invalid-parent', severity: 'warning' }
+      );
+    });
+  });
+
   it('warns when progress_ratio is outside 0-1', () => {
     expectDiagnostic(
       scene(

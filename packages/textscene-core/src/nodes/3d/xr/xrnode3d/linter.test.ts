@@ -140,6 +140,19 @@ pose = &"grip"
       expect(ruleDiagnostics(linter.lint(content), NO_POSE_RULE)).toEqual([]);
     });
 
+    it('stays quiet when the node is explicitly hidden', () => {
+      // xr_nodes.cpp:498 gates the whole override body, this warning included.
+      const content = `[gd_scene format=3]
+
+[node name="Origin" type="XROrigin3D"]
+
+[node name="Tracked" type="XRNode3D" parent="."]
+visible = false
+pose = &""
+`;
+      expect(ruleDiagnostics(linter.lint(content), NO_POSE_RULE)).toEqual([]);
+    });
+
     it('reaches XRAnchor3D and XRController3D too', () => {
       for (const type of ['XRAnchor3D', 'XRController3D']) {
         const content = `[gd_scene format=3]

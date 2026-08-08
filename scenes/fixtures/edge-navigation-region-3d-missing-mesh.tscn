@@ -1,9 +1,11 @@
 [gd_scene format=3 uid="uid://edge_navigation_region_3d_missing_mesh"]
 
-; `navigation_mesh` omitted entirely — same deliberately-supported optional
-; state as edge-navigation-region-2d-missing-polygon.tscn (Godot bakes one at
-; runtime; the linter rule's own comment says an absent reference must not be
-; flagged). Zero diagnostics, renders with no baked navmesh geometry.
+; `navigation_mesh` omitted entirely, while the region stays visible in the
+; tree. Demonstrates `navigationregion3d-requires-navigation-mesh`, a port of
+; `navigation_region_3d.cpp:252-260`'s own get_configuration_warnings(): with no
+; NavigationMesh set, Godot itself warns "A NavigationMesh resource must be set
+; or created for this node to work." One warning, zero errors; renders with no
+; baked navmesh geometry.
 
 [node name="Root" type="Node3D"]
 

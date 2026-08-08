@@ -18,7 +18,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
+import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 
 function checkPathFollow2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -27,28 +27,33 @@ function checkPathFollow2D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // path_2d.cpp:385 — the placement Godot itself flags, and it is a
+  // path_2d.cpp:384-388 — the placement Godot itself flags, and it is a
   // get_configuration_warnings() entry, so it is advisory (ADR-0032) rather
-  // than a setter that refuses a value. `parentTypeVerdict` supplies the
-  // instanced/untyped-parent exemption: a parent whose type lives in a
-  // sub-scene the linter never opens may well BE a Path2D.
-  const placement = parentTypeVerdict(scene, node, 'Path2D');
-  if (placement.kind === 'root') {
-    diagnostics.push({
-      severity: 'warning',
-      message: `PathFollow2D '${node.name}' is the scene root. It only works as a direct child of a Path2D node, and follows nothing here.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'pathfollow2d-no-parent',
-    });
-  } else if (placement.kind === 'mismatch') {
-    diagnostics.push({
-      severity: 'warning',
-      message: `PathFollow2D '${node.name}' is ${placementPhrase(placement)}. It only works as a direct child of a Path2D node, and follows nothing here.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'pathfollow2d-invalid-parent',
-    });
+  // than a setter that refuses a value. Both arms are one `push_back` behind
+  // `is_visible_in_tree()`: at the root the cast is `cast_to<Path2D>(nullptr)`,
+  // which is null. `parentTypeVerdict` supplies the instanced/untyped-parent
+  // exemption: a parent whose type lives in a sub-scene the linter never opens
+  // may well BE a Path2D. The progress checks below are this repo's own and
+  // carry no such gate.
+  if (!hiddenOrUnknowableInTree(scene, node)) {
+    const placement = parentTypeVerdict(scene, node, 'Path2D');
+    if (placement.kind === 'root') {
+      diagnostics.push({
+        severity: 'warning',
+        message: `PathFollow2D '${node.name}' is the scene root. It only works as a direct child of a Path2D node, and follows nothing here.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: 'pathfollow2d-no-parent',
+      });
+    } else if (placement.kind === 'mismatch') {
+      diagnostics.push({
+        severity: 'warning',
+        message: `PathFollow2D '${node.name}' is ${placementPhrase(placement)}. It only works as a direct child of a Path2D node, and follows nothing here.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: 'pathfollow2d-invalid-parent',
+      });
+    }
   }
 
   if (rawProps.progress !== undefined) {

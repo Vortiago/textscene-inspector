@@ -8,7 +8,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
-import { parentTypeVerdict, placementPhrase } from './parentType.js';
+import { StrictTscnParser } from './StrictTscnParser.js';
+import { parentTypeVerdict, placementPhrase, visibleInTreeVerdict } from './parentType.js';
 import type { TscnNode } from '../parser/types.js';
 
 function parse(source: string) {
@@ -119,5 +120,228 @@ describe('parentTypeVerdict', () => {
     expect(parentTypeVerdict(scene, byName(scene.nodes, 'Sim'), 'Skeleton3D').kind).toBe(
       'unknowable'
     );
+  });
+});
+
+/**
+ * The two families walk different chains, and both stop early. A uniform walk of
+ * every ancestor's `visible` key answers `hidden` for trees Godot draws.
+ */
+describe('visibleInTreeVerdict', () => {
+  // The strict parser, not the lenient one: it is what feeds the rules, and it
+  // keeps property values as the file's own strings, which is what
+  // `isExplicitlyHidden` reads.
+  function verdictOf(source: string, name: string) {
+    const scene = new StrictTscnParser().parse(source).scene;
+    if (!scene) throw new Error('the scanner produced no scene');
+    return visibleInTreeVerdict(scene, byName(scene.nodes, name));
+  }
+
+  describe('Node3D', () => {
+    it('is hidden by its own key, and by a Node3D ancestor', () => {
+      expect(
+        verdictOf(
+          `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Follow" type="PathFollow3D" parent="."]
+visible = false
+`,
+          'Follow'
+        )
+      ).toBe('hidden');
+
+      expect(
+        verdictOf(
+          `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+visible = false
+
+[node name="Mid" type="Node3D" parent="."]
+
+[node name="Follow" type="PathFollow3D" parent="Mid"]
+`,
+          'Follow'
+        )
+      ).toBe('hidden');
+    });
+
+    it('stops at the first non-Node3D ancestor, so a hidden Node3D above it does not count', () => {
+      // node_3d.cpp:150 casts the parent to Node3D and stores null otherwise, so
+      // the plain Node ends the chain and the hidden root is never read.
+      expect(
+        verdictOf(
+          `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+visible = false
+
+[node name="Plain" type="Node" parent="."]
+
+[node name="Follow" type="PathFollow3D" parent="Plain"]
+`,
+          'Follow'
+        )
+      ).toBe('visible');
+    });
+
+    it('cannot know an instanced ancestor inside the chain', () => {
+      expect(
+        verdictOf(
+          `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://rig.tscn" id="1"]
+
+[node name="Rig" instance=ExtResource("1")]
+
+[node name="Follow" type="PathFollow3D" parent="."]
+`,
+          'Follow'
+        )
+      ).toBe('unknowable');
+    });
+
+    it('ignores an instanced ancestor the chain never reaches', () => {
+      expect(
+        verdictOf(
+          `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://rig.tscn" id="1"]
+
+[node name="Rig" instance=ExtResource("1")]
+
+[node name="Plain" type="Node" parent="."]
+
+[node name="Follow" type="PathFollow3D" parent="Plain"]
+`,
+          'Follow'
+        )
+      ).toBe('visible');
+    });
+  });
+
+  describe('CanvasItem', () => {
+    it('cascades through the contiguous CanvasItem run', () => {
+      expect(
+        verdictOf(
+          `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+visible = false
+
+[node name="Region" type="NavigationRegion2D" parent="."]
+`,
+          'Region'
+        )
+      ).toBe('hidden');
+    });
+
+    it('stops at a plain Node, so a hidden Node2D above it does not count', () => {
+      expect(
+        verdictOf(
+          `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+visible = false
+
+[node name="Plain" type="Node" parent="."]
+
+[node name="Region" type="NavigationRegion2D" parent="Plain"]
+`,
+          'Region'
+        )
+      ).toBe('visible');
+    });
+
+    it('reads a CanvasLayer parent, but only as the immediate parent', () => {
+      const layer = `[gd_scene format=3]
+
+[node name="Root" type="Node"]
+
+[node name="Layer" type="CanvasLayer" parent="."]
+visible = false
+`;
+      expect(verdictOf(`${layer}
+[node name="Region" type="NavigationRegion2D" parent="Layer"]
+`, 'Region')).toBe('hidden');
+
+      // canvas_item.cpp:324-328 casts the IMMEDIATE parent only, so one plain
+      // Node between them and the layer contributes nothing.
+      expect(verdictOf(`${layer}
+[node name="Plain" type="Node" parent="Layer"]
+
+[node name="Region" type="NavigationRegion2D" parent="Layer/Plain"]
+`, 'Region')).toBe('visible');
+    });
+
+    it('reads a hidden Window found by the Viewport search, across plain Nodes', () => {
+      expect(
+        verdictOf(
+          `[gd_scene format=3]
+
+[node name="Dialog" type="Window"]
+visible = false
+
+[node name="Plain" type="Node" parent="."]
+
+[node name="Region" type="NavigationRegion2D" parent="Plain"]
+`,
+          'Region'
+        )
+      ).toBe('hidden');
+    });
+
+    it('treats any other Viewport ancestor as visible', () => {
+      expect(
+        verdictOf(
+          `[gd_scene format=3]
+
+[node name="Root" type="Node"]
+
+[node name="Port" type="SubViewport" parent="."]
+
+[node name="Region" type="NavigationRegion2D" parent="Port"]
+`,
+          'Region'
+        )
+      ).toBe('visible');
+    });
+
+    it('cannot rule out a hidden Window behind an instanced ancestor', () => {
+      // Unlike Node3D, the search climbs past whatever is not a Viewport, so an
+      // instanced ancestor above the CanvasItem run is still consulted.
+      expect(
+        verdictOf(
+          `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://dialog.tscn" id="1"]
+
+[node name="Dialog" instance=ExtResource("1")]
+
+[node name="Plain" type="Node" parent="."]
+
+[node name="Region" type="NavigationRegion2D" parent="Plain"]
+`,
+          'Region'
+        )
+      ).toBe('unknowable');
+    });
+  });
+
+  it('leaves a node in neither family visible: it has no is_visible_in_tree()', () => {
+    expect(
+      verdictOf(
+        `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+visible = false
+
+[node name="Player" type="AnimationPlayer" parent="."]
+`,
+        'Player'
+      )
+    ).toBe('visible');
   });
 });

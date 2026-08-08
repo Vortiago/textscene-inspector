@@ -32,7 +32,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
+import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 import { resolveSubResourceRef } from '../../../resources/SubResourceResolver.js';
 
 /** `PathFollow3D::ROTATION_ORIENTED` (path_3d.h), the mode that needs up vectors. */
@@ -69,26 +69,34 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // path_3d.cpp:359 — the placement Godot itself flags. `parentTypeVerdict`
-  // supplies the instanced/untyped-parent exemption: a parent whose type lives
-  // in a sub-scene the linter never opens may well BE a Path3D.
+  // path_3d.cpp:357 — both of this override's warnings sit inside
+  // `is_visible_in_tree() && is_inside_tree()`. The progress and dual-key
+  // checks further down are this repo's own and carry no such gate.
+  const gated = hiddenOrUnknowableInTree(scene, node);
+
+  // path_3d.cpp:359 — the placement Godot itself flags, at the root too, where
+  // the cast is `cast_to<Path3D>(nullptr)`. `parentTypeVerdict` supplies the
+  // instanced/untyped-parent exemption: a parent whose type lives in a
+  // sub-scene the linter never opens may well BE a Path3D.
   const placement = parentTypeVerdict(scene, node, 'Path3D');
-  if (placement.kind === 'root') {
-    diagnostics.push({
-      severity: 'warning',
-      message: `PathFollow3D '${node.name}' is the scene root. It only works as a direct child of a Path3D node, and follows nothing here.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'pathfollow3d-no-parent',
-    });
-  } else if (placement.kind === 'mismatch') {
-    diagnostics.push({
-      severity: 'warning',
-      message: `PathFollow3D '${node.name}' is ${placementPhrase(placement)}. It only works as a direct child of a Path3D node, and follows nothing here.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'pathfollow3d-invalid-parent',
-    });
+  if (!gated) {
+    if (placement.kind === 'root') {
+      diagnostics.push({
+        severity: 'warning',
+        message: `PathFollow3D '${node.name}' is the scene root. It only works as a direct child of a Path3D node, and follows nothing here.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: 'pathfollow3d-no-parent',
+      });
+    } else if (placement.kind === 'mismatch') {
+      diagnostics.push({
+        severity: 'warning',
+        message: `PathFollow3D '${node.name}' is ${placementPhrase(placement)}. It only works as a direct child of a Path3D node, and follows nothing here.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: 'pathfollow3d-invalid-parent',
+      });
+    }
   }
 
   // WARNING: progress < 0 (will be clamped to 0 by Godot)
@@ -140,6 +148,7 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
   // readable here AND say up vectors are off; a curve behind an ExtResource, or
   // one that simply omits the key, is the default `true` and is fine.
   if (
+    !gated &&
     parseInt(rawProps.rotation_mode ?? '', 10) === ROTATION_ORIENTED &&
     placement.kind === 'satisfied' &&
     parentCurveDisablesUpVector(scene, placement.parent)

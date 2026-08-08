@@ -141,6 +141,21 @@ transform = Transform3D(1, 0.5, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 `;
       expect(ruleDiagnostics(new Linter().lint(content), ORTHONORMAL_RULE)).toHaveLength(1);
     });
+
+    // The gate at openxr_composition_layer.cpp:762 closes before :770, so this
+    // warning is not part of it. A guard hoisted to the top of the rule body
+    // would silence it and nothing else here would notice.
+    it('warns on a hidden layer too, since only the parent check is gated', () => {
+      const content = `[gd_scene format=3]
+
+[node name="XROrigin3D" type="XROrigin3D"]
+
+[node name="Layer" type="OpenXRCompositionLayerQuad" parent="."]
+visible = false
+transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+`;
+      expect(ruleDiagnostics(new Linter().lint(content), ORTHONORMAL_RULE)).toHaveLength(1);
+    });
   });
 
   describe('hole-punch sort order', () => {
@@ -166,6 +181,18 @@ enable_hole_punch = true
       const found = ruleDiagnostics(new Linter().lint(content), HOLE_PUNCH_RULE);
       expect(found).toHaveLength(1);
       expect(found[0]!.severity).toBe('warning');
+    });
+
+    it('warns on a hidden layer too — :774 is outside the gate as well', () => {
+      const content = `[gd_scene format=3]
+
+[node name="XROrigin3D" type="XROrigin3D"]
+
+[node name="Layer" type="OpenXRCompositionLayerQuad" parent="."]
+visible = false
+enable_hole_punch = true
+`;
+      expect(ruleDiagnostics(new Linter().lint(content), HOLE_PUNCH_RULE)).toHaveLength(1);
     });
 
     it('stays quiet when hole punch is on with a negative sort_order', () => {

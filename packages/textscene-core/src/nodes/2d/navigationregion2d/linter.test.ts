@@ -72,6 +72,20 @@ navigation_polygon = ExtResource("1_nav")
       );
     });
 
+    it('still warns when a plain Node breaks the CanvasItem chain below the hidden ancestor', () => {
+      // canvas_item.cpp:311-317 reads `parent_visible_in_tree` off the
+      // IMMEDIATE parent, so the run ends at the plain Node and the hidden
+      // Node2D above it never enters the answer.
+      expectDiagnostic(
+        scene(
+          node('Node2D', { visible: false }, { name: 'Root' }),
+          node('Node', {}, { name: 'Plain', parent: '.' }),
+          node('NavigationRegion2D', {}, { name: 'Region', parent: 'Plain' })
+        ),
+        { ruleName: 'navigationregion2d-requires-navigation-polygon', severity: 'warning' }
+      );
+    });
+
     it('says nothing when an ancestor is an untyped instance (visibility unknowable)', () => {
       const content = `[gd_scene load_steps=2 format=3]
 

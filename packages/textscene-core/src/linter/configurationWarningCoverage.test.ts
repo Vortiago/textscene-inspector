@@ -110,6 +110,30 @@ interface WarningRow {
   readonly says: string;
   readonly verdict: Verdict;
   /**
+   * The visibility check Godot wraps around this `push_back`, when there is one.
+   *
+   * Ten of the 92 overrides gate part of their body on visibility, and the two
+   * spellings are different rules, not synonyms:
+   *
+   * - `visible` is the node's OWN flag (`node_3d.cpp:1127-1130`), so
+   *   `isExplicitlyHidden` answers it with no walk at all;
+   * - `visible-in-tree` is the family cascade (`node_3d.cpp:1131-1143` for
+   *   Node3D, `canvas_item.cpp:62-64` for CanvasItem), which `parentType.ts`'s
+   *   `visibleInTreeVerdict` reproduces.
+   *
+   * Absence means Godot raises the warning regardless of visibility. That is
+   * per-`push_back`, not per-class: `XROrigin3D` and `OpenXRCompositionLayer`
+   * each gate some of their rows and leave the rest unconditional.
+   *
+   * A gate reaches the same leaves the row does, since it is the same override
+   * body every heir inherits. Nothing here asserts it — a table checked against
+   * a declaration would be true by construction and would never see a hidden
+   * node still warning. The rules are held to it by a hidden-node case in each
+   * slice's own `linter.test.ts`; this column is the derivation record that
+   * says which slices owe one.
+   */
+  readonly gate?: 'visible-in-tree' | 'visible';
+  /**
    * The concrete types this row reaches, when that is NOT every descendant of
    * the declaring class.
    *
@@ -249,6 +273,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
         declined: 'runtime-only',
         because: 'get_nodes_in_group("_canvas_modulate_" + canvas RID), a live-tree group query, canvas_modulate.cpp:120',
       },
+      gate: 'visible-in-tree',
     },
   ],
 
@@ -914,6 +939,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
       at: 'navigation_region_2d.cpp:304',
       says: 'a NavigationPolygon resource must be set or created',
       verdict: { rule: 'navigationregion2d-requires-navigation-polygon' },
+      gate: 'visible-in-tree',
     },
   ],
 
@@ -921,10 +947,8 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'navigation_region_3d.cpp:257',
       says: 'a NavigationMesh resource must be set or created',
-      verdict: {
-        declined: 'runtime-only',
-        because: 'gated on is_visible_in_tree(), navigation_region_3d.cpp:255, which crosses instance= boundaries',
-      },
+      verdict: { rule: 'navigationregion3d-requires-navigation-mesh' },
+      gate: 'visible-in-tree',
     },
   ],
 
@@ -983,6 +1007,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
       at: 'openxr_composition_layer.cpp:765',
       says: 'must have an XROrigin3D node as parent',
       verdict: { rule: 'openxrcompositionlayer-parent-not-xrorigin3d' },
+      gate: 'visible',
     },
     {
       at: 'openxr_composition_layer.cpp:770',
@@ -1038,6 +1063,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
       at: 'openxr_visibility_mask.cpp:73',
       says: 'must have an XRCamera3D node as parent',
       verdict: { rule: 'openxrvisibilitymask-parent-not-xrcamera3d' },
+      gate: 'visible',
     },
   ],
 
@@ -1062,6 +1088,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
       at: 'path_2d.cpp:386',
       says: 'only works as a child of a Path2D node',
       verdict: { rule: 'pathfollow2d-invalid-parent' },
+      gate: 'visible-in-tree',
     },
   ],
 
@@ -1070,11 +1097,13 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
       at: 'path_3d.cpp:359',
       says: 'only works as a child of a Path3D node',
       verdict: { rule: 'pathfollow3d-invalid-parent' },
+      gate: 'visible-in-tree',
     },
     {
       at: 'path_3d.cpp:363',
       says: 'ROTATION_ORIENTED requires Up Vector enabled on the parent Path3D curve',
       verdict: { rule: 'pathfollow3d-oriented-mode-requires-up-vector' },
+      gate: 'visible-in-tree',
     },
   ],
 
@@ -1400,6 +1429,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
       at: 'xr_nodes.cpp:102',
       says: 'may not function as expected without an XROrigin3D parent',
       verdict: { rule: 'xrcamera3d-parent-not-xrorigin3d' },
+      gate: 'visible',
     },
     {
       at: 'xr_nodes.cpp:106',
@@ -1408,6 +1438,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
         declined: 'runtime-only',
         because: 'SceneTree::is_fti_enabled_in_project(), a project setting, xr_nodes.cpp:105',
       },
+      gate: 'visible',
     },
   ],
 
@@ -1427,6 +1458,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
       at: 'xr_nodes.cpp:503',
       says: 'may not function as expected without an XROrigin3D parent',
       verdict: { rule: 'xrnode3d-parent-not-xrorigin3d' },
+      gate: 'visible',
     },
     {
       at: 'xr_nodes.cpp:507',
@@ -1435,11 +1467,13 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
         declined: 'default-omitted',
         because: 'tracker_name field-initialises to "" (xr_nodes.h:81), which is the trigger itself',
       },
+      gate: 'visible',
     },
     {
       at: 'xr_nodes.cpp:511',
       says: 'no pose is set',
       verdict: { rule: 'xrnode3d-no-pose-set' },
+      gate: 'visible',
     },
     {
       at: 'xr_nodes.cpp:515',
@@ -1448,6 +1482,7 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
         declined: 'runtime-only',
         because: 'SceneTree::is_fti_enabled_in_project(), a project setting, xr_nodes.cpp:514',
       },
+      gate: 'visible',
     },
   ],
 
@@ -1456,11 +1491,13 @@ const WARNINGS: Readonly<Record<string, readonly WarningRow[]>> = {
       at: 'xr_nodes.cpp:695',
       says: 'requires an XRCamera3D child node',
       verdict: { rule: 'xrorigin3d-missing-camera-child' },
+      gate: 'visible',
     },
     {
       at: 'xr_nodes.cpp:699',
       says: 'changing scale on XROrigin3D is not supported',
       verdict: { rule: 'xrorigin3d-unsupported-scale' },
+      gate: 'visible',
     },
     {
       at: 'xr_nodes.cpp:705',

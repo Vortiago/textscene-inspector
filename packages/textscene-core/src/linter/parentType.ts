@@ -116,45 +116,125 @@ export function placementPhrase(verdict: ParentVerdict): string {
  * check. This deliberately reads only the node's OWN key: `is_visible()` is the
  * local flag, not `is_visible_in_tree()`, so an ancestor's visibility does not
  * enter into it.
+ *
+ * It is also the primitive `visibleInTreeVerdict` reads each ancestor with —
+ * every class the cascade consults spells the key `visible`, CanvasItem
+ * (`canvas_item.cpp:1471`), Node3D (`node_3d.cpp:1541`), CanvasLayer
+ * (`canvas_layer.cpp:341`) and Window (`window.cpp:3436`) alike.
  */
 export function isExplicitlyHidden(properties: Record<string, string>): boolean {
   return properties.visible === 'false';
 }
 
 /**
- * What a rule can say about `CanvasItem::is_visible_in_tree()`
- * (`canvas_item.cpp:62-64`: `visible && parent_visible_in_tree`), computed
- * statically.
+ * What a rule can say about `is_visible_in_tree()`, computed statically.
  *
- * `parent_visible_in_tree` cascades down from the nearest CanvasItem ancestor's
- * own `is_visible_in_tree()`, or a `CanvasLayer`'s own `is_visible()`
- * (`canvas_item.cpp:315,328`) — both are just the ancestor's own `visible` key,
- * which `CanvasLayer` exposes too (`canvas_layer.cpp:341`). So one uniform walk
- * of every ancestor's OWN `visible` key, ANDed together, reproduces the whole
- * cascade: the result is hidden the moment any one of them is explicitly
- * `false`, and visible only if none of them are.
+ * There is no single such method: `CanvasItem` and `Node3D` declare their own,
+ * over different chains, and a rule ported from a gated
+ * `get_configuration_warnings()` gets whichever its class inherits.
  */
 export type VisibilityVerdict =
-  /** Neither the node nor any ancestor is explicitly `visible = false`. */
+  /** Godot's `is_visible_in_tree()` would return true for this node. */
   | 'visible'
-  /** The node, or some ancestor, sets `visible = false`. */
+  /** The node, or an ancestor its family's chain consults, sets `visible = false`. */
   | 'hidden'
-  /** An ancestor's type — and so its own visibility — is not knowable from this file. */
+  /** An ancestor the chain consults is instanced or untyped, so its own `visible` is not in this file. */
   | 'unknowable';
 
-/**
- * Walks from `node` up to the root. An `instance=`/untyped ancestor could be
- * hidden from a scene this linter never opens, so the walk stops there and
- * reports `unknowable` rather than assuming visible.
- */
-export function visibleInTreeVerdict(scene: TscnScene, node: TscnNode): VisibilityVerdict {
-  if (isExplicitlyHidden(node.properties as unknown as Record<string, string>)) return 'hidden';
+/** `isExplicitlyHidden` over a node, since `properties` is widened per node type. */
+function ownVisibleKeyIsFalse(node: TscnNode): boolean {
+  return isExplicitlyHidden(node.properties as unknown as Record<string, string>);
+}
 
+/**
+ * `Node3D::is_visible_in_tree()` (`node_3d.cpp:1131-1143`): walks
+ * `s = s->data.parent`, and `data.parent` is `cast_to<Node3D>(get_parent())`
+ * (`node_3d.cpp:150`). The cast yields null for anything else, so the chain is
+ * the contiguous run of Node3D ancestors and the first non-Node3D ancestor ends
+ * it — everything above is never consulted, hidden or not.
+ */
+function node3DCascade(scene: TscnScene, node: TscnNode): VisibilityVerdict {
   let current = findParentNode(scene.nodes, node);
   while (current) {
     if (isTypeUnknowable(current)) return 'unknowable';
-    if (isExplicitlyHidden(current.properties as unknown as Record<string, string>)) return 'hidden';
+    if (!descendsFrom(current.type, 'Node3D')) return 'visible';
+    if (ownVisibleKeyIsFalse(current)) return 'hidden';
     current = findParentNode(scene.nodes, current);
   }
   return 'visible';
+}
+
+/**
+ * `CanvasItem::is_visible_in_tree()` (`canvas_item.cpp:62-64`:
+ * `visible && parent_visible_in_tree`), where `parent_visible_in_tree` is fixed
+ * at `NOTIFICATION_ENTER_TREE` (`canvas_item.cpp:306-352`) by the IMMEDIATE
+ * parent, in three exclusive branches:
+ *
+ * - a CanvasItem parent contributes its own `is_visible_in_tree()`, so the
+ *   contiguous CanvasItem run cascades;
+ * - else a CanvasLayer parent contributes `cl->is_visible()`
+ *   (`canvas_layer.cpp:75`) — its OWN key only, and the chain ends there, so a
+ *   CanvasLayer one hop further up contributes nothing;
+ * - else the search climbs to the first Viewport ancestor: a Window gives
+ *   `window->is_visible()` (`window.cpp:1166-1169`), any other Viewport gives
+ *   `true`, and no Viewport at all leaves it alone. A saved scene's root has no
+ *   Viewport in the file, so its own key is all that decides.
+ */
+function canvasItemCascade(scene: TscnScene, node: TscnNode): VisibilityVerdict {
+  let current = findParentNode(scene.nodes, node);
+  while (current) {
+    if (isTypeUnknowable(current)) return 'unknowable';
+    if (!descendsFrom(current.type, 'CanvasItem')) break;
+    if (ownVisibleKeyIsFalse(current)) return 'hidden';
+    current = findParentNode(scene.nodes, current);
+  }
+  if (!current) return 'visible';
+
+  if (descendsFrom(current.type, 'CanvasLayer')) {
+    return ownVisibleKeyIsFalse(current) ? 'hidden' : 'visible';
+  }
+
+  // The Viewport search starts at that same parent and skips whatever is not a
+  // Viewport, so an unknowable ancestor here still matters: it could be a Window.
+  while (current) {
+    if (isTypeUnknowable(current)) return 'unknowable';
+    if (descendsFrom(current.type, 'Window')) {
+      return ownVisibleKeyIsFalse(current) ? 'hidden' : 'visible';
+    }
+    if (descendsFrom(current.type, 'Viewport')) return 'visible';
+    current = findParentNode(scene.nodes, current);
+  }
+  return 'visible';
+}
+
+/**
+ * Godot's `is_visible_in_tree()` for `node`, read off this file alone.
+ *
+ * Only an explicit `visible = false` hides: absence is Godot's default form and
+ * the linter never resolves it against a class default. That is load-bearing
+ * for the Window branch, where the default is not `true` — `Popup`
+ * (`popup.cpp:218`) and `AcceptDialog` (`dialogs.cpp:466`) both `set_visible(false)`
+ * in their constructor, so a dialog that is shown writes `visible = true` and a
+ * dialog that omits the key is hidden at runtime. Resolving absence would
+ * silence every warning under one.
+ *
+ * A node in neither family has no `is_visible_in_tree()` to reproduce, and no
+ * gated configuration warning either, so nothing is suppressed.
+ */
+export function visibleInTreeVerdict(scene: TscnScene, node: TscnNode): VisibilityVerdict {
+  if (ownVisibleKeyIsFalse(node)) return 'hidden';
+  if (descendsFrom(node.type, 'CanvasItem')) return canvasItemCascade(scene, node);
+  if (descendsFrom(node.type, 'Node3D')) return node3DCascade(scene, node);
+  return 'visible';
+}
+
+/**
+ * True when a warning Godot gates on `is_visible_in_tree()` must stay silent.
+ *
+ * The three ported gates collapse the verdict identically, and each had to pick
+ * the same side of `unknowable`: a rule that guessed there would report a
+ * misconfiguration the author cannot see from this file.
+ */
+export function hiddenOrUnknowableInTree(scene: TscnScene, node: TscnNode): boolean {
+  return visibleInTreeVerdict(scene, node) !== 'visible';
 }

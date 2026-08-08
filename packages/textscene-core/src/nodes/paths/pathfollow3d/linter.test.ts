@@ -242,6 +242,59 @@ describe('PathFollow3D Linter', () => {
       expect(parentError.nodeName).toBe('PathFollow');
     });
 
+    // path_3d.cpp:357 wraps both of this override's warnings in
+    // `is_visible_in_tree() && is_inside_tree()`.
+    describe('the visibility gate', () => {
+      it('stays quiet when the node itself is hidden', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Node3D' }),
+            node('PathFollow3D', { visible: false }, { name: 'PathFollow', parent: '.' })
+          ),
+          { ruleName: 'pathfollow3d-invalid-parent' }
+        );
+      });
+
+      it('stays quiet at the scene root when hidden', () => {
+        expectNoDiagnostic(scene(node('PathFollow3D', { visible: false }, { name: 'PathFollow' })), {
+          ruleName: 'pathfollow3d-no-parent',
+        });
+      });
+
+      it('stays quiet when a Node3D ancestor is hidden', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node3D', { visible: false }, { name: 'Root' }),
+            node('Node3D', {}, { name: 'Mid', parent: '.' }),
+            node('PathFollow3D', {}, { name: 'PathFollow', parent: 'Mid' })
+          ),
+          { ruleName: 'pathfollow3d-invalid-parent' }
+        );
+      });
+
+      it('still warns when a plain Node breaks the Node3D chain below the hidden ancestor', () => {
+        expectDiagnostic(
+          scene(
+            node('Node3D', { visible: false }, { name: 'Root' }),
+            node('Node', {}, { name: 'Plain', parent: '.' }),
+            node('PathFollow3D', {}, { name: 'PathFollow', parent: 'Plain' })
+          ),
+          { ruleName: 'pathfollow3d-invalid-parent', severity: 'warning' }
+        );
+      });
+
+      it('stays quiet about ROTATION_ORIENTED when hidden', () => {
+        expectNoDiagnostic(
+          scene(
+            noUpVectorCurve,
+            path,
+            node('PathFollow3D', { rotation_mode: '4', visible: false }, { name: 'PathFollow', parent: '.' })
+          ),
+          { ruleName: 'pathfollow3d-oriented-mode-requires-up-vector' }
+        );
+      });
+    });
+
     it('should warn when parent is MeshInstance3D', () => {
       expectDiagnostic(
         scene(
