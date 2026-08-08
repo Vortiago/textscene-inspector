@@ -35,6 +35,14 @@
  * `--width` / `--height` (which size the 3D frame) do not apply. `--mode`
  * forces the choice when the root's type does not settle it.
  *
+ * `--mode 2d-root` draws that SAME rectangle as the root WINDOW instead of
+ * inside a SubViewport. It exists because a handful of viewport settings are
+ * handed to `SceneTree`'s root window and to nothing else, so nothing nested
+ * can observe them (`ROOT_ONLY_VIEWPORT_PROPERTIES`). The SubViewport arm stays
+ * the default — it owns its rectangle outright, with no window manager or
+ * screen size able to reach it — and now REFUSES rather than answering from the
+ * class default when a project sets one of those settings.
+ *
  * TWO THINGS THIS HARNESS DOES THAT A NAIVE `godot --path` DOES NOT:
  *
  * 1. **It injects the editor previews.** `godot --path` runs the GAME. Godot's
@@ -156,8 +164,163 @@ export const EDITOR_CAMERA_DISTANCE = 4;
 /** `frameSceneBounds.ts`'s margin, for the opt-in framed mode. */
 export const FRAME_MARGIN = 1.6;
 
-/** The render modes, and what `--mode` accepts. */
-export const RENDER_MODES = ['auto', '2d', '3d'];
+/**
+ * The render modes, and what `--mode` accepts. `2d-root` is APPENDED rather
+ * than slotted next to `2d`, so the rejection message keeps reading
+ * `auto|2d|3d|…` with the historical prefix intact.
+ */
+export const RENDER_MODES = ['auto', '2d', '3d', '2d-root'];
+
+/** The mode whose capture IS the root window rather than a nested viewport. */
+const ROOT_WINDOW_MODE = '2d-root';
+
+/**
+ * The viewport settings Godot applies to `SceneTree`'s root `Window` AND TO
+ * NOTHING ELSE, each with the class default a `Viewport` keeps when nobody
+ * hands it the project's value.
+ *
+ * `main/main.cpp`'s block runs only for a real game (`if (!editor &&
+ * !project_manager)`, main/main.cpp:4521) and reaches `sml->get_root()`; the
+ * `SceneTree` constructor's block writes straight to `root`. Neither walks any
+ * other viewport, and `Viewport` has no inheritance path for these — so a
+ * scene composed inside a `SubViewport` draws under the class default whatever
+ * the project says, and the default 2D capture cannot observe the setting at
+ * all. That is what `2d-root` exists for.
+ *
+ * Confined to what can change a 2D picture. The root-only settings that only a
+ * 3D render could show (`msaa_3d`, TAA, debanding, occlusion culling, mesh LOD,
+ * the shadow atlas, VRS) are already observed, because the 3D path renders
+ * into the root window's own viewport and never nests anything.
+ *
+ * `property` is the SCRIPT-side name from `scene/main/viewport.cpp`'s
+ * `ADD_PROPERTY` block — several differ from both the setter and the C++ field
+ * (`oversampling` for `set_use_oversampling`, `transparent_bg` for
+ * `set_transparent_background`), and a name Godot does not expose reads back
+ * null on both viewports, which would compare equal and report agreement. The
+ * generated script therefore proves each name exists before comparing.
+ */
+export const ROOT_ONLY_VIEWPORT_PROPERTIES = [
+  {
+    property: 'gui_snap_controls_to_pixels',
+    setting: 'gui/common/snap_controls_to_pixels',
+    appliedAt: 'main/main.cpp:4577-4578',
+    defaultAt: 'scene/main/viewport.h:267',
+  },
+  {
+    property: 'oversampling',
+    setting: 'gui/fonts/dynamic_fonts/use_oversampling',
+    appliedAt: 'main/main.cpp:4583-4584',
+    defaultAt: 'scene/main/viewport.h:244',
+  },
+  {
+    property: 'canvas_item_default_texture_filter',
+    setting: 'rendering/textures/canvas_textures/default_texture_filter',
+    appliedAt: 'main/main.cpp:4586-4589',
+    defaultAt: 'scene/main/viewport.h:419',
+  },
+  {
+    property: 'canvas_item_default_texture_repeat',
+    setting: 'rendering/textures/canvas_textures/default_texture_repeat',
+    appliedAt: 'main/main.cpp:4587-4591',
+    defaultAt: 'scene/main/viewport.h:420',
+  },
+  {
+    property: 'snap_2d_transforms_to_pixel',
+    setting: 'rendering/2d/snap/snap_2d_transforms_to_pixel',
+    appliedAt: 'scene/main/scene_tree.cpp:2106-2107',
+    defaultAt: 'scene/main/viewport.h:268',
+  },
+  {
+    property: 'snap_2d_vertices_to_pixel',
+    setting: 'rendering/2d/snap/snap_2d_vertices_to_pixel',
+    appliedAt: 'scene/main/scene_tree.cpp:2109-2110',
+    defaultAt: 'scene/main/viewport.h:269',
+  },
+  {
+    property: 'msaa_2d',
+    setting: 'rendering/anti_aliasing/quality/msaa_2d',
+    appliedAt: 'scene/main/scene_tree.cpp:2079-2080',
+    defaultAt: 'scene/main/viewport.h:309',
+  },
+  {
+    property: 'transparent_bg',
+    setting: 'rendering/viewport/transparent_background',
+    appliedAt: 'scene/main/scene_tree.cpp:2085-2086',
+    defaultAt: 'scene/main/viewport.h:264',
+  },
+  {
+    property: 'use_hdr_2d',
+    setting: 'rendering/viewport/hdr_2d',
+    appliedAt: 'scene/main/scene_tree.cpp:2088-2089',
+    defaultAt: 'scene/main/viewport.h:265',
+  },
+  {
+    property: 'sdf_oversize',
+    setting: 'rendering/2d/sdf/oversize',
+    appliedAt: 'scene/main/scene_tree.cpp:2145-2146',
+    defaultAt: 'scene/main/viewport.h:331',
+  },
+  {
+    property: 'sdf_scale',
+    setting: 'rendering/2d/sdf/scale',
+    appliedAt: 'scene/main/scene_tree.cpp:2147-2148',
+    defaultAt: 'scene/main/viewport.h:332',
+  },
+];
+
+/**
+ * The refusal. Turns the bootstrap's drift report into the message the harness
+ * throws instead of returning the SubViewport's answer.
+ *
+ * A measurement that cannot observe what was asked has to SAY SO — returning
+ * the class default is a confident wrong number, and every 2D parity reading
+ * this repo has taken went through that nested capture. There is no flag to
+ * silence this, because the remedy answers the question correctly rather than
+ * suppressing it.
+ *
+ * `null` when there is nothing to report, so a clean run costs nothing.
+ */
+export function rootOnlyDriftMessage(report) {
+  if (!report) return null;
+  const drift = report.drift ?? [];
+  const missing = report.missing ?? [];
+  if (drift.length === 0 && missing.length === 0) return null;
+
+  const cite = (property) => ROOT_ONLY_VIEWPORT_PROPERTIES.find((e) => e.property === property);
+  const named = drift.map(({ property }) => cite(property)?.setting ?? property);
+
+  // The FIRST LINE carries the settings and the remedy, because the batch
+  // capture tools log `error.message.split('\n')[0]` and nothing else: a
+  // summary that says only "something could not be observed" reaches those logs
+  // as a dead end.
+  const lines = [
+    named.length > 0
+      ? `Refusing to answer: this 2D capture nests the scene in a SubViewport, so ` +
+        `${named.join(', ')} cannot reach it — re-run with --mode 2d-root, which draws the ` +
+        'same rectangle AS the root window.'
+      : 'Refusing to answer: this 2D capture could not check the root-window-only viewport ' +
+        `settings at all — ${missing.join(', ')} are not exposed under those names.`,
+  ];
+
+  for (const { property, root, nested } of drift) {
+    const entry = cite(property);
+    lines.push(
+      `  ${entry?.setting ?? property} — root window ${root}, this capture ${nested} ` +
+        `(Viewport.${property}; applied at ${entry?.appliedAt ?? '?'}, and a Viewport keeps ` +
+        `its class default at ${entry?.defaultAt ?? '?'})`
+    );
+  }
+
+  if (missing.length > 0) {
+    lines.push(
+      'The engine does not expose these under the names this harness asked for, so nothing ' +
+        `was compared for them: ${missing.join(', ')}. Re-derive them from the ADD_PROPERTY ` +
+        'block in scene/main/viewport.cpp.'
+    );
+  }
+
+  return lines.join('\n');
+}
 
 /** Godot's preview sun: white, energy 1.0, shadows on, euler (-60°, 150°, 0). */
 const PREVIEW_SUN_ALTITUDE_DEG = -60;
@@ -356,7 +519,7 @@ export function projectViewportSizeFromIni(sourceIni) {
   };
 }
 
-export function projectConfig(sourceIni, { width, height }) {
+export function projectConfig(sourceIni, { width, height, pinWindowToViewport = false }) {
   const drop = [
     /^environment\/defaults\/default_environment\s*=/,
     /^rendering\/environment\/defaults\/default_environment\s*=/,
@@ -365,6 +528,20 @@ export function projectConfig(sourceIni, { width, height }) {
     /^run\/main_scene\s*=/,
     /^config_version\s*=/,
   ];
+
+  // Only when the capture IS the window. A window sized by an override — or by
+  // a fullscreen `window/size/mode` — makes the stretch transform scale the
+  // whole picture, so the root-window arm would draw a rectangle the previewer
+  // never draws. Scoped to that arm rather than added to the list above,
+  // because a blanket drop would silently move every 3D reference already
+  // arbitrated through this harness.
+  if (pinWindowToViewport) {
+    drop.push(
+      /^window\/size\/window_width_override\s*=/,
+      /^window\/size\/window_height_override\s*=/,
+      /^window\/size\/mode\s*=/
+    );
+  }
 
   const kept = (sourceIni ?? '')
     .split('\n')
@@ -472,6 +649,7 @@ export function bootstrapScript({
   out,
   boundsOut,
   modeOut,
+  driftOut = null,
   fov,
   fovExplicit,
   canvas2DSize,
@@ -491,6 +669,7 @@ export function bootstrapScript({
         '`--particles <seconds>` is the same advance asked for from outside.'
     );
   }
+  const rootWindow = mode === ROOT_WINDOW_MODE;
   return `extends Node3D
 
 const SCENE_PATH := ${gdString(scenePath)}
@@ -498,6 +677,13 @@ const PREVIEWS := ${previews ? 'true' : 'false'}
 const OUT := ${gdString(out)}
 const BOUNDS_OUT := ${gdString(boundsOut ?? '')}
 const MODE_OUT := ${gdString(modeOut)}
+# Empty on the root-window arm: there is nothing nested there to compare the
+# root window against, so a report would be the capture measured against itself.
+const DRIFT_OUT := ${gdString(rootWindow ? '' : (driftOut ?? ''))}
+const ROOT_WINDOW := ${rootWindow ? 'true' : 'false'}
+const ROOT_ONLY_PROPERTIES := [
+${ROOT_ONLY_VIEWPORT_PROPERTIES.map(({ property }) => `\t"${property}",`).join('\n')}
+]
 const MODE := "${mode}"
 const SCENE_CAMERA := ${sceneCamera ? 'true' : 'false'}
 const SCENE_CAMERA_PATH := ${gdString(sceneCameraPath ?? '')}
@@ -527,12 +713,17 @@ func _ready() -> void:
 	if PREVIEWS:
 		get_tree().paused = true
 	var target: Node = load(SCENE_PATH).instantiate()
-	var two_d := MODE == "2d" or (MODE == "auto" and _is_canvas_scene(target))
+	var two_d := MODE == "2d" or MODE == "${ROOT_WINDOW_MODE}" or (MODE == "auto" and _is_canvas_scene(target))
 	# Written before the render, so a run that dies mid-frame still says which
-	# path it took — the caller pairs our image with the previewer's on it.
+	# path it took — the caller pairs our image with the previewer's on it. Both
+	# 2D arms draw the SAME rectangle and so report the same "2d": which viewport
+	# composed it is the harness's business, not the pairing's.
 	_write_mode(two_d)
 	if two_d:
-		await _render_2d(target)
+		if ROOT_WINDOW:
+			await _render_2d_root(target)
+		else:
+			await _render_2d(target)
 	else:
 		await _render_3d(target)
 	get_tree().quit()
@@ -567,6 +758,7 @@ func _render_2d(target: Node) -> void:
 	vp.size = CANVAS_2D_SIZE
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(vp)
+	_report_root_only_drift(vp)
 	if not SCENE_CAMERA:
 		_disable_2d_cameras(target)
 	vp.add_child(target)
@@ -575,6 +767,82 @@ func _render_2d(target: Node) -> void:
 		_freeze_game_logic(target)
 	await _converge()
 	vp.get_texture().get_image().save_png(OUT)
+
+# THE SECOND 2D ARM. Godot hands several viewport settings to SceneTree's root
+# Window and to nothing else, so nothing composed inside a SubViewport can
+# observe them and _render_2d's picture is the class default's, not the
+# project's. This one makes the scene the root window's OWN scene — the same
+# add_child SceneTree performs for a project's main scene
+# (scene/main/scene_tree.cpp:1738-1739) — so the values in force are the ones
+# the project set.
+#
+# The rectangle is unchanged: the generated project.godot pins the window to
+# the project viewport size for this arm, so both arms capture the same frame
+# and a probe coordinate means the same thing in each. That pinning is also why
+# _render_2d stays the DEFAULT — it owns its rectangle outright, with no window
+# manager, screen size or override able to reach it, which is what makes the
+# capture reproducible under xvfb. This arm's caller checks the written image
+# is exactly that rect rather than trusting the window to have obeyed.
+func _render_2d_root(target: Node) -> void:
+	RenderingServer.set_default_clear_color(CLEAR_2D)
+	if not SCENE_CAMERA:
+		_disable_2d_cameras(target)
+	# One frame first: _ready runs while the root window is still adding THIS
+	# node, and a second add_child on a parent in that state is rejected outright
+	# (scene/main/node.cpp:1709) — which renders an empty window rather than
+	# failing. Yielding, rather than deferring the call, is what keeps the
+	# particle request below adjacent to the subtree entering the tree.
+	await get_tree().process_frame
+	get_tree().root.add_child(target)
+	_advance_particles(target)
+	if PREVIEWS:
+		_freeze_game_logic(target)
+	await _converge()
+	get_tree().root.get_texture().get_image().save_png(OUT)
+
+# What the nested capture CANNOT answer, reported rather than guessed at.
+#
+# Reads both viewports' LIVE values instead of re-deriving Godot's per-property
+# defaults here: the root window has already been handed the project's values by
+# the time _ready runs, and the fresh SubViewport has whatever Viewport's own
+# constructor gave it. Comparing the two needs no copy of either table and stays
+# correct if a future engine starts propagating one of these.
+#
+# Every name is proved to exist on BOTH viewports first. Object.get() returns
+# null for a name the engine does not expose, and two nulls compare equal — so a
+# stale name would report agreement, which is the exact silence this exists to
+# end.
+func _report_root_only_drift(vp: Viewport) -> void:
+	if DRIFT_OUT == "":
+		return
+	var root := get_tree().root
+	var drift: Array = []
+	var missing: Array = []
+	for property: String in ROOT_ONLY_PROPERTIES:
+		if not _has_property(root, property) or not _has_property(vp, property):
+			missing.append(property)
+			continue
+		var root_value: Variant = root.get(property)
+		var nested_value: Variant = vp.get(property)
+		if root_value != nested_value:
+			drift.append({
+				"property": property,
+				"root": var_to_str(root_value),
+				"nested": var_to_str(nested_value),
+			})
+	if drift.is_empty() and missing.is_empty():
+		return
+	var file := FileAccess.open(DRIFT_OUT, FileAccess.WRITE)
+	if file == null:
+		return
+	file.store_string(JSON.stringify({"drift": drift, "missing": missing}))
+	file.close()
+
+func _has_property(object: Object, property: String) -> bool:
+	for info: Dictionary in object.get_property_list():
+		if info["name"] == property:
+			return true
+	return false
 
 # An enabled Camera2D becomes current the moment it enters the tree and offsets
 # the whole canvas transform. The previewer ignores a scene's camera (Godot's
@@ -894,9 +1162,18 @@ export function renderArgv(work) {
   return ['--path', work, '--fixed-fps', String(REFERENCE_FIXED_FPS), '--quit-after', '400'];
 }
 
-function runGodot(args, { display }) {
+/**
+ * `screen` sizes the virtual X screen for this run. Only the root-window arm
+ * passes one: its capture IS the window, so a project viewport larger than
+ * xvfb-run's own default screen would leave the window clipped to the screen
+ * and the image the wrong size. Left unset everywhere else, since changing the
+ * screen under a render that does not depend on it is one more variable in a
+ * reference nobody asked to move.
+ */
+function runGodot(args, { display, screen = null }) {
   const command = display ? 'xvfb-run' : 'godot';
-  const argv = display ? ['-a', 'godot', ...args] : args;
+  const screenArgs = screen ? ['-s', `-screen 0 ${screen.width}x${screen.height}x24`] : [];
+  const argv = display ? ['-a', ...screenArgs, 'godot', ...args] : args;
   const result = spawnSync(command, argv, { encoding: 'utf8', timeout: 300_000 });
   // `error` carries a spawn failure (ENOENT when godot/xvfb-run is missing, or a
   // timeout) that `status` alone (null in that case) does not — callers surface it.
@@ -961,13 +1238,25 @@ async function renderInto(
 ) {
   await cp(root, work, { recursive: true, dereference: true });
   // Inside the scratch project, not beside the image: the mode is how the
-  // caller pairs this render with the previewer's, not an artefact to keep.
+  // caller pairs this render with the previewer's, not an artefact to keep. The
+  // drift report is the same kind of thing — read once, turned into a refusal.
   const modeOut = join(work, '__ref_mode.txt');
+  const driftOut = join(work, '__ref_root_only.json');
+  const rootWindow = mode === ROOT_WINDOW_MODE;
 
   const sourceIni = existsSync(join(root, 'project.godot'))
     ? await readFile(join(root, 'project.godot'), 'utf8')
     : null;
-  await writeFile(join(work, 'project.godot'), projectConfig(sourceIni, { width, height }));
+  const canvas2DSize = projectViewportSizeFromIni(sourceIni);
+  // The root-window arm captures the window, so the window has to BE the
+  // project-viewport rect; every other arm keeps the 3D frame override.
+  await writeFile(
+    join(work, 'project.godot'),
+    projectConfig(
+      sourceIni,
+      rootWindow ? { ...canvas2DSize, pinWindowToViewport: true } : { width, height }
+    )
+  );
 
   const resPath = `res://${relative(root, scenePath).split(sep).join('/')}`;
   await writeFile(
@@ -985,9 +1274,10 @@ async function renderInto(
       out: resolve(out),
       boundsOut: boundsOut ? resolve(boundsOut) : null,
       modeOut,
+      driftOut,
       fov,
       particles,
-      canvas2DSize: projectViewportSizeFromIni(sourceIni),
+      canvas2DSize,
     })
   );
   await writeFile(join(work, '__ref_main.tscn'), MAIN_SCENE);
@@ -1005,7 +1295,10 @@ async function renderInto(
   // a scene with no importable assets legitimately has nothing to do.
   runGodot(['--headless', '--path', work, '--import'], { display: false });
 
-  const render = runGodot(renderArgv(work), { display: true });
+  const render = runGodot(renderArgv(work), {
+    display: true,
+    screen: rootWindow ? canvas2DSize : null,
+  });
   if (!existsSync(resolve(out))) {
     // Surface the spawn error (missing godot/xvfb-run, timeout) that a bare
     // "produced no image" would otherwise hide with empty stderr.
@@ -1015,6 +1308,37 @@ async function renderInto(
     );
   }
   const rendered = existsSync(modeOut) ? (await readFile(modeOut, 'utf8')).trim() : null;
+
+  // Both refusals below delete the image first. Godot has already written one
+  // by the time either is known, and the default out path lives in the repo and
+  // is reused across runs — so a picture the harness will not vouch for would
+  // outlive the message saying so, which is the same stale-answer trap the
+  // pre-render delete above exists to close.
+  const refuse = async (message) => {
+    await rm(resolve(out), { force: true });
+    throw new Error(message);
+  };
+
+  if (rootWindow) {
+    // The window is asked for, not guaranteed: a window manager, a screen too
+    // small, or a project setting nobody thought to drop can all hand back a
+    // different rect, and a picture at the wrong size is a wrong measurement
+    // that still looks like an answer.
+    const png = PNG.sync.read(await readFile(resolve(out)));
+    if (png.width !== canvas2DSize.width || png.height !== canvas2DSize.height) {
+      await refuse(
+        `--mode ${ROOT_WINDOW_MODE} captured a ${png.width}x${png.height} window, but the ` +
+          `project viewport is ${canvas2DSize.width}x${canvas2DSize.height}. The two 2D arms ` +
+          'must draw the same rectangle for a probe coordinate to mean the same thing in each.'
+      );
+    }
+  }
+
+  const drift = existsSync(driftOut)
+    ? rootOnlyDriftMessage(JSON.parse(await readFile(driftOut, 'utf8')))
+    : null;
+  if (drift) await refuse(drift);
+
   return { workDir: work, out: resolve(out), mode: rendered };
 }
 
@@ -1028,6 +1352,10 @@ async function main() {
     console.error(
       `       [--mode ${RENDER_MODES.join('|')}]  (2d renders the project viewport, ` +
         `${CANVAS_2D_CAPTURE.width}x${CANVAS_2D_CAPTURE.height}; --width/--height size the 3D frame)`
+    );
+    console.error(
+      `       [--mode ${ROOT_WINDOW_MODE}]  (same rectangle, rendered AS the root window, for the ` +
+        'viewport settings Godot applies to the root and to nothing else)'
     );
     console.error(
       '       [--particles seconds]  (advances every CPUParticles emitter that much ' +

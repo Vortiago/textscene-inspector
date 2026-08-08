@@ -43,6 +43,8 @@ import { bootstrapScript,
   projectConfig,
   probePixels,
   renderReference,
+  ROOT_ONLY_VIEWPORT_PROPERTIES,
+  rootOnlyDriftMessage,
 } from './run.mjs';
 
 const REPO_ROOT = join(import.meta.dirname, '..', '..');
@@ -61,6 +63,7 @@ function bootstrap(overrides = {}) {
     out: '/tmp/o.png',
     boundsOut: null,
     modeOut: '/tmp/m.txt',
+    driftOut: '/tmp/d.json',
     fov: 70,
     fovExplicit: false,
     canvas2DSize: { width: 640, height: 360 },
@@ -178,6 +181,11 @@ describe('parseArgs', () => {
   it('rejects an unknown --mode instead of falling back to a camera the scene has no use for', () => {
     expect(() => parseArgs(['a.tscn', '--mode', 'canvas'])).toThrow(/auto\|2d\|3d/);
   });
+
+  it('takes 2d-root, the mode that renders the scene as the root window', () => {
+    expect(parseArgs(['a.tscn', '--mode', '2d-root']).mode).toBe('2d-root');
+    expect(parseArgs(['a.tscn', '--mode', '2D-ROOT']).mode).toBe('2d-root');
+  });
 });
 
 describe('resolveProjectRoot', () => {
@@ -230,6 +238,186 @@ describe('projectConfig', () => {
     const ini = projectConfig(source, { width: 400, height: 300 });
     expect(ini.match(/window\/size\/viewport_width=/g)).toHaveLength(1);
     expect(ini).toMatch(/window\/size\/viewport_width=400/);
+  });
+
+  /**
+   * The root-window arm captures the WINDOW, so the window has to be the
+   * project-viewport rectangle exactly. A source override (or a fullscreen
+   * window mode) sizes it to something else, and the stretch transform then
+   * scales the whole picture — a rect the previewer's 2D stage never draws.
+   */
+  const windowOverrides = [
+    '[display]',
+    'window/size/window_width_override=1920',
+    'window/size/window_height_override=1080',
+    'window/size/mode=3',
+  ].join('\n');
+
+  it('drops the window-size overrides when the window IS the capture', () => {
+    const ini = projectConfig(windowOverrides, {
+      width: 1152,
+      height: 648,
+      pinWindowToViewport: true,
+    });
+    expect(ini).not.toMatch(/window_width_override/);
+    expect(ini).not.toMatch(/window_height_override/);
+    expect(ini).not.toMatch(/window\/size\/mode=/);
+    expect(ini).toMatch(/window\/size\/viewport_width=1152/);
+  });
+
+  it('keeps them otherwise, so no render that does not capture the window moves', () => {
+    const ini = projectConfig(windowOverrides, { width: 400, height: 300 });
+    expect(ini).toMatch(/window_width_override=1920/);
+    expect(ini).toMatch(/window\/size\/mode=3/);
+  });
+});
+
+/**
+ * ROOT-WINDOW-ONLY VIEWPORT SETTINGS.
+ *
+ * Godot hands a handful of project settings to `SceneTree`'s root `Window` and
+ * to NOTHING else — `main/main.cpp` and the `SceneTree` constructor both do it —
+ * while `Viewport` initialises its own field to a class default. Anything drawn
+ * inside a `SubViewport` therefore keeps that default however the project is
+ * configured, so the harness's 2D capture (which composes the whole scene inside
+ * one) is structurally incapable of observing them.
+ *
+ * Two halves answer that: `--mode 2d-root` renders the scene AS the root window,
+ * and the SubViewport arm reports every such setting whose live root value
+ * differs from its own rather than returning a confident wrong picture.
+ */
+describe('root-window-only viewport settings', () => {
+  it('cites, for every listed property, where Godot applies it and where the default lives', () => {
+    expect(ROOT_ONLY_VIEWPORT_PROPERTIES.length).toBeGreaterThan(0);
+    for (const entry of ROOT_ONLY_VIEWPORT_PROPERTIES) {
+      expect(entry.property).toMatch(/^[a-z0-9_]+$/);
+      expect(entry.setting).toMatch(/^[a-z0-9_]+\//);
+      // A `file:line` into the engine, never a fixture or an issue number: the
+      // list is only trustworthy if the next reader can re-derive it.
+      expect(entry.appliedAt).toMatch(/^(main|scene)\/.+\.(cpp|h):\d+(-\d+)?$/);
+      expect(entry.defaultAt).toMatch(/^scene\/main\/viewport\.h:\d+$/);
+    }
+  });
+
+  it('names the two Godot call sites the whole limitation rests on', () => {
+    const applied = ROOT_ONLY_VIEWPORT_PROPERTIES.map((e) => e.appliedAt);
+    const settings = ROOT_ONLY_VIEWPORT_PROPERTIES.map((e) => e.setting);
+    expect(settings).toContain('gui/common/snap_controls_to_pixels');
+    expect(settings).toContain('rendering/2d/snap/snap_2d_transforms_to_pixel');
+    expect(settings).toContain('rendering/2d/snap/snap_2d_vertices_to_pixel');
+    expect(applied.some((at) => at.startsWith('main/main.cpp:'))).toBe(true);
+    expect(applied.some((at) => at.startsWith('scene/main/scene_tree.cpp:'))).toBe(true);
+  });
+
+  /**
+   * The comparison reads BOTH viewports' live values instead of re-deriving
+   * Godot's defaults in GDScript, so it stays correct if a future engine starts
+   * propagating one of these. That only holds while the property NAMES are
+   * real: `Object.get()` on a name Godot does not expose returns null on both
+   * sides, the two compare equal, and the check reports "no divergence" — the
+   * exact silence this exists to end. So the generated script proves each name
+   * exists on both viewports before it compares anything.
+   */
+  it('asks the engine for every listed property by name', () => {
+    const script = bootstrap({ mode: '2d' });
+    for (const { property } of ROOT_ONLY_VIEWPORT_PROPERTIES) {
+      expect(script).toContain(`"${property}"`);
+    }
+  });
+
+  it('proves each name exists on both viewports before comparing values', () => {
+    const script = bootstrap({ mode: '2d' });
+    expect(script).toContain('get_property_list()');
+    expect(script).toContain('missing');
+  });
+});
+
+describe('rootOnlyDriftMessage', () => {
+  const drifted = {
+    drift: [
+      {
+        property: 'gui_snap_controls_to_pixels',
+        root: 'false',
+        nested: 'true',
+      },
+    ],
+    missing: [],
+  };
+
+  it('says nothing when the SubViewport agrees with the root window', () => {
+    expect(rootOnlyDriftMessage({ drift: [], missing: [] })).toBeNull();
+    expect(rootOnlyDriftMessage(null)).toBeNull();
+  });
+
+  it('names the setting, both values, and the mode that can answer', () => {
+    const message = rootOnlyDriftMessage(drifted);
+    expect(message).toContain('gui/common/snap_controls_to_pixels');
+    expect(message).toContain('gui_snap_controls_to_pixels');
+    expect(message).toContain('main/main.cpp:4577-4578');
+    expect(message).toContain('scene/main/viewport.h:267');
+    expect(message).toMatch(/root window false/);
+    expect(message).toMatch(/this capture true/);
+    expect(message).toContain('--mode 2d-root');
+  });
+
+  it('puts the setting and the remedy on the FIRST line, which is all a batch log keeps', () => {
+    // `scripts/compare-docs/*` log `error.message.split('\n')[0]` per scene and
+    // carry on, so a summary line that names neither is a dead end there.
+    const [first] = rootOnlyDriftMessage(drifted).split('\n');
+    expect(first).toContain('gui/common/snap_controls_to_pixels');
+    expect(first).toContain('--mode 2d-root');
+  });
+
+  it('reports a name the engine no longer exposes as a harness bug, not a clean run', () => {
+    const message = rootOnlyDriftMessage({ drift: [], missing: ['gui_snap_controls_to_pixels'] });
+    expect(message).toContain('gui_snap_controls_to_pixels');
+    expect(message).toContain('ADD_PROPERTY');
+    // A missing name means the comparison proved NOTHING, so it must not read
+    // as agreement.
+    expect(message).not.toMatch(/agrees/);
+  });
+});
+
+/**
+ * The two 2D arms. The SubViewport one is what makes the capture a fixed,
+ * project-viewport-sized rectangle independent of window management under
+ * xvfb, so it stays the default; `2d-root` is the second answer, for the
+ * settings nothing nested can observe.
+ */
+describe('--mode 2d-root renders the scene as the root window', () => {
+  it('adds the scene where SceneTree adds a main scene, not under a SubViewport', () => {
+    const script = bootstrap({ mode: '2d-root' });
+    expect(script).toContain('const ROOT_WINDOW := true');
+    expect(script).toContain('get_tree().root.add_child(target)');
+    expect(script).toContain('get_tree().root.get_texture()');
+  });
+
+  it('asks for the particle advance the moment the subtree enters the tree, as the other arms do', () => {
+    const lines = bootstrap({ mode: '2d-root', particles: 0.5 }).split('\n');
+    const at = lines.indexOf('\tget_tree().root.add_child(target)');
+    expect(at).toBeGreaterThan(-1);
+    expect(lines[at + 1]).toBe('\t_advance_particles(target)');
+  });
+
+  it('still reports itself as a 2D render, since that is how the pair is made', () => {
+    // `__ref_mode.txt` is what pairs this image with the previewer's 2D
+    // capture; both arms draw the same rectangle, so both say "2d".
+    const script = bootstrap({ mode: '2d-root' });
+    expect(script).toContain('var two_d := MODE == "2d" or MODE == "2d-root"');
+  });
+
+  it('leaves the SubViewport arm in place as the default', () => {
+    const script = bootstrap({ mode: '2d' });
+    expect(script).toContain('const ROOT_WINDOW := false');
+    expect(script).toContain('var vp := SubViewport.new()');
+    expect(script).toContain('_report_root_only_drift(vp)');
+  });
+
+  it('never reports drift from the root-window arm, which has nothing nested to compare', () => {
+    // The root window's values ARE the ones in force there, so a report would
+    // be comparing the capture against itself.
+    expect(bootstrap({ mode: '2d-root' })).toContain('const DRIFT_OUT := ""');
+    expect(bootstrap({ mode: '2d' })).not.toContain('const DRIFT_OUT := ""');
   });
 });
 
@@ -423,6 +611,61 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     const [line] = probePixels(buffer, [[150, 150]], { patch: 21 });
     expect(Math.min(...line.rgb)).toBeGreaterThan(150);
   }, 180_000);
+
+  /**
+   * THE ROOT-WINDOW ARM, measured on the one thing a nested capture cannot see.
+   *
+   * The scene draws the SAME four-deep chain of half-pixel Control offsets
+   * twice — once directly in whatever viewport the capture composes into, once
+   * inside a SubViewport of its own — under a project that turns
+   * `gui/common/snap_controls_to_pixels` off. Godot hands that setting to the
+   * root Window alone, so the direct arm is unsnapped only when it is the root
+   * window's own scene; the nested arm snaps either way and is the control that
+   * proves the mode did not simply shift the whole picture.
+   *
+   * The offsets accumulate 4 x 0.5 = 2 px, so the two placements are 2 px apart
+   * in each axis and both land on whole pixels — no rasteriser fill rule enters
+   * the reading. Probed at `patch: 1`, because a wider patch's median straddles
+   * exactly the 2 px being measured.
+   */
+  const snapScene = join(
+    REPO_ROOT,
+    'scenes/fixtures/subviewport-snap-off/unit-subviewport-snap-off.tscn'
+  );
+  const UNSNAPPED_ONLY = [102, 62];
+  const SNAPPED_ONLY = [142, 102];
+  const NESTED_ARM = [504, 364];
+  const GREEN = [0, 255, 0];
+  const BACKDROP = [0, 0, 102];
+
+  it('sees the root window’s opt-out, which the SubViewport capture cannot', async () => {
+    const out = join(await scratchDir(), 'root-window.png');
+    const { mode } = await renderReference({ scene: snapScene, out, mode: '2d-root' });
+    expect(mode).toBe('2d');
+    const buffer = await readFile(out);
+    const png = PNG.sync.read(buffer);
+    expect([png.width, png.height]).toEqual([CANVAS_2D_CAPTURE.width, CANVAS_2D_CAPTURE.height]);
+
+    const [unsnapped, snapped, nested] = probePixels(
+      buffer,
+      [UNSNAPPED_ONLY, SNAPPED_ONLY, NESTED_ARM],
+      { patch: 1 }
+    );
+    expect(unsnapped.rgb).toEqual(GREEN);
+    expect(snapped.rgb).toEqual(BACKDROP);
+    // The nested arm is inside a SubViewport in BOTH modes, so it must not move.
+    expect(nested.rgb).toEqual(GREEN);
+  }, 180_000);
+
+  it('refuses the SubViewport capture for that project instead of answering with the default', async () => {
+    const out = join(await scratchDir(), 'nested.png');
+    await expect(renderReference({ scene: snapScene, out, mode: '2d' })).rejects.toThrow(
+      /gui\/common\/snap_controls_to_pixels/
+    );
+    await expect(renderReference({ scene: snapScene, out, mode: '2d' })).rejects.toThrow(
+      /--mode 2d-root/
+    );
+  }, 360_000);
 
   it('lights the scene only because of the previews — --no-previews is runtime semantics', async () => {
     const [lit, unlit] = [await render(true), await render(false)];

@@ -41,11 +41,12 @@
 ; separate the two arms — which is why this fixture measures an image rather
 ; than a reported rect.
 ;
-; ARBITRATE THIS ONE BY RUNNING GODOT DIRECTLY, not through the 2D reference
-; capture. That capture renders the whole scene inside a SubViewport of the
+; ARBITRATE THIS ONE THROUGH `pnpm ref:godot --mode 2d-root`. The default
+; `--mode 2d` renders the whole scene inside a SubViewport of the
 ; project-viewport size, so under it BOTH arms are inside a sub-viewport and
 ; both read (104, 64) — the root window's opt-out is unreachable there by
-; construction, and the fixture's whole variable collapses.
+; construction, and the fixture's whole variable collapses. That mode now
+; refuses this project rather than answering it.
 ;
 ; The sub-viewport holds Controls only, so its surface is filled by the
 ; Control-raster pass.

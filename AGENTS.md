@@ -35,6 +35,15 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
   than replaces — so the caller names the instant and both sides can be measured at it.
   Default 0; never derive it from the scene, and note it is one number for the whole
   scene while the previewer's substituted window is per emitter.
+  A 2D scene renders inside a SubViewport, which owns its rectangle whatever the window
+  does — but Godot hands some viewport settings to `SceneTree`'s root Window and to
+  nothing else (`gui/common/snap_controls_to_pixels`, the `rendering/2d/snap/*` pair,
+  the canvas-texture filter/repeat defaults, `msaa_2d`, …), so nothing nested can observe
+  them. `--mode 2d-root` draws the SAME rectangle AS the root window for those; the
+  SubViewport arm stays the default and now REFUSES, naming the setting and both values,
+  rather than answering from the class default. `ROOT_ONLY_VIEWPORT_PROPERTIES` in
+  `scripts/godot-ref/run.mjs` is the list, each entry citing the Godot line that applies
+  it — extend it there when a new one turns up.
 
 ## Vertical slices
 
