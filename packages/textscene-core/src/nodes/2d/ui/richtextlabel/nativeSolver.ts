@@ -19,13 +19,14 @@ import {
   AutowrapMode,
   clampAutowrapMode,
   shapeText,
+  shapedTextSizeWidthPx,
   soloLineLayout,
   type GlyphPlacement,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
-import { getAscentPx, getUnderlinePositionPx, getUnderlineThicknessPx } from '../../../../r3f/controls/native/text/openSansMetrics';
-import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { getUnderlinePositionPx, getUnderlineThicknessPx } from '../../../../r3f/controls/native/text/openSansMetrics';
+import { getFontAscentPx, getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics, resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ControlColor } from '../control/types';
 import type { RichTextLabelProperties } from './types';
@@ -142,7 +143,19 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
     fontSizePxAt: fontSizePxAtFromRuns(runs),
     fontMetrics,
   });
-  const measured = { x: layout.widthPx, y: layout.heightPx };
+  // `get_content_height` sums each PARAGRAPH's `text_buf->get_size().y`, itself
+  // the sum of its own lines' ascent+descent — never a count times one pitch,
+  // which a `[b]`/`[i]` span at a size of its own would make wrong by a pixel
+  // per size change (`richTextLineMetrics`).
+  const lines = richTextLineMetrics(runs, layout);
+  const lastLine = lines[lines.length - 1];
+  const measured = {
+    // `get_content_width` maxes `l.text_buf->get_size().x`, itself a max over
+    // `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`)
+    // — the CEILED extent, not the raw pen advance.
+    x: shapedTextSizeWidthPx(layout.widthPx),
+    y: lastLine ? lastLine.topPx + lastLine.ascentPx + lastLine.descentPx : 0,
+  };
 
   if (wraps) {
     return { x: 1, y: measured.y };
@@ -340,8 +353,10 @@ export function fontSizePxAtFromRuns(styledRuns: readonly StyledTextRun[]): (cha
  * ref:godot` / `pnpm ref:ours`, a horizontal transect through the 'l' stem —
  * a single vertical stroke, so its half-max-crossing width is the stroke
  * thickness directly, uncontaminated by any neighbouring glyph): Godot's own
- * embolden=1.2 renders that stem 3.04px wide (half-max crossings at x≈21.7
- * and x≈24.8, row y=7 of the fixture's capture). The former value here,
+ * embolden=1.2 renders that stem 3.04px wide (half-max crossings at x≈22.2
+ * and x≈25.3, read on any row strictly inside the stem — Godot's spans rows
+ * 6..19 of that capture and this engine's 7..20, so no single row number
+ * addresses both). The former value here,
  * 0.08 (an unmeasured placeholder), rendered only 2.15px — visibly thinner.
  * 0.35 renders 3.01px, matching to within the measurement's own row-to-row
  * noise (a single scanline's sub-pixel crossings), without collapsing 'o's
@@ -373,18 +388,20 @@ export const RICH_TEXT_LABEL_UNDERLINE_ALPHA = 0.5;
 /** One (line, contiguous-style-run) pair, ready for its own `<TextRun>`. */
 export interface RichTextRunPlacement {
   lineIndex: number;
+  /** This line's own box top, px, from the paragraph's top — `RichTextLineMetrics.topPx`, NOT `lineIndex * layout.linePitchPx`: lines carrying different font sizes are different heights. */
+  lineTopPx: number;
   bold: boolean;
   italic: boolean;
   underline: boolean;
   color: ControlColor;
-  /** This run's OWN resolved font size, px (`StyledTextRun.fontSizePx`) — the scale `<TextRun>` and `underlineRectPx` must use for THIS placement, which can differ from the paragraph's `normal_font_size` (`resolveRunFontSizePx`'s own doc). */
+  /** This run's OWN resolved font size, px (`StyledTextRun.fontSizePx`) — the scale `<TextRun>` draws THIS placement's glyph geometry at, which can differ from the paragraph's `normal_font_size` (`resolveRunFontSizePx`'s own doc). The BASELINE those glyphs sit on is the line's, not this size's: `layout.baselineOffsetPx`. */
   fontSizePx: number;
   /** A single-line `TextLayoutResult` wrapper holding ONLY this run's glyphs from that line — `glyph.x` values are untouched (already this LINE's own pen-relative x), so this needs no rebasing, only the line's own wrapping `<group>` position. */
   layout: TextLayoutResult;
 }
 
 /**
- * Echoes the PARENT layout's own `fontMetrics`/`baselineOffsetPx` rather than
+ * Echoes the PARENT layout's own `fontMetrics`/`linePitchPx` rather than
  * leaving them unset — see `textLayout.ts`'s `soloLineLayout`, the
  * SAME hazard: `TextRun` dispatches MSDF-atlas vs. canvas-rasterised painting
  * off `layout.fontMetrics.kind`, so an omitted value here would silently
@@ -392,38 +409,166 @@ export interface RichTextRunPlacement {
  * (the ALREADY-SHAPED paragraph this run's glyphs were sliced from) was
  * actually shaped against.
  *
- * `baselineOffsetPx`, unlike `fontMetrics`/`linePitchPx`, is NOT inherited
- * from the parent paragraph layout — it is recomputed at `runFontSizePx`, THIS
- * run's own resolved size (`RichTextRunPlacement.fontSizePx`, which a `[b]`/
- * `[i]` run's `resolveRunFontSizePx` can leave DIFFERENT from the paragraph's
- * `normal_font_size` — that function's own doc). `<TextRun>` is handed this
- * placement's `fontSizePx`, not the paragraph's, for the atlas geometry AND
- * the canvas raster's `baselineY` alike (`buildGlyphQuadArrays`/
- * `paintSceneFontCanvas` both key off `layout.baselineOffsetPx` directly, with
- * no independent per-call fontSizePx re-derivation of their own) — inheriting
- * the paragraph's ascent here would paint every glyph in a differently-sized
- * run at the WRONG baseline y (a whole ascent-delta vertical miss on the
- * canvas path, which has no ascent bake-time correction of any kind to
- * absorb it).
+ * `baselineOffsetPx` is neither inherited from the paragraph nor re-derived
+ * from this run's own size: it is the LINE's ascent (`RichTextLineMetrics`),
+ * the MAX over the fonts that actually land on that line. Godot applies it
+ * ONCE per line — `rich_text_label.cpp:1055`'s `off.y += l_ascent`, with
+ * `off_step.y` never varying across the glyph loop that follows — so a 16px
+ * `[b]` word and a 15px normal word on one line share one baseline and only
+ * their glyph SIZES differ. `<TextRun>` and `paintSceneFontCanvas` both key
+ * baseline placement off `layout.baselineOffsetPx` directly (with no
+ * fontSizePx re-derivation of their own), so this field is the only place
+ * that decision can be made.
  */
 function soloRunLayout(
   text: string,
   glyphs: GlyphPlacement[],
   parentLayout: TextLayoutResult,
-  runFontSizePx: number
+  lineAscentPx: number
 ): TextLayoutResult {
   const widthPx = glyphs.length ? glyphs[glyphs.length - 1]!.x + glyphs[glyphs.length - 1]!.advance - glyphs[0]!.x : 0;
-  return soloLineLayout(
-    { text, glyphs, widthPx },
-    parentLayout,
-    getFontAscentPx(parentLayout.fontMetrics, runFontSizePx)
-  );
+  return soloLineLayout({ text, glyphs, widthPx }, parentLayout, lineAscentPx);
+}
+
+/**
+ * Descent at `fontSizePx`, px — `getFontLinePitchPx` minus `getFontAscentPx`
+ * at zero spacing, rather than a local ceiling of the design-unit descent:
+ * `fontMetrics.ts` owns the independent-ceiling quantization rule
+ * (`text_server_adv.cpp:1515-1516`) and exposes no descent getter of its own,
+ * and a second reading of that rule here is exactly the drift that module's
+ * doc exists to prevent.
+ */
+function fontDescentPx(metrics: FontMetrics, fontSizePx: number): number {
+  return getFontLinePitchPx(metrics, fontSizePx, 0) - getFontAscentPx(metrics, fontSizePx);
+}
+
+/** One wrapped line's own vertical metrics — Godot recomputes these PER LINE (`text_server_adv.cpp:5486-5487`), unlike the underline's (`richTextUnderlineMetrics`). */
+export interface RichTextLineMetrics {
+  /** This line's box top, px, from the paragraph's top — the running sum of every earlier line's own `ascentPx + descentPx`. */
+  topPx: number;
+  /** Baseline offset from `topPx` — MAX `getFontAscentPx` over the fonts on THIS line. */
+  ascentPx: number;
+  /** MAX descent over the fonts on THIS line. */
+  descentPx: number;
+}
+
+/**
+ * Per-line ascent/descent/top for an already-shaped paragraph, from the sizes
+ * of the runs whose glyphs actually land on each line.
+ *
+ * `_shape_substr` (`modules/text_server_adv/text_server_adv.cpp:5486-5487`)
+ * rebuilds a wrapped line's `ascent`/`descent` as a MAX over the fonts of THAT
+ * line's own glyphs, and `rich_text_label.cpp:1055`/`:1589` step `off.y` by
+ * `l_ascent` before the line and `l_descent` after it. A paragraph mixing
+ * `normal_font_size` with a differently-sized `[b]`/`[i]` span therefore has
+ * lines of DIFFERENT heights, and every line after the first tall one sits
+ * lower than one paragraph-wide pitch would put it — a full pixel per size
+ * change, cumulative down the paragraph.
+ *
+ * `theme_cache.line_separation` adds nothing between lines here
+ * (`default_theme.cpp:1217`: RichTextLabel's own default is 0, unlike Label's
+ * 3), so a line's top is the bare running sum of the earlier lines' heights.
+ *
+ * A line with no attributed run at all — a blank line between two hard breaks,
+ * whose only character is the break itself — keeps the PARAGRAPH's own
+ * ascent/descent (`layout.baselineOffsetPx` and the rest of
+ * `layout.linePitchPx`): Godot shapes that line's newline against the
+ * paragraph's own font, so its height is that font's, never zero.
+ */
+export function richTextLineMetrics(
+  styledRuns: readonly StyledTextRun[],
+  layout: TextLayoutResult
+): RichTextLineMetrics[] {
+  return lineMetricsOf(attributeRunsToLines(styledRuns, layout), styledRuns, layout);
+}
+
+function lineMetricsOf(
+  perLine: readonly RunLineSegment[][],
+  styledRuns: readonly StyledTextRun[],
+  layout: TextLayoutResult
+): RichTextLineMetrics[] {
+  const paragraphAscentPx = layout.baselineOffsetPx;
+  const paragraphDescentPx = layout.linePitchPx - layout.baselineOffsetPx;
+
+  let topPx = 0;
+  return perLine.map((segments) => {
+    let ascentPx = 0;
+    let descentPx = 0;
+    for (const segment of segments) {
+      const { fontSizePx } = styledRuns[segment.runIndex]!;
+      ascentPx = Math.max(ascentPx, getFontAscentPx(layout.fontMetrics, fontSizePx));
+      descentPx = Math.max(descentPx, fontDescentPx(layout.fontMetrics, fontSizePx));
+    }
+    if (segments.length === 0) {
+      ascentPx = paragraphAscentPx;
+      descentPx = paragraphDescentPx;
+    }
+    const metrics = { topPx, ascentPx, descentPx };
+    topPx += ascentPx + descentPx;
+    return metrics;
+  });
+}
+
+/** The `[u]`/`[s]` stroke geometry a whole PARAGRAPH draws with — `sd->upos`/`sd->uthk`, before `rich_text_label.cpp:1243`'s 1px floor. */
+export interface RichTextUnderlineMetrics {
+  /** Downward offset from the line's baseline to the stroke's CENTRE, px (`shaped_text_get_underline_position`). */
+  positionPx: number;
+  /** The font's own stroke thickness, px, UNFLOORED (`shaped_text_get_underline_thickness`) — `underlineRectPx` applies `MAX(1.0, uth)`, exactly where Godot does. */
+  thicknessPx: number;
+}
+
+/**
+ * The paragraph-wide underline position/thickness every `[u]` run in it draws
+ * with — MAX over EVERY run's font size, not the underlined run's own.
+ *
+ * The asymmetry with `richTextLineMetrics` is Godot's, and it is easy to get
+ * backwards: `_shape_substr` (`modules/text_server_adv/text_server_adv.cpp:
+ * 5310-5311`) copies the parent paragraph's `upos`/`uthk` into each wrapped
+ * line VERBATIM, while recomputing that line's `ascent`/`descent` from its own
+ * glyphs a hundred lines further down. So `rich_text_label.cpp:1053-1054`'s
+ * `upos`/`uth`, read off the LINE's rid, are really the paragraph's — a
+ * paragraph containing one 16px `[b]` word draws every underline in it,
+ * including a 15px one on a line with no 16px glyph, at the 16px position.
+ *
+ * Both are monotonic in font size (a plain scale of one `post` table), so the
+ * MAX is taken over the runs' scaled values directly, which is what
+ * `text_server_adv.cpp:7174-7175` accumulates glyph by glyph.
+ *
+ * Deliberately stays on the vendored Open Sans's OWN `post` table
+ * (`openSansMetrics.ts`) rather than the resolved `FontMetrics` a scene font
+ * would carry: `fontMetrics.ts`'s contract exposes no underline-position/
+ * thickness fields at all (only ascent/descent/advances — a shaper's needs,
+ * not a stroke-drawer's), and there is no formula deriving one font's
+ * underline geometry from another's. A scene-font RichTextLabel's `[u]`
+ * stroke therefore keeps Open Sans's proportions — a documented,
+ * pre-existing-class residual (the same one `TextRun.tsx`'s own doc already
+ * carries for outline/synthesized-bold on the canvas path: an MSDF-only
+ * feature approximated rather than ported, never silently dropped).
+ */
+export function richTextUnderlineMetrics(styledRuns: readonly StyledTextRun[]): RichTextUnderlineMetrics {
+  let positionPx = 0;
+  let thicknessPx = 0;
+  for (const run of styledRuns) {
+    positionPx = Math.max(positionPx, getUnderlinePositionPx(run.fontSizePx));
+    thicknessPx = Math.max(thicknessPx, getUnderlineThicknessPx(run.fontSizePx));
+  }
+  return { positionPx, thicknessPx };
+}
+
+/** One line's worth of one style run — the attribution `layoutRichTextRuns` turns into a placement and `richTextLineMetrics` reads a font size out of. */
+interface RunLineSegment {
+  /** Index into `styledRuns`. */
+  runIndex: number;
+  /** The plain (tag-stripped) text these glyphs came from. */
+  text: string;
+  /** This run's own glyphs from that line, `x` values untouched (already the LINE's pen-relative x). */
+  glyphs: GlyphPlacement[];
 }
 
 /**
  * Attributes `layout`'s glyphs (already shaped from the CONCATENATION of every
  * `styledRuns[].text`, in order) back to their originating run, splitting each
- * line into one placement per contiguous style-run it contains.
+ * line into one segment per contiguous style-run it contains.
  *
  * Godot never needs this: its own `RichTextLabel` shapes styled runs
  * natively (per-`Item` font/color, `_shape_line`) and never has to reverse
@@ -433,6 +578,11 @@ function soloRunLayout(
  * `[b]`/`[i]`/`[color]` boundary (the line-break decision needs the WHOLE
  * paragraph's width, not each run measured alone) is to shape once, then
  * split back up — this function is that split, not a Godot port.
+ *
+ * It is also what makes a line's OWN font sizes knowable at all: which sizes
+ * land on a given line is an output of wrapping, not of the markup, so
+ * `richTextLineMetrics` can only take its per-line MAX ascent/descent after
+ * this pass has run.
  *
  * The split walks a cursor through the plain (tag-stripped) text character by
  * character alongside each line's own glyphs: wherever a glyph's `.char`
@@ -445,20 +595,17 @@ function soloRunLayout(
  * from an earlier, coincidentally-identical piece of text elsewhere in the
  * paragraph.
  */
-export function layoutRichTextRuns(
-  styledRuns: readonly StyledTextRun[],
-  layout: TextLayoutResult
-): RichTextRunPlacement[] {
+function attributeRunsToLines(styledRuns: readonly StyledTextRun[], layout: TextLayoutResult): RunLineSegment[][] {
   const plainText = styledRuns.map((r) => r.text).join('');
   const charRunIndex: number[] = [];
   styledRuns.forEach((run, runIdx) => {
     for (let i = 0; i < run.text.length; i++) charRunIndex.push(runIdx);
   });
 
-  const placements: RichTextRunPlacement[] = [];
   let cursor = 0;
 
-  layout.lines.forEach((line, lineIndex) => {
+  return layout.lines.map((line) => {
+    const segments: RunLineSegment[] = [];
     let i = 0;
     while (i < line.glyphs.length) {
       while (cursor < plainText.length && plainText[cursor] !== line.glyphs[i]!.char) {
@@ -476,21 +623,49 @@ export function layoutRichTextRuns(
         cursor++;
         i++;
       }
-      const run = styledRuns[runIdx];
       // No run, or no glyph consumed (the cursor ran off the end of the plain
       // text while glyphs remain — only reachable if `layout` was shaped from a
       // different string than `styledRuns` concatenates). Both mean this pass
       // cannot advance, and the enclosing `while` has no other exit: without
       // this it spins forever rather than dropping the unattributable tail.
-      if (!run || i === start) break;
+      if (!styledRuns[runIdx] || i === start) break;
+      segments.push({
+        runIndex: runIdx,
+        text: plainText.slice(textStart, cursor),
+        glyphs: line.glyphs.slice(start, i),
+      });
+    }
+    return segments;
+  });
+}
+
+/**
+ * One `<TextRun>`-ready placement per (line, contiguous-style-run) pair —
+ * `attributeRunsToLines`'s split, carrying each line's own top and baseline
+ * from `richTextLineMetrics` so a caller never has to re-derive either from a
+ * paragraph-wide pitch.
+ */
+export function layoutRichTextRuns(
+  styledRuns: readonly StyledTextRun[],
+  layout: TextLayoutResult
+): RichTextRunPlacement[] {
+  const perLine = attributeRunsToLines(styledRuns, layout);
+  const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
+
+  const placements: RichTextRunPlacement[] = [];
+  perLine.forEach((segments, lineIndex) => {
+    const { topPx, ascentPx } = lineMetrics[lineIndex]!;
+    for (const segment of segments) {
+      const run = styledRuns[segment.runIndex]!;
       placements.push({
         lineIndex,
+        lineTopPx: topPx,
         bold: run.bold,
         italic: run.italic,
         underline: run.underline,
         color: run.color,
         fontSizePx: run.fontSizePx,
-        layout: soloRunLayout(plainText.slice(textStart, cursor), line.glyphs.slice(start, i), layout, run.fontSizePx),
+        layout: soloRunLayout(segment.text, segment.glyphs, layout, ascentPx),
       });
     }
   });
@@ -498,55 +673,85 @@ export function layoutRichTextRuns(
   return placements;
 }
 
-/** A `[u]`-styled run's underline stroke rect, target-font-size px, in the SAME pen-space `TextRun`'s glyph geometry uses (Y-down, line-top-relative). */
+/** A `[u]`-styled run's underline stroke rect, px, in the SAME pen-space `TextRun`'s glyph geometry uses (Y-down, line-top-relative) — every edge on a whole pixel (`underlineRectPx`). */
 export interface UnderlineRectPx {
-  /** Left edge — the run's first glyph's own pen `x` (no left-side-bearing correction; matches `rich_text_label.cpp:1216-1244`'s `ul_start` sitting at the glyph's pen position, not its ink). */
+  /** Left edge — the first pixel column the run's first glyph's own pen `x` covers (no left-side-bearing correction; matches `rich_text_label.cpp:1216-1244`'s `ul_start` sitting at the glyph's pen position, not its ink). */
   x0: number;
-  /** Right edge — the run's last glyph's pen `x` + its own advance. */
+  /** Right edge, exclusive — one past the last pixel column the run's last glyph's pen `x` + advance covers. */
   x1: number;
-  /** Top edge of the stroke rect (centered on the underline y, `heightPx` tall). */
+  /** Top edge of the stroke rect — the first pixel row Godot's own quad covers. */
   topPx: number;
+  /** How many whole rows that quad covers — 1 for any stroke at its `MAX(1.0, uth)` floor. */
   heightPx: number;
 }
 
 /**
- * `rich_text_label.cpp:1049` (`off.y += l_ascent`) puts a line's BASELINE at
- * `getAscentPx(fontSizePx)` below its own top — the same reference point
- * `TextRun`'s italic shear now pivots at. `:1242-1244`'s `y_off = upos` (this
- * engine's `getUnderlinePositionPx`) offsets DOWN from that baseline to the
- * stroke's own y, and `:1243`'s `MAX(1.0, uth * base_scale)` floors the
- * stroke to at least 1px (`base_scale` — a UI content-scale factor this
- * renderer does not thread through text metrics — is always its own default
- * of 1 here, so the max only ever fires on the font's own sub-1px thickness).
- * `draw_line`'s own width is CENTERED on the from/to segment, hence the
- * `heightPx / 2` split either side of the stroke's y.
+ * The whole pixels an axis-aligned edge pair `[from, to)` covers when the
+ * rasterizer takes ONE sample at each pixel's centre and keeps no partial
+ * coverage — `[first, last]` inclusive, `last >= first` for any span at least
+ * one pixel long. A pixel `n` is in iff `from <= n + 0.5 < to`, the half-open
+ * top-left fill rule.
+ */
+function coveredPixelRange(from: number, to: number): { first: number; last: number } {
+  return { first: Math.ceil(from - 0.5), last: Math.ceil(to - 0.5) - 1 };
+}
+
+/**
+ * A `[u]` run's stroke rect, in the SAME pen-space `TextRun`'s glyph geometry
+ * uses (Y-down, line-top-relative), snapped to the whole pixels Godot's own
+ * quad covers.
+ *
+ * `rich_text_label.cpp:1055` (`off.y += l_ascent`) puts a line's BASELINE at
+ * `lineAscentPx` below its own top — the same reference point `TextRun`'s
+ * italic shear pivots at. `:1242-1244`'s `y_off = upos` offsets DOWN from that
+ * baseline to the stroke's own y, and `:1243`'s `MAX(1.0, uth * base_scale)`
+ * floors the stroke to at least 1px (`base_scale` — a UI content-scale factor
+ * this renderer does not thread through text metrics — is always its own
+ * default of 1 here, so the max only ever fires on the font's own sub-1px
+ * thickness). `draw_line`'s width is CENTERED on the from/to segment, hence
+ * the half-thickness split either side of the stroke's y.
+ *
+ * That leaves the stroke's edges on a FRACTION — a 1px rule centred 0.78 below
+ * an integer baseline spans y+0.28..y+1.28. Godot draws it as a plain
+ * untextured, un-antialiased quad (`canvas_item_add_line` builds one from the
+ * segment and its width) onto a 2D canvas with no MSAA, so the GPU's one
+ * sample per pixel centre turns those fractional edges into exactly ONE fully
+ * covered row. This renderer's canvas is multisampled, where the same
+ * fractional quad instead feathers across two rows at partial coverage — half
+ * a rule twice over, visibly softer than a hair-line should be at any size.
+ * Rounding the rect out to `coveredPixelRange` reproduces the sampling rather
+ * than the geometry, which is the thing that is actually visible.
+ *
+ * The snap is only equivalent to snapping in canvas space because everything
+ * between this rect and the canvas is whole-pixel: the Control's own drawn
+ * origin (`controlPixelSnap.ts`, on by default) and every line top above this
+ * one (`richTextLineMetrics` sums ceiling-quantized ascents and descents, and
+ * RichTextLabel's `line_separation` is an integer 0). A fractional origin
+ * would put the rule back on a fraction, one whole row away from the glyphs it
+ * belongs to.
  *
  * Returns `null` for an empty glyph list — nothing to underline, same as
  * `layoutRichTextRuns` never emitting a placement for a run with no glyphs.
- *
- * Deliberately stays on the vendored Open Sans's OWN ascent/underline-position/
- * thickness (`openSansMetrics.ts`) rather than the resolved `FontMetrics` a
- * scene font would carry: `fontMetrics.ts`'s `FontMetrics` contract exposes no
- * underline-position/thickness fields at all (only ascent/descent/advances —
- * a shaper's needs, not a stroke-drawer's), and there is no formula deriving
- * one font's underline geometry from another's. A scene-font RichTextLabel's
- * `[u]` stroke therefore keeps Open Sans's proportions — a documented,
- * pre-existing-class residual (the same one `TextRun.tsx`'s own doc already
- * carries for outline/synthesized-bold on the canvas path: an MSDF-only
- * feature approximated rather than ported, never silently dropped).
  */
-export function underlineRectPx(glyphs: readonly GlyphPlacement[], fontSizePx: number): UnderlineRectPx | null {
+export function underlineRectPx(
+  glyphs: readonly GlyphPlacement[],
+  lineAscentPx: number,
+  metrics: RichTextUnderlineMetrics
+): UnderlineRectPx | null {
   if (glyphs.length === 0) return null;
 
   const first = glyphs[0]!;
   const last = glyphs[glyphs.length - 1]!;
-  const centerY = getAscentPx(fontSizePx) + getUnderlinePositionPx(fontSizePx);
-  const heightPx = Math.max(1, getUnderlineThicknessPx(fontSizePx));
+  const centerY = lineAscentPx + metrics.positionPx;
+  const widthPx = Math.max(1, metrics.thicknessPx);
+
+  const rows = coveredPixelRange(centerY - widthPx / 2, centerY + widthPx / 2);
+  const columns = coveredPixelRange(first.x, last.x + last.advance);
 
   return {
-    x0: first.x,
-    x1: last.x + last.advance,
-    topPx: centerY - heightPx / 2,
-    heightPx,
+    x0: columns.first,
+    x1: columns.last + 1,
+    topPx: rows.first,
+    heightPx: rows.last + 1 - rows.first,
   };
 }

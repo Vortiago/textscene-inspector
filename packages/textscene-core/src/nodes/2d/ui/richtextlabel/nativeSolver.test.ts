@@ -36,6 +36,8 @@ import {
   styledTextRuns,
   fontSizePxAtFromRuns,
   layoutRichTextRuns,
+  richTextLineMetrics,
+  richTextUnderlineMetrics,
   underlineRectPx,
   BOLD_DISTANCE_BIAS,
   ITALIC_SKEW,
@@ -71,6 +73,10 @@ function ctx(withMeasurer = true): SolveContext {
 // two only coincided at the OLD atlas-bake-resolution-42 xadvance (both
 // rounded to the integer 28), not a fact about the font.
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
+// The SHAPED size of 'AB' — `TS->shaped_text_get_size(...).x` ceils the pen
+// advance to a whole pixel (`text_server_adv.cpp:7524-7537`), and every
+// minimum size below is built from that, not from the fractional sum.
+const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
 const OWN_LINE_PITCH = 23; // getLinePitchPx(16, 0): ceil(2189*16/2048) + ceil(600*16/2048) + 0.
 
 describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
@@ -99,14 +105,14 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
 
   it('fit_content + autowrap OFF: width is the natural line width, height is ONE line at 23px (not 26 — no line_separation)', () => {
     const result = size(richTextLabelMinimumSize(node({ fitContent: true, text: 'AB', autowrapMode: 0 }), ctx()));
-    expect(result.x).toBeCloseTo(AB_WIDTH, 6);
+    expect(result.x).toBeCloseTo(AB_SHAPED_WIDTH, 6);
     expect(result.y).toBe(OWN_LINE_PITCH);
   });
 
   it('fit_content + autowrap OFF + explicit hard break: height is N*23 with NO trailing subtraction (2*23=46, not Label\'s 2*26-3=49)', () => {
     const result = size(richTextLabelMinimumSize(node({ fitContent: true, text: 'A\nAB', autowrapMode: 0 }), ctx()));
     expect(result.y).toBe(2 * OWN_LINE_PITCH);
-    expect(result.x).toBeCloseTo(AB_WIDTH, 6);
+    expect(result.x).toBeCloseTo(AB_SHAPED_WIDTH, 6);
   });
 
   it('fit_content + default autowrap (WORD_SMART): width still floors to 1 (Size2(1, height) substitution), height still the natural single-line 23px', () => {
@@ -168,8 +174,9 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
     );
     // 'A' hmtx advance width 1354 design units, unitsPerEm 2048. Plain 'A' at
     // 32px + bold 'A' at the 16px fallback: 1354*32/2048 + 1354*16/2048 =
-    // 21.15625 + 10.578125 = 31.734375.
-    expect(result.x).toBeCloseTo(31.734375, 10);
+    // 21.15625 + 10.578125 = 31.734375 of pen advance, reported as the ceiled
+    // shaped size 32 (`text_server_adv.cpp:7524-7537`).
+    expect(result.x).toBe(Math.ceil(31.734375));
   });
 
   it('a [b] span whose bold_font_size ALSO matches normal_font_size measures as if uniformly shaped (the positive control this fix closes)', () => {
@@ -185,8 +192,15 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
         ctx()
       )
     );
-    // Both 'A's now shape at 32px: 2 * 1354*32/2048.
-    expect(result.x).toBeCloseTo(2 * ((1354 * 32) / 2048), 10);
+    // Both 'A's now shape at 32px. 32 is above
+    // SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so each advance is rounded to a
+    // whole pixel with the remainder carried (text_server_adv.cpp:7079-7084):
+    // 'A' quantizes to 1354/64 = 21.15625, giving 21 then
+    // round(21.15625 + 0.15625) = 21, so 42 of pen advance — NOT the 42.3125
+    // a continuous scale would produce. Real Godot 4.6.3 agrees:
+    // `ThemeDB.fallback_font.get_string_size("AA", HORIZONTAL_ALIGNMENT_LEFT,
+    // -1, 32).x` is 42.
+    expect(result.x).toBe(42);
   });
 });
 
@@ -562,6 +576,22 @@ describe('layoutRichTextRuns', () => {
     return shapeText(text, { fontSizePx: FONT_SIZE, boxWidthPx, autowrapMode, lineSpacingPx: 0 });
   }
 
+  /** `shape`, but with each character shaped at ITS run's own size — the only way a wrapped line can end up carrying a font size the paragraph's own key never mentions. */
+  function shapeMixed(
+    text: string,
+    runs: Parameters<typeof fontSizePxAtFromRuns>[0],
+    boxWidthPx = 0,
+    autowrapMode = AutowrapMode.OFF
+  ): TextLayoutResult {
+    return shapeText(text, {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx,
+      autowrapMode,
+      lineSpacingPx: 0,
+      fontSizePxAt: fontSizePxAtFromRuns(runs),
+    });
+  }
+
   it('returns no placements for empty text (one line, zero glyphs, nothing to attribute)', () => {
     expect(layoutRichTextRuns([], shape(''))).toEqual([]);
   });
@@ -648,49 +678,158 @@ describe('layoutRichTextRuns', () => {
     expect(placements[0]!.layout.linePitchPx).toBe(layout.linePitchPx);
   });
 
-  it("(regression) a run's own solo layout recomputes baselineOffsetPx at THAT RUN's own fontSizePx, not the paragraph's — TextRun/paintSceneFontCanvas key baseline placement off this field directly, so inheriting the paragraph's would misplace every glyph of a differently-sized [b]/[i] run", () => {
-    // 'A' at both sizes so the two runs shape at the SAME paragraph pitch
-    // (`shape()` always uses FONT_SIZE=16) while each placement's OWN
-    // baselineOffsetPx must reflect ITS run's fontSizePx (18 vs 16) —
-    // `resolveRunFontSizePx`'s own doc: a [b] span shapes at its OWN
-    // theme font-size key, independent of normal_font_size.
+  it("anchors EVERY run on a line at that LINE's own baseline — the MAX ascent over the fonts on it, not each run's own — so a 16px run and an 18px run on one line share one baseline", () => {
+    // `text_server_adv.cpp:5486` (`_shape_substr`):
+    // `p_new_sd->ascent = MAX(p_new_sd->ascent, MAX(cached_font_ascent + ..., -gl.y_off))`
+    // over the LINE's own glyphs, and `rich_text_label.cpp:1055`'s
+    // `off.y += l_ascent` is applied once for the whole line — `off_step.y`
+    // never varies per glyph, so both runs draw from the same baseline.
     const runs = [
       { text: 'plain', bold: false, italic: false, underline: false, color: WHITE, fontSizePx: 18 },
       { text: 'BOLD', bold: true, italic: false, underline: false, color: WHITE, fontSizePx: 16 },
     ];
     const layout = shape('plainBOLD');
     const placements = layoutRichTextRuns(runs, layout);
-    expect(placements[0]!.layout.baselineOffsetPx).toBe(getFontAscentPx(OPEN_SANS_FONT_METRICS, 18));
-    expect(placements[1]!.layout.baselineOffsetPx).toBe(getFontAscentPx(OPEN_SANS_FONT_METRICS, 16));
-    expect(placements[0]!.layout.baselineOffsetPx).not.toBe(placements[1]!.layout.baselineOffsetPx);
+    const lineAscent = getFontAscentPx(OPEN_SANS_FONT_METRICS, 18); // 20 — the larger of the two.
+    expect(placements[0]!.layout.baselineOffsetPx).toBe(lineAscent);
+    expect(placements[1]!.layout.baselineOffsetPx).toBe(lineAscent);
+    expect(getFontAscentPx(OPEN_SANS_FONT_METRICS, 16)).not.toBe(lineAscent);
+  });
+
+  it("steps each line's own top by THAT line's ascent+descent, not one paragraph-wide pitch — a line carrying an 18px run is 26 tall where a 16px-only line is 23", () => {
+    // 'AAAA' at 18 wraps onto its own line, 'BBBB' at 16 onto the next
+    // (same break-point shape as the wrap fixtures above).
+    const runs = [
+      { text: 'AAAA ', bold: false, italic: false, underline: false, color: WHITE, fontSizePx: 18 },
+      { text: 'BBBB', bold: false, italic: false, underline: false, color: WHITE, fontSizePx: 16 },
+    ];
+    const layout = shapeMixed('AAAA BBBB', runs, 60, AutowrapMode.WORD);
+    expect(layout.lines).toHaveLength(2);
+
+    // ceil(2189*18/2048)=20, ceil(600*18/2048)=6; ceil(2189*16/2048)=18, ceil(600*16/2048)=5.
+    expect(richTextLineMetrics(runs, layout)).toEqual([
+      { topPx: 0, ascentPx: 20, descentPx: 6 },
+      { topPx: 26, ascentPx: 18, descentPx: 5 },
+    ]);
+
+    const placements = layoutRichTextRuns(runs, layout);
+    expect(placements.map((p) => p.lineTopPx)).toEqual([0, 26]);
+    expect(placements[0]!.layout.baselineOffsetPx).toBe(20);
+    expect(placements[1]!.layout.baselineOffsetPx).toBe(18);
+  });
+});
+
+describe('richTextUnderlineMetrics', () => {
+  const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+
+  it("is the MAX over EVERY run in the paragraph, not the underlined run's own size — a line's shaped substring inherits the paragraph's upos/uthk verbatim (text_server_adv.cpp:5310-5311), unlike ascent/descent, which ARE recomputed per line", () => {
+    const runs = [
+      { text: 'big', bold: true, italic: false, underline: false, color: WHITE, fontSizePx: 18 },
+      { text: 'small', bold: false, italic: false, underline: true, color: WHITE, fontSizePx: 16 },
+    ];
+    // -(-100 - 50/2)*18/2048 and 50*18/2048 — the 18px run's, though it is the
+    // 16px run that carries [u]. The -thickness/2 term is FreeType's own
+    // top-edge-to-centre conversion (sfobjs.c:1424-1425).
+    expect(richTextUnderlineMetrics(runs)).toEqual({
+      positionPx: 1.0986328125,
+      thicknessPx: 0.439453125,
+    });
+  });
+
+  it('is zero for a run-less paragraph (nothing shaped, nothing to take a MAX over — text_server_adv.cpp:4461-4462 initialises both to 0)', () => {
+    expect(richTextUnderlineMetrics([])).toEqual({ positionPx: 0, thicknessPx: 0 });
   });
 });
 
 describe('underlineRectPx', () => {
-  const FONT_SIZE_PX = 18;
+  // -(-100 - 50/2)*16/2048 and 50*16/2048 — one paragraph's worth of upos/uthk at 16px.
+  const METRICS_16 = { positionPx: 0.9765625, thicknessPx: 0.390625 };
+  // -(-100 - 50/2)*18/2048 and 50*18/2048 — the same paragraph at 18px.
+  const METRICS_18 = { positionPx: 1.0986328125, thicknessPx: 0.439453125 };
+  const GLYPHS = [
+    { char: 'u', x: 10, advance: 5, glyph: null },
+    { char: 'l', x: 15, advance: 8, glyph: null },
+  ];
 
   it(
-    "computes the underline stroke's rect from the run's own first/last glyph x-extent and the " +
-      "font's baseline-relative underline metrics — an independent worked example, not the " +
-      'implementation recomputed: ascentPx=ceil(2189*18/2048)=20, underlinePositionPx=' +
-      '-(-100)*18/2048=0.87890625, underlineThicknessPx=50*18/2048=0.439453125 (floored to the 1px ' +
-      'minimum, rich_text_label.cpp:1243 MAX(1.0, uth)), so centerY=20.87890625 and the stroke spans ' +
-      'centerY +/- 0.5.',
+    "lands the whole rule on ONE pixel row — the row Godot's own hard-edged, un-antialiased " +
+      'draw_line quad covers. At a line ascent of 18 the 16px stroke centre is 18+0.9765625 and the ' +
+      'quad spans 18.4765625..19.4765625 (rich_text_label.cpp:1243-1244: MAX(1.0, uth) floors ' +
+      '0.390625 to a 1px width, centred on the segment), which contains exactly one pixel centre, 18.5.',
     () => {
-      const glyphs = [
-        { char: 'u', x: 10, advance: 5, glyph: null },
-        { char: 'l', x: 15, advance: 8, glyph: null },
-      ];
-      const rect = underlineRectPx(glyphs, FONT_SIZE_PX);
+      const rect = underlineRectPx(GLYPHS, 18, METRICS_16);
       expect(rect).not.toBeNull();
-      expect(rect!.x0).toBe(10);
-      expect(rect!.x1).toBe(23);
-      expect(rect!.topPx).toBeCloseTo(20.37890625, 6);
-      expect(rect!.heightPx).toBeCloseTo(1, 6);
+      expect(rect!.topPx).toBe(18);
+      expect(rect!.heightPx).toBe(1);
     }
   );
 
+  it('is one row LOWER at 18px, where the same quad spans 18.5986..19.5986 and the only centre inside it is 19.5 — the half-a-stroke rebase (sfobjs.c:1424-1425) is what decides which of the two rows, so dropping it moves the rule visibly', () => {
+    const rect = underlineRectPx(GLYPHS, 18, METRICS_18);
+    expect(rect!.topPx).toBe(19);
+    expect(rect!.heightPx).toBe(1);
+  });
+
+  it("tracks the line's own baseline exactly — the same offset from it at every line ascent, the invariant a fractional line origin would break", () => {
+    for (const ascentPx of [17, 18, 20, 26]) {
+      expect(underlineRectPx(GLYPHS, ascentPx, METRICS_16)!.topPx).toBe(ascentPx);
+    }
+  });
+
+  it('snaps a genuinely thick rule to every row its quad covers, never to a fixed 1: a 3px stroke centred at 18.9765625 spans 17.4765625..20.4765625, whose covered centres are 17.5, 18.5 and 19.5 (20.5 falls outside)', () => {
+    const rect = underlineRectPx(GLYPHS, 18, { positionPx: 0.9765625, thicknessPx: 3 });
+    expect(rect!.topPx).toBe(17);
+    expect(rect!.heightPx).toBe(3);
+  });
+
+  it("snaps the x extent the same way — the run's first glyph pen x through its last glyph's pen x + advance, rounded out to the columns the quad's own centres fall in", () => {
+    const rect = underlineRectPx(
+      [
+        { char: 'u', x: 10.4, advance: 4.8, glyph: null },
+        { char: 'l', x: 15.2, advance: 8, glyph: null },
+      ],
+      18,
+      METRICS_16
+    );
+    // ceil(10.4-0.5)=10 .. ceil(23.2-0.5)-1=22, i.e. columns 10..22 inclusive.
+    expect(rect!.x0).toBe(10);
+    expect(rect!.x1).toBe(23);
+  });
+
   it('returns null for an empty glyph list (nothing to underline)', () => {
-    expect(underlineRectPx([], FONT_SIZE_PX)).toBeNull();
+    expect(underlineRectPx([], 18, METRICS_16)).toBeNull();
+  });
+});
+
+/**
+ * `fit_content`'s width comes from `get_content_width`, which maxes
+ * `l.text_buf->get_size().x` over the lines
+ * (`rich_text_label.cpp`'s content-width accumulation) —
+ * `TextParagraph::get_size` is itself a max over
+ * `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`),
+ * and that accessor returns `Size2(sd->width, ...).ceil()`
+ * (`text_server_adv.cpp:7524-7537`).
+ *
+ * Godot 4.6.3, a `fit_content` RichTextLabel with `autowrap_mode = 0` and
+ * `text = "Master volume"` inside a VBoxContainer in a 1152x648 SubViewport:
+ * `get_combined_minimum_size()` = (116, 23) — the same whole pixel a Label of
+ * that text reports, not the 115.84375 pen advance behind it.
+ */
+describe('richTextLabelMinimumSize — the shaped extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
+  it("reports Godot's own whole-pixel 116 for a fit_content, non-wrapping 'Master volume'", () => {
+    const result = size(
+      richTextLabelMinimumSize(
+        node({ fitContent: true, text: 'Master volume', autowrapMode: 0 }),
+        ctx()
+      )
+    );
+    expect(result.x).toBe(116);
+  });
+
+  it('leaves the 1px autowrap width floor alone — that branch never reads a shaped size', () => {
+    const result = size(
+      richTextLabelMinimumSize(node({ fitContent: true, text: 'Master volume', autowrapMode: 2 }), ctx())
+    );
+    expect(result.x).toBe(1);
   });
 });

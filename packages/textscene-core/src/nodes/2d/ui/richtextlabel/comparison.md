@@ -32,6 +32,13 @@ Measured on Godot 4.6.3, `pnpm ref:godot scenes/fixtures/unit-rich-text-label.ts
 --mode 2d --probe <x,y>` against `pnpm ref:ours unit-rich-text-label.tscn --2d
 --probe <x,y>`:
 
+`[u]`'s rule is one crisp row at y 21 on both sides, the same `rgb(153, 153,
+153)` and the same 84 columns wide, but it starts at x 91 here against Godot's
+x 92 — the pen has drifted one column left over the ~90 px of text ahead of it.
+That drift is the shaper's accumulated per-glyph advance, not the rule's own
+geometry: the rule is anchored to its run's first glyph pen x, so it inherits
+whatever x that glyph already has.
+
 `[b]`'s span spans x 1..39 in Godot and x 1..38 here. `BOLD_DISTANCE_BIAS`
 (0.35) renders the `l` stem — a single vertical stroke, so its
 half-max-crossing width is the stroke thickness directly — 3.01 px wide

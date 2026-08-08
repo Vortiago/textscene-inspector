@@ -11,10 +11,11 @@
  * (`nativeSolver.ts`'s `BOLD_DISTANCE_BIAS`/`ITALIC_SKEW` cite the exact
  * `default_theme.cpp` embolden/skew constants). `[u]` is a drawn STROKE, not
  * a font effect: `nativeSolver.ts`'s `underlineRectPx` computes its rect from
- * the run's own glyph x-extent and the font's baseline-relative underline
- * metrics (`openSansMetrics.ts`'s `getUnderlinePositionPx`/
- * `getUnderlineThicknessPx`, baked from the vendored font's `post` table),
- * drawn as an extra `<ControlQuad>` sibling of the run's own `<TextRun>` at
+ * the run's own glyph x-extent, its LINE's own baseline and the PARAGRAPH's
+ * underline position/thickness (`richTextUnderlineMetrics`, whose doc has
+ * Godot's own reason for that line/paragraph split), snapped to the whole
+ * pixel rows Godot's un-antialiased `draw_line` quad covers, and drawn as an
+ * extra `<ControlQuad>` sibling of the run's own `<TextRun>` at
  * `RICH_TEXT_LABEL_UNDERLINE_ALPHA` times the run's own opacity — Godot's own
  * `underline_alpha` theme constant, a dimmer stroke rather than a
  * differently-coloured one. `nativeSolver.ts`'s `styledTextRuns` turns the
@@ -28,14 +29,16 @@
  * (shaping happens ONCE, over the whole concatenated plain text, so
  * line-breaking sees the true paragraph width rather than each run measured
  * in isolation) — each placement then hands its OWN `fontSizePx` to its own
- * `<TextRun>`.
+ * `<TextRun>`, while every run on a line shares that LINE's baseline
+ * (`richTextLineMetrics`), Godot's own `off.y += l_ascent`.
  *
  * RichTextLabel has no `horizontal_alignment`/`vertical_alignment` Control
  * property (unlike Label) — every line is left-aligned, and the paragraph as
  * a whole is top-aligned, so there is no `layoutLabelLines`-style alignment
- * pass here: each line's y is just `lineIndex * linePitchPx`, its own box
- * top, which `<TextRun>` anchors at that line's baseline itself
- * (`buildGlyphQuadArrays`'s own doc).
+ * pass here: each line's y is its own `lineTopPx`, the running sum of the
+ * earlier lines' own heights (NOT `lineIndex * linePitchPx` — lines carrying
+ * different font sizes are different heights), which `<TextRun>` anchors at
+ * that line's baseline itself (`buildGlyphQuadArrays`'s own doc).
  *
  * Tint: `ControlCanvasWalker` already folds this node's OWN `modulate` into
  * the `Modulate2DContext` value it provides AROUND this painter, so
@@ -68,6 +71,7 @@ import {
   fontSizePxAtFromRuns,
   layoutRichTextRuns,
   richTextLabelTextTheme,
+  richTextUnderlineMetrics,
   styledTextRuns,
   underlineRectPx,
 } from './nativeSolver';
@@ -107,14 +111,15 @@ export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeCon
   );
 
   const placements = useMemo(() => layoutRichTextRuns(runs, layout), [runs, layout]);
+  const underlineMetrics = useMemo(() => richTextUnderlineMetrics(runs), [runs]);
 
   return (
     <>
       {placements.map((placement, index) => {
         const runTint = multiplyModulate(tint.own, placement.color);
-        const y = placement.lineIndex * layout.linePitchPx;
+        const y = placement.lineTopPx;
         const underline = placement.underline
-          ? underlineRectPx(placement.layout.lines[0]!.glyphs, placement.fontSizePx)
+          ? underlineRectPx(placement.layout.lines[0]!.glyphs, placement.layout.baselineOffsetPx, underlineMetrics)
           : null;
         return (
           <group key={index} position={[0, -y, 0]}>
