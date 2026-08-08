@@ -70,7 +70,13 @@ const graphEditZoomLimitsRule: LintRule = {
       "Flags a GraphEdit whose zoom_min is authored above zoom_max, because Godot's two setters guard against each other, so one of the limits never lands",
     category: 'validation',
     applicableNodeTypes: ['GraphEdit'],
-    emits: [{ ruleName: 'graphedit-zoom-min-above-max', severity: 'warning' }],
+    emits: [
+      {
+        ruleName: 'graphedit-zoom-min-above-max',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'graph_edit.cpp:2480' },
+      },
+    ],
   },
   check: checkZoomLimits,
 };

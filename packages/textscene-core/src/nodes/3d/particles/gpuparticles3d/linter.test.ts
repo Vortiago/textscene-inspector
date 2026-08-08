@@ -394,19 +394,19 @@ draw_pass_2 = SubResource("mesh_1")
   });
 
   describe('Semantic Validation (Trail Configuration)', () => {
-    it('should error when trail_lifetime is set but trail_enabled is false', () => {
-      expectDiagnostic(
-        `[gd_scene format=3]
+    // trail_lifetime defaults to 0.3 with trail_enabled false and
+    // _validate_property never hides the key, so Godot itself writes this pair.
+    it('should pass when trail_lifetime is set and trail_enabled is false', () => {
+      expectClean(`[gd_scene format=3]
 
-[sub_resource type="ParticleProcessMaterial" id="process_1"]
+${RESOURCES}
 
-[node name="MisconfiguredTrail" type="GPUParticles3D"]
+[node name="DisabledTrail" type="GPUParticles3D"]
 process_material = SubResource("process_1")
+draw_pass_1 = SubResource("mesh_1")
 trail_enabled = false
 trail_lifetime = 1.0
-`,
-        { prop: 'trail_enabled', severity: 'error', contains: ['trail_enabled=true'] }
-      );
+`);
     });
 
     it('should pass when trail_lifetime is set and trail_enabled is true', () => {

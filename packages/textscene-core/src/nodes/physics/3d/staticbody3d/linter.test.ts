@@ -72,15 +72,10 @@ physics_material_override = SubResource("mat_1")
       });
 
       // physics_body_3d.cpp's setter is a bare assignment and the property
-      // carries no hint, so an infinite component is stored: the advisory is
-      // about the velocity being non-zero, which an infinite one is.
-      it('warns on a non-finite constant_linear_velocity without calling it malformed', () => {
+      // carries no hint, so an infinite component is stored rather than refused.
+      it('accepts a non-finite constant_linear_velocity without calling it malformed', () => {
         expectNoErrors(
           scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(inf, 0, 0)' }), collisionShape3d)
-        );
-        expectDiagnostic(
-          scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(inf, 0, 0)' }), collisionShape3d),
-          { ruleName: 'staticbody3d-constant-velocity-warning', severity: 'warning' }
         );
       });
 
@@ -231,53 +226,6 @@ physics_material_override = ExtResource("ext_mat_1")
     });
   });
 
-  describe('Semantic Validation (Constant Velocities)', () => {
-    it('should warn when constant_linear_velocity is non-zero', () => {
-      expectDiagnostic(
-        scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1.0, 0.0, 0.0)' }), collisionShape3d),
-        {
-          ruleName: 'staticbody3d-constant-velocity-warning',
-          severity: 'warning',
-          nodeType: 'StaticBody3D',
-          contains: ['constant_linear_velocity', 'confusing'],
-        }
-      );
-    });
-
-    it('should not warn when constant_linear_velocity is zero', () => {
-      expectClean(scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(0, 0, 0)' }), collisionShape3d));
-    });
-
-    it('should warn when constant_angular_velocity is non-zero', () => {
-      expectDiagnostic(
-        scene(node('StaticBody3D', { constant_angular_velocity: 'Vector3(0.0, 1.57, 0.0)' }), collisionShape3d),
-        {
-          ruleName: 'staticbody3d-constant-velocity-warning',
-          severity: 'warning',
-          nodeType: 'StaticBody3D',
-          contains: ['constant_angular_velocity', 'confusing'],
-        }
-      );
-    });
-
-    it('should not warn when constant_angular_velocity is zero', () => {
-      expectClean(scene(node('StaticBody3D', { constant_angular_velocity: 'Vector3(0, 0, 0)' }), collisionShape3d));
-    });
-
-    it('should warn when both velocities are non-zero', () => {
-      const warnings = lint(
-        scene(
-          node('StaticBody3D', {
-            constant_linear_velocity: 'Vector3(1.0, 0.0, 0.0)',
-            constant_angular_velocity: 'Vector3(0.0, 1.0, 0.0)',
-          }),
-          collisionShape3d
-        )
-      ).filter(d => d.ruleName === 'staticbody3d-constant-velocity-warning');
-      expect(warnings.length).toBe(2); // One for linear, one for angular
-    });
-  });
-
   describe('Semantic Validation (Collision Layers)', () => {
     it('should not warn when collision_layer is non-zero', () => {
       expectClean(scene(node('StaticBody3D', { collision_layer: 1 }), collisionShape3d));
@@ -302,10 +250,9 @@ physics_material_override = ExtResource("ext_mat_1")
 disable_mode = 10
 collision_layer = -5
 physics_material_override = SubResource("nonexistent")
-constant_linear_velocity = Vector3(1, 0, 0)
 `);
       // Should have multiple errors: disable_mode, collision_layer format errors,
-      // plus potentially resource not found and velocity warnings
+      // plus potentially resource not found
       expect(diagnostics.length).toBeGreaterThanOrEqual(2);
       const hasDisableModeError = diagnostics.some(d => d.message.includes('disable_mode'));
       const hasCollisionLayerError = diagnostics.some(d => d.message.includes('collision_layer'));
@@ -340,10 +287,8 @@ input_capture_on_drag = false
     });
 
     it('should handle scientific notation in velocities', () => {
-      // Should have warning about non-zero velocity
-      expectDiagnostic(
-        scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1e-5, 2.5e3, -3.14e2)' }), collisionShape3d),
-        { ruleName: 'staticbody3d-constant-velocity-warning' }
+      expectNoErrors(
+        scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1e-5, 2.5e3, -3.14e2)' }), collisionShape3d)
       );
     });
 

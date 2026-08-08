@@ -56,7 +56,11 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as unknown as Record<string, string>;
   const layerData = Object.entries(rawProps).filter(([key]) => LAYER_DATA_KEY_RE.test(key));
-  const format = rawProps.format !== undefined ? parseInt(rawProps.format, 10) : 0;
+  // Absent means the current format, not the oldest one: the member initialises
+  // to TILE_MAP_DATA_FORMAT_3, which is 2 (tile_map.h:64). Defaulting to 0 read
+  // an unversioned TileMap as Godot 3 data and reported a format the file never
+  // claimed.
+  const format = rawProps.format !== undefined ? parseInt(rawProps.format, 10) : 2;
 
   // tile_map.cpp:843 — unconditional; every TileMap node carries this, whatever
   // it's configured with.
@@ -161,14 +165,38 @@ const tileMapValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['TileMap'],
     emits: [
-      { ruleName: 'tilemap-deprecated', severity: 'warning' },
-      { ruleName: 'tilemap-y-sort-z-index-conflict', severity: 'warning' },
-      { ruleName: 'tilemap-layer-y-sort-without-node', severity: 'warning' },
-      { ruleName: 'tilemap-node-y-sort-without-layer', severity: 'warning' },
-      { ruleName: 'tilemap-requires-tileset', severity: 'warning' },
-      { ruleName: 'valid-tilemap-resources', severity: 'error' },
-      { ruleName: 'tilemap-unsupported-format', severity: 'warning' },
-      { ruleName: 'tilemap-invalid-tile-data', severity: 'error' },
+      { ruleName: 'tilemap-deprecated', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: 'tilemap-y-sort-z-index-conflict', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: 'tilemap-layer-y-sort-without-node', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: 'tilemap-node-y-sort-without-layer', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'tilemap-requires-tileset',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'tile_map_layer.cpp:224',
+          unused: 'a null tile set forces the cleanup path, so nothing is drawn',
+        },
+      },
+      {
+        ruleName: 'valid-tilemap-resources',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the tile_set reference names a resource id this file never declares',
+        },
+      },
+      {
+        ruleName: 'tilemap-unsupported-format',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'tile_map.cpp:71' },
+      },
+      {
+        ruleName: 'tilemap-invalid-tile-data',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'tile_map.cpp:79' },
+      },
     ],
   },
   check: checkTileMap,

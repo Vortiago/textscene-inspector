@@ -33,16 +33,6 @@ function checkAnimatedSprite3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  if (rawProps.autoplay && !rawProps.sprite_frames) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Property 'autoplay' is set to "${rawProps.autoplay}" but 'sprite_frames' is not set. Autoplay will not work without a SpriteFrames resource.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animatedsprite3d-autoplay-no-spriteframes',
-    });
-  }
-
   if (rawProps.animation && !rawProps.sprite_frames) {
     diagnostics.push({
       severity: 'warning',
@@ -60,13 +50,16 @@ const animatedSprite3DValidationRule: LintRule = {
   meta: {
     name: 'valid-animatedsprite3d-properties',
     description:
-      "Warns when AnimatedSprite3D has no SpriteFrames, or sets animation/autoplay without one",
+      "Warns when AnimatedSprite3D has no SpriteFrames, or sets animation without one",
     category: 'validation',
     applicableNodeTypes: ['AnimatedSprite3D'],
     emits: [
-      { ruleName: 'animatedsprite3d-requires-spriteframes', severity: 'warning' },
-      { ruleName: 'animatedsprite3d-autoplay-no-spriteframes', severity: 'warning' },
-      { ruleName: 'animatedsprite3d-animation-no-spriteframes', severity: 'warning' },
+      { ruleName: 'animatedsprite3d-requires-spriteframes', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'animatedsprite3d-animation-no-spriteframes',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'sprite_3d.cpp:1441' },
+      },
     ],
   },
   check: checkAnimatedSprite3D,

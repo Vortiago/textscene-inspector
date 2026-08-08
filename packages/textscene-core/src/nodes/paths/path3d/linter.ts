@@ -149,9 +149,29 @@ const path3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['Path3D'],
     emits: [
-      { ruleName: 'path3d-requires-curve', severity: 'warning' },
-      { ruleName: 'valid-path3d-resources', severity: 'error' },
-      { ruleName: 'curve3d-loadable', severity: 'error' },
+      {
+        ruleName: 'path3d-requires-curve',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'path_3d.cpp:275',
+          unused: 'a PathFollow3D on this path returns before moving, so nothing follows it',
+        },
+      },
+      {
+        ruleName: 'valid-path3d-resources',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the curve reference names a resource id this file never declares',
+        },
+      },
+      {
+        ruleName: 'curve3d-loadable',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'curve.cpp:2279' },
+      },
     ],
   },
   check: checkPath3D,

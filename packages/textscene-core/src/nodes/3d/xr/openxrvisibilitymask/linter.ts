@@ -63,7 +63,7 @@ const openXRVisibilityMaskParentRule: LintRule = {
       "Warns when a visible OpenXRVisibilityMask is not a direct child of an XRCamera3D, Godot's own configuration warning for this node",
     category: 'validation',
     applicableNodeTypes: ['OpenXRVisibilityMask'],
-    emits: [{ ruleName: PARENT_RULE, severity: 'warning' }],
+    emits: [{ ruleName: PARENT_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkOpenXRVisibilityMask,
 };

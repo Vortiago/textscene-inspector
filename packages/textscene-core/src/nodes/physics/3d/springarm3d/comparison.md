@@ -40,7 +40,7 @@ Strict parsing format-checks these `SpringArm3D` properties, plus 16 inherited f
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 SpringArm3D has no `parser.ts` of its own: it registers `parseNode3D` directly

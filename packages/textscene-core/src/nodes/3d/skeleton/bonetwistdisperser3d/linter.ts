@@ -174,8 +174,16 @@ const boneTwistDisperser3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'BoneTwistDisperser3D'),
     emits: [
-      { ruleName: 'bonetwistdisperser3d-setting-index-out-of-range', severity: 'warning' },
-      { ruleName: 'bonetwistdisperser3d-joint-index-out-of-range', severity: 'warning' },
+      {
+        ruleName: 'bonetwistdisperser3d-setting-index-out-of-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'bone_twist_disperser_3d.cpp:39' },
+      },
+      {
+        ruleName: 'bonetwistdisperser3d-joint-index-out-of-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'bone_twist_disperser_3d.cpp:502' },
+      },
     ],
   },
   check: checkBoneTwistDisperser3D,

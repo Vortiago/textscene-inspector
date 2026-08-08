@@ -73,6 +73,7 @@ const springBoneCollisionCapsule3DShapeRule: LintRule = {
       {
         ruleName: 'springbonecollisioncapsule3d-radius-exceeds-half-height',
         severity: 'warning',
+        grounding: { kind: 'engine', at: 'spring_bone_collision_capsule_3d.cpp:38' },
       },
     ],
   },

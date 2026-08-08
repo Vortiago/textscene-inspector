@@ -140,40 +140,33 @@ describe('Camera2D Linter', () => {
         valid: [true],
         with: { drag_vertical_enabled: false },
       },
-      // Drag offsets/margins without drag_*_enabled legitimately warn — assert no errors only.
       {
         prop: 'drag_horizontal_offset',
-        acceptMode: 'no-error',
         valid: [-1, -0.5, 0, 0.5, 1],
         invalid: [{ value: 1.5, contains: ['drag_horizontal_offset', 'between -1 and 1'] }],
       },
       {
         prop: 'drag_vertical_offset',
-        acceptMode: 'no-error',
         valid: [-1, -0.5, 0, 0.5, 1],
         invalid: [{ value: '-2.0', contains: ['drag_vertical_offset', 'between -1 and 1'] }],
       },
       {
         prop: 'drag_left_margin',
-        acceptMode: 'no-error',
         valid: [0, 0.2, 0.5, 0.8, 1],
         invalid: [{ value: 1.5, contains: ['drag_left_margin', 'between 0 and 1'] }],
       },
       {
         prop: 'drag_top_margin',
-        acceptMode: 'no-error',
         valid: [0, 0.2, 0.5, 0.8, 1],
         invalid: [{ value: -0.1, contains: ['drag_top_margin', 'between 0 and 1'] }],
       },
       {
         prop: 'drag_right_margin',
-        acceptMode: 'no-error',
         valid: [0, 0.2, 0.5, 0.8, 1],
         invalid: [{ value: '2.0', contains: ['drag_right_margin', 'between 0 and 1'] }],
       },
       {
         prop: 'drag_bottom_margin',
-        acceptMode: 'no-error',
         valid: [0, 0.2, 0.5, 0.8, 1],
         invalid: [{ value: -0.5, contains: ['drag_bottom_margin', 'between 0 and 1'] }],
       },
@@ -310,15 +303,6 @@ describe('Camera2D Linter', () => {
     });
 
     describe('position smoothing warnings', () => {
-      it('should warn when position_smoothing_enabled without speed', () => {
-        expectDiagnostic(scene(node('Camera2D', { position_smoothing_enabled: true })), {
-          ruleName: 'camera2d-smoothing-speed-missing',
-          severity: 'warning',
-          nodeType: 'Camera2D',
-          contains: ['position_smoothing_speed', 'not set'],
-        });
-      });
-
       it('should warn (not format-error) when position_smoothing_speed is zero', () => {
         // camera_2d.cpp:703 clamps to MAX(0, p_speed), so 0 is a legal value at
         // the format level; only the semantic "won't smooth" advisory fires.
@@ -335,15 +319,6 @@ describe('Camera2D Linter', () => {
     });
 
     describe('rotation smoothing warnings', () => {
-      it('should warn when rotation_smoothing_enabled without speed', () => {
-        expectDiagnostic(scene(node('Camera2D', { rotation_smoothing_enabled: true })), {
-          ruleName: 'camera2d-rotation-smoothing-speed-missing',
-          severity: 'warning',
-          nodeType: 'Camera2D',
-          contains: ['rotation_smoothing_speed', 'not set'],
-        });
-      });
-
       it('should warn (not format-error) when rotation_smoothing_speed is zero', () => {
         // camera_2d.cpp:715 clamps to MAX(0, p_speed), so 0 is a legal value at
         // the format level; only the semantic "won't smooth" advisory fires.
@@ -359,73 +334,6 @@ describe('Camera2D Linter', () => {
       });
     });
 
-    describe('drag margin warnings', () => {
-      it('should warn when horizontal margins set but drag not enabled', () => {
-        expectDiagnostic(scene(node('Camera2D', { drag_left_margin: 0.2, drag_right_margin: 0.2 })), {
-          ruleName: 'camera2d-horizontal-margins-without-drag',
-          severity: 'warning',
-          nodeType: 'Camera2D',
-          contains: ['drag_horizontal_enabled'],
-        });
-      });
-
-      it('should warn when vertical margins set but drag not enabled', () => {
-        expectDiagnostic(scene(node('Camera2D', { drag_top_margin: 0.2, drag_bottom_margin: 0.2 })), {
-          ruleName: 'camera2d-vertical-margins-without-drag',
-          severity: 'warning',
-          nodeType: 'Camera2D',
-          contains: ['drag_vertical_enabled'],
-        });
-      });
-
-      it('should not warn when margins set and drag enabled', () => {
-        expectClean(
-          scene(
-            node('Camera2D', {
-              drag_horizontal_enabled: true,
-              drag_left_margin: 0.2,
-              drag_right_margin: 0.2,
-              drag_vertical_enabled: true,
-              drag_top_margin: 0.2,
-              drag_bottom_margin: 0.2,
-            })
-          )
-        );
-      });
-    });
-
-    describe('drag offset warnings', () => {
-      it('should warn when horizontal offset set but drag not enabled', () => {
-        expectDiagnostic(scene(node('Camera2D', { drag_horizontal_offset: 0.5 })), {
-          ruleName: 'camera2d-horizontal-offset-without-drag',
-          severity: 'warning',
-          nodeType: 'Camera2D',
-          contains: ['drag_horizontal_enabled'],
-        });
-      });
-
-      it('should warn when vertical offset set but drag not enabled', () => {
-        expectDiagnostic(scene(node('Camera2D', { drag_vertical_offset: -0.5 })), {
-          ruleName: 'camera2d-vertical-offset-without-drag',
-          severity: 'warning',
-          nodeType: 'Camera2D',
-          contains: ['drag_vertical_enabled'],
-        });
-      });
-
-      it('should not warn when offsets set and drag enabled', () => {
-        expectClean(
-          scene(
-            node('Camera2D', {
-              drag_horizontal_enabled: true,
-              drag_horizontal_offset: 0.5,
-              drag_vertical_enabled: true,
-              drag_vertical_offset: -0.5,
-            })
-          )
-        );
-      });
-    });
   });
 
   describe('Edge Cases', () => {
@@ -530,7 +438,7 @@ describe('Camera2D Linter', () => {
       expect(warnings.length).toBeGreaterThan(0);
     });
 
-    it('should handle complex scene with smoothing warnings', () => {
+    it('should not warn about multiple cameras when only one is enabled', () => {
       const diagnostics = lint(
         scene(
           node('Node2D', {}, { name: 'Root' }),
@@ -539,19 +447,9 @@ describe('Camera2D Linter', () => {
             { enabled: true, position_smoothing_enabled: true, position_smoothing_speed: 5.0 },
             { name: 'ActiveCamera', parent: '.' }
           ),
-          node(
-            'Camera2D',
-            { enabled: false, position_smoothing_enabled: true },
-            { name: 'BrokenCamera', parent: '.' }
-          )
+          node('Camera2D', { enabled: false }, { name: 'DisabledCamera', parent: '.' })
         )
       );
-      // Should warn about BrokenCamera's missing smoothing speed.
-      const smoothingWarnings = diagnostics.filter(
-        d => d.message.includes('smoothing_speed') && d.message.includes('not set')
-      );
-      expect(smoothingWarnings.length).toBeGreaterThan(0);
-      // Only one camera is enabled, so no multiple-camera warning.
       const cameraWarnings = diagnostics.filter(d => d.message.includes('Multiple enabled'));
       expect(cameraWarnings).toHaveLength(0);
     });

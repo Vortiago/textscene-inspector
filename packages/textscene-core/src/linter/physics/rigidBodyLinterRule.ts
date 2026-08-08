@@ -63,6 +63,10 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `RigidBody${dim}`;
   const prefix = `rigidbody${dimSuffix(dim)}`;
   const massHintCite = dim === '2D' ? 'rigid_body_2d.cpp:742' : 'rigid_body_3d.cpp:764';
+  // `_body_state_changed` reads the contact list, and everything
+  // `max_contacts_reported` bounds, only inside `if (contact_monitor)`. Same
+  // line number in both files, but they are two separate facts.
+  const contactMonitorCite = dim === '2D' ? 'rigid_body_2d.cpp:181' : 'rigid_body_3d.cpp:181';
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
@@ -202,11 +206,39 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, type),
       emits: [
-        { ruleName: `valid-${prefix}-resources`, severity: 'error' },
-        { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
-        { ruleName: `${prefix}-mass-too-low`, severity: 'warning' },
-        { ruleName: `${prefix}-max-contacts-without-monitor`, severity: 'warning' },
-        { ruleName: `${prefix}-scale-overridden-at-runtime`, severity: 'warning' },
+        {
+          ruleName: `valid-${prefix}-resources`,
+          severity: 'error',
+          grounding: {
+            kind: 'no-engine-counterpart',
+            scope: 'dangling-reference',
+            because: 'the physics_material_override id is not declared anywhere in this file',
+          },
+        },
+        {
+          ruleName: `${prefix}-needs-collision-shape`,
+          severity: 'warning',
+          grounding: { kind: 'configuration-warning' },
+        },
+        {
+          ruleName: `${prefix}-mass-too-low`,
+          severity: 'warning',
+          grounding: { kind: 'engine', at: massHintCite },
+        },
+        {
+          ruleName: `${prefix}-max-contacts-without-monitor`,
+          severity: 'warning',
+          grounding: {
+            kind: 'engine-inert',
+            at: contactMonitorCite,
+            unused: 'the contact list is only gathered inside this guard',
+          },
+        },
+        {
+          ruleName: `${prefix}-scale-overridden-at-runtime`,
+          severity: 'warning',
+          grounding: { kind: 'configuration-warning' },
+        },
       ],
     },
     check,

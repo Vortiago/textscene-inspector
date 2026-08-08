@@ -43,7 +43,7 @@ Strict parsing format-checks these `Path3D` properties, plus 16 inherited from N
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-path3d` | `path3d-requires-curve` | warning |
 |  | `valid-path3d-resources` | error |
 |  | `curve3d-loadable` | error |

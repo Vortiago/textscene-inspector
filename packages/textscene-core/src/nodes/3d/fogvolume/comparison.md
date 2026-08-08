@@ -40,7 +40,7 @@ Strict parsing format-checks these `FogVolume` properties, plus 1 inherited from
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-fogvolume-size` | `fogvolume-size-ignored-for-world-shape` | warning |
 <!-- lint:end -->
 

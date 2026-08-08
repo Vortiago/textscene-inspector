@@ -54,7 +54,7 @@ const containerScriptRule: LintRule = {
     category: 'validation',
     exactClassByDesign: 'container.cpp:210',
     applicableNodeTypes: ['Container'],
-    emits: [{ ruleName: 'container-no-script', severity: 'warning' }],
+    emits: [{ ruleName: 'container-no-script', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkContainer,
 };

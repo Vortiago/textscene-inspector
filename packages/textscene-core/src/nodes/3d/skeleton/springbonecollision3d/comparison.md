@@ -43,7 +43,7 @@ Strict parsing format-checks these `SpringBoneCollision3D` properties, plus 16 i
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-springbonecollision3d-parent` (type-family match) | `springbonecollision3d-outside-springbonesimulator3d` | warning |
 <!-- lint:end -->
 

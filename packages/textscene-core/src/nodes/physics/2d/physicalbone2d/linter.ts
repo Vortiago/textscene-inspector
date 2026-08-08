@@ -96,9 +96,9 @@ const physicalBone2DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['PhysicalBone2D'],
     emits: [
-      { ruleName: 'physicalbone2d-missing-skeleton-parent', severity: 'warning' },
-      { ruleName: 'physicalbone2d-missing-bone-index', severity: 'warning' },
-      { ruleName: 'physicalbone2d-missing-joint-child', severity: 'warning' },
+      { ruleName: 'physicalbone2d-missing-skeleton-parent', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: 'physicalbone2d-missing-bone-index', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: 'physicalbone2d-missing-joint-child', severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkPhysicalBone2D,

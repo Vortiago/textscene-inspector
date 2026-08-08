@@ -60,7 +60,7 @@ const splineIK3DPathRule: LintRule = {
       'Warns when a SplineIK3D setting names no Path3D, the configuration Godot itself flags and then skips',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SplineIK3D'),
-    emits: [{ ruleName: 'splineik3d-setting-without-path-3d', severity: 'warning' }],
+    emits: [{ ruleName: 'splineik3d-setting-without-path-3d', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkSplineIK3D,
 };

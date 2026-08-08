@@ -84,7 +84,7 @@ const scrollContainerRule: LintRule = {
       'Flags a ScrollContainer that does not have exactly one sortable Control child',
     category: 'validation',
     applicableNodeTypes: ['ScrollContainer'],
-    emits: [{ ruleName: 'scrollcontainer-not-single-child', severity: 'warning' }],
+    emits: [{ ruleName: 'scrollcontainer-not-single-child', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkScrollContainer,
 };

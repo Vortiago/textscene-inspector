@@ -61,7 +61,7 @@ const collisionObject3DScaleRule: LintRule = {
       "Warns when a CollisionObject3D-derived node's own transform is scaled non-uniformly, which the physics engine cannot honour",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'CollisionObject3D'),
-    emits: [{ ruleName: RULE_NAME, severity: 'warning' }],
+    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkCollisionObject3DScale,
 };

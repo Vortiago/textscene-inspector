@@ -74,14 +74,8 @@ Strict parsing format-checks these `Camera2D` properties, plus 12 inherited from
 | `valid-camera2d-properties` | `camera2d-multiple-enabled` | warning |
 |  | `camera2d-invalid-horizontal-limits` | warning |
 |  | `camera2d-invalid-vertical-limits` | warning |
-|  | `camera2d-smoothing-speed-missing` | warning |
 |  | `camera2d-smoothing-speed-invalid` | warning |
-|  | `camera2d-rotation-smoothing-speed-missing` | warning |
 |  | `camera2d-rotation-smoothing-speed-invalid` | warning |
-|  | `camera2d-horizontal-margins-without-drag` | warning |
-|  | `camera2d-vertical-margins-without-drag` | warning |
-|  | `camera2d-horizontal-offset-without-drag` | warning |
-|  | `camera2d-vertical-offset-without-drag` | warning |
 <!-- lint:end -->
 
 Strict rejects a non-positive `zoom` component as `INVALID_ZOOM_VALUE`; the lenient parser's

@@ -69,8 +69,24 @@ const cpuParticles2DPreviewRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['CPUParticles2D'],
     emits: [
-      { ruleName: 'cpuparticles2d-nondeterministic-emission-shape', severity: 'warning' },
-      { ruleName: 'cpuparticles2d-fract-delta-ignored', severity: 'warning' },
+      {
+        ruleName: 'cpuparticles2d-nondeterministic-emission-shape',
+        severity: 'warning',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'previewer-limitation',
+          because: 'the emitter samples an unserialised global RNG, so no static pose can place it',
+        },
+      },
+      {
+        ruleName: 'cpuparticles2d-fract-delta-ignored',
+        severity: 'warning',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'previewer-limitation',
+          because: 'the frozen pose steps at a fixed rate, so a partial first step is unreachable',
+        },
+      },
     ],
   },
   check: checkCPUParticles2D,

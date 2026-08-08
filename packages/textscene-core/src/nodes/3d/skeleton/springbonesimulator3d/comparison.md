@@ -71,7 +71,7 @@ Strict parsing format-checks these `SpringBoneSimulator3D` properties, plus 2 in
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 | `valid-springbonesimulator3d-settings` (type-family match) | `springbonesimulator3d-setting-index-out-of-range` | warning |
 |  | `springbonesimulator3d-shared-config-ignored` | warning |

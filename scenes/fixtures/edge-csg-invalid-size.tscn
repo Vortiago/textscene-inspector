@@ -1,13 +1,9 @@
 [gd_scene format=3 uid="uid://edge_csg_invalid_size"]
 
-; The issue that filed this corpus asked for a Vector3 "missing z" component —
-; that's a hard format error (v.vector3 requires exactly 3 numbers) and would
-; break the fixtureLint gate, so this pins the nearest SCHEMA-VALID edge case
-; instead: a zero-volume CSGBox3D size. `Vector3(0, 0, 0)` passes format
-; validation (no min/max on size's components) but produces a degenerate
-; BoxGeometry — renders without crashing (a zero-size mesh, effectively
-; invisible), and is exactly the case `csgbox3d-degenerate-size` (own-geometry
-; rule, not a port of csg_shape.cpp:982) flags.
+; A zero-volume CSGBox3D size. `Vector3(0, 0, 0)` passes format validation (no
+; min/max on size's components) and produces a degenerate BoxGeometry, so this
+; pins that the renderer survives a zero-size mesh. Godot does not clamp `size`
+; and builds the brush with 12 faces regardless, so the scene lints clean.
 
 [node name="Scene" type="Node3D"]
 

@@ -55,10 +55,9 @@ Strict parsing format-checks these `CSGTorus3D` properties, plus 18 inherited fr
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-csgshape3d-own-geometry` (type-family match) | `csgmesh3d-requires-mesh` | warning |
 |  | `csgpolygon3d-insufficient-points` | warning |
-|  | `csgbox3d-degenerate-size` | warning |
 | `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
 |  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |

@@ -71,7 +71,7 @@ const remoteTransform2DPathRule: LintRule = {
       'Warns when RemoteTransform2D has no remote_path, or remote_path resolves to no node or a non-Node2D node',
     category: 'validation',
     applicableNodeTypes: ['RemoteTransform2D'],
-    emits: [{ ruleName: RULE_NAME, severity: 'warning' }],
+    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkRemoteTransform2D,
 };

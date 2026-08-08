@@ -70,7 +70,7 @@ const multiplayerSynchronizerRootPathRule: LintRule = {
       "Warns when MultiplayerSynchronizer's root_path names no node in this file, mirroring Godot's own configuration warning",
     category: 'validation',
     applicableNodeTypes: ['MultiplayerSynchronizer'],
-    emits: [{ ruleName: RULE_NAME, severity: 'warning' }],
+    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkMultiplayerSynchronizer,
 };

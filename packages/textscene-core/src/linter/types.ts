@@ -96,6 +96,85 @@ export interface RuleContext {
 }
 
 /**
+ * Why a diagnostic that is NOT about Godot semantics is still worth reporting.
+ *
+ * Typed rather than free text for the reason `DeclineCategory` is
+ * (`configurationWarningCoverage.test.ts`): a prose excuse turns the arm into a
+ * rubber stamp, while a category a reader can sort by makes a tired claim
+ * visible next to a principled one.
+ */
+export type OutsideEngineScope =
+  /** Names a resource id the file itself never declares. Godot fails the load. */
+  | 'dangling-reference'
+  /** Names a `res://` path this project does not contain, or one that cannot be read. */
+  | 'unresolvable-path'
+  /** A payload this previewer cannot decode, so it says so instead of drawing nothing. */
+  | 'previewer-limitation'
+  /** A `.tscn` a Godot save could not have produced — duplicate names, malformed sections. */
+  | 'file-integrity';
+
+/**
+ * Where one reported diagnostic's authority comes from.
+ *
+ * ADR-0032 governs a validator's bounds through `PropertyValidator.grounding`,
+ * and every `RangeArm` carries a `cite`. A semantic rule's diagnostics were the
+ * hole in that: `check()` is free code, so a hand-rolled condition with no
+ * engine counterpart was invisible to every guard. This closes it at the same
+ * granularity the reports happen at — one grounding per emitted `ruleName`,
+ * because one registered rule routinely reports under many
+ * (`valid-camera2d-properties` emits five, grounded two different ways).
+ *
+ * Required, not optional, for the reason `RangeArm.cite` is: the compiler then
+ * rejects an ungrounded diagnostic everywhere, with no sweep to keep honest and
+ * no budget number to ratchet down.
+ */
+export type EmitGrounding =
+  /**
+   * A ported `Node::get_configuration_warnings()` row.
+   *
+   * The `file.cpp:line` deliberately does NOT appear here.
+   * `configurationWarningCoverage.test.ts`'s census already holds it for every
+   * ported row, keyed by this exact `ruleName`; re-typing it beside the rule
+   * would create a second roster that can drift from the first.
+   * `emitsGrounding.test.ts` resolves it, and fails an arm with no census row.
+   */
+  | { readonly kind: 'configuration-warning' }
+  /**
+   * An engine rule that is not a configuration warning: a setter that refuses
+   * or alters, a `PROPERTY_HINT_RANGE`, `packed_scene.cpp`'s resolution order,
+   * a `DISABLE_DEPRECATED` alias. `at` is its `file.cpp:line` in Godot 4.6.3.
+   */
+  | { readonly kind: 'engine'; readonly at: string }
+  /**
+   * The engine READS the value, and the read is what makes the authored value
+   * inert: a branch this file never enters, a mode that never consults the key,
+   * a sibling flag that gates the whole group. `at` is that line, `unused` says
+   * in one clause what the value does not do.
+   *
+   * A separate arm because the claim is about REACHABILITY, not about a bound.
+   * ADR-0032's error/warning split cannot decide it - nothing is refused and
+   * nothing is altered, so it is advisory by construction. Collapsing it into
+   * `engine` was what let six independent audits disagree about whether
+   * `sprite_2d.cpp:98`'s `if (region_enabled)` grounds anything: it does, but
+   * not the way an `ERR_FAIL_COND` does, and the arm should say which.
+   */
+  | { readonly kind: 'engine-inert'; readonly at: string; readonly unused: string }
+  /**
+   * No engine counterpart, and legitimately so: the diagnostic is about the
+   * FILE or about THIS previewer, not about what Godot does with a value.
+   *
+   * This is the arm that must not become comfortable. A condition that is
+   * neither engine-grounded nor one of these scopes is an invented rule, and
+   * the honest outcome for one of those is deletion (ADR-0032: severity comes
+   * from engine source, and documentation prose is never a basis).
+   */
+  | {
+      readonly kind: 'no-engine-counterpart';
+      readonly scope: OutsideEngineScope;
+      readonly because: string;
+    };
+
+/**
  * Rule metadata
  */
 export interface RuleMeta {
@@ -118,7 +197,7 @@ export interface RuleMeta {
    * Every `ruleName`/`severity` pair this rule's `check` can emit.
    *
    * `name` is the REGISTRY key; a single registered rule routinely reports under
-   * many user-visible `ruleName`s (`valid-camera2d-properties` emits twelve, one
+   * many user-visible `ruleName`s (`valid-sprite3d-resources` emits four, one
    * of them the only error). Those names are the ones a user sees and suppresses,
    * and until now nothing could enumerate them: they are string literals inside
    * `check`, and the shared physics factories build theirs by interpolation, so
@@ -130,9 +209,14 @@ export interface RuleMeta {
    *
    * WHEN WRITING A RULE: put `severity:` before `ruleName:` in every diagnostic
    * object literal. The coverage guard pairs the two by source order, so the
-   * reverse order silently mispairs a severity.
+   * reverse order silently mispairs a severity. (That scrape strips the whole
+   * `emits` array first, so `grounding` cannot disturb the pairing — but it
+   * bracket-matches to find the array's end, so no string inside one may
+   * contain `[` or `]`.)
+   *
+   * Each entry also says where its authority comes from; see `EmitGrounding`.
    */
-  emits?: ReadonlyArray<{ ruleName: string; severity: Severity }>;
+  emits?: ReadonlyArray<{ ruleName: string; severity: Severity; grounding: EmitGrounding }>;
   /**
    * `file:line` of the engine guard that confines this rule to ONE exact class,
    * when Godot itself does not extend the condition to that class's subclasses.

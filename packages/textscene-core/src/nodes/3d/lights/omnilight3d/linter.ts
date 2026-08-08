@@ -43,9 +43,17 @@ const omniLight3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['OmniLight3D'],
     emits: [
-      { ruleName: 'omnilight3d-negative-energy', severity: 'warning' },
-      { ruleName: 'omnilight3d-negative-range', severity: 'warning' },
-      { ruleName: 'omnilight3d-projector-without-shadow', severity: 'warning' },
+      {
+        ruleName: 'omnilight3d-negative-energy',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'light_3d.cpp:389' },
+      },
+      {
+        ruleName: 'omnilight3d-negative-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'light_3d.cpp:639' },
+      },
+      { ruleName: 'omnilight3d-projector-without-shadow', severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkOmniLight3D,

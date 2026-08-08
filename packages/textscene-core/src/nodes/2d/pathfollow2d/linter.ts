@@ -107,11 +107,27 @@ const pathFollow2DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['PathFollow2D'],
     emits: [
-      { ruleName: 'pathfollow2d-no-parent', severity: 'warning' },
-      { ruleName: 'pathfollow2d-invalid-parent', severity: 'warning' },
-      { ruleName: 'pathfollow2d-negative-progress', severity: 'warning' },
-      { ruleName: 'pathfollow2d-progress-ratio-out-of-range', severity: 'warning' },
-      { ruleName: 'pathfollow2d-both-progress-properties', severity: 'warning' },
+      { ruleName: 'pathfollow2d-no-parent', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: 'pathfollow2d-invalid-parent', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'pathfollow2d-negative-progress',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'path_2d.cpp:437' },
+      },
+      {
+        ruleName: 'pathfollow2d-progress-ratio-out-of-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'path_2d.cpp:437' },
+      },
+      {
+        ruleName: 'pathfollow2d-both-progress-properties',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'packed_scene.cpp:369',
+          unused: 'properties apply in file order, so the earlier key is overwritten',
+        },
+      },
     ],
   },
   check: checkPathFollow2D,

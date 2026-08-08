@@ -116,15 +116,12 @@ function checkNode3D(context: RuleContext): Diagnostic[] {
         ruleName: 'valid-node3d-visibility',
       });
     } else if (visibilityPath !== '') {
-      // Empty path is valid (means no visibility parent), but non-empty must exist
-      const nodePathMap = buildNodePathMap(scene.nodes);
-
-      // Handle relative paths (starting with "." or containing "../")
-      let resolvedPath = visibilityPath;
-
-      // For absolute paths, check directly
+      // Empty path is valid (means no visibility parent), but a non-empty
+      // absolute path must exist. A relative path is legal and unresolved here,
+      // so it reports nothing.
       if (!visibilityPath.startsWith('.') && !visibilityPath.includes('../')) {
-        if (!nodePathMap.has(resolvedPath)) {
+        const nodePathMap = buildNodePathMap(scene.nodes);
+        if (!nodePathMap.has(visibilityPath)) {
           diagnostics.push({
             severity: 'error',
             message: `Visibility parent node not found: "${visibilityPath}". Node does not exist in scene tree.`,
@@ -133,16 +130,6 @@ function checkNode3D(context: RuleContext): Diagnostic[] {
             ruleName: 'valid-node3d-visibility',
           });
         }
-      } else {
-        // For relative paths, we'd need current node's path to resolve
-        // This is more complex and can be added if needed
-        diagnostics.push({
-          severity: 'warning',
-          message: `Relative visibility_parent paths like "${visibilityPath}" cannot be validated. Use absolute paths for better linting.`,
-          nodeName: props.name,
-          nodeType: node.type,
-          ruleName: 'valid-node3d-visibility',
-        });
       }
     }
   }
@@ -166,8 +153,11 @@ const node3DValidationRule: LintRule = {
     // spatial types Godot did not suffix (GridMap, Decal, ReflectionProbe, …).
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Node3D'),
     emits: [
-      { ruleName: 'valid-node3d-visibility', severity: 'error' },
-      { ruleName: 'valid-node3d-visibility', severity: 'warning' },
+      {
+        ruleName: 'valid-node3d-visibility',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'node_3d.cpp:1312' },
+      },
     ],
   },
   check: checkNode3D,

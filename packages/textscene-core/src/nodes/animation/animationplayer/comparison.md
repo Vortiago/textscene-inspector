@@ -67,13 +67,11 @@ Strict parsing format-checks these `AnimationPlayer` properties, plus 13 inherit
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-animationplayer-properties` | `animationplayer-no-animations` | warning |
-|  | `animationplayer-autoplay-missing` | warning |
+| `valid-animationplayer-properties` | `animationplayer-autoplay-missing` | warning |
 |  | `animationplayer-current-animation-missing` | warning |
 |  | `animationplayer-negative-blend-time` | warning |
 |  | `animationplayer-large-blend-time` | warning |
 |  | `animationplayer-inactive` | warning |
-|  | `animationplayer-invalid-root-path` | warning |
 <!-- lint:end -->
 
 `speed_scale` warns and falls back to `1.0` only when the value fails to parse

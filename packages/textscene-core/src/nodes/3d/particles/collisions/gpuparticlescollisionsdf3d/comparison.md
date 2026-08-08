@@ -41,7 +41,7 @@ Strict parsing format-checks these `GPUParticlesCollisionSDF3D` properties, plus
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-gpuparticlescollisionsdf3d-bake-mask` (type-family match) | `gpuparticlescollisionsdf3d-empty-bake-mask` | warning |
 <!-- lint:end -->
 

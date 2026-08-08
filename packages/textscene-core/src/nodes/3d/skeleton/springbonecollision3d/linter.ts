@@ -47,7 +47,7 @@ const springBoneCollision3DParentRule: LintRule = {
       'Warns when a SpringBoneCollision3D is not a direct child of a SpringBoneSimulator3D, where Godot never consults it',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SpringBoneCollision3D'),
-    emits: [{ ruleName: 'springbonecollision3d-outside-springbonesimulator3d', severity: 'warning' }],
+    emits: [{ ruleName: 'springbonecollision3d-outside-springbonesimulator3d', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkSpringBoneCollision3D,
 };

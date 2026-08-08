@@ -71,7 +71,13 @@ const optionButtonSelectedRule: LintRule = {
     description: "Flags an OptionButton 'selected' index that item_count never provides",
     category: 'validation',
     applicableNodeTypes: ['OptionButton'],
-    emits: [{ ruleName: 'optionbutton-selected-out-of-range', severity: 'warning' }],
+    emits: [
+      {
+        ruleName: 'optionbutton-selected-out-of-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'option_button.cpp:436' },
+      },
+    ],
   },
   check: checkOptionButtonSelected,
 };

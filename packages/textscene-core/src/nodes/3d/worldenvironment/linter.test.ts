@@ -248,7 +248,7 @@ environment = SubResource("env_1")
     });
 
     describe('camera_attributes resource existence', () => {
-      it('should warn about non-existent camera_attributes resource', () => {
+      it('errors on a non-existent camera_attributes resource', () => {
         expectDiagnostic(
           `[gd_scene format=3]
 
@@ -260,7 +260,7 @@ camera_attributes = SubResource("nonexistent_cam")
 `,
           {
             ruleName: 'valid-worldenvironment-resources',
-            severity: 'warning',
+            severity: 'error',
             contains: ['Camera attributes resource not found'],
           }
         );
@@ -309,7 +309,7 @@ environment = SubResource("env_2")
         {
           ruleName: 'single-worldenvironment',
           severity: 'warning',
-          contains: ['2 WorldEnvironment nodes', 'Only one WorldEnvironment should be active'],
+          contains: ['2 WorldEnvironment nodes', 'Only the first Environment has an effect'],
         }
       );
     });

@@ -69,7 +69,7 @@ const iterateIK3DTargetRule: LintRule = {
       'Warns when an IterateIK3D-family setting names no target_node, the configuration Godot itself flags and then skips',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'IterateIK3D'),
-    emits: [{ ruleName: RULE_NAME, severity: 'warning' }],
+    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkIterateIK3D,
 };

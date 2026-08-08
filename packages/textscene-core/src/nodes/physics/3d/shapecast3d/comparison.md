@@ -52,7 +52,7 @@ Strict parsing format-checks these `ShapeCast3D` properties, plus 16 inherited f
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-shapecast3d` | `shapecast3d-no-collide-target` | warning |
 |  | `shapecast3d-zero-mask` | warning |
 |  | `shapecast3d-missing-shape` | warning |

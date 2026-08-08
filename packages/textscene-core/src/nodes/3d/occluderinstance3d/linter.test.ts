@@ -107,8 +107,16 @@ describe('OccluderInstance3D semantic rules', () => {
   it('applies only to OccluderInstance3D', () => {
     expect(RULE.meta.applicableNodeTypes).toEqual(['OccluderInstance3D']);
     expect(RULE.meta.emits).toEqual([
-      { ruleName: 'occluderinstance3d-empty-bake-mask', severity: 'warning' },
-      { ruleName: 'occluderinstance3d-missing-occluder', severity: 'warning' },
+      {
+        ruleName: 'occluderinstance3d-empty-bake-mask',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+      {
+        ruleName: 'occluderinstance3d-missing-occluder',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
     ]);
   });
 });

@@ -59,11 +59,7 @@ Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inheri
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-animatedsprite2d-resources` | `animatedsprite2d-requires-spriteframes` | warning |
 |  | `valid-animatedsprite2d-resources` | error |
-|  | `animatedsprite2d-autoplay-no-spriteframes` | warning |
 |  | `animatedsprite2d-animation-no-spriteframes` | warning |
-|  | `animatedsprite2d-speed-scale-zero` | warning |
-|  | `animatedsprite2d-frame-progress-range` | warning |
-|  | `animatedsprite2d-playing-deprecated` | warning |
 <!-- lint:end -->
 
 `speed_scale`, `frame_progress`, `autoplay`, and `playing` are validated by strict but never

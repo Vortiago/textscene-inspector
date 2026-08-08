@@ -82,7 +82,7 @@ const controlTooltipRule: LintRule = {
       'Flags a tooltip that can never be displayed because the control (own value, default per-subclass) resolves Mouse Filter to Ignore',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Control'),
-    emits: [{ ruleName: 'control-tooltip-ignored-by-mouse-filter', severity: 'warning' }],
+    emits: [{ ruleName: 'control-tooltip-ignored-by-mouse-filter', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkControlTooltip,
 };

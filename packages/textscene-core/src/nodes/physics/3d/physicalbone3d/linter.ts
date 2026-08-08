@@ -47,7 +47,7 @@ const physicalBone3DValidationRule: LintRule = {
     description: "Warns when a PhysicalBone3D has no CollisionShape3D or CollisionPolygon3D descendant to give it a shape",
     category: 'validation',
     applicableNodeTypes: ['PhysicalBone3D'],
-    emits: [{ ruleName: RULE_NAME, severity: 'warning' }],
+    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkPhysicalBone3D,
 };

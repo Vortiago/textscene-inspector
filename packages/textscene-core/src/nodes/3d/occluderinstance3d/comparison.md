@@ -38,7 +38,7 @@ Strict parsing format-checks these `OccluderInstance3D` properties, plus 1 inher
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-occluderinstance3d-configuration` | `occluderinstance3d-empty-bake-mask` | warning |
 |  | `occluderinstance3d-missing-occluder` | warning |
 <!-- lint:end -->

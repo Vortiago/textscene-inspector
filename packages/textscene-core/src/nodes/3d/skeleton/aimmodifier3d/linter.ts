@@ -113,7 +113,7 @@ const aimModifier3DAxisRule: LintRule = {
       "Warns when a euler setting's forward axis is parallel to its primary rotation axis, the configuration Godot's own AimModifier3D warning refuses",
     category: 'validation',
     applicableNodeTypes: ['AimModifier3D'],
-    emits: [{ ruleName: 'aimmodifier3d-parallel-rotation-axes', severity: 'warning' }],
+    emits: [{ ruleName: 'aimmodifier3d-parallel-rotation-axes', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkAimModifier3D,
 };

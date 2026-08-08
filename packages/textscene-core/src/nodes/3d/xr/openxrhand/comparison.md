@@ -47,7 +47,7 @@ Strict parsing format-checks these `OpenXRHand` properties, plus 16 inherited fr
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 The lenient parser reads OpenXRHand through `parseNode3D`, so a malformed `hand`,

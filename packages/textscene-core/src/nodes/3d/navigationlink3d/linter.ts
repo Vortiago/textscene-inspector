@@ -108,7 +108,7 @@ const navigationLink3DPositionRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['NavigationLink3D'],
     emits: [
-      { ruleName: 'navigationlink3d-start-position-equals-end-position', severity: 'warning' },
+      { ruleName: 'navigationlink3d-start-position-equals-end-position', severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkNavigationLink3D,

@@ -44,7 +44,7 @@ const parallaxLayerParentRule: LintRule = {
       'Warns when a ParallaxLayer is not a direct child of a ParallaxBackground, where Godot never applies its motion properties',
     category: 'validation',
     applicableNodeTypes: ['ParallaxLayer'],
-    emits: [{ ruleName: 'parallaxlayer-outside-parallaxbackground', severity: 'warning' }],
+    emits: [{ ruleName: 'parallaxlayer-outside-parallaxbackground', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkParallaxLayer,
 };

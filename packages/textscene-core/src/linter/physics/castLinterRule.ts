@@ -31,6 +31,13 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
   // solver has no equivalent restriction.
   const rejectsConcave = kind === 'Shape' && dim === '3D';
 
+  // `_can_collide_with` filters every space-state query result. Keyed on `dim`
+  // alone, not on `kind`: one function serves the ray and the shape query in a
+  // dimension, and the two dimensions have their own copy of it.
+  const canCollideCite = dim === '2D' ? 'godot_space_2d.cpp:43' : 'godot_space_3d.cpp:43';
+  // Its first clause, the mask test against each candidate's collision_layer.
+  const maskCite = dim === '2D' ? 'godot_space_2d.cpp:44' : 'godot_space_3d.cpp:44';
+
   function check(context: RuleContext): Diagnostic[] {
     const { node } = context;
 
@@ -108,16 +115,50 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
       category: 'validation',
       applicableNodeTypes: [type],
       emits: [
-        { ruleName: `${prefix}-no-collide-target`, severity: 'warning' },
-        { ruleName: `${prefix}-zero-mask`, severity: 'warning' },
+        {
+          ruleName: `${prefix}-no-collide-target`,
+          severity: 'warning',
+          grounding: {
+            kind: 'engine-inert',
+            at: canCollideCite,
+            unused: 'both type clauses reject their category, so the query matches nothing',
+          },
+        },
+        {
+          ruleName: `${prefix}-zero-mask`,
+          severity: 'warning',
+          grounding: {
+            kind: 'engine-inert',
+            at: maskCite,
+            unused: 'the layer test fails for every object, so the cast reports no hit',
+          },
+        },
         ...(kind === 'Shape'
           ? [
-              { ruleName: `${prefix}-missing-shape`, severity: 'warning' as const },
-              { ruleName: `${prefix}-unresolved-shape`, severity: 'error' as const },
+              {
+                ruleName: `${prefix}-missing-shape`,
+                severity: 'warning' as const,
+                grounding: { kind: 'configuration-warning' } as const,
+              },
+              {
+                ruleName: `${prefix}-unresolved-shape`,
+                severity: 'error' as const,
+                grounding: {
+                  kind: 'no-engine-counterpart',
+                  scope: 'dangling-reference',
+                  because: 'the shape id is not declared anywhere in this file',
+                } as const,
+              },
             ]
           : []),
         ...(rejectsConcave
-          ? [{ ruleName: `${prefix}-concave-shape`, severity: 'warning' as const }]
+          ? [
+              {
+                ruleName: `${prefix}-concave-shape`,
+                severity: 'warning' as const,
+                grounding: { kind: 'configuration-warning' } as const,
+              },
+            ]
           : []),
       ],
     },

@@ -59,7 +59,7 @@ const timerWaitTimeRule: LintRule = {
       'Flags a Timer with a very low positive wait_time (< 0.05s), which behaves differently across frame rates',
     category: 'validation',
     applicableNodeTypes: ['Timer'],
-    emits: [{ ruleName: 'timer-low-wait-time', severity: 'warning' }],
+    emits: [{ ruleName: 'timer-low-wait-time', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkTimerWaitTime,
 };

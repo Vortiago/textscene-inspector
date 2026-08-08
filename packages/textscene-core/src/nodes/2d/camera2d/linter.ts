@@ -103,97 +103,38 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: position_smoothing_enabled without valid speed
-  if (rawProps.position_smoothing_enabled === 'true') {
-    if (rawProps.position_smoothing_speed === undefined) {
+  // WARNING: position_smoothing_enabled with a speed that cannot smooth
+  if (
+    rawProps.position_smoothing_enabled === 'true' &&
+    rawProps.position_smoothing_speed !== undefined
+  ) {
+    const speed = parseFloat(rawProps.position_smoothing_speed);
+    if (!isNaN(speed) && speed <= 0) {
       diagnostics.push({
         severity: 'warning',
-        message: `Camera2D has 'position_smoothing_enabled' set to true but 'position_smoothing_speed' is not set. Smoothing may not work as expected without a speed value.`,
+        message: `Camera2D has 'position_smoothing_enabled' set to true but 'position_smoothing_speed' is ${speed}. Speed must be greater than 0 for smoothing to work.`,
         nodeName: node.name,
         nodeType: node.type,
-        ruleName: 'camera2d-smoothing-speed-missing',
+        ruleName: 'camera2d-smoothing-speed-invalid',
       });
-    } else {
-      const speed = parseFloat(rawProps.position_smoothing_speed);
-      if (!isNaN(speed) && speed <= 0) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Camera2D has 'position_smoothing_enabled' set to true but 'position_smoothing_speed' is ${speed}. Speed must be greater than 0 for smoothing to work.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'camera2d-smoothing-speed-invalid',
-        });
-      }
     }
   }
 
-  // WARNING: rotation_smoothing_enabled without valid speed
-  if (rawProps.rotation_smoothing_enabled === 'true') {
-    if (rawProps.rotation_smoothing_speed === undefined) {
+  // WARNING: rotation_smoothing_enabled with a speed that cannot smooth
+  if (
+    rawProps.rotation_smoothing_enabled === 'true' &&
+    rawProps.rotation_smoothing_speed !== undefined
+  ) {
+    const speed = parseFloat(rawProps.rotation_smoothing_speed);
+    if (!isNaN(speed) && speed <= 0) {
       diagnostics.push({
         severity: 'warning',
-        message: `Camera2D has 'rotation_smoothing_enabled' set to true but 'rotation_smoothing_speed' is not set. Rotation smoothing may not work as expected without a speed value.`,
+        message: `Camera2D has 'rotation_smoothing_enabled' set to true but 'rotation_smoothing_speed' is ${speed}. Speed must be greater than 0 for rotation smoothing to work.`,
         nodeName: node.name,
         nodeType: node.type,
-        ruleName: 'camera2d-rotation-smoothing-speed-missing',
+        ruleName: 'camera2d-rotation-smoothing-speed-invalid',
       });
-    } else {
-      const speed = parseFloat(rawProps.rotation_smoothing_speed);
-      if (!isNaN(speed) && speed <= 0) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Camera2D has 'rotation_smoothing_enabled' set to true but 'rotation_smoothing_speed' is ${speed}. Speed must be greater than 0 for rotation smoothing to work.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'camera2d-rotation-smoothing-speed-invalid',
-        });
-      }
     }
-  }
-
-  // WARNING: drag margins set but drag not enabled
-  const hasHorizontalMargins = rawProps.drag_left_margin !== undefined || rawProps.drag_right_margin !== undefined;
-  const hasVerticalMargins = rawProps.drag_top_margin !== undefined || rawProps.drag_bottom_margin !== undefined;
-
-  if (hasHorizontalMargins && rawProps.drag_horizontal_enabled !== 'true') {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Camera2D has horizontal drag margins set (drag_left_margin or drag_right_margin) but 'drag_horizontal_enabled' is not true. These margins will have no effect.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'camera2d-horizontal-margins-without-drag',
-    });
-  }
-
-  if (hasVerticalMargins && rawProps.drag_vertical_enabled !== 'true') {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Camera2D has vertical drag margins set (drag_top_margin or drag_bottom_margin) but 'drag_vertical_enabled' is not true. These margins will have no effect.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'camera2d-vertical-margins-without-drag',
-    });
-  }
-
-  // WARNING: drag offsets set but drag not enabled
-  if (rawProps.drag_horizontal_offset !== undefined && rawProps.drag_horizontal_enabled !== 'true') {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Camera2D has 'drag_horizontal_offset' set but 'drag_horizontal_enabled' is not true. This offset will have no effect.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'camera2d-horizontal-offset-without-drag',
-    });
-  }
-
-  if (rawProps.drag_vertical_offset !== undefined && rawProps.drag_vertical_enabled !== 'true') {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Camera2D has 'drag_vertical_offset' set but 'drag_vertical_enabled' is not true. This offset will have no effect.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'camera2d-vertical-offset-without-drag',
-    });
   }
 
   return diagnostics;
@@ -205,21 +146,47 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
 const camera2DValidationRule: LintRule = {
   meta: {
     name: 'valid-camera2d-properties',
-    description: 'Validates Camera2D limit consistency, smoothing configuration, and drag settings',
+    description: 'Validates Camera2D limit consistency and smoothing configuration',
     category: 'validation',
     applicableNodeTypes: ['Camera2D'],
     emits: [
-      { ruleName: 'camera2d-multiple-enabled', severity: 'warning' },
-      { ruleName: 'camera2d-invalid-horizontal-limits', severity: 'warning' },
-      { ruleName: 'camera2d-invalid-vertical-limits', severity: 'warning' },
-      { ruleName: 'camera2d-smoothing-speed-missing', severity: 'warning' },
-      { ruleName: 'camera2d-smoothing-speed-invalid', severity: 'warning' },
-      { ruleName: 'camera2d-rotation-smoothing-speed-missing', severity: 'warning' },
-      { ruleName: 'camera2d-rotation-smoothing-speed-invalid', severity: 'warning' },
-      { ruleName: 'camera2d-horizontal-margins-without-drag', severity: 'warning' },
-      { ruleName: 'camera2d-vertical-margins-without-drag', severity: 'warning' },
-      { ruleName: 'camera2d-horizontal-offset-without-drag', severity: 'warning' },
-      { ruleName: 'camera2d-vertical-offset-without-drag', severity: 'warning' },
+      {
+        ruleName: 'camera2d-multiple-enabled',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'camera_2d.cpp:354',
+          unused: 'a second camera entering a tree that already has a current one never becomes current',
+        },
+      },
+      {
+        ruleName: 'camera2d-invalid-horizontal-limits',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'camera_2d.cpp:229',
+          unused: 'the degenerate branch centres the view instead of applying the limits',
+        },
+      },
+      {
+        ruleName: 'camera2d-invalid-vertical-limits',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'camera_2d.cpp:241',
+          unused: 'the degenerate branch centres the view instead of applying the limits',
+        },
+      },
+      {
+        ruleName: 'camera2d-smoothing-speed-invalid',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'camera_2d.cpp:703' },
+      },
+      {
+        ruleName: 'camera2d-rotation-smoothing-speed-invalid',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'camera_2d.cpp:715' },
+      },
     ],
   },
   check: checkCamera2D,

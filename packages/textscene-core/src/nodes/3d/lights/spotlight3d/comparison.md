@@ -53,7 +53,7 @@ Strict parsing format-checks these `SpotLight3D` properties, plus 15 inherited f
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-spotlight3d-properties` | `spotlight3d-negative-energy` | warning |
 |  | `spotlight3d-negative-range` | warning |
 |  | `spotlight3d-spot-angle-out-of-range` | warning |

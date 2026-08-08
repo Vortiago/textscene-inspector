@@ -160,20 +160,19 @@ describe('Skeleton3D Linter', () => {
 
   describe('Semantic Validation (Usage Context)', () => {
     describe('motion_scale warnings', () => {
-      it('should warn about motion_scale being too small', () => {
-        expectDiagnostic(scene(node('Skeleton3D', { motion_scale: '0.05' })), {
+      it('warns on a negative motion_scale, which the setter also replaces', () => {
+        expectDiagnostic(scene(node('Skeleton3D', { motion_scale: '-1.0' })), {
           ruleName: 'valid-skeleton3d-motion-scale',
           severity: 'warning',
-          contains: ['very small'],
+          contains: ['Godot replaces it with 1.0'],
         });
       });
 
-      it('should warn about motion_scale being too large', () => {
-        expectDiagnostic(scene(node('Skeleton3D', { motion_scale: '50.0' })), {
-          ruleName: 'valid-skeleton3d-motion-scale',
-          severity: 'warning',
-          contains: ['very large'],
-        });
+      it('stays silent inside the hint range and above its open max end', () => {
+        // skeleton_3d.cpp:1293 is "0.001,10,0.001,or_greater": 0.05 sits inside
+        // the range and `or_greater` opens the top, so neither warns.
+        expectClean(scene(node('Skeleton3D', { motion_scale: '0.05' })));
+        expectClean(scene(node('Skeleton3D', { motion_scale: '50.0' })));
       });
 
       it('should not warn about normal motion_scale values', () => {
@@ -243,75 +242,31 @@ describe('Skeleton3D Linter', () => {
       });
     });
 
+    // A Skeleton3D is legitimately consumed by BoneAttachment3D or
+    // SkeletonModifier3D subtrees, not only by a MeshInstance3D, and Skeleton3D
+    // overrides no get_configuration_warnings.
     describe('skeleton usage validation', () => {
-      it('should warn when skeleton is not used by any MeshInstance3D', () => {
-        const diagnostics = lint(
+      it('reports nothing when no MeshInstance3D references the skeleton', () => {
+        expectClean(
           scene(
             node('Skeleton3D', {}, { name: 'UnusedSkeleton' }),
             node('MeshInstance3D', {}, { name: 'SomeMesh' })
           )
         );
-        const warning = diagnostics.find(d =>
-          d.severity === 'warning' &&
-          d.ruleName === 'skeleton3d-unused'
-        );
-        // This should warn because there's a MeshInstance3D but it doesn't reference the skeleton
-        // However, this test is currently not working due to how properties are parsed
-        // TODO: Fix skeleton usage detection
-        // For now, we'll accept either a warning or no warning
-        if (warning) {
-          expect(warning.message).toContain('not referenced');
-          expect(warning.message).toContain('MeshInstance3D');
-        }
-      });
-
-      it('should pass when skeleton is referenced by MeshInstance3D', () => {
-        expectNoDiagnostic(
-          scene(
-            node('Skeleton3D', {}, { name: 'UsedSkeleton' }),
-            node('MeshInstance3D', { skeleton: 'NodePath("UsedSkeleton")' }, { name: 'CharacterMesh' })
-          ),
-          { ruleName: 'skeleton3d-unused' }
-        );
-      });
-
-      it('should handle relative skeleton paths', () => {
-        expectNoDiagnostic(
-          scene(
-            node('Node3D', {}, { name: 'Root' }),
-            node('Skeleton3D', {}, { name: 'MySkeleton', parent: '.' }),
-            node('MeshInstance3D', { skeleton: 'NodePath("../MySkeleton")' }, { name: 'MyMesh', parent: '.' })
-          ),
-          { ruleName: 'skeleton3d-unused' }
-        );
-      });
-
-      it('should warn when skeleton exists but mesh points to different skeleton', () => {
-        const diagnostics = lint(
+        expectClean(
           scene(
             node('Skeleton3D', {}, { name: 'UnusedSkeleton' }),
             node('Skeleton3D', {}, { name: 'OtherSkeleton' }),
             node('MeshInstance3D', { skeleton: 'NodePath("OtherSkeleton")' }, { name: 'Mesh' })
           )
         );
-        const unusedWarning = diagnostics.find(d =>
-          d.nodeName === 'UnusedSkeleton' &&
-          d.ruleName === 'skeleton3d-unused'
-        );
-        // This test verifies that UnusedSkeleton is detected as unused
-        // when another skeleton is referenced instead
-        // TODO: Currently not working due to property parsing - needs investigation
-        if (unusedWarning) {
-          expect(unusedWarning).toBeDefined();
-        }
       });
     });
   });
 
   describe('Edge Cases', () => {
     it('should handle node with no properties', () => {
-      // Should only warn about unused skeleton
-      expectNoErrors(scene(node('Skeleton3D', {}, { name: 'EmptySkeleton' })));
+      expectClean(scene(node('Skeleton3D', {}, { name: 'EmptySkeleton' })));
     });
 
     it('should handle multiple validation issues', () => {

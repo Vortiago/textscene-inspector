@@ -42,7 +42,7 @@ Strict parsing format-checks these `VisibleOnScreenNotifier3D` properties, plus 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 A malformed `aabb` (not an `AABB(...)` literal) fails strict validation, but the

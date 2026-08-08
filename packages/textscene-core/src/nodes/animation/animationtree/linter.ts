@@ -89,16 +89,8 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: anim_player not set (AnimationTree requires AnimationPlayer)
-  if (!rawProps.anim_player) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `AnimationTree 'anim_player' is not set. AnimationTree requires an AnimationPlayer node to provide animations.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animationtree-missing-anim-player',
-    });
-  }
+  // An absent `anim_player` gets no diagnostic: set_animation_player treats the
+  // empty path as a supported mode and reconfigures the root node for it.
 
   // WARNING: anim_player must reference an existing AnimationPlayer node.
   // resolveNodePathTarget suppresses escapes/ambiguous paths (see its JSDoc).
@@ -125,23 +117,6 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
           ruleName: 'animationtree-anim-player-wrong-type',
         });
       }
-    }
-  }
-
-  // WARNING: active = true but tree_root or anim_player not set
-  if (rawProps.active === 'true') {
-    if (!rawProps.tree_root || !rawProps.anim_player) {
-      const missing: string[] = [];
-      if (!rawProps.tree_root) missing.push('tree_root');
-      if (!rawProps.anim_player) missing.push('anim_player');
-
-      diagnostics.push({
-        severity: 'warning',
-        message: `AnimationTree is 'active' but missing required properties: ${missing.join(', ')}. The AnimationTree will not function properly until these are set.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'animationtree-active-but-incomplete',
-      });
     }
   }
 
@@ -183,13 +158,39 @@ const animationTreeValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['AnimationTree'],
     emits: [
-      { ruleName: 'animationtree-missing-tree-root', severity: 'warning' },
-      { ruleName: 'animationtree-tree-root-not-found', severity: 'error' },
-      { ruleName: 'animationtree-missing-anim-player', severity: 'warning' },
-      { ruleName: 'animationtree-anim-player-not-found', severity: 'warning' },
-      { ruleName: 'animationtree-anim-player-wrong-type', severity: 'warning' },
-      { ruleName: 'animationtree-active-but-incomplete', severity: 'warning' },
-      { ruleName: 'animationtree-inactive', severity: 'warning' },
+      { ruleName: 'animationtree-missing-tree-root', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'animationtree-tree-root-not-found',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the file declares no ExtResource or SubResource carrying that id',
+        },
+      },
+      {
+        ruleName: 'animationtree-anim-player-not-found',
+        severity: 'warning',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the path names a node the file never declares',
+        },
+      },
+      {
+        ruleName: 'animationtree-anim-player-wrong-type',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'animation_tree.cpp:1020' },
+      },
+      {
+        ruleName: 'animationtree-inactive',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'animation_mixer.cpp:446',
+          unused: 'processing is gated on active, so the blend tree never advances',
+        },
+      },
     ],
   },
   check: checkAnimationTree,

@@ -111,9 +111,25 @@ const pointLight2DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['PointLight2D'],
     emits: [
-      { ruleName: 'pointlight2d-requires-texture', severity: 'warning' },
-      { ruleName: 'pointlight2d-inverted-z-range', severity: 'warning' },
-      { ruleName: 'pointlight2d-inverted-layer-range', severity: 'warning' },
+      { ruleName: 'pointlight2d-requires-texture', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'pointlight2d-inverted-z-range',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'rasterizer_canvas_gles3.cpp:849',
+          unused: 'the inclusive z test can never pass, so the light reaches no item',
+        },
+      },
+      {
+        ruleName: 'pointlight2d-inverted-layer-range',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'renderer_viewport.cpp:672',
+          unused: 'the inclusive layer test can never pass, so the light reaches no canvas',
+        },
+      },
     ],
   },
   check: checkPointLight2D,

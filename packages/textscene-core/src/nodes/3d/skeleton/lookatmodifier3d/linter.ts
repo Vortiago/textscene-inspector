@@ -79,7 +79,7 @@ const lookAtModifier3DAxisRule: LintRule = {
       "Warns when the forward axis is parallel to the primary rotation axis, the configuration Godot's own LookAtModifier3D warning refuses",
     category: 'validation',
     applicableNodeTypes: ['LookAtModifier3D'],
-    emits: [{ ruleName: 'lookatmodifier3d-parallel-rotation-axes', severity: 'warning' }],
+    emits: [{ ruleName: 'lookatmodifier3d-parallel-rotation-axes', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkLookAtModifier3D,
 };

@@ -57,8 +57,24 @@ const path2DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['Path2D'],
     emits: [
-      { ruleName: 'path2d-missing-curve', severity: 'warning' },
-      { ruleName: 'valid-path2d-resources', severity: 'error' },
+      {
+        ruleName: 'path2d-missing-curve',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'path_2d.cpp:161',
+          unused: 'the debug pass hides the instance and returns, so the path draws nothing',
+        },
+      },
+      {
+        ruleName: 'valid-path2d-resources',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the curve reference names a resource id this file never declares',
+        },
+      },
     ],
   },
   check: checkPath2D,

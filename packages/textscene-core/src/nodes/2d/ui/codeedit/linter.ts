@@ -91,7 +91,13 @@ const codeEditDelimiterCollisionRule: LintRule = {
       "Validates CodeEdit's delimiter_strings and delimiter_comments do not share a start key",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'CodeEdit'),
-    emits: [{ ruleName: 'codeedit-delimiter-start-key-collision', severity: 'warning' }],
+    emits: [
+      {
+        ruleName: 'codeedit-delimiter-start-key-collision',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'code_edit.cpp:3436' },
+      },
+    ],
   },
   check: checkCodeEdit,
 };

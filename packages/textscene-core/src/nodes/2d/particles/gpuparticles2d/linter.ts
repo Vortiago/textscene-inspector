@@ -46,7 +46,7 @@ const gpuParticles2DPreviewRule: LintRule = {
       "Flags a GPUParticles2D with no process_material, mirroring Godot's own configuration warning",
     category: 'validation',
     applicableNodeTypes: ['GPUParticles2D'],
-    emits: [{ ruleName: 'gpuparticles2d-missing-process-material', severity: 'warning' }],
+    emits: [{ ruleName: 'gpuparticles2d-missing-process-material', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkGPUParticles2D,
 };

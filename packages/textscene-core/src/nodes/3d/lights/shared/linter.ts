@@ -64,7 +64,7 @@ const light3DScaleValidationRule: LintRule = {
       "Mirrors Light3D::get_configuration_warnings' own-scale check across every concrete light type",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Light3D'),
-    emits: [{ ruleName: SCALE_RULE, severity: 'warning' }],
+    emits: [{ ruleName: SCALE_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkLight3DScale,
 };

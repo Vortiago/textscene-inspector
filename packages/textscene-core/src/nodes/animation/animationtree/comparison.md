@@ -65,10 +65,8 @@ Strict parsing format-checks these `AnimationTree` properties, plus 13 inherited
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-animationtree-properties` | `animationtree-missing-tree-root` | warning |
 |  | `animationtree-tree-root-not-found` | error |
-|  | `animationtree-missing-anim-player` | warning |
 |  | `animationtree-anim-player-not-found` | warning |
 |  | `animationtree-anim-player-wrong-type` | warning |
-|  | `animationtree-active-but-incomplete` | warning |
 |  | `animationtree-inactive` | warning |
 <!-- lint:end -->
 

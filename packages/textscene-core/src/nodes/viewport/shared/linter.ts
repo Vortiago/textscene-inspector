@@ -80,7 +80,7 @@ const viewportSizeRule: LintRule = {
       'Flags a Window-family node whose size is 1 pixel or smaller on either axis, so it renders nothing',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Viewport'),
-    emits: [{ ruleName: 'viewport-size-too-small', severity: 'warning' }],
+    emits: [{ ruleName: 'viewport-size-too-small', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkViewportSize,
 };

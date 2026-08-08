@@ -48,7 +48,7 @@ const softBody3DValidationRule: LintRule = {
     description: 'Warns when a SoftBody3D has no mesh set, matching Godot\'s own configuration warning',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SoftBody3D'),
-    emits: [{ ruleName: 'valid-softbody3d-mesh', severity: 'warning' }],
+    emits: [{ ruleName: 'valid-softbody3d-mesh', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkSoftBody3D,
 };

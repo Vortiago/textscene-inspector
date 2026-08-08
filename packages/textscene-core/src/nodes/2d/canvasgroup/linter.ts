@@ -93,8 +93,8 @@ const canvasGroupAncestryRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['CanvasGroup'],
     emits: [
-      { ruleName: 'canvasgroup-ancestor-clips-children', severity: 'warning' },
-      { ruleName: 'canvasgroup-nested-in-canvasgroup', severity: 'warning' },
+      { ruleName: 'canvasgroup-ancestor-clips-children', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: 'canvasgroup-nested-in-canvasgroup', severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkCanvasGroup,

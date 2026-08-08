@@ -54,7 +54,17 @@ const binaryResourceRule: LintRule = {
     name: 'binary-resource-reference',
     description: 'Flags references to binary Godot resources (.scn/.res) the previewer cannot load',
     category: 'validation',
-    emits: [{ ruleName: 'binary-resource-reference', severity: 'warning' }],
+    emits: [
+      {
+        ruleName: 'binary-resource-reference',
+        severity: 'warning',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'previewer-limitation',
+          because: 'this previewer decodes only text .tscn/.tres, never a binary .scn/.res payload',
+        },
+      },
+    ],
   },
   check: checkBinaryResourceReferences,
 };

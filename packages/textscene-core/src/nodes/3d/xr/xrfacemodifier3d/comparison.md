@@ -40,7 +40,7 @@ Strict parsing format-checks these `XRFaceModifier3D` properties, plus 16 inheri
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 The lenient parser reads XRFaceModifier3D through `parseNode3D`, so a malformed

@@ -1,10 +1,5 @@
 /**
- * Tree linter registration: strict validators plus the one semantic rule.
- *
- * The rule earns its place because `tile_scroll_hint` is only ever read inside
- * the `scroll_hint_mode != SCROLL_HINT_MODE_DISABLED` draw block, which no
- * single-property validator can see.
+ * Tree linter registration: the slice's strict validators.
  */
 
 import './linterParser.js';
-import './linter.js';

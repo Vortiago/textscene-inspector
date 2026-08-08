@@ -56,14 +56,10 @@ Strict parsing format-checks these `MenuBar` properties, plus 28 inherited from 
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
-| `valid-menubar-children` | `menubar-no-popupmenu` | warning |
 <!-- lint:end -->
 
 `linterParser.ts` format-checks all six of MenuBar's own members; `focus_mode`
-is Control's, since MenuBar only overrides its default. `linter.ts` adds one
-semantic rule: a MenuBar with no `PopupMenu` child draws no items at all and
-reports a zero minimum size, so it is invisible rather than merely empty, and
-that is a fact about the CHILDREN which no per-property check can see. None of
+is Control's, since MenuBar only overrides its default. None of
 this affects the rendered fallback today: `index.ts` reuses `parseControl`
 unchanged, which reads none of these six keys. A bad value on any of them is
 therefore not substituted with a fallback by the lenient parser; it is never

@@ -181,18 +181,46 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       applicableNodeTypes: [type],
       emits: [
-        { ruleName: `${prefix}-no-parent`, severity: 'warning' },
-        { ruleName: `${prefix}-invalid-parent`, severity: 'warning' },
-        { ruleName: `${prefix}-empty-polygon`, severity: 'warning' },
+        {
+          ruleName: `${prefix}-no-parent`,
+          severity: 'warning',
+          grounding: { kind: 'configuration-warning' },
+        },
+        {
+          ruleName: `${prefix}-invalid-parent`,
+          severity: 'warning',
+          grounding: { kind: 'configuration-warning' },
+        },
+        {
+          ruleName: `${prefix}-empty-polygon`,
+          severity: 'warning',
+          grounding: { kind: 'configuration-warning' },
+        },
         // 2D-only branch (dim === '2D'); never emitted by the 3D instantiation
         ...(dim === '2D'
           ? [
-              { ruleName: `${prefix}-insufficient-points`, severity: 'warning' as const },
-              { ruleName: `${prefix}-one-way-ignored`, severity: 'warning' as const },
+              {
+                ruleName: `${prefix}-insufficient-points`,
+                severity: 'warning' as const,
+                grounding: { kind: 'configuration-warning' } as const,
+              },
+              {
+                ruleName: `${prefix}-one-way-ignored`,
+                severity: 'warning' as const,
+                grounding: { kind: 'configuration-warning' } as const,
+              },
             ]
           : []),
         // 3D-only branch (dim === '3D'); never emitted by the 2D instantiation
-        ...(dim === '3D' ? [{ ruleName: `${prefix}-non-uniform-scale`, severity: 'warning' as const }] : []),
+        ...(dim === '3D'
+          ? [
+              {
+                ruleName: `${prefix}-non-uniform-scale`,
+                severity: 'warning' as const,
+                grounding: { kind: 'configuration-warning' } as const,
+              },
+            ]
+          : []),
       ],
     },
     check,

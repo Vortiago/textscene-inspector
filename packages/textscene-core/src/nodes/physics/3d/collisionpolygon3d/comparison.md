@@ -44,7 +44,7 @@ Strict parsing format-checks these `CollisionPolygon3D` properties, plus 16 inhe
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-collisionpolygon3d` | `collisionpolygon3d-no-parent` | warning |
 |  | `collisionpolygon3d-invalid-parent` | warning |
 |  | `collisionpolygon3d-empty-polygon` | warning |

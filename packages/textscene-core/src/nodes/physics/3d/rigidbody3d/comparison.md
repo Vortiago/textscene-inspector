@@ -59,7 +59,7 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited fr
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-collisionobject3d-scale` (type-family match) | `collisionobject3d-non-uniform-scale` | warning |
 | `valid-rigidbody3d` (type-family match) | `valid-rigidbody3d-resources` | error |
 |  | `rigidbody3d-needs-collision-shape` | warning |

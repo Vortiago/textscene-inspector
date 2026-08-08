@@ -90,37 +90,12 @@ describe('CSG own-geometry-degenerate rule', () => {
   });
 
   describe('CSGBox3D', () => {
-    it('stays silent when size is absent (default is (1,1,1), csg_shape.h:277)', () => {
-      expect(warningsFor(csgScene('CSGBox3D', ''))).toEqual([]);
-    });
-
-    it('warns on a zero size', () => {
-      const warnings = warningsFor(csgScene('CSGBox3D', 'size = Vector3(0, 0, 0)\n'));
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0]?.ruleName).toBe('csgbox3d-degenerate-size');
-    });
-
-    it('warns when only one axis is zero', () => {
-      const warnings = warningsFor(csgScene('CSGBox3D', 'size = Vector3(2, 0, 2)\n'));
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0]?.ruleName).toBe('csgbox3d-degenerate-size');
-    });
-
-    it('stays silent on a positive size', () => {
-      expect(warningsFor(csgScene('CSGBox3D', 'size = Vector3(2, 2, 2)\n'))).toEqual([]);
-    });
-
-    // Verified with `godot --headless`: _build_brush's `vertex_mul = size / 2`
-    // (csg_shape.cpp:1568) scales face vertices componentwise, so a negative
-    // component only flips that axis's winding — the AABB is identical to the
-    // positive counterpart (measured: size (-1,1,1) -> AABB size (1,1,1), same
-    // as size (1,1,1); size (-2,-2,-2) -> AABB size (2,2,2)). Not degenerate.
-    it('stays silent on a negative size component (mirrors, does not degenerate)', () => {
-      expect(warningsFor(csgScene('CSGBox3D', 'size = Vector3(-1, 1, 1)\n'))).toEqual([]);
-    });
-
-    it('stays silent when every component is negative', () => {
-      expect(warningsFor(csgScene('CSGBox3D', 'size = Vector3(-2, -2, -2)\n'))).toEqual([]);
+    // `size` is PROPERTY_HINT_NONE and `set_size` does not clamp, so the brush
+    // is always built with 12 faces: no size is degenerate.
+    it('never emits, whatever the size', () => {
+      for (const size of ['', 'size = Vector3(0, 0, 0)\n', 'size = Vector3(2, 0, 2)\n', 'size = Vector3(2, 2, 2)\n']) {
+        expect(warningsFor(csgScene('CSGBox3D', size))).toEqual([]);
+      }
     });
   });
 

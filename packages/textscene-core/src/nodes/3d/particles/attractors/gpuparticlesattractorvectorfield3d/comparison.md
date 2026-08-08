@@ -35,7 +35,7 @@ Strict parsing format-checks these `GPUParticlesAttractorVectorField3D` properti
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 `size` is validated as a Vector3 whose components must each be at least 0.01, the

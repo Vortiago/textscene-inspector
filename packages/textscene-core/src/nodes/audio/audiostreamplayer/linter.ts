@@ -71,9 +71,29 @@ const audioStreamPlayerValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer'],
     emits: [
-      { ruleName: 'audiostreamplayer-missing-stream-resource', severity: 'error' },
-      { ruleName: 'audiostreamplayer-autoplay-without-stream', severity: 'warning' },
-      { ruleName: 'audiostreamplayer-extreme-volume', severity: 'warning' },
+      {
+        ruleName: 'audiostreamplayer-missing-stream-resource',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the file declares no ExtResource or SubResource carrying that id',
+        },
+      },
+      {
+        ruleName: 'audiostreamplayer-autoplay-without-stream',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'audio_stream_player_internal.cpp:139',
+          unused: 'play_basic returns an empty playback, so autoplay produces no sound',
+        },
+      },
+      {
+        ruleName: 'audiostreamplayer-extreme-volume',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'audio_stream_player.cpp:282' },
+      },
     ],
   },
   check: checkAudioStreamPlayer,

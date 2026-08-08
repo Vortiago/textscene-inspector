@@ -39,7 +39,7 @@ Strict parsing format-checks the inherited set (3 inherited from XRNode3D, 16 in
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-xrnode3d` (type-family match) | `xrnode3d-parent-not-xrorigin3d` | warning |
 |  | `xrnode3d-no-pose-set` | warning |
 <!-- lint:end -->

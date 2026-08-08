@@ -104,24 +104,6 @@ describe('CharacterBody3D Linter', () => {
       },
     ]);
 
-    describe('up_direction validation', () => {
-      // character_body_3d.cpp's setter assigns whatever it is given, so an
-      // infinite component is stored — and it is not the standard up vector.
-      it('warns on a non-finite up_direction without calling it malformed', () => {
-        expectDiagnostic(
-          scene(node('CharacterBody3D', { up_direction: 'Vector3(0, inf, 0)' }), collisionShape3d),
-          { ruleName: 'characterbody3d-non-standard-up-direction', severity: 'warning' }
-        );
-      });
-
-      it('should warn about non-standard up_direction', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { up_direction: 'Vector3(0, 0, 1)' }), collisionShape3d), {
-          ruleName: 'characterbody3d-non-standard-up-direction',
-          severity: 'warning',
-        });
-      });
-    });
-
     describe('floor_snap_length validation', () => {
       it('should accept valid floor_snap_length values', () => {
         for (const value of [0, 0.001, 0.1, 1.0, 5.0]) {

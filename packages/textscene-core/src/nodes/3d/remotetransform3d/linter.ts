@@ -86,7 +86,7 @@ const remoteTransform3DValidationRule: LintRule = {
       "Mirrors RemoteTransform3D::get_configuration_warnings' remote_path check: absent, dangling, or not a Node3D",
     category: 'validation',
     applicableNodeTypes: ['RemoteTransform3D'],
-    emits: [{ ruleName: RULE_NAME, severity: 'warning' }],
+    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkRemoteTransform3D,
 };

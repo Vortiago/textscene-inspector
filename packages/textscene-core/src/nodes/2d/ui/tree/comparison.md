@@ -24,7 +24,7 @@ transform-only fallback and its children still show.
 | Folding | `hide_folding` (`true`), `enable_recursive_folding` (`false`), `enable_drag_unfolding` (`false`), `hide_root` (`true`) | Format-checked only. |
 | Drag and drop | `drop_mode_flags` (`3`, ON_ITEM \| INBETWEEN) | Format-checked only. |
 | Tooltips | `auto_tooltip` (`false`) | Format-checked only. |
-| Scroll | `scroll_horizontal_enabled` (`false`), `scroll_vertical_enabled` (`false`), `scroll_hint_mode` (`1`, BOTH), `tile_scroll_hint` (`true`) | Format-checked, and the pair is the one combination `linter.ts` reasons about. |
+| Scroll | `scroll_horizontal_enabled` (`false`), `scroll_vertical_enabled` (`false`), `scroll_hint_mode` (`1`, BOTH), `tile_scroll_hint` (`true`) | Format-checked only. |
 
 ## Divergences
 
@@ -60,7 +60,6 @@ Strict parsing format-checks these `Tree` properties, plus 28 inherited from Con
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
-| `valid-tree-scroll-hint` | `tree-tile-scroll-hint-without-hints` | warning |
 <!-- lint:end -->
 
 `linterParser.ts` format-checks all 16 of Tree's own members, which is every member in
@@ -71,10 +70,7 @@ by script at runtime and never reach the `.tscn`, so no amount of linting can se
 content a Tree will actually show. Three of the sixteen diagnose at warning rather than
 error, `select_mode` and `scroll_hint_mode` past their last constant and
 `drop_mode_flags` past its two hinted bits, because each setter stores the wide value
-unaltered and only the inspector widget is narrow. One semantic rule sits beside them,
-`tree-tile-scroll-hint-without-hints`: `tile_scroll_hint` is read only inside the
-`scroll_hint_mode != SCROLL_HINT_MODE_DISABLED` draw block, so enabling it with the mode
-left at its default is a dead setting no per-property check could notice. None of the sixteen affects the
+unaltered and only the inspector widget is narrow. None of the sixteen affects the
 rendered fallback today, since Tree draws nothing: the strict and lenient parsers agree
 on every property, because there is no `parser.ts` here at all and `parseControl` reads
 none of these keys. A property here becomes render-relevant only once a concrete tree

@@ -215,50 +215,6 @@ physics_material_override = ExtResource("ext_mat_1")
     });
   });
 
-  describe('Semantic Validation (Constant Velocities)', () => {
-    it('should warn when constant_linear_velocity is non-zero', () => {
-      expectDiagnostic(
-        scene(node('StaticBody2D', { constant_linear_velocity: 'Vector2(1.0, 0.0)' }), collisionShape2d),
-        {
-          ruleName: 'staticbody2d-constant-velocity-warning',
-          severity: 'warning',
-          nodeType: 'StaticBody2D',
-          contains: ['constant_linear_velocity', 'confusing'],
-        }
-      );
-    });
-
-    it('should not warn when constant_linear_velocity is zero', () => {
-      expectClean(scene(node('StaticBody2D', { constant_linear_velocity: 'Vector2(0, 0)' }), collisionShape2d));
-    });
-
-    it('should warn when constant_angular_velocity is non-zero', () => {
-      expectDiagnostic(scene(node('StaticBody2D', { constant_angular_velocity: 1.57 }), collisionShape2d), {
-        ruleName: 'staticbody2d-constant-velocity-warning',
-        severity: 'warning',
-        nodeType: 'StaticBody2D',
-        contains: ['constant_angular_velocity', 'confusing'],
-      });
-    });
-
-    it('should not warn when constant_angular_velocity is zero', () => {
-      expectClean(scene(node('StaticBody2D', { constant_angular_velocity: 0.0 }), collisionShape2d));
-    });
-
-    it('should warn when both velocities are non-zero', () => {
-      const warnings = lint(
-        scene(
-          node('StaticBody2D', {
-            constant_linear_velocity: 'Vector2(1.0, 0.0)',
-            constant_angular_velocity: 1.0,
-          }),
-          collisionShape2d
-        )
-      ).filter(d => d.ruleName === 'staticbody2d-constant-velocity-warning');
-      expect(warnings.length).toBe(2); // One for linear, one for angular
-    });
-  });
-
   describe('Semantic Validation (Collision Layers)', () => {
     it('should not warn when collision_layer is non-zero', () => {
       expectClean(scene(node('StaticBody2D', { collision_layer: 1 }), collisionShape2d));
@@ -284,7 +240,6 @@ physics_material_override = ExtResource("ext_mat_1")
           node('StaticBody2D', {
             collision_layer: -5,
             physics_material_override: 'SubResource("nonexistent")',
-            constant_linear_velocity: 'Vector2(1, 0)',
           })
         )
       );
@@ -292,9 +247,8 @@ physics_material_override = ExtResource("ext_mat_1")
       expect(diagnostics.length).toBeGreaterThanOrEqual(1);
       const hasCollisionLayerError = diagnostics.some(d => d.message.includes('collision_layer'));
       const hasResourceError = diagnostics.some(d => d.message.includes('resource not found'));
-      const hasVelocityWarning = diagnostics.some(d => d.message.includes('constant_linear_velocity'));
       // At least one of these errors should be present
-      expect(hasCollisionLayerError || hasResourceError || hasVelocityWarning).toBe(true);
+      expect(hasCollisionLayerError || hasResourceError).toBe(true);
     });
 
     it('should handle all properties together', () => {
@@ -323,10 +277,8 @@ input_pickable = true
     });
 
     it('should handle scientific notation in velocities', () => {
-      // Should have warning about non-zero velocity
-      expectDiagnostic(
-        scene(node('StaticBody2D', { constant_linear_velocity: 'Vector2(1e-5, 2.5e3)' }), collisionShape2d),
-        { ruleName: 'staticbody2d-constant-velocity-warning' }
+      expectNoErrors(
+        scene(node('StaticBody2D', { constant_linear_velocity: 'Vector2(1e-5, 2.5e3)' }), collisionShape2d)
       );
     });
 
@@ -336,16 +288,7 @@ input_pickable = true
       );
     });
 
-    it('should handle negative angular velocity', () => {
-      // Should have warning about non-zero velocity
-      expectDiagnostic(scene(node('StaticBody2D', { constant_angular_velocity: -3.14159 }), collisionShape2d), {
-        ruleName: 'staticbody2d-constant-velocity-warning',
-        contains: ['constant_angular_velocity'],
-      });
-    });
-
     it('should handle whitespace in Vector2', () => {
-      // Should only have warning about non-zero velocity
       expectNoErrors(
         scene(
           node('StaticBody2D', { constant_linear_velocity: 'Vector2(  10.5  ,  -20.3  )' }),

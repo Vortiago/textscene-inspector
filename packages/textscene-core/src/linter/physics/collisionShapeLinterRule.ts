@@ -19,6 +19,10 @@ import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 
 export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
+  // `one_way_collision` carries PROPERTY_HINT_GROUP_ENABLE for the
+  // `one_way_collision` group, so the margin beside it is inert while the
+  // toggle is off. 2D only: CollisionShape3D declares neither property.
+  const ONE_WAY_GROUP_AT = 'collision_shape_2d.cpp:290';
   const type = `CollisionShape${dim}`;
   const prefix = `collisionshape${dimSuffix(dim)}`;
   const collisionObject = `CollisionObject${dim}`;
@@ -214,25 +218,77 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       applicableNodeTypes: [type],
       emits: [
-        { ruleName: `${prefix}-requires-shape`, severity: 'warning' },
-        { ruleName: `valid-${prefix}-resources`, severity: 'error' },
-        { ruleName: `${prefix}-invalid-parent`, severity: 'warning' },
-        { ruleName: `${prefix}-no-parent`, severity: 'warning' },
+        {
+          ruleName: `${prefix}-requires-shape`,
+          severity: 'warning',
+          grounding: { kind: 'configuration-warning' },
+        },
+        {
+          ruleName: `valid-${prefix}-resources`,
+          severity: 'error',
+          grounding: {
+            kind: 'no-engine-counterpart',
+            scope: 'dangling-reference',
+            because: 'the shape id is not declared anywhere in this file',
+          },
+        },
+        {
+          ruleName: `${prefix}-invalid-parent`,
+          severity: 'warning',
+          grounding: { kind: 'configuration-warning' },
+        },
+        {
+          ruleName: `${prefix}-no-parent`,
+          severity: 'warning',
+          grounding: { kind: 'configuration-warning' },
+        },
         // 2D-only branch (dim === '2D'); never emitted by the 3D instantiation
         ...(dim === '2D'
           ? [
-              { ruleName: `${prefix}-unused-one-way-margin`, severity: 'warning' as const },
-              { ruleName: `${prefix}-one-way-ignored-under-area2d`, severity: 'warning' as const },
-              { ruleName: `${prefix}-polygon-shape-limited-editing`, severity: 'warning' as const },
+              {
+                ruleName: `${prefix}-unused-one-way-margin`,
+                severity: 'warning' as const,
+                grounding: {
+                  kind: 'engine-inert',
+                  at: ONE_WAY_GROUP_AT,
+                  unused: 'the group-enable toggle gates the margin, which is read only while it is on',
+                } as const,
+              },
+              {
+                ruleName: `${prefix}-one-way-ignored-under-area2d`,
+                severity: 'warning' as const,
+                grounding: { kind: 'configuration-warning' } as const,
+              },
+              {
+                ruleName: `${prefix}-polygon-shape-limited-editing`,
+                severity: 'warning' as const,
+                grounding: { kind: 'configuration-warning' } as const,
+              },
             ]
           : []),
         // 3D-only branch (dim === '3D'); never emitted by the 2D instantiation
         ...(dim === '3D'
           ? [
-              { ruleName: `${prefix}-non-uniform-scale`, severity: 'warning' as const },
-              { ruleName: `${prefix}-concave-under-rigidbody`, severity: 'warning' as const },
-              { ruleName: `${prefix}-worldboundary-under-rigidbody`, severity: 'warning' as const },
-              { ruleName: `${prefix}-concave-under-characterbody`, severity: 'warning' as const },
+              {
+                ruleName: `${prefix}-non-uniform-scale`,
+                severity: 'warning' as const,
+                grounding: { kind: 'configuration-warning' } as const,
+              },
+              {
+                ruleName: `${prefix}-concave-under-rigidbody`,
+                severity: 'warning' as const,
+                grounding: { kind: 'configuration-warning' } as const,
+              },
+              {
+                ruleName: `${prefix}-worldboundary-under-rigidbody`,
+                severity: 'warning' as const,
+                grounding: { kind: 'configuration-warning' } as const,
+              },
+              {
+                ruleName: `${prefix}-concave-under-characterbody`,
+                severity: 'warning' as const,
+                grounding: { kind: 'configuration-warning' } as const,
+              },
             ]
           : []),
       ],

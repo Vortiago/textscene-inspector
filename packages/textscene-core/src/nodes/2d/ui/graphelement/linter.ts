@@ -77,7 +77,13 @@ const selectedRequiresSelectableRule: LintRule = {
       'always forces the element back to deselected regardless of load order',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'GraphElement'),
-    emits: [{ ruleName: 'graph-element-selected-not-selectable', severity: 'warning' }],
+    emits: [
+      {
+        ruleName: 'graph-element-selected-not-selectable',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'graph_element.cpp:207' },
+      },
+    ],
   },
   check: checkSelectedRequiresSelectable,
 };

@@ -66,7 +66,7 @@ const openXRRenderModelParentRule: LintRule = {
       "Warns when an OpenXRRenderModel's parent is neither an XROrigin3D nor an OpenXRRenderModelManager, Godot's own configuration warning for this node",
     category: 'validation',
     applicableNodeTypes: ['OpenXRRenderModel'],
-    emits: [{ ruleName: PARENT_RULE, severity: 'warning' }],
+    emits: [{ ruleName: PARENT_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkOpenXRRenderModelParent,
 };

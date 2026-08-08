@@ -47,8 +47,24 @@ const gridMapValidationRule: LintRule = {
       'Validates GridMap mesh_library reference resolves and flags missing mesh_library as a warning',
     category: 'validation',
     emits: [
-      { ruleName: 'gridmap-requires-mesh-library', severity: 'warning' },
-      { ruleName: 'valid-gridmap-resources', severity: 'error' },
+      {
+        ruleName: 'gridmap-requires-mesh-library',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'grid_map.cpp:676',
+          unused: 'every cell is skipped while the library is null, so the map draws nothing',
+        },
+      },
+      {
+        ruleName: 'valid-gridmap-resources',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the mesh_library id is undeclared in the file',
+        },
+      },
     ],
     applicableNodeTypes: ['GridMap'],
   },

@@ -87,20 +87,6 @@ function checkSprite3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Validate axis property is only used with FIXED_Y billboard mode
-  if (rawProps.axis !== undefined && rawProps.billboard !== undefined) {
-    const billboard = parseInt(rawProps.billboard, 10);
-    if (!isNaN(billboard) && billboard !== 2) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `Property 'axis' is only used when billboard mode is FIXED_Y (2). Current billboard mode is ${billboard}.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'sprite3d-axis-usage',
-      });
-    }
-  }
-
   return diagnostics;
 }
 
@@ -114,11 +100,38 @@ const sprite3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['Sprite3D'],
     emits: [
-      { ruleName: 'sprite3d-requires-texture', severity: 'warning' },
-      { ruleName: 'valid-sprite3d-resources', severity: 'error' },
-      { ruleName: 'sprite3d-frame-range', severity: 'warning' },
-      { ruleName: 'sprite3d-region-configuration', severity: 'warning' },
-      { ruleName: 'sprite3d-axis-usage', severity: 'warning' },
+      {
+        ruleName: 'sprite3d-requires-texture',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'sprite_3d.cpp:798',
+          unused: 'the draw clears the base and returns, so the sprite renders nothing',
+        },
+      },
+      {
+        ruleName: 'valid-sprite3d-resources',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the texture reference names a resource id this file never declares',
+        },
+      },
+      {
+        ruleName: 'sprite3d-frame-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'sprite_3d.cpp:878' },
+      },
+      {
+        ruleName: 'sprite3d-region-configuration',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'sprite_3d.cpp:808',
+          unused: 'region_rect is read only inside this branch',
+        },
+      },
     ],
   },
   check: checkSprite3D,

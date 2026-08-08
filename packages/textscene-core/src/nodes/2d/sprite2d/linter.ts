@@ -135,11 +135,43 @@ const sprite2DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['Sprite2D'],
     emits: [
-      { ruleName: 'sprite2d-requires-texture', severity: 'warning' },
-      { ruleName: 'valid-sprite2d-resources', severity: 'error' },
-      { ruleName: 'sprite2d-frame-range', severity: 'warning' },
-      { ruleName: 'sprite2d-frame-coords-range', severity: 'warning' },
-      { ruleName: 'sprite2d-region-configuration', severity: 'warning' },
+      {
+        ruleName: 'sprite2d-requires-texture',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'sprite_2d.cpp:159',
+          unused: 'the draw returns immediately, so the sprite renders nothing',
+        },
+      },
+      {
+        ruleName: 'valid-sprite2d-resources',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the texture reference names a resource id this file never declares',
+        },
+      },
+      {
+        ruleName: 'sprite2d-frame-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'sprite_2d.cpp:296' },
+      },
+      {
+        ruleName: 'sprite2d-frame-coords-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'sprite_2d.cpp:312' },
+      },
+      {
+        ruleName: 'sprite2d-region-configuration',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'sprite_2d.cpp:98',
+          unused: 'region_rect is read only inside this branch; the else uses the texture size',
+        },
+      },
     ],
   },
   check: checkSprite2D,

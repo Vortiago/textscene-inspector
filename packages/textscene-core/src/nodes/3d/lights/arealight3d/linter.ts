@@ -31,7 +31,21 @@ const areaLight3DValidationRule: LintRule = {
     description: 'Validates AreaLight3D property values and required properties',
     category: 'validation',
     applicableNodeTypes: ['AreaLight3D'],
-    emits: [{ ruleName: 'arealight3d-negative-energy', severity: 'warning' }],
+    emits: [
+      {
+        ruleName: 'arealight3d-negative-energy',
+        severity: 'warning',
+        // The weakest citation in the sweep, and deliberately not an exemption.
+        // AreaLight3D appears NOWHERE in 4.6.3, so it has no base chain here
+        // (`nodeBaseTypes.generated.ts` derives one from that ClassDB) and this
+        // line is Light3D's `light_energy` hint, not the node's own. What makes
+        // it the honest choice is that `lightEnergyArms('arealight3d')` already
+        // stamps the same cite on the RangeArm that produces this diagnostic,
+        // and `rangeAdvisoryGrounding` accepts it: naming an exemption here
+        // would leave two guards disagreeing about one fact.
+        grounding: { kind: 'engine', at: 'light_3d.cpp:389' },
+      },
+    ],
   },
   check: checkAreaLight3D,
 };

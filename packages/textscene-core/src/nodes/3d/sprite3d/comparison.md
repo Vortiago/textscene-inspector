@@ -47,12 +47,11 @@ Strict parsing format-checks these `Sprite3D` properties, plus 20 inherited from
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-sprite3d-resources` | `sprite3d-requires-texture` | warning |
 |  | `valid-sprite3d-resources` | error |
 |  | `sprite3d-frame-range` | warning |
 |  | `sprite3d-region-configuration` | warning |
-|  | `sprite3d-axis-usage` | warning |
 | `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
 |  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |

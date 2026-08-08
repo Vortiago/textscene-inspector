@@ -236,10 +236,26 @@ const springBoneSimulator3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SpringBoneSimulator3D'),
     emits: [
-      { ruleName: 'springbonesimulator3d-setting-index-out-of-range', severity: 'warning' },
-      { ruleName: 'springbonesimulator3d-shared-config-ignored', severity: 'warning' },
-      { ruleName: 'springbonesimulator3d-joint-config-ignored', severity: 'warning' },
-      { ruleName: 'springbonesimulator3d-collision-list-ignored', severity: 'warning' },
+      {
+        ruleName: 'springbonesimulator3d-setting-index-out-of-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:44' },
+      },
+      {
+        ruleName: 'springbonesimulator3d-shared-config-ignored',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:644' },
+      },
+      {
+        ruleName: 'springbonesimulator3d-joint-config-ignored',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:914' },
+      },
+      {
+        ruleName: 'springbonesimulator3d-collision-list-ignored',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:1150' },
+      },
     ],
   },
   check: checkSpringBoneSimulator3D,

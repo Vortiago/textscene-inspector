@@ -90,7 +90,7 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
     const resourceExists = checkResourceExists(scene, rawProps.camera_attributes);
     if (!resourceExists) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'error',
         message: `Camera attributes resource not found: ${rawProps.camera_attributes}`,
         nodeName: node.name,
         nodeType: node.type,
@@ -99,12 +99,16 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Check if there are multiple WorldEnvironment nodes (only one should be active)
+  // Godot's own row (world_environment.cpp:196) fires on a node whose Environment
+  // is not the one the viewport ended up with, which needs a live World3D. Gating
+  // on THIS node declaring an environment is the statically decidable subset: with
+  // two of them in one file exactly one wins, and which is not knowable here, so
+  // both are told.
   const worldEnvCount = countNodesOfType(scene.nodes, 'WorldEnvironment');
-  if (worldEnvCount > 1) {
+  if (rawProps.environment && worldEnvCount > 1) {
     diagnostics.push({
       severity: 'warning',
-      message: `Scene contains ${worldEnvCount} WorldEnvironment nodes. Only one WorldEnvironment should be active in a scene to avoid conflicts.`,
+      message: `Scene contains ${worldEnvCount} WorldEnvironment nodes. Only the first Environment has an effect.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'single-worldenvironment',
@@ -124,10 +128,21 @@ const worldEnvironmentValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['WorldEnvironment'],
     emits: [
-      { ruleName: 'worldenvironment-requires-environment', severity: 'warning' },
-      { ruleName: 'valid-worldenvironment-resources', severity: 'error' },
-      { ruleName: 'valid-worldenvironment-resources', severity: 'warning' },
-      { ruleName: 'single-worldenvironment', severity: 'warning' },
+      { ruleName: 'worldenvironment-requires-environment', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'valid-worldenvironment-resources',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the environment, sky or camera_attributes id is undeclared in the file',
+        },
+      },
+      {
+        ruleName: 'single-worldenvironment',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
     ],
   },
   check: checkWorldEnvironment,

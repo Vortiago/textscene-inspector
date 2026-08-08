@@ -242,13 +242,6 @@ describe('AnimationTree Linter', () => {
     });
 
     describe('anim_player warnings', () => {
-      it('should warn when anim_player is not set', () => {
-        expectDiagnostic(
-          scene(blendTree, node('AnimationTree', { tree_root: 'SubResource("BlendTree_1")' })),
-          { prop: 'anim_player', severity: 'warning', contains: ['not set', 'AnimationPlayer'] }
-        );
-      });
-
       it('should detect anim_player path issues', () => {
         expectDiagnostic(
           scene(
@@ -376,28 +369,6 @@ describe('AnimationTree Linter', () => {
     });
 
     describe('active property warnings', () => {
-      it('should warn when active but tree_root not set', () => {
-        expectDiagnostic(
-          scene(node('AnimationTree', { active: true, anim_player: 'NodePath("../AnimationPlayer")' })),
-          { prop: 'active', severity: 'warning', contains: ['missing', 'tree_root'] }
-        );
-      });
-
-      it('should warn when active but anim_player not set', () => {
-        expectDiagnostic(
-          scene(blendTree, node('AnimationTree', { tree_root: 'SubResource("BlendTree_1")', active: true })),
-          { prop: 'active', severity: 'warning', contains: ['missing', 'anim_player'] }
-        );
-      });
-
-      it('should warn when active but both tree_root and anim_player not set', () => {
-        expectDiagnostic(scene(node('AnimationTree', { active: true })), {
-          prop: 'active',
-          severity: 'warning',
-          contains: ['missing', 'tree_root', 'anim_player'],
-        });
-      });
-
       it('should warn when active is false', () => {
         expectDiagnostic(
           scene(
@@ -502,9 +473,7 @@ describe('AnimationTree Linter', () => {
     it('should handle AnimationTree with no properties', () => {
       const diagnostics = lint(scene(node('AnimationTree')));
       const treeRootWarning = diagnostics.find(d => d.message.includes('tree_root') && d.message.includes('not set'));
-      const animPlayerWarning = diagnostics.find(d => d.message.includes('anim_player') && d.message.includes('not set'));
       expect(treeRootWarning).toBeDefined();
-      expect(animPlayerWarning).toBeDefined();
     });
 
     it('should handle all properties together', () => {
@@ -617,23 +586,6 @@ describe('AnimationTree Linter', () => {
           })
         )
       );
-    });
-
-    it('should handle mixed warnings and errors', () => {
-      // Valid parse (no format errors) but semantic issues (warnings)
-      const diagnostics = lint(
-        scene(
-          node('AnimationTree', {
-            tree_root: 'SubResource("Missing_1")',
-            active: true,
-            audio_max_polyphony: 4,
-          })
-        )
-      );
-      const hasError = diagnostics.some(d => d.severity === 'error');
-      const hasWarning = diagnostics.some(d => d.severity === 'warning');
-      expect(hasError).toBe(true); // tree_root references missing resource
-      expect(hasWarning).toBe(true); // active but missing anim_player, low audio_max_polyphony
     });
 
     it('should handle empty NodePaths', () => {

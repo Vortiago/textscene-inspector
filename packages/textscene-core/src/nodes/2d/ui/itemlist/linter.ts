@@ -88,7 +88,13 @@ const itemListValidationRule: LintRule = {
     description: "Validates ItemList's dynamic item_<N>/… indices stay within item_count",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'ItemList'),
-    emits: [{ ruleName: 'itemlist-item-index-out-of-range', severity: 'warning' }],
+    emits: [
+      {
+        ruleName: 'itemlist-item-index-out-of-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+      },
+    ],
   },
   check: checkItemList,
 };

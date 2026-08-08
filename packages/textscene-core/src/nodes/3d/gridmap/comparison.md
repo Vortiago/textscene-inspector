@@ -49,7 +49,7 @@ Strict parsing format-checks these `GridMap` properties, plus 16 inherited from 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-gridmap-resources` | `gridmap-requires-mesh-library` | warning |
 |  | `valid-gridmap-resources` | error |
 <!-- lint:end -->

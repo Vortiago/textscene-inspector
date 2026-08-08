@@ -63,7 +63,7 @@ Strict parsing format-checks these `ReflectionProbe` properties, plus 1 inherite
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-reflectionprobe-ambient-mode` | `reflectionprobe-ambient-color-no-effect` | warning |
 <!-- lint:end -->
 

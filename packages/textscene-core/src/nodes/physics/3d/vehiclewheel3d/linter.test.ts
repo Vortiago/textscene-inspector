@@ -116,80 +116,6 @@ describe('VehicleWheel3D Linter', () => {
         expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-suspension-travel-out-of-range' });
       }
     });
-
-    it('warns when damping_relaxation is below damping_compression', () => {
-      expectDiagnostic(
-        scene(
-          vehicleBody,
-          node(
-            'VehicleWheel3D',
-            { damping_compression: 0.5, damping_relaxation: 0.3 },
-            { name: 'Wheel1', parent: '.' }
-          )
-        ),
-        {
-          ruleName: 'vehiclewheel3d-damping-relaxation-below-compression',
-          severity: 'warning',
-        }
-      );
-    });
-
-    it('stays quiet when only damping_compression is authored at or below the relaxation default (edge)', () => {
-      // Every corpus wheel sets damping_compression = 0.88 and leaves
-      // damping_relaxation at its 0.88 default, so the substituted pair is
-      // equal and the recommendation still holds.
-      const content = scene(
-        vehicleBody,
-        node('VehicleWheel3D', { damping_compression: 0.88 }, { name: 'Wheel1', parent: '.' })
-      );
-      expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-damping-relaxation-below-compression' });
-    });
-
-    it('warns when only damping_compression is authored, above the relaxation default', () => {
-      // The unauthored side is Godot's 0.88; a compression of 0.95 puts the
-      // wheel the wrong way round just as surely as authoring both would.
-      expectDiagnostic(
-        scene(
-          vehicleBody,
-          node('VehicleWheel3D', { damping_compression: 0.95 }, { name: 'Wheel1', parent: '.' })
-        ),
-        { ruleName: 'vehiclewheel3d-damping-relaxation-below-compression', severity: 'warning' }
-      );
-    });
-
-    it('warns when only damping_relaxation is authored, below the compression default', () => {
-      // Compression defaults to 0.83; a relaxation of 0.1 rebounds far faster
-      // than the spring compresses. Requiring BOTH sides missed this entirely.
-      expectDiagnostic(
-        scene(
-          vehicleBody,
-          node('VehicleWheel3D', { damping_relaxation: 0.1 }, { name: 'Wheel1', parent: '.' })
-        ),
-        { ruleName: 'vehiclewheel3d-damping-relaxation-below-compression', severity: 'warning' }
-      );
-    });
-
-    it('stays quiet when neither damping side is authored (edge)', () => {
-      // Godot's own pair — 0.83 compression, 0.88 relaxation — satisfies the
-      // recommendation, so a bare wheel must never carry this warning.
-      const content = scene(
-        vehicleBody,
-        node('VehicleWheel3D', { wheel_radius: 0.25 }, { name: 'Wheel1', parent: '.' })
-      );
-      expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-damping-relaxation-below-compression' });
-    });
-
-    it('stays quiet when relaxation equals compression', () => {
-      const content = scene(
-        vehicleBody,
-        node(
-          'VehicleWheel3D',
-          { damping_compression: 0.5, damping_relaxation: 0.5 },
-          { name: 'Wheel1', parent: '.' }
-        )
-      );
-      expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-damping-relaxation-below-compression' });
-    });
   });
 
   describe('Edge Cases', () => {
@@ -215,22 +141,6 @@ describe('VehicleWheel3D Linter', () => {
         )
       );
       expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
-    });
-
-    it('reports several problems at once', () => {
-      const diagnostics = lint(
-        scene(
-          node('Node3D', {}, { name: 'Root' }),
-          node(
-            'VehicleWheel3D',
-            { suspension_travel: 5.0, damping_compression: 0.9, damping_relaxation: 0.1 },
-            { name: 'Wheel1', parent: '.' }
-          )
-        )
-      );
-      const names = diagnostics.map((d) => d.ruleName);
-      expect(names).toContain('vehiclewheel3d-not-under-vehicle-body');
-      expect(names).toContain('vehiclewheel3d-damping-relaxation-below-compression');
     });
   });
 });

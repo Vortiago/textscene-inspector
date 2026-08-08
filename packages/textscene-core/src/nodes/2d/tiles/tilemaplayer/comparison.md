@@ -46,7 +46,6 @@ Strict parsing format-checks these `TileMapLayer` properties, plus 12 inherited 
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-tilemaplayer` | `tilemaplayer-requires-tileset` | warning |
 |  | `valid-tilemaplayer-resources` | error |
-|  | `tilemaplayer-empty` | warning |
 |  | `tilemaplayer-invalid-tile-data` | error |
 <!-- lint:end -->
 

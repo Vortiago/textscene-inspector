@@ -44,7 +44,7 @@ Strict parsing format-checks these `XROrigin3D` properties, plus 16 inherited fr
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-xrorigin3d` | `xrorigin3d-missing-camera-child` | warning |
 |  | `xrorigin3d-unsupported-scale` | warning |
 <!-- lint:end -->

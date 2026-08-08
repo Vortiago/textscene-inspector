@@ -161,9 +161,9 @@ const openXRCompositionLayerValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'OpenXRCompositionLayer'),
     emits: [
-      { ruleName: PARENT_RULE, severity: 'warning' },
-      { ruleName: ORTHONORMAL_RULE, severity: 'warning' },
-      { ruleName: HOLE_PUNCH_RULE, severity: 'warning' },
+      { ruleName: PARENT_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: ORTHONORMAL_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: HOLE_PUNCH_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkOpenXRCompositionLayer,

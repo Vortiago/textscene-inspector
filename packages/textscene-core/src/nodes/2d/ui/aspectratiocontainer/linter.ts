@@ -53,7 +53,15 @@ const aspectRatioContainerRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['AspectRatioContainer'],
     emits: [
-      { ruleName: 'aspectratiocontainer-unsupported-texturerect-expand-mode', severity: 'warning' },
+      {
+        ruleName: 'aspectratiocontainer-unsupported-texturerect-expand-mode',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'aspect_ratio_container.cpp:113',
+          unused: 'the sort pass skips the child instead of positioning it',
+        },
+      },
     ],
   },
   check: checkAspectRatioContainer,

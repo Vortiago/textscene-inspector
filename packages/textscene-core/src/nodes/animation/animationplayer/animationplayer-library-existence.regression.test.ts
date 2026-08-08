@@ -171,15 +171,13 @@ ${autoplay ? `autoplay = ${autoplay}\n` : ''}`;
     expect(rules(linter.lint(dictLibScene('&"wlak"')))).toContain('animationplayer-autoplay-missing');
   });
 
-  it('does NOT flag autoplay when NO clip source exists at all (the no-animations warning covers it)', () => {
+  it('does NOT flag autoplay when NO clip source exists at all (the clip set is unenumerable)', () => {
     const content = `[gd_scene format=3]
 
 [node name="AnimPlayer" type="AnimationPlayer"]
 autoplay = &"walk"
 `;
-    const found = rules(linter.lint(content));
-    expect(found).not.toContain('animationplayer-autoplay-missing');
-    expect(found).toContain('animationplayer-no-animations'); // pinned: the no-source signal stays the no-animations warning
+    expect(rules(linter.lint(content))).not.toContain('animationplayer-autoplay-missing');
   });
 
   // A clip name with a special char (e.g. `:`) must resolve identically in the linter and the render

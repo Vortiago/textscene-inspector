@@ -79,7 +79,7 @@ Strict parsing format-checks these `BoneTwistDisperser3D` properties, plus 2 inh
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 | `valid-bonetwistdisperser3d-settings` (type-family match) | `bonetwistdisperser3d-setting-index-out-of-range` | warning |
 |  | `bonetwistdisperser3d-joint-index-out-of-range` | warning |

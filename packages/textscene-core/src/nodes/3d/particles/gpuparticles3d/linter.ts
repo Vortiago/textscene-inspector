@@ -3,7 +3,7 @@
  *
  * Note: Format validation (amount > 0, explosiveness range, etc.) is handled
  * by linterParser.ts during strict parsing. This file focuses on semantic validation
- * that requires full scene context (e.g., resource references exist, trail configuration).
+ * that requires full scene context (e.g., resource references exist).
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -85,22 +85,6 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Validate trail configuration
-  if (rawProps.trail_lifetime) {
-    const trailLifetime = parseFloat(rawProps.trail_lifetime);
-    const trailEnabled = rawProps.trail_enabled === 'true';
-
-    if (!isNaN(trailLifetime) && trailLifetime > 0 && !trailEnabled) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Trail lifetime is set to ${trailLifetime}, but 'trail_enabled' is false. Set 'trail_enabled=true' to enable particle trails`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'valid-gpuparticles3d-trail-config',
-      });
-    }
-  }
-
   // sub_emitter must reference an existing GPUParticles3D node; empty/non-NodePath
   // means "no sub-emitter". resolveNodePathTarget suppresses escapes/ambiguous
   // paths (see its JSDoc).
@@ -158,13 +142,36 @@ const gpuParticles3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['GPUParticles3D'],
     emits: [
-      { ruleName: 'gpuparticles3d-missing-process-material', severity: 'warning' },
-      { ruleName: 'valid-gpuparticles3d-process-material', severity: 'error' },
-      { ruleName: 'valid-gpuparticles3d-resources', severity: 'error' },
-      { ruleName: 'gpuparticles3d-no-draw-pass-mesh', severity: 'warning' },
-      { ruleName: 'valid-gpuparticles3d-trail-config', severity: 'error' },
-      { ruleName: 'valid-gpuparticles3d-sub-emitter', severity: 'error' },
-      { ruleName: 'gpuparticles3d-performance', severity: 'warning' },
+      { ruleName: 'gpuparticles3d-missing-process-material', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'valid-gpuparticles3d-process-material',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the process_material reference names a resource id this file never declares',
+        },
+      },
+      {
+        ruleName: 'valid-gpuparticles3d-resources',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the draw pass mesh reference names a resource id this file never declares',
+        },
+      },
+      { ruleName: 'gpuparticles3d-no-draw-pass-mesh', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'valid-gpuparticles3d-sub-emitter',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'gpu_particles_3d.cpp:823' },
+      },
+      {
+        ruleName: 'gpuparticles3d-performance',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'gpu_particles_3d.cpp:821' },
+      },
     ],
   },
   check: checkGPUParticles3D,

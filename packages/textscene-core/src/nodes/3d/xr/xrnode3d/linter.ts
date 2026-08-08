@@ -117,8 +117,8 @@ const xrNode3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'XRNode3D'),
     emits: [
-      { ruleName: PARENT_RULE, severity: 'warning' },
-      { ruleName: NO_POSE_RULE, severity: 'warning' },
+      { ruleName: PARENT_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: NO_POSE_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkXRNode3D,

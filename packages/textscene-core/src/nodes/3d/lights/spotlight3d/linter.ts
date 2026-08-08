@@ -84,11 +84,23 @@ const spotLight3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['SpotLight3D'],
     emits: [
-      { ruleName: 'spotlight3d-negative-energy', severity: 'warning' },
-      { ruleName: 'spotlight3d-negative-range', severity: 'warning' },
-      { ruleName: 'spotlight3d-spot-angle-out-of-range', severity: 'warning' },
-      { ruleName: 'spotlight3d-shadow-angle-too-wide', severity: 'warning' },
-      { ruleName: 'spotlight3d-projector-without-shadow', severity: 'warning' },
+      {
+        ruleName: 'spotlight3d-negative-energy',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'light_3d.cpp:389' },
+      },
+      {
+        ruleName: 'spotlight3d-negative-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'light_3d.cpp:672' },
+      },
+      {
+        ruleName: 'spotlight3d-spot-angle-out-of-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'light_3d.cpp:674' },
+      },
+      { ruleName: 'spotlight3d-shadow-angle-too-wide', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: 'spotlight3d-projector-without-shadow', severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkSpotLight3D,

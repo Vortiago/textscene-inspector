@@ -244,34 +244,6 @@ pixel_size = 0.01
     });
   });
 
-  describe('Semantic Validation (Axis Usage)', () => {
-    it('should warn when axis is set without FIXED_Y billboard mode', () => {
-      expectDiagnostic(
-        scene(node('Sprite3D', { billboard: 1, axis: 1 }, { name: 'AxisWithoutFixedY' })),
-        {
-          ruleName: 'sprite3d-axis-usage',
-          severity: 'warning',
-          contains: ['axis', 'FIXED_Y'],
-        }
-      );
-    });
-
-    it('should pass when axis is set with FIXED_Y billboard mode', () => {
-      expectClean(
-        scene(
-          node('Sprite3D', { texture: textureRef, billboard: 2, axis: 1 }, { name: 'ValidAxisUsage' }),
-          textureDef
-        )
-      );
-    });
-
-    it('should pass when axis is set without billboard property', () => {
-      expectClean(
-        scene(node('Sprite3D', { texture: textureRef, axis: 1 }, { name: 'AxisOnly' }), textureDef)
-      );
-    });
-  });
-
   describe('Edge Cases', () => {
     it('should handle multiple validation errors', () => {
       const diagnostics = lint(

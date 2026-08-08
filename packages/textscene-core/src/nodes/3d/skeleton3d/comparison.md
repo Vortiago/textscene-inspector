@@ -41,11 +41,10 @@ Strict parsing format-checks these `Skeleton3D` properties, plus 16 inherited fr
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-skeleton3d-usage` | `valid-skeleton3d-motion-scale` | warning |
 |  | `skeleton3d-debug-mode` | warning |
 |  | `skeleton3d-deprecated-feature` | warning |
-|  | `skeleton3d-unused` | warning |
 <!-- lint:end -->
 
 Skeleton3D has no `parser.ts` of its own: it registers `parseNode3D` directly (index.ts),

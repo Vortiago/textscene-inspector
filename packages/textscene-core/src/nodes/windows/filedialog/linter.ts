@@ -86,7 +86,13 @@ const fileDialogValidationRule: LintRule = {
     description: "Validates FileDialog's dynamic option_<N>/… indices stay within option_count",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'FileDialog'),
-    emits: [{ ruleName: 'filedialog-option-index-out-of-range', severity: 'warning' }],
+    emits: [
+      {
+        ruleName: 'filedialog-option-index-out-of-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+      },
+    ],
   },
   check: checkFileDialog,
 };

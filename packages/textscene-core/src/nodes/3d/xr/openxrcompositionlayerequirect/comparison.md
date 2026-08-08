@@ -59,7 +59,7 @@ Strict parsing format-checks these `OpenXRCompositionLayerEquirect` properties, 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-openxrcompositionlayer` (type-family match) | `openxrcompositionlayer-parent-not-xrorigin3d` | warning |
 |  | `openxrcompositionlayer-non-orthonormal-transform` | warning |
 |  | `openxrcompositionlayer-hole-punch-sort-order` | warning |

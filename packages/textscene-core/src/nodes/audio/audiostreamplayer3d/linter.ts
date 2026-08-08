@@ -14,7 +14,6 @@ import {
   player3DVolumeArms,
   player3DPitchArms,
   checkInvalidMaxPolyphony,
-  isDrivenByAnimationAudioTrack,
 } from '../sharedLinterChecks.js';
 
 // audio_stream_player_3d.cpp:885, unit_size PROPERTY_HINT_RANGE
@@ -37,36 +36,19 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // A stream can also arrive through an AnimationPlayer audio track that
-  // targets this node (animation_mixer.cpp:889-897 builds its own polyphonic
-  // playback and never reads the node's `stream`), so a node driven that way
-  // is not silent despite having no `stream` of its own.
-  const drivenByAnimation = rawProps.stream === undefined && isDrivenByAnimationAudioTrack(scene, node);
+  // A player with no `stream` at all gets no diagnostic: that is the serialised
+  // default, audio_stream_player_3d.cpp defines no configuration warning, and a
+  // script or an AnimationPlayer audio track may supply the stream instead.
 
-  // Advisory, not an error: audio_stream_player_3d.cpp defines no
-  // configuration warning, and a player with no stream is valid Godot; a script
-  // may assign one at runtime.
-  if (rawProps.stream === undefined) {
-    if (!drivenByAnimation) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `AudioStreamPlayer3D '${node.name}' has no 'stream', so it will not play anything until one is assigned.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'audiostreamplayer3d-missing-stream',
-      });
-    }
-  } else {
-    // ERROR: stream resource doesn't exist
-    if (!checkResourceExists(scene, rawProps.stream)) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Stream resource "${rawProps.stream}" does not exist in scene. AudioStreamPlayer3D will not play audio.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'audiostreamplayer3d-missing-stream-resource',
-      });
-    }
+  // ERROR: stream resource doesn't exist
+  if (rawProps.stream !== undefined && !checkResourceExists(scene, rawProps.stream)) {
+    diagnostics.push({
+      severity: 'error',
+      message: `Stream resource "${rawProps.stream}" does not exist in scene. AudioStreamPlayer3D will not play audio.`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'audiostreamplayer3d-missing-stream-resource',
+    });
   }
 
   // ERROR: max_distance must be >= 0 (audio_stream_player_3d.cpp:660,
@@ -149,20 +131,67 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
 const audioStreamPlayer3DValidationRule: LintRule = {
   meta: {
     name: 'valid-audiostreamplayer3d-properties',
-    description: 'Validates AudioStreamPlayer3D property values, required properties, and logical consistency',
+    description: 'Validates AudioStreamPlayer3D property values, resource references, and logical consistency',
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer3D'],
     emits: [
-      { ruleName: 'audiostreamplayer3d-missing-stream', severity: 'warning' },
-      { ruleName: 'audiostreamplayer3d-missing-stream-resource', severity: 'error' },
-      { ruleName: 'audiostreamplayer3d-small-unit-size', severity: 'warning' },
-      { ruleName: 'audiostreamplayer3d-invalid-max-distance', severity: 'error' },
-      { ruleName: 'audiostreamplayer3d-invalid-pitch-scale', severity: 'error' },
-      { ruleName: 'audiostreamplayer3d-emission-angle-not-enabled', severity: 'warning' },
-      { ruleName: 'audiostreamplayer3d-emission-filter-not-enabled', severity: 'warning' },
-      { ruleName: 'audiostreamplayer3d-extreme-volume', severity: 'warning' },
-      { ruleName: 'audiostreamplayer3d-unusual-pitch', severity: 'warning' },
-      { ruleName: 'audiostreamplayer3d-invalid-max-polyphony', severity: 'error' },
+      {
+        ruleName: 'audiostreamplayer3d-missing-stream-resource',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the file declares no ExtResource or SubResource carrying that id',
+        },
+      },
+      {
+        ruleName: 'audiostreamplayer3d-small-unit-size',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'audio_stream_player_3d.cpp:885' },
+      },
+      {
+        ruleName: 'audiostreamplayer3d-invalid-max-distance',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'audio_stream_player_3d.cpp:660' },
+      },
+      {
+        ruleName: 'audiostreamplayer3d-invalid-pitch-scale',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'audio_stream_player_internal.cpp:314' },
+      },
+      {
+        ruleName: 'audiostreamplayer3d-emission-angle-not-enabled',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'audio_stream_player_3d.cpp:898',
+          unused: 'the group-enable toggle gates the whole emission_angle group',
+        },
+      },
+      {
+        ruleName: 'audiostreamplayer3d-emission-filter-not-enabled',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'audio_stream_player_3d.cpp:898',
+          unused: 'the group-enable toggle gates the whole emission_angle group',
+        },
+      },
+      {
+        ruleName: 'audiostreamplayer3d-extreme-volume',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'audio_stream_player_3d.cpp:883' },
+      },
+      {
+        ruleName: 'audiostreamplayer3d-unusual-pitch',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'audio_stream_player_3d.cpp:887' },
+      },
+      {
+        ruleName: 'audiostreamplayer3d-invalid-max-polyphony',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'audio_stream_player_internal.cpp:323' },
+      },
     ],
   },
   check: checkAudioStreamPlayer3D,

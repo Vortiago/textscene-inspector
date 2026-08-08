@@ -89,9 +89,21 @@ const camera3DValidationRule: LintRule = {
     description: 'Validates Camera3D property values, required properties, clipping plane relationships, and performance considerations',
     category: 'validation',
     emits: [
-      { ruleName: 'camera3d-invalid-clipping-planes', severity: 'error' },
-      { ruleName: 'camera3d-small-near-plane', severity: 'warning' },
-      { ruleName: 'camera3d-small-far-plane', severity: 'warning' },
+      {
+        ruleName: 'camera3d-invalid-clipping-planes',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'projection.cpp:367' },
+      },
+      {
+        ruleName: 'camera3d-small-near-plane',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'camera_3d.cpp:685' },
+      },
+      {
+        ruleName: 'camera3d-small-far-plane',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'camera_3d.cpp:686' },
+      },
     ],
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Camera3D'),
   },

@@ -38,30 +38,14 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // "-4,4,0.001,or_less,or_greater", so BOTH ends are open, and set_speed_scale
   // (:648) is a bare assignment. Negative is reverse playback; 0 pauses.
 
-  // WARNING: No animations defined (AnimationPlayer without animations is useless).
-  // Godot raises no warning for this — AnimationPlayer declares no
-  // get_configuration_warnings() override at all. Grounded instead in the
-  // node being unable to do anything: with no clip source there is nothing
-  // `play()` could ever resolve.
-  // Note: In TSCN format, animations are typically stored in the anims/ section
-  // We can check if there are any properties starting with "anims/"
+  // Which clip sources the file declares, and in which form: pre-4.0 files put
+  // clips in an `anims/<name>` section, Godot 4 references AnimationLibraries
+  // via `libraries/<name>` keys (the empty-name default library is written
+  // `libraries/`), and older 4.x files used a single `libraries` dict.
   const hasAnimations = Object.keys(rawProps).some(key => key.startsWith('anims/'));
-  // Godot 4 references AnimationLibraries via `libraries/<name>` keys (the
-  // empty-name default library is written `libraries/`); older files used a
-  // single `libraries` dict. Accept either form.
   const hasLibraries = Object.keys(rawProps).some(
     key => key === 'libraries' || key.startsWith('libraries/')
   );
-
-  if (!hasAnimations && !hasLibraries) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `AnimationPlayer has no animations defined. Add animations to the 'libraries/' property (or legacy 'anims/' section) to make this node functional.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animationplayer-no-animations',
-    });
-  }
 
   // Build the set of known clip names. Godot references a clip in the default
   // (empty-name) library bare ("walk") but a clip in a NAMED library prefixed
@@ -82,9 +66,9 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // Only assert a clip is MISSING when the clip set is FULLY enumerable. An
   // ExtResource-backed library is external (often binary .res) and unresolvable
   // here, so its clips are invisible — flagging then would false-positive (the
-  // renderer is deliberately lenient about external libraries). And with no
-  // resolvable clip source at all, the no-animations warning above already
-  // covers it; existence-checking would only duplicate that noise.
+  // renderer is deliberately lenient about external libraries). A file that
+  // declares no clip source at all is equally unenumerable: the clips may be
+  // added by script, so there is nothing here to call the reference dangling.
   const hasUnresolvableLibrary = Object.entries(rawProps).some(
     ([key, value]) => (key === 'libraries' || key.startsWith('libraries/')) && value.includes('ExtResource(')
   );
@@ -162,25 +146,9 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Validate root_node existence
-  if (rawProps.root_node !== undefined) {
-    const rootPath = rawProps.root_node.trim().replace(/^NodePath\("(.*)"\)$/, '$1');
-
-    // Check if root_node is not default ".."
-    if (rootPath !== '..' && rootPath !== '') {
-      // Try to resolve the node path
-      // For now, just check if it's a reasonable path format
-      if (!rootPath.match(/^(\.\.|\.|\/)/) && !rootPath.match(/^[A-Za-z_]/)) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `AnimationPlayer 'root_node' has unusual path format "${rootPath}". Ensure this path resolves correctly at runtime.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animationplayer-invalid-root-path',
-        });
-      }
-    }
-  }
+  // `root_node` gets no diagnostic: animation_player.cpp declares it
+  // PROPERTY_HINT_NONE and set_root_node is a bare assignment, so no path
+  // shape is refused.
 
   return diagnostics;
 }
@@ -195,13 +163,39 @@ const animationPlayerValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['AnimationPlayer'],
     emits: [
-      { ruleName: 'animationplayer-no-animations', severity: 'warning' },
-      { ruleName: 'animationplayer-autoplay-missing', severity: 'warning' },
-      { ruleName: 'animationplayer-current-animation-missing', severity: 'warning' },
-      { ruleName: 'animationplayer-negative-blend-time', severity: 'warning' },
-      { ruleName: 'animationplayer-large-blend-time', severity: 'warning' },
-      { ruleName: 'animationplayer-inactive', severity: 'warning' },
-      { ruleName: 'animationplayer-invalid-root-path', severity: 'warning' },
+      {
+        ruleName: 'animationplayer-autoplay-missing',
+        severity: 'warning',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'no library the file declares holds a clip under that name',
+        },
+      },
+      {
+        ruleName: 'animationplayer-current-animation-missing',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'animation_player.cpp:429' },
+      },
+      {
+        ruleName: 'animationplayer-negative-blend-time',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'animation_player.cpp:1046' },
+      },
+      {
+        ruleName: 'animationplayer-large-blend-time',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'animation_player.cpp:1046' },
+      },
+      {
+        ruleName: 'animationplayer-inactive',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'animation_mixer.cpp:446',
+          unused: 'processing is gated on active, so autoplay and current_animation never advance',
+        },
+      },
     ],
   },
   check: checkAnimationPlayer,

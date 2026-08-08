@@ -52,7 +52,7 @@ Strict parsing format-checks these `PathFollow3D` properties, plus 16 inherited 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-pathfollow3d` | `pathfollow3d-no-parent` | warning |
 |  | `pathfollow3d-invalid-parent` | warning |
 |  | `pathfollow3d-negative-progress` | warning |

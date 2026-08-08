@@ -1,9 +1,8 @@
 /**
  * Dimension-parameterized semantic linter rule for CharacterBody2D / CharacterBody3D.
  *
- * The two slices were ~85% identical; the genuine dimension-specific seam is the
- * `up_direction` arity and standard value (2D screen-space `Vector2(0, -1)` vs 3D
- * world-space `Vector3(0, 1, 0)`). Format validation stays in each slice's
+ * The two slices were ~85% identical; what remains dimension-specific is the pair
+ * of per-dimension engine citations. Format validation stays in each slice's
  * linterParser.ts.
  */
 
@@ -12,8 +11,6 @@ import {
   hasCollisionShapeDescendant,
   collisionShapeTypesPhrase,
 } from './hasCollisionShapeDescendant.js';
-import { VECTOR2_REGEX, VECTOR3_REGEX } from '../validators/vectorValidators.js';
-import { tupleComponent } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { rangeAdvisories } from '../rangeAdvisory.js';
@@ -31,10 +28,9 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `CharacterBody${dim}`;
   const prefix = `characterbody${dimSuffix(dim)}`;
   const safeMarginHintCite = dim === '2D' ? 'character_body_2d.cpp:757' : 'character_body_3d.cpp:942';
-
-  // up_direction seam: 2D is Vector2(0, -1) (screen space), 3D is Vector3(0, 1, 0).
-  const upDirRegex = dim === '2D' ? VECTOR2_REGEX : VECTOR3_REGEX;
-  const upStandard = dim === '2D' ? 'Vector2(0, -1)' : 'Vector3(0, 1, 0)';
+  // `_validate_property` strips PROPERTY_USAGE_EDITOR from every `floor_` key
+  // while motion_mode is FLOATING, so the inspector offers none of them there.
+  const floorPropsCite = dim === '2D' ? 'character_body_2d.cpp:672' : 'character_body_3d.cpp:957';
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
@@ -86,25 +82,10 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
       }
     }
 
-    // Warning: Unusual up_direction (not the standard value for this dimension)
-    if (rawProps.up_direction !== undefined) {
-      const match = upDirRegex.exec(rawProps.up_direction);
-      if (match) {
-        const x = tupleComponent(match[1]);
-        const y = tupleComponent(match[2]);
-        const isStandard =
-          dim === '2D' ? x === 0 && y === -1 : x === 0 && y === 1 && tupleComponent(match[3]) === 0;
-        if (!isStandard) {
-          diagnostics.push({
-            severity: 'warning',
-            message: `${type} '${node.name}' has non-standard up_direction: ${rawProps.up_direction}. Standard is ${upStandard}. Ensure this is intentional for your game's orientation.`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: `${prefix}-non-standard-up-direction`,
-          });
-        }
-      }
-    }
+    // `up_direction` gets no advisory: `set_up_direction` refuses only the zero
+    // vector and normalises everything else, and the property carries no hint,
+    // so "standard is the screen-space or world-space up vector" is a preference
+    // with nothing behind it.
 
     // `max_slides` gets no advisory: character_body_2d.cpp:741 /
     // character_body_3d.cpp:926 declare it PROPERTY_HINT_NONE with
@@ -143,11 +124,30 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       applicableNodeTypes: [type],
       emits: [
-        { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
-        { ruleName: `${prefix}-floor-props-in-floating-mode`, severity: 'warning' },
-        { ruleName: `${prefix}-non-standard-up-direction`, severity: 'warning' },
-        { ruleName: `${prefix}-safe-margin-too-small`, severity: 'warning' },
-        { ruleName: `${prefix}-safe-margin-too-large`, severity: 'warning' },
+        {
+          ruleName: `${prefix}-needs-collision-shape`,
+          severity: 'warning',
+          grounding: { kind: 'configuration-warning' },
+        },
+        {
+          ruleName: `${prefix}-floor-props-in-floating-mode`,
+          severity: 'warning',
+          grounding: {
+            kind: 'engine-inert',
+            at: floorPropsCite,
+            unused: 'floating mode strips every floor_ key from the property list',
+          },
+        },
+        {
+          ruleName: `${prefix}-safe-margin-too-small`,
+          severity: 'warning',
+          grounding: { kind: 'engine', at: safeMarginHintCite },
+        },
+        {
+          ruleName: `${prefix}-safe-margin-too-large`,
+          severity: 'warning',
+          grounding: { kind: 'engine', at: safeMarginHintCite },
+        },
       ],
     },
     check,

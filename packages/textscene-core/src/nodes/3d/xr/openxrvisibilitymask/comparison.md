@@ -39,7 +39,7 @@ Strict parsing format-checks the inherited set (1 inherited from VisualInstance3
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-openxrvisibilitymask-parent` | `openxrvisibilitymask-parent-not-xrcamera3d` | warning |
 <!-- lint:end -->
 

@@ -137,9 +137,9 @@ const bone2DAncestryRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['Bone2D'],
     emits: [
-      { ruleName: CHAIN_RULE, severity: 'warning' },
-      { ruleName: PARENT_RULE, severity: 'warning' },
-      { ruleName: REST_RULE, severity: 'warning' },
+      { ruleName: CHAIN_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: PARENT_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: REST_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkBone2D,

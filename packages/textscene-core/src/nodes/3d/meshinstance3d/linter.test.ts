@@ -9,7 +9,6 @@ import {
   lint,
   expectClean,
   expectDiagnostic,
-  expectNoDiagnostic,
   runPropertyValidation,
 } from '../../../linter/testing/testkit';
 import './linterParser';
@@ -221,143 +220,53 @@ describe('MeshInstance3D Linter', () => {
     });
   });
 
+  // The real condition (visual_instance_3d.cpp: `!is_zero_approx(end) && end <=
+  // begin`) belongs to `valid-geometryinstance3d-visibility-range`, which
+  // reaches MeshInstance3D through its descendsFrom matcher. This slice reports
+  // nothing of its own.
   describe('Semantic Validation (Visibility Range)', () => {
-    it('should detect invalid visibility range (begin > end)', () => {
-      expectDiagnostic(
-        scene(
-          node(
-            'MeshInstance3D',
-            { visibility_range_begin: '100.0', visibility_range_end: '50.0' },
-            { name: 'InvalidRange' }
-          )
-        ),
-        {
-          ruleName: 'valid-meshinstance3d-visibility-range',
-          severity: 'error',
-          contains: ['begin', 'end'],
-        }
-      );
-    });
-
-    it('should accept valid visibility range (begin < end)', () => {
-      expectClean(
-        scene(
-          node(
-            'MeshInstance3D',
-            { visibility_range_begin: '10.0', visibility_range_end: '100.0' },
-            { name: 'ValidRange' }
-          )
-        )
-      );
-    });
-
-    it('should accept valid visibility range (begin = end)', () => {
-      expectClean(
-        scene(
-          node(
-            'MeshInstance3D',
-            { visibility_range_begin: '50.0', visibility_range_end: '50.0' },
-            { name: 'EqualRange' }
-          )
-        )
-      );
-    });
-
-    it('should not validate range when only begin is specified', () => {
-      expectClean(
-        scene(node('MeshInstance3D', { visibility_range_begin: '100.0' }, { name: 'OnlyBegin' }))
-      );
-    });
-
-    it('should not validate range when only end is specified', () => {
-      expectClean(
-        scene(node('MeshInstance3D', { visibility_range_end: '50.0' }, { name: 'OnlyEnd' }))
-      );
+    it('reports nothing for any begin/end pairing', () => {
+      const cases: Record<string, string>[] = [
+        { visibility_range_begin: '100.0', visibility_range_end: '50.0' },
+        { visibility_range_begin: '10.0', visibility_range_end: '100.0' },
+        { visibility_range_begin: '50.0', visibility_range_end: '50.0' },
+        { visibility_range_begin: '100.0' },
+        { visibility_range_end: '50.0' },
+      ];
+      for (const range of cases) {
+        expectClean(scene(node('MeshInstance3D', range, { name: 'Range' })));
+      }
     });
   });
 
+  // Godot tolerates a stale or wrong-typed skeleton path: the lookup is
+  // get_node_or_null (its in-source comment notes the path may be outdated
+  // after a reparent) and a non-Skeleton3D target silently yields no skin.
   describe('Semantic Validation (Skeleton)', () => {
-    it('should detect missing skeleton node', () => {
-      const diagnostics = lint(
+    it('reports nothing for a missing, wrong-typed, empty or relative skeleton path', () => {
+      expectClean(
         scene(node('MeshInstance3D', { skeleton: 'NodePath("NonexistentSkeleton")' }, { name: 'MissingSkeleton' }))
       );
-      expect(diagnostics).toHaveLength(1);
-      expect(diagnostics[0]).toMatchObject({
-        severity: 'error',
-        ruleName: 'valid-meshinstance3d-skeleton',
-      });
-      expect(diagnostics[0]!.message).toContain('Skeleton node not found');
-    });
-
-    it('should pass when skeleton node exists', () => {
       expectClean(
         scene(
           node('Skeleton3D', {}, { name: 'MySkeleton' }),
           node('MeshInstance3D', { skeleton: 'NodePath("MySkeleton")' }, { name: 'MyMesh' })
         )
       );
-    });
-
-    it('should detect skeleton pointing to wrong node type', () => {
-      expectDiagnostic(
+      expectClean(
         scene(
           node('Node3D', {}, { name: 'Root' }),
           node('Node3D', {}, { name: 'NotASkeleton', parent: '.' }),
           node('MeshInstance3D', { skeleton: 'NodePath("NotASkeleton")' }, { name: 'MyMesh', parent: '.' })
-        ),
-        { prop: 'must point to a Skeleton3D node', contains: ['must point to a Skeleton3D node'] }
+        )
       );
-    });
-
-    it('should accept empty skeleton path', () => {
+      expectClean(scene(node('MeshInstance3D', { skeleton: 'NodePath("")' }, { name: 'MyMesh' })));
       expectClean(
-        scene(node('MeshInstance3D', { skeleton: 'NodePath("")' }, { name: 'MyMesh' }))
-      );
-    });
-
-    it('should not error on a relative (..) skeleton path that escapes the authored scope', () => {
-      // Mirrors scenes/demos/3d/graphics_settings/3d_scene.tscn: a MeshInstance3D
-      // whose skeleton resolves up the tree via "../.." — a relative path the
-      // static linter cannot resolve, so it must not assert not-found.
-      expectNoDiagnostic(
         scene(
           node('Node3D', {}, { name: 'Root' }),
           node('SpotLight3D', {}, { name: 'SpotLight3D', parent: '.' }),
           node('MeshInstance3D', { skeleton: 'NodePath("../..")' }, { name: 'MeshInstance3D', parent: 'SpotLight3D' })
-        ),
-        { ruleName: 'valid-meshinstance3d-skeleton' }
-      );
-    });
-
-    it('should not error when the MeshInstance3D is parented under an instanced sub-scene', () => {
-      // Mirrors the fabrik_ik GLB case: a mesh living inside an instanced
-      // sub-scene references a Skeleton3D that exists only in that sub-scene's
-      // internals, which the static linter cannot see.
-      const content = `[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://character.tscn" id="1_char"]
-
-[node name="Root" type="Node3D"]
-
-[node name="Character" parent="." instance=ExtResource("1_char")]
-
-[node name="BodyMesh" type="MeshInstance3D" parent="Character"]
-skeleton = NodePath("Armature/Skeleton3D")
-`;
-
-      expectNoDiagnostic(content, { ruleName: 'valid-meshinstance3d-skeleton' });
-    });
-
-    it('should still error on a missing local skeleton when nested under a non-instance parent', () => {
-      // Boundary: a non-relative path under an ordinary (non-instanced) parent is
-      // fully authored, so a genuinely missing Skeleton3D must still be reported.
-      expectDiagnostic(
-        scene(
-          node('Node3D', {}, { name: 'Root' }),
-          node('Node3D', {}, { name: 'Holder', parent: '.' }),
-          node('MeshInstance3D', { skeleton: 'NodePath("NonexistentSkeleton")' }, { name: 'MyMesh', parent: 'Holder' })
-        ),
-        { ruleName: 'valid-meshinstance3d-skeleton', severity: 'error', contains: ['Skeleton node not found'] }
+        )
       );
     });
   });
@@ -420,15 +329,13 @@ skeleton = NodePath("Armature/Skeleton3D")
               cast_shadow: 10,
               gi_mode: 5,
               mesh: 'SubResource("nonexistent")',
-              visibility_range_begin: '100.0',
-              visibility_range_end: '50.0',
             },
             { name: 'MultipleErrors' }
           )
         )
       );
-      // We expect multiple errors: cast_shadow, gi_mode format errors
-      // plus potentially mesh resource not found and visibility range error
+      // We expect multiple diagnostics: cast_shadow and gi_mode format
+      // complaints plus the missing mesh resource.
       expect(diagnostics.length).toBeGreaterThan(1);
       // Verify at least some of the expected errors are present
       const hasCastShadowError = diagnostics.some(d => d.message.includes('cast_shadow'));

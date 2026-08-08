@@ -7,7 +7,6 @@ import {
   node,
   scene,
   expectClean,
-  expectNoErrors,
   expectNoDiagnostic,
   expectDiagnostic,
   runPropertyValidation,
@@ -42,8 +41,8 @@ describe('Label3D Linter', () => {
       });
 
       it('should accept empty quoted string', () => {
-        // Note: empty text might trigger a warning, but not an error
-        expectNoErrors(scene(node('Label3D', { text: '""' })), { prop: 'text' });
+        // Empty is the serialised default, so it reports nothing at all.
+        expectClean(scene(node('Label3D', { text: '""' })));
       });
     });
 
@@ -91,15 +90,6 @@ describe('Label3D Linter', () => {
   });
 
   describe('Semantic Validation Rules', () => {
-    it('should warn when text is empty', () => {
-      expectDiagnostic(scene(node('Label3D', { text: '""' })), {
-        ruleName: 'label3d-empty-text',
-        severity: 'warning',
-        nodeType: 'Label3D',
-        contains: ['empty'],
-      });
-    });
-
     // label_3d.cpp:131 — pixel_size PROPERTY_HINT_RANGE "0.0001,128,0.0001", closed
     // at both ends and enforced at neither.
     it('should warn when pixel_size is above the hint', () => {

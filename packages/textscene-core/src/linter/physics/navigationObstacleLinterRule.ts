@@ -58,6 +58,10 @@ import { dimSuffix } from './dim.js';
 const MIN_GLOBAL_SCALE = 0.001;
 
 export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
+  // The `affect_navigation_mesh` early return, per dimension: the two families
+  // gate in their own source parser, so one literal cannot stand for both.
+  const CARVE_GATE_AT =
+    dim === '2D' ? 'navigation_obstacle_2d.cpp:363' : 'navigation_obstacle_3d.cpp:443';
   const type = `NavigationObstacle${dim}`;
   const prefix = `navigationobstacle${dimSuffix(dim)}`;
   const ruleName = `${prefix}-carve-without-affect`;
@@ -136,13 +140,33 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       applicableNodeTypes: [type],
       emits: [
-        { ruleName, severity: 'warning' },
+        {
+          ruleName,
+          severity: 'warning',
+          grounding: {
+            kind: 'engine-inert',
+            at: CARVE_GATE_AT,
+            unused: 'the source-geometry parser returns before it reads carve_navigation_mesh',
+          },
+        },
         // 2D-only branch (dim === '2D'); never emitted by the 3D instantiation
         ...(dim === '2D'
           ? [
-              { ruleName: scaleRuleName, severity: 'warning' as const },
-              { ruleName: nonUniformScaleRuleName, severity: 'warning' as const },
-              { ruleName: skewRuleName, severity: 'warning' as const },
+              {
+                ruleName: scaleRuleName,
+                severity: 'warning' as const,
+                grounding: { kind: 'configuration-warning' } as const,
+              },
+              {
+                ruleName: nonUniformScaleRuleName,
+                severity: 'warning' as const,
+                grounding: { kind: 'configuration-warning' } as const,
+              },
+              {
+                ruleName: skewRuleName,
+                severity: 'warning' as const,
+                grounding: { kind: 'configuration-warning' } as const,
+              },
             ]
           : []),
       ],

@@ -198,55 +198,8 @@ describe('AnimationPlayer Linter', () => {
       );
     });
 
-    describe('missing animations warnings', () => {
-      it('should warn when no animations are defined', () => {
-        expectDiagnostic(scene(node('AnimationPlayer', { speed_scale: 1.0 })), {
-          prop: 'no animations',
-          severity: 'warning',
-          contains: ['no animations', 'anims/'],
-        });
-      });
-
-      it('should not warn when animations are defined', () => {
-        expectNoDiagnostic(
-          scene(
-            node('AnimationPlayer', {
-              speed_scale: 1.0,
-              'anims/idle': 'SubResource("Animation_1")',
-              'anims/walk': 'SubResource("Animation_2")',
-            })
-          ),
-          { prop: 'no animations' }
-        );
-      });
-
-      it('should not warn when libraries are defined', () => {
-        expectNoDiagnostic(
-          scene(
-            node('AnimationPlayer', {
-              speed_scale: 1.0,
-              libraries: 'ExtResource("AnimationLibrary_1")',
-            })
-          ),
-          { prop: 'no animations' }
-        );
-      });
-
-      it('should not warn when the default library is an ExtResource in the slash form', () => {
-        // `hasLibraries` only checks that a `libraries/`-prefixed key exists —
-        // it doesn't care whether the value is a Sub- or ExtResource — so an
-        // external (often binary) library still suppresses this warning even
-        // though the render-side parser can't capture its clips at all.
-        expectNoDiagnostic(
-          scene(
-            node('AnimationPlayer', {
-              speed_scale: 1.0,
-              'libraries/': 'ExtResource("1_lib")',
-            })
-          ),
-          { prop: 'no animations' }
-        );
-      });
+    it('says nothing about a player with no clip source at all', () => {
+      expectClean(scene(node('AnimationPlayer', { speed_scale: 1.0 })));
     });
 
     describe('autoplay animation existence', () => {
@@ -327,26 +280,16 @@ describe('AnimationPlayer Linter', () => {
       });
     });
 
-    describe('root_node path validation', () => {
-      it('should warn for unusual root_node path format', () => {
-        expectDiagnostic(scene(node('AnimationPlayer', { root_node: 'NodePath("@invalid@path")' })), {
-          prop: 'root_node',
-          contains: ['root_node', 'unusual'],
-        });
-      });
-
-      it('should not warn for standard root_node paths', () => {
-        for (const path of ['NodePath("..")', 'NodePath(".")', 'NodePath("/root")']) {
-          expectNoDiagnostic(scene(node('AnimationPlayer', { root_node: path })), { prop: 'root_node' });
-        }
-      });
+    it('says nothing about any root_node path shape', () => {
+      for (const path of ['NodePath("..")', 'NodePath(".")', 'NodePath("/root")', 'NodePath("@odd@path")']) {
+        expectNoDiagnostic(scene(node('AnimationPlayer', { root_node: path })), { prop: 'root_node' });
+      }
     });
   });
 
   describe('Edge Cases', () => {
     it('should handle AnimationPlayer with no properties', () => {
-      // Should have warning about no animations
-      expectDiagnostic(scene(node('AnimationPlayer')), { prop: 'no animations' });
+      expectClean(scene(node('AnimationPlayer')));
     });
 
     it('should handle all properties together', () => {

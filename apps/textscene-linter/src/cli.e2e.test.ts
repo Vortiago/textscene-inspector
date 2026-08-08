@@ -23,16 +23,13 @@ const CLEAN_TSCN = `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 `;
 
-// Relative visibility_parent paths trigger a warning-severity diagnostic
-// and nothing of error severity - mirrors lint.test.ts's WARNING_TSCN.
+// A CSGMesh3D with no mesh trips a warning-severity diagnostic and nothing of
+// error severity - mirrors lint.test.ts's WARNING_TSCN.
 const WARNING_TSCN = `[gd_scene format=3]
 
 [node name="Root" type="Node3D"]
 
-[node name="Child" type="Node3D" parent="."]
-visibility_parent = NodePath("../Other")
-
-[node name="Other" type="Node3D" parent="."]
+[node name="Shape" type="CSGMesh3D" parent="."]
 `;
 
 let tempDir: string;

@@ -129,8 +129,8 @@ const xrOrigin3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['XROrigin3D'],
     emits: [
-      { ruleName: CAMERA_CHILD_RULE, severity: 'warning' },
-      { ruleName: SCALE_RULE, severity: 'warning' },
+      { ruleName: CAMERA_CHILD_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: SCALE_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkXROrigin3D,

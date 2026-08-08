@@ -9,6 +9,7 @@ import {
   lint,
   expectClean,
   expectDiagnostic,
+  expectNoDiagnostic,
   runPropertyValidation,
 } from '../../../linter/testing/testkit';
 import './linterParser'; // Import to trigger validator registration
@@ -164,8 +165,9 @@ describe('Node3D Linter', () => {
       expectClean(scene(node('Node3D', { visibility_parent: 'NodePath("")' }, { name: 'ChildNode' })));
     });
 
-    it('should warn about relative visibility_parent paths', () => {
-      const diagnostics = lint(
+    it('should report nothing for a relative visibility_parent path', () => {
+      // A relative path is legal; this rule resolves only absolute ones.
+      expectNoDiagnostic(
         scene(
           node('Node3D', {}, { name: 'ParentNode' }),
           node(
@@ -173,13 +175,9 @@ describe('Node3D Linter', () => {
             { visibility_parent: 'NodePath("../OtherNode")' },
             { name: 'ChildNode', parent: 'ParentNode' }
           )
-        )
+        ),
+        { ruleName: 'valid-node3d-visibility' }
       );
-      const visibilityWarning = diagnostics.find(d => d.ruleName === 'valid-node3d-visibility');
-      if (visibilityWarning) {
-        expect(visibilityWarning.severity).toBe('warning');
-        expect(visibilityWarning.message).toContain('Relative');
-      }
     });
   });
 

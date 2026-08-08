@@ -162,16 +162,6 @@ describe('CharacterBody2D Linter', () => {
       },
     ]);
 
-    it('should warn about custom up_direction', () => {
-      expectDiagnostic(
-        scene(node('CharacterBody2D', { up_direction: 'Vector2(1, 0)' }), collisionShape2d),
-        {
-          ruleName: 'characterbody2d-non-standard-up-direction',
-          severity: 'warning',
-        }
-      );
-    });
-
     // character_body_2d.cpp:749 hints "0,32,0.1,or_greater" — the high end is open
     // and the low end is the setter's own ERR_FAIL — so no advisory survives.
     it.each([0.0001, 5, 50, 500])('says nothing about floor_snap_length %s', (snap) => {
@@ -411,24 +401,5 @@ describe('CharacterBody2D Linter', () => {
       );
     });
 
-    it('should handle 2D-specific up_direction standard (0, -1)', () => {
-      expectNoDiagnostic(
-        scene(node('CharacterBody2D', { up_direction: 'Vector2(0, -1)' }), collisionShape2d),
-        {
-          ruleName: 'characterbody2d-non-standard-up-direction',
-        }
-      );
-    });
-
-    it('should warn about non-standard 2D up_direction', () => {
-      expectDiagnostic(
-        scene(node('CharacterBody2D', { up_direction: 'Vector2(0, 1)' }), collisionShape2d),
-        {
-          ruleName: 'characterbody2d-non-standard-up-direction',
-          severity: 'warning',
-          contains: ['Vector2(0, -1)'],
-        }
-      );
-    });
   });
 });

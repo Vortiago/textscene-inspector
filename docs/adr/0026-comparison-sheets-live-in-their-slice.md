@@ -51,7 +51,7 @@ there.
 **A rule declares what it reports.** `RuleMeta` gains
 `emits: ReadonlyArray<{ ruleName, severity }>`, because `meta.name` is the registry
 key while the names users see and suppress are string literals inside `check` —
-`valid-camera2d-properties` reports under twelve of them. `ruleCoverage.test.ts`
+`valid-camera2d-properties` reports under five of them. `ruleCoverage.test.ts`
 holds the declaration to the source.
 
 ## Consequences

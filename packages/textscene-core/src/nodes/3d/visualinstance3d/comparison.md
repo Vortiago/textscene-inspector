@@ -37,7 +37,7 @@ Strict parsing format-checks these `VisualInstance3D` properties, plus 16 inheri
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 A non-numeric or negative `layers` (e.g. `layers = abc` or `layers = -1`) fails strict

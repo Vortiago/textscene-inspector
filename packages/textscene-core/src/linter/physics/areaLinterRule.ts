@@ -15,6 +15,15 @@ import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 
 export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
+  // What an area pair does with the two monitor flags: detection needs the
+  // monitoring side's callback AND the detected side's `monitorable`. Each
+  // dimension has its own copy of the pair, so one literal cannot serve both.
+  const monitorFlagsCite =
+    dim === '2D' ? 'godot_area_pair_2d.cpp:134' : 'godot_area_pair_3d.cpp:135';
+  // The mask test that decides whether an area sees a body at all:
+  // `area->collides_with(body)`, the body's collision_layer against the AREA's
+  // collision_mask. Jolt states the same rule at jolt_area_3d.cpp:451.
+  const areaMaskCite = dim === '2D' ? 'godot_area_pair_2d.cpp:36' : 'godot_area_pair_3d.cpp:37';
   const type = `Area${dim}`;
   const prefix = `area${dimSuffix(dim)}`;
 
@@ -63,13 +72,12 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
     // ("0,1024,0.001,or_greater") and are rejected by each slice's format
     // validator instead.
 
-    // No `collision_layer == 0` + monitoring check: no engine warning exists
-    // for it, AND the premise was wrong — Area monitoring matches a target
-    // body's `collision_layer` against the AREA's `collision_mask`, not
-    // against the area's own `collision_layer`, so the area's layer has no
-    // bearing on what it detects. It fired on shipped Godot demos that set
-    // `collision_layer = 0` deliberately.
-    const collisionLayer = rawProps.collision_layer;
+    // No `collision_layer` check of any kind: no engine warning exists for it,
+    // AND the premise was wrong. Area monitoring matches a target body's
+    // `collision_layer` against the AREA's `collision_mask`, not against the
+    // area's own `collision_layer`, so the area's layer has no bearing on what
+    // it detects. It fired on shipped Godot demos that set `collision_layer = 0`
+    // deliberately.
 
     // Warning: collision_mask is 0 and monitoring is true (won't detect anything)
     const collisionMask = rawProps.collision_mask;
@@ -86,33 +94,9 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
       }
     }
 
-    // Warning: Both layer and mask are 0 with monitoring enabled
-    if (monitoring === 'true' && collisionLayer !== undefined && collisionMask !== undefined) {
-      const layer = parseInt(collisionLayer, 10);
-      const mask = parseInt(collisionMask, 10);
-      if (!isNaN(layer) && !isNaN(mask) && layer === 0 && mask === 0) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `${type} '${node.name}' has 'monitoring' enabled but both 'collision_layer' and 'collision_mask' are 0. The area won't detect anything.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-monitoring-no-collision`,
-        });
-      }
-    }
-
-    // Warning: audio_bus_override is true but audio_bus_name is not set
-    const audioBusOverride = rawProps.audio_bus_override === 'true';
-    const audioBusName = rawProps.audio_bus_name;
-    if (audioBusOverride && !audioBusName) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${type} '${node.name}' has 'audio_bus_override' enabled but 'audio_bus_name' is not set. Specify which audio bus to use.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: `${prefix}-audio-override-missing-name`,
-      });
-    }
+    // No `audio_bus_override` + missing `audio_bus_name` check: `audio_bus` has
+    // no initialiser and `get_audio_bus_name()` returns Master for any unset or
+    // unknown name, so absence IS the default and Godot omits the key.
 
     return diagnostics;
   }
@@ -124,11 +108,29 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       applicableNodeTypes: [type],
       emits: [
-        { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
-        { ruleName: `${prefix}-inactive`, severity: 'warning' },
-        { ruleName: `${prefix}-monitoring-zero-mask`, severity: 'warning' },
-        { ruleName: `${prefix}-monitoring-no-collision`, severity: 'warning' },
-        { ruleName: `${prefix}-audio-override-missing-name`, severity: 'warning' },
+        {
+          ruleName: `${prefix}-needs-collision-shape`,
+          severity: 'warning',
+          grounding: { kind: 'configuration-warning' },
+        },
+        {
+          ruleName: `${prefix}-inactive`,
+          severity: 'warning',
+          grounding: {
+            kind: 'engine-inert',
+            at: monitorFlagsCite,
+            unused: 'a non-monitoring area never registers the callback this line requires',
+          },
+        },
+        {
+          ruleName: `${prefix}-monitoring-zero-mask`,
+          severity: 'warning',
+          grounding: {
+            kind: 'engine-inert',
+            at: areaMaskCite,
+            unused: 'collides_with returns false for every layer, so monitoring detects nothing',
+          },
+        },
       ],
     },
     check,

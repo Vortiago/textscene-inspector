@@ -231,13 +231,6 @@ describe('Area2D Linter', () => {
       });
     });
 
-    it('should warn when both collision_layer and collision_mask are 0 with monitoring', () => {
-      expectDiagnostic(
-        scene(node('Area2D', { monitoring: true, collision_layer: 0, collision_mask: 0 }), collisionShape2d),
-        { ruleName: 'area2d-monitoring-no-collision', severity: 'warning', nodeType: 'Area2D' }
-      );
-    });
-
     it('should not warn when monitoring is false', () => {
       expectClean(
         scene(node('Area2D', { monitoring: false, collision_layer: 0, collision_mask: 0 }), collisionShape2d)
@@ -248,25 +241,6 @@ describe('Area2D Linter', () => {
       expectClean(
         scene(node('Area2D', { monitoring: true, collision_layer: 1, collision_mask: 1 }), collisionShape2d)
       );
-    });
-  });
-
-  describe('Semantic Validation (Audio Bus)', () => {
-    it('should warn when audio_bus_override is true but audio_bus_name is not set', () => {
-      expectDiagnostic(scene(node('Area2D', { audio_bus_override: true }), collisionShape2d), {
-        ruleName: 'area2d-audio-override-missing-name',
-        severity: 'warning',
-        nodeType: 'Area2D',
-        contains: ['audio_bus_name'],
-      });
-    });
-
-    it('should pass when audio_bus_override is true and audio_bus_name is set', () => {
-      expectClean(scene(node('Area2D', { audio_bus_override: true, audio_bus_name: '"Master"' }), collisionShape2d));
-    });
-
-    it('should not check audio_bus_name when audio_bus_override is false', () => {
-      expectClean(scene(node('Area2D', { audio_bus_override: false }), collisionShape2d));
     });
   });
 

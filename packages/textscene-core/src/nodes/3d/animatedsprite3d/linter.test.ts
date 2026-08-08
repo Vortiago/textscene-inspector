@@ -61,25 +61,6 @@ describe('AnimatedSprite3D semantic rule', () => {
     });
   });
 
-  describe('autoplay-no-spriteframes', () => {
-    it('warns when autoplay is set without sprite_frames', () => {
-      const diagnostics = lint({ autoplay: '"idle"' });
-      expect(diagnostics).toContainEqual(
-        expect.objectContaining({
-          severity: 'warning',
-          ruleName: 'animatedsprite3d-autoplay-no-spriteframes',
-        })
-      );
-    });
-
-    it('stays quiet when both autoplay and sprite_frames are set', () => {
-      const diagnostics = lint({ autoplay: '"idle"', sprite_frames: 'SubResource("frames_1")' });
-      expect(
-        diagnostics.some((d) => d.ruleName === 'animatedsprite3d-autoplay-no-spriteframes')
-      ).toBe(false);
-    });
-  });
-
   describe('animation-no-spriteframes', () => {
     it('warns when animation is set without sprite_frames', () => {
       const diagnostics = lint({ animation: '&"walk"' });

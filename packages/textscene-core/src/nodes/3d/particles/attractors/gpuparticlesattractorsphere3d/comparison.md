@@ -37,7 +37,7 @@ Strict parsing format-checks these `GPUParticlesAttractorSphere3D` properties, p
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 `radius` is validated as a float that must be at least 0.01, the hard floor Godot's

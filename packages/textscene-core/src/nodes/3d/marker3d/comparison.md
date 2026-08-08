@@ -36,7 +36,7 @@ Strict parsing format-checks these `Marker3D` properties, plus 16 inherited from
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 Strict rejects a non-numeric `gizmo_extents` as an error; the lenient parser

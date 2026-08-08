@@ -100,8 +100,8 @@ const jointValidationRule: LintRule = {
     // `joint3d-not-connected` in every PinJoint2D sheet. The dimension is
     // already on the diagnostic's `nodeType` and in its message.
     emits: [
-      { ruleName: 'joint-not-connected', severity: 'warning' },
-      { ruleName: 'joint-same-body', severity: 'warning' },
+      { ruleName: 'joint-not-connected', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: 'joint-same-body', severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkJoint,

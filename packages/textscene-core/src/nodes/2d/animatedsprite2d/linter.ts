@@ -43,17 +43,6 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Warn if autoplay is set but sprite_frames is not set
-  if (rawProps.autoplay && !rawProps.sprite_frames) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Property 'autoplay' is set to "${rawProps.autoplay}" but 'sprite_frames' is not set. Autoplay will not work without a SpriteFrames resource.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animatedsprite2d-autoplay-no-spriteframes',
-    });
-  }
-
   // Warn if animation is set but sprite_frames is not set
   if (rawProps.animation && !rawProps.sprite_frames) {
     diagnostics.push({
@@ -65,50 +54,10 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Validate speed_scale value
-  if (rawProps.speed_scale !== undefined) {
-    const speedScale = parseFloat(rawProps.speed_scale);
-    if (!isNaN(speedScale)) {
-      // Warn if speed_scale is 0 (animation won't play)
-      if (speedScale === 0) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Property 'speed_scale' is 0. Animation will not advance (paused state). Use play()/stop() methods to control playback instead.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animatedsprite2d-speed-scale-zero',
-        });
-      }
-      // Negative speed_scale is valid for reverse playback — no diagnostic
-    }
-  }
-
-  // Validate frame_progress range (should be 0-1)
-  if (rawProps.frame_progress !== undefined) {
-    const frameProgress = parseFloat(rawProps.frame_progress);
-    if (!isNaN(frameProgress)) {
-      if (frameProgress < 0 || frameProgress > 1) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Property 'frame_progress' is ${frameProgress}. Expected range is 0.0 to 1.0. Godot will clamp this value automatically.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animatedsprite2d-frame-progress-range',
-        });
-      }
-    }
-  }
-
-  // Warning: deprecated 'playing' property (Godot 4.0+)
-  if (rawProps.playing !== undefined) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Property 'playing' is deprecated in Godot 4.0+. Use play() and stop() methods in code instead of setting this property in scene files.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animatedsprite2d-playing-deprecated',
-    });
-  }
+  // `speed_scale` and `frame_progress` get no diagnostic: both are
+  // PROPERTY_HINT_NONE behind a bare setter, so no value is out of range (0
+  // speed_scale is a legal paused state, and frame_progress is not clamped).
+  // `playing` gets none either: AnimatedSprite2D declares no such property.
 
   return diagnostics;
 }
@@ -119,17 +68,25 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
 const animatedSprite2DValidationRule: LintRule = {
   meta: {
     name: 'valid-animatedsprite2d-resources',
-    description: 'Validates AnimatedSprite2D sprite_frames resources, animation properties, and playback settings',
+    description: 'Validates AnimatedSprite2D sprite_frames resources and animation references',
     category: 'validation',
     applicableNodeTypes: ['AnimatedSprite2D'],
     emits: [
-      { ruleName: 'animatedsprite2d-requires-spriteframes', severity: 'warning' },
-      { ruleName: 'valid-animatedsprite2d-resources', severity: 'error' },
-      { ruleName: 'animatedsprite2d-autoplay-no-spriteframes', severity: 'warning' },
-      { ruleName: 'animatedsprite2d-animation-no-spriteframes', severity: 'warning' },
-      { ruleName: 'animatedsprite2d-speed-scale-zero', severity: 'warning' },
-      { ruleName: 'animatedsprite2d-frame-progress-range', severity: 'warning' },
-      { ruleName: 'animatedsprite2d-playing-deprecated', severity: 'warning' },
+      { ruleName: 'animatedsprite2d-requires-spriteframes', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'valid-animatedsprite2d-resources',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the file declares no ExtResource or SubResource carrying that id',
+        },
+      },
+      {
+        ruleName: 'animatedsprite2d-animation-no-spriteframes',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'animated_sprite_2d.cpp:563' },
+      },
     ],
   },
   check: checkAnimatedSprite2D,

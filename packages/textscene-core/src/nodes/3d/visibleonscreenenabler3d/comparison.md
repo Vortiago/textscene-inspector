@@ -40,7 +40,7 @@ Strict parsing format-checks these `VisibleOnScreenEnabler3D` properties, plus 1
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 The lenient parser reuses the base parser here and keeps every key in

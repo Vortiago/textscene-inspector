@@ -54,7 +54,7 @@ const skeletonModifier3DParentRule: LintRule = {
       'Warns when a SkeletonModifier3D-family node has no direct Skeleton3D parent, so it resolves no skeleton and does nothing',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SkeletonModifier3D'),
-    emits: [{ ruleName: RULE_NAME, severity: 'warning' }],
+    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkSkeletonModifier3D,
 };

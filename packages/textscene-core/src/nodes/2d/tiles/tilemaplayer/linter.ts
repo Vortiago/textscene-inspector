@@ -35,18 +35,7 @@ function checkTileMapLayer(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Godot raises no warning for this — TileMapLayer declares no
-  // get_configuration_warnings() override at all (tile_map_layer.h/.cpp);
-  // grounded instead in the node drawing nothing with no cell data to render.
-  if (rawProps.tile_map_data === undefined) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `TileMapLayer has no 'tile_map_data' — the layer is empty.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'tilemaplayer-empty',
-    });
-  } else if (decodeTileMapData(rawProps.tile_map_data) === null) {
+  if (rawProps.tile_map_data !== undefined && decodeTileMapData(rawProps.tile_map_data) === null) {
     diagnostics.push({
       severity: 'error',
       message: `'tile_map_data' is not a decodable PackedByteArray (2-byte header + 12-byte cell records).`,
@@ -66,10 +55,29 @@ const tileMapLayerValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['TileMapLayer'],
     emits: [
-      { ruleName: 'tilemaplayer-requires-tileset', severity: 'warning' },
-      { ruleName: 'valid-tilemaplayer-resources', severity: 'error' },
-      { ruleName: 'tilemaplayer-empty', severity: 'warning' },
-      { ruleName: 'tilemaplayer-invalid-tile-data', severity: 'error' },
+      {
+        ruleName: 'tilemaplayer-requires-tileset',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'tile_map_layer.cpp:224',
+          unused: 'a null tile set forces the cleanup path, so nothing is drawn',
+        },
+      },
+      {
+        ruleName: 'valid-tilemaplayer-resources',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the tile_set reference names a resource id this file never declares',
+        },
+      },
+      {
+        ruleName: 'tilemaplayer-invalid-tile-data',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'tile_map_layer.cpp:3239' },
+      },
     ],
   },
   check: checkTileMapLayer,

@@ -78,9 +78,8 @@ Strict parsing format-checks these `VehicleWheel3D` properties, plus 16 inherite
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-vehiclewheel3d` | `vehiclewheel3d-not-under-vehicle-body` | warning |
-|  | `vehiclewheel3d-damping-relaxation-below-compression` | warning |
 <!-- lint:end -->
 
 The lenient parser reads every strict-validated property, so the two grammars

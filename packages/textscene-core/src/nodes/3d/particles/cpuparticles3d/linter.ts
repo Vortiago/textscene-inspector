@@ -66,8 +66,16 @@ const cpuParticles3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['CPUParticles3D'],
     emits: [
-      { ruleName: 'cpuparticles3d-requires-mesh', severity: 'warning' },
-      { ruleName: 'valid-cpuparticles3d-resources', severity: 'error' },
+      { ruleName: 'cpuparticles3d-requires-mesh', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'valid-cpuparticles3d-resources',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the mesh reference names a resource id this file never declares',
+        },
+      },
     ],
   },
   check: checkCPUParticles3D,

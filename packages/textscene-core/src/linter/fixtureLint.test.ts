@@ -41,8 +41,8 @@ const scenesRoot = resolve(here, '../../../../scenes');
  */
 const UNIT_FIXTURE_WARNINGS: Readonly<Record<string, { rules: readonly string[]; reason: string }>> = {
   'unit-unsupported-nodes.tscn': {
-    rules: ['area3d-needs-collision-shape', 'animationplayer-no-animations'],
-    reason: 'exists to show unsupported types; the Area3D has no shape and the AnimationPlayer no animations on purpose',
+    rules: ['area3d-needs-collision-shape'],
+    reason: 'exists to show unsupported types; the Area3D has no shape on purpose',
   },
   'unit-cpuparticles2d-unpreviewable.tscn': {
     rules: [

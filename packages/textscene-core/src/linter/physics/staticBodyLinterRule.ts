@@ -1,10 +1,8 @@
 /**
  * Dimension-parameterized semantic linter rule for StaticBody2D / StaticBody3D.
  *
- * The genuine dimension-specific seam is `constant_angular_velocity`: in 2D it is
- * a scalar (float), in 3D it is a Vector3. `constant_linear_velocity` is a
- * Vector2/Vector3 accordingly. Format validation stays in each slice's
- * linterParser.ts.
+ * The two slices are identical after a 2D↔3D token swap, so a single factory
+ * builds both. Format validation stays in each slice's linterParser.ts.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
@@ -13,8 +11,6 @@ import {
   hasCollisionShapeDescendant,
   collisionShapeTypesPhrase,
 } from './hasCollisionShapeDescendant.js';
-import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
-import { tupleComponent } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
@@ -22,35 +18,6 @@ import { descendsFrom } from '../nodeBaseTypes.js';
 export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `StaticBody${dim}`;
   const prefix = `staticbody${dimSuffix(dim)}`;
-
-  const vectorArity = dim === '2D' ? 2 : 3;
-  const vectorRegex = makeFloatTupleRegex(dim === '2D' ? 'Vector2' : 'Vector3', vectorArity);
-
-  /** True when any component of the vector value is non-zero. */
-  function isNonZeroVector(value: string): boolean {
-    const match = vectorRegex.exec(value);
-    if (!match) {
-      return false;
-    }
-    for (let i = 1; i <= vectorArity; i++) {
-      if (tupleComponent(match[i]) !== 0) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  function pushConstantVelocityWarning(diagnostics: Diagnostic[], node: RuleContext['node'], kind: 'linear' | 'rotate', raw: string): void {
-    const verb = kind === 'linear' ? 'move' : 'rotate';
-    const propName = kind === 'linear' ? 'constant_linear_velocity' : 'constant_angular_velocity';
-    diagnostics.push({
-      severity: 'warning',
-      message: `${type} '${node.name}' has non-zero ${propName} (${raw}). This affects touching bodies but doesn't ${verb} the static body itself, which can be confusing.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: `${prefix}-constant-velocity-warning`,
-    });
-  }
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
@@ -85,25 +52,9 @@ export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
-    // Warning: Non-zero constant_linear_velocity on static body (unusual/confusing)
-    if (rawProps.constant_linear_velocity && isNonZeroVector(rawProps.constant_linear_velocity)) {
-      pushConstantVelocityWarning(diagnostics, node, 'linear', rawProps.constant_linear_velocity);
-    }
-
-    // Warning: Non-zero constant_angular_velocity on static body (unusual/confusing).
-    // Dimension seam: 2D angular velocity is a scalar float; 3D is a Vector3.
-    if (dim === '2D') {
-      if (rawProps.constant_angular_velocity) {
-        const angularVel = parseFloat(rawProps.constant_angular_velocity);
-        if (!isNaN(angularVel) && angularVel !== 0) {
-          pushConstantVelocityWarning(diagnostics, node, 'rotate', rawProps.constant_angular_velocity);
-        }
-      }
-    } else {
-      if (rawProps.constant_angular_velocity && isNonZeroVector(rawProps.constant_angular_velocity)) {
-        pushConstantVelocityWarning(diagnostics, node, 'rotate', rawProps.constant_angular_velocity);
-      }
-    }
+    // Neither constant velocity gets a check: both setters are plain
+    // assignments forwarding to `body_set_state`, and neither property carries
+    // a hint, so a non-zero value is an ordinary configuration.
 
     // Neither `collision_layer == 0` nor `collision_mask == 0` gets a check.
     // Godot has no such warning for ANY type — grepping `scene/` and `modules/`
@@ -122,9 +73,20 @@ export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, type),
       emits: [
-        { ruleName: `valid-${prefix}-resources`, severity: 'error' },
-        { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
-        { ruleName: `${prefix}-constant-velocity-warning`, severity: 'warning' },
+        {
+          ruleName: `valid-${prefix}-resources`,
+          severity: 'error',
+          grounding: {
+            kind: 'no-engine-counterpart',
+            scope: 'dangling-reference',
+            because: 'the physics_material_override id is not declared anywhere in this file',
+          },
+        },
+        {
+          ruleName: `${prefix}-needs-collision-shape`,
+          severity: 'warning',
+          grounding: { kind: 'configuration-warning' },
+        },
       ],
     },
     check,

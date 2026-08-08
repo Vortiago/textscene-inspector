@@ -49,7 +49,7 @@ const lightOccluder2DRequiresOccluderRule: LintRule = {
     description: 'Warns when a LightOccluder2D has no occluder polygon resource set',
     category: 'validation',
     applicableNodeTypes: ['LightOccluder2D'],
-    emits: [{ ruleName: RULE_NAME, severity: 'warning' }],
+    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkLightOccluder2D,
 };

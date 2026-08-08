@@ -68,8 +68,20 @@ export function makeNavigationRegionLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       applicableNodeTypes: [type],
       emits: [
-        { ruleName: resourceRuleName, severity: 'error' },
-        { ruleName: missingResourceRuleName, severity: 'warning' },
+        {
+          ruleName: resourceRuleName,
+          severity: 'error',
+          grounding: {
+            kind: 'no-engine-counterpart',
+            scope: 'dangling-reference',
+            because: `the ${property} id is not declared anywhere in this file`,
+          },
+        },
+        {
+          ruleName: missingResourceRuleName,
+          severity: 'warning',
+          grounding: { kind: 'configuration-warning' },
+        },
       ],
     },
     check,

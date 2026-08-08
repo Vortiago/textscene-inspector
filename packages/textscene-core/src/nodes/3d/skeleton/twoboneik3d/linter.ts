@@ -199,9 +199,17 @@ const twoBoneIK3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'TwoBoneIK3D'),
     emits: [
-      { ruleName: 'twoboneik3d-setting-index-out-of-range', severity: 'warning' },
-      { ruleName: 'twoboneik3d-pole-direction-vector-ignored', severity: 'warning' },
-      { ruleName: 'twoboneik3d-setting-missing-target-node', severity: 'warning' },
+      {
+        ruleName: 'twoboneik3d-setting-index-out-of-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'two_bone_ik_3d.cpp:39' },
+      },
+      {
+        ruleName: 'twoboneik3d-pole-direction-vector-ignored',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'two_bone_ik_3d.cpp:446' },
+      },
+      { ruleName: 'twoboneik3d-setting-missing-target-node', severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkTwoBoneIK3D,

@@ -36,7 +36,7 @@ Strict parsing format-checks these `AudioListener3D` properties, plus 16 inherit
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 `doppler_tracking` is the node's only own property, and it plays no part in what the

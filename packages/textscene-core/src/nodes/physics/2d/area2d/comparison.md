@@ -65,8 +65,6 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 | `valid-area2d` | `area2d-needs-collision-shape` | warning |
 |  | `area2d-inactive` | warning |
 |  | `area2d-monitoring-zero-mask` | warning |
-|  | `area2d-monitoring-no-collision` | warning |
-|  | `area2d-audio-override-missing-name` | warning |
 <!-- lint:end -->
 
 The lenient parser only reads `monitoring`, `monitorable`, `collision_layer`, and

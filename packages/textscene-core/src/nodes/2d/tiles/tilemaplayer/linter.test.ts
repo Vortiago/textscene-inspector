@@ -43,11 +43,9 @@ describe('TileMapLayer lint rules', () => {
     );
   });
 
-  it('warns on a TileMapLayer with no tile data at all', () => {
-    expectDiagnostic(scene(`tile_set = SubResource("TileSet_a")`, TILESET_RESOURCES), {
-      ruleName: 'tilemaplayer-empty',
-      severity: 'warning',
-    });
+  it('stays silent on a TileMapLayer with no tile data at all', () => {
+    const diagnostics = lint(scene(`tile_set = SubResource("TileSet_a")`, TILESET_RESOURCES));
+    expect(diagnostics.filter((d) => d.ruleName?.startsWith('tilemaplayer'))).toEqual([]);
   });
 
   it('errors when the tile_set reference cannot be resolved (dangling id)', () => {

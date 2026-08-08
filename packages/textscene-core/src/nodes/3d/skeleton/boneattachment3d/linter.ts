@@ -91,8 +91,8 @@ const boneAttachment3DSkeletonRule: LintRule = {
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'BoneAttachment3D'),
     emits: [
-      { ruleName: PARENT_RULE, severity: 'warning' },
-      { ruleName: EXTERNAL_RULE, severity: 'warning' },
+      { ruleName: PARENT_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: EXTERNAL_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkBoneAttachment3D,

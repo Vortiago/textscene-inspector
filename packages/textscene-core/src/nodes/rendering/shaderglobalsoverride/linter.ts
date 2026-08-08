@@ -45,7 +45,7 @@ const shaderGlobalsOverrideValidationRule: LintRule = {
     description: 'Warns when more than one ShaderGlobalsOverride node is in the scene',
     category: 'validation',
     applicableNodeTypes: ['ShaderGlobalsOverride'],
-    emits: [{ ruleName: 'shaderglobalsoverride-multiple-in-scene', severity: 'warning' }],
+    emits: [{ ruleName: 'shaderglobalsoverride-multiple-in-scene', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkShaderGlobalsOverride,
 };

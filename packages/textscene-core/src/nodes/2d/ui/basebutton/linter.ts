@@ -68,7 +68,7 @@ const buttonGroupRule: LintRule = {
     description: 'Flags a ButtonGroup on a button that is not in toggle mode',
     category: 'validation',
     applicableNodeTypeMatcher: isButton,
-    emits: [{ ruleName: 'button-group-without-toggle-mode', severity: 'warning' }],
+    emits: [{ ruleName: 'button-group-without-toggle-mode', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkButtonGroup,
 };

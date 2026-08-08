@@ -105,10 +105,18 @@ const decalValidationRule: LintRule = {
       'Validates Decal texture references resolve, and three of get_configuration_warnings\' own checks: at least one texture, Normal/ORM without Albedo, and an empty Cull Mask',
     category: 'validation',
     emits: [
-      { ruleName: 'decal-requires-texture', severity: 'warning' },
-      { ruleName: 'valid-decal-resources', severity: 'error' },
-      { ruleName: 'decal-normal-orm-without-albedo', severity: 'warning' },
-      { ruleName: 'decal-empty-cull-mask', severity: 'warning' },
+      { ruleName: 'decal-requires-texture', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'valid-decal-resources',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the texture id is undeclared in the file',
+        },
+      },
+      { ruleName: 'decal-normal-orm-without-albedo', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: 'decal-empty-cull-mask', severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
     applicableNodeTypes: ['Decal'],
   },

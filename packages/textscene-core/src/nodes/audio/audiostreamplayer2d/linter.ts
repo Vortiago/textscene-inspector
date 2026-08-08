@@ -44,30 +44,19 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
   // is not silent despite having no `stream` of its own.
   const drivenByAnimation = rawProps.stream === undefined && isDrivenByAnimationAudioTrack(scene, node);
 
-  // Advisory, not an error: audio_stream_player_2d.cpp defines no
-  // configuration warning, and a player with no stream is valid Godot; a script
-  // may assign one at runtime.
-  if (rawProps.stream === undefined) {
-    if (!drivenByAnimation) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `AudioStreamPlayer2D '${node.name}' has no 'stream', so it will not play anything until one is assigned.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'audiostreamplayer2d-missing-stream',
-      });
-    }
-  } else {
-    // ERROR: stream resource doesn't exist
-    if (!checkResourceExists(scene, rawProps.stream)) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Stream resource "${rawProps.stream}" does not exist in scene. AudioStreamPlayer2D will not play audio.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'audiostreamplayer2d-missing-stream-resource',
-      });
-    }
+  // A player with no `stream` at all gets no diagnostic: that is the serialised
+  // default, audio_stream_player_2d.cpp defines no configuration warning, and a
+  // script may assign one at runtime.
+
+  // ERROR: stream resource doesn't exist
+  if (rawProps.stream !== undefined && !checkResourceExists(scene, rawProps.stream)) {
+    diagnostics.push({
+      severity: 'error',
+      message: `Stream resource "${rawProps.stream}" does not exist in scene. AudioStreamPlayer2D will not play audio.`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'audiostreamplayer2d-missing-stream-resource',
+    });
   }
 
   // WARNING: autoplay enabled but no stream set
@@ -129,18 +118,53 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
 const audioStreamPlayer2DValidationRule: LintRule = {
   meta: {
     name: 'valid-audiostreamplayer2d-properties',
-    description: 'Validates AudioStreamPlayer2D property values, required properties, and logical consistency',
+    description: 'Validates AudioStreamPlayer2D property values, resource references, and logical consistency',
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer2D'],
     emits: [
-      { ruleName: 'audiostreamplayer2d-missing-stream', severity: 'warning' },
-      { ruleName: 'audiostreamplayer2d-missing-stream-resource', severity: 'error' },
-      { ruleName: 'audiostreamplayer2d-autoplay-without-stream', severity: 'warning' },
-      { ruleName: 'audiostreamplayer2d-zero-pitch-scale', severity: 'error' },
-      { ruleName: 'audiostreamplayer2d-small-max-distance', severity: 'warning' },
-      { ruleName: 'audiostreamplayer2d-extreme-volume', severity: 'warning' },
-      { ruleName: 'audiostreamplayer2d-unusual-pitch', severity: 'warning' },
-      { ruleName: 'audiostreamplayer2d-invalid-max-polyphony', severity: 'error' },
+      {
+        ruleName: 'audiostreamplayer2d-missing-stream-resource',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the file declares no ExtResource or SubResource carrying that id',
+        },
+      },
+      {
+        ruleName: 'audiostreamplayer2d-autoplay-without-stream',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'audio_stream_player_internal.cpp:139',
+          unused: 'play_basic returns an empty playback, so autoplay produces no sound',
+        },
+      },
+      {
+        ruleName: 'audiostreamplayer2d-zero-pitch-scale',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'audio_stream_player_internal.cpp:314' },
+      },
+      {
+        ruleName: 'audiostreamplayer2d-small-max-distance',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'audio_stream_player_2d.cpp:436' },
+      },
+      {
+        ruleName: 'audiostreamplayer2d-extreme-volume',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'audio_stream_player_2d.cpp:430' },
+      },
+      {
+        ruleName: 'audiostreamplayer2d-unusual-pitch',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'audio_stream_player_2d.cpp:432' },
+      },
+      {
+        ruleName: 'audiostreamplayer2d-invalid-max-polyphony',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'audio_stream_player_internal.cpp:323' },
+      },
     ],
   },
   check: checkAudioStreamPlayer2D,

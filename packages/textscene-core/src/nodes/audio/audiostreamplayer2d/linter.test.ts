@@ -186,37 +186,8 @@ describe('AudioStreamPlayer2D Linter', () => {
   });
 
   describe('Semantic Validation', () => {
-    describe('missing stream advisory', () => {
-      it('should WARN, not error, when stream is missing', () => {
-        // Godot defines no configuration warning for this and accepts the node
-        // happily; a script may assign the stream at runtime, which is what the
-        // vendored platformer's coin pickup does.
-        expectDiagnostic(bare({ volume_db: 0.0, pitch_scale: 1.0 }), {
-          ruleName: 'audiostreamplayer2d-missing-stream',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-          contains: ['no', 'stream'],
-        });
-      });
-
-      it('should not error when stream is present', () => {
-        expectClean(withStream());
-      });
-
-      it('stays silent when an AnimationPlayer audio track targets this node', () => {
-        // coin.tscn's Pickup: the stream arrives through the animation's audio
-        // track (animation_mixer.cpp:889-897 builds its own polyphonic playback
-        // for the track's target and never reads the node's `stream`).
-        expectClean(drivenByAudioTrack('Pickup'));
-      });
-
-      it('still warns when the audio track targets a DIFFERENT node', () => {
-        expectDiagnostic(drivenByAudioTrack('SomeOtherNode'), {
-          ruleName: 'audiostreamplayer2d-missing-stream',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-        });
-      });
+    it('stays quiet about a streamless player (the stream may arrive at runtime)', () => {
+      expectClean(bare({ volume_db: 0.0, pitch_scale: 1.0 }));
     });
 
     describe('missing stream resource error', () => {
@@ -249,7 +220,17 @@ describe('AudioStreamPlayer2D Linter', () => {
       });
 
       it('stays silent when an AnimationPlayer audio track targets this node', () => {
+        // animation_mixer.cpp:889-897 builds its own polyphonic playback for
+        // the track's target and never reads the node's `stream`.
         expectClean(drivenByAudioTrack('Pickup', { autoplay: true }));
+      });
+
+      it('still warns when the audio track targets a DIFFERENT node', () => {
+        expectDiagnostic(drivenByAudioTrack('SomeOtherNode', { autoplay: true }), {
+          ruleName: 'audiostreamplayer2d-autoplay-without-stream',
+          severity: 'warning',
+          nodeType: 'AudioStreamPlayer2D',
+        });
       });
     });
 
@@ -323,11 +304,6 @@ describe('AudioStreamPlayer2D Linter', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle node with no properties', () => {
-      // Should have error for missing stream
-      expectDiagnostic(bare(), { prop: 'stream' });
-    });
-
     it('should handle all properties together', () => {
       expectClean(
         withStream({

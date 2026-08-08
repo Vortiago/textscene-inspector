@@ -197,14 +197,6 @@ describe('AnimatedSprite2D Linter', () => {
   });
 
   describe('Semantic Validation (Animation Properties)', () => {
-    it('should warn when autoplay is set but sprite_frames is not', () => {
-      expectDiagnostic(scene(node('AnimatedSprite2D', { autoplay: '"idle"' })), {
-        ruleName: 'animatedsprite2d-autoplay-no-spriteframes',
-        severity: 'warning',
-        contains: ['autoplay', "sprite_frames' is not set"],
-      });
-    });
-
     it('should warn when animation is set but sprite_frames is not', () => {
       expectDiagnostic(scene(node('AnimatedSprite2D', { animation: '"walk"' })), {
         ruleName: 'animatedsprite2d-animation-no-spriteframes',
@@ -219,74 +211,6 @@ describe('AnimatedSprite2D Linter', () => {
 
     it('should pass when both autoplay and sprite_frames are set', () => {
       expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, autoplay: '"idle"' })));
-    });
-  });
-
-  describe('Semantic Validation (Speed Scale)', () => {
-    it('should warn when speed_scale is 0', () => {
-      expectDiagnostic(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, speed_scale: 0.0 })), {
-        ruleName: 'animatedsprite2d-speed-scale-zero',
-        severity: 'warning',
-        contains: ['speed_scale', '0', 'will not advance'],
-      });
-    });
-
-    it('should not flag negative speed_scale (reverse playback is valid)', () => {
-      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, speed_scale: -1.0 })));
-    });
-
-    it('should pass with positive speed_scale', () => {
-      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, speed_scale: 2.0 })));
-    });
-
-    it('should pass with default speed_scale (1.0)', () => {
-      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, speed_scale: 1.0 })));
-    });
-  });
-
-  describe('Semantic Validation (Frame Progress)', () => {
-    it('should warn when frame_progress is below 0', () => {
-      expectDiagnostic(
-        scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, frame_progress: -0.5 })),
-        {
-          ruleName: 'animatedsprite2d-frame-progress-range',
-          severity: 'warning',
-          contains: ['frame_progress', '0.0 to 1.0'],
-        }
-      );
-    });
-
-    it('should warn when frame_progress is above 1', () => {
-      expectDiagnostic(
-        scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, frame_progress: 1.5 })),
-        {
-          ruleName: 'animatedsprite2d-frame-progress-range',
-          severity: 'warning',
-          contains: ['frame_progress', '0.0 to 1.0'],
-        }
-      );
-    });
-
-    it('should pass with frame_progress in valid range', () => {
-      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, frame_progress: 0.5 })));
-    });
-
-    it('should pass with frame_progress = 0', () => {
-      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, frame_progress: 0.0 })));
-    });
-
-    it('should pass with frame_progress = 1', () => {
-      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, frame_progress: 1.0 })));
-    });
-  });
-
-  describe('Semantic Validation (Deprecated Playing Property)', () => {
-    it('should warn when playing property is used (deprecated)', () => {
-      expectDiagnostic(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, playing: true })), {
-        ruleName: 'animatedsprite2d-playing-deprecated',
-        severity: 'warning',
-        contains: ['playing', 'deprecated', 'Godot 4.0+'],
-      });
     });
   });
 
@@ -377,26 +301,6 @@ describe('AnimatedSprite2D Linter', () => {
           })
         )
       );
-    });
-
-    it('should catch multiple semantic errors in complex scene', () => {
-      const diagnostics = lint(
-        scene(
-          node('AnimatedSprite2D', {
-            sprite_frames: 'SubResource("missing_frames")',
-            animation: '"walk"',
-            autoplay: '"idle"',
-            frame_progress: 1.5,
-            speed_scale: 0.0,
-            playing: true,
-          })
-        )
-      );
-      expect(diagnostics.length).toBeGreaterThan(2);
-      expect(diagnostics.some(d => d.message.includes('SpriteFrames resource not found'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('frame_progress') && d.message.includes('0.0 to 1.0'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('speed_scale') && d.message.includes('0'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('playing') && d.message.includes('deprecated'))).toBe(true);
     });
 
     it('should not flag reverse playback configuration (negative speed_scale is valid)', () => {

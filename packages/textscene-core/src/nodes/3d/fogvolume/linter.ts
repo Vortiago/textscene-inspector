@@ -53,7 +53,17 @@ const fogVolumeSizeRule: LintRule = {
       "Warns when a FogVolume authors 'size' while 'shape' is World, where Godot's renderer never consults it",
     category: 'validation',
     applicableNodeTypes: ['FogVolume'],
-    emits: [{ ruleName: 'fogvolume-size-ignored-for-world-shape', severity: 'warning' }],
+    emits: [
+      {
+        ruleName: 'fogvolume-size-ignored-for-world-shape',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'fog.cpp:702',
+          unused: 'the world shape never enters the branch that reads the extents',
+        },
+      },
+    ],
   },
   check: checkFogVolumeSize,
 };

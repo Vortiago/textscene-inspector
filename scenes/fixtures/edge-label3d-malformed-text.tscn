@@ -1,14 +1,9 @@
 [gd_scene format=3 uid="uid://edge_label3d_malformed_text"]
 
-; The issue asked for `billboard_mode=999` and `pixel_size=-1` — both trip
-; hard format errors (v.enumInt(0,2) / v.positiveFloat) and would break the
-; fixtureLint gate. This pins the lint-safe edge cases instead: `text = ""`
-; (empty — quotedString only checks the value IS quoted, not non-empty, so
-; this is schema-valid and renders as a blank label) and `pixel_size` at an
-; extreme-but-positive boundary (0.0001 — vanishingly small, effectively
-; invisible at normal camera distance, without being <= 0). The empty text
-; trips the pre-existing `label3d-empty-text` advisory WARNING (not an
-; error) — `billboard=1` and `pixel_size=0.0001` are otherwise clean.
+; Lint-safe Label3D edge cases: `text = ""` (empty is the serialised default
+; and renders as a blank label) and `pixel_size` at the bottom of its hint
+; (0.0001 - vanishingly small, effectively invisible at normal camera distance,
+; without being <= 0). The scene lints clean.
 
 [node name="Scene" type="Node3D"]
 

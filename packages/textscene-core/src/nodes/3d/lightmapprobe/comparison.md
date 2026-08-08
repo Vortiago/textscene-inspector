@@ -36,7 +36,7 @@ Strict parsing format-checks the inherited set (16 inherited from Node3D, 10 inh
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 LightmapProbe declares no validator of its own, so nothing strict rejects here is

@@ -136,8 +136,8 @@ const openXRRenderModelManagerRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['OpenXRRenderModelManager'],
     emits: [
-      { ruleName: TRACKER_RULE, severity: 'warning' },
-      { ruleName: PARENT_RULE, severity: 'warning' },
+      { ruleName: TRACKER_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: PARENT_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkOpenXRRenderModelManager,

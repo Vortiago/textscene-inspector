@@ -102,9 +102,9 @@ const geometryInstance3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'GeometryInstance3D'),
     emits: [
-      { ruleName: 'geometryinstance3d-visibility-range-end-before-begin', severity: 'warning' },
-      { ruleName: 'geometryinstance3d-visibility-range-begin-fade-without-margin', severity: 'warning' },
-      { ruleName: 'geometryinstance3d-visibility-range-end-fade-without-margin', severity: 'warning' },
+      { ruleName: 'geometryinstance3d-visibility-range-end-before-begin', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: 'geometryinstance3d-visibility-range-begin-fade-without-margin', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: 'geometryinstance3d-visibility-range-end-fade-without-margin', severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkGeometryInstance3D,

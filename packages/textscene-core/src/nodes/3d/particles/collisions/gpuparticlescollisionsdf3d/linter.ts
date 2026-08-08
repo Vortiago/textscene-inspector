@@ -57,7 +57,7 @@ const gpuParticlesCollisionSDF3DBakeMaskRule: LintRule = {
       "Warns when a GPUParticlesCollisionSDF3D's Bake Mask has no bits enabled, so baking would produce no collision",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'GPUParticlesCollisionSDF3D'),
-    emits: [{ ruleName: 'gpuparticlescollisionsdf3d-empty-bake-mask', severity: 'warning' }],
+    emits: [{ ruleName: 'gpuparticlescollisionsdf3d-empty-bake-mask', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkGPUParticlesCollisionSDF3D,
 };

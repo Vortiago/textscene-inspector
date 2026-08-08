@@ -57,7 +57,7 @@ Strict parsing format-checks these `Node3D` properties, plus 10 inherited from N
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 Node3D's lenient parser reads exactly two properties: `transform` and

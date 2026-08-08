@@ -77,7 +77,7 @@ const xrCamera3DParentRule: LintRule = {
       "Warns when a visible XRCamera3D has a parent that is not an XROrigin3D, Godot's own configuration warning for this node",
     category: 'validation',
     applicableNodeTypes: ['XRCamera3D'],
-    emits: [{ ruleName: PARENT_RULE, severity: 'warning' }],
+    emits: [{ ruleName: PARENT_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkXRCamera3DParent,
 };

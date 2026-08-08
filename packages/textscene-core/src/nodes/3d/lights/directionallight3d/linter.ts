@@ -31,54 +31,18 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
     ],
   });
 
-  // The remaining checks are cross-field consistency (shadow split ordering + mode),
-  // not range advisories — they stay hand-written.
+  // The remaining check is cross-field consistency (shadow mode vs. which split
+  // fields the inspector still shows), not a range advisory, so it stays
+  // hand-written.
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }
 
   const rawProps = node.properties as Record<string, string>;
 
-  // Validate shadow split ordering (split_1 < split_2 < split_3)
   const split1 = rawProps.directional_shadow_split_1 ? parseFloat(rawProps.directional_shadow_split_1) : undefined;
   const split2 = rawProps.directional_shadow_split_2 ? parseFloat(rawProps.directional_shadow_split_2) : undefined;
   const split3 = rawProps.directional_shadow_split_3 ? parseFloat(rawProps.directional_shadow_split_3) : undefined;
-
-  if (split1 !== undefined && split2 !== undefined && !isNaN(split1) && !isNaN(split2)) {
-    if (split1 >= split2) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Shadow split ordering invalid: split_1 (${split1}) must be less than split_2 (${split2})`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'directionallight3d-shadow-split-order',
-      });
-    }
-  }
-
-  if (split2 !== undefined && split3 !== undefined && !isNaN(split2) && !isNaN(split3)) {
-    if (split2 >= split3) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Shadow split ordering invalid: split_2 (${split2}) must be less than split_3 (${split3})`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'directionallight3d-shadow-split-order',
-      });
-    }
-  }
-
-  if (split1 !== undefined && split3 !== undefined && !isNaN(split1) && !isNaN(split3)) {
-    if (split1 >= split3) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Shadow split ordering invalid: split_1 (${split1}) must be less than split_3 (${split3})`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'directionallight3d-shadow-split-order',
-      });
-    }
-  }
 
   // Godot raises no warning for this — it just hides the field. Grounded in
   // `_validate_property` (light_3d.cpp:542-551): under `ORTHOGONAL`,
@@ -128,15 +92,30 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
 const directionalLight3DValidationRule: LintRule = {
   meta: {
     name: 'valid-directionallight3d-properties',
-    description: 'Validates DirectionalLight3D property values, shadow split ordering, and mode consistency',
+    description: 'Validates DirectionalLight3D property values and shadow mode consistency',
     category: 'validation',
     applicableNodeTypes: ['DirectionalLight3D'],
     emits: [
       // via lightEnergyArms('directionallight3d')
-      { ruleName: 'directionallight3d-negative-energy', severity: 'warning' },
-      { ruleName: 'directionallight3d-negative-shadow-distance', severity: 'warning' },
-      { ruleName: 'directionallight3d-shadow-split-order', severity: 'error' },
-      { ruleName: 'directionallight3d-unused-splits', severity: 'warning' },
+      {
+        ruleName: 'directionallight3d-negative-energy',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'light_3d.cpp:389' },
+      },
+      {
+        ruleName: 'directionallight3d-negative-shadow-distance',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'light_3d.cpp:584' },
+      },
+      {
+        ruleName: 'directionallight3d-unused-splits',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'renderer_scene_cull.cpp:2175',
+          unused: 'the cascade loop reads only the first split offsets for the chosen mode',
+        },
+      },
     ],
   },
   check: checkDirectionalLight3D,

@@ -121,8 +121,16 @@ const tabBarValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['TabBar'],
     emits: [
-      { ruleName: 'tabbar-current-tab-out-of-range', severity: 'warning' },
-      { ruleName: 'tabbar-tab-index-out-of-range', severity: 'warning' },
+      {
+        ruleName: 'tabbar-current-tab-out-of-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'tab_bar.cpp:804' },
+      },
+      {
+        ruleName: 'tabbar-tab-index-out-of-range',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+      },
     ],
   },
   check: checkTabBar,

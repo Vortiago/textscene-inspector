@@ -214,81 +214,20 @@ describe('DirectionalLight3D Linter', () => {
       });
     });
 
+    // Nothing enforces split ordering: the cascade consumer reads the offsets as
+    // authored, and each split's own hint bounds the value, never the ordering.
     describe('shadow split ordering', () => {
-      it('should pass with correctly ordered splits', () => {
-        expectClean(
-          scene(
-            node('DirectionalLight3D', {
-              directional_shadow_split_1: 0.1,
-              directional_shadow_split_2: 0.3,
-              directional_shadow_split_3: 0.7,
-            })
-          )
-        );
-      });
-
-      it('should error if split_1 >= split_2', () => {
-        expectDiagnostic(
-          scene(
-            node('DirectionalLight3D', {
-              directional_shadow_split_1: 0.5,
-              directional_shadow_split_2: 0.3,
-            })
-          ),
-          {
-            ruleName: 'directionallight3d-shadow-split-order',
-            severity: 'error',
-            contains: ['split ordering', 'split_1', 'split_2'],
-          }
-        );
-      });
-
-      it('should error if split_2 >= split_3', () => {
-        expectDiagnostic(
-          scene(
-            node('DirectionalLight3D', {
-              directional_shadow_split_2: 0.7,
-              directional_shadow_split_3: 0.5,
-            })
-          ),
-          {
-            ruleName: 'directionallight3d-shadow-split-order',
-            severity: 'error',
-            contains: ['split ordering', 'split_2', 'split_3'],
-          }
-        );
-      });
-
-      it('should error if split_1 >= split_3', () => {
-        expectDiagnostic(
-          scene(
-            node('DirectionalLight3D', {
-              directional_shadow_split_1: 0.8,
-              directional_shadow_split_3: 0.6,
-            })
-          ),
-          {
-            ruleName: 'directionallight3d-shadow-split-order',
-            severity: 'error',
-            contains: ['split ordering', 'split_1', 'split_3'],
-          }
-        );
-      });
-
-      it('should error if splits are equal', () => {
-        expectDiagnostic(
-          scene(
-            node('DirectionalLight3D', {
-              directional_shadow_split_1: 0.5,
-              directional_shadow_split_2: 0.5,
-            })
-          ),
-          {
-            ruleName: 'directionallight3d-shadow-split-order',
-            severity: 'error',
-            contains: ['split ordering'],
-          }
-        );
+      it('reports nothing whatever the order', () => {
+        const cases: Record<string, number>[] = [
+          { directional_shadow_split_1: 0.1, directional_shadow_split_2: 0.3, directional_shadow_split_3: 0.7 },
+          { directional_shadow_split_1: 0.5, directional_shadow_split_2: 0.3 },
+          { directional_shadow_split_2: 0.7, directional_shadow_split_3: 0.5 },
+          { directional_shadow_split_1: 0.8, directional_shadow_split_3: 0.6 },
+          { directional_shadow_split_1: 0.5, directional_shadow_split_2: 0.5 },
+        ];
+        for (const splits of cases) {
+          expectClean(scene(node('DirectionalLight3D', splits)));
+        }
       });
     });
 
@@ -418,7 +357,7 @@ describe('DirectionalLight3D Linter', () => {
       );
     });
 
-    it('should handle multiple validation errors', () => {
+    it('should report out-of-band hints as warnings, not errors', () => {
       const diagnostics = lint(
         scene(
           node('DirectionalLight3D', {
@@ -433,11 +372,9 @@ describe('DirectionalLight3D Linter', () => {
       // light_energy = 0 is valid. directional_shadow_mode (light_3d.cpp:578)
       // and shadow_opacity (light_3d.cpp:407, via Light3D::set_param's
       // index-only guard) are both hints, not enforcement (ADR-0032), so the
-      // out-of-range mode and opacity now WARN instead of erroring; only the
-      // split-order semantic rule stays an error.
-      const errors = diagnostics.filter((d) => d.severity === 'error');
-      expect(errors).toHaveLength(1);
-      expect(errors[0]?.ruleName).toBe('directionallight3d-shadow-split-order');
+      // out-of-range mode and opacity WARN instead of erroring, and nothing
+      // here reaches the error tier.
+      expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
       const warnings = diagnostics.filter((d) => d.severity === 'warning');
       const hasModeWarning = warnings.some(d => d.message.includes('directional_shadow_mode'));
       const hasOpacityWarning = warnings.some(d => d.message.includes('shadow_opacity'));
@@ -461,8 +398,7 @@ describe('DirectionalLight3D Linter', () => {
           node('DirectionalLight3D', {
             light_energy: -150,
             directional_shadow_max_distance: -15000,
-            directional_shadow_split_1: 0.5,
-            directional_shadow_split_2: 0.3,
+            transform: 'Transform3D(1, 0, 0)',
           })
         )
       );

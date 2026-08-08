@@ -70,7 +70,17 @@ const windowValidationRule: LintRule = {
     description: "Validates Window's max_size/min_size consistency",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Window'),
-    emits: [{ ruleName: 'window-max-size-below-min-size', severity: 'warning' }],
+    emits: [
+      {
+        ruleName: 'window-max-size-below-min-size',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'window.cpp:473',
+          unused: 'the size fails this validity test, so the rendering server maximum is used instead',
+        },
+      },
+    ],
   },
   check: checkWindow,
 };

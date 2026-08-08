@@ -107,7 +107,7 @@ const navigationLink2DEndpointsRule: LintRule = {
       'Warns when NavigationLink2D start_position and end_position resolve to the same point (each defaulting to Vector2(0, 0) when omitted), so the link routes nowhere',
     category: 'validation',
     applicableNodeTypes: ['NavigationLink2D'],
-    emits: [{ ruleName: RULE_NAME, severity: 'warning' }],
+    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkNavigationLink2D,
 };

@@ -69,7 +69,7 @@ const labelAutowrapRule: LintRule = {
       'Flags a Label with autowrap enabled under a Container parent that still has the default (0, 0) custom_minimum_size',
     category: 'validation',
     applicableNodeTypes: ['Label'],
-    emits: [{ ruleName: 'label-autowrap-needs-custom-minimum-size', severity: 'warning' }],
+    emits: [{ ruleName: 'label-autowrap-needs-custom-minimum-size', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkLabelAutowrap,
 };

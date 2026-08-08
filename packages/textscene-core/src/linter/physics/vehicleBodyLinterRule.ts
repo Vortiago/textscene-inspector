@@ -26,6 +26,13 @@ import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 
+/**
+ * `_update_friction` returns before any suspension or traction impulse is
+ * computed when `wheels` is empty. Not dimension-keyed: Godot declares no
+ * VehicleBody2D, so this factory serves one family.
+ */
+const NO_WHEELS_AT = 'vehicle_body_3d.cpp:731';
+
 export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `VehicleBody${dim}`;
   const wheelType = `VehicleWheel${dim}`;
@@ -62,7 +69,17 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
       description: `Validates that a ${type} has wheels`,
       category: 'validation',
       applicableNodeTypes: [type],
-      emits: [{ ruleName: `${prefix}-needs-wheels`, severity: 'warning' }],
+      emits: [
+        {
+          ruleName: `${prefix}-needs-wheels`,
+          severity: 'warning',
+          grounding: {
+            kind: 'engine-inert',
+            at: NO_WHEELS_AT,
+            unused: 'with no wheels the suspension and traction pass returns before applying anything',
+          },
+        },
+      ],
     },
     check,
   };

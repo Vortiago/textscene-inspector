@@ -79,8 +79,8 @@ const subViewportContainerRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['SubViewportContainer'],
     emits: [
-      { ruleName: 'subviewportcontainer-no-viewport', severity: 'warning' },
-      { ruleName: 'subviewportcontainer-non-arrow-cursor', severity: 'warning' },
+      { ruleName: 'subviewportcontainer-no-viewport', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      { ruleName: 'subviewportcontainer-non-arrow-cursor', severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkSubViewportContainer,

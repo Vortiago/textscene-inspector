@@ -11,7 +11,6 @@ import type { MeshInstance3DProperties } from './types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
-import { extractNodePath, resolveNodePathTarget } from '../../../linter/linterUtils.js';
 
 /**
  * Check if properties are valid MeshInstance3D properties
@@ -115,49 +114,6 @@ function checkMeshInstance3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Validate visibility range logical consistency
-  if (rawProps.visibility_range_begin !== undefined && rawProps.visibility_range_end !== undefined) {
-    const rangeBegin = parseFloat(rawProps.visibility_range_begin);
-    const rangeEnd = parseFloat(rawProps.visibility_range_end);
-    if (!isNaN(rangeBegin) && !isNaN(rangeEnd) && rangeBegin > rangeEnd) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Invalid visibility range: begin (${rangeBegin}) must be less than or equal to end (${rangeEnd})`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'valid-meshinstance3d-visibility-range',
-      });
-    }
-  }
-
-  // skeleton must reference an existing Skeleton3D node; empty/non-NodePath
-  // means "no skeleton". resolveNodePathTarget suppresses escapes/ambiguous
-  // paths (see its JSDoc).
-  if (rawProps.skeleton) {
-    const skeletonPath = extractNodePath(rawProps.skeleton);
-    if (skeletonPath) {
-      const target = resolveNodePathTarget(scene.nodes, node, skeletonPath);
-
-      if (target.status === 'missing') {
-        diagnostics.push({
-          severity: 'error',
-          message: `Skeleton node not found: NodePath("${skeletonPath}")`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'valid-meshinstance3d-skeleton',
-        });
-      } else if (target.status === 'found' && target.node.type !== 'Skeleton3D') {
-        diagnostics.push({
-          severity: 'error',
-          message: `Skeleton property points to a ${target.node.type} node, but must point to a Skeleton3D node`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'valid-meshinstance3d-skeleton',
-        });
-      }
-    }
-  }
-
   return diagnostics;
 }
 
@@ -167,16 +123,22 @@ function checkMeshInstance3D(context: RuleContext): Diagnostic[] {
 const meshInstance3DValidationRule: LintRule = {
   meta: {
     name: 'valid-meshinstance3d-resources',
-    description: 'Validates MeshInstance3D resource references, skeleton paths, and visibility ranges',
+    description: 'Validates MeshInstance3D resource references',
     category: 'validation',
     // Matcher, not a name list: RuleRegistry matches applicableNodeTypes by
     // exact name, so SoftBody3D — which inherits `mesh` from MeshInstance3D —
     // got no resource-existence check at all.
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'MeshInstance3D'),
     emits: [
-      { ruleName: 'valid-meshinstance3d-resources', severity: 'error' },
-      { ruleName: 'valid-meshinstance3d-visibility-range', severity: 'error' },
-      { ruleName: 'valid-meshinstance3d-skeleton', severity: 'error' },
+      {
+        ruleName: 'valid-meshinstance3d-resources',
+        severity: 'error',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'the mesh, material, skin or surface-override id is undeclared in the file',
+        },
+      },
     ],
   },
   check: checkMeshInstance3D,

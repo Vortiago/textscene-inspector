@@ -63,7 +63,17 @@ const reflectionProbeAmbientModeRule: LintRule = {
       "Flags ambient_color/ambient_color_energy authored while ambient_mode isn't AMBIENT_COLOR — legal and still serialised, but inert",
     category: 'validation',
     applicableNodeTypes: ['ReflectionProbe'],
-    emits: [{ ruleName: 'reflectionprobe-ambient-color-no-effect', severity: 'warning' }],
+    emits: [
+      {
+        ruleName: 'reflectionprobe-ambient-color-no-effect',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'reflection_probe.cpp:208',
+          unused: 'the ambient colour is read only while the mode is AMBIENT_COLOR',
+        },
+      },
+    ],
   },
   check: checkAmbientMode,
 };

@@ -63,7 +63,7 @@ const multiplayerSpawnerSpawnPathRule: LintRule = {
       "Warns when MultiplayerSpawner's spawn_path names no node in this file, mirroring Godot's own configuration warning",
     category: 'validation',
     applicableNodeTypes: ['MultiplayerSpawner'],
-    emits: [{ ruleName: RULE_NAME, severity: 'warning' }],
+    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkMultiplayerSpawner,
 };

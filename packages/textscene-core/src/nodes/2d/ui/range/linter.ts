@@ -80,8 +80,12 @@ const rangeBoundsRule: LintRule = {
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Range'),
     emits: [
-      { ruleName: 'range-max-below-min', severity: 'warning' },
-      { ruleName: 'range-exp-edit-negative-min', severity: 'warning' },
+      {
+        ruleName: 'range-max-below-min',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'range.cpp:229' },
+      },
+      { ruleName: 'range-exp-edit-negative-min', severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],
   },
   check: checkRangeBounds,

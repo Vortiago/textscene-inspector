@@ -28,35 +28,6 @@ const withStream = (props: Record<string, PropValue> = {}): string =>
 const bare = (props: Record<string, PropValue> = {}): string =>
   scene(node('AudioStreamPlayer3D', props, { name: 'AudioPlayer' }));
 
-/**
- * An AnimationPlayer with one Animation carrying a single 'audio' track whose
- * NodePath targets `targetName`, plus an AudioStreamPlayer3D of that name with
- * no `stream` of its own (the `coin.tscn` `Pickup` shape, ported to 3D).
- */
-function drivenByAudioTrack(targetName: string, playerProps: Record<string, PropValue> = {}): string {
-  return scene(
-    audioStream,
-    `[sub_resource type="Animation" id="anim1"]
-tracks/0/type = "audio"
-tracks/0/path = NodePath("${targetName}")
-tracks/0/keys = {
-"clips": [{
-"end_offset": 0.0,
-"start_offset": 0.0,
-"stream": ExtResource("1_abc")
-}],
-"times": PackedFloat32Array(0)
-}`,
-    `[sub_resource type="AnimationLibrary" id="lib"]
-_data = {
-&"picked": SubResource("anim1")
-}`,
-    node('Node3D', {}, { name: 'Root' }),
-    node('AnimationPlayer', { 'libraries/': 'SubResource("lib")' }, { parent: '.' }),
-    node('AudioStreamPlayer3D', playerProps, { name: 'Pickup', parent: '.' })
-  );
-}
-
 describe('AudioStreamPlayer3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
     it('should pass validation for valid AudioStreamPlayer3D properties', () => {
@@ -241,35 +212,8 @@ describe('AudioStreamPlayer3D Linter', () => {
   });
 
   describe('Semantic Validation', () => {
-    describe('missing stream error', () => {
-      it('should WARN, not error, when stream is missing', () => {
-        // Godot defines no configuration warning for this and accepts the node
-        // happily; a script may assign the stream at runtime.
-        expectDiagnostic(bare({ volume_db: 0.0, pitch_scale: 1.0 }), {
-          prop: 'stream',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer3D',
-          contains: ['no', 'stream'],
-        });
-      });
-
-      it('should not error when stream is present', () => {
-        expectNoErrors(withStream(), { prop: 'stream' });
-      });
-
-      it('stays silent when an AnimationPlayer audio track targets this node', () => {
-        // animation_mixer.cpp:889-897 builds its own polyphonic playback for
-        // the track's target and never reads the node's `stream`.
-        expectClean(drivenByAudioTrack('Pickup'));
-      });
-
-      it('still warns when the audio track targets a DIFFERENT node', () => {
-        expectDiagnostic(drivenByAudioTrack('SomeOtherNode'), {
-          ruleName: 'audiostreamplayer3d-missing-stream',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer3D',
-        });
-      });
+    it('stays quiet about a streamless player (the stream may arrive at runtime)', () => {
+      expectClean(bare({ volume_db: 0.0, pitch_scale: 1.0 }));
     });
 
     describe('missing stream resource error', () => {
@@ -389,14 +333,6 @@ describe('AudioStreamPlayer3D Linter', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle node with no properties', () => {
-      const diagnostics = lint(bare());
-      // Should have error for missing stream
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const streamError = diagnostics.find(d => d.message.includes('stream'));
-      expect(streamError).toBeDefined();
-    });
-
     it('should handle all properties together', () => {
       expectClean(
         withStream({
