@@ -110,3 +110,27 @@ export function useCanvasDecodeDefines(
     [texture]
   );
 }
+
+/** A 2D-canvas `map` and the `defines` that decode it, as one value. */
+export interface Canvas2DMap {
+  /** The `NoColorSpace` clone, or `null` while there is nothing to show. */
+  texture: THREE.Texture | null;
+  /** Spread onto the sampling material's `defines`. */
+  defines: Record<string, string> | undefined;
+}
+
+/**
+ * The retag and its matching decode, taken together — the two halves of one
+ * invariant, so a caller cannot apply one without the other. Half-applied,
+ * the material samples raw sRGB bytes and never decodes them, which is a
+ * wrong colour ramp visible only under magnification.
+ *
+ * A consumer that reaches the tag by another route (`composeFrameTexture`'s
+ * own `colorSpace` argument, `useIconTexture`'s `pinNoColorSpace`) needs the
+ * defines half alone and calls `useCanvasDecodeDefines` directly.
+ */
+export function useCanvas2DMap(texture: THREE.Texture | null | undefined): Canvas2DMap {
+  const canvasTexture = useCanvas2DTexture(texture);
+  const defines = useCanvasDecodeDefines(canvasTexture);
+  return useMemo(() => ({ texture: canvasTexture, defines }), [canvasTexture, defines]);
+}

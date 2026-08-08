@@ -26,6 +26,7 @@ import {
   fitIconSize,
   pickButtonStyleBox,
   resolveButtonDrawState,
+  shapeButtonLabel,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
 import {
@@ -34,7 +35,7 @@ import {
   type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
-import { AutowrapMode, shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ControlColor } from '../control/types';
 import type { ButtonProperties } from './types';
@@ -149,7 +150,7 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const fontMetrics = resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY);
   const layout: TextLayoutResult | null =
     hasText && ctx.measureText
-      ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics })
+      ? shapeButtonLabel(text, fontSizePx, fontMetrics)
       : null;
   const textSize = layout ? { x: layout.widthPx, y: layout.heightPx } : { x: 0, y: 0 };
 

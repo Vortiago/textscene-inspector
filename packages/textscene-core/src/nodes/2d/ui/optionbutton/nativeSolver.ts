@@ -46,6 +46,7 @@ import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/nativ
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
+  centredTextTopPx,
   pickButtonStyleBox,
   resolveButtonDrawState,
   tintColor,
@@ -221,13 +222,7 @@ export function layoutOptionButtonContent(input: OptionButtonContentInput): Opti
   const customElementHeight = rectSize.y - styleMargin.top - styleMargin.bottom;
   const textOffset: Vec2 = {
     x: styleMargin.left,
-    // Floored for the same reason `buttonBase.ts`'s `layoutButtonContent`
-    // floors its own `textOffsetY` — Button's `text_ofs.y` is never floored
-    // in the source itself, only later, per-glyph
-    // (`modules/text_server_adv/text_server_adv.cpp:4083`,
-    // `cpos.y = Math::floor(cpos.y)`), but this codebase's ascent is always a
-    // whole pixel, so flooring here reaches the identical pixel.
-    y: Math.floor((customElementHeight - textNaturalSize.y) / 2 + styleMargin.top),
+    y: centredTextTopPx(customElementHeight, textNaturalSize.y, styleMargin.top),
   };
 
   return { arrowRect, textOffset };

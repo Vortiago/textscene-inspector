@@ -7,8 +7,9 @@ import {
   createThemeResourceFromContent,
   buildThemeResource,
   buildThemeTypeChain,
-  resolveThemeFont,
-  resolveThemeFontSizePx,
+  resolveThemeFontIn,
+  resolveThemeFontSizeIn,
+  themeResolutionScope,
   type ThemeResource,
   type ThemeAddresses,
 } from './themeProcessing';
@@ -432,41 +433,41 @@ describe('buildThemeTypeChain', () => {
   });
 });
 
-describe('resolveThemeFont', () => {
+describe('resolveThemeFontIn', () => {
   it('a valid node-local override wins over any ancestor theme', () => {
     const ancestor = theme({ fonts: { Label: { font: FONT_B } } });
-    expect(resolveThemeFont('font', FONT_A, 'Label', undefined, [ancestor], null)).toBe(FONT_A);
+    expect(resolveThemeFontIn(themeResolutionScope('Label', undefined, [ancestor], null), 'font', FONT_A)).toBe(FONT_A);
   });
 
   it('an override explicitly authored to nothing (null) STOPS the walk — it does not fall through', () => {
     const ancestor = theme({ fonts: { Label: { font: FONT_B } } });
-    expect(resolveThemeFont('font', null, 'Label', undefined, [ancestor], null)).toBeNull();
+    expect(resolveThemeFontIn(themeResolutionScope('Label', undefined, [ancestor], null), 'font', null)).toBeNull();
   });
 
   it('no override (undefined) falls through to the ancestor theme', () => {
     const ancestor = theme({ fonts: { Label: { font: FONT_B } } });
-    expect(resolveThemeFont('font', undefined, 'Label', undefined, [ancestor], null)).toBe(FONT_B);
+    expect(resolveThemeFontIn(themeResolutionScope('Label', undefined, [ancestor], null), 'font', undefined)).toBe(FONT_B);
   });
 
   it('the nearest ancestor wins over a farther one', () => {
     const nearest = theme({ fonts: { Label: { font: FONT_A } } });
     const farther = theme({ fonts: { Label: { font: FONT_B } } });
-    expect(resolveThemeFont('font', undefined, 'Label', undefined, [nearest, farther], null)).toBe(FONT_A);
+    expect(resolveThemeFontIn(themeResolutionScope('Label', undefined, [nearest, farther], null), 'font', undefined)).toBe(FONT_A);
   });
 
   it('a gap ancestor (its theme does not define the key) falls through to the next ancestor', () => {
     const gap = theme();
     const farther = theme({ fonts: { Label: { font: FONT_B } } });
-    expect(resolveThemeFont('font', undefined, 'Label', undefined, [gap, farther], null)).toBe(FONT_B);
+    expect(resolveThemeFontIn(themeResolutionScope('Label', undefined, [gap, farther], null), 'font', undefined)).toBe(FONT_B);
   });
 
   it('falls through every ancestor to the project theme', () => {
     const project = theme({ fonts: { Label: { font: FONT_B } } });
-    expect(resolveThemeFont('font', undefined, 'Label', undefined, [theme(), theme()], project)).toBe(FONT_B);
+    expect(resolveThemeFontIn(themeResolutionScope('Label', undefined, [theme(), theme()], project), 'font', undefined)).toBe(FONT_B);
   });
 
   it('resolves to null (the caller renders its own bundled default) when nothing anywhere defines it', () => {
-    expect(resolveThemeFont('font', undefined, 'Label', undefined, [theme(), theme()], theme())).toBeNull();
+    expect(resolveThemeFontIn(themeResolutionScope('Label', undefined, [theme(), theme()], theme()), 'font', undefined)).toBeNull();
   });
 
   it("a theme's own default_font SHORT-CIRCUITS the type chain for a NEARER type before a farther type's own explicit entry is ever tried (theme_owner.cpp:236-245's types-inner loop)", () => {
@@ -474,7 +475,7 @@ describe('resolveThemeFont', () => {
     // nearer type in the chain) already satisfies `has_font` via this
     // theme's own `default_font` — so `Control/fonts/font` is shadowed.
     const shadowing = theme({ defaultFont: FONT_A, fonts: { Control: { font: FONT_B } } });
-    expect(resolveThemeFont('font', undefined, 'Label', undefined, [shadowing], null)).toBe(FONT_A);
+    expect(resolveThemeFontIn(themeResolutionScope('Label', undefined, [shadowing], null), 'font', undefined)).toBe(FONT_A);
   });
 
   it('a type registered as a variation IN THIS THEME skips ONLY that type\'s default_font fallback — the walk continues within the SAME theme\'s turn (has_font_no_default, theme.cpp:1009-1017) and still finds ITS OWN default_font one type later, never reaching a farther ancestor\'s explicit entry', () => {
@@ -486,36 +487,36 @@ describe('resolveThemeFont', () => {
     const nearest = theme({ defaultFont: FONT_A, typeVariations: { title_panel: 'Panel' } });
     const farther = theme({ fonts: { title_panel: { font: FONT_B } } });
     expect(
-      resolveThemeFont('font', undefined, 'Panel', 'title_panel', [nearest, farther], null)
+      resolveThemeFontIn(themeResolutionScope('Panel', 'title_panel', [nearest, farther], null), 'font', undefined)
     ).toBe(FONT_A);
   });
 });
 
-describe('resolveThemeFontSizePx', () => {
+describe('resolveThemeFontSizeIn', () => {
   it('a positive node-local override wins over any ancestor theme', () => {
     const ancestor = theme({ fontSizes: { Label: { font_size: 30 } } });
-    expect(resolveThemeFontSizePx('font_size', 24, 'Label', undefined, [ancestor], null, 16)).toBe(24);
+    expect(resolveThemeFontSizeIn(themeResolutionScope('Label', undefined, [ancestor], null), 'font_size', 24, 16)).toBe(24);
   });
 
   it('an override of 0 does NOT win — falls through like an absent one (Control::get_theme_font_size, control.cpp:3114-3117)', () => {
     const ancestor = theme({ fontSizes: { Label: { font_size: 30 } } });
-    expect(resolveThemeFontSizePx('font_size', 0, 'Label', undefined, [ancestor], null, 16)).toBe(30);
+    expect(resolveThemeFontSizeIn(themeResolutionScope('Label', undefined, [ancestor], null), 'font_size', 0, 16)).toBe(30);
   });
 
   it('falls through the ancestor chain to the theme default_font_size', () => {
     const ancestor = theme({ defaultFontSize: 22 });
-    expect(resolveThemeFontSizePx('font_size', undefined, 'Label', undefined, [ancestor], null, 16)).toBe(22);
+    expect(resolveThemeFontSizeIn(themeResolutionScope('Label', undefined, [ancestor], null), 'font_size', undefined, 16)).toBe(22);
   });
 
   it('falls back to the built-in default size when nothing anywhere defines it', () => {
-    expect(resolveThemeFontSizePx('font_size', undefined, 'Label', undefined, [theme()], theme(), 16)).toBe(16);
+    expect(resolveThemeFontSizeIn(themeResolutionScope('Label', undefined, [theme()], theme()), 'font_size', undefined, 16)).toBe(16);
   });
 
   it('the nearest ancestor wins over a farther one', () => {
     const nearest = theme({ fontSizes: { Label: { font_size: 20 } } });
     const farther = theme({ fontSizes: { Label: { font_size: 30 } } });
     expect(
-      resolveThemeFontSizePx('font_size', undefined, 'Label', undefined, [nearest, farther], null, 16)
+      resolveThemeFontSizeIn(themeResolutionScope('Label', undefined, [nearest, farther], null), 'font_size', undefined, 16)
     ).toBe(20);
   });
 });

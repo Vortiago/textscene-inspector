@@ -45,36 +45,20 @@ import {
   clampAutowrapMode,
   shapeText,
   isTextLayoutResult,
+  soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { LABEL_THEME_FONT_KEY, labelShapingWidthPx, labelTextTheme, layoutLabelLines, type LabelLinePlacement } from './nativeSolver';
+import {
+  LABEL_LINE_SPACING_PX,
+  LABEL_THEME_FONT_KEY,
+  labelShapingWidthPx,
+  labelTextTheme,
+  layoutLabelLines,
+  type LabelLinePlacement,
+} from './nativeSolver';
 import type { LabelProperties } from './types';
-
-
-/**
- * A single line, wrapped as its own one-line `TextLayoutResult` — `TextRun`
- * computes `lineIndex * linePitchPx` internally, which is 0 for a solo line,
- * so it draws relative to y=0 with no cumulative pitch of its own; the caller
- * (this component) supplies the real cumulative Y via the wrapping `<group>`'s
- * position. Echoes the PARENT layout's own `fontMetrics`/`baselineOffsetPx`
- * rather than leaving them unset: `TextRun` dispatches MSDF-atlas vs.
- * canvas-rasterised painting off `layout.fontMetrics.kind` — an omitted value
- * here would silently force every Label back onto the atlas path (and, for a
- * font this atlas has no bitmaps for, zero visible glyphs) regardless of
- * which font `layout` itself was actually shaped against.
- */
-export function soloLineLayout(placement: LabelLinePlacement, layout: TextLayoutResult): TextLayoutResult {
-  return {
-    lines: [placement.line],
-    linePitchPx: layout.linePitchPx,
-    widthPx: placement.line.widthPx,
-    heightPx: layout.linePitchPx,
-    baselineOffsetPx: layout.baselineOffsetPx,
-    fontMetrics: layout.fontMetrics,
-  };
-}
 
 /**
  * The per-line `TextLayoutResult`s, memoised together with the placements they
@@ -85,7 +69,7 @@ export function soloLineLayout(placement: LabelLinePlacement, layout: TextLayout
  */
 function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayoutResult): TextLayoutResult[] {
   return useMemo(
-    () => placements.map((placement) => soloLineLayout(placement, layout)),
+    () => placements.map((placement) => soloLineLayout(placement.line, layout)),
     [placements, layout]
   );
 }
@@ -120,6 +104,7 @@ export function Label({ solveNode, rect, renderOrder, theme, meta }: NativeContr
       fontSizePx: textTheme.fontSizePx,
       boxWidthPx: labelShapingWidthPx(rect.w),
       autowrapMode,
+      lineSpacingPx: LABEL_LINE_SPACING_PX,
       uppercase: props.uppercase,
       fontMetrics,
     });
@@ -128,15 +113,8 @@ export function Label({ solveNode, rect, renderOrder, theme, meta }: NativeContr
 
   const placements = useMemo(
     () =>
-      layoutLabelLines(
-        layout,
-        rect.w,
-        rect.h,
-        props.horizontalAlignment,
-        props.verticalAlignment,
-        textTheme.fontSizePx
-      ),
-    [layout, rect.w, rect.h, props.horizontalAlignment, props.verticalAlignment, textTheme.fontSizePx]
+      layoutLabelLines(layout, rect.w, rect.h, props.horizontalAlignment, props.verticalAlignment),
+    [layout, rect.w, rect.h, props.horizontalAlignment, props.verticalAlignment]
   );
 
   const lineLayouts = useSoloLineLayouts(placements, layout);

@@ -12,7 +12,7 @@ import { useResource } from '../resources/useResource';
 import { buildTileGeometryArrays, type DrawableCell } from '../resources/tileset/tileGeometry';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/tileSetModel';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
-import { useCanvas2DTexture, useCanvasDecodeDefines } from './canvas2DTextureDecode';
+import { useCanvas2DMap } from './canvas2DTextureDecode';
 import type { CanvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';
 import type { CanvasItemLightingProps } from './lighting2d/useCanvasItemLighting';
 
@@ -35,11 +35,7 @@ export interface TileSourceMeshProps {
 
 export function TileSourceMesh({ source, cells, grid, z, color, opacity, name, blend, lighting }: TileSourceMeshProps) {
   const texResult = useResource<THREE.Texture>(source.texturePath ?? '', 'Texture2D');
-  // NoColorSpace: the 2D canvas's hardware filter blends undecoded sRGB
-  // bytes (`canvas2DTextureDecode.ts`); the material below decodes the
-  // already-filtered sample via `useCanvasDecodeDefines`.
-  const tex = useCanvas2DTexture(texResult.value);
-  const decodeDefines = useCanvasDecodeDefines(tex);
+  const { texture: tex, defines: decodeDefines } = useCanvas2DMap(texResult.value);
   const image = tex?.image as { width?: number; height?: number } | undefined;
   const texW = image?.width;
   const texH = image?.height;

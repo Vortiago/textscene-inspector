@@ -181,7 +181,7 @@ describe('labelMinimumSize — autowrap ON reports the WRAPPED height once a pri
   });
 
   it('shapes at a TRUNCATED width (label.cpp:581 `int width = get_size().width - ...`), so a fractional box does not fit a word its whole-pixel width cannot', () => {
-    const full = shapeText('AB AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF }).widthPx;
+    const full = shapeText('AB AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 }).widthPx;
     // The discriminating band: trunc(box) < full <= box. Vacuous if `full`
     // landed on a whole pixel, so pin that it did not.
     expect(Number.isInteger(full)).toBe(false);
@@ -401,18 +401,18 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
   const PITCH = 26; // getLinePitchPx(16)
 
   function layoutFor(text: string, boxWidthPx = 0, autowrapMode = AutowrapMode.OFF) {
-    return shapeText(text, { fontSizePx: FONT_SIZE, boxWidthPx, autowrapMode });
+    return shapeText(text, { fontSizePx: FONT_SIZE, boxWidthPx, autowrapMode, lineSpacingPx: 3 });
   }
 
   it('left alignment (default/undefined): every line starts at x=0', () => {
     const layout = layoutFor('A\nAB'); // two lines, different widths
-    const placements = layoutLabelLines(layout, 200, 200, undefined, undefined, FONT_SIZE);
+    const placements = layoutLabelLines(layout, 200, 200, undefined, undefined);
     expect(placements.map((p) => p.x)).toEqual([0, 0]);
   });
 
   it('center alignment (1): each line centers independently by ITS OWN width', () => {
     const layout = layoutFor('A\nAB');
-    const placements = layoutLabelLines(layout, 200, 200, 1, undefined, FONT_SIZE);
+    const placements = layoutLabelLines(layout, 200, 200, 1, undefined);
     expect(placements[0]!.x).toBe(Math.trunc(Math.trunc(200 - layout.lines[0]!.widthPx) / 2));
     expect(placements[1]!.x).toBe(Math.trunc(Math.trunc(200 - layout.lines[1]!.widthPx) / 2));
     expect(placements[0]!.x).not.toBe(placements[1]!.x);
@@ -420,33 +420,33 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
 
   it('right alignment (2): each line right-aligns to the box width', () => {
     const layout = layoutFor('AB');
-    const placements = layoutLabelLines(layout, 200, 200, 2, undefined, FONT_SIZE);
+    const placements = layoutLabelLines(layout, 200, 200, 2, undefined);
     expect(placements[0]!.x).toBe(Math.trunc(200 - layout.lines[0]!.widthPx));
   });
 
   it('vertical TOP (default): line N sits at exactly N*linePitchPx — the pure label.cpp box top, with no painter-side anchor folded in (`<TextRun>` owns that)', () => {
     const layout = layoutFor('A\nB\nC');
-    const placements = layoutLabelLines(layout, 200, 200, undefined, 0, FONT_SIZE);
+    const placements = layoutLabelLines(layout, 200, 200, undefined, 0);
     expect(placements.map((p) => p.y)).toEqual([0, PITCH, 2 * PITCH]);
   });
 
   it('vertical CENTER (1): vbegin centers the whole text block in the box', () => {
     const layout = layoutFor('A\nB'); // 2 lines: contentHeight = 2*26-3 = 49
-    const placements = layoutLabelLines(layout, 200, 149, undefined, 1, FONT_SIZE);
+    const placements = layoutLabelLines(layout, 200, 149, undefined, 1);
     const vbegin = (149 - 49) / 2;
     expect(placements[0]!.y).toBeCloseTo(vbegin, 6);
   });
 
   it('vertical BOTTOM (2): vbegin pins the block against the box bottom', () => {
     const layout = layoutFor('A\nB');
-    const placements = layoutLabelLines(layout, 200, 149, undefined, 2, FONT_SIZE);
+    const placements = layoutLabelLines(layout, 200, 149, undefined, 2);
     const vbegin = 149 - 49;
     expect(placements[0]!.y).toBeCloseTo(vbegin, 6);
   });
 
   it('vertical FILL (3): distributes the box height evenly across N-1 inter-line gaps', () => {
     const layout = layoutFor('A\nB\nC'); // 3 lines, contentHeight = 3*26-3 = 75
-    const placements = layoutLabelLines(layout, 200, 175, undefined, 3, FONT_SIZE);
+    const placements = layoutLabelLines(layout, 200, 175, undefined, 3);
     const vsep = (175 - 75) / 2;
     expect(placements[0]!.y).toBeCloseTo(0, 6);
     expect(placements[1]!.y).toBeCloseTo(PITCH + vsep, 6);
@@ -461,37 +461,37 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
   // 99px box, which only a truncated offset can produce.
   it('vertical CENTER (1) truncates a half-pixel offset: a 100px box and a 99px box around the same 23px line place their text on the SAME row (38, not 38.5)', () => {
     const layout = layoutFor('A'); // one line: contentHeight = 26 - 3 = 23
-    const odd = layoutLabelLines(layout, 200, 99, undefined, 1, FONT_SIZE);
-    const even = layoutLabelLines(layout, 200, 100, undefined, 1, FONT_SIZE);
+    const odd = layoutLabelLines(layout, 200, 99, undefined, 1);
+    const even = layoutLabelLines(layout, 200, 100, undefined, 1);
     expect(odd[0]!.y).toBe(38);
     expect(even[0]!.y).toBe(38);
   });
 
   it('vertical BOTTOM (2) truncates too — a fractional box height cannot put the text on a fractional row', () => {
     const layout = layoutFor('A');
-    const placements = layoutLabelLines(layout, 200, 100.75, undefined, 2, FONT_SIZE);
+    const placements = layoutLabelLines(layout, 200, 100.75, undefined, 2);
     expect(placements[0]!.y).toBe(77);
   });
 
   it('vertical FILL (3) truncates the SEPARATION, not the accumulated pitch: four lines in a 205px box sit 60px apart, so the last line lands on 180 rather than drifting to 182', () => {
     const layout = layoutFor('A\nB\nC\nD'); // 4 lines: contentHeight = 4*26-3 = 101
     // (205 - 101) / 3 = 34.666..., truncated to 34, on top of the 26px pitch.
-    const placements = layoutLabelLines(layout, 200, 205, undefined, 3, FONT_SIZE);
+    const placements = layoutLabelLines(layout, 200, 205, undefined, 3);
     expect(placements.map((p) => p.y)).toEqual([0, 60, 120, 180]);
   });
 
   it('truncates TOWARD ZERO, not toward minus infinity, when the box is SHORTER than the text (C++ `int` conversion, not a floor)', () => {
     const layout = layoutFor('A'); // contentHeight 23
     // (10 - 23) / 2 = -6.5 -> -6 under an int conversion; a floor would give -7.
-    expect(layoutLabelLines(layout, 200, 10, undefined, 1, FONT_SIZE)[0]!.y).toBe(-6);
+    expect(layoutLabelLines(layout, 200, 10, undefined, 1)[0]!.y).toBe(-6);
     // FILL's separation goes the same way: (10 - 101) / 3 = -30.333... -> -30.
     const four = layoutFor('A\nB\nC\nD');
-    expect(layoutLabelLines(four, 200, 10, undefined, 3, FONT_SIZE)[1]!.y).toBe(PITCH - 30);
+    expect(layoutLabelLines(four, 200, 10, undefined, 3)[1]!.y).toBe(PITCH - 30);
   });
 
   it('horizontal FILL (3), single line: widens that line to the box width (JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE, label.h:46)', () => {
     const layout = layoutFor('A B');
-    const placements = layoutLabelLines(layout, 200, 200, 3, undefined, FONT_SIZE);
+    const placements = layoutLabelLines(layout, 200, 200, 3, undefined);
     expect(placements[0]!.line.widthPx).toBeCloseTo(200, 6);
     expect(placements[0]!.x).toBe(0);
   });
@@ -499,7 +499,7 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
   it("horizontal FILL (3), multi-line: the LAST line is NOT justified (JUSTIFICATION_SKIP_LAST_LINE, label.h:46) — earlier lines are", () => {
     const layout = layoutFor('A B\nA B');
     const naturalWidth = layout.lines[0]!.widthPx;
-    const placements = layoutLabelLines(layout, 200, 200, 3, undefined, FONT_SIZE);
+    const placements = layoutLabelLines(layout, 200, 200, 3, undefined);
     expect(placements[0]!.line.widthPx).toBeCloseTo(200, 6);
     expect(placements[1]!.line.widthPx).toBeCloseTo(naturalWidth, 6);
   });
@@ -554,12 +554,12 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
    * numbers and not the MSDF atlas's advances against FreeType's.
    */
   function lineOfWidth(widthPx: number) {
-    const layout = shapeText('Wave rift', { fontSizePx: FONT_SIZE, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    const layout = shapeText('Wave rift', { fontSizePx: FONT_SIZE, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
     return { ...layout, lines: layout.lines.map((l) => ({ ...l, widthPx })), widthPx };
   }
 
   function originAt(boxWidthPx: number, alignment: number): number {
-    return layoutLabelLines(lineOfWidth(GODOT_LINE_WIDTH_PX), boxWidthPx, 100, alignment, undefined, FONT_SIZE)[0]!.x;
+    return layoutLabelLines(lineOfWidth(GODOT_LINE_WIDTH_PX), boxWidthPx, 100, alignment, undefined)[0]!.x;
   }
 
   const CENTER_CASES: Array<[number, number]> = [
@@ -615,8 +615,8 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
     [300.7, 300],
     [301.4, 301],
   ])('H_FILL stretches a line to the TRUNCATED box width: box %s -> right edge %s', (boxWidthPx, expected) => {
-    const layout = shapeText('A B C\nD', { fontSizePx: FONT_SIZE, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
-    const placements = layoutLabelLines(layout, boxWidthPx, 200, 3, undefined, FONT_SIZE);
+    const layout = shapeText('A B C\nD', { fontSizePx: FONT_SIZE, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const placements = layoutLabelLines(layout, boxWidthPx, 200, 3, undefined);
     expect(placements[0]!.x).toBe(0);
     expect(placements[0]!.line.widthPx).toBe(expected);
   });

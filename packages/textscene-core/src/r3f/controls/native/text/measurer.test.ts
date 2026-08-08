@@ -55,6 +55,7 @@ describe('measureText', () => {
       fontSizePx: 16,
       boxWidthPx: 0,
       autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
     });
     expect(layout.lines).toHaveLength(1);
     expect(size.x).toBe(layout.widthPx);

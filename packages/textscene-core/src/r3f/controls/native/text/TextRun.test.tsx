@@ -16,7 +16,7 @@ const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 const SCALE = 16 / OPEN_SANS_ATLAS_INFO.fontSize;
 
 function layoutFor(text: string, uppercase = false) {
-  return shapeText(text, { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, uppercase });
+  return shapeText(text, { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, uppercase, lineSpacingPx: 3 });
 }
 
 describe('buildGlyphQuadArrays (pure geometry math)', () => {
@@ -110,7 +110,7 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
   );
 
   it('places line N exactly one linePitchPx below line N-1, with the same per-line baseline anchor', () => {
-    const layout = shapeText('A\nA', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    const layout = shapeText('A\nA', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
     const arrays = buildGlyphQuadArrays(layout, 16);
     const firstTop = -arrays.positions[1]!;
     const secondTop = -arrays.positions[4 * 3 + 1]!;
@@ -178,6 +178,7 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
       boxWidthPx: 0,
       autowrapMode: AutowrapMode.OFF,
       fontMetrics: CANVAS_METRICS,
+      lineSpacingPx: 3,
     });
   }
 

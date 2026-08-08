@@ -214,6 +214,14 @@ export function combinedMinimumSize(n: SolveNode, ctx: SolveContext): Vec2 {
  * Theme resources stay: a Control's theme comes from its class's default,
  * which the orphan already has.
  *
+ * The bag handed to the `MinimumSizeFn` is SYNTHETIC and never went through a
+ * slice's `parser.ts`, so it carries none of Godot's parsed property defaults
+ * — `stretchMode`, `expandMode`, `stretch` and their kin read `undefined`
+ * here where every other caller sees a parsed value, and each function's own
+ * `?? default` fallbacks are what stand in. That is sound only because of the
+ * bound below; a `MinimumSizeFn` that read a property WITHOUT a fallback
+ * would see `undefined` at preset time alone.
+ *
  * The result is bounded above by the node's real combined minimum for every
  * monotone `MinimumSizeFn` — stripping content cannot enlarge a minimum — so
  * the offsets this feeds can only ever place a rect the min-size floor then

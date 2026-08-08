@@ -173,7 +173,7 @@ function buildForest(
    * (`scene/gui/control.cpp:3089-3093`). Every declared key stays in the
    * result even when its ref fails to resolve (`null`): a local override,
    * once declared, wins UNCONDITIONALLY over any ancestor theme — see
-   * `themeProcessing.resolveThemeFont`'s doc for why key PRESENCE (not the
+   * `themeProcessing.resolveThemeFontIn`'s doc for why key PRESENCE (not the
    * resolved value) is what encodes "authored".
    */
   function resolveFontOverrides(

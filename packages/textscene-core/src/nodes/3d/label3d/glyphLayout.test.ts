@@ -5,7 +5,7 @@ import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO } from '../../../r3f/contr
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { buildGlyphQuadArrays } from '../../../r3f/controls/native/text/TextRun';
 import { layoutLabel3DLines, outlineDistanceBias, MAX_DISTANCE_BIAS } from './glyphLayout';
-import { soloLineLayout } from './LabelGlyphs';
+import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { HorizontalAlignment } from './types';
 
 const FONT_SIZE = 32;

@@ -119,8 +119,17 @@ export interface ShapeTextOptions {
   autowrapMode: AutowrapMode;
   /** `Label.uppercase` — shapes `text.toUpperCase()`, not the source casing. */
   uppercase?: boolean;
-  /** `default_theme.cpp:392`'s `line_spacing` constant, px. Default 3 (UI scale 1.0). */
-  lineSpacingPx?: number;
+  /**
+   * The theme `line_spacing` this control shapes at, px. Required, with no
+   * default: it is a PER-CONTROL theme constant, not a property of shaping.
+   * Label's is 3 (`LABEL_LINE_SPACING_PX`); every Button-family widget and
+   * LineEdit read no such key at all and pass 0; RichTextLabel's own
+   * `line_separation` default is 0 (`default_theme.cpp:1217`); Label3D passes
+   * the node's authored `line_spacing`. A shared default here would be one
+   * widget's constant silently applied to the rest — worth an explicit value
+   * at every call site, because the miss shows only as a 1-3px vertical shift.
+   */
+  lineSpacingPx: number;
   /**
    * Per-character font size override, keyed by index into the (post-uppercase)
    * text — RichTextLabel's `[b]`/`[i]`/`[b][i]` bbcode spans shape at their OWN
@@ -203,6 +212,39 @@ export interface TextLayoutResult {
    * bitmaps that font has none of); required for that reason.
    */
   fontMetrics: FontMetrics;
+}
+
+/**
+ * One line of an already-shaped result, re-wrapped as its own one-line
+ * `TextLayoutResult`. `TextRun` computes `lineIndex * linePitchPx` internally,
+ * which is 0 for a solo line, so it draws relative to y=0 with no cumulative
+ * pitch of its own; the caller supplies the real cumulative Y via the wrapping
+ * `<group>`'s position.
+ *
+ * It lives beside `TextLayoutResult` rather than in any one slice because it is
+ * the ONE construction path that bypasses `shapeText`, and so the one place
+ * `baselineOffsetPx` and `fontMetrics` can be dropped despite both being
+ * required: `TextRun` dispatches MSDF-atlas vs. canvas-rasterised painting off
+ * `fontMetrics.kind`, and anchors every glyph at `baselineOffsetPx`. Echoing
+ * the parent's values is therefore the default, and a caller overrides
+ * `baselineOffsetPx` only when the line genuinely sits at a different baseline
+ * from the paragraph — a RichTextLabel run shaped at its own `[b]`/`[i]` theme
+ * font size, where inheriting the paragraph's ascent is a whole ascent-delta
+ * vertical miss.
+ */
+export function soloLineLayout(
+  line: TextLineLayout,
+  parent: TextLayoutResult,
+  baselineOffsetPx: number = parent.baselineOffsetPx
+): TextLayoutResult {
+  return {
+    lines: [line],
+    linePitchPx: parent.linePitchPx,
+    widthPx: line.widthPx,
+    heightPx: parent.linePitchPx,
+    baselineOffsetPx,
+    fontMetrics: parent.fontMetrics,
+  };
 }
 
 /**
@@ -474,7 +516,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     boxWidthPx,
     autowrapMode,
     uppercase = false,
-    lineSpacingPx = 3,
+    lineSpacingPx,
     fontSizePxAt,
     fontMetrics = OPEN_SANS_FONT_METRICS,
   } = options;

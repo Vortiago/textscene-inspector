@@ -56,13 +56,14 @@ import { multiplyModulate, useCanvasItemTint, WHITE_MODULATE, type RGBA } from '
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { AutowrapMode, clampAutowrapMode, shapeText } from '../../../../r3f/controls/native/text/textLayout';
+import { clampAutowrapMode, shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   BOLD_DISTANCE_BIAS,
   ITALIC_SKEW,
   RICH_TEXT_LABEL_UNDERLINE_ALPHA,
+  RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
   RICH_TEXT_LABEL_THEME_FONT_KEY,
   fontSizePxAtFromRuns,
   layoutRichTextRuns,
@@ -87,7 +88,7 @@ export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeCon
   const plainText = useMemo(() => runs.map((r) => r.text).join(''), [runs]);
   const fontSizePxAt = useMemo(() => fontSizePxAtFromRuns(runs), [runs]);
   // RichTextLabel's own default is WORD_SMART (`rich_text_label.h:557`), not Label's OFF.
-  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.WORD_SMART);
+  const autowrapMode = clampAutowrapMode(props.autowrapMode, RICH_TEXT_LABEL_DEFAULT_AUTOWRAP);
 
   // Read INSIDE the render body, not the `useMemo` below — see Label's own
   // Component.tsx for why.

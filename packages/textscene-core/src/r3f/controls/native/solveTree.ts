@@ -52,7 +52,7 @@ export interface SolveNode {
    * `theme`, if it has one, is index 0 (`Control::get_theme_font`'s ancestor
    * walk, `scene/theme/theme_owner.cpp`'s `ThemeOwner::_get_next_owner_node`).
    * An ancestor Control with NO `theme` set contributes no entry. Feeds
-   * `themeProcessing.ts`'s `resolveThemeFont`/`resolveThemeFontSizePx`.
+   * `themeProcessing.ts`'s `resolveThemeFontIn`/`resolveThemeFontSizeIn`.
    * Required — see `fontOverrides`'s own doc for why.
    */
   themeChain: readonly ThemeResource[];

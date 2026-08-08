@@ -20,6 +20,7 @@ function layoutFor(text: string) {
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.OFF,
     fontMetrics: CANVAS_METRICS,
+    lineSpacingPx: 3,
   });
 }
 

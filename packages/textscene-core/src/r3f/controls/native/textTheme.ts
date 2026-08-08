@@ -9,7 +9,7 @@
  *
  * Font SIZE resolves through Godot's FULL ancestor walk
  * (`Control::get_theme_font_size`, `scene/gui/control.cpp:3107-3129`, via
- * `resolveNodeFontSizePx`/`resolveThemeFontSizePx`): a POSITIVE node-local
+ * `resolveNodeFontSizePx`/`resolveThemeFontSizeIn`): a POSITIVE node-local
  * `theme_override_font_sizes/<sizeKey>` wins outright (`> 0` — an override of
  * `0` falls through exactly like an absent one, `:3114-3117`); otherwise the
  * nearest ancestor Control's own `theme` (then the project theme) supplies

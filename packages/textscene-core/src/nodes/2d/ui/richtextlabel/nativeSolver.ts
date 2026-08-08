@@ -15,7 +15,14 @@
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { AutowrapMode, shapeText, type GlyphPlacement, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  AutowrapMode,
+  clampAutowrapMode,
+  shapeText,
+  soloLineLayout,
+  type GlyphPlacement,
+  type TextLayoutResult,
+} from '../../../../r3f/controls/native/text/textLayout';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { getAscentPx, getUnderlinePositionPx, getUnderlineThicknessPx } from '../../../../r3f/controls/native/text/openSansMetrics';
 import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -44,10 +51,8 @@ export const RICH_TEXT_LABEL_THEME_FONT_KEY = 'normal_font';
 /** `default_theme.cpp:1205`: `theme->set_color("default_color", "RichTextLabel", Color(1, 1, 1))` — opaque white, its own literal (coincidentally the same value as Label's, a separate call site). */
 export const RICH_TEXT_LABEL_DEFAULT_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 
-const AUTOWRAP_OFF = 0;
-
 /** `rich_text_label.h:557`: `TextServer::AutowrapMode autowrap_mode = TextServer::AUTOWRAP_WORD_SMART;` — RichTextLabel's own default, unlike Label's OFF (`label.h`/`Label`'s constructor). */
-const RICH_TEXT_LABEL_DEFAULT_AUTOWRAP = 3;
+export const RICH_TEXT_LABEL_DEFAULT_AUTOWRAP = AutowrapMode.WORD_SMART;
 
 /** Resolves this RichTextLabel's own theme font size/colour (overrides, else the ancestor Theme chain / theme default / RichTextLabel's own white — `resolveTextTheme`'s own doc). */
 export function richTextLabelTextTheme(
@@ -104,8 +109,8 @@ export function richTextLabelTextTheme(
  */
 export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as RichTextLabelProperties;
-  const autowrapMode = props.autowrapMode ?? RICH_TEXT_LABEL_DEFAULT_AUTOWRAP;
-  const wraps = autowrapMode !== AUTOWRAP_OFF;
+  const autowrapMode = clampAutowrapMode(props.autowrapMode, RICH_TEXT_LABEL_DEFAULT_AUTOWRAP);
+  const wraps = autowrapMode !== AutowrapMode.OFF;
 
   if (!props.fitContent) {
     return wraps ? { x: 1, y: 0 } : { x: 0, y: 0 };
@@ -127,9 +132,8 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   if (!ctx.measureText) return { x: 0, y: 0 };
 
   const fontMetrics = resolveNodeFontMetrics(n, RICH_TEXT_LABEL_THEME_FONT_KEY);
-  // `line_separation` is 0 for RichTextLabel (`default_theme.cpp:1217`), matching
-  // `lineSpacingPx`'s own default of 0 here (Label's own measurer instead passes
-  // its own non-zero constant).
+  // `line_separation` is 0 for RichTextLabel (`default_theme.cpp:1217`) —
+  // NOT Label's 3, which is why `lineSpacingPx` is stated rather than defaulted.
   const layout = shapeText(text, {
     fontSizePx,
     boxWidthPx: 0,
@@ -381,7 +385,7 @@ export interface RichTextRunPlacement {
 
 /**
  * Echoes the PARENT layout's own `fontMetrics`/`baselineOffsetPx` rather than
- * leaving them unset — see `label/Component.tsx`'s `soloLineLayout`, the
+ * leaving them unset — see `textLayout.ts`'s `soloLineLayout`, the
  * SAME hazard: `TextRun` dispatches MSDF-atlas vs. canvas-rasterised painting
  * off `layout.fontMetrics.kind`, so an omitted value here would silently
  * force every run back onto the atlas path regardless of which font `layout`
@@ -409,15 +413,11 @@ function soloRunLayout(
   runFontSizePx: number
 ): TextLayoutResult {
   const widthPx = glyphs.length ? glyphs[glyphs.length - 1]!.x + glyphs[glyphs.length - 1]!.advance - glyphs[0]!.x : 0;
-  const fontMetrics = parentLayout.fontMetrics;
-  return {
-    lines: [{ text, glyphs, widthPx }],
-    linePitchPx: parentLayout.linePitchPx,
-    widthPx,
-    heightPx: parentLayout.linePitchPx,
-    baselineOffsetPx: getFontAscentPx(fontMetrics, runFontSizePx),
-    fontMetrics: parentLayout.fontMetrics,
-  };
+  return soloLineLayout(
+    { text, glyphs, widthPx },
+    parentLayout,
+    getFontAscentPx(parentLayout.fontMetrics, runFontSizePx)
+  );
 }
 
 /**

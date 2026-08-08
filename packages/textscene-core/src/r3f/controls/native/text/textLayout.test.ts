@@ -29,13 +29,14 @@
  *     is still zero on the current line (no word boundary found yet).
  */
 import { afterEach, describe, expect, it } from 'vitest';
-import { AutowrapMode, shapeText } from './textLayout';
+import { AutowrapMode, shapeText, soloLineLayout } from './textLayout';
 import { OPEN_SANS_METRICS } from './openSansMetrics';
 import type { FontMetrics } from './fontMetrics';
+import type { CanvasFontMetrics } from './runtimeFontMetrics';
 
 /** Every line's rendered text, in order — the shape most tests care about. */
 function lineTexts(text: string, boxWidthPx: number, autowrapMode: AutowrapMode, fontSizePx = 16): string[] {
-  return shapeText(text, { fontSizePx, boxWidthPx, autowrapMode }).lines.map((l) => l.text);
+  return shapeText(text, { fontSizePx, boxWidthPx, autowrapMode, lineSpacingPx: 3 }).lines.map((l) => l.text);
 }
 
 describe('shapeText — autowrap OFF', () => {
@@ -92,6 +93,7 @@ describe('shapeText — autowrap WORD_SMART (BREAK_WORD_BOUND | BREAK_ADAPTIVE |
       fontSizePx: 16,
       boxWidthPx: 90,
       autowrapMode: AutowrapMode.WORD_SMART,
+      lineSpacingPx: 3,
     }).lines;
     expect(lines[0]!.text.endsWith(' ')).toBe(false);
     expect(lines[0]!.text.startsWith(' ')).toBe(false);
@@ -109,20 +111,20 @@ describe('shapeText — autowrap WORD_SMART (BREAK_WORD_BOUND | BREAK_ADAPTIVE |
 
 describe('shapeText — uppercase transform', () => {
   it('shapes the UPPERCASED string, not the source casing', () => {
-    const layout = shapeText('abc', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, uppercase: true });
+    const layout = shapeText('abc', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, uppercase: true, lineSpacingPx: 3 });
     expect(layout.lines[0]!.text).toBe('ABC');
     expect(layout.lines[0]!.glyphs.map((g) => g.char)).toEqual(['A', 'B', 'C']);
   });
 
   it('leaves the string as-is when uppercase is not requested', () => {
-    const layout = shapeText('abc', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    const layout = shapeText('abc', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
     expect(layout.lines[0]!.text).toBe('abc');
   });
 });
 
 describe('shapeText — glyph pen positions', () => {
   it('places the first glyph at x=0 and advances by exactly its own advance', () => {
-    const layout = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    const layout = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
     const [a, b] = layout.lines[0]!.glyphs;
     expect(a!.x).toBe(0);
     expect(b!.x).toBeCloseTo(a!.advance, 10);
@@ -148,7 +150,7 @@ describe('shapeText — a character outside the baked charset', () => {
       // baking Omega would make this test wrong BY DESIGN (glyph would stop
       // being null), so don't "fix" it by adding Omega to the charset; pick a
       // different still-unbaked character instead if this ever needs re-proving.
-      const layout = shapeText('AΩB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+      const layout = shapeText('AΩB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
       const [a, omega, b] = layout.lines[0]!.glyphs;
       expect(omega!.glyph).toBeNull();
       expect(omega!.advance).toBeCloseTo(9.484375, 10);
@@ -175,7 +177,7 @@ describe('shapeText — kerning plumbing', () => {
   it('folds a kerning adjustment for an adjacent pair into the pen advance', () => {
     // -256 design units @ unitsPerEm 2048 -> -256*16/2048 = -2px at size 16.
     OPEN_SANS_METRICS.kerning.AB = -256;
-    const layout = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    const layout = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
     const [a, b] = layout.lines[0]!.glyphs;
     const bareAdvance = (1354 * 16) / 2048;
     expect(a!.advance).toBeCloseTo(bareAdvance - 2, 10);
@@ -193,6 +195,7 @@ describe('shapeText — fontSizePxAt (per-character size override)', () => {
       boxWidthPx: 0,
       autowrapMode: AutowrapMode.OFF,
       fontSizePxAt: (i) => (i === 0 ? 16 : 18),
+      lineSpacingPx: 3,
     });
     const [a0, a1] = layout.lines[0]!.glyphs;
     expect(a0!.advance).toBeCloseTo((1354 * 16) / 2048, 10);
@@ -206,8 +209,9 @@ describe('shapeText — fontSizePxAt (per-character size override)', () => {
       boxWidthPx: 0,
       autowrapMode: AutowrapMode.OFF,
       fontSizePxAt: () => 16,
+      lineSpacingPx: 3,
     });
-    const flat = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    const flat = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
     expect(withCallback).toEqual(flat);
   });
 
@@ -219,6 +223,7 @@ describe('shapeText — fontSizePxAt (per-character size override)', () => {
         boxWidthPx: 0,
         autowrapMode: AutowrapMode.OFF,
         fontSizePxAt: (i) => (i === 0 ? 16 : 18),
+        lineSpacingPx: 3,
       });
       const [a] = layout.lines[0]!.glyphs;
       // No -2px kerning fold-in, unlike the same-size case in the kerning
@@ -237,6 +242,7 @@ describe('shapeText — fontSizePxAt (per-character size override)', () => {
       boxWidthPx: 60,
       autowrapMode: AutowrapMode.WORD,
       fontSizePxAt: () => 40,
+      lineSpacingPx: 3,
     });
     expect(wideLayout.lines.length).toBeGreaterThan(1);
 
@@ -245,6 +251,7 @@ describe('shapeText — fontSizePxAt (per-character size override)', () => {
       boxWidthPx: 60,
       autowrapMode: AutowrapMode.WORD,
       fontSizePxAt: (i) => (i === 0 ? 40 : 8),
+      lineSpacingPx: 3,
     });
     expect(mixedLayout.lines.map((l) => l.text)).toEqual(['A A']);
   });
@@ -252,12 +259,12 @@ describe('shapeText — fontSizePxAt (per-character size override)', () => {
 
 describe('shapeText — line pitch', () => {
   it('pins line height at font size 16 to 26px (ceil(ascent)+ceil(descent)+3, not the raw float sum of 24.79)', () => {
-    const layout = shapeText('X', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    const layout = shapeText('X', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
     expect(layout.linePitchPx).toBe(26);
   });
 
   it('reports total height as lines.length * linePitchPx', () => {
-    const layout = shapeText('AAAA\nBBBB\nCCCC', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    const layout = shapeText('AAAA\nBBBB\nCCCC', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
     expect(layout.lines).toHaveLength(3);
     expect(layout.heightPx).toBe(3 * 26);
   });
@@ -265,7 +272,7 @@ describe('shapeText — line pitch', () => {
 
 describe('shapeText — empty text', () => {
   it('shapes to exactly one empty line', () => {
-    const layout = shapeText('', { fontSizePx: 16, boxWidthPx: 100, autowrapMode: AutowrapMode.WORD_SMART });
+    const layout = shapeText('', { fontSizePx: 16, boxWidthPx: 100, autowrapMode: AutowrapMode.WORD_SMART, lineSpacingPx: 3 });
     expect(layout.lines).toHaveLength(1);
     expect(layout.lines[0]!.text).toBe('');
     expect(layout.heightPx).toBe(26);
@@ -274,7 +281,7 @@ describe('shapeText — empty text', () => {
 
 describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the shaping/painting dispatch seam)', () => {
   it('echoes back the default OPEN_SANS_FONT_METRICS (kind "atlas") and its own ceil(ascent) as baselineOffsetPx when no fontMetrics option is given', () => {
-    const layout = shapeText('X', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF });
+    const layout = shapeText('X', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
     expect(layout.fontMetrics?.kind).toBe('atlas');
     // ceil(2189 * 16/2048) = 18 -- OPEN_SANS_METRICS.ascent's own value, same
     // arithmetic openSansMetrics.ts's getAscentPx documents.
@@ -291,7 +298,7 @@ describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the sha
       getKerningAdjustmentUnits: () => 0,
       averageAdvanceUnits: 500,
     };
-    const layout = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, fontMetrics: canvasMetrics });
+    const layout = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, fontMetrics: canvasMetrics, lineSpacingPx: 3 });
     expect(layout.fontMetrics).toBe(canvasMetrics);
     for (const gp of layout.lines[0]!.glyphs) {
       expect(gp.glyph).toBeNull();
@@ -301,5 +308,55 @@ describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the sha
     expect(layout.lines[0]!.glyphs[0]!.advance).toBeCloseTo(8, 10);
     // ceil(800 * 16/1000) = 13.
     expect(layout.baselineOffsetPx).toBe(13);
+  });
+});
+
+describe('soloLineLayout — re-wrapping one line of an already-shaped result', () => {
+  const FAKE_SCENE_FONT_METRICS: CanvasFontMetrics = {
+    kind: 'canvas',
+    cssFontFamily: 'tscn-scene-font-test',
+    unitsPerEm: 1000,
+    ascent: 800,
+    descent: 200,
+    getGlyphAdvanceUnits: () => 500,
+    getKerningAdjustmentUnits: () => 0,
+    averageAdvanceUnits: 500,
+  };
+
+  it("echoes the parent's own fontMetrics — TextRun dispatches paint by layout.fontMetrics.kind, so a scene-font line must not fall back to the atlas painter", () => {
+    const parent = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      fontMetrics: FAKE_SCENE_FONT_METRICS,
+      lineSpacingPx: 3,
+    });
+    const solo = soloLineLayout(parent.lines[0]!, parent);
+    expect(solo.fontMetrics).toBe(FAKE_SCENE_FONT_METRICS);
+    expect(solo.baselineOffsetPx).toBe(parent.baselineOffsetPx);
+    expect(solo.linePitchPx).toBe(parent.linePitchPx);
+  });
+
+  it('echoes the atlas metrics when the parent was shaped against them', () => {
+    const parent = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const solo = soloLineLayout(parent.lines[0]!, parent);
+    expect(solo.fontMetrics).toBe(parent.fontMetrics);
+    expect(solo.fontMetrics.kind).toBe('atlas');
+  });
+
+  it('takes its width from the LINE, not the parent — a multi-line parent reports its widest line', () => {
+    const parent = shapeText('WWWW\nI', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const narrow = soloLineLayout(parent.lines[1]!, parent);
+    expect(narrow.widthPx).toBe(parent.lines[1]!.widthPx);
+    expect(narrow.widthPx).toBeLessThan(parent.widthPx);
+    expect(narrow.heightPx).toBe(parent.linePitchPx);
+    expect(narrow.lines).toHaveLength(1);
+  });
+
+  it('honours an explicit baselineOffsetPx — a RichTextLabel run shaped at its own [b]/[i] size sits at its OWN baseline, not the paragraph ascent', () => {
+    const parent = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0 });
+    const solo = soloLineLayout(parent.lines[0]!, parent, 99);
+    expect(solo.baselineOffsetPx).toBe(99);
+    expect(solo.fontMetrics).toBe(parent.fontMetrics);
   });
 });

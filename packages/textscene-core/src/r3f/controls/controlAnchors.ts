@@ -158,11 +158,14 @@ export function resolveOffsets(
   // been in a tree — so only the wide presets carry a non-zero `new_size`.
   const size = MINSIZE_PRESETS.has(preset) ? presetTimeMinimumSize() : { x: 0, y: 0 };
 
-  // Written as `0 - …` rather than a unary minus so a zero-size begin edge
-  // yields +0: negative zero is a distinct value to a deep-equality assertion.
+  // Parenthesised, and written as `0 - …` rather than a unary minus: the
+  // fallback is the WHOLE expression (`??` binds looser than `*`, so the bare
+  // form means the same thing but reads as `(p.offsetLeft ?? 0) - …`, a
+  // different function), and `0 - x` keeps a zero-size begin edge at +0 —
+  // negative zero is a distinct value to a deep-equality assertion.
   return [
-    p.offsetLeft ?? 0 - size.x * al,
-    p.offsetTop ?? 0 - size.y * at,
+    p.offsetLeft ?? (0 - size.x * al),
+    p.offsetTop ?? (0 - size.y * at),
     p.offsetRight ?? size.x * (1 - ar),
     p.offsetBottom ?? size.y * (1 - ab),
   ];
@@ -180,7 +183,7 @@ const GROW_DIRECTION_BOTH = 2;
  * (away from the left anchor), the RIGHT-edge ones grow BEGIN, and every
  * horizontally-centred or horizontally-spanning one grows BOTH.
  */
-export const PRESET_GROW_HORIZONTAL: Record<number, number> = {
+const PRESET_GROW_HORIZONTAL: Record<number, number> = {
   0: GROW_DIRECTION_END, // TOP_LEFT
   1: GROW_DIRECTION_BEGIN, // TOP_RIGHT
   2: GROW_DIRECTION_END, // BOTTOM_LEFT
@@ -205,7 +208,7 @@ export const PRESET_GROW_HORIZONTAL: Record<number, number> = {
  * mirrored rule: TOP-edge presets grow END, BOTTOM-edge ones BEGIN, and every
  * vertically-centred or vertically-spanning one BOTH.
  */
-export const PRESET_GROW_VERTICAL: Record<number, number> = {
+const PRESET_GROW_VERTICAL: Record<number, number> = {
   0: GROW_DIRECTION_END, // TOP_LEFT
   1: GROW_DIRECTION_END, // TOP_RIGHT
   2: GROW_DIRECTION_BEGIN, // BOTTOM_LEFT

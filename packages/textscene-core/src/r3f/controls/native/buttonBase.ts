@@ -21,6 +21,8 @@
 import type { ControlColor } from '../../../nodes/2d/ui/control/types';
 import { multiplyModulate, type RGBA } from '../../canvasItemModulate';
 import type { StyleBoxFlatData } from './styleBoxFlat';
+import type { FontMetrics } from './text/fontMetrics';
+import { AutowrapMode, shapeText, type TextLayoutResult } from './text/textLayout';
 export { tintStyleBox } from './StyleBoxQuad';
 import type { Rect2, Vec2 } from './rect';
 
@@ -76,6 +78,60 @@ export function fitIconSize(size: Vec2, maxWidth: number): Vec2 {
     return { x: maxWidth, y: (size.y * maxWidth) / size.x };
   }
   return size;
+}
+
+/**
+ * Shapes a Button-family label — Button, CheckBox, OptionButton and their
+ * solvers all measure the same way, so they call this rather than spelling the
+ * option bag out each time.
+ *
+ * `lineSpacingPx: 0`, not Label's 3: no Button-family control sets a
+ * `line_spacing` on its `text_buf` (`button.cpp`, `check_box.cpp`,
+ * `option_button.cpp` — none touches the key at all), and a widget whose
+ * painter and solver disagree about it comes out with its label centred 3px
+ * off rather than failing outright. `boxWidthPx: 0` + `AUTOWRAP_OFF` because
+ * a Button never wraps.
+ */
+export function shapeButtonLabel(
+  text: string,
+  fontSizePx: number,
+  fontMetrics: FontMetrics
+): TextLayoutResult {
+  return shapeText(text, {
+    fontSizePx,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.OFF,
+    lineSpacingPx: 0,
+    fontMetrics,
+  });
+}
+
+/**
+ * The top edge of vertically-centred text within a Button-family content box,
+ * floored — `button.cpp:453`'s `text_ofs.y`, plus Godot's own per-glyph floor.
+ *
+ * `text_ofs.y` itself is never floored in the source; the floor happens
+ * per-glyph, deep in the TextServer, once this offset has already been baked
+ * into the drawn baseline (`modules/text_server_adv/text_server_adv.cpp:4083`,
+ * `TextServerAdvanced::_font_draw_glyph`: `cpos.y = Math::floor(cpos.y);`,
+ * where `cpos` is `p_pos` = this `text_ofs.y` + the line's ascent). Since this
+ * codebase's ascent (`getFontAscentPx`) is always a whole pixel already,
+ * `floor(text_ofs.y) + ascent === floor(text_ofs.y + ascent)`, so flooring
+ * HERE — before ascent is even added, in `<TextRun>`'s own per-line math —
+ * reaches the identical pixel the source does.
+ *
+ * Left unfloored, a box-height/text-height pairing whose difference is odd
+ * (a 32px rect with 16px SemiBold text at 23px tall: `(24-23)/2 = 0.5`) lands
+ * the glyph's baseline exactly ON a pixel boundary, which this engine's WebGL
+ * rasteriser resolves upward instead of down — a full row above Godot's floor,
+ * on every affected Button-family label.
+ */
+export function centredTextTopPx(
+  boxHeightPx: number,
+  textHeightPx: number,
+  topInsetPx: number
+): number {
+  return Math.floor((boxHeightPx - textHeightPx) / 2 + topInsetPx);
 }
 
 // --- Content layout: icon + text placement within a Button-family control --
@@ -248,23 +304,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     }
     textOffsetX += horizontalAlignShift(textNaturalSize.x, drawableWidth, textAlignment);
 
-    // `text_ofs.y` itself (`button.cpp:453`) is never floored in the source —
-    // the floor happens per-glyph, deep in the TextServer, once this offset
-    // has already been baked into the drawn baseline
-    // (`modules/text_server_adv/text_server_adv.cpp:4083`,
-    // `TextServerAdvanced::_font_draw_glyph`: `cpos.y = Math::floor(cpos.y);`,
-    // `cpos` there is `p_pos` = this `text_ofs.y` + the line's ascent). Since
-    // this codebase's ascent (`getFontAscentPx`) is always a whole pixel
-    // already, `floor(text_ofs.y) + ascent === floor(text_ofs.y + ascent)`,
-    // so flooring HERE — before ascent is even added, in `<TextRun>`'s own
-    // per-line math — reaches the identical pixel the source does. Left
-    // unfloored, a box height/text height pairing whose difference is odd
-    // (e.g. this Button's own 32px rect, 16px SemiBold text at 23px tall:
-    // `(24-23)/2=0.5`) lands the glyph's baseline exactly ON a pixel
-    // boundary, which this engine's own WebGL rasteriser resolves upward
-    // instead of down — a full row above Godot's floor, on every affected
-    // Button-family label.
-    let textOffsetY = Math.floor((drawableHeight - textNaturalSize.y) / 2 + styleMargin.top);
+    let textOffsetY = centredTextTopPx(drawableHeight, textNaturalSize.y, styleMargin.top);
     if (iconLayout && verticalIconAlignment === V_TOP) {
       textOffsetY += customElementSize.y - drawableHeight;
     }

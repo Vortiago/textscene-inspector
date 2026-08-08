@@ -22,7 +22,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../r3f/godotColor';
-import { useCanvas2DTexture, useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
+import { useCanvas2DMap } from '../../../r3f/canvas2DTextureDecode';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { Vector2 } from '../../base/node2d/types';
@@ -42,11 +42,7 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   // Either an image file or an inline procedural texture; `useTexture2D` hides
   // which, and owns the lifetime of the procedural one it rasterises.
   const { texture: resolvedTexture } = useTexture2D(props.texture, externalResources, internalResources);
-  // NoColorSpace: the 2D canvas's hardware filter blends undecoded sRGB
-  // bytes (`canvas2DTextureDecode.ts`); FilledPolygon's material decodes the
-  // already-filtered sample via `useCanvasDecodeDefines`.
-  const texture = useCanvas2DTexture(resolvedTexture);
-  const decodeDefines = useCanvasDecodeDefines(texture);
+  const { texture, defines: decodeDefines } = useCanvas2DMap(resolvedTexture);
 
   const rings = useMemo(
     () =>

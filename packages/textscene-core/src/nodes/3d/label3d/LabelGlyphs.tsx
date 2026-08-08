@@ -42,30 +42,11 @@ import * as THREE from 'three';
 import {
   AutowrapMode,
   shapeText,
-  type TextLayoutResult,
-  type TextLineLayout,
+  soloLineLayout,
 } from '../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../r3f/controls/native/text/TextRun';
 import { layoutLabel3DLines, outlineDistanceBias } from './glyphLayout';
 import type { Label3DProperties } from './types';
-
-/**
- * Wraps one line as its own one-line `TextLayoutResult` — `TextRun` computes
- * `lineIndex * linePitchPx` internally, which is 0 for a solo line, so it
- * draws relative to y=0; the caller (this component) supplies the real
- * cumulative Y via the wrapping `<group>`'s own position. Mirrors
- * `nodes/2d/ui/label/Component.tsx`'s `soloLineLayout`.
- */
-export function soloLineLayout(line: TextLineLayout, parent: TextLayoutResult): TextLayoutResult {
-  return {
-    lines: [line],
-    linePitchPx: parent.linePitchPx,
-    widthPx: line.widthPx,
-    heightPx: parent.linePitchPx,
-    baselineOffsetPx: parent.baselineOffsetPx,
-    fontMetrics: parent.fontMetrics,
-  };
-}
 
 export interface LabelGlyphsProps {
   properties: Label3DProperties;
@@ -92,6 +73,15 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
     [layout, properties.horizontal_alignment, properties.line_spacing]
   );
 
+  // Memoised, not built inline in the `.map` below: `TextRun` keys its
+  // geometry AND material off this object's identity and disposes the old
+  // pair on every change, so a fresh object per render re-meshes every line
+  // on every render.
+  const lineLayouts = useMemo(
+    () => placements.map((placement) => soloLineLayout(placement.line, layout)),
+    [placements, layout]
+  );
+
   const depthTest = !properties.no_depth_test;
   const side = properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide;
 
@@ -103,11 +93,10 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
   return (
     <>
       {placements.map((placement, index) => {
-        const oneLine = soloLineLayout(placement.line, layout);
         return (
           <group key={index} position={[placement.x, -placement.y, 0]}>
             <TextRun
-              layout={oneLine}
+              layout={lineLayouts[index]!}
               fontSizePx={properties.font_size}
               tint={properties.modulate}
               depthTest={depthTest}

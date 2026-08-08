@@ -93,16 +93,18 @@ export function getFontAscentPx(metrics: Pick<FontMetrics, 'ascent' | 'unitsPerE
  *   pitch from a raw float sum of its ascent+descent would silently drop the
  *   quantization and undershoot every line pitch it produces.
  * - `scene/theme/default_theme.cpp:392` — Label's `line_spacing` theme
- *   constant is `Math::round(3 * scale)`; `lineSpacingPx` defaults to 3 (UI
- *   scale 1.0).
+ *   constant is `Math::round(3 * scale)`. That is LABEL's constant, not a
+ *   property of font metrics, so `lineSpacingPx` is required here with no
+ *   default: every other text control reads a different key or none at all,
+ *   and a default would be Label's 3 silently applied to all of them.
  *
- * At Open Sans SemiBold size 16: ceil(2189*16/2048) + ceil(600*16/2048) + 3
- * = 18 + 5 + 3 = 26.
+ * At Open Sans SemiBold size 16 with Label's spacing:
+ * ceil(2189*16/2048) + ceil(600*16/2048) + 3 = 18 + 5 + 3 = 26.
  */
 export function getFontLinePitchPx(
   metrics: Pick<FontMetrics, 'ascent' | 'descent' | 'unitsPerEm'>,
   fontSizePx: number,
-  lineSpacingPx = 3
+  lineSpacingPx: number
 ): number {
   const ascentPx = getFontAscentPx(metrics, fontSizePx);
   const descentPx = Math.ceil(unitsToPx(metrics.descent, metrics, fontSizePx));

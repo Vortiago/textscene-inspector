@@ -1,7 +1,7 @@
 /**
  * The one DOM-touching orchestrator in this font's pipeline: turns a
  * resolved `FontResource` (`resources/processing/fontProcessing.ts` — the
- * output of `resources/processing/themeProcessing.ts`'s `resolveThemeFont`,
+ * output of `resources/processing/themeProcessing.ts`'s `resolveThemeFontIn`,
  * a CONCURRENT packet's own ancestor/type-chain walk over `SolveNode`'s
  * `fontOverrides`/`themeChain`/`projectTheme` fields — see this file's own
  * doc for the join-point contract) into a `FontMetrics` (`./fontMetrics.ts`),
@@ -46,7 +46,7 @@
  *
  * `text/resolveNodeFontMetrics.ts`'s `resolveNodeFontMetrics(solveNode,
  * themeKey)` is the seam every widget's solver/painter actually calls — it
- * wraps `themeProcessing.ts`'s `resolveThemeFont` (walking
+ * wraps `themeProcessing.ts`'s `resolveThemeFontIn` (walking
  * `solveNode.fontOverrides`/`.themeChain`/`.projectTheme`) and THIS module's
  * own `peekSceneFontMetrics` in one place. `peekSceneFontMetrics(font,
  * nodePath)` itself is the ONE call a synchronous solve pass

@@ -466,60 +466,6 @@ function fontSizeInTheme(theme: ThemeResource, type: string, name: string): numb
 }
 
 /**
- * A Control's resolved theme font — Godot's ancestor + type-chain walk
- * (`Control::get_theme_font`, `ThemeOwner::get_theme_item_in_types`;
- * `scene/gui/control.cpp:3083-3103`, `scene/theme/theme_owner.cpp:227-254`):
- *
- *  1. the node's OWN `theme_override_fonts/<name>` — wins UNCONDITIONALLY
- *     once declared, valid or not: `Control::get_theme_font`'s local-override
- *     branch (`control.cpp:3089-3093`) returns whatever is stored with no
- *     validity check, unlike every ancestor Theme below. `override` encodes
- *     this: `undefined` = not authored (keep walking), `null` = authored but
- *     invalid/unresolved (STOP, resolve to no font), a `FontResource` = the
- *     override itself.
- *  2. `ancestorThemes` (nearest Control-with-a-theme first — this node's own
- *     `theme` is index 0 if it has one; a Control ancestor with NO `theme`
- *     contributes no entry, mirroring `ThemeOwner::_get_next_owner_node`
- *     skipping non-owning nodes) then `projectTheme`
- *     (`gui/theme/custom`) — for each, for every type in the
- *     variation/native-inheritance chain, in order (themes outer, types
- *     inner — `theme_owner.cpp:236-245`'s loop nesting; a theme with ANY
- *     `default_font` therefore SHADOWS a more specific `<baseType>/fonts/<name>`
- *     entry on a farther ancestor, because it wins on the nearer type before
- *     the farther type is ever tried).
- *  3. `null` — nothing anywhere defines it. This previewer has no literal
- *     built-in-default FONT RESOURCE (only a default SIZE, see
- *     `resolveThemeFontSizePx`); `null` is the signal a painter renders its
- *     own bundled default face for.
- *
- * "Resolved" is deliberately NOT "usable". This answers what Godot would
- * resolve, faithfully — and Godot considers a `SystemFont` a perfectly valid
- * Font, because the OS resolves the family name at draw time. Only this
- * previewer, in a browser with no access to the host's installed fonts,
- * cannot fetch bytes for one. Folding that limitation into the walk would
- * make it stop early and skip a FARTHER ancestor that might have resolved to
- * something drawable, which is not what Godot does. Whether the result
- * carries drawable bytes is a separate predicate the painter applies:
- * `resolveFontFileBytes` (`r3f/controls/native/text/sceneFontResolution.ts`),
- * which walks `fallbacks`/`baseFont` — Godot's own "try the next one" chain —
- * and returns the leaf actually carrying bytes, not necessarily the root.
- */
-export function resolveThemeFont(
-  name: string,
-  override: FontResource | null | undefined,
-  nativeType: string,
-  typeVariation: string | undefined,
-  ancestorThemes: readonly ThemeResource[],
-  projectTheme: ThemeResource | null
-): FontResource | null {
-  return resolveThemeFontIn(
-    themeResolutionScope(nativeType, typeVariation, ancestorThemes, projectTheme),
-    name,
-    override
-  );
-}
-
-/**
  * The part of a theme lookup that does NOT depend on which item is being
  * looked up: the type-dependency chain and the ordered list of themes to
  * search. Both are functions of the NODE alone (its native type, its
@@ -545,7 +491,45 @@ export function themeResolutionScope(
   };
 }
 
-/** `resolveThemeFont`'s walk against an already-built scope. */
+/**
+ * A Control's resolved theme font — Godot's ancestor + type-chain walk
+ * (`Control::get_theme_font`, `ThemeOwner::get_theme_item_in_types`;
+ * `scene/gui/control.cpp:3083-3103`, `scene/theme/theme_owner.cpp:227-254`):
+ *
+ *  1. the node's OWN `theme_override_fonts/<name>` — wins UNCONDITIONALLY
+ *     once declared, valid or not: `Control::get_theme_font`'s local-override
+ *     branch (`control.cpp:3089-3093`) returns whatever is stored with no
+ *     validity check, unlike every ancestor Theme below. `override` encodes
+ *     this: `undefined` = not authored (keep walking), `null` = authored but
+ *     invalid/unresolved (STOP, resolve to no font), a `FontResource` = the
+ *     override itself.
+ *  2. `ancestorThemes` (nearest Control-with-a-theme first — this node's own
+ *     `theme` is index 0 if it has one; a Control ancestor with NO `theme`
+ *     contributes no entry, mirroring `ThemeOwner::_get_next_owner_node`
+ *     skipping non-owning nodes) then `projectTheme`
+ *     (`gui/theme/custom`) — for each, for every type in the
+ *     variation/native-inheritance chain, in order (themes outer, types
+ *     inner — `theme_owner.cpp:236-245`'s loop nesting; a theme with ANY
+ *     `default_font` therefore SHADOWS a more specific `<baseType>/fonts/<name>`
+ *     entry on a farther ancestor, because it wins on the nearer type before
+ *     the farther type is ever tried).
+ *  3. `null` — nothing anywhere defines it. This previewer has no literal
+ *     built-in-default FONT RESOURCE (only a default SIZE, see
+ *     `resolveThemeFontSizeIn`); `null` is the signal a painter renders its
+ *     own bundled default face for.
+ *
+ * "Resolved" is deliberately NOT "usable". This answers what Godot would
+ * resolve, faithfully — and Godot considers a `SystemFont` a perfectly valid
+ * Font, because the OS resolves the family name at draw time. Only this
+ * previewer, in a browser with no access to the host's installed fonts,
+ * cannot fetch bytes for one. Folding that limitation into the walk would
+ * make it stop early and skip a FARTHER ancestor that might have resolved to
+ * something drawable, which is not what Godot does. Whether the result
+ * carries drawable bytes is a separate predicate the painter applies:
+ * `resolveFontFileBytes` (`r3f/controls/native/text/sceneFontResolution.ts`),
+ * which walks `fallbacks`/`baseFont` — Godot's own "try the next one" chain —
+ * and returns the leaf actually carrying bytes, not necessarily the root.
+ */
 export function resolveThemeFontIn(
   scope: ThemeResolutionScope,
   name: string,
@@ -563,7 +547,7 @@ export function resolveThemeFontIn(
 }
 
 /**
- * The font-size counterpart of `resolveThemeFont`
+ * The font-size counterpart of `resolveThemeFontIn`
  * (`Control::get_theme_font_size`, `control.cpp:3107-3129`). Godot's local
  * override ALSO requires `> 0` (`if (font_size && (*font_size) > 0)`,
  * `control.cpp:3114-3117`) — unlike the font override, a size override of `0`
@@ -574,24 +558,6 @@ export function resolveThemeFontIn(
  * scaled — which this function ALWAYS falls back to, so it never returns
  * anything but a concrete, positive size.
  */
-export function resolveThemeFontSizePx(
-  name: string,
-  override: number | undefined,
-  nativeType: string,
-  typeVariation: string | undefined,
-  ancestorThemes: readonly ThemeResource[],
-  projectTheme: ThemeResource | null,
-  builtInDefaultPx: number
-): number {
-  return resolveThemeFontSizeIn(
-    themeResolutionScope(nativeType, typeVariation, ancestorThemes, projectTheme),
-    name,
-    override,
-    builtInDefaultPx
-  );
-}
-
-/** `resolveThemeFontSizePx`'s walk against an already-built scope. */
 export function resolveThemeFontSizeIn(
   scope: ThemeResolutionScope,
   name: string,

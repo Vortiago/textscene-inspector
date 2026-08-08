@@ -44,12 +44,18 @@ import { subViewportContainerMinimumSize } from './nativeSolver';
 // needs CenterContainer's layout as much as this slice's own minimum size.
 import '../../../../r3f/controls/index';
 
-function subViewport(name: string, size?: { x: number; y: number }): TscnNode {
+/**
+ * A parsed SubViewport. `size` defaults to Godot's own `Size2i(512, 512)`
+ * (`scene/main/viewport.h`) because `subviewport/parser.ts` applies it to
+ * EVERY parsed SubViewport — a node reaching the solver without one does not
+ * exist, so a factory that omitted it would test an unreachable branch.
+ */
+function subViewport(name: string, size: { x: number; y: number } = { x: 512, y: 512 }): TscnNode {
   return {
     name,
     type: 'SubViewport',
     children: [],
-    properties: size ? { name, size } : { name },
+    properties: { name, size },
   };
 }
 
@@ -101,7 +107,7 @@ describe('subViewportContainerMinimumSize (scene/gui/subviewport_container.cpp::
     expect(size).toEqual({ x: 300, y: 180 });
   });
 
-  it("falls back to Viewport's own default size when the sub-viewport authors none", () => {
+  it("reports Viewport's own default size when the sub-viewport authors none — the parser has already applied it", () => {
     // `scene/main/viewport.h`: `Size2i size = Size2i(512, 512)`.
     const size = subViewportContainerMinimumSize(container({}, [subViewport('SubViewport')]), ctx());
     expect(size).toEqual({ x: 512, y: 512 });

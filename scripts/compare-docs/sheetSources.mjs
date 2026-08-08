@@ -104,10 +104,24 @@ export function findCommentedFrontmatterKeys(text) {
   return found;
 }
 
+/**
+ * The compare-marker syntax, as a pattern source so every reader builds its own
+ * flags from ONE definition — `build-gallery.mjs` needs both a whole-line
+ * anchored form (is THIS line a section's marker) and this unanchored one (is
+ * there a marker here at all, junk after `-->` included). Two literals would
+ * let the section walk and the orphan detector drift apart, and the detector
+ * exists precisely to catch markers the walk misses.
+ */
+export const COMPARE_MARKER_PATTERN = String.raw`<!--\s*compare:\s*(.*?)\s*-->`;
+
+/** Parse a marker's `key=value` attributes. */
+export const compareMarkerAttrs = (attrs) =>
+  Object.fromEntries(attrs.split(/\s+/).map((kv) => kv.split('=')));
+
 /** Every `<!-- compare: image=… status=… fixture=… -->` marker in a sheet body. */
 export function parseCompareMarkers(body) {
-  return [...body.matchAll(/<!--\s*compare:\s*(.*?)\s*-->/g)].map((m) =>
-    Object.fromEntries(m[1].split(/\s+/).map((kv) => kv.split('=')))
+  return [...body.matchAll(new RegExp(COMPARE_MARKER_PATTERN, 'g'))].map((m) =>
+    compareMarkerAttrs(m[1])
   );
 }
 

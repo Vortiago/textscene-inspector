@@ -34,6 +34,18 @@ export const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey:
 export const LABEL_THEME_FONT_KEY = 'font';
 
 /**
+ * `scene/theme/default_theme.cpp:392` — Label is the one text control whose
+ * theme sets `line_spacing`, at `Math::round(3 * scale)`, i.e. 3 at UI scale
+ * 1.0. Named here, in Label's own slice, because it is Label's constant:
+ * every Button-family widget and LineEdit read no such key at all,
+ * RichTextLabel has its own `line_separation` (0), and Label3D uses the
+ * node's authored value. Both the solve pass and `Component.tsx` shape
+ * against this one constant, so the two cannot disagree about the pitch of
+ * the same Label.
+ */
+export const LABEL_LINE_SPACING_PX = 3;
+
+/**
  * Label's own default-theme font colour — opaque white, a DIFFERENT literal
  * from the `control_font_color` gray (`Color(0.875, 0.875, 0.875)`,
  * `godotDefaultTheme.ts`'s `DEFAULT_FONT_COLOR`) most other widget types read:
@@ -118,10 +130,7 @@ export function labelShapingWidthPx(controlWidthPx: number): number {
  *
  * `_update_visible` (`:344-388`) sums `asc + dsc + line_spacing` per line then
  * subtracts ONE trailing `line_spacing` — N lines carry only (N-1) inter-line
- * gaps. Shaping at `getLinePitchPx(fontSizePx) - fontHeightPx` (Label's own
- * 3px `line_spacing` theme constant, never hardcoded — recovered the same
- * way so a future change to that default cannot silently drift this
- * subtraction out of sync with it) returns `N * linePitchPx` with no such
+ * gaps. Shaping at `LABEL_LINE_SPACING_PX` returns `N * linePitchPx` with no such
  * subtraction, so it is applied here: `layout.heightPx - lineSpacingPx`.
  *
  * Empty text (`:239-241`) short-circuits before any of the above: `_shape()`
@@ -174,14 +183,10 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   if (!ctx.measureText) return { x: 0, y: 0 };
 
-  // Label is the one widget whose theme sets `line_spacing` (3), and it
-  // separates lines without adding a trailing gap — which the subtraction
-  // below guarantees, so nothing is added back for a single line. The
-  // subtraction is mathematically independent of WHICH `fontMetrics` is
-  // used (ascent/descent cancel identically either way), so this still
-  // recovers exactly `getFontLinePitchPx`'s own default (3) rather than a
-  // hardcoded literal.
-  const lineSpacingPx = getFontLinePitchPx(fontMetrics, fontSizePx) - fontHeightPx;
+  // Label's `line_spacing` separates lines without adding a trailing gap,
+  // which the `- lineSpacingPx` below guarantees, so nothing is added back
+  // for a single line.
+  const lineSpacingPx = LABEL_LINE_SPACING_PX;
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
   // This control's own resolved width, or `undefined` on the first pass, where
   // no rect exists yet.
@@ -309,20 +314,12 @@ export function layoutLabelLines(
   boxWidthPx: number,
   boxHeightPx: number,
   horizontalAlignment: number | undefined,
-  verticalAlignment: number | undefined,
-  fontSizePx: number
+  verticalAlignment: number | undefined
 ): LabelLinePlacement[] {
   const lineCount = layout.lines.length;
   if (lineCount === 0) return [];
 
-  // `layout.fontMetrics` is `shapeText`'s own echo of whichever `FontMetrics`
-  // it shaped THIS layout against (`textLayout.ts`'s own doc) — reading it
-  // back here, rather than taking a second `fontMetrics` parameter, is what
-  // keeps this placement math from EVER disagreeing with the layout it is
-  // placing.
-  const fontMetrics = layout.fontMetrics;
-  const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
-  const lineSpacingPx = getFontLinePitchPx(fontMetrics, fontSizePx) - fontHeightPx;
+  const lineSpacingPx = LABEL_LINE_SPACING_PX;
   // label.cpp:599 etc: `total_h - line_spacing - paragraph_spacing` (single
   // paragraph here, so paragraph_spacing is 0) — the SAME `-lineSpacingPx`
   // correction `labelMinimumSize` applies to `ctx.measureText`'s own sum.

@@ -1,13 +1,13 @@
 /**
  * `resolveNodeFontMetrics` — the join between `themeProcessing.ts`'s
- * `resolveThemeFont` (walking `SolveNode.fontOverrides`/`.themeChain`/
+ * `resolveThemeFontIn` (walking `SolveNode.fontOverrides`/`.themeChain`/
  * `.projectTheme`) and `sceneFontLoader.ts`'s `peekSceneFontMetrics`.
  *
  * `peekSceneFontMetrics` never returns anything but the bundled default under
  * this test environment's `IS_VITEST` short-circuit (`sceneFontLoader.ts`'s
  * own doc — no `FontFace`/canvas under happy-dom), so a resolved
  * `FontMetrics` VALUE cannot be observed here. What CAN be observed: whether
- * `resolveThemeFont` was fed the right `themeKey`/`nativeType`/`typeVariation`
+ * `resolveThemeFontIn` was fed the right `themeKey`/`nativeType`/`typeVariation`
  * at all, via `peekSceneFontMetrics`'s own warn-on-unresolvable side effect
  * (a `SystemFont` always warns, resolved or not — `sceneFontLoader.test.ts`'s
  * own coverage of that branch). A warn firing (or not) for a given lookup
@@ -102,14 +102,14 @@ describe('resolveNodeFontMetrics', () => {
     const n = labelNode({ fontOverrides: { font: null }, themeChain: [theme] });
     const metrics = resolveNodeFontMetrics(n, 'font');
     // The override (null, "authored but invalid") wins unconditionally over
-    // the ancestor theme's SystemFont — resolveThemeFont's own contract — so
+    // the ancestor theme's SystemFont — resolveThemeFontIn's own contract — so
     // this resolves to no font at all, and no SystemFont warn ever fires.
     expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
     expect(warnSpy).not.toHaveBeenCalled();
   });
 });
 
-describe('resolveNodeFontSizePx — the font-SIZE counterpart join (resolveThemeFontSizePx, walking the SAME SolveNode fields resolveNodeFontMetrics does)', () => {
+describe('resolveNodeFontSizePx — the font-SIZE counterpart join (resolveThemeFontSizeIn, walking the SAME SolveNode fields resolveNodeFontMetrics does)', () => {
   it('returns the built-in default when nothing anywhere defines this size key', () => {
     expect(resolveNodeFontSizePx(labelNode(), 'font_size', undefined, 16)).toBe(16);
   });

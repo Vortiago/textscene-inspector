@@ -31,8 +31,9 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { OPTION_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   layoutOptionButtonContent,
@@ -68,20 +69,10 @@ export function OptionButton({ solveNode, rect, renderOrder, theme }: NativeCont
   // Read INSIDE the render body, not the `useMemo` below — see Label's own
   // Component.tsx for why.
   const fontMetrics = resolveNodeFontMetrics(solveNode, OPTION_BUTTON_THEME_FONT_KEY);
-  // `lineSpacingPx: 0` — OptionButton is Button-family (`option_button.cpp`
-  // never sets a `line_spacing` on its own `text_buf`, exactly like Button
-  // itself, `button/nativeSolver.ts`'s `buttonMinimumSize` and
-  // `button/Component.tsx` both pass the same literal). Omitting it here
-  // defaulted to `shapeText`'s OWN 3px UI `line_spacing` constant
-  // (`textLayout.ts`'s own doc, Label's), inflating this layout's `heightPx`
-  // 3px past what `optionButtonMinimumSize`'s OWN measurement used
-  // (`nativeSolver.ts`'s `ctx.measureText`, no `lineSpacingPx` override so
-  // its own default 0) — the two disagreeing is what actually moved this
-  // label's vertical centring, not the centring math itself.
   const layout: TextLayoutResult | null = useMemo(
     () =>
       hasText
-        ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics })
+        ? shapeButtonLabel(text, fontSizePx, fontMetrics)
         : null,
     [hasText, text, fontSizePx, fontMetrics]
   );

@@ -167,17 +167,6 @@ const ESCAPE_MAP: Record<string, string> = {
  * `\` + literal `u1234`, not as a Unicode escape. Used wherever a node parser
  * reads a string property (label/button text, …).
  */
-/**
- * A StringName-typed property value: Godot's text saver writes it with a `&`
- * sigil — `&"HeaderLabel"`, `&"Panel"` — where a plain String has none
- * (`core/variant/variant_utility.cpp`'s StringName stringify path). Strips
- * the sigil, then unquotes. A bare quoted string passes through unchanged,
- * so a scene that omits the sigil still parses.
- */
-export function unquoteStringName(value: string): string {
-  return unquoteString(value.startsWith('&') ? value.slice(1) : value);
-}
-
 export function unquoteString(value: string): string {
   let v = value;
   if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) {
@@ -189,4 +178,15 @@ export function unquoteString(value: string): string {
     }
     return ESCAPE_MAP[seq] ?? seq;
   });
+}
+
+/**
+ * A StringName-typed property value: Godot's text saver writes it with a `&`
+ * sigil — `&"HeaderLabel"`, `&"Panel"` — where a plain String has none
+ * (`core/variant/variant_utility.cpp`'s StringName stringify path). Strips
+ * the sigil, then unquotes. A bare quoted string passes through unchanged,
+ * so a scene that omits the sigil still parses.
+ */
+export function unquoteStringName(value: string): string {
+  return unquoteString(value.startsWith('&') ? value.slice(1) : value);
 }

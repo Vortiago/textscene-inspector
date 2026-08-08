@@ -26,6 +26,8 @@ import {
   findImage,
   parseFrontmatter,
   sheetLabel,
+  COMPARE_MARKER_PATTERN,
+  compareMarkerAttrs,
 } from './sheetSources.mjs';
 import { renderCoverage as renderLintCoverage } from './lintCoverage.mjs';
 
@@ -73,14 +75,12 @@ const STATUS_LABEL = {
 const rollupStatus = (statuses) =>
   STATUS_ORDER.find((s) => statuses.includes(s)) ?? DEFAULT_STATUS;
 
-// Unanchored, so it also finds a marker the section scan does NOT consume — a
-// stray one with no heading above it, or trailing junk after `-->` on its line.
-// This is the same pattern `parseCompareMarkers` (sheetSources.mjs) treats as
-// the authority on "what markers exist in this body".
-const COMPARE_MARKER_RE = /<!--\s*compare:\s*(.*?)\s*-->/g;
-// Anchored to a whole line, used only to test "is THIS heading's next
-// non-blank line a marker" while walking.
-const COMPARE_MARKER_LINE_RE = /^<!--\s*compare:\s*(.*?)\s*-->$/;
+// Both built from `sheetSources.mjs`'s ONE pattern. Unanchored finds a marker
+// anywhere on a line — a stray one with no heading above it, or trailing junk
+// after `-->`; anchored tests "is THIS heading's next non-blank line a
+// section marker".
+const COMPARE_MARKER_RE = new RegExp(COMPARE_MARKER_PATTERN);
+const COMPARE_MARKER_LINE_RE = new RegExp(`^${COMPARE_MARKER_PATTERN}$`);
 
 /**
  * Split a sheet body into the intro prose and its per-property comparison
@@ -97,11 +97,21 @@ export function parseSections(body) {
   const trailing = [];
   let cur = null;
   let inTrailing = false;
-  // Line indices consumed as a section's marker, so the orphan scan below
-  // never double-counts one.
-  const consumedMarkerLines = new Set();
+  // A `<!-- compare: … -->` marker that never becomes a section is a broken
+  // sheet: everything the loop below would have given it — its image, its
+  // status, its prose — is silently dropped rather than rendered. Collected
+  // here, in the same walk: any line carrying a marker that this loop does
+  // NOT consume as a section's own marker is orphaned, whether it sits past a
+  // heading it isn't attached to, under no heading at all, or carries junk
+  // after its `-->` (which the anchored test below rejects).
+  const orphaned = [];
+  const recordIfOrphaned = (line) => {
+    const stray = COMPARE_MARKER_RE.exec(line);
+    if (stray) orphaned.push(stray[0]);
+  };
   for (let i = 0; i < lines.length; i++) {
     if (inTrailing) {
+      recordIfOrphaned(lines[i]);
       trailing.push(lines[i]);
       continue;
     }
@@ -122,9 +132,7 @@ export function parseSections(body) {
       }
     }
     if (heading && marker) {
-      const attrs = Object.fromEntries(
-        marker[1].split(/\s+/).map((kv) => kv.split('='))
-      );
+      const attrs = compareMarkerAttrs(marker[1]);
       cur = {
         title: heading[1].trim(),
         image: attrs.image,
@@ -133,29 +141,20 @@ export function parseSections(body) {
         bodyLines: [],
       };
       sections.push(cur);
-      consumedMarkerLines.add(markerLine);
       i = markerLine; // consume through the marker line, skipped blanks included
     } else if (heading && !marker && sections.length > 0) {
       // A markerless `## Heading` after the compare-sections (e.g. a sheet-level
       // "## Known limitations") is trailing content, not part of the last section.
       inTrailing = true;
+      recordIfOrphaned(lines[i]);
       trailing.push(lines[i]);
     } else if (cur) {
+      recordIfOrphaned(lines[i]);
       cur.bodyLines.push(lines[i]);
     } else {
+      recordIfOrphaned(lines[i]);
       intro.push(lines[i]);
     }
-  }
-  // A `<!-- compare: … -->` marker that never became a section is a broken
-  // sheet: everything the section-forming loop above would have given it — its
-  // image, its status, its prose — is silently dropped rather than rendered.
-  // Detected on the whole body (not line-by-line at the point of failure)
-  // because the marker may sit past a `##` heading it isn't attached to, or
-  // never sit under a heading at all — both escape the walk above entirely.
-  const orphaned = [];
-  for (const m of body.matchAll(COMPARE_MARKER_RE)) {
-    const lineIndex = body.slice(0, m.index).split('\n').length - 1;
-    if (!consumedMarkerLines.has(lineIndex)) orphaned.push(m[0]);
   }
   return {
     intro: intro.join('\n').trim(),

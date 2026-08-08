@@ -40,14 +40,10 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import { isViewportBoundary } from '../../../viewport/subviewport/viewportBoundary';
 import type { SubViewportProperties } from '../../../viewport/subviewport/types';
 import type { SubViewportContainerProperties } from './types';
-
-/** `Viewport`'s own default target size — `scene/main/viewport.h`: `Size2i size = Size2i(512, 512)`. */
-const DEFAULT_SUB_VIEWPORT_SIZE: Vec2 = { x: 512, y: 512 };
 
 export const subViewportContainerMinimumSize: MinimumSizeFn = (n) => {
   const props = n.node.properties as SubViewportContainerProperties;
@@ -58,7 +54,9 @@ export const subViewportContainerMinimumSize: MinimumSizeFn = (n) => {
   for (const child of n.node.children) {
     // `Object::cast_to<SubViewport>` — every other child kind is skipped.
     if (!isViewportBoundary(child.type)) continue;
-    const size = (child.properties as SubViewportProperties).size ?? DEFAULT_SUB_VIEWPORT_SIZE;
+    // Never undefined: `subviewport/parser.ts` applies Godot's own 512x512
+    // default (`scene/main/viewport.h`) to every parsed SubViewport.
+    const size = (child.properties as SubViewportProperties).size;
     if (size.x > width) width = size.x;
     if (size.y > height) height = size.y;
   }
