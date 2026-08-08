@@ -81,6 +81,20 @@ anything other than `0`/`2`/`3` as `1` (cast ON), Godot's own default. `mesh`,
 `surface_material_override/<n>` are assigned straight from the raw string whenever
 present; the lenient parser never checks that they resolve to a real resource or node.
 
+## Material precedence
+
+Per surface, Godot binds `material_override`, else `surface_material_override/N`,
+else the surface's own material, else the renderer's default
+(`render_forward_clustered.cpp:4206,4264,4221`; `MeshInstance3D::get_active_material`,
+`scene/3d/mesh_instance_3d.cpp:384`). `material_override` is applied to every
+surface, not to the mesh as a whole, and `N` is the index in the mesh's
+`_surfaces` — an index past the mesh's surface count is dropped rather than
+adding a surface (`scene/3d/mesh_instance_3d.cpp:68,407`).
+
+An ArrayMesh resolves that order exactly, from either source — a `.tres` or a
+scene `[sub_resource]`. A primitive mesh (BoxMesh, SphereMesh, …) does not: see
+below.
+
 ## Known limitations
 
 - **CylinderMesh single cap** — three removes both end caps or neither, so a Godot cylinder with exactly one of `cap_top` / `cap_bottom` disabled renders with both caps.

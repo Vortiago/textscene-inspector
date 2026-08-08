@@ -250,7 +250,7 @@ describe('<MeshInstance3D>', () => {
       expect(material.roughness).toBe(0.8);
     });
 
-    it('prefers surface_material_override[0] over material_override', async () => {
+    it('prefers material_override over surface_material_override[0]', async () => {
       const surfaceMap = new Map<number, string>();
       surfaceMap.set(0, 'SubResource("Surf_0")');
       const node = makeNode({
@@ -267,8 +267,8 @@ describe('<MeshInstance3D>', () => {
       const material = findMesh(renderer.scene).material as unknown as {
         color: { r: number; g: number; b: number };
       };
-      expect(material.color.r).toBe(0);
-      expect(material.color.g).toBe(1);
+      expect(material.color.r).toBe(1);
+      expect(material.color.g).toBe(0);
     });
   });
 

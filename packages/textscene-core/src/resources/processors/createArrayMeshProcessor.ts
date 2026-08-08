@@ -19,6 +19,12 @@ export interface ArrayMeshResource {
   geometry: THREE.BufferGeometry;
   /** `materialPaths[i]` is the res:// material for draw group `i` (null = none). */
   materialPaths: (string | null)[];
+  /**
+   * `surfaceIndices[i]` is draw group `i`'s index in the mesh's `_surfaces`.
+   * Equal to `i` unless an undecodable surface was dropped, and it is the index
+   * `surface_material_override/N` addresses.
+   */
+  surfaceIndices: number[];
 }
 
 export function createArrayMeshProcessor(
@@ -36,6 +42,7 @@ export function createArrayMeshProcessor(
       return {
         geometry: buildArrayMeshGeometry(mesh),
         materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
+        surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
       };
     },
     dispose: (resource) => resource.geometry.dispose(),

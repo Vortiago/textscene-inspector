@@ -66,7 +66,7 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     expect(mat.color.r).toBe(1); // override (red), not mesh-own (blue)
   });
 
-  it('#13 surface_material_override/0 wins over material_override', async () => {
+  it('#13 material_override wins over surface_material_override/0', async () => {
     const surfaceMap = new Map<number, string>([[0, 'SubResource("Surf0")']]);
     const node = makeNode({
       mesh: 'SubResource("Box_1")',
@@ -81,8 +81,8 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     const mat = findMesh(renderer.scene).material as unknown as {
       color: { r: number; g: number };
     };
-    expect(mat.color.r).toBe(0);
-    expect(mat.color.g).toBe(1);
+    expect(mat.color.r).toBe(1);
+    expect(mat.color.g).toBe(0);
   });
 
   it('#14 surface_material_override/1 with slot 0 absent → slot 1 lands at material index 1', async () => {

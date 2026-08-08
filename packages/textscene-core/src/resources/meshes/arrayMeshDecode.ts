@@ -112,6 +112,12 @@ function surfaceLayout(format: number): SurfaceLayout {
 
 /** One decoded mesh surface. */
 export interface ArrayMeshSurface {
+  /**
+   * The surface's position in the mesh's `_surfaces` array. Not the position in
+   * THIS array, which is compacted by undecodable surfaces — it is the index
+   * `surface_material_override/N` names, so it has to survive the compaction.
+   */
+  surfaceIndex: number;
   /** Godot Mesh.ArrayFormat bitfield (uint64, fits in a JS number ≤ 2^53). */
   format: number;
   /** Godot primitive type (3 = TRIANGLES). */
@@ -559,9 +565,13 @@ export function decodeSceneArrayMesh(
     resolveRefToResourcePath(readMaterialRef(block), extById, '', REJECT_SUB_RESOURCES) ??
     undefined
   );
-  // Carry the scene-local id alongside, since no path can express it.
+  // Carry the scene-local id alongside, since no path can express it. Keyed on
+  // the surface's ORIGINAL index: an undecodable surface is gone from
+  // `mesh.surfaces`, so walking the two lists in step would hand every surface
+  // below the gap its predecessor's material.
+  const bySurfaceIndex = new Map(mesh.surfaces.map((s) => [s.surfaceIndex, s]));
   for (const [i, block] of [...iterateSurfaceBlocks(surfacesRaw)].entries()) {
-    const surface = mesh.surfaces[i];
+    const surface = bySurfaceIndex.get(i);
     if (!surface || surface.materialPath) continue;
     const ref = parseResourceReference(readMaterialRef(block) ?? '');
     if (ref?.type === 'SubResource') surface.materialSubResourceId = ref.id;
@@ -638,6 +648,7 @@ function decodeSurfaces(
     }
 
     surfaces.push({
+      surfaceIndex,
       format,
       primitive: readInt(block, 'primitive'),
       vertexCount,

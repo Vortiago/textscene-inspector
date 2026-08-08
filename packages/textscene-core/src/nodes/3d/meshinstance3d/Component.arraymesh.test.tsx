@@ -156,6 +156,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     const resource: ArrayMeshResource = {
       geometry: buildArrayMeshGeometry(mesh),
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
+      surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
     };
     preloadArrayMesh(loader, 'res://stage/meshes/wall.tres', resource);
 
@@ -181,6 +182,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     const resource: ArrayMeshResource = {
       geometry: buildArrayMeshGeometry(mesh),
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
+      surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
     };
     preloadArrayMesh(loader, 'res://stage/meshes/wall.tres', resource);
 

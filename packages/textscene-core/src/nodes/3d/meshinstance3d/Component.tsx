@@ -13,8 +13,14 @@
  * mesh switches to a magenta placeholder material with a drei `<Text>`
  * label naming the missing path.
  *
- * Material precedence (matches Godot):
- *   surface_material_override > material_override > mesh's own material > default placeholder.
+ * Material precedence, per surface, is Godot's:
+ *   material_override > surface_material_override/N > the surface's own material >
+ *   the renderer's default material
+ * (`render_forward_clustered.cpp:4206,4264,4221`, restated by
+ * `MeshInstance3D::get_active_material`, `scene/3d/mesh_instance_3d.cpp:384`).
+ * The ArrayMesh branches resolve exactly that. The primitive-SubResource branch
+ * below still takes `surface_material_override/0` ahead of `material_override`,
+ * which inverts the top two ranks for a node that sets both — see the sheet.
  */
 
 import * as THREE from 'three';
@@ -45,6 +51,7 @@ import { decodeSceneArrayMesh } from '../../../resources/meshes/arrayMeshDecode'
 import { buildArrayMeshGeometry } from '../../../resources/meshes/arrayMeshGeometry';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
+import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import {
   GODOT_DEFAULT_ALBEDO,
   GODOT_DEFAULT_METALLIC,
@@ -110,6 +117,15 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     [properties, internalResources]
   );
   const materialSubResource = materialSubResources[0] ?? undefined;
+
+  // The same two override properties as an ArrayMesh sees them. A baked mesh's
+  // surfaces are draw groups rather than material sub-resources, so they cannot
+  // go through `resolveMaterialSubResources` above — but Godot applies the
+  // overrides to both kinds of mesh identically.
+  const meshOverrides = useMemo(
+    () => resolveMeshOverrides(properties, internalResources, externalResources),
+    [properties, internalResources, externalResources]
+  );
 
   const materialScalars = useMemo(
     () =>
@@ -425,7 +441,11 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
 
     return (
       <MeshShell {...shellProps}>
-        <ArrayMeshSurfaces mesh={arrayMeshResult.value} shadowSide={shadowFlags.shadowSide} />
+        <ArrayMeshSurfaces
+          mesh={arrayMeshResult.value}
+          overrides={meshOverrides}
+          shadowSide={shadowFlags.shadowSide}
+        />
       </MeshShell>
     );
   }
@@ -441,6 +461,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
           <ArrayMeshSurfaces
             mesh={sceneArrayMesh.resource}
             sceneMaterials={sceneArrayMesh.sceneMaterials}
+            overrides={meshOverrides}
             shadowSide={shadowFlags.shadowSide}
           />
         ) : (
@@ -711,11 +732,17 @@ const UNRESOLVED_MESH = (
  *
  * Shared by both ArrayMesh sources — an external `.tres` and a scene's own
  * `[sub_resource]` — because where the bytes came from stops mattering here.
+ *
+ * The slot count comes from the DRAW GROUPS, never from the overrides: Godot
+ * stores a per-surface override into an array sized to the mesh's surface count
+ * (`scene/3d/mesh_instance_3d.cpp:68,407`), so an override naming a surface the
+ * mesh does not have is dropped rather than growing the mesh.
  */
 function ArrayMeshSurfaces({
   mesh,
   shadowSide,
   sceneMaterials,
+  overrides,
 }: {
   mesh: ArrayMeshResource;
   shadowSide: THREE.Side | undefined;
@@ -725,27 +752,34 @@ function ArrayMeshSurfaces({
    * rather than through the pipeline.
    */
   sceneMaterials?: readonly (TscnInternalResource | undefined)[];
+  overrides: MeshOverrides;
 }) {
-  const surfacePaths = mesh.materialPaths.length > 0 ? mesh.materialPaths : [null];
-  const multiSurface = surfacePaths.length > 1;
+  const groupCount = Math.max(mesh.materialPaths.length, 1);
+  const multiSurface = groupCount > 1;
   return (
     <>
       <primitive object={mesh.geometry} attach="geometry" />
-      {surfacePaths.map((path, i) => {
+      {Array.from({ length: groupCount }, (_unused, i) => {
         const attach = multiSurface ? `material-${i}` : 'material';
         const scene = sceneMaterials?.[i];
+        const own: MaterialSource | undefined = scene
+          ? { kind: 'scene', resource: scene }
+          : mesh.materialPaths[i]
+            ? { kind: 'path', path: mesh.materialPaths[i]! }
+            : undefined;
+        const source = effectiveMaterialSource(overrides, mesh.surfaceIndices[i] ?? i, own);
         // A scene-local material is already in hand; only a PATH needs the pipeline.
-        return scene ? (
+        return source?.kind === 'scene' ? (
           <StandardMaterialSlot
             key={`surf-${i}`}
-            scalars={parseStandardMaterial3DScalars(scene.data as Record<string, string>)}
+            scalars={parseStandardMaterial3DScalars(source.resource.data as Record<string, string>)}
             attach={attach}
             shadowSide={shadowSide}
           />
         ) : (
           <ExternalMaterialSlot
             key={`surf-${i}`}
-            path={path}
+            path={source?.path ?? null}
             attach={attach}
             shadowSide={shadowSide}
           />
@@ -753,6 +787,46 @@ function ArrayMeshSurfaces({
       })}
     </>
   );
+}
+
+/** A MeshInstance3D's two material-override properties, already resolved. */
+interface MeshOverrides {
+  /** `material_override`: in front of every surface's material. */
+  node?: MaterialSource;
+  /** `surface_material_override/N`, keyed by Godot's ORIGINAL surface index. */
+  perSurface: ReadonlyMap<number, MaterialSource>;
+}
+
+function resolveMeshOverrides(
+  properties: MeshInstance3DProperties,
+  internalResources: readonly TscnInternalResource[],
+  externalResources: readonly TscnExternalResource[]
+): MeshOverrides {
+  const perSurface = new Map<number, MaterialSource>();
+  for (const [index, ref] of properties.surfaceMaterialOverrides ?? []) {
+    const source = resolveMaterialSource(ref, internalResources, externalResources);
+    if (source) perSurface.set(index, source);
+  }
+  return {
+    node: resolveMaterialSource(properties.materialOverride, internalResources, externalResources),
+    perSurface,
+  };
+}
+
+/**
+ * What Godot binds for one surface. `_geometry_instance_update` picks the
+ * instance's own surface material over the mesh's, per surface
+ * (`render_forward_clustered.cpp:4264`), and
+ * `_geometry_instance_add_surface` then puts `material_override` in front of
+ * whichever won, on every surface (`:4206`). Nothing left means the renderer's
+ * default material (`:4221`), which is what an empty slot renders.
+ */
+function effectiveMaterialSource(
+  overrides: MeshOverrides,
+  surfaceIndex: number,
+  own: MaterialSource | undefined
+): MaterialSource | undefined {
+  return overrides.node ?? overrides.perSurface.get(surfaceIndex) ?? own;
 }
 
 /**
@@ -786,6 +860,7 @@ function useSceneArrayMeshGeometry(
         resource: {
           geometry: buildArrayMeshGeometry(mesh),
           materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
+          surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
         },
         // Resolved here rather than in the decoder: only the renderer holds the
         // scene's resources, and a scene's materials are reachable by no path.
@@ -850,8 +925,13 @@ function resolveExtArrayMeshPath(
  * Single-surface meshes return a length-1 array; multi-surface meshes
  * return a length-N array with `undefined` for unpopulated slots (the
  * caller's SecondarySurfaceMaterial renders a default placeholder).
- * The first element collapses the legacy fallback chain:
- *   surface_material_override[0] > material_override > mesh-own.
+ * Each slot collapses the same chain the renderer does,
+ *   material_override > surface_material_override[N] > mesh-own,
+ * per `render_forward_clustered.cpp:4206` (`material_override` in front, applied
+ * inside the per-surface add) over `:4264` (the instance's per-surface override
+ * ahead of the mesh's own). Only a node setting the top two together can tell
+ * that order from its inverse. The mesh's own material is surface 0's alone —
+ * a primitive mesh has exactly one surface to carry it.
  */
 function resolveMaterialSubResources(
   properties: MeshInstance3DProperties,
@@ -863,15 +943,15 @@ function resolveMaterialSubResources(
       ? Math.max(...Array.from(overrides.keys()), 0) + 1
       : 1;
 
-  const slot0Ref =
-    overrides?.get(0) ??
-    properties.materialOverride ??
-    findMeshOwnMaterial(properties.mesh, internalResources);
+  const meshOwn = findMeshOwnMaterial(properties.mesh, internalResources);
 
   const result: Array<TscnInternalResource | undefined> = new Array(surfaceSlots);
-  result[0] = resolveStandardMaterial(slot0Ref, internalResources);
-  for (let i = 1; i < surfaceSlots; i++) {
-    const ref = overrides?.get(i);
+  for (let i = 0; i < surfaceSlots; i++) {
+    // `material_override` first, and on EVERY surface: it is applied in
+    // `_geometry_instance_add_surface`, which runs per surface, rather than as
+    // a whole-mesh replacement. Only then the per-surface override, then the
+    // mesh's own material — which exists for surface 0 alone on a primitive.
+    const ref = properties.materialOverride ?? overrides?.get(i) ?? (i === 0 ? meshOwn : undefined);
     result[i] = resolveStandardMaterial(ref, internalResources);
   }
   return result;

@@ -541,6 +541,22 @@ const GOOD_THEN_BAD_TRES = WALL_TRES.replace(
 blend_shape_mode = 0`
 );
 
+/** The mirror image: the UNREADABLE surface first, so the survivor is Godot's surface 1. */
+const BAD_THEN_GOOD_TRES = WALL_TRES.replace(
+  '_surfaces = [{',
+  `_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 0),
+"format": 4097,
+"index_count": 3,
+"index_data": PackedByteArray("AAABAAIA"),
+"name": "truncated",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/")
+}, {`
+);
+
 describe('undecodable surfaces', () => {
   it('fails a mesh whose ONLY surface has vertex_data shorter than its format requires', () => {
     // Per-surface dropping is what keeps a mesh's readable surfaces; when nothing
@@ -586,6 +602,21 @@ describe('undecodable surfaces', () => {
     expect(mesh.surfaces).toHaveLength(1);
     expect(mesh.surfaces[0]!.materialPath).toBe('res://stage/tile_material.tres');
     for (const p of mesh.surfaces[0]!.positions) expect(Number.isFinite(p)).toBe(true);
+  });
+
+  it('reports each surface\u2019s ORIGINAL index, which a drop above it does not shift', () => {
+    // `surface_material_override/N` names the index in `_surfaces`, so a survivor
+    // that moved down the compacted list has to keep saying where it came from.
+    const mesh = decodeArrayMesh(BAD_THEN_GOOD_TRES, 'res://mesh.tres');
+
+    expect(mesh.surfaces).toHaveLength(1);
+    expect(mesh.surfaces[0]!.surfaceIndex).toBe(1);
+  });
+
+  it('numbers surfaces from zero when nothing is dropped', () => {
+    const mesh = decodeArrayMesh(TWO_SURFACE_TRES, 'res://mesh.tres');
+
+    expect(mesh.surfaces.map((s) => s.surfaceIndex)).toEqual([0, 1]);
   });
 });
 

@@ -170,7 +170,7 @@ surface_material_override/0 = SubResource("mat_blue")
       expect(mat.color.getHex()).toBe(0x0000ff);
     });
 
-    it('full precedence: mesh < materialOverride < surface override', async () => {
+    it('full precedence: mesh < surface override < materialOverride', async () => {
       const renderer = await renderScene(`[gd_scene load_steps=5 format=3]
 
 [sub_resource type="StandardMaterial3D" id="mat_yellow"]
@@ -194,7 +194,9 @@ surface_material_override/0 = SubResource("mat_blue")
 `);
       const meshes = findMeshes(renderer.scene);
       const mat = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
-      expect(mat.color.getHex()).toBe(0x0000ff);
+      // `material_override` (red) outranks both, per
+      // `render_forward_clustered.cpp:4206` applying it inside the per-surface add.
+      expect(mat.color.getHex()).toBe(0xff0000);
     });
   });
 

@@ -1,0 +1,36 @@
+[gd_resource type="ArrayMesh" format=4 load_steps=2 uid="uid://unitarraymeshsurfoverquads"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_body"]
+resource_name = "body"
+albedo_color = Color(0.1, 0.15, 0.7, 1)
+metallic = 0.0
+roughness = 0.5
+
+[resource]
+resource_name = "unit_surface_override_quads"
+_surfaces = [{
+"aabb": AABB(-2.1, -1, 0, 2, 2, 0),
+"attribute_data": PackedByteArray("AAAAAAAAgD8AAIA/AACAPwAAgD8AAAAAAAAAAAAAAAA="),
+"format": 34359742487,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"material": SubResource("StandardMaterial3D_body"),
+"name": "left_body",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("ZmYGwAAAgL8AAAAAzczMvQAAgL8AAAAAzczMvQAAgD8AAAAAZmYGwAAAgD8AAAAA/3//f////7//f/9/////v/9//3////+//3//f////78=")
+}, {
+"aabb": AABB(0.1, -1, 0, 2, 2, 0),
+"attribute_data": PackedByteArray("AAAAAAAAgD8AAIA/AACAPwAAgD8AAAAAAAAAAAAAAAA="),
+"format": 34359742487,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"material": SubResource("StandardMaterial3D_body"),
+"name": "right_body",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("zczMPQAAgL8AAAAAZmYGQAAAgL8AAAAAZmYGQAAAgD8AAAAAzczMPQAAgD8AAAAA/3//f////7//f/9/////v/9//3////+//3//f////78=")
+}]
+blend_shape_mode = 0

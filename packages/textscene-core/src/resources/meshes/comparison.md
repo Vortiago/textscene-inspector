@@ -53,11 +53,22 @@ Three references, all rendered:
 
 ## Surface materials
 
+A draw group's material is the first of these that resolves: the node's
+`material_override`, then its `surface_material_override/N`, then the surface's
+own `material`, then Godot's default 3D material — the order
+`RenderForwardClustered` binds per surface
+(`render_forward_clustered.cpp:4206,4264,4221`). `material_override` covers every
+surface; `N` is the surface's index in `_surfaces`, so an index the mesh has no
+surface for is dropped rather than adding a slot.
+
 | reference | resolution |
 | --- | --- |
-| `ExtResource` | the declaring document's `[ext_resource]` table |
+| `ExtResource` | the declaring document's `[ext_resource]` table — the `.tres`'s for a surface's own material, the `.tscn`'s for an override, since that is where each is written |
 | `SubResource` of a `.tres` | addressed `<file>::<id>`; its own texture `ExtResource`s resolve against that **`.tres`'s** table, not the scene's |
 | `SubResource` of a `.tscn` | read off the parsed scene's own resources — no path, nothing to fetch |
+
+An override reference that resolves to nothing leaves the surface on the material
+below it, which is what Godot's invalid-RID branch does.
 
 ## Unreadable surfaces
 
@@ -68,7 +79,10 @@ one geometry, so one NaN would poison the whole mesh's bounding sphere — and w
 camera fit, making the scene unframeable rather than merely misdrawn.
 
 Dropping happens in the decoder, not the geometry builder, so one list is the source of
-both the draw groups and the per-surface material paths.
+both the draw groups and the per-surface material paths. Each surviving surface also
+carries its ORIGINAL `_surfaces` index, which is the one
+`surface_material_override/<n>` names — the draw groups below a dropped surface
+renumber, that index does not.
 
 A mesh with NO readable surface fails outright, rather than caching an empty geometry as
 a success and rendering invisibly. An `attribute_data` record narrower than the format
@@ -92,14 +106,12 @@ here.
 
 ## Known limitations
 
-- **Texture slots on a scene SubResource material are unwired**, on every surface —
-  its scalars apply, its textures do not. `StandardMaterialSlot` already accepts the
-  maps and `ExternalMaterialSlot` already resolves them per surface one branch away in
-  the same loop; the scene branch passes only `scalars`. No corpus scene uses one.
-- **`material_override` / `surface_material_override/N` do not reach an ArrayMesh.**
-  Both ArrayMesh paths render one slot per draw group from the surface's own material,
-  so a node-level override is dropped where Godot would apply it. Pre-existing for an
-  external `.tres`; the inline path inherits it.
+- **Texture slots on a scene SubResource material are unwired**, on every surface and
+  whether the material is the surface's own or an override — its scalars apply, its
+  textures do not. `StandardMaterialSlot` already accepts the maps and
+  `ExternalMaterialSlot` already resolves them per surface one branch away in the same
+  loop; the scene branch passes only `scalars`. An override naming an `ExtResource`
+  `.tres` goes through that other branch and keeps its textures.
 - **A `.tres` whose every surface is undecodable fails the whole resource**, which puts
   its path in the missing-resources panel even though the file is present. The
   placeholder is right; the panel row overstates the cause.
@@ -109,6 +121,3 @@ here.
   there is no frame and the pair is the normal itself; the angle slot stays zero, and
   reading it as an angle would mean a half-turn rather than the identity. Implemented
   by symmetry and pinned by a hand-built fixture, not measured against Godot.
-- **A dropped surface renumbers the draw groups below it.** Group N means `surfaces[N]`,
-  which is what the material paths index, so materials follow. It would matter if
-  `surface_material_override/<n>`, which names Godot's ORIGINAL index, were wired here.
