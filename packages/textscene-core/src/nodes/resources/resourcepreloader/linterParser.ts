@@ -32,44 +32,7 @@ import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, RESOURCE_REFERENCE_REGEX } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-
-/**
- * Split a literal's top-level comma-separated elements — depth tracked over
- * `()`/`[]` and quote-aware, so a resource id or a quoted name containing a
- * comma or parenthesis is never mistaken for a separator. Empty input (an
- * empty `PackedStringArray()`/`[]` body) yields no elements.
- */
-function splitTopLevel(body: string): string[] {
-  const trimmed = body.trim();
-  if (trimmed === '') return [];
-  const parts: string[] = [];
-  let depth = 0;
-  let inQuote = false;
-  let start = 0;
-  for (let i = 0; i < trimmed.length; i++) {
-    const c = trimmed[i];
-    if (inQuote) {
-      if (c === '\\') {
-        i++;
-        continue;
-      }
-      if (c === '"') inQuote = false;
-      continue;
-    }
-    if (c === '"') {
-      inQuote = true;
-    } else if (c === '(' || c === '[') {
-      depth++;
-    } else if (c === ')' || c === ']') {
-      depth--;
-    } else if (c === ',' && depth === 0) {
-      parts.push(trimmed.slice(start, i));
-      start = i + 1;
-    }
-  }
-  parts.push(trimmed.slice(start));
-  return parts.map((p) => p.trim());
-}
+import { splitTopLevel } from '../../../godot/string.js';
 
 const OUTER_RE = /^\[([\s\S]*)\]$/;
 const PACKED_STRING_ARRAY_RE = /^PackedStringArray\(([\s\S]*)\)$/;

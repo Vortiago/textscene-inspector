@@ -25,48 +25,12 @@ import '../animationmixer/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import { splitTopLevel } from '../../../godot/string.js';
 
 const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
 const METHOD_CALL_MODE = { 0: 'DEFERRED', 1: 'IMMEDIATE' };
 
 const ARRAY_LITERAL_RE = /^\[([\s\S]*)\]$/;
-
-/**
- * Depth/quote-aware split of a bracket body's top-level comma-separated
- * elements, so a `&"…"` StringName containing a comma is never mistaken for a
- * separator. Empty input yields no elements.
- */
-function splitTopLevel(body: string): string[] {
-  const trimmed = body.trim();
-  if (trimmed === '') return [];
-  const parts: string[] = [];
-  let depth = 0;
-  let inQuote = false;
-  let start = 0;
-  for (let i = 0; i < trimmed.length; i++) {
-    const c = trimmed[i];
-    if (inQuote) {
-      if (c === '\\') {
-        i++;
-        continue;
-      }
-      if (c === '"') inQuote = false;
-      continue;
-    }
-    if (c === '"') {
-      inQuote = true;
-    } else if (c === '(' || c === '[') {
-      depth++;
-    } else if (c === ')' || c === ']') {
-      depth--;
-    } else if (c === ',' && depth === 0) {
-      parts.push(trimmed.slice(start, i));
-      start = i + 1;
-    }
-  }
-  parts.push(trimmed.slice(start));
-  return parts.map((p) => p.trim());
-}
 
 /**
  * `blend_times`: a flat Array of (from: StringName, to: StringName, time:

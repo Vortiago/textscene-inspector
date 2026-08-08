@@ -61,9 +61,9 @@ export type ParentVerdict =
  * The middle case is the trap. `NodeRegistry.ts:109` defaults a missing type to
  * `'Node'`, so an override heading parses as a confident, wrong `'Node'` and a
  * check of `!node.type` sails past it. That is not hypothetical: it made the
- * linter report a misplaced skeleton modifier in Godot's own shipped ragdoll
- * demo, whose `PhysicalBoneSimulator3D` hangs off a `Skeleton3D` override
- * inside an instanced character.
+ * linter report a misplaced skeleton modifier on a shipped Godot demo, where a
+ * `PhysicalBoneSimulator3D` hangs off a `Skeleton3D` override inside an
+ * instanced character.
  *
  * This is a function rather than three inline conditions because the inline
  * form had already been written five ways across the linter — parent-side and

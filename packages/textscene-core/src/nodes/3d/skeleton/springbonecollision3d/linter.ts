@@ -20,23 +20,19 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { findParentNode } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
-import { isTypeUnknowable } from '../../../../linter/parentType.js';
+import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 
 function checkSpringBoneCollision3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
 
-  const parent = findParentNode(scene.nodes, node);
-  // An instanced parent's type lives in another file; treat it as unknown.
-  if (parent && isTypeUnknowable(parent)) return [];
-  if (parent?.type === 'SpringBoneSimulator3D') return [];
+  const verdict = parentTypeVerdict(scene, node, 'SpringBoneSimulator3D');
+  if (verdict.kind === 'satisfied' || verdict.kind === 'unknowable') return [];
 
-  const where = parent ? `a child of a ${parent.type} node` : 'the scene root';
   return [
     {
       severity: 'warning',
-      message: `SpringBoneCollision3D '${node.name}' is ${where}. SpringBoneCollision3D only has an effect as a child of a SpringBoneSimulator3D; elsewhere it is never consulted and collides with nothing.`,
+      message: `SpringBoneCollision3D '${node.name}' is ${placementPhrase(verdict)}. SpringBoneCollision3D only has an effect as a child of a SpringBoneSimulator3D; elsewhere it is never consulted and collides with nothing.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'springbonecollision3d-outside-springbonesimulator3d',

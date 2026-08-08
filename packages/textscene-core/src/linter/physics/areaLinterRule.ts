@@ -67,8 +67,8 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
     // for it, AND the premise was wrong — Area monitoring matches a target
     // body's `collision_layer` against the AREA's `collision_mask`, not
     // against the area's own `collision_layer`, so the area's layer has no
-    // bearing on what it detects. Fired on dodge-the-creeps' Coin and
-    // squash-the-creeps' MobDetector, both deliberately `collision_layer = 0`.
+    // bearing on what it detects. It fired on shipped Godot demos that set
+    // `collision_layer = 0` deliberately.
     const collisionLayer = rawProps.collision_layer;
 
     // Warning: collision_mask is 0 and monitoring is true (won't detect anything)

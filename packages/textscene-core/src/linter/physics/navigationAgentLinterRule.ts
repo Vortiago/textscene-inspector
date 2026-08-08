@@ -22,11 +22,9 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { findParentNode } from '../linterUtils.js';
-import { descendsFrom } from '../nodeBaseTypes.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import { isTypeUnknowable } from '../parentType.js';
+import { parentTypeVerdict, placementPhrase } from '../parentType.js';
 
 export function makeNavigationAgentLinterRule(dim: PhysicsDim): LintRule {
   const type = `NavigationAgent${dim}`;
@@ -36,17 +34,14 @@ export function makeNavigationAgentLinterRule(dim: PhysicsDim): LintRule {
 
   function check(context: RuleContext): Diagnostic[] {
     const { node, scene } = context;
-    const parent = findParentNode(scene.nodes, node);
 
-    // An instanced parent's type lives in another file; the linter never opens it.
-    if (parent && isTypeUnknowable(parent)) return [];
-    if (parent && descendsFrom(parent.type, parentType)) return [];
+    const verdict = parentTypeVerdict(scene, node, parentType);
+    if (verdict.kind === 'satisfied' || verdict.kind === 'unknowable') return [];
 
-    const where = parent ? `a child of a ${parent.type} node` : 'the scene root';
     return [
       {
         severity: 'warning',
-        message: `${type} '${node.name}' is ${where}. ${type} only works as a child of a ${parentType}-inheriting node; elsewhere it has no position to steer and is never placed on the navigation map.`,
+        message: `${type} '${node.name}' is ${placementPhrase(verdict)}. ${type} only works as a child of a ${parentType}-inheriting node; elsewhere it has no position to steer and is never placed on the navigation map.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName,

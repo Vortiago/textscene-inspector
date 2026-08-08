@@ -29,8 +29,7 @@ import { resolveAudioTrackPaths } from '../animation/animationplayer/animationRe
  * polyphonic playback bound to the track's target and never reads that
  * node's own `stream` property, so such a node is not silent even with no
  * `stream` of its own. The `missing-stream` / `autoplay-without-stream`
- * rules must stay quiet about it (verified against
- * `scenes/demos/2d/platformer/level/coin.tscn`'s `Pickup` node).
+ * rules must stay quiet about it.
  *
  * Resolution reuses `resolveNodePathTarget`'s confidence bar (final-segment
  * name match, scene-wide, refusing `..` and instance-scoped paths): a track

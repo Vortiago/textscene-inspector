@@ -109,9 +109,8 @@ export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
     // Godot has no such warning for ANY type — grepping `scene/` and `modules/`
     // for a zero comparison on either property returns nothing — and both are
     // ordinary shipped configurations: a static body that only needs to BE
-    // detected carries `collision_mask = 0` (squash-the-creeps' Ground/Walls,
-    // the platformer's PlatformStatic), and a projectile that only needs to
-    // detect carries `collision_layer = 0` (the platformer's Bullet).
+    // detected carries `collision_mask = 0`, and a projectile that only needs
+    // to detect carries `collision_layer = 0`.
 
     return diagnostics;
   }

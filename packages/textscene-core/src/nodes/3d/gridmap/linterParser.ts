@@ -10,43 +10,7 @@ import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, RESOURCE_REFERENCE_REGEX, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-
-/**
- * Depth/quote-aware split of a bracket body's top-level comma-separated
- * elements, so a resource id containing a comma is never mistaken for a
- * separator. Empty input yields no elements.
- */
-function splitTopLevel(body: string): string[] {
-  const trimmed = body.trim();
-  if (trimmed === '') return [];
-  const parts: string[] = [];
-  let depth = 0;
-  let inQuote = false;
-  let start = 0;
-  for (let i = 0; i < trimmed.length; i++) {
-    const c = trimmed[i];
-    if (inQuote) {
-      if (c === '\\') {
-        i++;
-        continue;
-      }
-      if (c === '"') inQuote = false;
-      continue;
-    }
-    if (c === '"') {
-      inQuote = true;
-    } else if (c === '(' || c === '[') {
-      depth++;
-    } else if (c === ')' || c === ']') {
-      depth--;
-    } else if (c === ',' && depth === 0) {
-      parts.push(trimmed.slice(start, i));
-      start = i + 1;
-    }
-  }
-  parts.push(trimmed.slice(start));
-  return parts.map((p) => p.trim());
-}
+import { splitTopLevel } from '../../../godot/string.js';
 
 const DICT_LITERAL_RE = /^\{[\s\S]*\}$/;
 const CELLS_RE = /"cells"\s*:\s*PackedInt32Array\(([\s\S]*?)\)/;

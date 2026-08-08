@@ -53,10 +53,6 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
-    // The scale check (rigid_body_3d.cpp:667) used to live here — see this
-    // file's docblock for why it moved to `rigidBodyLinterRule`, which now
-    // reaches VehicleBody3D on its own.
-
     return diagnostics;
   }
 

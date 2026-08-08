@@ -19,3 +19,46 @@
  * No `g` flag, so `.test()` on the shared instance is stateless.
  */
 export const IS_VALID_INT_RE = /^[+-]?\d+$/;
+
+/**
+ * Depth/quote-aware split of a bracket body's top-level comma-separated
+ * elements, so a comma inside a nested literal or a quoted resource id is never
+ * mistaken for a separator. Empty input yields no elements.
+ *
+ * `(`/`[` both open a level and `)`/`]` both close one, because Godot's own
+ * writer nests the two interchangeably — `Array[NodePath]([NodePath("a"),
+ * NodePath("b")])` puts a paren body inside a bracket body. Inside a quoted
+ * run, a backslash escapes the next character, so an embedded `\"` does not
+ * end the quote.
+ */
+export function splitTopLevel(body: string): string[] {
+  const trimmed = body.trim();
+  if (trimmed === '') return [];
+  const parts: string[] = [];
+  let depth = 0;
+  let inQuote = false;
+  let start = 0;
+  for (let i = 0; i < trimmed.length; i++) {
+    const c = trimmed[i];
+    if (inQuote) {
+      if (c === '\\') {
+        i++;
+        continue;
+      }
+      if (c === '"') inQuote = false;
+      continue;
+    }
+    if (c === '"') {
+      inQuote = true;
+    } else if (c === '(' || c === '[') {
+      depth++;
+    } else if (c === ')' || c === ']') {
+      depth--;
+    } else if (c === ',' && depth === 0) {
+      parts.push(trimmed.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(trimmed.slice(start));
+  return parts.map((p) => p.trim());
+}

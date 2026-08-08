@@ -31,7 +31,7 @@
  */
 
 export { CMP_EPSILON, isZeroApprox, isEqualApprox } from './math.js';
-export { IS_VALID_INT_RE } from './string.js';
+export { IS_VALID_INT_RE, splitTopLevel } from './string.js';
 export {
   MATERIAL_RENDER_PRIORITY_MIN,
   MATERIAL_RENDER_PRIORITY_MAX,
