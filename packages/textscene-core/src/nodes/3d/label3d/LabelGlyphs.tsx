@@ -98,6 +98,18 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
             <TextRun
               layout={lineLayouts[index]!}
               fontSizePx={properties.font_size}
+              // `modulate`/`outline_modulate` are AUTHORED sRGB and must reach
+              // the tone curve decoded. Godot writes each into the glyph
+              // quad's vertex colour (`scene/3d/label_3d.cpp
+              // Label3D::_generate_glyph_surfaces:428`) on a material built by
+              // `BaseMaterial3D::get_material_for_2d`, which sets
+              // `FLAG_SRGB_VERTEX_COLOR` alongside
+              // `FLAG_ALBEDO_FROM_VERTEX_COLOR` (`scene/resources/
+              // material.cpp:3048-3049`); that flag emits a vertex-shader
+              // sRGB->linear decode of `COLOR.rgb` whenever the render target
+              // is not itself sRGB (`material.cpp:1218`), i.e. always in 3D.
+              // `TextRun` performs that decode (`sRGBToLinearRGB`), and
+              // `msdfMaterial.ts` runs the curve before re-encoding.
               tint={properties.modulate}
               depthTest={depthTest}
               side={side}

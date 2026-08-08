@@ -68,4 +68,21 @@ describe('createMsdfMaterial', () => {
     const mat = createMsdfMaterial({ map: new THREE.Texture(), color: RED, opacity: 1, pxRange: 4 });
     expect(mat.clippingPlanes).toEqual([]);
   });
+
+  it('tone maps the linear fragment BEFORE encoding it, the order every built-in material uses', () => {
+    const mat = createMsdfMaterial({ map: new THREE.Texture(), color: RED, opacity: 1, pxRange: 4 });
+    const tonemap = mat.fragmentShader.indexOf('#include <tonemapping_fragment>');
+    const encode = mat.fragmentShader.indexOf('#include <colorspace_fragment>');
+    expect(tonemap).toBeGreaterThan(-1);
+    expect(encode).toBeGreaterThan(-1);
+    // Reversed, the curve would run on an already-sRGB-encoded value, which a
+    // plain "contains both chunks" assertion would happily accept.
+    expect(tonemap).toBeLessThan(encode);
+    // `tonemapping_pars_fragment` is injected by three's own fragment prefix
+    // (`WebGLProgram`), never by the material: a second copy fails to compile.
+    expect(mat.fragmentShader).not.toContain('tonemapping_pars_fragment');
+    // three only expands `TONE_MAPPING` for a material that opts in; the
+    // default is `true` and nothing here may turn it off.
+    expect(mat.toneMapped).toBe(true);
+  });
 });

@@ -71,26 +71,6 @@ via the SAME glyph's own known atlas bounding-box width as a ruler (`H` = 28 atl
 scale `fontSizePx/42`), rather than deriving the camera's world-to-screen scale, which
 `--frame`/`--camera` do not print.
 
-### A non-white `modulate` fills darker than Godot's
-
-Measured on `unit-arraymesh.tscn`'s title caption
-(`modulate = Color(1, 1, 0.7, 1)`) at the editor orbit: Godot fills the glyph
-interiors `rgb(255, 255, 210)`, we fill them `rgb(255, 255, 179)`.
-
-210 is what the ADR-0025 preview environment's `tonemap_mode = FILMIC` produces
-from that blue channel — `srgb_to_linear(0.7) = 0.4480`, `tonemap_filmic` at
-`tonemap_white = 1.0` gives `0.6454`, encoded back to sRGB `210.15`
-(`servers/rendering/renderer_rd/shaders/effects/tonemap.glsl`). 179 is exactly
-`0.7 × 255`. That FILMIC pass is live over this frame — the same scene's mesh
-surface matches Godot to a single level across 63,000 px — so the fill reaches
-the tonemapper at a value Godot's `modulate` decode does not produce. The pixel
-does not say which stage supplies it.
-
-An all-white `modulate` is unaffected — 1.0 is a fixed point of the curve once it
-is normalised by its own white point — so the same scene's description caption
-fills `rgb(255, 255, 255)` on both sides, and every Label3D that leaves `modulate`
-at its default is at parity in its fill.
-
 ### Unparsed properties
 
 `vertical_alignment`, `autowrap_mode`, `width`, `render_priority`, and

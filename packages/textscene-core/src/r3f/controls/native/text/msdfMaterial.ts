@@ -27,6 +27,43 @@
  * engine's own TextServer rasterizes through FreeType bitmaps, not MSDF, so
  * there is no Godot GLSL source for this stage to match.
  *
+ * TONE CURVE + ENCODE — the two trailing chunks, and why a hand-written shader
+ * needs both spelled out. Every built-in three material ends with
+ * `<tonemapping_fragment>` then `<colorspace_fragment>`; a `ShaderMaterial`
+ * inherits neither, and each omission is silent, luminance-shaped, and has a
+ * fixed point at white — which is why both survived a long time here:
+ *
+ *   - No encode: the shader's LINEAR `uColor` is written straight into an sRGB
+ *     buffer, so every glyph lands at `srgbToLinear(c)` — Godot's font colour
+ *     223 rendered as 188.
+ *   - No tone curve: a 3D scene tone maps, and this previewer installs Godot's
+ *     own curve as `THREE.CustomToneMapping`
+ *     (`resources/environment/toneMapping.ts`), which three expands PER
+ *     MATERIAL, exactly where that chunk sits. Skip it and the decode and the
+ *     encode simply cancel, putting the RAW authored channel in the
+ *     framebuffer — measured against Godot 4.6.3 on a Label3D `modulate` of
+ *     `Color(1, 1, 0.7)` under the editor preview environment's FILMIC: Godot
+ *     fills rgb(255, 255, 210), this shader filled rgb(255, 255, 179), i.e.
+ *     0.7 x 255 exactly. 0 and 1 are fixed points of that curve, so a tint
+ *     built from those two alone shows nothing at all.
+ *
+ * The curve is unconditional here rather than an opt-in some 3D caller passes,
+ * and this material IS the default painter for 2D Control text as well as for
+ * Label3D — the sibling `MeshBasicMaterial` painter
+ * (`canvasTextPainter.ts`'s `createCanvasTextMaterial`) takes only the
+ * scene-authored-font branch. What keeps the chunk inert in 2D is that the
+ * 2D world canvas is mounted `flat`, i.e. `NoToneMapping`
+ * (`r3f/components/Canvas2DStage/World2DCanvas.tsx` — Godot composites canvas
+ * items AFTER tone mapping the 3D buffers, so authored 2D colour reaches the
+ * framebuffer as written). With no curve selected three compiles this chunk
+ * out entirely. So `flat` is load-bearing for text colour, not merely for
+ * fills: removing it would tone-map every glyph in the 2D stage.
+ *
+ * Neither `tonemapping_pars_fragment` nor `colorspace_pars_fragment` belongs
+ * in this source: `WebGLProgram` injects both into the fragment PREFIX (that
+ * is where `toneMapping()` and `linearToOutputTexel()` come from), so a second
+ * copy would be a redefinition, not a declaration.
+ *
  * `clippingPlanes` is spread onto the material rather than shared by
  * reference: three.js clip planes are per-material state, and a later
  * mutation of the caller's array (say, a ScrollContainer resizing) must not
@@ -127,12 +164,13 @@ void main() {
   vec4 diffuseColor = vec4(rgb, alpha);
   #include <clipping_planes_fragment>
   gl_FragColor = diffuseColor;
-  // uColor is LINEAR and the render target is sRGB. Every built-in three
-  // material ends with this chunk (linearToOutputTexel); a hand-written shader
-  // gets no encode unless it asks for one, so without it the linear value is
-  // written straight into an sRGB buffer and every glyph lands at
-  // srgbToLinear(c) — Godot's font colour 223 rendering as 188. White is that
-  // curve's fixed point, which is why white-on-anything looked perfect.
+  // The tone curve, then the encode — the pair, and the order, every built-in
+  // three material ends with, and which a hand-written shader gets only by
+  // asking. uColor is LINEAR; without the curve the decode and the encode
+  // cancel and a glyph lands at its RAW authored channel, and without the
+  // encode a linear value is written straight into an sRGB buffer. This
+  // file's own doc has both measurements.
+  #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }
 `;
