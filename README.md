@@ -108,7 +108,7 @@ v1.6.2631 or later (`winget --version`).
 ```bash
 pnpm test                # full vitest suite
 pnpm test:watch          # watch mode
-pnpm test:visual         # golden images, headless chromium + pixelmatch
+pnpm test:visual         # golden images, headless chromium, exact pixel compare
 pnpm test:visual:update  # rewrite baselines after an intentional change — eyeball, then commit
 ```
 

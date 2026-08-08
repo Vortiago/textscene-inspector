@@ -31,8 +31,10 @@ to that root's result.
 
 ## Divergences
 
-None visible in this fixture. Measured at 0.052% against Godot 4.6.3 with
-`pnpm ref:diff unit-csg-cylinder.tscn`, down from 0.788% before the normals port.
+None visible in this fixture. `pnpm ref:diff unit-csg-cylinder.tscn` measures it
+against Godot 4.6.3 at a mean channel error of 2.173/255 over the frame, worst
+channel 74/255 — spread across the sky, the lit surfaces and the silhouette's
+antialiased edge rather than localised to the cone apex the normals port fixed.
 
 ## Linting
 

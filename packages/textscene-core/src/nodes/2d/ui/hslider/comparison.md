@@ -37,9 +37,8 @@ radius by it, and rasterising each icon at it — so a project setting 2.0 gets 
 
 None measurable in this fixture. `pnpm ref:godot
 scenes/fixtures/unit-hslider.tscn --mode 2d` and `pnpm ref:ours unit-hslider.tscn
---2d` differ on ZERO pixels under the visual harness's tolerance, at a mean
-channel error of 0.07/255 over the frame — the grabber is Godot's own
-`slider_grabber` texture on both sides, not a substitute shape. Its core reads
+--2d` differ at a mean channel error of 0.07/255 over the frame — the grabber is
+Godot's own `slider_grabber` texture on both sides, not a substitute shape. Its core reads
 rgb(223, 223, 223) against rgb(222, 222, 222) (`--probe 305,80`) and the rim
 pixel Godot's SVG antialiases reads rgb(218, 218, 218) against rgb(214, 214, 214)
 (`--probe 301,80`); the six rows land on identical scanlines, y 33..46, 73..86,

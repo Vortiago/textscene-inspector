@@ -15,11 +15,13 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
 - `npx eslint <changed files>` — CI runs `eslint .`; unused imports/vars pass
   vitest + tsc but fail CI.
 - Changed `.tscn` fixtures: `pnpm build:linter && pnpm lint:tscn <files>`.
-- Changed rendering: `pnpm test:visual` (golden images); `pnpm test:visual:update`
-  rewrites baselines — eyeball, then commit. A NEW golden moves ONE variable, and its
-  `.tscn` header names it and says why a regression in it is invisible in every other
-  scene — a fixture that moves two cannot localise which one broke. A 2D-UI scene sets
-  `mode: '2d'` (`scripts/visual/scenes.mjs`), routing it through the **2D parity
+- Changed rendering: `pnpm test:visual` (golden images) — a capture must decode to its
+  baseline's pixels EXACTLY; there is no per-scene tolerance and a new one is never the
+  answer to a failure. `pnpm test:visual:update` rewrites baselines — eyeball, then
+  commit. A NEW golden moves ONE variable, and its `.tscn` header names it and says why
+  a regression in it is invisible in every other scene — a fixture that moves two
+  cannot localise which one broke. A 2D-UI scene sets `mode: '2d'`
+  (`scripts/visual/scenes.mjs`), routing it through the **2D parity
   capture** — the project-viewport rectangle at zoom 1, chrome hidden, Godot's own
   clear colour — instead of the default 3D one, so a Control's golden and its
   `comparison.md` describe the same picture.

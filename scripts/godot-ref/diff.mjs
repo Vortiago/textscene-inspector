@@ -4,16 +4,16 @@
  * then report how far apart they are.
  *
  *   pnpm ref:diff unit-csg-box.tscn
- *   pnpm ref:diff unit-csg-*.tscn --max 0.2
+ *   pnpm ref:diff unit-csg-*.tscn --max-mean 2
  *
  * ## Why this exists
  *
  * `pnpm test:visual` compares the previewer against its own committed PNG, so it detects
  * CHANGE and can never detect WRONGNESS. A render that was wrong the day it was baselined
- * stays green forever. That is not hypothetical: `csg-cylinder-3d` passed its 0.1% golden
- * for months while sitting 0.788% away from Godot, because three.js gives a collapsed cone
- * apex nine distinct radial normals where Godot's `smooth_faces` averages every face
- * meeting at one position into a single normal.
+ * stays green forever. That is not hypothetical: `csg-cylinder-3d` matched its golden for
+ * months while its cone apex was shaded unlike Godot's, because three.js gives a
+ * collapsed apex nine distinct radial normals where Godot's `smooth_faces` averages every
+ * face meeting at one position into a single normal.
  *
  * `ref:godot` and `ref:ours` could each answer that question already, but only one side at
  * a time and only by eye. This runs both at the same camera and prints the number, which
@@ -27,22 +27,34 @@
  * committed, asserted by nothing, and now of unknown freshness. So this is a tool the
  * author runs, exactly like `ref:godot` itself (see AGENTS.md).
  *
- * `--max` is offered for scripted use and is opt-in; without it the command reports and
- * exits 0 whatever the numbers say.
+ * `--max-mean` is offered for scripted use and is opt-in; without it the command reports
+ * and exits 0 whatever the numbers say.
  *
  * ## Reading the output
  *
- * Two renderers never agree byte-for-byte. Measured floor on this corpus is 0.011% to
- * 0.013% for a clean single-object scene and 0.069% for a silhouette-heavy four-object
- * one, all antialiasing along edges. A real geometry or shading bug reads an order of
- * magnitude above that.
+ * Three numbers per scene, all per-channel and unweighted (`imageDelta.mjs`):
+ *
+ *   changed   the share of pixels differing at all. Between two DIFFERENT renderers this
+ *             saturates — a half-bit of shading difference everywhere reads as ~100% —
+ *             so it locates a difference rather than sizing it.
+ *   max       the worst single-channel excursion. One resampled edge pixel can reach
+ *             255, so this bounds the damage, it does not describe it.
+ *   mean      mean |Δ| per channel over the whole frame. This is the parity statistic:
+ *             it is what "closer to Godot" is measured in when a baseline is arbitrated,
+ *             and the only one of the three that moves with the SIZE of a difference
+ *             rather than its extent.
+ *
+ * The predecessor of these numbers was a single perceptual percentage, which can report
+ * 0.000% for two images that share no identical pixel anywhere — a flat luminance or
+ * chroma shift scores zero under a YIQ distance. An arbitration tool that inherits the
+ * gate's blind spot is worse than none, because its answer is trusted more.
  */
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { basename, join, relative as relativePath, resolve, sep } from 'node:path';
 import { PNG } from 'pngjs';
-import pixelmatch from 'pixelmatch';
+import { compareImages } from '../visual/imageDelta.mjs';
 import { renderReference } from './run.mjs';
 import { captureOurs } from './capture-ours.mjs';
 
@@ -50,28 +62,28 @@ const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
 const FIXTURE_DIR = join(REPO_ROOT, 'scenes', 'fixtures');
 const OUT_DIR = join(import.meta.dirname, 'output');
 
-/** Same tolerance the visual harness uses, so the two numbers are comparable. */
-const PIXELMATCH_THRESHOLD = 0.1;
-
 function usage() {
   console.error(
-    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max <pct>] [--frame] [--keep]\n' +
+    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep]\n' +
       '\n' +
-      '  <fixture.tscn>  fixture filename as listed in apps/textscene-web/src/fixtures.ts,\n' +
-      '                  or a path to a .tscn under scenes/\n' +
-      '  --max <pct>     exit 1 if any scene exceeds this percentage (default: report only)\n' +
-      '  --frame         fit-the-bounds camera on BOTH sides instead of the editor orbit\n' +
-      '  --keep          keep the per-side PNGs, not just the diff'
+      '  <fixture.tscn>   fixture filename as listed in apps/textscene-web/src/fixtures.ts,\n' +
+      '                   or a path to a .tscn under scenes/\n' +
+      '  --max-mean <n>   exit 1 if any scene exceeds this mean per-channel error, in /255\n' +
+      '                   (default: report only)\n' +
+      '  --frame          fit-the-bounds camera on BOTH sides instead of the editor orbit\n' +
+      '  --keep           keep the per-side PNGs, not just the diff'
   );
 }
 
 export function parseArgs(argv) {
-  const args = { fixtures: [], max: null, frame: false, keep: false };
+  const args = { fixtures: [], maxMean: null, frame: false, keep: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === '--max') {
-      args.max = Number(argv[++i]);
-      if (!Number.isFinite(args.max)) throw new Error(`--max needs a number, got "${argv[i]}"`);
+    if (arg === '--max-mean') {
+      args.maxMean = Number(argv[++i]);
+      if (!Number.isFinite(args.maxMean)) {
+        throw new Error(`--max-mean needs a number, got "${argv[i]}"`);
+      }
     } else if (arg === '--frame') args.frame = true;
     else if (arg === '--keep') args.keep = true;
     else if (arg.startsWith('--')) throw new Error(`unknown flag: ${arg}`);
@@ -111,26 +123,22 @@ export function catalogName(scenePath) {
     : withinScenes;
 }
 
-/** Pixel difference between two PNG buffers, plus the diff image. */
+/**
+ * Difference between two PNG buffers, plus the diff image — the same
+ * measurement the golden gate asserts on (`../visual/imageDelta.mjs`), so a
+ * parity number and a golden number mean the same thing.
+ */
 export function comparePngs(godotBuffer, oursBuffer) {
-  const a = PNG.sync.read(godotBuffer);
-  const b = PNG.sync.read(oursBuffer);
-  if (a.width !== b.width || a.height !== b.height) {
+  const result = compareImages(godotBuffer, oursBuffer, { diff: true });
+  if (result.sizeMismatch) {
+    const { expected, actual } = result.sizeMismatch;
     return {
-      sizeMismatch: `godot ${a.width}x${a.height} vs ours ${b.width}x${b.height}`,
+      sizeMismatch:
+        `godot ${expected.width}x${expected.height} vs ` +
+        `ours ${actual.width}x${actual.height}`,
     };
   }
-  const diff = new PNG({ width: a.width, height: a.height });
-  const pixels = pixelmatch(a.data, b.data, diff.data, a.width, a.height, {
-    threshold: PIXELMATCH_THRESHOLD,
-  });
-  return {
-    pixels,
-    pct: (pixels / (a.width * a.height)) * 100,
-    width: a.width,
-    height: a.height,
-    diff,
-  };
+  return result;
 }
 
 async function diffOne({ scenePath, fixtureName, label }, { frame, keep }) {
@@ -144,7 +152,7 @@ async function diffOne({ scenePath, fixtureName, label }, { frame, keep }) {
   const result = comparePngs(godotBuffer, oursBuffer);
   if (result.sizeMismatch) return { label, ...result };
 
-  if (result.pixels > 0) {
+  if (result.changedPixels > 0) {
     const diffPath = join(OUT_DIR, `${label}.diff.png`);
     await writeFile(diffPath, PNG.sync.write(result.diff));
     result.diffPath = diffPath;
@@ -172,19 +180,24 @@ async function main() {
     if (result.sizeMismatch) {
       console.log(`${result.label.padEnd(28)} SIZE MISMATCH  ${result.sizeMismatch}`);
     } else {
-      const pct = `${result.pct.toFixed(3)}%`;
+      const changed = `${result.changedPct.toFixed(3)}%`;
       console.log(
-        `${result.label.padEnd(28)} ${pct.padStart(8)}  ` +
-          `(${result.pixels} px of ${result.width}x${result.height})` +
+        `${result.label.padEnd(28)} changed ${changed.padStart(8)}  ` +
+          `(${result.changedPixels} px of ${result.width}x${result.height})  ` +
+          `max ${String(result.maxChannelDelta).padStart(3)}/255  ` +
+          `mean ${result.meanChannelError.toFixed(3)}/255` +
           (result.diffPath ? `  ${result.diffPath}` : '')
       );
     }
   }
 
-  if (args.max === null) return;
-  const over = results.filter((r) => r.sizeMismatch || r.pct > args.max);
+  if (args.maxMean === null) return;
+  const over = results.filter((r) => r.sizeMismatch || r.meanChannelError > args.maxMean);
   if (over.length > 0) {
-    console.error(`\n${over.length} scene(s) over --max ${args.max}%: ${over.map((r) => r.label).join(', ')}`);
+    console.error(
+      `\n${over.length} scene(s) over --max-mean ${args.maxMean}/255: ` +
+        over.map((r) => r.label).join(', ')
+    );
     process.exit(1);
   }
 }

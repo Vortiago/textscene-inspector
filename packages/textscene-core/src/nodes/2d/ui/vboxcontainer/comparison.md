@@ -29,9 +29,8 @@ None visible in this fixture. Both images pack "Top" above "Bottom" at the
 lower-left, at the same positions, with the same 16 px separation between them,
 and both draw the labels in the same bundled theme font at the same weight —
 `pnpm ref:godot scenes/fixtures/unit-vbox-container.tscn --mode 2d` against
-`pnpm ref:ours unit-vbox-container.tscn --2d` puts 74 px of 1152x648 (0.010%)
-outside the visual harness's tolerance, at a mean channel error of 0.03/255, all
-of it on glyph edges.
+`pnpm ref:ours unit-vbox-container.tscn --2d` differs at a mean channel error of
+0.03/255 over the 1152x648 frame, all of it on glyph edges.
 
 `unit-vbox-container-pitch.tscn` is the wider reading of the solve, as flat bands
 with no text to blame an edge on. Every band edge in the `alignment = 1` column

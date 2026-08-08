@@ -33,9 +33,9 @@ None visible in this fixture. The child fills the content box, so the label's
 `vertical_alignment = 1` centres it on the panel's midline as in Godot; panel
 position, size, dark slate fill, 6 px corners, padding and both-axis centring
 match. `pnpm ref:godot scenes/fixtures/unit-panel-container.tscn --mode 2d`
-against `pnpm ref:ours unit-panel-container.tscn --2d` puts 128 px of 1152x648
-(0.017%) outside the visual harness's tolerance, at a mean channel error of
-0.04/255 — the label's glyph edges and the corner arcs.
+against `pnpm ref:ours unit-panel-container.tscn --2d` differs at a mean channel
+error of 0.04/255 over the 1152x648 frame — the label's glyph edges and the
+corner arcs.
 
 ## Linting
 

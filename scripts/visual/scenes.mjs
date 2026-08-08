@@ -7,9 +7,16 @@
  * deterministically (the two-identical-frames gate rejects anything that
  * doesn't), e.g. `arraymesh` (.tres geometry) and `decal` (a local SVG
  * texture). `file` is the bare fixture filename exactly as it appears in
- * apps/textscene-web/src/fixtures.ts (the `?fixture=` deep link). `maxDiffPct`
- * overrides the default failure threshold for scenes with antialiasing-
- * sensitive content (thin gizmo lines).
+ * apps/textscene-web/src/fixtures.ts (the `?fixture=` deep link).
+ *
+ * No scene carries a difference budget: a capture must decode to its
+ * baseline's pixels exactly (`imageDelta.mjs`, and `compareToBaseline` in
+ * `run.mjs` for why a perceptual tolerance was the wrong instrument). The
+ * per-scene percentages this manifest used to carry were written for
+ * antialiasing-sensitive content — thin gizmo lines, soft shadow edges — none
+ * of which varies between runs of the same pinned rasterizer. Each scene's
+ * note below still says what its content is sensitive to, because that is what
+ * a reader needs when a diff DOES appear; none of them is a licence to differ.
  *
  * `collisions: true` (optional) ticks the toolbar's "Visible Collision Shapes"
  * checkbox before capturing, so CollisionShape2D/3D gizmos render — they are
@@ -18,9 +25,9 @@
  * `select` (optional) is a node path the harness selects in the scene tree
  * before capturing, so a selection-gated gizmo (Marker/Path/PathFollow, ADR-0018)
  * renders. These `*-selected` scenes are the real-browser regression guard for
- * the gizmos — the un-selected fixtures never show them. Their thin AA lines and
- * the selection-highlight box make them AA-sensitive, hence the relaxed
- * `maxDiffPct`.
+ * the gizmos — the un-selected fixtures never show them. Their content is thin
+ * AA lines plus the selection-highlight box, so a diff here is usually one
+ * gizmo's geometry rather than a shading change.
  *
  * `mode: '2d'` (optional) routes the scene through the 2D parity capture
  * instead of the default 3D one: the project-viewport rectangle at zoom 1
@@ -28,16 +35,11 @@
  * the background flattened to Godot's clear colour, exactly what `pnpm
  * ref:godot`/`ref:ours --2d` compare against (`findCaptureTarget` +
  * `createCaptureContext` in `previewServer.mjs`). Every Node2D/Control-rooted
- * golden carries it — before it existed, these captured the WHOLE 2D
- * viewport instead, chrome and all, which is why their `maxDiffPct` was
- * relaxed regardless of what content they carry. Goldens added SINCE the
- * parity capture keep the strict 0.1% default instead: a 1:1 frame at zoom 1
- * over integer pixels has no camera fit and no resampling to absorb, so a
- * relaxed threshold there would only be slack for a real regression to hide
- * in. The relaxed values above are historical, not a rule for 2D.
+ * golden carries it — before it existed, these captured the WHOLE 2D viewport
+ * instead, chrome and all, which is why they used to be compared loosely
+ * regardless of what content they carry. A 1:1 frame at zoom 1 over integer
+ * pixels has no camera fit and no resampling in it at all.
  */
-
-export const DEFAULT_MAX_DIFF_PCT = 0.1;
 
 export const GOLDEN_SCENES = [
   { name: 'plane-mesh', file: 'unit-plane-mesh.tscn' },
@@ -46,11 +48,10 @@ export const GOLDEN_SCENES = [
   // baseline pins what it LOOKS like.
   { name: 'plane-rotated-scaled', file: 'edge-plane-rotated-scaled.tscn' },
   { name: 'all-meshes', file: 'integration-all-meshes.tscn' },
-  // Shadow-bearing scenes: the shadow map is the most GPU-sensitive content in
-  // the set (soft-edge PCF sampling differs across drivers), so these carry the
-  // same relaxed threshold as the thin-AA gizmo scenes. The shadows themselves
-  // are small contact regions — a missing shadow moves far more than 0.5%.
-  { name: 'all-primitives', file: 'integration-all-primitives.tscn', maxDiffPct: 0.5 },
+  // Shadow-bearing: the shadow map is the most driver-sensitive content in the
+  // set (soft-edge PCF sampling), so a diff confined to a contact shadow's
+  // penumbra reads differently from one over the lit surfaces.
+  { name: 'all-primitives', file: 'integration-all-primitives.tscn' },
   // Every CSG dimension OMITTED, so the render depends entirely on our parser
   // defaults matching Godot's. The other CSG fixtures set size/radius/height
   // explicitly, which is why a wrong default (CSGBox3D 2,2,2 vs Godot's 1,1,1)
@@ -66,9 +67,8 @@ export const GOLDEN_SCENES = [
   // while its shadow lands on the ground and the sphere parented under it still
   // renders. Implemented as `visible = false` this scene showed no shadow and
   // no sphere — three skips an invisible object in the shadow pass and stops
-  // walking its subtree. Soft-shadow edges are GPU-sensitive, hence the
-  // relaxed threshold.
-  { name: 'shadows-only', file: 'unit-shadows-only.tscn', maxDiffPct: 0.5 },
+  // walking its subtree.
+  { name: 'shadows-only', file: 'unit-shadows-only.tscn' },
   // CSG `material` as an ExtResource .tres beside the same node with an inline
   // SubResource material. Only the sub-resource form used to resolve, so the
   // 33 ExtResource materials in scenes/demos/3d/csg/csg.tscn rendered white —
@@ -90,7 +90,6 @@ export const GOLDEN_SCENES = [
     file: 'unit-2d-geometry-parity.tscn',
     mode: '2d',
     navigation: true,
-    maxDiffPct: 0.5,
   },
   // Two AreaLight3D panels of the SAME light_energy but very different
   // area_size, each lighting its own plate. Godot normalises the emitted colour
@@ -147,9 +146,9 @@ export const GOLDEN_SCENES = [
   { name: 'glow-normalized', file: 'unit-glow-normalized.tscn' },
   { name: 'glow-agx', file: 'unit-glow-agx.tscn' },
   { name: 'glow-exposure', file: 'unit-glow-exposure.tscn' },
-  // Raised threshold: a 4x4 checkerboard on two quads carries far more edge than
-  // the silhouette-only scenes the default is tuned for.
-  { name: 'material-emission-texture', file: 'unit-material-emission-texture.tscn', maxDiffPct: 0.6 },
+  // A 4x4 checkerboard on two quads: far more texture edge than the
+  // silhouette-only scenes around it, so a sampling change shows here first.
+  { name: 'material-emission-texture', file: 'unit-material-emission-texture.tscn' },
   { name: 'material-emission-hdr', file: 'unit-material-emission-hdr.tscn' },
   // Height mapping: a local grayscale height SVG drives displacementMap on a
   // finely-subdivided sphere — the baseline pins that the relief actually
@@ -158,9 +157,9 @@ export const GOLDEN_SCENES = [
   { name: 'world-environment', file: 'unit-world-environment-basic.tscn' },
   // Godot's editor preview sun + preview environment on a scene that declares
   // neither (ADR-0025). Godot's own render of the same lighting is committed at
-  // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing, hence the
-  // relaxed threshold shared with the other shadow scenes.
-  { name: 'preview-lighting', file: 'unit-preview-lighting.tscn', maxDiffPct: 0.5 },
+  // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing, like the
+  // other preview-lit scenes.
+  { name: 'preview-lighting', file: 'unit-preview-lighting.tscn' },
   // The light-transport pair, one per way energy reaches a surface. Each puts
   // an UNSHADED patch of the surface's own albedo onto the lit plane, and both
   // Godot equations say a white energy-1.0 source renders exactly that albedo
@@ -179,30 +178,28 @@ export const GOLDEN_SCENES = [
   // Scene-owned skies, authored away from Godot's defaults so the gradient and
   // the sun disc are legible. Both carry their own light AND environment, so
   // they also pin that BOTH previews yield.
-  { name: 'sky-procedural', file: 'unit-sky-procedural.tscn', maxDiffPct: 0.5 },
-  { name: 'sky-physical', file: 'unit-sky-physical.tscn', maxDiffPct: 0.5 },
-  // Locks the equirect V/U orientation (measured against real Godot); the black
-  // grid lines antialias, so it shares the sky scenes' relaxed threshold.
-  { name: 'sky-panorama', file: 'unit-sky-panorama.tscn', maxDiffPct: 0.5 },
+  { name: 'sky-procedural', file: 'unit-sky-procedural.tscn' },
+  { name: 'sky-physical', file: 'unit-sky-physical.tscn' },
+  // Locks the equirect V/U orientation (measured against real Godot); its black
+  // grid lines are the antialiasing-heaviest content of the sky scenes.
+  { name: 'sky-panorama', file: 'unit-sky-panorama.tscn' },
   // BG_SKY over a GOLD sky with AMBIENT_SOURCE_COLOR (flat grey 0.6,
   // sky_contribution 0) and AgX tonemapping. Pins two things together — the
   // shadowed grass stays grey (no sky IBL leaking into diffuse) while the
   // metallic sphere reflects the gold sky at full strength (reflection stays on
-  // under a COLOR ambient). Matches real Godot to ≤6/255 (reflection to 1/255);
-  // shadows + a metallic reflection are the most GPU-sensitive content, hence
-  // the relaxed threshold.
-  { name: 'stage-ambient-ibl', file: 'unit-stage-ambient-ibl.tscn', maxDiffPct: 0.5 },
+  // under a COLOR ambient). Matches real Godot to ≤6/255 (reflection to 1/255).
+  { name: 'stage-ambient-ibl', file: 'unit-stage-ambient-ibl.tscn' },
   // The same env with the WorldEnvironment INSTANCED one level down. Renders
   // pixel-for-pixel like the direct fixture above — pins that an instanced
   // WorldEnvironment still drives tonemap + ambient and yields the editor
   // preview environment. If instance env-resolution regresses, this diverges
   // while stage-ambient-ibl stays green.
-  { name: 'instanced-environment', file: 'unit-instanced-environment.tscn', maxDiffPct: 0.5 },
+  { name: 'instanced-environment', file: 'unit-instanced-environment.tscn' },
   // The same env with an UNSUPPORTED custom-shader sky. Pins that an unresolvable
   // sky does NOT collapse the environment: AgX + flat ambient still apply (grass
   // identical to the gold-sky fixture), the background falls back to the mid-blue
   // solid, and the metallic sphere — with no sky to reflect — reads near-black.
-  { name: 'shader-sky-env', file: 'unit-shader-sky-env.tscn', maxDiffPct: 0.5 },
+  { name: 'shader-sky-env', file: 'unit-shader-sky-env.tscn' },
   // NOTE: unit-label3d.tscn is deliberately NOT in the set — Label3D
   // labels render effectively invisible after auto-framing (default
   // pixel_size 0.005 → ~0.08 world units tall; the committed showcase
@@ -222,8 +219,7 @@ export const GOLDEN_SCENES = [
   // object, and we are too bright exactly where Godot is darkest (mean over
   // them: Godot 79.6, baseline 101.8, ours 119.9), which reads as specular or
   // edge sampling rather than the global colour shift that moved
-  // material-features. Threshold still tightened to the strict default, but
-  // note that alone does not gate this: the miss is 0.023%, well under 0.1%.
+  // material-features.
   { name: 'hallway-mockup', file: 'example-hallway-mockup.tscn' },
   // Instance root merge (ADR-0013): two instances of unit-instance-child.tscn
   // collapse into Area3D coins at x=±1.5. Pins the rendered pixels of a
@@ -231,51 +227,42 @@ export const GOLDEN_SCENES = [
   // cannot silently shift them.
   { name: 'instanced-subscene', file: 'integration-instanced-subscene.tscn' },
   // Thin collision-gizmo lines are the most AA-sensitive content in the set.
-  { name: 'physics-bodies', file: 'unit-physics-bodies.tscn', maxDiffPct: 0.3 },
+  { name: 'physics-bodies', file: 'unit-physics-bodies.tscn' },
   // The first golden ever to show a collision gizmo: `physics-bodies` above
   // carries CollisionShape3D nodes but the toggle is off, so its baseline is a
   // bare plane. Capsule / sphere / cylinder all used to fall through to a 1x1x1
   // box, and every gizmo was hard-coded green regardless of `debug_color`.
-  // Thin wireframe lines, hence the relaxed threshold.
   {
     name: 'collision-shapes',
     file: 'unit-collision-shapes.tscn',
     collisions: true,
-    maxDiffPct: 0.5,
   },
   // Decal PROJECTS a local checkerboard onto the floor plane its box intersects
   // (DecalGeometry, baked after mount), one plain and one tinted. The box gizmo
   // is selection-gated (ADR-0018) and the harness drives no selection, so this
   // captures the Godot-runtime view: projection only, no outline. Loads a
-  // texture (deterministic local SVG, gated by the two-identical-frames settle);
-  // the projection edges are AA-sensitive, hence the relaxed threshold.
-  { name: 'decal', file: 'unit-decal.tscn', maxDiffPct: 0.3 },
+  // texture (deterministic local SVG, gated by the two-identical-frames settle).
+  { name: 'decal', file: 'unit-decal.tscn' },
   // Decal `texture_albedo` as an INLINE GradientTexture2D. The albedo is the
   // only thing a decal projects, so an unresolved slot leaves the floor bare —
   // indistinguishable from a plain plane, which is why no other scene flags it.
-  // Projection edges are antialiasing-sensitive, same threshold as `decal`.
-  { name: 'decal-gradienttexture', file: 'unit-decal-gradienttexture.tscn', maxDiffPct: 0.3 },
+  { name: 'decal-gradienttexture', file: 'unit-decal-gradienttexture.tscn' },
   // `anisotropy_flowmap` as a real PNG — the ONLY scene where a decoded image
   // reaches the anisotropy channel repack (Godot keeps per-pixel strength in
   // ALPHA, three.js reads it from BLUE), which needs a canvas readback that no
   // headless unit-test environment can perform. The right sphere carries the
   // flowmap and must show alternating streaked / isotropic bands; the left one
   // has the identical scalar-only material and is streaked all the way round.
-  // Both ways this can break move several times the threshold: lose the
-  // readback and the banded sphere becomes a copy of the uniform one, drop the
-  // repack and its highlight flattens everywhere. Specular highlights on a
-  // curved surface are AA-sensitive, hence the slightly relaxed threshold.
-  {
-    name: 'material-anisotropy-flowmap',
-    file: 'unit-material-anisotropy-flowmap.tscn',
-    maxDiffPct: 0.2,
-  },
+  // Both ways this can break move a large part of the frame: lose the readback
+  // and the banded sphere becomes a copy of the uniform one, drop the repack
+  // and its highlight flattens everywhere.
+  { name: 'material-anisotropy-flowmap', file: 'unit-material-anisotropy-flowmap.tscn' },
   // PathFollow2D follow-offset: a Polygon2D follower placed at
   // progress_ratio 0.5 along the parent Path2D's Curve2D. The Marker2D cross
   // and Path2D curve gizmos are selection-gated (ADR-0018) and the harness
   // drives no selection, so this scene pins the one visible, non-gated piece —
   // the follower's curve placement.
-  { name: 'pathfollow2d-follow', file: 'unit-pathfollow2d.tscn', mode: '2d', maxDiffPct: 0.3 },
+  { name: 'pathfollow2d-follow', file: 'unit-pathfollow2d.tscn', mode: '2d' },
   // PathFollow3D follow-offset (ADR-0018): a BoxMesh follower placed at
   // progress_ratio 0.5 along the parent Path3D's Curve3D. Same as the 2D case —
   // the Path3D curve gizmo is selection-gated and hidden here, so this pins the
@@ -284,45 +271,42 @@ export const GOLDEN_SCENES = [
 
   // --- Selection-gated gizmos (ADR-0018): select the node, capture the gizmo. ---
   // These pin that the real tree-click → selection → gizmo path works for every
-  // gizmo node type. Relaxed threshold: thin AA gizmo lines + selection box.
-  { name: 'marker2d-selected', file: 'unit-marker2d.tscn', mode: '2d', select: 'Marker2DRoot/DefaultMarker', maxDiffPct: 0.5 },
-  { name: 'path2d-selected', file: 'unit-path2d.tscn', mode: '2d', select: 'Path2DRoot/ArcPath', maxDiffPct: 0.5 },
-  { name: 'pathfollow2d-selected', file: 'unit-pathfollow2d.tscn', mode: '2d', select: 'PathFollow2DRoot/TrackPath/Follower', maxDiffPct: 0.5 },
-  { name: 'marker3d-selected', file: 'unit-marker-3d.tscn', select: 'Root/MyMarker3D', maxDiffPct: 0.5 },
-  { name: 'path3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath', maxDiffPct: 0.5 },
-  { name: 'pathfollow3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath/Follower', maxDiffPct: 0.5 },
+  // gizmo node type. Their content is thin gizmo lines plus the selection box.
+  { name: 'marker2d-selected', file: 'unit-marker2d.tscn', mode: '2d', select: 'Marker2DRoot/DefaultMarker' },
+  { name: 'path2d-selected', file: 'unit-path2d.tscn', mode: '2d', select: 'Path2DRoot/ArcPath' },
+  { name: 'pathfollow2d-selected', file: 'unit-pathfollow2d.tscn', mode: '2d', select: 'PathFollow2DRoot/TrackPath/Follower' },
+  { name: 'marker3d-selected', file: 'unit-marker-3d.tscn', select: 'Root/MyMarker3D' },
+  { name: 'path3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath' },
+  { name: 'pathfollow3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath/Follower' },
   // The VehicleWheel3D gizmo — radius circle, spring coil, travel line, axle
-  // ticks, forward arrow. Thin AA lines, hence the same tolerance as the other
-  // gizmo goldens. No unselected companion: with the gizmo hidden this scene
-  // renders like any other transform-only body fixture.
-  { name: 'vehiclewheel3d-selected', file: 'unit-physics-vehicle.tscn', select: 'Root/Vehicle/Wheel1', maxDiffPct: 0.5 },
+  // ticks, forward arrow — thin lines, like the other gizmo goldens. No
+  // unselected companion: with the gizmo hidden this scene renders like any
+  // other transform-only body fixture.
+  { name: 'vehiclewheel3d-selected', file: 'unit-physics-vehicle.tscn', select: 'Root/Vehicle/Wheel1' },
 
   // --- Lights / Camera3D / AudioStreamPlayer3D gizmo E2E coverage ---
   // Unselected: pins the non-gizmo render (ground + shading only — no helper).
   { name: 'directional-light-3d', file: 'unit-directional-light-3d.tscn' },
   { name: 'omni-light-3d', file: 'unit-omni-light-3d.tscn' },
-  { name: 'spot-light-3d', file: 'unit-spot-light-3d.tscn', maxDiffPct: 0.5 },
+  { name: 'spot-light-3d', file: 'unit-spot-light-3d.tscn' },
   { name: 'camera-basic', file: 'unit-camera-basic.tscn' },
   { name: 'audio-stream-player-3d', file: 'unit-audio-stream-player.tscn' },
   // Selected: the core deliverable — real tree-click → selection → gizmo
-  // render for each gate. Relaxed threshold: thin AA helper wireframes.
+  // render for each gate. Their content is thin helper wireframes.
   {
     name: 'directional-light-3d-selected',
     file: 'unit-directional-light-3d.tscn',
     select: 'Root/DirectionalLight3D',
-    maxDiffPct: 0.5,
   },
   {
     name: 'omni-light-3d-selected',
     file: 'unit-omni-light-3d.tscn',
     select: 'Root/OmniLight3D',
-    maxDiffPct: 0.5,
   },
   {
     name: 'spot-light-3d-selected',
     file: 'unit-spot-light-3d.tscn',
     select: 'Root/SpotLight3D',
-    maxDiffPct: 0.5,
   },
   // unit-multi-camera.tscn (not unit-camera-basic.tscn): a red box sits
   // in-frustum for depth reference alongside the selected CameraHelper.
@@ -330,13 +314,11 @@ export const GOLDEN_SCENES = [
     name: 'camera3d-selected',
     file: 'unit-multi-camera.tscn',
     select: 'Root/MainCamera',
-    maxDiffPct: 0.5,
   },
   {
     name: 'audio-stream-player-3d-selected',
     file: 'unit-audio-stream-player.tscn',
     select: 'Scene/Speaker_Default',
-    maxDiffPct: 0.5,
   },
   // The emission cone: `Speaker_Cone` is the only corpus node anywhere that
   // sets `emission_angle_enabled`, and until now nothing rendered or asserted
@@ -345,7 +327,6 @@ export const GOLDEN_SCENES = [
     name: 'audio-stream-player-3d-cone-selected',
     file: 'unit-audio-stream-player.tscn',
     select: 'Scene/Speaker_Cone',
-    maxDiffPct: 0.5,
   },
 
   // --- Mesh primitives + StandardMaterial3D features ---
@@ -393,61 +374,60 @@ export const GOLDEN_SCENES = [
   { name: 'csg-multi-material', file: 'unit-csg-multi-material.tscn' },
   // Transparency was the one measured confounder with no CSG coverage at all.
   { name: 'csg-transparency', file: 'unit-csg-transparency.tscn' },
-  // 2D nodes render in the 2D view (with its zoom/pan chrome) — relax the
-  // threshold like the other 2D goldens (marker2d/path2d).
-  { name: 'polygon-2d', file: 'unit-polygon2d.tscn', mode: '2d', maxDiffPct: 0.5 },
-  { name: 'line-2d', file: 'unit-line2d.tscn', mode: '2d', maxDiffPct: 0.5 },
+  // Filled 2D geometry through the parity capture, the plainest form of it.
+  { name: 'polygon-2d', file: 'unit-polygon2d.tscn', mode: '2d' },
+  { name: 'line-2d', file: 'unit-line2d.tscn', mode: '2d' },
   // A y-sorted node's OWN body, between the two children it merges into the
   // same sort. Godot probes: (200,330) yellow — the bar covers the red block;
   // (700,330) blue — the blue one covers the bar. Without the body the first
   // is red, which no other golden would notice.
-  { name: 'ysort-own-body', file: 'unit-ysort-own-body.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'ysort-own-body', file: 'unit-ysort-own-body.tscn', mode: '2d' },
   // The 2D light surface: ADD/SUB/MIX applied against a lit surface, and an
   // inline gradient cookie under a canvas tint with an unshaded item beside it.
-  { name: 'pointlight2d-blend', file: 'unit-pointlight2d-blend.tscn', mode: '2d', maxDiffPct: 0.5 },
-  { name: 'pointlight2d-gradient', file: 'unit-pointlight2d-gradient.tscn', mode: '2d', maxDiffPct: 0.5 },
-  { name: 'pointlight2d-lightonly', file: 'unit-pointlight2d-lightonly.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'pointlight2d-blend', file: 'unit-pointlight2d-blend.tscn', mode: '2d' },
+  { name: 'pointlight2d-gradient', file: 'unit-pointlight2d-gradient.tscn', mode: '2d' },
+  { name: 'pointlight2d-lightonly', file: 'unit-pointlight2d-lightonly.tscn', mode: '2d' },
   // Godot's light culling: `light.range_item_cull_mask & item.light_mask != 0`.
   // Four panels under two lights of different cull masks: one panel takes only
   // the warm light, its NEIGHBOUR only the cool one, the third both, and the
   // fourth sits right under the cool light and takes neither. Nothing else in
   // the goldens sets either mask, so without this a light that reached
   // everything under it would move no baseline at all.
-  { name: 'pointlight2d-cull-mask', file: 'unit-pointlight2d-cull-mask.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'pointlight2d-cull-mask', file: 'unit-pointlight2d-cull-mask.tscn', mode: '2d' },
   // The two range windows, which are the other half of the same cull test.
   // `range_z_max = 4` over panels at z_index 0, 4 and 5 pins the per-ITEM z
   // window and its inclusive upper bound; a default light over a world panel and
   // a bare CanvasLayer panel pins the per-CANVAS layer window, whose 0..0
   // default is why Godot never lights an untouched HUD.
-  { name: 'pointlight2d-range-z', file: 'unit-pointlight2d-range-z.tscn', mode: '2d', maxDiffPct: 0.5 },
-  { name: 'pointlight2d-range-layer', file: 'unit-pointlight2d-range-layer.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'pointlight2d-range-z', file: 'unit-pointlight2d-range-z.tscn', mode: '2d' },
+  { name: 'pointlight2d-range-layer', file: 'unit-pointlight2d-range-layer.tscn', mode: '2d' },
   // LightOccluder2D shadows, one behaviour per fixture. A shadow withholds a
   // light from the geometry behind the occluder; it never darkens what the
   // light did not reach, so an unlit surface is the same grey either way.
-  { name: 'lightoccluder2d-shadow-closed', file: 'unit-lightoccluder2d-shadow-closed.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'lightoccluder2d-shadow-closed', file: 'unit-lightoccluder2d-shadow-closed.tscn', mode: '2d' },
   // These two had fixtures and comparison images but no baseline, so nothing
   // guarded them — including `unit-lightoccluder2d-shadow`, the single-edge case
   // the LightOccluder2D sheet leads with. Every other occluder behaviour was
   // pinned, which is exactly why the gap was easy to miss.
-  { name: 'lightoccluder2d', file: 'unit-lightoccluder2d.tscn', mode: '2d', maxDiffPct: 0.5 },
-  { name: 'lightoccluder2d-shadow', file: 'unit-lightoccluder2d-shadow.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'lightoccluder2d', file: 'unit-lightoccluder2d.tscn', mode: '2d' },
+  { name: 'lightoccluder2d-shadow', file: 'unit-lightoccluder2d-shadow.tscn', mode: '2d' },
   // `cull_mode` 0/1/2: which winding of an occluder's edges casts. The reversed
   // pair is the same two occluders with the polygon wound the other way, so
   // CLOCKWISE and COUNTER_CLOCKWISE swap and DISABLED stays put — a cull test
   // that read winding-independently would leave one of the two baselines flat.
-  { name: 'lightoccluder2d-cull-mode', file: 'unit-lightoccluder2d-cull-mode.tscn', mode: '2d', maxDiffPct: 0.5 },
-  { name: 'lightoccluder2d-cull-mode-reversed', file: 'unit-lightoccluder2d-cull-mode-reversed.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'lightoccluder2d-cull-mode', file: 'unit-lightoccluder2d-cull-mode.tscn', mode: '2d' },
+  { name: 'lightoccluder2d-cull-mode-reversed', file: 'unit-lightoccluder2d-cull-mode-reversed.tscn', mode: '2d' },
   // `shadow_color` is the light's, not the occluder's, and it REPLACES the light
   // term rather than withholding it. It is also the one light term Godot does not
   // multiply by the item's albedo, so it rides its own accumulator — a baseline
   // that folded it into the ordinary one would sit a whole albedo out.
-  { name: 'lightoccluder2d-shadow-color', file: 'unit-lightoccluder2d-shadow-color.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'lightoccluder2d-shadow-color', file: 'unit-lightoccluder2d-shadow-color.tscn', mode: '2d' },
   // `shadow_item_cull_mask & occluder.light_mask`: one occluder casts, its twin
   // is culled by the same light.
-  { name: 'lightoccluder2d-shadow-mask', file: 'unit-lightoccluder2d-shadow-mask.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'lightoccluder2d-shadow-mask', file: 'unit-lightoccluder2d-shadow-mask.tscn', mode: '2d' },
   // Two shadowed lights in one accumulation pass: each must clear the stencil
   // before it stamps, or the first light's volume also cuts the second's.
-  { name: 'lightoccluder2d-two-lights', file: 'unit-lightoccluder2d-two-lights.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'lightoccluder2d-two-lights', file: 'unit-lightoccluder2d-two-lights.tscn', mode: '2d' },
   // `shadow_filter`: the boundary is a STEPPED penumbra, not an edge, and every
   // occluder fixture above leaves the property at NONE — so without these three
   // the whole filtered mechanism is unpinned. The occluder's upper endpoint sits
@@ -457,50 +437,50 @@ export const GOLDEN_SCENES = [
   // the (1-s)^2 falloff, with the step boundaries 19.4 px either side of the
   // geometric edge. PCF13 spreads the same ramp over the wider kernel, and the
   // colour fixture pins the fractional tint the two accumulators split.
-  { name: 'pointlight2d-shadow-pcf5', file: 'unit-pointlight2d-shadow-pcf5.tscn', mode: '2d', maxDiffPct: 0.5 },
-  { name: 'pointlight2d-shadow-pcf13', file: 'unit-pointlight2d-shadow-pcf13.tscn', mode: '2d', maxDiffPct: 0.5 },
-  { name: 'pointlight2d-shadow-pcf-color', file: 'unit-pointlight2d-shadow-pcf-color.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'pointlight2d-shadow-pcf5', file: 'unit-pointlight2d-shadow-pcf5.tscn', mode: '2d' },
+  { name: 'pointlight2d-shadow-pcf13', file: 'unit-pointlight2d-shadow-pcf13.tscn', mode: '2d' },
+  { name: 'pointlight2d-shadow-pcf-color', file: 'unit-pointlight2d-shadow-pcf-color.tscn', mode: '2d' },
   // CPUParticles2D renders a FROZEN pose, so these baselines are what prove it
   // settles: a live emitter would never produce two identical frames and the
   // harness would fail it as unstable rather than as changed. Each fixture pins
   // `use_fixed_seed`/`seed`/`fixed_fps`/`preprocess` so the pose is one exact
   // draw rather than a plausible one.
-  { name: 'cpuparticles2d', file: 'unit-cpuparticles2d.tscn', mode: '2d', maxDiffPct: 0.5 },
-  { name: 'cpuparticles2d-emission-shapes', file: 'unit-cpuparticles2d-emission-shapes.tscn', mode: '2d', maxDiffPct: 0.5 },
-  { name: 'cpuparticles2d-curves', file: 'unit-cpuparticles2d-curves.tscn', mode: '2d', maxDiffPct: 0.5 },
-  { name: 'cpuparticles2d-color-ramp', file: 'unit-cpuparticles2d-color-ramp.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'cpuparticles2d', file: 'unit-cpuparticles2d.tscn', mode: '2d' },
+  { name: 'cpuparticles2d-emission-shapes', file: 'unit-cpuparticles2d-emission-shapes.tscn', mode: '2d' },
+  { name: 'cpuparticles2d-curves', file: 'unit-cpuparticles2d-curves.tscn', mode: '2d' },
+  { name: 'cpuparticles2d-color-ramp', file: 'unit-cpuparticles2d-color-ramp.tscn', mode: '2d' },
   // A scaled emitter whose particles must NOT scale with it: Godot's default
   // `local_coords = false` emits into world space, which the dungeon candle relies on.
-  { name: 'cpuparticles2d-local-coords', file: 'unit-cpuparticles2d-local-coords.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'cpuparticles2d-local-coords', file: 'unit-cpuparticles2d-local-coords.tscn', mode: '2d' },
   // `emitting = false` draws nothing. Script-triggered one-shot emitters ship
   // this way, so a regression that started drawing them would be widespread.
-  { name: 'cpuparticles2d-not-emitting', file: 'unit-cpuparticles2d-not-emitting.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'cpuparticles2d-not-emitting', file: 'unit-cpuparticles2d-not-emitting.tscn', mode: '2d' },
   // The one emitter that authors no `preprocess`, so it is the only one whose
   // instant the previewer substitutes rather than reads. Its lifetime is
   // deliberately not a multiple of the step, so the settle's whole-frame
   // overshoot is in the picture. Arbitrated against Godot at the same instant
   // via `--particles 0.95`; the fixture header carries the command.
-  { name: 'cpuparticles2d-unpreprocessed', file: 'unit-cpuparticles2d-unpreprocessed.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'cpuparticles2d-unpreprocessed', file: 'unit-cpuparticles2d-unpreprocessed.tscn', mode: '2d' },
   // The one emitter here that does NOT pin its seed, so it is the only one that
   // exercises the substituted one. Godot cannot draw this scene the same way
   // twice; the previewer must, and this baseline is the whole assertion of that.
   // Its image records OUR pose and is not arbitrable against a reference.
-  { name: 'cpuparticles2d-unseeded', file: 'unit-cpuparticles2d-unseeded.tscn', mode: '2d', maxDiffPct: 0 },
+  { name: 'cpuparticles2d-unseeded', file: 'unit-cpuparticles2d-unseeded.tscn', mode: '2d' },
   // Baseline corrected in the Y-flip fix: a NavigationPolygon's vertices are
   // Godot canvas pixels (+Y DOWN), and this overlay was the one 2D geometry
   // path that skipped the negation — so the navmesh used to sit ABOVE the
   // region origin instead of below it.
-  { name: 'navigation-region-2d', file: 'unit-navigation-region-2d.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'navigation-region-2d', file: 'unit-navigation-region-2d.tscn', mode: '2d' },
   // A ParallaxBackground is a CanvasLayer: its subtree hangs off the VIEWPORT,
   // so the blue bar stays at the canvas origin while the red reference bar under
   // the same displaced parent moves with it. Every other 2D golden composes
   // transforms the ordinary way and would still match if that chain were
   // re-attached.
-  { name: 'parallax-background', file: 'unit-parallax-background.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'parallax-background', file: 'unit-parallax-background.tscn', mode: '2d' },
   // `motion_mirroring` draws the layer a SECOND time, 200 px right — the only
   // repeated canvas subtree in the corpus, and the only property of a
   // ParallaxLayer a camera-less still frame can show at all.
-  { name: 'parallax-layer', file: 'unit-parallax-layer.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'parallax-layer', file: 'unit-parallax-layer.tscn', mode: '2d' },
   // NOTE: AreaLight3D deliberately has no golden — its fixture is light-only
   // (no lit geometry), so the frame is blank. Add one once the fixture gains a
   // lit surface to show the emitter's effect.
@@ -511,27 +491,23 @@ export const GOLDEN_SCENES = [
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property showcase guard (12 spheres across 4 rows: basic PBR,
   // emission/normal, advanced PBR, transparency/glass).
-  // Held a 0.5 threshold and a permanent 0.092% miss for months. The miss was
-  // real: the emission colour-space fix landed after this baseline was written
-  // and rebaselined only the glow/emission-specific goldens, so a global
-  // tonemap change never reached this one. Arbitrated against Godot rather
-  // than against the stale PNG — over the pixels where the two disagreed, the
-  // render measured 13.4% closer to Godot than the baseline was — then
-  // rebaselined and returned to the strict default. A loose threshold is what
-  // let a genuine global change hide here; it does not get one back.
+  // The scene a loose budget hid a global change in: an emission colour-space
+  // fix rebaselined only the glow/emission goldens, and the tonemap shift it
+  // left here sat inside this scene's own tolerance for months. Arbitrated
+  // against Godot rather than against the stale PNG — over the pixels where the
+  // two disagreed, the render measured 13.4% closer to Godot than the baseline
+  // was — and rebaselined on that.
   { name: 'material-features', file: 'integration-material-features.tscn' },
   // StandardMaterial3D `billboard_mode = ENABLED` on a QuadMesh: the left quad
   // must turn to face the camera (full asymmetric walk sprite) while the right
   // quad (billboard_mode = DISABLED) foreshortens at the editor orbit. The only
   // golden that exercises mesh billboarding — every other fixture leaves it
-  // inert. Sprite edges antialias against the ground, hence the relaxed
-  // threshold.
-  { name: 'material-billboard', file: 'unit-material-billboard.tscn', maxDiffPct: 0.5 },
+  // inert.
+  { name: 'material-billboard', file: 'unit-material-billboard.tscn' },
   // An additive, unshaded, billboarded QuadMesh with a radial GradientTexture2D
   // reads as a soft gold ring over the dark ground, beside a metallic + emissive
-  // body. Pins the additive-billboard-gradient glow path. Additive edges →
-  // relaxed threshold.
-  { name: 'coin-glow', file: 'unit-coin-glow.tscn', maxDiffPct: 0.5 },
+  // body. Pins the additive-billboard-gradient glow path.
+  { name: 'coin-glow', file: 'unit-coin-glow.tscn' },
 
   // --- Sprite2D/Sprite3D + 3D physics-body roundout ---
   { name: 'sprite2d', file: 'unit-sprite2d.tscn', mode: '2d' },
@@ -581,17 +557,15 @@ export const GOLDEN_SCENES = [
   // tile slices — was guarded by nothing but a hand-written array in the test
   // written alongside it. The marker glyph is asymmetric on both axes, so each
   // orientation is visually distinct.
-  // Tight threshold on purpose: a 2D canvas render with no AA-sensitive
-  // shading is byte-stable, and only the four TRANSPOSED cells move when the
-  // composition order is wrong — 0.21% of the frame. The default 0.1% leaves
-  // too little margin for a guard this specific.
-  { name: 'tile-map-layer-flips', file: 'unit-tile-map-layer-flips.tscn', mode: '2d', maxDiffPct: 0.02 },
+  // Only the four TRANSPOSED cells move when the composition order is wrong —
+  // 0.21% of the frame, so this guard is as specific as it is small.
+  { name: 'tile-map-layer-flips', file: 'unit-tile-map-layer-flips.tscn', mode: '2d' },
   { name: 'tile-map-layer-isometric', file: 'unit-tile-map-layer-isometric.tscn', mode: '2d' },
-  // Y-sort (issue 74) regression guard: the full isometric dungeon. Sibling y-sort
-  // subtrees (Floor / Walls / Decorations under the non-y-sorted root) must layer in
-  // disjoint tree-ordered z-bands, and each layer's tiles interleave with decorations
-  // by Y — decorations must NOT hide behind the floor. maxDiffPct covers SwiftShader AA.
-  { name: 'isometric-dungeon', file: 'dungeon.tscn', mode: '2d', maxDiffPct: 0.5 },
+  // Y-sort regression guard: the full isometric dungeon. Sibling y-sort subtrees
+  // (Floor / Walls / Decorations under the non-y-sorted root) must layer in
+  // disjoint tree-ordered z-bands, and each layer's tiles interleave with
+  // decorations by Y — decorations must NOT hide behind the floor.
+  { name: 'isometric-dungeon', file: 'dungeon.tscn', mode: '2d' },
   // Hexagon grid (shape=3, vertical offset axis): odd columns stagger by
   // half a tile — the half-offset placement math had no visual guard before.
   { name: 'tile-map-layer-hexagon', file: 'unit-tile-map-layer-hexagon.tscn', mode: '2d' },
@@ -604,7 +578,7 @@ export const GOLDEN_SCENES = [
   // relay's +2; the 2D pentagon is authored at the gray ghost's spot but
   // driven to the relay's upper-right. Verified against real Godot 4.6.3.
   { name: 'remote-transform-3d', file: 'unit-remote-transform-3d.tscn' },
-  { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', mode: '2d' },
 
   // --- ViewportTexture: content sampled THROUGH a SubViewport target ---
   // The only golden that consumes a render target, so it alone pins the
@@ -622,9 +596,9 @@ export const GOLDEN_SCENES = [
   // first time they can be golden-gated at all. Each scene below moves ONE
   // piece of that renderer and its fixture header says which; between them
   // they cover the container solve, the StyleBoxFlat raster, the text engine,
-  // a composite widget, clipping, and a viewport surface. All hold the strict
-  // default threshold — the parity capture is a 1:1 frame with no camera fit,
-  // and these draw flat fills and glyphs rather than shaded geometry.
+  // a composite widget, clipping, and a viewport surface. The parity capture is
+  // a 1:1 frame with no camera fit, and these draw flat fills and glyphs rather
+  // than shaded geometry.
   //
   // Every scene's layout was measured through Godot 4.6.3 at `--mode 2d`
   // before its baseline was written; the fixtures record the probes.
@@ -752,5 +726,5 @@ export const GOLDEN_SCENES = [
   // has, by construction, nothing to interact with — the two faults it found on
   // its first capture were each invisible to all 23 single-widget scenes.
   // Text-dense, so MSDF stem antialiasing dominates its diff.
-  { name: 'complex-2d-gui', file: 'complex-2d-gui.tscn', mode: '2d', maxDiffPct: 0.5 },
+  { name: 'complex-2d-gui', file: 'complex-2d-gui.tscn', mode: '2d' },
 ];

@@ -35,14 +35,15 @@ geometry:
   floor more than we do at a partial `albedo_mix`, so its checkerboards are
   paler; ours are higher-contrast. Exact `albedo_mix` blending needs a custom
   projector shader. It is the whole of the frame's divergence and it is large:
-  `pnpm ref:diff scenes/fixtures/unit-decal.tscn` reports 13.013 % (93,949 px of
-  955x756), and `unit-decal-gradienttexture.tscn` — the same projection driven by
-  an inline `GradientTexture2D` — 12.881 %, the same magnitude through a
-  different texture source. Inside the footprint of the latter, Godot's centre
-  reads rgb(237, 165, 160) against our rgb(243, 96, 61) and its edge
-  rgb(153, 161, 223) against rgb(59, 84, 221). The floor OUTSIDE the footprint
-  matches to a single level, rgb(227, 230, 234) against rgb(226, 229, 233), so
-  the projection's composite is the whole of it.
+  `pnpm ref:diff scenes/fixtures/unit-decal.tscn` reports a mean channel error of
+  9.107/255 over the 955x756 frame, and `unit-decal-gradienttexture.tscn` — the
+  same projection driven by an inline `GradientTexture2D` — 8.361/255, the same
+  magnitude through a different texture source; the CSG fixtures measured the same
+  way sit near 2/255. Inside the footprint of the latter, Godot's centre reads
+  rgb(237, 165, 160) against our rgb(243, 96, 61) and its edge rgb(153, 161, 223)
+  against rgb(59, 84, 221). The floor OUTSIDE the footprint matches to a single
+  level, rgb(227, 230, 234) against rgb(226, 229, 233), so the projection's
+  composite carries the divergence.
 - **No edge fades.** `upper/lower/normal_fade`, `distance_fade_*` and `cull_mask`
   need per-fragment work the baked `DecalGeometry` mesh cannot do. They are
   near-invisible on the flat surfaces decals usually target.

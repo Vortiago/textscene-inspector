@@ -27,9 +27,8 @@ row and its cross-axis fill. Here two Labels ("Left", "Right") each carry
 
 None visible in this fixture. `pnpm ref:godot
 scenes/fixtures/unit-hbox-container.tscn --mode 2d` against `pnpm ref:ours
-unit-hbox-container.tscn --2d` puts 34 px of 1152x648 (0.005%) outside the
-visual harness's tolerance, at a mean channel error of 0.01/255 — all of it on
-the two labels' glyph edges.
+unit-hbox-container.tscn --2d` differs at a mean channel error of 0.01/255 over
+the 1152x648 frame — all of it on the two labels' glyph edges.
 
 ## Linting
 

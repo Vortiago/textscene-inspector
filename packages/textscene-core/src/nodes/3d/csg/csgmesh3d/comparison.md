@@ -38,8 +38,10 @@ in a boolean.
 
 ## Divergences
 
-None visible in this fixture. Measured at 0.030% against Godot 4.6.3 with
-`pnpm ref:diff unit-csg-mesh.tscn`.
+None visible in this fixture. `pnpm ref:diff unit-csg-mesh.tscn` measures it
+against Godot 4.6.3 at a mean channel error of 2.249/255 over the frame, worst
+channel 159/255 — spread across the sky, the lit surfaces and the silhouette's
+antialiased edge rather than localised to the resolved mesh.
 
 ## Linting
 

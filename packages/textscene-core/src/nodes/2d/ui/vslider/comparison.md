@@ -30,9 +30,9 @@ and `max_value` at the top, and the `grabber_area` fills upward from the bottom.
 
 None measurable in this fixture. `pnpm ref:godot
 scenes/fixtures/unit-vslider.tscn --mode 2d` and `pnpm ref:ours unit-vslider.tscn
---2d` differ on ZERO pixels under the visual harness's tolerance, at a mean
-channel error of 0.03/255 over the frame — the grabber is the same
-`slider_grabber` texture HSlider's sheet measures, not a substitute shape.
+--2d` differ at a mean channel error of 0.03/255 over the frame — the grabber is
+the same `slider_grabber` texture HSlider's sheet measures, not a substitute
+shape.
 
 Tick marks are NOT mirrored with the value axis. Godot's vertical tick loop
 computes `ofs = i * areasize / (ticks - 1) + grabber_offset` and draws downward

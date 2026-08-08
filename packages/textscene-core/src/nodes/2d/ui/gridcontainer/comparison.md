@@ -29,9 +29,9 @@ the rows to the top.
 
 None visible in this fixture. `pnpm ref:godot
 scenes/fixtures/unit-grid-container.tscn --mode 2d` against `pnpm ref:ours
-unit-grid-container.tscn --2d` puts 517 px of 1152x648 (0.069%) outside the
-visual harness's tolerance, at a mean channel error of 0.15/255 — glyph edges,
-plus the second column starting one pixel apart (x 97 against x 96).
+unit-grid-container.tscn --2d` differs at a mean channel error of 0.15/255 over
+the 1152x648 frame — glyph edges, plus the second column starting one pixel
+apart (x 97 against x 96).
 
 ## Linting
 

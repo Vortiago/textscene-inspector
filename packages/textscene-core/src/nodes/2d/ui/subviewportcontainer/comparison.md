@@ -89,8 +89,8 @@ scenes/fixtures/unit-sub-viewport-container-2d-content.tscn --mode 2d --probe
 The 1-byte gap is the 8-bit **linear** intermediate: Godot keeps float precision
 to its swap chain, while the target quantises before the curve expands the
 darks. Dark gradients inside a sub-viewport band slightly more than the same
-content drawn directly. Nothing else in the frame differs — pixelmatch reports
-zero differing pixels at a mean channel error of 0.04/255.
+content drawn directly. Over the whole frame that is a mean channel error of
+0.04/255 — the scale of a one-count rounding, not of a shading difference.
 
 Both content kinds land on the same value.
 `unit-sub-viewport-container-3d-content.tscn` is

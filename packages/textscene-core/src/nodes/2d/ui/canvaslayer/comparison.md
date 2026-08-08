@@ -23,9 +23,8 @@ the evidence the layer hosts and viewport-anchors its child faithfully.
 
 None visible in this fixture. `pnpm ref:godot
 scenes/fixtures/unit-canvas-layer.tscn --mode 2d` against `pnpm ref:ours
-unit-canvas-layer.tscn --2d` puts 82 px of 1152x648 (0.011%) outside the visual
-harness's tolerance, at a mean channel error of 0.02/255 — all of it on the
-label's glyph edges.
+unit-canvas-layer.tscn --2d` differs at a mean channel error of 0.02/255 over
+the 1152x648 frame — all of it on the label's glyph edges.
 
 ## Linting
 

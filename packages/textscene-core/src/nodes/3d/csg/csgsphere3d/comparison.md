@@ -23,8 +23,10 @@ sphere carrying its StandardMaterial3D. The CSG boolean `operation` IS applied
 
 ## Divergences
 
-None visible in this fixture. Measured at 0.013% against Godot 4.6.3 with
-`pnpm ref:diff unit-csg-sphere.tscn`.
+None visible in this fixture. `pnpm ref:diff unit-csg-sphere.tscn` measures it
+against Godot 4.6.3 at a mean channel error of 2.092/255 over the frame, worst
+channel 86/255 — spread across the sky, the lit surfaces and the silhouette's
+antialiased edge rather than localised to the shape.
 
 ## Linting
 

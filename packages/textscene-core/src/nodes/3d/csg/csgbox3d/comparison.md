@@ -27,8 +27,10 @@ the far end.
 
 ## Divergences
 
-None visible in this fixture. Measured at 0.011% against Godot 4.6.3 with
-`pnpm ref:diff unit-csg-box.tscn`.
+None visible in this fixture. `pnpm ref:diff unit-csg-box.tscn` measures it
+against Godot 4.6.3 at a mean channel error of 1.570/255 over the frame, worst
+channel 62/255 — spread across the sky, the lit surfaces and the silhouette's
+antialiased edge rather than localised to the shape.
 
 ## Linting
 

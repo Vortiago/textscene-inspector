@@ -33,8 +33,10 @@ to `true` here, unlike CSGPolygon3D, where it defaults to `false`.
 
 ## Divergences
 
-None visible in this fixture. Measured at 0.046% against Godot 4.6.3 with
-`pnpm ref:diff unit-csg-torus.tscn`.
+None visible in this fixture. `pnpm ref:diff unit-csg-torus.tscn` measures it
+against Godot 4.6.3 at a mean channel error of 2.156/255 over the frame, worst
+channel 110/255 — spread across the sky, the lit surfaces and the silhouette's
+antialiased edge rather than localised to the ring.
 
 ## Linting
 

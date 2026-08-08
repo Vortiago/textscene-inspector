@@ -23,9 +23,9 @@ alpha included.
 ## Divergences
 
 None visible in this fixture. `pnpm ref:godot scenes/fixtures/unit-color-rect.tscn
---mode 2d` and `pnpm ref:ours unit-color-rect.tscn --2d` put no pixel outside the
-visual harness's tolerance at all. The two opaque boxes are byte-identical
-(rgb(217, 51, 51) and rgb(255, 255, 255)), and all three land on the same
+--mode 2d` and `pnpm ref:ours unit-color-rect.tscn --2d` agree on every opaque
+pixel. The two opaque boxes are byte-identical (rgb(217, 51, 51) and
+rgb(255, 255, 255)), and all three land on the same
 columns; the only difference in the frame is the half-alpha box's blend against
 the backdrop, rgb(64, 89, 147) against rgb(64, 89, 146) — one count of rounding
 on the blue channel, over that box alone.

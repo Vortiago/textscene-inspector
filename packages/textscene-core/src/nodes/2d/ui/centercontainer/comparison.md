@@ -23,9 +23,8 @@ horizontally and vertically. The container draws nothing itself — only the cen
 
 None visible in this fixture. `pnpm ref:godot
 scenes/fixtures/unit-center-container.tscn --mode 2d` against `pnpm ref:ours
-unit-center-container.tscn --2d` puts 69 px of 1152x648 (0.009%) outside the
-visual harness's tolerance, at a mean channel error of 0.01/255 — all of it on
-the centred label's glyph edges.
+unit-center-container.tscn --2d` differs at a mean channel error of 0.01/255
+over the 1152x648 frame — all of it on the centred label's glyph edges.
 
 ## Linting
 
