@@ -397,6 +397,18 @@ neighbour's so a magnified bilinear sample cannot bleed a hidden key colour into
 the visible fringe. `applyAlphaBorderFix` runs it once at decode and returns the
 original texture untouched when the pass changes nothing.
 
+It also returns the original in two cases where Godot *would* rewrite and we
+cannot, both forced by the readback rather than by Godot: pixels arrive through
+a 2D canvas whose store is premultiplied 8-bit, and the pass substitutes a
+`DataTexture` for the **whole** image. So an image carrying partial alpha would
+have every soft texel degraded to repair its transparent ones, and a transparent
+texel with no opaque neighbour within the search radius — which Godot leaves
+holding its own RGB — would come back black, because premultiplication zeroed it
+before the readback. Both are skipped, leaving those textures exactly as decoded.
+Measured against Godot, applying the pass through this readback costs far more
+than it repairs on a soft-edged image; closing the gap needs a decode path that
+does not go through a canvas.
+
 External resources (textures, materials, GLB meshes, packed scenes) flow through
 a **two-bus, event-driven pipeline** — *not* promises/Suspense at the component
 boundary. `request(path)` is fire-and-forget (returns `void`); a component learns

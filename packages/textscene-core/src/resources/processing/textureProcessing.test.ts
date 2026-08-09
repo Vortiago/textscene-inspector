@@ -190,6 +190,50 @@ describe('applyAlphaBorderFix', () => {
     expect(applyAlphaBorderFix(texture, () => pixels)).toBe(texture);
   });
 
+  /**
+   * A soft-edged image must come back untouched even though it HAS a texel this
+   * pass would rewrite. Substituting replaces the whole image, and the pixels
+   * arrive un-premultiplied from a premultiplied 8-bit store — exact only at
+   * alpha 0 and 255 — so every partial texel would be degraded to repair the
+   * transparent ones. Measured against Godot that is a net loss, worst on a
+   * radial light falloff, which carries no opaque texel at all.
+   */
+  it('leaves an image carrying partial alpha alone, however much it would rewrite', () => {
+    const texture = new THREE.Texture();
+    const softEdged = () => ({
+      // Transparent magenta (would be rewritten), a half-alpha texel, an opaque source.
+      data: new Uint8Array([255, 0, 255, 0, 90, 90, 90, 128, 10, 20, 30, 255]),
+      width: 3,
+      height: 1,
+    });
+    expect(applyAlphaBorderFix(texture, softEdged)).toBe(texture);
+  });
+
+  it('still substitutes when the only alphas are 0 and 255', () => {
+    const texture = new THREE.Texture();
+    expect(applyAlphaBorderFix(texture, needsFix)).not.toBe(texture);
+  });
+
+  /**
+   * Godot leaves a transparent texel with no opaque neighbour carrying its own
+   * RGB. We never see that RGB — the premultiplied store zeroed it before the
+   * readback — so substituting would publish black there. One such texel is
+   * enough to make the whole substituted image wrong, even though other
+   * transparent texels in the same image DO have a source and would be fixed.
+   */
+  it('leaves the image alone when any transparent texel is out of reach of an opaque one', () => {
+    const texture = new THREE.Texture();
+    const stranded = () => {
+      // 7x1: a transparent texel beside an opaque one (fixable), then a run of
+      // transparent texels whose last is 5 apart — beyond the radius-4 search.
+      const data = new Uint8Array(7 * 4);
+      data.set([255, 0, 255, 0], 0);
+      data.set([10, 20, 30, 255], 4);
+      return { data, width: 7, height: 1 };
+    };
+    expect(applyAlphaBorderFix(texture, stranded)).toBe(texture);
+  });
+
   it('replaces the texture with one whose transparent texel carries its neighbour RGB', () => {
     const texture = new THREE.Texture();
     const fixed = applyAlphaBorderFix(texture, needsFix);

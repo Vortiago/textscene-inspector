@@ -95,7 +95,46 @@ export function fixAlphaEdges(data: Uint8Array, width: number, height: number): 
  * `null` when the image has no below-threshold texel at all — there is nothing
  * for the pass to rewrite, and the table would be built for nobody.
  */
-function opaqueCounts(data: Uint8Array, width: number, height: number): Int32Array | null {
+/**
+ * Whether every below-threshold texel has an opaque texel within `MAX_RADIUS`,
+ * i.e. whether the pass rewrites ALL of them and leaves none carrying its
+ * original RGB.
+ *
+ * Godot runs on the image's real bytes, so a transparent texel with no opaque
+ * neighbour simply keeps whatever RGB it had. We cannot reproduce that: our
+ * pixels arrive from a premultiplied canvas store, where alpha 0 has already
+ * forced RGB to zero, so an unrewritten texel would end up black instead of
+ * its original colour. When any such texel exists the substituted image is
+ * therefore wrong in a way the pass cannot repair, and the caller keeps the
+ * decoded texture instead.
+ */
+export function everyTransparentTexelHasASource(
+  data: Uint8Array | Uint8ClampedArray,
+  width: number,
+  height: number
+): boolean {
+  // `opaqueCounts` reports "no below-threshold texel anywhere" as null, which is
+  // vacuously true here: nothing is stranded when nothing needs a source.
+  const opaque = opaqueCounts(data, width, height);
+  if (!opaque) return true;
+  for (let y = 0; y < height; y++) {
+    const fromY = Math.max(0, y - MAX_RADIUS);
+    const toY = Math.min(height - 1, y + MAX_RADIUS);
+    for (let x = 0; x < width; x++) {
+      if (data[(y * width + x) * 4 + 3]! >= ALPHA_THRESHOLD) continue;
+      const fromX = Math.max(0, x - MAX_RADIUS);
+      const toX = Math.min(width - 1, x + MAX_RADIUS);
+      if (boxSum(opaque, width, fromX, fromY, toX, toY) === 0) return false;
+    }
+  }
+  return true;
+}
+
+function opaqueCounts(
+  data: Uint8Array | Uint8ClampedArray,
+  width: number,
+  height: number
+): Int32Array | null {
   let targets = 0;
   for (let i = 3; i < data.length; i += 4) {
     if (data[i]! < ALPHA_THRESHOLD) targets++;

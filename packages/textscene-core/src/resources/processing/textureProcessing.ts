@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import { readImagePixels, type ImagePixels } from '../../r3f/controls/withImageCanvas';
-import { fixAlphaEdges } from './fixAlphaEdges';
+import { everyTransparentTexelHasASource, fixAlphaEdges } from './fixAlphaEdges';
 
 /**
  * Get MIME type from file extension.
@@ -69,6 +69,36 @@ export async function createTextureFromBuffer(
 }
 
 /**
+ * Whether every texel is either fully transparent or fully opaque.
+ *
+ * This decides whether the alpha-border pass may run at all, and the reason is
+ * OUR readback rather than anything Godot does. Pixels come back through a 2D
+ * canvas, whose backing store is premultiplied 8-bit: un-premultiplying
+ * `rgb = stored / alpha` is exact at alpha 255 and carries no information at
+ * all at alpha 0 (where this pass supplies the colour anyway), but at every
+ * value between, the stored byte has already lost the low bits and the divide
+ * amplifies what is left. A soft-edged image round-tripped that way comes back
+ * visibly wrong.
+ *
+ * That would be a fair trade if the substitution were local, but it is not: the
+ * pass replaces the whole image with a `DataTexture`, so every partially
+ * transparent texel pays the round trip to repair the transparent ones. On a
+ * radial light falloff — no opaque texel anywhere, three quarters of it partial
+ * — that is a large net loss, measured against Godot.
+ *
+ * Binary alpha is exactly the case the pass exists for (a paletted sprite whose
+ * transparent texels keep a leftover key colour), and exactly the case the
+ * round trip carries losslessly.
+ */
+function hasOnlyBinaryAlpha(data: Uint8Array | Uint8ClampedArray): boolean {
+  for (let i = 3; i < data.length; i += 4) {
+    const alpha = data[i]!;
+    if (alpha !== 0 && alpha !== 255) return false;
+  }
+  return true;
+}
+
+/**
  * Godot's import-time alpha-border pass (`fixAlphaEdges.ts`) applied to a
  * freshly decoded texture — the one step between the bytes on disk and the
  * bytes Godot's renderer samples that reading a `res://` image directly would
@@ -80,12 +110,6 @@ export async function createTextureFromBuffer(
  * `DataTexture`: a canvas cannot carry them, because its backing store is
  * premultiplied and would zero the very RGB this pass just wrote behind alpha 0.
  *
- * Pixels are read through a 2D canvas, so they arrive un-premultiplied from a
- * premultiplied store. A texel at or just above the alpha threshold is a
- * REPLACEMENT SOURCE whose RGB survives that round trip only to about ±6/255;
- * one at alpha 255, which is where nearly every replacement colour comes from,
- * is exact.
- *
  * `readPixels` is a seam, not API: happy-dom cannot rasterize, so injecting the
  * read is the only way a test reaches the image-backed branch. Production
  * passes one argument.
@@ -96,6 +120,18 @@ export function applyAlphaBorderFix(
 ): THREE.Texture {
   const pixels = readPixels(texture.image);
   if (!pixels) return texture;
+
+  // The readback is only lossless at the two ends of the alpha range, and
+  // substituting a DataTexture replaces the WHOLE image, not just the texels
+  // this pass rewrites — so on an image carrying partial alpha the round trip
+  // corrupts far more than the pass repairs. See `hasOnlyBinaryAlpha`.
+  if (!hasOnlyBinaryAlpha(pixels.data)) return texture;
+
+  // The other half of the same readback limitation: a transparent texel with no
+  // opaque neighbour keeps its original RGB in Godot, and would come back black
+  // here, because the premultiplied store zeroed it before this pass ever saw
+  // it. Substituting is only faithful when the pass rewrites every one of them.
+  if (!everyTransparentTexelHasASource(pixels.data, pixels.width, pixels.height)) return texture;
 
   // Copy rather than rewrite in place: a reader that hands back a texture's own
   // buffer (a DataTexture already carries one) would otherwise have this pass
