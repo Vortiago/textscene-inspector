@@ -6,6 +6,13 @@
 ; the texture's own pixel size because Godot spawns in canvas space and draws
 ; the item with an identity transform, while the local-coords one is scaled up
 ; by its node like any other CanvasItem.
+;
+; `preprocess = 0.95`, not `1.0`: with `lifetime = 1.0` a preprocess of exactly
+; one lifetime lands the settle right on the cycle's own wrap instant, where
+; the whole stream has just recycled back toward the origin — a degenerate
+; instant for ANY emitter, not something this fixture's own variable
+; (`local_coords`) produces. 0.95 is the same window the other unauthored-
+; preprocess fixture in this slice settles to, off that boundary.
 
 [ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
 
@@ -21,7 +28,7 @@ scale = Vector2(3, 3)
 amount = 16
 texture = ExtResource("1_ball")
 lifetime = 1.0
-preprocess = 1.0
+preprocess = 0.95
 use_fixed_seed = true
 seed = 21
 fixed_fps = 30
@@ -41,7 +48,7 @@ scale = Vector2(3, 3)
 amount = 16
 texture = ExtResource("1_ball")
 lifetime = 1.0
-preprocess = 1.0
+preprocess = 0.95
 use_fixed_seed = true
 seed = 21
 fixed_fps = 30

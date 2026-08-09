@@ -306,8 +306,6 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
     const p = state.particles[i]!;
     if (!state.emitting && !p.active) continue;
 
-    const localDelta = delta;
-
     // The birth phase is the particle's slot in the stream: particle i is born
     // i/pcount of the way through each cycle, which is what makes a continuous
     // emitter show every age at once.
@@ -326,14 +324,10 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
     // emitter fires at once.
     restartPhase *= 1.0 - props.explosiveness;
     const restartTime = restartPhase * lifetime;
-    let restart = false;
 
-    if (state.time > prevTime) {
-      if (restartTime >= prevTime && restartTime < state.time) restart = true;
-    } else if (localDelta > 0.0) {
-      if (restartTime >= prevTime) restart = true;
-      else if (restartTime < state.time) restart = true;
-    }
+    const step = restartStep(prevTime, state.time, restartTime, lifetime, delta, props.fract_delta);
+    let restart = step.restart;
+    const localDelta = step.localDelta;
 
     if (p.time * (1.0 - props.explosiveness) > p.lifetime) restart = true;
 
@@ -351,7 +345,7 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
       }
     } else if (!p.active) {
       continue;
-    } else if (p.time >= p.lifetime) {
+    } else if (particleExpired(p.time, p.lifetime)) {
       p.active = false;
       tv = 1.0;
     } else {
@@ -365,6 +359,68 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
     p.transform.ox += p.velocity.x * localDelta;
     p.transform.oy += p.velocity.y * localDelta;
   }
+}
+
+/** `restartStep`'s return: whether particle `i` restarts this step, and the delta its position should integrate with. */
+export interface RestartStep {
+  restart: boolean;
+  /** `local_delta` — the whole step unless a restart shortens it (fract_delta). */
+  localDelta: number;
+}
+
+/**
+ * Whether particle `i` restarts THIS step, and the `local_delta` it should
+ * integrate position with — `cpu_particles_2d.cpp:807,829-852`. `local_delta`
+ * starts as the whole step and is narrowed only inside a restart branch, and
+ * only when `fractionalDelta` (Godot's `fract_delta`, default true) is set:
+ * a particle born partway through the step is credited only the REMAINDER of
+ * the step after its own restart instant, not the whole thing. Without that,
+ * every particle that restarts in the same step lands at the same
+ * displacement — Godot's actual comb-vs-bar mechanism.
+ *
+ * `prevTime`/`time` are the emitter's cycle time before/after this step
+ * (`time` already wrapped mod `lifetime` if the step crossed it); `restartTime`
+ * is `restartPhase * lifetime` for this particle.
+ */
+export function restartStep(
+  prevTime: number,
+  time: number,
+  restartTime: number,
+  lifetime: number,
+  delta: number,
+  fractionalDelta: boolean
+): RestartStep {
+  let restart = false;
+  let localDelta = delta;
+
+  if (time > prevTime) {
+    // restartTime >= prevTime is used so particles emit in the first frame
+    // they are processed (`:830`).
+    if (restartTime >= prevTime && restartTime < time) {
+      restart = true;
+      if (fractionalDelta) localDelta = time - restartTime;
+    }
+  } else if (delta > 0.0) {
+    // The step wrapped past `lifetime`: `time` is now on the OTHER side of
+    // zero from `prevTime`, so a restart phase near the tail of the cycle
+    // (restartTime >= prevTime) gets the slice up to the old boundary plus
+    // however far past zero `time` has gone; one right after zero
+    // (restartTime < time) gets the ordinary slice.
+    if (restartTime >= prevTime) {
+      restart = true;
+      if (fractionalDelta) localDelta = lifetime - restartTime + time;
+    } else if (restartTime < time) {
+      restart = true;
+      if (fractionalDelta) localDelta = time - restartTime;
+    }
+  }
+
+  return { restart, localDelta };
+}
+
+/** `p.time > p.lifetime` (`cpu_particles_2d.cpp:971`) — strict, so a particle exactly at its lifetime gets one more advancing step before it dies. */
+export function particleExpired(time: number, lifetime: number): boolean {
+  return time > lifetime;
 }
 
 /** The `restart` branch: a fresh draw from the per-particle RNG. */

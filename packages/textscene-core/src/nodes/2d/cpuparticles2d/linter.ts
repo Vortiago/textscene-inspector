@@ -1,11 +1,11 @@
 /**
- * Semantic rules for CPUParticles2D — the two settings whose result the
+ * Semantic rules for CPUParticles2D — the one setting whose result the
  * previewer's frozen pose cannot reproduce.
  *
- * Both are advisory (WARNING, never error): each is legal Godot that renders
- * fine in the engine. The warning exists because the divergence is otherwise
- * invisible — the emitter still draws particles, just not in the places the
- * property asks for.
+ * Advisory (WARNING, never error): it is legal Godot that renders fine in the
+ * engine. The warning exists because the divergence is otherwise invisible —
+ * the emitter still draws particles, just not in the places the property
+ * asks for.
  *
  * Format validation lives in linterParser.ts.
  */
@@ -47,18 +47,6 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Godot's default is TRUE, so only an explicit setting is worth reporting —
-  // warning on every emitter that omits the property would say nothing.
-  if (props.fract_delta === 'true') {
-    diagnostics.push({
-      severity: 'warning',
-      message: `CPUParticles2D 'fract_delta' gives a restarting particle a partial first step. The previewer's frozen pose steps at a fixed rate and ignores it, so particles land up to one frame behind Godot's.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'cpuparticles2d-fract-delta-ignored',
-    });
-  }
-
   return diagnostics;
 }
 
@@ -66,13 +54,10 @@ const cpuParticles2DPreviewRule: LintRule = {
   meta: {
     name: 'valid-cpuparticles2d-preview',
     description:
-      'Flags CPUParticles2D settings the previewer’s frozen pose cannot reproduce: global-RNG emission shapes and fractional delta',
+      'Flags CPUParticles2D settings the previewer’s frozen pose cannot reproduce: global-RNG emission shapes',
     category: 'validation',
     applicableNodeTypes: ['CPUParticles2D'],
-    emits: [
-      { ruleName: 'cpuparticles2d-nondeterministic-emission-shape', severity: 'warning' },
-      { ruleName: 'cpuparticles2d-fract-delta-ignored', severity: 'warning' },
-    ],
+    emits: [{ ruleName: 'cpuparticles2d-nondeterministic-emission-shape', severity: 'warning' }],
   },
   check: checkCPUParticles2D,
 };

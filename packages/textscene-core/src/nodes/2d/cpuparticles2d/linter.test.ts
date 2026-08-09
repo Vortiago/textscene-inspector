@@ -1,5 +1,5 @@
 /**
- * CPUParticles2D semantic rules: the two advisory warnings for settings the
+ * CPUParticles2D semantic rules: the advisory warning for the one setting the
  * frozen pose cannot reproduce.
  */
 
@@ -47,38 +47,14 @@ describe('CPUParticles2D preview rule', () => {
     );
   });
 
-  it('warns when `fract_delta` is explicitly enabled', () => {
-    const content = scene('fract_delta = true\n');
-    expect(namesOf(content)).toContain('cpuparticles2d-fract-delta-ignored');
-    expect(severitiesOf(content, 'cpuparticles2d-fract-delta-ignored')).toEqual(['warning']);
-  });
-
-  it('stays silent when `fract_delta` is omitted, though Godot defaults it TRUE', () => {
-    // Warning on the default would fire for every emitter in every scene and
-    // so tell the reader nothing about THIS one.
-    expect(namesOf(scene('amount = 8\n'))).not.toContain('cpuparticles2d-fract-delta-ignored');
-  });
-
-  it('stays silent when `fract_delta` is explicitly disabled', () => {
-    expect(namesOf(scene('fract_delta = false\n'))).not.toContain(
-      'cpuparticles2d-fract-delta-ignored'
-    );
-  });
-
-  it('reports both warnings together when both apply', () => {
-    const names = namesOf(scene('emission_shape = 6\nfract_delta = true\n'));
-    expect(names).toContain('cpuparticles2d-nondeterministic-emission-shape');
-    expect(names).toContain('cpuparticles2d-fract-delta-ignored');
-  });
-
-  it('never raises an ERROR — both conditions are legal Godot (severity contract)', () => {
-    const diagnostics = linter.lint(scene('emission_shape = 6\nfract_delta = true\n'));
+  it('never raises an ERROR — the condition is legal Godot (severity contract)', () => {
+    const diagnostics = linter.lint(scene('emission_shape = 6\n'));
     expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
   });
 
   it('leaves other node types alone (edge case)', () => {
-    const content = `[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\nfract_delta = true\n`;
-    expect(namesOf(content)).not.toContain('cpuparticles2d-fract-delta-ignored');
+    const content = `[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\nemission_shape = 6\n`;
+    expect(namesOf(content)).not.toContain('cpuparticles2d-nondeterministic-emission-shape');
   });
 
   it('does not fire on an emitter with no properties at all (edge case)', () => {

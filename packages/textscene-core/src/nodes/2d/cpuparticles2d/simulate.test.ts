@@ -4,6 +4,8 @@ import { parseCPUParticles2D } from './parser';
 import {
   IDENTITY_AFFINE,
   MAX_SIM_STEPS,
+  particleExpired,
+  restartStep,
   settleSeconds,
   simulateFrozenPose,
   type ParticleSimInput,
@@ -51,6 +53,134 @@ describe('settleSeconds', () => {
 
   it('never returns a non-positive window for a degenerate lifetime (edge case)', () => {
     expect(settleSeconds(props({ preprocess: '0', lifetime: '0' }))).toBeGreaterThan(0);
+  });
+});
+
+describe('restartStep (cpu_particles_2d.cpp:829-852)', () => {
+  // Godot's own local variable is `local_delta`, seeded from `p_delta` each
+  // particle-iteration and left alone unless a restart branch below
+  // overwrites it. `restartStep` returns that pair rather than mutating in
+  // place, since it has no `Particle` to close over.
+  it('branch A: time advancing normally, restart inside [prevTime, time) — local_delta = time - restartTime (:830-836)', () => {
+    // prevTime=0.2, time=0.3, restartTime=0.25, lifetime irrelevant here.
+    expect(restartStep(0.2, 0.3, 0.25, 1.0, 0.1, true)).toEqual({
+      restart: true,
+      localDelta: 0.3 - 0.25,
+    });
+  });
+
+  it('branch A: no restart when restartTime falls outside [prevTime, time)', () => {
+    expect(restartStep(0.2, 0.3, 0.35, 1.0, 0.1, true)).toEqual({
+      restart: false,
+      localDelta: 0.1,
+    });
+  });
+
+  it('branch B1: wrapped (time <= prevTime), restartTime >= prevTime — local_delta = lifetime - restartTime + time (:839-844)', () => {
+    // The particle's restart phase sits at the tail of the cycle: it should
+    // have restarted just BEFORE the wrap, so its slice runs from restartTime
+    // to the old lifetime boundary, plus however far past zero `time` has
+    // already gone.
+    expect(restartStep(0.9, 0.05, 0.92, 1.0, 0.15, true)).toEqual({
+      restart: true,
+      localDelta: 1.0 - 0.92 + 0.05,
+    });
+  });
+
+  it('branch B2: wrapped (time <= prevTime), restartTime < time — local_delta = time - restartTime (:845-850)', () => {
+    // The particle's restart phase sits right after zero: the wrap carried
+    // `time` past it already this step.
+    expect(restartStep(0.9, 0.05, 0.02, 1.0, 0.15, true)).toEqual({
+      restart: true,
+      localDelta: 0.05 - 0.02,
+    });
+  });
+
+  it('wrapped, restartTime neither >= prevTime nor < time: no restart', () => {
+    expect(restartStep(0.9, 0.05, 0.5, 1.0, 0.15, true)).toEqual({
+      restart: false,
+      localDelta: 0.15,
+    });
+  });
+
+  it('fract_delta = false: every restart takes the WHOLE step, in every branch (:834,842,848 gated by `if (fractional_delta)`)', () => {
+    expect(restartStep(0.2, 0.3, 0.25, 1.0, 0.1, false)).toEqual({ restart: true, localDelta: 0.1 });
+    expect(restartStep(0.9, 0.05, 0.92, 1.0, 0.15, false)).toEqual({ restart: true, localDelta: 0.15 });
+    expect(restartStep(0.9, 0.05, 0.02, 1.0, 0.15, false)).toEqual({ restart: true, localDelta: 0.15 });
+  });
+});
+
+describe('particleExpired (cpu_particles_2d.cpp:971 `p.time > p.lifetime`)', () => {
+  it('is not expired one step before its lifetime', () => {
+    expect(particleExpired(0.9, 1.0)).toBe(false);
+  });
+
+  it('is NOT expired at exact equality — Godot advances it one more step first', () => {
+    expect(particleExpired(1.0, 1.0)).toBe(false);
+  });
+
+  it('is expired once time has actually passed its lifetime', () => {
+    expect(particleExpired(1.0001, 1.0)).toBe(true);
+  });
+});
+
+describe('a restarting particle’s partial first step (comb vs. bar)', () => {
+  // Godot integrates `p.transform[2] += p.velocity * local_delta` for EVERY
+  // particle, restart included (`cpu_particles_2d.cpp:1151`), and `local_delta`
+  // for a particle that restarts mid-frame is only the REMAINDER of the frame
+  // after its own restart instant when `fract_delta` is on (Godot's default —
+  // `cpu_particles_2d.h:138`). A frozen pose that always uses the whole frame
+  // gives every particle restarting in the same step the SAME displacement,
+  // i.e. a comb of discrete bands; the fractional step spreads them
+  // continuously into a solid bar, which is what Godot draws.
+  //
+  // amount=100, lifetime=1.0, fixed_fps=30 (frame_time = 1/30) — with
+  // explosiveness = randomness = 0, particle i's restart phase is i/100 of the
+  // cycle, so restartTime_i = i/100. At the very first step (prevTime=0,
+  // time=1/30=0.0333…), only i=0..3 have restartTime < time, and each gets
+  // local_delta = time - i/100. With direction=(1,0), spread=0, gravity=0 and
+  // initial_velocity pinned to 120, a restarting particle's spawn transform is
+  // the identity (ox=oy=0) and NOTHING else moves it this frame (no advance
+  // pass runs on a restart), so ox is exactly `120 * local_delta`.
+  const streamProps = {
+    amount: '100',
+    lifetime: '1.0',
+    fixed_fps: '30',
+    preprocess: '0.01', // < 1/30, so the settle loop runs exactly one step
+    direction: 'Vector2(1, 0)',
+    spread: '0',
+    initial_velocity_min: '120',
+    initial_velocity_max: '120',
+    gravity: 'Vector2(0, 0)',
+  };
+
+  it('spreads the newest particles across the frame (fract_delta default true — a solid bar)', () => {
+    const pose = simulateFrozenPose(input({ props: props(streamProps) }));
+    const oxOf = (index: number) => pose.find((p) => p.index === index)!.transform.ox;
+
+    expect(oxOf(0)).toBeCloseTo(4.0, 6);
+    expect(oxOf(1)).toBeCloseTo(2.8, 6);
+    expect(oxOf(2)).toBeCloseTo(1.6, 6);
+    expect(oxOf(3)).toBeCloseTo(0.4, 6);
+    // Every y stays 0: direction is pure +X and spread is 0.
+    for (const index of [0, 1, 2, 3]) {
+      expect(pose.find((p) => p.index === index)!.transform.oy).toBeCloseTo(0, 6);
+    }
+  });
+
+  it('bunches the newest particles at one position with fract_delta disabled (the comb)', () => {
+    const pose = simulateFrozenPose(
+      input({ props: props({ ...streamProps, fract_delta: 'false' }) })
+    );
+    const oxOf = (index: number) => pose.find((p) => p.index === index)!.transform.ox;
+
+    // Every particle that restarted this step gets the WHOLE frame's worth of
+    // motion, landing at the same displacement regardless of when in the
+    // frame it was actually born.
+    expect(oxOf(0)).toBeCloseTo(4.0, 6);
+    expect(oxOf(1)).toBeCloseTo(4.0, 6);
+    expect(oxOf(2)).toBeCloseTo(4.0, 6);
+    expect(oxOf(3)).toBeCloseTo(4.0, 6);
   });
 });
 
