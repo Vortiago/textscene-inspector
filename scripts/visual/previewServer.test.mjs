@@ -10,6 +10,10 @@
  * be compared against — so neither shows up in the image it corrupts.
  */
 import { describe, expect, it } from 'vitest';
+import { spawn } from 'node:child_process';
+import { writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { settleCanvas, SETTLE_SIM_SECONDS } from './previewServer.mjs';
 import { bootstrapScript } from '../godot-ref/run.mjs';
 
@@ -128,4 +132,77 @@ describe('the settle contract is shared, not duplicated', () => {
     expect(godotScript(SETTLE_SIM_SECONDS)).toContain('func _converge() -> void:');
     expect(godotScript(SETTLE_SIM_SECONDS)).not.toContain('func _settle() -> void:');
   });
+});
+
+/**
+ * The preview server is spawned `detached`, which is what lets one signal reach
+ * the whole `shell`→`pnpm`→`vite preview` group — and equally what lets that
+ * group outlive the harness. Every harness calls `killPreviewGroup` from a
+ * `finally`, and Node runs no `finally` when the process is signalled, so an
+ * interrupted run leaves a server holding its port with nothing left to reap
+ * it. `assertPortFree` already DETECTS the leftover; these pin the prevention.
+ */
+describe('an interrupted harness does not orphan its preview group', () => {
+  /** Runs `body` in a real child node process; returns its stdout and pid. */
+  function runHarness(body) {
+    const file = join(tmpdir(), `preview-teardown-${process.pid}-${Math.abs(hashOf(body))}.mjs`);
+    writeFileSync(file, body);
+    const child = spawn(process.execPath, [file], { stdio: ['ignore', 'pipe', 'inherit'] });
+    let out = '';
+    child.stdout.on('data', (d) => (out += d));
+    return { child, out: () => out, cleanup: () => rmSync(file, { force: true }) };
+  }
+
+  const hashOf = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7);
+  const alive = (pid) => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const until = async (fn, ms = 5000) => {
+    const end = Date.now() + ms;
+    while (Date.now() < end) {
+      if (fn()) return true;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    return fn();
+  };
+
+  // A stand-in for the real spawn: same `detached` group shape, no build.
+  const harness = () => `
+import { spawn } from 'node:child_process';
+import { registerPreviewGroupTeardown } from ${JSON.stringify(
+    new URL('./previewServer.mjs', import.meta.url).href
+  )};
+const proc = spawn('sh', ['-c', 'sleep 120'], { detached: true, stdio: 'ignore' });
+registerPreviewGroupTeardown(proc);
+console.log(String(proc.pid));
+setTimeout(() => {}, 120000);
+`;
+
+  it('reaps the group when the harness is interrupted with SIGINT', async () => {
+    const h = runHarness(harness());
+    await until(() => h.out().trim().length > 0);
+    const groupPid = Number(h.out().trim());
+    expect(alive(groupPid)).toBe(true);
+
+    h.child.kill('SIGINT');
+    const reaped = await until(() => !alive(groupPid));
+    h.cleanup();
+    expect(reaped).toBe(true);
+  }, 20000);
+
+  it('reaps the group when the harness is terminated with SIGTERM', async () => {
+    const h = runHarness(harness());
+    await until(() => h.out().trim().length > 0);
+    const groupPid = Number(h.out().trim());
+
+    h.child.kill('SIGTERM');
+    const reaped = await until(() => !alive(groupPid));
+    h.cleanup();
+    expect(reaped).toBe(true);
+  }, 20000);
 });

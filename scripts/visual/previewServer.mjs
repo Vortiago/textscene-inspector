@@ -187,12 +187,46 @@ export async function assertPortFree(port, envVarName = 'VISUAL_PORT') {
   }
 }
 
+/**
+ * Reap the preview group when THIS process ends, however it ends.
+ *
+ * `detached: true` is what lets one signal reach the whole
+ * `shell`→`pnpm`→`vite preview` group; it is equally what lets that group
+ * outlive us. Every harness already calls `killPreviewGroup` from a `finally`,
+ * but Node runs no `finally` when the process is signalled — so an interrupted
+ * run (Ctrl-C, a CI step timing out, a supervisor's SIGTERM) leaves a server
+ * holding its port with nothing left that knows about it. `assertPortFree`
+ * above DETECTS that leftover on the next run; this prevents making one.
+ *
+ * Registered at the spawn rather than in each caller, so a new harness cannot
+ * acquire the leak by forgetting to opt in.
+ *
+ * `exit` covers normal and thrown termination, and must stay synchronous —
+ * `process.kill` is. The signal handlers reap and then re-raise, which reaches
+ * the default disposition now that `once` has removed the listener, so the
+ * harness still dies of the signal it was sent instead of reporting a clean
+ * exit. SIGKILL cannot be caught and stays the one path that orphans a server.
+ */
+export function registerPreviewGroupTeardown(proc) {
+  const onExit = () => killPreviewGroup(proc);
+  const onSignal = (signal) => {
+    process.removeListener('exit', onExit);
+    killPreviewGroup(proc);
+    process.kill(process.pid, signal);
+  };
+  process.once('exit', onExit);
+  process.once('SIGINT', () => onSignal('SIGINT'));
+  process.once('SIGTERM', () => onSignal('SIGTERM'));
+  process.once('SIGHUP', () => onSignal('SIGHUP'));
+}
+
 export function startPreview(port) {
   const proc = spawn(
     'pnpm',
     ['--filter', '@textscene/web-previewer', 'preview', '--port', String(port), '--strictPort'],
     { cwd: REPO_ROOT, shell: true, stdio: 'ignore', detached: true }
   );
+  registerPreviewGroupTeardown(proc);
   return { proc, baseUrl: `http://localhost:${port}` };
 }
 
