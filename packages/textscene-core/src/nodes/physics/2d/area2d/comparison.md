@@ -63,7 +63,7 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-area2d` | `area2d-needs-collision-shape` | warning |
-|  | `area2d-inactive` | warning |
+|  | `area2d-detects-nothing` | warning |
 |  | `area2d-monitoring-zero-mask` | warning |
 <!-- lint:end -->
 

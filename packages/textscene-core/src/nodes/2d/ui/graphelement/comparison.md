@@ -51,7 +51,7 @@ Strict parsing format-checks these `GraphElement` properties, plus 28 inherited 
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
-| `valid-graph-element-selection` (type-family match) | `graph-element-selected-not-selectable` | warning |
+| `valid-graph-element-selection` (type-family match) | `graph-element-selected-not-selectable` | error |
 <!-- lint:end -->
 
 All 6 of GraphElement's own members format-check as a plain `Vector2` or boolean

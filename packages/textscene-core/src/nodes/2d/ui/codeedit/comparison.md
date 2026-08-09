@@ -65,7 +65,7 @@ Strict parsing format-checks these `CodeEdit` properties, plus 47 inherited from
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
-| `valid-codeedit-properties` (type-family match) | `codeedit-delimiter-start-key-collision` | warning |
+| `valid-codeedit-properties` (type-family match) | `codeedit-delimiter-start-key-collision` | error |
 <!-- lint:end -->
 
 `linterParser.ts` format-checks all 22 of CodeEdit's own members (everything in

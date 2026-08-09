@@ -56,7 +56,7 @@ Strict parsing format-checks these `Area3D` properties, plus 6 inherited from Co
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-collisionobject3d-scale` (type-family match) | `collisionobject3d-non-uniform-scale` | warning |
 | `valid-area3d` | `area3d-needs-collision-shape` | warning |
-|  | `area3d-inactive` | warning |
+|  | `area3d-detects-nothing` | warning |
 |  | `area3d-monitoring-zero-mask` | warning |
 <!-- lint:end -->
 

@@ -43,7 +43,7 @@ Strict parsing format-checks these `GraphNode` properties, plus 6 inherited from
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
-| `valid-graph-element-selection` (type-family match) | `graph-element-selected-not-selectable` | warning |
+| `valid-graph-element-selection` (type-family match) | `graph-element-selected-not-selectable` | error |
 <!-- lint:end -->
 
 GraphNode registers `parseControl` directly (`index.ts`), the same base parser

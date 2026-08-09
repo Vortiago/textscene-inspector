@@ -68,7 +68,7 @@ Strict parsing format-checks these `AnimationPlayer` properties, plus 13 inherit
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-animationplayer-properties` | `animationplayer-autoplay-missing` | warning |
-|  | `animationplayer-current-animation-missing` | warning |
+|  | `animationplayer-current-animation-missing` | error |
 |  | `animationplayer-negative-blend-time` | warning |
 |  | `animationplayer-large-blend-time` | warning |
 |  | `animationplayer-inactive` | warning |

@@ -89,7 +89,7 @@ Strict parsing format-checks these `GraphEdit` properties, plus 28 inherited fro
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
-| `valid-graphedit-zoom-limits` | `graphedit-zoom-min-above-max` | warning |
+| `valid-graphedit-zoom-limits` | `graphedit-zoom-min-above-max` | error |
 <!-- lint:end -->
 
 GraphEdit's lenient parser is `parseControl`, which has no field for any of the

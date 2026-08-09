@@ -73,10 +73,10 @@ Strict parsing format-checks these `SpringBoneSimulator3D` properties, plus 2 in
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
-| `valid-springbonesimulator3d-settings` (type-family match) | `springbonesimulator3d-setting-index-out-of-range` | warning |
-|  | `springbonesimulator3d-shared-config-ignored` | warning |
-|  | `springbonesimulator3d-joint-config-ignored` | warning |
-|  | `springbonesimulator3d-collision-list-ignored` | warning |
+| `valid-springbonesimulator3d-settings` (type-family match) | `springbonesimulator3d-setting-index-out-of-range` | error |
+|  | `springbonesimulator3d-shared-config-ignored` | error |
+|  | `springbonesimulator3d-joint-config-ignored` | error |
+|  | `springbonesimulator3d-collision-list-ignored` | error |
 <!-- lint:end -->
 
 The lenient parser never substitutes a value here, because SpringBoneSimulator3D

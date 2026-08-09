@@ -60,7 +60,7 @@ Strict parsing format-checks these `TileMap` properties, plus 12 inherited from 
 |  | `tilemap-node-y-sort-without-layer` | warning |
 |  | `tilemap-requires-tileset` | warning |
 |  | `valid-tilemap-resources` | error |
-|  | `tilemap-unsupported-format` | warning |
+|  | `tilemap-unsupported-format` | error |
 |  | `tilemap-invalid-tile-data` | error |
 <!-- lint:end -->
 

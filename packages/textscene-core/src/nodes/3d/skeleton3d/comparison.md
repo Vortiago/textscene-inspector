@@ -42,7 +42,7 @@ Strict parsing format-checks these `Skeleton3D` properties, plus 16 inherited fr
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-skeleton3d-usage` | `valid-skeleton3d-motion-scale` | warning |
+| `valid-skeleton3d-usage` | `valid-skeleton3d-motion-scale` | error |
 |  | `skeleton3d-debug-mode` | warning |
 |  | `skeleton3d-deprecated-feature` | warning |
 <!-- lint:end -->

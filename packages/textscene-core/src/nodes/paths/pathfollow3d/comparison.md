@@ -59,8 +59,7 @@ Strict parsing format-checks these `PathFollow3D` properties, plus 16 inherited 
 | `valid-pathfollow3d` | `pathfollow3d-no-parent` | warning |
 |  | `pathfollow3d-invalid-parent` | warning |
 |  | `pathfollow3d-negative-progress` | warning |
-|  | `pathfollow3d-progress-ratio-out-of-range` | warning |
-|  | `pathfollow3d-both-progress-properties` | warning |
+|  | `pathfollow3d-progress-ratio-ignored` | error |
 |  | `pathfollow3d-oriented-mode-requires-up-vector` | warning |
 <!-- lint:end -->
 

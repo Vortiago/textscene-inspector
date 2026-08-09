@@ -68,8 +68,8 @@ Strict parsing format-checks these `Sprite2D` properties, plus 12 inherited from
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-sprite2d-resources` | `sprite2d-requires-texture` | warning |
 |  | `valid-sprite2d-resources` | error |
-|  | `sprite2d-frame-range` | warning |
-|  | `sprite2d-frame-coords-range` | warning |
+|  | `sprite2d-frame-range` | error |
+|  | `sprite2d-frame-coords-range` | error |
 |  | `sprite2d-region-configuration` | warning |
 <!-- lint:end -->
 

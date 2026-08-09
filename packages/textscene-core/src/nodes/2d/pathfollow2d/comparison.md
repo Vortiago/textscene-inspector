@@ -61,8 +61,7 @@ Strict parsing format-checks these `PathFollow2D` properties, plus 12 inherited 
 | `valid-pathfollow2d` | `pathfollow2d-no-parent` | warning |
 |  | `pathfollow2d-invalid-parent` | warning |
 |  | `pathfollow2d-negative-progress` | warning |
-|  | `pathfollow2d-progress-ratio-out-of-range` | warning |
-|  | `pathfollow2d-both-progress-properties` | warning |
+|  | `pathfollow2d-progress-ratio-ignored` | error |
 <!-- lint:end -->
 
 `rotates`, `cubic_interp`, and `loop` fall back to Godot's default `true`; `h_offset`

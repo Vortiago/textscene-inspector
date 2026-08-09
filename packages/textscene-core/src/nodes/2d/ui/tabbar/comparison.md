@@ -80,8 +80,8 @@ Strict parsing format-checks these `TabBar` properties, plus 28 inherited from C
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
-| `valid-tabbar-properties` | `tabbar-current-tab-out-of-range` | warning |
-|  | `tabbar-tab-index-out-of-range` | warning |
+| `valid-tabbar-properties` | `tabbar-current-tab-out-of-range` | error |
+|  | `tabbar-tab-index-out-of-range` | error |
 <!-- lint:end -->
 
 Nothing on TabBar diverges between the two parsers. The lenient parser reuses

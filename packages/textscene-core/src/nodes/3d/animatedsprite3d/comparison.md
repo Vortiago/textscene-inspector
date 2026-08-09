@@ -51,7 +51,8 @@ Strict parsing format-checks these `AnimatedSprite3D` properties, plus 20 inheri
 |  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 | `valid-animatedsprite3d-properties` | `animatedsprite3d-requires-spriteframes` | warning |
-|  | `animatedsprite3d-animation-no-spriteframes` | warning |
+|  | `valid-animatedsprite3d-resources` | error |
+|  | `animatedsprite3d-animation-no-spriteframes` | error |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D` unchanged, which extracts only `transform` and
