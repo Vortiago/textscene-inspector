@@ -635,6 +635,27 @@ export const GOLDEN_SCENES = [
   // `.woff2`/`.otf` pair exists in the corpus — so it is arbitrated on its own
   // terms against Godot, never against the sibling's baseline.
   { name: 'control-scene-font-woff2', file: 'unit-control-scene-font-woff2.tscn', mode: '2d' },
+  // The ONE variable: a scene font drawn MAGNIFIED. Both siblings above draw
+  // their scene-font Labels at 1x, where the canvas raster is sampled at the
+  // size it was painted and no filter kernel is exercised at all. A scaled one
+  // is the only shape in the bag where the sampling colour space of the
+  // canvas-painted glyph texture can be read off the ramp — the fixture header
+  // carries the arbitration that settled which space is correct.
+  {
+    name: 'control-scene-font-magnified',
+    file: 'unit-control-scene-font-magnified.tscn',
+    mode: '2d',
+  },
+  // The FIRST dedicated coverage for RichTextLabel. `complex-2d-gui` renders
+  // one, but that composition scene moves many widgets at once and cannot
+  // localise a regression to this type. Exercises the whole supported bbcode
+  // subset in one pass — bold via embolden, italic via skew, the underline
+  // rule, and a colour span — each already probed against the engine. Its
+  // styled runs carry a standing sub-pixel vertical residual against Godot
+  // that is a FreeType light-hinting limit rather than a defect; the slice's
+  // sheet records the measurement, and this golden exists so a change to span
+  // layout cannot move those runs invisibly.
+  { name: 'richtext-label-bbcode', file: 'unit-rich-text-label.tscn', mode: '2d' },
   { name: 'button-states', file: 'unit-button-states.tscn', mode: '2d' },
   // The ONE variable each: `anchors_preset` authored WITHOUT any explicit
   // `anchor_*` and without a `layout_mode`. Godot's setter is non-operational
