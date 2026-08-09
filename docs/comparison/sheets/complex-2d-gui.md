@@ -132,8 +132,8 @@ against `pnpm ref:ours complex-2d-gui.tscn --2d --probe <x,y>`.
 | (565, 175) | the master volume grabber, at `value` along a grid-cell width | rgb(220, 220, 220) | rgb(220, 220, 221) |
 | (318, 214) | the music slider's tick marks | rgb(83, 87, 95) | rgb(26, 31, 41) — the tick is at x 316..317 here |
 | (797, 452) | the gain VSlider grabber, measured up from the bottom of a box cell | rgb(197, 197, 198) | rgb(197, 197, 198) |
-| (200, 288) | the LineEdit's text baseline inside its stylebox | rgb(113, 114, 116) | rgb(223, 223, 223) |
-| (184, 328) | the CheckBox's tick beside its label | rgb(26, 26, 26) | rgb(36, 36, 36) |
+| (200, 288) | the LineEdit's text baseline inside its stylebox | rgb(113, 114, 116) | rgb(125, 126, 128) |
+| (184, 328) | the CheckBox's tick beside its label | rgb(26, 26, 26) | rgb(26, 26, 26) |
 | (716, 245) | the OptionButton's selected item and its arrow | rgb(155, 155, 156) | rgb(154, 155, 155) |
 
 ### The sub-viewport surface

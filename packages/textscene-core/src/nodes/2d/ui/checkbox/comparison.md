@@ -22,23 +22,20 @@ chrome between them — CheckBox's `normal` StyleBox is empty.
 
 ## Divergences
 
-The indicator is the theme's own icon texture on both sides. Measured on Godot
-4.6.3, `pnpm ref:godot scenes/fixtures/unit-checkbox.tscn --mode 2d --probe <x,y>`
+The indicator is the theme's own icon texture on both sides, and it lands in the
+same place. Measured on Godot 4.6.3,
+`pnpm ref:godot scenes/fixtures/unit-checkbox.tscn --mode 2d --probe <x,y>`
 against `pnpm ref:ours unit-checkbox.tscn --2d --probe <x,y>`:
 
 | Probe | What it is | Godot | Ours |
 | --- | --- | --- | --- |
-| (509, 291) | the checked plate, where Godot draws it | rgb(210, 210, 210) | rgb(76, 76, 76) |
-| (509, 294) | the same plate 3 px lower, where ours draws it | rgb(210, 210, 210) | rgb(210, 210, 210) |
-| (516, 295) | the tick cut out of that plate | rgb(26, 26, 26) | rgb(210, 210, 210) |
+| (509, 291) | the checked plate | rgb(210, 210, 210) | rgb(210, 210, 210) |
+| (516, 295) | the tick cut out of that plate | rgb(26, 26, 26) | rgb(26, 26, 26) |
 
-Same texture, same colours, same footprint: the checked icon's ink spans
-x 506..519 over 14 rows in both, 190 px against 194. It sits 3 px lower because
-the row itself is 3 px taller — `CheckBox::get_minimum_size` floors the row at the
-font height, and ours measures that 3 px over (the Control sheet has the
-arithmetic), which also moves the tick out from under a probe aimed at Godot's.
-The disabled row's unchecked icon lands at x 505..518 in Godot and x 506..519
-here, one pixel right.
+Same texture, same colours, same footprint and the same rows: the checked
+plate spans x 506..519 over y 291..304 on both sides. The only residual is its
+coverage — 127 plate pixels against 131 — which is the anti-aliasing of the
+icon's rounded corners, not a placement difference.
 
 A scene-authored `theme_override_icons/<name>` is still a separate case:
 `parseThemeOverrides` drops it through its `default` branch, where

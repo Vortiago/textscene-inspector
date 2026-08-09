@@ -36,7 +36,7 @@ the middle one darkens it by the same cookie, in the same places as Godot.
 Each mode is one fixed-function blend against the accumulator, so all three land
 on Godot: `SrcAlpha/One` added for ADD, the same term reverse-subtracted for SUB,
 and `SrcAlpha/OneMinusSrcAlpha` for MIX, which is `mix(dst, src, srcAlpha)`
-exactly. Mean channel error 0.49/255 over the frame.
+exactly. Mean channel error 0.03/255 over the frame, no channel off by more than 1.
 
 MIX is the one mode whose result depends on the ORDER lights are applied, since
 it interpolates the accumulator rather than adding to it. The quads therefore
@@ -57,7 +57,7 @@ subtree, and a right-hand panel whose `CanvasItemMaterial` sets `light_mode = 1`
 That panel keeps its authored colour while the floor around it goes blue, and the
 torch beside it stops dead at its edge — Godot's base pass guards both the tint
 and the light loop with the item's light mode, and an `Unshaded` item is excluded
-from each. Mean channel error 0.09/255.
+from each. Mean channel error 0.004/255.
 
 ## Light Only items
 
@@ -133,9 +133,9 @@ measured on Godot 4.6.3:
 
 | Panel | `z_index` | Godot | Ours | Reached |
 | --- | --- | --- | --- | --- |
-| `InsideWindow` | 0 | rgb(141, 122, 138) | rgb(141, 123, 138) | yes |
-| `AtWindowMax` | 4 | rgb(213, 173, 165) | rgb(214, 174, 165) | yes, the bound is inclusive |
-| `AboveWindow` | 5 | rgb(55, 62, 106) | rgb(55, 62, 107) | no — albedo × CanvasModulate exactly |
+| `InsideWindow` | 0 | rgb(141, 122, 138) | rgb(141, 122, 138) | yes |
+| `AtWindowMax` | 4 | rgb(213, 173, 165) | rgb(213, 173, 165) | yes, the bound is inclusive |
+| `AboveWindow` | 5 | rgb(55, 62, 106) | rgb(55, 62, 106) | no — albedo × CanvasModulate exactly |
 
 The same scene authored with `range_z_min = 4` instead inverts it: `z_index` 0
 falls to rgb(55, 62, 106) and `z_index` 4 stays at rgb(213, 173, 165). And with a
@@ -162,7 +162,7 @@ a world `Polygon2D` and an identical one inside a bare `CanvasLayer`:
 
 | Panel | Canvas layer | Godot | Ours | Reached |
 | --- | --- | --- | --- | --- |
-| `WorldPanel` | 0 | rgb(181, 159, 145) | rgb(181, 159, 146) | yes |
+| `WorldPanel` | 0 | rgb(181, 159, 145) | rgb(181, 159, 145) | yes |
 | `HudPanel` | 1 | rgb(107, 107, 117) | rgb(107, 107, 117) | no — the raw albedo, untinted |
 
 Widening the light to `range_layer_max = 1` lights the HUD panel to
@@ -234,11 +234,11 @@ Measured mean channel error against the engine, over the whole frame:
 
 | Sheet | Mean | Pixels off by > 16/255 |
 | --- | --- | --- |
-| `unit-pointlight2d` | 0.32/255 | 0.0% |
-| `unit-pointlight2d-blend` | 0.49/255 | 0.0% |
-| `unit-pointlight2d-gradient` | 0.09/255 | 0.0% |
-| `unit-pointlight2d-lightonly` | 0.43/255 | 0.0% |
-| `unit-pointlight2d-cull-mask` | 0.22/255 | 0.0% |
+| `unit-pointlight2d` | 0.018/255 | 0.0% |
+| `unit-pointlight2d-blend` | 0.029/255 | 0.0% |
+| `unit-pointlight2d-gradient` | 0.004/255 | 0.0% |
+| `unit-pointlight2d-lightonly` | 0.086/255 | 0.0% |
+| `unit-pointlight2d-cull-mask` | 0.030/255 | 0.0% |
 
 What is left unimplemented:
 
