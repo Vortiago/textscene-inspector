@@ -45,11 +45,13 @@ import {
   ensureWebBuilt,
   findCaptureTarget,
   gotoFixture,
+  isUniformImage,
   killPreviewGroup,
   setDisplayToggle,
   settleCanvas,
   startPreview,
   waitForServer,
+  warmUpGLContext,
 } from './previewServer.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -82,58 +84,6 @@ function parseArgs(argv) {
     }
   }
   return opts;
-}
-
-/**
- * A throwaway WebGL context, created and torn down before any real scene is
- * captured.
- *
- * The first WebGL context in a fresh headless Chromium+SwiftShader process
- * can lose context under load before a screenshot lands — and `settleCanvas`
- * cannot tell a lost context from a settled one: two captures of a dead,
- * uniform canvas are exactly as byte-identical as two captures of a
- * genuinely stable frame, so the settle gate is silently defeated rather than
- * failed. Whichever scene captures first in a fresh process absorbs that
- * risk (the observed symptom this fixes); this burns the risk here instead,
- * on a page nothing depends on, before the real capture pages ever open.
- */
-async function warmUpGLContext(browser) {
-  const context = await browser.newContext({ viewport: { width: 64, height: 64 } });
-  try {
-    const page = await context.newPage();
-    await page.setContent(
-      '<canvas id="warmup" width="64" height="64"></canvas><script>' +
-        'const gl = document.getElementById("warmup").getContext("webgl2") || ' +
-        'document.getElementById("warmup").getContext("webgl"); ' +
-        'if (gl) { for (let i = 0; i < 60; i++) { ' +
-        'gl.clearColor(Math.random(), Math.random(), Math.random(), 1); ' +
-        'gl.clear(gl.COLOR_BUFFER_BIT); gl.finish(); } }' +
-        '</script>'
-    );
-    await page.waitForTimeout(500);
-  } finally {
-    await context.close();
-  }
-}
-
-/**
- * A fully uniform image is never a legitimate golden — it is either a WebGL
- * context that died mid-capture (readback comes back all-black or all one
- * clear colour) or a scene that rendered nothing. Two captures of that dead
- * frame are byte-identical, so `settleCanvas` reports it as settled; this is
- * the guard that stops `--update` writing it as a baseline, which would make
- * every future compare pass against a blank reference no matter how badly the
- * renderer breaks.
- */
-export function isUniformImage(buffer) {
-  const { data } = PNG.sync.read(buffer);
-  const [r0, g0, b0, a0] = data;
-  for (let i = 4; i < data.length; i += 4) {
-    if (data[i] !== r0 || data[i + 1] !== g0 || data[i + 2] !== b0 || data[i + 3] !== a0) {
-      return false;
-    }
-  }
-  return true;
 }
 
 /**

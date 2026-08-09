@@ -5,9 +5,6 @@
  * pixels", which only a real Chromium + SwiftShader can answer — covered by
  * `pnpm test:visual` itself, not here. What IS testable in isolation:
  *
- * - `isUniformImage`: the guard that stops `--update` writing a dead-context
- *   or unrendered-scene capture as a baseline (a uniform image settles just
- *   as cleanly as a real one, so pixel-settling alone cannot catch this).
  * - `captureScene`'s seam selection: a `mode: '2d'` scene must route through
  *   the canvas2D page/context and target, never the default 3D one, and a
  *   console error logged during any scene's capture must fail it even when
@@ -33,7 +30,7 @@ vi.mock('./previewServer.mjs', async (importOriginal) => {
 });
 
 import { findCaptureTarget, gotoFixture, settleCanvas } from './previewServer.mjs';
-import { captureScene, isUniformImage, pixelsMatchBaseline } from './run.mjs';
+import { captureScene, pixelsMatchBaseline } from './run.mjs';
 
 function uniformPngBuffer(width, height, [r, g, b, a] = [30, 60, 90, 255]) {
   const png = new PNG({ width, height });
@@ -45,26 +42,6 @@ function uniformPngBuffer(width, height, [r, g, b, a] = [30, 60, 90, 255]) {
   }
   return PNG.sync.write(png);
 }
-
-describe('isUniformImage', () => {
-  it('flags a capture that is a single colour throughout as uniform', () => {
-    expect(isUniformImage(uniformPngBuffer(8, 8))).toBe(true);
-  });
-
-  it('does not flag a capture carrying any real content', () => {
-    const png = PNG.sync.read(uniformPngBuffer(8, 8));
-    // One pixel breaks uniformity — the guard must not need more than that.
-    const idx = (4 * 8 + 4) * 4;
-    png.data[idx] = 255;
-    png.data[idx + 1] = 0;
-    png.data[idx + 2] = 0;
-    expect(isUniformImage(PNG.sync.write(png))).toBe(false);
-  });
-
-  it('treats a single-pixel image as uniform (nothing to disagree with it)', () => {
-    expect(isUniformImage(uniformPngBuffer(1, 1))).toBe(true);
-  });
-});
 
 describe('captureScene seam selection', () => {
   function fakePages() {

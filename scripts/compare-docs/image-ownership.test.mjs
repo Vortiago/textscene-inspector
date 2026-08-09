@@ -14,6 +14,9 @@
  * survived. These tests make the overlap a failing assertion instead.
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { COMPLEX_SCENES } from './capture-complex.mjs';
 import { partitionTargets } from './recapture.mjs';
 
@@ -46,5 +49,44 @@ describe('comparison image ownership', () => {
 
   it('gives every complex scene a distinct slug, so ownership is unambiguous', () => {
     expect(new Set(COMPLEX_SLUGS).size).toBe(COMPLEX_SLUGS.length);
+  });
+});
+
+/**
+ * The other half of "one image, one owner": HOW an owner is allowed to write.
+ *
+ * `settleCanvas` accepts a capture once two consecutive screenshots match, and
+ * two reads of a DEAD WebGL context match just as well as two reads of a live
+ * one. A comparing harness catches that for free — a blank frame diffs hugely
+ * and fails. A publishing one does not: the blank image becomes the picture the
+ * gallery shows and the sheet measures against, and nothing fails afterwards.
+ *
+ * `writeCaptureImage` is the guard, so a raw `writeFileSync` into the images
+ * directory is the bypass. This asserts there is no bypass, in the scripts
+ * whose whole job is to write there.
+ */
+describe('every published image goes through the guarded writer', () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const WRITERS = ['recapture.mjs', 'capture.mjs', 'capture-complex.mjs'];
+
+  it.each(WRITERS)('%s writes captures through writeCaptureImage', (file) => {
+    expect(readFileSync(join(here, file), 'utf8')).toContain('writeCaptureImage(');
+  });
+
+  it.each(WRITERS)('%s never writes an image path with a raw writeFileSync', (file) => {
+    const raw = readFileSync(join(here, file), 'utf8')
+      .split('\n')
+      .filter((line) => /writeFileSync\(/.test(line))
+      .filter((line) => /IMAGES|imgPath|imagePath|-ours|-godot/.test(line));
+    expect(raw).toEqual([]);
+  });
+
+  /**
+   * The cause, not just the detection. The first WebGL context in a fresh
+   * SwiftShader process is the one that can die under load, so whichever scene
+   * captures first absorbs the risk unless it is burned on a throwaway page.
+   */
+  it.each([...WRITERS, 'capture-animation.mjs'])('%s warms up GL before capturing', (file) => {
+    expect(readFileSync(join(here, file), 'utf8')).toContain('await warmUpGLContext(browser)');
   });
 });

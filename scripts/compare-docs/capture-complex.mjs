@@ -17,7 +17,7 @@
  * is painted out exactly as in capture.mjs.
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -33,6 +33,8 @@ import {
   settleCanvas,
   startPreview,
   waitForServer,
+  warmUpGLContext,
+  writeCaptureImage,
 } from '../visual/previewServer.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -165,6 +167,9 @@ async function captureOurs(scenes) {
   try {
     await waitForServer(`${baseUrl}/`);
     browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
+    // Burn the first-WebGL-context-lost risk before any published image is
+    // captured — see warmUpGLContext's own doc comment.
+    await warmUpGLContext(browser);
     for (const c of scenes) {
       process.stdout.write(`[complex ours] ${c.slug} (${c.mode}) … `);
       // Match the Godot framing. A 3D scene is fit to bounds on both sides only
@@ -190,7 +195,7 @@ async function captureOurs(scenes) {
           screenshotTimeout: c.settleTimeout,
         });
         if (!buffer) throw new Error(settleReason);
-        writeFileSync(join(IMAGES, `${c.slug}-ours.png`), buffer);
+        writeCaptureImage(join(IMAGES, `${c.slug}-ours.png`), buffer, `${c.slug} ours`);
         console.log('ok');
       } catch (error) {
         console.log(`FAILED: ${error.message}`);

@@ -25,7 +25,6 @@ import {
   readSync,
   closeSync,
   readFileSync,
-  writeFileSync,
 } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
@@ -41,6 +40,8 @@ import {
   settleCanvas,
   startPreview,
   waitForServer,
+  warmUpGLContext,
+  writeCaptureImage,
   CANVAS_2D_CAPTURE,
 } from '../visual/previewServer.mjs';
 import { COMPLEX_SCENES } from './capture-complex.mjs';
@@ -186,6 +187,9 @@ async function captureOurs(targets, godotModes) {
   try {
     await waitForServer(`${baseUrl}/`);
     browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
+    // Burn the first-WebGL-context-lost risk before any published image is
+    // captured — see warmUpGLContext's own doc comment.
+    await warmUpGLContext(browser);
     let done = 0;
     for (const mode of ['3d', '2d']) {
       const group = withMode.filter((t) => t.mode === mode);
@@ -205,7 +209,7 @@ async function captureOurs(targets, godotModes) {
             if (opened !== mode) {
               throw new Error(`previewer opened ${opened.toUpperCase()} but Godot rendered ${mode.toUpperCase()}`);
             }
-            writeFileSync(imgPath(t.image, 'ours'), buffer);
+            writeCaptureImage(imgPath(t.image, 'ours'), buffer, `${t.image} ours`);
             console.log('ok');
           } catch (error) {
             console.log(`FAILED: ${error.message}`);

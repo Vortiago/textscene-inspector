@@ -11,10 +11,11 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PNG } from 'pngjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = join(here, '../..');
@@ -685,4 +686,77 @@ export async function settleCanvas(
       SETTLE_MAX_ATTEMPTS * SETTLE_INTERVAL_MS
     }ms all differed`,
   };
+}
+
+/**
+ * A throwaway WebGL context, created and torn down before any real scene is
+ * captured.
+ *
+ * The first WebGL context in a fresh headless Chromium+SwiftShader process
+ * can lose context under load before a screenshot lands — and `settleCanvas`
+ * cannot tell a lost context from a settled one: two captures of a dead,
+ * uniform canvas are exactly as byte-identical as two captures of a
+ * genuinely stable frame, so the settle gate is silently defeated rather than
+ * failed. Whichever scene captures first in a fresh process absorbs that
+ * risk; this burns the risk here instead, on a page nothing depends on,
+ * before the real capture pages ever open.
+ */
+export async function warmUpGLContext(browser) {
+  const context = await browser.newContext({ viewport: { width: 64, height: 64 } });
+  try {
+    const page = await context.newPage();
+    await page.setContent(
+      '<canvas id="warmup" width="64" height="64"></canvas><script>' +
+        'const gl = document.getElementById("warmup").getContext("webgl2") || ' +
+        'document.getElementById("warmup").getContext("webgl"); ' +
+        'if (gl) { for (let i = 0; i < 60; i++) { ' +
+        'gl.clearColor(Math.random(), Math.random(), Math.random(), 1); ' +
+        'gl.clear(gl.COLOR_BUFFER_BIT); gl.finish(); } }' +
+        '</script>'
+    );
+    await page.waitForTimeout(500);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * A fully uniform image is never a legitimate capture — it is either a WebGL
+ * context that died mid-capture (readback comes back all-black or all one
+ * clear colour) or a scene that rendered nothing. Two captures of that dead
+ * frame are byte-identical, so `settleCanvas` reports it as settled.
+ */
+export function isUniformImage(buffer) {
+  const { data } = PNG.sync.read(buffer);
+  const [r0, g0, b0, a0] = data;
+  for (let i = 4; i < data.length; i += 4) {
+    if (data[i] !== r0 || data[i + 1] !== g0 || data[i + 2] !== b0 || data[i + 3] !== a0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * The only sanctioned way to commit a capture to disk.
+ *
+ * The distinction between a settled frame and a dead one survives exactly this
+ * far and no further: a comparing harness catches a blank frame for free
+ * (it diffs hugely and fails), while a WRITING one publishes it and disables
+ * itself permanently — every later comparison then passes against a blank
+ * reference no matter how badly the renderer breaks. Refusing costs a re-run;
+ * accepting costs the guard.
+ *
+ * A node that genuinely draws nothing is not this case: its sheet declares
+ * `visual: false`, which keeps it out of the capture set entirely.
+ */
+export function writeCaptureImage(path, buffer, what) {
+  if (isUniformImage(buffer)) {
+    throw new Error(
+      `${what}: capture is a single uniform colour throughout — refusing to write it ` +
+        `to ${path}. That is a lost WebGL context or an unrendered scene, never a real ` +
+        'capture; a node that draws nothing belongs on a `visual: false` sheet.'
+    );
+  }
+  writeFileSync(path, buffer);
 }

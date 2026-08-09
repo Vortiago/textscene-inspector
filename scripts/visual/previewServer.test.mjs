@@ -11,11 +11,27 @@
  */
 import { describe, expect, it } from 'vitest';
 import { spawn } from 'node:child_process';
-import { writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { settleCanvas, SETTLE_SIM_SECONDS } from './previewServer.mjs';
+import { PNG } from 'pngjs';
+import { isUniformImage, settleCanvas, writeCaptureImage, SETTLE_SIM_SECONDS } from './previewServer.mjs';
 import { bootstrapScript } from '../godot-ref/run.mjs';
+
+/** A PNG whose every pixel is the same colour — what a dead GL context reads back as. */
+function uniformPng(width = 8, height = 8) {
+  const png = new PNG({ width, height });
+  png.data.fill(0);
+  return PNG.sync.write(png);
+}
+
+/** The same PNG with a single pixel changed, so it carries ink. */
+function inkedPng(width = 8, height = 8) {
+  const png = new PNG({ width, height });
+  png.data.fill(0);
+  png.data[0] = 255;
+  return PNG.sync.write(png);
+}
 
 /** A Playwright page/element pair reduced to what `settleCanvas` touches. */
 function stubCanvas(shots) {
@@ -205,4 +221,56 @@ setTimeout(() => {}, 120000);
     h.cleanup();
     expect(reaped).toBe(true);
   }, 20000);
+});
+
+/**
+ * The write path's own blind spot.
+ *
+ * `settleCanvas` accepts a capture once two consecutive screenshots are
+ * byte-identical, and it cannot tell a settled frame from a DEAD one — two
+ * reads of a lost WebGL context are byte-identical too. On a comparing
+ * harness that is harmless: a blank frame diffs hugely and fails. On a
+ * WRITING harness it is not, because the blank image becomes the published
+ * picture (or the baseline every future compare is measured against), and
+ * nothing ever fails again. The guard has to live at the write, which is the
+ * only place that distinction still exists.
+ */
+describe('a dead GL context cannot be written as a capture', () => {
+  const scratch = mkdtempSync(join(tmpdir(), 'capture-write-'));
+
+  it('refuses a fully uniform capture rather than publishing it', () => {
+    const out = join(scratch, 'refused.png');
+    expect(() => writeCaptureImage(out, uniformPng(), 'unit-thing ours')).toThrow(/uniform/i);
+    expect(existsSync(out)).toBe(false);
+  });
+
+  it('names what it refused, so the operator knows which image to look at', () => {
+    expect(() => writeCaptureImage(join(scratch, 'named.png'), uniformPng(), 'unit-thing ours')).toThrow(
+      /unit-thing ours/
+    );
+  });
+
+  it('writes a capture that carries ink, byte for byte', () => {
+    const out = join(scratch, 'written.png');
+    const buffer = inkedPng();
+    writeCaptureImage(out, buffer, 'unit-thing ours');
+    expect(readFileSync(out).equals(buffer)).toBe(true);
+  });
+
+  it('treats a single differing pixel as ink — the guard is for dead frames, not sparse ones', () => {
+    expect(isUniformImage(inkedPng(64, 64))).toBe(false);
+    expect(isUniformImage(uniformPng(64, 64))).toBe(true);
+  });
+
+  it('calls a one-pixel image uniform, since it can never carry a difference', () => {
+    expect(isUniformImage(uniformPng(1, 1))).toBe(true);
+  });
+
+  it('catches a non-black uniform frame too — a dead context reads back the clear colour', () => {
+    const png = new PNG({ width: 8, height: 8 });
+    for (let i = 0; i < png.data.length; i += 4) {
+      [png.data[i], png.data[i + 1], png.data[i + 2], png.data[i + 3]] = [30, 60, 90, 255];
+    }
+    expect(isUniformImage(PNG.sync.write(png))).toBe(true);
+  });
 });
