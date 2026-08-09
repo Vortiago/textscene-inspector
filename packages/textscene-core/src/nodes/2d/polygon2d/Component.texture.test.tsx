@@ -205,4 +205,20 @@ describe('<Polygon2D> vertex_colors', () => {
     expect(geom.attributes.color).toBeUndefined();
     expect((mesh(renderer).material as THREE.MeshBasicMaterial).vertexColors).toBe(false);
   });
+
+  it("does not fold the node's own color.a into opacity once vertex_colors replaces color", async () => {
+    // `polygon_2d.cpp:310-314` assigns the vertex Color OUTRIGHT when
+    // `vertex_colors.size() == points.size()` — `color` (RGB *and* alpha)
+    // never enters the mesh, and `canvas_item_add_mesh` gets a bare
+    // `Color(1, 1, 1)` for its own modulate parameter (`polygon_2d.cpp:401`).
+    // A translucent `color` alongside opaque `vertex_colors` must therefore
+    // leave the material at full opacity, not `color.a`.
+    const { renderer } = await render({
+      polygon: SQUARE,
+      color: 'Color(1, 1, 1, 0.2)',
+      vertex_colors: 'PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1)',
+    });
+    const mat = mesh(renderer).material as THREE.MeshBasicMaterial;
+    expect(mat.opacity).toBeCloseTo(1, 5);
+  });
 });

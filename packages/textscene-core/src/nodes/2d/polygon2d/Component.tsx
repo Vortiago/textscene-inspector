@@ -10,10 +10,11 @@
  * positionally in Godot, so anything that renumbered or duplicated vertices
  * (as a generated `ShapeGeometry` does) would silently mismatch them.
  *
- * The fill is the flat `color` composited with the inherited modulate in sRGB
- * (via the tint's `own` product) and converted to linear once, then drawn with
- * an unlit, double-sided, alpha-blended material — Godot's 2D canvas model —
- * modulated by `texture` where one is set.
+ * The fill is the flat `color` — first quantized to the byte Godot's mesh
+ * upload actually stores (`vertexColorQuantize.ts`) — composited with the
+ * inherited modulate in sRGB (via the tint's `own` product) and converted to
+ * linear once, then drawn with an unlit, double-sided, alpha-blended material
+ * — Godot's 2D canvas model — modulated by `texture` where one is set.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -28,6 +29,7 @@ import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { Vector2 } from '../../base/node2d/types';
 import type { Polygon2DProperties } from './types';
 import { polygonRings, type PolygonRings } from './polygonShapes';
+import { quantizeVertexColor, quantizeVertexColorChannel } from './vertexColorQuantize';
 import { canvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
 import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
 import {
@@ -119,14 +121,25 @@ function FilledPolygon({
 }) {
   // Godot multiplies fill × modulate × self_modulate in one space, then converts
   // once: compose with the tint's sRGB `own` product before sRGB→linear.
-  const { fill, tintOnlyFill, opacity } = useMemo(() => {
-    const composed = multiplyModulate(tint.own, color);
+  //
+  // `color` is quantized FIRST, replicating the 8-bit vertex-colour cast
+  // Godot's mesh upload applies to it (see `vertexColorQuantize.ts`) — the
+  // node's inherited tint (`tint.own`) is a separate, unquantized float
+  // multiply Godot applies per draw call, so it composes AFTER.
+  const { fill, tintOnlyFill, opacity, tintOnlyOpacity } = useMemo(() => {
+    const composed = multiplyModulate(tint.own, quantizeVertexColor(color));
     return {
       fill: godotColorToLinear(composed),
       // The same tint WITHOUT the node's own `color`, for the per-vertex path
       // where Godot replaces `color` rather than combining with it.
       tintOnlyFill: godotColorToLinear(tint.own),
       opacity: composed.a,
+      // `color` drops WHOLE — alpha included — on the vertex-color path
+      // (`polygon_2d.cpp:310-314` assigns the vertex Color outright, and
+      // `canvas_item_add_mesh` gets a bare `Color(1, 1, 1)` for its own
+      // modulate parameter, `polygon_2d.cpp:401`), so that branch must not
+      // carry `color.a` into the material opacity either.
+      tintOnlyOpacity: tint.own.a,
     };
   }, [tint.own, color]);
 
@@ -145,7 +158,7 @@ function FilledPolygon({
         color={vertexColors ? tintOnlyFill : fill}
         map={texture}
         vertexColors={vertexColors}
-        opacity={opacity}
+        opacity={vertexColors ? tintOnlyOpacity : opacity}
         transparent
         depthWrite={false}
         side={THREE.DoubleSide}
@@ -266,15 +279,19 @@ function buildVertexColors(vertexCount: number, vertexColors: Float32Array): Flo
   if (vertexCount === 0 || vertexColors.length / 4 !== vertexCount) return null;
   const out = new Float32Array(vertexCount * 4);
   for (let i = 0; i < vertexCount; i++) {
+    // Every `vertex_colors` entry travels through the SAME truncating 8-bit
+    // mesh upload as the flat `color` fallback (`polygon_2d.cpp:310-314`
+    // reads `vertex_colors` into the identical `Vector<Color>` the flat-fill
+    // branch fills) — quantize before the linear conversion.
     const linear = godotColorToLinear({
-      r: vertexColors[i * 4]!,
-      g: vertexColors[i * 4 + 1]!,
-      b: vertexColors[i * 4 + 2]!,
+      r: quantizeVertexColorChannel(vertexColors[i * 4]!),
+      g: quantizeVertexColorChannel(vertexColors[i * 4 + 1]!),
+      b: quantizeVertexColorChannel(vertexColors[i * 4 + 2]!),
     });
     out[i * 4] = linear.r;
     out[i * 4 + 1] = linear.g;
     out[i * 4 + 2] = linear.b;
-    out[i * 4 + 3] = vertexColors[i * 4 + 3]!;
+    out[i * 4 + 3] = quantizeVertexColorChannel(vertexColors[i * 4 + 3]!);
   }
   return out;
 }
