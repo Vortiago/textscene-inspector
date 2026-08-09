@@ -11,25 +11,17 @@
  * read the setter. This is the ratchet over that migration: the count of
  * un-audited bounds goes down and never up, so a new slice cannot quietly add
  * one, and the number reaching zero is what finishes the audit.
+ *
+ * The two tiers' own behaviour — what `enforced` and `hinted` do to a
+ * diagnostic's severity — is the sibling `boundGrounding.tiers.test.ts`.
  */
 
 import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { v } from './validators/v.js';
-import { layerBitmask } from './validators/layerBitmask.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
+import { classifiableKeys, unclassifiedKeys } from './testing/validatorClassification.js';
 import './index.js'; // side-effect: every slice registers its validators
-
-/**
- * The one bound that cannot be grounded, with the reason.
- *
- * `AreaLight3D` does not exist anywhere in Godot 4.6.3, so it has no
- * ADD_PROPERTY hint and no setter to cite. Its slice sheet records that the
- * node postdates this engine build. Guessing a citation would be worse than
- * admitting there is none, so the bound stays an ungrounded error and is named
- * here rather than hidden in a count.
- */
-const UNGROUNDABLE: ReadonlySet<string> = new Set(['AreaLight3D.area_range']);
 
 /**
  * Types whose validators are all still unclassified.
@@ -53,215 +45,27 @@ const UNGROUNDABLE: ReadonlySet<string> = new Set(['AreaLight3D.area_range']);
  */
 const UNCLASSIFIED_VALIDATOR_BUDGET = 0;
 
-/**
- * Every key that resolves to a validator, declarations AND removals.
- *
- * Removals are the third population: `getOwnKeys` deliberately omits them (a
- * removal is not a declaration), so a sweep built on it alone cannot see a
- * rejection that refuses every value of the key outright.
- */
-function classifiableKeys(): { nodeType: string; key: string }[] {
-  const out: { nodeType: string; key: string }[] = [];
-  for (const nodeType of validatorRegistry.getRegisteredNodeTypes()) {
-    for (const key of validatorRegistry.getOwnKeys(nodeType)) out.push({ nodeType, key });
-  }
-  // A separate walk, not a nested loop: a type that ONLY removes never appears
-  // in the validator map, so folding removals into the loop above visited none
-  // of them.
-  for (const nodeType of validatorRegistry.getTypesWithRemovals()) {
-    for (const key of Object.keys(validatorRegistry.getOwnRemovals(nodeType))) {
-      out.push({ nodeType, key });
-    }
-  }
-  return out;
-}
-
-/**
- * Every registered validator that declares neither `formatOnly` nor `grounding`,
- * counting a wildcard dispatcher's leaves as separate validators.
- *
- * Without the recursion a dispatcher's own tag would vouch for every bound
- * behind it: `Generic6DOFJoint3D` registers 18 wildcard keys covering 27 leaf
- * validators, and the sweep saw 18 functions.
- */
-function unclassifiedKeys(): string[] {
-  const out: string[] = [];
-
-  const visit = (validator: PropertyValidator, label: string): void => {
-    // The exemption covers THIS validator, never its subtree: returning early
-    // would let one exempt wildcard key excuse every leaf behind it.
-    if (!UNGROUNDABLE.has(label) && !validator.formatOnly && !validator.grounding) {
-      out.push(label);
-    }
-    validator.leaves?.forEach((leaf, index) => visit(leaf, `${label}[${index}]`));
-  };
-
-  for (const { nodeType, key } of classifiableKeys()) {
-    const validator = validatorRegistry.findValidator(nodeType, key);
-    if (validator) visit(validator, `${nodeType}.${key}`);
-  }
-  return out.sort();
-}
-
 describe('bound grounding', () => {
   it('classifies every validator as format-only or grounded', () => {
-    // Covers hand-rolled validators too: one that never goes through the DSL
-    // declares neither tag, so it lands here however many real values it rejects.
+    // The floor first: 1986 keys resolve to a validator today, and a budget of
+    // zero is satisfied just as well by a registry that never loaded. Covers
+    // hand-rolled validators too: one that never goes through the DSL declares
+    // neither tag, so it lands here however many real values it rejects.
+    expect(classifiableKeys().length).toBeGreaterThan(1500);
     expect(unclassifiedKeys()).toHaveLength(UNCLASSIFIED_VALIDATOR_BUDGET);
   });
 
   it('gives every grounded bound a source citation', () => {
     // The citation is the whole point: `enforced` without a `file:line` is the
     // same unverifiable claim the invented thresholds used to make.
+    const keys = classifiableKeys();
+    expect(keys.length).toBeGreaterThan(1500);
     const uncited: string[] = [];
-    for (const { nodeType, key } of classifiableKeys()) {
+    for (const { nodeType, key } of keys) {
       const g = validatorRegistry.findValidator(nodeType, key)?.grounding;
       if (g && !/\.(cpp|h):\d+/.test(g.cite)) uncited.push(`${nodeType}.${key}: "${g.cite}"`);
     }
     expect(uncited.sort()).toEqual([]);
-  });
-});
-
-describe('the two tiers behave differently', () => {
-  it('an enforced bound rejects out-of-range as an error', () => {
-    // Godot's own guard, so the value genuinely does not reach the engine.
-    const validator = v.float('fov', { min: 1, max: 179, enforced: 'camera_3d.cpp:725' });
-    expect(validator('fov', '250', 1)?.severity).toBe('error');
-    expect(validator.grounding).toEqual({ kind: 'enforced', cite: 'camera_3d.cpp:725' });
-  });
-
-  it('a hinted bound reports out-of-range as a warning', () => {
-    // The inspector will not offer it, but a .tscn carrying it loads and runs.
-    const validator = v.float('near', { min: 0.001, hinted: 'camera_3d.cpp:685' });
-    expect(validator('near', '0.0001', 1)?.severity).toBe('warning');
-    expect(validator.grounding).toEqual({ kind: 'hinted', cite: 'camera_3d.cpp:685' });
-  });
-
-  it('keeps a FORMAT failure an error whatever the grounding', () => {
-    // An unparseable value is malformed regardless of what Godot would accept.
-    const validator = v.float('near', { min: 0.001, hinted: 'camera_3d.cpp:685' });
-    expect(validator('near', 'not-a-number', 1)?.severity).toBe('error');
-  });
-
-  it('applies the same split to an enum', () => {
-    const hinted = v.enumInt('mode', 0, 2, { 0: 'A', 1: 'B', 2: 'C' }, { hinted: 'x.cpp:10' });
-    expect(hinted('mode', '9', 1)?.severity).toBe('warning');
-    const enforced = v.enumInt('mode', 0, 2, { 0: 'A', 1: 'B', 2: 'C' }, { enforced: 'x.cpp:11' });
-    expect(enforced('mode', '9', 1)?.severity).toBe('error');
-  });
-
-  it('leaves an un-audited bound erroring, as it did before the split', () => {
-    const validator = v.float('legacy', { min: 0 });
-    expect(validator('legacy', '-1', 1)?.severity).toBe('error');
-    expect(validator.grounding).toBeUndefined();
-  });
-});
-
-describe('per-end grounding', () => {
-  it('gives an enforced floor and a hinted ceiling different severities', () => {
-    // PhysicalBone2D.bone2d_index is the real shape: ERR_FAIL_COND on the floor
-    // (physical_bone_2d.cpp:229), nothing but a hint on the ceiling (:283).
-    const validator = v.strictInt('bone2d_index', {
-      min: 0,
-      max: 1000,
-      enforced: { min: 'physical_bone_2d.cpp:229' },
-      hinted: { max: 'physical_bone_2d.cpp:283' },
-    });
-    expect(validator('bone2d_index', '-1', 1)?.severity).toBe('error');
-    expect(validator('bone2d_index', '1001', 1)?.severity).toBe('warning');
-  });
-
-  it('grounds every bounded combinator, not just float and int', () => {
-    // The audit found eight combinators that could not carry a citation, which
-    // covered a large share of the bounds needing one.
-    const cases: PropertyValidator[] = [
-      v.radians('angle', { maxDeg: 180, hinted: 'a.cpp:1' }),
-      v.nonNegativeFloat('n', { hinted: 'b.cpp:2' }),
-      v.positiveFloat('p', undefined, { hinted: 'c.cpp:3' }),
-      v.positiveInt('i', undefined, { hinted: 'd.cpp:4' }),
-      v.strictNonNegativeInt('s', { hinted: 'e.cpp:5' }),
-      v.boundedVector3('vec', { min: 0, hinted: 'f.cpp:6' }),
-      v.strictInt('si', { min: 0, hinted: 'g.cpp:7' }),
-      layerBitmask('mask', { hinted: 'h.cpp:8' }),
-    ];
-    for (const validator of cases) {
-      expect(validator.grounding?.kind).toBe('hinted');
-    }
-  });
-
-  it('reports a hinted violation as a warning through those combinators too', () => {
-    expect(v.nonNegativeFloat('n', { hinted: 'b.cpp:2' })('n', '-1', 1)?.severity).toBe('warning');
-    expect(v.positiveInt('i', undefined, { hinted: 'd.cpp:4' })('i', '0', 1)?.severity).toBe(
-      'warning'
-    );
-    expect(
-      v.boundedVector3('vec', { min: 0, hinted: 'f.cpp:6' })('vec', 'Vector3(-1, 0, 0)', 1)
-        ?.severity
-    ).toBe('warning');
-  });
-
-  it('splits float and int the same way strictInt does', () => {
-    // Regression for a bug the 3D rendering audit found: `float`/`int` used to
-    // collapse a per-end split through `boundSeverity`, which returns 'error'
-    // unless BOTH ends are hinted — so `{ enforced: { min }, hinted: { max } }`
-    // typechecked but silently made the whole bound an error. CSGCylinder3D's
-    // `sides` (enforced floor csg_shape.cpp:1876, hinted ceiling :1849) is the
-    // real shape this fixes.
-    const floatV = v.float('extra_cull_margin', {
-      min: 0,
-      max: 16384,
-      enforced: { min: 'visual_instance_3d.cpp:377' },
-      hinted: { max: 'visual_instance_3d.cpp:602' },
-    });
-    expect(floatV('extra_cull_margin', '-1', 1)?.severity).toBe('error');
-    expect(floatV('extra_cull_margin', '20000', 1)?.severity).toBe('warning');
-
-    const intV = v.int('sides', {
-      min: 3,
-      max: 64,
-      enforced: { min: 'csg_shape.cpp:1876' },
-      hinted: { max: 'csg_shape.cpp:1849' },
-    });
-    expect(intV('sides', '2', 1)?.severity).toBe('error');
-    expect(intV('sides', '65', 1)?.severity).toBe('warning');
-  });
-
-  it('splits enumInt per end too, which used to collapse to error', () => {
-    // `boundSeverity` returned 'warning' only when BOTH ends were hinted, so an
-    // enforced floor made the whole bound error, ceiling included.
-    const split = v.enumInt(
-      'mode',
-      1,
-      3,
-      { 1: 'A', 2: 'B', 3: 'C' },
-      { enforced: { min: 'x.cpp:10' }, hinted: { max: 'x.cpp:11' } }
-    );
-    expect(split('mode', '0', 1)?.severity).toBe('error');
-    expect(split('mode', '4', 1)?.severity).toBe('warning');
-  });
-
-  it('splits boundedVector3 per end too', () => {
-    const split = v.boundedVector3('size', {
-      min: 0.01,
-      max: 1024,
-      enforced: { min: 'gpu_particles_collision_3d.cpp:97' },
-      hinted: { max: 'gpu_particles_collision_3d.cpp:101' },
-    });
-    expect(split('size', 'Vector3(0, 1, 1)', 1)?.severity).toBe('error');
-    expect(split('size', 'Vector3(2048, 1, 1)', 1)?.severity).toBe('warning');
-  });
-
-  it('keeps BOTH citations when the ends are grounded differently', () => {
-    // Recording only the enforced one discarded the hinted end's file:line, so
-    // the citation sweep could never check it.
-    const split = v.float('extra_cull_margin', {
-      min: 0,
-      max: 16384,
-      enforced: { min: 'visual_instance_3d.cpp:377' },
-      hinted: { max: 'visual_instance_3d.cpp:602' },
-    });
-    expect(split.grounding?.cite).toContain('visual_instance_3d.cpp:377');
-    expect(split.grounding?.cite).toContain('visual_instance_3d.cpp:602');
   });
 });
 
@@ -296,7 +100,9 @@ describe('the classification guard bites', () => {
     // to cite. Counting it as un-audited was what inflated the ratchet to 596.
     expect(v.float('width').formatOnly).toBe(true);
     expect(v.int('count').formatOnly).toBe(true);
-    expect(v.float('fov', { min: 1, max: 179, enforced: 'camera_3d.cpp:725' }).formatOnly).toBeUndefined();
+    expect(
+      v.float('fov', { min: 1, max: 179, enforced: 'camera_3d.cpp:725' }).formatOnly
+    ).toBeUndefined();
   });
 
   it('passes a grounded bound, which cites instead of declaring format-only', () => {

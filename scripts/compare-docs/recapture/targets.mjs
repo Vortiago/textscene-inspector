@@ -1,0 +1,82 @@
+/** WHICH images the sheets ask for, where each one lives, and who renders it. */
+
+import { closeSync, existsSync, openSync, readFileSync, readSync } from 'node:fs';
+import { join } from 'node:path';
+import { CANVAS_2D_CAPTURE } from '../../visual/previewServer.mjs';
+import { COMPLEX_SCENES } from '../capture-complex.mjs';
+import {
+  IMAGES_DIR as IMAGES,
+  REPO_ROOT,
+  collectSheetFiles,
+  findScene,
+  parseCompareMarkers,
+  parseFrontmatter,
+} from '../sheetSources.mjs';
+
+/** Every (image, fixture, camera) the sheets reference — legacy pair + sections. */
+export function collectTargets() {
+  const byImage = new Map();
+  for (const file of collectSheetFiles()) {
+    const text = readFileSync(file, 'utf8');
+    const parsed = parseFrontmatter(text);
+    if (!parsed) continue;
+    const { meta } = parsed;
+    const camera = meta.camera || '';
+    // The frontmatter pair and the section markers are BOTH sources, never
+    // either/or: a sheet that gains its first section must not lose the image
+    // its own header still displays. Taking only the sections silently orphans
+    // that image — it stops being re-rendered, drifts from the renderer, and
+    // there is no failure to notice, because every OTHER image still updates.
+    // Sections are applied last so one may override the header for a shared
+    // name; the Map collapses the duplicate.
+    if (meta.visual !== 'false' && meta.image && meta.fixture) {
+      // A no-visual sheet renders a "draws nothing" note, not its image — skip it.
+      byImage.set(meta.image, { fixture: meta.fixture, camera });
+    }
+    for (const attrs of parseCompareMarkers(parsed.body)) {
+      if (attrs.image && attrs.fixture) byImage.set(attrs.image, { fixture: attrs.fixture, camera });
+    }
+  }
+  return [...byImage.entries()].map(([image, t]) => ({ image, ...t })).sort((a, b) => a.image.localeCompare(b.image));
+}
+
+// The Godot-side scene path for a sheet's `fixture` value (which is the ours-side
+// `?fixture=` id). Shared with the sheets test so both agree on what resolves.
+export const godotScenePath = (fixture) => findScene(fixture) ?? join(REPO_ROOT, 'scenes/fixtures', fixture);
+export const imgPath = (image, side) => join(IMAGES, `${image}-${side}.png`);
+
+export function modeOfExistingGodot(image) {
+  const file = imgPath(image, 'godot');
+  if (!existsSync(file)) return null;
+  const h = Buffer.alloc(24);
+  const fd = openSync(file, 'r');
+  try {
+    readSync(fd, h, 0, 24, 0);
+  } finally {
+    closeSync(fd);
+  }
+  return h.readUInt32BE(16) === CANVAS_2D_CAPTURE.width && h.readUInt32BE(20) === CANVAS_2D_CAPTURE.height
+    ? '2d'
+    : '3d';
+}
+
+/**
+ * Split sheet images into the ones this script renders and the ones
+ * capture-complex.mjs owns.
+ *
+ * Both scripts write `<image>-godot.png` into the same directory, and a complex
+ * scene needs per-scene settings (`frame`, `sceneCamera`, a named `oursCamera`,
+ * a forced 2D/3D mode) that live in COMPLEX_SCENES and that a sheet's
+ * frontmatter cannot express. Rendering one here with this script's defaults
+ * produces a WRONG frame that silently overwrites the right one — the town
+ * captured from the editor orbit ends up under the terrain — and nothing fails,
+ * because a picture is a picture. So ownership is decided by the slug, in one
+ * place, and the owned ones are handed to their owner rather than guessed at.
+ */
+export function partitionTargets(targets) {
+  const complexSlugs = new Set(COMPLEX_SCENES.map((c) => c.slug));
+  return {
+    own: targets.filter((t) => !complexSlugs.has(t.image)),
+    delegated: targets.filter((t) => complexSlugs.has(t.image)),
+  };
+}
