@@ -35,6 +35,13 @@ brightens the top, and fills the cast shadow to a washed, lighter patch. Parity 
 unverified — nothing in this repo can compare our AreaLight3D against the engine until
 a 4.7 binary sits beside the 4.6 one.
 
+Two of the node's own 4.7 properties are neither parsed nor validated here,
+`area_attenuation` (float) and `area_texture` (Texture2D). Their types come from the
+class reference, but a validator needs the `ADD_PROPERTY` hint and a check that the
+property is serialised at all, and neither is readable until the engine reference moves
+to 4.7. `light_size` and `shadow_normal_bias` appear on the same class-reference page as
+default-value overrides of Light3D members, so they stay Light3D's to validate.
+
 ## Linting
 
 <!-- lint:begin AreaLight3D -->

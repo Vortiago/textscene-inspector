@@ -51,6 +51,17 @@ line reproduced as a comment. No source file, test, fixture, script or CI step m
 resolve a path into the checkout — `scripts/godot-source-decoupling.test.mjs` enforces
 that, and deleting the clone must leave `pnpm validate` unchanged.
 
+Every `file.cpp:line` in the code is 4.6.3-relative, and there are a lot of them —
+~3,500 distinct pairs across ~400 engine files in `packages/textscene-core/src` alone:
+
+```bash
+grep -rhoE '[a-z0-9_]+\.(cpp|h|glsl):[0-9]+' packages/textscene-core/src | sort -u | wc -l
+```
+
+Moving the pin therefore re-anchors every citation and is a sweep, not a config change.
+The published class reference is already a minor ahead (4.7), which is why `AreaLight3D`
+has a slice and a `Light3D` hop stated by hand but no citable `ADD_PROPERTY` hint.
+
 ## Core Documentation
 
 ### TSCN Format

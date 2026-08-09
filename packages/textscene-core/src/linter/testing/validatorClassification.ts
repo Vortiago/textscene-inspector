@@ -13,13 +13,15 @@ import { validatorRegistry } from '../ValidatorRegistry.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 
 /**
- * The one bound that cannot be grounded, with the reason.
+ * The one bound that cannot be grounded against the pinned reference, with the
+ * reason.
  *
- * `AreaLight3D` does not exist anywhere in Godot 4.6.3, so it has no
- * ADD_PROPERTY hint and no setter to cite. Its slice sheet records that the
- * node postdates this engine build. Guessing a citation would be worse than
- * admitting there is none, so the bound stays an ungrounded error and is named
- * here rather than hidden in a count.
+ * `AreaLight3D` postdates Godot 4.6.3 and appears nowhere in it, so there is no
+ * ADD_PROPERTY hint and no setter to cite. The current class reference gives
+ * `area_range` a default of 5.0 but never its hint, and a default is not a
+ * bound. Guessing a citation would be worse than admitting there is none, so
+ * the bound stays ungrounded and named here rather than hidden in a count; it
+ * becomes citable the day the reference pin moves.
  */
 const UNGROUNDABLE: ReadonlySet<string> = new Set(['AreaLight3D.area_range']);
 

@@ -35,14 +35,17 @@ const areaLight3DValidationRule: LintRule = {
       {
         ruleName: 'arealight3d-negative-energy',
         severity: 'warning',
-        // The weakest citation in the sweep, and deliberately not an exemption.
-        // AreaLight3D appears NOWHERE in 4.6.3, so it has no base chain here
+        // Light3D's `light_energy` hint, not the node's own, and that is the
+        // right cite: the class reference lists AreaLight3D under Light3D's
+        // "Inherited By", so it inherits the property and the hint that governs
+        // it. Only the LINE NUMBER is pin-relative — AreaLight3D appears
+        // nowhere in 4.6.3, so it has no catalogued base chain here
         // (`nodeBaseTypes.generated.ts` derives one from that ClassDB) and this
-        // line is Light3D's `light_energy` hint, not the node's own. What makes
-        // it the honest choice is that `lightEnergyArms('arealight3d')` already
-        // stamps the same cite on the RangeArm that produces this diagnostic,
-        // and `rangeAdvisoryGrounding` accepts it: naming an exemption here
-        // would leave two guards disagreeing about one fact.
+        // offset must be re-anchored when the pin moves. Not an exemption,
+        // because `lightEnergyArms('arealight3d')` already stamps the same cite
+        // on the RangeArm that produces this diagnostic and
+        // `rangeAdvisoryGrounding` accepts it: exempting here would leave two
+        // guards disagreeing about one fact.
         grounding: { kind: 'engine', at: 'light_3d.cpp:389' },
       },
     ],

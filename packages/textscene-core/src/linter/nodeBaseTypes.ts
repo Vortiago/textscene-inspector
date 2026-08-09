@@ -26,8 +26,11 @@ import { CATALOG_BASE_TYPES } from './nodeBaseTypes.generated.js';
  * shadow the engine's own answer, which `nodeBaseTypes.sync.test.ts` rejects.
  */
 const UNCATALOGUED: Readonly<Record<string, string>> = {
-  // Not in 4.6.3's ClassDB at all — it is an editor-authored light shape rather
-  // than its own class, but scenes still name it (3d/lights/arealight3d).
+  // A real class, added after the pinned build: 4.6.3's ClassDB does not know
+  // it, and the current class reference lists it under Light3D's "Inherited By"
+  // beside DirectionalLight3D / OmniLight3D / SpotLight3D. Scenes already name
+  // it (3d/lights/arealight3d), so the hop is stated here until the pin moves
+  // and the catalog supplies it.
   AreaLight3D: 'Light3D',
 };
 
