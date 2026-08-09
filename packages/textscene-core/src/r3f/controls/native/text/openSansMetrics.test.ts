@@ -47,17 +47,23 @@ describe('OPEN_SANS_METRICS', () => {
     expect(getLinePitchPx(16)).toBe(26);
   });
 
-  it('spot-checks glyph advances against values independently extracted by a separate msdf-bmfont-xml run', () => {
+  it('spot-checks glyph advances against values hand-computed from the vendored font\'s own hmtx table', () => {
     // Baked atlas xadvance (at the atlas bake size, 42px) for a handful of
-    // representative glyphs, independently produced during the P10 spike
-    // (S2 `atlas-tight/OpenSans_SemiBold.json`) from the same vendored font.
-    // This packet's own bake run must reproduce the same figures exactly —
-    // msdf-bmfont-xml's packing/advance computation is deterministic.
-    expect(OPEN_SANS_ATLAS_GLYPHS[' ']?.xadvance).toBe(11);
-    expect(OPEN_SANS_ATLAS_GLYPHS['A']?.xadvance).toBe(28);
-    expect(OPEN_SANS_ATLAS_GLYPHS['M']?.xadvance).toBe(39);
-    expect(OPEN_SANS_ATLAS_GLYPHS['W']?.xadvance).toBe(40);
-    expect(OPEN_SANS_ATLAS_GLYPHS['i']?.xadvance).toBe(12);
-    expect(OPEN_SANS_ATLAS_GLYPHS['.']?.xadvance).toBe(12);
+    // representative glyphs. msdf-bmfont-xml's own glyph-table xadvance is
+    // `glyph.advanceWidth * (fontSize / unitsPerEm)`, unrounded
+    // (`index.js:400`; `bake-metrics.mjs` now passes `roundDecimal: null` so
+    // `index.js:298`'s guard leaves it that way). `hmtx` advance widths are
+    // whole design units by construction (TrueType's `hmtx` table is
+    // unsigned 16-bit integers) — independently read with fontkit 2.0.4
+    // straight off the vendored woff2 (space 532, A 1354, M 1887, W 1936,
+    // i 571, period 561 — all whole numbers, NOT read back from either
+    // generated module), so each figure below is `wholeAdvanceUnits *
+    // 42/2048` computed by hand from that reading.
+    expect(OPEN_SANS_ATLAS_GLYPHS[' ']?.xadvance).toBe(10.91015625);
+    expect(OPEN_SANS_ATLAS_GLYPHS['A']?.xadvance).toBe(27.767578125);
+    expect(OPEN_SANS_ATLAS_GLYPHS['M']?.xadvance).toBe(38.6982421875);
+    expect(OPEN_SANS_ATLAS_GLYPHS['W']?.xadvance).toBe(39.703125);
+    expect(OPEN_SANS_ATLAS_GLYPHS['i']?.xadvance).toBe(11.7099609375);
+    expect(OPEN_SANS_ATLAS_GLYPHS['.']?.xadvance).toBe(11.5048828125);
   });
 });

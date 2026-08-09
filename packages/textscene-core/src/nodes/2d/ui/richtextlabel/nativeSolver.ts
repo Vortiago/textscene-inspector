@@ -354,9 +354,17 @@ export function fontSizePxAtFromRuns(styledRuns: readonly StyledTextRun[]): (cha
  * a single vertical stroke, so its half-max-crossing width is the stroke
  * thickness directly, uncontaminated by any neighbouring glyph): Godot's own
  * embolden=1.2 renders that stem 3.04px wide (half-max crossings at x≈22.2
- * and x≈25.3, read on any row strictly inside the stem — Godot's spans rows
- * 6..19 of that capture and this engine's 7..20, so no single row number
- * addresses both). The former value here,
+ * and x≈25.3, read on any row strictly inside the stem). Reading the SAME
+ * stem's own column VERTICALLY (half-max crossings, linear-interpolated
+ * between samples, at the stem's own peak-darkness column) puts Godot's
+ * cap-top/baseline-bottom at y≈6.38/19.5 against this engine's y≈6.75/19.82 —
+ * a real but sub-pixel (~0.35px lower) residual, not a whole row, so a single
+ * integer row number still cannot address both crisply at a coarse
+ * ink-visibility threshold (`richtextlabel/comparison.md`'s own divergence
+ * entry has the fuller account: three glyphs on this SAME 16px run measure
+ * three different residuals, which rules out a per-run constant and points
+ * at Godot's own FreeType hinting, not at `buildGlyphQuadArrays`). The
+ * former value here,
  * 0.08 (an unmeasured placeholder), rendered only 2.15px — visibly thinner.
  * 0.35 renders 3.01px, matching to within the measurement's own row-to-row
  * noise (a single scanline's sub-pixel crossings), without collapsing 'o's

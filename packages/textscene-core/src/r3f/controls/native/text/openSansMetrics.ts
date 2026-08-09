@@ -18,11 +18,12 @@ import { getFontAscentPx, getFontLinePitchPx } from './fontMetrics';
  * `advanceWidths` IS a deliberate duplicate of `openSansAtlas.ts`'s own
  * glyph table's `xadvance` field — the ONE exception to "one bake, one
  * source": that table is the atlas tool's OWN glyph geometry (bitmap
- * placement inside the PNG, at the atlas's bake-size-42 resolution), rounded
- * to whole atlas-bake pixels by msdf-bmfont-xml itself before this script
- * ever reads it back, where THIS one is the RAW `hmtx` value, quantized by
- * nothing and at no size — see `getGlyphAdvanceUnits`'s own doc for why a
- * shaper never wants the ATLAS's copy.
+ * placement inside the PNG, at the atlas's bake-size-42 resolution) —
+ * `xadvance` is `glyph.advanceWidth * (fontSize / unitsPerEm)` FIXED to
+ * that bake size (msdf-bmfont-xml's `index.js:400`), where THIS one is the
+ * RAW `hmtx` value, quantized by nothing and at no size — see
+ * `getGlyphAdvanceUnits`'s own doc for why a shaper never wants the ATLAS's
+ * copy.
  */
 export interface OpenSansMetrics {
   /** `font.unitsPerEm` (fontkit) — hhea/head design units per em. */
@@ -92,12 +93,11 @@ export function getKerningAdjustmentUnits(a: string, b: string): number {
  *
  * This is the RAW design-unit value, at no size and quantized by nothing —
  * never `openSansAtlas.ts`'s own `xadvance`, which is msdf-bmfont-xml's OWN
- * atlas-bake-resolution glyph table (bake size 42, INTEGER-rounded at THAT
- * resolution before this repo's bake script ever sees it) and therefore
- * carries roughly 1/2 an atlas-bake-pixel of quantization noise per glyph —
- * negligible at the atlas's own 42px bake size, but the SAME absolute error
- * persists after scaling down to a UI font size (14-28px), where it is a much
- * larger fraction of each glyph's own advance and accumulates roughly
+ * atlas-bake-resolution glyph table, fixed to bake size 42
+ * (`glyph.advanceWidth * (fontSize / unitsPerEm)`, msdf-bmfont-xml's
+ * `index.js:400`) before this repo's bake script ever reads it back. Scaling
+ * that bake-size-42 value down to a UI font size (14-28px) does not reproduce
+ * HarfBuzz's own target-size shaping, and the error accumulates roughly
  * linearly with line length.
  *
  * Godot's own per-glyph advance is quantized too, just at the TARGET size

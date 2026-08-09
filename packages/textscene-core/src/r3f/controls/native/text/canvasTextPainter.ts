@@ -212,18 +212,48 @@ export interface CanvasTextMaterialOptions {
 }
 
 /**
+ * `map_fragment.glsl.js`'s own video-texture decode define — the pairing
+ * `createCanvasTextMaterial` would need if `map` were ever tagged
+ * `NoColorSpace` the way every OTHER 2D-canvas-drawn texture is
+ * (`canvas2DTextureDecode.ts`'s `useCanvasDecodeDefines`). `TextRun.tsx`'s
+ * own doc has why THIS texture stays `SRGBColorSpace` instead (measured, not
+ * inferred: Godot's own glyph rendering has no genuinely-differing RGB pair
+ * for a filter to blend in the wrong order in the first place, so there is
+ * nothing here for this define to correct today) — this define exists so
+ * that IF that ever changes, the decode is a `map.colorSpace` check away
+ * rather than a second thing to remember. Duplicated from
+ * `canvas2DTextureDecode.ts` (not imported) because that module is a *hook*
+ * (`useMemo`-based) and this material is built imperatively, outside any
+ * component's render.
+ */
+const DECODE_VIDEO_TEXTURE_DEFINES: Readonly<Record<string, string>> = { DECODE_VIDEO_TEXTURE: '' };
+
+/**
  * A plain textured quad material for canvas-rasterised text — no custom
  * shader needed (unlike MSDF: there is no distance field to decode), so
  * `THREE.MeshBasicMaterial` is used directly and gets three's OWN automatic
- * sRGB->linear texture decode for free (the texture must be marked
- * `THREE.SRGBColorSpace`, done by the caller when constructing the
- * `THREE.CanvasTexture` — `msdfMaterial.ts`'s own doc has why a hand-written
- * `ShaderMaterial`, unlike this built-in one, would need that decode spelled
- * out by hand instead).
+ * sRGB->linear hardware decode for the common case (`map` tagged
+ * `SRGBColorSpace`, `TextRun.tsx`'s own doc has why that is correct for this
+ * texture today). The `NoColorSpace` branch below exists so a FUTURE `map`
+ * that legitimately needs the post-filter decode instead (the general
+ * 2D-canvas rule every OTHER canvas-drawn texture follows) gets it
+ * automatically from its OWN tag — the same auto-detection
+ * `useCanvasDecodeDefines`/`ControlQuad` already do — rather than needing a
+ * second, easy-to-forget edit here. The two halves (tag + define) can
+ * therefore never be applied independently, whichever this function's
+ * caller chooses.
+ *
+ * `defines` is assigned AFTER construction, not through the constructor's
+ * options object: `THREE.Material#setValues` (which the constructor calls)
+ * skips — with a console warning — any key that is not ALREADY a property on
+ * the instance, and `MeshBasicMaterial` (unlike `ShaderMaterial`) declares no
+ * default `defines` property. `WebGLProgram` itself reads `material.defines`
+ * generically for every material type, so a direct assignment still reaches
+ * the compiled shader; only the constructor-object shortcut does not.
  */
 export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): THREE.MeshBasicMaterial {
   const { map, opacity, depthTest = false, side = THREE.DoubleSide, clippingPlanes = [] } = options;
-  return new THREE.MeshBasicMaterial({
+  const material = new THREE.MeshBasicMaterial({
     map,
     transparent: true,
     opacity,
@@ -232,4 +262,8 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     side,
     clippingPlanes: [...clippingPlanes],
   });
+  if (map.colorSpace === THREE.NoColorSpace) {
+    material.defines = { ...DECODE_VIDEO_TEXTURE_DEFINES };
+  }
+  return material;
 }

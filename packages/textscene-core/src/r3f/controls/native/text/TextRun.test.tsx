@@ -70,12 +70,16 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
       "(0.2 * distance below line top) would shift every ascender-height vertex LEFT, which is the " +
       "wrong direction and (for a run boundary) eats into the space that precedes it.",
     () => {
-      // 'A' (fontSize 16, atlas bake size 42, SCALE = 16/42): yoffset=13, height=34,
-      // bake `base` = 45. baselineOffsetPx at fontSize 16 = ceil(2189 * 16/2048) = 18.
-      // topPx = 18 - (45 - 13)*(16/42) = 5.809523809...; bottomPx = topPx + 34*(16/42)
-      // = 18.761904761... — the bitmap's own bottom edge sits a shade BELOW the baseline
-      // (the bake's anti-aliasing padding: 13 + 34 - 45 = 2 bake px), not the ~18.8 below
-      // the line top a top-edge pivot would use.
+      // 'A' (fontSize 16, atlas bake size 42, SCALE = 16/42): yoffset=12.8916015625,
+      // height=34, bake `base` = 44.8916015625 (both floats — `roundDecimal: null`
+      // leaves the bake tool's own unrounded numbers, but `base - yoffset` is an
+      // integer 32 either way, since both carry the SAME baseline offset).
+      // baselineOffsetPx at fontSize 16 = ceil(2189 * 16/2048) = 18.
+      // topPx = 18 - (44.8916015625 - 12.8916015625)*(16/42) = 5.809523809...;
+      // bottomPx = topPx + 34*(16/42) = 18.761904761... — the bitmap's own bottom
+      // edge sits a shade BELOW the baseline (the bake's anti-aliasing padding:
+      // 12.8916015625 + 34 - 44.8916015625 = 2 bake px), not the ~18.8 below the
+      // line top a top-edge pivot would use.
       const skewed = buildGlyphQuadArrays(layoutFor('A'), 16, 0.2);
       const straight = buildGlyphQuadArrays(layoutFor('A'), 16, 0);
       const topDx = skewed.positions[0]! - straight.positions[0]!;
@@ -91,8 +95,8 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
     "anchors a line at its BASELINE (`layout.baselineOffsetPx` below the line's box top), " +
       'folding the MSDF bake\'s own line-top anchor (`OPEN_SANS_ATLAS_INFO.base` above that ' +
       'baseline) in HERE rather than leaving it for a caller to add back — at fontSize 16 the ' +
-      "reconciliation is 18 - 45*(16/42) = 0.857142857... Godot px, and every consumer that used to " +
-      'carry it now positions a line by its box-top Y alone.',
+      'reconciliation is 18 - OPEN_SANS_ATLAS_INFO.base*(16/42) Godot px, and every consumer ' +
+      'that used to carry it now positions a line by its box-top Y alone.',
     () => {
       const layout = layoutFor('A');
       const a = OPEN_SANS_ATLAS_GLYPHS.A!;
@@ -105,7 +109,21 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
       // ascent are DIFFERENT quantities, so a painter that ignored one would be
       // wrong by this much on every line.
       expect(OPEN_SANS_ATLAS_INFO.base * SCALE).not.toBeCloseTo(layout.baselineOffsetPx, 3);
-      expect(18 - OPEN_SANS_ATLAS_INFO.base * SCALE).toBeCloseTo(0.8571428571428577, 10);
+      // `OPEN_SANS_ATLAS_INFO.base` is msdf-bmfont-xml's own `baseline`
+      // (`index.js:346`): `os2.sTypoAscender * (fontSize / unitsPerEm)`, ATLAS
+      // fontSize = 42 here. For OpenSans_SemiBold, OS/2 `sTypoAscender` (2189)
+      // equals the hhea `ascent` `OPEN_SANS_METRICS.ascent` bakes separately —
+      // so `base * (16/42)` reduces to `2189 * (16/2048)` regardless of the
+      // atlas's own bake size, and the reconciliation below is really just
+      // Godot's ceiling rule's own discarded remainder
+      // (`getFontAscentPx`/`text_server_adv.cpp:1515-1516`): `ceil(2189*16/2048)
+      // - 2189*16/2048 = 18 - 17.1015625 = 0.8984375`. It is unrounded (`bake-
+      // metrics.mjs` bakes `roundDecimal: null`) but bake-size-independent
+      // either way — the fix changed `base`'s exact float (was 45 pre-fix,
+      // the whole-bake-pixel round of 44.8916015625) without changing which
+      // constants this reconciliation is actually built from.
+      expect(OPEN_SANS_ATLAS_INFO.base * (2048 / 42)).toBe(2189);
+      expect(18 - OPEN_SANS_ATLAS_INFO.base * SCALE).toBeCloseTo(0.8984375, 10);
     }
   );
 
@@ -202,6 +220,74 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
     expect(mat.map).toBeInstanceOf(THREE.CanvasTexture);
     expect(mat.transparent).toBe(true);
   });
+
+  it(
+    'tags the canvas raster SRGBColorSpace -- DELIBERATELY NOT the general 2D-canvas ' +
+      '`NoColorSpace` rule (`canvas2DTextureDecode.ts`) every OTHER 2D-canvas-drawn texture ' +
+      '(TextureRect, theme icons, sprites) gets. Measured, not inferred ' +
+      '(`unit-control-scene-font-magnified.tscn`\'s header has the arbitration): `NoColorSpace` ' +
+      'here produces a dip below the backdrop at a magnified glyph edge that Godot\'s own render ' +
+      'of the SAME scene never shows, because Godot\'s own glyph texture is a coverage mask with ' +
+      'a CONSTANT colour channel (`text_server_adv.cpp` `rasterize_bitmap`, `FT_PIXEL_MODE_GRAY`: ' +
+      '`wr[ofs+0] = 255` always, only `wr[ofs+1]` -- alpha, never sRGB-encoded -- varies), so the ' +
+      'byte-vs-decoded-first blend order this file\'s sibling fixes correct for icons/sprites is, ' +
+      'for Godot\'s OWN text rendering, never even in play. `TextRun.tsx`\'s own doc has the full ' +
+      'derivation. This pins the decision against a future change that "completes the pattern" by ' +
+      'copying the icon/sprite retag here without re-measuring.',
+    async () => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={WHITE} />
+      );
+      const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      expect(mat.map!.colorSpace).toBe(THREE.SRGBColorSpace);
+    }
+  );
+
+  it(
+    'leaves DECODE_VIDEO_TEXTURE UNSET, matching the kept SRGBColorSpace tag -- ' +
+      '`createCanvasTextMaterial`\'s own auto-detection (`map.colorSpace === NoColorSpace`) means ' +
+      'this follows automatically from the tag above rather than needing its own separate pin, but ' +
+      'asserted here anyway: a `SRGBColorSpace` texture ALREADY gets three\'s automatic hardware ' +
+      'decode, so also setting this define would decode the sample TWICE.',
+    async () => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={WHITE} />
+      );
+      const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      expect(mat.defines?.DECODE_VIDEO_TEXTURE).toBeUndefined();
+    }
+  );
+
+  it(
+    'keeps the SRGBColorSpace tag across a re-render that reuses the SAME material -- the ' +
+      'material is built imperatively (`createCanvasTextMaterial`, a plain ' +
+      '`new THREE.MeshBasicMaterial(...)`), never through a JSX `<meshBasicMaterial map={...}>` ' +
+      'element, so `@react-three/fiber`\'s `applyProps` `colorMaps` re-tagging never gets a chance ' +
+      'to run on it either way -- proving the KEPT tag survives a second commit the same way a ' +
+      'retag would have (`undecodedTexture.ts`\'s own doc: that re-tagging is what forces ' +
+      '`useIconTexture` to use `pinNoColorSpace` instead of a plain assignment there). ' +
+      '`renderOrder` is deliberately NOT a `useMemo` dep (`TextRun.tsx`\'s own deps list), so ' +
+      'changing only it forces a second commit of the SAME material/texture object.',
+    async () => {
+      // SAME layout object reference across both renders -- `layout` is a
+      // `useMemo` dep, so calling `canvasLayoutFor('Hi')` a second time (a
+      // fresh object, equal contents but different identity) would rebuild
+      // the material for that reason alone, defeating the point of this test.
+      const layout = canvasLayoutFor('Hi');
+      const renderer = await ReactThreeTestRenderer.create(
+        <TextRun layout={layout} fontSizePx={16} tint={WHITE} renderOrder={0} />
+      );
+      const mesh1 = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+      const mat = mesh1.material as THREE.MeshBasicMaterial;
+      expect(mat.map!.colorSpace).toBe(THREE.SRGBColorSpace);
+      await renderer.update(<TextRun layout={layout} fontSizePx={16} tint={WHITE} renderOrder={5} />);
+      const mesh2 = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+      const matAfter = mesh2.material as THREE.MeshBasicMaterial;
+      expect(matAfter).toBe(mat); // same object -- proves the memo held and this is a genuine re-commit, not a rebuild
+      expect(mesh2.renderOrder).toBe(5); // proves the second commit actually applied props
+      expect(matAfter.map!.colorSpace).toBe(THREE.SRGBColorSpace);
+    }
+  );
 
   it('applies tint.a directly as material opacity (the canvas raster is drawn opaque; alpha is not baked into it)', async () => {
     const tint = { r: 1, g: 1, b: 1, a: 0.4 };

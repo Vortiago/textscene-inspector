@@ -50,6 +50,41 @@ stroke units, so this remains a tuned approximation, not a calibrated port —
 `[i]`'s skew is exact by contrast, since it transcribes a Transform2D
 coefficient directly.
 
+`[b]`/`[i]` both fall back to Godot's built-in 16 px (`resolveRunFontSizePx`'s
+own doc — this scene overrides only `normal_font_size`, not the style-specific
+keys), landing on an 18 px-dominant line whose shared baseline is set by the
+line's own MAX ascent (`richTextLineMetrics`). Reading the `l` stem's own
+column vertically (half-max crossings, linear-interpolated between samples)
+puts Godot's cap-top/baseline-bottom at y≈6.38/19.5 against this engine's
+y≈6.75/19.82 — a real, sub-pixel (~0.35 px lower) residual on the 16 px run.
+Two candidate fixes to `buildGlyphQuadArrays`'s `bakeAnchorPx` were tried and
+both are ruled out by measurement, not merely undesirable: the CURRENT
+proportional scale of the atlas's own `base` at the run's own size, and a
+per-size whole-pixel ascent ceiling (`getFontAscentPx`) in its place. The
+18 px run on the SAME line (whose own size equals the line's dominant size —
+e.g. the `l` in `underline` and the `d` in `and`) reads **exactly** y=5.5/19.5
+in Godot AND in this engine, to the pixel — so any correction that moves
+`bakeAnchorPx` at a size equal to the line's own would regress an
+already-exact case, and the ceiling-based alternative does exactly that,
+by 0.71 px. The residual is also not a uniform per-run shift: reading three
+16 px glyphs on the SAME run (`l`, `d`, `B`) shows the ascender-height pair
+(`l`/`d`) both ~0.35 px low while the cap-height `B` is ~1.1 px low — three
+different residuals on one run at one size rules out a single per-run
+constant, closed-form or tuned. This is the signature of FreeType's
+per-size, per-outline-feature vertical grid-fitting under Godot's default
+`HINTING_LIGHT` (`scene/theme/default_theme.h:36`'s `p_font_hinting`
+default) snapping baseline/x-height/cap-height/ascender "blue zones"
+independently at each requested pixel size — confirmed further by every
+18 px baseline in this same capture landing on an exact `.5` half-pixel row
+(the signature of a hinted edge sampled between two pixel centres) while the
+16 px cap-top does not. A continuous proportional rescale of ONE 42 px MSDF
+bake cannot reproduce a font's own per-size hint adjustments — those are
+per-glyph, per-blue-zone, and non-linear in size — so no formula in
+`buildGlyphQuadArrays` closes this without porting FreeType's own hinter.
+The residual stays open as an architecture-level limit, not a bug in the
+reconciliation `buildGlyphQuadArrays` already does; the mechanism it would
+touch is shared by every text-painting Control, not owned by this node type.
+
 ## Linting
 
 <!-- lint:begin RichTextLabel -->
@@ -58,6 +93,7 @@ Strict parsing format-checks the inherited set (35 inherited from Control); `Ric
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `control-property-order` (type-family match) | `control-property-order` | warning |
 <!-- lint:end -->
 
 `RichTextLabel` has no strict counterpart for `bbcode_enabled` or `fit_content`

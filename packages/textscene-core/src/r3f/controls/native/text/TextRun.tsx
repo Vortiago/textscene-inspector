@@ -118,6 +118,22 @@ export function buildGlyphQuadArrays(
   const baselineOffsetPx = layout.baselineOffsetPx;
   // How far the bake's own line-top reference (what every `glyph.yoffset` is
   // measured down from) sits above the baseline, at the TARGET size.
+  //
+  // A run whose OWN `fontSizePx` differs from the size that set the line's
+  // shared `baselineOffsetPx` (a bbcode span at a fallback size, on a line
+  // otherwise dominated by a larger one) reads a few tenths of a pixel low
+  // against Godot — measured and NOT fixable here: swapping this proportional
+  // scale for a per-size whole-pixel ascent ceiling regresses the case where
+  // the run's own size EQUALS the line's (verified exact against Godot, by
+  // the pixel, on this same measurement) by most of a pixel, and three
+  // glyphs on ONE mismatched run measure three DIFFERENT residuals — no
+  // single per-run constant fits all three. That is the signature of
+  // Godot's own FreeType light hinting (`scene/theme/default_theme.h`'s
+  // default `font_hinting`) snapping each outline's baseline/x-height/
+  // cap-height/ascender independently at every requested pixel size, which a
+  // continuous rescale of one MSDF bake cannot reproduce. Do not re-attempt
+  // a closed-form fix here without porting that hinter — see the
+  // richtextlabel node's own comparison sheet for the full measurement.
   const bakeAnchorPx = OPEN_SANS_ATLAS_INFO.base * scale;
 
   let glyphCount = 0;
@@ -272,10 +288,52 @@ function buildTextRun(
 
     const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout);
     const texture = new THREE.CanvasTexture(canvas);
-    // Canvas 2D fill colours are sRGB (`canvasTextPainter.ts`'s own doc) —
-    // marking the texture SRGBColorSpace gets three's OWN automatic decode
-    // at sample time, the built-in-material equivalent of `msdfMaterial.ts`'s
-    // hand-written `sRGBToLinearRGB` + `colorspace_fragment` chunk.
+    // DELIBERATELY `SRGBColorSpace`, not the `NoColorSpace` the general 2D-
+    // canvas rule (`canvas2DTextureDecode.ts`'s own doc — `rendering/viewport/
+    // hdr_2d` off, `rendering_server.cpp:3771`/`texture_storage.cpp:754`)
+    // would suggest, and unlike every OTHER 2D-canvas-drawn texture (icons,
+    // sprites, TextureRect images). Measured before deciding, not inferred:
+    // magnifying this raster (`unit-control-scene-font-magnified.tscn`, whose
+    // header has the full arbitration) showed `NoColorSpace` producing a
+    // 5/255 dip BELOW the backdrop at the glyph edge that Godot's OWN render
+    // of the SAME scene never shows (a perfectly monotonic ramp) — the tag
+    // this replaces was already the correct one.
+    //
+    // The general rule holds for a texture with two GENUINELY DIFFERING
+    // opaque RGB values (an icon's ink vs. its rect, `72ab8896`'s own
+    // measurement) or a real colour-to-transparent(RGB=0) edge. Godot's own
+    // GLYPH texture is neither: for a plain (non-MSDF, non-colour-emoji) font,
+    // `modules/text_server_adv/text_server_adv.cpp` (`rasterize_bitmap`,
+    // `FT_PIXEL_MODE_GRAY` branch, ~:1170-1174) allocates an `Image::
+    // FORMAT_LA8` glyph texture and writes `wr[ofs+0] = 255` (the "colour"
+    // channel, CONSTANT wherever FreeType wrote any coverage at all) and
+    // `wr[ofs+1] = <coverage byte>` (the only channel that varies). Godot's
+    // canvas then modulates this constant-255 channel by `font_color` and
+    // blends by the ALPHA channel alone — which is never sRGB-encoded on
+    // either side of any GPU pipeline, by definition (only RGB carries a
+    // gamma curve) — so the byte-vs-decoded-first BLEND ORDER this whole
+    // file's sibling fix (`f2024064`) exists to correct is, for Godot's own
+    // text rendering, not merely closed but never open: there is no non-
+    // degenerate RGB pair for a filter to blend in the wrong order.
+    //
+    // THIS engine's canvas-2D `fillText` raster (`canvasTextPainter.ts`) is
+    // architecturally different — it bakes the actual ink colour into RGB
+    // (Canvas 2D's non-premultiplied-pixel guarantee) rather than carrying a
+    // separate coverage-only channel, and `CANVAS_TEXT_SUPERSAMPLE`'s 3x
+    // raster resolution puts a genuinely near-degenerate `(R=0,A=0)` texel
+    // immediately beside a near-fully-covered `(R=ink,A=255)` one at a
+    // glyph's outer edge (`canvasTextPainter.ts`'s own doc: the canvas starts
+    // at the browser's cleared `(0,0,0,0)` state and only `fillText` ever
+    // paints into it) — which is exactly the two-genuinely-different-values
+    // shape the general rule is FOR. Retagging this texture therefore
+    // reproduces a fringe Godot's reference never has, rather than removing
+    // one: `SRGBColorSpace`'s hardware pre-filter decode happens, empirically,
+    // to suppress it for this specific "0 beside a near-constant colour"
+    // shape (it does NOT for two genuinely different opaque colours — that is
+    // exactly the bug the sibling fixes close). A future change to THIS
+    // architecture (splitting the raster into a coverage-only channel plus a
+    // separately-modulated colour, matching Godot's own model exactly) would
+    // reopen this question; a plain retag today would not.
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.generateMipmaps = false;
     texture.minFilter = THREE.LinearFilter;

@@ -150,11 +150,13 @@ function bakeKerning(font) {
  * atlas bakes — the RAW, UNQUANTIZED source `fontMetrics.ts`'s
  * `getFontGlyphAdvancePx` puts through FreeType's own fixed-point chain,
  * instead of `openSansAtlas.ts`'s `xadvance` (msdf-bmfont-xml's OWN
- * atlas-bake-resolution-42 glyph table, INTEGER-rounded at that bake size
- * before this script ever sees it — confirmed empirically: msdf-bmfont-xml's
- * `roundDecimal` option defaults to `null` — no rounding — yet its own output
- * for this font is already whole pixels at size 42, so the rounding is
- * upstream, in the atlas-bake tool itself).
+ * atlas-bake-resolution-42 glyph table). Even with this bake script now
+ * passing `roundDecimal: null` explicitly (see `bakeAtlas`'s own comment —
+ * the library rounded every atlas field to a whole bake-pixel unless asked
+ * not to), the atlas's `xadvance` is still the WRONG source for a shaper: it
+ * is `glyph.advanceWidth * (fontSize / unitsPerEm)` fixed at bake size 42
+ * (`msdf-bmfont-xml`'s `index.js:400`), not at the size the text is actually
+ * shaped at.
  *
  * The two are not the same kind of number, which is the whole reason this
  * table exists separately. Godot's advance is HarfBuzz's `x_advance`
@@ -163,13 +165,8 @@ function bakeKerning(font) {
  * font size — but quantized at the size the text is actually shaped at, from
  * this raw table (`ftadvanc.c:52`'s `FT_MulFix(1024 * advance, x_scale)`,
  * FreeType's unhinted `hmtx` fast path, `hb-ft.cc:115`). The atlas's
- * `xadvance` is quantized at bake size 42 instead, so its error is fixed in
- * ATLAS pixels and survives the scale down to a 14-28px UI size at full
- * magnitude. Baking this table closed that residual: measured on
- * `unit-rich-text-label.tscn`'s 45-character line against real Godot 4.6.3,
- * reusing the atlas's own `xadvance` left the line's ink 1px wider than
- * Godot's own render even after the (much larger) per-style-run font-size fix
- * (nativeSolver.ts's `resolveRunFontSizePx`) closed the rest.
+ * `xadvance` is fixed to bake size 42 instead, so scaling it down to a
+ * 14-28px UI size does not reproduce HarfBuzz's own target-size shaping.
  *
  * Nothing here is pre-scaled or pre-rounded: the quantization is a function
  * of the target size, so it can only be applied at shaping time, and
@@ -225,6 +222,38 @@ function bakeAtlas(ttfBuffer) {
         distanceRange: ATLAS_DISTANCE_RANGE,
         fieldType: 'msdf',
         outputType: 'json',
+        // Explicit `null` (not omitted): `index.js:111`'s
+        // `utils.valueQueue([opt.roundDecimal, reuse.roundDecimal])` returns
+        // the FIRST value that is `!== undefined` — `null` qualifies,
+        // `undefined` does not — so this reaches `index.js:298`'s
+        // `if (roundDecimal !== null) utils.roundAllValue(...)` as `null` and
+        // that STRICT check turns the round off. Leaving the key out entirely
+        // is NOT equivalent: `valueQueue` then falls off the end and returns
+        // `undefined`, which is `!== null` too, so the round fires anyway —
+        // `utils.roundAllValue(fontData, decimal = 0, ...)`'s default
+        // parameter rounds every NUMERIC atlas field to a whole bake-pixel.
+        // Verified directly: `valueQueue([undefined, undefined])` returns
+        // `undefined`, and `undefined !== null` is `true`.
+        //
+        // In practice this only CHANGES `base`, `lineHeight`, and each
+        // glyph's `yoffset`/`xadvance` — the only fields that are non-integer
+        // before the round ever runs. `base`/`lineHeight` scale OS/2
+        // `sTypoAscender`/`sTypoDescender`/`sTypoLineGap` by `fontSize /
+        // unitsPerEm` (`index.js:346`, `:281`); `xadvance` is
+        // `glyph.advanceWidth * scale` (`index.js:400`); `yoffset` is
+        // `Math.round(bBox.y1) - pad + baseline` (`index.js:399`), an integer
+        // plus that SAME non-integer `baseline`. Every glyph's own
+        // `width`/`height`/`xoffset` (`index.js:396-398`) and its packed
+        // `x`/`y` (`index.js:233-234`, from bin-packing integer rectangles)
+        // are ALREADY whole numbers by construction, so rounding them is a
+        // no-op either way.
+        //
+        // Full float precision, not a large explicit decimal count: a chosen
+        // decimal count would be an arbitrary second quantization step with
+        // no Godot-side counterpart to justify it; `null` reaches the tool's
+        // own unrounded floats, and `JSON.stringify` already serializes a JS
+        // double losslessly.
+        roundDecimal: null,
       },
       (err, textures, font) => {
         if (err) {
@@ -281,11 +310,12 @@ import { getFontAscentPx, getFontLinePitchPx } from './fontMetrics';
  * \`advanceWidths\` IS a deliberate duplicate of \`openSansAtlas.ts\`'s own
  * glyph table's \`xadvance\` field — the ONE exception to "one bake, one
  * source": that table is the atlas tool's OWN glyph geometry (bitmap
- * placement inside the PNG, at the atlas's bake-size-42 resolution), rounded
- * to whole atlas-bake pixels by msdf-bmfont-xml itself before this script
- * ever reads it back, where THIS one is the RAW \`hmtx\` value, quantized by
- * nothing and at no size — see \`getGlyphAdvanceUnits\`'s own doc for why a
- * shaper never wants the ATLAS's copy.
+ * placement inside the PNG, at the atlas's bake-size-42 resolution) —
+ * \`xadvance\` is \`glyph.advanceWidth * (fontSize / unitsPerEm)\` FIXED to
+ * that bake size (msdf-bmfont-xml's \`index.js:400\`), where THIS one is the
+ * RAW \`hmtx\` value, quantized by nothing and at no size — see
+ * \`getGlyphAdvanceUnits\`'s own doc for why a shaper never wants the ATLAS's
+ * copy.
  */
 export interface OpenSansMetrics {
   /** \`font.unitsPerEm\` (fontkit) — hhea/head design units per em. */
@@ -355,12 +385,11 @@ export function getKerningAdjustmentUnits(a: string, b: string): number {
  *
  * This is the RAW design-unit value, at no size and quantized by nothing —
  * never \`openSansAtlas.ts\`'s own \`xadvance\`, which is msdf-bmfont-xml's OWN
- * atlas-bake-resolution glyph table (bake size 42, INTEGER-rounded at THAT
- * resolution before this repo's bake script ever sees it) and therefore
- * carries roughly 1/2 an atlas-bake-pixel of quantization noise per glyph —
- * negligible at the atlas's own 42px bake size, but the SAME absolute error
- * persists after scaling down to a UI font size (14-28px), where it is a much
- * larger fraction of each glyph's own advance and accumulates roughly
+ * atlas-bake-resolution glyph table, fixed to bake size 42
+ * (\`glyph.advanceWidth * (fontSize / unitsPerEm)\`, msdf-bmfont-xml's
+ * \`index.js:400\`) before this repo's bake script ever reads it back. Scaling
+ * that bake-size-42 value down to a UI font size (14-28px) does not reproduce
+ * HarfBuzz's own target-size shaping, and the error accumulates roughly
  * linearly with line length.
  *
  * Godot's own per-glyph advance is quantized too, just at the TARGET size
@@ -510,18 +539,15 @@ export interface OpenSansGlyph {
   /** Offset from the line-top to the bitmap's top edge, atlas-bake-size px. */
   yoffset: number;
   /**
-   * msdf-bmfont-xml's OWN glyph-table advance, atlas-bake-size (42) px —
-   * INTEGER-rounded at that resolution by the atlas-bake tool itself before
-   * this script ever reads it back (confirmed empirically against the
-   * vendored font; msdf-bmfont-xml's own \`roundDecimal\` option, which would
-   * explain an INTENTIONAL round, defaults to \`null\`/off). NOT the glyph
-   * shaper's advance source: \`openSansMetrics.ts\`'s \`getGlyphAdvanceUnits\`
-   * (this SAME \`hmtx\` table, raw and at no size, quantized by
-   * \`fontMetrics.ts\` at the size actually shaped) is — see that function's
-   * own doc for why the atlas-bake-resolution rounding here is a real,
-   * measured source of drift a shaper must not inherit. Kept
-   * only as atlas metadata a consumer might reasonably expect a glyph-info
-   * table to carry; \`textLayout.ts\` never reads this field.
+   * msdf-bmfont-xml's OWN glyph-table advance, fixed to atlas-bake-size (42)
+   * px (\`glyph.advanceWidth * (fontSize / unitsPerEm)\`, msdf-bmfont-xml's
+   * \`index.js:400\`) — NOT the glyph shaper's advance source:
+   * \`openSansMetrics.ts\`'s \`getGlyphAdvanceUnits\` (this SAME \`hmtx\` table,
+   * raw and at no size, quantized by \`fontMetrics.ts\` at the size actually
+   * shaped) is — see that function's own doc for why a value fixed to the
+   * atlas's bake size is the wrong source for a shaper targeting a different
+   * size. Kept only as atlas metadata a consumer might reasonably expect a
+   * glyph-info table to carry; \`textLayout.ts\` never reads this field.
    */
   xadvance: number;
   /** Left edge of the glyph's bitmap within the atlas texture, px. */
