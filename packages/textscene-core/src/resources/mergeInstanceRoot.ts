@@ -112,6 +112,15 @@ export function mergeInstanceRoot(
     instance: root.instance,
     properties: mergedProperties,
     rawProperties: mergedRaw,
+    // `mergedRaw`'s key order is neither file's real order (a shared key
+    // keeps ROOT's position but the INSTANCE's value; an instance-only key
+    // is appended after every root key) — explicit `false` here, since the
+    // `...instanceNode` spread above would otherwise carry the instance
+    // node's OWN (reliable, but not applicable to this merged node)
+    // `rawPropertiesOrderReliable` through unchanged. A file-order-sensitive
+    // resolver (ADR-0035) must fall back to the editor-save-order assumption
+    // for a node built this way.
+    rawPropertiesOrderReliable: false,
     children: [...root.children, ...instanceNode.children],
   };
 }

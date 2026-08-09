@@ -35,6 +35,21 @@ export interface TscnNode {
   properties: Node3DProperties | Record<string, unknown>;
   /** Raw body properties as strings, retained so a type-less instance node's overrides can be re-parsed against the instanced root's type. */
   rawProperties?: Record<string, string>;
+  /**
+   * Whether `rawProperties`' key insertion order reflects a SINGLE file's
+   * real property order (`Object.keys` order = scan order, ADR-0035) rather
+   * than a synthesized bag. `core/NodeRegistry.ts`'s `parseNodeWithRegistry`
+   * sets this `true` for every node it builds — one `TscnParserCore` scan.
+   * `resources/mergeInstanceRoot.ts`'s raw merge
+   * (`{ ...root.rawProperties, ...instanceNode.rawProperties }`) produces
+   * neither file's order (a shared key keeps ROOT's position but the
+   * INSTANCE's value), so it sets this `false` on the node it returns. A
+   * file-order-sensitive resolver (`r3f/controls/controlAnchors.ts`'s
+   * `resolveControlLayout`, `nodes/2d/ui/shared/range.ts`'s
+   * `resolveRangeValue`) must fall back to Godot's editor-save-order
+   * assumption unless this is `true`.
+   */
+  rawPropertiesOrderReliable?: boolean;
   /** External scene instance reference (e.g., ExtResource("1_abc")) */
   instance?: string;
 }

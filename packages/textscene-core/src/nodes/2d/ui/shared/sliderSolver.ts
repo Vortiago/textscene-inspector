@@ -31,7 +31,7 @@
 
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { rangeRatio, type RangeProperties } from './range';
+import { rangeRatio, type RangeProperties, type RangeValueOrder } from './range';
 
 /**
  * `tick.svg`'s own CROSS-axis extent — the length a tick bar runs ACROSS the
@@ -77,9 +77,13 @@ export function sliderMinimumSize(vertical: boolean, theme: NativeTheme): Vec2 {
  * including its own degenerate-range guard (returns 1, never divides by
  * zero) — this only adds Slider's OWN NaN guard on top, reachable if a
  * consumer somehow authors a literal NaN value.
+ *
+ * `orderedKeys` threads through to `rangeRatio`'s own file-order-aware value
+ * resolution (`resolveRangeValue`, ADR-0035) — `undefined` (the default)
+ * keeps today's editor-save-order assumption.
  */
-export function resolveSliderRatio(props: RangeProperties): number {
-  const ratio = rangeRatio(props);
+export function resolveSliderRatio(props: RangeProperties, orderedKeys?: RangeValueOrder): number {
+  const ratio = rangeRatio(props, orderedKeys);
   return Number.isNaN(ratio) ? 0 : ratio;
 }
 

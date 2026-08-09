@@ -1,9 +1,11 @@
-# Order-sensitive Control and Range setters get linter warnings now; file-order parse semantics are proposed, not yet built
+# Order-sensitive Control and Range setters are resolved in file order at parse time; linter warnings name the hazard too
 
-- Status: **Proposed** (2026-08-09) — costed per the plan's request, awaiting Atle's
-  decision on Option B (below). Option C ships in the same change as an independent,
-  no-regret mitigation regardless of that decision, and covers every family this
-  ADR has confirmed reachable from a `.tscn` — `Control` and `Range` both.
+- Status: **Accepted** (2026-08-09) — Option B, applying the known side-effecting
+  setters' semantics in file order at parse time. Accepted on the condition that
+  every rule it encodes is grounded in Godot's own source and measured behaviour
+  rather than in inference about what the engine probably does; the citations below
+  are the record of that. Option C's advisory warnings stand alongside it, since a
+  warning names the authoring hazard even where the parser now resolves it.
 - Related: ADR-0031 (Control nodes render natively — `controlRectSolver.ts`,
   `controlAnchors.ts`), ADR-0001 (unified slice, React-free linter — the two-parser
   seam this ADR's options act on).
@@ -321,32 +323,87 @@ itself, an argument against them — none of the three options changes any publi
 
 ## Decision
 
-**Recommend Option B** for the render-correctness fix: it is proportionate to what
-this finding and the breadth survey actually demonstrate (two confirmed families, a
-handful of functions, no new storage), and Option A's only real advantage over it —
-duplicate-key fidelity — has no known instance to justify carrying a type migration
-for. Option B is **not implemented in this change** — the task explicitly scoped this
-work to costing, not the parser change, so this ADR proposes it for Atle's decision
-rather than landing it. This applies equally to both confirmed families: neither
-`controlAnchors.ts` nor `shared/range.ts`'s `rangeRatio()` gained order-awareness.
+**Option B is implemented, for both confirmed families.** It was proportionate to
+what this finding and the breadth survey actually demonstrated (two confirmed
+families, a handful of functions, no new storage), and Option A's only real
+advantage over it — duplicate-key fidelity — has no known instance to justify
+carrying a type migration for.
 
-**Option C is implemented in this change, for every family this ADR confirms** —
-`Control` (`control-property-order`) and `Range` (`hslider-property-order`,
-`vslider-property-order`) — as an independent, no-regret mitigation: it does not
-depend on which of A/B/D is chosen for the render side, it is genuinely cheap
-(confirmed above — the ordered bag Option C needs already exists at the exact point
-`RuleRegistry` rules run), and it turns a silent authoring hazard into a visible one
-immediately, for every scene linted from today onward, while Option B's decision is
-pending. The three rules share one pure order-comparison function
-(`linter/propertyOrder.ts`) rather than duplicating the arithmetic per family, but
-stop short of a rule-authoring framework — see Option C's own cost/failure-mode
-entry above for why that boundary was drawn where it was.
+`r3f/controls/controlAnchors.ts`'s `resolveControlLayout` REPLAYS a Control's raw
+`.tscn` property keys in file order — a direct simulation of
+`Control::_set_layout_mode`/`_set_anchors_layout_preset`'s setters (tracking
+`stored_layout_mode`, `anchor[4]`, `offset[4]`, `h_grow`/`v_grow` exactly the way
+`Control::Data` does) rather than a pairwise "does X come before Y" rule, so it
+covers all FIVE order-sensitive pairs the breadth survey named — including
+`layout_mode = 0`'s own unconditional reset (`control.cpp:919-935,927-930`), found
+while costing this and not one of the original four — without growing pairwise
+special cases. `nodes/2d/ui/shared/range.ts`'s `resolveRangeValue` does the
+equivalent for `Range`, replaying `min_value`/`max_value`/`page`/`value` against
+`Range::set_min`/`set_max`/`set_page`/`set_value` (`range.cpp:211-266`), including
+the refinement the initial costing understated: `set_min`/`set_max` also mutually
+constrain each other (`shared->max = MAX(shared->max, shared->min)`,
+`max_validated = MAX(p_max, shared->min)`) and both clamp `page`
+(`shared->page = CLAMP(shared->page, 0, shared->max - shared->min)`), so `page` is
+part of the replay and `min`/`max`/`page` interact with each other, not only with
+`value`. `set_step` was checked and confirmed inert as a TRIGGER (no `set_value`
+call of its own, `range.cpp:243-252`) and is excluded from the replay; `Range`'s
+`p_step > 0` snap term inside `_calc_value` (`range.cpp:184-186`) is a separate,
+pre-existing rendering-fidelity gap `rangeRatio` never modelled even before this
+change, and stays out of scope here to avoid conflating an order fix with a new
+feature.
+
+Both resolvers take the raw ordered keys as an explicit, OPTIONAL parameter
+(`ControlLayoutOrder`/`RangeValueOrder`, both `readonly string[] | undefined`) and
+fall back to the pre-existing fixed-order resolvers/`rangeRatio` behaviour —
+editor-save order — whenever that order is absent or unreliable. `TscnNode` grew
+one additive field, `rawPropertiesOrderReliable?: boolean`, to carry that fact:
+`core/NodeRegistry.ts`'s `parseNodeWithRegistry` sets it `true` for every node it
+builds (one `TscnParserCore` scan, real file order), and
+`resources/mergeInstanceRoot.ts` sets it explicitly `false` on a merged instance
+root — its raw merge (`{ ...root.rawProperties, ...instanceNode.rawProperties }`)
+keeps a shared key at ROOT's position with the INSTANCE's value, which is neither
+file's real order, so a merged node takes the fixed-order (editor-save) path
+exactly as it did before this change. `native/solveTree.ts`'s `controlLayoutOrder(n)`
+is the one place a `SolveNode` consumer reads that fact, shared by
+`native/controlRectSolver.ts` (Control) and both `HSlider`/`VSlider`
+`Component.tsx`s (Range) rather than each re-deriving the reliability check.
+
+**Not modelled, both cited in `resolveControlLayout`'s own doc rather than left
+silent:** `Control::set_anchor`'s `p_push_opposite_anchor` clamp
+(`control.cpp:758-786`, default `true`) — a genuinely order-sensitive mechanism
+found while reading the source for this change, but a DIFFERENT shape (incremental
+per-edge state, not a "later trigger wipes an earlier target" pair) than the five
+pairs this ADR's breadth survey grounds, and out of scope for this change.
+
+**The duplicate-key wrinkle (Considered options, above) remains unaddressed**,
+exactly as this ADR always said Option B would leave it: a `Record<string, string>`
+still cannot represent "this key was written twice", so a `.tscn` that assigns the
+same order-sensitive key more than once is read at its FIRST position with its
+LAST value — Option A's own advantage, still without a known instance to justify it.
+
+**Option C stays in place, for every family this ADR confirms** — `Control`
+(`control-property-order`) and `Range` (`hslider-property-order`,
+`vslider-property-order`) — as a complement, not a superseded interim measure: a
+warning names an authoring hazard a human maintaining the file should still see,
+even now that the parser resolves it correctly (`control/linter.ts`'s module doc
+says so explicitly). The three rules still share one pure order-comparison function
+(`linter/propertyOrder.ts`) rather than duplicating the arithmetic per family, and
+still stop short of a rule-authoring framework.
 
 ## Consequences
 
-- **Today:** `pnpm lint:tscn`/the VS Code extension's diagnostics/the web app's
-  Source-pane gutter warn — all severity `warning`, an advisory condition, not an
-  error, per this project's linter conventions — for:
+- **The renderer resolves both families' file order correctly.** A scene that
+  authors either divergent order — Control's `anchor_*`/`offset_*`/`grow_*`/
+  `layout_mode` vs. `anchors_preset`, or `layout_mode = 0`'s own reset, or Range's
+  `value` vs. `min_value`/`max_value`/`page` — now previews the SAME rect/value real
+  Godot 4.6.3 would produce for that exact file order, not a fixed assumption. The
+  acceptance case this ADR was accepted against (the same four `offset_*` values,
+  only the order against `anchors_preset = 15` changed) resolves to `(0, 0, 1152,
+  648)` when the offsets precede the preset and `(40, 40, 1352, 768)` when they
+  follow it — both, in the same build.
+- **`pnpm lint:tscn`/the VS Code extension's diagnostics/the web app's Source-pane
+  gutter still warn** — all severity `warning`, an advisory condition, not an error,
+  per this project's linter conventions — for:
   - a Control-family node (`control-property-order`) that authors
     `anchor_*`/`offset_*`/`grow_*` before an operational `anchors_preset`, or
     `layout_mode` after one;
@@ -355,24 +412,19 @@ entry above for why that boundary was drawn where it was.
 
   The corpus's existing fixtures are all editor-order (Control) or bounds-before-value
   order (Range) and stay silent for both rules (confirmed: `fixtureLint.test.ts`,
-  `ruleCoverage.test.ts`, `barrelCompleteness.test.ts` pass with the three new rules
-  registered).
-- **The renderer is unchanged, for both families.** A scene that already authors
-  either divergent order — none in this corpus today for Control; none in this
-  corpus's `HSlider`/`VSlider` fixtures for Range either — still renders the
-  fixed-order result unconditionally, exactly as before this change. Closing that
-  gap for either family is Option B, awaiting decision.
-- If Option B is later accepted: `controlAnchors.ts`'s three resolvers gain file-order
-  awareness (`mergeInstanceRoot.ts`'s raw-merge wrinkle needs an explicit answer
-  first — fall back to today's fixed order for a merged instance root, since its
-  "order" is neither file's), and `nodes/2d/ui/shared/range.ts`'s `rangeRatio()`
-  gains the equivalent for `min_value`/`max_value`/`page`/`value`. No `TscnNode` type
-  change, no app changes (confirmed above), for either family.
+  `ruleCoverage.test.ts`, `barrelCompleteness.test.ts` pass with the three rules
+  registered) — a grep of the full `scenes/` corpus (fixtures and demos) for every
+  order this change makes behave differently (the divergent Control order, the
+  divergent Range order, a per-edge `anchor_*` default, `page`/`allow_greater`/
+  `allow_lesser`/`rounded` on any Range-family node, and `layout_mode = 0` authored
+  after an anchor/offset/grow key) found zero matches, confirming no visual golden
+  needed to move for this change.
 - If a THIRD order-sensitive family turns up (the breadth survey's 348-setter count
-  suggests more are plausible), the same shape of fix applies on both sides: Option B
-  reads `rawProperties`'/`node.properties`' key order once in that family's own
-  resolver, and Option C's linter side reuses `targetsBeforeLatestTrigger` from a new
-  small rule file, the same way `Range`'s did. Nothing here forecloses either.
+  suggests more are plausible), the same shape of fix applies on both sides: the new
+  family's own resolver reads `rawProperties`'/`node.properties`' key order once
+  (mirroring `resolveControlLayout`/`resolveRangeValue`), and Option C's linter side
+  reuses `targetsBeforeLatestTrigger` from a new small rule file, the same way
+  `Range`'s did. Nothing here forecloses either.
 
 ## Known limitations of the implemented Option C
 

@@ -7,6 +7,8 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../parser/types';
+import type { ParsedHeading } from '../../../parser/utils';
+import { parseControl } from '../../../nodes/2d/ui/control/parser';
 import type { Rect2 } from './rect';
 import type { SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
@@ -32,6 +34,29 @@ function node(path: string, type: string, properties: Props, children: SolveNode
 
 function ctx(): SolveContext {
   return createSolveContext(nativeTheme(1));
+}
+
+/**
+ * A `SolveNode` built the way the real render path builds one: raw
+ * snake_case `.tscn` property keys, run through the real `parseControl`, with
+ * `rawProperties`/`rawPropertiesOrderReliable` set exactly as
+ * `core/NodeRegistry.ts` sets them for a genuinely single-file-scanned node
+ * (ADR-0035) — so `resolveControlLayout`'s file-order simulation reads the
+ * SAME `Object.keys(rawProperties)` order a real parse would produce, not a
+ * hand-picked array a bug in the plumbing could silently disagree with.
+ */
+function orderedNode(path: string, type: string, rawProperties: Record<string, string>): SolveNode {
+  const name = path.split('/').pop()!;
+  const heading: ParsedHeading = { type: 'node', attributes: { name, type } };
+  const tscnNode: TscnNode = {
+    name,
+    type,
+    children: [],
+    properties: parseControl(heading, rawProperties),
+    rawProperties,
+    rawPropertiesOrderReliable: true,
+  };
+  return { ...solveNode(), path, node: tscnNode, children: [] };
 }
 
 describe('solveControlTree — LayoutPreset table (control.cpp::set_anchors_preset)', () => {
@@ -736,5 +761,96 @@ describe('solveControlTree — a second pass for a size-dependent MinimumSizeFn 
     solveControlTree([root], VIEWPORT, ctx());
 
     expect(calls).toBe(1);
+  });
+});
+
+describe('solveControlTree — file-order-aware Control layout (ADR-0035, Option B)', () => {
+  // The ADR's own measured acceptance case, exercised end-to-end through the
+  // solver (`SolveNode.node.rawProperties` → `resolveControlLayout` →
+  // `computeAnchoredRect`'s formula), not just against the resolver directly.
+  // `Control::_set_anchors_layout_preset` (control.cpp:982-1032) calls
+  // `set_anchors_preset` then `set_offsets_preset`; a later `offset_*` line
+  // (its own setter, `Control::set_offset`, control.cpp:798-805) overwrites
+  // what the preset wrote, and an earlier one is wiped BY the preset.
+  it('offsets authored BEFORE anchors_preset=15 are wiped to (0, 0, 1152, 648)', () => {
+    const root = orderedNode('Root', 'Control', {
+      layout_mode: '3',
+      offset_left: '40',
+      offset_top: '40',
+      offset_right: '240',
+      offset_bottom: '160',
+      anchors_preset: '15',
+    });
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Root')?.rect).toEqual({ x: 0, y: 0, w: 1152, h: 648 });
+  });
+
+  it('the SAME offsets authored AFTER anchors_preset=15 survive, landing at (40, 40, 1352, 768)', () => {
+    const root = orderedNode('Root', 'Control', {
+      layout_mode: '3',
+      anchors_preset: '15',
+      offset_left: '40',
+      offset_top: '40',
+      offset_right: '240',
+      offset_bottom: '160',
+    });
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Root')?.rect).toEqual({ x: 40, y: 40, w: 1352, h: 768 });
+  });
+
+  it('anchors_preset authored BEFORE layout_mode does nothing at all — the gate reads stale state (control.cpp:991-993)', () => {
+    const root = orderedNode('Root', 'Control', {
+      anchors_preset: '15',
+      layout_mode: '3',
+    });
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    // The preset never ran, so anchors/offsets/grow direction stay at the
+    // struct default — the same (0,0,0,0) rect as TOP_LEFT (preset 0).
+    expect(solved.get('Root')?.rect).toEqual({ x: 0, y: 0, w: 0, h: 0 });
+  });
+
+  it('a merged-instance-root node (rawPropertiesOrderReliable: false) falls back to the editor-save-order assumption', () => {
+    // Same raw bag as the "before" case above, but flagged unreliable — the
+    // solver must NOT simulate file order for it, so the explicit offsets
+    // (authored second in `resolveOffsets`'s per-side `??` sense) still win,
+    // exactly like `resolveAnchors`/`resolveOffsets` did before this change.
+    const heading: ParsedHeading = { type: 'node', attributes: { name: 'Root', type: 'Control' } };
+    const rawProperties = {
+      layout_mode: '3',
+      offset_left: '40',
+      offset_top: '40',
+      offset_right: '240',
+      offset_bottom: '160',
+      anchors_preset: '15',
+    };
+    const tscnNode: TscnNode = {
+      name: 'Root',
+      type: 'Control',
+      children: [],
+      properties: parseControl(heading, rawProperties),
+      rawProperties,
+      rawPropertiesOrderReliable: false,
+    };
+    const root: SolveNode = { ...solveNode(), path: 'Root', node: tscnNode, children: [] };
+
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Root')?.rect).toEqual({ x: 40, y: 40, w: 1352, h: 768 });
+  });
+
+  it('a hand-built node with no rawProperties at all also falls back (no order to read)', () => {
+    // The pre-existing `node()` helper never sets rawProperties/
+    // rawPropertiesOrderReliable — this is the SAME shape every OTHER test in
+    // this file already uses, so it doubles as a regression guard: those 700+
+    // lines of pre-existing assertions must keep passing unchanged.
+    const root = node('Root', 'Control', {
+      layoutMode: 3,
+      offsetLeft: 40,
+      offsetTop: 40,
+      offsetRight: 240,
+      offsetBottom: 160,
+      anchorsPreset: 15,
+    });
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Root')?.rect).toEqual({ x: 40, y: 40, w: 1352, h: 768 });
   });
 });

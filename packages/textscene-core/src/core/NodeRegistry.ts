@@ -127,6 +127,9 @@ export function parseNodeWithRegistry(
       children: [],
       properties: parsedProps,
       rawProperties: properties,
+      // One TscnParserCore scan built `properties` — its key order is this
+      // node's real file order (ADR-0035).
+      rawPropertiesOrderReliable: true,
     };
 
     // Preserve instance attribute for external scene loading
@@ -146,6 +149,9 @@ export function parseNodeWithRegistry(
     children: [],
     properties: parsedProps,
     rawProperties: properties,
+    // One TscnParserCore scan built `properties` — its key order is this
+    // node's real file order (ADR-0035).
+    rawPropertiesOrderReliable: true,
   };
 
   // Capture instance property for external scene references

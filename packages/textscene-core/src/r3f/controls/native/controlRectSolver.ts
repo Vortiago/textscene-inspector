@@ -17,9 +17,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Rect2, Vec2 } from './rect';
-import { controlProps, type SolveNode } from './solveTree';
+import { controlLayoutOrder, controlProps, type SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import {
   controlSolverRegistry,
@@ -28,7 +27,7 @@ import {
   type SolveContext,
   type TextMeasurer,
 } from './solverRegistry';
-import { resolveAnchors, resolveGrowDirection, resolveOffsets } from '../controlAnchors.js';
+import { resolveControlLayout, type ControlLayoutOrder } from '../controlAnchors.js';
 
 export interface SolvedControl {
   rect: Rect2;
@@ -86,9 +85,9 @@ export interface SolvedControl {
  * top-left, not an absolute viewport position. RTL is out of scope (no
  * `layout_direction` is modelled).
  */
-function computeAnchoredRect(p: ControlProperties, parentRect: Rect2, presetTimeMinimumSize: () => Vec2): Rect2 {
-  const [al, at, ar, ab] = resolveAnchors(p);
-  const [offsetLeft, offsetTop, offsetRight, offsetBottom] = resolveOffsets(p, presetTimeMinimumSize);
+function computeAnchoredRect(anchors: [number, number, number, number], offsets: [number, number, number, number], parentRect: Rect2): Rect2 {
+  const [al, at, ar, ab] = anchors;
+  const [offsetLeft, offsetTop, offsetRight, offsetBottom] = offsets;
 
   const left = offsetLeft + al * parentRect.w;
   const top = offsetTop + at * parentRect.h;
@@ -96,6 +95,19 @@ function computeAnchoredRect(p: ControlProperties, parentRect: Rect2, presetTime
   const bottom = offsetBottom + ab * parentRect.h;
 
   return { x: left, y: top, w: right - left, h: bottom - top };
+}
+
+/**
+ * Resolves `n`'s anchors/offsets/grow-direction ONCE (`resolveControlLayout`,
+ * `controlAnchors.ts`, ADR-0035) — `solveFree` needs anchors+offsets for its
+ * own rect and grow-direction for the floor step right after; `dispatchChildren`
+ * needs only grow-direction for a container child's re-floor. One resolve per
+ * node keeps `presetTimeMinimumSize` (an unmemoised `MinimumSizeFn` run,
+ * fired only when an applied preset is a `MINSIZE_PRESETS` member) from firing
+ * twice for the SAME node the way two separate resolver calls would.
+ */
+function resolveNodeLayout(n: SolveNode, ctx: SolveContext, orderedKeys: ControlLayoutOrder) {
+  return resolveControlLayout(controlProps(n), orderedKeys, () => presetTimeMinimumSize(n, ctx));
 }
 
 // --- Minimum-size floor + grow direction ------------------------------------
@@ -378,14 +390,18 @@ function solveFree(
   out: Map<string, SolvedControl>
 ): void {
   const minSize = ctx.combinedMinimumSize(n);
-  const props = controlProps(n);
-  const rect = controlSolverRegistry.isCanvasBoundary(n.node.type)
-    ? canvasBoundaryRect(parentRect)
-    : floorAtMinimumSize(
-        computeAnchoredRect(props, parentRect, () => presetTimeMinimumSize(n, ctx)),
-        minSize,
-        ...resolveGrowDirection(props)
-      );
+  let rect: Rect2;
+  if (controlSolverRegistry.isCanvasBoundary(n.node.type)) {
+    rect = canvasBoundaryRect(parentRect);
+  } else {
+    const layout = resolveNodeLayout(n, ctx, controlLayoutOrder(n));
+    rect = floorAtMinimumSize(
+      computeAnchoredRect(layout.anchors, layout.offsets, parentRect),
+      minSize,
+      layout.growHorizontal,
+      layout.growVertical
+    );
+  }
   record(n, rect, minSize, paintIndexOf, out, ctx.minimumSizeMeta?.(n));
   dispatchChildren(n, rect, ctx, paintIndexOf, out);
 }
@@ -454,10 +470,13 @@ function dispatchChildren(
     // nor any container's own source file names it — so every port transcribed
     // faithfully from its own source would omit it, and each would be wrong the
     // moment a child's minimum is fractional. Every real text minimum is.
-    const childProps = controlProps(child);
-    const childRect = controlSolverRegistry.isCanvasBoundary(child.node.type)
-      ? canvasBoundaryRect(rect)
-      : floorAtMinimumSize(assigned, minSize, ...resolveGrowDirection(childProps));
+    let childRect: Rect2;
+    if (controlSolverRegistry.isCanvasBoundary(child.node.type)) {
+      childRect = canvasBoundaryRect(rect);
+    } else {
+      const childLayout = resolveNodeLayout(child, ctx, controlLayoutOrder(child));
+      childRect = floorAtMinimumSize(assigned, minSize, childLayout.growHorizontal, childLayout.growVertical);
+    }
     record(child, childRect, minSize, paintIndexOf, out, meta);
     dispatchChildren(child, childRect, ctx, paintIndexOf, out);
   }

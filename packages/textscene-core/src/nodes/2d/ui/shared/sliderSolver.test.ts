@@ -45,6 +45,12 @@ describe('resolveSliderRatio', () => {
     // reach the NaN branch here is a genuinely NaN authored value.
     expect(resolveSliderRatio({ value: Number.NaN })).toBe(0);
   });
+
+  it('threads orderedKeys through to rangeRatio’s file-order-aware value resolution (ADR-0035)', () => {
+    const props = { value: 150, minValue: 0, maxValue: 200 };
+    expect(resolveSliderRatio(props, ['value', 'min_value', 'max_value'])).toBeCloseTo(0.5, 10);
+    expect(resolveSliderRatio(props, ['min_value', 'max_value', 'value'])).toBeCloseTo(0.75, 10);
+  });
 });
 
 describe('sliderMinimumSize — Slider::get_minimum_size (slider.cpp:35-44)', () => {

@@ -127,11 +127,18 @@ const MINSIZE_PRESETS = new Set([9, 10, 11, 12, 13, 14, 15]);
  * begin/centre/end constants that remain are `0 / -size/2 / -size` on the
  * left and top, and `+size / +size/2 / 0` on the right and bottom.
  *
- * An authored `offset_*` wins per side: the four floats are serialized after
- * `anchors_preset` (`control.cpp`'s `ADD_PROPERTY` order), so they are applied
- * on top of whatever the preset wrote. The gate is `presetApplies` again, and
- * a preset outside 0..15 writes nothing for the same reasons the anchors half
- * does.
+ * An authored `offset_*` wins per side — but only because THIS function
+ * assumes editor-save order, not because of `control.cpp`'s `ADD_PROPERTY`
+ * order (`ADD_PROPERTY` is the EDITOR's own serialization order, not a
+ * constraint Godot's parser enforces on a hand-authored or hand-edited
+ * `.tscn` — ADR-0035). An editor-saved scene always agrees with this
+ * function because `Control::_get_anchors_layout_preset`
+ * (`control.cpp:1039-1112`) derives a serialized `anchors_preset` FROM the
+ * final anchors, so a non-zero preset and matching `offset_*` always co-occur
+ * in save order; a hand-authored file carries no such guarantee, which is
+ * what `resolveControlLayout` below (the file-order-AWARE resolver) exists
+ * for. The gate is `presetApplies` again, and a preset outside 0..15 writes
+ * nothing for the same reasons the anchors half does.
  *
  * This matters where the min-size floor does not already reproduce it. Because
  * the offsets place a rect of the VIRTUAL minimum where the floor would place
@@ -153,22 +160,36 @@ export function resolveOffsets(
   const preset = p.anchorsPreset;
   if (!presetApplies(p) || preset === undefined || !PRESET_ANCHORS[preset]) return authored;
 
-  const [al, at, ar, ab] = PRESET_ANCHORS[preset]!;
-  // `KEEP_SIZE` reads `get_size()`, which is (0, 0) on a node that has never
-  // been in a tree — so only the wide presets carry a non-zero `new_size`.
-  const size = MINSIZE_PRESETS.has(preset) ? presetTimeMinimumSize() : { x: 0, y: 0 };
-
-  // Parenthesised, and written as `0 - …` rather than a unary minus: the
-  // fallback is the WHOLE expression (`??` binds looser than `*`, so the bare
-  // form means the same thing but reads as `(p.offsetLeft ?? 0) - …`, a
-  // different function), and `0 - x` keeps a zero-size begin edge at +0 —
-  // negative zero is a distinct value to a deep-equality assertion.
+  const derived = presetDerivedOffsets(preset, presetTimeMinimumSize);
   return [
-    p.offsetLeft ?? (0 - size.x * al),
-    p.offsetTop ?? (0 - size.y * at),
-    p.offsetRight ?? size.x * (1 - ar),
-    p.offsetBottom ?? size.y * (1 - ab),
+    p.offsetLeft ?? derived[0],
+    p.offsetTop ?? derived[1],
+    p.offsetRight ?? derived[2],
+    p.offsetBottom ?? derived[3],
   ];
+}
+
+/**
+ * The four `offset_*` values `set_offsets_preset` (`control.cpp:1231-1345`)
+ * derives for `preset` alone — the SAME formula `resolveOffsets` above
+ * documents in full, factored out so `resolveControlLayout`'s file-order
+ * simulation (below) can apply it as one EVENT in a sequence instead of
+ * duplicating the arithmetic.
+ *
+ * `KEEP_SIZE` reads `get_size()`, which is (0, 0) on a node that has never
+ * been in a tree — so only the wide (`MINSIZE_PRESETS`) presets carry a
+ * non-zero `new_size`. Parenthesised, and written as `0 - …` rather than a
+ * unary minus: the fallback is the WHOLE expression (`??` binds looser than
+ * `*`), and `0 - x` keeps a zero-size begin edge at +0 — negative zero is a
+ * distinct value to a deep-equality assertion.
+ */
+function presetDerivedOffsets(
+  preset: number,
+  presetTimeMinimumSize: () => { x: number; y: number }
+): [number, number, number, number] {
+  const [al, at, ar, ab] = PRESET_ANCHORS[preset]!;
+  const size = MINSIZE_PRESETS.has(preset) ? presetTimeMinimumSize() : { x: 0, y: 0 };
+  return [0 - size.x * al, 0 - size.y * at, size.x * (1 - ar), size.y * (1 - ab)];
 }
 
 /** `Control::GrowDirection` (`control.h:59-62`). */
@@ -252,4 +273,206 @@ export function resolveGrowDirection(p: ControlProperties): [number, number] {
   const h = preset !== undefined ? PRESET_GROW_HORIZONTAL[preset] : undefined;
   const v = preset !== undefined ? PRESET_GROW_VERTICAL[preset] : undefined;
   return [p.growHorizontal ?? h ?? GROW_DIRECTION_END, p.growVertical ?? v ?? GROW_DIRECTION_END];
+}
+
+// --- File-order-aware resolution (ADR-0035, Option B) -----------------------
+
+/**
+ * A node's raw `.tscn` property keys, in real file order — `undefined` when
+ * that order is unknown or unreliable. `native/solveTree.ts`'s
+ * `controlLayoutOrder(n)` is the usual producer (reads
+ * `TscnNode.rawPropertiesOrderReliable`, ADR-0035).
+ */
+export type ControlLayoutOrder = readonly string[] | undefined;
+
+export interface ControlLayoutResolution {
+  anchors: [number, number, number, number];
+  offsets: [number, number, number, number];
+  growHorizontal: number;
+  growVertical: number;
+}
+
+/** `Control::Data`'s struct defaults for the fields this simulation tracks (`control.h:201-210`). */
+const STRUCT_DEFAULT_LAYOUT_MODE = 0; // LAYOUT_MODE_POSITION, control.h:201
+const STRUCT_DEFAULT_ANCHORS: [number, number, number, number] = [0, 0, 0, 0]; // ANCHOR_BEGIN x4, control.h:205
+const STRUCT_DEFAULT_OFFSETS: [number, number, number, number] = [0, 0, 0, 0]; // control.h:204
+
+interface ControlLayoutState {
+  storedLayoutMode: number;
+  anchors: [number, number, number, number];
+  offsets: [number, number, number, number];
+  growHorizontal: number;
+  growVertical: number;
+}
+
+function initialControlLayoutState(): ControlLayoutState {
+  return {
+    storedLayoutMode: STRUCT_DEFAULT_LAYOUT_MODE,
+    anchors: [...STRUCT_DEFAULT_ANCHORS],
+    offsets: [...STRUCT_DEFAULT_OFFSETS],
+    growHorizontal: GROW_DIRECTION_END,
+    growVertical: GROW_DIRECTION_END,
+  };
+}
+
+/**
+ * Applies TOP_LEFT/KEEP_SIZE — the reset `Control::_set_layout_mode` performs
+ * whenever `p_mode == LAYOUT_MODE_POSITION` (0), UNCONDITIONALLY, regardless
+ * of the mode's previous value (`control.cpp:919-935`, the reset at
+ * `:927-930`): `set_anchors_and_offsets_preset(PRESET_TOP_LEFT,
+ * PRESET_MODE_KEEP_SIZE)` then `set_grow_direction_preset(PRESET_TOP_LEFT)`.
+ * This is the "fifth pair" ADR-0035's breadth survey names — an explicitly
+ * authored `layout_mode = 0` wipes `anchor_*`/`offset_*`/`grow_*` authored
+ * before it, the same mechanism as `anchors_preset`, just via the other
+ * property, and NOT gated the way `anchors_preset` is (`_set_layout_mode`
+ * has no `stored_layout_mode` check of its own).
+ *
+ * TOP_LEFT is preset 0, not a `MINSIZE_PRESETS` member, so `KEEP_SIZE`'s
+ * `new_size` is always `get_size()` — (0, 0) while the node is orphan — and
+ * the reset always lands on exactly the struct defaults.
+ */
+function applyLayoutModePositionReset(state: ControlLayoutState): void {
+  state.anchors = [...STRUCT_DEFAULT_ANCHORS];
+  state.offsets = [...STRUCT_DEFAULT_OFFSETS];
+  state.growHorizontal = PRESET_GROW_HORIZONTAL[0]!;
+  state.growVertical = PRESET_GROW_VERTICAL[0]!;
+}
+
+/**
+ * Applies `anchors_preset = preset` — `Control::_set_anchors_layout_preset`'s
+ * three sibling side effects (`control.cpp:1004,1007-1029,1032`) — to
+ * `state`. The caller has already checked the `-1` sentinel and the
+ * `stored_layout_mode` gate; this only guards the OTHER early exit,
+ * `ERR_FAIL_INDEX((int)p_preset, 16)` inside `set_anchors_preset` — an
+ * out-of-range preset leaves every switch in `set_anchors_preset`,
+ * `set_offsets_preset`, and `set_grow_direction_preset` without a matching
+ * `case`, so real Godot changes nothing at all; `PRESET_ANCHORS[preset]`
+ * being absent is the same 0..15 check every other resolver in this file uses.
+ */
+function applyAnchorsPreset(
+  state: ControlLayoutState,
+  preset: number,
+  presetTimeMinimumSize: () => { x: number; y: number }
+): void {
+  const anchors = PRESET_ANCHORS[preset];
+  if (!anchors) return;
+  state.anchors = [...anchors];
+  state.offsets = presetDerivedOffsets(preset, presetTimeMinimumSize);
+  state.growHorizontal = PRESET_GROW_HORIZONTAL[preset]!;
+  state.growVertical = PRESET_GROW_VERTICAL[preset]!;
+}
+
+const ANCHOR_KEY_SIDE: Record<string, number> = {
+  anchor_left: 0,
+  anchor_top: 1,
+  anchor_right: 2,
+  anchor_bottom: 3,
+};
+const OFFSET_KEY_SIDE: Record<string, number> = {
+  offset_left: 0,
+  offset_top: 1,
+  offset_right: 2,
+  offset_bottom: 3,
+};
+
+/** This property bag's per-side anchor/offset floats, indexed the same way `PRESET_ANCHORS` is. */
+function anchorValue(p: ControlProperties, side: number): number | undefined {
+  return [p.anchorLeft, p.anchorTop, p.anchorRight, p.anchorBottom][side];
+}
+function offsetValue(p: ControlProperties, side: number): number | undefined {
+  return [p.offsetLeft, p.offsetTop, p.offsetRight, p.offsetBottom][side];
+}
+
+/**
+ * Resolves a Control's anchors/offsets/grow-direction by REPLAYING its raw
+ * `.tscn` property keys in file order (ADR-0035, Option B) — a direct
+ * simulation of the setters involved, rather than a pairwise "does X come
+ * before Y" comparison, so it stays correct as more of these keys interact
+ * (`layout_mode`'s own reset is one more such interaction, not a special
+ * case bolted onto a pairwise rule).
+ *
+ * `orderedKeys === undefined` (order unknown or unreliable — a merged
+ * instance root, ADR-0035, or a hand-built node with no raw bag) falls back
+ * to `resolveAnchors`/`resolveOffsets`/`resolveGrowDirection`, which assume
+ * editor-save order — correct for every editor-authored scene.
+ *
+ * Two things this deliberately does NOT model, both cited so a reader does
+ * not mistake the omission for an oversight:
+ *
+ * - `Control::set_anchor` (the setter bound to `anchor_left`/`_top`/`_right`/
+ *   `_bottom` via `_set_anchor`, `control.cpp:754-757`) has a SECOND side
+ *   effect this does not simulate: `p_push_opposite_anchor` (default `true`,
+ *   `control.h:495`) pushes the OPPOSITE edge's anchor to match when the pair
+ *   would otherwise cross (`control.cpp:758-786`). `p_keep_offset` (default
+ *   `true`, same line) means the offset-recompute half of that same function
+ *   is already correctly inert here — it only fires from a NON-default call,
+ *   which `_set_anchor` never makes. The push-opposite clamp is a real,
+ *   citable mechanism, but it is not one of the pairs ADR-0035 grounds
+ *   (`anchors_preset` vs. `offset_*`/`anchor_*`/`grow_*`, `layout_mode` vs.
+ *   `anchors_preset`, and `layout_mode = 0`'s own reset) — modelling it needs
+ *   incremental per-edge state beyond those pairs and was left out of this
+ *   change.
+ * - `Range::_calc_value`'s `p_step > 0` snap term (`range.cpp:184-186`, the
+ *   Range/Slider equivalent) has no Control analogue and is irrelevant here;
+ *   noted on `resolveRangeValue` (`nodes/2d/ui/shared/range.ts`) instead.
+ */
+export function resolveControlLayout(
+  p: ControlProperties,
+  orderedKeys: ControlLayoutOrder,
+  presetTimeMinimumSize: () => { x: number; y: number }
+): ControlLayoutResolution {
+  if (!orderedKeys) {
+    const [growHorizontal, growVertical] = resolveGrowDirection(p);
+    return {
+      anchors: resolveAnchors(p),
+      offsets: resolveOffsets(p, presetTimeMinimumSize),
+      growHorizontal,
+      growVertical,
+    };
+  }
+
+  const state = initialControlLayoutState();
+
+  for (const key of orderedKeys) {
+    if (key === 'layout_mode') {
+      if (p.layoutMode === undefined) continue; // unparseable — no event
+      state.storedLayoutMode = p.layoutMode;
+      if (state.storedLayoutMode === STRUCT_DEFAULT_LAYOUT_MODE) applyLayoutModePositionReset(state);
+      continue;
+    }
+    if (key === 'anchors_preset') {
+      if (p.anchorsPreset === undefined) continue;
+      if (p.anchorsPreset === -1) continue; // custom-anchors sentinel, control.cpp:983-989 — no effect
+      // The gate: only ANCHORS(1)/UNCONTROLLED(3) — control.cpp:991-993.
+      if (state.storedLayoutMode !== 1 && state.storedLayoutMode !== 3) continue;
+      applyAnchorsPreset(state, p.anchorsPreset, presetTimeMinimumSize);
+      continue;
+    }
+    if (key in ANCHOR_KEY_SIDE) {
+      const side = ANCHOR_KEY_SIDE[key]!;
+      const v = anchorValue(p, side);
+      if (v !== undefined) state.anchors[side] = v;
+      continue;
+    }
+    if (key in OFFSET_KEY_SIDE) {
+      const side = OFFSET_KEY_SIDE[key]!;
+      const v = offsetValue(p, side);
+      if (v !== undefined) state.offsets[side] = v;
+      continue;
+    }
+    if (key === 'grow_horizontal') {
+      if (p.growHorizontal !== undefined) state.growHorizontal = p.growHorizontal;
+      continue;
+    }
+    if (key === 'grow_vertical') {
+      if (p.growVertical !== undefined) state.growVertical = p.growVertical;
+    }
+  }
+
+  return {
+    anchors: state.anchors,
+    offsets: state.offsets,
+    growHorizontal: state.growHorizontal,
+    growVertical: state.growVertical,
+  };
 }

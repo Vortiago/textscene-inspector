@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../../nodes/2d/ui/control/types';
-import { resolveAnchors, resolveGrowDirection, resolveOffsets } from './controlAnchors';
+import { resolveAnchors, resolveControlLayout, resolveGrowDirection, resolveOffsets } from './controlAnchors';
 
 const BEGIN = 0;
 const END = 1;
@@ -336,6 +336,154 @@ describe('resolveGrowDirection — authored grow_horizontal/grow_vertical win', 
     // 0 is falsy — `??` must be what distinguishes it from absent, not `||`.
     const p = props({ anchorsPreset: 15, layoutMode: 1, growHorizontal: BEGIN, growVertical: BEGIN });
     expect(resolveGrowDirection(p)).toEqual([BEGIN, BEGIN]);
+  });
+});
+
+describe('resolveControlLayout — no reliable order falls back to resolveAnchors/resolveOffsets/resolveGrowDirection', () => {
+  // `orderedKeys === undefined` — a hand-built node, or a merged instance
+  // root (`resources/mergeInstanceRoot.ts`, ADR-0035) — assumes the editor's
+  // own save order, matching every editor-authored scene.
+  const MIN = { x: 30, y: 12 };
+
+  it('an authored offset AFTER the preset (in the fallback sense) survives, matching resolveOffsets directly', () => {
+    const p = props({ anchorsPreset: 15, layoutMode: 1, offsetLeft: 40, offsetTop: 40, offsetRight: 240, offsetBottom: 160 });
+    const result = resolveControlLayout(p, undefined, () => MIN);
+    expect(result.anchors).toEqual(resolveAnchors(p));
+    expect(result.offsets).toEqual(resolveOffsets(p, () => MIN));
+    expect(result.growHorizontal).toBe(resolveGrowDirection(p)[0]);
+    expect(result.growVertical).toBe(resolveGrowDirection(p)[1]);
+  });
+});
+
+describe('resolveControlLayout — file-order simulation (ADR-0035, Option B)', () => {
+  // The ADR's own measured acceptance case: the SAME Control, the SAME four
+  // `offset_*` values, only the order against `anchors_preset = 15` changes.
+  // `_set_anchors_layout_preset` (control.cpp:982-1032) calls
+  // `set_anchors_preset` then `set_offsets_preset` — a later `offset_*` line
+  // (its own setter, `Control::set_offset`, control.cpp:798-805) overwrites
+  // what the preset wrote; an earlier one is overwritten BY the preset.
+  it('offsets authored BEFORE anchors_preset=15 are wiped to the preset default', () => {
+    const p = props({ anchorsPreset: 15, layoutMode: 1, offsetLeft: 40, offsetTop: 40, offsetRight: 240, offsetBottom: 160 });
+    const orderedKeys = ['layout_mode', 'offset_left', 'offset_top', 'offset_right', 'offset_bottom', 'anchors_preset'];
+    const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
+    expect(result.anchors).toEqual([0, 0, 1, 1]);
+    expect(result.offsets).toEqual([0, 0, 0, 0]);
+  });
+
+  it('offsets authored AFTER anchors_preset=15 survive', () => {
+    const p = props({ anchorsPreset: 15, layoutMode: 1, offsetLeft: 40, offsetTop: 40, offsetRight: 240, offsetBottom: 160 });
+    const orderedKeys = ['layout_mode', 'anchors_preset', 'offset_left', 'offset_top', 'offset_right', 'offset_bottom'];
+    const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
+    expect(result.anchors).toEqual([0, 0, 1, 1]);
+    expect(result.offsets).toEqual([40, 40, 240, 160]);
+  });
+
+  it('anchors_preset authored BEFORE layout_mode does nothing at all — the gate reads stale state (control.cpp:991-993)', () => {
+    const p = props({ anchorsPreset: 15, layoutMode: 1, offsetLeft: 40, offsetTop: 40, offsetRight: 240, offsetBottom: 160 });
+    const orderedKeys = ['anchors_preset', 'layout_mode', 'offset_left', 'offset_top', 'offset_right', 'offset_bottom'];
+    const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
+    // The preset never ran (gate was still closed when it fired), so anchors
+    // and grow direction stay at the struct default and the offsets, authored
+    // after the (inert) preset, land unopposed.
+    expect(result.anchors).toEqual([0, 0, 0, 0]);
+    expect(result.offsets).toEqual([40, 40, 240, 160]);
+    expect(result.growHorizontal).toBe(1); // GROW_DIRECTION_END, control.h:209
+    expect(result.growVertical).toBe(1); // GROW_DIRECTION_END, control.h:210
+  });
+
+  it('anchor_* and grow_* authored before the preset are wiped identically to offset_*', () => {
+    const p = props({
+      anchorsPreset: 15,
+      layoutMode: 1,
+      anchorLeft: 0.25,
+      anchorTop: 0.25,
+      anchorRight: 0.75,
+      anchorBottom: 0.75,
+      growHorizontal: 0,
+      growVertical: 0,
+    });
+    const orderedKeys = [
+      'layout_mode',
+      'anchor_left',
+      'anchor_top',
+      'anchor_right',
+      'anchor_bottom',
+      'grow_horizontal',
+      'grow_vertical',
+      'anchors_preset',
+    ];
+    const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
+    expect(result.anchors).toEqual([0, 0, 1, 1]); // FULL_RECT's own anchors
+    expect(result.growHorizontal).toBe(2); // GROW_DIRECTION_BOTH, FULL_RECT's own table entry
+    expect(result.growVertical).toBe(2);
+  });
+
+  it('anchor_* and grow_* authored AFTER the preset survive', () => {
+    const p = props({
+      anchorsPreset: 15,
+      layoutMode: 1,
+      anchorLeft: 0.25,
+      anchorTop: 0.25,
+      anchorRight: 0.75,
+      anchorBottom: 0.75,
+      growHorizontal: 0,
+      growVertical: 0,
+    });
+    const orderedKeys = [
+      'layout_mode',
+      'anchors_preset',
+      'anchor_left',
+      'anchor_top',
+      'anchor_right',
+      'anchor_bottom',
+      'grow_horizontal',
+      'grow_vertical',
+    ];
+    const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
+    expect(result.anchors).toEqual([0.25, 0.25, 0.75, 0.75]);
+    expect(result.growHorizontal).toBe(0);
+    expect(result.growVertical).toBe(0);
+  });
+
+  it('an explicitly authored layout_mode = 0 wipes anchor_*/offset_*/grow_* authored before it (control.cpp:919-935,927-930 — the fifth pair)', () => {
+    const p = props({
+      layoutMode: 0,
+      offsetLeft: 40,
+      offsetTop: 40,
+      offsetRight: 240,
+      offsetBottom: 160,
+      growHorizontal: 0,
+    });
+    const orderedKeys = ['offset_left', 'offset_top', 'offset_right', 'offset_bottom', 'grow_horizontal', 'layout_mode'];
+    const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
+    expect(result.anchors).toEqual([0, 0, 0, 0]);
+    expect(result.offsets).toEqual([0, 0, 0, 0]);
+    expect(result.growHorizontal).toBe(1); // TOP_LEFT's own table entry, GROW_DIRECTION_END
+    expect(result.growVertical).toBe(1);
+  });
+
+  it('an explicitly authored layout_mode = 0 does NOT wipe values authored after it', () => {
+    const p = props({ layoutMode: 0, offsetLeft: 40 });
+    const orderedKeys = ['layout_mode', 'offset_left'];
+    const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
+    expect(result.offsets).toEqual([40, 0, 0, 0]);
+  });
+
+  it('a preset outside 0..15 (ERR_FAIL_INDEX) leaves whatever state came before it untouched', () => {
+    const p = props({ anchorsPreset: 99, layoutMode: 1, anchorLeft: 0.3 });
+    const orderedKeys = ['layout_mode', 'anchor_left', 'anchors_preset'];
+    const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
+    expect(result.anchors).toEqual([0.3, 0, 0, 0]);
+  });
+
+  it('a malformed (unparsed) property at its ordered position is skipped, not applied as NaN', () => {
+    // `anchorsPreset` parsed to `undefined` (e.g. an unparseable float) — the
+    // key is still in the raw order, but there is no value to apply.
+    const p = props({ layoutMode: 1, offsetLeft: 5 });
+    const orderedKeys = ['layout_mode', 'anchors_preset', 'offset_left'];
+    const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
+    expect(result.offsets[0]).toBe(5);
+    expect(Number.isNaN(result.anchors[0])).toBe(false);
   });
 });
 

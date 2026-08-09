@@ -9,6 +9,7 @@
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SLIDER_GRABBER_ICONS, SLIDER_TICK_ICONS } from '../../../../r3f/controls/native/themeIcons';
@@ -27,7 +28,7 @@ import type { VSliderProperties } from './types';
 export function VSlider({ solveNode, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = solveNode.node.properties as VSliderProperties;
   const size = { x: rect.w, y: rect.h };
-  const ratio = resolveSliderRatio(props);
+  const ratio = resolveSliderRatio(props, controlLayoutOrder(solveNode));
 
   const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
   const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });

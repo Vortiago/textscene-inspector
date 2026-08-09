@@ -20,11 +20,19 @@
  * qualifies), so `Object.keys(node.properties)` already IS the file order this
  * rule needs, with no parser change.
  *
- * This is advisory only: it flags an authoring hazard, it does not correct the
- * render. Nothing in the fixture corpus authors the divergent order today, and an
- * editor-saved scene cannot (`_get_anchors_layout_preset` derives the preset FROM
- * the final anchors, so a non-zero preset and matching `anchor_*` always co-occur)
- * — but a hand-authored or hand-edited `.tscn` carries no such guarantee.
+ * This warning names an AUTHORING hazard, not a rendering gap: the renderer
+ * itself now resolves this order correctly (`r3f/controls/controlAnchors.ts`'s
+ * `resolveControlLayout`, ADR-0035, Option B) by replaying a node's raw
+ * property keys in file order — so a scene that authors the divergent order
+ * still previews exactly as Godot would render it. The warning stays because
+ * the ORDER remains confusing to a human maintaining the file even once the
+ * math is right — a later `anchors_preset` silently discarding an earlier
+ * `offset_*` is a footgun worth flagging regardless of whether this
+ * previewer gets the resulting rect right. Nothing in the fixture corpus
+ * authors the divergent order today, and an editor-saved scene cannot
+ * (`_get_anchors_layout_preset` derives the preset FROM the final anchors, so
+ * a non-zero preset and matching `anchor_*` always co-occur) — but a
+ * hand-authored or hand-edited `.tscn` carries no such guarantee.
  *
  * The "N sibling keys wiped by one trigger key" arithmetic below is shared with
  * `HSlider`/`VSlider`'s own property-order rules (`shared/rangeLinter.ts`,
@@ -43,8 +51,8 @@ import { targetsBeforeLatestTrigger } from '../../../../linter/propertyOrder.js'
  * The `anchor_*`/`offset_*`/`grow_*` keys `_set_anchors_layout_preset` overwrites
  * as a side effect — `set_anchors_preset` (anchors), `set_offsets_preset`
  * (offsets), `set_grow_direction_preset` (grow) — the same ten keys
- * `controlAnchors.ts`'s `resolveAnchors`/`resolveOffsets`/`resolveGrowDirection`
- * read.
+ * `controlAnchors.ts`'s `resolveControlLayout` (file-order-aware) and its
+ * `resolveAnchors`/`resolveOffsets`/`resolveGrowDirection` fallbacks read.
  */
 const PRESET_SIDE_EFFECT_KEYS = [
   'anchor_left',

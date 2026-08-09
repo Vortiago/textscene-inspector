@@ -74,3 +74,20 @@ export interface SolveNode {
 export function controlProps(n: SolveNode): ControlProperties {
   return n.node.properties as ControlProperties;
 }
+
+/**
+ * This node's raw property keys, in real file order — `undefined` when that
+ * order is unknown or unreliable (a hand-built literal with no `rawProperties`
+ * at all, or a merged instance root whose raw merge mixes two files' orders,
+ * `resources/mergeInstanceRoot.ts`, ADR-0035).
+ *
+ * Consumed by every file-order-sensitive resolver
+ * (`r3f/controls/controlAnchors.ts`'s `resolveControlLayout`,
+ * `nodes/2d/ui/shared/range.ts`'s `resolveRangeValue`) so each computes its
+ * own order fact from the SAME node-level source rather than re-deriving the
+ * `rawPropertiesOrderReliable` check per call site.
+ */
+export function controlLayoutOrder(n: SolveNode): readonly string[] | undefined {
+  const { node } = n;
+  return node.rawPropertiesOrderReliable && node.rawProperties ? Object.keys(node.rawProperties) : undefined;
+}
