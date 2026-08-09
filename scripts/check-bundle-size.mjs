@@ -27,10 +27,6 @@ import { pathToFileURL } from 'node:url';
 import { checkHostBundles } from './check-bundle-size/hostBundles.mjs';
 import { checkWebviewBudget } from './check-bundle-size/webviewBudget.mjs';
 
-// Re-exported for `check-bundle-size.test.mjs`, which unit-tests the pure
-// token/metafile scanners through this entry point.
-export { findForbiddenHostInputs, findHostBundleViolations } from './check-bundle-size/hostBundles.mjs';
-
 function main() {
   const enforce = process.argv.includes('--enforce');
 
@@ -49,11 +45,11 @@ function main() {
   if (!hostOk || (webview === 'over-budget' && enforce)) process.exit(1);
 }
 
-// Only run when executed directly (`node scripts/check-bundle-size.mjs`),
-// not when imported by `check-bundle-size.test.mjs` for its pure functions.
-// `pathToFileURL` (rather than a manual `file://` template) is required for
-// this comparison to hold on Windows, where `process.argv[1]` is a
-// `C:\...`-style path, not a POSIX one.
+// Only run when executed directly (`node scripts/check-bundle-size.mjs`), so
+// importing this entry never exits the importer's process. `pathToFileURL`
+// (rather than a manual `file://` template) is required for this comparison to
+// hold on Windows, where `process.argv[1]` is a `C:\...`-style path, not a
+// POSIX one.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
 }

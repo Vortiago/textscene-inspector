@@ -7,27 +7,16 @@
  * once over the real tree, and those two callers must not be able to drift.
  */
 
-import { readdirSync, type Dirent } from 'node:fs';
+import { walk } from './ruleNameScrape.js';
 
-/** Walk the filesystem for all linterParser.ts source files. */
-export function walkLinterParsers(dir: string): string[] {
-  const results: string[] = [];
-  let entries: Dirent[];
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return results;
-  }
-  for (const entry of entries) {
-    const full = `${dir}/${entry.name}`;
-    if (entry.isDirectory()) {
-      results.push(...walkLinterParsers(full));
-    } else if (entry.name === 'linterParser.ts') {
-      results.push(full);
-    }
-  }
-  return results;
-}
+/**
+ * Every `linterParser.ts` under `dir`.
+ *
+ * The sibling `walk` rather than a local copy, and specifically one that lets
+ * an unreadable directory THROW: a walk that swallows the error and returns
+ * `[]` turns this guard's own failure into a pass over an empty population.
+ */
+export const walkLinterParsers = (dir: string): string[] => walk(dir, 'linterParser.ts');
 
 /**
  * Slice of `source` from `start` (just past an opening `{`) to its balanced

@@ -13,7 +13,6 @@ import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import {
   player2DVolumeArms,
   player2DPitchArms,
-  checkInvalidMaxPolyphony,
   isDrivenByAnimationAudioTrack,
 } from '../sharedLinterChecks.js';
 
@@ -70,23 +69,6 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // ERROR: pitch_scale = 0. audio_stream_player_internal.cpp:314,
-  // ERR_FAIL_COND(p_pitch_scale <= 0.0) — the setter refuses, so the write never
-  // lands. linterParser.ts reports the whole <= 0 range; this adds the semantic
-  // wording for the zero case.
-  if (rawProps.pitch_scale !== undefined) {
-    const pitchScale = parseFloat(rawProps.pitch_scale);
-    if (!isNaN(pitchScale) && pitchScale === 0) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Property 'pitch_scale' is 0. Audio will not play. Use values > 0.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'audiostreamplayer2d-zero-pitch-scale',
-      });
-    }
-  }
-
   // Range advisories: distance / volume / pitch bands. `attenuation` carries
   // none: audio_stream_player_2d.cpp:437 declares it PROPERTY_HINT_EXP_EASING,
   // which states no range, and set_attenuation (:308) is a bare assignment.
@@ -106,8 +88,6 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
       pitch_scale: player2DPitchArms('audiostreamplayer2d'),
     })
   );
-
-  checkInvalidMaxPolyphony(rawProps, node.name, node.type, 'audiostreamplayer2d', diagnostics);
 
   return diagnostics;
 }
@@ -141,11 +121,6 @@ const audioStreamPlayer2DValidationRule: LintRule = {
         },
       },
       {
-        ruleName: 'audiostreamplayer2d-zero-pitch-scale',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'audio_stream_player_internal.cpp:314' },
-      },
-      {
         ruleName: 'audiostreamplayer2d-small-max-distance',
         severity: 'warning',
         grounding: { kind: 'engine', at: 'audio_stream_player_2d.cpp:436' },
@@ -159,11 +134,6 @@ const audioStreamPlayer2DValidationRule: LintRule = {
         ruleName: 'audiostreamplayer2d-unusual-pitch',
         severity: 'warning',
         grounding: { kind: 'engine', at: 'audio_stream_player_2d.cpp:432' },
-      },
-      {
-        ruleName: 'audiostreamplayer2d-invalid-max-polyphony',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'audio_stream_player_internal.cpp:323' },
       },
     ],
   },

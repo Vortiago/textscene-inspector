@@ -2,9 +2,9 @@
 
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { REPO_ROOT } from '../../repoRoot.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = join(here, '../../..');
 
 export const OUT = join(here, '../node-catalog.json');
-export const ENUM_GD = join(repoRoot, 'scripts/godot-ref/enumerate-nodes.gd');
+export const ENUM_GD = join(REPO_ROOT, 'scripts/godot-ref/enumerate-nodes.gd');

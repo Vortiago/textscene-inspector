@@ -27,8 +27,8 @@ validatorRegistry.registerAll('PhysicalBone2D', {
   // 1000 ceiling is never checked at scene-load time: the only index check
   // (:237, ERR_FAIL_INDEX_MSG against parent_skeleton->get_bone_count()) is
   // gated on is_inside_tree(), which a freshly-deserialized property assignment
-  // never satisfies (packed_scene.cpp sets properties before adding the node to
-  // the tree). So the ceiling is only hinted.
+  // never satisfies (packed_scene.cpp:492 sets properties, :541 parents the
+  // node). So the ceiling is only hinted.
   bone2d_index: v.strictInt('bone2d_index', {
     min: 0,
     max: 1000,

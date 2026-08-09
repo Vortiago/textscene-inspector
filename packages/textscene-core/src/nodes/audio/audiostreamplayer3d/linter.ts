@@ -10,11 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
-import {
-  player3DVolumeArms,
-  player3DPitchArms,
-  checkInvalidMaxPolyphony,
-} from '../sharedLinterChecks.js';
+import { player3DVolumeArms, player3DPitchArms } from '../sharedLinterChecks.js';
 
 // audio_stream_player_3d.cpp:885, unit_size PROPERTY_HINT_RANGE
 // "0.1,100,0.01,or_greater": top end open, and set_unit_size (:569) is a bare
@@ -49,36 +45,6 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
       nodeType: node.type,
       ruleName: 'audiostreamplayer3d-missing-stream-resource',
     });
-  }
-
-  // ERROR: max_distance must be >= 0 (audio_stream_player_3d.cpp:660,
-  // ERR_FAIL_COND(p_metres < 0.0))
-  if (rawProps.max_distance !== undefined) {
-    const maxDistance = parseFloat(rawProps.max_distance);
-    if (!isNaN(maxDistance) && maxDistance < 0) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Property 'max_distance' must be non-negative (got ${maxDistance}). Use 0 for unlimited distance.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'audiostreamplayer3d-invalid-max-distance',
-      });
-    }
-  }
-
-  // ERROR: pitch_scale must be > 0 (audio_stream_player_internal.cpp:314,
-  // ERR_FAIL_COND(p_pitch_scale <= 0.0); all three players route through it)
-  if (rawProps.pitch_scale !== undefined) {
-    const pitchScale = parseFloat(rawProps.pitch_scale);
-    if (!isNaN(pitchScale) && pitchScale <= 0) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Property 'pitch_scale' must be greater than 0 (got ${pitchScale}). Zero or negative pitch breaks audio.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'audiostreamplayer3d-invalid-pitch-scale',
-      });
-    }
   }
 
   // WARNING: emission_angle_degrees without emission_angle_enabled
@@ -120,8 +86,6 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
     })
   );
 
-  checkInvalidMaxPolyphony(rawProps, node.name, node.type, 'audiostreamplayer3d', diagnostics);
-
   return diagnostics;
 }
 
@@ -150,16 +114,6 @@ const audioStreamPlayer3DValidationRule: LintRule = {
         grounding: { kind: 'engine', at: 'audio_stream_player_3d.cpp:885' },
       },
       {
-        ruleName: 'audiostreamplayer3d-invalid-max-distance',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'audio_stream_player_3d.cpp:660' },
-      },
-      {
-        ruleName: 'audiostreamplayer3d-invalid-pitch-scale',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'audio_stream_player_internal.cpp:314' },
-      },
-      {
         ruleName: 'audiostreamplayer3d-emission-angle-not-enabled',
         severity: 'warning',
         grounding: {
@@ -186,11 +140,6 @@ const audioStreamPlayer3DValidationRule: LintRule = {
         ruleName: 'audiostreamplayer3d-unusual-pitch',
         severity: 'warning',
         grounding: { kind: 'engine', at: 'audio_stream_player_3d.cpp:887' },
-      },
-      {
-        ruleName: 'audiostreamplayer3d-invalid-max-polyphony',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'audio_stream_player_internal.cpp:323' },
       },
     ],
   },

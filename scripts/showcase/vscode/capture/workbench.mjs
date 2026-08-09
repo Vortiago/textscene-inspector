@@ -39,7 +39,7 @@ export async function palette(page, label) {
 }
 
 /** Open a workspace file via Quick Open. */
-export async function openFile(page, relPath) {
+async function openFile(page, relPath) {
   await page.keyboard.press('Escape');
   await sleep(150);
   await page.keyboard.press('Control+P');

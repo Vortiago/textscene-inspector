@@ -31,8 +31,6 @@ import {
   useThisCamera,
 } from './record/helpers.mjs';
 
-export { selectScene };
-
 const OUT_DIR = process.env.SHOWCASE_OUT || 'docs/showcase/web';
 
 /** Capture the poster frame used for verification + the showcase thumbnail. */

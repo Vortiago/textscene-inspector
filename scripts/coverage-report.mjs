@@ -26,12 +26,8 @@ import { pathToFileURL } from 'node:url';
 import { collectCoverage } from './coverage-report/collect.mjs';
 import { parseArgs, report } from './coverage-report/report.mjs';
 
-// Re-exported for `coverage-report.test.mjs`, which asserts the ledger agrees
-// with the catalog.
-export { collectCoverage };
-
-// Only report when run as a CLI — `coverage-report.test.mjs` imports
-// `collectCoverage` and must not have a report printed into its output.
+// Only report when run as a CLI, so importing this entry never prints a report
+// into someone else's output.
 // `pathToFileURL` because argv[1] is a path and import.meta.url is a URL.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const opts = parseArgs(process.argv.slice(2));

@@ -66,7 +66,7 @@ Strict parsing format-checks these `PathFollow2D` properties, plus 12 inherited 
 
 `rotates`, `cubic_interp`, and `loop` fall back to Godot's default `true`; `h_offset`
 and `v_offset` fall back to `0`. `progress` and `progress_ratio` stay `undefined`
-when absent, so the component can tell which one the scene authored, but if present
-with an unparseable value each falls to `0` with a warning instead of staying unset.
-The lenient parser still reads `progress_ratio` even though nothing positions from
-it, so a bad value is reported rather than skipped for being unusable anyway.
+when absent, but if present with an unparseable value each falls to `0` with a
+warning instead of staying unset. The lenient parser still reads `progress_ratio`
+even though nothing positions from it, so a bad value is reported rather than
+skipped for being unusable anyway.

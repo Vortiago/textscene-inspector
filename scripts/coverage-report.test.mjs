@@ -16,7 +16,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { collectCoverage } from './coverage-report.mjs';
+import { collectCoverage } from './coverage-report/collect.mjs';
 
 const CATALOG = join(import.meta.dirname, 'compare-docs/node-catalog.json');
 const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));

@@ -15,7 +15,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { COMPLEX_SCENES } from './capture-complex.mjs';
-import { partitionTargets } from './recapture.mjs';
+import { partitionTargets } from './recapture/targets.mjs';
 
 const COMPLEX_SLUGS = COMPLEX_SCENES.map((c) => c.slug);
 

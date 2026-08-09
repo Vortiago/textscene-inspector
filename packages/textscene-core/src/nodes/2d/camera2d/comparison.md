@@ -74,9 +74,7 @@ Strict parsing format-checks these `Camera2D` properties, plus 12 inherited from
 | `valid-camera2d-properties` | `camera2d-multiple-enabled` | warning |
 |  | `camera2d-invalid-horizontal-limits` | warning |
 |  | `camera2d-invalid-vertical-limits` | warning |
-|  | `camera2d-smoothing-speed-negative` | error |
 |  | `camera2d-smoothing-speed-zero` | warning |
-|  | `camera2d-rotation-smoothing-speed-negative` | error |
 |  | `camera2d-rotation-smoothing-speed-zero` | warning |
 <!-- lint:end -->
 

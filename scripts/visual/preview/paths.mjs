@@ -5,9 +5,8 @@
  * silently repoint a path at the wrong tree.
  */
 
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { REPO_ROOT } from '../../repoRoot.mjs';
 
-const here = dirname(fileURLToPath(import.meta.url));
-export const REPO_ROOT = join(here, '../../..');
+export { REPO_ROOT };
 export const WEB_DIST_INDEX = join(REPO_ROOT, 'apps/textscene-web/dist/index.html');

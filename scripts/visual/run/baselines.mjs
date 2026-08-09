@@ -36,7 +36,6 @@ export function compareToBaseline(scene, actualBuffer) {
     return {
       status: 'fail',
       detail: `size mismatch: baseline ${expected.width}x${expected.height}, actual ${actual.width}x${actual.height}`,
-      actual,
     };
   }
   const { width, height } = expected;
@@ -50,7 +49,6 @@ export function compareToBaseline(scene, actualBuffer) {
     return {
       status: 'fail',
       detail: `${diffPixels} px differ (${diffPct.toFixed(3)}% > ${maxDiffPct}%)`,
-      actual,
       diff,
     };
   }

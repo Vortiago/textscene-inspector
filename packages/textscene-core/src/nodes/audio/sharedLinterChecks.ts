@@ -3,8 +3,12 @@
  * extreme-volume / unusual-pitch bands were copy-pasted verbatim across the
  * 2D/3D/base `linter.ts` files (architecture review) — only the rule-name prefix
  * and the volume thresholds differed — so they are **Range advisory** arms now,
- * flowing through the shared `rangeAdvisories` combinator. `max_polyphony` stays
- * a hand-written check because it is an ERROR, not an advisory.
+ * flowing through the shared `rangeAdvisories` combinator.
+ *
+ * Only ADVISORY bands live here. A condition the setter refuses outright
+ * belongs on the property's validator in each slice's `linterParser.ts`, which
+ * already carries the same `enforced:` citation and reports at the same tier;
+ * a semantic rule beside it makes the linter report one value twice.
  *
  * `volume_db` and `pitch_scale` are declared on three SEPARATE concrete
  * classes (no shared base ADD_PROPERTY), so each player's citation is a
@@ -16,7 +20,6 @@
  * `lights/shared/linterChecks.ts` uses for `omniRangeArms` / `spotRangeArms`).
  */
 
-import type { Diagnostic } from '../../linter/types.js';
 import type { RangeArm } from '../../linter/rangeAdvisory.js';
 import type { TscnNode, TscnScene } from '../../parser/types.js';
 import { isValidProperties, resolveNodePathTarget } from '../../linter/linterUtils.js';
@@ -169,30 +172,3 @@ export function player3DPitchArms(rulePrefix: string): RangeArm[] {
   ];
 }
 
-/**
- * Error when `max_polyphony` parses below 1 (`<prefix>-invalid-max-polyphony`).
- * `AudioStreamPlayerInternal::set_max_polyphony` (audio_stream_player_internal.cpp:322)
- * wraps the assignment in `if (p_max_polyphony > 0)`, so a value below 1 is
- * silently dropped and the node keeps its old polyphony: the engine refuses the
- * write, which is what makes this an error rather than an advisory. The property
- * itself is PROPERTY_HINT_NONE, so there is no hint band around it.
- */
-export function checkInvalidMaxPolyphony(
-  rawProps: Record<string, string>,
-  nodeName: string,
-  nodeType: string,
-  rulePrefix: string,
-  diagnostics: Diagnostic[]
-): void {
-  if (rawProps.max_polyphony === undefined) return;
-  const maxPolyphony = parseInt(rawProps.max_polyphony, 10);
-  if (Number.isNaN(maxPolyphony) || maxPolyphony >= 1) return;
-
-  diagnostics.push({
-    severity: 'error',
-    message: `Property 'max_polyphony' must be at least 1 (got ${maxPolyphony}). Values below 1 cause runtime errors.`,
-    nodeName,
-    nodeType,
-    ruleName: `${rulePrefix}-invalid-max-polyphony`,
-  });
-}

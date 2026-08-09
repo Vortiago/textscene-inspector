@@ -10,12 +10,13 @@
  */
 
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { baseChain } from '../nodeBaseTypes.js';
 
-const here = dirname(fileURLToPath(import.meta.url));
-export const nodesRoot = resolve(here, '../../nodes');
+// Re-exported, not re-derived: two modules in this directory resolving the same
+// directory from their own `import.meta.url` is two `..` counts to keep right.
+export { nodesRoot } from './ruleNameScrape.js';
+import { nodesRoot } from './ruleNameScrape.js';
 
 // ---------------------------------------------------------------------------
 // Base-type to parser directory mapping.

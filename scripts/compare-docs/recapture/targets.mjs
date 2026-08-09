@@ -12,6 +12,7 @@ import {
   parseCompareMarkers,
   parseFrontmatter,
 } from '../sheetSources.mjs';
+import { readRecordedMode } from '../capture/modes.mjs';
 
 /** Every (image, fixture, camera) the sheets reference — legacy pair + sections. */
 export function collectTargets() {
@@ -45,9 +46,21 @@ export function collectTargets() {
 export const godotScenePath = (fixture) => findScene(fixture) ?? join(REPO_ROOT, 'scenes/fixtures', fixture);
 export const imgPath = (image, side) => join(IMAGES, `${image}-${side}.png`);
 
+/**
+ * Which workspace an already-rendered reference was captured in.
+ *
+ * The `.mode` sidecar first, because Godot is the side that classifies the root
+ * and it writes the answer down. Measuring the PNG is only a fallback for an
+ * image cached from before the sidecar existed, and it is not reliable on its
+ * own: a 2D frame is now the scene's own `display/window/size/viewport_*`, so a
+ * 640x400 pong capture and a 1920x1080 RTS capture both measure as '3d'. That
+ * does not fail, it quietly builds the gallery against the wrong workspace.
+ */
 export function modeOfExistingGodot(image) {
   const file = imgPath(image, 'godot');
   if (!existsSync(file)) return null;
+  const recorded = readRecordedMode(file);
+  if (recorded) return recorded;
   const h = Buffer.alloc(24);
   const fd = openSync(file, 'r');
   try {

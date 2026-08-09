@@ -11,12 +11,11 @@
  */
 
 import { existsSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
+import { REPO_ROOT } from '../repoRoot.mjs';
 
-const here = dirname(fileURLToPath(import.meta.url));
-export const REPO_ROOT = join(here, '../..');
+export { REPO_ROOT };
 
 /** Slice roots, walked for `comparison.md`. */
 const SLICE_ROOTS = [

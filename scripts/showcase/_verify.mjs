@@ -1,5 +1,5 @@
 import { launchShowcaseBrowser } from './browser.mjs';
-import { selectScene } from './record.mjs';
+import { selectScene } from './record/helpers.mjs';
 
 const url = process.env.SHOWCASE_URL || 'http://localhost:4173';
 const label = process.argv[2] || 'Csg Box';

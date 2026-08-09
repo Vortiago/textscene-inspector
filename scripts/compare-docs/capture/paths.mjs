@@ -2,14 +2,16 @@
 
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { IMAGES_DIR, REPO_ROOT } from '../sheetSources.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-export const REPO_ROOT = join(here, '../../..');
 export const PLAN = join(here, '../plan.json');
-// Beside the sheets that embed them, so a sheet's `![](images/...)` link is
-// relative and the pair travels together.
-export const IMAGES = join(REPO_ROOT, 'docs/comparison/images');
+// From `sheetSources.mjs`, not re-derived: capture and recapture WRITE into
+// this directory and the gallery READS from it, so a second spelling of it
+// fails by putting pictures somewhere nothing looks, with nothing to report.
+export { REPO_ROOT };
+export const IMAGES = IMAGES_DIR;
 
 export const imagePath = (fixture, side) =>
   join(IMAGES, `${fixture.replace(/\.tscn$/, '')}-${side}.png`);

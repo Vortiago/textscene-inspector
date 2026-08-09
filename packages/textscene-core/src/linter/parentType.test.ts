@@ -11,7 +11,15 @@
 
 import { describe, expect, it } from 'vitest';
 import { parentTypeVerdict, placementPhrase } from './parentType.js';
-import { byName, parseScene as parse } from './testing/sceneNodes.js';
+import { byName } from './testing/sceneNodes.js';
+import { TscnParser } from '../parser/TscnParser.js';
+
+/**
+ * The lenient parser, constructed here rather than in `testing/sceneNodes.ts`:
+ * importing it pulls every node slice's registration, and this is the only one
+ * of the three `parentType.*` files that needs it.
+ */
+const parse = (source: string) => new TscnParser().parse(source);
 
 describe('parentTypeVerdict', () => {
   it('is satisfied by the wanted type, and carries the parent', () => {

@@ -1,20 +1,15 @@
 /**
  * Scene helpers the `parentType.*.test.ts` files share.
  *
- * Both verdict families are read off a parsed tree by node NAME, and the two
- * families need DIFFERENT parsers, so the choice is made here once instead of
- * per file.
+ * Deliberately reaches only `StrictTscnParser`. The LENIENT `TscnParser` stays
+ * out: it side-effect-imports every node slice, so a shared module naming it
+ * would hand a 466-module graph to the two files here that only want
+ * `verdictOf` — the one file that does parse leniently constructs its own.
  */
 
-import { TscnParser } from '../../parser/TscnParser.js';
 import { StrictTscnParser } from '../StrictTscnParser.js';
 import { visibleInTreeVerdict } from '../parentType.js';
 import type { TscnNode } from '../../parser/types.js';
-
-/** Parse with the lenient renderer parser. */
-export function parseScene(source: string) {
-  return new TscnParser().parse(source);
-}
 
 /** Depth-first lookup by name, since these trees are tiny. */
 export function byName(nodes: readonly TscnNode[], name: string): TscnNode {

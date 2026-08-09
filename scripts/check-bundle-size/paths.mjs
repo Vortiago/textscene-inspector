@@ -3,10 +3,10 @@
  * host guard and the webview budget can never disagree about where `dist/` is.
  */
 
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { REPO_ROOT } from '../repoRoot.mjs';
 
-export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
+export { REPO_ROOT };
 export const WEBVIEW_DIR = join(REPO_ROOT, 'apps/textscene-vscode/dist/webview');
 export const ENTRY = 'webview.js';
 

@@ -63,7 +63,7 @@ function execInDir(dir) {
 }
 
 /** Numeric version tuple from a `vscode-<platform>-<a.b.c>` cache dir (missing → -Infinity). */
-export function cacheDirVersion(dir) {
+function cacheDirVersion(dir) {
   const m = /(\d+)\.(\d+)\.(\d+)\b/.exec(dir);
   return m ? Number(m[1]) * 1e6 + Number(m[2]) * 1e3 + Number(m[3]) : -Infinity;
 }
@@ -117,7 +117,7 @@ export async function waitCDP() {
 }
 
 /** The exact argv the dev-host is spawned with, for a resolved binary. */
-export function buildLaunchCommand(bin, viaPath) {
+function buildLaunchCommand(bin, viaPath) {
   const vscodeArgs = [
     `--extensionDevelopmentPath=${EXT}`,
     `--user-data-dir=${UD}`,

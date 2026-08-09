@@ -23,9 +23,5 @@
  * and `pool` (bounded fan-out).
  */
 
-export { fetchSourceIndex } from './godotLinks/sourceIndex.mjs';
-export { mapPool } from './godotLinks/pool.mjs';
-export { makeResolver } from './godotLinks/resolve.mjs';
-
 export const docsUrl = (name) =>
   `https://docs.godotengine.org/en/stable/classes/class_${name.toLowerCase()}.html`;

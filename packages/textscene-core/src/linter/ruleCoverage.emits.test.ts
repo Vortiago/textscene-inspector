@@ -106,7 +106,7 @@ describe('rule emits meta-guard', () => {
   });
 
   it('declares every ruleName the source emits', () => {
-    // The swept tree yields 274 pairs today. A scrape that desynced and
+    // The swept tree yields 269 pairs today. A scrape that desynced and
     // deleted its own population would otherwise pass this silently — the exact
     // failure the bracket-matched `emits` strip exists to avoid.
     expect(allFiles.length).toBeGreaterThan(1000);

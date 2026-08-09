@@ -55,11 +55,9 @@ Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inh
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-audiostreamplayer2d-properties` | `audiostreamplayer2d-missing-stream-resource` | error |
 |  | `audiostreamplayer2d-autoplay-without-stream` | warning |
-|  | `audiostreamplayer2d-zero-pitch-scale` | error |
 |  | `audiostreamplayer2d-small-max-distance` | warning |
 |  | `audiostreamplayer2d-extreme-volume` | warning |
 |  | `audiostreamplayer2d-unusual-pitch` | warning |
-|  | `audiostreamplayer2d-invalid-max-polyphony` | error |
 <!-- lint:end -->
 
 Beyond the shared audio-base fallbacks (pitch_scale, volume_db, bus, and the

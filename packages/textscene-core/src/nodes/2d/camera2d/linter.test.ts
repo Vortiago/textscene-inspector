@@ -313,13 +313,23 @@ describe('Camera2D Linter', () => {
         });
       });
 
-      it('errors when position_smoothing_speed is negative, which MAX overwrites', () => {
-        expectDiagnostic(scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: -4 })), {
-          ruleName: 'camera2d-smoothing-speed-negative',
-          severity: 'error',
-          contains: ['position_smoothing_speed', 'never applies'],
-        });
-      });
+      // A negative speed is the VALIDATOR's job, not this rule's: `MAX(0, p_speed)`
+      // refuses it and `v.nonNegativeFloat(…, { enforced: 'camera_2d.cpp:703' })`
+      // already reports that at the same tier from the same line. A rule beside it
+      // reported the one value twice, and read it with `parseFloat`, which returns
+      // NaN for the `-inf` Godot writes and reloads.
+      it.each([-4, '-inf', 'inf_neg'])(
+        'errors exactly once on position_smoothing_speed %s, from the validator',
+        (speed) => {
+          const diagnostics = lint(
+            scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: speed }))
+          );
+          const errors = diagnostics.filter((d) => d.severity === 'error');
+          expect(errors).toHaveLength(1);
+          expect(errors[0]?.ruleName).toBe('strict-parser');
+          expect(errors[0]?.message).toContain('position_smoothing_speed');
+        }
+      );
 
       it('should not warn when position_smoothing_enabled with valid speed', () => {
         expectClean(scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: 5.0 })));
@@ -337,13 +347,18 @@ describe('Camera2D Linter', () => {
         });
       });
 
-      it('errors when rotation_smoothing_speed is negative, which MAX overwrites', () => {
-        expectDiagnostic(scene(node('Camera2D', { rotation_smoothing_enabled: true, rotation_smoothing_speed: -2.5 })), {
-          ruleName: 'camera2d-rotation-smoothing-speed-negative',
-          severity: 'error',
-          contains: ['rotation_smoothing_speed', 'never applies'],
-        });
-      });
+      it.each([-2.5, '-inf', 'inf_neg'])(
+        'errors exactly once on rotation_smoothing_speed %s, from the validator',
+        (speed) => {
+          const diagnostics = lint(
+            scene(node('Camera2D', { rotation_smoothing_enabled: true, rotation_smoothing_speed: speed }))
+          );
+          const errors = diagnostics.filter((d) => d.severity === 'error');
+          expect(errors).toHaveLength(1);
+          expect(errors[0]?.ruleName).toBe('strict-parser');
+          expect(errors[0]?.message).toContain('rotation_smoothing_speed');
+        }
+      );
 
       it('should not warn when rotation_smoothing_enabled with valid speed', () => {
         expectClean(scene(node('Camera2D', { rotation_smoothing_enabled: true, rotation_smoothing_speed: 5.0 })));

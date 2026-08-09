@@ -28,10 +28,6 @@ import { captureOurs } from './recapture/oursSide.mjs';
 import { runComplex } from './recapture/complex.mjs';
 import { collectTargets, partitionTargets } from './recapture/targets.mjs';
 
-// Re-exported for the ownership test, which asks this entry — the path every
-// caller already knows — rather than reaching into the parts.
-export { partitionTargets };
-
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   let targets = collectTargets();
@@ -53,8 +49,8 @@ async function main() {
   }
 }
 
-// Guarded: this module exports partitionTargets for the ownership test, and an
-// unguarded main() would start rendering the moment anything imported it.
+// Guarded so an unguarded main() cannot start rendering the moment anything
+// imports this entry.
 if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
   main().catch((e) => {
     console.error(e);
