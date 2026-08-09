@@ -42,6 +42,7 @@ Strict parsing format-checks the inherited set (35 inherited from Control); `Tex
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `control-property-order` (type-family match) | `control-property-order` | warning |
 <!-- lint:end -->
 
 `TextureRect` has no strict counterpart for `expand_mode`, `stretch_mode`, `flip_h`,

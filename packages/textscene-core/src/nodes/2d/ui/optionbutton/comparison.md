@@ -82,6 +82,7 @@ Strict parsing format-checks the inherited set (35 inherited from Control); `Opt
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `control-property-order` (type-family match) | `control-property-order` | warning |
 <!-- lint:end -->
 
 `OptionButton` has no strict counterpart of its own for `selected`, `popup/item_N/id`,

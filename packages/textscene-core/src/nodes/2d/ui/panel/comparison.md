@@ -40,6 +40,7 @@ Strict parsing format-checks the inherited set (35 inherited from Control); `Pan
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `control-property-order` (type-family match) | `control-property-order` | warning |
 <!-- lint:end -->
 
 Panel adds no properties of its own: it forwards straight to `parseControl`, so

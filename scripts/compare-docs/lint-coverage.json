@@ -1681,6 +1681,30 @@
               "severity": "warning"
             }
           ]
+        },
+        {
+          "name": "control-property-order",
+          "description": "Warns when a Control-family node authors anchor_*/offset_*/grow_* or layout_mode in a file order Godot's own anchors_preset setter silently discards or no-ops.",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "control-property-order",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "hslider-property-order",
+          "description": "Warns when an HSlider authors 'value' in a file order Range's own min_value/max_value/page setters silently re-clamp against.",
+          "universal": false,
+          "viaMatcher": false,
+          "emits": [
+            {
+              "ruleName": "hslider-property-order",
+              "severity": "warning"
+            }
+          ]
         }
       ]
     },
@@ -2020,6 +2044,18 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "control-property-order",
+          "description": "Warns when a Control-family node authors anchor_*/offset_*/grow_* or layout_mode in a file order Godot's own anchors_preset setter silently discards or no-ops.",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "control-property-order",
               "severity": "warning"
             }
           ]
@@ -4215,6 +4251,18 @@
           ]
         },
         {
+          "name": "control-property-order",
+          "description": "Warns when a Control-family node authors anchor_*/offset_*/grow_* or layout_mode in a file order Godot's own anchors_preset setter silently discards or no-ops.",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "control-property-order",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
           "name": "valid-subviewportcontainer-children",
           "description": "Flags a SubViewportContainer with no SubViewport child, which renders an empty surface",
           "universal": false,
@@ -4750,6 +4798,30 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "control-property-order",
+          "description": "Warns when a Control-family node authors anchor_*/offset_*/grow_* or layout_mode in a file order Godot's own anchors_preset setter silently discards or no-ops.",
+          "universal": false,
+          "viaMatcher": true,
+          "emits": [
+            {
+              "ruleName": "control-property-order",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "vslider-property-order",
+          "description": "Warns when a VSlider authors 'value' in a file order Range's own min_value/max_value/page setters silently re-clamp against.",
+          "universal": false,
+          "viaMatcher": false,
+          "emits": [
+            {
+              "ruleName": "vslider-property-order",
               "severity": "warning"
             }
           ]

@@ -17,6 +17,8 @@
 import '../nodes/node/index.linter.js';
 import '../nodes/2d/ui/control/index.linter.js';
 import '../nodes/2d/ui/subviewportcontainer/index.linter.js';
+import '../nodes/2d/ui/hslider/index.linter.js';
+import '../nodes/2d/ui/vslider/index.linter.js';
 import '../nodes/viewport/subviewport/index.linter.js';
 import '../nodes/base/node3d/index.linter.js';
 import '../nodes/base/node2d/index.linter.js';

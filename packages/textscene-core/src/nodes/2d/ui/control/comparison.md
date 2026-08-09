@@ -97,6 +97,7 @@ Strict parsing format-checks these `Control` properties. Every validator failure
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `control-property-order` (type-family match) | `control-property-order` | warning |
 <!-- lint:end -->
 
 Most layout/theme properties strict validates here run through the `parseOptional*`

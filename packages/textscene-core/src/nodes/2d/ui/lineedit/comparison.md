@@ -85,6 +85,7 @@ Strict parsing format-checks the inherited set (35 inherited from Control); `Lin
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `control-property-order` (type-family match) | `control-property-order` | warning |
 <!-- lint:end -->
 
 `LineEdit` has no strict counterpart for `secret_character`, `alignment` or

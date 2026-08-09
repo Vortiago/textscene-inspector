@@ -226,6 +226,7 @@ Strict parsing format-checks these `SubViewportContainer` properties, plus 35 in
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `control-property-order` (type-family match) | `control-property-order` | warning |
 | `valid-subviewportcontainer-children` | `subviewportcontainer-no-viewport` | warning |
 <!-- lint:end -->
 

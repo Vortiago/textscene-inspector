@@ -38,6 +38,7 @@ Strict parsing format-checks the inherited set (35 inherited from Control); `Col
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `control-property-order` (type-family match) | `control-property-order` | warning |
 <!-- lint:end -->
 
 ColorRect's only own property, `color`, has no strict validator; only the inherited

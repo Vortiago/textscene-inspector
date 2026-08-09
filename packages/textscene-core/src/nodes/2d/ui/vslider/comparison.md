@@ -54,6 +54,8 @@ Strict parsing format-checks the inherited set (35 inherited from Control); `VSl
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `control-property-order` (type-family match) | `control-property-order` | warning |
+| `vslider-property-order` | `vslider-property-order` | warning |
 <!-- lint:end -->
 
 `VSlider` has no strict counterpart for the `Range` or `Slider` properties, and

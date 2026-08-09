@@ -109,6 +109,35 @@ Label's own `font_color` default is opaque white, the fixed point of the sRGB
 transfer curve, so this fixture's glyphs peak at rgb(255, 255, 255) in both
 images.
 
+`unit-control-scene-font-magnified.tscn` measures a colour-space question that
+is closed for every other 2D-canvas-drawn texture (`TextureRect`, theme icons,
+sprites — `f2024064`, `72ab8896`) but stays OPEN for a scene font's glyphs,
+which this engine rasterises through its own canvas-2D painter
+(`canvasTextPainter.ts`), a separate call site from those. Measured on Godot
+4.6.3, `--mode 2d`, row y=350 across the magnified "I"'s left stem: Godot's own
+ramp climbs `76 → 230` PERFECTLY MONOTONICALLY over x=408..437 (no dip
+anywhere). This engine's current (`SRGBColorSpace`) render is also monotonic,
+`77 → 230` over the narrower x=417..427 — an already-documented AA-kernel-width
+gap (canvas-2D-rasterised here, FreeType there), not a colour-space one.
+Retagging that SAME texture `NoColorSpace` (the general 2D-canvas rule) instead
+DIPS to 72 at x=418, 5/255 below the 77 backdrop — a fringe Godot's own render
+never shows. Total `|Godot − ours|` over x=400..440 is lower for the kept
+`SRGBColorSpace` tag (877) than for the retag (944).
+
+Why the general rule does not reach here: Godot's own glyph texture is not a
+baked-colour RGBA texture the way an icon or sprite PNG is.
+`modules/text_server_adv/text_server_adv.cpp`'s `rasterize_bitmap`
+(`FT_PIXEL_MODE_GRAY` branch) allocates an `Image::FORMAT_LA8` texture and
+writes `wr[ofs+0] = 255` unconditionally wherever FreeType wrote any coverage —
+only the alpha channel (never sRGB-encoded, on either side of any pipeline)
+carries the antialiasing gradient, so there is no genuinely-differing RGB pair
+for a bilinear filter to blend in the wrong order. This engine's canvas-2D
+`fillText` raster bakes the ink colour into RGB instead (Canvas 2D's
+non-premultiplied-pixel guarantee), with a genuine `(R=0, A=0)` texel beside the
+ink at the 3x-supersampled edge — the shape the general rule is FOR — so
+retagging it would reproduce a fringe Godot's reference does not have.
+`TextRun.tsx`'s own doc carries the full derivation and citation.
+
 ## Linting
 
 <!-- lint:begin Label -->
@@ -117,6 +146,7 @@ Strict parsing format-checks the inherited set (35 inherited from Control); `Lab
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `control-property-order` (type-family match) | `control-property-order` | warning |
 <!-- lint:end -->
 
 Label's own properties, `text`, `horizontal_alignment`, `vertical_alignment`,
