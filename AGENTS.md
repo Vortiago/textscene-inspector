@@ -30,6 +30,17 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
   the extension's own preview command and reads the canvas back over CDP. Requires ink
   with text, exactly 0 with every label emptied, and zero CSP violations or network
   attempts inside the preview frame. Linux/Xvfb; CI runs it there.
+- Changed the web previewer's outliner, inspector, mode switching, or camera/selection
+  wiring: `pnpm test:e2e:web` — drives the real built app in a headless browser
+  (`scripts/e2e/webAppGate.mjs`). Asserts the viewport camera's GL-uploaded `viewMatrix`
+  is byte-identical across two different tree selections (camera never moves on
+  selection — auto-fit is load-time only), the outliner's node paths, the inspector's
+  displayed property values, that a 2D/3D fixture opens in the matching workspace with a
+  properly SIZED canvas checked separately from its ink count, and zero console
+  errors/pageerrors/failed requests on load. Observes entirely from outside the app
+  (`context.addInitScript` patching `WebGL(2)RenderingContext.prototype`, the same
+  mechanism `scripts/vscode/driveScene.mjs` uses) — no production file carries a test
+  hook for it.
 - Parity questions: `pnpm ref:godot <scene.tscn> [--camera x,y,z] [--probe x,y]` renders
   through real Godot 4.6 and prints exact pixels — measure, never derive. Needs local
   `godot` + `xvfb-run`, so it is a tool, not a gate. It injects the editor preview

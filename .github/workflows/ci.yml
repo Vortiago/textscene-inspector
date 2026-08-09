@@ -139,6 +139,52 @@ jobs:
           name: visual-diffs
           path: scripts/visual/output/
 
+  e2e-web:
+    name: E2E (web previewer app)
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      # Same reuse-the-build-artifact rationale as the visual-regression job
+      # above: the artifact IS this commit's build, so VISUAL_SKIP_BUILD=1
+      # skips a redundant cold rebuild (which would also wipe this download
+      # via vite's emptyOutDir).
+      - uses: actions/download-artifact@v8
+        with:
+          name: web-previewer
+          path: apps/textscene-web/dist/
+
+      - name: Cache Playwright chromium
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Outliner, inspector, camera-invariance and load-health gate
+        run: pnpm test:e2e:web
+        env:
+          VISUAL_SKIP_BUILD: '1'
+          # No system Chrome on the runner — use Playwright's own bundled
+          # Chromium (scripts/showcase/browser.mjs's launchShowcaseBrowser
+          # otherwise defaults to the 'chrome' channel, which this runner
+          # never installs).
+          SHOWCASE_CHANNEL: bundled
+
   integration-tests:
     name: Integration Tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
