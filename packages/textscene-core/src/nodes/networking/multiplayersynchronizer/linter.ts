@@ -15,7 +15,7 @@
  * non-root node in a `.tscn` has) — so the `is_empty()` disjunct is
  * unreachable from mere absence, for a different reason than the spawner's:
  * there the trigger IS the default; here the default is not the trigger.
- * `..` is also exactly the relative form `resolveNodePathTarget` classifies
+ * `..` is also exactly the relative form `resolveNodePath` classifies
  * as `escapes` (a `..` segment leaves the scope the static linter can walk
  * with confidence), so a bare default or explicit `NodePath("..")` is
  * declined the same way any other relative escape is — not by inventing a
@@ -35,7 +35,8 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { extractNodePath, resolveNodePathTarget, isValidProperties } from '../../../linter/linterUtils.js';
+import { extractNodePath, isValidProperties } from '../../../linter/linterUtils.js';
+import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 
 const RULE_NAME = 'multiplayersynchronizer-root-path-dangling';
 
@@ -49,7 +50,7 @@ function checkMultiplayerSynchronizer(context: RuleContext): Diagnostic[] {
   const path = extractNodePath(raw);
   if (!path) return [];
 
-  const target = resolveNodePathTarget(scene.nodes, node, path);
+  const target = resolveNodePath(scene, node, path);
   if (target.status !== 'missing') return [];
 
   return [

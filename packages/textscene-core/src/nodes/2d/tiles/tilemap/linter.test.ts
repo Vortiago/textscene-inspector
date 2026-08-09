@@ -82,6 +82,17 @@ describe('TileMap lint rules', () => {
       );
     });
 
+    // No `layer_0/…` key at all, yet the loaded node still has Layer0: the
+    // constructor pushes it before any property is applied (tile_map.cpp:1014-1021),
+    // and it defaults to not-y-sorted at z_index 0 — the exact collision partner
+    // for a y-sorted layer_1 at z_index 0.
+    it('warns when a y-sorted layer collides with the constructor’s keyless Layer0', () => {
+      expectDiagnostic(scene(`layer_1/y_sort_enabled = true`), {
+        ruleName: 'tilemap-y-sort-z-index-conflict',
+        severity: 'warning',
+      });
+    });
+
     it('stays quiet when only one layer is configured with y_sort_enabled', () => {
       const diagnostics = lint(scene(`layer_0/y_sort_enabled = true`));
       expect(diagnostics.filter((d) => d.ruleName === 'tilemap-y-sort-z-index-conflict')).toEqual([]);

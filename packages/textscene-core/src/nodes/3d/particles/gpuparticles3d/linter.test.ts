@@ -333,6 +333,26 @@ draw_pass_1 = SubResource("nonexistent_mesh")
       );
     });
 
+    // draw_pass_2..4 are ordinary serialised keys once `draw_passes` is raised
+    // (gpu_particles_3d.cpp:462-467, MAX_DRAW_PASSES = 4 in the header), and a
+    // dangling id in one fails the load exactly like draw_pass_1's.
+    it('reports a dangling mesh in a draw pass past the first', () => {
+      const diagnostics = lint(`[gd_scene format=3]
+
+[sub_resource type="ParticleProcessMaterial" id="process_1"]
+[sub_resource type="BoxMesh" id="mesh_1"]
+
+[node name="Particles" type="GPUParticles3D"]
+process_material = SubResource("process_1")
+draw_passes = 3
+draw_pass_1 = SubResource("mesh_1")
+draw_pass_3 = SubResource("nonexistent_mesh")
+`);
+      const errors = diagnostics.filter((d) => d.ruleName === 'valid-gpuparticles3d-resources');
+      expect(errors).toHaveLength(1);
+      expect(errors[0]!.message).toContain('draw_pass_3');
+    });
+
     it('should pass when draw_pass_1 resource exists', () => {
       expectClean(`[gd_scene format=3]
 
@@ -462,7 +482,7 @@ sub_emitter = NodePath("NonexistentEmitter")
 
 [node name="Particles" type="GPUParticles3D" parent="."]
 process_material = SubResource("process_1")
-sub_emitter = NodePath("WrongType")
+sub_emitter = NodePath("../WrongType")
 `,
         { prop: 'must point to a GPUParticles3D node' }
       );
@@ -484,7 +504,7 @@ draw_pass_1 = SubResource("mesh_1")
 [node name="MainParticles" type="GPUParticles3D" parent="."]
 process_material = SubResource("process_1")
 draw_pass_1 = SubResource("mesh_1")
-sub_emitter = NodePath("SubEmitter")
+sub_emitter = NodePath("../SubEmitter")
 `);
     });
 
@@ -500,11 +520,12 @@ sub_emitter = NodePath("")
 `);
     });
 
-    it('should not error on a relative (..) sub_emitter path that escapes the authored scope', () => {
-      // A "../" segment can resolve into an instanced sibling sub-scene the
-      // static linter never sees, so a not-found assertion would be a false
-      // positive (same static-scope heuristic as the skeleton/anim_player rules).
-      expectNoDiagnostic(
+    // A `..` segment is not itself unknowable: the walk climbs to World and then
+    // asks World for a child named "Other" (node.cpp:1941). There is none and no
+    // instance to hide one, so Godot's own `get_node_or_null` returns null too.
+    // The instance case is the test below, where the decline is real.
+    it('errors on a relative path whose next segment names no child', () => {
+      expectDiagnostic(
         `[gd_scene format=3]
 
 [sub_resource type="ParticleProcessMaterial" id="process_1"]
@@ -515,7 +536,7 @@ sub_emitter = NodePath("")
 process_material = SubResource("process_1")
 sub_emitter = NodePath("../Other/Emitter")
 `,
-        { ruleName: 'valid-gpuparticles3d-sub-emitter' }
+        { ruleName: 'valid-gpuparticles3d-sub-emitter', severity: 'error' }
       );
     });
 
@@ -643,7 +664,7 @@ draw_order = 1
 trail_enabled = true
 trail_lifetime = 0.5
 collision_base_size = 1.0
-sub_emitter = NodePath("SubEmitter")
+sub_emitter = NodePath("../SubEmitter")
 interp_to_end = 0.3
 `);
     });

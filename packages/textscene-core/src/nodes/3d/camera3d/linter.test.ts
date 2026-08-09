@@ -194,10 +194,13 @@ describe('Camera3D Linter', () => {
       });
     });
 
+    // Only PROJECTION_FRUSTUM (2) reaches projection.cpp:367's
+    // `ERR_FAIL_COND(p_far <= p_near)`; the mode dispatch at camera_3d.cpp:102-115
+    // sends perspective and orthogonal to setters with no such guard.
     describe('clipping planes relationship', () => {
-      it('should error when near >= far', () => {
+      it('should error when near >= far under the frustum projection', () => {
         expectDiagnostic(
-          scene(node('Camera3D', { projection: 0, fov: 75.0, near: 100.0, far: 50.0 })),
+          scene(node('Camera3D', { projection: 2, size: 1.0, near: 100.0, far: 50.0 })),
           {
             prop: 'clipping',
             severity: 'error',
@@ -207,9 +210,9 @@ describe('Camera3D Linter', () => {
         );
       });
 
-      it('should error when near equals far', () => {
+      it('should error when near equals far under the frustum projection', () => {
         expectDiagnostic(
-          scene(node('Camera3D', { projection: 0, fov: 75.0, near: 100.0, far: 100.0 })),
+          scene(node('Camera3D', { projection: 2, size: 1.0, near: 100.0, far: 100.0 })),
           {
             prop: 'clipping',
             severity: 'error',
@@ -221,9 +224,22 @@ describe('Camera3D Linter', () => {
 
       it('should not error when near < far', () => {
         expectNoDiagnostic(
-          scene(node('Camera3D', { projection: 0, fov: 75.0, near: 0.1, far: 100.0 })),
+          scene(node('Camera3D', { projection: 2, size: 1.0, near: 0.1, far: 100.0 })),
           { prop: 'clipping' }
         );
+      });
+
+      // `projection` absent means PROJECTION_PERSPECTIVE (camera_3d.h:66), the case
+      // that used to draw an error for a pair Godot stores untouched.
+      it.each([
+        ['perspective, written', { projection: 0, fov: 75.0 }],
+        ['perspective, defaulted by omission', { fov: 75.0 }],
+        ['orthogonal', { projection: 1, size: 10.0 }],
+      ])('stays silent on near >= far under %s', (_label, props) => {
+        const diagnostics = lint(scene(node('Camera3D', { ...props, near: 100.0, far: 50.0 })));
+        expect(
+          diagnostics.filter((d) => d.ruleName === 'camera3d-invalid-clipping-planes')
+        ).toHaveLength(0);
       });
     });
 
@@ -422,8 +438,9 @@ describe('Camera3D Linter', () => {
     });
 
     it('should handle clipping planes at exact boundary (near = far boundary)', () => {
+      // `<=`, not `<`: projection.cpp:367 is `ERR_FAIL_COND(p_far <= p_near)`.
       expectDiagnostic(
-        scene(node('Camera3D', { projection: 0, fov: 75.0, near: 0.1, far: 0.1 })),
+        scene(node('Camera3D', { projection: 2, size: 1.0, near: 0.1, far: 0.1 })),
         { prop: 'clipping', severity: 'error' }
       );
     });

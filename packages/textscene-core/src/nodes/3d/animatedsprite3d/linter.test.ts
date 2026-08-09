@@ -104,6 +104,21 @@ describe('AnimatedSprite3D semantic rule', () => {
         diagnostics.some((d) => d.ruleName === 'animatedsprite3d-animation-no-spriteframes')
       ).toBe(false);
     });
+
+    // `set_animation` returns at sprite_3d.cpp:1432-1434 when the name equals the one
+    // already held, and sprite_3d.h:234 seeds it with SceneStringName(default_) — so this
+    // scene never reaches the clearing branch the rule reports. Both spellings of the
+    // literal, since Godot writes a StringName with an `&` prefix.
+    it.each(['&"default"', '"default"'])(
+      'stays silent on animation %s without sprite_frames, which Godot accepts',
+      (animation) => {
+        const diagnostics = lint({ animation });
+        expect(
+          diagnostics.filter((d) => d.ruleName === 'animatedsprite3d-animation-no-spriteframes')
+        ).toHaveLength(0);
+        expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
+      }
+    );
   });
 
   it('produces zero diagnostics for a fully-configured node', () => {

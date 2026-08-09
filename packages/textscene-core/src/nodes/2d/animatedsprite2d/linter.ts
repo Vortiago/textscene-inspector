@@ -8,6 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { DEFAULT_ANIMATION_NAME, literalText } from '../../../godot/index.js';
 
 /**
  * Validate AnimatedSprite2D semantic rules (resource references, animation properties, etc.)
@@ -45,7 +46,16 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
 
   // `sprite_frames` is declared ahead of `animation` (animated_sprite_2d.cpp:671-672),
   // so a null SpriteFrames at this point is the authored absence, not load order.
-  if (rawProps.animation && !rawProps.sprite_frames) {
+  //
+  // Not `"default"`, though: `set_animation` opens with
+  // `if (animation == p_name) { return; }` (animated_sprite_2d.cpp:554-556) and the
+  // field already holds that name (animated_sprite_2d.h:43), so the clearing branch
+  // this reports is never reached and Godot loads the scene in silence.
+  if (
+    rawProps.animation &&
+    literalText(rawProps.animation) !== DEFAULT_ANIMATION_NAME &&
+    !rawProps.sprite_frames
+  ) {
     diagnostics.push({
       severity: 'error',
       message: `Property 'animation' is set to "${rawProps.animation}" but 'sprite_frames' is not set. Godot clears 'animation' back to empty, so the authored name never applies.`,

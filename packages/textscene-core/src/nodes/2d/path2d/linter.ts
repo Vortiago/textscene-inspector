@@ -63,7 +63,7 @@ const path2DValidationRule: LintRule = {
         grounding: {
           kind: 'engine-inert',
           at: 'path_2d.cpp:161',
-          unused: 'the debug pass hides the instance and returns, so the path draws nothing',
+          unused: 'the debug pass has already cleared the mesh and returns without refilling it',
         },
       },
       {

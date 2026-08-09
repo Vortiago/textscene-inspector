@@ -11,6 +11,9 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 
+/** `Camera3D::PROJECTION_FRUSTUM` (camera_3d.h:47), the third of three. */
+const PROJECTION_FRUSTUM = 2;
+
 /**
  * Validate Camera3D semantic rules
  */
@@ -30,8 +33,22 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
   // omits defaults when serialising, and camera3d/parser.ts defaults it the
   // same way, so an absent key means 75 rather than missing.
 
-  // ERROR: near must be less than far (cross-field consistency, not a range advisory)
-  if (rawProps.near !== undefined && rawProps.far !== undefined) {
+  // ERROR: near must be less than far, but ONLY under the frustum projection.
+  //
+  // `_update_camera_mode` (camera_3d.cpp:102-115) dispatches on `mode`, and only
+  // PROJECTION_FRUSTUM reaches `Projection::set_frustum`'s
+  // `ERR_FAIL_COND(p_far <= p_near)` (projection.cpp:367, via camera_3d.cpp:280).
+  // `Projection::set_perspective` (projection.cpp:252, :278) and `set_orthogonal`
+  // (:344, :356) carry no such guard, and `Camera3D::set_near`/`set_far`
+  // (camera_3d.cpp:736, :746) assign straight through with no clamp — so on the
+  // DEFAULT perspective projection the engine refuses nothing and a degenerate
+  // matrix is not an ADR-0032 error. A hint cannot rescue it either: both hints
+  // end in `or_greater` and neither constrains the pair.
+  if (
+    rawProps.near !== undefined &&
+    rawProps.far !== undefined &&
+    parseInt(rawProps.projection ?? '', 10) === PROJECTION_FRUSTUM
+  ) {
     const near = parseFloat(rawProps.near);
     const far = parseFloat(rawProps.far);
 

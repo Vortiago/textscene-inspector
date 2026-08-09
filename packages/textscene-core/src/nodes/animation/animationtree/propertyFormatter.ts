@@ -57,7 +57,8 @@ export function formatAnimationTreeProperties(
 }
 
 function extractNodePath(raw: string): string {
-  const match = raw.match(/^NodePath\("([^"]*)"\)$/);
+  // `\s*` for the reason `parseNodePathLiteral` carries it.
+  const match = raw.match(/^NodePath\(\s*"([^"]*)"\s*\)$/);
   return match ? (match[1] ?? raw) : raw;
 }
 

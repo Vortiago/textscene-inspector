@@ -337,7 +337,10 @@ describe('AnimationTree Linter', () => {
           node('Label3D', {}, { name: 'NotAPlayer', parent: '.' }),
           node(
             'AnimationTree',
-            { tree_root: 'SubResource("StateMachine_root")', anim_player: 'NodePath("NotAPlayer")' },
+            {
+              tree_root: 'SubResource("StateMachine_root")',
+              anim_player: 'NodePath("../NotAPlayer")',
+            },
             { parent: '.' }
           )
         );
@@ -347,9 +350,10 @@ describe('AnimationTree Linter', () => {
         });
       });
 
-      it('should stay silent when the final path segment is ambiguous (duplicate node names)', () => {
-        // Two "Player" nodes exist; one is a valid AnimationPlayer, so the path is
-        // plausibly correct and the static linter must not guess.
+      // Duplicate names used to force a decline, because matching by name alone
+      // could not tell two "Player" nodes apart. A real walk can: the path names
+      // GroupB's child specifically (node.cpp:1941).
+      it('picks the right node when a name repeats, rather than declining', () => {
         const content = scene(
           '[sub_resource type="AnimationNodeStateMachine" id="StateMachine_root"]',
           node('Node3D', {}, { name: 'Root' }),
@@ -359,7 +363,10 @@ describe('AnimationTree Linter', () => {
           node('AnimationPlayer', {}, { name: 'Player', parent: 'GroupB' }),
           node(
             'AnimationTree',
-            { tree_root: 'SubResource("StateMachine_root")', anim_player: 'NodePath("Player")' },
+            {
+              tree_root: 'SubResource("StateMachine_root")',
+              anim_player: 'NodePath("../GroupB/Player")',
+            },
             { parent: '.' }
           )
         );

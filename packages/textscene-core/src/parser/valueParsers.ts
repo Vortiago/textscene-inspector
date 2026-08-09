@@ -293,6 +293,9 @@ export function parseOptionalVector2(value: string | undefined): Vector2 | undef
  */
 export function parseNodePathLiteral(value: string | undefined): string | null {
   if (value === undefined) return null;
-  const match = value.match(/^NodePath\("([^"]*)"\)$/);
+  // `\s*` because Godot tokenises rather than pattern-matches, dropping
+  // whitespace before each token (variant_parser.cpp:415-417): `NodePath( "x" )`
+  // is a path the engine reads, so a display formatter must read it too.
+  const match = value.match(/^NodePath\(\s*"([^"]*)"\s*\)$/);
   return match ? match[1]! : null;
 }

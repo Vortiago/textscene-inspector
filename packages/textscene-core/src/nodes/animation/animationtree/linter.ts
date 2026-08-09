@@ -8,13 +8,18 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties, extractNodePath, resolveNodePathTarget } from '../../../linter/linterUtils.js';
+import { isValidProperties, extractNodePath} from '../../../linter/linterUtils.js';
+import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 
 /**
  * Extract resource ID from SubResource("id") or ExtResource("id") format
  */
 function extractResourceId(value: string): string | null {
-  const match = value.match(/^(?:SubResource|ExtResource)\("([^"]+)"\)$/);
+  // `\s*`: Godot tokenises the literal rather than pattern-matching it
+  // (variant_parser.cpp:415-417 drops whitespace before every token), so
+  // `SubResource( "id" )` resolves — reading it as unparseable reported a
+  // dangling tree_root on a scene that loads.
+  const match = value.match(/^(?:SubResource|ExtResource)\(\s*"([^"]+)"\s*\)$/);
   return (match && match[1]) ? match[1] : null;
 }
 
@@ -93,12 +98,12 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
   // empty path as a supported mode and reconfigures the root node for it.
 
   // WARNING: anim_player must reference an existing AnimationPlayer node.
-  // resolveNodePathTarget suppresses escapes/ambiguous paths (see its JSDoc).
+  // resolveNodePath suppresses escapes/ambiguous paths (see its JSDoc).
   if (rawProps.anim_player) {
     const path = extractNodePath(rawProps.anim_player);
     // "." (self) is not resolvable to a concrete node here.
     if (path && path !== '.') {
-      const target = resolveNodePathTarget(scene.nodes, node, path);
+      const target = resolveNodePath(scene, node, path);
 
       if (target.status === 'missing') {
         diagnostics.push({

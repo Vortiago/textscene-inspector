@@ -194,13 +194,18 @@ physics_material_override = ExtResource("ext_mat_1")
       expectClean(scene(node('StaticBody2D'), collisionShape2d));
     });
 
-    it('should pass when StaticBody2D has nested CollisionShape2D', () => {
-      expectClean(
+    // A shape under an intervening node registers with nothing: `_notification`
+    // attaches on `Object::cast_to<CollisionObject2D>(get_parent())`
+    // (collision_shape_2d.cpp:55), so this body's `shapes` map stays empty and
+    // Godot raises its own warning (collision_object_2d.cpp:587).
+    it('warns when the only CollisionShape2D under StaticBody2D sits below an intervening node', () => {
+      expectDiagnostic(
         scene(
           node('StaticBody2D'),
           node('Node2D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape2D', {}, { parent: 'Container' })
-        )
+        ),
+        { ruleName: 'staticbody2d-needs-collision-shape', severity: 'warning' }
       );
     });
 

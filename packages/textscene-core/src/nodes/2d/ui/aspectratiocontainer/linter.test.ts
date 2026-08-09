@@ -47,6 +47,23 @@ expand_mode = 3
       expectNoErrors(content);
     });
 
+    // `as_sortable_control` (container.cpp:143-153) rejects these before the sort
+    // pass reads expand_mode at aspect_ratio_container.cpp:112, so Godot prints
+    // nothing for them.
+    it.each([
+      ['visible = false', 'visible = false'],
+      ['top_level = true', 'top_level = true'],
+    ])('stays silent on a proportional TextureRect with %s', (_label, extra) => {
+      expectNoDiagnostic(
+        containerScene(`
+[node name="Art" type="TextureRect" parent="Frame"]
+expand_mode = 3
+${extra}
+`),
+        { ruleName: 'aspectratiocontainer-unsupported-texturerect-expand-mode' }
+      );
+    });
+
     it('warns on a direct TextureRect child with EXPAND_FIT_HEIGHT_PROPORTIONAL (5)', () => {
       expectDiagnostic(
         containerScene(`

@@ -4,7 +4,7 @@
 
 [node name="MyMultiplayerSpawner" type="MultiplayerSpawner" parent="."]
 _spawnable_scenes = PackedStringArray("res://enemy.tscn")
-spawn_path = NodePath("SpawnRoot")
+spawn_path = NodePath("../SpawnRoot")
 spawn_limit = 8
 
 [node name="SpawnRoot" type="Node" parent="."]

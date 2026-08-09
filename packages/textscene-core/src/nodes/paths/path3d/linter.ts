@@ -126,7 +126,12 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
   if (tiltsLiteral) {
     const tilts = tiltsLiteral[1]!.split(',').filter((s) => s.trim() !== '').length;
     const expected = vector3s / 3;
-    if (tilts !== expected) {
+    // Too FEW only. `Curve3D::_set_data`'s fill loop is bounded by
+    // `points.size()` (curve.cpp:2294) and indexes `rt[i]` inside it, so a short
+    // `tilts` reads past the end of the array while a long one simply leaves its
+    // extra values untouched — that scene loads, and reporting it was an error
+    // on a file Godot opens.
+    if (tilts < expected) {
       return [
         problem(
           `its Curve3D has ${tilts} tilt values for ${expected} control points; Godot indexes ` +

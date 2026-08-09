@@ -78,7 +78,7 @@ export function restartParticle(
 /**
  * The emission-shape offset. POINTS / DIRECTED_POINTS / RING are absent on
  * purpose: those three draw from Godot's unserialised GLOBAL RNG
- * (`cpu_particles_2d.cpp:975, 992, 995`), not the per-particle one, so no
+ * (`cpu_particles_2d.cpp:936, 953, 956`), not the per-particle one, so no
  * frozen pose can match the engine. The linter warns instead.
  */
 function emitAtShape(props: CPUParticles2DProperties, p: Particle, rng: GodotRandomPCG): void {

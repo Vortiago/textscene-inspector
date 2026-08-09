@@ -54,5 +54,31 @@ export function basisColumnScalesGodotFloat(raw: string): [number, number, numbe
   if (!match) return null;
   const n = match.slice(1, 10).map(tupleComponent);
   const col = (i: number): number => Math.hypot(n[i]!, n[i + 3]!, n[i + 6]!);
-  return [col(0), col(1), col(2)];
+  const sign = detSign(n as number[]);
+  return [sign * col(0), sign * col(1), sign * col(2)];
+}
+
+/**
+ * `SIGN(determinant())` as `Basis::get_scale` applies it (basis.cpp:321-322),
+ * which is +1, -1, or 0 exactly (`SIGN`, typedefs.h:124-126).
+ *
+ * SIGNED, unlike {@link basisColumnScales}, and the difference is only invisible
+ * where it cancels. It cancels in a PAIRWISE comparison, which is why the
+ * non-uniform-scale rules are right to ignore it; it does NOT cancel in
+ * `rigid_body_3d.cpp:666`'s `abs(scale.axis - 1.0) > 0.05`, which compares each
+ * axis against a constant. A mirrored basis such as
+ * `Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)` has determinant -1, so
+ * Godot reads its scale as (-1, -1, -1) and warns on all three axes while the
+ * unsigned magnitudes read (1, 1, 1) and say nothing. A degenerate basis gives
+ * sign 0, hence scale (0, 0, 0), which warns — matching the engine.
+ *
+ * `rigid_body_2d.cpp:647` has no equivalent: it tests `t.columns[i].length()`,
+ * a magnitude, so the 2D rule stays unsigned. The asymmetry is Godot's.
+ */
+function detSign(n: number[]): number {
+  const [a, b, c, d, e, f, g, h, i] = n as [
+    number, number, number, number, number, number, number, number, number,
+  ];
+  const det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+  return det > 0 ? 1 : det < 0 ? -1 : 0;
 }

@@ -149,13 +149,18 @@ describe('Area2D Linter', () => {
       expectClean(scene(node('Area2D'), collisionShape2d));
     });
 
-    it('should pass when Area2D has nested CollisionShape2D', () => {
-      expectClean(
+    // A shape under an intervening node registers with nothing: `_notification`
+    // attaches on `Object::cast_to<CollisionObject2D>(get_parent())`
+    // (collision_shape_2d.cpp:55), so this body's `shapes` map stays empty and
+    // Godot raises its own warning (collision_object_2d.cpp:587).
+    it('warns when the only CollisionShape2D under Area2D sits below an intervening node', () => {
+      expectDiagnostic(
         scene(
           node('Area2D'),
           node('Node2D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape2D', {}, { parent: 'Container' })
-        )
+        ),
+        { ruleName: 'area2d-needs-collision-shape', severity: 'warning' }
       );
     });
 

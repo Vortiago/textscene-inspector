@@ -6,33 +6,43 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnScene } from '../../../parser/types.js';
+import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
+import { findParentNode, isValidProperties } from '../../../linter/linterUtils.js';
+import { isViewportBoundary } from '../../viewport/subviewport/viewportBoundary.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 
 /**
- * Count enabled Camera2D nodes in the scene
+ * The SubViewport a node draws into, or null for the scene's own viewport.
+ *
+ * Godot's current-camera slot is per-viewport: `Camera2D` joins
+ * `"__cameras_" + itos(vp.get_id())` (camera_2d.cpp:348) and `make_current` is
+ * gated on `!viewport->get_camera_2d()` (:353), where `camera_2d` is a member of
+ * Viewport itself (viewport.h:764). Two enabled cameras in different
+ * sub-viewports each become current in their own and never contend.
  */
-function countEnabledCameras(scene: TscnScene): number {
+function viewportScopeOf(scene: TscnScene, node: TscnNode): TscnNode | null {
+  for (let n = findParentNode(scene.nodes, node); n; n = findParentNode(scene.nodes, n)) {
+    if (isViewportBoundary(n.type)) return n;
+  }
+  return null;
+}
+
+/** Enabled unless the key says otherwise: `enabled` defaults true (camera_2d.h:70). */
+function cameraIsEnabled(node: TscnNode): boolean {
+  if (!isValidProperties(node.properties)) return true;
+  return (node.properties as Record<string, string>).enabled !== 'false';
+}
+
+/** Enabled Camera2D nodes sharing `scope`'s viewport, the set that really contends. */
+function countEnabledCamerasInScope(scene: TscnScene, scope: TscnNode | null): number {
   let count = 0;
 
   function traverse(nodes: TscnScene['nodes']): void {
     for (const node of nodes) {
-      if (node.type === 'Camera2D') {
-        if (isValidProperties(node.properties)) {
-          const props = node.properties as Record<string, string>;
-          // Default is enabled=true if not specified
-          const enabled = props.enabled !== 'false';
-          if (enabled) {
-            count++;
-          }
-        } else {
-          // No properties means defaults, so enabled=true
-          count++;
-        }
+      if (node.type === 'Camera2D' && cameraIsEnabled(node) && viewportScopeOf(scene, node) === scope) {
+        count++;
       }
-      // Recursively check children
       if (node.children && node.children.length > 0) {
         traverse(node.children);
       }
@@ -83,7 +93,7 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
   const rawProps = isValidProperties(node.properties) ? (node.properties as Record<string, string>) : {};
   const thisEnabled = rawProps.enabled !== 'false'; // Default is enabled=true
   if (thisEnabled) {
-    const enabledCount = countEnabledCameras(scene);
+    const enabledCount = countEnabledCamerasInScope(scene, viewportScopeOf(scene, node));
     if (enabledCount > 1) {
       diagnostics.push({
         severity: 'warning',

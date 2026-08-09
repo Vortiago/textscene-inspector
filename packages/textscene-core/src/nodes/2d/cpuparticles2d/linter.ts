@@ -16,8 +16,9 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 
 /**
  * `emission_shape` values that sample Godot's process-wide RNG rather than the
- * per-particle one (`cpu_particles_2d.cpp:975` for POINTS/DIRECTED_POINTS,
- * `:992` and `:995` for RING). That RNG is never serialised, so the emitter's
+ * per-particle one (`cpu_particles_2d.cpp:936` `Math::rand()` for
+ * POINTS/DIRECTED_POINTS, `:953` and `:956` `Math::randf()` for RING). That RNG
+ * is never serialised, so the emitter's
  * layout differs between two runs of Godot itself — there is no pose a static
  * previewer could match.
  */

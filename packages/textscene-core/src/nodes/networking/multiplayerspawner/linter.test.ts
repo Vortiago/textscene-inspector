@@ -57,10 +57,30 @@ describe('MultiplayerSpawner spawn_path rule', () => {
     expect(warnings[0]?.message).toContain('NoSuchNode');
   });
 
-  it('stays silent on an escaping relative path rather than guessing', () => {
-    // ".." leaves the authored scope the static linter can confidently walk;
-    // resolveNodePathTarget declines rather than risk a false positive.
-    expect(warningsFor(scene('spawn_path = NodePath("../Elsewhere")\n'))).toEqual([]);
+  // `..` is not itself unresolvable: the walk climbs to Root and asks it for a
+  // child named Elsewhere (node.cpp:1941). Root has only the Spawner, so
+  // `has_node` is false (multiplayer_spawner.cpp:91) and Godot warns too.
+  it('warns on a relative path whose next segment names no child', () => {
+    const warnings = warningsFor(scene('spawn_path = NodePath("../Elsewhere")\n'));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]?.message).toContain('Elsewhere');
+  });
+
+  // The genuine decline: the path walks INTO instanced content, whose children
+  // live in another file, so a miss here is our blindness and not Godot's null.
+  it('stays silent when the path descends into an instanced sub-scene', () => {
+    const content = `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://level.tscn" id="1_level"]
+
+[node name="Root" type="Node"]
+
+[node name="Spawner" type="MultiplayerSpawner" parent="."]
+spawn_path = NodePath("../Level/Spawns")
+
+[node name="Level" parent="." instance=ExtResource("1_level")]
+`;
+    expect(warningsFor(content)).toEqual([]);
   });
 
   it('leaves the committed fixture warning-free', () => {

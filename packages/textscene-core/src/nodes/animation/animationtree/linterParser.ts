@@ -26,7 +26,8 @@ import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
-const RESOURCE_REGEX = /^(SubResource|ExtResource)\("([^"]+)"\)$/;
+/** `\s*` for the tokenizer reason `RESOURCE_REFERENCE_REGEX` documents. */
+const RESOURCE_REGEX = /^(SubResource|ExtResource)\(\s*"([^"]+)"\s*\)$/;
 
 function resourceRef(name: string, code: string): PropertyValidator {
   const validator: PropertyValidator = (key, value, line) => {

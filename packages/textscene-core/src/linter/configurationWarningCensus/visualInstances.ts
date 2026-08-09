@@ -7,7 +7,7 @@ import type { WarningRow } from './types.js';
 export const visualInstanceWarnings: Readonly<Record<string, readonly WarningRow[]>> = {
   AnimatedSprite3D: [
     {
-      at: 'sprite_3d.cpp:1469',
+      at: 'sprite_3d.cpp:1472',
       says: 'requires a SpriteFrames resource to display frames',
       verdict: { rule: 'animatedsprite3d-requires-spriteframes' },
     },

@@ -31,7 +31,7 @@
  */
 
 export { CMP_EPSILON, isZeroApprox, isEqualApprox, smoothstep } from './math.js';
-export { IS_VALID_INT_RE, splitTopLevel } from './string.js';
+export { IS_VALID_INT_RE, literalText, splitTopLevel } from './string.js';
 export {
   MATERIAL_RENDER_PRIORITY_MIN,
   MATERIAL_RENDER_PRIORITY_MAX,
@@ -39,3 +39,4 @@ export {
   CANVAS_ITEM_Z_MAX,
 } from './rendering.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MODES } from './canvasItem.js';
+export { DEFAULT_ANIMATION_NAME } from './animation.js';

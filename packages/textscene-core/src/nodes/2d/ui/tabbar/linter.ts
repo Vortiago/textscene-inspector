@@ -71,14 +71,20 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
     const current = parseInt(currentRaw, 10);
     // Below -1 is linterParser.ts's error (tab_bar.cpp:804), and -1 itself is
     // the legal deselect sentinel, so only a non-negative index is compared.
+    // NOTE the ERR_FAIL_INDEX at :804 is NOT what this rule reports: it is
+    // unreachable for the common shape (no tab_count key at all), where the
+    // index is queued at :802 and silently never replayed. The write is still
+    // discarded, which is what keeps this at the error tier.
     if (!Number.isNaN(current) && current >= 0 && current >= count) {
       diagnostics.push({
         severity: 'error',
         message:
           `TabBar '${node.name}' selects tab ${current} but declares only ${count} tab(s) (tab_count). ` +
-          'set_current_tab reaches ERR_FAIL_INDEX(p_current, get_tab_count()) (tab_bar.cpp:804) ' +
-          'whichever of the two properties Godot applies first, so the selection is dropped and ' +
-          'the bar opens on its default tab.',
+          'set_current_tab parks the index in queued_current and returns while the bar is ' +
+          'uninitialised (tab_bar.cpp:801-802); only set_tab_count replays it (:778-782), and ' +
+          'with tab_count absent or 0 that returns at its own `p_count == tabs.size()` guard ' +
+          '(:741) without ever replaying. Either way the selection is dropped and the bar ' +
+          'opens on its default tab.',
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'tabbar-current-tab-out-of-range',
@@ -124,7 +130,7 @@ const tabBarValidationRule: LintRule = {
       {
         ruleName: 'tabbar-current-tab-out-of-range',
         severity: 'error',
-        grounding: { kind: 'engine', at: 'tab_bar.cpp:804' },
+        grounding: { kind: 'engine', at: 'tab_bar.cpp:802' },
       },
       {
         ruleName: 'tabbar-tab-index-out-of-range',

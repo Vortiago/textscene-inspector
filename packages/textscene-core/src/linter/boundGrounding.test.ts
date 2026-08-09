@@ -22,6 +22,7 @@ import { v } from './validators/v.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
 import { classifiableKeys, unclassifiedKeys } from './testing/validatorClassification.js';
 import './index.js'; // side-effect: every slice registers its validators
+import { ENGINE_CITE_RE } from './testing/engineCite.js';
 
 /**
  * Types whose validators are all still unclassified.
@@ -63,7 +64,7 @@ describe('bound grounding', () => {
     const uncited: string[] = [];
     for (const { nodeType, key } of keys) {
       const g = validatorRegistry.findValidator(nodeType, key)?.grounding;
-      if (g && !/\.(cpp|h):\d+/.test(g.cite)) uncited.push(`${nodeType}.${key}: "${g.cite}"`);
+      if (g && !ENGINE_CITE_RE.test(g.cite)) uncited.push(`${nodeType}.${key}: "${g.cite}"`);
     }
     expect(uncited.sort()).toEqual([]);
   });

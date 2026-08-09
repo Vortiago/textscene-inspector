@@ -253,6 +253,33 @@ describe('Camera2D Linter', () => {
         );
       });
 
+      // The current-camera slot belongs to the Viewport (viewport.h:764) and the
+      // group name carries its id (camera_2d.cpp:348), so each of these becomes
+      // current in its own sub-viewport and neither displaces the other.
+      it('should not warn across a SubViewport boundary, which has its own camera slot', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node2D', {}, { name: 'Root' }),
+            node('Camera2D', { enabled: true }, { name: 'MainCamera', parent: '.' }),
+            node('SubViewport', {}, { name: 'Inset', parent: '.' }),
+            node('Camera2D', { enabled: true }, { name: 'InsetCamera', parent: 'Inset' })
+          ),
+          { ruleName: 'camera2d-multiple-enabled' }
+        );
+      });
+
+      it('should warn for two cameras inside the SAME SubViewport', () => {
+        expectDiagnostic(
+          scene(
+            node('Node2D', {}, { name: 'Root' }),
+            node('SubViewport', {}, { name: 'Inset', parent: '.' }),
+            node('Camera2D', { enabled: true }, { name: 'CameraA', parent: 'Inset' }),
+            node('Camera2D', { enabled: true }, { name: 'CameraB', parent: 'Inset' })
+          ),
+          { ruleName: 'camera2d-multiple-enabled', severity: 'warning' }
+        );
+      });
+
       it('should not warn when only one camera is enabled', () => {
         expectNoDiagnostic(
           scene(

@@ -23,21 +23,28 @@ export function collisionShapeTypes(dim: '2D' | '3D'): readonly string[] {
 }
 
 /**
- * True when any descendant can provide this body's collision shapes.
+ * True when a DIRECT child can provide this body's collision shapes.
  *
- * ONE walk testing both types per node, not one walk per type. The `.some` form
- * this replaced descended the whole subtree twice whenever the first type was
- * absent — and the miss case is precisely the one that matters, since a body with
- * no shape at all is the warning this backs.
+ * Direct, not any descendant, because that is the only relationship Godot
+ * registers. A shape attaches itself on `NOTIFICATION_PARENTED`
+ * (`collision_shape_2d.cpp:52-55`, `collision_shape_3d.cpp:82-83`, and the two
+ * polygon classes alike):
+ *
+ *     collision_object = Object::cast_to<CollisionObject2D>(get_parent());
+ *     if (collision_object) { owner_id = collision_object->create_shape_owner(this); }
+ *
+ * `get_parent()`, so one level and no further, and `create_shape_owner` is what
+ * fills the `shapes` map that `collision_object_2d.cpp:587`'s
+ * `if (shapes.is_empty())` tests. A subtree walk therefore reads a shape as
+ * belonging to a body it never reached: `StaticBody2D > Node2D > CollisionShape2D`
+ * leaves the body shapeless and warned about by Godot, and
+ * `Area2D > StaticBody2D > CollisionShape2D` gives the shape to the inner body
+ * while the outer one keeps none. Both went unreported.
  */
-export function hasCollisionShapeDescendant(node: TscnNode, dim: '2D' | '3D'): boolean {
+export function hasCollisionShapeChild(node: TscnNode, dim: '2D' | '3D'): boolean {
   const shape = `CollisionShape${dim}`;
   const polygon = `CollisionPolygon${dim}`;
-  for (const child of node.children) {
-    if (child.type === shape || child.type === polygon) return true;
-    if (hasCollisionShapeDescendant(child, dim)) return true;
-  }
-  return false;
+  return node.children.some((child) => child.type === shape || child.type === polygon);
 }
 
 /** `CollisionShape2D or CollisionPolygon2D`, for a diagnostic message. */

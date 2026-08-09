@@ -41,6 +41,38 @@ describe('joint dead-configuration rule', () => {
     expectClean(scene(node(type, CONNECTED)));
   });
 
+  // `_update_joint` derives each body from `get_node_or_null` (joint_2d.cpp:70-74),
+  // so the "not connected" arm cannot be answered from the presence of the path
+  // text alone. These two pin both directions against a real tree.
+  it('stays quiet when both ends resolve to real sibling bodies', () => {
+    // Scoped to this rule: the bare bodies correctly trip
+    // `staticbody2d-needs-collision-shape`, which is not what this asserts.
+    expectNoDiagnostic(
+      scene(
+        node('Node2D', {}, { name: 'Root' }),
+        node('StaticBody2D', {}, { name: 'BodyA', parent: '.' }),
+        node('StaticBody2D', {}, { name: 'BodyB', parent: '.' }),
+        node('PinJoint2D', CONNECTED, { name: 'Joint', parent: '.' })
+      ),
+      { ruleName: 'joint-not-connected' }
+    );
+  });
+
+  it('warns when an end names a node that does not resolve', () => {
+    expectDiagnostic(
+      scene(
+        node('Node2D', {}, { name: 'Root' }),
+        node('StaticBody2D', {}, { name: 'BodyA', parent: '.' }),
+        node(
+          'PinJoint2D',
+          { node_a: 'NodePath("../BodyA")', node_b: 'NodePath("../NoSuchBody")' },
+          { name: 'Joint', parent: '.' }
+        )
+      ),
+      { ruleName: 'joint-not-connected', severity: 'warning' }
+    );
+  });
+
   it('names which end is unset rather than saying only "not connected"', () => {
     const onlyA = expectDiagnostic(scene(node('PinJoint2D', { node_a: 'NodePath("../BodyA")' })), {
       ruleName: 'joint-not-connected',

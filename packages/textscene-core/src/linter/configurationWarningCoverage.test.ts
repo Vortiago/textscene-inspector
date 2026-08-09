@@ -29,6 +29,7 @@ import { descendsFrom } from './nodeBaseTypes.js';
 import { WARNINGS, type WarningRow } from './configurationWarningCensus.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its rules
+import { ENGINE_CITE_RE } from './testing/engineCite.js';
 
 /**
  * Every row still in the `unimplemented` arm, by declaring class and source
@@ -140,7 +141,7 @@ describe('Godot configuration-warning coverage', () => {
     for (const [cls, rows] of Object.entries(WARNINGS)) {
       for (const row of rows) {
         if (!('declined' in row.verdict)) continue;
-        if (!/\.(cpp|h):\d+/.test(row.verdict.because)) {
+        if (!ENGINE_CITE_RE.test(row.verdict.because)) {
           thin.push(`${cls} ${row.at}: "${row.verdict.because}" cites no source line`);
         }
       }

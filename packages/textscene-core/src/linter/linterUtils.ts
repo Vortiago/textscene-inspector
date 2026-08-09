@@ -29,6 +29,8 @@ interface SceneIndex {
   underInstanceAncestor: Set<TscnNode>;
   /** type -> how many nodes in the whole tree carry it. */
   countByType: Map<string, number>;
+  /** type -> the first node of that type in depth-first (= Godot tree) order. */
+  firstByType: Map<string, TscnNode>;
 }
 
 /**
@@ -47,6 +49,7 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
   const byName = new Map<string, TscnNode[]>();
   const underInstanceAncestor = new Set<TscnNode>();
   const countByType = new Map<string, number>();
+  const firstByType = new Map<string, TscnNode>();
 
   const walk = (nodes: TscnNode[], parent: TscnNode | null, ancestorIsInstance: boolean): void => {
     for (const node of nodes) {
@@ -57,6 +60,7 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
       else byName.set(node.name, [node]);
 
       countByType.set(node.type, (countByType.get(node.type) ?? 0) + 1);
+      if (!firstByType.has(node.type)) firstByType.set(node.type, node);
 
       if (ancestorIsInstance) underInstanceAncestor.add(node);
 
@@ -70,7 +74,7 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
   // contract) — freezing here makes that contract enforced, not just documented.
   for (const matches of byName.values()) Object.freeze(matches);
 
-  return { parentOf, byName, underInstanceAncestor, countByType };
+  return { parentOf, byName, underInstanceAncestor, countByType, firstByType };
 }
 
 function getSceneIndex(roots: TscnNode[]): SceneIndex {
@@ -101,6 +105,21 @@ export function countNodesOfType(roots: TscnNode[], type: string): number {
 }
 
 /**
+ * The first node of `type` in depth-first order, which is the one Godot's
+ * `SceneTree::get_first_node_in_group` returns: `_update_group_order`
+ * (`scene_tree.cpp:333-347`) sorts the group with `Node::Comparator`
+ * (`node.h:132-134`), whose `is_greater_than` is tree order. Several engine
+ * warnings are about being the node that did NOT win such a lookup, and that
+ * winner is decidable from the file rather than only from a live tree.
+ *
+ * Exact-name for the same reason `countNodesOfType` is: the engine's groups are
+ * keyed by concrete class, not by a subclass closure.
+ */
+export function firstNodeOfType(roots: TscnNode[], type: string): TscnNode | null {
+  return getSceneIndex(roots).firstByType.get(type) ?? null;
+}
+
+/**
  * Find the parent of `target` in the node tree, or null when it is a root (no
  * parent) or absent. Shared by the linters that validate parent type — e.g.
  * CollisionShape2D/3D (must sit under a physics body) and PathFollow2D/3D (must
@@ -117,7 +136,11 @@ export function findParentNode(nodes: TscnNode[], target: TscnNode): TscnNode | 
  * anim_player) that resolve a node reference before checking its type.
  */
 export function extractNodePath(value: string): string | null {
-  const match = value.match(/^NodePath\("([^"]*)"\)$/);
+  // `\s*` for the reason `NODE_PATH_REGEX` carries it: Godot tokenises the
+  // literal and drops whitespace before each token (variant_parser.cpp:415-417),
+  // so `NodePath( "../Body" )` is a real path and reading it as "no path" made
+  // the joint rules report a connected joint as unconnected.
+  const match = value.match(/^NodePath\(\s*"([^"]*)"\s*\)$/);
   return match && match[1] ? match[1] : null;
 }
 
@@ -150,53 +173,3 @@ export function isUnderInstance(roots: TscnNode[], target: TscnNode): boolean {
   return getSceneIndex(roots).underInstanceAncestor.has(target);
 }
 
-/**
- * True when a NodePath cannot be safely resolved against the authored root scope
- * — either a relative (`..`) segment escapes that scope, or the referencing node
- * sits under an instanced sub-scene whose internals the linter never sees. In
- * both cases a not-found / wrong-type assertion would be a false positive, so
- * callers should skip the check. Keep strict checking only for purely-local,
- * non-relative paths under authored root nodes.
- */
-export function nodePathEscapesAuthoredScope(
-  roots: TscnNode[],
-  referencingNode: TscnNode,
-  pathParts: string[]
-): boolean {
-  return pathParts.some(part => part === '..') || isUnderInstance(roots, referencingNode);
-}
-
-/**
- * Outcome of resolving a NodePath property's target against the STATIC authored
- * tree. The NodePath-target rules (anim_player, skeleton, sub_emitter) diagnose
- * ONLY when resolution is confident, and stay silent otherwise — the linter is
- * React/THREE-free (cannot see into instanced sub-scenes) and Godot allows node
- * names to repeat across parents:
- *  - `escapes`   — a `..` segment leaves authored scope, or the referencing node
- *                  sits under an instance; the real target may be unseeable.
- *  - `ambiguous` — more than one node matches the path's final segment, so the
- *                  linter cannot tell which is meant (don't guess by tree order).
- *  - `missing`   — no node matches: a confident not-found.
- *  - `found`     — exactly one node matches: a confident target to type-check.
- */
-export type NodePathResolution =
-  | { status: 'escapes' }
-  | { status: 'ambiguous' }
-  | { status: 'missing' }
-  | { status: 'found'; node: TscnNode };
-
-export function resolveNodePathTarget(
-  roots: TscnNode[],
-  referencingNode: TscnNode,
-  path: string
-): NodePathResolution {
-  const pathParts = path.split('/');
-  if (nodePathEscapesAuthoredScope(roots, referencingNode, pathParts)) {
-    return { status: 'escapes' };
-  }
-  const name = pathParts[pathParts.length - 1] ?? '';
-  const matches = findNodesByName(roots, name);
-  if (matches.length === 0) return { status: 'missing' };
-  if (matches.length > 1) return { status: 'ambiguous' };
-  return { status: 'found', node: matches[0]! };
-}

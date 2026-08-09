@@ -10,9 +10,9 @@
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { checkResourceExists } from '../resourceChecker.js';
 import {
-  hasCollisionShapeDescendant,
+  hasCollisionShapeChild,
   collisionShapeTypesPhrase,
-} from './hasCollisionShapeDescendant.js';
+} from './hasCollisionShapeChild.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
@@ -66,7 +66,8 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
   // `_body_state_changed` reads the contact list, and everything
   // `max_contacts_reported` bounds, only inside `if (contact_monitor)`. Same
   // line number in both files, but they are two separate facts.
-  const contactMonitorCite = dim === '2D' ? 'rigid_body_2d.cpp:181' : 'rigid_body_3d.cpp:181';
+  const bodyFile = dim === '2D' ? 'rigid_body_2d.cpp' : 'rigid_body_3d.cpp';
+  const contactMonitorCite = `${bodyFile}:181`;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
@@ -91,7 +92,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     }
 
     // Warning: RigidBody without collision shape is useless
-    if (!hasCollisionShapeDescendant(node, dim)) {
+    if (!hasCollisionShapeChild(node, dim)) {
       diagnostics.push({
         severity: 'warning',
         message: `${type} '${node.name}' has no ${collisionShapeTypesPhrase(dim)} children. Rigid bodies need collision shapes to function in physics.`,
@@ -125,13 +126,26 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     // (2D :425/:435 reject < -1, 3D :443/:453 reject < 0), which
     // linterParser.ts reports as errors.
 
-    // Warning: max_contacts_reported set but contact_monitor=false
+    // Warning: max_contacts_reported set but contact_monitor=false.
+    // NARROWER than it used to read: the flag gates the contact LIST and the signals,
+    // not the reporting itself. `_sync_body_state` writes `contact_count` from the
+    // state unconditionally (:155, called at :179 ahead of the guard), and the
+    // server's `can_report_contacts()` is `!contacts.is_empty()`, sized by
+    // max_contacts_reported alone. Saying the property "won't work" claimed more
+    // than the guard supports.
     if (rawProps.max_contacts_reported !== undefined) {
       const contactMonitor = rawProps.contact_monitor;
       if (contactMonitor !== 'true') {
         diagnostics.push({
           severity: 'warning',
-          message: `${type} '${node.name}' has max_contacts_reported set but contact_monitor is not enabled. The property won't work unless contact_monitor=true.`,
+          message:
+            `${type} '${node.name}' sets max_contacts_reported while contact_monitor is off, ` +
+            'so get_colliding_bodies() stays empty and the body_entered/exited signals never ' +
+            'fire. The contact COUNT still works: _sync_body_state assigns contact_count at ' +
+            `${bodyFile}:155, before the contact_monitor guard at :181, and the physics server ` +
+            'gathers contacts on max_contacts_reported alone (can_report_contacts() is ' +
+            'contacts.is_empty() negated). Enable contact_monitor only if you need the list ' +
+            'or the signals.',
           nodeName: node.name,
           nodeType: node.type,
           ruleName: `${prefix}-max-contacts-without-monitor`,
@@ -143,10 +157,12 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     // rigid_body_3d.cpp:667; the 2D counterpart is the branch below). Reaches
     // VehicleBody3D too, via the matcher below.
     if (dim === '3D' && rawProps.transform !== undefined) {
-      // Godot-float-grammar parsing, not `basisColumnScales`: rigid_body_3d.cpp:667
+      // Godot-float-grammar parsing, not `basisColumnScales`: rigid_body_3d.cpp:666
       // measures `abs(scale.axis - 1) > 0.05`, which is true for an infinite
       // basis column and false for a `nan` one — a distinction
       // `basisColumnScales.ts`'s docblock explains this variant exists to keep.
+      // It is also the SIGNED scale, because comparing each axis against 1.0 does
+      // not cancel `get_scale`'s shared `det_sign` the way a pairwise test does.
       const scales = basisColumnScalesGodotFloat(rawProps.transform);
       if (scales) {
         const [sx, sy, sz] = scales;
@@ -231,7 +247,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
           grounding: {
             kind: 'engine-inert',
             at: contactMonitorCite,
-            unused: 'the contact list is only gathered inside this guard',
+            unused: 'the colliding-bodies list and the contact signals live behind this guard',
           },
         },
         {

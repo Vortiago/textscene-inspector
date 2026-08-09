@@ -41,6 +41,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
+import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 
 const PARENT_RULE = 'boneattachment3d-parent-not-skeleton3d';
 const EXTERNAL_RULE = 'boneattachment3d-external-skeleton-unset';
@@ -51,7 +52,32 @@ function checkBoneAttachment3D(context: RuleContext): Diagnostic[] {
   if (properties.use_external_skeleton === 'true') {
     // `extractNodePath` returns null for a non-literal and for NodePath(""),
     // which is exactly the "no path" case the engine's null cache covers.
-    if (extractNodePath(properties.external_skeleton ?? '') !== null) return [];
+    const path = extractNodePath(properties.external_skeleton ?? '');
+    if (path !== null) {
+      // A path being PRESENT is not the same as the cache being set.
+      // `_update_external_skeleton_cache` (cpp:81-92) fills it only when
+      // `has_node(external_skeleton_node)` AND the node casts to Skeleton3D —
+      // its `ERR_FAIL_NULL_MSG(sk, …)` returns with the cache still null for
+      // anything else. Both misses leave `external_skeleton_node_cache.is_null()`
+      // true at cpp:64, so Godot warns and this used to stay quiet.
+      const target = resolveNodePath(scene, node, path);
+      if (target.status === 'unknowable') return [];
+      if (target.status === 'found' && descendsFrom(target.node.type, 'Skeleton3D')) return [];
+
+      const because =
+        target.status === 'missing'
+          ? 'names no node reachable from this one'
+          : `points at a ${target.node.type}, not a Skeleton3D`;
+      return [
+        {
+          severity: 'warning',
+          message: `BoneAttachment3D '${node.name}' has use_external_skeleton on, but external_skeleton NodePath("${path}") ${because}, so the skeleton cache stays empty and it relays no bone transform.`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: EXTERNAL_RULE,
+        },
+      ];
+    }
     // An unknowable parent may well BE the BoneAttachment3D this one would
     // inherit a skeleton from, so it is not something to warn about.
     const inherited = parentTypeVerdict(scene, node, 'BoneAttachment3D');

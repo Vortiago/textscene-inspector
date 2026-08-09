@@ -16,14 +16,15 @@
  * node in this file (`!has_node`); present and resolving, but to something
  * that is not a Node2D (`!cast_to<Node2D>`, subclasses included).
  *
- * `resolveNodePathTarget` stays quiet on a relative (`..`) or ambiguous path,
+ * `resolveNodePath` stays quiet on a relative (`..`) or ambiguous path,
  * same as the MultiplayerSpawner/MultiplayerSynchronizer dangling-path rules —
  * a confident answer needs the path to name exactly one node in this file.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { extractNodePath, isValidProperties, resolveNodePathTarget } from '../../../linter/linterUtils.js';
+import { extractNodePath, isValidProperties} from '../../../linter/linterUtils.js';
+import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 
 const RULE_NAME = 'remotetransform2d-invalid-remote-path';
@@ -50,7 +51,7 @@ function checkRemoteTransform2D(context: RuleContext): Diagnostic[] {
     return warn(node, 'has no remote_path set.');
   }
 
-  const target = resolveNodePathTarget(scene.nodes, node, path);
+  const target = resolveNodePath(scene, node, path);
   if (target.status === 'missing') {
     return warn(node, `has remote_path set to NodePath("${path}"), which names no node in this file.`);
   }

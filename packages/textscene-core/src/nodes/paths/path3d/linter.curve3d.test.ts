@@ -81,6 +81,14 @@ describe('curve3d-loadable', () => {
     expect(errors[0]!.message).toContain('1 tilt values for 2 control points');
   });
 
+  // `_set_data`'s fill loop runs `for (i < points.size())` and only ever reads
+  // `rt[i]` inside it (curve.cpp:2294-2298), so surplus tilts are never touched.
+  it('accepts MORE tilts than control points, which Godot simply ignores', () => {
+    expect(
+      curveErrors(lint(`${POINTS},\n"tilts": PackedFloat32Array(0, 0, 0, 0)`))
+    ).toEqual([]);
+  });
+
   it('stays quiet when the curve reference points at no resource in this scene', () => {
     // A missing resource is already reported by valid-path3d-resources; this rule must
     // not pile a second, less useful error on top of it.

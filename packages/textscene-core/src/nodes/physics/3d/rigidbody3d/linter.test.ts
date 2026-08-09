@@ -265,13 +265,18 @@ physics_material_override = ExtResource("ext_mat_1")
       expectClean(scene(node('RigidBody3D', { mass: 1.0 }), collisionShape3d));
     });
 
-    it('should pass when RigidBody3D has nested CollisionShape3D', () => {
-      expectClean(
+    // A shape under an intervening node registers with nothing: `_notification`
+    // attaches on `Object::cast_to<CollisionObject3D>(get_parent())`
+    // (collision_shape_3d.cpp:83), so this body's `shapes` map stays empty and
+    // Godot raises its own warning (collision_object_3d.cpp:739).
+    it('warns when the only CollisionShape3D under RigidBody3D sits below an intervening node', () => {
+      expectDiagnostic(
         scene(
           node('RigidBody3D', { mass: 1.0 }),
           node('Node3D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape3D', {}, { parent: 'Container' })
-        )
+        ),
+        { ruleName: 'rigidbody3d-needs-collision-shape', severity: 'warning' }
       );
     });
 
@@ -294,7 +299,7 @@ physics_material_override = ExtResource("ext_mat_1")
           ruleName: 'rigidbody3d-max-contacts-without-monitor',
           severity: 'warning',
           nodeType: 'RigidBody3D',
-          contains: ['contact_monitor is not enabled'],
+          contains: ['get_colliding_bodies() stays empty', 'contact COUNT still works'],
         }
       );
     });
@@ -339,6 +344,24 @@ physics_material_override = ExtResource("ext_mat_1")
           nodeType: 'RigidBody3D',
           contains: ['overridden by the physics engine'],
         }
+      );
+    });
+
+    // `get_scale()` is `SIGN(determinant()) * get_scale_abs()` (basis.cpp:321-322),
+    // so a mirrored basis reads as (-1, -1, -1) and every axis fails
+    // `abs(scale.axis - 1) > 0.05` (rigid_body_3d.cpp:666). Column MAGNITUDES are
+    // (1, 1, 1) and say nothing, which is why the shared unsigned helper is right
+    // for the pairwise non-uniform rules and wrong here.
+    it('warns on a mirrored basis, whose signed scale is (-1, -1, -1)', () => {
+      expectDiagnostic(
+        scene(
+          node('RigidBody3D', {
+            mass: 1.0,
+            transform: 'Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
+          }),
+          collisionShape3d
+        ),
+        { ruleName: 'rigidbody3d-scale-overridden-at-runtime', severity: 'warning' }
       );
     });
 

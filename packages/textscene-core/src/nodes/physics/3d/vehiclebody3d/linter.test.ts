@@ -202,7 +202,14 @@ describe('VehicleBody3D Linter', () => {
       expect(diagnostic.message).toContain('(Infinity, 1, 1)');
     });
 
-    it('stays quiet on a nan basis component, whose comparisons are all false', () => {
+    // A `nan` component poisons the DETERMINANT, not just its own column, and
+    // `get_scale` multiplies every axis by that one shared sign
+    // (basis.cpp:321-322). `SIGN(nan)` is 0 — both of its comparisons are false
+    // (typedefs.h:124-126) — so the clean columns come back as exactly 0, and
+    // `abs(0 - 1) > 0.05` (rigid_body_3d.cpp:666) is true for them. Only the nan
+    // axis itself stays silent. The unsigned reading this rule used to take is
+    // what made the whole node look quiet.
+    it('warns on a nan basis component, since the poisoned determinant zeroes the rest', () => {
       const content = scene(
         node(
           'VehicleBody3D',
@@ -212,7 +219,10 @@ describe('VehicleBody3D Linter', () => {
         wheel,
         collisionShape3d
       );
-      expectNoDiagnostic(content, { ruleName: 'rigidbody3d-scale-overridden-at-runtime' });
+      expectDiagnostic(content, {
+        ruleName: 'rigidbody3d-scale-overridden-at-runtime',
+        severity: 'warning',
+      });
     });
 
     it('stays quiet on an unscaled translated transform', () => {

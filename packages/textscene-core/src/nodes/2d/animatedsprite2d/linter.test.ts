@@ -205,6 +205,17 @@ describe('AnimatedSprite2D Linter', () => {
       });
     });
 
+    // `set_animation` returns at animated_sprite_2d.cpp:554-556 when the name equals the
+    // one already held, and animated_sprite_2d.h:43 seeds it with SceneStringName(default_)
+    // — so this scene never reaches the clearing branch the rule reports.
+    it('stays silent on animation "default" without sprite_frames, which Godot accepts', () => {
+      const diagnostics = lint(scene(node('AnimatedSprite2D', { animation: '"default"' })));
+      expect(
+        diagnostics.filter((d) => d.ruleName === 'animatedsprite2d-animation-no-spriteframes')
+      ).toHaveLength(0);
+      expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
+    });
+
     it('should pass when both animation and sprite_frames are set', () => {
       expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, animation: '"walk"' })));
     });

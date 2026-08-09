@@ -218,14 +218,18 @@ describe('CharacterBody2D Linter', () => {
       });
     });
 
-    it('should pass when CharacterBody2D has nested CollisionShape2D', () => {
-      expectNoDiagnostic(
+    // A shape under an intervening node registers with nothing: `_notification`
+    // attaches on `Object::cast_to<CollisionObject2D>(get_parent())`
+    // (collision_shape_2d.cpp:55), so this body's `shapes` map stays empty and
+    // Godot raises its own warning (collision_object_2d.cpp:587).
+    it('warns when the only CollisionShape2D under CharacterBody2D sits below an intervening node', () => {
+      expectDiagnostic(
         scene(
           node('CharacterBody2D'),
           node('Node2D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape2D', {}, { parent: 'Container' })
         ),
-        { ruleName: 'characterbody2d-needs-collision-shape' }
+        { ruleName: 'characterbody2d-needs-collision-shape', severity: 'warning' }
       );
     });
 

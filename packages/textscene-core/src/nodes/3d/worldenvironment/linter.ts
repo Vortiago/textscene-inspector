@@ -10,7 +10,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
-import { countNodesOfType } from '../../../linter/linterUtils.js';
+import { firstNodeOfType, isValidProperties } from '../../../linter/linterUtils.js';
 import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver.js';
 
 /**
@@ -99,16 +99,31 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Godot's own row (world_environment.cpp:196) fires on a node whose Environment
-  // is not the one the viewport ended up with, which needs a live World3D. Gating
-  // on THIS node declaring an environment is the statically decidable subset: with
-  // two of them in one file exactly one wins, and which is not knowable here, so
-  // both are told.
-  const worldEnvCount = countNodesOfType(scene.nodes, 'WorldEnvironment');
-  if (rawProps.environment && worldEnvCount > 1) {
+  // world_environment.cpp:195 warns when `environment.is_valid() &&
+  // get_viewport()->find_world_3d()->get_environment() != environment`, and the
+  // world's environment is whatever `_update_current_environment` (:76-80) took
+  // from `get_first_node_in_group`. That winner is not a live-tree fact: the group
+  // is sorted in tree order (scene_tree.cpp:333-347 with node.h:132-134), so it is
+  // the first WorldEnvironment in the file.
+  //
+  // Two consequences the old count-based form got wrong, both silent-in-Godot:
+  // the winner itself compares equal and is never warned about, and the test is
+  // `Ref` identity, so two nodes naming the SAME `ExtResource` share one instance
+  // and neither warns.
+  //
+  // First means first WorldEnvironment, valid or not: the engine assigns
+  // `first->environment` unconditionally, so a leading node with no environment
+  // sets the world's to null and every later one with one does warn.
+  //
+  // Limitation, from the group spanning instanced sub-scenes: a WorldEnvironment
+  // behind `instance=` can be the real first and is invisible here.
+  const first = firstNodeOfType(scene.nodes, 'WorldEnvironment');
+  const winningEnvironment =
+    first && isValidProperties(first.properties) ? first.properties.environment : undefined;
+  if (rawProps.environment && node !== first && rawProps.environment !== winningEnvironment) {
     diagnostics.push({
       severity: 'warning',
-      message: `Scene contains ${worldEnvCount} WorldEnvironment nodes. Only the first Environment has an effect.`,
+      message: `WorldEnvironment '${node.name}' is not the first in the scene, and its 'environment' is not the one the first declares, so Godot ignores it. Only the first Environment has an effect.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'single-worldenvironment',

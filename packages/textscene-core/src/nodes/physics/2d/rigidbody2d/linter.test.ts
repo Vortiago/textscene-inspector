@@ -234,13 +234,18 @@ physics_material_override = ExtResource("ext_mat_1")
       expectClean(scene(node('RigidBody2D', { mass: 1.0 }), collisionShape2d));
     });
 
-    it('should pass when RigidBody2D has nested CollisionShape2D', () => {
-      expectClean(
+    // A shape under an intervening node registers with nothing: `_notification`
+    // attaches on `Object::cast_to<CollisionObject2D>(get_parent())`
+    // (collision_shape_2d.cpp:55), so this body's `shapes` map stays empty and
+    // Godot raises its own warning (collision_object_2d.cpp:587).
+    it('warns when the only CollisionShape2D under RigidBody2D sits below an intervening node', () => {
+      expectDiagnostic(
         scene(
           node('RigidBody2D', { mass: 1.0 }),
           node('Node2D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape2D', {}, { parent: 'Container' })
-        )
+        ),
+        { ruleName: 'rigidbody2d-needs-collision-shape', severity: 'warning' }
       );
     });
 
@@ -321,7 +326,7 @@ physics_material_override = ExtResource("ext_mat_1")
           ruleName: 'rigidbody2d-max-contacts-without-monitor',
           severity: 'warning',
           nodeType: 'RigidBody2D',
-          contains: ['contact_monitor is not enabled'],
+          contains: ['get_colliding_bodies() stays empty', 'contact COUNT still works'],
         }
       );
     });

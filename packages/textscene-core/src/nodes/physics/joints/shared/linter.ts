@@ -36,6 +36,7 @@ import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types
 import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 
 /** `'2D'` or `'3D'` for a joint type, or undefined when it is not a joint. */
 function jointDim(nodeType: string): '2D' | '3D' | undefined {
@@ -54,8 +55,21 @@ function checkJoint(context: RuleContext): Diagnostic[] {
 
   // `extractNodePath` already treats an empty NodePath as absent, which is how
   // Godot serialises "not connected".
-  const a = props.node_a ? extractNodePath(props.node_a) : null;
-  const b = props.node_b ? extractNodePath(props.node_b) : null;
+  //
+  // But a path being WRITTEN is not the same as a body being found. `_update_joint`
+  // derives `body_a` from `cast_to<PhysicsBody2D>(get_node_or_null(a))`
+  // (joint_2d.cpp:70-74, joint_3d.cpp:70-74), and the "not connected" arm tests
+  // `!body_a` — so a path naming nothing counts as unset. Only `missing` does:
+  // `unknowable` means the target may live in a sub-scene this file cannot open,
+  // and a wrong-type target is Godot's own "must be a PhysicsBody" string, an
+  // unimplemented census row rather than this rule's business.
+  const connected = (raw: string | undefined): string | null => {
+    const path = raw ? extractNodePath(raw) : null;
+    if (path === null) return null;
+    return resolveNodePath(context.scene, node, path).status === 'missing' ? null : path;
+  };
+  const a = connected(props.node_a);
+  const b = connected(props.node_b);
 
   // Exclusive, as in Godot's own chain: an unset end is reported once, and the
   // same-body case cannot arise while an end is unset. How many ends have to be

@@ -32,14 +32,18 @@ describe('PhysicalBone3D collision-shape rule', () => {
     );
   });
 
-  it('accepts a shape nested deeper than a direct child', () => {
-    expectNoDiagnostic(
+  // `collision_shape_3d.cpp:83` attaches on
+  // `Object::cast_to<CollisionObject3D>(get_parent())`, so a shape under an
+  // intervening node registers with nothing and this bone's `shapes` map stays
+  // empty — the state collision_object_3d.cpp:739 warns about.
+  it('warns when the only shape sits deeper than a direct child', () => {
+    expectDiagnostic(
       scene(
         node('PhysicalBone3D', {}, { name: 'Root' }),
         node('Node3D', {}, { name: 'Group', parent: '.' }),
         node('CollisionShape3D', {}, { parent: 'Group' })
       ),
-      { ruleName: RULE }
+      { ruleName: RULE, severity: 'warning' }
     );
   });
 

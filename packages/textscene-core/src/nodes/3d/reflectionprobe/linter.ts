@@ -12,12 +12,19 @@
  * `ambient_color`/`ambient_color_energy` it last held, and Godot reloads that
  * file without complaint — this is not a defect Godot itself would refuse.
  *
- * What IS true, per the class doc ("Only effective if ambient_mode is
- * AMBIENT_COLOR"), is that the value has no effect while ambient_mode names a
- * different mode: same shape as CharacterBody's `floor_*` properties under
- * `motion_mode = FLOATING` (characterBodyLinterRule.ts) — legal, serialisable,
- * inert. The message says "set but has no effect", not "invalid" or
- * "dropped", because neither of those is what happens.
+ * That hook grounds NOTHING about the runtime, though, and the class doc's
+ * "Only effective if ambient_mode is AMBIENT_COLOR" is prose, which ADR-0032
+ * forbids as a basis. The real gate is in the shader: `light_storage.cpp:1817`
+ * copies `ambient_color` into the reflection buffer unconditionally, and
+ * `scene_forward_lights_inc.glsl:977` switches on `ambient_mode` so that
+ * `:998`'s `ambient_out.rgb = hvec3(reflections.data[ref_index].ambient)` — the
+ * only read of that field — runs solely in `case REFLECTION_AMBIENT_COLOR:`.
+ * Under any other mode the value reaches the GPU and is never sampled: same
+ * shape as CharacterBody's `floor_*` properties under `motion_mode = FLOATING`
+ * (characterBodyLinterRule.ts) — legal, serialisable, inert. The message says
+ * "set but has no effect", not "invalid" or "dropped", because neither of those
+ * is what happens. (Verified in the `renderer_rd` backend, which serves both
+ * Forward+ and Mobile.)
  *
  * Format validation lives in linterParser.ts.
  */
@@ -69,7 +76,7 @@ const reflectionProbeAmbientModeRule: LintRule = {
         severity: 'warning',
         grounding: {
           kind: 'engine-inert',
-          at: 'reflection_probe.cpp:208',
+          at: 'scene_forward_lights_inc.glsl:998',
           unused: 'the ambient colour is read only while the mode is AMBIENT_COLOR',
         },
       },

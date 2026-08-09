@@ -1,7 +1,7 @@
 /**
  * Perf regression test for the NodePath-resolution helpers.
  *
- * Semantic lint rules call `findParentNode` / `resolveNodePathTarget` (which
+ * Semantic lint rules call `findParentNode` / `resolveNodePath` (which
  * itself calls `findNodesByName` and `isUnderInstance`) once per matching
  * node, and each of those used to re-walk the ENTIRE scene tree from scratch
  * every single call. On a scene with N nodes, checking every node this way
@@ -32,8 +32,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { TscnNode } from '../parser/types.js';
-import { findParentNode, resolveNodePathTarget } from './linterUtils.js';
+import type { TscnNode, TscnScene } from '../parser/types.js';
+import { findParentNode } from './linterUtils.js';
+import { resolveNodePath } from './nodePathResolve.js';
 
 /**
  * A wide, shallow tree (root -> groups -> leaves) so the traversal-depth cost
@@ -82,12 +83,13 @@ function collectLeaves(roots: TscnNode[]): TscnNode[] {
 
 /** Simulate what a semantic rule does per node: resolve its parent + a NodePath. */
 function runLookupsForEveryNode(roots: TscnNode[], leaves: TscnNode[]): void {
+  const scene = { nodes: roots } as TscnScene;
   for (const leaf of leaves) {
     findParentNode(roots, leaf);
-    // "Nonexistent" so resolution always reaches the missing case, exercising
-    // the full findNodesByName scan (the realistic worst case for a rule
-    // checking a NodePath that doesn't resolve).
-    resolveNodePathTarget(roots, leaf, 'Nonexistent');
+    // "../Nonexistent" so resolution climbs (touching the parent index) and then
+    // misses, the realistic worst case for a rule checking a path that does not
+    // resolve. A bare name would stop at the leaf's own empty child list.
+    resolveNodePath(scene, leaf, '../Nonexistent');
   }
 }
 

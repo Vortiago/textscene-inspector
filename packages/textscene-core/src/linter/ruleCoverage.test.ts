@@ -34,6 +34,7 @@ import {
   walk,
 } from './testing/ruleNameScrape.js';
 import './index.js';
+import { ENGINE_CITE_RE } from './testing/engineCite.js';
 
 describe('lint rule coverage meta-guard', () => {
   const files = ruleFiles();
@@ -110,7 +111,7 @@ describe('validator coverage meta-guard', () => {
       .getRules()
       .filter((r) => r.meta.exactClassByDesign)
       .flatMap((r) => [
-        ...(/\.(cpp|h):\d+/.test(r.meta.exactClassByDesign!)
+        ...(ENGINE_CITE_RE.test(r.meta.exactClassByDesign!)
           ? []
           : [`${r.meta.name}: exactClassByDesign cites no engine line`]),
         ...(r.meta.applicableNodeTypeMatcher

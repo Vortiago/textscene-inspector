@@ -165,6 +165,24 @@ describe('Node3D Linter', () => {
       expectClean(scene(node('Node3D', { visibility_parent: 'NodePath("")' }, { name: 'ChildNode' })));
     });
 
+    // `%Name` resolves through the owner's `owned_unique_nodes`
+    // (node.cpp:1931-1933), not by tree position, and it is what the inspector's
+    // node picker writes. Comparing it against a position-keyed path map called a
+    // working reference "not found", at error tier.
+    it('should report nothing for a %unique-name visibility_parent', () => {
+      expectNoDiagnostic(
+        scene(
+          node('Node3D', {}, { name: 'ParentNode' }),
+          node(
+            'Node3D',
+            { visibility_parent: 'NodePath("%ParentNode")' },
+            { name: 'ChildNode', parent: 'ParentNode' }
+          )
+        ),
+        { ruleName: 'valid-node3d-visibility' }
+      );
+    });
+
     it('should report nothing for a relative visibility_parent path', () => {
       // A relative path is legal; this rule resolves only absolute ones.
       expectNoDiagnostic(

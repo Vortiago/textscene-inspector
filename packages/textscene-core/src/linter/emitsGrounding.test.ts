@@ -27,9 +27,9 @@ import { ruleRegistry } from './RuleRegistry.js';
 import { WARNINGS } from './configurationWarningCensus.js';
 import type { EmitGrounding, Severity } from './types.js';
 import './index.js'; // side-effect: every slice registers its rules
+import { ENGINE_CITE_RE } from './testing/engineCite.js';
 
 /** `scene/3d/light_3d.cpp:389` and the bare `light_3d.cpp:389` both pass. */
-const CITE_RE = /\.(cpp|h):\d+/;
 
 /** Every emitted `ruleName` a census row claims, with the row's `file.cpp:line`. */
 function censusCitations(): Map<string, string[]> {
@@ -105,7 +105,7 @@ describe('emit grounding', () => {
       .filter(
         (e) =>
           (e.grounding.kind === 'engine' || e.grounding.kind === 'engine-inert') &&
-          !CITE_RE.test(e.grounding.at)
+          !ENGINE_CITE_RE.test(e.grounding.at)
       )
       .map((e) => `${e.rule}: ${e.ruleName}`);
     expect(uncited.sort()).toEqual([]);
@@ -175,7 +175,7 @@ describe('emit grounding', () => {
     // a row whose `at` had degraded to prose would launder every arm resolving
     // through it.
     const malformed = [...census]
-      .flatMap(([rule, ats]) => ats.filter((at) => !CITE_RE.test(at)).map((at) => `${rule}: ${at}`))
+      .flatMap(([rule, ats]) => ats.filter((at) => !ENGINE_CITE_RE.test(at)).map((at) => `${rule}: ${at}`))
       .sort();
     expect(malformed).toEqual([]);
   });
@@ -212,8 +212,8 @@ describe('the grounding guard bites', () => {
   });
 
   it('rejects an engine arm whose cite names no line', () => {
-    expect(CITE_RE.test('the class reference says so')).toBe(false);
-    expect(CITE_RE.test('audio_stream_player_3d.cpp:885')).toBe(true);
+    expect(ENGINE_CITE_RE.test('the class reference says so')).toBe(false);
+    expect(ENGINE_CITE_RE.test('audio_stream_player_3d.cpp:885')).toBe(true);
   });
 
   it('keeps an inert claim distinguishable from a bound', () => {

@@ -81,7 +81,10 @@ function buildNodePathMap(nodes: TscnNode[]): Map<string, TscnNode> {
  * @returns The extracted path, or null if invalid format
  */
 function parseNodePath(nodePathValue: string): string | null {
-  const match = nodePathValue.match(/^NodePath\("([^"]*)"\)$/);
+  // `\s*` for the tokenizer reason `NODE_PATH_REGEX` documents: Godot drops
+  // whitespace before every token (variant_parser.cpp:415-417), so
+  // `NodePath( "Body" )` is a real path rather than a malformed literal.
+  const match = nodePathValue.match(/^NodePath\(\s*"([^"]*)"\s*\)$/);
   return match && match[1] !== undefined ? match[1] : null;
 }
 
@@ -119,7 +122,22 @@ function checkNode3D(context: RuleContext): Diagnostic[] {
       // Empty path is valid (means no visibility parent), but a non-empty
       // absolute path must exist. A relative path is legal and unresolved here,
       // so it reports nothing.
-      if (!visibilityPath.startsWith('.') && !visibilityPath.includes('../')) {
+      //
+      // `%Name` is a UNIQUE-NAME path (UNIQUE_NODE_PREFIX, string_name.h:36) and
+      // must be excluded for the same reason: `get_node_or_null` resolves it
+      // through `owned_unique_nodes` on the owner (node.cpp:1931-1933), not by
+      // tree position, and the inspector's node picker writes exactly this form.
+      // Matching it against a position-keyed path map reported "not found" at
+      // ERROR tier for a reference Godot resolves.
+      //
+      // Known over-approximation in the other direction, left as-is because
+      // narrowing it means real relative resolution: a bare `Name` is compared
+      // against paths measured from the SCENE ROOT, while Godot walks the
+      // referencing node's OWN children (node.cpp:1892-1952). A bare name that
+      // happens to exist elsewhere in the tree therefore passes here and fails
+      // in Godot.
+      const isUniqueName = visibilityPath.startsWith('%');
+      if (!isUniqueName && !visibilityPath.startsWith('.') && !visibilityPath.includes('../')) {
         const nodePathMap = buildNodePathMap(scene.nodes);
         if (!nodePathMap.has(visibilityPath)) {
           diagnostics.push({

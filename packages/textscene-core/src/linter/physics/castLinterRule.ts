@@ -34,7 +34,11 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
   // `_can_collide_with` filters every space-state query result. Keyed on `dim`
   // alone, not on `kind`: one function serves the ray and the shape query in a
   // dimension, and the two dimensions have their own copy of it.
-  const canCollideCite = dim === '2D' ? 'godot_space_2d.cpp:43' : 'godot_space_3d.cpp:43';
+  // The BODY clause specifically — `get_type() == TYPE_BODY && !p_collide_with_bodies`
+  // — since a cite names a construct, not a function signature. Its area twin sits
+  // four lines above it, and 3D adds a TYPE_SOFT_BODY clause below that gates on the
+  // same `collide_with_bodies` flag, so the two dimensions still decide alike.
+  const canCollideCite = dim === '2D' ? 'godot_space_2d.cpp:52' : 'godot_space_3d.cpp:52';
   // Its first clause, the mask test against each candidate's collision_layer.
   const maskCite = dim === '2D' ? 'godot_space_2d.cpp:44' : 'godot_space_3d.cpp:44';
 

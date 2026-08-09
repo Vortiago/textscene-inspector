@@ -22,7 +22,8 @@
 
 import type { RangeArm } from '../../linter/rangeAdvisory.js';
 import type { TscnNode, TscnScene } from '../../parser/types.js';
-import { isValidProperties, resolveNodePathTarget } from '../../linter/linterUtils.js';
+import { extractNodePath, isValidProperties } from '../../linter/linterUtils.js';
+import { resolveNodePath } from '../../linter/nodePathResolve.js';
 import { extractLibraries } from '../animation/animationplayer/parser.js';
 import { resolveAudioTrackPaths } from '../animation/animationplayer/animationResolver.js';
 
@@ -34,17 +35,28 @@ import { resolveAudioTrackPaths } from '../animation/animationplayer/animationRe
  * `stream` of its own. The `missing-stream` / `autoplay-without-stream`
  * rules must stay quiet about it.
  *
- * Resolution reuses `resolveNodePathTarget`'s confidence bar (final-segment
- * name match, scene-wide, refusing `..` and instance-scoped paths): a track
- * whose target can't be resolved confidently is treated as NOT driving this
+ * Track paths resolve from the mixer's `root_node`, NOT from the player:
+ * `_update_caches` takes `Node *parent = get_node_or_null(root_node)`
+ * (animation_mixer.cpp:661) and walks every track path from there, and
+ * `root_node` defaults to `NodePath("..")` (scene_string_names.h:129), the
+ * player's own parent. Resolving from the player instead shifts every track one
+ * level down the tree.
+ *
+ * A target that cannot be resolved confidently is treated as NOT driving this
  * node — a missed warning beats a wrong one.
  */
 export function isDrivenByAnimationAudioTrack(scene: TscnScene, node: TscnNode): boolean {
   for (const player of collectByType(scene.nodes, 'AnimationPlayer')) {
     if (!isValidProperties(player.properties)) continue;
-    const libraries = extractLibraries(player.properties as Record<string, string>);
+    const props = player.properties as Record<string, string>;
+    // `root_node` is authored as a NodePath on the player and defaults to "..".
+    const rootPath = extractNodePath(props.root_node ?? '') ?? '..';
+    const mixerRoot = resolveNodePath(scene, player, rootPath);
+    if (mixerRoot.status !== 'found') continue;
+
+    const libraries = extractLibraries(props);
     for (const rawPath of resolveAudioTrackPaths(libraries, scene.internalResources)) {
-      const target = resolveNodePathTarget(scene.nodes, player, rawPath);
+      const target = resolveNodePath(scene, mixerRoot.node, rawPath);
       if (target.status === 'found' && target.node === node) return true;
     }
   }

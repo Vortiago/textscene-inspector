@@ -41,8 +41,19 @@ const LAYER_DATA_KEY_RE = /^layer_(\d+)\/tile_data$/;
 const LAYER_KEY_RE = /^layer_(\d+)\//;
 
 /** Every layer index that has AT LEAST ONE `layer_<i>/...` key present, ascending. */
+/**
+ * Every layer index the loaded TileMap has, which is NOT the same as every index
+ * the file mentions.
+ *
+ * Index 0 is seeded unconditionally: `TileMap::TileMap()` builds a "Layer0"
+ * TileMapLayer and pushes it into `layers` before any property is applied
+ * (tile_map.cpp:1014-1021). A file that only writes `layer_1/…` therefore loads
+ * with TWO layers, and `get_configuration_warnings` iterates that real vector
+ * (:848), so Layer0's defaults — not y-sorted, z_index 0 — take part in the
+ * comparison. Scraping keys alone made the rule silent on exactly that scene.
+ */
 function layerIndices(rawProps: Record<string, string>): number[] {
-  const indices = new Set<number>();
+  const indices = new Set<number>([0]);
   for (const key of Object.keys(rawProps)) {
     const match = LAYER_KEY_RE.exec(key);
     if (match) indices.add(parseInt(match[1]!, 10));

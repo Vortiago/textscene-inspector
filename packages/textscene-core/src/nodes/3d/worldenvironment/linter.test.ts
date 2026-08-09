@@ -309,8 +309,50 @@ environment = SubResource("env_2")
         {
           ruleName: 'single-worldenvironment',
           severity: 'warning',
-          contains: ['2 WorldEnvironment nodes', 'Only the first Environment has an effect'],
+          prop: "'WorldEnvironment2'",
+          contains: ['Only the first Environment has an effect'],
         }
+      );
+    });
+
+    // world_environment.cpp:195 compares against the world's own Environment, and
+    // `_update_current_environment` (:76-80) took that from the FIRST node in the
+    // group. The first node's comparison is therefore equal, and Godot says nothing.
+    it('leaves the first WorldEnvironment alone, since it is the one that wins', () => {
+      const diagnostics = lint(`[gd_scene format=3]
+
+[sub_resource type="Environment" id="env_1"]
+[sub_resource type="Environment" id="env_2"]
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment1" type="WorldEnvironment" parent="."]
+environment = SubResource("env_1")
+
+[node name="WorldEnvironment2" type="WorldEnvironment" parent="."]
+environment = SubResource("env_2")
+`);
+      const named = diagnostics.filter((d) => d.ruleName === 'single-worldenvironment');
+      expect(named.map((d) => d.nodeName)).toEqual(['WorldEnvironment2']);
+    });
+
+    // The engine's test is `Ref<Environment> != environment`, i.e. resource
+    // identity. Two nodes naming one ExtResource hold the same instance.
+    it('stays silent when both nodes name the same environment resource', () => {
+      expectNoDiagnostic(
+        `[gd_scene format=3]
+
+[ext_resource type="Environment" path="res://shared.tres" id="env_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment1" type="WorldEnvironment" parent="."]
+environment = ExtResource("env_1")
+
+[node name="WorldEnvironment2" type="WorldEnvironment" parent="."]
+environment = ExtResource("env_1")
+`,
+        { ruleName: 'single-worldenvironment' }
       );
     });
 
@@ -333,7 +375,7 @@ environment = SubResource("env_2")
 [node name="WorldEnvironment3" type="WorldEnvironment" parent="."]
 environment = SubResource("env_3")
 `,
-        { ruleName: 'single-worldenvironment', contains: ['3 WorldEnvironment nodes'] }
+        { ruleName: 'single-worldenvironment', prop: "'WorldEnvironment3'" }
       );
     });
 
@@ -367,7 +409,7 @@ environment = SubResource("env_1")
 [node name="WorldEnvironment2" type="WorldEnvironment" parent="Container"]
 environment = SubResource("env_2")
 `,
-        { ruleName: 'single-worldenvironment', contains: ['2 WorldEnvironment nodes'] }
+        { ruleName: 'single-worldenvironment', prop: "'WorldEnvironment2'" }
       );
     });
   });

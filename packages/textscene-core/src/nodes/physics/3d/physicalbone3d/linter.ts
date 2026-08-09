@@ -20,15 +20,15 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import {
-  hasCollisionShapeDescendant,
+  hasCollisionShapeChild,
   collisionShapeTypesPhrase,
-} from '../../../../linter/physics/hasCollisionShapeDescendant.js';
+} from '../../../../linter/physics/hasCollisionShapeChild.js';
 
 const RULE_NAME = 'physicalbone3d-needs-collision-shape';
 
 function checkPhysicalBone3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (hasCollisionShapeDescendant(node, '3D')) return [];
+  if (hasCollisionShapeChild(node, '3D')) return [];
 
   return [
     {

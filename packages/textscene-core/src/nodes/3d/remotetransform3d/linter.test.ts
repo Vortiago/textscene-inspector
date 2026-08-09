@@ -51,11 +51,16 @@ describe('RemoteTransform3D remote_path rule', () => {
   });
 
   it('stays silent when remote_path resolves to a Node3D', () => {
-    // resolveNodePathTarget resolves the FINAL segment by name across the whole
-    // tree (linterUtils.ts), not real relative-path semantics — a bare name
-    // matches its sibling "Target" the same way gpuparticles3d's sub_emitter
-    // tests reference a sibling without "..".
-    expect(warningsFor(scene('remote_path = NodePath("Target")\n'))).toEqual([]);
+    // `../`, because a sibling is not a child: `get_node_or_null` walks
+    // `data.children.getptr(name)` from the RemoteTransform3D itself
+    // (node.cpp:1941), which is also the form the inspector writes.
+    expect(warningsFor(scene('remote_path = NodePath("../Target")\n'))).toEqual([]);
+  });
+
+  it('warns on a bare sibling name, which resolves to nothing from this node', () => {
+    const warnings = warningsFor(scene('remote_path = NodePath("Target")\n'));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]?.message).toContain('Target');
   });
 
   it('warns when remote_path names no node in this file', () => {
@@ -65,7 +70,7 @@ describe('RemoteTransform3D remote_path rule', () => {
   });
 
   it('warns when remote_path resolves to a node that is not a Node3D', () => {
-    const warnings = warningsFor(scene('remote_path = NodePath("NotSpatial")\n'));
+    const warnings = warningsFor(scene('remote_path = NodePath("../NotSpatial")\n'));
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.message).toContain('Node');
   });

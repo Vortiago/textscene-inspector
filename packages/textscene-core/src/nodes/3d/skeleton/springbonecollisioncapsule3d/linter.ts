@@ -12,15 +12,15 @@
  *         if (radius > height * 0.5) { radius = height * 0.5; }   // :51-52
  *     }
  *
- * Why this is a WARNING and not the error tier. ADR-0032's error row is about a
- * setter refusing or altering the value written to ITS OWN property, and neither
- * of these does: `radius = p_radius` and `height = p_height` both assign
- * straight through. The alteration is cross-field, and which of the pair ends up
- * rewritten depends on which setter runs last, i.e. on the order the two keys
- * happen to appear in the file, a property of the text, not of any setter's
- * enforcement. The scene loads either way, so this reports that the pair as
- * written is not the pair that will exist, and says nothing about which half
- * moves.
+ * Why this is the ERROR tier. ADR-0032's error row is "the setter refuses or
+ * alters the value: an `ERR_FAIL*`, or a clamp/mask that silently changes what
+ * was written" — it says nothing about the altered value having to be the
+ * setter's own property, and `height = radius * 2.0` silently changes an
+ * authored `height`. Which half of the pair moves depends on which setter runs
+ * last, i.e. on the order the two keys appear in the file, so the message names
+ * neither; but one of the two authored numbers is always discarded. No hint can
+ * express it either — both `radius` and `height` carry `,or_greater`, so a
+ * scene like `radius = 4.0, height = 1.0` violates neither bound.
  *
  * BOTH keys must be present. With only one written, the setter moves the other
  * away from its constructor default and the written value survives intact, so
@@ -66,7 +66,7 @@ const springBoneCollisionCapsule3DShapeRule: LintRule = {
   meta: {
     name: 'valid-springbonecollisioncapsule3d-shape',
     description:
-      "Warns when a SpringBoneCollisionCapsule3D's radius exceeds half its height, which Godot resolves by rewriting one of the two on load",
+      "Reports a SpringBoneCollisionCapsule3D whose radius exceeds half its height, since Godot silently rewrites one of the two on load",
     category: 'validation',
     applicableNodeTypes: ['SpringBoneCollisionCapsule3D'],
     emits: [

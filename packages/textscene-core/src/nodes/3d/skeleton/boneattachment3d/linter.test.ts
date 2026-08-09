@@ -86,6 +86,42 @@ use_external_skeleton = true
     expect(found[0]!.severity).toBe('warning');
   });
 
+  // `_update_external_skeleton_cache` fills the cache only when `has_node` is
+  // true AND the node casts to Skeleton3D (cpp:81-92); either miss leaves
+  // `external_skeleton_node_cache.is_null()` true at cpp:64, so Godot warns.
+  it('warns when the external path names no reachable node', () => {
+    const content = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="Attachment" type="BoneAttachment3D" parent="."]
+use_external_skeleton = true
+external_skeleton = NodePath("Skeleton3D")
+`;
+    const found = ruleDiagnostics(linter.lint(content));
+    expect(found).toHaveLength(1);
+    expect(found[0]!.ruleName).toBe(EXTERNAL_RULE);
+    expect(found[0]!.message).toContain('names no node reachable');
+  });
+
+  it('warns when the external path resolves to something that is not a Skeleton3D', () => {
+    const content = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="NotABone" type="MeshInstance3D" parent="."]
+
+[node name="Attachment" type="BoneAttachment3D" parent="."]
+use_external_skeleton = true
+external_skeleton = NodePath("../NotABone")
+`;
+    const found = ruleDiagnostics(linter.lint(content));
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toContain('MeshInstance3D');
+  });
+
   it('warns when the external path is present but empty', () => {
     const content = `[gd_scene format=3]
 

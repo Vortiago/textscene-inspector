@@ -21,6 +21,27 @@
 export const IS_VALID_INT_RE = /^[+-]?\d+$/;
 
 /**
+ * The text inside a serialised `String`, `StringName` or `NodePath` literal.
+ *
+ * Godot 4's writer prefixes a bare StringName with `&` and a bare NodePath with
+ * `^` (`variant_parser.cpp`'s `write` for `Variant::STRING_NAME` /
+ * `Variant::NODE_PATH`), so `autoplay = &"spin"` and `animation = "walk"` are
+ * the same string wearing different jackets. A rule comparing an authored name
+ * against an engine constant has to compare the CONTENTS, and doing that by
+ * hand is how one slice came to treat `&""` as a non-empty name.
+ *
+ * Only the outer jacket comes off: an embedded quote stays, and a value that
+ * was never quoted comes back trimmed and otherwise untouched.
+ */
+export function literalText(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^[&^]/, '')
+    .replace(/^["']|["']$/g, '')
+    .trim();
+}
+
+/**
  * Depth/quote-aware split of a bracket body's top-level comma-separated
  * elements, so a comma inside a nested literal or a quoted resource id is never
  * mistaken for a separator. Empty input yields no elements.

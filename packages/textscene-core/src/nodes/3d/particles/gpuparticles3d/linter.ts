@@ -9,7 +9,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../../linter/resourceChecker.js';
-import { extractNodePath, resolveNodePathTarget } from '../../../../linter/linterUtils.js';
+import { extractNodePath} from '../../../../linter/linterUtils.js';
+import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 
 /** Top of the `amount` hint, gpu_particles_3d.cpp:821 — "1,1000000,1,exp". */
 const MAX_HINTED_PARTICLE_AMOUNT = 1000000;
@@ -49,13 +50,21 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Check if draw_pass_1 resource exists (if specified)
-  if (rawProps.draw_pass_1) {
-    const resourceExists = checkResourceExists(scene, rawProps.draw_pass_1);
-    if (!resourceExists) {
+  // Every draw pass, not just the first. MAX_DRAW_PASSES is 4
+  // (gpu_particles_3d.h:56) and `_validate_property` (gpu_particles_3d.cpp:462-467)
+  // clears PROPERTY_USAGE_NONE for every index under `draw_passes`, so
+  // draw_pass_2..4 are ordinary serialised keys the moment an author raises the
+  // count — and a dangling id in one fails the load exactly like draw_pass_1.
+  // Sorted so a scene with several reports them in index order rather than in
+  // whatever order the file happened to list them.
+  const drawPassKeys = Object.keys(rawProps)
+    .filter((key) => /^draw_pass_\d+$/.test(key) && rawProps[key])
+    .sort((a, b) => Number(a.slice('draw_pass_'.length)) - Number(b.slice('draw_pass_'.length)));
+  for (const key of drawPassKeys) {
+    if (!checkResourceExists(scene, rawProps[key]!)) {
       diagnostics.push({
         severity: 'error',
-        message: `Draw pass mesh resource not found: ${rawProps.draw_pass_1}`,
+        message: `Draw pass mesh resource not found for '${key}': ${rawProps[key]}`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'valid-gpuparticles3d-resources',
@@ -86,12 +95,12 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
   }
 
   // sub_emitter must reference an existing GPUParticles3D node; empty/non-NodePath
-  // means "no sub-emitter". resolveNodePathTarget suppresses escapes/ambiguous
+  // means "no sub-emitter". resolveNodePath suppresses escapes/ambiguous
   // paths (see its JSDoc).
   if (rawProps.sub_emitter) {
     const subEmitterPath = extractNodePath(rawProps.sub_emitter);
     if (subEmitterPath) {
-      const target = resolveNodePathTarget(scene.nodes, node, subEmitterPath);
+      const target = resolveNodePath(scene, node, subEmitterPath);
 
       if (target.status === 'missing') {
         diagnostics.push({

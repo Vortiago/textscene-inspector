@@ -28,7 +28,8 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { extractNodePath, resolveNodePathTarget, isValidProperties } from '../../../linter/linterUtils.js';
+import { extractNodePath, isValidProperties } from '../../../linter/linterUtils.js';
+import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 
 const RULE_NAME = 'multiplayerspawner-spawn-path-dangling';
 
@@ -42,7 +43,7 @@ function checkMultiplayerSpawner(context: RuleContext): Diagnostic[] {
   const path = extractNodePath(raw);
   if (!path) return [];
 
-  const target = resolveNodePathTarget(scene.nodes, node, path);
+  const target = resolveNodePath(scene, node, path);
   if (target.status !== 'missing') return [];
 
   return [

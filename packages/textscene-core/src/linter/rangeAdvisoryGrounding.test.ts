@@ -28,6 +28,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { rangeAdvisories, type RangeAdvisoryTable } from './rangeAdvisory.js';
 import type { TscnNode } from '../parser/types.js';
+import { ENGINE_CITE_RE } from './testing/engineCite.js';
 
 /**
  * Drop comments before scraping, so PROSE about the convention cannot fail it.
@@ -51,7 +52,6 @@ function stripComments(source: string): string {
 }
 
 /** `scene/3d/light_3d.cpp:389` and the bare `light_3d.cpp:389` both pass. */
-const CITE_RE = /\.(cpp|h):\d+/;
 
 /** Every `cite: '…'` literal in the sources, with the file it came from. */
 function citeLiterals(): { file: string; cite: string }[] {
@@ -91,7 +91,7 @@ describe('range advisory grounding', () => {
 
   it('cites a real source location on every arm', () => {
     const uncited = citeLiterals()
-      .filter(({ cite }) => !CITE_RE.test(cite))
+      .filter(({ cite }) => !ENGINE_CITE_RE.test(cite))
       .map(({ file, cite }) => `${file}: "${cite}"`);
     expect(uncited.sort()).toEqual([]);
   });
