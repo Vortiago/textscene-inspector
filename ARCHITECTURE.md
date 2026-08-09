@@ -200,7 +200,8 @@ boundary where Godot data becomes a three.js object — never in the parsers or
 decoders, which stay faithful readers of what the file says:
 
 - **Texture V.** Godot's UV origin is the image's **top**-left. Textures load
-  with three's default `flipY=true` (nothing in the codebase sets it), which
+  with three's default `flipY=true` (only the alpha-border replacement below
+  sets it, and only by carrying the decoded texture's own value forward), which
   uploads the image bottom-up, so a Godot V must be mirrored: `v → 1 - v`.
   Textures are shared **by identity** between 2D and 3D consumers, so this is
   converted per consumer, never by flipping the texture:
@@ -386,6 +387,15 @@ DOM overlay was equally blind to a `Node2D` ancestor's transform, so this is
 unchanged behaviour, not new fallout from going native.
 
 ### Resource Loading
+
+A texture is not simply the file's bytes: Godot's editor **imports** every image
+before its renderer ever samples one, and reading `res://foo.png` off disk skips
+that. `resources/processing/fixAlphaEdges.ts` reproduces the one import step that
+changes pixels for an unattended texture — `process/fix_alpha_border`, on by
+default, which rewrites each transparent texel's RGB with its nearest opaque
+neighbour's so a magnified bilinear sample cannot bleed a hidden key colour into
+the visible fringe. `applyAlphaBorderFix` runs it once at decode and returns the
+original texture untouched when the pass changes nothing.
 
 External resources (textures, materials, GLB meshes, packed scenes) flow through
 a **two-bus, event-driven pipeline** — *not* promises/Suspense at the component

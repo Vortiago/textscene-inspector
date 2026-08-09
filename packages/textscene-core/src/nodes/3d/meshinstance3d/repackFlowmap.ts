@@ -1,31 +1,20 @@
 import * as THREE from 'three';
-import { imageSize, withImageCanvas } from '../../../r3f/controls/withImageCanvas';
+import { readImagePixels, type ImagePixels } from '../../../r3f/controls/withImageCanvas';
 
 /** RGBA8 pixels of a flowmap image, first row = top row. */
-export interface FlowmapPixels {
-  data: Uint8Array | Uint8ClampedArray;
-  width: number;
-  height: number;
-}
+export type FlowmapPixels = ImagePixels;
 
 /**
- * Read a texture image's RGBA8 bytes.
+ * Read a flowmap image's RGBA8 bytes — `readImagePixels`, which owns the shared
+ * drawable-image policy, under the name this slice reads it by. `undefined`
+ * must degrade to "no map" rather than break the material.
  *
- * A `DataTexture` already carries them (`image.data`). Everything the resource
- * pipeline loads is decoded by `THREE.TextureLoader` into an `HTMLImageElement`
- * with no `.data`, so those go through `withImageCanvas` — which owns the
- * shared drawable-image policy — and come back via `getImageData`.
- * `undefined` means no pixels were readable (undecoded image,
- * no DOM, no 2D context, tainted canvas); textures reach both hosts as blob
- * URLs built from bytes the host already fetched, so a taint is not expected,
- * but it must degrade to "no map" rather than break the material.
- *
- * Canvas 2D stores premultiplied alpha, so a pixel with low alpha loses
- * precision in R/G on the round trip, and one with alpha 0 loses them outright
- * — the readback reports black where the source held a direction. At the base
- * level that is inert: R/G are the direction vector, scaled downstream by that
- * same alpha, so the error stays proportional to a strength that is already
- * near zero.
+ * What the shared reader's premultiplied round trip costs A FLOWMAP: a pixel
+ * with low alpha loses precision in R/G, and one with alpha 0 loses them
+ * outright — the readback reports black where the source held a direction. At
+ * the base level that is inert: R/G are the direction vector, scaled downstream
+ * by that same alpha, so the error stays proportional to a strength that is
+ * already near zero.
  *
  * PARITY LIMITATION (minified flowmap): it stops being inert once mipmaps are
  * in play. Averaging mixes a zero-alpha texel's zeroed direction into coarser
@@ -38,16 +27,7 @@ export interface FlowmapPixels {
  * would remove it.
  */
 export function readFlowmapPixels(image: unknown): FlowmapPixels | undefined {
-  const raw = (image as { data?: Uint8Array | Uint8ClampedArray } | null)?.data;
-  if (raw) {
-    const size = imageSize(image);
-    return size ? { data: raw, ...size } : undefined;
-  }
-  return withImageCanvas(
-    image,
-    (ctx, { width, height }) => ({ data: ctx.getImageData(0, 0, width, height).data, width, height }),
-    { willReadFrequently: true }
-  );
+  return readImagePixels(image);
 }
 
 /**

@@ -56,3 +56,36 @@ export function withImageCanvas<T>(
     return undefined; // tainted canvas / unsupported image source
   }
 }
+
+/** RGBA8 pixels of a decoded image, first row = top row. */
+export interface ImagePixels extends ImageSize {
+  data: Uint8Array | Uint8ClampedArray;
+}
+
+/**
+ * Read a texture image's RGBA8 bytes.
+ *
+ * A `DataTexture` already carries them (`image.data`). Everything the resource
+ * pipeline loads is decoded by `THREE.TextureLoader` into an `HTMLImageElement`
+ * with no `.data`, so those go through `withImageCanvas` and come back via
+ * `getImageData`. `undefined` means no pixels were readable (undecoded image,
+ * no DOM, no 2D context, tainted canvas); textures reach both hosts as blob
+ * URLs built from bytes the host already fetched, so a taint is not expected,
+ * but every caller must degrade rather than break.
+ *
+ * Canvas 2D stores premultiplied alpha, so the readback loses R/G/B precision
+ * where alpha is low and loses them outright where alpha is 0. What that costs
+ * is the CALLER's to weigh — see each caller's own doc.
+ */
+export function readImagePixels(image: unknown): ImagePixels | undefined {
+  const raw = (image as { data?: Uint8Array | Uint8ClampedArray } | null)?.data;
+  if (raw) {
+    const size = imageSize(image);
+    return size ? { data: raw, ...size } : undefined;
+  }
+  return withImageCanvas(
+    image,
+    (ctx, { width, height }) => ({ data: ctx.getImageData(0, 0, width, height).data, width, height }),
+    { willReadFrequently: true }
+  );
+}

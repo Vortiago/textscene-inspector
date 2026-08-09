@@ -14,6 +14,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
+  applyAlphaBorderFix,
   createTextureFromBuffer,
   getMimeType,
   isTexturePath,
@@ -167,5 +168,59 @@ describe('createTextureFromBuffer', () => {
   it('constructs the TextureLoader without a manager when none is given', async () => {
     await createTextureFromBuffer(data, 'image/png');
     expect(fakeLoader.lastManager).toBeUndefined();
+  });
+});
+
+describe('applyAlphaBorderFix', () => {
+  /** A 2x1 RGBA8 image: a transparent magenta texel beside an opaque grey one. */
+  const needsFix = () => ({
+    data: new Uint8Array([255, 0, 255, 0, 10, 20, 30, 255]),
+    width: 2,
+    height: 1,
+  });
+
+  it('keeps the loaded texture when its pixels are unreadable', () => {
+    const texture = new THREE.Texture();
+    expect(applyAlphaBorderFix(texture, () => undefined)).toBe(texture);
+  });
+
+  it('keeps the loaded texture when no transparent texel needs rewriting', () => {
+    const texture = new THREE.Texture();
+    const pixels = { data: new Uint8Array([1, 2, 3, 255, 4, 5, 6, 255]), width: 2, height: 1 };
+    expect(applyAlphaBorderFix(texture, () => pixels)).toBe(texture);
+  });
+
+  it('replaces the texture with one whose transparent texel carries its neighbour RGB', () => {
+    const texture = new THREE.Texture();
+    const fixed = applyAlphaBorderFix(texture, needsFix);
+
+    expect(fixed).not.toBe(texture);
+    const image = fixed.image as { data: Uint8Array; width: number; height: number };
+    expect(Array.from(image.data)).toEqual([10, 20, 30, 0, 10, 20, 30, 255]);
+    expect(image.width).toBe(2);
+    expect(image.height).toBe(1);
+  });
+
+  it('carries the loaded texture sampling state onto the replacement', () => {
+    const texture = new THREE.Texture();
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.MirroredRepeatWrapping;
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestMipmapLinearFilter;
+    texture.generateMipmaps = true;
+    texture.flipY = true;
+    texture.anisotropy = 4;
+
+    const fixed = applyAlphaBorderFix(texture, needsFix);
+
+    expect(fixed.colorSpace).toBe(THREE.SRGBColorSpace);
+    expect(fixed.wrapS).toBe(THREE.RepeatWrapping);
+    expect(fixed.wrapT).toBe(THREE.MirroredRepeatWrapping);
+    expect(fixed.magFilter).toBe(THREE.NearestFilter);
+    expect(fixed.minFilter).toBe(THREE.NearestMipmapLinearFilter);
+    expect(fixed.generateMipmaps).toBe(true);
+    expect(fixed.flipY).toBe(true);
+    expect(fixed.anisotropy).toBe(4);
   });
 });

@@ -105,46 +105,37 @@ one-shots that ship this way, so an empty frame here is the correct frame.
 Measured whole-frame against Godot 4.6.3, `pnpm ref:godot <fixture> --mode 2d` against
 `pnpm ref:ours <fixture> --2d`, 1152x648, via `scripts/visual/imageDelta.mjs`'s
 `compareImages` — the same per-pixel, no-perceptual-tolerance comparison the golden
-gate uses. Every fixture here also carries a **1/255 quantization difference across
-the entire `Backdrop` `Polygon2D`** (its opaque fill, `Color(0.08, 0.08, 0.1, 1)`,
-reads blue `25` from Godot and `26` from the previewer at every interior pixel
-probed) that has nothing to do with `CPUParticles2D` — it is identical before and
-after the change below, and `Polygon2D`'s own flat-fill path is outside this slice, so
-it is not chased here. `changed` below is filtered to pixels differing by MORE than
-2/255, which is what isolates the emitter's own contribution from that unrelated,
-uniform 1-ULP noise:
+gate uses. The `Backdrop` `Polygon2D` behind every fixture matches Godot byte for byte,
+so every pixel `compareImages` counts is the emitter's own and the columns below are its
+own `changedPixels` / `changedPct`, `meanChannelError` (mean `|Δ|` over every pixel AND
+every RGB channel in the frame, identical ones included) and `maxChannelDelta`:
 
-| Fixture | Instant | Differing pixels (Δ>2/255) | mean Δ/255 (unfiltered) |
-| --- | --- | --- | --- |
-| `unit-cpuparticles2d-emission-shapes.tscn` | `preprocess = 0.0334` | 391 (0.052 %) | 0.133 |
-| `unit-cpuparticles2d-unpreprocessed.tscn` | `--particles 0.95` | 3029 (0.406 %) | 0.168 |
-| `unit-cpuparticles2d.tscn` | `preprocess = 1.5` | 4148 (0.556 %) | 0.199 |
-| `unit-cpuparticles2d-curves.tscn` | `preprocess = 2.0` | 3113 (0.417 %) | 0.237 |
-| `unit-cpuparticles2d-color-ramp.tscn` | `preprocess = 2.0` | 8049 (1.078 %) | 0.287 |
-| `unit-cpuparticles2d-local-coords.tscn` | `preprocess = 0.95` | 8624 (1.155 %) | 0.414 |
+| Fixture | Instant | changedPixels | meanChannelError | maxChannelDelta |
+| --- | --- | --- | --- | --- |
+| `unit-cpuparticles2d-emission-shapes.tscn` | `preprocess = 0.0334` | 552 (0.074 %) | 0.011 | 118 |
+| `unit-cpuparticles2d-curves.tscn` | `preprocess = 2.0` | 1362 (0.182 %) | 0.040 | 177 |
+| `unit-cpuparticles2d-local-coords.tscn` | `preprocess = 0.95` | 1399 (0.187 %) | 0.004 | 58 |
+| `unit-cpuparticles2d-unpreprocessed.tscn` | `--particles 0.95` | 5200 (0.697 %) | 0.017 | 115 |
+| `unit-cpuparticles2d.tscn` | `preprocess = 1.5` | 5964 (0.799 %) | 0.027 | 160 |
+| `unit-cpuparticles2d-color-ramp.tscn` | `preprocess = 2.0` | 7758 (1.039 %) | 0.014 | 66 |
 
-`emission-shapes` is the load-bearing one: it is the same simulation on both sides, stepped
-the same way, landing on the same pose to the pixel, and its `initial_velocity` is zero — so
-nothing in the frame moves after birth and the fixture cannot show a position error whatever
-one exists. The rest all give particles real velocity, and what they add on top is a
-restarting particle's PARTIAL first step: Godot integrates `p.velocity * local_delta` on the
-same frame a particle is born (`cpu_particles_2d.cpp:1151`), and `local_delta` for that frame
-is only the remainder of the step after the particle's own restart instant when `fract_delta`
-is on (Godot's default — `cpu_particles_2d.h:138`), not the whole step. Skipping that made
-every particle restarting in the SAME step land at the same displacement, and `restartStep` in
-`simulate.ts` now reproduces the partial step (`cpu_particles_2d.cpp:829-852`), which is why
-`unit-cpuparticles2d.tscn`, `color-ramp`, `curves` and `unpreprocessed` all narrowed on both
-columns.
+`emission-shapes` is the load-bearing one for the SIMULATION: it is the same simulation on
+both sides, stepped the same way, landing on the same pose to the pixel, and its
+`initial_velocity` is zero — so nothing in the frame moves after birth and the fixture cannot
+show a position error whatever one exists. The rest all give particles real velocity, and what
+they add on top is a restarting particle's PARTIAL first step: Godot integrates
+`p.velocity * local_delta` on the same frame a particle is born (`cpu_particles_2d.cpp:1151`),
+and `local_delta` for that frame is only the remainder of the step after the particle's own
+restart instant when `fract_delta` is on (Godot's default — `cpu_particles_2d.h:138`), not the
+whole step. `restartStep` in `simulate.ts` reproduces it (`cpu_particles_2d.cpp:829-852`);
+without it every particle restarting in the SAME step lands at one displacement.
 
-`local-coords` is a different case: at `amount = 16`, `lifetime = 1.0`, `fixed_fps = 30`,
-particles restart roughly every `0.0625 s`, never twice inside one `1/30 s` step — so the
-partial-step mechanism above cannot fire here, and it does not close this fixture's own
-visible defect (a serrated top/bottom edge along the scaled `LocalCoords` stream, where Godot
-draws a smooth capsule). The fix's effect on it is real but small — mean error 0.441 → 0.414,
-worst single-channel excursion 235 → 109 — which is one particle's own sub-frame offset
-(`initial_velocity_max = 60` × up to one step at `local_coords` scale `3` ≈ 6 screen px), not
-the serration. That serration is unexplained here: it was not derived from Godot source this
-session, so it is not fixed here either — see Known limitations, below.
+`local-coords` is the load-bearing one for the DRAW: at `amount = 16`, `lifetime = 1.0`,
+`fixed_fps = 30`, particles restart roughly every `0.0625 s`, never twice inside one `1/30 s`
+step, so the partial-step mechanism cannot fire and what is left is the quad path alone. Its
+`LocalCoords` emitter magnifies an 8x8 texture nine times, which makes every remaining
+difference an artefact of how one texel becomes 81 pixels — see Known limitations for the one
+that survives.
 
 Two more things are structural rather than a capture artefact:
 
@@ -273,9 +264,14 @@ and the linter says nothing.
   wall clock; the previewer settles it once and holds it. `speed_scale` is
   therefore invisible here — Godot itself forces it to 1 while it settles, so it
   decides how fast a running emitter reaches a pose, never which pose that is.
-- **A dense, scaled stream of overlapping quads shows a seam at its top and
-  bottom edge that Godot does not draw.** `unit-cpuparticles2d-local-coords.tscn`'s
-  `LocalCoords` emitter (16 particles, `scale_amount = 3`, node `scale = 3`) is a
-  solid capsule in Godot and a serrated one here — the horizontal extent and the
-  particle count both match, so this is not the restart-phase divergence
-  `restartStep` addresses. Not traced to a Godot source line.
+- **The outermost pixel of a quad is antialiased; Godot's is not.** A stream's
+  silhouette lands where Godot puts it, but the single pixel column the quad's
+  edge passes through is blended by MSAA, which the previewer's `<Canvas>` asks
+  for and Godot's 2D does not:
+  `rendering/anti_aliasing/quality/msaa_2d` defaults to `Disabled`
+  (`servers/rendering/rendering_server.cpp:3773`), so a Godot 2D fragment is
+  either fully in or fully out. Where a quad edge covers three quarters of a
+  pixel, Godot draws the fill and the previewer draws three quarters of it
+  blended with the backdrop. It is the whole of what is left between
+  `unit-cpuparticles2d-local-coords.tscn` and its reference, and it is a
+  property of the shared 2D canvas rather than of this slice.
