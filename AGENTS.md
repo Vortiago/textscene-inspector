@@ -60,6 +60,16 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
   rather than answering from the class default. `ROOT_ONLY_VIEWPORT_PROPERTIES` in
   `scripts/godot-ref/run.mjs` is the list, each entry citing the Godot line that applies
   it — extend it there when a new one turns up.
+  The tool has a **±1/255 floor on any channel whose value × 255 is fractional**: blending
+  into an 8-bit attachment is rounded by the rasterizer's ROP, and GL/Vulkan require the
+  source only to be CLAMPED before the blend equation, never converted to fixed point —
+  so the tie-break is implementation-defined. `--rendering-driver opengl3` against the
+  default vulkan moves the bytes on this machine, the clear colour itself included
+  (0.3 × 255 = 76.5 lands 76 under one and 77 under the other). A one-step gap on a
+  fractional channel is therefore NOT a parity defect and has no source-derivable
+  expected value; reproducing it would pin us to one software rasterizer. Measure such a
+  channel on both backends before believing it, and spend the effort on a divergence that
+  survives the swap.
 
 ## Vertical slices
 

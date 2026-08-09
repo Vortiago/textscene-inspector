@@ -30,6 +30,12 @@ columns; the only difference in the frame is the half-alpha box's blend against
 the backdrop, rgb(64, 89, 147) against rgb(64, 89, 146) — one count of rounding
 on the blue channel, over that box alone.
 
+Blue is the only channel of the three whose `value × 255` is fractional
+(0.85 → 216.75), which is exactly the case the reference tool cannot resolve:
+blending into an 8-bit attachment is rounded by the rasterizer, and the swap to
+`--rendering-driver opengl3` moves these bytes. There is no expected value to
+port here — Godot's own C++ and GLSL mandate neither result.
+
 ## Linting
 
 <!-- lint:begin ColorRect -->
