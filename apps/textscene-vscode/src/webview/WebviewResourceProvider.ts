@@ -20,9 +20,8 @@ export class WebviewResourceProvider implements ResourceProvider {
   constructor(private vscode: VsCodeApi) {
     // Listen for resource responses from extension
     window.addEventListener('message', (event) => {
-      const data: unknown = event.data;
-      if (!isHostToWebviewMessage(data)) return;
-      const message = data;
+      const message: unknown = event.data;
+      if (!isHostToWebviewMessage(message)) return;
 
       if (message.type === 'resourceLoaded') {
         const pending = this.pendingRequests.get(message.requestId);
