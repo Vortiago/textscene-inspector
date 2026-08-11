@@ -15,7 +15,7 @@ import { propertyError } from './propertyError.js';
  * is the file a linter exists for, and rejecting it was an error on a scene the
  * engine opens without complaint.
  */
-export const RESOURCE_REFERENCE_REGEX = /^(SubResource|ExtResource)\(\s*"[\w-]+"\s*\)$/;
+export const RESOURCE_REFERENCE_REGEX = /^(SubResource|ExtResource)\s*\(\s*"[\w-]+"\s*\)$/;
 
 /**
  * NodePath format: `NodePath("path/to/node")`.
@@ -27,7 +27,7 @@ export const RESOURCE_REFERENCE_REGEX = /^(SubResource|ExtResource)\(\s*"[\w-]+"
  *
  * `\s*` for the same tokenizer reason as {@link RESOURCE_REFERENCE_REGEX}.
  */
-export const NODE_PATH_REGEX = /^NodePath\(\s*"[^"]*"\s*\)$/;
+export const NODE_PATH_REGEX = /^NodePath\s*\(\s*"[^"]*"\s*\)$/;
 
 /**
  * Creates a resource reference validator

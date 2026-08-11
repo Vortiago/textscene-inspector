@@ -27,11 +27,16 @@
  *
  * ## Where a static reader must decline
  *
- * Two things this file cannot see, and both yield `unknowable` rather than a
- * guess. Walking INTO an `instance=` node: its interior children live in another
- * file, so a name that misses among the authored ones may still exist. And
- * walking FROM a node that sits under an instance: the enclosing sub-scene can
- * add siblings and parents this file never lists.
+ * Three things this file cannot see, and all yield `unknowable` rather than a
+ * guess. Walking INTO a node `isTypeUnknowable` covers: its interior children
+ * live in another file, so a name that misses among the authored ones may still
+ * exist. Walking FROM a node that sits under an instance: the enclosing
+ * sub-scene can add siblings and parents this file never lists. And landing ON
+ * one: the heading declares a name and a PackedScene, never a class, so every
+ * caller that asks `descendsFrom(target.node.type, …)` reads a non-class as a
+ * class name and reports a Godot-valid target as the wrong type —
+ * `scenes/demos/3d/ik/fps/fps_example.tscn` relays into an instanced `.dae`
+ * weapon and was warned about.
  *
  * Unique names are decidable, though. `_acquire_unique_name_in_owner`
  * (node.cpp:2222-2234) registers `"%" + name` on the node's OWNER, which for a
@@ -43,6 +48,7 @@
 
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import { findParentNode, isUnderInstance } from './linterUtils.js';
+import { isTypeUnknowable } from './parentType.js';
 
 /** `UNIQUE_NODE_PREFIX` (string_name.h:36). */
 const UNIQUE_NODE_PREFIX = '%';
@@ -58,7 +64,7 @@ export type NodePathResolution =
   | { readonly status: 'found'; readonly node: TscnNode }
   /** The walk ran off the authored tree exactly as the engine's would. */
   | { readonly status: 'missing' }
-  /** The walk entered, or started inside, content this file does not declare. */
+  /** The walk entered, started inside, or ended on content this file does not declare. */
   | { readonly status: 'unknowable' };
 
 const UNKNOWABLE: NodePathResolution = { status: 'unknowable' };
@@ -114,9 +120,13 @@ export function resolveNodePath(
   referencingNode: TscnNode,
   path: string
 ): NodePathResolution {
-  const segments = nameSegments(path);
-  if (segments.length === 0) return MISSING; // `p_path.is_empty()` (:1894)
+  if (path === '') return MISSING; // `p_path.is_empty()` (:1894)
   if (path.startsWith('/')) return UNKNOWABLE;
+
+  // No NAME segments is not an empty path: `is_empty()` is `!data`, true only
+  // for a default-constructed NodePath, so `":position"` carries data, runs the
+  // `get_name_count()` loop zero times (:1912) and returns `this`.
+  const segments = nameSegments(path);
   if (isUnderInstance(scene.nodes, referencingNode)) return UNKNOWABLE;
 
   let uniques: Map<string, TscnNode> | null = null;
@@ -149,9 +159,12 @@ export function resolveNodePath(
     // Below an `instance=` node the real children are in another file, so a miss
     // here is our blindness rather than the engine's null.
     const child = childNamed(current, name);
-    if (!child) return current.instance ? UNKNOWABLE : MISSING;
+    if (!child) return isTypeUnknowable(current) ? UNKNOWABLE : MISSING;
     current = child;
   }
 
-  return { status: 'found', node: current };
+  // The node exists, but nothing about it beyond its name is readable here: an
+  // `instance=` heading names a PackedScene rather than a class, and a heading
+  // with neither `type=` nor `instance=` overrides a node declared elsewhere.
+  return isTypeUnknowable(current) ? UNKNOWABLE : { status: 'found', node: current };
 }

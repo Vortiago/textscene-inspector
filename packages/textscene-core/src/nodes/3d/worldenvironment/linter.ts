@@ -7,11 +7,23 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnScene } from '../../../parser/types.js';
+import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
 import { firstNodeOfType, isValidProperties } from '../../../linter/linterUtils.js';
 import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver.js';
+
+/** `environment.is_valid()`, the gate on joining the group (world_environment.cpp:39). */
+function declaresEnvironment(node: TscnNode): boolean {
+  return isValidProperties(node.properties) && Boolean(node.properties.environment);
+}
+
+/** `Ref` identity, spelled the way two references to one resource compare equal. */
+function environmentId(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const parsed = parseResourceReference(raw);
+  return parsed ? `${parsed.type}:${parsed.id}` : raw;
+}
 
 /**
  * Resolve the `sky` reference stored inside the Environment SubResource that a
@@ -111,16 +123,25 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
   // `Ref` identity, so two nodes naming the SAME `ExtResource` share one instance
   // and neither warns.
   //
-  // First means first WorldEnvironment, valid or not: the engine assigns
-  // `first->environment` unconditionally, so a leading node with no environment
-  // sets the world's to null and every later one with one does warn.
+  // First means first node that JOINS the group, and `add_to_group` is gated on
+  // `environment.is_valid()` (:39-40) — a leading WorldEnvironment carrying only
+  // `camera_attributes` never enters it, so the next one along is the winner and
+  // Godot says nothing about it.
+  //
+  // The comparison is by resource ID, not by the raw text: `!=` on a `Ref` is
+  // instance identity, and `SubResource("e")` and `SubResource( "e" )` are the
+  // same instance — a spelling this file's own reference grammar accepts.
   //
   // Limitation, from the group spanning instanced sub-scenes: a WorldEnvironment
-  // behind `instance=` can be the real first and is invisible here.
-  const first = firstNodeOfType(scene.nodes, 'WorldEnvironment');
-  const winningEnvironment =
-    first && isValidProperties(first.properties) ? first.properties.environment : undefined;
-  if (rawProps.environment && node !== first && rawProps.environment !== winningEnvironment) {
+  // behind `instance=` can be the real first and is invisible here. The group key
+  // also carries the World3D scenario id, so a WorldEnvironment inside a
+  // SubViewport with `own_world_3d` is first in its own group; that scoping is
+  // not modelled.
+  const first = firstNodeOfType(scene.nodes, 'WorldEnvironment', declaresEnvironment);
+  const winningId = first && isValidProperties(first.properties)
+    ? environmentId(first.properties.environment)
+    : undefined;
+  if (rawProps.environment && node !== first && environmentId(rawProps.environment) !== winningId) {
     diagnostics.push({
       severity: 'warning',
       message: `WorldEnvironment '${node.name}' is not the first in the scene, and its 'environment' is not the one the first declares, so Godot ignores it. Only the first Environment has an effect.`,

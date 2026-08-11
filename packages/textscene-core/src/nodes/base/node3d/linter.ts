@@ -7,9 +7,9 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
+import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 
 /**
  * Node3D properties interface for type checking
@@ -43,39 +43,6 @@ function hasNode3DProperties(props: unknown): props is Node3DProperties {
 }
 
 /**
- * Build a map of all node paths in the scene for fast lookup
- */
-function buildNodePathMap(nodes: TscnNode[]): Map<string, TscnNode> {
-  const pathMap = new Map<string, TscnNode>();
-
-  function buildPath(node: TscnNode, parentPath: string): string {
-    const nodeName = (node.properties as { name?: string }).name || '';
-    const nodePath = parentPath ? `${parentPath}/${nodeName}` : nodeName;
-    pathMap.set(nodePath, node);
-    return nodePath;
-  }
-
-  function traverse(node: TscnNode, parentPath: string) {
-    const currentPath = buildPath(node, parentPath);
-    if (node.children) {
-      for (const child of node.children) {
-        traverse(child, currentPath);
-      }
-    }
-  }
-
-  // Find root nodes (nodes without parent or with parent=".")
-  for (const node of nodes) {
-    const props = node.properties as { parent?: string };
-    if (!props.parent || props.parent === '.') {
-      traverse(node, '');
-    }
-  }
-
-  return pathMap;
-}
-
-/**
  * Parse NodePath value to extract the actual path
  * @param nodePathValue - Value like NodePath("path/to/node") or NodePath("")
  * @returns The extracted path, or null if invalid format
@@ -84,7 +51,7 @@ function parseNodePath(nodePathValue: string): string | null {
   // `\s*` for the tokenizer reason `NODE_PATH_REGEX` documents: Godot drops
   // whitespace before every token (variant_parser.cpp:415-417), so
   // `NodePath( "Body" )` is a real path rather than a malformed literal.
-  const match = nodePathValue.match(/^NodePath\(\s*"([^"]*)"\s*\)$/);
+  const match = nodePathValue.match(/^NodePath\s*\(\s*"([^"]*)"\s*\)$/);
   return match && match[1] !== undefined ? match[1] : null;
 }
 
@@ -119,35 +86,27 @@ function checkNode3D(context: RuleContext): Diagnostic[] {
         ruleName: 'valid-node3d-visibility',
       });
     } else if (visibilityPath !== '') {
-      // Empty path is valid (means no visibility parent), but a non-empty
-      // absolute path must exist. A relative path is legal and unresolved here,
-      // so it reports nothing.
+      // Empty path is valid — it means no visibility parent
+      // (`_update_visibility_parent` clears the RID and returns).
       //
-      // `%Name` is a UNIQUE-NAME path (UNIQUE_NODE_PREFIX, string_name.h:36) and
-      // must be excluded for the same reason: `get_node_or_null` resolves it
-      // through `owned_unique_nodes` on the owner (node.cpp:1931-1933), not by
-      // tree position, and the inspector's node picker writes exactly this form.
-      // Matching it against a position-keyed path map reported "not found" at
-      // ERROR tier for a reference Godot resolves.
-      //
-      // Known over-approximation in the other direction, left as-is because
-      // narrowing it means real relative resolution: a bare `Name` is compared
-      // against paths measured from the SCENE ROOT, while Godot walks the
-      // referencing node's OWN children (node.cpp:1892-1952). A bare name that
-      // happens to exist elsewhere in the tree therefore passes here and fails
-      // in Godot.
-      const isUniqueName = visibilityPath.startsWith('%');
-      if (!isUniqueName && !visibilityPath.startsWith('.') && !visibilityPath.includes('../')) {
-        const nodePathMap = buildNodePathMap(scene.nodes);
-        if (!nodePathMap.has(visibilityPath)) {
-          diagnostics.push({
-            severity: 'error',
-            message: `Visibility parent node not found: "${visibilityPath}". Node does not exist in scene tree.`,
-            nodeName: props.name,
-            nodeType: node.type,
-            ruleName: 'valid-node3d-visibility',
-          });
-        }
+      // `resolveNodePath` rather than a path map keyed from the SCENE ROOT. The
+      // map answered a different question: `_update_visibility_parent` calls
+      // `get_node_or_null(visibility_parent_path)` on the node itself, which
+      // walks `data.children.getptr(name)` from there (node.cpp:1941), so a bare
+      // `Mesh` means THIS node's own child. Keyed from the root it means the root
+      // node's, which made `visibility_parent = NodePath("Mesh")` on any non-root
+      // node an ERROR on a scene Godot loads — and a name that happened to exist
+      // at the root passed while Godot failed. `%Name` needed a special case for
+      // the same mismatch; the port handles it (node.cpp:1930-1937) with none.
+      const target = resolveNodePath(scene, node, visibilityPath);
+      if (target.status === 'missing') {
+        diagnostics.push({
+          severity: 'error',
+          message: `Visibility parent node not found: "${visibilityPath}". Node does not exist in scene tree.`,
+          nodeName: props.name,
+          nodeType: node.type,
+          ruleName: 'valid-node3d-visibility',
+        });
       }
     }
   }

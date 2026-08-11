@@ -30,15 +30,15 @@ export const IS_VALID_INT_RE = /^[+-]?\d+$/;
  * against an engine constant has to compare the CONTENTS, and doing that by
  * hand is how one slice came to treat `&""` as a non-empty name.
  *
- * Only the outer jacket comes off: an embedded quote stays, and a value that
- * was never quoted comes back trimmed and otherwise untouched.
+ * Only the outer jacket comes off, and only a MATCHED pair of it: `" default "`
+ * keeps its spaces, because `set_animation` compares the contents and
+ * `" default " == "default"` is false. A value that was never quoted comes back
+ * trimmed and otherwise untouched.
  */
 export function literalText(raw: string): string {
-  return raw
-    .trim()
-    .replace(/^[&^]/, '')
-    .replace(/^["']|["']$/g, '')
-    .trim();
+  const bare = raw.trim().replace(/^[&^]/, '');
+  const quoted = /^(["'])([\s\S]*)\1$/.exec(bare);
+  return quoted ? quoted[2]! : bare;
 }
 
 /**

@@ -10,25 +10,33 @@ import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { findParentNode, isValidProperties } from '../../../linter/linterUtils.js';
 import { isViewportBoundary } from '../../viewport/subviewport/viewportBoundary.js';
+import { isTypeUnknowable } from '../../../linter/parentType.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 
 /**
  * The SubViewport a node draws into, or null for the scene's own viewport.
  *
  * Godot's current-camera slot is per-viewport: `Camera2D` joins
- * `"__cameras_" + itos(vp.get_id())` (camera_2d.cpp:348) and `make_current` is
- * gated on `!viewport->get_camera_2d()` (:353), where `camera_2d` is a member of
+ * `"__cameras_" + itos(vp.get_id())` (camera_2d.cpp:349) and `make_current` is
+ * gated on `!viewport->get_camera_2d()` (:354), where `camera_2d` is a member of
  * Viewport itself (viewport.h:764). Two enabled cameras in different
  * sub-viewports each become current in their own and never contend.
+ *
+ * `undefined` rather than `null` for an ancestor whose class this file does not
+ * declare: an instanced sub-scene may be rooted at a SubViewport, and reading it
+ * as an ordinary node pools its cameras into the outer viewport's scope — the
+ * very false positive the scoping was added to remove. Distinct from `null`,
+ * which is the real scene-root viewport, so two such cameras never compare equal.
  */
-function viewportScopeOf(scene: TscnScene, node: TscnNode): TscnNode | null {
+function viewportScopeOf(scene: TscnScene, node: TscnNode): TscnNode | null | undefined {
   for (let n = findParentNode(scene.nodes, node); n; n = findParentNode(scene.nodes, n)) {
+    if (isTypeUnknowable(n)) return undefined;
     if (isViewportBoundary(n.type)) return n;
   }
   return null;
 }
 
-/** Enabled unless the key says otherwise: `enabled` defaults true (camera_2d.h:70). */
+/** Enabled unless the key says otherwise: `enabled` defaults true (camera_2d.h:67). */
 function cameraIsEnabled(node: TscnNode): boolean {
   if (!isValidProperties(node.properties)) return true;
   return (node.properties as Record<string, string>).enabled !== 'false';
@@ -40,6 +48,8 @@ function countEnabledCamerasInScope(scene: TscnScene, scope: TscnNode | null): n
 
   function traverse(nodes: TscnScene['nodes']): void {
     for (const node of nodes) {
+      // An `undefined` scope never equals `scope`, so a camera whose viewport
+      // this file cannot determine is left out of the contending set.
       if (node.type === 'Camera2D' && cameraIsEnabled(node) && viewportScopeOf(scene, node) === scope) {
         count++;
       }
@@ -91,9 +101,9 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
   // Check for multiple enabled cameras first (before properties guard)
   // This check should run even if properties are empty (defaults to enabled=true)
   const rawProps = isValidProperties(node.properties) ? (node.properties as Record<string, string>) : {};
-  const thisEnabled = rawProps.enabled !== 'false'; // Default is enabled=true
-  if (thisEnabled) {
-    const enabledCount = countEnabledCamerasInScope(scene, viewportScopeOf(scene, node));
+  const scope = viewportScopeOf(scene, node);
+  if (cameraIsEnabled(node) && scope !== undefined) {
+    const enabledCount = countEnabledCamerasInScope(scene, scope);
     if (enabledCount > 1) {
       diagnostics.push({
         severity: 'warning',

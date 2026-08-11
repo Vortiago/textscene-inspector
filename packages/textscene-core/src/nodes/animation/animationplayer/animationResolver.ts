@@ -16,6 +16,7 @@
 import type { TscnInternalResource } from '../../../parser/types';
 import { parseVector2, parseVector3 } from '../../../parser/vectors';
 import { parseColor } from '../../../utils/colorParser';
+import { literalText } from '../../../godot/index.js';
 import type { AnimationLibraryRef } from './types';
 
 export type GodotKeyframeValue = number[] | number | boolean;
@@ -116,7 +117,7 @@ export function resolveAudioTrackPaths(
 function audioTrackPaths(data: Record<string, unknown>): string[] {
   const paths: string[] = [];
   for (let i = 0; data[`tracks/${i}/type`] !== undefined; i++) {
-    const type = stripQuotes(asString(data[`tracks/${i}/type`]) ?? '');
+    const type = literalText(asString(data[`tracks/${i}/type`]) ?? '');
     if (type !== 'audio') continue;
     const inner = extractNodePathInner(asString(data[`tracks/${i}/path`]) ?? '');
     if (inner !== null) paths.push(inner);
@@ -160,7 +161,7 @@ const TRANSFORM_3D_TRACKS: Record<string, { property: string; components: number
 function parseTracks(data: Record<string, unknown>): GodotTrack[] {
   const tracks: GodotTrack[] = [];
   for (let i = 0; data[`tracks/${i}/type`] !== undefined; i++) {
-    const type = stripQuotes(asString(data[`tracks/${i}/type`]) ?? '');
+    const type = literalText(asString(data[`tracks/${i}/type`]) ?? '');
     const rawPath = asString(data[`tracks/${i}/path`]) ?? '';
     const rawKeys = asString(data[`tracks/${i}/keys`]) ?? '';
     // class_animation.html / animation.h: interp defaults to 1 (LINEAR),
@@ -362,6 +363,3 @@ function numberOr(value: unknown, fallback: number): number {
   return Number.isNaN(n) ? fallback : n;
 }
 
-function stripQuotes(raw: string): string {
-  return raw.replace(/^["']|["']$/g, '').trim();
-}

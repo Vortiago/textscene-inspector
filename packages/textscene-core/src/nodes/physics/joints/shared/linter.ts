@@ -33,6 +33,7 @@
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
+import type { TscnNode } from '../../../../parser/types.js';
 import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
@@ -63,13 +64,22 @@ function checkJoint(context: RuleContext): Diagnostic[] {
   // `unknowable` means the target may live in a sub-scene this file cannot open,
   // and a wrong-type target is Godot's own "must be a PhysicsBody" string, an
   // unimplemented census row rather than this rule's business.
-  const connected = (raw: string | undefined): string | null => {
+  //
+  // The resolved node is kept, not just the path: `_update_joint`'s same-body arm
+  // compares POINTERS (`body_a == body_b`, joint_2d.cpp:86), so `../Body` and
+  // `%Body` naming one node are the same body however differently they are
+  // spelled. Two identical strings always walk to the same place, which is what
+  // keeps the answer available when the target is `unknowable`.
+  const connected = (raw: string | undefined): { path: string; node?: TscnNode } | null => {
     const path = raw ? extractNodePath(raw) : null;
     if (path === null) return null;
-    return resolveNodePath(context.scene, node, path).status === 'missing' ? null : path;
+    const target = resolveNodePath(context.scene, node, path);
+    if (target.status === 'missing') return null;
+    return target.status === 'found' ? { path, node: target.node } : { path };
   };
   const a = connected(props.node_a);
   const b = connected(props.node_b);
+  const sameBody = Boolean(a && b && (a.path === b.path || (a.node !== undefined && a.node === b.node)));
 
   // Exclusive, as in Godot's own chain: an unset end is reported once, and the
   // same-body case cannot arise while an end is unset. How many ends have to be
@@ -89,11 +99,11 @@ function checkJoint(context: RuleContext): Diagnostic[] {
     ];
   }
 
-  if (a === b) {
+  if (sameBody) {
     return [
       {
         severity: 'warning',
-        message: `${node.type} '${node.name}' has 'node_a' and 'node_b' both pointing at ${a}. A joint must connect two different ${bodyType}s.`,
+        message: `${node.type} '${node.name}' has 'node_a' and 'node_b' both pointing at ${a!.node?.name ?? a!.path}. A joint must connect two different ${bodyType}s.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'joint-same-body',

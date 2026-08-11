@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties, extractNodePath} from '../../../linter/linterUtils.js';
+import { isValidProperties, extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 
 /**
@@ -19,7 +19,7 @@ function extractResourceId(value: string): string | null {
   // (variant_parser.cpp:415-417 drops whitespace before every token), so
   // `SubResource( "id" )` resolves — reading it as unparseable reported a
   // dangling tree_root on a scene that loads.
-  const match = value.match(/^(?:SubResource|ExtResource)\(\s*"([^"]+)"\s*\)$/);
+  const match = value.match(/^(?:SubResource|ExtResource)\s*\(\s*"([^"]+)"\s*\)$/);
   return (match && match[1]) ? match[1] : null;
 }
 
@@ -98,7 +98,8 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
   // empty path as a supported mode and reconfigures the root node for it.
 
   // WARNING: anim_player must reference an existing AnimationPlayer node.
-  // resolveNodePath suppresses escapes/ambiguous paths (see its JSDoc).
+  // resolveNodePath's one decline, `unknowable`, covers every path whose answer
+  // lives in another file (see its JSDoc); `..` resolves rather than declining.
   if (rawProps.anim_player) {
     const path = extractNodePath(rawProps.anim_player);
     // "." (self) is not resolvable to a concrete node here.

@@ -9,11 +9,14 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../../linter/resourceChecker.js';
-import { extractNodePath} from '../../../../linter/linterUtils.js';
+import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 
 /** Top of the `amount` hint, gpu_particles_3d.cpp:821 — "1,1000000,1,exp". */
 const MAX_HINTED_PARTICLE_AMOUNT = 1000000;
+
+/** `MAX_DRAW_PASSES = 4` (gpu_particles_3d.h:56). */
+const MAX_DRAW_PASSES = 4;
 
 /**
  * Validate GPUParticles3D semantic rules (resource references, trail config, etc.)
@@ -50,21 +53,29 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Every draw pass, not just the first. MAX_DRAW_PASSES is 4
-  // (gpu_particles_3d.h:56) and `_validate_property` (gpu_particles_3d.cpp:462-467)
-  // clears PROPERTY_USAGE_NONE for every index under `draw_passes`, so
-  // draw_pass_2..4 are ordinary serialised keys the moment an author raises the
-  // count — and a dangling id in one fails the load exactly like draw_pass_1.
-  // Sorted so a scene with several reports them in index order rather than in
-  // whatever order the file happened to list them.
-  const drawPassKeys = Object.keys(rawProps)
-    .filter((key) => /^draw_pass_\d+$/.test(key) && rawProps[key])
-    .sort((a, b) => Number(a.slice('draw_pass_'.length)) - Number(b.slice('draw_pass_'.length)));
-  for (const key of drawPassKeys) {
-    if (!checkResourceExists(scene, rawProps[key]!)) {
+  // Every draw pass, not just the first. `_validate_property`
+  // (gpu_particles_3d.cpp:462-467) clears PROPERTY_USAGE_NONE for every index
+  // under `draw_passes`, so draw_pass_2..4 are ordinary serialised keys the
+  // moment an author raises the count — and a dangling id in one fails the load
+  // exactly like draw_pass_1. Counting up to MAX_DRAW_PASSES rather than
+  // scraping keys gives index order for free and ignores a `draw_pass_9` Godot
+  // never writes.
+  //
+  // `null` is the serialised form of an EMPTY pass, which `draw_passes = 2` with
+  // one mesh writes and Godot reloads without complaint
+  // (`scenes/demos/3d/particles/test.tscn`), so it is skipped rather than read
+  // as a reference that failed to resolve.
+  const drawPasses: [key: string, ref: string][] = [];
+  for (let i = 1; i <= MAX_DRAW_PASSES; i++) {
+    const key = `draw_pass_${i}`;
+    const raw = rawProps[key];
+    if (raw && raw !== 'null') drawPasses.push([key, raw]);
+  }
+  for (const [key, raw] of drawPasses) {
+    if (!checkResourceExists(scene, raw)) {
       diagnostics.push({
         severity: 'error',
-        message: `Draw pass mesh resource not found for '${key}': ${rawProps[key]}`,
+        message: `Draw pass mesh resource not found for '${key}': ${raw}`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'valid-gpuparticles3d-resources',
@@ -79,11 +90,10 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
   // (`_validate_property`, gpu_particles_3d.cpp:462-466), so any present
   // `draw_pass_N` key is in scope regardless of what `draw_passes` says here —
   // this stays a simple "no key at all has a mesh" scan rather than also
-  // re-deriving that bound.
-  const hasDrawPassMesh = Object.keys(rawProps).some(
-    (key) => /^draw_pass_\d+$/.test(key) && rawProps[key]
-  );
-  if (!hasDrawPassMesh) {
+  // re-deriving that bound. `meshes_found` tests `is_valid()`, so the `null` an
+  // empty pass serialises to is not a mesh — the same exclusion the loop above
+  // makes, which is why both read the one list.
+  if (drawPasses.length === 0) {
     diagnostics.push({
       severity: 'warning',
       message:
@@ -95,8 +105,9 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
   }
 
   // sub_emitter must reference an existing GPUParticles3D node; empty/non-NodePath
-  // means "no sub-emitter". resolveNodePath suppresses escapes/ambiguous
-  // paths (see its JSDoc).
+  // means "no sub-emitter". `resolveNodePath` declines — `unknowable`, its only
+  // decline — whenever the walk touches content another file declares, so
+  // neither arm below fires on a target this file cannot classify.
   if (rawProps.sub_emitter) {
     const subEmitterPath = extractNodePath(rawProps.sub_emitter);
     if (subEmitterPath) {

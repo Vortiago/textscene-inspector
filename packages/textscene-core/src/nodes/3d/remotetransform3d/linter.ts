@@ -15,16 +15,16 @@
  * all three of "absent", "present but resolves to nothing in this file", and
  * "present and resolves, but not to a Node3D".
  *
- * `resolveNodePath` stays silent on `escapes`/`ambiguous` (a `..` segment
- * or an instanced ancestor puts the real target outside what this linter can
- * see, and Godot allows node names to repeat across parents) — same caution
- * every other NodePath-target rule in this repo applies.
+ * `resolveNodePath` stays silent only on `unknowable` — an instanced ancestor,
+ * an instanced target, or a walk into content another file declares puts the
+ * answer outside what this linter can see. A `..` segment is not one of those:
+ * it climbs, the way `get_node_or_null` does.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
-import { extractNodePath} from '../../../linter/linterUtils.js';
+import { extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 
 const RULE_NAME = 'remotetransform3d-invalid-remote-path';

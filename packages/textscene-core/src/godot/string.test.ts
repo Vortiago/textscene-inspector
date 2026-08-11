@@ -1,5 +1,38 @@
 import { describe, it, expect } from 'vitest';
-import { IS_VALID_INT_RE, splitTopLevel } from './string.js';
+import { IS_VALID_INT_RE, literalText, splitTopLevel } from './string.js';
+
+describe('literalText', () => {
+  it.each([
+    ['"walk"', 'walk'],
+    ['&"spin"', 'spin'],
+    ['^"Body/Mesh"', 'Body/Mesh'],
+    ['&""', ''],
+    ['  &"pad"  ', 'pad'],
+  ])('takes the jacket off %s', (raw, expected) => {
+    expect(literalText(raw)).toBe(expected);
+  });
+
+  // The contents are what `set_animation` compares, so whitespace INSIDE the
+  // quotes is part of the name and `" default " == "default"` stays false.
+  it('keeps whitespace that was inside the quotes', () => {
+    expect(literalText('" default "')).toBe(' default ');
+  });
+
+  it('keeps an embedded quote', () => {
+    expect(literalText('"a\\"b"')).toBe('a\\"b');
+  });
+
+  it.each(['"unterminated', 'unopened"', `"mixed'`])(
+    'leaves an unmatched quote alone: %s',
+    (raw) => {
+      expect(literalText(raw)).toBe(raw);
+    }
+  );
+
+  it('trims a value that was never quoted and leaves the rest', () => {
+    expect(literalText('  default  ')).toBe('default');
+  });
+});
 
 describe('IS_VALID_INT_RE', () => {
   it.each(['0', '-7', '+7', '000'])('accepts %s', (s) => {

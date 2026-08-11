@@ -68,6 +68,10 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
   // line number in both files, but they are two separate facts.
   const bodyFile = dim === '2D' ? 'rigid_body_2d.cpp' : 'rigid_body_3d.cpp';
   const contactMonitorCite = `${bodyFile}:181`;
+  // `_sync_body_state`'s `contact_count = p_state->get_contact_count()`. Unlike the
+  // guard above, this one does NOT coincide: the 3D body assigns an inverse inertia
+  // tensor the 2D one has no counterpart for, putting the line one earlier.
+  const countLine = dim === '2D' ? 155 : 154;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
@@ -142,7 +146,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
             `${type} '${node.name}' sets max_contacts_reported while contact_monitor is off, ` +
             'so get_colliding_bodies() stays empty and the body_entered/exited signals never ' +
             'fire. The contact COUNT still works: _sync_body_state assigns contact_count at ' +
-            `${bodyFile}:155, before the contact_monitor guard at :181, and the physics server ` +
+            `${bodyFile}:${countLine}, before the contact_monitor guard at :181, and the physics server ` +
             'gathers contacts on max_contacts_reported alone (can_report_contacts() is ' +
             'contacts.is_empty() negated). Enable contact_monitor only if you need the list ' +
             'or the signals.',

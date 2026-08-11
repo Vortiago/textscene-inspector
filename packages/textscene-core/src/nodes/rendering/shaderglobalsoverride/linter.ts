@@ -9,14 +9,16 @@
  * running tree finds that group non-empty and stays inactive for the rest of
  * its life (removing the first only re-activates deferred, at :272).
  *
- * That is checkable from a `.tscn` alone for the SAME reason Camera2D's
- * multiple-enabled rule is (camera2d/linter.ts): whether a conflict exists at
- * all is a SCENE-WIDE fact (does this file contain more than one node of the
- * type?), even though which one loses is a TREE-ORDER fact this linter does
- * not simulate (Godot's tree-enter order, not document order, decides it, and
- * an instanced sub-scene can contribute one this linter never opens). So this
- * reuses Camera2D's shape exactly: warn on every instance once the count is
- * more than one, rather than guessing which one "wins".
+ * Checkable from a `.tscn` alone only as far as "a conflict exists": which node
+ * loses is a TREE-ENTER-order fact, not a document-order one, and an instanced
+ * sub-scene can contribute a node this linter never opens. So every instance is
+ * warned about once the count is more than one, rather than guessing the winner.
+ *
+ * Unlike WorldEnvironment, whose winner IS decidable — `get_first_node_in_group`
+ * reads a group sorted in tree order, which `firstNodeOfType` reproduces, so its
+ * rule exempts the winner. Godot warns only the losers here too
+ * (`if (!active)`), so exempting one is the remaining gap; it needs the
+ * enter-order model this rule does not have.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';

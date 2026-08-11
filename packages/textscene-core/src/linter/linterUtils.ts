@@ -114,9 +114,29 @@ export function countNodesOfType(roots: TscnNode[], type: string): number {
  *
  * Exact-name for the same reason `countNodesOfType` is: the engine's groups are
  * keyed by concrete class, not by a subclass closure.
+ *
+ * `joins` narrows to the nodes that actually ENTER the group, because several of
+ * these `add_to_group` calls are conditional — `WorldEnvironment` joins only
+ * `if (environment.is_valid())` (world_environment.cpp:39-40), so a leading node
+ * without one is not the winner and must not be treated as it. Omitted, the
+ * answer comes from the cached index in O(1); given, it costs one walk.
  */
-export function firstNodeOfType(roots: TscnNode[], type: string): TscnNode | null {
-  return getSceneIndex(roots).firstByType.get(type) ?? null;
+export function firstNodeOfType(
+  roots: TscnNode[],
+  type: string,
+  joins?: (node: TscnNode) => boolean
+): TscnNode | null {
+  if (!joins) return getSceneIndex(roots).firstByType.get(type) ?? null;
+
+  const search = (nodes: TscnNode[]): TscnNode | null => {
+    for (const node of nodes) {
+      if (node.type === type && joins(node)) return node;
+      const found = search(node.children);
+      if (found) return found;
+    }
+    return null;
+  };
+  return search(roots);
 }
 
 /**
@@ -140,7 +160,7 @@ export function extractNodePath(value: string): string | null {
   // literal and drops whitespace before each token (variant_parser.cpp:415-417),
   // so `NodePath( "../Body" )` is a real path and reading it as "no path" made
   // the joint rules report a connected joint as unconnected.
-  const match = value.match(/^NodePath\(\s*"([^"]*)"\s*\)$/);
+  const match = value.match(/^NodePath\s*\(\s*"([^"]*)"\s*\)$/);
   return match && match[1] ? match[1] : null;
 }
 

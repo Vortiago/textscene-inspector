@@ -9,7 +9,8 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
-import { extractLibraries, isActive, stripQuotes } from './parser.js';
+import { extractLibraries, isActive } from './parser.js';
+import { literalText } from '../../../godot/index.js';
 import { resolveAnimations } from './animationResolver.js';
 
 /**
@@ -83,7 +84,7 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // `animation_set.has(autoplay)`, so a name that resolves to nothing simply
   // never calls `play()` — no error, no log, nothing.
   if (canCheckExistence && rawProps.autoplay !== undefined) {
-    const autoplayName = stripQuotes(rawProps.autoplay);
+    const autoplayName = literalText(rawProps.autoplay);
     if (autoplayName.length > 0 && !knownClips.has(autoplayName)) {
       diagnostics.push({
         severity: 'warning',
@@ -100,7 +101,7 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // the assignment, and the property loads empty. Only claimed where the clip
   // set is fully enumerable, per `canCheckExistence` above.
   if (canCheckExistence && rawProps.current_animation !== undefined) {
-    const currentName = stripQuotes(rawProps.current_animation);
+    const currentName = literalText(rawProps.current_animation);
     if (currentName.length > 0 && !knownClips.has(currentName)) {
       diagnostics.push({
         severity: 'error',

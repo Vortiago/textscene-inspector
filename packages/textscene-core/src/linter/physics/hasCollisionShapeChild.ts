@@ -1,6 +1,7 @@
 /** Shared "does this body have a shape provider?" check for the physics linters. */
 
 import type { TscnNode } from '../../parser/types.js';
+import { isTypeUnknowable } from '../parentType.js';
 
 /**
  * The node types that give a `CollisionObject` its shapes, for one dimension.
@@ -40,11 +41,21 @@ export function collisionShapeTypes(dim: '2D' | '3D'): readonly string[] {
  * leaves the body shapeless and warned about by Godot, and
  * `Area2D > StaticBody2D > CollisionShape2D` gives the shape to the inner body
  * while the outer one keeps none. Both went unreported.
+ *
+ * A child `isTypeUnknowable` covers counts, because its class is not in this
+ * file: an `instance=` heading names a PackedScene and a heading with neither
+ * `type=` nor `instance=` overrides a node declared elsewhere, so a sub-scene
+ * rooted at a CollisionShape reads as neither of the two names. Narrowing to
+ * direct children is what makes that shape common, and a missed warning beats
+ * warning about a body Godot gives a shape. Same predicate `resolveNodePath`
+ * declines on, so the two helpers answer this one question the same way.
  */
 export function hasCollisionShapeChild(node: TscnNode, dim: '2D' | '3D'): boolean {
   const shape = `CollisionShape${dim}`;
   const polygon = `CollisionPolygon${dim}`;
-  return node.children.some((child) => child.type === shape || child.type === polygon);
+  return node.children.some(
+    (child) => isTypeUnknowable(child) || child.type === shape || child.type === polygon
+  );
 }
 
 /** `CollisionShape2D or CollisionPolygon2D`, for a diagnostic message. */

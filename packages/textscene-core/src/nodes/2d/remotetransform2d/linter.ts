@@ -16,14 +16,15 @@
  * node in this file (`!has_node`); present and resolving, but to something
  * that is not a Node2D (`!cast_to<Node2D>`, subclasses included).
  *
- * `resolveNodePath` stays quiet on a relative (`..`) or ambiguous path,
- * same as the MultiplayerSpawner/MultiplayerSynchronizer dangling-path rules —
- * a confident answer needs the path to name exactly one node in this file.
+ * `resolveNodePath` walks the path the engine's way, so `..` is answered rather
+ * than declined; its one decline, `unknowable`, covers a walk that touches
+ * content another file declares. Same bar as the MultiplayerSpawner /
+ * MultiplayerSynchronizer dangling-path rules.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { extractNodePath, isValidProperties} from '../../../linter/linterUtils.js';
+import { extractNodePath, isValidProperties } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 

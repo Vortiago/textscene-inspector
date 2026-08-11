@@ -296,6 +296,6 @@ export function parseNodePathLiteral(value: string | undefined): string | null {
   // `\s*` because Godot tokenises rather than pattern-matches, dropping
   // whitespace before each token (variant_parser.cpp:415-417): `NodePath( "x" )`
   // is a path the engine reads, so a display formatter must read it too.
-  const match = value.match(/^NodePath\(\s*"([^"]*)"\s*\)$/);
+  const match = value.match(/^NodePath\s*\(\s*"([^"]*)"\s*\)$/);
   return match ? match[1]! : null;
 }

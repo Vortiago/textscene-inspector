@@ -51,8 +51,6 @@ function stripComments(source: string): string {
     .join('\n');
 }
 
-/** `scene/3d/light_3d.cpp:389` and the bare `light_3d.cpp:389` both pass. */
-
 /** Every `cite: '…'` literal in the sources, with the file it came from. */
 function citeLiterals(): { file: string; cite: string }[] {
   const root = join(import.meta.dirname, '..');

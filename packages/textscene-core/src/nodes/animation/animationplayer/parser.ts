@@ -8,6 +8,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { boolOr, enumOr, floatOr } from '../../../parser/valueParsers';
+import { literalText } from '../../../godot/index.js';
 import {
   type AnimationLibraryRef,
   AnimationProcessMode,
@@ -44,8 +45,8 @@ export function parseAnimationPlayer(
       [MethodCallMode.DEFERRED, MethodCallMode.IMMEDIATE]
     ),
     active: isActive(properties),
-    autoplay: stripQuotes(properties.autoplay ?? ''),
-    current_animation: stripQuotes(properties.current_animation ?? ''),
+    autoplay: literalText(properties.autoplay ?? ''),
+    current_animation: literalText(properties.current_animation ?? ''),
     current_animation_length: floatOr(properties.current_animation_length, 0.0),
     current_animation_position: floatOr(properties.current_animation_position, 0.0),
     root_node: properties.root_node ?? 'NodePath("..")',
@@ -94,14 +95,4 @@ export function extractLibraries(properties: Record<string, string>): AnimationL
   }
 
   return libraries;
-}
-
-export function stripQuotes(raw: string): string {
-  // Godot 4 prefixes StringName literals with `&` and NodePath literals with
-  // `^` (e.g. `autoplay = &"spin"`); drop that before unquoting.
-  return raw
-    .trim()
-    .replace(/^[&^]/, '')
-    .replace(/^["']|["']$/g, '')
-    .trim();
 }

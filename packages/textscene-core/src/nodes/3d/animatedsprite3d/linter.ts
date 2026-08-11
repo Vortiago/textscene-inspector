@@ -40,7 +40,7 @@ function checkAnimatedSprite3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // `sprite_frames` is declared ahead of `animation` (sprite_3d.cpp:1538-1539),
+  // `sprite_frames` is declared ahead of `animation` (sprite_3d.cpp:1539-1540),
   // so a null SpriteFrames at this point is the authored absence, not load order.
   //
   // Not `"default"`, though: `set_animation` opens with

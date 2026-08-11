@@ -120,6 +120,26 @@ describe('joint dead-configuration rule', () => {
     expect(d.message).toContain('../Body');
   });
 
+  // `_update_joint` compares the resolved POINTERS (`body_a == body_b`,
+  // joint_2d.cpp:86), so one body reached by two spellings is still one body.
+  it('flags one body reached by two different paths', () => {
+    const content = [
+      '[gd_scene format=3]',
+      '',
+      '[node name="Root" type="Node2D"]',
+      '',
+      '[node name="Body" type="StaticBody2D" parent="."]',
+      'unique_name_in_owner = true',
+      '',
+      '[node name="Joint" type="PinJoint2D" parent="."]',
+      'node_a = NodePath("../Body")',
+      'node_b = NodePath("%Body")',
+      '',
+    ].join('\n');
+    const d = expectDiagnostic(content, { ruleName: 'joint-same-body', severity: 'warning' });
+    expect(d.message).toContain('Body');
+  });
+
   it('does not also report not-connected when both ends name one body', () => {
     // The two cases are exclusive in Godot's own chain; reporting both would
     // double up on one defect.

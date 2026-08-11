@@ -10,6 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
+import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 
 /** `Camera3D::PROJECTION_FRUSTUM` (camera_3d.h:47), the third of three. */
 const PROJECTION_FRUSTUM = 2;
@@ -49,10 +50,14 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
     rawProps.far !== undefined &&
     parseInt(rawProps.projection ?? '', 10) === PROJECTION_FRUSTUM
   ) {
-    const near = parseFloat(rawProps.near);
-    const far = parseFloat(rawProps.far);
+    // `parseGodotFloat`, not `parseFloat`: `inf` / `-inf` / `inf_neg` are float
+    // literals Godot writes and reloads (variant_parser.cpp:150-155), and
+    // `parseFloat` reads every one of them as NaN — which makes `near >= far`
+    // false and silently skips the pair the ERR_FAIL_COND does refuse.
+    const near = parseGodotFloat(rawProps.near);
+    const far = parseGodotFloat(rawProps.far);
 
-    if (!isNaN(near) && !isNaN(far)) {
+    if (near !== null && far !== null && !isNaN(near) && !isNaN(far)) {
       if (near >= far) {
         diagnostics.push({
           severity: 'error',

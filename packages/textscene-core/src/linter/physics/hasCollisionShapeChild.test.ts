@@ -32,6 +32,14 @@ describe('hasCollisionShapeChild', () => {
     );
   });
 
+  // An `instance=` heading names a PackedScene, so the parser leaves the
+  // `ExtResource("…")` literal in `type` and a sub-scene rooted at a shape reads
+  // as neither name. Declining is the same call every NodePath rule makes.
+  it.each(['2D', '3D'] as const)('counts an instanced child, whose class is elsewhere (%s)', (dim) => {
+    const child = { ...node('ExtResource("1_shape")'), instance: 'ExtResource("1_shape")' };
+    expect(hasCollisionShapeChild(node('Body', [child]), dim)).toBe(true);
+  });
+
   // `collision_shape_2d.cpp:55` / `collision_shape_3d.cpp:83` attach on
   // `Object::cast_to<CollisionObject2D>(get_parent())`, so an intervening node keeps
   // the shape off this body entirely and Godot's `shapes.is_empty()` warning

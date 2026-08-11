@@ -15,10 +15,10 @@
  * non-root node in a `.tscn` has) — so the `is_empty()` disjunct is
  * unreachable from mere absence, for a different reason than the spawner's:
  * there the trigger IS the default; here the default is not the trigger.
- * `..` is also exactly the relative form `resolveNodePath` classifies
- * as `escapes` (a `..` segment leaves the scope the static linter can walk
- * with confidence), so a bare default or explicit `NodePath("..")` is
- * declined the same way any other relative escape is — not by inventing a
+ * `..` itself resolves: `resolveNodePath` climbs to the parent the way
+ * `get_node_or_null` does, and only a `..` off the file's own root has no
+ * answer. So a bare default or explicit `NodePath("..")` is silent because it
+ * names a real node or an `unknowable` one — never `missing` — not by inventing a
  * second resolution mechanism for the single-hop case, since the shared
  * helper's own contract already covers it.
  *

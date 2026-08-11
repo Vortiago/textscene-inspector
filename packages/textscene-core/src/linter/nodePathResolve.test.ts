@@ -171,6 +171,15 @@ describe('resolveNodePath', () => {
       expect(resolveNodePath(scene, tree, 'Enemy/Hitbox')).toEqual({ status: 'unknowable' });
     });
 
+    // An `instance=` heading declares a PackedScene, never a class, so
+    // `StrictTscnParser` puts the `ExtResource("…")` literal in `type`. Handing
+    // that to `descendsFrom` reports a Godot-valid target as the wrong type.
+    it('declines a path that lands ON an instance, whose class is in another file', () => {
+      const tree = node('Root', [node('Pistol', [], { instance: 'ExtResource("8")' })]);
+      const scene = sceneOf(tree);
+      expect(resolveNodePath(scene, tree, 'Pistol')).toEqual({ status: 'unknowable' });
+    });
+
     it('still finds an authored child under an instance (an editable override)', () => {
       const tree = node('Root', [
         node('Enemy', [node('Extra')], { instance: 'ExtResource("1_enemy")' }),
@@ -180,6 +189,18 @@ describe('resolveNodePath', () => {
         status: 'found',
         node: pick([tree], 'Extra'),
       });
+    });
+
+    // A heading with neither `type=` nor `instance=` overrides a node declared
+    // inside the instance, so ITS children are in the other file too.
+    it('declines a miss below a property-override heading', () => {
+      const tree = node('Root', [
+        node('Enemy', [node('Body', [], { type: '', overridesExistingNode: true })], {
+          instance: 'ExtResource("1_enemy")',
+        }),
+      ]);
+      const scene = sceneOf(tree);
+      expect(resolveNodePath(scene, tree, 'Enemy/Body/Sprite')).toEqual({ status: 'unknowable' });
     });
 
     it('declines when the referencing node itself sits under an instance', () => {
@@ -219,6 +240,15 @@ describe('resolveNodePath', () => {
         status: 'found',
         node: pick([tree], 'A'),
       });
+    });
+
+    // `is_empty()` is `!data`, so a subname-only path is NOT empty: the loop runs
+    // zero times and `current` is still the referencing node.
+    it('resolves a subname-only path to the referencing node', () => {
+      const tree = node('Root', [node('A')]);
+      const scene = sceneOf(tree);
+      const a = pick([tree], 'A');
+      expect(resolveNodePath(scene, a, ':position')).toEqual({ status: 'found', node: a });
     });
   });
 });

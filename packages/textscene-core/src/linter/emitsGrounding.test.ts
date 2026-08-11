@@ -29,8 +29,6 @@ import type { EmitGrounding, Severity } from './types.js';
 import './index.js'; // side-effect: every slice registers its rules
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
 
-/** `scene/3d/light_3d.cpp:389` and the bare `light_3d.cpp:389` both pass. */
-
 /** Every emitted `ruleName` a census row claims, with the row's `file.cpp:line`. */
 function censusCitations(): Map<string, string[]> {
   const out = new Map<string, string[]>();

@@ -49,8 +49,14 @@ export function isDrivenByAnimationAudioTrack(scene: TscnScene, node: TscnNode):
   for (const player of collectByType(scene.nodes, 'AnimationPlayer')) {
     if (!isValidProperties(player.properties)) continue;
     const props = player.properties as Record<string, string>;
-    // `root_node` is authored as a NodePath on the player and defaults to "..".
-    const rootPath = extractNodePath(props.root_node ?? '') ?? '..';
+    // `root_node` defaults to ".." only when the key is ABSENT. An authored
+    // `NodePath("")` is a different state: `get_node_or_null` fails on
+    // `p_path.is_empty()` (node.cpp:1894), `_update_caches` bails on the null
+    // parent (animation_mixer.cpp:661), and the player drives nothing — so
+    // substituting the default there would suppress a warning that is correct.
+    const rootPath =
+      props.root_node === undefined ? '..' : extractNodePath(props.root_node);
+    if (rootPath === null) continue;
     const mixerRoot = resolveNodePath(scene, player, rootPath);
     if (mixerRoot.status !== 'found') continue;
 
