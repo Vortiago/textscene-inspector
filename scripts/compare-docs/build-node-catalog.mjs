@@ -27,9 +27,14 @@ import { enumerateGodotNodes, godotVersion, supportedTypes } from './build-node-
 import { EXTRA_CLASSES, RESOURCE_CLASSES } from './build-node-catalog/extraClasses.mjs';
 import { groupOf } from './build-node-catalog/groups.mjs';
 import { attachLinks } from './build-node-catalog/links.mjs';
-import { OUT } from './build-node-catalog/paths.mjs';
+import { OUT, PROPS_OUT } from './build-node-catalog/paths.mjs';
 
 const linksOnly = process.argv.includes('--links-only');
+// The engine half alone. Writing the property table needs a local godot and
+// nothing else, while the catalog also re-verifies every docs/source link over
+// the network, so refreshing the properties should not depend on the GitHub API
+// being reachable or under its rate limit.
+const propertiesOnly = process.argv.includes('--properties-only');
 const previous = existsSync(OUT)
   ? JSON.parse(readFileSync(OUT, 'utf8'))
   : { nodes: [], resources: [], extras: [] };
@@ -43,6 +48,23 @@ const previousByName = new Map(
 // `--links-only` refreshes the docs/source links against the existing catalog:
 // the node list itself needs a local godot + xvfb-run, the links only need the
 // network, and they go stale on different schedules.
+/** One row per class, sorted so a regenerated file diffs by content not by order. */
+function writeProperties(properties) {
+  const sorted = Object.fromEntries(
+    Object.entries(properties)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([cls, props]) => [cls, [...props].sort((a, b) => a.name.localeCompare(b.name))])
+  );
+  writeFileSync(PROPS_OUT, `${JSON.stringify(sorted, null, 2)}\n`);
+  const count = Object.values(sorted).reduce((sum, p) => sum + p.length, 0);
+  console.log(`Wrote ${PROPS_OUT} - ${Object.keys(sorted).length} classes, ${count} properties.`);
+}
+
+if (propertiesOnly) {
+  writeProperties(enumerateGodotNodes().properties);
+  process.exit(0);
+}
+
 let nodes;
 let godotVersionValue;
 if (linksOnly) {
@@ -61,7 +83,9 @@ if (linksOnly) {
   godotVersionValue = previous.godotVersion ?? 'unknown';
 } else {
   const supported = await supportedTypes();
-  nodes = enumerateGodotNodes()
+  const enumerated = enumerateGodotNodes();
+  writeProperties(enumerated.properties);
+  nodes = enumerated.classes
     // Editor-only plugins and engine-internal placeholders are not scene content.
     .filter((n) => !n.name.startsWith('Editor') && !n.name.endsWith('EditorPlugin') && n.name !== 'MissingNode')
     .map((n) => ({

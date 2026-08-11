@@ -23,6 +23,21 @@ export async function supportedTypes() {
   return new Set(nodeRegistry.getAllTypeNames());
 }
 
+/** The JSON blob printed on the line after `marker`. */
+function blobAfter(out, marker, what) {
+  const at = out.indexOf(marker);
+  if (at === -1) throw new Error(`Godot did not emit ${what}. Output:\n${out.slice(-800)}`);
+  return JSON.parse(out.slice(at + marker.length).trim().split('\n')[0]);
+}
+
+/**
+ * One engine run, both answers: the instantiable classes and every Node class's
+ * own serialised properties.
+ *
+ * Kept as one spawn because starting Godot under xvfb dominates the cost, and
+ * because two runs could straddle a version change and disagree about the same
+ * engine.
+ */
 export function enumerateGodotNodes() {
   const proj = mkdtempSync(join(tmpdir(), 'godot-nodes-'));
   const res = spawnSync('xvfb-run', ['-a', 'godot', '--headless', '--path', proj, '-s', ENUM_GD], {
@@ -30,9 +45,10 @@ export function enumerateGodotNodes() {
     timeout: 120_000,
   });
   const out = `${res.stdout ?? ''}\n${res.stderr ?? ''}`;
-  const marker = out.indexOf('###NODES_JSON###');
-  if (marker === -1) throw new Error(`Godot did not emit the node list. Output:\n${out.slice(-800)}`);
-  return JSON.parse(out.slice(marker + '###NODES_JSON###'.length).trim().split('\n')[0]);
+  return {
+    classes: blobAfter(out, '###NODES_JSON###', 'the node list'),
+    properties: blobAfter(out, '###PROPS_JSON###', 'the property list'),
+  };
 }
 
 export function godotVersion() {
