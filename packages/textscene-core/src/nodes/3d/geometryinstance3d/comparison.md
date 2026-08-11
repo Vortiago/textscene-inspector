@@ -59,8 +59,8 @@ Strict parsing format-checks these `GeometryInstance3D` properties, plus 1 inher
 | `ignore_occlusion_culling` | true or false |
 | `instance_shader_parameters/*` | any Variant — the type comes from the attached shader's uniform declarations, not the .tscn |
 | `lod_bias` | float 0-128 |
-| `material_overlay` | SubResource("id") or ExtResource("id") |
-| `material_override` | SubResource("id") or ExtResource("id") |
+| `material_overlay` | null, SubResource("id") or ExtResource("id") |
+| `material_override` | null, SubResource("id") or ExtResource("id") |
 | `sorting_offset` | float |
 | `sorting_use_aabb_center` | true or false |
 | `transparency` | float 0-1 |

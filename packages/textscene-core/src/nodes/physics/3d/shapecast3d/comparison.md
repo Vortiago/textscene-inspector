@@ -46,7 +46,7 @@ Strict parsing format-checks these `ShapeCast3D` properties, plus 17 inherited f
 | `exclude_parent` | true or false |
 | `margin` | float 0-100 |
 | `max_results` | integer |
-| `shape` | SubResource("id") or ExtResource("id") |
+| `shape` | null, SubResource("id") or ExtResource("id") |
 | `target_position` | Vector3(x, y, z) |
 
 | Rule | Reports | Severity |

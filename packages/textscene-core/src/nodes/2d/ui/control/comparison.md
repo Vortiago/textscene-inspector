@@ -95,13 +95,13 @@ Strict parsing format-checks these `Control` properties, plus 16 inherited from 
 | `size_flags_horizontal` | integer |
 | `size_flags_stretch_ratio` | float >= 0 |
 | `size_flags_vertical` | integer |
-| `theme` | null, SubResource("id"), or ExtResource("id") |
+| `theme` | null, SubResource("id") or ExtResource("id") |
 | `theme_override_colors/*` | Color(r, g, b, a) |
 | `theme_override_constants/*` | integer -16384-16384 |
 | `theme_override_font_sizes/*` | integer >= 1 |
-| `theme_override_fonts/*` | SubResource("id") or ExtResource("id") |
-| `theme_override_icons/*` | SubResource("id") or ExtResource("id") |
-| `theme_override_styles/*` | SubResource("id") or ExtResource("id") |
+| `theme_override_fonts/*` | null, SubResource("id") or ExtResource("id") |
+| `theme_override_icons/*` | null, SubResource("id") or ExtResource("id") |
+| `theme_override_styles/*` | null, SubResource("id") or ExtResource("id") |
 | `theme_type_variation` | quoted string or &"name" |
 | `tooltip_auto_translate_mode` | enum 0-2 (INHERIT/ALWAYS/DISABLED) |
 | `tooltip_text` | quoted string |

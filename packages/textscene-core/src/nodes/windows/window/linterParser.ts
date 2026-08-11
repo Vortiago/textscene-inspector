@@ -166,11 +166,8 @@ validatorRegistry.registerAll('Window', {
   accessibility_description: v.quotedString('accessibility_description'),
 
   // "Theme" group.
-  // window.cpp:3477 is Control.theme's twin, down to the PropertyInfo. Nullable
-  // for the same reason: Godot omits the key when the slot is cleared, but
-  // set_theme accepts a null Ref, so a hand-written `theme = null` loads and
-  // must not be reported.
-  theme: v.nullableResourceReference('theme'),
+  // window.cpp:3477 is Control.theme's twin, down to the PropertyInfo.
+  theme: v.resourceReference('theme'),
   theme_type_variation: v.stringName('theme_type_variation'),
 
   // Shared with Control — Godot emits this family from both, identically.

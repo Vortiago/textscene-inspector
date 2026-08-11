@@ -36,8 +36,15 @@ export function createResourceReferenceValidator(
   errorCode: string = 'INVALID_REFERENCE'
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
-    if (!RESOURCE_REFERENCE_REGEX.test(value)) {
-      return propertyError(key, line, `Property '${propertyName}' must be a resource reference like SubResource("id") or ExtResource("id"), got: "${value}"`, errorCode);
+    // `null` is legal for every resource slot. Godot's writer normally omits a
+    // cleared one instead of emitting `null`, which is a WRITE-side fact and
+    // reads as a reason to reject the spelling; it is not one.
+    // `variant_parser.cpp:699` parses a bare `null` to `Variant()`,
+    // `can_convert_strict` allows NIL -> OBJECT (variant.cpp:543), and a
+    // `Ref<T>` setter takes an invalid Ref without complaint, so the value
+    // LOADS. Whether the slot ought to be filled is a semantic rule's question.
+    if (value !== 'null' && !RESOURCE_REFERENCE_REGEX.test(value)) {
+      return propertyError(key, line, `Property '${propertyName}' must be a resource reference like SubResource("id") or ExtResource("id"), or null, got: "${value}"`, errorCode);
     }
     return null;
   };

@@ -38,7 +38,7 @@ Strict parsing format-checks these `RetargetModifier3D` properties, plus 2 inher
 | Property | Accepts |
 | --- | --- |
 | `enable` | bit mask of TRANSFORM_FLAG_POSITION (1) | TRANSFORM_FLAG_ROTATION (2) | TRANSFORM_FLAG_SCALE (4) |
-| `profile` | SubResource("id") or ExtResource("id") |
+| `profile` | null, SubResource("id") or ExtResource("id") |
 | `use_global_pose` | true or false |
 
 | Rule | Reports | Severity |

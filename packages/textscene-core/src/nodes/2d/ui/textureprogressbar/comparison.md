@@ -53,10 +53,10 @@ Strict parsing format-checks these `TextureProgressBar` properties, plus 9 inher
 | `stretch_margin_left` | integer 0-16384 |
 | `stretch_margin_right` | integer 0-16384 |
 | `stretch_margin_top` | integer 0-16384 |
-| `texture_over` | SubResource("id") or ExtResource("id") |
-| `texture_progress` | SubResource("id") or ExtResource("id") |
+| `texture_over` | null, SubResource("id") or ExtResource("id") |
+| `texture_progress` | null, SubResource("id") or ExtResource("id") |
 | `texture_progress_offset` | Vector2(x, y) |
-| `texture_under` | SubResource("id") or ExtResource("id") |
+| `texture_under` | null, SubResource("id") or ExtResource("id") |
 | `tint_over` | Color(r, g, b, a) |
 | `tint_progress` | Color(r, g, b, a) |
 | `tint_under` | Color(r, g, b, a) |

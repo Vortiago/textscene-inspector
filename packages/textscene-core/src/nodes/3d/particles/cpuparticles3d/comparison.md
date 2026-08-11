@@ -51,22 +51,22 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 | Property | Accepts |
 | --- | --- |
 | `amount` | integer 1-1000000 |
-| `angle_curve` | SubResource("id") or ExtResource("id") |
+| `angle_curve` | null, SubResource("id") or ExtResource("id") |
 | `angle_max` | float |
 | `angle_min` | float |
-| `angular_velocity_curve` | SubResource("id") or ExtResource("id") |
+| `angular_velocity_curve` | null, SubResource("id") or ExtResource("id") |
 | `angular_velocity_max` | float |
 | `angular_velocity_min` | float |
-| `anim_offset_curve` | SubResource("id") or ExtResource("id") |
+| `anim_offset_curve` | null, SubResource("id") or ExtResource("id") |
 | `anim_offset_max` | float 0-1 |
 | `anim_offset_min` | float 0-1 |
-| `anim_speed_curve` | SubResource("id") or ExtResource("id") |
+| `anim_speed_curve` | null, SubResource("id") or ExtResource("id") |
 | `anim_speed_max` | float |
 | `anim_speed_min` | float |
 | `color` | Color(r, g, b, a) |
-| `color_initial_ramp` | SubResource("id") or ExtResource("id") |
-| `color_ramp` | SubResource("id") or ExtResource("id") |
-| `damping_curve` | SubResource("id") or ExtResource("id") |
+| `color_initial_ramp` | null, SubResource("id") or ExtResource("id") |
+| `color_ramp` | null, SubResource("id") or ExtResource("id") |
+| `damping_curve` | null, SubResource("id") or ExtResource("id") |
 | `damping_max` | float >= 0 |
 | `damping_min` | float >= 0 |
 | `direction` | Vector3(x, y, z) |
@@ -88,41 +88,41 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 | `flatness` | float 0-1 |
 | `fract_delta` | true or false |
 | `gravity` | Vector3(x, y, z) |
-| `hue_variation_curve` | SubResource("id") or ExtResource("id") |
+| `hue_variation_curve` | null, SubResource("id") or ExtResource("id") |
 | `hue_variation_max` | float -1-1 |
 | `hue_variation_min` | float -1-1 |
 | `initial_velocity_max` | float >= 0 |
 | `initial_velocity_min` | float >= 0 |
 | `lifetime` | float > 0 |
 | `lifetime_randomness` | float 0-1 |
-| `linear_accel_curve` | SubResource("id") or ExtResource("id") |
+| `linear_accel_curve` | null, SubResource("id") or ExtResource("id") |
 | `linear_accel_max` | float |
 | `linear_accel_min` | float |
 | `local_coords` | true or false |
-| `mesh` | SubResource("id") or ExtResource("id") |
+| `mesh` | null, SubResource("id") or ExtResource("id") |
 | `one_shot` | true or false |
-| `orbit_velocity_curve` | SubResource("id") or ExtResource("id") |
+| `orbit_velocity_curve` | null, SubResource("id") or ExtResource("id") |
 | `orbit_velocity_max` | float |
 | `orbit_velocity_min` | float |
 | `particle_flag_align_y` | true or false |
 | `particle_flag_disable_z` | true or false |
 | `particle_flag_rotate_y` | true or false |
 | `preprocess` | float >= 0 |
-| `radial_accel_curve` | SubResource("id") or ExtResource("id") |
+| `radial_accel_curve` | null, SubResource("id") or ExtResource("id") |
 | `radial_accel_max` | float |
 | `radial_accel_min` | float |
 | `randomness` | float 0-1 |
-| `scale_amount_curve` | SubResource("id") or ExtResource("id") |
+| `scale_amount_curve` | null, SubResource("id") or ExtResource("id") |
 | `scale_amount_max` | float >= 0 |
 | `scale_amount_min` | float >= 0 |
-| `scale_curve_x` | SubResource("id") or ExtResource("id") |
-| `scale_curve_y` | SubResource("id") or ExtResource("id") |
-| `scale_curve_z` | SubResource("id") or ExtResource("id") |
+| `scale_curve_x` | null, SubResource("id") or ExtResource("id") |
+| `scale_curve_y` | null, SubResource("id") or ExtResource("id") |
+| `scale_curve_z` | null, SubResource("id") or ExtResource("id") |
 | `seed` | integer 0-4294967295 |
 | `speed_scale` | float 0-64 |
 | `split_scale` | true or false |
 | `spread` | float 0-180 |
-| `tangential_accel_curve` | SubResource("id") or ExtResource("id") |
+| `tangential_accel_curve` | null, SubResource("id") or ExtResource("id") |
 | `tangential_accel_max` | float |
 | `tangential_accel_min` | float |
 | `use_fixed_seed` | true or false |

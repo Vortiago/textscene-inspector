@@ -35,7 +35,7 @@ Strict parsing format-checks these `CollisionShape2D` properties, plus 12 inheri
 | `disabled` | true or false |
 | `one_way_collision` | true or false |
 | `one_way_collision_margin` | float 0-128 |
-| `shape` | SubResource("id") or ExtResource("id") |
+| `shape` | null, SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

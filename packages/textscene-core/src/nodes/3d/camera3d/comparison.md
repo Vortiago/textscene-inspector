@@ -33,12 +33,12 @@ Strict parsing format-checks these `Camera3D` properties, plus 17 inherited from
 
 | Property | Accepts |
 | --- | --- |
-| `attributes` | SubResource("id") or ExtResource("id") |
-| `compositor` | SubResource("id") or ExtResource("id") |
+| `attributes` | null, SubResource("id") or ExtResource("id") |
+| `compositor` | null, SubResource("id") or ExtResource("id") |
 | `cull_mask` | 32-bit layer mask (layers 1-32) |
 | `current` | true or false |
 | `doppler_tracking` | enum 0-2 (DISABLED/IDLE_STEP/PHYSICS_STEP) |
-| `environment` | SubResource("id") or ExtResource("id") |
+| `environment` | null, SubResource("id") or ExtResource("id") |
 | `far` | float |
 | `fov` | float 1-179 |
 | `frustum_offset` | Vector2(x, y) |

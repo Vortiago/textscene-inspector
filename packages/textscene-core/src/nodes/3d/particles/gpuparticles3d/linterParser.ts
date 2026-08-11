@@ -112,10 +112,10 @@ validatorRegistry.registerAll('GPUParticles3D', {
   // follows). scenes/demos/3d/particles/test.tscn ships `draw_pass_2 = null`
   // this way; draw_pass_1's index is never hidden, so this format is
   // liberal, not the only one an editor-saved scene bothers to write.
-  draw_pass_1: v.nullableResourceReference('draw_pass_1'),
-  draw_pass_2: v.nullableResourceReference('draw_pass_2'),
-  draw_pass_3: v.nullableResourceReference('draw_pass_3'),
-  draw_pass_4: v.nullableResourceReference('draw_pass_4'),
+  draw_pass_1: v.resourceReference('draw_pass_1'),
+  draw_pass_2: v.resourceReference('draw_pass_2'),
+  draw_pass_3: v.resourceReference('draw_pass_3'),
+  draw_pass_4: v.resourceReference('draw_pass_4'),
   // gpu_particles_3d.cpp:855, PROPERTY_HINT_RESOURCE_TYPE "Skin". Always
   // visible (no `_validate_property` conditioning), so a cleared skin diffs
   // equal to the class default and is omitted rather than written `null`.

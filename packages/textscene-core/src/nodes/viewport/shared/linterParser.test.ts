@@ -400,10 +400,12 @@ describe('Viewport shared validators', () => {
     });
 
     it.each(['vrs_texture', 'world_3d'])(
-      'rejects the bare literal null for %s: Godot omits the key instead of writing it',
+      'accepts the bare literal null for %s, which Godot loads as a cleared slot',
       (key) => {
+        // Omitting a cleared key is what the WRITER does; the loader still takes
+        // a hand-written `null` (variant_parser.cpp:699, variant.cpp:543).
         const validator = find(key);
-        expect(validator(key, 'null', 1)).not.toBeNull();
+        expect(validator(key, 'null', 1)).toBeNull();
       }
     );
   });

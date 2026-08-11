@@ -35,7 +35,7 @@ Strict parsing format-checks these `StaticBody3D` properties, plus 6 inherited f
 | --- | --- |
 | `constant_angular_velocity` | Vector3(x, y, z) |
 | `constant_linear_velocity` | Vector3(x, y, z) |
-| `physics_material_override` | SubResource("id") or ExtResource("id") |
+| `physics_material_override` | null, SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

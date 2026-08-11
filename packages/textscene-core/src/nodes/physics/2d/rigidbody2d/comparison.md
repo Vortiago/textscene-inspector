@@ -61,7 +61,7 @@ Strict parsing format-checks these `RigidBody2D` properties, plus 5 inherited fr
 | `lock_rotation` | true or false |
 | `mass` | float >= 5e-324 |
 | `max_contacts_reported` | integer 0-4095 |
-| `physics_material_override` | SubResource("id") or ExtResource("id") |
+| `physics_material_override` | null, SubResource("id") or ExtResource("id") |
 | `sleeping` | true or false |
 
 | Rule | Reports | Severity |

@@ -32,7 +32,7 @@ Strict parsing format-checks these `StatusIndicator` properties, plus 10 inherit
 
 | Property | Accepts |
 | --- | --- |
-| `icon` | SubResource("id") or ExtResource("id") |
+| `icon` | null, SubResource("id") or ExtResource("id") |
 | `menu` | NodePath("path/to/node") |
 | `tooltip` | quoted string |
 | `visible` | true or false |

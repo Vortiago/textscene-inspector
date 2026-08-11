@@ -47,7 +47,7 @@ validatorRegistry.registerAll('Light3D', {
   // so this is a format check like every other Texture2D reference property.
   // No PROPERTY_USAGE_STORE_IF_NULL (object.h:113) on this ADD_PROPERTY, unlike
   // GraphNode's slot icons, so a cleared projector is OMITTED, never written as
-  // `null` — resourceReference, not nullableResourceReference.
+  // `null` — resourceReference, not resourceReference.
   light_projector: v.resourceReference('light_projector'),
   // light_3d.cpp:394, PROPERTY_HINT_RANGE "0,1,0.001,or_greater,suffix:m".
   light_size: v.nonNegativeFloat('light_size', { hinted: 'light_3d.cpp:394' }),

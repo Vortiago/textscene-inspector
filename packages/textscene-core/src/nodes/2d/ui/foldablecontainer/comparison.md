@@ -38,7 +38,7 @@ Strict parsing format-checks these `FoldableContainer` properties, plus 53 inher
 
 | Property | Accepts |
 | --- | --- |
-| `foldable_group` | SubResource("id") or ExtResource("id") |
+| `foldable_group` | null, SubResource("id") or ExtResource("id") |
 | `folded` | true or false |
 | `language` | quoted string |
 | `title` | quoted string |

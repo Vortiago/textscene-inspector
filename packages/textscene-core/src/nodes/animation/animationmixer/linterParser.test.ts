@@ -104,8 +104,12 @@ describe('AnimationMixer strict validators', () => {
       expect(check('AnimationMixer', 'libraries/', 'ExtResource("1_lib")')).toBeNull();
     });
 
+    it('accepts the literal null, a cleared slot Godot loads', () => {
+      expect(check('AnimationMixer', 'libraries/', 'null')).toBeNull();
+    });
+
     it('rejects a non-resource value', () => {
-      expect(check('AnimationMixer', 'libraries/', 'null')).not.toBeNull();
+      expect(check('AnimationMixer', 'libraries/', '"res://lib.tres"')).not.toBeNull();
     });
   });
 

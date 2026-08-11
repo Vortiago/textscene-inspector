@@ -135,10 +135,10 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 | `normal_fade` | float 0-1 |
 | `size` | Vector3(x, y, z) |
 | `sorting_offset` | float |
-| `texture_albedo` | SubResource("id") or ExtResource("id") |
-| `texture_emission` | SubResource("id") or ExtResource("id") |
-| `texture_normal` | SubResource("id") or ExtResource("id") |
-| `texture_orm` | SubResource("id") or ExtResource("id") |
+| `texture_albedo` | null, SubResource("id") or ExtResource("id") |
+| `texture_emission` | null, SubResource("id") or ExtResource("id") |
+| `texture_normal` | null, SubResource("id") or ExtResource("id") |
+| `texture_orm` | null, SubResource("id") or ExtResource("id") |
 | `upper_fade` | float >= 0 |
 
 | Rule | Reports | Severity |

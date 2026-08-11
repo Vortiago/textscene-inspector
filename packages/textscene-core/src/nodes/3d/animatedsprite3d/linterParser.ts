@@ -39,7 +39,7 @@ validatorRegistry.registerAll('AnimatedSprite3D', {
   // no constructor default, same default-null shape as Sprite3D.texture — every
   // other default-null Ref<T> slot in this codebase (Sprite3D.texture,
   // MeshInstance3D.mesh, GridMap.mesh_library, …) gets the plain, non-nullable
-  // form, so this matches rather than reaching for `nullableResourceReference`.
+  // form, so this matches rather than reaching for `resourceReference`.
   sprite_frames: v.resourceReference('sprite_frames'),
 
   // sprite_3d.cpp:1540, ADD_PROPERTY(Variant::STRING_NAME, "animation",

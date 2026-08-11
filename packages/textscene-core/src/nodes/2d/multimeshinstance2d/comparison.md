@@ -33,8 +33,8 @@ Strict parsing format-checks these `MultiMeshInstance2D` properties, plus 12 inh
 
 | Property | Accepts |
 | --- | --- |
-| `multimesh` | SubResource("id") or ExtResource("id") |
-| `texture` | SubResource("id") or ExtResource("id") |
+| `multimesh` | null, SubResource("id") or ExtResource("id") |
+| `texture` | null, SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

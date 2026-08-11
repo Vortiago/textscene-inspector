@@ -244,6 +244,13 @@ describe('Window strict validators', () => {
       expect(check('theme', 'ExtResource("1")')).toBeNull();
     });
 
+    it('accepts a null theme, which Godot loads as a cleared slot', () => {
+      // variant_parser.cpp:699 reads a bare `null` as Variant(), can_convert_strict
+      // allows NIL -> OBJECT (variant.cpp:543), and set_theme takes an invalid Ref
+      // without complaint. Rejecting it would report a file the engine opens.
+      expect(check('theme', 'null')).toBeNull();
+    });
+
     it('rejects a non-reference theme value', () => {
       expect(check('theme', '"not-a-resource"')).not.toBeNull();
     });

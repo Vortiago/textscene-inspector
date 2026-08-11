@@ -32,8 +32,8 @@ Strict parsing format-checks these `MeshInstance2D` properties, plus 12 inherite
 
 | Property | Accepts |
 | --- | --- |
-| `mesh` | SubResource("id") or ExtResource("id") |
-| `texture` | SubResource("id") or ExtResource("id") |
+| `mesh` | null, SubResource("id") or ExtResource("id") |
+| `texture` | null, SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

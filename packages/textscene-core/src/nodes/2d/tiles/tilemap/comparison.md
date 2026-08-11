@@ -51,7 +51,7 @@ Strict parsing format-checks these `TileMap` properties, plus 12 inherited from 
 | `layer_#/*` | layer |
 | `navigation_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) |
 | `rendering_quadrant_size` | integer 1-128 |
-| `tile_set` | SubResource("id") or ExtResource("id") |
+| `tile_set` | null, SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

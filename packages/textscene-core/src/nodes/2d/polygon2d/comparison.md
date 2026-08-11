@@ -61,7 +61,7 @@ Strict parsing format-checks these `Polygon2D` properties, plus 12 inherited fro
 | `polygon` | PackedVector2Array(x, y, …) |
 | `polygons` | Array of PackedInt32Array(i0, i1, …) or bare [i0, i1, …] index lists |
 | `skeleton` | NodePath("path/to/node") |
-| `texture` | SubResource("id") or ExtResource("id") |
+| `texture` | null, SubResource("id") or ExtResource("id") |
 | `texture_offset` | Vector2(x, y) |
 | `texture_rotation` | float |
 | `texture_scale` | Vector2(x, y) |

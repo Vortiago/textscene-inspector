@@ -54,7 +54,8 @@ const built = existsSync(DIST);
 // `LimitAngularVelocityModifier3D.joint_count` each pass an empty setter string
 // to their ADD_PROPERTY, so `ClassDB::set_property` drops the write before any
 // `_set` runs and a .tscn cannot express them. `OpenXRRenderModel.render_model`
-// is the same shape. Each is pinned by a test asserting `findValidator` returns
+// is a DIFFERENT shape and its setter is real (`set_render_model`): it is
+// `Variant::RID`, a runtime handle with no literal a scene author could write. Each is pinned by a test asserting `findValidator` returns
 // null, so a later sweep cannot "close" them by inventing coverage.
 const EXPECTED_UNVALIDATED = 4;
 

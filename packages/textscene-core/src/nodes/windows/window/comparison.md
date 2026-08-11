@@ -102,13 +102,13 @@ Strict parsing format-checks these `Window` properties, plus 47 inherited from V
 | `position` | Vector2i(x, y) |
 | `sharp_corners` | true or false |
 | `size` | Vector2i(x, y), both >= 0 |
-| `theme` | null, SubResource("id"), or ExtResource("id") |
+| `theme` | null, SubResource("id") or ExtResource("id") |
 | `theme_override_colors/*` | Color(r, g, b, a) |
 | `theme_override_constants/*` | integer -16384-16384 |
 | `theme_override_font_sizes/*` | integer >= 1 |
-| `theme_override_fonts/*` | SubResource("id") or ExtResource("id") |
-| `theme_override_icons/*` | SubResource("id") or ExtResource("id") |
-| `theme_override_styles/*` | SubResource("id") or ExtResource("id") |
+| `theme_override_fonts/*` | null, SubResource("id") or ExtResource("id") |
+| `theme_override_icons/*` | null, SubResource("id") or ExtResource("id") |
+| `theme_override_styles/*` | null, SubResource("id") or ExtResource("id") |
 | `theme_type_variation` | quoted string or &"name" |
 | `title` | quoted string |
 | `transient` | true or false |

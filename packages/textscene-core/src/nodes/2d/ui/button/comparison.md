@@ -46,7 +46,7 @@ Strict parsing format-checks these `Button` properties, plus 10 inherited from B
 | `clip_text` | true or false |
 | `expand_icon` | true or false |
 | `flat` | true or false |
-| `icon` | SubResource("id") or ExtResource("id") |
+| `icon` | null, SubResource("id") or ExtResource("id") |
 | `icon_alignment` | enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL) |
 | `language` | quoted string |
 | `text` | quoted string |

@@ -33,8 +33,12 @@ describe('Camera3D attributes', () => {
     expect(check('attributes', 'SubResource ( "CameraAttributesPractical_1" )')).toBeNull();
   });
 
-  it('rejects the literal null — Godot omits a cleared Resource slot, never writes null', () => {
-    expect(check('attributes', 'null')).not.toBeNull();
+  it('accepts the literal null, a cleared slot Godot loads', () => {
+    // Godot omits a cleared slot rather than writing `null`, but that is the
+    // WRITE side. variant_parser.cpp:699 reads a bare `null`, can_convert_strict
+    // allows NIL -> OBJECT (variant.cpp:543), and the Ref setter takes it, so the
+    // value loads and reporting it would be a false positive.
+    expect(check('attributes', 'null')).toBeNull();
   });
 
   it('rejects a bare resource path string', () => {
@@ -60,8 +64,12 @@ describe('Camera3D compositor', () => {
     expect(check('compositor', 'ExtResource("1_comp")')).toBeNull();
   });
 
-  it('rejects the literal null', () => {
-    expect(check('compositor', 'null')).not.toBeNull();
+  it('accepts the literal null, a cleared slot Godot loads', () => {
+    // Godot omits a cleared slot rather than writing `null`, but that is the
+    // WRITE side. variant_parser.cpp:699 reads a bare `null`, can_convert_strict
+    // allows NIL -> OBJECT (variant.cpp:543), and the Ref setter takes it, so the
+    // value loads and reporting it would be a false positive.
+    expect(check('compositor', 'null')).toBeNull();
   });
 });
 
@@ -74,8 +82,12 @@ describe('Camera3D environment', () => {
     expect(check('environment', 'ExtResource("1_env")')).toBeNull();
   });
 
-  it('rejects the literal null', () => {
-    expect(check('environment', 'null')).not.toBeNull();
+  it('accepts the literal null, a cleared slot Godot loads', () => {
+    // Godot omits a cleared slot rather than writing `null`, but that is the
+    // WRITE side. variant_parser.cpp:699 reads a bare `null`, can_convert_strict
+    // allows NIL -> OBJECT (variant.cpp:543), and the Ref setter takes it, so the
+    // value loads and reporting it would be a false positive.
+    expect(check('environment', 'null')).toBeNull();
   });
 });
 

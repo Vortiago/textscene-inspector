@@ -45,7 +45,7 @@ Strict parsing format-checks these `CSGTorus3D` properties, plus 18 inherited fr
 | --- | --- |
 | `flip_faces` | true or false |
 | `inner_radius` | float > 0 |
-| `material` | SubResource("id") or ExtResource("id") |
+| `material` | null, SubResource("id") or ExtResource("id") |
 | `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) |
 | `outer_radius` | float > 0 |
 | `ring_sides` | integer 3-64 |

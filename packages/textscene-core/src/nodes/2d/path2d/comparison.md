@@ -35,7 +35,7 @@ Strict parsing format-checks these `Path2D` properties, plus 12 inherited from N
 
 | Property | Accepts |
 | --- | --- |
-| `curve` | SubResource("id") or ExtResource("id") |
+| `curve` | null, SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

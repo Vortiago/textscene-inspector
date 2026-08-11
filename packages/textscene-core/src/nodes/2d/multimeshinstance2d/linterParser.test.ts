@@ -109,10 +109,11 @@ describe('MultiMeshInstance2D strict validators', () => {
       expect(check('multimesh', '"res://grass.tres"')?.code).toBe('INVALID_MULTIMESH_REFERENCE');
     });
 
-    it('rejects the literal null', () => {
-      // A bare `Ref<MultiMesh>` that is empty is the property's default and
-      // is simply omitted from serialisation rather than written as `null`.
-      expect(check('multimesh', 'null')).not.toBeNull();
+    it('accepts the literal null, a cleared slot Godot loads', () => {
+      // Omitting a cleared slot is what the WRITER does; the loader still
+      // takes a hand-written `null` (variant_parser.cpp:699, NIL -> OBJECT at
+      // variant.cpp:543), so reporting it would flag a file Godot opens.
+      expect(check('multimesh', 'null')).toBeNull();
     });
   });
 
@@ -129,10 +130,11 @@ describe('MultiMeshInstance2D strict validators', () => {
       expect(check('texture', '"res://marker.png"')?.code).toBe('INVALID_TEXTURE_REFERENCE');
     });
 
-    it('rejects the literal null', () => {
-      // Same default-null shape as `multimesh`: Godot omits the key rather
-      // than writing `texture = null` at the default.
-      expect(check('texture', 'null')).not.toBeNull();
+    it('accepts the literal null, a cleared slot Godot loads', () => {
+      // Omitting a cleared slot is what the WRITER does; the loader still
+      // takes a hand-written `null` (variant_parser.cpp:699, NIL -> OBJECT at
+      // variant.cpp:543), so reporting it would flag a file Godot opens.
+      expect(check('texture', 'null')).toBeNull();
     });
   });
 });

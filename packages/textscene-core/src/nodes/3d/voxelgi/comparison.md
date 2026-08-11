@@ -35,8 +35,8 @@ Strict parsing format-checks these `VoxelGI` properties, plus 1 inherited from V
 
 | Property | Accepts |
 | --- | --- |
-| `camera_attributes` | SubResource("id") or ExtResource("id") |
-| `data` | SubResource("id") or ExtResource("id") |
+| `camera_attributes` | null, SubResource("id") or ExtResource("id") |
+| `data` | null, SubResource("id") or ExtResource("id") |
 | `size` | Vector3(x, y, z), each float >= 1 |
 | `subdiv` | enum 0-3 (SUBDIV_64/SUBDIV_128/SUBDIV_256/SUBDIV_512) |
 

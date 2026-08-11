@@ -37,13 +37,13 @@ Strict parsing format-checks these `TouchScreenButton` properties, plus 12 inher
 | Property | Accepts |
 | --- | --- |
 | `action` | quoted string or &"name" |
-| `bitmask` | SubResource("id") or ExtResource("id") |
+| `bitmask` | null, SubResource("id") or ExtResource("id") |
 | `passby_press` | true or false |
-| `shape` | SubResource("id") or ExtResource("id") |
+| `shape` | null, SubResource("id") or ExtResource("id") |
 | `shape_centered` | true or false |
 | `shape_visible` | true or false |
-| `texture_normal` | SubResource("id") or ExtResource("id") |
-| `texture_pressed` | SubResource("id") or ExtResource("id") |
+| `texture_normal` | null, SubResource("id") or ExtResource("id") |
+| `texture_pressed` | null, SubResource("id") or ExtResource("id") |
 | `visibility_mode` | enum 0-1 (ALWAYS/TOUCHSCREEN_ONLY) |
 
 | Rule | Reports | Severity |

@@ -240,15 +240,10 @@ validatorRegistry.registerAll('Control', {
   // ever reaches a `.tscn` is `NodePath("…")`.
   shortcut_context: v.nodePath('shortcut_context'),
 
-  // "Theme" group.
-  // Nullable on the LOAD side, not the write side. control.cpp:4319 carries no
-  // PROPERTY_USAGE_STORE_IF_NULL (contrast graph_node.cpp:143), so Godot omits
-  // the key rather than writing `null` when the slot is cleared. But
-  // variant_parser.cpp reads a bare `null` as a null OBJECT and set_theme
-  // (control.cpp:2986-3009) has no ERR_FAIL and handles an invalid Ref, so a
-  // hand-written `theme = null` LOADS. Rejecting it would be a false positive
-  // on a file the engine opens. Window.theme is the same property and matches.
-  theme: v.nullableResourceReference('theme'),
+  // "Theme" group. `null` is legal here and the combinator accepts it; see
+  // its docblock for why the write-side STORE_IF_NULL reasoning is a red
+  // herring.
+  theme: v.resourceReference('theme'),
   // control.cpp:3017-3022, StringName param, bare assign. The GETTER
   // (control.cpp:3028, `StringName Control::get_theme_type_variation`) is what
   // the serialiser reads despite ADD_PROPERTY declaring Variant::STRING

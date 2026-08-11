@@ -175,7 +175,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   }),
 
   // :156, Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE "Curve".
-  damping_curve: v.nullableResourceReference('damping_curve'),
+  damping_curve: v.resourceReference('damping_curve'),
 
   // :158, Variant::INT with PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_ARRAY (so
   // it carries STORAGE): the count of the nested joints array. set_joint_count

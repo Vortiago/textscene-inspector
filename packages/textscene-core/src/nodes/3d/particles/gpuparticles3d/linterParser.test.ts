@@ -243,10 +243,10 @@ describe('GPUParticles3D strict validators', () => {
     );
 
     it.each(['draw_pass_1', 'draw_pass_2', 'draw_pass_3', 'draw_pass_4'])(
-      '%s rejects a non-reference, non-null value (FORMAT branch, always an error)',
+      '%s rejects a non-reference, non-null value (always an error)',
       (property) => {
         expect(check(property, '"not-a-resource"')?.code).toBe(
-          `INVALID_${property.toUpperCase()}_FORMAT`
+          `INVALID_${property.toUpperCase()}_REFERENCE`
         );
       }
     );
@@ -266,8 +266,14 @@ describe('GPUParticles3D strict validators', () => {
       expect(check('draw_skin', 'ExtResource("1")')).toBeNull();
     });
 
-    it('rejects the literal null — unlike draw_pass_N, draw_skin never serialises it', () => {
-      expect(check('draw_skin', 'null')?.code).toBe('INVALID_DRAW_SKIN_REFERENCE');
+    it('accepts the literal null, which loads even though Godot omits a cleared skin', () => {
+      // Whether the SERIALISER writes `null` is a separate question from whether
+      // the loader takes one, and only the second decides what a file may hold.
+      expect(check('draw_skin', 'null')).toBeNull();
+    });
+
+    it('rejects a value that is no reference at all', () => {
+      expect(check('draw_skin', '"nope"')?.code).toBe('INVALID_DRAW_SKIN_REFERENCE');
     });
   });
 });

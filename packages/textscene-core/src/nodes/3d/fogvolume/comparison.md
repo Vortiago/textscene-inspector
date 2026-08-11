@@ -33,7 +33,7 @@ Strict parsing format-checks these `FogVolume` properties, plus 1 inherited from
 
 | Property | Accepts |
 | --- | --- |
-| `material` | SubResource("id") or ExtResource("id") |
+| `material` | null, SubResource("id") or ExtResource("id") |
 | `shape` | enum 0-4 (ELLIPSOID/CONE/CYLINDER/BOX/WORLD) |
 | `size` | Vector3(x, y, z), each >= 0 (>= 0.01 recommended; 1024 ceiling is or_greater, so unbounded above) |
 

@@ -98,7 +98,7 @@ export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // :307, PROPERTY_HINT_RANGE "0,1,0.001,or_greater,suffix:m". Open ceiling, and
   // set_radius (:642) assigns straight through: warning on the floor only.
   'radius/value': v.float('radius/value', { min: 0, hinted: 'spring_bone_simulator_3d.cpp:307' }),
-  'radius/damping_curve': v.nullableResourceReference('radius/damping_curve'),
+  'radius/damping_curve': v.resourceReference('radius/damping_curve'),
 
   // :309, PROPERTY_HINT_RANGE "0,4,0.01,or_greater". set_stiffness (:676)
   // assigns straight through.
@@ -106,18 +106,18 @@ export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
     min: 0,
     hinted: 'spring_bone_simulator_3d.cpp:309',
   }),
-  'stiffness/damping_curve': v.nullableResourceReference('stiffness/damping_curve'),
+  'stiffness/damping_curve': v.resourceReference('stiffness/damping_curve'),
 
   // :311, PROPERTY_HINT_RANGE "0,1,0.01,or_greater". set_drag (:710) assigns
   // straight through.
   'drag/value': v.float('drag/value', { min: 0, hinted: 'spring_bone_simulator_3d.cpp:311' }),
-  'drag/damping_curve': v.nullableResourceReference('drag/damping_curve'),
+  'drag/damping_curve': v.resourceReference('drag/damping_curve'),
 
   // :313, PROPERTY_HINT_RANGE "0,1,0.01,or_greater,or_less,suffix:m/s". BOTH
   // ends are opened, so there is no bound to report at all: gravity is a signed
   // constant velocity and a negative one is ordinary. Format check only.
   'gravity/value': v.float('gravity/value'),
-  'gravity/damping_curve': v.nullableResourceReference('gravity/damping_curve'),
+  'gravity/damping_curve': v.resourceReference('gravity/damping_curve'),
 
   // :315, Variant::VECTOR3, and the one leaf whose setter refuses a value.
   'gravity/direction': nonZeroVector3(

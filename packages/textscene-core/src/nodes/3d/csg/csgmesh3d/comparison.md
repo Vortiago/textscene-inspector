@@ -49,8 +49,8 @@ Strict parsing format-checks these `CSGMesh3D` properties, plus 18 inherited fro
 | Property | Accepts |
 | --- | --- |
 | `flip_faces` | true or false |
-| `material` | SubResource("id") or ExtResource("id") |
-| `mesh` | SubResource("id") or ExtResource("id") |
+| `material` | null, SubResource("id") or ExtResource("id") |
+| `mesh` | null, SubResource("id") or ExtResource("id") |
 | `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) |
 
 | Rule | Reports | Severity |

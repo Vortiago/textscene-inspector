@@ -50,8 +50,8 @@ Strict parsing format-checks these `GridMap` properties, plus 17 inherited from 
 | `collision_mask` | 32-bit layer mask (layers 1-32) |
 | `collision_priority` | float |
 | `data` | Dictionary literal { "cells": PackedInt32Array(...) } |
-| `mesh_library` | SubResource("id") or ExtResource("id") |
-| `physics_material` | SubResource("id") or ExtResource("id") |
+| `mesh_library` | null, SubResource("id") or ExtResource("id") |
+| `physics_material` | null, SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

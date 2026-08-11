@@ -96,7 +96,7 @@ Strict parsing format-checks these `CSGPolygon3D` properties, plus 18 inherited 
 | --- | --- |
 | `depth` | float >= 0.001 |
 | `flip_faces` | true or false |
-| `material` | SubResource("id") or ExtResource("id") |
+| `material` | null, SubResource("id") or ExtResource("id") |
 | `mode` | enum 0-2 (DEPTH/SPIN/PATH) |
 | `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) |
 | `path_continuous_u` | true or false |

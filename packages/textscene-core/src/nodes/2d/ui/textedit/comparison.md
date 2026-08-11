@@ -78,7 +78,7 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 | `shortcut_keys_enabled` | true or false |
 | `structured_text_bidi_override` | enum 0-6 (STRUCTURED_TEXT_DEFAULT/STRUCTURED_TEXT_URI/STRUCTURED_TEXT_FILE/STRUCTURED_TEXT_EMAIL/STRUCTURED_TEXT_LIST/STRUCTURED_TEXT_GDSCRIPT/STRUCTURED_TEXT_CUSTOM) |
 | `structured_text_bidi_override_options` | Array literal ([...]) |
-| `syntax_highlighter` | SubResource("id") or ExtResource("id") |
+| `syntax_highlighter` | null, SubResource("id") or ExtResource("id") |
 | `tab_input_mode` | true or false |
 | `text` | quoted string |
 | `text_direction` | enum -1-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) |

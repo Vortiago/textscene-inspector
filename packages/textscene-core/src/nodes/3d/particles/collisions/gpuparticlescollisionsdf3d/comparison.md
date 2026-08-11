@@ -35,7 +35,7 @@ Strict parsing format-checks these `GPUParticlesCollisionSDF3D` properties, plus
 | `bake_mask` | 32-bit layer mask (layers 1-32) |
 | `resolution` | enum 0-5 (16/32/64/128/256/512) |
 | `size` | Vector3(x, y, z), each float >= 0.01 |
-| `texture` | SubResource("id") or ExtResource("id") |
+| `texture` | null, SubResource("id") or ExtResource("id") |
 | `thickness` | float 0-2 |
 
 | Rule | Reports | Severity |

@@ -30,7 +30,7 @@ Strict parsing format-checks these `GPUParticlesAttractorVectorField3D` properti
 | Property | Accepts |
 | --- | --- |
 | `size` | Vector3(x, y, z), each float >= 0.01 |
-| `texture` | SubResource("id") or ExtResource("id") |
+| `texture` | null, SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

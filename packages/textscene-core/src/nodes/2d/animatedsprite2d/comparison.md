@@ -50,7 +50,7 @@ Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inheri
 | `offset` | Vector2(x, y) |
 | `playing` | true or false |
 | `speed_scale` | float |
-| `sprite_frames` | SubResource("id") or ExtResource("id") |
+| `sprite_frames` | null, SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

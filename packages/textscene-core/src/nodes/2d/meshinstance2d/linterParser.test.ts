@@ -108,10 +108,11 @@ describe('MeshInstance2D strict validators', () => {
       expect(check('mesh', '"res://quad.tres"')?.code).toBe('INVALID_MESH_REFERENCE');
     });
 
-    it('rejects the literal null', () => {
-      // A bare `Ref<Mesh>` that is empty is the property's default and is
-      // simply omitted from serialisation rather than written as `null`.
-      expect(check('mesh', 'null')).not.toBeNull();
+    it('accepts the literal null, a cleared slot Godot loads', () => {
+      // Omitting a cleared slot is what the WRITER does; the loader still
+      // takes a hand-written `null` (variant_parser.cpp:699, NIL -> OBJECT at
+      // variant.cpp:543), so reporting it would flag a file Godot opens.
+      expect(check('mesh', 'null')).toBeNull();
     });
   });
 
@@ -128,10 +129,11 @@ describe('MeshInstance2D strict validators', () => {
       expect(check('texture', '"res://marker.png"')?.code).toBe('INVALID_TEXTURE_REFERENCE');
     });
 
-    it('rejects the literal null', () => {
-      // Same default-null shape as `mesh`: Godot omits the key rather than
-      // writing `texture = null` at the default.
-      expect(check('texture', 'null')).not.toBeNull();
+    it('accepts the literal null, a cleared slot Godot loads', () => {
+      // Omitting a cleared slot is what the WRITER does; the loader still
+      // takes a hand-written `null` (variant_parser.cpp:699, NIL -> OBJECT at
+      // variant.cpp:543), so reporting it would flag a file Godot opens.
+      expect(check('texture', 'null')).toBeNull();
     });
   });
 });

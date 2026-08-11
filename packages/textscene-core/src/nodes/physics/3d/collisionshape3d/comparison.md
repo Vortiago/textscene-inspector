@@ -36,7 +36,7 @@ Strict parsing format-checks these `CollisionShape3D` properties, plus 17 inheri
 | `debug_color` | Color(r, g, b, a) |
 | `debug_fill` | true or false |
 | `disabled` | true or false |
-| `shape` | SubResource("id") or ExtResource("id") |
+| `shape` | null, SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

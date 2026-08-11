@@ -51,8 +51,8 @@ const SLOT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   left_color: v.color('left_color'),
   right_color: v.color('right_color'),
   // graph_node.cpp:143,147 — Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE "Texture2D".
-  left_icon: v.nullableResourceReference('left_icon'),
-  right_icon: v.nullableResourceReference('right_icon'),
+  left_icon: v.resourceReference('left_icon'),
+  right_icon: v.resourceReference('right_icon'),
   // graph_node.cpp:148 — Variant::BOOL, no hint.
   draw_stylebox: v.boolean('draw_stylebox'),
 };

@@ -41,7 +41,7 @@ Strict parsing format-checks these `AnimatedSprite3D` properties, plus 20 inheri
 | `frame` | integer >= 0 |
 | `frame_progress` | float |
 | `speed_scale` | float |
-| `sprite_frames` | SubResource("id") or ExtResource("id") |
+| `sprite_frames` | null, SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

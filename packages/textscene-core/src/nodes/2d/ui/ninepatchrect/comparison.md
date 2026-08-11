@@ -44,7 +44,7 @@ Strict parsing format-checks these `NinePatchRect` properties, plus 53 inherited
 | `patch_margin_right` | integer 0-16384 |
 | `patch_margin_top` | integer 0-16384 |
 | `region_rect` | Rect2(x, y, w, h) |
-| `texture` | SubResource("id") or ExtResource("id") |
+| `texture` | null, SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -55,7 +55,7 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inh
 | `pitch_scale` | float >= 5e-324 |
 | `playback_type` | enum 0-2 (DEFAULT/STREAM/SAMPLE) |
 | `playing` | true or false |
-| `stream` | SubResource("id") or ExtResource("id") |
+| `stream` | null, SubResource("id") or ExtResource("id") |
 | `stream_paused` | true or false |
 | `unit_size` | float |
 | `volume_db` | float |

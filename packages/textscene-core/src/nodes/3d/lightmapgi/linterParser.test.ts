@@ -426,8 +426,12 @@ describe('LightmapGI strict validators', () => {
       expect(check('environment_custom_sky', 'ExtResource("1")')).toBeNull();
     });
 
-    it('rejects the literal null — the property is simply omitted at default, not written as null', () => {
-      expect(check('environment_custom_sky', 'null')).not.toBeNull();
+    it('accepts the literal null, a cleared slot Godot loads', () => {
+      // Omitting a cleared slot is what the WRITER does. The loader still
+      // takes a hand-written `null`: variant_parser.cpp:699 reads it as
+      // Variant(), can_convert_strict allows NIL -> OBJECT (variant.cpp:543),
+      // and the Ref setter accepts an invalid Ref.
+      expect(check('environment_custom_sky', 'null')).toBeNull();
     });
 
     it('rejects a bare resource path string', () => {
@@ -473,8 +477,12 @@ describe('LightmapGI strict validators', () => {
       expect(check('camera_attributes', 'ExtResource("1")')).toBeNull();
     });
 
-    it('rejects the literal null', () => {
-      expect(check('camera_attributes', 'null')).not.toBeNull();
+    it('accepts the literal null, a cleared slot Godot loads', () => {
+      // Omitting a cleared slot is what the WRITER does. The loader still
+      // takes a hand-written `null`: variant_parser.cpp:699 reads it as
+      // Variant(), can_convert_strict allows NIL -> OBJECT (variant.cpp:543),
+      // and the Ref setter accepts an invalid Ref.
+      expect(check('camera_attributes', 'null')).toBeNull();
     });
   });
 
@@ -507,8 +515,12 @@ describe('LightmapGI strict validators', () => {
       expect(check('light_data', 'ExtResource("1")')).toBeNull();
     });
 
-    it('rejects the literal null', () => {
-      expect(check('light_data', 'null')).not.toBeNull();
+    it('accepts the literal null, a cleared slot Godot loads', () => {
+      // Omitting a cleared slot is what the WRITER does. The loader still
+      // takes a hand-written `null`: variant_parser.cpp:699 reads it as
+      // Variant(), can_convert_strict allows NIL -> OBJECT (variant.cpp:543),
+      // and the Ref setter accepts an invalid Ref.
+      expect(check('light_data', 'null')).toBeNull();
     });
   });
 });

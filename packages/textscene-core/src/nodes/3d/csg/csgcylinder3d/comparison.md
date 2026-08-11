@@ -44,7 +44,7 @@ Strict parsing format-checks these `CSGCylinder3D` properties, plus 18 inherited
 | `cone` | true or false |
 | `flip_faces` | true or false |
 | `height` | float > 0 |
-| `material` | SubResource("id") or ExtResource("id") |
+| `material` | null, SubResource("id") or ExtResource("id") |
 | `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) |
 | `radius` | float > 0 |
 | `sides` | integer 3-64 |

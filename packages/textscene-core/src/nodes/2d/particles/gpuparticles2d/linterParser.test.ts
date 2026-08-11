@@ -449,8 +449,12 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('process_material', 'ExtResource("1")')).toBeNull();
     });
 
+    it('accepts the literal null, a cleared slot Godot loads', () => {
+      expect(check('process_material', 'null')).toBeNull();
+    });
+
     it('rejects a non-reference value', () => {
-      expect(check('process_material', 'null')?.code).toBe('INVALID_PROCESS_MATERIAL_REFERENCE');
+      expect(check('process_material', '"nope"')?.code).toBe('INVALID_PROCESS_MATERIAL_REFERENCE');
     });
   });
 });

@@ -82,7 +82,7 @@ Strict parsing format-checks these `LineEdit` properties, plus 53 inherited from
 | `max_length` | integer >= 0 |
 | `middle_mouse_paste_enabled` | true or false |
 | `placeholder_text` | quoted string |
-| `right_icon` | SubResource("id") or ExtResource("id") |
+| `right_icon` | null, SubResource("id") or ExtResource("id") |
 | `right_icon_scale` | float 0.1-1 |
 | `secret` | true or false |
 | `secret_character` | quoted string, at most one character |

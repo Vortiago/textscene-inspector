@@ -111,11 +111,11 @@ describe('MultiMeshInstance3D strict validators', () => {
       expect(check('multimesh', '"res://grass.tres"')).not.toBeNull();
     });
 
-    it('rejects the literal null', () => {
-      // Unlike an indexed slot Godot clears while a sibling still sets it,
-      // a bare `Ref<MultiMesh>` that is empty is the property's default and
-      // is simply omitted from serialisation rather than written as `null`.
-      expect(check('multimesh', 'null')).not.toBeNull();
+    it('accepts the literal null, a cleared slot Godot loads', () => {
+      // Omitting a cleared slot is what the WRITER does; the loader still
+      // takes a hand-written `null` (variant_parser.cpp:699, NIL -> OBJECT at
+      // variant.cpp:543), so reporting it would flag a file Godot opens.
+      expect(check('multimesh', 'null')).toBeNull();
     });
   });
 });

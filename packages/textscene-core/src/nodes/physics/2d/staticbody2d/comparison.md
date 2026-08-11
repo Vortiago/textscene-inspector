@@ -36,7 +36,7 @@ Strict parsing format-checks these `StaticBody2D` properties, plus 5 inherited f
 | --- | --- |
 | `constant_angular_velocity` | float |
 | `constant_linear_velocity` | Vector2(x, y) |
-| `physics_material_override` | SubResource("id") or ExtResource("id") |
+| `physics_material_override` | null, SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

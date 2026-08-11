@@ -45,12 +45,12 @@ Strict parsing format-checks these `TextureButton` properties, plus 10 inherited
 | `flip_v` | true or false |
 | `ignore_texture_size` | true or false |
 | `stretch_mode` | enum 0-6 (STRETCH_SCALE/STRETCH_TILE/STRETCH_KEEP/STRETCH_KEEP_CENTERED/STRETCH_KEEP_ASPECT/STRETCH_KEEP_ASPECT_CENTERED/STRETCH_KEEP_ASPECT_COVERED) |
-| `texture_click_mask` | SubResource("id") or ExtResource("id") |
-| `texture_disabled` | SubResource("id") or ExtResource("id") |
-| `texture_focused` | SubResource("id") or ExtResource("id") |
-| `texture_hover` | SubResource("id") or ExtResource("id") |
-| `texture_normal` | SubResource("id") or ExtResource("id") |
-| `texture_pressed` | SubResource("id") or ExtResource("id") |
+| `texture_click_mask` | null, SubResource("id") or ExtResource("id") |
+| `texture_disabled` | null, SubResource("id") or ExtResource("id") |
+| `texture_focused` | null, SubResource("id") or ExtResource("id") |
+| `texture_hover` | null, SubResource("id") or ExtResource("id") |
+| `texture_normal` | null, SubResource("id") or ExtResource("id") |
+| `texture_pressed` | null, SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
