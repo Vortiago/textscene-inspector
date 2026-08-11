@@ -31,7 +31,7 @@ never runs, and nothing in the scene moves.
 ## Linting
 
 <!-- lint:begin XRHandModifier3D -->
-Strict parsing format-checks these `XRHandModifier3D` properties, plus 2 inherited from SkeletonModifier3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `XRHandModifier3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

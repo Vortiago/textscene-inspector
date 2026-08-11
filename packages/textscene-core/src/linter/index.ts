@@ -16,6 +16,7 @@
 // they gain type-specific validators or semantic rules.
 import '../nodes/node/index.linter.js';
 import '../nodes/canvasitem/shared/index.linter.js';
+import '../nodes/2d/ui/canvaslayer/index.linter.js';
 import '../nodes/2d/ui/control/index.linter.js';
 import '../nodes/2d/ui/container/index.linter.js';
 import '../nodes/2d/ui/subviewportcontainer/index.linter.js';

@@ -27,7 +27,7 @@ to compare against Godot.
 ## Linting
 
 <!-- lint:begin ScriptCreateDialog -->
-Strict parsing format-checks the inherited set (1 inherited from ConfirmationDialog, 5 inherited from AcceptDialog, 45 inherited from Window, 9 inherited from Viewport, 10 inherited from Node); `ScriptCreateDialog` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (1 inherited from ConfirmationDialog, 5 inherited from AcceptDialog, 45 inherited from Window, 47 inherited from Viewport, 10 inherited from Node); `ScriptCreateDialog` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

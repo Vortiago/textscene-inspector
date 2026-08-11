@@ -14,6 +14,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 import { busValidator } from '../busValidator.js';
 
+const PLAYBACK_TYPE = { 0: 'DEFAULT', 1: 'STREAM', 2: 'SAMPLE' };
 const ATTENUATION_MODEL = {
   0: 'INVERSE_DISTANCE',
   1: 'INVERSE_SQUARE_DISTANCE',
@@ -39,6 +40,15 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   playing: v.boolean('playing'),
   autoplay: v.boolean('autoplay'),
   stream_paused: v.boolean('stream_paused'),
+  // audio_stream_player_3d.cpp:896, PROPERTY_HINT_ENUM "Default,Stream,Sample".
+  // set_playback_type (:789-791) forwards to
+  // AudioStreamPlayerInternal::set_playback_type (audio_stream_player_internal.cpp:337-339),
+  // the SAME setter and SAME AudioServer::PlaybackType enum AudioStreamPlayer's
+  // validator of the same name grounds against: a bare assignment, out-of-range
+  // only warns.
+  playback_type: v.enumInt('playback_type', 0, 2, PLAYBACK_TYPE, {
+    hinted: 'audio_stream_player_3d.cpp:896',
+  }),
   // audio_stream_player_3d.cpp:721, ERR_FAIL_INDEX((int)p_model, 4).
   attenuation_model: v.enumInt('attenuation_model', 0, 3, ATTENUATION_MODEL, {
     enforced: 'audio_stream_player_3d.cpp:721',

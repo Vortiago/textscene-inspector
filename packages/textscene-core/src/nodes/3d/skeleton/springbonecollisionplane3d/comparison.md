@@ -39,7 +39,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin SpringBoneCollisionPlane3D -->
-Strict parsing format-checks the inherited set (4 inherited from SpringBoneCollision3D, 16 inherited from Node3D, 10 inherited from Node); `SpringBoneCollisionPlane3D` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (4 inherited from SpringBoneCollision3D, 17 inherited from Node3D, 10 inherited from Node); `SpringBoneCollisionPlane3D` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

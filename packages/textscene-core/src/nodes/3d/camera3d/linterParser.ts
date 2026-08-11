@@ -51,4 +51,15 @@ validatorRegistry.registerAll('Camera3D', {
   current: v.boolean('current'),
   h_offset: v.float('h_offset'),
   v_offset: v.float('v_offset'),
+  // camera_3d.cpp:675, ADD_PROPERTY(Variant::OBJECT, "attributes", …). set_attributes
+  // (:532-555) is a bare assignment (connects a changed signal, no refusal), so
+  // only the reference format is checkable. Godot omits the key entirely when
+  // the slot is cleared rather than writing null.
+  attributes: v.resourceReference('attributes'),
+  // camera_3d.cpp:676, ADD_PROPERTY(Variant::OBJECT, "compositor", …). set_compositor
+  // (:572-580) is a bare assignment.
+  compositor: v.resourceReference('compositor'),
+  // camera_3d.cpp:674, ADD_PROPERTY(Variant::OBJECT, "environment", …). set_environment
+  // (:518-526) is a bare assignment.
+  environment: v.resourceReference('environment'),
 });

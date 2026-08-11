@@ -21,4 +21,7 @@ validatorRegistry.registerAll('SubViewportContainer', {
     "Property 'stretch_shrink' must be an integer >= 1 (Godot rejects anything lower)",
     { enforced: 'subviewport_container.cpp:71' }
   ),
+  // subviewport_container.cpp:249-251 — bare assignment, no hint on the BOOL
+  // property (:302), so format-only.
+  mouse_target: v.boolean('mouse_target'),
 });

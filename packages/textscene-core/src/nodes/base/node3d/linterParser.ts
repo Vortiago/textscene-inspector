@@ -26,6 +26,12 @@ const ROTATION_ORDER = {
   5: 'ZYX',
 };
 
+const ROTATION_EDIT_MODE = {
+  0: 'Euler',
+  1: 'Quaternion',
+  2: 'Basis',
+};
+
 validatorRegistry.registerAll('Node3D', {
   transform: v.transform3d('transform'),
   global_transform: v.transform3d('global_transform'),
@@ -45,5 +51,12 @@ validatorRegistry.registerAll('Node3D', {
   // node_3d.cpp:760, ERR_FAIL_INDEX(int32_t(p_order), 6).
   rotation_order: v.enumInt('rotation_order', 0, 5, ROTATION_ORDER, {
     enforced: 'node_3d.cpp:760',
+  }),
+  // node_3d.cpp:1532, PROPERTY_HINT_ENUM "Euler,Quaternion,Basis". Unlike
+  // rotation_order's neighbouring ERR_FAIL_INDEX, set_rotation_edit_mode
+  // (node_3d.cpp:717-746) has no range guard at all, so out-of-range is
+  // hinted only.
+  rotation_edit_mode: v.enumInt('rotation_edit_mode', 0, 2, ROTATION_EDIT_MODE, {
+    hinted: 'node_3d.cpp:1532',
   }),
 });

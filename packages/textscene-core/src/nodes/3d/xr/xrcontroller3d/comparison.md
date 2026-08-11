@@ -35,7 +35,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin XRController3D -->
-Strict parsing format-checks the inherited set (3 inherited from XRNode3D, 16 inherited from Node3D, 10 inherited from Node); `XRController3D` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (3 inherited from XRNode3D, 17 inherited from Node3D, 10 inherited from Node); `XRController3D` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

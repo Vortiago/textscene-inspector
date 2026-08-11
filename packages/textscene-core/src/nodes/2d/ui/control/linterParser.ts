@@ -15,8 +15,45 @@
 
 import '../../../canvasitem/shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v } from '../../../../linter/validators/index.js';
+import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
+import { v, shape, propertyError } from '../../../../linter/validators/index.js';
 import { THEME_OVERRIDE_VALIDATORS } from '../../../../linter/validators/themeOverrides.js';
+import { NODE_PATH_LITERAL_RE, splitTopLevel } from '../../../../godot/index.js';
+
+/**
+ * `Array[NodePath]([…])` — the four `accessibility_*_nodes` properties
+ * (control.cpp:4313-4316, `PROPERTY_HINT_ARRAY_TYPE "NodePath"` on a
+ * `Variant::ARRAY`, not `PACKED_*`) are `TypedArray<NodePath>` getters, so the
+ * serialiser takes the typed-array branch (`core/variant/variant_parser.cpp:2341-2344`)
+ * rather than any packed spelling. The bare `[NodePath(…), …]` form loads too:
+ * `TypedArray(const Array&)` (`core/variant/typed_array.h:43-46`) calls `assign()`
+ * on an untyped incoming array, the same trap CodeEdit's array properties
+ * document. Setters (control.cpp:2203-2247) are bare assigns, no ERR_FAIL, so
+ * this is a shape check only: an empty array is legal and every element must
+ * itself be a `NodePath("…")` literal, empty path included.
+ */
+function nodePathArray(name: string): PropertyValidator {
+  const code = `INVALID_${name.toUpperCase()}_FORMAT`;
+  const reject = (key: string, line: number, value: string) =>
+    propertyError(
+      key,
+      line,
+      `Property '${name}' must be Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …], got: ${value}`,
+      code
+    );
+  return shape((key, value, line) => {
+    const trimmed = value.trim();
+    const typed = /^Array\s*\[\s*NodePath\s*\]\s*\(\s*\[([\s\S]*)\]\s*\)$/.exec(trimmed);
+    const match = typed ?? /^\[([\s\S]*)\]$/.exec(trimmed);
+    if (!match) return reject(key, line, value);
+    const body = match[1]!.trim();
+    if (body === '') return null;
+    for (const element of splitTopLevel(body)) {
+      if (!NODE_PATH_LITERAL_RE.test(element)) return reject(key, line, value);
+    }
+    return null;
+  }, 'Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …]');
+}
 
 validatorRegistry.registerAll('Control', {
   // Layout regime + anchors/offsets (the free/anchored path).
@@ -102,4 +139,130 @@ validatorRegistry.registerAll('Control', {
   // Grounding for these two lives in linter/validators/themeOverrides.ts,
   // which this slice does not own.
   ...THEME_OVERRIDE_VALIDATORS,
+
+  // "Accessibility" group (control.cpp:4310-4316). Setters are bare assigns
+  // (control.cpp:2166-2247), no ERR_FAIL anywhere in the group.
+  accessibility_name: v.quotedString('accessibility_name'),
+  accessibility_description: v.quotedString('accessibility_description'),
+  // control.cpp:4312, ENUM "Off,Polite,Assertive" = DisplayServer::AccessibilityLiveMode
+  // (3 BIND_ENUM_CONSTANTs, display/display_server.cpp:1768-1770). Field is
+  // full-width (control.h:259), not a bitfield: hinted, not enforced.
+  accessibility_live: v.enumInt(
+    'accessibility_live',
+    0,
+    2,
+    { 0: 'OFF', 1: 'POLITE', 2: 'ASSERTIVE' },
+    { hinted: 'control.cpp:4312' }
+  ),
+  accessibility_controls_nodes: nodePathArray('accessibility_controls_nodes'),
+  accessibility_described_by_nodes: nodePathArray('accessibility_described_by_nodes'),
+  accessibility_labeled_by_nodes: nodePathArray('accessibility_labeled_by_nodes'),
+  accessibility_flow_to_nodes: nodePathArray('accessibility_flow_to_nodes'),
+
+  // "Focus" group. Neighbor/next/previous are NODE_PATH with only
+  // PROPERTY_HINT_NODE_PATH_VALID_TYPES (an editor-picker filter, not a value
+  // bound); setters (control.cpp:2618-2648) bare-assign the path itself — the
+  // ERR_FAIL_INDEX at :2620 guards the internal Side index, not the value.
+  focus_neighbor_left: v.nodePath('focus_neighbor_left'),
+  focus_neighbor_top: v.nodePath('focus_neighbor_top'),
+  focus_neighbor_right: v.nodePath('focus_neighbor_right'),
+  focus_neighbor_bottom: v.nodePath('focus_neighbor_bottom'),
+  focus_next: v.nodePath('focus_next'),
+  focus_previous: v.nodePath('focus_previous'),
+  // control.cpp:2295, ERR_FAIL_INDEX((int)p_focus_behavior_recursive, 3) — enforced.
+  // ENUM "Inherited,Disabled,Enabled" (control.h:72-76, INHERITED=0..ENABLED=2).
+  focus_behavior_recursive: v.enumInt(
+    'focus_behavior_recursive',
+    0,
+    2,
+    { 0: 'INHERITED', 1: 'DISABLED', 2: 'ENABLED' },
+    { enforced: 'control.cpp:2295' }
+  ),
+
+  // "Mouse" group.
+  // control.cpp:1953, ERR_FAIL_INDEX(p_mouse_behavior_recursive, 3) — enforced.
+  // Same three labels/values as focus_behavior_recursive (control.h:94-98).
+  mouse_behavior_recursive: v.enumInt(
+    'mouse_behavior_recursive',
+    0,
+    2,
+    { 0: 'INHERITED', 1: 'DISABLED', 2: 'ENABLED' },
+    { enforced: 'control.cpp:1953' }
+  ),
+  mouse_force_pass_scroll_events: v.boolean('mouse_force_pass_scroll_events'),
+  // control.cpp:2877, ERR_FAIL_INDEX(int(p_shape), CURSOR_MAX) where
+  // CURSOR_MAX=17 (control.h:100-118, ARROW=0..HELP=16) — enforced.
+  mouse_default_cursor_shape: v.enumInt(
+    'mouse_default_cursor_shape',
+    0,
+    16,
+    {
+      0: 'ARROW',
+      1: 'IBEAM',
+      2: 'POINTING_HAND',
+      3: 'CROSS',
+      4: 'WAIT',
+      5: 'BUSY',
+      6: 'DRAG',
+      7: 'CAN_DROP',
+      8: 'FORBIDDEN',
+      9: 'VSIZE',
+      10: 'HSIZE',
+      11: 'BDIAGSIZE',
+      12: 'FDIAGSIZE',
+      13: 'MOVE',
+      14: 'VSPLIT',
+      15: 'HSPLIT',
+      16: 'HELP',
+    },
+    { enforced: 'control.cpp:2877' }
+  ),
+
+  // Misc.
+  clip_contents: v.boolean('clip_contents'),
+  localize_numeral_system: v.boolean('localize_numeral_system'),
+  // control.cpp:3539, ERR_FAIL_INDEX(p_direction, LAYOUT_DIRECTION_MAX) where
+  // MAX=5 (control.h:154-160, INHERITED=0..SYSTEM_LOCALE=4). The early return
+  // at :3536 fires only when the incoming value equals data.layout_dir, which
+  // is itself only ever assigned a value that already cleared this same
+  // guard — so it can never intercept an out-of-range write. Enforced.
+  layout_direction: v.enumInt(
+    'layout_direction',
+    0,
+    4,
+    { 0: 'INHERITED', 1: 'APPLICATION_LOCALE', 2: 'LTR', 3: 'RTL', 4: 'SYSTEM_LOCALE' },
+    { enforced: 'control.cpp:3539' }
+  ),
+  // shortcut_context declares Variant::OBJECT + PROPERTY_HINT_NODE_TYPE
+  // (control.cpp:4307, takes a live `const Node *`), but packed_scene.cpp:884-891
+  // converts a Node value to `get_path_to(n)` — a NodePath — before writing it,
+  // and skips the key entirely when it was never set. The only spelling that
+  // ever reaches a `.tscn` is `NodePath("…")`.
+  shortcut_context: v.nodePath('shortcut_context'),
+
+  // "Theme" group.
+  // Nullable on the LOAD side, not the write side. control.cpp:4319 carries no
+  // PROPERTY_USAGE_STORE_IF_NULL (contrast graph_node.cpp:143), so Godot omits
+  // the key rather than writing `null` when the slot is cleared. But
+  // variant_parser.cpp reads a bare `null` as a null OBJECT and set_theme
+  // (control.cpp:2986-3009) has no ERR_FAIL and handles an invalid Ref, so a
+  // hand-written `theme = null` LOADS. Rejecting it would be a false positive
+  // on a file the engine opens. Window.theme is the same property and matches.
+  theme: v.nullableResourceReference('theme'),
+  // control.cpp:3017-3022, StringName param, bare assign. The GETTER
+  // (control.cpp:3028, `StringName Control::get_theme_type_variation`) is what
+  // the serialiser reads despite ADD_PROPERTY declaring Variant::STRING
+  // (control.cpp:4320) — StringName always writes `&"…"` (variant_parser.cpp:2147-2151).
+  theme_type_variation: v.stringName('theme_type_variation'),
+  // control.cpp:3657-3660, bare assign to a full-width field (control.h:298).
+  // ENUM "Inherit,Always,Disabled" = Node::AutoTranslateMode (3
+  // BIND_ENUM_CONSTANTs, main/node.cpp:4032-4034). Hinted, not enforced.
+  tooltip_auto_translate_mode: v.enumInt(
+    'tooltip_auto_translate_mode',
+    0,
+    2,
+    { 0: 'INHERIT', 1: 'ALWAYS', 2: 'DISABLED' },
+    { hinted: 'control.cpp:4288' }
+  ),
+  tooltip_text: v.quotedString('tooltip_text'),
 });

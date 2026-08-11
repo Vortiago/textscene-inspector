@@ -31,7 +31,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin VoxelGI -->
-Strict parsing format-checks these `VoxelGI` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `VoxelGI` properties, plus 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

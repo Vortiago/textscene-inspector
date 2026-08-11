@@ -43,7 +43,7 @@ compare against Godot.
 ## Linting
 
 <!-- lint:begin FileDialog -->
-Strict parsing format-checks these `FileDialog` properties, plus 1 inherited from ConfirmationDialog, 5 inherited from AcceptDialog, 45 inherited from Window, 9 inherited from Viewport, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `FileDialog` properties, plus 1 inherited from ConfirmationDialog, 5 inherited from AcceptDialog, 45 inherited from Window, 47 inherited from Viewport, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

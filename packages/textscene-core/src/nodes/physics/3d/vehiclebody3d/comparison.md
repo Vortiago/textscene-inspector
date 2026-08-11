@@ -39,7 +39,7 @@ antialiasing along the chassis and wheel silhouettes.
 ## Linting
 
 <!-- lint:begin VehicleBody3D -->
-Strict parsing format-checks these `VehicleBody3D` properties, plus 23 inherited from RigidBody3D, 6 inherited from CollisionObject3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `VehicleBody3D` properties, plus 23 inherited from RigidBody3D, 6 inherited from CollisionObject3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

@@ -47,7 +47,7 @@ from Godot.
 ## Linting
 
 <!-- lint:begin GeometryInstance3D -->
-Strict parsing format-checks these `GeometryInstance3D` properties, plus 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `GeometryInstance3D` properties, plus 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

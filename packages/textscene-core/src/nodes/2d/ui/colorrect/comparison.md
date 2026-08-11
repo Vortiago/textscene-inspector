@@ -27,7 +27,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin ColorRect -->
-Strict parsing format-checks these `ColorRect` properties, plus 28 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `ColorRect` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

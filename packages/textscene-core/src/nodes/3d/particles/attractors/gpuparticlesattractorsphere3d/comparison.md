@@ -28,7 +28,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin GPUParticlesAttractorSphere3D -->
-Strict parsing format-checks these `GPUParticlesAttractorSphere3D` properties, plus 4 inherited from GPUParticlesAttractor3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `GPUParticlesAttractorSphere3D` properties, plus 4 inherited from GPUParticlesAttractor3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

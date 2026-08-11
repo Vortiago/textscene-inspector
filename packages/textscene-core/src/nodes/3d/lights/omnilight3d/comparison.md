@@ -38,7 +38,7 @@ distance-falloff divergence does not surface at this range.
 ## Linting
 
 <!-- lint:begin OmniLight3D -->
-Strict parsing format-checks these `OmniLight3D` properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `OmniLight3D` properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

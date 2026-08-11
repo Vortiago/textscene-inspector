@@ -174,10 +174,11 @@ also the blit's coverage guard. Measured through Godot 4.6.3 with
 ## Linting
 
 <!-- lint:begin SubViewportContainer -->
-Strict parsing format-checks these `SubViewportContainer` properties, plus 28 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `SubViewportContainer` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
+| `mouse_target` | true or false |
 | `stretch` | true or false |
 | `stretch_shrink` | integer > 0 |
 

@@ -69,7 +69,7 @@ compare against Godot.
 ## Linting
 
 <!-- lint:begin Window -->
-Strict parsing format-checks these `Window` properties, plus 9 inherited from Viewport, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Window` properties, plus 47 inherited from Viewport, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
@@ -102,7 +102,7 @@ Strict parsing format-checks these `Window` properties, plus 9 inherited from Vi
 | `position` | Vector2i(x, y) |
 | `sharp_corners` | true or false |
 | `size` | Vector2i(x, y), both >= 0 |
-| `theme` | SubResource("id") or ExtResource("id") |
+| `theme` | null, SubResource("id"), or ExtResource("id") |
 | `theme_override_colors/*` | Color(r, g, b, a) |
 | `theme_override_constants/*` | integer -16384-16384 |
 | `theme_override_font_sizes/*` | integer >= 1 |

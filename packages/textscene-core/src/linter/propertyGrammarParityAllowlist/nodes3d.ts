@@ -79,6 +79,26 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'debug_custom_color tints the curve gizmo the editor draws and this previewer reproduces; the component hardcodes its colour instead.',
   },
 
+  Camera3D: {
+    renderGap: [
+      // Per-camera overrides of the world environment, the exposure/DOF
+      // attributes, and the post-process Compositor stack. All three change the
+      // image; none is implemented, and no Environment or Compositor resource
+      // slice exists to hang them on.
+      'environment', 'attributes', 'compositor',
+    ],
+    reason: 'A camera can override the environment, carry its own exposure and depth-of-field attributes, and run a compositor stack; the previewer implements none of the three.',
+  },
+
+  WorldEnvironment: {
+    renderGap: [
+      // The scene-wide post-process stack, the twin of Camera3D.compositor and
+      // bound from the identical PropertyInfo.
+      'compositor',
+    ],
+    reason: 'compositor is the scene-wide post-process stack, declared identically to Camera3D.compositor and unimplemented in the same way.',
+  },
+
   Sprite3D: {
     renderGap: [
       // SpriteBase3D members the tier now validates and `parser.ts` does not

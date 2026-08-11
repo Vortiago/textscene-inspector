@@ -52,7 +52,7 @@ would draw the plain grabber too.
 ## Linting
 
 <!-- lint:begin HSlider -->
-Strict parsing format-checks the inherited set (5 inherited from Slider, 9 inherited from Range, 28 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `HSlider` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (5 inherited from Slider, 9 inherited from Range, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `HSlider` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

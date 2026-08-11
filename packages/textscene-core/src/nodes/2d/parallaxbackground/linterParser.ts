@@ -8,19 +8,14 @@
 // The base chain. Registration happens on import, so a test that loads only
 // this slice resolves an inherited key ONLY if the ancestor is pulled in too;
 // without this line just the full barrel ever registers it.
-import '../../node/linterParser.js';
+import '../ui/canvaslayer/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
+// The eight CanvasLayer keys this used to re-declare now come from the base,
+// which grounds `layer` on RS::CANVAS_LAYER_MIN/MAX instead of accepting
+// whatever parseInt tolerated.
 validatorRegistry.registerAll('ParallaxBackground', {
-  visible: v.boolean('visible'),
-  layer: v.lenientInt('layer'),
-  offset: v.vector2('offset'),
-  rotation: v.float('rotation'),
-  scale: v.vector2('scale'),
-  transform: v.transform2d('transform'),
-  follow_viewport_enabled: v.boolean('follow_viewport_enabled'),
-  follow_viewport_scale: v.float('follow_viewport_scale'),
   scroll_offset: v.vector2('scroll_offset'),
   scroll_base_offset: v.vector2('scroll_base_offset'),
   scroll_base_scale: v.vector2('scroll_base_scale'),

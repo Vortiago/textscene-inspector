@@ -47,7 +47,7 @@ the modifier would visibly move a bone renders as the unmodified rest pose.
 ## Linting
 
 <!-- lint:begin ConvertTransformModifier3D -->
-Strict parsing format-checks these `ConvertTransformModifier3D` properties, plus 1 inherited from BoneConstraint3D, 2 inherited from SkeletonModifier3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `ConvertTransformModifier3D` properties, plus 1 inherited from BoneConstraint3D, 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

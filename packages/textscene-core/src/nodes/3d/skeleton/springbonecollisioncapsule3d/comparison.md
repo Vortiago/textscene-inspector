@@ -30,7 +30,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin SpringBoneCollisionCapsule3D -->
-Strict parsing format-checks these `SpringBoneCollisionCapsule3D` properties, plus 4 inherited from SpringBoneCollision3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `SpringBoneCollisionCapsule3D` properties, plus 4 inherited from SpringBoneCollision3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

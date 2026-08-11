@@ -26,7 +26,7 @@ There is no runtime output to compare — the node draws nothing in either Godot
 ## Linting
 
 <!-- lint:begin AudioListener3D -->
-Strict parsing format-checks these `AudioListener3D` properties, plus 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AudioListener3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

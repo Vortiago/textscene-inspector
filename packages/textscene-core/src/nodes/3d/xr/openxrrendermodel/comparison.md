@@ -33,7 +33,7 @@ None visible in this fixture: the node owns no property that describes anything 
 ## Linting
 
 <!-- lint:begin OpenXRRenderModel -->
-Strict parsing format-checks the inherited set (16 inherited from Node3D, 10 inherited from Node); `OpenXRRenderModel` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (17 inherited from Node3D, 10 inherited from Node); `OpenXRRenderModel` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -31,7 +31,7 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin LightmapProbe -->
-Strict parsing format-checks the inherited set (16 inherited from Node3D, 10 inherited from Node); `LightmapProbe` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (17 inherited from Node3D, 10 inherited from Node); `LightmapProbe` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

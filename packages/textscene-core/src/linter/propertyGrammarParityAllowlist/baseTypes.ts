@@ -111,6 +111,12 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   Node3D: {
+    renderGap: [
+      // Decides which of basis/scale/quaternion/rotation/rotation_order Godot
+      // SERIALISES (node_3d.cpp's _validate_property), so a renderer matching
+      // Godot's transform editing needs it. Ours reads `transform` directly.
+      'rotation_edit_mode',
+    ],
     linterOnly: [
       // Godot serialises spatial state as either a single `transform` matrix
       // (what the lenient parser reads) or as discrete components; the linter
@@ -125,6 +131,43 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'top_level', 'rotation_order', 'visibility_parent',
     ],
     reason: 'Parser uses the transform matrix; linter validates discrete component forms and global equivalents that the renderer ignores.',
+  },
+
+  // Viewport has no parser.ts of its own; SubViewport and Window inherit these
+  // through the base-walk, so one entry here covers both.
+  Viewport: {
+    linterOnly: [
+      // Input routing and 3D audio listening. None of it touches a frozen
+      // frame: picking decides which collider a click hits, the gui keys gate
+      // and threshold event delivery, and the audio listener is sound.
+      'physics_object_picking', 'physics_object_picking_sort',
+      'physics_object_picking_first_only',
+      'gui_disable_input', 'gui_drag_threshold',
+      'audio_listener_enable_3d',
+    ],
+    renderGap: [
+      // Everything else Viewport declares is an image-forming setting the
+      // previewer does not read: the antialiasing and scaling stack, the
+      // shadow atlas, variable-rate shading, the SDF used by 2D lighting,
+      // pixel snapping, mipmap and anisotropy control, occlusion culling, and
+      // the World3D that decides which lights and environment the viewport
+      // renders against (distinct from the `own_world_3d` flag we do parse).
+      'msaa_2d', 'screen_space_aa', 'use_taa',
+      'scaling_3d_mode', 'scaling_3d_scale', 'fsr_sharpness',
+      'texture_mipmap_bias', 'anisotropic_filtering_level',
+      'positional_shadow_atlas_size', 'positional_shadow_atlas_16_bits',
+      'positional_shadow_atlas_quad_0', 'positional_shadow_atlas_quad_1',
+      'positional_shadow_atlas_quad_2', 'positional_shadow_atlas_quad_3',
+      'vrs_mode', 'vrs_update_mode', 'vrs_texture',
+      'sdf_oversize', 'sdf_scale',
+      'snap_2d_transforms_to_pixel', 'snap_2d_vertices_to_pixel',
+      'gui_snap_controls_to_pixels',
+      'canvas_cull_mask', 'canvas_item_default_texture_repeat',
+      'mesh_lod_threshold', 'use_occlusion_culling', 'use_hdr_2d',
+      'oversampling', 'oversampling_override',
+      'debug_draw', 'use_xr', 'world_3d',
+    ],
+    reason: 'Viewport is a base with no parser of its own. The picking/gui/audio keys are input and sound routing with no frozen-frame effect; the rest form the image (antialiasing, scaling, shadow atlas, VRS, SDF, snapping, culling) and are unimplemented.',
   },
 
   Light3D: {
@@ -218,6 +261,20 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // Theme-override wildcard keys — validated by pattern match in the
       // linter; the parser uses a loop over `theme_override_*/*` keys and
       // there is no fixed per-key scraping surface to compare against.
+      // Input routing and assistive tech, none of which touches a frozen frame:
+      // the accessibility tree is a screen-reader surface, focus order and the
+      // shortcut context steer keyboard/gamepad navigation, the mouse keys pick
+      // an OS cursor and decide who consumes an event, and a tooltip is a hover
+      // popup rather than scene content.
+      'accessibility_name', 'accessibility_description', 'accessibility_live',
+      'accessibility_controls_nodes', 'accessibility_described_by_nodes',
+      'accessibility_labeled_by_nodes', 'accessibility_flow_to_nodes',
+      'focus_behavior_recursive', 'focus_neighbor_left', 'focus_neighbor_top',
+      'focus_neighbor_right', 'focus_neighbor_bottom', 'focus_next', 'focus_previous',
+      'shortcut_context',
+      'mouse_behavior_recursive', 'mouse_default_cursor_shape',
+      'mouse_force_pass_scroll_events',
+      'tooltip_text', 'tooltip_auto_translate_mode',
       'theme_override_colors/*', 'theme_override_constants/*',
       'theme_override_font_sizes/*', 'theme_override_styles/*',
       'theme_override_fonts/*', 'theme_override_icons/*',
@@ -228,6 +285,17 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // entries cover every Control descendant.
       'focus_mode', 'mouse_filter',
     ],
-    reason: 'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare.',
+    renderGap: [
+      // These five DO change what Godot draws, for every Control below here.
+      // `theme` and `theme_type_variation` decide which fonts, colours and
+      // styleboxes the whole subtree resolves, and no Theme resource slice
+      // exists in this repo at all. `clip_contents` sets the canvas clip rect.
+      // `layout_direction` mirrors anchors and rects under RTL. And
+      // `localize_numeral_system` swaps the numeral glyphs ProgressBar,
+      // SpinBox, CodeEdit and RichTextLabel draw.
+      'theme', 'theme_type_variation', 'clip_contents', 'layout_direction',
+      'localize_numeral_system',
+    ],
+    reason: 'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare. The accessibility, focus, mouse and tooltip keys are input and assistive-tech surfaces with no frozen-frame effect, while the theme/clip/direction group genuinely changes the drawing and is unimplemented.',
   },
 };

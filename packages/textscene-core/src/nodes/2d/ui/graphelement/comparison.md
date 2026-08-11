@@ -34,7 +34,7 @@ Not captured yet — nothing renders, so there is nothing to compare pixels agai
 ## Linting
 
 <!-- lint:begin GraphElement -->
-Strict parsing format-checks these `GraphElement` properties, plus 28 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `GraphElement` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

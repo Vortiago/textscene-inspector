@@ -34,7 +34,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin AudioStreamPlayer3D -->
-Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
@@ -53,6 +53,7 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 16 inh
 | `max_polyphony` | integer >= 1 |
 | `panning_strength` | float >= 0 |
 | `pitch_scale` | float >= 5e-324 |
+| `playback_type` | enum 0-2 (DEFAULT/STREAM/SAMPLE) |
 | `playing` | true or false |
 | `stream` | SubResource("id") or ExtResource("id") |
 | `stream_paused` | true or false |

@@ -46,6 +46,7 @@ Strict parsing format-checks these `WorldEnvironment` properties, plus 10 inheri
 | Property | Accepts |
 | --- | --- |
 | `camera_attributes` | SubResource("id") or ExtResource("id") |
+| `compositor` | SubResource("id") or ExtResource("id") |
 | `environment` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |

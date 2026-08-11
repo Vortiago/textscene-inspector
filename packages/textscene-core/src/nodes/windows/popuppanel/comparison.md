@@ -38,7 +38,7 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin PopupPanel -->
-Strict parsing format-checks the inherited set (45 inherited from Window, 9 inherited from Viewport, 10 inherited from Node); `PopupPanel` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (45 inherited from Window, 47 inherited from Viewport, 10 inherited from Node); `PopupPanel` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

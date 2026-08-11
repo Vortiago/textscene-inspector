@@ -32,7 +32,7 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin CodeEdit -->
-Strict parsing format-checks these `CodeEdit` properties, plus 47 inherited from TextEdit, 28 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `CodeEdit` properties, plus 47 inherited from TextEdit, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

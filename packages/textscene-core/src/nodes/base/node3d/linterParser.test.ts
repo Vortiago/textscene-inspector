@@ -73,4 +73,29 @@ describe('Node3D transform validators', () => {
       expect(check('transform', 'Transform3D(invalid)', type)).not.toBeNull();
     }
   });
+
+  describe('rotation_edit_mode', () => {
+    // node_3d.cpp:1532 — PROPERTY_HINT_ENUM "Euler,Quaternion,Basis". Three
+    // BIND_ENUM_CONSTANT entries (node_3d.cpp:1519-1521) put the legal span at
+    // 0-2, not the label-list length by coincidence.
+    it('accepts 0, 1 and 2 (Euler, Quaternion, Basis)', () => {
+      expect(check('rotation_edit_mode', '0')).toBeNull();
+      expect(check('rotation_edit_mode', '1')).toBeNull();
+      expect(check('rotation_edit_mode', '2')).toBeNull();
+    });
+
+    // set_rotation_edit_mode (node_3d.cpp:717-746) has no ERR_FAIL_INDEX at
+    // all, unlike its neighbour set_rotation_order (node_3d.cpp:760)'s
+    // `ERR_FAIL_INDEX(int32_t(p_order), 6)` — two enums in the same file,
+    // adjacent, different tiers. Out of range is a WARNING, not an error.
+    it('warns rather than errors outside the enum, unlike rotation_order', () => {
+      const below = check('rotation_edit_mode', '-1');
+      const above = check('rotation_edit_mode', '3');
+      // The VALUE code, not just severity, proves the enum-range branch ran.
+      expect(below?.code).toBe('INVALID_ROTATION_EDIT_MODE_VALUE');
+      expect(above?.code).toBe('INVALID_ROTATION_EDIT_MODE_VALUE');
+      expect(below?.severity).toBe('warning');
+      expect(above?.severity).toBe('warning');
+    });
+  });
 });

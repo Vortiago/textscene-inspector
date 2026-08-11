@@ -28,7 +28,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { baseChain } from './nodeBaseTypes.js';
 import { ASYMMETRY_ALLOWLIST } from './propertyGrammarParityAllowlist.js';
-import { checkParity, collectSlices } from './testing/propertyGrammarParityCheck.js';
+import { checkParity, collectSlices, getFullValidatorKeys } from './testing/propertyGrammarParityCheck.js';
 import {
   extractNodeType,
   findLinterParserDirs,
@@ -104,6 +104,40 @@ describe('property-grammar parity guard', () => {
     expect(staleSections, `Stale allowlist entries found:\n  ${staleSections.join('\n  ')}`).toEqual([]);
   });
 
+  it('every allowlisted key is a key some side actually declares', () => {
+    // The honesty check above asks whether a listed key has become symmetric.
+    // It never asks whether the key EXISTS, so a typo or a leftover placeholder
+    // sits in the table forever, silently inflating the render-gap count and
+    // describing a property Godot never had. Caught for real: a placeholder
+    // string survived a full review pass in the Viewport render-gap list purely
+    // because nothing looked.
+    //
+    // Wildcards are patterns rather than keys, so they are exempt by shape.
+    const unknown: string[] = [];
+    for (const [nodeType, entry] of Object.entries(ASYMMETRY_ALLOWLIST)) {
+      // Inherited keys count: an entry sits on the type whose PARSER is silent
+      // about them, which is routinely a descendant of the type that declares
+      // them (Control lists CanvasItem's z_index, and rightly).
+      const declared = new Set([
+        ...getFullValidatorKeys(nodeType),
+        ...(collectSlices().find((s) => s.nodeType === nodeType)?.parserProps ?? []),
+      ]);
+      const listed = [
+        ...(entry.parserOnly ?? []),
+        ...(entry.linterOnly ?? []),
+        ...(entry.renderGap ?? []),
+      ];
+      for (const key of listed) {
+        if (key.includes('*') || key.includes('#')) continue;
+        if (!declared.has(key)) unknown.push(`${nodeType}.${key}`);
+      }
+    }
+    expect(
+      unknown,
+      `Allowlisted keys that neither the validators nor the parser declare, so they describe nothing:\n  ${unknown.join('\n  ')}`
+    ).toEqual([]);
+  });
+
   it('no key is claimed as both deliberate scope and a render gap', () => {
     const conflicts: string[] = [];
     for (const [nodeType, entry] of Object.entries(ASYMMETRY_ALLOWLIST)) {
@@ -131,7 +165,11 @@ describe('property-grammar parity guard', () => {
   // one side already declares. The engine-property sweep that added those
   // validators is what surfaced them, so the number rising here is the
   // to-do list becoming honest rather than growing.
-  const EXPECTED_RENDER_GAP_KEYS = 95;
+  // +47 from the second engine-property wave: Viewport 32, Control 5,
+  // CanvasLayer 5, Camera3D 3, WorldEnvironment 1, Node3D 1. Same character as
+  // the +38 before them, and Viewport dominates because a viewport IS the
+  // image-forming settings, so nearly everything it declares is a real gap.
+  const EXPECTED_RENDER_GAP_KEYS = 142;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
@@ -173,7 +211,10 @@ describe('property-grammar parity guard', () => {
    * the property can give. That is the piece of work, and it wants its own pass
    * rather than being smuggled into a wave.
    */
-  const SWEPT_SLICES = 74;
+  // +1: nodes/2d/ui/canvaslayer/ gained a linterParser.ts. It had a parser and
+  // no linter half at all, so its eight own properties were unvalidated and
+  // invisible to this guard, which only sees a directory holding BOTH files.
+  const SWEPT_SLICES = 75;
   // +1: nodes/animation/animationmixer/ — a new abstract tier (linterParser.ts
   // only, no parser.ts of its own, same shape as canvasitem/shared/), added to
   // register anims/<name>/libraries/libraries/<name> once for both

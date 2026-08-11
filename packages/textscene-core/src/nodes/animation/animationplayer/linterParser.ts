@@ -29,6 +29,24 @@ import { splitTopLevel } from '../../../godot/string.js';
 
 const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
 const METHOD_CALL_MODE = { 0: 'DEFERRED', 1: 'IMMEDIATE' };
+// Tween::TransitionType / Tween::EaseType (tween.h:82-95, :98-103): the
+// hint_string order at animation_player.cpp:1044/:1045 matches the C++ enum
+// declaration order, so these count and label straight from it.
+const AUTO_CAPTURE_TRANSITION_TYPE = {
+  0: 'LINEAR',
+  1: 'SINE',
+  2: 'QUINT',
+  3: 'QUART',
+  4: 'QUAD',
+  5: 'EXPO',
+  6: 'ELASTIC',
+  7: 'CUBIC',
+  8: 'CIRC',
+  9: 'BOUNCE',
+  10: 'BACK',
+  11: 'SPRING',
+};
+const AUTO_CAPTURE_EASE_TYPE = { 0: 'IN', 1: 'OUT', 2: 'IN_OUT', 3: 'OUT_IN' };
 
 const ARRAY_LITERAL_RE = /^\[([\s\S]*)\]$/;
 
@@ -73,6 +91,39 @@ validatorRegistry.registerAll('AnimationPlayer', {
   // both ends open, and set_speed_scale (:648) is a bare assignment, so the only
   // thing to reject is a non-number.
   speed_scale: v.float('speed_scale'),
+  // animation_player.cpp:1049, Variant::BOOL, PROPERTY_HINT_NONE.
+  // set_movie_quit_on_finish_enabled (:782-784) is a bare assignment.
+  movie_quit_on_finish: v.boolean('movie_quit_on_finish'),
+  // animation_player.cpp:1042, Variant::BOOL, PROPERTY_HINT_NONE.
+  // set_auto_capture (:857-858) is a bare assignment (plus a
+  // notify_property_list_changed for the conditional sibling visibility at
+  // :125, which does not touch the stored value).
+  playback_auto_capture: v.boolean('playback_auto_capture'),
+  // animation_player.cpp:1043, Variant::FLOAT, PROPERTY_HINT_NONE, "suffix:s":
+  // a suffix is not a bound (ADR-0032). set_auto_capture_duration (:866-868)
+  // is a bare assignment, so this is a format check only.
+  playback_auto_capture_duration: v.float('playback_auto_capture_duration'),
+  // animation_player.cpp:1044, PROPERTY_HINT_ENUM
+  // "Linear,Sine,Quint,Quart,Quad,Expo,Elastic,Cubic,Circ,Bounce,Back,Spring"
+  // (12 values, Tween::TransitionType). set_auto_capture_transition_type
+  // (:874-876) is a bare assignment, so out-of-range only warns.
+  playback_auto_capture_transition_type: v.enumInt(
+    'playback_auto_capture_transition_type',
+    0,
+    11,
+    AUTO_CAPTURE_TRANSITION_TYPE,
+    { hinted: 'animation_player.cpp:1044' }
+  ),
+  // animation_player.cpp:1045, PROPERTY_HINT_ENUM "In,Out,InOut,OutIn"
+  // (4 values, Tween::EaseType). set_auto_capture_ease_type (:882-884) is a
+  // bare assignment, so out-of-range only warns.
+  playback_auto_capture_ease_type: v.enumInt(
+    'playback_auto_capture_ease_type',
+    0,
+    3,
+    AUTO_CAPTURE_EASE_TYPE,
+    { hinted: 'animation_player.cpp:1045' }
+  ),
   // animation_player.cpp:822 is a bare assignment, so the hint at :1046
   // ("0,4096,0.01") is advisory: out-of-range is a warning in linter.ts.
   playback_default_blend_time: v.float('playback_default_blend_time'),

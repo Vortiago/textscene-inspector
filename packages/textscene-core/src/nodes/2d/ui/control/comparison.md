@@ -52,17 +52,37 @@ Strict parsing format-checks these `Control` properties, plus 16 inherited from 
 
 | Property | Accepts |
 | --- | --- |
+| `accessibility_controls_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …] |
+| `accessibility_described_by_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …] |
+| `accessibility_description` | quoted string |
+| `accessibility_flow_to_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …] |
+| `accessibility_labeled_by_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …] |
+| `accessibility_live` | enum 0-2 (OFF/POLITE/ASSERTIVE) |
+| `accessibility_name` | quoted string |
 | `anchor_bottom` | float |
 | `anchor_left` | float |
 | `anchor_right` | float |
 | `anchor_top` | float |
 | `anchors_preset` | integer -1-15 |
+| `clip_contents` | true or false |
 | `custom_minimum_size` | Vector2(x, y) |
+| `focus_behavior_recursive` | enum 0-2 (INHERITED/DISABLED/ENABLED) |
 | `focus_mode` | enum 0-3 (NONE/CLICK/ALL/ACCESSIBILITY) |
+| `focus_neighbor_bottom` | NodePath("path/to/node") |
+| `focus_neighbor_left` | NodePath("path/to/node") |
+| `focus_neighbor_right` | NodePath("path/to/node") |
+| `focus_neighbor_top` | NodePath("path/to/node") |
+| `focus_next` | NodePath("path/to/node") |
+| `focus_previous` | NodePath("path/to/node") |
 | `grow_horizontal` | integer 0-2 |
 | `grow_vertical` | integer 0-2 |
+| `layout_direction` | enum 0-4 (INHERITED/APPLICATION_LOCALE/LTR/RTL/SYSTEM_LOCALE) |
 | `layout_mode` | integer 0-3 |
+| `localize_numeral_system` | true or false |
+| `mouse_behavior_recursive` | enum 0-2 (INHERITED/DISABLED/ENABLED) |
+| `mouse_default_cursor_shape` | enum 0-16 (ARROW/IBEAM/POINTING_HAND/CROSS/WAIT/BUSY/DRAG/CAN_DROP/FORBIDDEN/VSIZE/HSIZE/BDIAGSIZE/FDIAGSIZE/MOVE/VSPLIT/HSPLIT/HELP) |
 | `mouse_filter` | enum 0-2 (STOP/PASS/IGNORE) |
+| `mouse_force_pass_scroll_events` | true or false |
 | `offset_bottom` | float |
 | `offset_left` | float |
 | `offset_right` | float |
@@ -71,15 +91,20 @@ Strict parsing format-checks these `Control` properties, plus 16 inherited from 
 | `pivot_offset_ratio` | Vector2(x, y) |
 | `rotation` | float |
 | `scale` | Vector2(x, y) |
+| `shortcut_context` | NodePath("path/to/node") |
 | `size_flags_horizontal` | integer |
 | `size_flags_stretch_ratio` | float >= 0 |
 | `size_flags_vertical` | integer |
+| `theme` | null, SubResource("id"), or ExtResource("id") |
 | `theme_override_colors/*` | Color(r, g, b, a) |
 | `theme_override_constants/*` | integer -16384-16384 |
 | `theme_override_font_sizes/*` | integer >= 1 |
 | `theme_override_fonts/*` | SubResource("id") or ExtResource("id") |
 | `theme_override_icons/*` | SubResource("id") or ExtResource("id") |
 | `theme_override_styles/*` | SubResource("id") or ExtResource("id") |
+| `theme_type_variation` | quoted string or &"name" |
+| `tooltip_auto_translate_mode` | enum 0-2 (INHERIT/ALWAYS/DISABLED) |
+| `tooltip_text` | quoted string |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

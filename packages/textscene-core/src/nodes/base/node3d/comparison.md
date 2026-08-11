@@ -47,6 +47,7 @@ Strict parsing format-checks these `Node3D` properties, plus 10 inherited from N
 | `quaternion` | Quaternion(x, y, z, w) |
 | `rotation` | Vector3(x, y, z) |
 | `rotation_degrees` | Vector3(x, y, z) |
+| `rotation_edit_mode` | enum 0-2 (Euler/Quaternion/Basis) |
 | `rotation_order` | enum 0-5 (XYZ/XZY/YXZ/YZX/ZXY/ZYX) |
 | `scale` | Vector3(x, y, z) |
 | `top_level` | true or false |

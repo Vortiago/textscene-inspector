@@ -104,7 +104,8 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
  * Member counts at the time of writing, for scale rather than as an assertion
  * (nothing can verify them without reading `doc/classes` at test time, which
  * `godot-source-decoupling.test.mjs` forbids). Registered leaves: LineEdit 36,
- * RichTextLabel 30, Label 22, ScrollContainer 11, CanvasLayer 9, GridContainer 1.
+ * RichTextLabel 30, Label 22, ScrollContainer 11, GridContainer 1. (CanvasLayer
+ * declares its own eight now, so it left this list.)
  *
  * The tiers below were invisible until this guard closed over the base chain,
  * and each one is worth more than a leaf because its keys reach every
@@ -124,7 +125,7 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
  *
  * Removing an entry (by declaring its validators) is the only correct edit.
  */
-const UNDECLARED: readonly string[] = ['CSGPrimitive3D', 'CSGShape3D', 'CanvasLayer', 'PhysicsBody3D'];
+const UNDECLARED: readonly string[] = ['CSGPrimitive3D', 'CSGShape3D', 'PhysicsBody3D'];
 
 /**
  * Every type this guard holds to account: the registry, closed over the base

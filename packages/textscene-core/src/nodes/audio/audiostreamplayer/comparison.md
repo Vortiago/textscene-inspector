@@ -36,7 +36,9 @@ Strict parsing format-checks these `AudioStreamPlayer` properties, plus 10 inher
 | `autoplay` | true or false |
 | `bus` | quoted string or &"name" |
 | `max_polyphony` | integer >= 1 |
+| `mix_target` | enum 0-2 (STEREO/SURROUND/CENTER) |
 | `pitch_scale` | float > 0 |
+| `playback_type` | enum 0-2 (DEFAULT/STREAM/SAMPLE) |
 | `playing` | true or false |
 | `stream` | SubResource("id") or ExtResource("id") |
 | `stream_paused` | true or false |

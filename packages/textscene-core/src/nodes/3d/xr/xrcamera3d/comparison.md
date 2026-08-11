@@ -27,7 +27,7 @@ This previewer's Cameras panel matches the node type `Camera3D` exactly (`r3f/co
 ## Linting
 
 <!-- lint:begin XRCamera3D -->
-Strict parsing format-checks the inherited set (12 inherited from Camera3D, 16 inherited from Node3D, 10 inherited from Node); `XRCamera3D` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (15 inherited from Camera3D, 17 inherited from Node3D, 10 inherited from Node); `XRCamera3D` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

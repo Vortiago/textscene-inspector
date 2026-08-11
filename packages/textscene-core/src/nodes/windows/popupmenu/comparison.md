@@ -31,7 +31,7 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin PopupMenu -->
-Strict parsing format-checks these `PopupMenu` properties, plus 45 inherited from Window, 9 inherited from Viewport, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `PopupMenu` properties, plus 45 inherited from Window, 47 inherited from Viewport, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

@@ -27,7 +27,7 @@ Not captured yet — nothing renders, so there is nothing to compare pixels agai
 ## Linting
 
 <!-- lint:begin ProgressBar -->
-Strict parsing format-checks these `ProgressBar` properties, plus 9 inherited from Range, 28 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `ProgressBar` properties, plus 9 inherited from Range, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

@@ -29,7 +29,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin OpenXRInteractionProfileEditor -->
-Strict parsing format-checks the inherited set (1 inherited from BoxContainer, 28 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `OpenXRInteractionProfileEditor` declares none of its own. Every validator failure is an **error**. `OpenXRInteractionProfileEditor` also REFUSES `vertical`, which its base declares but this class cannot carry.
+Strict parsing format-checks the inherited set (1 inherited from BoxContainer, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `OpenXRInteractionProfileEditor` declares none of its own. Every validator failure is an **error**. `OpenXRInteractionProfileEditor` also REFUSES `vertical`, which its base declares but this class cannot carry.
 
 | Property | Accepts |
 | --- | --- |

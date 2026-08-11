@@ -34,7 +34,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin OpenXRVisibilityMask -->
-Strict parsing format-checks the inherited set (1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node); `OpenXRVisibilityMask` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node); `OpenXRVisibilityMask` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

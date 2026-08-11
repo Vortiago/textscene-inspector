@@ -30,7 +30,7 @@ children they configure are spawned only once a live XR runtime reports active d
 ## Linting
 
 <!-- lint:begin OpenXRRenderModelManager -->
-Strict parsing format-checks these `OpenXRRenderModelManager` properties, plus 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `OpenXRRenderModelManager` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

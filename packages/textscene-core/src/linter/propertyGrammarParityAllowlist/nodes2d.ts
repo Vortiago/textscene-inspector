@@ -152,6 +152,27 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'enabled and use_edge_connections gate the navmesh and edge-connection debug draw this previewer mirrors; the layer mask and the two costs only steer pathfinding.',
   },
 
+  CanvasLayer: {
+    renderGap: [
+      // The layer's own canvas transform, and the parallax-style viewport
+      // follow. Godot composites the layer through both; the previewer reads
+      // only `layer`, `visible` and the composed `transform`.
+      'offset', 'rotation', 'scale',
+      'follow_viewport_enabled', 'follow_viewport_scale',
+    ],
+    reason: 'layer, visible and transform are parsed and validated; the discrete offset/rotation/scale and the viewport-follow pair all move what the layer draws and are unread.',
+  },
+
+  SubViewportContainer: {
+    linterOnly: [
+      // Routes input to the child SubViewport instead of the container. Pure
+      // event plumbing, no draw effect. Control's own 25 come from the Control
+      // entry in baseTypes.
+      'mouse_target',
+    ],
+    reason: 'mouse_target decides whether the container or its SubViewport receives input events; nothing about a frozen frame changes.',
+  },
+
   Sprite2D: {
     renderGap: [
       // Clamps the atlas sampler to the region rect, which is what stops a
@@ -165,7 +186,9 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     linterOnly: [
       // Physics simulation properties: valid TSCN but the static renderer
       // reads only collision_layer/collision_mask for display.
-      'space_override', 'gravity_space_override', 'gravity_point',
+      // (`space_override` sat here until the key-existence guard ran: it is the
+      // Godot 3 name, replaced in 4.x by the three per-force overrides below.)
+      'gravity_space_override', 'gravity_point',
       'gravity_point_center', 'gravity_point_unit_distance',
       'gravity_direction', 'gravity', 'linear_damp_space_override',
       'linear_damp', 'angular_damp_space_override', 'angular_damp',

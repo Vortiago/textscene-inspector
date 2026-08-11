@@ -26,7 +26,18 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin CanvasLayer -->
-Strict parsing format-checks the inherited set (10 inherited from Node); `CanvasLayer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `CanvasLayer` properties, plus 10 inherited from Node. Every validator failure is an **error**.
+
+| Property | Accepts |
+| --- | --- |
+| `follow_viewport_enabled` | true or false |
+| `follow_viewport_scale` | float |
+| `layer` | integer -2147483648-2147483647 |
+| `offset` | Vector2(x, y) |
+| `rotation` | float |
+| `scale` | Vector2(x, y) |
+| `transform` | Transform2D(6 floats) |
+| `visible` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

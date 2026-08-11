@@ -33,7 +33,7 @@ None visible in this fixture. Measured at 0.011% against Godot 4.6.3 with
 ## Linting
 
 <!-- lint:begin CSGBox3D -->
-Strict parsing format-checks these `CSGBox3D` properties, plus 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `CSGBox3D` properties, plus 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

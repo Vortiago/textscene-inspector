@@ -34,7 +34,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin XROrigin3D -->
-Strict parsing format-checks these `XROrigin3D` properties, plus 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `XROrigin3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

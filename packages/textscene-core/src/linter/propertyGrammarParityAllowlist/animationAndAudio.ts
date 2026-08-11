@@ -64,6 +64,12 @@ export const animationAndAudioAsymmetries: Readonly<Record<string, AsymmetryEntr
       'current_animation_position',
     ],
     linterOnly: [
+      // Editor and movie-writer plumbing: quitting the engine after a movie
+      // render, and the auto-capture blend Godot runs when a playback STARTS.
+      // Neither bears on the single frame a static preview shows.
+      'movie_quit_on_finish', 'playback_auto_capture',
+      'playback_auto_capture_duration', 'playback_auto_capture_ease_type',
+      'playback_auto_capture_transition_type',
       // animation_player.cpp:38-39,71-73: legacy back-compat alias for
       // current_animation, which the parser already reads directly and
       // literally (properties.current_animation). Never pushed by
@@ -115,7 +121,7 @@ export const animationAndAudioAsymmetries: Readonly<Record<string, AsymmetryEntr
   // -------------------------------------------------------------------------
 
   AudioStreamPlayer: {
-    linterOnly: AUDIO_BASE_KEYS,
+    linterOnly: [...AUDIO_BASE_KEYS, 'mix_target', 'playback_type'],
     reason: 'AudioStreamPlayer reads audio properties via parseAudioBase shared helper (not visible to per-file scrape); linter registers them explicitly. parser/parser.ts delegates entirely to helpers.',
   },
 
@@ -125,7 +131,9 @@ export const animationAndAudioAsymmetries: Readonly<Record<string, AsymmetryEntr
   },
 
   AudioStreamPlayer3D: {
-    linterOnly: AUDIO_BASE_KEYS,
-    reason: 'AudioStreamPlayer3D reads audio base properties via parseAudioBase shared helper not captured by per-file scrape; linter registers them explicitly.',
+    // `playback_type` forwards into the same AudioStreamPlayerInternal setter as
+    // its 2D twin's, so both carry it and neither draws anything from it.
+    linterOnly: [...AUDIO_BASE_KEYS, 'playback_type'],
+    reason: 'AudioStreamPlayer3D reads audio base properties via parseAudioBase shared helper not captured by per-file scrape; linter registers them explicitly. playback_type selects the AudioServer sampling path and never reaches a frame.',
   },
 };

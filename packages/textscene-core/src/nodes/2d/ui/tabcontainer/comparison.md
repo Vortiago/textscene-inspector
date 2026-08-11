@@ -39,7 +39,7 @@ Not captured yet: nothing renders, so there is nothing to compare pixels against
 ## Linting
 
 <!-- lint:begin TabContainer -->
-Strict parsing format-checks these `TabContainer` properties, plus 28 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `TabContainer` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

@@ -31,7 +31,7 @@ None visible in this fixture: the node draws nothing in either engine.
 ## Linting
 
 <!-- lint:begin AimModifier3D -->
-Strict parsing format-checks these `AimModifier3D` properties, plus 2 inherited from SkeletonModifier3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AimModifier3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |

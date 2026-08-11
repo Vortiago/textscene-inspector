@@ -6,7 +6,20 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
+import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
+
+/**
+ * The error a validator returns for a value, or null when it accepts it.
+ * Used for `mix_target`/`playback_type`: unlike the rest of this file, these
+ * assert directly through `validatorRegistry` rather than the full `Linter`,
+ * since the unit under test is the validator itself.
+ */
+function check(property: string, value: string) {
+  const validator = validatorRegistry.findValidator('AudioStreamPlayer', property);
+  expect(validator, `no validator registered for AudioStreamPlayer.${property}`).not.toBeNull();
+  return validator!(property, value, 1);
+}
 
 describe('AudioStreamPlayer LinterParser', () => {
   let linter: Linter;
@@ -318,6 +331,48 @@ bus = Master
       expect(diagnostics.length).toBeGreaterThan(0);
       expect(diagnostics[0]!.message).toContain('bus');
       expect(diagnostics[0]!.message).toContain('must be a string');
+    });
+  });
+
+  describe('mix_target validation', () => {
+    it('accepts every value the 3-entry MixTarget hint names (Stereo,Surround,Center)', () => {
+      for (const value of [0, 1, 2]) {
+        expect(check('mix_target', String(value))).toBeNull();
+      }
+    });
+
+    it('warns, not errors, past the hint (audio_stream_player.cpp:161-163 is a bare assignment)', () => {
+      const error = check('mix_target', '3');
+      expect(error).not.toBeNull();
+      expect(error!.severity).toBe('warning');
+      expect(error!.message).toContain('0-2');
+    });
+
+    it('rejects a non-numeric value', () => {
+      const error = check('mix_target', 'Stereo');
+      expect(error).not.toBeNull();
+      expect(error!.message).toContain('must be a number');
+    });
+  });
+
+  describe('playback_type validation', () => {
+    it('accepts every value the 3-entry AudioServer::PlaybackType hint names (Default,Stream,Sample)', () => {
+      for (const value of [0, 1, 2]) {
+        expect(check('playback_type', String(value))).toBeNull();
+      }
+    });
+
+    it('warns, not errors, past the hint (audio_stream_player_internal.cpp:337-339 is a bare assignment)', () => {
+      const error = check('playback_type', '3');
+      expect(error).not.toBeNull();
+      expect(error!.severity).toBe('warning');
+      expect(error!.message).toContain('0-2');
+    });
+
+    it('rejects a non-numeric value', () => {
+      const error = check('playback_type', 'Stream');
+      expect(error).not.toBeNull();
+      expect(error!.message).toContain('must be a number');
     });
   });
 });

@@ -47,15 +47,16 @@ const built = existsSync(DIST);
  * `Control`'s slice, not in each of the forty leaves that inherit it, so the
  * diff is per declaring class and the base-walk is deliberately not applied.
  */
-// 191 at the guard's introduction, then 102 closed in one sweep across
-// Label3D, the TileMap pair, the particles family, the physics bodies, 2D
-// geometry, and the area/gridmap/navigation set.
+// 191 at the guard's introduction, then closed in two waves: 102, then 85.
 //
-// What remains is deliberately the tail: Viewport (38) and Control (25) are 63
-// of it, and both are a different kind of work. Viewport's are renderer knobs
-// (vrs_*, msaa_2d, scaling_3d_*) that no scene reads, and Control's 25 reach
-// roughly 47 leaves, so a wrong call there is the most expensive one available.
-const EXPECTED_UNVALIDATED = 89;
+// The four left are all correctly unvalidated, and the number should stay at 4
+// rather than reaching 0. `ShapeCast2D`/`ShapeCast3D.collision_result` and
+// `LimitAngularVelocityModifier3D.joint_count` each pass an empty setter string
+// to their ADD_PROPERTY, so `ClassDB::set_property` drops the write before any
+// `_set` runs and a .tscn cannot express them. `OpenXRRenderModel.render_model`
+// is the same shape. Each is pinned by a test asserting `findValidator` returns
+// null, so a later sweep cannot "close" them by inventing coverage.
+const EXPECTED_UNVALIDATED = 4;
 
 /**
  * A registered key can stand for a whole indexed family.
