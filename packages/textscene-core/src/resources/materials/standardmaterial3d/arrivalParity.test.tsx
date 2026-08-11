@@ -260,17 +260,14 @@ const CASES: ParityCase[] = [
 
 /**
  * One shared texture per path, as the loader's cache hands out — so the two
- * paths' texture state is comparable, and a per-material clone is recognisable
- * as a clone rather than as a different image.
+ * paths' texture state is comparable and both land on the same `source`.
  */
 const TEXTURE_BY_PATH = new Map<string, THREE.Texture>();
-const SHARED_TEXTURES = new Set<THREE.Texture>();
 function textureFor(path: string): THREE.Texture {
   let texture = TEXTURE_BY_PATH.get(path);
   if (!texture) {
     texture = new THREE.Texture();
     TEXTURE_BY_PATH.set(path, texture);
-    SHARED_TEXTURES.add(texture);
   }
   return texture;
 }
