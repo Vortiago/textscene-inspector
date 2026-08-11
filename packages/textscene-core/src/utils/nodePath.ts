@@ -1,5 +1,7 @@
 /** Utilities for manipulating node paths in the scene tree. */
 
+import { NODE_PATH_LITERAL_ANYWHERE_RE } from '../godot/index.js';
+
 export function joinPath(parentPath: string, childName: string): string {
   return parentPath ? `${parentPath}/${childName}` : childName;
 }
@@ -47,7 +49,7 @@ export function resolveRelativePath(basePath: string, relative: string): string 
  */
 export function resolveNodePathLiteral(basePath: string, raw: string | undefined): string | null {
   if (!raw) return null;
-  const match = /NodePath\(\s*"([^"]*)"\s*\)/.exec(raw);
+  const match = NODE_PATH_LITERAL_ANYWHERE_RE.exec(raw);
   const inner = (match?.[1] ?? raw).trim();
   if (inner === '' || inner === '.') return null;
   // Absolute paths (`/root/…`) address the LIVE tree, which a static parse does not

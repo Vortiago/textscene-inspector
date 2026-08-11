@@ -8,7 +8,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { boolOr, enumOr, floatOr } from '../../../parser/valueParsers';
-import { literalText } from '../../../godot/index.js';
+import { literalText, resourceRef, SUB_RESOURCE_REF_BODY } from '../../../godot/index.js';
 import {
   type AnimationLibraryRef,
   AnimationProcessMode,
@@ -66,11 +66,14 @@ export function isActive(properties: Record<string, string>): boolean {
   return boolOr(properties.active ?? properties.playback_active, true);
 }
 
-const SUB_RESOURCE_REF = /^SubResource\("([^"]+)"\)$/;
 // Entries of the dictionary form `libraries = { "<name>": SubResource("id"), … }`.
 // Only inline SubResource libraries are captured; ExtResource entries point to
 // external (often binary .res) libraries the previewer can't resolve.
-const DICT_LIBRARY_ENTRY = /"([^"]*)"\s*:\s*SubResource\("([^"]+)"\)/g;
+//
+// Built from the shared reference body: both patterns here were written without
+// whitespace tolerance, so a padded `SubResource ("id")` that the linter passes
+// yielded no library at all and the animations silently went missing.
+const DICT_LIBRARY_ENTRY = new RegExp(`"([^"]*)"\\s*:\\s*${SUB_RESOURCE_REF_BODY}`, 'g');
 
 export function extractLibraries(properties: Record<string, string>): AnimationLibraryRef[] {
   const libraries: AnimationLibraryRef[] = [];
@@ -80,9 +83,9 @@ export function extractLibraries(properties: Record<string, string>): AnimationL
     if (!key.startsWith('libraries/')) continue;
     const raw = properties[key];
     if (raw === undefined) continue;
-    const match = SUB_RESOURCE_REF.exec(raw.trim());
-    if (!match || match[1] === undefined) continue;
-    libraries.push({ name: key.slice('libraries/'.length), subResourceId: match[1] });
+    const parsed = resourceRef(raw.trim());
+    if (parsed?.kind !== 'SubResource') continue;
+    libraries.push({ name: key.slice('libraries/'.length), subResourceId: parsed.id });
   }
 
   // Dictionary form (Godot 4's actual serialization), possibly multi-line:

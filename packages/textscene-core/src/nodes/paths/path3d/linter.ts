@@ -17,6 +17,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import type { TscnInternalResource } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { SUB_RESOURCE_REF_ANYWHERE_RE } from '../../../godot/index.js';
 
 /**
  * Validate Path3D semantic rules
@@ -78,7 +79,7 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
  */
 function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] {
   const { node, scene } = context;
-  const id = curveRef.match(/SubResource\s*\(\s*"([^"]+)"\s*\)/)?.[1];
+  const id = SUB_RESOURCE_REF_ANYWHERE_RE.exec(curveRef)?.[1];
   if (!id) return [];
 
   const resource = scene.internalResources?.find(

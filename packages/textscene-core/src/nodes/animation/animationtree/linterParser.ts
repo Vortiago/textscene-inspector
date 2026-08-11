@@ -24,14 +24,13 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { shape, v } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import { RESOURCE_REF_RE } from '../../../godot/index.js';
 
 const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
-/** `\s*` for the tokenizer reason `RESOURCE_REFERENCE_REGEX` documents. */
-const RESOURCE_REGEX = /^(SubResource|ExtResource)\s*\(\s*"([^"]+)"\s*\)$/;
 
 function resourceRef(name: string, code: string): PropertyValidator {
   const validator: PropertyValidator = (key, value, line) => {
-    if (!RESOURCE_REGEX.test(value.trim())) {
+    if (!RESOURCE_REF_RE.test(value.trim())) {
       return propertyError(key, line, `Property '${name}' must be a SubResource or ExtResource reference, got: "${value}"`, code);
     }
     return null;

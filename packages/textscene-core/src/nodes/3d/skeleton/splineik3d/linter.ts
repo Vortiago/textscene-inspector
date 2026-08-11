@@ -25,9 +25,12 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { nodePathLiteral } from '../../../../godot/index.js';
 
 /** `NodePath("")` and a bare `""`, the two spellings of the unset path. */
-const EMPTY_NODE_PATH_RE = /^(?:NodePath\s*\(\s*)?""\s*\)?$/;
+function isUnsetPath(raw: string): boolean {
+  return nodePathLiteral(raw) === '' || raw === '""';
+}
 
 function checkSplineIK3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -41,7 +44,7 @@ function checkSplineIK3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   for (let index = 0; index < count; index++) {
     const path = properties[`settings/${index}/path_3d`];
-    if (path !== undefined && !EMPTY_NODE_PATH_RE.test(path.trim())) continue;
+    if (path !== undefined && !isUnsetPath(path.trim())) continue;
     diagnostics.push({
       severity: 'warning',
       message: `SplineIK3D '${node.name}' setting ${index} has no Path3D. Godot resolves 'settings/${index}/path_3d' before it reads the curve and skips the setting when nothing comes back, so this chain of bones is never posed.`,

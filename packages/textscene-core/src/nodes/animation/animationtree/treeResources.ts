@@ -15,6 +15,19 @@
 
 import type { TscnInternalResource } from '../../../parser/types';
 import { findSubResource } from '../../../resources/SubResourceResolver';
+import {
+  SUB_RESOURCE_REF_ANYWHERE_RE,
+  SUB_RESOURCE_REF_BODY,
+} from '../../../godot/index.js';
+
+/**
+ * `transitions = [&"Start", &"Idle", SubResource("…"), …]` as alternating tokens.
+ *
+ * Built from the shared reference body rather than spelled out, so the padded
+ * form the linter accepts is tokenised here too. `String.match` with a `g`
+ * regex resets `lastIndex` itself, so the shared instance is safe to reuse.
+ */
+const TRANSITION_TOKEN_RE = new RegExp(`"[^"]*"|${SUB_RESOURCE_REF_BODY}`, 'g');
 
 /** One node of a resolved AnimationTree. */
 export type AnimNode =
@@ -97,8 +110,7 @@ export function resolveTreeRoot(
 
 /** Extract the id from a `SubResource("id")` reference. */
 function extractSubResourceId(ref: string): string | null {
-  const match = /SubResource\(\s*"([^"]+)"\s*\)/.exec(ref);
-  return match?.[1] ?? null;
+  return SUB_RESOURCE_REF_ANYWHERE_RE.exec(ref)?.[1] ?? null;
 }
 
 function resolveNodeById(
@@ -250,7 +262,7 @@ function pickStartState(
   transitions: string,
   states: StateMachineNode['states']
 ): string | null {
-  const tokens = transitions.match(/"[^"]*"|SubResource\("[^"]+"\)/g) ?? [];
+  const tokens = transitions.match(TRANSITION_TOKEN_RE) ?? [];
   for (let i = 0; i + 2 < tokens.length; i += 3) {
     const from = stripStringName(tokens[i]!);
     if (from === 'Start') return stripStringName(tokens[i + 1]!);

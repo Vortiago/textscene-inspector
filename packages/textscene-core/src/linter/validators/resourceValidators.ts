@@ -2,20 +2,20 @@
 
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
+import { NODE_PATH_LITERAL_RE, RESOURCE_REF_RE } from '../../godot/index.js';
 
 /**
  * Resource reference format: `SubResource("id")` or `ExtResource("id")`.
  *
- * `\s*` around the parentheses because Godot's reader tokenises rather than
- * pattern-matches: `VariantParser::get_token` discards any character `<= 32`
- * before a token (`variant_parser.cpp:415-417`), and the `SubResource`/
- * `ExtResource` branch simply asks for the next token to be a `(`
- * (`:1089-1093`). So `SubResource( "id" )` loads exactly like the tight form.
- * Godot's own writer never pads, so only a hand-edited file carries it — which
- * is the file a linter exists for, and rejecting it was an error on a scene the
- * engine opens without complaint.
+ * The validator and the parsers that later RESOLVE the reference read one
+ * pattern, from `godot/variantParser.ts`. They did not: this copy alone was
+ * widened to tolerate `SubResource ( "id" )`, so the linter passed a value that
+ * `extractLibraries` and `extractSubResourceId` then dropped, and the id went
+ * missing with no diagnostic anywhere. Its id class also read `[\w-]+` where
+ * every resolver reads `[^"]+`, making the linter the strictest reader of an id
+ * it does not itself look up.
  */
-export const RESOURCE_REFERENCE_REGEX = /^(SubResource|ExtResource)\s*\(\s*"[\w-]+"\s*\)$/;
+export const RESOURCE_REFERENCE_REGEX = RESOURCE_REF_RE;
 
 /**
  * NodePath format: `NodePath("path/to/node")`.
@@ -24,10 +24,8 @@ export const RESOURCE_REFERENCE_REGEX = /^(SubResource|ExtResource)\s*\(\s*"[\w-
  * character, so `NodePath("a") junk NodePath("b")` validated as one path — the
  * same shape of hole `v.quotedString` had. Measured across the corpus (784
  * NodePath values) the two forms disagree on nothing.
- *
- * `\s*` for the same tokenizer reason as {@link RESOURCE_REFERENCE_REGEX}.
  */
-export const NODE_PATH_REGEX = /^NodePath\s*\(\s*"[^"]*"\s*\)$/;
+export const NODE_PATH_REGEX = NODE_PATH_LITERAL_RE;
 
 /**
  * Creates a resource reference validator

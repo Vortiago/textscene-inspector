@@ -1,6 +1,7 @@
 /** Small shared helpers for node-type semantic linters. */
 
 import type { TscnNode } from '../parser/types.js';
+import { nodePathLiteral } from '../godot/index.js';
 
 /**
  * Narrow a node's `properties` to a string-keyed record before reading raw
@@ -156,12 +157,10 @@ export function findParentNode(nodes: TscnNode[], target: TscnNode): TscnNode | 
  * anim_player) that resolve a node reference before checking its type.
  */
 export function extractNodePath(value: string): string | null {
-  // `\s*` for the reason `NODE_PATH_REGEX` carries it: Godot tokenises the
-  // literal and drops whitespace before each token (variant_parser.cpp:415-417),
-  // so `NodePath( "../Body" )` is a real path and reading it as "no path" made
-  // the joint rules report a connected joint as unconnected.
-  const match = value.match(/^NodePath\s*\(\s*"([^"]*)"\s*\)$/);
-  return match && match[1] ? match[1] : null;
+  // Stricter than `nodePathLiteral` on one point only: an EMPTY path is "no
+  // path" to a rule resolving a reference, where a display formatter still has
+  // an empty string to show.
+  return nodePathLiteral(value) || null;
 }
 
 /** Shared empty result for `findNodesByName` misses — one frozen instance, not a fresh allocation per miss. */

@@ -16,7 +16,11 @@
 import type { TscnInternalResource } from '../../../parser/types';
 import { parseVector2, parseVector3 } from '../../../parser/vectors';
 import { parseColor } from '../../../utils/colorParser';
-import { literalText } from '../../../godot/index.js';
+import {
+  literalText,
+  NODE_PATH_LITERAL_ANYWHERE_RE,
+  SUB_RESOURCE_REF_BODY,
+} from '../../../godot/index.js';
 import type { AnimationLibraryRef } from './types';
 
 export type GodotKeyframeValue = number[] | number | boolean;
@@ -125,7 +129,7 @@ function audioTrackPaths(data: Record<string, unknown>): string[] {
   return paths;
 }
 
-const SUB_RESOURCE_ENTRY = /"([^"]+)":\s*SubResource\("([^"]+)"\)/g;
+const SUB_RESOURCE_ENTRY = new RegExp(`"([^"]+)"\\s*:\\s*${SUB_RESOURCE_REF_BODY}`, 'g');
 
 function parseLibraryData(dataStr: string): Array<[string, string]> {
   const entries: Array<[string, string]> = [];
@@ -211,8 +215,7 @@ function parseTracks(data: Record<string, unknown>): GodotTrack[] {
 
 /** Extract the inner string of a `NodePath("…")` literal, or null if it isn't one. */
 export function extractNodePathInner(raw: string): string | null {
-  const match = /NodePath\(\s*"([^"]*)"\s*\)/.exec(raw);
-  return match?.[1] ?? null;
+  return NODE_PATH_LITERAL_ANYWHERE_RE.exec(raw)?.[1] ?? null;
 }
 
 function parseNodePath(raw: string): { targetPath: string; property: string } | null {

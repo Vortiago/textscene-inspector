@@ -16,21 +16,13 @@
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { decodeAtlasTexture } from './textures/atlastexture/decode.js';
 import { ATLAS_TEXTURE_TYPE, type AtlasRegion } from './textures/atlastexture/types.js';
+import { resourceRef } from '../godot/index.js';
 
 export function parseResourceReference(
   ref: string
 ): { type: 'SubResource' | 'ExtResource'; id: string } | null {
-  const subMatch = ref.match(/^SubResource\s*\(\s*"([^"]+)"\s*\)$/);
-  if (subMatch && subMatch[1]) {
-    return { type: 'SubResource', id: subMatch[1] };
-  }
-
-  const extMatch = ref.match(/^ExtResource\s*\(\s*"([^"]+)"\s*\)$/);
-  if (extMatch && extMatch[1]) {
-    return { type: 'ExtResource', id: extMatch[1] };
-  }
-
-  return null;
+  const parsed = resourceRef(ref);
+  return parsed ? { type: parsed.kind, id: parsed.id } : null;
 }
 
 /**

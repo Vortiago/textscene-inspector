@@ -40,3 +40,12 @@ export {
 } from './rendering.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MODES } from './canvasItem.js';
 export { DEFAULT_ANIMATION_NAME } from './animation.js';
+export {
+  NODE_PATH_LITERAL_RE,
+  NODE_PATH_LITERAL_ANYWHERE_RE,
+  RESOURCE_REF_RE,
+  SUB_RESOURCE_REF_ANYWHERE_RE,
+  SUB_RESOURCE_REF_BODY,
+  nodePathLiteral,
+  resourceRef,
+} from './variantParser.js';

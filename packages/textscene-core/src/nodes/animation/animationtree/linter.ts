@@ -10,17 +10,13 @@ import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
+import { RESOURCE_REF_RE } from '../../../godot/index.js';
 
 /**
  * Extract resource ID from SubResource("id") or ExtResource("id") format
  */
 function extractResourceId(value: string): string | null {
-  // `\s*`: Godot tokenises the literal rather than pattern-matching it
-  // (variant_parser.cpp:415-417 drops whitespace before every token), so
-  // `SubResource( "id" )` resolves — reading it as unparseable reported a
-  // dangling tree_root on a scene that loads.
-  const match = value.match(/^(?:SubResource|ExtResource)\s*\(\s*"([^"]+)"\s*\)$/);
-  return (match && match[1]) ? match[1] : null;
+  return RESOURCE_REF_RE.exec(value)?.[2] ?? null;
 }
 
 /**

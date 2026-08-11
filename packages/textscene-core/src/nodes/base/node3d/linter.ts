@@ -10,6 +10,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
+import { nodePathLiteral } from '../../../godot/index.js';
 
 /**
  * Node3D properties interface for type checking
@@ -48,11 +49,7 @@ function hasNode3DProperties(props: unknown): props is Node3DProperties {
  * @returns The extracted path, or null if invalid format
  */
 function parseNodePath(nodePathValue: string): string | null {
-  // `\s*` for the tokenizer reason `NODE_PATH_REGEX` documents: Godot drops
-  // whitespace before every token (variant_parser.cpp:415-417), so
-  // `NodePath( "Body" )` is a real path rather than a malformed literal.
-  const match = nodePathValue.match(/^NodePath\s*\(\s*"([^"]*)"\s*\)$/);
-  return match && match[1] !== undefined ? match[1] : null;
+  return nodePathLiteral(nodePathValue);
 }
 
 /**

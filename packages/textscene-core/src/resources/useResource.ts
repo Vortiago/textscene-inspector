@@ -20,6 +20,7 @@ import type { ResourceEventBus, ResourceType as BusResourceType } from './Resour
 import { cloneWithMaterials, disposeClonedMaterials } from './processing/glbProcessing';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
 import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
+import { resourceRef } from '../godot/index.js';
 
 export type ResourceType =
   | 'Texture2D'
@@ -362,11 +363,10 @@ export function resolveResourcePath(
   if (idOrPath.startsWith('res://')) {
     return idOrPath;
   }
-  const match = idOrPath.match(/^ExtResource\s*\(\s*"([^"]+)"\s*\)$/);
-  if (!match || !match[1]) {
+  const parsed = resourceRef(idOrPath);
+  if (parsed?.kind !== 'ExtResource') {
     return null;
   }
-  const id = match[1];
-  const metadata = scene.resourceLoader?.getMetadata(id);
+  const metadata = scene.resourceLoader?.getMetadata(parsed.id);
   return metadata?.path ?? null;
 }
