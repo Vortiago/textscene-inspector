@@ -63,4 +63,43 @@ validatorRegistry.registerAll('Area3D', {
   // StringName (area_3d.cpp:601), so the serialised form is &"Master" or the
   // plain "Master" the text parser also accepts — never a bare word.
   audio_bus_name: v.stringName('audio_bus_name'),
+  // area_3d.cpp:794, PROPERTY_HINT_RANGE "0,10,0.001,or_greater": or_greater
+  // opens the max. set_wind_force_magnitude (:134-137) is a bare assignment,
+  // so out-of-range warns.
+  wind_force_magnitude: v.float('wind_force_magnitude', {
+    min: 0,
+    hinted: 'area_3d.cpp:794',
+  }),
+  // area_3d.cpp:795, PROPERTY_HINT_RANGE "0.0,3.0,0.001,or_greater": or_greater
+  // opens the max. set_wind_attenuation_factor (:145-148) is a bare
+  // assignment, so out-of-range warns.
+  wind_attenuation_factor: v.float('wind_attenuation_factor', {
+    min: 0,
+    hinted: 'area_3d.cpp:795',
+  }),
+  // area_3d.cpp:796, Variant::NODE_PATH. set_wind_source_path (:156-159) is a
+  // bare assignment: format-only. NodePath("") is legal (:173 treats an empty
+  // path as "no wind source").
+  wind_source_path: v.nodePath('wind_source_path'),
+  // area_3d.cpp:803, PROPERTY_HINT_GROUP_ENABLE (bool group toggle).
+  reverb_bus_enabled: v.boolean('reverb_bus_enabled'),
+  // area_3d.cpp:804 declares Variant::STRING_NAME; set_reverb_bus_name
+  // (:618-620) is a bare assignment. The ENUM hint's option list is populated
+  // dynamically in _validate_property, editor-only, so it carries no bound to
+  // check against a saved value.
+  reverb_bus_name: v.stringName('reverb_bus_name'),
+  // area_3d.cpp:805, PROPERTY_HINT_RANGE "0,1,0.01". set_reverb_amount
+  // (:631-633) is a bare assignment, so out-of-range warns.
+  reverb_bus_amount: v.float('reverb_bus_amount', {
+    min: 0,
+    max: 1,
+    hinted: 'area_3d.cpp:805',
+  }),
+  // area_3d.cpp:806, PROPERTY_HINT_RANGE "0,1,0.01". set_reverb_uniformity
+  // (:639-641) is a bare assignment, so out-of-range warns.
+  reverb_bus_uniformity: v.float('reverb_bus_uniformity', {
+    min: 0,
+    max: 1,
+    hinted: 'area_3d.cpp:806',
+  }),
 });

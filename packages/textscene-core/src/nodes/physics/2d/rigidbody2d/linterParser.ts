@@ -12,6 +12,7 @@ import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js'
 const CENTER_OF_MASS_MODE = { 0: 'AUTO', 1: 'CUSTOM' };
 const DAMP_MODE = { 0: 'COMBINE', 1: 'REPLACE' };
 const FREEZE_MODE = { 0: 'STATIC', 1: 'KINEMATIC' };
+const CCD_MODE = { 0: 'DISABLED', 1: 'CAST_RAY', 2: 'CAST_SHAPE' };
 
 /** 2D inertia is a scalar (rotational mass around Z), unlike 3D's Vector3. */
 const inertia2d: PropertyValidator = (key, value, line) => {
@@ -44,6 +45,32 @@ validatorRegistry.registerAll('RigidBody2D', {
   }),
   center_of_mass: v.vector2('center_of_mass'),
   inertia: inertia2d,
+  sleeping: v.boolean('sleeping'),
+  can_sleep: v.boolean('can_sleep'),
+  lock_rotation: v.boolean('lock_rotation'),
+  freeze: v.boolean('freeze'),
+  // rigid_body_2d.cpp:754 "Static,Kinematic". set_freeze_mode (:304-310) is a
+  // bare assignment (only an early-return-if-unchanged guard), so out-of-range
+  // warns. Godot has this property (unlike its absence suggested before this
+  // audit); RigidBody3D carries the same enum.
+  freeze_mode: v.enumInt('freeze_mode', 0, 1, FREEZE_MODE, { hinted: 'rigid_body_2d.cpp:754' }),
+  custom_integrator: v.boolean('custom_integrator'),
+  // rigid_body_2d.cpp:757 "Disabled,Cast Ray,Cast Shape". Unlike RigidBody3D's
+  // plain bool, 2D's continuous_cd is an INT enum (CCDMode).
+  // set_continuous_collision_detection_mode (:566-569) is a bare assignment,
+  // so out-of-range warns.
+  continuous_cd: v.enumInt('continuous_cd', 0, 2, CCD_MODE, { hinted: 'rigid_body_2d.cpp:757' }),
+  contact_monitor: v.boolean('contact_monitor'),
+  // rigid_body_2d.cpp:759 hints "0,64,1,or_greater" (min 0 stated, max open), but
+  // the real bound comes from the setter: rigid_body_2d.cpp:501,
+  // ERR_FAIL_INDEX_MSG(p_amount, MAX_CONTACTS_REPORTED_2D_MAX) where the
+  // constant is 4096, so the engine enforces [0, 4095] on both ends.
+  max_contacts_reported: v.int('max_contacts_reported', {
+    min: 0,
+    max: 4095,
+    enforced: 'rigid_body_2d.cpp:501',
+  }),
+  linear_velocity: v.vector2('linear_velocity'),
   // rigid_body_2d.cpp:762 "Combine,Replace". set_linear_damp_mode (:406-409) is
   // a bare assignment, so out-of-range warns.
   linear_damp_mode: v.enumInt('linear_damp_mode', 0, 1, DAMP_MODE, {
@@ -56,6 +83,10 @@ validatorRegistry.registerAll('RigidBody2D', {
     message: "Property 'linear_damp' must be >= -1. Use -1 for the project default.",
     enforced: 'rigid_body_2d.cpp:425',
   }),
+  // rigid_body_2d.cpp:765: Variant::FLOAT. 2D angular velocity is a scalar
+  // (rotation around Z), unlike 3D's Vector3. PROPERTY_HINT_NONE;
+  // set_angular_velocity (:460-463) is a bare assignment, so no bound.
+  angular_velocity: v.float('angular_velocity'),
   // rigid_body_2d.cpp:766 "Combine,Replace". set_angular_damp_mode (:415-418) is
   // a bare assignment, so out-of-range warns.
   angular_damp_mode: v.enumInt('angular_damp_mode', 0, 1, DAMP_MODE, {
@@ -67,23 +98,11 @@ validatorRegistry.registerAll('RigidBody2D', {
     message: "Property 'angular_damp' must be >= -1. Use -1 for the project default.",
     enforced: 'rigid_body_2d.cpp:435',
   }),
-  lock_rotation: v.boolean('lock_rotation'),
-  // rigid_body_2d.cpp:754 "Static,Kinematic". set_freeze_mode (:304-310) is a
-  // bare assignment (only an early-return-if-unchanged guard), so out-of-range
-  // warns. Godot has this property (unlike its absence suggested before this
-  // audit); RigidBody3D carries the same enum.
-  freeze_mode: v.enumInt('freeze_mode', 0, 1, FREEZE_MODE, { hinted: 'rigid_body_2d.cpp:754' }),
-  freeze: v.boolean('freeze'),
-  contact_monitor: v.boolean('contact_monitor'),
-  // rigid_body_2d.cpp:759 hints "0,64,1,or_greater" (min 0 stated, max open), but
-  // the real bound comes from the setter: rigid_body_2d.cpp:501,
-  // ERR_FAIL_INDEX_MSG(p_amount, MAX_CONTACTS_REPORTED_2D_MAX) where the
-  // constant is 4096, so the engine enforces [0, 4095] on both ends.
-  max_contacts_reported: v.int('max_contacts_reported', {
-    min: 0,
-    max: 4095,
-    enforced: 'rigid_body_2d.cpp:501',
-  }),
+  constant_force: v.vector2('constant_force'),
+  // rigid_body_2d.cpp:770: Variant::FLOAT. 2D constant_torque is a scalar,
+  // unlike 3D's Vector3. set_constant_torque (:558-560) passes straight to
+  // the physics server with no guard, so no bound.
+  constant_torque: v.float('constant_torque'),
 });
 
 // Shown in the generated `## Linting` table of this node's sheet.

@@ -108,6 +108,48 @@ curve = ExtResource("curve_ext")
         });
       });
     });
+
+    describe('debug_custom_color property validation', () => {
+      it('should accept a valid Color literal', () => {
+        expectClean(`[gd_scene format=3]
+
+[sub_resource type="Curve3D" id="curve_1"]
+
+[node name="Path3D" type="Path3D"]
+curve = SubResource("curve_1")
+debug_custom_color = Color(1, 0.5, 0, 1)
+`);
+      });
+
+      it('should reject a malformed debug_custom_color', () => {
+        expectDiagnostic(scene(node('Path3D', { debug_custom_color: 'Color(1, 0, 0)' })), {
+          prop: 'debug_custom_color',
+          severity: 'error',
+        });
+      });
+
+      it('should accept non-finite components (inf/-inf/inf_neg/nan), which variant_parser.cpp writes into every Color and set_debug_custom_color (path_3d.cpp:175-178) never checks', () => {
+        expectClean(`[gd_scene format=3]
+
+[sub_resource type="Curve3D" id="curve_1"]
+
+[node name="Path3D" type="Path3D"]
+curve = SubResource("curve_1")
+debug_custom_color = Color(inf, -inf, inf_neg, nan)
+`);
+      });
+
+      it('should accept both SubResource and ExtResource on curve alongside a set debug_custom_color', () => {
+        expectClean(`[gd_scene format=3]
+
+[ext_resource type="Curve3D" path="res://curves/path.tres" id="curve_ext"]
+
+[node name="Path3D" type="Path3D"]
+curve = ExtResource("curve_ext")
+debug_custom_color = Color(0, 0, 0, 1)
+`);
+      });
+    });
   });
 
   describe('Semantic Validation (Resource Existence)', () => {

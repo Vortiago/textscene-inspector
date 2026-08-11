@@ -42,18 +42,39 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 
 | Property | Accepts |
 | --- | --- |
+| `alpha_antialiasing_edge` | float 0-1 |
+| `alpha_antialiasing_mode` | enum 0-2 (OFF/ALPHA_TO_COVERAGE/ALPHA_TO_COVERAGE_AND_TO_ONE) |
+| `alpha_cut` | enum 0-3 (DISABLED/DISCARD/OPAQUE_PREPASS/HASH) |
+| `alpha_hash_scale` | float 0-2 |
+| `alpha_scissor_threshold` | float 0-1 |
+| `autowrap_mode` | enum 0-3 (AUTOWRAP_OFF/AUTOWRAP_ARBITRARY/AUTOWRAP_WORD/AUTOWRAP_WORD_SMART) |
+| `autowrap_trim_flags` | bit mask of BREAK_TRIM_INDENT (32) | BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128) |
 | `billboard` | enum 0-2 (DISABLED/ENABLED/FIXED_Y) |
+| `double_sided` | true or false |
+| `fixed_size` | true or false |
+| `font` | SubResource("id") or ExtResource("id") |
 | `font_size` | float > 0 |
 | `horizontal_alignment` | enum 0-3 (LEFT/CENTER/RIGHT/FILL) |
+| `justification_flags` | bit mask of JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128) |
+| `language` | quoted string |
 | `line_spacing` | float |
 | `modulate` | Color(r, g, b, a) |
 | `no_depth_test` | true or false |
+| `offset` | Vector2(x, y) |
 | `outline_modulate` | Color(r, g, b, a) |
 | `outline_render_priority` | integer -128-127 |
 | `outline_size` | float >= 0 |
 | `pixel_size` | float |
 | `render_priority` | integer -128-127 |
+| `shaded` | true or false |
+| `structured_text_bidi_override` | enum 0-6 (STRUCTURED_TEXT_DEFAULT/STRUCTURED_TEXT_URI/STRUCTURED_TEXT_FILE/STRUCTURED_TEXT_EMAIL/STRUCTURED_TEXT_LIST/STRUCTURED_TEXT_GDSCRIPT/STRUCTURED_TEXT_CUSTOM) |
+| `structured_text_bidi_override_options` | Array literal ([...]) |
 | `text` | quoted string |
+| `text_direction` | enum -1-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) |
+| `texture_filter` | enum 0-5 (NEAREST/LINEAR/NEAREST_WITH_MIPMAPS/LINEAR_WITH_MIPMAPS/NEAREST_WITH_MIPMAPS_ANISOTROPIC/LINEAR_WITH_MIPMAPS_ANISOTROPIC) |
+| `uppercase` | true or false |
+| `vertical_alignment` | enum 0-3 (TOP/CENTER/BOTTOM/FILL) |
+| `width` | float |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

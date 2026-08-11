@@ -54,6 +54,7 @@ Strict parsing format-checks these `GPUParticles2D` properties, plus 12 inherite
 | `amount` | integer 1-1000000 |
 | `amount_ratio` | float 0-1 |
 | `collision_base_size` | float >= 0 |
+| `draw_order` | enum 0-2 (INDEX/LIFETIME/REVERSE_LIFETIME) |
 | `emitting` | true or false |
 | `explosiveness` | float 0-1 |
 | `fixed_fps` | integer 0-1000 |

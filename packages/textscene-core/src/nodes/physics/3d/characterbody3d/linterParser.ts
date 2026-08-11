@@ -20,6 +20,7 @@ validatorRegistry.registerAll('CharacterBody3D', {
     hinted: 'character_body_3d.cpp:922',
   }),
   up_direction: v.vector3('up_direction'),
+  slide_on_ceiling: v.boolean('slide_on_ceiling'),
   velocity: v.vector3('velocity'),
   floor_stop_on_slope: v.boolean('floor_stop_on_slope'),
   floor_constant_speed: v.boolean('floor_constant_speed'),

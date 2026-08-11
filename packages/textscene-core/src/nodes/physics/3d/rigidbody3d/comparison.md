@@ -38,9 +38,12 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited fr
 | --- | --- |
 | `angular_damp` | float >= 0 |
 | `angular_damp_mode` | enum 0-1 (COMBINE/REPLACE) |
+| `angular_velocity` | Vector3(x, y, z) |
 | `can_sleep` | true or false |
 | `center_of_mass` | Vector3(x, y, z) |
 | `center_of_mass_mode` | enum 0-1 (AUTO/CUSTOM) |
+| `constant_force` | Vector3(x, y, z) |
+| `constant_torque` | Vector3(x, y, z) |
 | `contact_monitor` | true or false |
 | `continuous_cd` | true or false |
 | `custom_integrator` | true or false |
@@ -50,6 +53,7 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited fr
 | `inertia` | Vector3(x, y, z), each float >= 0 |
 | `linear_damp` | float >= 0 |
 | `linear_damp_mode` | enum 0-1 (COMBINE/REPLACE) |
+| `linear_velocity` | Vector3(x, y, z) |
 | `lock_rotation` | true or false |
 | `mass` | float >= 5e-324 |
 | `max_contacts_reported` | integer 0-4095 |

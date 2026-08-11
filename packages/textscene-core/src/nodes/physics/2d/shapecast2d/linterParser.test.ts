@@ -23,7 +23,10 @@ describe('ShapeCast2D strict validators', () => {
     expect(validatorRegistry.getOwnKeys('ShapeCast2D')).not.toEqual([]);
   });
 
-  it('does not register a validator for the read-only collision_result', () => {
+  it('registers no validator for collision_result: shape_cast_2d.cpp:475 binds it with an empty setter string', () => {
+    // ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "collision_result", PROPERTY_HINT_NONE, "",
+    // PROPERTY_USAGE_NO_EDITOR), "", "get_collision_result") — the "" is the setter name.
+    // A `.tscn` cannot write this key at all, so there is nothing to validate.
     expect(validatorRegistry.findValidator('ShapeCast2D', 'collision_result')).toBeNull();
   });
 

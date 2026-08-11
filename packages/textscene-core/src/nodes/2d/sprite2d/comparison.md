@@ -57,6 +57,7 @@ Strict parsing format-checks these `Sprite2D` properties, plus 12 inherited from
 | `hframes` | integer 1-16384 |
 | `offset` | Vector2(x, y) |
 | `region_enabled` | true or false |
+| `region_filter_clip_enabled` | true or false |
 | `region_rect` | Rect2(x, y, w, h) |
 | `texture` | SubResource("id") or ExtResource("id") |
 | `vframes` | integer 1-16384 |

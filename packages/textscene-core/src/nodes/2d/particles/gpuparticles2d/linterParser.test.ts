@@ -36,11 +36,43 @@ describe('GPUParticles2D strict validators', () => {
     expect(accepted).toEqual([]);
   });
 
-  it('does not register a validator for draw_order', () => {
-    // set_draw_order (gpu_particles_2d.cpp:309) has no ERR_FAIL_INDEX or CLAMP,
-    // exactly like CPUParticles2D's identically-named setter, which that
-    // sibling slice deliberately leaves unvalidated.
-    expect(validatorRegistry.findValidator('GPUParticles2D', 'draw_order')).toBeNull();
+  describe('draw_order', () => {
+    // gpu_particles_2d.cpp:964, ADD_PROPERTY hints PROPERTY_HINT_ENUM
+    // "Index,Lifetime,Reverse Lifetime" (enum 0-2). set_draw_order
+    // (gpu_particles_2d.cpp:308-311) is `draw_order = p_order;` — no
+    // ERR_FAIL_INDEX and no CLAMP — so out of range is a WARNING, not an
+    // error (ADR-0032).
+    it('accepts every labelled value 0-2 (gpu_particles_2d.cpp:964)', () => {
+      expect(check('draw_order', '0')).toBeNull();
+      expect(check('draw_order', '1')).toBeNull();
+      expect(check('draw_order', '2')).toBeNull();
+    });
+
+    it('accepts the real value scenes/fixtures/unit-gpu-particles-2d.tscn:37 writes (`draw_order = 1`)', () => {
+      expect(check('draw_order', '1')).toBeNull();
+    });
+
+    it('rejects a non-numeric value (FORMAT branch, always an error)', () => {
+      expect(check('draw_order', 'z')?.code).toBe('INVALID_DRAW_ORDER_FORMAT');
+    });
+
+    it('warns just above 2, which set_draw_order does not ERR_FAIL_INDEX', () => {
+      expect(check('draw_order', '3')?.severity).toBe('warning');
+    });
+
+    it('warns just below 0', () => {
+      expect(check('draw_order', '-1')?.severity).toBe('warning');
+    });
+
+    it('warns (not errors) on the value CPUParticles2D\'s platformer demo ships for the identically-named property', () => {
+      // enemy.tscn:296 is a CPUParticles2D node, not GPUParticles2D — no
+      // GPUParticles2D fixture carries an out-of-range draw_order — but the
+      // same reasoning applies: the setter has no guard, so any int format-
+      // validates and only a warning follows.
+      const warning = check('draw_order', '215832976');
+      expect(warning?.code).toBe('INVALID_DRAW_ORDER_VALUE');
+      expect(warning?.severity).toBe('warning');
+    });
   });
 
   describe('booleans', () => {

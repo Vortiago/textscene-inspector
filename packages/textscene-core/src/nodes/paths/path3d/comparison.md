@@ -39,6 +39,7 @@ Strict parsing format-checks these `Path3D` properties, plus 16 inherited from N
 | Property | Accepts |
 | --- | --- |
 | `curve` | SubResource("id") or ExtResource("id") |
+| `debug_custom_color` | Color(r, g, b, a) |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

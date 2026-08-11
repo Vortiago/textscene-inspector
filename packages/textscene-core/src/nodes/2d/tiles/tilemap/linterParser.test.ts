@@ -108,4 +108,84 @@ tile_set = NotARef(1)
       expect(error?.code).toBe('INVALID_TILEMAP_LAYER_INDEX');
     });
   });
+
+  function checkTopLevel(key: string, value: string) {
+    const validator = validatorRegistry.findValidator('TileMap', key);
+    expect(validator, `no validator resolved for TileMap.${key}`).not.toBeNull();
+    return validator!(key, value, 1);
+  }
+
+  describe('collision_animatable — bare assignment (tile_map.cpp:401-410), no ERR_FAIL, no hint, so no bound', () => {
+    it('accepts true/false', () => {
+      expect(checkTopLevel('collision_animatable', 'true')).toBeNull();
+      expect(checkTopLevel('collision_animatable', 'false')).toBeNull();
+    });
+
+    it('rejects a non-boolean — the property is Variant::BOOL', () => {
+      expect(checkTopLevel('collision_animatable', '1')).not.toBeNull();
+    });
+  });
+
+  describe('collision_visibility_mode — bare assignment (tile_map.cpp:417-426), PROPERTY_HINT_ENUM "Default,Force Show,Force Hide" at tile_map.cpp:998', () => {
+    it('accepts the exact value scenes/demos/2d/physics_tests writes (1=FORCE_SHOW) and the enum floor/ceiling', () => {
+      expect(checkTopLevel('collision_visibility_mode', '1')).toBeNull();
+      expect(checkTopLevel('collision_visibility_mode', '0')).toBeNull();
+      expect(checkTopLevel('collision_visibility_mode', '2')).toBeNull();
+    });
+
+    it('warns below 0, the first value outside the hint — the setter forwards it to every layer unaltered', () => {
+      const error = checkTopLevel('collision_visibility_mode', '-1');
+      expect(error).not.toBeNull();
+      expect(error!.severity).toBe('warning');
+    });
+
+    it('warns above 2, the first value outside the hint', () => {
+      const error = checkTopLevel('collision_visibility_mode', '3');
+      expect(error).not.toBeNull();
+      expect(error!.severity).toBe('warning');
+    });
+  });
+
+  describe('navigation_visibility_mode — bare assignment (tile_map.cpp:433-442), PROPERTY_HINT_ENUM "Default,Force Show,Force Hide" at tile_map.cpp:1000', () => {
+    it('accepts the enum floor (0=DEFAULT) and ceiling (2=FORCE_HIDE)', () => {
+      expect(checkTopLevel('navigation_visibility_mode', '0')).toBeNull();
+      expect(checkTopLevel('navigation_visibility_mode', '1')).toBeNull();
+      expect(checkTopLevel('navigation_visibility_mode', '2')).toBeNull();
+    });
+
+    it('warns below 0, the first value outside the hint', () => {
+      const error = checkTopLevel('navigation_visibility_mode', '-1');
+      expect(error).not.toBeNull();
+      expect(error!.severity).toBe('warning');
+    });
+
+    it('warns above 2, the first value outside the hint', () => {
+      const error = checkTopLevel('navigation_visibility_mode', '3');
+      expect(error).not.toBeNull();
+      expect(error!.severity).toBe('warning');
+    });
+  });
+
+  describe('rendering_quadrant_size — ERR_FAIL_COND_MSG(p_size < 1) at tile_map.cpp:224, PROPERTY_HINT_RANGE "1,128,1" at tile_map.cpp:996', () => {
+    it('accepts the exact values scenes/demos/2d writes (4 and 32), both inside the hinted range', () => {
+      expect(checkTopLevel('rendering_quadrant_size', '4')).toBeNull();
+      expect(checkTopLevel('rendering_quadrant_size', '32')).toBeNull();
+    });
+
+    it('accepts the enforced floor (1) and the hinted ceiling (128)', () => {
+      expect(checkTopLevel('rendering_quadrant_size', '1')).toBeNull();
+      expect(checkTopLevel('rendering_quadrant_size', '128')).toBeNull();
+    });
+
+    it('errors at 0, the first value the ERR_FAIL_COND_MSG floor refuses', () => {
+      const error = checkTopLevel('rendering_quadrant_size', '0');
+      expect(error?.severity).toBe('error');
+    });
+
+    it('warns above the hinted 128 ceiling — the setter never checks it (tile_map.cpp:996), unlike TileMapLayer\'s own rendering_quadrant_size which has no ceiling at all', () => {
+      const error = checkTopLevel('rendering_quadrant_size', '129');
+      expect(error).not.toBeNull();
+      expect(error!.severity).toBe('warning');
+    });
+  });
 });

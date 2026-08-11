@@ -8,7 +8,7 @@
  *
  * Every `ADD_PROPERTY` in `gpu_particles_2d.cpp`'s `_bind_methods` has a
  * non-empty setter and no `PROPERTY_USAGE_NONE`, so all 26 of GPUParticles2D's
- * own members get a validator here except `draw_order` (see its comment below).
+ * own members get a validator here.
  *
  * Per ADR-0032, the setter decides whether an out-of-range value is an ERROR
  * (it `ERR_FAIL`s, clamps, or otherwise refuses the write) or a WARNING (the
@@ -24,6 +24,12 @@
 import '../../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+
+// gpu_particles_2d.cpp:964 hints 3 labels ("Index,Lifetime,Reverse
+// Lifetime"); BIND_ENUM_CONSTANT binds all 3 (:972-974). NOT the same enum as
+// CPUParticles2D's DrawOrder (cpu_particles_2d.h:43-45 has only 2 constants,
+// no REVERSE_LIFETIME) despite the identical property name.
+const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME', 2: 'REVERSE_LIFETIME' };
 
 validatorRegistry.registerAll('GPUParticles2D', {
   emitting: v.boolean('emitting'),
@@ -115,14 +121,11 @@ validatorRegistry.registerAll('GPUParticles2D', {
   local_coords: v.boolean('local_coords'),
 
   // gpu_particles_2d.cpp:964 hints PROPERTY_HINT_ENUM "Index,Lifetime,Reverse
-  // Lifetime" (3 values, DRAW_ORDER_INDEX/LIFETIME/REVERSE_LIFETIME = 0..2 per
-  // the BIND_ENUM_CONSTANT lines at 972-974), which would suggest a hard
-  // enum(0-2). But set_draw_order (line 309) is `draw_order = p_order;` with
-  // no ERR_FAIL_INDEX and no CLAMP — exactly CPUParticles2D's identically-named
-  // setter (nodes/2d/cpuparticles2d/linterParser.ts), which that slice
-  // deliberately leaves unvalidated because Godot's own 2D platformer demo
-  // ships `draw_order = 215832976` and still opens without complaint. Same
-  // reasoning applies here: no validator registered for `draw_order`.
+  // Lifetime"; set_draw_order (:308-311) is `draw_order = p_order;` with no
+  // ERR_FAIL_INDEX and no CLAMP, so an out-of-range value is a warning, not an
+  // error — unlike CPUParticles2D's identically-named but differently-sized
+  // enum, which shares only the reasoning, not the bound.
+  draw_order: v.enumInt('draw_order', 0, 2, DRAW_ORDER, { hinted: 'gpu_particles_2d.cpp:964' }),
 
   // gpu_particles_2d.cpp:966, PROPERTY_HINT_GROUP_ENABLE is an editor-only
   // grouping hint, not a range.

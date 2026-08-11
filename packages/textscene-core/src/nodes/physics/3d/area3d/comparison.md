@@ -49,6 +49,13 @@ Strict parsing format-checks these `Area3D` properties, plus 6 inherited from Co
 | `monitorable` | true or false |
 | `monitoring` | true or false |
 | `priority` | float |
+| `reverb_bus_amount` | float 0-1 |
+| `reverb_bus_enabled` | true or false |
+| `reverb_bus_name` | quoted string or &"name" |
+| `reverb_bus_uniformity` | float 0-1 |
+| `wind_attenuation_factor` | float >= 0 |
+| `wind_force_magnitude` | float >= 0 |
+| `wind_source_path` | NodePath("path/to/node") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

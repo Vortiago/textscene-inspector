@@ -83,6 +83,11 @@ describe('Sprite2D Linter', () => {
         invalid: [{ value: '"0, 0, 100, 100"', contains: ['region_rect', 'Rect2'] }],
       },
       {
+        prop: 'region_filter_clip_enabled',
+        valid: [true, false],
+        invalid: [{ value: 1, contains: ['region_filter_clip_enabled', 'boolean'] }],
+      },
+      {
         prop: 'hframes',
         valid: [4, 16384],
         invalid: [

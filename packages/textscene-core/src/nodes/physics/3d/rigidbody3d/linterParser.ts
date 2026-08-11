@@ -31,6 +31,7 @@ validatorRegistry.registerAll('RigidBody3D', {
   // bound is only that no component is negative. rigid_body_3d.cpp:344-346,
   // three ERR_FAIL_COND(p_inertia.{x,y,z} < 0): the setter refuses.
   inertia: v.boundedVector3('inertia', { min: 0, enforced: 'rigid_body_3d.cpp:344' }),
+  linear_velocity: v.vector3('linear_velocity'),
   // rigid_body_3d.cpp:784 "Combine,Replace". set_linear_damp_mode (:425-428) is
   // a bare assignment, so out-of-range warns.
   linear_damp_mode: v.enumInt('linear_damp_mode', 0, 1, DAMP_MODE, {
@@ -42,6 +43,10 @@ validatorRegistry.registerAll('RigidBody3D', {
     message: "Property 'linear_damp' must be >= 0. Damping cannot be negative.",
     enforced: 'rigid_body_3d.cpp:444',
   }),
+  // rigid_body_3d.cpp:787: Variant::VECTOR3. 3D angular velocity is a vector,
+  // unlike RigidBody2D's scalar. PROPERTY_HINT_NONE; set_angular_velocity
+  // (:479-482) is a bare assignment, so no bound.
+  angular_velocity: v.vector3('angular_velocity'),
   // rigid_body_3d.cpp:788 "Combine,Replace". set_angular_damp_mode (:434-437) is
   // a bare assignment, so out-of-range warns.
   angular_damp_mode: v.enumInt('angular_damp_mode', 0, 1, DAMP_MODE, {
@@ -53,6 +58,11 @@ validatorRegistry.registerAll('RigidBody3D', {
     message: "Property 'angular_damp' must be >= 0. Damping cannot be negative.",
     enforced: 'rigid_body_3d.cpp:454',
   }),
+  constant_force: v.vector3('constant_force'),
+  // rigid_body_3d.cpp:792: Variant::VECTOR3. 3D constant_torque is a vector,
+  // unlike RigidBody2D's scalar. set_constant_torque (:584-586) passes
+  // straight to the physics server with no guard, so no bound.
+  constant_torque: v.vector3('constant_torque'),
   lock_rotation: v.boolean('lock_rotation'),
   // rigid_body_3d.cpp:776 "Static,Kinematic". set_freeze_mode (:320-326) is a
   // bare assignment (only an early-return-if-unchanged guard), so out-of-range

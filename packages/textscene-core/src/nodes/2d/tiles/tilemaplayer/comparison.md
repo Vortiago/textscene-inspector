@@ -36,8 +36,19 @@ Strict parsing format-checks these `TileMapLayer` properties, plus 12 inherited 
 
 | Property | Accepts |
 | --- | --- |
+| `collision_enabled` | true or false |
+| `collision_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) |
 | `enabled` | true or false |
+| `navigation_enabled` | true or false |
+| `navigation_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) |
+| `occlusion_enabled` | true or false |
+| `physics_quadrant_size` | integer >= 1 |
+| `rendering_quadrant_size` | integer >= 1 |
+| `tile_map_data` | PackedByteArray(…) bytes, or a base64-quoted PackedByteArray("…") (decoded by the tilemaplayer-invalid-tile-data rule) |
 | `tile_set` | SubResource("id") or ExtResource("id") |
+| `use_kinematic_bodies` | true or false |
+| `x_draw_order_reversed` | true or false |
+| `y_sort_origin` | integer |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

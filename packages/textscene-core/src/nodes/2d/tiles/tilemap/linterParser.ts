@@ -18,6 +18,14 @@ import { IS_VALID_INT_RE } from '../../../../godot/index.js';
 const TILE_DATA_RE = /^PackedInt32Array\(([\s\S]*)\)$/;
 
 /**
+ * tile_map.h:56-59, VisibilityMode. BIND_ENUM_CONSTANT count is 3
+ * (DEFAULT/FORCE_SHOW/FORCE_HIDE) — same shape as TileMapLayer's own
+ * DebugVisibilityMode (tilemaplayer/linterParser.ts), under a different enum
+ * name; the "Default,Force Show,Force Hide" hint string is identical.
+ */
+const VISIBILITY_MODE = { 0: 'DEFAULT', 1: 'FORCE_SHOW', 2: 'FORCE_HIDE' };
+
+/**
  * `layer_<i>/tile_data`: registered `PropertyInfo(Variant::PACKED_INT32_ARRAY,
  * "tile_data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR)`
  * (tile_map.cpp:1039), storage-bearing. Shape-only: the format-AWARE decode
@@ -110,4 +118,32 @@ validatorRegistry.registerAll('TileMap', {
   // integer format is checked.
   format: v.int('format'),
   'layer_#/*': layerValidator,
+
+  // tile_map.cpp:401-410, bare assignment (also toggles
+  // notify_local_transform/physics_process_internal; no value constraint).
+  collision_animatable: v.boolean('collision_animatable'),
+  // tile_map.cpp:417-426, bare assignment, forwarded verbatim to every child
+  // TileMapLayer::set_collision_visibility_mode. Hint at ADD_PROPERTY
+  // tile_map.cpp:998.
+  collision_visibility_mode: v.enumInt('collision_visibility_mode', 0, 2, VISIBILITY_MODE, {
+    hinted: 'tile_map.cpp:998',
+  }),
+  // tile_map.cpp:433-442, bare assignment, forwarded to every child layer.
+  // Hint at ADD_PROPERTY tile_map.cpp:1000.
+  navigation_visibility_mode: v.enumInt('navigation_visibility_mode', 0, 2, VISIBILITY_MODE, {
+    hinted: 'tile_map.cpp:1000',
+  }),
+  // tile_map.cpp:223-231: ERR_FAIL_COND_MSG(p_size < 1) floors it (also
+  // forwarded to every child TileMapLayer::set_rendering_quadrant_size, which
+  // re-enforces the same floor independently). The RANGE hint's 128 ceiling
+  // (ADD_PROPERTY tile_map.cpp:996) is never checked by either setter, so it
+  // warns rather than errors. TileMapLayer's OWN rendering_quadrant_size
+  // carries no RANGE hint at all (tilemaplayer/linterParser.ts) — its ceiling
+  // is fully open where TileMap's is a soft (warning-only) 128.
+  rendering_quadrant_size: v.strictInt('rendering_quadrant_size', {
+    min: 1,
+    max: 128,
+    enforced: { min: 'tile_map.cpp:224' },
+    hinted: { max: 'tile_map.cpp:996' },
+  }),
 });

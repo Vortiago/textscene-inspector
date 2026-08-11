@@ -54,39 +54,38 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   Line2D: {
-    parserOnly: [
-      // PackedVector2Array body: complex binary-encoded data with no
-      // per-key validator available (same convention as Polygon2D.polygon).
-      'points',
+    renderGap: [
+      // The whole stroke appearance beyond its centreline. Godot antialiases
+      // the edge, tiles or stretches a texture along the run, tints by a
+      // gradient, tapers by a width curve and caps each end; this draws a flat
+      // constant-width line and reads none of it.
+      'antialiased', 'gradient', 'texture', 'texture_mode', 'width_curve',
+      'begin_cap_mode', 'end_cap_mode',
     ],
-    reason: 'Line2D points is a PackedVector2Array (opaque encoded data); no format validator exists for packed arrays.',
+    reason: 'points is parsed and now validated too; the remaining seven are the stroke appearance the renderer does not implement.',
   },
 
   Polygon2D: {
-    parserOnly: [
-      // PackedVector2Array / Array-of-PackedInt32Array / PackedColorArray
-      // bodies (same pattern as Line2D.points above): opaque encoded data with
-      // no per-key grammar. (`uv` used to sit here; it has one now.)
-      'polygon', 'polygons', 'vertex_colors',
-    ],
     linterOnly: [
       // Display tweak with no rendering parity requirement. (`invert_enabled`,
       // `invert_border` and the whole texture transform used to sit here; all
       // are rendered now.)
       'antialiased',
     ],
-    reason: 'polygon/polygons/vertex_colors are encoded packed arrays with no per-key grammar; antialiased is a display tweak the renderer has no equivalent for.',
+    renderGap: [
+      // Skeleton2D skinning: `bones` is the weight table and `skeleton` names
+      // the rig. Godot deforms the polygon by them; this draws the rest pose.
+      'bones', 'skeleton',
+    ],
+    reason: 'polygon/polygons/vertex_colors are parsed AND validated now; antialiased is a display tweak with no equivalent; bones/skeleton are the unimplemented Skeleton2D deformation.',
   },
 
   CPUParticles2D: {
-    parserOnly: [
-      // Godot's setter takes ANY int and reads everything but 1 as Index — its
-      // own 2D platformer demo ships `draw_order = 215832976` — so a range
-      // validator would error on a scene the engine opens without complaint.
-      'draw_order',
-    ],
     linterOnly: [
       ...PARTICLE_PARAM_KEYS,
+      // Only reachable for the POINTS / DIRECTED_POINTS emission shapes, which
+      // sample Godot's global RNG and so are deliberately not previewed.
+      'emission_colors',
       // Emission shapes the frozen pose cannot reproduce (they sample Godot's
       // global RNG), so the parser has no reason to read their point data —
       // but a malformed packed array is still worth reporting.
@@ -95,16 +94,28 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'split_scale', 'scale_curve_x', 'scale_curve_y',
     ],
     reason:
-      'The parameter min/max/curve keys ARE read, but through a table-driven `properties[`${prefix}_min`]` lookup the scrape cannot see; emission_points/normals and the split-scale curves are validated but deliberately unrendered; draw_order is validator-free because Godot accepts any int for it.',
+      'The parameter min/max/curve keys ARE read, but through a table-driven `properties[`${prefix}_min`]` lookup the scrape cannot see; emission_points/normals/colors and the split-scale curves are validated but deliberately unrendered. draw_order is both parsed and validated now: its enum is 0-1 here, narrower than the 2D and 3D GPU twins, and out-of-range warns rather than errors because the setter bare-assigns.',
   },
 
   TileMapLayer: {
-    parserOnly: [
-      // Raw tile cell stream (PackedByteArray): decoded by a dedicated
-      // helper; the linter has no format validator for packed cell data.
-      'tile_map_data',
+    linterOnly: [
+      // Physics and navigation bodies built from the tiles, plus the batching
+      // quadrant sizes. The two visibility modes gate DEBUG_ENABLED overlays
+      // that are additionally suppressed in the editor (tile_map_layer.cpp),
+      // so they draw in neither reference nor ours.
+      'collision_enabled', 'use_kinematic_bodies', 'collision_visibility_mode',
+      'navigation_enabled', 'navigation_visibility_mode',
+      'physics_quadrant_size', 'rendering_quadrant_size',
     ],
-    reason: 'tile_map_data is a PackedByteArray decoded by decodeTileMapData; transform/position are covered by the Node2D base on both parser and validator sides.',
+    renderGap: [
+      // Occlusion polygons feed 2D shadow casting, which this previewer has
+      // infrastructure for but never wires tiles into.
+      'occlusion_enabled',
+      // Flips the same-Y tie-break while y-sorting; neither the parser nor
+      // ySortItems reads it.
+      'x_draw_order_reversed',
+    ],
+    reason: 'tile_map_data and y_sort_origin are parsed and validated; the physics/navigation bodies and quadrant batching never reach a frame, while occlusion and the draw-order flip do and are unimplemented.',
   },
 
   TileMap: {
@@ -118,6 +129,11 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // truly has no use for: neither changes which tile draws where in a
       // static frame.
       'layer_#/*',
+      // Forwarded verbatim to the child layers Godot builds from this
+      // deprecated node; batching and debug-overlay concerns only, matching
+      // the TileMapLayer entry above.
+      'collision_animatable', 'collision_visibility_mode',
+      'navigation_visibility_mode', 'rendering_quadrant_size',
     ],
     reason: 'layer_<i>/* is read through a loop the scrape cannot match; parser.ts genuinely reads five of its seven leaves (name/enabled/modulate/z_index/tile_data), and y_sort_enabled/navigation_enabled have no bearing on a static frame. instance_shader_parameters/* is covered by the inherited CanvasItem entry.',
   },
@@ -125,6 +141,25 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   // -------------------------------------------------------------------------
   // Physics (linter-only physics properties)
   // -------------------------------------------------------------------------
+
+  // Navigation regions draw a translucent navmesh overlay here, mirroring the
+  // editor's debug view, so the two keys that gate Godot's own debug draw are
+  // gaps rather than scope. The costs and layers are pathfinding inputs that
+  // never reach a frame in either.
+  NavigationRegion2D: {
+    linterOnly: ['navigation_layers', 'enter_cost', 'travel_cost'],
+    renderGap: ['enabled', 'use_edge_connections'],
+    reason: 'enabled and use_edge_connections gate the navmesh and edge-connection debug draw this previewer mirrors; the layer mask and the two costs only steer pathfinding.',
+  },
+
+  Sprite2D: {
+    renderGap: [
+      // Clamps the atlas sampler to the region rect, which is what stops a
+      // neighbouring tile bleeding in at the seam. Purely a render concern.
+      'region_filter_clip_enabled',
+    ],
+    reason: 'region_filter_clip_enabled prevents atlas-edge bleed at the region seam; the renderer samples the region without it.',
+  },
 
   Area2D: {
     linterOnly: [

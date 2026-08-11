@@ -36,7 +36,12 @@ Strict parsing format-checks these `NavigationRegion3D` properties, plus 16 inhe
 
 | Property | Accepts |
 | --- | --- |
+| `enabled` | true or false |
+| `enter_cost` | float >= 0 |
+| `navigation_layers` | 32-bit layer mask (layers 1-32) |
 | `navigation_mesh` | SubResource("id") or ExtResource("id") |
+| `travel_cost` | float >= 0 |
+| `use_edge_connections` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

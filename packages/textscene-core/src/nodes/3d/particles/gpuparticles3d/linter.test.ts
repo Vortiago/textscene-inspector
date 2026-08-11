@@ -246,7 +246,18 @@ draw_pass_1 = SubResource("mesh_1")
       it('should reject invalid reference format', () => {
         expectDiagnostic(createTestScene('draw_pass_1 = invalid'), {
           prop: 'draw_pass_1',
-          contains: ['resource reference'],
+          contains: ['SubResource'],
+        });
+      });
+
+      it('should accept the literal null (an empty pass) as a format', () => {
+        // Godot writes `null` for a draw_pass_N index its own
+        // `_validate_property` makes newly visible with no mesh assigned
+        // (scenes/demos/3d/particles/test.tscn ships `draw_pass_2 = null`).
+        // `gpuparticles3d-no-draw-pass-mesh` still warns separately (no mesh
+        // set anywhere) — that is the semantic rule, not the format check.
+        expectNoDiagnostic(createTestScene('draw_pass_1 = null'), {
+          ruleName: 'strict-parser',
         });
       });
     });

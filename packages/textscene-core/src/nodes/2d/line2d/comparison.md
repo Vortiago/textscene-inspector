@@ -37,12 +37,20 @@ Strict parsing format-checks these `Line2D` properties, plus 12 inherited from N
 
 | Property | Accepts |
 | --- | --- |
+| `antialiased` | true or false |
+| `begin_cap_mode` | enum 0-2 (NONE/BOX/ROUND) |
 | `closed` | true or false |
 | `default_color` | Color(r, g, b, a) |
+| `end_cap_mode` | enum 0-2 (NONE/BOX/ROUND) |
+| `gradient` | SubResource("id") or ExtResource("id") |
 | `joint_mode` | enum 0-2 (SHARP/BEVEL/ROUND) |
+| `points` | PackedVector2Array(x, y, …) |
 | `round_precision` | integer 1-32 |
 | `sharp_limit` | float >= 0 |
+| `texture` | SubResource("id") or ExtResource("id") |
+| `texture_mode` | enum 0-2 (NONE/TILE/STRETCH) |
 | `width` | float |
+| `width_curve` | SubResource("id") or ExtResource("id") |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

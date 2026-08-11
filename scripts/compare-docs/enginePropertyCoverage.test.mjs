@@ -47,7 +47,15 @@ const built = existsSync(DIST);
  * `Control`'s slice, not in each of the forty leaves that inherit it, so the
  * diff is per declaring class and the base-walk is deliberately not applied.
  */
-const EXPECTED_UNVALIDATED = 191;
+// 191 at the guard's introduction, then 102 closed in one sweep across
+// Label3D, the TileMap pair, the particles family, the physics bodies, 2D
+// geometry, and the area/gridmap/navigation set.
+//
+// What remains is deliberately the tail: Viewport (38) and Control (25) are 63
+// of it, and both are a different kind of work. Viewport's are renderer knobs
+// (vrs_*, msaa_2d, scaling_3d_*) that no scene reads, and Control's 25 reach
+// roughly 47 leaves, so a wrong call there is the most expensive one available.
+const EXPECTED_UNVALIDATED = 89;
 
 /**
  * A registered key can stand for a whole indexed family.

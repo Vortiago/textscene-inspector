@@ -18,6 +18,10 @@ validatorRegistry.registerAll('Sprite2D', {
   flip_v: v.boolean('flip_v'),
   region_enabled: v.boolean('region_enabled'),
   region_rect: v.rect2('region_rect'),
+  // sprite_2d.cpp:551, BOOL, no hint. set_region_filter_clip_enabled
+  // (sprite_2d.cpp:282-289) has an early equality-return guard, then a bare
+  // assignment: format-only.
+  region_filter_clip_enabled: v.boolean('region_filter_clip_enabled'),
   // sprite_2d.cpp:543 hints "1,16384,1" — no or_greater/or_less, hard both ends.
   // set_hframes (sprite_2d.cpp:323) ERR_FAIL_COND_MSGs below 1; the ceiling is
   // hint-only, never setter-enforced. `strictInt` (not `int`) because only it

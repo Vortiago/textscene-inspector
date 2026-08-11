@@ -122,13 +122,16 @@ describe('property-grammar parity guard', () => {
   // number rather than a pile. Exact equality, not a ceiling: this list should
   // only move when someone deliberately adds a slice or closes a gap, and
   // either way the diff should say so out loud.
-  // +9 on Light3D: the projector, both soft-shadow sizes, the shadow caster
-  // mask, the four distance-fade keys and editor_only. They are new to the LIST
-  // rather than new to the previewer, which never read any of them; they became
-  // visible only once Light3D registered validators for the twelve of its own
-  // 27 ADD_PROPERTY keys that had none, so the guard could finally ask whether
-  // the renderer should be reading them.
-  const EXPECTED_RENDER_GAP_KEYS = 57;
+  // +9 on Light3D, then +38 across Label3D, Line2D, Polygon2D, GridMap, both
+  // NavigationRegions, TileMapLayer, Sprite2D and Path3D.
+  //
+  // None of these are new gaps. The previewer never read any of them; they
+  // became VISIBLE only once validators existed for the properties, because
+  // this guard can only ask "should the renderer be reading this?" about a key
+  // one side already declares. The engine-property sweep that added those
+  // validators is what surfaced them, so the number rising here is the
+  // to-do list becoming honest rather than growing.
+  const EXPECTED_RENDER_GAP_KEYS = 95;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>

@@ -19,24 +19,64 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // baked meshes reproduce, not add to, what `data` already draws — so no
       // parser needs to read this cache to render the grid correctly.
       'baked_meshes',
+      // Physics and navigation built from the cells, plus the octree
+      // partitioning size. None of them decide what is drawn where.
+      'bake_navigation', 'cell_octant_size', 'collision_layer',
+      'collision_mask', 'collision_priority', 'physics_material',
     ],
-    reason: 'data is a packed cell dictionary decoded by a bespoke helper (extractCells) — now symmetric on both sides; baked_meshes is a rendering-optimisation cache over the same cell data, so nothing needs to read it.',
+    renderGap: [
+      // Multiplies the cell size into the render transform
+      // (grid_map.cpp:687, :1333), so a non-unit scale moves every tile.
+      'cell_scale',
+    ],
+    reason: 'data is a packed cell dictionary decoded by a bespoke helper (extractCells) - now symmetric on both sides; baked_meshes is a rendering-optimisation cache, and the physics/navigation/octant keys never reach a frame. cell_scale does and is unread.',
   },
 
   Label3D: {
-    parserOnly: [
-      // double_sided toggle: read for rendering but not validated by the
-      // linter (boolean with Godot-default=true, no range constraint).
-      'double_sided',
-    ],
     renderGap: [
       // Material draw ORDER. With a single label nothing moves, but two
       // overlapping transparent materials resolve in this order, so it is a
       // real render input rather than an editor-only concern.
       'outline_render_priority', 'render_priority',
+      // Everything about the label except its string and its double-sidedness.
+      // Text shaping: the font itself, the locale and bidi settings the
+      // TextServer shapes and substitutes glyphs by, and the case transform.
+      'font', 'language', 'text_direction', 'structured_text_bidi_override',
+      'structured_text_bidi_override_options', 'uppercase',
+      // Wrapping: this splits on a literal newline only, so the wrap mode, its
+      // trim flags, the justification flags and the wrap width are all unread.
+      'autowrap_mode', 'autowrap_trim_flags', 'justification_flags', 'width',
+      // Placement relative to the node origin.
+      'offset', 'vertical_alignment',
+      // Material behaviour: lighting response, constant screen size, the alpha
+      // compositing mode with its two thresholds and its antialiasing pair,
+      // and the texture sampler.
+      'shaded', 'fixed_size', 'alpha_cut', 'alpha_scissor_threshold',
+      'alpha_hash_scale', 'alpha_antialiasing_mode', 'alpha_antialiasing_edge',
+      'texture_filter',
     ],
     reason:
-      'Label3D.double_sided is a boolean read by the parser with no constraint to enforce; the two render-order properties are the reverse, validated against the RenderingServer range but unread, so overlapping transparent labels resolve in the wrong order.',
+      'double_sided is the one own property both parsed and validated; everything else Label3D declares is a real render input the previewer does not read, so the whole set is a render gap rather than deliberate scope.',
+  },
+
+  // Navigation regions draw a translucent navmesh overlay here, mirroring the
+  // editor's debug view, so the two keys that gate Godot's own debug draw are
+  // gaps rather than scope. The costs and layers are pathfinding inputs that
+  // never reach a frame in either.
+  NavigationRegion3D: {
+    linterOnly: ['navigation_layers', 'enter_cost', 'travel_cost'],
+    renderGap: ['enabled', 'use_edge_connections'],
+    reason: 'enabled and use_edge_connections gate the navmesh and edge-connection debug draw this previewer mirrors; the layer mask and the two costs only steer pathfinding.',
+  },
+
+  Path3D: {
+    renderGap: [
+      // The curve gizmo's colour. This repo draws that gizmo (ADR-0018) and
+      // the editor plugin reads this property for it, while Path3D.tsx
+      // hardcodes white.
+      'debug_custom_color',
+    ],
+    reason: 'debug_custom_color tints the curve gizmo the editor draws and this previewer reproduces; the component hardcodes its colour instead.',
   },
 
   Sprite3D: {

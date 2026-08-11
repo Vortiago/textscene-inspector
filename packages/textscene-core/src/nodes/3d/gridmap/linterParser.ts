@@ -8,7 +8,7 @@
 
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { accepts, propertyError, RESOURCE_REFERENCE_REGEX, v } from '../../../linter/validators/index.js';
+import { accepts, layerBitmask, propertyError, RESOURCE_REFERENCE_REGEX, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { splitTopLevel } from '../../../godot/string.js';
 
@@ -89,6 +89,47 @@ const bakedMeshesValidator: PropertyValidator = accepts((key, value, line) => {
 }, 'Array of resource references ([SubResource("id"), …])');
 bakedMeshesValidator.grounding = { kind: 'enforced', cite: 'grid_map.cpp:97' };
 
+const CELL_OCTANT_SIZE_HINT_MIN = 1;
+const CELL_OCTANT_SIZE_HINT_MAX = 1024;
+
+/**
+ * `cell_octant_size`: grid_map.cpp:1253 `PROPERTY_HINT_RANGE "1,1024,1"`, but
+ * `set_octant_size` (:313-317) only guards `ERR_FAIL_COND(p_size == 0)` — an
+ * ENFORCED refusal of exactly zero, not a floor. A negative or >1024 value
+ * that is not 0 is not refused by the setter at all, so it only warns, per
+ * the hint. Zero is checked first so the error wins over the warning.
+ */
+const cellOctantSizeValidator: PropertyValidator = accepts((key, value, line) => {
+  const parsed = parseInt(value.trim(), 10);
+  if (isNaN(parsed)) {
+    return propertyError(
+      key,
+      line,
+      `Property 'cell_octant_size' must be a number, got: "${value}"`,
+      'INVALID_CELL_OCTANT_SIZE_FORMAT'
+    );
+  }
+  if (parsed === 0) {
+    return propertyError(
+      key,
+      line,
+      "Property 'cell_octant_size' must not be 0 (grid_map.cpp:313 refuses the write)",
+      'INVALID_CELL_OCTANT_SIZE_VALUE'
+    );
+  }
+  if (parsed < CELL_OCTANT_SIZE_HINT_MIN || parsed > CELL_OCTANT_SIZE_HINT_MAX) {
+    return propertyError(
+      key,
+      line,
+      `Property 'cell_octant_size' should be between ${CELL_OCTANT_SIZE_HINT_MIN} and ${CELL_OCTANT_SIZE_HINT_MAX} (got ${parsed})`,
+      'INVALID_CELL_OCTANT_SIZE_VALUE',
+      'warning'
+    );
+  }
+  return null;
+}, 'integer, nonzero, 1-1024 hinted');
+cellOctantSizeValidator.grounding = { kind: 'enforced', cite: 'grid_map.cpp:313, grid_map.cpp:1253' };
+
 validatorRegistry.registerAll('GridMap', {
   mesh_library: v.resourceReference('mesh_library'),
   cell_size: v.vector3('cell_size'),
@@ -97,4 +138,22 @@ validatorRegistry.registerAll('GridMap', {
   cell_center_z: v.boolean('cell_center_z'),
   data: dataValidator,
   baked_meshes: bakedMeshesValidator,
+  // grid_map.cpp:1265 — plain BOOL, no hint.
+  bake_navigation: v.boolean('bake_navigation'),
+  cell_octant_size: cellOctantSizeValidator,
+  // grid_map.cpp:1257 — plain FLOAT, no hint. set_cell_scale (:1273-1276) is a
+  // bare assignment: nothing to bound.
+  cell_scale: v.float('cell_scale'),
+  // grid_map.cpp:1260 — PROPERTY_HINT_LAYERS_3D_PHYSICS. set_collision_layer
+  // (:162-165) is a bare assignment.
+  collision_layer: layerBitmask('collision_layer', { hinted: 'grid_map.cpp:1260' }),
+  // grid_map.cpp:1261 — PROPERTY_HINT_LAYERS_3D_PHYSICS. set_collision_mask
+  // (:171-174) is a bare assignment.
+  collision_mask: layerBitmask('collision_mask', { hinted: 'grid_map.cpp:1261' }),
+  // grid_map.cpp:1262 — plain FLOAT, no hint. set_collision_priority
+  // (:210-213) is a bare assignment: nothing to bound.
+  collision_priority: v.float('collision_priority'),
+  // grid_map.cpp:1249 — PROPERTY_HINT_RESOURCE_TYPE "PhysicsMaterial". Godot
+  // omits the key when the slot is cleared, so never require it here.
+  physics_material: v.resourceReference('physics_material'),
 });

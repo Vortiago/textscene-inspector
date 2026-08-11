@@ -42,19 +42,27 @@ Strict parsing format-checks these `RigidBody2D` properties, plus 5 inherited fr
 | --- | --- |
 | `angular_damp` | float >= -1 |
 | `angular_damp_mode` | enum 0-1 (COMBINE/REPLACE) |
+| `angular_velocity` | float |
+| `can_sleep` | true or false |
 | `center_of_mass` | Vector2(x, y) |
 | `center_of_mass_mode` | enum 0-1 (AUTO/CUSTOM) |
+| `constant_force` | Vector2(x, y) |
+| `constant_torque` | float |
 | `contact_monitor` | true or false |
+| `continuous_cd` | enum 0-2 (DISABLED/CAST_RAY/CAST_SHAPE) |
+| `custom_integrator` | true or false |
 | `freeze` | true or false |
 | `freeze_mode` | enum 0-1 (STATIC/KINEMATIC) |
 | `gravity_scale` | float |
 | `inertia` | float >= 0 |
 | `linear_damp` | float >= -1 |
 | `linear_damp_mode` | enum 0-1 (COMBINE/REPLACE) |
+| `linear_velocity` | Vector2(x, y) |
 | `lock_rotation` | true or false |
 | `mass` | float >= 5e-324 |
 | `max_contacts_reported` | integer 0-4095 |
 | `physics_material_override` | SubResource("id") or ExtResource("id") |
+| `sleeping` | true or false |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

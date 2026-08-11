@@ -44,6 +44,7 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | `platform_on_leave` | enum 0-2 (ADD_VELOCITY/ADD_UPWARD_VELOCITY/DO_NOTHING) |
 | `platform_wall_layers` | 32-bit layer mask (layers 1-32) |
 | `safe_margin` | float |
+| `slide_on_ceiling` | true or false |
 | `up_direction` | Vector3(x, y, z) |
 | `velocity` | Vector3(x, y, z) |
 | `wall_min_slide_angle` | radians, 0° to 180° |

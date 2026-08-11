@@ -43,24 +43,34 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 18 inherite
 | Property | Accepts |
 | --- | --- |
 | `amount` | integer > 0 |
+| `amount_ratio` | float 0-1 |
 | `collision_base_size` | float >= 0 |
 | `draw_order` | enum 0-3 (INDEX/LIFETIME/REVERSE_LIFETIME/VIEW_DEPTH) |
-| `draw_pass_1` | SubResource("id") or ExtResource("id") |
+| `draw_pass_1` | null, SubResource("id"), or ExtResource("id") |
+| `draw_pass_2` | null, SubResource("id"), or ExtResource("id") |
+| `draw_pass_3` | null, SubResource("id"), or ExtResource("id") |
+| `draw_pass_4` | null, SubResource("id"), or ExtResource("id") |
+| `draw_passes` | integer 1-4 |
+| `draw_skin` | SubResource("id") or ExtResource("id") |
 | `emitting` | true or false |
 | `explosiveness` | float 0-1 |
 | `fixed_fps` | integer 0-1000 |
 | `fract_delta` | true or false |
 | `interp_to_end` | float 0-1 |
+| `interpolate` | true or false |
 | `lifetime` | float > 0 |
 | `local_coords` | true or false |
 | `one_shot` | true or false |
 | `preprocess` | float >= 0 |
 | `process_material` | SubResource("id") or ExtResource("id") |
 | `randomness` | float 0-1 |
+| `seed` | integer 0-4294967295 |
 | `speed_scale` | float 0-64 |
 | `sub_emitter` | NodePath("path/to/node") |
 | `trail_enabled` | true or false |
 | `trail_lifetime` | float >= 0.01 |
+| `transform_align` | enum 0-3 (DISABLED/Z_BILLBOARD/Y_TO_VELOCITY/Z_BILLBOARD_Y_TO_VELOCITY) |
+| `use_fixed_seed` | true or false |
 | `visibility_aabb` | AABB(x, y, z, w, h, d) |
 
 | Rule | Reports | Severity |

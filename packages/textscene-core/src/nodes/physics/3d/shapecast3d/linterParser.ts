@@ -6,11 +6,14 @@
  * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
  * re-declaring an inherited key shadows it and duplicates the rule.
  *
- * `collision_result` (Array, getter `get_collision_result`, no setter) is
- * deliberately absent: scene/3d/physics/shape_cast_3d.cpp:172 binds it
- * `PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR` with an empty setter — a
- * runtime-computed collision report, never authored by hand, so it never
- * appears in a `.tscn` and gets no validator.
+ * `collision_result` is deliberately absent: scene/3d/physics/shape_cast_3d.cpp:172
+ * binds it with an EMPTY setter (`ADD_PROPERTY(..., "", "get_collision_result")`) —
+ * a getter-only Array holding the runtime-computed collision report, always `[]`
+ * whenever the editor writes the file. `PROPERTY_USAGE_NO_EDITOR` only hides it
+ * from the inspector (it does not itself block serialisation — see
+ * `springbonecollision3d`'s `bone`, which carries the same flag and still gets a
+ * validator); the missing setter is what makes this one impossible to author by
+ * hand, so it gets no validator.
  */
 
 import '../../../base/node3d/linterParser.js';

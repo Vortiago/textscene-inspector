@@ -7,6 +7,12 @@ import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
+// cpu_particles_2d.cpp:1509 hints 2 labels ("Index,Lifetime");
+// BIND_ENUM_CONSTANT binds both (:1511-1512). NOT the same enum as
+// GPUParticles2D's DrawOrder (gpu_particles_2d.h:40-43 has a third,
+// REVERSE_LIFETIME) despite the identical property name.
+const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME' };
+
 validatorRegistry.registerAll('CPUParticles2D', {
   emitting: v.boolean('emitting'),
   // cpu_particles_2d.cpp:1492 hints "1,1000000,1,exp" but set_amount
@@ -48,10 +54,12 @@ validatorRegistry.registerAll('CPUParticles2D', {
   fixed_fps: v.int('fixed_fps', { min: 0, hinted: 'cpu_particles_2d.cpp:1504' }),
   fract_delta: v.boolean('fract_delta'),
   local_coords: v.boolean('local_coords'),
-  // Godot's own setter takes any int and its 2D platformer demo ships
-  // `draw_order = 215832976`, which the engine reads as Index. Reporting an
-  // error would fail a scene Godot opens without complaint, so the range check
-  // is deliberately absent here; the lenient parser falls back to Index.
+  // cpu_particles_2d.cpp:1509 hints "Index,Lifetime" (enum 0-1);
+  // set_draw_order (cpu_particles_2d.cpp:173-175) is `draw_order = p_order;`
+  // with no ERR_FAIL_INDEX and no CLAMP, so out of range is a warning, not an
+  // error — Godot's own 2D platformer demo ships `draw_order = 215832976`,
+  // which the engine reads as Index, and a warning does not fail that scene.
+  draw_order: v.enumInt('draw_order', 0, 1, DRAW_ORDER, { hinted: 'cpu_particles_2d.cpp:1509' }),
 
   // cpu_particles_2d.cpp:1586, ENUM 7 labels (matches BIND_ENUM_CONSTANT x7 +
   // EMISSION_SHAPE_MAX=7). set_emission_shape (cpu_particles_2d.cpp:480-481)
@@ -87,6 +95,12 @@ validatorRegistry.registerAll('CPUParticles2D', {
   emission_ring_inner_radius: v.float('emission_ring_inner_radius'),
   emission_points: v.packedVector2Array('emission_points'),
   emission_normals: v.packedVector2Array('emission_normals'),
+  // cpu_particles_2d.cpp:1591, PropertyInfo(Variant::PACKED_COLOR_ARRAY, …).
+  // get_emission_colors (cpu_particles_2d.cpp:551-553) returns `Vector<Color>`,
+  // not a `TypedArray<Color>`, so this is a genuine PackedColorArray, not the
+  // `Array[Color]([…])` spelling a TypedArray getter behind the same
+  // PropertyInfo type would write.
+  emission_colors: v.packedColorArray('emission_colors'),
 
   particle_flag_align_y: v.boolean('particle_flag_align_y'),
   direction: v.vector2('direction'),
