@@ -10,8 +10,8 @@ import { describe, it, expect } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseNode2D } from '../nodes/base/node2d/parser';
-import type { TscnNode } from '../parser/types';
 import type { Node2DProperties } from '../nodes/base/node2d/types';
+import type { TscnNode } from '../parser/types';
 import { CanvasItem2D } from './components/CanvasItem2D';
 
 const heading = { type: 'node', attributes: { type: 'Node2D', name: 'CI' } };
@@ -20,7 +20,10 @@ function srgbToLinear(c: number): number {
   return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
 
-function makeNode(name: string, raw: Record<string, string> = {}): TscnNode {
+function makeNode(
+  name: string,
+  raw: Record<string, string> = {}
+): TscnNode & { properties: Node2DProperties } {
   return {
     name,
     type: 'Node2D',

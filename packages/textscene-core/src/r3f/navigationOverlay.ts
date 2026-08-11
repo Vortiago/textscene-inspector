@@ -4,6 +4,10 @@
  * plus edge lines — not solid scene geometry — so both node types build the
  * same two geometries from `[positions, polygons]` and render them unlit and
  * transparent.
+ *
+ * This is the THREE-side build step over the two navigation slice decodes
+ * (`resources/navigation/navigationpolygon` / `navigationmesh`), shared rather
+ * than duplicated as each slice's `build.ts`.
  */
 
 import * as THREE from 'three';

@@ -15,7 +15,7 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import type { ParsedTresFile } from '../../../../parser/tresParser';
+import type { ParsedResource } from '../../../../parser/parsedResource';
 import { TscnParser } from '../../../../parser/TscnParser';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
 import { findMesh } from '../../../3d/testing/reactThreeTestInstance';
@@ -31,7 +31,7 @@ const INLINE_BOX: readonly TscnInternalResource[] = [
 ];
 
 /** A .tres carrying a BoxShape3D, as the resource pipeline would parse it. */
-const BOX_TRES: ParsedTresFile = {
+const BOX_TRES: ParsedResource = {
   resourceType: 'BoxShape3D',
   properties: { size: 'Vector3(2, 6, 8)' },
   extResources: [],
@@ -47,7 +47,7 @@ function node(type: string, shape: string | undefined): TscnNode {
   return scene.nodes[0]!;
 }
 
-async function render3D(shape: string | undefined, tres?: ParsedTresFile) {
+async function render3D(shape: string | undefined, tres?: ParsedResource) {
   const fake = createFakeResourceLoader();
   if (tres) fake.resources.seed(SHAPE_PATH, tres);
   return ReactThreeTestRenderer.create(

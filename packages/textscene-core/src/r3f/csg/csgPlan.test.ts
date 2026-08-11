@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { identityTransform3D } from '../../utils/transform';
 import { buildCsgPlan, CsgOperation } from './csgPlan';
 import type { TscnNode } from '../../parser/types';
 
@@ -38,14 +39,7 @@ function node(
 }
 
 function translated(x: number, y: number, z: number) {
-  return {
-    transform: {
-      basis_x: { x: 1, y: 0, z: 0 },
-      basis_y: { x: 0, y: 1, z: 0 },
-      basis_z: { x: 0, y: 0, z: 1 },
-      origin: { x, y, z },
-    },
-  };
+  return { transform: { ...identityTransform3D(), origin: { x, y, z } } };
 }
 
 describe('buildCsgPlan', () => {

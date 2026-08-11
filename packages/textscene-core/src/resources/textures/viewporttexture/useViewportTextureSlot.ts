@@ -46,9 +46,7 @@ import {
   resolveViewportTexturePath,
   viewportTextureRegistryKey,
 } from '../../../r3f/viewportTexturePath.js';
-
-/** The `type` a ViewportTexture sub-resource declares. */
-export const VIEWPORT_TEXTURE_TYPE = 'ViewportTexture';
+import { VIEWPORT_TEXTURE_TYPE } from './types.js';
 
 /**
  * Whether a texture reference names a ViewportTexture — the guard a slot uses

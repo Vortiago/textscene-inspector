@@ -57,6 +57,9 @@ catalogs:
     eslint-plugin-react-hooks:
       specifier: ^7.1
       version: 7.1.1
+    fastnoise-lite:
+      specifier: 1.1.1
+      version: 1.1.1
     fontkit:
       specifier: ^2.0.4
       version: 2.0.4
@@ -323,6 +326,9 @@ importers:
       '@react-three/postprocessing':
         specifier: 'catalog:'
         version: 3.0.4(@react-three/fiber@9.6.1(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(three@0.185.1))(@types/three@0.185.1)(react@19.2.6)(three@0.185.1)
+      fastnoise-lite:
+        specifier: 'catalog:'
+        version: 1.1.1
       postprocessing:
         specifier: 'catalog:'
         version: 6.39.3(three@0.185.1)
@@ -2270,6 +2276,9 @@ packages:
 
   fast-uri@3.1.0:
     resolution: {integrity: sha512-iPeeDKJSWf4IEOasVVrknXpaBV0IApz/gp7S2bb7Z4Lljbl2MGJRqInZiUrQwV16cpzw/D3S5j5Julj/gT52AA==}
+
+  fastnoise-lite@1.1.1:
+    resolution: {integrity: sha512-3XEk16gmVq1HUL0+BdoR+/wD/tfB6VQjpliqQ7rSSE2omh23wrJGidQ5Mfr4mECCUtBGtcEov44BGIyVqs+U4w==}
 
   fastq@1.19.1:
     resolution: {integrity: sha512-GwLTyxkCXjXbxqIhTsMI2Nui8huMPtnxg7krajPJAjnEG/iiOS7i+zCtWGZR9G0NBKbXKh6X9m9UIsYX/N6vvQ==}
@@ -6408,6 +6417,8 @@ snapshots:
   fast-levenshtein@2.0.6: {}
 
   fast-uri@3.1.0: {}
+
+  fastnoise-lite@1.1.1: {}
 
   fastq@1.19.1:
     dependencies:

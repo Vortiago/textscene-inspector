@@ -17,7 +17,8 @@ import {
   GODOT_DEFAULT_METALLIC,
   GODOT_DEFAULT_ROUGHNESS,
 } from './godotDefaultMaterial';
-import type { StandardMaterial3DScalars } from './standardMaterialScalars';
+import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
+import { materialBlendProps } from '../../resources/materials/standardmaterial3d/build';
 
 export interface StandardMaterialSlotProps {
   scalars: StandardMaterial3DScalars | null;
@@ -113,6 +114,12 @@ export function StandardMaterialSlot({
   // Respect the source material's cull_mode verbatim. Godot's default
   // when cull_mode is unset is BACK culling → THREE.FrontSide.
   const effectiveSide = scalars.side;
+  // Godot's SUB and PREMULT_ALPHA have no three preset, so they arrive as
+  // CustomBlending plus six factor fields. Omitted (never `undefined`) for the
+  // preset modes — see `materialBlendProps`. Passing only `blending` would leave
+  // a CustomBlending material on three's default factors, which is a different
+  // operation entirely.
+  const blendProps = materialBlendProps(scalars);
   // The material's shader needs to be recompiled whenever the set of
   // active texture maps changes — three.js bakes `USE_MAP` / `USE_NORMALMAP`
   // / etc. into shader defines at first compile. Keying the material on which
@@ -152,7 +159,8 @@ export function StandardMaterialSlot({
         opacity={scalars.opacity}
         alphaTest={scalars.alphaTest}
         depthWrite={scalars.depthWrite}
-        blending={scalars.blending}
+        depthTest={scalars.depthTest}
+        {...blendProps}
         side={effectiveSide}
       />
     );
@@ -174,7 +182,8 @@ export function StandardMaterialSlot({
     opacity: scalars.opacity,
     alphaTest: scalars.alphaTest,
     depthWrite: scalars.depthWrite,
-    blending: scalars.blending,
+    depthTest: scalars.depthTest,
+    ...blendProps,
     side: effectiveSide,
     shadowSide: shadowSide ?? null,
     map: albedoMap ?? null,

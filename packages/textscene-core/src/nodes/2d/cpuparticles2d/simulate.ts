@@ -33,12 +33,11 @@
  * its seed, the shared PCG32 port (godotRng.ts) puts the particles in Godot's
  * actual places rather than statistically similar ones.
  *
- * A pure function of its input, and React-free — `Component.tsx` turns the
- * returned poses into geometry. Not THREE-free, though: `sampleGradientColor`
- * lives beside the gradient rasteriser, which imports THREE at module scope.
- * That costs nothing here (the linter entry point pulls only the parser and the
- * rules, never this file), and reusing the canonical sampler beats a second
- * implementation of `Gradient::get_color_at_offset`.
+ * A pure function of its input, React-free and THREE-free — `Component.tsx`
+ * turns the returned poses into geometry. A colour ramp is sampled per particle
+ * and never becomes a texture, so it reads the gradient slice's pure `sample.ts`
+ * rather than its rasteriser: the canonical `Gradient::get_color_at_offset` port
+ * without a renderer in this file's import closure.
  *
  * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`scene/2d/cpu_particles_2d.cpp`), used under the
@@ -71,10 +70,10 @@
  */
 
 import type { Color, Vector2 } from '../../base/node2d/types';
-import type { Curve } from '../../../resources/curve/types';
-import { sampleCurve } from '../../../resources/curve/sample';
+import type { Curve } from '../../../resources/curves/curve/types';
+import { sampleCurve } from '../../../resources/curves/curve/sample';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
-import { sampleGradientColor } from '../../../resources/textures/gradienttexture2d/renderer';
+import { sampleGradientColor } from '../../../resources/textures/gradienttexture2d/sample';
 import { GodotRandomPCG, idhash, randFromSeed, type SeedRef } from './godotRng';
 import {
   CPUParticles2DDrawOrder,

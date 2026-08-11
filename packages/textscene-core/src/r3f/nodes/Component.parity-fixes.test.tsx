@@ -189,7 +189,13 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     expect(pos.getX(0)).toBeLessThan(0);
   });
 
-  it('audit slot 59a — PrismMesh geometry rotated by π/6 around Y', async () => {
+  it('audit slot 59a — PrismMesh fills its size box with the apex placed by left_to_right', async () => {
+    // The real port (primitive_meshes.cpp PrismMesh::_create_mesh_array): a
+    // triangular cross-section in the XY plane — apex on top, its X placed by
+    // left_to_right (default 0.5 = centred) — extruded along Z, filling the
+    // size box exactly. The retired approximation was a 3-segment cylinder
+    // rotated π/6, inscribed in a circle and extruded along Y; this pin is
+    // what replaced that contract.
     const renderer = await renderMesh(
       { albedo_color: 'Color(1, 1, 1, 1)' },
       'PrismMesh',
@@ -197,52 +203,34 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const pos = mesh.geometry.attributes.position!;
-    // CylinderGeometry(r=1, r=1, h=2, segments=3) places side-wall
-    // vertices at azimuths {0, 2π/3, 4π/3}. After `geom.rotateY(π/6)`,
-    // those become {π/6, 5π/6, 9π/6}. Collect all unique radial
-    // azimuths (rounded) at radius ≈ 1 and confirm they match the
-    // rotated set rather than the un-rotated set.
-    // Bucket every vertex's azimuth (atan2 over the XZ plane), filtering
-    // out cap-center verts which live on the Y axis (r ≈ 0). The remaining
-    // vertices are the three triangle corners — at rotated azimuths
-    // {30°, 150°, 270°}. We use a generous radius filter (anything with
-    // r > 0.1) so the test stays robust against subdivision sampling.
-    const azimuths = new Set<string>();
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    let minZ = Infinity;
+    let maxZ = -Infinity;
     for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const z = pos.getZ(i);
-      const r = Math.sqrt(x * x + z * z);
-      if (r < 0.1) continue;
-      const theta = (Math.atan2(z, x) + 2 * Math.PI) % (2 * Math.PI);
-      const bucket = Math.round((theta * 180) / Math.PI / 5) * 5;
-      // Normalise the 360° wrap-closing duplicate to 0° so a vertex at
-      // exactly 360° shows up as 0° in the set (and is correctly
-      // flagged as the unrotated reference).
-      azimuths.add((bucket % 360).toString());
+      minX = Math.min(minX, pos.getX(i));
+      maxX = Math.max(maxX, pos.getX(i));
+      minY = Math.min(minY, pos.getY(i));
+      maxY = Math.max(maxY, pos.getY(i));
+      minZ = Math.min(minZ, pos.getZ(i));
+      maxZ = Math.max(maxZ, pos.getZ(i));
     }
-    // Build a baseline CylinderGeometry with the same args BUT without
-    // the rotation, and capture its azimuths. The PrismMeshGeometry's
-    // output should be the baseline rotated by π/6 — i.e. each baseline
-    // azimuth A maps to A + 30° (mod 360°) in the rendered geometry.
-    const baseline = new THREE.CylinderGeometry(1, 1, 2, 3, 1, false);
-    const baselineAzimuths = new Set<string>();
-    const basePos = baseline.attributes.position!;
-    for (let i = 0; i < basePos.count; i++) {
-      const x = basePos.getX(i);
-      const z = basePos.getZ(i);
-      const r = Math.sqrt(x * x + z * z);
-      if (r < 0.1) continue;
-      const theta = (Math.atan2(z, x) + 2 * Math.PI) % (2 * Math.PI);
-      const bucket = Math.round((theta * 180) / Math.PI / 5) * 5;
-      baselineAzimuths.add((bucket % 360).toString());
+    // Fills the size box on every axis (the approximation inscribed a circle,
+    // so its X/Z extent fell short of ±1).
+    expect(minX).toBeCloseTo(-1, 5);
+    expect(maxX).toBeCloseTo(1, 5);
+    expect(minY).toBeCloseTo(-1, 5);
+    expect(maxY).toBeCloseTo(1, 5);
+    expect(minZ).toBeCloseTo(-1, 5);
+    expect(maxZ).toBeCloseTo(1, 5);
+    // Every top-row vertex sits at the apex X: left_to_right 0.5 centres it.
+    for (let i = 0; i < pos.count; i++) {
+      if (Math.abs(pos.getY(i) - maxY) < 1e-5) {
+        expect(pos.getX(i)).toBeCloseTo(0, 5);
+      }
     }
-    baseline.dispose();
-    // Every baseline azimuth must NOT appear in the rotated set.
-    for (const a of baselineAzimuths) {
-      expect(azimuths.has(a)).toBe(false);
-    }
-    // The rotated set must have at least one entry; baseline disturbed.
-    expect(azimuths.size).toBeGreaterThan(0);
   });
 
   it('audit slot 66a — Camera3D h_offset shifts position along local X', async () => {

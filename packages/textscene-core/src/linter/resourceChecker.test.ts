@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { checkResourceExists } from './resourceChecker.js';
-import type { TscnScene, TscnInternalResource, TscnExternalResource } from '../parser/types.js';
+import type { TscnScene, TscnExternalResource } from '../parser/types.js';
 
 describe('checkResourceExists', () => {
   describe('SubResource validation', () => {
@@ -18,7 +18,7 @@ describe('checkResourceExists', () => {
             type: 'ArrayMesh',
             data: { id: 'mesh_1' },
           },
-        ] as TscnInternalResource[],
+        ],
       };
 
       expect(checkResourceExists(scene, 'SubResource("mesh_1")')).toBe(true);
@@ -34,7 +34,7 @@ describe('checkResourceExists', () => {
             type: 'ArrayMesh',
             data: { id: 'mesh_1' },
           },
-        ] as TscnInternalResource[],
+        ],
       };
 
       expect(checkResourceExists(scene, 'SubResource("mesh_999")')).toBe(false);
@@ -60,7 +60,7 @@ describe('checkResourceExists', () => {
             type: 'StandardMaterial3D',
             data: { id: 'material-red-glossy' },
           },
-        ] as TscnInternalResource[],
+        ],
       };
 
       expect(checkResourceExists(scene, 'SubResource("material-red-glossy")')).toBe(true);
@@ -76,7 +76,7 @@ describe('checkResourceExists', () => {
             type: 'StandardMaterial3D',
             data: { id: 'material_red_glossy' },
           },
-        ] as TscnInternalResource[],
+        ],
       };
 
       expect(checkResourceExists(scene, 'SubResource("material_red_glossy")')).toBe(true);
@@ -102,7 +102,7 @@ describe('checkResourceExists', () => {
             type: 'BoxShape3D',
             data: { id: 'shape_1' },
           },
-        ] as TscnInternalResource[],
+        ],
       };
 
       expect(checkResourceExists(scene, 'SubResource("mesh_1")')).toBe(true);
@@ -134,10 +134,11 @@ describe('checkResourceExists', () => {
         nodes: [],
         externalResources: [
           {
+            id: 'texture_1',
             type: 'Texture2D',
-            path: 'texture_1',
+            path: 'res://textures/texture.png',
           },
-        ] as TscnExternalResource[],
+        ],
         internalResources: [],
       };
 
@@ -265,7 +266,7 @@ describe('checkResourceExists', () => {
             type: 'ArrayMesh',
             data: { id: 'resource_1' },
           },
-        ] as TscnInternalResource[],
+        ],
       };
 
       expect(checkResourceExists(scene, 'SubResource("resource_1")')).toBe(true);
@@ -299,7 +300,7 @@ describe('checkResourceExists', () => {
             type: 'ArrayMesh',
             data: { id: 'resource_1' },
           },
-        ] as TscnInternalResource[],
+        ],
       };
 
       expect(checkResourceExists(scene, 'ExtResource("resource_1")')).toBe(false);

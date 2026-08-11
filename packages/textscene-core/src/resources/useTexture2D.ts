@@ -41,12 +41,12 @@ import {
   resolveTexture2DPath,
   unwrapCanvasTextureRef,
 } from './SubResourceResolver.js';
-import { atlasTextureLayout } from './textures/atlastexture/parser.js';
+import { atlasTextureLayout } from './textures/atlastexture/decode.js';
 import {
   resolveAtlasTexture,
   resolveAtlasTextureRef,
 } from './textures/atlastexture/resolveAtlasTexture.js';
-import { parseGradientTexture2D } from './textures/gradienttexture2d/parser.js';
+import { decodeGradientTexture2D } from './textures/gradienttexture2d/decode.js';
 import { useProceduralTexture, useProceduralTexturePins } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
 
@@ -154,6 +154,6 @@ export function inlineTexture2DSize(
     internalResources
   );
   if (resource?.type !== 'GradientTexture2D') return null;
-  const { width, height } = parseGradientTexture2D(resource.data as Record<string, string>);
+  const { width, height } = decodeGradientTexture2D(resource.data as Record<string, string>);
   return { x: width, y: height };
 }

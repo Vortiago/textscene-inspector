@@ -25,6 +25,7 @@
  */
 
 import { glslFloat } from './glslLiterals';
+import { DEFAULT_AGX_CONTRAST } from './types';
 
 /** Godot `ToneMapper`. */
 export const GodotToneMapper = {
@@ -66,27 +67,56 @@ function acesGrey(x: number): number {
 }
 
 /**
- * The `tonemapper_params.x` Godot computes on the CPU from `tonemap_white`.
- * Reinhard wants white squared; FILMIC/ACES want the curve at white, which is
- * what normalises the output so white maps to 1.0.
+ * Godot's `environment_get_white` — the authored white after the per-curve
+ * FLOOR the engine applies before anything reads it
+ * (`servers/rendering/storage/environment_storage.cpp`). Godot's own reason:
+ * "Glow with screen blend mode does not work when white < 1.0, so make sure it
+ * is at least 1.0 for all tonemappers".
+ *
+ *   LINEAR         → 1.0 (`output_max_value`; the authored value is ignored)
+ *   FILMIC / ACES  → max(1, white)
+ *   AGX            → max(2, white), on the desktop/Forward+ path this previewer
+ *                    mirrors (the 10-bit Mobile path pins it to a flat 2.0)
+ *   REINHARDT      → max(1, white)
+ *
+ * Everything downstream of the authored property goes through here, so the
+ * curve's normalisation and SCREEN's glow clamp cannot disagree about which
+ * white they are anchored to — Godot hands both the same
+ * `environment_get_white` result.
+ */
+export function resolvedWhite(mode: number, white: number): number {
+  switch (mode) {
+    case GodotToneMapper.AGX:
+      return Math.max(2, white);
+    case GodotToneMapper.LINEAR:
+      return 1;
+    default:
+      return Math.max(1, white);
+  }
+}
+
+/**
+ * The `tonemapper_params.x` Godot computes on the CPU from the resolved white
+ * (`environment_get_tonemap_parameters`). Reinhard wants white squared;
+ * FILMIC/ACES want the curve at white, which is what normalises the output so
+ * white maps to 1.0.
  *
  * AgX is different: white is not a normalisation divisor but the shoulder's
  * high-clip point — the input the curve is shaped to just reach `output_max`.
- * Godot's `environment_get_white` floors it at 2.0 for AgX (`max(2, white)` on
- * the desktop/Forward+ path this previewer mirrors), so the default white of
- * 1.0 becomes 2.0. The AgX GLSL reads this as `godotToneMapWhite` and derives
- * the remaining curve parameters from it, exactly as Godot's CPU code does.
+ * The AgX GLSL reads it as `godotToneMapWhite` and derives the remaining curve
+ * parameters from it, exactly as Godot's CPU code does.
  */
 export function toneMappingWhiteParam(mode: number, white: number): number {
+  const resolved = resolvedWhite(mode, white);
   switch (mode) {
     case GodotToneMapper.REINHARDT:
-      return white * white;
+      return resolved * resolved;
     case GodotToneMapper.FILMIC:
-      return filmic(white);
+      return filmic(resolved);
     case GodotToneMapper.ACES:
-      return acesGrey(white);
+      return acesGrey(resolved);
     case GodotToneMapper.AGX:
-      return Math.max(2, white);
+      return resolved;
     default:
       return 1;
   }
@@ -98,8 +128,11 @@ export function toneMappingWhiteParam(mode: number, white: number): number {
  * hook, so each curve multiplies it in first — which is also where Godot puts
  * `tonemap_exposure`.
  */
-export function toneMappingShaderChunk(mode: number): string {
-  const body = CURVES[mode] ?? LINEAR_CURVE;
+export function toneMappingShaderChunk(
+  mode: number,
+  agxContrast = DEFAULT_AGX_CONTRAST
+): string {
+  const body = (CURVES[mode] ?? LINEAR_CURVE)(agxContrast);
   return /* glsl */ `
 uniform float toneMappingExposure;
 uniform float godotToneMapWhite;
@@ -124,8 +157,12 @@ ${body}
  * bodies in one place rather than leaving consumers to supply the fifth. AGX is a
  * real curve on both paths, so it returns GLSL like the others.
  */
-export function toneMappingEffectGlsl(mode: number, white: number): string {
-  const body = CURVES[mode] ?? LINEAR_CURVE;
+export function toneMappingEffectGlsl(
+  mode: number,
+  white: number,
+  agxContrast = DEFAULT_AGX_CONTRAST
+): string {
+  const body = (CURVES[mode] ?? LINEAR_CURVE)(agxContrast);
   const bakedWhite = glslFloat(toneMappingWhiteParam(mode, white));
   return /* glsl */ `
 vec3 godotToneMap(vec3 color, float exposure) {
@@ -136,17 +173,24 @@ ${body}
 `;
 }
 
-/** LINEAR: exposure is the whole transform. */
-const LINEAR_CURVE = /* glsl */ `  return color;`;
+/**
+ * One builder per mode. Every curve takes the AgX contrast even though only AgX
+ * reads it: a table of mixed shapes would have each consumer decide which arm it
+ * is calling, and the point of the table is that they cannot tell.
+ */
+type CurveBody = (agxContrast: number) => string;
 
-const CURVES: Record<number, string> = {
+/** LINEAR: exposure is the whole transform. */
+const LINEAR_CURVE: CurveBody = () => /* glsl */ `  return color;`;
+
+const CURVES: Record<number, CurveBody> = {
   // Reinhard's extended formula, equation 4 in https://doi.org/cjbgrt
-  [GodotToneMapper.REINHARDT]: /* glsl */ `
+  [GodotToneMapper.REINHARDT]: () => /* glsl */ `
   float white_squared = godotToneMapWhite;
   vec3 white_squared_color = white_squared * color;
   return (white_squared_color + color * color) / (white_squared_color + white_squared);`,
 
-  [GodotToneMapper.FILMIC]: /* glsl */ `
+  [GodotToneMapper.FILMIC]: () => /* glsl */ `
   const float exposure_bias = 2.0;
   const float A = 0.22 * exposure_bias * exposure_bias;
   const float B = 0.30 * exposure_bias;
@@ -157,7 +201,7 @@ const CURVES: Record<number, string> = {
   vec3 tonemapped = ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
   return tonemapped / godotToneMapWhite;`,
 
-  [GodotToneMapper.ACES]: /* glsl */ `
+  [GodotToneMapper.ACES]: () => /* glsl */ `
   const float exposure_bias = 1.8;
   const float A = 0.0245786;
   const float B = 0.000090537;
@@ -188,12 +232,12 @@ const CURVES: Record<number, string> = {
   //
   // The four curve parameters are `environment_get_tonemap_parameters`'s AgX
   // branch, computed here from `godotToneMapWhite` (Godot's `high_clip`, i.e.
-  // `max(2, white)`) and `awp_contrast`. Godot fills these on the CPU into a
-  // push constant; recomputing them in-shader from the one injected white is
-  // the same arithmetic and keeps AgX on the identical single-value injection
-  // seam as the curves above. `awp_contrast` is Godot's Environment default of
-  // 1.25 (a per-scene `agx_contrast` override is not parsed; see PARITY).
-  [GodotToneMapper.AGX]: /* glsl */ `
+  // `max(2, white)`) and `awp_contrast` (the Environment's
+  // `tonemap_agx_contrast`, default 1.25). Godot fills these on the CPU into a
+  // push constant; recomputing them in-shader from the two injected constants is
+  // the same arithmetic and keeps AgX on the same bake-a-literal seam as the
+  // curves above.
+  [GodotToneMapper.AGX]: (agxContrast) => /* glsl */ `
   color = max(color, vec3(0.0));
 
   const mat3 rec709_to_rec2020_agx_inset = mat3(
@@ -205,7 +249,7 @@ const CURVES: Record<number, string> = {
       -0.855988495690215, 1.32639796461980, -0.238183969428088,
       -0.108898916004672, -0.0270845997150571, 1.40253671195648);
 
-  const float awp_contrast = 1.25;
+  const float awp_contrast = ${glslFloat(agxContrast)};
   const float awp_crossover_point = 0.18;
   const float output_max_value = 1.0;
   const float awp_shoulder_max = output_max_value - awp_crossover_point;

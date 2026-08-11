@@ -256,7 +256,7 @@ draw_pass_1 = SubResource("mesh_1")
   });
 
   describe('Semantic Validation (Resource References)', () => {
-    it('should error when process_material is missing', () => {
+    it('should warn when process_material is missing (valid, assignable at runtime)', () => {
       expectDiagnostic(
         `[gd_scene format=3]
 
@@ -264,7 +264,11 @@ draw_pass_1 = SubResource("mesh_1")
 amount = 1000
 lifetime = 2.0
 `,
-        { prop: 'process_material', severity: 'error', contains: ['requires'] }
+        {
+          ruleName: 'gpuparticles3d-missing-process-material',
+          severity: 'warning',
+          contains: ['process_material'],
+        }
       );
     });
 

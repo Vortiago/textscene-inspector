@@ -11,8 +11,8 @@ import * as THREE from 'three';
 import type { FileEventBus } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import { decodeArrayMesh } from '../meshes/arrayMeshDecode';
-import { buildArrayMeshGeometry } from '../meshes/arrayMeshGeometry';
+import { decodeArrayMesh } from '../meshes/arraymesh/decode';
+import { buildArrayMeshGeometry } from '../meshes/arraymesh/build';
 
 /** Decoded ArrayMesh: merged geometry plus one material path per surface (group). */
 export interface ArrayMeshResource {

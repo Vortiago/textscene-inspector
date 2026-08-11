@@ -12,7 +12,6 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
-import { findMesh } from '../testing/reactThreeTestInstance';
 
 function makeNode(meshSubResId: string): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -43,7 +42,7 @@ async function renderGeometry(
       <MeshInstance3D node={makeNode(meshSubResource.id)} />
     </SceneResourcesProvider>
   );
-  return findMesh(renderer.scene).geometry;
+  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
 }
 
 describe('Mesh primitives (assertions 48–59)', () => {
@@ -161,15 +160,14 @@ describe('Mesh primitives (assertions 48–59)', () => {
     expect(geom.parameters.tube).toBe(0.5);
   });
 
-  it('#59 PrismMesh.size → CylinderGeometry approximation (3 radial segments)', async () => {
-    const geom = (await renderGeometry(
-      sub('PrismMesh', 'Pr', { size: 'Vector3(2, 2, 2)' })
-    )) as unknown as THREE.CylinderGeometry & {
-      type: string;
-      parameters: { radialSegments: number; height: number };
-    };
-    expect(geom.type).toBe('CylinderGeometry');
-    expect(geom.parameters.radialSegments).toBe(3);
-    expect(geom.parameters.height).toBe(2);
+  it('#59 PrismMesh.size → a triangular prism filling that box', async () => {
+    const geom = await renderGeometry(sub('PrismMesh', 'Pr', { size: 'Vector3(2, 2, 2)' }));
+
+    // Godot's own prism: 8 triangles (two caps, two slanted sides, one base),
+    // not the 3-segment cylinder this used to approximate it with.
+    expect(geom.getIndex()!.count).toBe(24);
+    geom.computeBoundingBox();
+    expect(geom.boundingBox!.max.toArray()).toEqual([1, 1, 1]);
+    expect(geom.boundingBox!.min.toArray()).toEqual([-1, -1, -1]);
   });
 });

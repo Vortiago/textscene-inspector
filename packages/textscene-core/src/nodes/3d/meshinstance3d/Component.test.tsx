@@ -167,16 +167,14 @@ describe('<MeshInstance3D>', () => {
       expect(geometry.parameters.tube).toBe(0.5);
     });
 
-    it('renders CylinderGeometry with 3 radial segments for PrismMesh', async () => {
+    it('renders Godot\'s triangular prism for PrismMesh', async () => {
       const node = makeNode({ mesh: 'SubResource("Pri_1")' });
       const resource = meshSubResource('PrismMesh', 'Pri_1', { size: 'Vector3(2, 2, 2)' });
       const renderer = await render(node, [resource]);
-      const geometry = findMesh(renderer.scene).geometry as unknown as {
-        type: string;
-        parameters: { radialSegments: number };
-      };
-      expect(geometry.type).toBe('CylinderGeometry');
-      expect(geometry.parameters.radialSegments).toBe(3);
+      const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
+      // 8 triangles: two triangular caps, two slanted sides, one base.
+      expect(geometry.getIndex()!.count).toBe(24);
+      expect(geometry.getAttribute('position').count).toBe(20);
     });
   });
 

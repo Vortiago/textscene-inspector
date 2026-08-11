@@ -10,7 +10,7 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useResource } from '../resources/useResource';
 import { buildTileGeometryArrays, type DrawableCell } from '../resources/tileset/tileGeometry';
-import type { AtlasSourceModel, TileGrid } from '../resources/tileset/tileSetModel';
+import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
 import { useCanvas2DMap } from './canvas2DTextureDecode';
 import type { CanvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';

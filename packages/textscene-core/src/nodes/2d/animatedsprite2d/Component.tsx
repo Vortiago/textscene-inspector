@@ -35,7 +35,8 @@ import { loopsUnderOverride } from '../../../r3f/animation/loopOverride';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { useSpriteFrames } from './useSpriteFrames';
-import { frameAtTime, clipDuration, type SpriteFramesAnimation } from './spriteFrames';
+import { frameAtTime, clipDuration } from '../../../resources/textures/spriteframes/playback';
+import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';
 import type { AnimatedSprite2DProperties } from './types';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 

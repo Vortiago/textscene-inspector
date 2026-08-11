@@ -125,7 +125,7 @@ curve = ExtResource("curve_ext")
       it('should detect missing curve property', () => {
         expectDiagnostic(scene(node('Path3D')), {
           ruleName: 'path3d-requires-curve',
-          severity: 'error',
+          severity: 'warning',
           contains: ["missing required property 'curve'", 'useless'],
         });
       });
@@ -325,7 +325,7 @@ curve = ExtResource("curve_ext")
       const content = scene(node('Path3D'));
 
       // Should have missing curve error
-      expectDiagnostic(content, { ruleName: 'path3d-requires-curve', severity: 'error' });
+      expectDiagnostic(content, { ruleName: 'path3d-requires-curve', severity: 'warning' });
 
       // Should also have unused warning
       expectDiagnostic(content, { ruleName: 'path3d-unused', severity: 'warning' });

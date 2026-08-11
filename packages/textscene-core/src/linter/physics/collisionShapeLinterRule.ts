@@ -36,7 +36,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // ERROR: shape property is REQUIRED
     if (!rawProps.shape) {
       diagnostics.push({
-        severity: 'error',
+        severity: 'warning',
         message: `${type} '${node.name}' is missing required property 'shape'. A collision shape needs a shape resource to define its collision geometry.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -109,7 +109,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       applicableNodeTypes: [type],
       emits: [
-        { ruleName: `${prefix}-requires-shape`, severity: 'error' },
+        { ruleName: `${prefix}-requires-shape`, severity: 'warning' },
         { ruleName: `valid-${prefix}-resources`, severity: 'error' },
         { ruleName: `${prefix}-invalid-parent`, severity: 'warning' },
         { ruleName: `${prefix}-no-parent`, severity: 'warning' },

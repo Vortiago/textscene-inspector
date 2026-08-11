@@ -17,9 +17,8 @@ import { useResourceLoader } from '../../resources/useResource';
 import { useTexture2D } from '../../resources/useTexture2D';
 import { useSceneResources } from '../SceneResourcesContext';
 import { useLiveTreeVersion } from '../useLiveSceneTree';
-import { buildSkyEnvironment } from './skyEnvironment';
+import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
-import type { SkyLight } from './skyUniforms';
 
 export interface SkyLayerProps {
   sky: SkyProperties;

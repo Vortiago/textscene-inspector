@@ -428,6 +428,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Noisetexture2d Normal",
+    "file": "unit-noisetexture2d-normal.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Noisetexture2d",
+    "file": "unit-noisetexture2d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Omni Light 3d",
     "file": "unit-omni-light-3d.tscn",
     "category": "Other"

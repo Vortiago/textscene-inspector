@@ -7,7 +7,7 @@ renders_as: a THREE.DataTexture / CanvasTexture
 # Texture2D (sub-resource textures)
 
 A material's texture slot can point at a SubResource Texture2D, not only an imported
-image. Three common ones:
+image. Four common ones:
 
 ## GradientTexture2D
 <!-- compare: image=unit-coin-glow status=limitation fixture=unit-coin-glow.tscn -->
@@ -56,3 +56,34 @@ four-colour sheet, each shrunk to its own minimum size.
 - **Semi-transparent texels** pass through a premultiplied canvas on the way into the
   crop, so they can differ from the sheet's own byte by 1/255. Opaque and fully
   transparent texels are exact.
+
+## NoiseTexture2D + FastNoiseLite
+
+A noise field generated into a texture. The generator is the `fastnoise-lite` package,
+the official JS port of the same upstream library Godot vendors: sampled against real
+Godot 4.6.3, the two agree to about 1e-7 across simplex, cellular and weighted-fBm
+Perlin settings. That holds only because every parameter is configured explicitly —
+the raw library's own defaults are not Godot's (3 fractal octaves against Godot's 5,
+EuclideanSq cellular distance against Godot's Euclidean), and leaving one unset moves
+a sample from 0.61 to 0.25. The image layer
+around it is ported from Godot: normalization to the field's own min/max, `invert`,
+the `color_ramp` mapped through each pixel's luminance, `as_normal_map` via
+`Image::bump_map_to_normal_map` (which reads the RED channel, so a ramped texture's
+normals come from its red), and the seamless blend skirt's quadrant swap.
+
+Every NoiseTexture2D property the corpus uses is applied (`width`, `height`, `noise`,
+`seamless`, `color_ramp`, `as_normal_map`, `bump_strength`), as is every FastNoiseLite
+property except the domain-warp block.
+
+**Domain warp is decoded but not applied.** Godot warps the sample position through a
+second generator; the JS port's entry point is spelled `DomainWrap` and dispatches on
+an unexported `Vector2` class, so it cannot be driven from outside the module and a
+plain coordinate object is silently ignored (1.1.1). Three corpus materials enable it
+(`lava`, `sand_albedo`, `wet_concrete_albedo`); they render the same generator with
+unwarped coordinates, so the palette and scale match while the swirl does not. Files
+that set warp parameters WITHOUT `domain_warp_enabled` (`marble`) are unaffected — the
+engine ignores them too.
+
+Rasterisation is synchronous and costs roughly a second for a shipped 1024x1024
+seamless field, once per resource: Godot generates the same texture on a worker
+thread.

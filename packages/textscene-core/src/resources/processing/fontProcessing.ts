@@ -27,8 +27,8 @@
  * `materialProcessing.ts` and the mesh-library/tileset resolvers use.
  */
 
-import type { ParsedTresFile } from '../../parser/tresParser';
-import { parseTresFile } from '../../parser/tresParser';
+import type { ParsedResource } from '../../parser/parsedResource';
+import { parseTresFile } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { findSubResource } from '../SubResourceResolver';
 import { parseSubResourcePath, resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
@@ -211,7 +211,7 @@ export async function createFontResourceFromContent(
   loadFont: FontLoaderFn,
   subResourceId?: string
 ): Promise<FontResource> {
-  const parsed: ParsedTresFile = parseTresFile(content);
+  const parsed: ParsedResource = parseTresFile(content);
 
   let resourceType: string;
   let properties: Record<string, string>;

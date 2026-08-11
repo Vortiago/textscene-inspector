@@ -20,14 +20,14 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { parseResourceReference, findSubResource } from '../../SubResourceResolver';
 import { proceduralTexture, proceduralTextureKey } from '../proceduralTextureCache';
 import { imageSize } from '../../../r3f/controls/withImageCanvas';
-import { atlasTextureLayout, parseAtlasTexture } from './parser';
-import { rasterizeAtlasTexture } from './renderer';
-import type { AtlasTexture } from './types';
+import { atlasTextureLayout, decodeAtlasTexture } from './decode';
+import { rasterizeAtlasTexture } from './build';
+import type { AtlasTextureData } from './types';
 
 /** An inline AtlasTexture reference: the sub-resource id it names, plus its decoded properties. */
 export interface AtlasTextureReference {
   id: string;
-  texture: AtlasTexture;
+  texture: AtlasTextureData;
 }
 
 /**
@@ -43,7 +43,7 @@ export function resolveAtlasTextureRef(
   if (!parsed || parsed.type !== 'SubResource') return null;
   const resource = findSubResource(internalResources, parsed.id);
   if (!resource || resource.type !== 'AtlasTexture') return null;
-  return { id: parsed.id, texture: parseAtlasTexture(resource.data as Record<string, unknown>) };
+  return { id: parsed.id, texture: decodeAtlasTexture(resource.data as Record<string, unknown>) };
 }
 
 /** A cropped cell and the procedural-cache key that keeps it resident. */

@@ -27,8 +27,8 @@
  * `await` mid-walk).
  */
 
-import type { ParsedTresFile } from '../../parser/tresParser';
-import { parseTresFile } from '../../parser/tresParser';
+import type { ParsedResource } from '../../parser/parsedResource';
+import { parseTresFile } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { unquoteStringName } from '../../parser/utils';
 import { parseOptionalFloat } from '../../parser/valueParsers';
@@ -322,7 +322,7 @@ export async function createThemeResourceFromContent(
   loadFont: FontLoaderFn,
   subResourceId?: string
 ): Promise<ThemeResource> {
-  const parsed: ParsedTresFile = parseTresFile(content);
+  const parsed: ParsedResource = parseTresFile(content);
 
   let properties: Record<string, string>;
 

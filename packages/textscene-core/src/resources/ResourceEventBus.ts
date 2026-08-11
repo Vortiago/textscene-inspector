@@ -18,15 +18,11 @@ export type ResourceEventType =
    * (hot-reload) does NOT emit this — its caller re-requests itself.
    */
   | 'invalidated';
-export type ResourceType =
-  | 'texture'
-  | 'material'
-  | 'scene'
-  | 'glb'
-  | 'resource'
-  | 'arraymesh'
-  | 'font'
-  | 'theme';
+// One bus-tag union repo-wide: the slice claim table (ADR-0031) is the
+// authority, and this alias is what keeps the bus from drifting off it.
+// Type-only import, so the claim table's renderer-free closure holds.
+import type { ResourceBusType } from './sliceRegistration';
+export type ResourceType = ResourceBusType;
 
 export interface ProgressData {
   loaded: number;

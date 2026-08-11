@@ -14,6 +14,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { vector2ToPositions } from './navigationOverlay';
+import { decodeNavigationPolygon } from '../resources/navigation/navigationpolygon';
 
 describe('vector2ToPositions', () => {
   it('negates Y so Godot +Y-down becomes three.js +Y-up', () => {
@@ -35,5 +36,15 @@ describe('vector2ToPositions', () => {
 
   it('ignores a trailing odd value', () => {
     expect(vector2ToPositions(new Float32Array([1, 2, 3])).length).toBe(3);
+  });
+
+  it('is the only place the negation happens — the slice decode hands over raw Godot Y', () => {
+    // Negating inside decodeNavigationPolygon too would mirror the navmesh back.
+    const polygon = decodeNavigationPolygon({
+      vertices: 'PackedVector2Array(0, 0, 0, 128, 64, 128)',
+      polygons: 'Array[PackedInt32Array]([PackedInt32Array(0, 1, 2)])',
+    });
+    expect(polygon!.vertices[3]).toBe(128);
+    expect([...vector2ToPositions(polygon!.vertices)]).toEqual([0, 0, 0, 0, -128, 0, 64, -128, 0]);
   });
 });

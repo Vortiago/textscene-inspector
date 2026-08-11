@@ -16,25 +16,29 @@
 import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
 import type { TscnInternalResource } from '../parser/types.js';
-import { resolveGradientTexture2D } from './textures/gradienttexture2d/resolveGradientTexture.js';
+import { resolveProceduralTexture } from './textures/resolveProceduralTexture.js';
 import {
   pinProceduralTexture,
   unpinProceduralTexture,
 } from './textures/proceduralTextureCache.js';
 
 /**
- * The procedural texture `ref` names — currently a `SubResource` naming an
- * inline `GradientTexture2D` — held resident for as long as the caller is
- * mounted. Null for every other reference form (an `ExtResource` image, a
- * `res://` path, a sub-resource of some other type, nothing at all), leaving
- * the caller's async path to handle it.
+ * The procedural texture `ref` names — a `SubResource` naming an inline
+ * `GradientTexture2D` or `NoiseTexture2D` — held resident for as long as the
+ * caller is mounted. Null for every other reference form (an `ExtResource`
+ * image, a `res://` path, a sub-resource of some other type, nothing at all),
+ * leaving the caller's async path to handle it.
+ *
+ * Which slices those are is `resolveProceduralTexture`'s business, not this
+ * hook's: this is the React half (memo + pin), and the walk is shared with the
+ * React-free material paths so a new slice reaches every consumer at once.
  */
 export function useProceduralTexture(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
 ): THREE.Texture | null {
   const resolved = useMemo(
-    () => resolveGradientTexture2D(ref, internalResources),
+    () => resolveProceduralTexture(ref, internalResources),
     [ref, internalResources]
   );
   useProceduralTexturePins(resolved ? [resolved.key] : []);

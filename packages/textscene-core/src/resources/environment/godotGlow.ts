@@ -31,7 +31,7 @@
  *    environment glows does not drag in five tone-curve bodies.
  */
 
-import type { EnvironmentSettings } from './renderer';
+import type { EnvironmentSettings } from './types';
 import { glslFloat } from './glslLiterals';
 
 /** Godot `Environment.GlowBlendMode`. */

@@ -24,6 +24,10 @@
  * Returns a `ResourceProcessor<TscnScene>` that exposes the same
  * surface as the other three processors. `ResourceLoader.scenes` is
  * the production accessor.
+ *
+ * The PackedScene slice's loader-facing adapter — the claims live at
+ * `resources/formats/packedscene/` (ADR-0031); the two scene-only concerns
+ * above are why the machinery stays here rather than inside the slice.
  */
 
 import type { TscnScene, TscnNode } from '../../parser/types';
@@ -31,7 +35,7 @@ import type { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
 import { TscnParser } from '../../parser/TscnParser';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import { isGLBPath } from '../processing/glbProcessing';
+import { isGLBPath } from '../formats/glb/glbProcessing';
 
 /**
  * The `[gd_scene]` tag, allowing leading `;` comment lines and blank lines

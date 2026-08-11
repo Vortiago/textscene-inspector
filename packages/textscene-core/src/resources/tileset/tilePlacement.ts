@@ -15,7 +15,7 @@ import {
   TILE_SHAPE_ISOMETRIC,
   type TileGrid,
   type Vec2i,
-} from './tileSetModel';
+} from './types';
 
 /** Positive modulo (Godot's Math::posmod) — posmod(-1, 2) === 1. */
 function posmod(a: number, b: number): number {

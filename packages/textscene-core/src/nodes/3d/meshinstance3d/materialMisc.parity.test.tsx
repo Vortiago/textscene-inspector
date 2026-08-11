@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { parseStandardMaterial3DScalars } from '../../../r3f/materials/standardMaterialScalars';
+import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';

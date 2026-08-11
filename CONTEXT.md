@@ -46,6 +46,10 @@ _Avoid_: "asset", "inline resource".
 `res://file.tres::SubId` — Godot's own notation for a **SubResource** of some `.tres` OTHER than the previewed scene, and the one string that makes all three kinds of resource reference interchangeable to a consumer (an **ExtResource** `.tres`; a SubResource of the scene, resolved from its own internal-resources list via `SceneResourcesContext`; a SubResource of a `.tres` the scene pulled in). The WHOLE address is the resource identity — the processor cache key, the in-flight dedupe key, `useResource`'s LRU pin — while its `filePath` half is the only thing the **resource event bus**'s byte layer, a host `ResourceProvider` or a **Dependency hot-reload** ever sees, because only real files can be fetched. A FAILED address is reported under the address, so one can surface as a missing-resources row; the panel normalises to `filePath` before handing a host a **Resource upload** or its removal, that being the key the bytes live under. Consumers hold the address as an ordinary path (`ArrayMeshResource.materialPaths`, `MeshLibraryItem.meshPath`, `ExternalMaterialSlot`'s `path`), which keeps the third kind from being a category any CONSUMER has to know about; a producer minting addresses for a new resource type must still honour the id in its processor's `process()`, declared with `addressesSubResources`. Decision: ADR-0032.
 _Avoid_: "composite path"/"synthetic path" (it is Godot's grammar, not an invention); treating it as a filename (nothing may `fetch` one); a per-consumer resolver for the third kind.
 
+**ParsedResource** (`parser/parsedResource.ts`):
+The one parsed form every Godot resource serialization normalizes to — header type, ext/sub-resource tables, and the `[resource]` body as raw Godot-text value strings. Produced today from `.tres` text; a binary `.res` loader (#110) must produce the same shape, which is what lets a **Resource slice**'s decoder stay format-agnostic. Values stay raw strings at this layer — the slice's `decode.ts` owns their meaning.
+_Avoid_: "ParsedTresFile" (the pre-rename name — it baked the text format into a shape binary files will share); decoding values at parse time.
+
 **UID reference**:
 Godot 4's stable `uid://…` identifier; in this corpus every ExtResource pairs it with a `res://` path, so path resolution is authoritative and the uid is currently ignored. Uid-only resolution is unsupported.
 _Avoid_: "id" (overloaded with the per-scene resource `id=`).
@@ -101,6 +105,10 @@ _Avoid_: "fixing" the silence by resolving instance internals (the linter must s
 **Vertical slice**:
 All code for one Node type co-located in one folder — parser, linter, formatter, render component, and tests — the organizing principle the codebase is being unified toward.
 _Avoid_: "module" (reserve for the architecture sense), "feature folder".
+
+**Resource slice**:
+All code for one resource type co-located in `resources/<category>/<type>/` — a registration object declaring the TSCN type names and file extensions it claims plus its bus tag, `types.ts`, and co-located tests; the resource-side sibling of the **Vertical slice**. Two kinds under one contract: a *Godot-text slice* adds pure `decode.ts` (a **ParsedResource** section → typed Data) and `build.ts` (Data plus resolved dependencies → THREE object or plain data); a *foreign-format slice* (GLB, images, the **Import sidecar**, **Project settings**) declares its real parser openly instead of faking that split. One decoder per type: hosts may keep two appliers over it, the decode never forks (ADR-0031).
+_Avoid_: "processor" for the slice (the processor is the loading-side adapter that feeds it); a hollow `decode.ts` on a foreign format; value-shape sniffing a property bag (the pattern this replaced).
 
 **Split slice** (historical — removed 2026-06):
 The former transitional state where a Node type's parser/linter/formatter lived in `nodes/<category>/<type>/` while its render component lived in a parallel `r3f/nodes/<type>/`. Every slice is now unified; the term survives only so old documents stay readable.

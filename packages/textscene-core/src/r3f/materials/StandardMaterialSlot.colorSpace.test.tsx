@@ -37,7 +37,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { StandardMaterialSlot } from './StandardMaterialSlot';
-import { parseStandardMaterial3DScalars } from './standardMaterialScalars';
+import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 
 /** A distinct texture per slot, so a mixed-up wiring cannot pass. */
 function texture(name: string): THREE.Texture {

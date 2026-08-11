@@ -12,6 +12,105 @@ rim, anisotropy, refraction) upgrade the surface to `MeshPhysicalMaterial`. Each
 section below drives one feature from its own fixture and shows the two engines
 side by side.
 
+A material reaches the renderer three ways — inline as a `[sub_resource]` of the
+scene, as a standalone `.tres`, or as a `[sub_resource]` of a `.tres` that
+carries it — and all three run ONE decode (`decode.ts`, ADR-0031). The two
+adapters over it are `<StandardMaterialSlot>` (reactive, for R3F prop-diffing)
+and `build.ts` (imperative, for the resource pipeline's cache);
+`arrivalParity.test.tsx` holds them to the same material state property-set by
+property-set. Nothing below depends on which route a material took, except where
+"Known limitations" says otherwise.
+
+## Transparency and alpha
+
+`transparency` selects the mode; the albedo alpha alone does NOT make a surface
+transparent. Godot's generated fragment code emits `ALPHA *= albedo.a *
+albedo_tex.a` only when `transparency != TRANSPARENCY_DISABLED` (or
+shadow-to-opacity / pixel-alpha distance fade / proximity fade is on), so an
+opaque material's alpha channel never reaches the blend at all.
+
+| Godot `transparency` | `transparent` | `depthWrite` | `alphaTest` |
+| --- | --- | --- | --- |
+| 0 DISABLED *(default)* | no | yes | 0 |
+| 1 ALPHA | yes | no | 0 |
+| 2 ALPHA_SCISSOR | no | yes | `alpha_scissor_threshold` (0.5) |
+| 3 ALPHA_HASH | yes | yes | 0 |
+| 4 ALPHA_DEPTH_PRE_PASS | yes | yes | 0 |
+
+ALPHA is the only mode that gives up depth writes: DEPTH_PRE_PASS keeps them by
+running a depth prepass, and the two cutout modes discard rather than blend, so
+they stay on the depth-writing opaque pass.
+
+## Which render pass a surface joins
+
+`transparency` is only one of the inputs. Godot decides the pass in
+`ShaderData::uses_alpha_pass()`, over flags its generated shader raises, and this
+slice ports that predicate rather than reading the property directly. A surface
+joins the ALPHA pass when any of these holds:
+
+- **the shader writes ALPHA and is not a cutout** — a transparency mode,
+  `shadow_to_opacity`, PIXEL_ALPHA `distance_fade_mode`, or `proximity_fade_enabled`;
+- **`blend_mode` is not MIX** — `blend_mode_uses_blend_alpha` is true for ADD, SUB,
+  MUL and PREMULT_ALPHA, so an additive material blends in the alpha pass with no
+  `transparency` authored at all;
+- **the shader samples the screen** — refraction reads `screen_texture`, and
+  refraction or proximity fade reads `depth_texture`;
+- **depth is off** — `depth_draw_mode = Never` or `no_depth_test`.
+
+A CUTOUT (`ALPHA_SCISSOR`, `ALPHA_HASH`) cancels the first condition: it discards
+fragments instead of blending them, so it stays opaque — unless
+`alpha_antialiasing_mode` re-admits it, which is what Godot's alpha-to-coverage
+needs.
+
+Depth writing then follows the pipeline rule: the depth-draw mode decides it, and
+the alpha pass overrides `Opaque Only` to no-write ("alpha does not draw depth").
+`depth_draw_mode` and `no_depth_test` are honoured; refraction overrides the
+authored mode to `Always`.
+
+## Refraction forces opacity
+
+A refractive material is NOT faded by its albedo alpha. Godot's refraction branch
+replaces the usual `ALPHA *= albedo.a * albedo_tex.a` with a flat `ALPHA = 1.0`
+("Force transparency on the material (required for refraction)") and modulates
+`ALBEDO` by `1.0 - ref_amount` instead, so `glass.tres` — `transparency = 1` with
+an alpha of 0.63 — renders fully opaque and depth-writing, distorting the
+background rather than blending with it.
+
+## Blend modes
+
+`blend_mode` becomes a `render_mode blend_*` line on Godot's generated shader,
+which the RD backend turns into fixed blend factors
+(`MaterialStorage::ShaderData::blend_mode_to_blend_attachment`). Those factors
+are ported verbatim into one table (`blendState.ts`); where a three.js preset
+programs exactly the same state, the preset is used.
+
+| Godot | colour factors | alpha factors | three |
+| --- | --- | --- | --- |
+| 0 MIX *(default)* | `SRC_ALPHA` / `1-SRC_ALPHA` | `ONE` / `1-SRC_ALPHA` | `NormalBlending` |
+| 1 ADD | `SRC_ALPHA` / `ONE` | `SRC_ALPHA` / `ONE` | `AdditiveBlending` |
+| 2 SUB | `SRC_ALPHA` / `ONE`, reverse-subtract | same | `CustomBlending` |
+| 3 MUL | `DST_COLOR` / `ZERO` | `DST_ALPHA` / `ZERO` | `MultiplyBlending` |
+| 4 PREMULT_ALPHA | `ONE` / `1-SRC_ALPHA` | `ONE` / `1-SRC_ALPHA` | `CustomBlending` |
+
+Two modes cannot use a preset. three's `SubtractiveBlending` is `FUNC_ADD` with
+`ZERO / 1-SRC_COLOR`, a different operation from Godot's reverse-subtract. And
+PREMULT_ALPHA is not `NormalBlending` with `premultipliedAlpha`: that flag makes
+three premultiply the shader output (`gl_FragColor.rgb *= a`), which
+double-applies against a source Godot expects to be premultiplied already, so the
+flag stays off and the factors are stated instead.
+
+## Albedo and culling
+
+`albedo_color` is converted sRGB→linear and is NOT clamped — it carries no range
+hint and `Color::srgb_to_linear` extrapolates, so an HDR albedo (a tracer bullet
+at `Color(2.33575, 3.29442, 3.29442, 1)`) keeps the headroom it needs to cross
+the glow bright-pass. `metallic` and `roughness` ARE clamped, to the `"0,1,0.01"`
+hints they declare.
+
+`cull_mode` names the faces Godot DISCARDS while three's `side` names the ones it
+KEEPS: BACK (the default) → `FrontSide`, FRONT → `BackSide`, DISABLED →
+`DoubleSide`.
+
 ## Metallic / roughness
 <!-- compare: image=unit-material-metallic status=done fixture=unit-material-metallic.tscn -->
 
@@ -175,6 +274,34 @@ copied), and the clone is tagged so its material disposes it.
 
 ## Known limitations
 
+- **ALPHA_HASH** — Godot dithers a per-pixel discard, so the surface stays on the opaque
+  pass and averages to its alpha over neighbouring pixels. three has no stochastic clip,
+  so the mode is approximated with alpha blending: closer in appearance than the fully
+  opaque surface a literal port would give, at the cost of the pass classification. The
+  depth write still follows Godot's.
+- **alpha_antialiasing_mode** — the flag is read, because it decides whether a cutout
+  joins the alpha pass, but the alpha-to-coverage blending it selects is not reproduced
+  (WebGL exposes the sample mask only through MSAA state three does not expose
+  per-material). The cutout edge reads hard rather than coverage-blended.
+- **proximity_fade / distance_fade** — both are read, because they decide the pass, but
+  neither fade is rendered: a proximity-fading surface joins the alpha pass at full
+  opacity instead of thinning as it approaches other geometry.
+- **refraction distortion** — `transmission` + `thickness` stand in for Godot's
+  screen-space offset, and Godot's `ALBEDO *= 1.0 - ref_amount` (which dims the surface
+  by the per-pixel refraction strength) is not applied, so a refractive surface reads
+  brighter than Godot's. The forced opacity and depth write ARE reproduced.
+- **anisotropy_flowmap through an external `.tres`** — the alpha→blue repack needs a
+  canvas readback that lives in the node layer, so a material loaded as a `.tres` gets
+  its anisotropy SCALARS and no flowmap (rather than a map whose strength channel is
+  meaningless). Inline materials get the full repack, as the flowmap section above shows.
+- **Triplanar through an external `.tres`** — the tiling density is reproduced by folding
+  the mesh's size into the texture repeat, which needs the mesh. Only the node component
+  has it, so a `.tres` material's `uv1_triplanar` is decoded and then unused; the surface
+  tiles by its own UVs.
+- **Procedural textures inside a `.tres`** — a slot pointing at a `SubResource`
+  (`NoiseTexture2D`, `GradientTexture2D` declared in the same file, as
+  `procedural_materials/ice.tres` does) resolves to no file path. The procedural
+  rasteriser is reached from the scene path only, so those slots stay empty.
 - **texture_mipmap_bias** — Godot applies the project's `lod_bias` to every sampler, so a
   project that sharpens (Truck Town sets `-0.5`) reads softer here at minification. WebGL2
   exposes no per-texture LOD bias; the only route is a per-fragment `texture(s, uv, bias)`

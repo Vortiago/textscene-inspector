@@ -1,8 +1,61 @@
+/**
+ * Cross-slice collision-shape tests: the resource-slice claim table (ADR-0031)
+ * and the shared `PackedVector3Array` grammar the two polygon shapes decode
+ * through. Each slice's own property mapping lives in its `decode.test.ts`.
+ */
+
 import { describe, expect, it } from 'vitest';
-import { parseBoxShape3D } from './boxshape3d/parser';
-import { parseConvexPolygonShape3D } from './convexpolygonshape3d/parser';
-import { parseConcavePolygonShape3D } from './concavepolygonshape3d/parser';
+import { resourceSliceRegistry } from '../sliceRegistration';
 import { parsePackedVector3Array } from './packedArray';
+// Side-effect imports: a slice index registers its claims on load.
+import './boxshape3d';
+import './sphereshape3d';
+import './capsuleshape3d';
+import './cylindershape3d';
+import './convexpolygonshape3d';
+import './concavepolygonshape3d';
+import './rectangleshape2d';
+import './circleshape2d';
+import './capsuleshape2d';
+
+/** Every shape type this package claims, with the slice folder that claims it. */
+const CLAIMS: readonly (readonly [string, string])[] = [
+  ['BoxShape3D', 'boxshape3d'],
+  ['SphereShape3D', 'sphereshape3d'],
+  ['CapsuleShape3D', 'capsuleshape3d'],
+  ['CylinderShape3D', 'cylindershape3d'],
+  ['ConvexPolygonShape3D', 'convexpolygonshape3d'],
+  ['ConcavePolygonShape3D', 'concavepolygonshape3d'],
+  ['RectangleShape2D', 'rectangleshape2d'],
+  ['CircleShape2D', 'circleshape2d'],
+  ['CapsuleShape2D', 'capsuleshape2d'],
+];
+
+describe('collision-shape slice registrations', () => {
+  it.each(CLAIMS)('%s is claimed by the %s slice', (typeName, slice) => {
+    expect(resourceSliceRegistry.byTypeName(typeName)).toMatchObject({
+      slice,
+      kind: 'godot-text',
+      busType: 'resource',
+      failureLabel: 'Resource',
+    });
+  });
+
+  it.each(CLAIMS)('%s routes to the generic resource processor slot', (typeName) => {
+    expect(resourceSliceRegistry.busTypeFor(typeName)).toBe('resource');
+  });
+
+  it('claims no file extension — `.tres` is the shared Godot-text container', () => {
+    for (const [typeName] of CLAIMS) {
+      expect(resourceSliceRegistry.byTypeName(typeName)?.extensions).toBeUndefined();
+    }
+  });
+
+  it('leaves a shape type nobody implements unclaimed by these slices', () => {
+    const unimplemented = resourceSliceRegistry.byTypeName('WorldBoundaryShape3D');
+    expect(CLAIMS.some(([, slice]) => slice === unimplemented?.slice)).toBe(false);
+  });
+});
 
 describe('parsePackedVector3Array', () => {
   it('parses a flat list of vertices', () => {
@@ -16,49 +69,5 @@ describe('parsePackedVector3Array', () => {
 
   it('throws on malformed input', () => {
     expect(() => parsePackedVector3Array('not-an-array')).toThrow();
-  });
-});
-
-describe('parseBoxShape3D', () => {
-  it('parses size from Vector3', () => {
-    expect(parseBoxShape3D({ size: 'Vector3(2, 4, 0.3)' }).size).toEqual({ x: 2, y: 4, z: 0.3 });
-  });
-
-  it('defaults to Vector3(1,1,1)', () => {
-    expect(parseBoxShape3D({}).size).toEqual({ x: 1, y: 1, z: 1 });
-  });
-});
-
-describe('parseConvexPolygonShape3D', () => {
-  it('parses 8-vertex point cloud (24 floats)', () => {
-    const points = parseConvexPolygonShape3D({
-      points: 'PackedVector3Array(0,0,0, 1,0,0, 1,1,0, 0,1,0, 0,0,1, 1,0,1, 1,1,1, 0,1,1)',
-    }).points;
-    expect(points.length).toBe(24);
-    expect(points.length / 3).toBe(8);
-  });
-
-  it('degrades to empty points (no throw) on malformed data', () => {
-    // CollisionGizmo calls this directly in render with no error boundary, so
-    // a hand-edited/corrupt array must not crash the whole scene preview.
-    expect(() => parseConvexPolygonShape3D({ points: 'PackedVector3Array(1, x, 3)' })).not.toThrow();
-    expect(parseConvexPolygonShape3D({ points: 'garbage' }).points.length).toBe(0);
-    expect(parseConvexPolygonShape3D({}).points.length).toBe(0);
-  });
-});
-
-describe('parseConcavePolygonShape3D', () => {
-  it('parses a triangle soup', () => {
-    const data = parseConcavePolygonShape3D({
-      data: 'PackedVector3Array(0,0,0, 1,0,0, 0,1,0)',
-    }).data;
-    expect(data.length).toBe(9);
-    expect(data.length % 9).toBe(0); // whole triangles
-  });
-
-  it('degrades to empty data (no throw) on malformed data', () => {
-    expect(() => parseConcavePolygonShape3D({ data: 'PackedVector3Array(0, 0, nope)' })).not.toThrow();
-    expect(parseConcavePolygonShape3D({ data: 'not-an-array' }).data.length).toBe(0);
-    expect(parseConcavePolygonShape3D({}).data.length).toBe(0);
   });
 });

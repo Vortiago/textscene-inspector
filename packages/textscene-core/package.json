@@ -74,6 +74,7 @@
     "url": "https://github.com/Vortiago/textscene-inspector/issues"
   },
   "dependencies": {
+    "fastnoise-lite": "catalog:",
     "@react-three/drei": "catalog:",
     "@react-three/fiber": "catalog:",
     "@react-three/postprocessing": "catalog:",

@@ -1,0 +1,39 @@
+; One variable: NoiseTexture2D's as_normal_map arm as SAMPLED BY LIGHTING —
+; bump_to_normal_map's sign/packing and the NoColorSpace tagging only show up
+; when a lit material perturbs its normals with the result. The other noise
+; golden (unit-noisetexture2d.tscn) is an unlit 2D colour-ramp field, so a
+; regression here (flipped green channel, sRGB-bent normals, row order) is
+; invisible in it and in every other scene.
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_nrm"]
+seed = 7
+frequency = 0.05
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_nrm"]
+width = 128
+height = 128
+as_normal_map = true
+bump_strength = 8.0
+noise = SubResource("FastNoiseLite_nrm")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nrm"]
+albedo_color = Color(0.6, 0.6, 0.65, 1)
+roughness = 0.35
+normal_enabled = true
+normal_texture = SubResource("NoiseTexture2D_nrm")
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_nrm"]
+size = Vector2(6, 6)
+
+[node name="NoiseNormal" type="Node3D"]
+
+[node name="Plane" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_nrm")
+surface_material_override/0 = SubResource("StandardMaterial3D_nrm")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.906308, 0.422618, 0, -0.422618, 0.906308, 0, 3, 0)
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.832051, 0.5547, 0, -0.5547, 0.832051, 0, 4, 6)

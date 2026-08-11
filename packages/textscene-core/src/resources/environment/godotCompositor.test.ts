@@ -1,0 +1,225 @@
+/**
+ * The composite shader against Godot 4.6.3's `tonemap.glsl` `main()`
+ * (`servers/rendering/renderer_rd/shaders/effects/`), whose order is:
+ *
+ *   color.rgb *= exposure;                              // the SCENE, once
+ *   if (glow && glow_mode != SOFTLIGHT) {
+ *       vec3 glow = gather_glow(...) * params.glow_intensity;
+ *       if (glow_mode == MIX) color = color * (1 - glow_intensity) + glow;
+ *       else                  color = apply_glow(color, glow, params.white);
+ *   }
+ *   color.rgb = apply_tonemapping(color.rgb);           // max(0) then the curve
+ *   // post-tonemap glow (SOFTLIGHT) runs here, on tonemapped operands
+ *
+ * and whose `params.white` the renderer fills from `environment_get_white`
+ * (`renderer_scene_render_rd.cpp`: `tonemap.white = environment_get_white(...)`),
+ * i.e. the FLOORED white rather than the authored property.
+ *
+ * Assertions are on the discriminating structure, never on the whole emitted
+ * string: a snapshot of generated GLSL locks its formatting and fails on every
+ * edit without saying which of these invariants broke.
+ */
+
+import { describe, expect, it } from 'vitest';
+import { compositeGlsl } from './godotCompositor';
+import { decodeEnvironment } from './decode';
+import { createEnvironmentSettings } from './build';
+import { GlowBlendMode, glowParamsFor, type GlowParams } from './godotGlow';
+import { GodotToneMapper } from './godotToneMapping';
+
+function glowOn(extra: Record<string, string> = {}): GlowParams {
+  const params = glowParamsFor(
+    createEnvironmentSettings(decodeEnvironment({ glow_enabled: 'true', ...extra }))
+  );
+  if (!params) throw new Error('expected glow to be enabled');
+  return params;
+}
+
+/** `mainImage`'s body — above it sit the DEFINITIONS, not the call order. */
+function body(params: GlowParams, toneMapping = { mode: GodotToneMapper.FILMIC, white: 1 }) {
+  const glsl = compositeGlsl(params, toneMapping);
+  return glsl.slice(glsl.indexOf('void mainImage'));
+}
+
+describe('compositeGlsl — the shader it emits', () => {
+  it('is self-contained: the curve and the blend are defined above mainImage', () => {
+    // The effect compiles this one string; a function it only calls would be a
+    // link error at shader-compile time, i.e. a black frame.
+    const glsl = compositeGlsl(glowOn(), { mode: GodotToneMapper.FILMIC, white: 1 });
+    expect(glsl).toContain('vec3 godotToneMap(vec3 color, float exposure)');
+    expect(glsl).toContain('vec3 godotGlowBlend(vec3 color, vec3 glow)');
+    expect(glsl).toContain('void mainImage(const in vec4 inputColor, const in vec2 uv,');
+  });
+
+  it('declares the two uniforms the pass feeds it', () => {
+    const glsl = compositeGlsl(glowOn(), { mode: GodotToneMapper.FILMIC, white: 1 });
+    expect(glsl).toContain('uniform sampler2D godotGlowBuffer;');
+    expect(glsl).toContain('uniform float godotExposure;');
+  });
+
+  it('preserves the input alpha rather than writing the blended one', () => {
+    expect(body(glowOn())).toContain('outputColor = vec4(color, inputColor.a);');
+  });
+});
+
+describe('compositeGlsl — the glow gather', () => {
+  it('scales the gathered buffer by glow_intensity, as gather_glow’s caller does', () => {
+    expect(body(glowOn({ glow_intensity: '0.75' }))).toContain(
+      'texture2D(godotGlowBuffer, uv).rgb * 0.75'
+    );
+  });
+
+  it('gives MIX the glow_mix factor in the intensity slot Godot reuses', () => {
+    // Godot fills the same uniform from `glow_mix` under MIX and lerps against
+    // it, so the scale on the buffer and the lerp factor are one value.
+    const glsl = body(glowOn({ glow_blend_mode: String(GlowBlendMode.MIX), glow_mix: '0.4' }));
+    expect(glsl).toContain('texture2D(godotGlowBuffer, uv).rgb * 0.4');
+  });
+});
+
+describe('compositeGlsl — exposure', () => {
+  // `tonemap.glsl` exposes the SCENE colour once before the blend; the GLOW was
+  // already exposed by the bright pass. Getting this wrong double-exposes the
+  // glow, or scales the blended SUM instead of its operands — and every glow
+  // fixture leaves `tonemap_exposure` at 1.0, where all three are identical.
+  it('exposes the scene colour and leaves the glow alone, pre-tonemap modes', () => {
+    const glsl = compositeGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), {
+      mode: GodotToneMapper.FILMIC,
+      white: 1,
+    });
+    expect(glsl).toContain('* godotExposure');
+    expect(glsl).toContain('godotToneMap(color, 1.0)');
+    expect(glsl).not.toMatch(/glow[^;]*godotExposure/);
+  });
+
+  it('applies exposure exactly once, whichever side of the curve blends', () => {
+    for (const mode of [GlowBlendMode.SCREEN, GlowBlendMode.SOFTLIGHT, GlowBlendMode.MIX]) {
+      const occurrences = body(glowOn({ glow_blend_mode: String(mode) })).match(
+        /godotExposure/g
+      );
+      expect(occurrences, `blend mode ${mode}`).toHaveLength(1);
+    }
+  });
+
+  it('calls the curve with an exposure of 1.0 — each operand is exposed already', () => {
+    const glsl = body(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }));
+    expect(glsl).toContain('godotToneMap(glow, 1.0)');
+    expect(glsl).toContain('godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0)');
+  });
+
+  it('clamps the scene colour non-negative before the curve, as apply_tonemapping does', () => {
+    // Godot: "Ensure color values passed to tonemappers are positive. They can
+    // be negative in the case of negative lights".
+    expect(body(glowOn())).toContain('max(inputColor.rgb, 0.0)');
+  });
+});
+
+describe('compositeGlsl — which side of the tone curve the blend falls on', () => {
+  it('tonemaps both operands and neither twice, SOFTLIGHT', () => {
+    const glsl = compositeGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }), {
+      mode: GodotToneMapper.FILMIC,
+      white: 1,
+    });
+    expect(glsl).toContain('godotToneMap(glow, 1.0)');
+    expect(glsl).not.toMatch(/glow[^;]*godotExposure/);
+  });
+
+  it('blends before the tone curve for SCREEN and after it for SOFTLIGHT', () => {
+    const screen = body(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }));
+    const softlight = body(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }));
+    expect(screen.indexOf('godotGlowBlend')).toBeLessThan(screen.indexOf('godotToneMap(color'));
+    expect(softlight.indexOf('godotToneMap(max')).toBeLessThan(softlight.indexOf('godotGlowBlend'));
+  });
+
+  it('puts every non-SOFTLIGHT mode on the pre-tonemap side (edge case)', () => {
+    for (const mode of [
+      GlowBlendMode.ADDITIVE,
+      GlowBlendMode.SCREEN,
+      GlowBlendMode.REPLACE,
+      GlowBlendMode.MIX,
+    ]) {
+      const glsl = body(glowOn({ glow_blend_mode: String(mode) }));
+      expect(glsl.indexOf('godotGlowBlend'), `blend mode ${mode}`).toBeLessThan(
+        glsl.indexOf('godotToneMap(color')
+      );
+    }
+  });
+});
+
+describe('compositeGlsl — the white SCREEN normalises against', () => {
+  it('uses Godot’s FLOORED white, not the authored property (regression)', () => {
+    // `apply_glow` divides by `params.white`, which the renderer fills from
+    // `environment_get_white` — floored at 1.0 for every SDR curve. Passing the
+    // raw `tonemap_white` instead would divide by a value below 1 and blow the
+    // glow out. Godot's own comment: "white cannot be smaller than the maximum
+    // output value".
+    const glsl = compositeGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), {
+      mode: GodotToneMapper.FILMIC,
+      white: 0.5,
+    });
+    expect(glsl).toContain('clamp(glow, 0.0, 1.0)');
+    expect(glsl).toContain('color * glow / 1.0');
+    expect(glsl).not.toContain('color * glow / 0.5');
+  });
+
+  it('passes an authored white above the floor straight through', () => {
+    const glsl = compositeGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), {
+      mode: GodotToneMapper.FILMIC,
+      white: 6,
+    });
+    expect(glsl).toContain('clamp(glow, 0.0, 6.0)');
+    expect(glsl).toContain('color * glow / 6.0');
+  });
+
+  it('normalises SCREEN against 1.0 under LINEAR, which has no white', () => {
+    // `environment_get_white` returns `output_max_value` for LINEAR whatever the
+    // scene authored.
+    const glsl = compositeGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), {
+      mode: GodotToneMapper.LINEAR,
+      white: 6,
+    });
+    expect(glsl).toContain('clamp(glow, 0.0, 1.0)');
+  });
+});
+
+describe('compositeGlsl — malformed input', () => {
+  it('falls back to ADDITIVE for a blend mode outside the enum (error path)', () => {
+    // `glow_blend_mode` is decoded leniently, so a hand-edited scene can carry
+    // anything; an unknown mode must still compile.
+    expect(body(glowOn({ glow_blend_mode: '99' }))).toContain('godotGlowBlend');
+    expect(compositeGlsl(glowOn({ glow_blend_mode: '99' }), {
+      mode: GodotToneMapper.FILMIC,
+      white: 1,
+    })).toContain('return color + glow;');
+  });
+
+  it('emits no uncompilable literal for a malformed tonemap white (error path)', () => {
+    const glsl = compositeGlsl(glowOn(), { mode: GodotToneMapper.FILMIC, white: Number.NaN });
+    expect(glsl).not.toMatch(/=\s*(NaN|Infinity)/);
+    expect(glsl).not.toMatch(/\*\s*(NaN|Infinity)/);
+  });
+
+  it('emits no uncompilable literal for a malformed glow intensity (error path)', () => {
+    const glsl = compositeGlsl(glowOn({ glow_intensity: 'not-a-number' }), {
+      mode: GodotToneMapper.FILMIC,
+      white: 1,
+    });
+    expect(glsl).not.toMatch(/[=*]\s*(NaN|Infinity)/);
+  });
+});
+
+describe('compositeGlsl — the AgX contrast', () => {
+  it('threads an authored tonemap_agx_contrast into the composed curve', () => {
+    const glsl = compositeGlsl(glowOn(), {
+      mode: GodotToneMapper.AGX,
+      white: 16.29,
+      agxContrast: 1.8,
+    });
+    expect(glsl).toContain('awp_contrast = 1.8;');
+  });
+
+  it('falls back to Godot’s default when the caller omits it (edge case)', () => {
+    const glsl = compositeGlsl(glowOn(), { mode: GodotToneMapper.AGX, white: 16.29 });
+    expect(glsl).toContain('awp_contrast = 1.25;');
+  });
+});

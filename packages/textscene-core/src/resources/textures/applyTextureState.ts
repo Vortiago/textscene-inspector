@@ -2,6 +2,11 @@
  * Per-material texture state — the UV transform and the sampler filter — applied
  * by cloning only when the material actually diverges from the shared source.
  *
+ * NOT A RESOURCE SLICE (ADR-0031): it decodes no Godot serialization and claims
+ * no type name. It is a SHARED APPLIER over an already-loaded `THREE.Texture`,
+ * consumed by every material slice's renderer — which is why it sits beside the
+ * texture slices rather than inside one.
+ *
  * WHY CLONE. `useResource` returns the SAME cached `THREE.Texture` for every
  * consumer of a path (the identity-equality contract). Both things this module
  * applies live on the Texture rather than the Material in three, but are

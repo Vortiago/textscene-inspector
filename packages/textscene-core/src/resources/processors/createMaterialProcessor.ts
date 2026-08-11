@@ -12,7 +12,12 @@ import * as THREE from 'three';
 import type { FileEventBus } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import { createMaterialFromContent, isMaterialPath, type TextureLoaderFn } from '../processing/materialProcessing';
+import {
+  createMaterialFromContent,
+  isMaterialPath,
+  releaseProceduralTextures,
+  type TextureLoaderFn,
+} from '../materials/standardmaterial3d/loadMaterial';
 import { parseSubResourcePath } from '../subResourcePath';
 import { isMaterialOwnedTexture } from '../textures/applyTextureState';
 
@@ -45,8 +50,16 @@ export function createMaterialProcessor(
  * clone leaks its GPU upload for the life of the session. Only clones are
  * freed: the shared source belongs to the loader's cache and may still be in
  * use by other materials.
+ *
+ * Its BORROWED textures are handed back rather than freed. A procedural texture
+ * (a `GradientTexture2D` the material's own `.tres` declares) belongs to the
+ * procedural cache and may still be lent to another material or a mounted
+ * component; releasing the pin is what lets capacity eviction reclaim it once
+ * the last borrower is gone, and holding the pin until here is what stops an
+ * eviction from disposing a texture this material is still sampling.
  */
 function disposeMaterialAndOwnedTextures(material: THREE.Material): void {
+  releaseProceduralTextures(material);
   // Walk the material's own values rather than a hand-listed set of slot names:
   // three assigns every map in its constructor, so this cannot go stale the day
   // a new one is wired, and the ownership tag is the real discriminator anyway.
