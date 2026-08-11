@@ -63,8 +63,9 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   text: v.quotedString('text'),
   // item_list.cpp:2464, Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE
   // "Texture2D". set_item_icon (item_list.cpp:206-228) assigns past the index
-  // guard. No PROPERTY_USAGE_STORE_IF_NULL, so an unset icon is omitted from
-  // the file rather than written as null.
+  // guard. An unset icon is normally omitted rather than written as `null`, for
+  // want of PROPERTY_USAGE_STORE_IF_NULL, but that is a write-side fact and the
+  // literal still loads, so the combinator accepts it.
   icon: v.resourceReference('icon'),
   // item_list.cpp:2465, Variant::BOOL, no hint. set_item_selectable
   // (item_list.cpp:368-376) assigns past the index guard. Defaults to true, so

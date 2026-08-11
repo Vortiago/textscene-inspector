@@ -47,6 +47,7 @@ import {
   STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
+import { packedArrayLiteral } from '../../../../godot/index.js';
 
 /** `HorizontalAlignment` (core/math/math_defs.h:80-85), label.cpp:1433 hint "Left,Center,Right,Fill". */
 const HORIZONTAL_ALIGNMENT = {
@@ -122,7 +123,7 @@ ellipsisCharValidator.grounding = { kind: 'enforced', cite: 'label.cpp:1260' };
  * through with no arity or value bound, so this only rejects a literal Godot's
  * own parser could not read.
  */
-const PACKED_FLOAT32_ARRAY_RE = /^PackedFloat32Array\(([\s\S]*)\)$/;
+const PACKED_FLOAT32_ARRAY_RE = packedArrayLiteral('PackedFloat32Array');
 const tabStopsValidator = shape((key, value, line) => {
   const match = PACKED_FLOAT32_ARRAY_RE.exec(value.trim());
   if (!match) {

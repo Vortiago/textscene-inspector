@@ -31,7 +31,7 @@
  */
 
 export { CMP_EPSILON, isZeroApprox, isEqualApprox, smoothstep } from './math.js';
-export { IS_VALID_INT_RE, literalText, splitTopLevel } from './string.js';
+export { IS_VALID_INT_RE, literalText, dropTrailingComma, splitTopLevel } from './string.js';
 export {
   MATERIAL_RENDER_PRIORITY_MIN,
   MATERIAL_RENDER_PRIORITY_MAX,
@@ -48,6 +48,9 @@ export {
   SUB_RESOURCE_REF_ANYWHERE_RE,
   SUB_RESOURCE_REF_BODY,
   TYPED_OR_BARE_ARRAY_RE,
+  TYPED_WRAPPER_RE,
+  packedArrayCallAnywhere,
+  packedArrayLiteral,
   nodePathLiteral,
   resourceRef,
 } from './variantParser.js';

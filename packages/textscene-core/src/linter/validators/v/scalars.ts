@@ -8,7 +8,7 @@ import { propertyError } from '../propertyError.js';
 import { createBooleanValidator } from '../commonValidators.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
-import { ARRAY_LITERAL_RE, TYPED_OR_BARE_ARRAY_RE } from '../../../godot/index.js';
+import { ARRAY_LITERAL_RE, TYPED_WRAPPER_RE } from '../../../godot/index.js';
 
 /**
  * One TSCN quoted literal: a quote, an escape-aware body, a closing quote, and
@@ -85,17 +85,23 @@ export const scalarCombinators = {
     const code = formatCode(name);
     const typed = opts?.typedAs;
     const wrapper = typed ? ` or Array[${typed}]([...])` : '';
-    const re = typed ? TYPED_OR_BARE_ARRAY_RE : ARRAY_LITERAL_RE;
     return shape((key, value, line) => {
-      if (!re.test(value)) {
-        return propertyError(
+      const reject = () =>
+        propertyError(
           key,
           line,
           `Property '${name}' must be an Array literal like []${wrapper}, got: ${value}`,
           code
         );
+      const wrapped = TYPED_WRAPPER_RE.exec(value.trim());
+      if (wrapped) {
+        // The wrapper names its element type, and `Array::assign` refuses a
+        // typed array whose type is not the property's, so matching the wrapper
+        // shape alone would accept `Array[Dictionary]` for a RichTextEffect
+        // slot. An unhinted property takes no wrapper at all.
+        return typed !== undefined && wrapped[1]!.trim() === typed ? null : reject();
       }
-      return null;
+      return ARRAY_LITERAL_RE.test(value) ? null : reject();
     }, `Array literal ([...]${wrapper})`);
   },
 };

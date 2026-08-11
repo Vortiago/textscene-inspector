@@ -16,11 +16,7 @@
 import type { TscnInternalResource } from '../../../parser/types';
 import { parseVector2, parseVector3 } from '../../../parser/vectors';
 import { parseColor } from '../../../utils/colorParser';
-import {
-  literalText,
-  NODE_PATH_LITERAL_ANYWHERE_RE,
-  SUB_RESOURCE_REF_BODY,
-} from '../../../godot/index.js';
+import { NODE_PATH_LITERAL_ANYWHERE_RE, SUB_RESOURCE_REF_BODY, literalText, packedArrayCallAnywhere } from '../../../godot/index.js';
 import type { AnimationLibraryRef } from './types';
 
 export type GodotKeyframeValue = number[] | number | boolean;
@@ -226,8 +222,8 @@ function parseNodePath(raw: string): { targetPath: string; property: string } | 
   return { targetPath: inner.slice(0, colon), property: inner.slice(colon + 1) };
 }
 
-const PACKED_FLOAT_RE = /"times":\s*PackedFloat32Array\(([^)]*)\)/;
-const PACKED_TRANSITIONS_RE = /"transitions":\s*PackedFloat32Array\(([^)]*)\)/;
+const PACKED_FLOAT_RE = new RegExp(`"times"\\s*:\\s*${packedArrayCallAnywhere('PackedFloat32Array').source}`);
+const PACKED_TRANSITIONS_RE = new RegExp(`"transitions"\\s*:\\s*${packedArrayCallAnywhere('PackedFloat32Array').source}`);
 
 function parseKeys(keysStr: string): GodotKeyframe[] {
   if (keysStr.length === 0) return [];
@@ -250,7 +246,7 @@ function parseKeys(keysStr: string): GodotKeyframe[] {
   }));
 }
 
-const PACKED_FLOAT_ARRAY_RE = /PackedFloat32Array\(([^)]*)\)/;
+const PACKED_FLOAT_ARRAY_RE = packedArrayCallAnywhere('PackedFloat32Array');
 
 /**
  * Decode a 3D transform track's flat key array. Godot serializes these as a

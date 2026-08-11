@@ -12,26 +12,11 @@ import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, shape, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import { IS_VALID_INT_RE, splitTopLevel } from '../../../godot/index.js';
+import { dropTrailingComma, IS_VALID_INT_RE, splitTopLevel } from '../../../godot/index.js';
 
 const BRACKET_ARRAY_RE = /^\s*\[([\s\S]*)\]\s*$/;
 const PACKED_INT32_ELEMENT_RE = /^PackedInt32Array\s*\(([\s\S]*)\)$/;
 const BARE_INT_ARRAY_ELEMENT_RE = /^\[([\s\S]*)\]$/;
-
-/**
- * `splitTopLevel` splits by comma alone, so a TRAILING comma before the
- * closing bracket reads as one more (empty) element than Godot's own array
- * actually holds. `_parse_array` (variant_parser.cpp:1643-1677) checks for
- * `TK_BRACKET_CLOSE` before it ever demands another value
- * (:1658-1662, before the `need_comma` branch at :1663), so `[1, 2,]` loads as
- * a 2-element array, not 3. Only ONE trailing empty is ever a trailing comma —
- * an interior `,,` fails `parse_value` on the comma token itself
- * (:1664-1665's `need_comma` branch demands a value, not another comma), so
- * that shape is already an invalid `.tscn` no matter how this drops it.
- */
-function dropTrailingComma(parts: string[]): string[] {
-  return parts.length > 1 && parts[parts.length - 1] === '' ? parts.slice(0, -1) : parts;
-}
 
 /**
  * `polygons`: an Array of PackedInt32Array index lists (polygon_2d.cpp:720,

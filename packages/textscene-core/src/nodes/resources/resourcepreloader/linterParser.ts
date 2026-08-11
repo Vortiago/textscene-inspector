@@ -31,12 +31,12 @@
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError } from '../../../linter/validators/index.js';
-import { RESOURCE_REF_RE } from '../../../godot/index.js';
+import { RESOURCE_REF_RE, packedArrayLiteral } from '../../../godot/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import { splitTopLevel } from '../../../godot/string.js';
+import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
 
 const OUTER_RE = /^\[([\s\S]*)\]$/;
-const PACKED_STRING_ARRAY_RE = /^PackedStringArray\(([\s\S]*)\)$/;
+const PACKED_STRING_ARRAY_RE = packedArrayLiteral('PackedStringArray');
 const QUOTED_NAME_RE = /^"(?:[^"\\]|\\[\s\S])*"$/;
 const FORMAT_CODE = 'INVALID_RESOURCES_FORMAT';
 
@@ -52,7 +52,7 @@ const resourcesValidator: PropertyValidator = accepts((key, value, line) => {
     );
   }
 
-  const topParts = splitTopLevel(outer[1]!);
+  const topParts = dropTrailingComma(splitTopLevel(outer[1]!));
   if (topParts.length !== 2) {
     // resource_preloader.cpp:36, ERR_FAIL_COND(p_data.size() != 2) — the whole
     // write is dropped, resources cleared.
@@ -102,7 +102,7 @@ const resourcesValidator: PropertyValidator = accepts((key, value, line) => {
     }
   }
 
-  const entries = splitTopLevel(resourcesMatch[1]!);
+  const entries = dropTrailingComma(splitTopLevel(resourcesMatch[1]!));
   if (names.length !== entries.length) {
     // resource_preloader.cpp:40, ERR_FAIL_COND(names.size() != resdata.size())
     // — the whole write is dropped, resources cleared.

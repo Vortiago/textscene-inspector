@@ -31,6 +31,7 @@ import {
   STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
+import { packedArrayLiteral } from '../../../../godot/index.js';
 
 // rich_text_label.cpp:7767: PROPERTY_HINT_ENUM "Left,Center,Right,Fill", the
 // full 4-member HorizontalAlignment enum (core/math/math_defs.h:80-84). Not
@@ -70,7 +71,7 @@ const VISIBLE_CHARACTERS_BEHAVIOR = {
  * rejecting: an arbitrary-length list of numbers, empty allowed
  * (`PackedFloat32Array()` is the documented default).
  */
-const PACKED_FLOAT32_ARRAY_RE = /^PackedFloat32Array\(([\s\S]*)\)$/;
+const PACKED_FLOAT32_ARRAY_RE = packedArrayLiteral('PackedFloat32Array');
 
 function packedFloat32ArrayValidator(name: string, code: string) {
   return shape((key, value, line) => {
@@ -270,11 +271,5 @@ validatorRegistry.registerAll('RichTextLabel', {
   // written with the `Array[Type](...)` wrapper, unlike custom_effects above).
   // set_structured_text_bidi_override_options (rich_text_label.cpp:7334-7344)
   // is a bare assignment.
-  // Unlike the four Control siblings that spell this property strictly, this one
-  // has always taken the wrapper too, on the grounds that accepting a shape the
-  // loader reads costs nothing. The disagreement is real and predates this
-  // refactor; it is preserved rather than settled here.
-  structured_text_bidi_override_options: v.arrayLiteral('structured_text_bidi_override_options', {
-    typedAs: 'Type',
-  }),
+  structured_text_bidi_override_options: v.arrayLiteral('structured_text_bidi_override_options'),
 });

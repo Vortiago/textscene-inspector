@@ -10,6 +10,7 @@
  */
 
 import { warn } from '../../../../logger';
+import { packedArrayLiteral } from '../../../../godot/index.js';
 
 export interface Vec2i {
   x: number;
@@ -28,12 +29,15 @@ export interface PlacedCell {
   alternativeId: number;
 }
 
+const PACKED_BYTE_ARRAY_RE = packedArrayLiteral('PackedByteArray');
+const PACKED_INT32_ARRAY_RE = packedArrayLiteral('PackedInt32Array');
+
 const CELL_BYTES = 12;
 const HEADER_BYTES = 2;
 const FORMAT_VERSION = 0;
 
 export function decodeTileMapData(value: string): PlacedCell[] | null {
-  const m = value.match(/^PackedByteArray\((.*)\)$/s);
+  const m = PACKED_BYTE_ARRAY_RE.exec(value);
   if (!m) return null;
 
   const bytes = decodeBytes(m[1]!.trim());
@@ -64,7 +68,7 @@ export function decodeLegacyTileData(value: string, format: number): PlacedCell[
     warn(`[TileMap] tile data format ${format} is a Godot 3 format — ignoring tile data`);
     return null;
   }
-  const m = value.match(/^PackedInt32Array\((.*)\)$/s);
+  const m = PACKED_INT32_ARRAY_RE.exec(value);
   if (!m) return null;
 
   const ints = m[1]!.split(',').map((s) => parseInt(s.trim(), 10));

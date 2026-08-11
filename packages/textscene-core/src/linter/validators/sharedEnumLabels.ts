@@ -98,7 +98,7 @@ export const ENABLE_MODE = {
  * `AudioServer::PlaybackType`, reached by all three AudioStreamPlayers.
  *
  * Not a coincidence like its neighbours above but one core enum
- * (`audio_server.h:74-80`): each player's setter forwards to the same
+ * (`audio_server.h:194-199`): each player's setter forwards to the same
  * `AudioStreamPlayerInternal::set_playback_type`
  * (audio_stream_player_internal.cpp:337-339). They still have nowhere to hoist
  * it — the three descend from `Node`, `Node2D` and `Node3D`, and no ancestor
@@ -112,20 +112,12 @@ export const PLAYBACK_TYPE = {
 } as const;
 
 /**
- * Three `BaseMaterial3D` enums that `Label3D` and `SpriteBase3D` both re-bind.
+ * `BaseMaterial3D::AlphaAntiAliasing` (scene/resources/material.h:196-200), which
+ * `Label3D` and `SpriteBase3D` both re-bind.
  *
  * Each class builds its own StandardMaterial3D and forwards the value, so both
  * declare the property itself and neither inherits it: `GeometryInstance3D`,
- * their nearest common ancestor, knows nothing about any of the three.
- *
- * `BASE_MATERIAL_TEXTURE_FILTER` is spelled out rather than named
- * `TEXTURE_FILTER` because THREE different engine enums carry that name and two
- * are still local to their slices on purpose: `CanvasItem::TextureFilter`
- * (canvasitem/shared) prepends `PARENT_NODE` at 0 and so runs seven values
- * offset by one, and `Viewport::DefaultCanvasItemTextureFilter`
- * (viewport/shared) has four with `LINEAR_WITH_MIPMAPS` and
- * `NEAREST_WITH_MIPMAPS` in the opposite order. Sharing on the name alone would
- * mislabel every diagnostic those two raise.
+ * their nearest common ancestor, knows nothing about it.
  */
 export const BASE_MATERIAL_ALPHA_ANTIALIASING = {
   0: 'OFF',
@@ -133,15 +125,35 @@ export const BASE_MATERIAL_ALPHA_ANTIALIASING = {
   2: 'ALPHA_TO_COVERAGE_AND_TO_ONE',
 } as const;
 
-/** `BaseMaterial3D::AlphaCutMode`, as Label3D and SpriteBase3D both bind it. */
-export const BASE_MATERIAL_ALPHA_CUT = {
+/**
+ * The alpha-cut mode `Label3D` and `SpriteBase3D` each declare for themselves.
+ *
+ * NOT a BaseMaterial3D enum, despite sitting beside two that are: `material.h`
+ * declares no `AlphaCutMode` at all. These are two separate four-value enums
+ * that agree, `label_3d.h:50-56` and `sprite_3d.h:52-58`, so this is the same
+ * cross-family coincidence as `ENABLE_MODE` above rather than one shared
+ * declaration. Both setters enforce with `ERR_FAIL_INDEX(p_mode, ALPHA_CUT_MAX)`
+ * at `label_3d.cpp:1013` and `sprite_3d.cpp:531`, and each call site keeps its
+ * own citation.
+ */
+export const LABEL_SPRITE_ALPHA_CUT = {
   0: 'DISABLED',
   1: 'DISCARD',
   2: 'OPAQUE_PREPASS',
   3: 'HASH',
 } as const;
 
-/** `BaseMaterial3D::TextureFilter` — see the naming note above. */
+/**
+ * `BaseMaterial3D::TextureFilter` (scene/resources/material.h:171-178).
+ *
+ * Spelled out rather than named `TEXTURE_FILTER` because THREE different engine
+ * enums carry that name and two are still local to their slices on purpose:
+ * `CanvasItem::TextureFilter` (canvasitem/shared) prepends `PARENT_NODE` at 0
+ * and so runs seven values offset by one, and
+ * `Viewport::DefaultCanvasItemTextureFilter` (viewport/shared) has four with
+ * `LINEAR_WITH_MIPMAPS` and `NEAREST_WITH_MIPMAPS` in the opposite order.
+ * Sharing on the name alone would mislabel every diagnostic those two raise.
+ */
 export const BASE_MATERIAL_TEXTURE_FILTER = {
   0: 'NEAREST',
   1: 'LINEAR',

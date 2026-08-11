@@ -39,10 +39,29 @@ function resolveReference(
 }
 
 /**
- * Whether a resource reference resolves to something the scene declares.
+ * An explicitly CLEARED resource slot, written as a bare `null`.
+ *
+ * Distinct from an absent key and from a dangling reference: the author said
+ * "no resource here", and `variant_parser.cpp:699` reads it as `Variant()`,
+ * which every `Ref<T>` setter takes. See `createResourceReferenceValidator`
+ * for the format half of the same rule.
+ */
+export function isClearedResource(resourceRef: string | undefined): boolean {
+  return resourceRef?.trim() === 'null';
+}
+
+/**
+ * Whether a reference is anything OTHER than a dangling one.
  *
  * A malformed reference is `false` here rather than throwing — its format is
  * the strict parser's job, and reporting it twice would double the diagnostic.
+ *
+ * A CLEARED slot is `true`, because it names nothing on purpose. Every caller
+ * uses this to decide whether to report a missing resource, and `null` is a
+ * value Godot writes and reloads, so reporting it is a false positive on a file
+ * the engine opens. The guard lives here rather than at the two dozen call
+ * sites for the same reason the format half lives at its combinator: the rule
+ * is general, and the sites that hand-rolled it disagreed.
  *
  * @example
  * ```typescript
@@ -52,5 +71,6 @@ function resolveReference(
  * ```
  */
 export function checkResourceExists(scene: TscnScene, resourceRef: string): boolean {
+  if (isClearedResource(resourceRef)) return true;
   return resolveReference(scene, resourceRef) !== undefined;
 }

@@ -63,8 +63,9 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   text: v.quotedString('text'),
   // popup_menu.cpp:3322, Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE
   // "Texture2D". set_item_icon (popup_menu.cpp:2024) is a bare assignment.
-  // No PROPERTY_USAGE_STORE_IF_NULL here (unlike GraphNode's slot icons), so
-  // a null icon is omitted from the file rather than written literally.
+  // A null icon is normally omitted rather than written literally, for want of
+  // PROPERTY_USAGE_STORE_IF_NULL (unlike GraphNode's slot icons). That is a
+  // write-side fact; the literal still loads and the combinator accepts it.
   icon: v.resourceReference('icon'),
   // popup_menu.cpp:3323, Variant::INT, PROPERTY_HINT_ENUM "No,As
   // checkbox,As radio button" (values 0-2). `_set_item_checkable_type`

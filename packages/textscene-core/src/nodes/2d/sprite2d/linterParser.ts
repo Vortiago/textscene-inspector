@@ -23,21 +23,21 @@ validatorRegistry.registerAll('Sprite2D', {
   // assignment: format-only.
   region_filter_clip_enabled: v.boolean('region_filter_clip_enabled'),
   // sprite_2d.cpp:543 hints "1,16384,1" — no or_greater/or_less, hard both ends.
-  // set_hframes (sprite_2d.cpp:323) ERR_FAIL_COND_MSGs below 1; the ceiling is
+  // set_hframes (sprite_2d.cpp:344) ERR_FAIL_COND_MSGs below 1; the ceiling is
   // hint-only, never setter-enforced. `strictInt` (not `int`) because only it
   // wires a per-end severity through to the underlying validator.
   hframes: v.strictInt('hframes', {
     min: 1,
     max: 16384,
-    enforced: { min: 'sprite_2d.cpp:323' },
+    enforced: { min: 'sprite_2d.cpp:344' },
     hinted: { max: 'sprite_2d.cpp:543' },
   }),
-  // sprite_2d.cpp:544, same shape as hframes: set_vframes (sprite_2d.cpp:344)
+  // sprite_2d.cpp:544, same shape as hframes: set_vframes (sprite_2d.cpp:323)
   // ERR_FAIL_COND_MSGs below 1, the 16384 ceiling is hint-only.
   vframes: v.strictInt('vframes', {
     min: 1,
     max: 16384,
-    enforced: { min: 'sprite_2d.cpp:344' },
+    enforced: { min: 'sprite_2d.cpp:323' },
     hinted: { max: 'sprite_2d.cpp:544' },
   }),
   // sprite_2d.cpp:545 carries no hint at all; set_frame (sprite_2d.cpp:296)

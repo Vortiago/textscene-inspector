@@ -1,6 +1,10 @@
+import { packedArrayCallAnywhere, packedArrayLiteral } from '../../godot/index.js';
+
+const PACKED_VECTOR3_ARRAY_RE = packedArrayLiteral('PackedVector3Array');
+
 /** Parse Godot `PackedVector3Array(x, y, z, x, y, z, ...)` into a flat Float32Array. */
 export function parsePackedVector3Array(value: string): Float32Array {
-  const match = value.match(/^PackedVector3Array\s*\(([\s\S]*)\)$/);
+  const match = PACKED_VECTOR3_ARRAY_RE.exec(value);
   if (!match) {
     throw new Error(`Invalid PackedVector3Array format: ${value}`);
   }
@@ -51,7 +55,7 @@ export function parsePackedColorArray(value: string): Float32Array {
  */
 export function parsePackedInt32Arrays(value: string): number[][] {
   const result: number[][] = [];
-  const re = /PackedInt32Array\(([^)]*)\)/g;
+  const re = packedArrayCallAnywhere('PackedInt32Array', true);
   let match: RegExpExecArray | null;
   while ((match = re.exec(value)) !== null) {
     const body = match[1]!.trim();

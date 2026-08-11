@@ -20,6 +20,7 @@ import type {
   Curve3DSample,
   Curve3DSampler,
 } from './types';
+import { packedArrayCallAnywhere } from '../../../godot/index.js';
 
 const FLOATS_PER_POINT = 9;
 
@@ -63,7 +64,7 @@ function extractPointsLiteral(dataValue: unknown): string | null {
     if (typeof points === 'string') source = points;
   }
   if (!source) return null;
-  const match = source.match(/PackedVector3Array\s*\([^)]*\)/);
+  const match = packedArrayCallAnywhere('PackedVector3Array').exec(source);
   return match ? match[0] : null;
 }
 

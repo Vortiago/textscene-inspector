@@ -22,30 +22,13 @@
 import '../animationmixer/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { shape, v } from '../../../linter/validators/index.js';
-import { propertyError } from '../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import { RESOURCE_REF_RE } from '../../../godot/index.js';
 
 const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
 
-function resourceRef(name: string, code: string): PropertyValidator {
-  const validator: PropertyValidator = (key, value, line) => {
-    if (!RESOURCE_REF_RE.test(value.trim())) {
-      return propertyError(key, line, `Property '${name}' must be a SubResource or ExtResource reference, got: "${value}"`, code);
-    }
-    return null;
-  };
-  validator.accepts = 'SubResource("id") or ExtResource("id")';
-  // animation_tree.cpp:1018, PROPERTY_HINT_RESOURCE_TYPE "AnimationRootNode":
-  // rejects only a malformed reference, no magnitude to ground. Kept hand-rolled
-  // (rather than v.resourceReference) because linter.test.ts:90 pins this exact
-  // message substring.
-  validator.formatOnly = true;
-  return validator;
-}
-
 validatorRegistry.registerAll('AnimationTree', {
-  tree_root: resourceRef('tree_root', 'INVALID_TREE_ROOT_FORMAT'),
+  // animation_tree.cpp:1018, PROPERTY_HINT_RESOURCE_TYPE "AnimationRootNode":
+  // rejects only a malformed reference, no magnitude to ground.
+  tree_root: v.resourceReference('tree_root'),
   // animation_tree.cpp:1020, PROPERTY_HINT_NODE_PATH_VALID_TYPES "AnimationPlayer".
   // set_animation_player (:845-855) is a bare assignment (an empty path even
   // resets root_node/animation_libraries deliberately, not a rejection).

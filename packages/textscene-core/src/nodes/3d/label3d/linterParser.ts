@@ -10,7 +10,7 @@ import '../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import {
   BASE_MATERIAL_ALPHA_ANTIALIASING,
-  BASE_MATERIAL_ALPHA_CUT,
+  LABEL_SPRITE_ALPHA_CUT,
   BASE_MATERIAL_TEXTURE_FILTER,
 } from '../../../linter/validators/sharedEnumLabels.js';
 import { hintedBitField, maskedBitField, v } from '../../../linter/validators/index.js';
@@ -148,7 +148,7 @@ validatorRegistry.registerAll('Label3D', {
   }),
   // set_alpha_cut_mode:1013, ERR_FAIL_INDEX(p_mode, ALPHA_CUT_MAX): the setter
   // refuses.
-  alpha_cut: v.enumInt('alpha_cut', 0, 3, BASE_MATERIAL_ALPHA_CUT, { enforced: 'label_3d.cpp:1013' }),
+  alpha_cut: v.enumInt('alpha_cut', 0, 3, LABEL_SPRITE_ALPHA_CUT, { enforced: 'label_3d.cpp:1013' }),
   // set_vertical_alignment:693, ERR_FAIL_INDEX((int)p_alignment, 4): the
   // setter refuses.
   vertical_alignment: v.enumInt('vertical_alignment', 0, 3, VERTICAL_ALIGNMENT, {

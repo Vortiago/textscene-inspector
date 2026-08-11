@@ -11,6 +11,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { RESOURCE_REF_RE } from '../../../godot/index.js';
+import { isClearedResource } from '../../../linter/resourceChecker.js';
 
 /**
  * Extract resource ID from SubResource("id") or ExtResource("id") format
@@ -66,7 +67,9 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
   const rawProps = node.properties as Record<string, string>;
 
   // WARNING: tree_root not set (AnimationTree won't do anything without it)
-  if (!rawProps.tree_root) {
+  // A cleared slot (`tree_root = null`) is a set-to-nothing, which is exactly
+  // what this warning is about, so it counts as absent here and as not-dangling below.
+  if (!rawProps.tree_root || isClearedResource(rawProps.tree_root)) {
     diagnostics.push({
       severity: 'warning',
       message: `AnimationTree 'tree_root' is not set. AnimationTree requires a root animation node (AnimationNodeBlendTree or AnimationNodeStateMachine) to function.`,
@@ -77,7 +80,7 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
   }
 
   // ERROR: tree_root resource doesn't exist in scene
-  if (rawProps.tree_root) {
+  if (rawProps.tree_root && !isClearedResource(rawProps.tree_root)) {
     if (!resourceExists(scene, rawProps.tree_root)) {
       const resourceId = extractResourceId(rawProps.tree_root);
       diagnostics.push({

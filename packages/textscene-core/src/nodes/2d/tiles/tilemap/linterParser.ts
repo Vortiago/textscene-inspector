@@ -15,7 +15,11 @@ import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js'
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../../../godot/rendering.js';
 import { IS_VALID_INT_RE } from '../../../../godot/index.js';
 
-const TILE_DATA_RE = /^PackedInt32Array\(([\s\S]*)\)$/;
+// `\s*` at both ends and before the paren: Godot's tokenizer discards any
+// character <= 32 before a token (variant_parser.cpp:415-417), so a padded
+// `PackedInt32Array ( … )` loads, the same reasoning godot/variantParser.ts
+// states for the NodePath and resource-ref literals.
+const TILE_DATA_RE = /^\s*PackedInt32Array\s*\(([\s\S]*)\)\s*$/;
 
 /**
  * tile_map.h:56-59, VisibilityMode. BIND_ENUM_CONSTANT count is 3

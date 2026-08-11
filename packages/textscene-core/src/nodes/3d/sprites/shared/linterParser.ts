@@ -21,7 +21,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import {
   BASE_MATERIAL_ALPHA_ANTIALIASING,
-  BASE_MATERIAL_ALPHA_CUT,
+  LABEL_SPRITE_ALPHA_CUT,
   BASE_MATERIAL_TEXTURE_FILTER,
 } from '../../../../linter/validators/sharedEnumLabels.js';
 import {
@@ -68,7 +68,7 @@ validatorRegistry.registerAll('SpriteBase3D', {
   fixed_size: v.boolean('fixed_size'),
   // set_alpha_cut_mode:530-531, ERR_FAIL_INDEX(p_mode, ALPHA_CUT_MAX): the
   // setter refuses.
-  alpha_cut: v.enumInt('alpha_cut', 0, 3, BASE_MATERIAL_ALPHA_CUT, { enforced: 'sprite_3d.cpp:531' }),
+  alpha_cut: v.enumInt('alpha_cut', 0, 3, LABEL_SPRITE_ALPHA_CUT, { enforced: 'sprite_3d.cpp:531' }),
   // sprite_3d.cpp:692 hints "0,1,0.001" (closed); set_alpha_scissor_threshold:
   // 558-565 is a bare assignment, so out-of-hint is a warning.
   alpha_scissor_threshold: v.float('alpha_scissor_threshold', {

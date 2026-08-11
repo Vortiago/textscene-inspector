@@ -58,7 +58,7 @@ Strict parsing format-checks these `RichTextLabel` properties, plus 53 inherited
 | `selection_enabled` | true or false |
 | `shortcut_keys_enabled` | true or false |
 | `structured_text_bidi_override` | enum 0-6 (STRUCTURED_TEXT_DEFAULT/STRUCTURED_TEXT_URI/STRUCTURED_TEXT_FILE/STRUCTURED_TEXT_EMAIL/STRUCTURED_TEXT_LIST/STRUCTURED_TEXT_GDSCRIPT/STRUCTURED_TEXT_CUSTOM) |
-| `structured_text_bidi_override_options` | Array literal ([...] or Array[Type]([...])) |
+| `structured_text_bidi_override_options` | Array literal ([...]) |
 | `tab_size` | integer 0-24 |
 | `tab_stops` | PackedFloat32Array(x, y, …) |
 | `text` | quoted string |

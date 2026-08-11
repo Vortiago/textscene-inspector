@@ -17,7 +17,10 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import type { TscnInternalResource } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
-import { SUB_RESOURCE_REF_ANYWHERE_RE } from '../../../godot/index.js';
+import { SUB_RESOURCE_REF_ANYWHERE_RE, packedArrayCallAnywhere } from '../../../godot/index.js';
+
+const POINTS_RE = new RegExp(`"points"\\s*:\\s*${packedArrayCallAnywhere('PackedVector3Array').source}`);
+const TILTS_RE = new RegExp(`"tilts"\\s*:\\s*${packedArrayCallAnywhere('PackedFloat32Array').source}`);
 
 /**
  * Validate Path3D semantic rules
@@ -98,7 +101,7 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
     ruleName: 'curve3d-loadable',
   });
 
-  const pointsLiteral = data.match(/"points"\s*:\s*PackedVector3Array\(([^)]*)\)/);
+  const pointsLiteral = POINTS_RE.exec(data);
   if (!pointsLiteral) {
     return [problem("its Curve3D has no \"points\" in `_data`; Godot loads the curve with zero points and the path draws nothing.")];
   }
@@ -123,7 +126,7 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
     ];
   }
 
-  const tiltsLiteral = data.match(/"tilts"\s*:\s*PackedFloat32Array\(([^)]*)\)/);
+  const tiltsLiteral = TILTS_RE.exec(data);
   if (tiltsLiteral) {
     const tilts = tiltsLiteral[1]!.split(',').filter((s) => s.trim() !== '').length;
     const expected = vector3s / 3;

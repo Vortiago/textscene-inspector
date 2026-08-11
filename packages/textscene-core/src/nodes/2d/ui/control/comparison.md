@@ -91,7 +91,7 @@ Strict parsing format-checks these `Control` properties, plus 16 inherited from 
 | `pivot_offset_ratio` | Vector2(x, y) |
 | `rotation` | float |
 | `scale` | Vector2(x, y) |
-| `shortcut_context` | NodePath("path/to/node") |
+| `shortcut_context` | null or NodePath("path/to/node") |
 | `size_flags_horizontal` | integer |
 | `size_flags_stretch_ratio` | float >= 0 |
 | `size_flags_vertical` | integer |

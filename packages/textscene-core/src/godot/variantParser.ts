@@ -58,6 +58,35 @@ export const ARRAY_LITERAL_RE = /^\[([\s\S]*)\]$/;
  */
 export const TYPED_OR_BARE_ARRAY_RE = /^(?:\[[\s\S]*\]|Array\[[^[\]]+\]\(\[[\s\S]*\]\))$/;
 
+/** A typed `Array[T]([…])` wrapper alone; `[1]` is the element type `T`. */
+export const TYPED_WRAPPER_RE = /^Array\[([^[\]]+)\]\(\[[\s\S]*\]\)$/;
+
+/**
+ * A whole `Packed…Array(…)` constructor call, capturing the argument body.
+ *
+ * Built rather than written out for the reason this file exists: five copies of
+ * this shape had been hand-written across the tile decoder, the GridMap parser
+ * and the shape resources, none of them tolerating the padding Godot's
+ * tokenizer discards, so a hand-edited `PackedByteArray ( … )` decoded to
+ * nothing and a TileMapLayer silently rendered no tiles.
+ *
+ * The body is greedy to the LAST paren, which is what a value that is entirely
+ * one constructor call needs. For SCANNING a larger string use
+ * `packedArrayCallAnywhere`, whose body stops at the first paren.
+ */
+export function packedArrayLiteral(typeName: string): RegExp {
+  return new RegExp(`^${WS}${typeName}${WS}\\(([\\s\\S]*)\\)${WS}$`);
+}
+
+/**
+ * The same call found ANYWHERE in a larger value; `[1]` is the body, which stops
+ * at the first `)`. Pass `global` for a repeated scan — a `g`-flagged RegExp
+ * carries `lastIndex`, so each caller needs its own instance.
+ */
+export function packedArrayCallAnywhere(typeName: string, global = false): RegExp {
+  return new RegExp(`${typeName}${WS}\\(([^)]*)\\)`, global ? 'g' : '');
+}
+
 /**
  * A `SubResource("…")` reference alone, capturing the id.
  *

@@ -18,7 +18,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { v, shape, propertyError } from '../../../../linter/validators/index.js';
 import { THEME_OVERRIDE_VALIDATORS } from '../../../../linter/validators/themeOverrides.js';
-import { NODE_PATH_LITERAL_RE, splitTopLevel } from '../../../../godot/index.js';
+import { dropTrailingComma, NODE_PATH_LITERAL_RE, splitTopLevel } from '../../../../godot/index.js';
 
 /**
  * `Array[NodePath]([…])` — the four `accessibility_*_nodes` properties
@@ -48,7 +48,7 @@ function nodePathArray(name: string): PropertyValidator {
     if (!match) return reject(key, line, value);
     const body = match[1]!.trim();
     if (body === '') return null;
-    for (const element of splitTopLevel(body)) {
+    for (const element of dropTrailingComma(splitTopLevel(body))) {
       if (!NODE_PATH_LITERAL_RE.test(element)) return reject(key, line, value);
     }
     return null;
@@ -234,11 +234,12 @@ validatorRegistry.registerAll('Control', {
     { enforced: 'control.cpp:3539' }
   ),
   // shortcut_context declares Variant::OBJECT + PROPERTY_HINT_NODE_TYPE
-  // (control.cpp:4307, takes a live `const Node *`), but packed_scene.cpp:884-891
-  // converts a Node value to `get_path_to(n)` — a NodePath — before writing it,
-  // and skips the key entirely when it was never set. The only spelling that
-  // ever reaches a `.tscn` is `NodePath("…")`.
-  shortcut_context: v.nodePath('shortcut_context'),
+  // (control.cpp:4307, takes a live `const Node *`), and packed_scene.cpp:884-891
+  // converts a Node value to `get_path_to(n)` — a NodePath — before writing it.
+  // That is what the WRITER emits; the loader also takes `null`, since NIL
+  // converts to OBJECT (variant.cpp:543-545) and set_shortcut_context handles a
+  // nullptr by storing an empty ObjectID (control.cpp:2022-2027).
+  shortcut_context: v.nodePath('shortcut_context', { orNull: true }),
 
   // "Theme" group. `null` is legal here and the combinator accepts it; see
   // its docblock for why the write-side STORE_IF_NULL reasoning is a red

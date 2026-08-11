@@ -9,20 +9,34 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { checkResourceExists, isClearedResource } from '../../../linter/resourceChecker.js';
 import { firstNodeOfType, isValidProperties } from '../../../linter/linterUtils.js';
 import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver.js';
 
+/**
+ * The resource a slot actually holds, or undefined when it holds none.
+ *
+ * A cleared slot (`environment = null`) is undefined here, exactly like an
+ * absent key: `Ref::is_valid()` is false for both, so every question this file
+ * asks Godot answers the same way for either. Reading the raw string as truthy
+ * instead made `null` look like a held resource and got all four gates wrong at
+ * once, including blaming the wrong node for a duplicate.
+ */
+function heldResource(raw: string | undefined): string | undefined {
+  return raw === undefined || isClearedResource(raw) ? undefined : raw;
+}
+
 /** `environment.is_valid()`, the gate on joining the group (world_environment.cpp:39). */
 function declaresEnvironment(node: TscnNode): boolean {
-  return isValidProperties(node.properties) && Boolean(node.properties.environment);
+  return isValidProperties(node.properties) && heldResource(node.properties.environment) !== undefined;
 }
 
 /** `Ref` identity, spelled the way two references to one resource compare equal. */
 function environmentId(raw: string | undefined): string | undefined {
-  if (!raw) return undefined;
-  const parsed = parseResourceReference(raw);
-  return parsed ? `${parsed.type}:${parsed.id}` : raw;
+  const held = heldResource(raw);
+  if (!held) return undefined;
+  const parsed = parseResourceReference(held);
+  return parsed ? `${parsed.type}:${parsed.id}` : held;
 }
 
 /**
@@ -58,7 +72,7 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
   // gives the node a visible effect, so a camera_attributes-only
   // WorldEnvironment is a valid configuration the engine says nothing about.
   // Testing `environment` alone warned about exactly those scenes.
-  if (!rawProps.environment && !rawProps.camera_attributes) {
+  if (heldResource(rawProps.environment) === undefined && heldResource(rawProps.camera_attributes) === undefined) {
     diagnostics.push({
       severity: 'warning',
       message: `WorldEnvironment has neither an 'environment' nor a 'camera_attributes' resource, so it has no visible effect.`,
@@ -72,11 +86,12 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
   // that warning became a conjunction, "no environment" no longer implies the
   // node was reported, and a camera_attributes-only node would have reached here
   // with nothing to resolve.
-  if (rawProps.environment) {
-    if (!checkResourceExists(scene, rawProps.environment)) {
+  const environment = heldResource(rawProps.environment);
+  if (environment !== undefined) {
+    if (!checkResourceExists(scene, environment)) {
       diagnostics.push({
         severity: 'error',
-        message: `Environment resource not found: ${rawProps.environment}`,
+        message: `Environment resource not found: ${environment}`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'valid-worldenvironment-resources',
@@ -84,7 +99,7 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
     } else {
       // The Environment subresource may reference a Sky subresource; existence-check
       // it like the environment reference itself (the render parser reads sky too).
-      const skyRef = getEnvironmentSkyReference(scene, rawProps.environment);
+      const skyRef = getEnvironmentSkyReference(scene, environment);
       if (skyRef && !checkResourceExists(scene, skyRef)) {
         diagnostics.push({
           severity: 'error',
@@ -98,12 +113,13 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
   }
 
   // Check if camera_attributes resource exists (if specified - this is optional)
-  if (rawProps.camera_attributes) {
-    const resourceExists = checkResourceExists(scene, rawProps.camera_attributes);
+  const cameraAttributes = heldResource(rawProps.camera_attributes);
+  if (cameraAttributes !== undefined) {
+    const resourceExists = checkResourceExists(scene, cameraAttributes);
     if (!resourceExists) {
       diagnostics.push({
         severity: 'error',
-        message: `Camera attributes resource not found: ${rawProps.camera_attributes}`,
+        message: `Camera attributes resource not found: ${cameraAttributes}`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'valid-worldenvironment-resources',
@@ -141,7 +157,11 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
   const winningId = first && isValidProperties(first.properties)
     ? environmentId(first.properties.environment)
     : undefined;
-  if (rawProps.environment && node !== first && environmentId(rawProps.environment) !== winningId) {
+  if (
+    heldResource(rawProps.environment) &&
+    node !== first &&
+    environmentId(rawProps.environment) !== winningId
+  ) {
     diagnostics.push({
       severity: 'warning',
       message: `WorldEnvironment '${node.name}' is not the first in the scene, and its 'environment' is not the one the first declares, so Godot ignores it. Only the first Environment has an effect.`,

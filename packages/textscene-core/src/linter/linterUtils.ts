@@ -28,10 +28,16 @@ interface SceneIndex {
   byName: Map<string, TscnNode[]>;
   /** Nodes that have an ANCESTOR (not themselves) with `instance` set. */
   underInstanceAncestor: Set<TscnNode>;
-  /** type -> how many nodes in the whole tree carry it. */
-  countByType: Map<string, number>;
-  /** type -> the first node of that type in depth-first (= Godot tree) order. */
-  firstByType: Map<string, TscnNode>;
+  /**
+   * type -> every node of that type, in depth-first (= Godot tree) order.
+   *
+   * One ordered list rather than a count plus a first-node map, because the
+   * conditional `add_to_group` lookups need the Nth entry that satisfies a
+   * predicate, not just the first node outright. Scanning this list is O(nodes
+   * of that type); re-walking the tree per call was O(whole tree), and the
+   * rules that need it are exactly the ones that fire when the type repeats.
+   */
+  nodesByType: Map<string, TscnNode[]>;
 }
 
 /**
@@ -49,8 +55,7 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
   const parentOf = new Map<TscnNode, TscnNode | null>();
   const byName = new Map<string, TscnNode[]>();
   const underInstanceAncestor = new Set<TscnNode>();
-  const countByType = new Map<string, number>();
-  const firstByType = new Map<string, TscnNode>();
+  const nodesByType = new Map<string, TscnNode[]>();
 
   const walk = (nodes: TscnNode[], parent: TscnNode | null, ancestorIsInstance: boolean): void => {
     for (const node of nodes) {
@@ -60,8 +65,9 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
       if (named) named.push(node);
       else byName.set(node.name, [node]);
 
-      countByType.set(node.type, (countByType.get(node.type) ?? 0) + 1);
-      if (!firstByType.has(node.type)) firstByType.set(node.type, node);
+      const ofType = nodesByType.get(node.type);
+      if (ofType) ofType.push(node);
+      else nodesByType.set(node.type, [node]);
 
       if (ancestorIsInstance) underInstanceAncestor.add(node);
 
@@ -75,7 +81,7 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
   // contract) — freezing here makes that contract enforced, not just documented.
   for (const matches of byName.values()) Object.freeze(matches);
 
-  return { parentOf, byName, underInstanceAncestor, countByType, firstByType };
+  return { parentOf, byName, underInstanceAncestor, nodesByType };
 }
 
 function getSceneIndex(roots: TscnNode[]): SceneIndex {
@@ -102,7 +108,7 @@ function getSceneIndex(roots: TscnNode[]): SceneIndex {
  * a type-keyed group, never a subclass closure.
  */
 export function countNodesOfType(roots: TscnNode[], type: string): number {
-  return getSceneIndex(roots).countByType.get(type) ?? 0;
+  return getSceneIndex(roots).nodesByType.get(type)?.length ?? 0;
 }
 
 /**
@@ -119,25 +125,21 @@ export function countNodesOfType(roots: TscnNode[], type: string): number {
  * `joins` narrows to the nodes that actually ENTER the group, because several of
  * these `add_to_group` calls are conditional — `WorldEnvironment` joins only
  * `if (environment.is_valid())` (world_environment.cpp:39-40), so a leading node
- * without one is not the winner and must not be treated as it. Omitted, the
- * answer comes from the cached index in O(1); given, it costs one walk.
+ * without one is not the winner and must not be treated as it.
+ *
+ * Both paths read the cached per-type list, so `joins` costs a scan of that
+ * type's own nodes rather than a fresh walk of the whole tree. It used to walk,
+ * which made the one production caller quadratic in exactly the scenes the rule
+ * exists for: the ones where the type appears more than once.
  */
 export function firstNodeOfType(
   roots: TscnNode[],
   type: string,
   joins?: (node: TscnNode) => boolean
 ): TscnNode | null {
-  if (!joins) return getSceneIndex(roots).firstByType.get(type) ?? null;
-
-  const search = (nodes: TscnNode[]): TscnNode | null => {
-    for (const node of nodes) {
-      if (node.type === type && joins(node)) return node;
-      const found = search(node.children);
-      if (found) return found;
-    }
-    return null;
-  };
-  return search(roots);
+  const ofType = getSceneIndex(roots).nodesByType.get(type);
+  if (!ofType) return null;
+  return (joins ? ofType.find(joins) : ofType[0]) ?? null;
 }
 
 /**

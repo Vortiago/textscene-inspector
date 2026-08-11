@@ -83,3 +83,21 @@ export function splitTopLevel(body: string): string[] {
   parts.push(trimmed.slice(start));
   return parts.map((p) => p.trim());
 }
+
+/**
+ * `splitTopLevel` splits by comma alone, so a TRAILING comma before the closing
+ * bracket reads as one more (empty) element than Godot's own array actually
+ * holds. `_parse_array` (variant_parser.cpp:1643-1677) checks for
+ * `TK_BRACKET_CLOSE` before it ever demands another value (:1658-1662, before
+ * the `need_comma` branch at :1663), so `[1, 2,]` loads as a 2-element array,
+ * not 3. Only ONE trailing empty is ever a trailing comma: an interior `,,`
+ * fails `parse_value` on the comma token itself (:1664-1665's `need_comma`
+ * branch demands a value, not another comma), so that shape is already an
+ * invalid `.tscn` no matter how this drops it.
+ *
+ * Every bracket-array validator needs this. Three shipped without it and
+ * rejected a comma Godot accepts.
+ */
+export function dropTrailingComma(parts: string[]): string[] {
+  return parts.length > 1 && parts[parts.length - 1] === '' ? parts.slice(0, -1) : parts;
+}

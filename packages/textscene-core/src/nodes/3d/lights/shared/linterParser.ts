@@ -45,9 +45,10 @@ validatorRegistry.registerAll('Light3D', {
   // -MeshTexture,-Texture2DRD,-ViewportTexture". The excluded subclasses are a
   // DEBUG_ENABLED WARN_PRINT in set_projector (light_3d.cpp:212), not a refusal,
   // so this is a format check like every other Texture2D reference property.
-  // No PROPERTY_USAGE_STORE_IF_NULL (object.h:113) on this ADD_PROPERTY, unlike
-  // GraphNode's slot icons, so a cleared projector is OMITTED, never written as
-  // `null` — resourceReference, not resourceReference.
+  // A cleared projector is normally OMITTED rather than written as `null`, for
+  // want of PROPERTY_USAGE_STORE_IF_NULL (object.h:113). That is a WRITE-side
+  // fact about which values are common, not a bound on what loads, so the
+  // combinator accepts `null` here as it does in every resource slot.
   light_projector: v.resourceReference('light_projector'),
   // light_3d.cpp:394, PROPERTY_HINT_RANGE "0,1,0.001,or_greater,suffix:m".
   light_size: v.nonNegativeFloat('light_size', { hinted: 'light_3d.cpp:394' }),
