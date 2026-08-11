@@ -285,6 +285,33 @@ describe('WebviewResourceProvider', () => {
   });
 
   // ============================================================================
+  // Malformed Messages
+  // ============================================================================
+
+  describe('Malformed Messages', () => {
+    it.each([
+      ['null', null],
+      ['undefined', undefined],
+      ['a string', 'resourceLoaded'],
+      ['a number', 42],
+      ['an object with no type', {}],
+    ])('should ignore %s message data and leave pending requests intact', async (_label, payload) => {
+      const loadPromise = provider.loadResource('res://test.txt', 'Resource');
+
+      expect(() => simulateExtensionMessage(payload)).not.toThrow();
+
+      simulateExtensionMessage({
+        type: 'resourceLoaded',
+        requestId: 'resource_0',
+        content: 'content',
+        isBinary: false
+      });
+
+      await expect(loadPromise).resolves.toBe('content');
+    });
+  });
+
+  // ============================================================================
   // Concurrent Requests
   // ============================================================================
 
