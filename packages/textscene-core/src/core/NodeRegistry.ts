@@ -14,7 +14,7 @@
  * in `r3f/NodeComponentRegistry.ts`.
  */
 
-import type { ParsedHeading } from '../parser/utils';
+import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils';
 import type { TscnNode } from '../parser/types';
 import { warn } from '../logger';
 import { createTypeRegistry } from './createTypeRegistry';
@@ -131,6 +131,8 @@ export function parseNodeWithRegistry(
       // node's real file order (ADR-0035).
       rawPropertiesOrderReliable: true,
     };
+
+    if (isPropertyOverrideHeading(heading)) node.overridesExistingNode = true;
 
     // Preserve instance attribute for external scene loading
     if (hasInstanceAttribute) {

@@ -14,6 +14,7 @@ import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import { createMaterialFromContent, isMaterialPath, type TextureLoaderFn } from '../processing/materialProcessing';
 import { parseSubResourcePath } from '../subResourcePath';
+import { isMaterialOwnedTexture } from '../textures/applyTextureState';
 
 /**
  * Create a material processor that handles loading and caching materials.
@@ -34,6 +35,23 @@ export function createMaterialProcessor(
       const { subResourceId } = parseSubResourcePath(path);
       return createMaterialFromContent(data as string, loadTexture, subResourceId);
     },
-    dispose: (material) => material.dispose(),
+    dispose: disposeMaterialAndOwnedTextures,
   });
+}
+
+/**
+ * `Material.dispose()` does NOT dispose its maps, and this material's maps may
+ * include per-material clones that nothing else owns — so without this every
+ * clone leaks its GPU upload for the life of the session. Only clones are
+ * freed: the shared source belongs to the loader's cache and may still be in
+ * use by other materials.
+ */
+function disposeMaterialAndOwnedTextures(material: THREE.Material): void {
+  // Walk the material's own values rather than a hand-listed set of slot names:
+  // three assigns every map in its constructor, so this cannot go stale the day
+  // a new one is wired, and the ownership tag is the real discriminator anyway.
+  for (const value of Object.values(material)) {
+    if (value instanceof THREE.Texture && isMaterialOwnedTexture(value)) value.dispose();
+  }
+  material.dispose();
 }

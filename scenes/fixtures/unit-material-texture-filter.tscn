@@ -1,0 +1,69 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitmaterialtexfilter"]
+
+; Two quads sampling ONE image through two StandardMaterial3D sub-resources that
+; differ in exactly one property: `texture_filter`. Left is 0 (NEAREST, no
+; mipmaps), right is 3 (LINEAR_WITH_MIPMAPS, Godot's default).
+;
+; The texture is deliberately 8x8 with antialiasing turned off at authoring
+; time, so a quad this size magnifies it ~25x and magFilter is the DOMINANT
+; term: left must show razor-hard 2px-cell blocks, right a smooth gradient
+; between them. A 256px source would have been near 1:1 here, leaving only a
+; sub-pixel minification difference and a golden that barely discriminates.
+;
+; This is also the only scene in the corpus that witnesses per-material texture
+; CLONING. `texture_filter` is a material property in Godot but lives on the
+; Texture in three, and the loader caches one THREE.Texture per path — so a
+; renderer that writes filter state onto the shared cached texture renders both
+; quads with whichever material happened to build last, and the two become
+; identical. No other fixture pairs one image with two filter states.
+;
+; Deliberately INLINE sub-resources rather than external .tres materials: the
+; two material construction paths are independent implementations, and this is
+; the larger one by corpus count. The external path is covered by
+; texture-filter.integration.test.ts.
+;
+; Failure modes: property ignored → both quads soft. Applied at texture load
+; instead of material build → both take one filter, non-deterministically.
+; magFilter set but not minFilter/generateMipmaps → the near quad sharpens and
+; a minified one would not.
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="1_tex"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_panel"]
+size = Vector2(2.6, 2.6)
+
+[sub_resource type="StandardMaterial3D" id="Material_nearest"]
+albedo_texture = ExtResource("1_tex")
+texture_filter = 0
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Material_linear"]
+albedo_texture = ExtResource("1_tex")
+texture_filter = 3
+roughness = 1.0
+
+[node name="Scene" type="Node3D"]
+
+[node name="Nearest" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.45, 0, 0)
+mesh = SubResource("QuadMesh_panel")
+surface_material_override/0 = SubResource("Material_nearest")
+
+[node name="Linear" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.45, 0, 0)
+mesh = SubResource("QuadMesh_panel")
+surface_material_override/0 = SubResource("Material_linear")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 0)
+text = "texture_filter: NEAREST vs LINEAR"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="Description" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, 0)
+text = "LEFT hard edges. RIGHT soft. One shared image."
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

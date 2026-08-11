@@ -190,3 +190,24 @@ export function unquoteString(value: string): string {
 export function unquoteStringName(value: string): string {
   return unquoteString(value.startsWith('&') ? value.slice(1) : value);
 }
+
+/**
+ * Whether a `[node]` heading OVERRIDES the node already at its path rather than
+ * declaring a new one.
+ *
+ * Godot writes an override with neither `type=` nor `instance=` — the node it
+ * names already exists inside instanced content, so there is nothing to declare,
+ * only properties to change. `[node name="Robot" parent="Player/Skeleton/Skeleton3D"]`
+ * retextures a mesh inside a GLB; `[node name="CoinCount" type="Label3D" parent="..."]`
+ * beside it adds a genuinely new child.
+ *
+ * Lives here rather than in either node creator because BOTH of them build
+ * nodes from a heading — the renderer's registry and the linter's strict parser
+ * — and the two disagreeing about what an override is would be a silent
+ * divergence between what renders and what lints.
+ */
+export function isPropertyOverrideHeading(heading: ParsedHeading): boolean {
+  return (
+    heading.type === 'node' && !heading.attributes.type && !heading.attributes.instance
+  );
+}

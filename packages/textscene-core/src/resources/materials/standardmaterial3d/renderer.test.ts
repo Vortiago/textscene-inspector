@@ -542,7 +542,12 @@ describe('StandardMaterial3D Renderer', () => {
       expect(material.map!.wrapT).toBe(THREE.RepeatWrapping);
     });
 
-    it('should handle uv1_scale with value of 1.0 (no tiling change)', () => {
+    it('hands back the shared texture for an identity uv1_scale', () => {
+      // An identity scale asks for nothing, so there is nothing to clone. This
+      // path used to clone anyway — and incidentally flipped the clone to
+      // RepeatWrapping, which is not something `uv1_scale` means. Wrapping is
+      // `texture_repeat`'s business: its default rides the shared texture from
+      // the loader, so a material that authors nothing shares it untouched.
       const albedoTexture = new THREE.Texture();
       const properties: StandardMaterial3DProperties = {
         albedo_texture: albedoTexture,
@@ -551,10 +556,30 @@ describe('StandardMaterial3D Renderer', () => {
 
       const material = createStandardMaterial(properties);
 
-      expect(material.map!.repeat.x).toBe(1); // Direct: uv1_scale = 1.0
+      expect(material.map).toBe(albedoTexture);
+      expect(material.map!.repeat.x).toBe(1);
       expect(material.map!.repeat.y).toBe(1);
-      expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
-      expect(material.map!.wrapT).toBe(THREE.RepeatWrapping);
+    });
+
+    it('clamps its own copy when the material turns texture_repeat off', () => {
+      // Textures are loaded with RepeatWrapping because Godot's material
+      // default is repeat — so a material that authors `texture_repeat = false`
+      // (the platformer's tile material, the voxel world's) must diverge here,
+      // or its atlas wraps to the opposite edge where Godot clamps.
+      const albedoTexture = new THREE.Texture();
+      albedoTexture.wrapS = THREE.RepeatWrapping;
+      albedoTexture.wrapT = THREE.RepeatWrapping;
+
+      const material = createStandardMaterial({
+        albedo_texture: albedoTexture,
+        texture_repeat: false,
+      });
+
+      expect(material.map).not.toBe(albedoTexture);
+      expect(material.map!.wrapS).toBe(THREE.ClampToEdgeWrapping);
+      expect(material.map!.wrapT).toBe(THREE.ClampToEdgeWrapping);
+      // And the shared source is untouched, so every other material still repeats.
+      expect(albedoTexture.wrapS).toBe(THREE.RepeatWrapping);
     });
 
     it('should apply UV transform independently to each texture type', () => {

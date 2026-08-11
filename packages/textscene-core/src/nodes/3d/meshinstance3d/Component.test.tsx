@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
+import { visualLayersOf } from '../../../r3f/visualLayers';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
@@ -269,6 +270,29 @@ describe('<MeshInstance3D>', () => {
       };
       expect(material.color.r).toBe(1);
       expect(material.color.g).toBe(0);
+    });
+  });
+
+  describe('render layers', () => {
+    it("carries the node's layers mask, which a Decal's cull_mask filters on", async () => {
+      const node = makeNode({ mesh: 'SubResource("Box_1")', layers: 2 });
+      const renderer = await render(node, [
+        meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+      ]);
+      expect(visualLayersOf(renderer.scene.findByType('Mesh').instance)).toBe(2);
+    });
+
+    it("reads an absent layers property as Godot's default", async () => {
+      const node = makeNode({ mesh: 'SubResource("Box_1")' });
+      const renderer = await render(node, [
+        meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+      ]);
+      expect(visualLayersOf(renderer.scene.findByType('Mesh').instance)).toBe(1);
+    });
+
+    it('tags the placeholder branch too, so the mask predates any resource load', async () => {
+      const renderer = await render(makeNode({ layers: 4 }));
+      expect(visualLayersOf(renderer.scene.findByType('Mesh').instance)).toBe(4);
     });
   });
 

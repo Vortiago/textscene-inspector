@@ -32,7 +32,7 @@
 import { Fragment, useCallback, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type * as THREE from 'three';
-import type { TscnNode, TscnScene } from '../parser/types.js';
+import type { TscnExternalResource, TscnNode, TscnScene } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
 import {
   hasYSortDescendant,
@@ -155,10 +155,71 @@ interface DispatchedNodeProps {
  * itself so the branch is free of rules-of-hooks concerns.
  */
 export function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
-  if (node.instance) {
-    return <InstancedNode node={node} path={path} />;
-  }
-  return <PlainNode node={node} path={path} />;
+  const dispatched = node.instance ? (
+    <InstancedNode node={node} path={path} />
+  ) : (
+    <PlainNode node={node} path={path} />
+  );
+
+  return node.authoredResources ? (
+    <AuthoredResourceScope resources={node.authoredResources}>{dispatched}</AuthoredResourceScope>
+  ) : (
+    dispatched
+  );
+}
+
+/**
+ * Restore the ExtResource table a grafted node was authored against.
+ *
+ * A node grafted into content loaded from ANOTHER scene keeps rendering under
+ * that scene's provider, where its `ExtResource("3")` is a different resource or
+ * absent entirely — a failure that shows up as something plausible rather than
+ * as nothing, which is the worse kind.
+ *
+ * `internalResources` is carried through untouched rather than reset: the
+ * provider would default it to empty, and a grafted node's `SubResource(...)`
+ * would then resolve to nothing. Those ids belong to the outer scene too, so
+ * this is not yet exactly right — but no corpus scene puts a SubResource in a
+ * deep override, and keeping what is in scope beats wiping it.
+ */
+function AuthoredResourceScope({
+  resources,
+  children,
+}: {
+  resources: readonly TscnExternalResource[];
+  children: ReactNode;
+}): ReactNode {
+  const { internalResources } = useSceneResources();
+  return (
+    <SceneResourcesProvider externalResources={resources} internalResources={internalResources}>
+      {children}
+    </SceneResourcesProvider>
+  );
+}
+
+/**
+ * The node with its DEEP children removed — those whose authored parent path
+ * descended into this instance's content.
+ *
+ * They are addressed against the instanced scene, not against this node, so
+ * rendering them here would put them at the INSTANCE's transform instead of
+ * their real parent's: the platformer player's coin counter is a 3.33x-scaled
+ * Label3D 7.5 units up, and misplacing it visibly breaks the scene's framing.
+ * A node that cannot yet be placed correctly renders nowhere rather than
+ * somewhere wrong.
+ *
+ * Override-only deep children reach their target through
+ * `GlbOverridesProvider`, which still receives the FULL child list; they never
+ * wanted a row of their own. What is still missing is the counterpart for a
+ * TYPED deep child — it needs portalling onto the matched GLB object, which is
+ * why the coin counter does not render at all yet.
+ */
+function withoutDeepChildren(node: TscnNode): TscnNode {
+  // `some` before `filter`: the overwhelming majority of nodes have no deep
+  // children, and returning the SAME reference is what keeps the downstream
+  // `useMemo([node])`s in `PlainNode` from invalidating every render.
+  if (!node.children.some((c) => c.instanceSubPath)) return node;
+  return { ...node, children: node.children.filter((c) => !c.instanceSubPath) };
 }
 
 interface PlainNodeProps extends DispatchedNodeProps {
@@ -434,11 +495,17 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
     [node, externalResources, scenePath, loadedScene]
   );
 
+  // Memoized because `withoutDeepChildren` allocates a new node whenever there
+  // IS a deep child — exactly the case this feature creates — and `PlainNode`
+  // memoizes a recursive subtree scan on node identity, so an unmemoized strip
+  // would re-run that scan on every render of every instance with an override.
+  const shallow = useMemo(() => withoutDeepChildren(node), [node]);
+
   // Unresolvable ref or failed load: keep the node visible with a magenta
   // placeholder child, matching the missing-texture UX.
   if (!scenePath || result.status === 'unavailable') {
     return (
-      <PlainNode node={node} path={path}>
+      <PlainNode node={shallow} path={path}>
         <MissingResourcePlaceholder shape="box" />
       </PlainNode>
     );
@@ -446,7 +513,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // Still loading: render the instancing node's own subtree; the merged
   // result swaps in once the sub-scene arrives.
   if (result.status === 'pending' || !loadedScene) {
-    return <PlainNode node={node} path={path} />;
+    return <PlainNode node={shallow} path={path} />;
   }
 
   if (effective !== node) {
@@ -463,7 +530,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // Fallback (`.glb` synthetic root / multi-root): historical nested form.
   return (
     <GlbOverridesProvider overrides={node.children}>
-      <PlainNode node={node} path={path}>
+      <PlainNode node={shallow} path={path}>
         <SceneResourcesProvider
           internalResources={loadedScene.internalResources}
           externalResources={loadedScene.externalResources}

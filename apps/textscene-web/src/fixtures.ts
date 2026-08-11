@@ -218,6 +218,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Cull Mask",
+    "file": "unit-decal-cull-mask.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal Gradienttexture",
     "file": "unit-decal-gradienttexture.tscn",
     "category": "Other"
@@ -1540,6 +1545,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Rim",
     "file": "unit-material-rim.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Texture Filter",
+    "file": "unit-material-texture-filter.tscn",
     "category": "Unit - Materials"
   },
   {

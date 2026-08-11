@@ -40,6 +40,15 @@ export function formatDecalProperties(properties: DecalProperties): PropertySect
     ],
   });
 
+  sections.push({
+    title: 'Distance Fade',
+    items: [
+      { label: 'Enabled', value: properties.distance_fade_enabled ? 'true' : 'false' },
+      { label: 'Begin', value: properties.distance_fade_begin.toFixed(2) },
+      { label: 'Length', value: properties.distance_fade_length.toFixed(2) },
+    ],
+  });
+
   sections.push(...formatNode3DProperties(properties));
 
   return sections;
