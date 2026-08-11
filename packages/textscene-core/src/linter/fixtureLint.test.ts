@@ -1,14 +1,21 @@
 /**
- * Bulk fixture lint guard: every shipped scene file must lint clean.
+ * Bulk lint guard over `scenes/fixtures`, this package's OWN test corpus.
  *
- * This turns the manual `pnpm lint:tscn scenes/fixtures/*.tscn
- * scenes/examples/*.tscn` sweep into an always-on test. Positive fixtures
- * and examples must produce zero error-severity diagnostics (warnings are
+ * Positive fixtures must produce zero error-severity diagnostics (warnings are
  * allowed — some scenes intentionally carry advisory warnings). Negative
  * `edge-*` fixtures listed in INTEGRATION_FIXTURES_WITH_ERRORS must produce at
  * least one error, pinning that the rules they exist to trigger actually
  * fire — the gap class where a rule exists but its fixture silently stops
  * exercising it.
+ *
+ * Scope is deliberately ONE directory, and it is the one `fixtureCheck.ts`
+ * already reads: these files back this package's unit tests, so the coupling
+ * is to its own data rather than to the repository's layout. Which OTHER
+ * directories get swept is the caller's decision, made where the linter is
+ * invoked (`pnpm lint:scenes`, and the CI step beside it), not encoded here.
+ * Sweeping two directories from inside the library is what kept
+ * `scenes/demos` — 220 vendored Godot scenes — out of every gate, and two
+ * false positives shipped behind that gap.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -139,11 +146,9 @@ function warningRulesFor(dir: string, file: string): string[] {
 
 describe('shipped scenes lint clean (bulk fixture guard)', () => {
   const fixturesDir = join(scenesRoot, 'fixtures');
-  const examplesDir = join(scenesRoot, 'examples');
 
-  it('finds the scenes directories (path layout guard)', () => {
+  it('finds the fixtures directory (path layout guard)', () => {
     expect(tscnFiles(fixturesDir).length).toBeGreaterThan(0);
-    expect(tscnFiles(examplesDir).length).toBeGreaterThan(0);
   });
 
   it('every unit-* fixture warns only where allowlisted, rule by rule', () => {
@@ -178,14 +183,6 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
     for (const file of tscnFiles(fixturesDir)) {
       if (INTEGRATION_FIXTURES_WITH_ERRORS.has(file)) continue;
       failures.push(...lintFile(fixturesDir, file).messages);
-    }
-    expect(failures).toEqual([]);
-  });
-
-  it('every example scene produces zero error diagnostics', () => {
-    const failures: string[] = [];
-    for (const file of tscnFiles(examplesDir)) {
-      failures.push(...lintFile(examplesDir, file).messages);
     }
     expect(failures).toEqual([]);
   });

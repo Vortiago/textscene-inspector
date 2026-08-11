@@ -53,6 +53,12 @@ jobs:
       - name: Build Linter CLI
         run: pnpm --filter @textscene/linter build
 
+      # After the CLI build, so it lints the binary this run produced. The
+      # vendored demos are scenes Godot itself opens, so an error here is our
+      # false positive rather than a broken scene.
+      - name: Lint shipped scenes
+        run: node apps/textscene-linter/bin/tscn-lint.js scenes/examples scenes/demos
+
       - name: Package VS Code Extension
         run: pnpm vsc:package
 
