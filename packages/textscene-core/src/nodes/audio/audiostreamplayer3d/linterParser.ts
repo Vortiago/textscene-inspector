@@ -13,8 +13,8 @@ import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 import { busValidator } from '../busValidator.js';
+import { PLAYBACK_TYPE } from '../../../linter/validators/sharedEnumLabels.js';
 
-const PLAYBACK_TYPE = { 0: 'DEFAULT', 1: 'STREAM', 2: 'SAMPLE' };
 const ATTENUATION_MODEL = {
   0: 'INVERSE_DISTANCE',
   1: 'INVERSE_SQUARE_DISTANCE',

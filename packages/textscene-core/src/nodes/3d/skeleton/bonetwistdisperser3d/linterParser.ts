@@ -55,7 +55,8 @@
  * digits (property_utils.cpp:182-198), and `_parse_node` omits a property only
  * when that flag is true (packed_scene.cpp:982). Godot therefore writes every
  * live leaf unconditionally, default-valued or not, including `damping_curve =
- * null`, which is why that leaf cannot take a bare `v.resourceReference`.
+ * null` — a scene the engine itself emits, and one `v.resourceReference` accepts
+ * because `null` is legal in every resource slot.
  */
 
 import '../skeletonmodifier3d/linterParser.js';

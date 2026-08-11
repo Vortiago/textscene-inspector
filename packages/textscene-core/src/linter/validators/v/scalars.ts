@@ -8,6 +8,7 @@ import { propertyError } from '../propertyError.js';
 import { createBooleanValidator } from '../commonValidators.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
+import { ARRAY_LITERAL_RE, TYPED_OR_BARE_ARRAY_RE } from '../../../godot/index.js';
 
 /**
  * One TSCN quoted literal: a quote, an escape-aware body, a closing quote, and
@@ -62,5 +63,39 @@ export const scalarCombinators = {
       }
       return null;
     }, 'quoted string or &"name"');
+  },
+
+  /**
+   * A `Variant::ARRAY` property's literal shape, and nothing about its elements.
+   *
+   * `typedAs` names the element type when the `ADD_PROPERTY` carries a
+   * `PROPERTY_HINT_ARRAY_TYPE`, and it is REQUIRED to accept the wrapped
+   * `Array[T]([…])` form: `Array::is_typed()` is what makes the writer emit that
+   * wrapper (variant_parser.cpp:2341-2344), so an unhinted property is never
+   * written wrapped. Whether to accept the wrapper anyway is therefore a
+   * per-property question and deliberately not a default — seven call sites had
+   * each answered it from their own property's hint, and collapsing them onto one
+   * answer would have silently widened five of them.
+   *
+   * Elements go unchecked because every one of these setters bare-assigns the
+   * whole array with no per-element guard; a stricter validator would reject
+   * values the engine loads.
+   */
+  arrayLiteral(name: string, opts?: { typedAs?: string }): PropertyValidator {
+    const code = formatCode(name);
+    const typed = opts?.typedAs;
+    const wrapper = typed ? ` or Array[${typed}]([...])` : '';
+    const re = typed ? TYPED_OR_BARE_ARRAY_RE : ARRAY_LITERAL_RE;
+    return shape((key, value, line) => {
+      if (!re.test(value)) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must be an Array literal like []${wrapper}, got: ${value}`,
+          code
+        );
+      }
+      return null;
+    }, `Array literal ([...]${wrapper})`);
   },
 };

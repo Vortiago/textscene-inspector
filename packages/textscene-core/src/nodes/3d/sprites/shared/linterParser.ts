@@ -20,6 +20,11 @@ import '../../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import {
+  BASE_MATERIAL_ALPHA_ANTIALIASING,
+  BASE_MATERIAL_ALPHA_CUT,
+  BASE_MATERIAL_TEXTURE_FILTER,
+} from '../../../../linter/validators/sharedEnumLabels.js';
+import {
   MATERIAL_RENDER_PRIORITY_MIN,
   MATERIAL_RENDER_PRIORITY_MAX,
 } from '../../../../godot/index.js';
@@ -30,25 +35,7 @@ import {
 // BillboardMode value — a 0-3 bound would accept a value Godot's own setter
 // refuses.
 const BILLBOARD = { 0: 'DISABLED', 1: 'ENABLED', 2: 'FIXED_Y' };
-// sprite_3d.cpp:691 hints 4 labels ("Disabled,Discard,Opaque Pre-Pass,Alpha
-// Hash") and ALPHA_CUT_MAX is 4 (sprite_3d.h:52-57), so ALPHA_CUT_HASH=3 is a
-// real, editor-reachable value.
-const ALPHA_CUT = { 0: 'DISABLED', 1: 'DISCARD', 2: 'OPAQUE_PREPASS', 3: 'HASH' };
 const AXIS = { 0: 'X_AXIS', 1: 'Y_AXIS', 2: 'Z_AXIS' };
-// sprite_3d.cpp:694 hints 3 labels ("Disabled,Alpha Edge Blend,Alpha Edge
-// Clip"), matching BaseMaterial3D::AlphaAntiAliasing (material.h:196-200)
-// minus its ALPHA_ANTIALIASING_MAX sentinel.
-const ALPHA_AA = { 0: 'OFF', 1: 'ALPHA_TO_COVERAGE', 2: 'ALPHA_TO_COVERAGE_AND_TO_ONE' };
-// sprite_3d.cpp:696 hints 6 labels, matching BaseMaterial3D::TextureFilter
-// (material.h:171-178) minus its TEXTURE_FILTER_MAX sentinel.
-const TEXTURE_FILTER = {
-  0: 'NEAREST',
-  1: 'LINEAR',
-  2: 'NEAREST_WITH_MIPMAPS',
-  3: 'LINEAR_WITH_MIPMAPS',
-  4: 'NEAREST_WITH_MIPMAPS_ANISOTROPIC',
-  5: 'LINEAR_WITH_MIPMAPS_ANISOTROPIC',
-};
 
 validatorRegistry.registerAll('SpriteBase3D', {
   // set_centered:316-323 is a bare bool assignment (only guarded against a
@@ -81,7 +68,7 @@ validatorRegistry.registerAll('SpriteBase3D', {
   fixed_size: v.boolean('fixed_size'),
   // set_alpha_cut_mode:530-531, ERR_FAIL_INDEX(p_mode, ALPHA_CUT_MAX): the
   // setter refuses.
-  alpha_cut: v.enumInt('alpha_cut', 0, 3, ALPHA_CUT, { enforced: 'sprite_3d.cpp:531' }),
+  alpha_cut: v.enumInt('alpha_cut', 0, 3, BASE_MATERIAL_ALPHA_CUT, { enforced: 'sprite_3d.cpp:531' }),
   // sprite_3d.cpp:692 hints "0,1,0.001" (closed); set_alpha_scissor_threshold:
   // 558-565 is a bare assignment, so out-of-hint is a warning.
   alpha_scissor_threshold: v.float('alpha_scissor_threshold', {
@@ -94,7 +81,7 @@ validatorRegistry.registerAll('SpriteBase3D', {
   alpha_hash_scale: v.float('alpha_hash_scale', { min: 0, max: 2, hinted: 'sprite_3d.cpp:693' }),
   // sprite_3d.cpp:694 hints 3 labels (0-2); set_alpha_antialiasing:571-578 is a
   // bare assignment (no ERR_FAIL), so out-of-hint is a warning.
-  alpha_antialiasing_mode: v.enumInt('alpha_antialiasing_mode', 0, 2, ALPHA_AA, {
+  alpha_antialiasing_mode: v.enumInt('alpha_antialiasing_mode', 0, 2, BASE_MATERIAL_ALPHA_ANTIALIASING, {
     hinted: 'sprite_3d.cpp:694',
   }),
   // sprite_3d.cpp:695 hints "0,1,0.01" (closed); set_alpha_antialiasing_edge:
@@ -106,7 +93,7 @@ validatorRegistry.registerAll('SpriteBase3D', {
   }),
   // sprite_3d.cpp:696 hints 6 labels (0-5); set_texture_filter:612-619 is a
   // bare assignment (no ERR_FAIL), so out-of-hint is a warning.
-  texture_filter: v.enumInt('texture_filter', 0, 5, TEXTURE_FILTER, {
+  texture_filter: v.enumInt('texture_filter', 0, 5, BASE_MATERIAL_TEXTURE_FILTER, {
     hinted: 'sprite_3d.cpp:696',
   }),
   // sprite_3d.cpp:697 hints RS::MATERIAL_RENDER_PRIORITY_MIN..MAX

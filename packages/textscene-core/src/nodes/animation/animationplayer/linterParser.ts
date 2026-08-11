@@ -26,6 +26,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { splitTopLevel } from '../../../godot/string.js';
+import { ARRAY_LITERAL_RE } from '../../../godot/index.js';
 
 const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
 const METHOD_CALL_MODE = { 0: 'DEFERRED', 1: 'IMMEDIATE' };
@@ -48,7 +49,6 @@ const AUTO_CAPTURE_TRANSITION_TYPE = {
 };
 const AUTO_CAPTURE_EASE_TYPE = { 0: 'IN', 1: 'OUT', 2: 'IN_OUT', 3: 'OUT_IN' };
 
-const ARRAY_LITERAL_RE = /^\[([\s\S]*)\]$/;
 
 /**
  * `blend_times`: a flat Array of (from: StringName, to: StringName, time:

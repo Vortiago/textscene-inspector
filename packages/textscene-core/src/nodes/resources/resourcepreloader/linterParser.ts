@@ -30,7 +30,8 @@
 
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { accepts, propertyError, RESOURCE_REFERENCE_REGEX } from '../../../linter/validators/index.js';
+import { accepts, propertyError } from '../../../linter/validators/index.js';
+import { RESOURCE_REF_RE } from '../../../godot/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { splitTopLevel } from '../../../godot/string.js';
 
@@ -114,7 +115,7 @@ const resourcesValidator: PropertyValidator = accepts((key, value, line) => {
   }
 
   for (const entry of entries) {
-    if (!RESOURCE_REFERENCE_REGEX.test(entry)) {
+    if (!RESOURCE_REF_RE.test(entry)) {
       // resource_preloader.cpp:44, ERR_CONTINUE(resource.is_null()) — a
       // non-resource (including the literal `null`) drops that one pair
       // silently rather than the whole property.

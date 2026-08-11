@@ -44,6 +44,7 @@ import {
   BREAK_TRIM_MASK,
   JUSTIFICATION_HINTED_BITS,
   OVERRUN_BEHAVIOR,
+  STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
 
@@ -61,21 +62,6 @@ const VERTICAL_ALIGNMENT = {
   1: 'VERTICAL_ALIGNMENT_CENTER',
   2: 'VERTICAL_ALIGNMENT_BOTTOM',
   3: 'VERTICAL_ALIGNMENT_FILL',
-};
-
-/**
- * `TextServer::StructuredTextParser` — same table LineEdit/LinkButton/TextEdit
- * each declare locally (servers/text/text_server.h:214-221), label.cpp:1457
- * hint labels index 5 "None"; the real constant is STRUCTURED_TEXT_GDSCRIPT.
- */
-const STRUCTURED_TEXT_PARSER = {
-  0: 'STRUCTURED_TEXT_DEFAULT',
-  1: 'STRUCTURED_TEXT_URI',
-  2: 'STRUCTURED_TEXT_FILE',
-  3: 'STRUCTURED_TEXT_EMAIL',
-  4: 'STRUCTURED_TEXT_LIST',
-  5: 'STRUCTURED_TEXT_GDSCRIPT',
-  6: 'STRUCTURED_TEXT_CUSTOM',
 };
 
 /**
@@ -163,27 +149,6 @@ const tabStopsValidator = shape((key, value, line) => {
   }
   return null;
 }, 'PackedFloat32Array(x, y, …)');
-
-/**
- * `structured_text_bidi_override_options` is a plain Godot `Array`
- * (doc/classes/Label.xml, default `[]`); label.cpp:1458's `ADD_PROPERTY`
- * carries no hint at all, and `set_structured_text_bidi_override_options`
- * (label.cpp:1164-1174) assigns the Array straight through, so this only
- * rejects a malformed literal. Same pattern as LineEdit's / LinkButton's own
- * property of the same name.
- */
-const ARRAY_LITERAL_RE = /^\[[\s\S]*\]$/;
-const structuredTextBidiOverrideOptionsValidator = shape((key, value, line) => {
-  if (!ARRAY_LITERAL_RE.test(value)) {
-    return propertyError(
-      key,
-      line,
-      `Property 'structured_text_bidi_override_options' must be an Array literal like [], got: ${value}`,
-      'INVALID_STRUCTURED_TEXT_BIDI_OVERRIDE_OPTIONS_FORMAT'
-    );
-  }
-  return null;
-}, 'Array literal ([...])');
 
 validatorRegistry.registerAll('Label', {
   // -- Ungrouped run (label.cpp:1431-1444) ------------------------------------
@@ -314,6 +279,8 @@ validatorRegistry.registerAll('Label', {
     STRUCTURED_TEXT_PARSER,
     { hinted: 'label.cpp:1457' }
   ),
-  // label.cpp:1458 — see structuredTextBidiOverrideOptionsValidator above.
-  structured_text_bidi_override_options: structuredTextBidiOverrideOptionsValidator,
+  // label.cpp:1458: Variant::ARRAY with no hint at all, so it is never written
+  // wrapped. set_structured_text_bidi_override_options (label.cpp:1164-1174)
+  // assigns straight through, leaving only the literal shape to reject.
+  structured_text_bidi_override_options: v.arrayLiteral('structured_text_bidi_override_options'),
 });

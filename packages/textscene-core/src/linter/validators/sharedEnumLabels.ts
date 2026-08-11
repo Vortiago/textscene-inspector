@@ -93,3 +93,60 @@ export const ENABLE_MODE = {
   1: 'ENABLE_MODE_ALWAYS',
   2: 'ENABLE_MODE_WHEN_PAUSED',
 } as const;
+
+/**
+ * `AudioServer::PlaybackType`, reached by all three AudioStreamPlayers.
+ *
+ * Not a coincidence like its neighbours above but one core enum
+ * (`audio_server.h:74-80`): each player's setter forwards to the same
+ * `AudioStreamPlayerInternal::set_playback_type`
+ * (audio_stream_player_internal.cpp:337-339). They still have nowhere to hoist
+ * it — the three descend from `Node`, `Node2D` and `Node3D`, and no ancestor
+ * declares the property — so the labels live here and each `v.enumInt` keeps
+ * its own `ADD_PROPERTY` citation.
+ */
+export const PLAYBACK_TYPE = {
+  0: 'DEFAULT',
+  1: 'STREAM',
+  2: 'SAMPLE',
+} as const;
+
+/**
+ * Three `BaseMaterial3D` enums that `Label3D` and `SpriteBase3D` both re-bind.
+ *
+ * Each class builds its own StandardMaterial3D and forwards the value, so both
+ * declare the property itself and neither inherits it: `GeometryInstance3D`,
+ * their nearest common ancestor, knows nothing about any of the three.
+ *
+ * `BASE_MATERIAL_TEXTURE_FILTER` is spelled out rather than named
+ * `TEXTURE_FILTER` because THREE different engine enums carry that name and two
+ * are still local to their slices on purpose: `CanvasItem::TextureFilter`
+ * (canvasitem/shared) prepends `PARENT_NODE` at 0 and so runs seven values
+ * offset by one, and `Viewport::DefaultCanvasItemTextureFilter`
+ * (viewport/shared) has four with `LINEAR_WITH_MIPMAPS` and
+ * `NEAREST_WITH_MIPMAPS` in the opposite order. Sharing on the name alone would
+ * mislabel every diagnostic those two raise.
+ */
+export const BASE_MATERIAL_ALPHA_ANTIALIASING = {
+  0: 'OFF',
+  1: 'ALPHA_TO_COVERAGE',
+  2: 'ALPHA_TO_COVERAGE_AND_TO_ONE',
+} as const;
+
+/** `BaseMaterial3D::AlphaCutMode`, as Label3D and SpriteBase3D both bind it. */
+export const BASE_MATERIAL_ALPHA_CUT = {
+  0: 'DISABLED',
+  1: 'DISCARD',
+  2: 'OPAQUE_PREPASS',
+  3: 'HASH',
+} as const;
+
+/** `BaseMaterial3D::TextureFilter` — see the naming note above. */
+export const BASE_MATERIAL_TEXTURE_FILTER = {
+  0: 'NEAREST',
+  1: 'LINEAR',
+  2: 'NEAREST_WITH_MIPMAPS',
+  3: 'LINEAR_WITH_MIPMAPS',
+  4: 'NEAREST_WITH_MIPMAPS_ANISOTROPIC',
+  5: 'LINEAR_WITH_MIPMAPS_ANISOTROPIC',
+} as const;

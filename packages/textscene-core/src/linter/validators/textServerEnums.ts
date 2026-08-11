@@ -113,3 +113,28 @@ export const TEXT_DIRECTION = {
   2: 'TEXT_DIRECTION_RTL',
   3: 'TEXT_DIRECTION_INHERITED',
 } as const;
+
+/**
+ * `TextServer::StructuredTextParser` — STRUCTURED_TEXT_DEFAULT=0 …
+ * STRUCTURED_TEXT_CUSTOM=6 (servers/text/text_server.h:214-221).
+ *
+ * Five slices bound all seven from byte-identical copies: Label, LineEdit,
+ * LinkButton, RichTextLabel and Label3D. That last one is why the file's
+ * "text-bearing Control" framing is a shorthand rather than a rule — Label3D is
+ * a GeometryInstance3D and re-binds the same server enum anyway, which is the
+ * argument for sharing the labels regardless of where a class sits in the tree.
+ *
+ * Every hint string labels index 5 "None" while the constant there is
+ * STRUCTURED_TEXT_GDSCRIPT. The labels below follow the ENUM, not the hint, so
+ * a diagnostic names what the engine calls the value; all five copies noted
+ * this separately, which is the sort of fact that should be stated once.
+ */
+export const STRUCTURED_TEXT_PARSER = {
+  0: 'STRUCTURED_TEXT_DEFAULT',
+  1: 'STRUCTURED_TEXT_URI',
+  2: 'STRUCTURED_TEXT_FILE',
+  3: 'STRUCTURED_TEXT_EMAIL',
+  4: 'STRUCTURED_TEXT_LIST',
+  5: 'STRUCTURED_TEXT_GDSCRIPT',
+  6: 'STRUCTURED_TEXT_CUSTOM',
+} as const;

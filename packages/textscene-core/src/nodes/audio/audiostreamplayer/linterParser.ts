@@ -15,9 +15,9 @@ import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 import { busValidator } from '../busValidator.js';
+import { PLAYBACK_TYPE } from '../../../linter/validators/sharedEnumLabels.js';
 
 const MIX_TARGET = { 0: 'STEREO', 1: 'SURROUND', 2: 'CENTER' };
-const PLAYBACK_TYPE = { 0: 'DEFAULT', 1: 'STREAM', 2: 'SAMPLE' };
 
 validatorRegistry.registerAll('AudioStreamPlayer', {
   stream: v.resourceReference('stream'),

@@ -159,74 +159,35 @@ describe('GridMap strict validators', () => {
     });
   });
 
-  describe('collision_layer', () => {
-    // grid_map.cpp:1260 — PROPERTY_HINT_LAYERS_3D_PHYSICS. set_collision_layer
-    // (:162-165) is a bare assignment, so out-of-range warns.
-    it('accepts a single-layer mask', () => {
-      expect(check('collision_layer', '1')).toBeNull();
-    });
-
-    it('accepts zero (no layers)', () => {
-      expect(check('collision_layer', '0')).toBeNull();
-    });
-
-    it('accepts the full 32-bit mask', () => {
-      expect(check('collision_layer', '4294967295')).toBeNull();
-    });
-
-    it('rejects a non-numeric mask', () => {
-      const error = check('collision_layer', 'not-a-number');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_COLLISION_LAYER_FORMAT');
-    });
-
-    it('warns on a negative mask rather than erroring', () => {
-      const error = check('collision_layer', '-1');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_COLLISION_LAYER_VALUE');
-      expect(error!.severity).toBe('warning');
-    });
-
-    it('warns on a mask beyond the 32-bit range rather than erroring', () => {
-      const error = check('collision_layer', '4294967296');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_COLLISION_LAYER_VALUE');
-      expect(error!.severity).toBe('warning');
-    });
-  });
-
-  describe('collision_mask', () => {
-    // grid_map.cpp:1261 — PROPERTY_HINT_LAYERS_3D_PHYSICS. set_collision_mask
-    // (:171-174) is a bare assignment, so out-of-range warns.
-    it('accepts a single-layer mask', () => {
-      expect(check('collision_mask', '1')).toBeNull();
-    });
-
-    it('accepts zero (no layers)', () => {
-      expect(check('collision_mask', '0')).toBeNull();
-    });
-
-    it('accepts the full 32-bit mask', () => {
-      expect(check('collision_mask', '4294967295')).toBeNull();
+  // Both are PROPERTY_HINT_LAYERS_3D_PHYSICS over a bare-assigning setter, so
+  // out-of-range warns rather than erroring. The cite differs per property and
+  // stays a column: grid_map.cpp:1260 / set_collision_layer (:162-165) and
+  // :1261 / set_collision_mask (:171-174).
+  describe.each([
+    ['collision_layer', 'COLLISION_LAYER'],
+    ['collision_mask', 'COLLISION_MASK'],
+  ])('%s', (property, code) => {
+    it.each([
+      ['a single-layer mask', '1'],
+      ['zero (no layers)', '0'],
+      ['the full 32-bit mask', '4294967295'],
+    ])('accepts %s', (_label, value) => {
+      expect(check(property, value)).toBeNull();
     });
 
     it('rejects a non-numeric mask', () => {
-      const error = check('collision_mask', 'not-a-number');
+      const error = check(property, 'not-a-number');
       expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_COLLISION_MASK_FORMAT');
+      expect(error!.code).toBe(`INVALID_${code}_FORMAT`);
     });
 
-    it('warns on a negative mask rather than erroring', () => {
-      const error = check('collision_mask', '-1');
+    it.each([
+      ['a negative mask', '-1'],
+      ['a mask beyond the 32-bit range', '4294967296'],
+    ])('warns on %s rather than erroring', (_label, value) => {
+      const error = check(property, value);
       expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_COLLISION_MASK_VALUE');
-      expect(error!.severity).toBe('warning');
-    });
-
-    it('warns on a mask beyond the 32-bit range rather than erroring', () => {
-      const error = check('collision_mask', '4294967296');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_COLLISION_MASK_VALUE');
+      expect(error!.code).toBe(`INVALID_${code}_VALUE`);
       expect(error!.severity).toBe('warning');
     });
   });

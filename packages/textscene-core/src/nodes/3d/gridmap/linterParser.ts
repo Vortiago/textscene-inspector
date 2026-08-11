@@ -8,7 +8,8 @@
 
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { accepts, layerBitmask, propertyError, RESOURCE_REFERENCE_REGEX, v } from '../../../linter/validators/index.js';
+import { accepts, layerBitmask, propertyError, v } from '../../../linter/validators/index.js';
+import { ARRAY_LITERAL_RE, RESOURCE_REF_RE } from '../../../godot/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { splitTopLevel } from '../../../godot/string.js';
 
@@ -52,8 +53,6 @@ const dataValidator: PropertyValidator = accepts((key, value, line) => {
 }, 'Dictionary literal { "cells": PackedInt32Array(...) }');
 dataValidator.grounding = { kind: 'enforced', cite: 'grid_map.cpp:71' };
 
-const ARRAY_LITERAL_RE = /^\[([\s\S]*)\]$/;
-
 /**
  * `baked_meshes`: an Array of baked ArrayMesh resources (grid_map.cpp:84-106
  * `_set`, :138-145 `_get`, :154-156 `_get_property_list`, conditionally pushed
@@ -76,7 +75,7 @@ const bakedMeshesValidator: PropertyValidator = accepts((key, value, line) => {
   const body = match[1]!.trim();
   if (body === '') return null;
   for (const entry of splitTopLevel(body)) {
-    if (!RESOURCE_REFERENCE_REGEX.test(entry)) {
+    if (!RESOURCE_REF_RE.test(entry)) {
       return propertyError(
         key,
         line,

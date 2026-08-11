@@ -60,7 +60,7 @@ Strict parsing format-checks these `GraphEdit` properties, plus 53 inherited fro
 | `connection_lines_antialiased` | true or false |
 | `connection_lines_curvature` | float |
 | `connection_lines_thickness` | float 0-100 |
-| `connections` | Array literal ([…] or Array[Dictionary]([…])) |
+| `connections` | Array literal ([...] or Array[Dictionary]([...])) |
 | `grid_pattern` | enum 0-1 (GRID_PATTERN_LINES/GRID_PATTERN_DOTS) |
 | `minimap_enabled` | true or false |
 | `minimap_opacity` | float |

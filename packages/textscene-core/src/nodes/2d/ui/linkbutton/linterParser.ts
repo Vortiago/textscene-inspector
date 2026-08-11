@@ -22,6 +22,7 @@ import { propertyError, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import {
   OVERRUN_BEHAVIOR,
+  STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
 
@@ -29,16 +30,6 @@ const UNDERLINE_MODE = {
   0: 'UNDERLINE_MODE_ALWAYS',
   1: 'UNDERLINE_MODE_ON_HOVER',
   2: 'UNDERLINE_MODE_NEVER',
-};
-
-const STRUCTURED_TEXT_PARSER = {
-  0: 'STRUCTURED_TEXT_DEFAULT',
-  1: 'STRUCTURED_TEXT_URI',
-  2: 'STRUCTURED_TEXT_FILE',
-  3: 'STRUCTURED_TEXT_EMAIL',
-  4: 'STRUCTURED_TEXT_LIST',
-  5: 'STRUCTURED_TEXT_GDSCRIPT',
-  6: 'STRUCTURED_TEXT_CUSTOM',
 };
 
 /**
@@ -78,28 +69,6 @@ const ellipsisCharValidator: PropertyValidator = (key, value, line) => {
 };
 ellipsisCharValidator.accepts = 'quoted string, at most one character';
 ellipsisCharValidator.grounding = { kind: 'enforced', cite: 'link_button.cpp:93' };
-
-/**
- * `structured_text_bidi_override_options` is a plain Godot `Array`
- * (doc/classes/LinkButton.xml:24, default `[]`); its `ADD_PROPERTY`
- * (link_button.cpp:356) carries no hint at all, and
- * `set_structured_text_bidi_override_options` (link_button.cpp:118-122) assigns
- * the Array straight through, so this only rejects a malformed literal.
- */
-const ARRAY_LITERAL_RE = /^\[[\s\S]*\]$/;
-const structuredTextBidiOverrideOptionsValidator: PropertyValidator = (key, value, line) => {
-  if (!ARRAY_LITERAL_RE.test(value)) {
-    return propertyError(
-      key,
-      line,
-      `Property 'structured_text_bidi_override_options' must be an Array literal like [], got: ${value}`,
-      'INVALID_STRUCTURED_TEXT_BIDI_OVERRIDE_OPTIONS_FORMAT'
-    );
-  }
-  return null;
-};
-structuredTextBidiOverrideOptionsValidator.accepts = 'Array literal ([...])';
-structuredTextBidiOverrideOptionsValidator.formatOnly = true;
 
 validatorRegistry.registerAll('LinkButton', {
   // link_button.cpp:344: Variant::STRING, no hint. set_text (link_button.cpp:55-64)
@@ -146,6 +115,8 @@ validatorRegistry.registerAll('LinkButton', {
     STRUCTURED_TEXT_PARSER,
     { hinted: 'link_button.cpp:355' }
   ),
-  // link_button.cpp:356: Variant::ARRAY, default "[]"; see ARRAY_LITERAL_RE above.
-  structured_text_bidi_override_options: structuredTextBidiOverrideOptionsValidator,
+  // link_button.cpp:356: Variant::ARRAY with no hint, so never written wrapped.
+  // set_structured_text_bidi_override_options (link_button.cpp:118-122) assigns
+  // straight through, leaving only the literal shape to reject.
+  structured_text_bidi_override_options: v.arrayLiteral('structured_text_bidi_override_options'),
 });

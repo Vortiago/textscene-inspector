@@ -10,8 +10,7 @@ import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 import { busValidator } from '../busValidator.js';
-
-const PLAYBACK_TYPE = { 0: 'DEFAULT', 1: 'STREAM', 2: 'SAMPLE' };
+import { PLAYBACK_TYPE } from '../../../linter/validators/sharedEnumLabels.js';
 
 validatorRegistry.registerAll('AudioStreamPlayer2D', {
   // audio_stream_player_2d.cpp:429 hints PROPERTY_HINT_RESOURCE_TYPE

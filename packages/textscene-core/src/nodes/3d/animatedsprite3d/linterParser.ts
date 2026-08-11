@@ -36,10 +36,7 @@ import { v } from '../../../linter/validators/index.js';
 validatorRegistry.registerAll('AnimatedSprite3D', {
   // sprite_3d.cpp:1539, ADD_PROPERTY(Variant::OBJECT, "sprite_frames",
   // PROPERTY_HINT_RESOURCE_TYPE, "SpriteFrames"). `Ref<SpriteFrames> frames` has
-  // no constructor default, same default-null shape as Sprite3D.texture — every
-  // other default-null Ref<T> slot in this codebase (Sprite3D.texture,
-  // MeshInstance3D.mesh, GridMap.mesh_library, …) gets the plain, non-nullable
-  // form, so this matches rather than reaching for `resourceReference`.
+  // no constructor default, same default-null shape as Sprite3D.texture.
   sprite_frames: v.resourceReference('sprite_frames'),
 
   // sprite_3d.cpp:1540, ADD_PROPERTY(Variant::STRING_NAME, "animation",

@@ -5,29 +5,6 @@ import { propertyError } from './propertyError.js';
 import { NODE_PATH_LITERAL_RE, RESOURCE_REF_RE } from '../../godot/index.js';
 
 /**
- * Resource reference format: `SubResource("id")` or `ExtResource("id")`.
- *
- * The validator and the parsers that later RESOLVE the reference read one
- * pattern, from `godot/variantParser.ts`. They did not: this copy alone was
- * widened to tolerate `SubResource ( "id" )`, so the linter passed a value that
- * `extractLibraries` and `extractSubResourceId` then dropped, and the id went
- * missing with no diagnostic anywhere. Its id class also read `[\w-]+` where
- * every resolver reads `[^"]+`, making the linter the strictest reader of an id
- * it does not itself look up.
- */
-export const RESOURCE_REFERENCE_REGEX = RESOURCE_REF_RE;
-
-/**
- * NodePath format: `NodePath("path/to/node")`.
- *
- * `[^"]*` rather than `.*`: the greedy form only checked the first and last
- * character, so `NodePath("a") junk NodePath("b")` validated as one path — the
- * same shape of hole `v.quotedString` had. Measured across the corpus (784
- * NodePath values) the two forms disagree on nothing.
- */
-export const NODE_PATH_REGEX = NODE_PATH_LITERAL_RE;
-
-/**
  * Creates a resource reference validator
  * Validates SubResource("id") or ExtResource("id") format
  */
@@ -43,7 +20,7 @@ export function createResourceReferenceValidator(
     // `can_convert_strict` allows NIL -> OBJECT (variant.cpp:543), and a
     // `Ref<T>` setter takes an invalid Ref without complaint, so the value
     // LOADS. Whether the slot ought to be filled is a semantic rule's question.
-    if (value !== 'null' && !RESOURCE_REFERENCE_REGEX.test(value)) {
+    if (value !== 'null' && !RESOURCE_REF_RE.test(value)) {
       return propertyError(key, line, `Property '${propertyName}' must be a resource reference like SubResource("id") or ExtResource("id"), or null, got: "${value}"`, errorCode);
     }
     return null;
@@ -59,7 +36,7 @@ export function createNodePathValidator(
   errorCode: string = 'INVALID_PATH'
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
-    if (!NODE_PATH_REGEX.test(value)) {
+    if (!NODE_PATH_LITERAL_RE.test(value)) {
       return propertyError(key, line, `Property '${propertyName}' must be a NodePath like NodePath("path/to/node"), got: "${value}"`, errorCode);
     }
     return null;

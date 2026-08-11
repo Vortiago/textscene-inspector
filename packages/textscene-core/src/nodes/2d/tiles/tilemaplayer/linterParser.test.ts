@@ -103,34 +103,19 @@ tile_set = NotARef(1)
     // true/false and are simply absent from a scene that never overrides
     // them), so the corpus carries zero real occurrences to pin against —
     // confirmed by grepping scenes/**/*.tscn for each key.
-    it('occlusion_enabled: accepts true/false, bare assignment (tile_map_layer.cpp:3442-3450)', () => {
-      expect(check('occlusion_enabled', 'true')).toBeNull();
-      expect(check('occlusion_enabled', 'false')).toBeNull();
-      expect(check('occlusion_enabled', '1')).not.toBeNull();
-    });
-
-    it('x_draw_order_reversed: accepts true/false, bare assignment (tile_map_layer.cpp:3335-3343)', () => {
-      expect(check('x_draw_order_reversed', 'true')).toBeNull();
-      expect(check('x_draw_order_reversed', 'false')).toBeNull();
-      expect(check('x_draw_order_reversed', '1')).not.toBeNull();
-    });
-
-    it('collision_enabled: accepts true/false, bare assignment (tile_map_layer.cpp:3384-3392)', () => {
-      expect(check('collision_enabled', 'true')).toBeNull();
-      expect(check('collision_enabled', 'false')).toBeNull();
-      expect(check('collision_enabled', '1')).not.toBeNull();
-    });
-
-    it('use_kinematic_bodies: accepts true/false, bare assignment (tile_map_layer.cpp:3398-3406)', () => {
-      expect(check('use_kinematic_bodies', 'true')).toBeNull();
-      expect(check('use_kinematic_bodies', 'false')).toBeNull();
-      expect(check('use_kinematic_bodies', '1')).not.toBeNull();
-    });
-
-    it('navigation_enabled: accepts true/false; PROPERTY_HINT_GROUP_ENABLE (tile_map_layer.cpp:2283) only makes the inspector group checkable, it adds no value constraint of its own', () => {
-      expect(check('navigation_enabled', 'true')).toBeNull();
-      expect(check('navigation_enabled', 'false')).toBeNull();
-      expect(check('navigation_enabled', '1')).not.toBeNull();
+    // The grounding differs per row and stays a column: four cite a
+    // bare-assignment setter, while navigation_enabled's PROPERTY_HINT_GROUP_ENABLE
+    // only makes the inspector group checkable and adds no value constraint.
+    it.each([
+      ['occlusion_enabled', 'bare assignment (tile_map_layer.cpp:3442-3450)'],
+      ['x_draw_order_reversed', 'bare assignment (tile_map_layer.cpp:3335-3343)'],
+      ['collision_enabled', 'bare assignment (tile_map_layer.cpp:3384-3392)'],
+      ['use_kinematic_bodies', 'bare assignment (tile_map_layer.cpp:3398-3406)'],
+      ['navigation_enabled', 'PROPERTY_HINT_GROUP_ENABLE (tile_map_layer.cpp:2283)'],
+    ])('%s: accepts true/false and nothing else — %s', (property) => {
+      expect(check(property, 'true')).toBeNull();
+      expect(check(property, 'false')).toBeNull();
+      expect(check(property, '1')).not.toBeNull();
     });
   });
 

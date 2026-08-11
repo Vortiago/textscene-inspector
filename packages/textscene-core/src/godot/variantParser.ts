@@ -13,18 +13,50 @@
  * Every pattern below is DERIVED from one body string per literal rather than written
  * out, because the alternative was measured: eleven hand-written copies of these two
  * patterns had drifted into four spellings. Three of them wore a comment deferring to
- * a fourth ("`\s*` for the reason `NODE_PATH_REGEX` documents") while not matching it,
- * and the split let the linter accept a padded `SubResource ("id")` that the animation
- * and curve parsers then dropped on the floor. Derivation makes that divergence
- * unrepresentable instead of merely discouraged.
+ * a fourth for its whitespace handling while not actually matching it, and the split
+ * let the linter accept a padded `SubResource ("id")` that the animation and curve
+ * parsers then dropped on the floor. Derivation makes that divergence unrepresentable
+ * instead of merely discouraged.
  */
 const WS = '\\s*';
 
-/** A `NodePath("…")` literal, capturing the path. An EMPTY path is legal and common. */
+/**
+ * A `NodePath("…")` literal, capturing the path. An EMPTY path is legal and common.
+ *
+ * `[^"]*` rather than `.*`: the greedy form only anchors the first and last character,
+ * so `NodePath("a") junk NodePath("b")` matches as one path. Measured across the corpus
+ * (784 NodePath values) the two forms disagree on nothing, so this costs no leniency.
+ */
 const NODE_PATH_BODY = `NodePath${WS}\\(${WS}"([^"]*)"${WS}\\)`;
 
-/** A resource reference, capturing the kind and then the id. */
+/**
+ * A resource reference, capturing the kind and then the id.
+ *
+ * The id class is `[^"]+`, matching every resolver that later LOOKS the id up. A copy
+ * reading `[\w-]+` made the linter the strictest reader of an id it does not itself
+ * resolve, rejecting references the rest of the pipeline handles.
+ */
 const RESOURCE_REF_BODY = `(SubResource|ExtResource)${WS}\\(${WS}"([^"]+)"${WS}\\)`;
+
+/**
+ * A bare `[…]` array literal, capturing the body.
+ *
+ * Exported for the two callers that go on to PARSE the body (GridMap's mesh list,
+ * AnimationPlayer's library list) rather than merely shape-check it. A caller that
+ * only needs the shape wants `v.arrayLiteral` instead of re-deriving this.
+ */
+export const ARRAY_LITERAL_RE = /^\[([\s\S]*)\]$/;
+
+/**
+ * A bare `[…]` OR a typed `Array[Type]([…])` literal.
+ *
+ * `Array::is_typed()` makes the writer wrap the elements in `Array[Type](…)`
+ * (variant_parser.cpp:2341-2344), which happens exactly when the property carries
+ * element-type info — `PROPERTY_HINT_ARRAY_TYPE` on the `ADD_PROPERTY`. So the two
+ * spellings are not interchangeable per property, and which one a validator accepts
+ * is a per-property fact its call site has to state.
+ */
+export const TYPED_OR_BARE_ARRAY_RE = /^(?:\[[\s\S]*\]|Array\[[^[\]]+\]\(\[[\s\S]*\]\))$/;
 
 /**
  * A `SubResource("…")` reference alone, capturing the id.

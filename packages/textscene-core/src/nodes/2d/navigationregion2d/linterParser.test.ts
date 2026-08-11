@@ -88,64 +88,38 @@ describe('NavigationRegion2D strict validators', () => {
     });
   });
 
-  describe('enter_cost — navigation_region_2d.cpp:351, plain FLOAT with NO PROPERTY_HINT_RANGE', () => {
-    // set_enter_cost (:112) opens with ERR_FAIL_COND_MSG(p_enter_cost < 0.0):
-    // an ENFORCED floor, not merely hinted, even though there is no hint at
-    // all — the bound comes from the setter guard, not from ADD_PROPERTY.
+  // Both are plain FLOATs with NO PROPERTY_HINT_RANGE, yet both setters open with
+  // ERR_FAIL_COND_MSG(cost < 0.0) — navigation_region_2d.cpp:112 and :127 — so the floor is
+  // ENFORCED and comes from the setter guard rather than from ADD_PROPERTY. The
+  // ADD_PROPERTY cite and the negative sample stay columns.
+  describe.each([
+    ['enter_cost', 'navigation_region_2d.cpp:351', 'ENTER_COST', '-0.01'],
+    ['travel_cost', 'navigation_region_2d.cpp:352', 'TRAVEL_COST', '-1'],
+  ])('%s — %s, plain FLOAT with NO PROPERTY_HINT_RANGE', (property, _cite, code, negative) => {
     it('accepts zero, a positive float, and the non-finite spellings Godot writes', () => {
       // `nan < 0.0` is false in both C++ and JS, so the setter's guard lets
       // `nan` through; there is no ceiling for `inf` to trip.
-      expect(check('enter_cost', '0')).toBeNull();
-      expect(check('enter_cost', '1000')).toBeNull();
-      expect(check('enter_cost', 'inf')).toBeNull();
-      expect(check('enter_cost', 'nan')).toBeNull();
+      expect(check(property, '0')).toBeNull();
+      expect(check(property, '1000')).toBeNull();
+      expect(check(property, 'inf')).toBeNull();
+      expect(check(property, 'nan')).toBeNull();
     });
 
     it('rejects a non-numeric value', () => {
-      const error = check('enter_cost', 'cheap');
+      const error = check(property, 'cheap');
       expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_ENTER_COST_FORMAT');
+      expect(error!.code).toBe(`INVALID_${code}_FORMAT`);
     });
 
     it('errors on a negative value: the setter refuses it', () => {
-      const error = check('enter_cost', '-0.01');
+      const error = check(property, negative);
       expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_ENTER_COST_VALUE');
+      expect(error!.code).toBe(`INVALID_${code}_VALUE`);
       expect(error!.severity).toBe('error');
     });
 
     it('errors on inf_neg, since inf_neg < 0.0 trips the same guard', () => {
-      const error = check('enter_cost', 'inf_neg');
-      expect(error).not.toBeNull();
-      expect(error!.severity).toBe('error');
-    });
-  });
-
-  describe('travel_cost — navigation_region_2d.cpp:352, plain FLOAT with NO PROPERTY_HINT_RANGE', () => {
-    // set_travel_cost (:127) opens with ERR_FAIL_COND_MSG(p_travel_cost < 0.0):
-    // an ENFORCED floor, same shape as enter_cost.
-    it('accepts zero, a positive float, and the non-finite spellings Godot writes', () => {
-      expect(check('travel_cost', '0')).toBeNull();
-      expect(check('travel_cost', '1000')).toBeNull();
-      expect(check('travel_cost', 'inf')).toBeNull();
-      expect(check('travel_cost', 'nan')).toBeNull();
-    });
-
-    it('rejects a non-numeric value', () => {
-      const error = check('travel_cost', 'cheap');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_TRAVEL_COST_FORMAT');
-    });
-
-    it('errors on a negative value: the setter refuses it', () => {
-      const error = check('travel_cost', '-1');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_TRAVEL_COST_VALUE');
-      expect(error!.severity).toBe('error');
-    });
-
-    it('errors on inf_neg, since inf_neg < 0.0 trips the same guard', () => {
-      const error = check('travel_cost', 'inf_neg');
+      const error = check(property, 'inf_neg');
       expect(error).not.toBeNull();
       expect(error!.severity).toBe('error');
     });

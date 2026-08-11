@@ -26,9 +26,12 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
+import { propertyError, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
+import {
+  STRUCTURED_TEXT_PARSER,
+  TEXT_DIRECTION,
+} from '../../../../linter/validators/textServerEnums.js';
 
 /**
  * `LineEdit::HorizontalAlignment` reuses Control's shared `HorizontalAlignment`
@@ -53,22 +56,6 @@ const VIRTUAL_KEYBOARD_TYPE = {
   5: 'KEYBOARD_TYPE_EMAIL_ADDRESS',
   6: 'KEYBOARD_TYPE_PASSWORD',
   7: 'KEYBOARD_TYPE_URL',
-};
-
-/**
- * `TextServer::StructuredTextParser` — same table TextEdit and LinkButton each
- * declare locally (servers/text/text_server.cpp:681-687, enum declared
- * text_server.h:214-222). The hint labels index 5 "None"; the real constant is
- * STRUCTURED_TEXT_GDSCRIPT.
- */
-const STRUCTURED_TEXT_PARSER = {
-  0: 'STRUCTURED_TEXT_DEFAULT',
-  1: 'STRUCTURED_TEXT_URI',
-  2: 'STRUCTURED_TEXT_FILE',
-  3: 'STRUCTURED_TEXT_EMAIL',
-  4: 'STRUCTURED_TEXT_LIST',
-  5: 'STRUCTURED_TEXT_GDSCRIPT',
-  6: 'STRUCTURED_TEXT_CUSTOM',
 };
 
 /**
@@ -119,30 +106,6 @@ const secretCharacterValidator: PropertyValidator = (key, value, line) => {
 };
 secretCharacterValidator.accepts = 'quoted string, at most one character';
 secretCharacterValidator.grounding = { kind: 'enforced', cite: 'line_edit.cpp:2612' };
-
-/**
- * `structured_text_bidi_override_options` is a plain Godot `Array`
- * (doc/classes/LineEdit.xml, default `[]`) whose contents are opaque,
- * parser-specific arguments interpreted by whichever `structured_text_bidi_override`
- * parser is active — there is no fixed arity or element type to check, only
- * the TSCN variant-text bracket grammar. line_edit.cpp:3523's `ADD_PROPERTY`
- * carries no hint at all, and `set_structured_text_bidi_override_options`
- * (line_edit.cpp:2217-2220) assigns the Array straight through, so this only
- * rejects a malformed literal.
- */
-const ARRAY_LITERAL_RE = /^\[[\s\S]*\]$/;
-const structuredTextBidiOverrideOptionsValidator = accepts((key, value, line) => {
-  if (!ARRAY_LITERAL_RE.test(value)) {
-    return propertyError(
-      key,
-      line,
-      `Property 'structured_text_bidi_override_options' must be an Array literal like [], got: ${value}`,
-      'INVALID_STRUCTURED_TEXT_BIDI_OVERRIDE_OPTIONS_FORMAT'
-    );
-  }
-  return null;
-}, 'Array literal ([...])');
-structuredTextBidiOverrideOptionsValidator.formatOnly = true;
 
 validatorRegistry.registerAll('LineEdit', {
   // -- Ungrouped run (line_edit.cpp:3483-3501) --------------------------------
@@ -239,8 +202,11 @@ validatorRegistry.registerAll('LineEdit', {
     STRUCTURED_TEXT_PARSER,
     { hinted: 'line_edit.cpp:3522' }
   ),
-  // line_edit.cpp:3523 — Variant::ARRAY, default "[]"; see ARRAY_LITERAL_RE above.
-  structured_text_bidi_override_options: structuredTextBidiOverrideOptionsValidator,
+  // line_edit.cpp:3523: Variant::ARRAY with no hint, so never written wrapped.
+  // The contents are opaque parser-specific arguments with no fixed arity or
+  // element type; set_structured_text_bidi_override_options (line_edit.cpp:2217-2220)
+  // assigns straight through, leaving only the literal shape to reject.
+  structured_text_bidi_override_options: v.arrayLiteral('structured_text_bidi_override_options'),
 
   // -- Icon (ADD_GROUP "Icon", "", line_edit.cpp:3525-3528) -------------------
   // line_edit.cpp:3526 — Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE "Texture2D".

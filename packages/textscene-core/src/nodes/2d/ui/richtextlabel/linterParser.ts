@@ -28,6 +28,7 @@ import {
   BREAK_TRIM_LABELS,
   BREAK_TRIM_MASK,
   JUSTIFICATION_HINTED_BITS,
+  STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
 
@@ -60,20 +61,6 @@ const VISIBLE_CHARACTERS_BEHAVIOR = {
   2: 'VC_GLYPHS_AUTO',
   3: 'VC_GLYPHS_LTR',
   4: 'VC_GLYPHS_RTL',
-} as const;
-
-// rich_text_label.cpp:7795: PROPERTY_HINT_ENUM
-// "Default,URI,File,Email,List,None,Custom". The hint labels index 5 "None";
-// the real constant is STRUCTURED_TEXT_GDSCRIPT (servers/text/text_server.cpp:681-687,
-// text_server.h:214-222), the same mismatch TextEdit's own copy notes.
-const STRUCTURED_TEXT_PARSER = {
-  0: 'STRUCTURED_TEXT_DEFAULT',
-  1: 'STRUCTURED_TEXT_URI',
-  2: 'STRUCTURED_TEXT_FILE',
-  3: 'STRUCTURED_TEXT_EMAIL',
-  4: 'STRUCTURED_TEXT_LIST',
-  5: 'STRUCTURED_TEXT_GDSCRIPT',
-  6: 'STRUCTURED_TEXT_CUSTOM',
 } as const;
 
 /**
@@ -111,33 +98,6 @@ function packedFloat32ArrayValidator(name: string, code: string) {
     }
     return null;
   }, 'PackedFloat32Array(x, y, …)');
-}
-
-/**
- * Plain `[...]` or typed `Array[Type]([...])` literal: `Array::is_typed()`
- * writes the `Array[Type](...)` wrapper (core/variant/variant_parser.cpp:2341-2344)
- * whenever the array carries element-type info, which `custom_effects`
- * (PROPERTY_HINT_ARRAY_TYPE "RichTextEffect") does and
- * `structured_text_bidi_override_options` (no hint at all) never does.
- * Accepting both shapes avoids rejecting a real value from either setter:
- * `set_effects` (rich_text_label.cpp:7465-7468) and
- * `set_structured_text_bidi_override_options` (rich_text_label.cpp:7334-7344)
- * are both bare assignments with no per-element grammar to check.
- */
-const ARRAY_LITERAL_RE = /^(?:\[[\s\S]*\]|Array\[[^[\]]+\]\(\[[\s\S]*\]\))$/;
-
-function arrayLiteralValidator(name: string, code: string) {
-  return shape((key, value, line) => {
-    if (!ARRAY_LITERAL_RE.test(value)) {
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' must be an Array literal like [] or Array[Type]([...]), got: ${value}`,
-        code
-      );
-    }
-    return null;
-  }, 'Array literal ([...] or Array[Type]([...]))');
 }
 
 validatorRegistry.registerAll('RichTextLabel', {
@@ -212,7 +172,9 @@ validatorRegistry.registerAll('RichTextLabel', {
   // rich_text_label.cpp:7773: Variant::ARRAY, PROPERTY_HINT_ARRAY_TYPE
   // "RichTextEffect". set_effects (rich_text_label.cpp:7465-7468) is a bare
   // assignment (`custom_effects = Array(p_effects);`) with no per-element check.
-  custom_effects: arrayLiteralValidator('custom_effects', 'INVALID_CUSTOM_EFFECTS_FORMAT'),
+  // PROPERTY_HINT_ARRAY_TYPE "RichTextEffect" makes `Array::is_typed()` true, so
+  // the writer emits the `Array[RichTextEffect]([...])` wrapper here.
+  custom_effects: v.arrayLiteral('custom_effects', { typedAs: 'RichTextEffect' }),
   // rich_text_label.cpp:7774: bare BOOL, no hint. set_meta_underline
   // (rich_text_label.cpp:5155-5162) is an unconditional assignment.
   meta_underlined: v.boolean('meta_underlined'),
@@ -305,11 +267,14 @@ validatorRegistry.registerAll('RichTextLabel', {
     { hinted: 'rich_text_label.cpp:7795' }
   ),
   // rich_text_label.cpp:7796: Variant::ARRAY, no hint at all (so it is never
-  // written with the `Array[Type](...)` wrapper, see ARRAY_LITERAL_RE above).
+  // written with the `Array[Type](...)` wrapper, unlike custom_effects above).
   // set_structured_text_bidi_override_options (rich_text_label.cpp:7334-7344)
   // is a bare assignment.
-  structured_text_bidi_override_options: arrayLiteralValidator(
-    'structured_text_bidi_override_options',
-    'INVALID_STRUCTURED_TEXT_BIDI_OVERRIDE_OPTIONS_FORMAT'
-  ),
+  // Unlike the four Control siblings that spell this property strictly, this one
+  // has always taken the wrapper too, on the grounds that accepting a shape the
+  // loader reads costs nothing. The disagreement is real and predates this
+  // refactor; it is preserved rather than settled here.
+  structured_text_bidi_override_options: v.arrayLiteral('structured_text_bidi_override_options', {
+    typedAs: 'Type',
+  }),
 });

@@ -13,22 +13,6 @@ import { shape, v } from '../../../../linter/validators/v.js';
 import { propertyError } from '../../../../linter/validators/propertyError.js';
 
 /**
- * `connections` is declared `Variant::ARRAY` (graph_edit.cpp:3083) but its
- * getter returns `TypedArray<Dictionary>` (graph_edit.h:355), and a typed array
- * is written with the `Array[Type]([…])` wrapper
- * (core/variant/variant_parser.cpp:2341-2344), so the saved spelling is
- * `Array[Dictionary]([…])`, not a bare list and never a `Packed*Array`.
- * The bare `[…]` is accepted too, because `TypedArray<T>(const Array &)` calls
- * `assign()` on an untyped array (core/variant/typed_array.h:43-50) and loads it.
- *
- * Per-element grammar is deliberately unchecked: `set_connections`
- * (graph_edit.cpp:2533-2543) reads `from_node`/`from_port`/`to_node`/`to_port`
- * off each Dictionary with `operator[]`, which default-constructs a missing key
- * rather than failing, so no element shape is refused at load.
- */
-const ARRAY_LITERAL_RE = /^(?:\[[\s\S]*\]|Array\[[^[\]]+\]\(\[[\s\S]*\]\))$/;
-
-/**
  * `type_names` keeps a plain `Dictionary` member (graph_edit.h:314) returned
  * untyped (graph_edit.h:434). `PROPERTY_HINT_DICTIONARY_TYPE "int;String"`
  * (graph_edit.cpp:3077) only types the inspector's key/value widgets, so
@@ -118,17 +102,13 @@ validatorRegistry.registerAll('GraphEdit', {
   // graph_edit.cpp:3082: bare BOOL.
   connection_lines_antialiased: v.boolean('connection_lines_antialiased'),
   // graph_edit.cpp:3083: ARRAY with PROPERTY_HINT_ARRAY_TYPE naming Dictionary.
-  connections: shape((key, value, line) => {
-    if (!ARRAY_LITERAL_RE.test(value)) {
-      return propertyError(
-        key,
-        line,
-        `Property 'connections' must be an Array literal like [] or Array[Dictionary]([…]), got: ${value}`,
-        'INVALID_CONNECTIONS_FORMAT'
-      );
-    }
-    return null;
-  }, 'Array literal ([…] or Array[Dictionary]([…]))'),
+  // Declared Variant::ARRAY but the getter returns TypedArray<Dictionary>
+  // (graph_edit.h:355), so the saved spelling carries the wrapper. The bare
+  // `[…]` loads too: `TypedArray<T>(const Array &)` assigns an untyped array
+  // (core/variant/typed_array.h:43-50). Per-element grammar goes unchecked
+  // because set_connections (graph_edit.cpp:2533-2543) reads each key with
+  // `operator[]`, which default-constructs a missing one rather than failing.
+  connections: v.arrayLiteral('connections', { typedAs: 'Dictionary' }),
 
   // "Zoom" group, graph_edit.cpp:3085-3089. All four are PROPERTY_HINT_NONE.
   // graph_edit.cpp:3086: set_zoom defers to set_zoom_custom, which CLAMPs to

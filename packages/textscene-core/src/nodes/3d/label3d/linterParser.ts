@@ -9,12 +9,11 @@
 import '../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import {
-  hintedBitField,
-  maskedBitField,
-  propertyError,
-  shape,
-  v,
-} from '../../../linter/validators/index.js';
+  BASE_MATERIAL_ALPHA_ANTIALIASING,
+  BASE_MATERIAL_ALPHA_CUT,
+  BASE_MATERIAL_TEXTURE_FILTER,
+} from '../../../linter/validators/sharedEnumLabels.js';
+import { hintedBitField, maskedBitField, v } from '../../../linter/validators/index.js';
 import {
   MATERIAL_RENDER_PRIORITY_MIN,
   MATERIAL_RENDER_PRIORITY_MAX,
@@ -25,49 +24,18 @@ import {
   BREAK_TRIM_LABELS,
   BREAK_TRIM_MASK,
   JUSTIFICATION_HINTED_BITS,
+  STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
 } from '../../../linter/validators/textServerEnums.js';
 
 const BILLBOARD = { 0: 'DISABLED', 1: 'ENABLED', 2: 'FIXED_Y' };
 const HORIZONTAL_ALIGNMENT = { 0: 'LEFT', 1: 'CENTER', 2: 'RIGHT', 3: 'FILL' };
-// label_3d.cpp:143 hints 3 labels, matching BaseMaterial3D::AlphaAntiAliasing
-// (material.h:196-200) minus its ALPHA_ANTIALIASING_MAX sentinel.
-const ALPHA_AA = { 0: 'OFF', 1: 'ALPHA_TO_COVERAGE', 2: 'ALPHA_TO_COVERAGE_AND_TO_ONE' };
-// label_3d.cpp:140 hints 4 labels ("Disabled,Discard,Opaque Pre-Pass,Alpha
-// Hash") and ALPHA_CUT_MAX is 4 (label_3d.h:50-56), so ALPHA_CUT_HASH=3 is a
-// real, editor-reachable value; set_alpha_cut_mode:1012-1019 ERR_FAIL_INDEXes.
-const ALPHA_CUT = { 0: 'DISABLED', 1: 'DISCARD', 2: 'OPAQUE_PREPASS', 3: 'HASH' };
 // `VerticalAlignment` (core/math/math_defs.h:87-92). label_3d.cpp:157 hints
 // only 3 labels ("Top,Center,Bottom"), but set_vertical_alignment:692-693
 // `ERR_FAIL_INDEX((int)p_alignment, 4)` permits FILL too — legal, just not
 // offered by the inspector dropdown, same widening idiom as text_direction's
 // unlabelled -1 below.
 const VERTICAL_ALIGNMENT = { 0: 'TOP', 1: 'CENTER', 2: 'BOTTOM', 3: 'FILL' };
-// label_3d.cpp:145 hints 6 labels, matching BaseMaterial3D::TextureFilter
-// (material.h:171-178) minus its TEXTURE_FILTER_MAX sentinel.
-const TEXTURE_FILTER = {
-  0: 'NEAREST',
-  1: 'LINEAR',
-  2: 'NEAREST_WITH_MIPMAPS',
-  3: 'LINEAR_WITH_MIPMAPS',
-  4: 'NEAREST_WITH_MIPMAPS_ANISOTROPIC',
-  5: 'LINEAR_WITH_MIPMAPS_ANISOTROPIC',
-};
-// label_3d.cpp:168 hints 7 labels (TextServer::StructuredTextParser,
-// servers/text/text_server.h:214-222); index 5 shows "None" but the real
-// constant is STRUCTURED_TEXT_GDSCRIPT, same mismatch Label's own table notes.
-const STRUCTURED_TEXT_PARSER = {
-  0: 'STRUCTURED_TEXT_DEFAULT',
-  1: 'STRUCTURED_TEXT_URI',
-  2: 'STRUCTURED_TEXT_FILE',
-  3: 'STRUCTURED_TEXT_EMAIL',
-  4: 'STRUCTURED_TEXT_LIST',
-  5: 'STRUCTURED_TEXT_GDSCRIPT',
-  6: 'STRUCTURED_TEXT_CUSTOM',
-};
-
-/** A plain Godot `Array` literal, e.g. `[]` or `[1, 2]` — format-only. */
-const ARRAY_LITERAL_RE = /^\[[\s\S]*\]$/;
 
 validatorRegistry.registerAll('Label3D', {
   text: v.quotedString('text'),
@@ -137,17 +105,7 @@ validatorRegistry.registerAll('Label3D', {
   // plain `Array st_args`), no hint. set_structured_text_bidi_override_options:
   // 741-747 assigns straight through, so this only rejects a malformed
   // literal. Same pattern as Label's/LinkButton's/LineEdit's identical property.
-  structured_text_bidi_override_options: shape((key, value, line) => {
-    if (!ARRAY_LITERAL_RE.test(value)) {
-      return propertyError(
-        key,
-        line,
-        `Property 'structured_text_bidi_override_options' must be an Array literal like [], got: ${value}`,
-        'INVALID_STRUCTURED_TEXT_BIDI_OVERRIDE_OPTIONS_FORMAT'
-      );
-    }
-    return null;
-  }, 'Array literal ([...])'),
+  structured_text_bidi_override_options: v.arrayLiteral('structured_text_bidi_override_options'),
   // label_3d.cpp:141 hints "0,1,0.001" (closed); set_alpha_scissor_threshold:
   // 1047-1052 is a bare assignment, so out-of-hint is a warning.
   alpha_scissor_threshold: v.float('alpha_scissor_threshold', {
@@ -167,7 +125,7 @@ validatorRegistry.registerAll('Label3D', {
   }),
   // label_3d.cpp:143 hints 3 labels (0-2); set_alpha_antialiasing:1058-1063
   // is a bare assignment (no ERR_FAIL), so out-of-hint is a warning.
-  alpha_antialiasing_mode: v.enumInt('alpha_antialiasing_mode', 0, 2, ALPHA_AA, {
+  alpha_antialiasing_mode: v.enumInt('alpha_antialiasing_mode', 0, 2, BASE_MATERIAL_ALPHA_ANTIALIASING, {
     hinted: 'label_3d.cpp:143',
   }),
   // label_3d.cpp:168 — PROPERTY_HINT_ENUM, 7 labels. set_structured_text_bidi_override
@@ -185,12 +143,12 @@ validatorRegistry.registerAll('Label3D', {
   autowrap_mode: v.enumInt('autowrap_mode', 0, 3, AUTOWRAP_MODE, { hinted: 'label_3d.cpp:160' }),
   // label_3d.cpp:145 hints 6 labels (0-5); set_texture_filter:1021-1026 is a
   // bare assignment (no ERR_FAIL), so out-of-hint is a warning.
-  texture_filter: v.enumInt('texture_filter', 0, 5, TEXTURE_FILTER, {
+  texture_filter: v.enumInt('texture_filter', 0, 5, BASE_MATERIAL_TEXTURE_FILTER, {
     hinted: 'label_3d.cpp:145',
   }),
   // set_alpha_cut_mode:1013, ERR_FAIL_INDEX(p_mode, ALPHA_CUT_MAX): the setter
   // refuses.
-  alpha_cut: v.enumInt('alpha_cut', 0, 3, ALPHA_CUT, { enforced: 'label_3d.cpp:1013' }),
+  alpha_cut: v.enumInt('alpha_cut', 0, 3, BASE_MATERIAL_ALPHA_CUT, { enforced: 'label_3d.cpp:1013' }),
   // set_vertical_alignment:693, ERR_FAIL_INDEX((int)p_alignment, 4): the
   // setter refuses.
   vertical_alignment: v.enumInt('vertical_alignment', 0, 3, VERTICAL_ALIGNMENT, {

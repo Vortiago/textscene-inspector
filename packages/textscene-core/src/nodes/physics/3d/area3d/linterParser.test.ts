@@ -58,168 +58,97 @@ describe('Area3D reverb/wind strict validators', () => {
     });
   });
 
-  describe('reverb_bus_amount — area_3d.cpp:805, PROPERTY_HINT_RANGE "0,1,0.01"', () => {
-    // set_reverb_amount (:631-633) is a bare assignment: both ends are
-    // hint-only, so out-of-range warns rather than errors on either side.
-    it('accepts the 0 floor', () => {
-      expect(check('reverb_bus_amount', '0')).toBeNull();
-    });
-
-    it('accepts the 1 ceiling', () => {
-      expect(check('reverb_bus_amount', '1')).toBeNull();
-    });
-
-    it('rejects a non-numeric value', () => {
-      const error = check('reverb_bus_amount', 'loud');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_REVERB_BUS_AMOUNT_FORMAT');
-    });
-
-    it('warns just below 0 rather than erroring', () => {
-      const error = check('reverb_bus_amount', '-0.01');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_REVERB_BUS_AMOUNT_VALUE');
-      expect(error!.severity).toBe('warning');
-    });
-
-    it('warns just above 1 rather than erroring', () => {
-      const error = check('reverb_bus_amount', '1.01');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_REVERB_BUS_AMOUNT_VALUE');
-      expect(error!.severity).toBe('warning');
-    });
-
-    it('warns on inf: `inf > 1` trips the hinted ceiling, the bare-assignment setter never checks it', () => {
-      expect(check('reverb_bus_amount', 'inf')?.severity).toBe('warning');
-    });
-
-    it('warns on inf_neg: `inf_neg < 0` trips the hinted floor the same way', () => {
-      expect(check('reverb_bus_amount', 'inf_neg')?.severity).toBe('warning');
-    });
-
-    it('accepts nan: every comparison against nan is false, so neither bound trips', () => {
-      expect(check('reverb_bus_amount', 'nan')).toBeNull();
-    });
-  });
-
-  describe('reverb_bus_uniformity — area_3d.cpp:806, PROPERTY_HINT_RANGE "0,1,0.01"', () => {
-    // set_reverb_uniformity (:639-641) is a bare assignment, the same shape
-    // as reverb_bus_amount above.
-    it('accepts the 0 floor', () => {
-      expect(check('reverb_bus_uniformity', '0')).toBeNull();
-    });
-
-    it('accepts the 1 ceiling', () => {
-      expect(check('reverb_bus_uniformity', '1')).toBeNull();
+  // Both reverb properties hint "0,1,0.01" over a bare-assigning setter
+  // (set_reverb_amount :631-633, set_reverb_uniformity :639-641), so both ends
+  // are hint-only and out-of-range warns on either side. Cite and code stay
+  // columns; only the non-numeric sample differs, which is arbitrary anyway.
+  describe.each([
+    ['reverb_bus_amount', 'area_3d.cpp:805', 'REVERB_BUS_AMOUNT', 'loud'],
+    ['reverb_bus_uniformity', 'area_3d.cpp:806', 'REVERB_BUS_UNIFORMITY', 'even'],
+  ])('%s — %s, PROPERTY_HINT_RANGE "0,1,0.01"', (property, _cite, code, nonNumeric) => {
+    it.each([
+      ['the 0 floor', '0'],
+      ['the 1 ceiling', '1'],
+      // Every comparison against nan is false, so neither bound trips.
+      ['nan', 'nan'],
+    ])('accepts %s', (_label, value) => {
+      expect(check(property, value)).toBeNull();
     });
 
     it('rejects a non-numeric value', () => {
-      const error = check('reverb_bus_uniformity', 'even');
+      const error = check(property, nonNumeric);
       expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_REVERB_BUS_UNIFORMITY_FORMAT');
+      expect(error!.code).toBe(`INVALID_${code}_FORMAT`);
     });
 
-    it('warns just below 0 rather than erroring', () => {
-      const error = check('reverb_bus_uniformity', '-0.01');
+    it.each([
+      ['just below 0', '-0.01'],
+      ['just above 1', '1.01'],
+      // `inf > 1` trips the hinted ceiling and `inf_neg < 0` the hinted floor;
+      // the bare-assignment setter never checks either.
+      ['inf', 'inf'],
+      ['inf_neg', 'inf_neg'],
+    ])('warns on %s rather than erroring', (_label, value) => {
+      const error = check(property, value);
       expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_REVERB_BUS_UNIFORMITY_VALUE');
+      expect(error!.code).toBe(`INVALID_${code}_VALUE`);
       expect(error!.severity).toBe('warning');
-    });
-
-    it('warns just above 1 rather than erroring', () => {
-      const error = check('reverb_bus_uniformity', '1.01');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_REVERB_BUS_UNIFORMITY_VALUE');
-      expect(error!.severity).toBe('warning');
-    });
-
-    it('warns on inf: `inf > 1` trips the hinted ceiling', () => {
-      expect(check('reverb_bus_uniformity', 'inf')?.severity).toBe('warning');
-    });
-
-    it('warns on inf_neg: `inf_neg < 0` trips the hinted floor', () => {
-      expect(check('reverb_bus_uniformity', 'inf_neg')?.severity).toBe('warning');
-    });
-
-    it('accepts nan: every comparison against nan is false, so neither bound trips', () => {
-      expect(check('reverb_bus_uniformity', 'nan')).toBeNull();
     });
   });
 
-  describe('wind_force_magnitude — area_3d.cpp:794, PROPERTY_HINT_RANGE "0,10,0.001,or_greater"', () => {
-    // or_greater opens the max, so only the floor is a bound.
-    // set_wind_force_magnitude (:134-137) is a bare assignment, so below-floor
-    // warns rather than errors.
-    it('accepts the 0 floor', () => {
-      expect(check('wind_force_magnitude', '0')).toBeNull();
-    });
+  // Both wind properties hint a floor of 0 with or_greater opening the max, over
+  // a bare-assigning setter (set_wind_force_magnitude :134-137,
+  // set_wind_attenuation_factor :145-148), so only below-floor warns. The
+  // past-ceiling sample is arbitrary and stays a column with the cite.
+  describe.each([
+    [
+      'wind_force_magnitude',
+      'area_3d.cpp:794',
+      '"0,10,0.001,or_greater"',
+      'WIND_FORCE_MAGNITUDE',
+      '50',
+      'strong',
+    ],
+    [
+      'wind_attenuation_factor',
+      'area_3d.cpp:795',
+      '"0.0,3.0,0.001,or_greater"',
+      'WIND_ATTENUATION_FACTOR',
+      '10',
+      'gusty',
+    ],
+  ])(
+    '%s — %s, PROPERTY_HINT_RANGE %s',
+    (property, _cite, _hint, code, pastCeiling, nonNumeric) => {
+      it.each([
+        ['the 0 floor', '0'],
+        ['a value past the hint ceiling (or_greater opens it)', pastCeiling],
+        // or_greater leaves no ceiling for inf to trip.
+        ['inf', 'inf'],
+        // Every comparison against nan is false, so the floor never trips.
+        ['nan', 'nan'],
+      ])('accepts %s', (_label, value) => {
+        expect(check(property, value)).toBeNull();
+      });
 
-    it('accepts a value past the hint ceiling (or_greater opens it)', () => {
-      expect(check('wind_force_magnitude', '50')).toBeNull();
-    });
+      it('rejects a non-numeric value', () => {
+        const error = check(property, nonNumeric);
+        expect(error).not.toBeNull();
+        expect(error!.code).toBe(`INVALID_${code}_FORMAT`);
+      });
 
-    it('rejects a non-numeric value', () => {
-      const error = check('wind_force_magnitude', 'strong');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_WIND_FORCE_MAGNITUDE_FORMAT');
-    });
-
-    it('warns just below the 0 floor rather than erroring', () => {
-      const error = check('wind_force_magnitude', '-0.001');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_WIND_FORCE_MAGNITUDE_VALUE');
-      expect(error!.severity).toBe('warning');
-    });
-
-    it('accepts inf: or_greater leaves no ceiling for it to trip', () => {
-      expect(check('wind_force_magnitude', 'inf')).toBeNull();
-    });
-
-    it('warns on inf_neg: `inf_neg < 0` trips the hinted floor', () => {
-      expect(check('wind_force_magnitude', 'inf_neg')?.severity).toBe('warning');
-    });
-
-    it('accepts nan: every comparison against nan is false, so the floor never trips', () => {
-      expect(check('wind_force_magnitude', 'nan')).toBeNull();
-    });
-  });
-
-  describe('wind_attenuation_factor — area_3d.cpp:795, PROPERTY_HINT_RANGE "0.0,3.0,0.001,or_greater"', () => {
-    // or_greater opens the max. set_wind_attenuation_factor (:145-148) is a
-    // bare assignment, so below-floor warns rather than errors.
-    it('accepts the 0 floor', () => {
-      expect(check('wind_attenuation_factor', '0')).toBeNull();
-    });
-
-    it('accepts a value past the hint ceiling (or_greater opens it)', () => {
-      expect(check('wind_attenuation_factor', '10')).toBeNull();
-    });
-
-    it('rejects a non-numeric value', () => {
-      const error = check('wind_attenuation_factor', 'gusty');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_WIND_ATTENUATION_FACTOR_FORMAT');
-    });
-
-    it('warns just below the 0 floor rather than erroring', () => {
-      const error = check('wind_attenuation_factor', '-0.001');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_WIND_ATTENUATION_FACTOR_VALUE');
-      expect(error!.severity).toBe('warning');
-    });
-
-    it('accepts inf: or_greater leaves no ceiling for it to trip', () => {
-      expect(check('wind_attenuation_factor', 'inf')).toBeNull();
-    });
-
-    it('warns on inf_neg: `inf_neg < 0` trips the hinted floor', () => {
-      expect(check('wind_attenuation_factor', 'inf_neg')?.severity).toBe('warning');
-    });
-
-    it('accepts nan: every comparison against nan is false, so the floor never trips', () => {
-      expect(check('wind_attenuation_factor', 'nan')).toBeNull();
-    });
-  });
+      it.each([
+        ['just below the 0 floor', '-0.001'],
+        // `inf_neg < 0` trips the hinted floor.
+        ['inf_neg', 'inf_neg'],
+      ])('warns on %s rather than erroring', (_label, value) => {
+        const error = check(property, value);
+        expect(error).not.toBeNull();
+        expect(error!.code).toBe(`INVALID_${code}_VALUE`);
+        expect(error!.severity).toBe('warning');
+      });
+    }
+  );
 
   describe('wind_source_path — area_3d.cpp:796, Variant::NODE_PATH, PROPERTY_HINT_NODE_PATH_VALID_TYPES "Node3D"', () => {
     // set_wind_source_path (:156-159) is a bare assignment: format-only.

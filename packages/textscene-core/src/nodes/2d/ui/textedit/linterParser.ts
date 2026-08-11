@@ -20,36 +20,8 @@
 
 import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
+import { v } from '../../../../linter/validators/index.js';
 import { AUTOWRAP_MODE, TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
-
-/**
- * `structured_text_bidi_override_options` is a plain Godot `Array`
- * (doc/classes/TextEdit.xml:1400, default `[]`) whose contents are opaque,
- * parser-specific arguments interpreted by whichever `structured_text_bidi_override`
- * parser is active — there is no fixed arity or element type to check, only
- * the TSCN variant-text bracket grammar the parser layer already relies on
- * (parser/utils.ts's heading/array bracket checks use the same `[...]` shape).
- */
-const ARRAY_LITERAL_RE = /^\[[\s\S]*\]$/;
-
-/**
- * `TextEdit::set_structured_text_bidi_override_options` (text_edit.cpp:3793-3803)
- * is a bare assignment, and the property's `ADD_PROPERTY` (text_edit.cpp:7608)
- * carries no hint at all, so this rejects only a malformed Array literal.
- */
-const structuredTextBidiOverrideOptionsValidator = accepts((key, value, line) => {
-  if (!ARRAY_LITERAL_RE.test(value)) {
-    return propertyError(
-      key,
-      line,
-      `Property 'structured_text_bidi_override_options' must be an Array literal like [], got: ${value}`,
-      'INVALID_STRUCTURED_TEXT_BIDI_OVERRIDE_OPTIONS_FORMAT'
-    );
-  }
-  return null;
-}, 'Array literal ([...])');
-structuredTextBidiOverrideOptionsValidator.formatOnly = true;
 
 validatorRegistry.registerAll('TextEdit', {
   // Text & behaviour (ungrouped run, text_edit.cpp:7545-7561).
@@ -211,6 +183,9 @@ validatorRegistry.registerAll('TextEdit', {
     5: 'STRUCTURED_TEXT_GDSCRIPT',
     6: 'STRUCTURED_TEXT_CUSTOM',
   }, { hinted: 'text_edit.cpp:7607' }),
-  // text_edit.cpp:7608 — Variant::ARRAY, default "[]"; see ARRAY_LITERAL_RE above.
-  structured_text_bidi_override_options: structuredTextBidiOverrideOptionsValidator,
+  // text_edit.cpp:7608: Variant::ARRAY with no hint, so never written wrapped.
+  // The contents are opaque parser-specific arguments with no fixed arity or
+  // element type; set_structured_text_bidi_override_options (text_edit.cpp:3793-3803)
+  // assigns straight through, leaving only the literal shape to reject.
+  structured_text_bidi_override_options: v.arrayLiteral('structured_text_bidi_override_options'),
 });
