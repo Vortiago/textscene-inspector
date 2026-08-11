@@ -5,6 +5,18 @@ It runs the two-phase validation pipeline: strict parsing (`StrictTscnParser`
 catches syntax/format errors with line/column locations), then semantic lint
 rules (missing resources, invalid references, property constraints).
 
+Its subject is the **text scene file**, whole. It exists because Godot has no
+text-scene linter of its own, and the goal is to help you author a sound, valid
+`.tscn` regardless of what any previewer chooses to draw. So coverage tracks what
+the ENGINE serialises: a property is worth validating because Godot writes it and
+reads it back, not because some renderer consumes it. Every diagnostic is
+grounded in a line of Godot's own source, and the three severity tiers come from
+what the engine actually does with a value (ADR-0032): an **error** is a value the
+setter refuses or alters, a **warning** is one outside the property's own editor
+hint, and a value the engine simply accepts gets nothing at all. The aim is that
+a clean run means the file is sound, and that a diagnostic never fires on a scene
+Godot opens without complaint.
+
 ## Install / Build
 
 From the repo root:
