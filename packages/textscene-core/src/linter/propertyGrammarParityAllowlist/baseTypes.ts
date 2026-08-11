@@ -20,6 +20,42 @@ import type { AsymmetryEntry } from './types.js';
 const LIGHT3D_LINTER_ONLY_KEYS = [
   'light_bake_mode', 'light_cull_mask', 'light_indirect_energy',
   'shadow_opacity', 'shadow_reverse_cull_face', 'shadow_transmittance_bias',
+  // The physical-light-units trio. All three are dead unless the project
+  // setting `rendering/lights_and_shadows/use_physical_light_units` is on, and
+  // a `.tscn` carries no project settings, so under the defaults this
+  // previewer reads they change nothing that is drawn. Light3D's
+  // `_validate_property` hides them for the same reason.
+  'light_intensity_lumens', 'light_intensity_lux', 'light_temperature',
+] as const;
+
+/**
+ * Light3D keys that DO change a frozen frame, and that the shared parser
+ * helpers do not read yet.
+ *
+ * `editor_only` is here rather than beside the runtime-only keys above because
+ * its 2D twin already made that call: Light2D disables the light outside the
+ * editor, so the scene renders darker in game than in the editor, and this
+ * previewer always draws it. Light3D's mechanism is the same one, and splitting
+ * the pair across the two lists would be the divergence, not the consistency.
+ */
+const LIGHT3D_RENDER_GAP_KEYS = [
+  // Projects a texture through the light; nothing here samples it.
+  'light_projector',
+  // Soft-shadow radius and sun angular diameter: ONE param under two names,
+  // both bound to PARAM_SIZE (light_3d.cpp:394 and :395), which is why
+  // `_validate_property` shows whichever suits the light type. It defaults to 0
+  // (light_3d.cpp:478), so a scene that never sets it has the hard shadows we
+  // already draw, and the gap opens only once a scene does set it.
+  'light_size',
+  'light_angular_distance',
+  // Which render layers cast INTO this light's shadow, distinct from
+  // light_cull_mask's "what this light illuminates".
+  'shadow_caster_mask',
+  // The light LOD system: past distance_fade_begin the light fades out over
+  // distance_fade_length and drops its shadow at distance_fade_shadow.
+  'distance_fade_enabled', 'distance_fade_begin',
+  'distance_fade_shadow', 'distance_fade_length',
+  'editor_only',
 ] as const;
 
 export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
@@ -93,7 +129,8 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Light3D: {
     linterOnly: LIGHT3D_LINTER_ONLY_KEYS,
-    reason: 'Light3D base validators live in 3d/lights/shared/linterParser.ts and reach every concrete light via the base-walk; bake/cull-mask and fine shadow-tuning keys are runtime-only, so the shared parser helpers never read them.',
+    renderGap: LIGHT3D_RENDER_GAP_KEYS,
+    reason: 'Light3D base validators live in 3d/lights/shared/linterParser.ts and reach every concrete light via the base-walk, so one entry here covers all four leaves. Bake/cull-mask, fine shadow tuning and the physical-light-units trio are runtime-only; the projector, the two soft-shadow sizes, the caster mask and the distance-fade group do change the frame and are simply unimplemented.',
   },
 
   Light2D: {

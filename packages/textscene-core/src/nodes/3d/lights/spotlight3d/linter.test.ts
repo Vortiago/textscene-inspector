@@ -105,7 +105,7 @@ describe('SpotLight3D Linter', () => {
       {
         prop: 'shadow_blur',
         valid: [5.0, 0],
-        invalid: [{ value: -1.0, contains: ['non-negative'] }],
+        invalid: [{ value: -1.0, contains: ['between 0 and 10'] }],
       },
       {
         // light_3d.cpp:406 hints "-16,16,0.001" (both ends closed), warning-only

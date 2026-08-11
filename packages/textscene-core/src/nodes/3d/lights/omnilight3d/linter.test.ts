@@ -74,7 +74,7 @@ describe('OmniLight3D Linter', () => {
       {
         prop: 'shadow_blur',
         valid: [5.0, 0],
-        invalid: [{ value: -1.0, contains: ['non-negative'] }],
+        invalid: [{ value: -1.0, contains: ['between 0 and 10'] }],
       },
       {
         // light_3d.cpp:406 hints "-16,16,0.001" (both ends closed), warning-only
@@ -243,6 +243,16 @@ describe('OmniLight3D Linter', () => {
       expectNoDiagnostic(scene(node('OmniLight3D', { omni_range: 5.0 })), {
         ruleName: 'omnilight3d-projector-without-shadow',
       });
+    });
+
+    it('does not warn when light_projector is present but malformed', () => {
+      // The format validator already errors on it, and Godot sets no projector
+      // from a value its reader rejects, so warning here reported one defect
+      // twice.
+      expectNoDiagnostic(
+        scene(node('OmniLight3D', { light_projector: 'not-a-reference', omni_range: 5.0 })),
+        { ruleName: 'omnilight3d-projector-without-shadow' }
+      );
     });
   });
 

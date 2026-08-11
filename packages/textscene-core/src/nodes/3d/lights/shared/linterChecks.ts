@@ -13,6 +13,7 @@
 import type { RangeArm } from '../../../../linter/rangeAdvisory.js';
 import type { Diagnostic } from '../../../../linter/types.js';
 import type { TscnNode } from '../../../../parser/types.js';
+import { resourceRef } from '../../../../godot/index.js';
 
 /**
  * The `light_energy` **Range advisory**. `rulePrefix` is the node-type slug
@@ -86,7 +87,11 @@ export function projectorWithoutShadowDiagnostic(
   rulePrefix: string
 ): Diagnostic | null {
   const properties = node.properties as unknown as Record<string, string>;
-  if (!properties.light_projector) return null;
+  // A PARSEABLE reference, not merely a present key. Godot's reader rejects a
+  // malformed value outright, so no projector is set and there is nothing to
+  // warn about; keying off presence reported this beside the format error the
+  // validator already raises, two diagnostics for one defect.
+  if (!resourceRef(properties.light_projector ?? '')) return null;
   if (properties.shadow_enabled === 'true') return null;
 
   return {

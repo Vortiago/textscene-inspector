@@ -122,7 +122,13 @@ describe('property-grammar parity guard', () => {
   // number rather than a pile. Exact equality, not a ceiling: this list should
   // only move when someone deliberately adds a slice or closes a gap, and
   // either way the diff should say so out loud.
-  const EXPECTED_RENDER_GAP_KEYS = 48;
+  // +9 on Light3D: the projector, both soft-shadow sizes, the shadow caster
+  // mask, the four distance-fade keys and editor_only. They are new to the LIST
+  // rather than new to the previewer, which never read any of them; they became
+  // visible only once Light3D registered validators for the twelve of its own
+  // 27 ADD_PROPERTY keys that had none, so the guard could finally ask whether
+  // the renderer should be reading them.
+  const EXPECTED_RENDER_GAP_KEYS = 57;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>

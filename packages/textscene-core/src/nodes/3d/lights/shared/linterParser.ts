@@ -40,10 +40,60 @@ validatorRegistry.registerAll('Light3D', {
     hinted: 'light_3d.cpp:398',
   }),
   light_cull_mask: layerBitmask('light_cull_mask', { hinted: 'light_3d.cpp:399' }),
+  // light_3d.cpp:393, PROPERTY_HINT_RESOURCE_TYPE
+  // "Texture2D,-AnimatedTexture,-AtlasTexture,-CameraTexture,-CanvasTexture,
+  // -MeshTexture,-Texture2DRD,-ViewportTexture". The excluded subclasses are a
+  // DEBUG_ENABLED WARN_PRINT in set_projector (light_3d.cpp:212), not a refusal,
+  // so this is a format check like every other Texture2D reference property.
+  // No PROPERTY_USAGE_STORE_IF_NULL (object.h:113) on this ADD_PROPERTY, unlike
+  // GraphNode's slot icons, so a cleared projector is OMITTED, never written as
+  // `null` — resourceReference, not nullableResourceReference.
+  light_projector: v.resourceReference('light_projector'),
+  // light_3d.cpp:394, PROPERTY_HINT_RANGE "0,1,0.001,or_greater,suffix:m".
+  light_size: v.nonNegativeFloat('light_size', { hinted: 'light_3d.cpp:394' }),
+  // light_3d.cpp:395, PROPERTY_HINT_RANGE "0,90,0.01,degrees" — both ends
+  // closed. The bare "degrees" token is a display-only suffix, distinct from
+  // "radians_as_degrees", so the stored value is degrees already and the
+  // hint bound applies unconverted (no v.radians here).
+  light_angular_distance: v.float('light_angular_distance', {
+    min: 0,
+    max: 90,
+    hinted: 'light_3d.cpp:395',
+  }),
+  // light_3d.cpp:385, PROPERTY_HINT_RANGE "0,100000.0,0.01,or_greater,suffix:lm".
+  // Same set_param:36 index-only guard as light_energy, so a negative reading
+  // is a warning.
+  light_intensity_lumens: v.nonNegativeFloat('light_intensity_lumens', {
+    hinted: 'light_3d.cpp:385',
+  }),
+  // light_3d.cpp:386, PROPERTY_HINT_RANGE "0,150000.0,0.01,or_greater,suffix:lx".
+  light_intensity_lux: v.nonNegativeFloat('light_intensity_lux', {
+    hinted: 'light_3d.cpp:386',
+  }),
+  // light_3d.cpp:387, PROPERTY_HINT_RANGE "1000,15000.0,1.0,suffix:k": both
+  // ends closed, no or_greater/or_less. set_temperature (light_3d.cpp:257) is
+  // a bare assignment (no clamp, no ERR_FAIL), so out-of-hint is a warning.
+  light_temperature: v.float('light_temperature', {
+    min: 1000,
+    max: 15000,
+    hinted: 'light_3d.cpp:387',
+  }),
   shadow_enabled: v.boolean('shadow_enabled'),
-  shadow_bias: v.float('shadow_bias'),
-  shadow_normal_bias: v.float('shadow_normal_bias'),
-  shadow_blur: v.nonNegativeFloat('shadow_blur', { hinted: 'light_3d.cpp:408' }),
+  // light_3d.cpp:403, PROPERTY_HINT_RANGE "0,10,0.001": both ends closed, no
+  // or_greater/or_less. set_param:36 guards the param index, not the value,
+  // so out-of-hint is a warning.
+  shadow_bias: v.float('shadow_bias', { min: 0, max: 10, hinted: 'light_3d.cpp:403' }),
+  // light_3d.cpp:404, same "0,10,0.001" shape as shadow_bias.
+  shadow_normal_bias: v.float('shadow_normal_bias', {
+    min: 0,
+    max: 10,
+    hinted: 'light_3d.cpp:404',
+  }),
+  // light_3d.cpp:408, same "0,10,0.001" shape as shadow_bias.
+  shadow_blur: v.float('shadow_blur', { min: 0, max: 10, hinted: 'light_3d.cpp:408' }),
+  // light_3d.cpp:409, PROPERTY_HINT_LAYERS_3D_RENDER. set_shadow_caster_mask
+  // (light_3d.cpp:148) is a bare assignment, so out-of-widget is a warning.
+  shadow_caster_mask: layerBitmask('shadow_caster_mask', { hinted: 'light_3d.cpp:409' }),
   // light_3d.cpp:406, PROPERTY_HINT_RANGE "-16,16,0.001": both ends closed, no
   // or_greater/or_less. The previous ±10 bound was narrower than the hint and
   // rejected a legal ±16 value; Light3D::set_param:36 still only guards the
@@ -55,4 +105,25 @@ validatorRegistry.registerAll('Light3D', {
   }),
   shadow_opacity: v.float('shadow_opacity', { min: 0, max: 1, hinted: 'light_3d.cpp:407' }),
   shadow_reverse_cull_face: v.boolean('shadow_reverse_cull_face'),
+  // light_3d.cpp:412, PROPERTY_HINT_GROUP_ENABLE — a checkable-group marker
+  // for the inspector, not a value constraint (object.h:93).
+  distance_fade_enabled: v.boolean('distance_fade_enabled'),
+  // light_3d.cpp:413, PROPERTY_HINT_RANGE "0.0,4096.0,0.01,or_greater,suffix:m".
+  // set_distance_fade_begin (light_3d.cpp:85) is a bare assignment.
+  distance_fade_begin: v.nonNegativeFloat('distance_fade_begin', {
+    hinted: 'light_3d.cpp:413',
+  }),
+  // light_3d.cpp:414, same hint shape as distance_fade_begin.
+  // set_distance_fade_shadow (light_3d.cpp:94) is a bare assignment.
+  distance_fade_shadow: v.nonNegativeFloat('distance_fade_shadow', {
+    hinted: 'light_3d.cpp:414',
+  }),
+  // light_3d.cpp:415, same hint shape as distance_fade_begin.
+  // set_distance_fade_length (light_3d.cpp:103) is a bare assignment.
+  distance_fade_length: v.nonNegativeFloat('distance_fade_length', {
+    hinted: 'light_3d.cpp:415',
+  }),
+  // light_3d.cpp:418, PROPERTY_HINT_NONE (no hint at all). set_editor_only
+  // (light_3d.cpp:315) is a bare assignment, so this is a format-only bool.
+  editor_only: v.boolean('editor_only'),
 });

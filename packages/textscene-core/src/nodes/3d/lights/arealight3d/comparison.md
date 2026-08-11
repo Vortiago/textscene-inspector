@@ -45,7 +45,7 @@ default-value overrides of Light3D members, so they stay Light3D's to validate.
 ## Linting
 
 <!-- lint:begin AreaLight3D -->
-Strict parsing format-checks these `AreaLight3D` properties, plus 15 inherited from Light3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AreaLight3D` properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 16 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
 
 | Property | Accepts |
 | --- | --- |
