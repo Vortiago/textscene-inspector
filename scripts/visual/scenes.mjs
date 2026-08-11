@@ -536,7 +536,7 @@ export const GOLDEN_SCENES = [
   // ramp) on a Sprite2D. Besides these two, no other scene carries any noise
   // texture, so a generator/default drift or a broken skirt is invisible in
   // every other golden.
-  { name: 'noisetexture2d', file: 'unit-noisetexture2d.tscn' },
+  { name: 'noisetexture2d', file: 'unit-noisetexture2d.tscn', mode: '2d' },
   // The as_normal_map arm under lighting: bump_to_normal_map's sign/packing
   // and the NoColorSpace tagging only surface when a lit material perturbs
   // its normals with the result — the ramp golden above is unlit 2D.
