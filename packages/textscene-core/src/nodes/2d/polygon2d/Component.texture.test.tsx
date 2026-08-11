@@ -42,6 +42,13 @@ function node(rawProps: Record<string, string>): TscnNode {
 async function render(rawProps: Record<string, string>) {
   const fake = createFakeResourceLoader();
   const tex = new THREE.Texture();
+  // The real loader hands every decoded image out with REPEAT wrapping, because
+  // that is what a 3D material inherits (`BaseMaterial3D` constructs with
+  // `FLAG_USE_TEXTURE_REPEAT`, `scene/resources/material.cpp:4005`). Seeding
+  // three's own clamp default instead would leave the canvas-side clamp below
+  // asserting a value nothing had to produce.
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
   (tex as unknown as { image: { width: number; height: number } }).image = {
     width: TEX_W,
     height: TEX_H,

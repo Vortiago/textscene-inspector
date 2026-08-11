@@ -504,6 +504,8 @@ export const GOLDEN_SCENES = [
   // NOTE: AreaLight3D deliberately has no golden — its fixture is light-only
   // (no lit geometry), so the frame is blank. Add one once the fixture gains a
   // lit surface to show the emitter's effect.
+  // Sits on a standing `ao_light_affect` divergence, so a few levels of movement
+  // here is noise rather than evidence — the material sheet carries the numbers.
   { name: 'material-ao', file: 'unit-material-ao.tscn' },
   { name: 'material-normal-map', file: 'unit-material-normal-map.tscn' },
   { name: 'material-textured', file: 'unit-material-textured.tscn' },

@@ -174,6 +174,24 @@ edge (a broad sheen washed the dark body out to bright grey — now fixed). The 
 matches Godot, but the sheen is retroreflective — a crescent where view meets light
 — rather than an even ring around the whole silhouette.
 
+## Ambient occlusion
+
+`ao_texture` reaches three's `aoMap`, which attenuates INDIRECT light only.
+Godot multiplies the DIRECT term by it as well, scaled by `ao_light_affect`:
+`ao = mix(1.0, ao, ao_light_affect)` in
+`servers/rendering/renderer_rd/shaders/forward_clustered/scene_forward_clustered.glsl`,
+fed from `BaseMaterial3D::_update_shader` (`scene/resources/material.cpp`).
+
+`ao_light_affect` is not implemented here at all, so at its maximum Godot draws a
+hard checkerboard where this draws a nearly flat plate — a mean channel error
+around 60/255 over the pixels that carry the map. Closing it needs the direct
+term multiplied in the material's own shader, which three exposes only through
+`onBeforeCompile`.
+
+The size of that standing gap is what makes this fixture's image a poor
+arbitrator: a shift of a few levels measured against a 60/255 divergence is
+noise whichever way it points.
+
 ## Anisotropy
 <!-- compare: image=unit-material-anisotropy status=limitation fixture=unit-material-anisotropy.tscn -->
 

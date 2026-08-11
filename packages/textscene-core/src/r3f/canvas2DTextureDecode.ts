@@ -46,12 +46,35 @@ export { pinNoColorSpace };
 /**
  * A 2D-canvas-only GPU texture for a shared, cache-identity texture — the
  * undecoded view (`undecodedTexture.ts`), named for the 2D-canvas reason this
- * module's own doc gives.
+ * module's own doc gives, and wrapped the way the canvas wraps.
+ *
+ * The shared cache entry is loaded with REPEAT wrapping, because that is what
+ * a 3D material inherits (`BaseMaterial3D` constructs with
+ * `FLAG_USE_TEXTURE_REPEAT` set). A canvas item inherits the opposite: its
+ * `texture_repeat` defaults to `TEXTURE_REPEAT_PARENT`, which resolves at the
+ * root to the VIEWPORT's default, and that is
+ * `DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_DISABLED` (`scene/main/viewport.h:420`,
+ * applied at `scene/main/viewport.cpp:4009`; the resolution walk is
+ * `CanvasItem::_refresh_texture_repeat_cache`,
+ * `scene/main/canvas_item.cpp:1686-1694`). So a UV that leaves 0..1 clamps to
+ * the edge texel on the canvas where it would tile in 3D — visible wherever a
+ * canvas item's UVs overrun its texture, which for `Polygon2D` is the ordinary
+ * case rather than an exotic one.
+ *
+ * A consumer whose draw overrides the sampler (a tiled `TextureRect`, a
+ * `Sprite2D` frame) clones and sets its own wrapping downstream of this.
  *
  * Returns `null` while there is nothing to show yet.
  */
 export function useCanvas2DTexture(texture: THREE.Texture | null | undefined): THREE.Texture | null {
-  return useUndecodedTexture(texture);
+  const undecoded = useUndecodedTexture(texture);
+  return useMemo(() => {
+    if (!undecoded) return null;
+    undecoded.wrapS = THREE.ClampToEdgeWrapping;
+    undecoded.wrapT = THREE.ClampToEdgeWrapping;
+    undecoded.needsUpdate = true;
+    return undecoded;
+  }, [undecoded]);
 }
 
 /** Reused across every call — `DECODE_VIDEO_TEXTURE` needs no per-consumer state. */
