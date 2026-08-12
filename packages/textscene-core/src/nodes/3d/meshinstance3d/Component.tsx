@@ -60,22 +60,25 @@ import {
 } from '../../../r3f/materials/godotDefaultMaterial';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
-import { applyTextureState, type TextureState } from '../../../resources/textures/applyTextureState';
+import type { MaterialTextureState } from '../../../resources/textures/applyTextureState';
+import {
+  bindSlotTexture,
+  releaseBoundTexture,
+} from '../../../resources/materials/standardmaterial3d/textureBinding';
+import {
+  TEXTURE_SLOTS,
+  type TextureSlot,
+} from '../../../resources/materials/standardmaterial3d/types';
 import { GODOT_TEXTURE_FILTER_DEFAULT } from '../../../resources/textures/godotTextureFilter';
 import { repackAnisotropyFlowmap } from '../../../resources/textures/repackFlowmap';
 import { triplanarPlaneScale } from './triplanarScale';
 
-/** Texture slots StandardMaterial3D exposes — checked in this order. */
-const TEXTURE_PROPERTIES = [
-  'albedo_texture',
-  'normal_texture',
-  'roughness_texture',
-  'metallic_texture',
-  'emission_texture',
-  'ao_texture',
-  'heightmap_texture',
-  'anisotropy_flowmap',
-] as const;
+// The slot list is the decode's own (`TEXTURE_SLOTS`), not a second copy: the
+// `useResource` fan-out below calls one hook per entry, so a list that drifted
+// from the decode's would silently stop fetching a slot the material declares.
+// Its ORDER is load-bearing here — hooks must be called unconditionally in a
+// stable order.
+const TEXTURE_PROPERTIES = TEXTURE_SLOTS;
 
 export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as MeshInstance3DProperties;
@@ -233,18 +236,20 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   );
   useProceduralTexturePins(proceduralKeys);
 
-  // Per-material texture state: the UV transform (`uv1_scale` / `uv1_offset`),
-  // the sampler filter (`texture_filter`) and the wrapping (`texture_repeat`,
-  // whose default is applied to the shared texture at load). `applyTextureState` clones
-  // before mutating, so two MeshInstance3D nodes sharing a texture path with
-  // different tiling or filtering don't clobber each other, and hands the
-  // original straight back when this material asks for neither.
+  // The per-material half of every texture binding: the UV transform
+  // (`uv1_scale` / `uv1_offset`), the sampler filter (`texture_filter`) and the
+  // wrapping (`texture_repeat`, whose default is applied to the shared texture
+  // at load). The per-SLOT half — which slots decode sRGB — is added by
+  // `bindSlotTexture`, which clones before mutating, so two MeshInstance3D nodes
+  // sharing a texture path with different tiling, filtering or slot roles don't
+  // clobber each other, and hands the original straight back when this binding
+  // needs nothing of its own.
   //
   // A triplanar material tiles per WORLD unit, not across the
   // mesh's 0..1 UVs. For a PlaneMesh we reproduce that density by folding
   // the plane's size into the scale (repeat = size × uv1_scale) — otherwise
   // a 12×3.5 hallway floor stretched one texture copy and read "too big".
-  const textureState = useMemo((): TextureState | null => {
+  const textureState = useMemo((): MaterialTextureState | null => {
     if (!materialScalars) return null;
     const scale =
       materialScalars.triplanar && meshResource
@@ -285,7 +290,8 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
         viewportAlbedo
           ? { value: viewportAlbedo }
           : effectiveSlot(proceduralTextures.albedo_texture, textureSlots.albedo_texture),
-        textureState
+        textureState,
+        'albedo_texture'
       ),
     [viewportAlbedo, proceduralTextures.albedo_texture, textureSlots.albedo_texture, textureState]
   );
@@ -293,7 +299,8 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.normal_texture, textureSlots.normal_texture),
-        textureState
+        textureState,
+        'normal_texture'
       ),
     [proceduralTextures.normal_texture, textureSlots.normal_texture, textureState]
   );
@@ -307,7 +314,8 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.roughness_texture, textureSlots.roughness_texture),
-        textureState
+        textureState,
+        'roughness_texture'
       ),
     [proceduralTextures.roughness_texture, textureSlots.roughness_texture, textureState]
   );
@@ -315,7 +323,8 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.metallic_texture, textureSlots.metallic_texture),
-        textureState
+        textureState,
+        'metallic_texture'
       ),
     [proceduralTextures.metallic_texture, textureSlots.metallic_texture, textureState]
   );
@@ -323,7 +332,8 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.emission_texture, textureSlots.emission_texture),
-        textureState
+        textureState,
+        'emission_texture'
       ),
     [proceduralTextures.emission_texture, textureSlots.emission_texture, textureState]
   );
@@ -331,7 +341,8 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.ao_texture, textureSlots.ao_texture),
-        textureState
+        textureState,
+        'ao_texture'
       ),
     [proceduralTextures.ao_texture, textureSlots.ao_texture, textureState]
   );
@@ -339,7 +350,8 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.heightmap_texture, textureSlots.heightmap_texture),
-        textureState
+        textureState,
+        'heightmap_texture'
       ),
     [proceduralTextures.heightmap_texture, textureSlots.heightmap_texture, textureState]
   );
@@ -359,25 +371,50 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   }, [anisotropyStrength, anisotropyFlowmap]);
 
   const anisotropyMap = useMemo(
-    () => transformedTexture({ value: repackedFlowmap }, textureState),
+    () => transformedTexture({ value: repackedFlowmap }, textureState, 'anisotropy_flowmap'),
     [repackedFlowmap, textureState]
   );
 
   // The repack allocates its own pixel buffer, so it is disposed on the same
-  // terms as the procedural DataTextures above. Dispose the UV-transformed
-  // texture too, and not only the repack it came from: a non-identity uv1_scale
-  // makes `transformedTexture` hand back a CLONE, and the clone is what the
-  // material samples. three keys its GPU texture on the sampler parameters, and
-  // the clone changes wrapS/wrapT, so it gets an upload of its own while the
-  // original is never uploaded at all — disposing only the original frees
-  // nothing. Both are ours to release; when the transform is identity they are
-  // the same object and one dispose is enough.
+  // terms as the procedural DataTextures above. The binding may hand back a
+  // CLONE of it, and the clone is what the material samples: three keys its GPU
+  // texture on the sampler parameters, so a clone that changes wrapS/wrapT or
+  // colour space gets an upload of its own while the original is never uploaded
+  // at all — disposing only the original frees nothing. When nothing diverged
+  // they are the same object and one dispose is enough.
   useEffect(() => {
     return () => {
       repackedFlowmap?.dispose();
       if (anisotropyMap !== repackedFlowmap) anisotropyMap?.dispose();
     };
   }, [repackedFlowmap, anisotropyMap]);
+
+  // Every OTHER slot's binding may equally have produced a clone, and each one
+  // is a GPU upload of its own. `releaseBoundTexture` frees exactly those and
+  // leaves the loader's shared cache entries alone, so a slot that needed
+  // nothing costs nothing here. Listed rather than folded into an array literal
+  // in the dependency list, which would be a new array every render and free
+  // the textures the material is still sampling.
+  //
+  // Same shape as the flowmap effect above and as the per-clone dispose the
+  // colour-space retag used to carry inside the material slot, so the exposure
+  // is unchanged: under StrictMode's mount → unmount → mount the cleanup fires
+  // once on a still-live clone. three's dispose is refcounted per source and
+  // clears only the renderer's per-texture properties — the pixels live on the
+  // shared `source` — so the remount re-uploads rather than sampling nothing.
+  // Replacement is ordered safely: R3F applies the new props during commit,
+  // before React runs this cleanup for the old ones.
+  useEffect(() => {
+    return () => {
+      releaseBoundTexture(albedoMap);
+      releaseBoundTexture(normalMap);
+      releaseBoundTexture(roughnessMap);
+      releaseBoundTexture(metalnessMap);
+      releaseBoundTexture(emissiveMap);
+      releaseBoundTexture(aoMap);
+      releaseBoundTexture(displacementMap);
+    };
+  }, [albedoMap, normalMap, roughnessMap, metalnessMap, emissiveMap, aoMap, displacementMap]);
 
   // If any requested slot resolved to `unavailable`, surface the FIRST
   // such path as the placeholder label. Listing more than one would
@@ -679,13 +716,14 @@ function SecondarySurfaceMaterial({
  * `<meshStandardMaterial>` falls back to `null` for that slot.
  */
 function transformedTexture(
-  slot: { value: THREE.Texture | undefined } | null,
-  state: TextureState | null
+  resolved: { value: THREE.Texture | undefined } | null,
+  state: MaterialTextureState | null,
+  slot: TextureSlot
 ): THREE.Texture | undefined {
-  const value = slot?.value;
+  const value = resolved?.value;
   if (!value) return undefined;
   if (!state) return value;
-  return applyTextureState(value, state);
+  return bindSlotTexture(value, slot, state);
 }
 
 /**
@@ -993,7 +1031,6 @@ function findMeshOwnMaterial(
   return typeof material === 'string' ? material : undefined;
 }
 
-type TextureSlot = (typeof TEXTURE_PROPERTIES)[number];
 
 /**
  * Walk the material's texture slots and resolve each `ExtResource("id")`

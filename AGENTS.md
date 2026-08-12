@@ -109,9 +109,12 @@ real parser instead of the decode/build split. Conformance:
   `import.meta.dirname`, never `process.cwd()` (hooks/CI run from the repo root).
 - `THREE.Object3D` has ONE parent: cached Object3D resources are cloned per consumer
   (`src/resources/useResource.ts`); identity-equality only for textures/materials —
-  except where a consumer needs its own colour space (`r3f/undecodedTexture.ts`: the
-  2D canvas, and every non-colour 3D map), which clones and retags, so assert
-  `.source` identity there.
+  except where a consumer needs its own colour space, which clones and retags, so
+  assert `.source` identity there — `r3f/undecodedTexture.ts` for the 2D canvas and
+  the theme icons, and
+  `resources/materials/standardmaterial3d/textureBinding.ts` for a 3D material,
+  where naming the SLOT is what decides it (Godot's `source_color` samplers) and
+  both arrival paths cross the same seam.
 - Tests: happy + error + edge per public method, co-located. Prefix intentionally-unused
   params with `_`.
 - Self-registration on import — never edit central files beyond the aggregation imports.

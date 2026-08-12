@@ -24,9 +24,21 @@ function build(
   ) as THREE.MeshStandardMaterial;
 }
 
+/**
+ * A texture as the LOADER hands it out: tagged `SRGBColorSpace` before any slot
+ * is known (`resources/formats/image/textureProcessing.ts`). Binding is what
+ * decides the colour space each Godot slot actually samples in, so starting
+ * from three's own default would let a raw slot pass without being bound.
+ */
+function loadedTexture(): THREE.Texture {
+  const texture = new THREE.Texture();
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 describe('texture_filter integration — shared textures', () => {
   it('gives two materials sharing one texture their own sampler state', () => {
-    const shared = new THREE.Texture();
+    const shared = loadedTexture();
 
     const pixelArt = build({ texture_filter: '0' }, { albedo_texture: shared });
     const anisotropic = build({ texture_filter: '5' }, { albedo_texture: shared });
@@ -48,12 +60,12 @@ describe('texture_filter integration — shared textures', () => {
   it('hands back the shared texture itself when the filter is unauthored', () => {
     // Godot's default IS three's default state, so an ordinary material must
     // not clone — this is what keeps the change off every existing baseline.
-    const shared = new THREE.Texture();
+    const shared = loadedTexture();
     expect(build({}, { albedo_texture: shared }).map).toBe(shared);
   });
 
   it('clones once when a material diverges on both filter and UV scale', () => {
-    const shared = new THREE.Texture();
+    const shared = loadedTexture();
     const material = build(
       { texture_filter: '0', uv1_scale: 'Vector3(2, 2, 1)' },
       { albedo_texture: shared }
@@ -66,7 +78,7 @@ describe('texture_filter integration — shared textures', () => {
   });
 
   it('applies the filter to every texture slot, not only albedo', () => {
-    const shared = new THREE.Texture();
+    const shared = loadedTexture();
     const material = build(
       {
         texture_filter: '0',

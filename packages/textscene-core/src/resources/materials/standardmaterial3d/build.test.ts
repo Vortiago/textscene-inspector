@@ -25,6 +25,32 @@ function build(
   ) as THREE.MeshStandardMaterial;
 }
 
+/**
+ * A texture as the LOADER hands it out: tagged `SRGBColorSpace` before any slot
+ * is known (`resources/formats/image/textureProcessing.ts`). Binding is what
+ * decides the colour space each Godot slot actually samples in, so starting
+ * from three's own default would let a raw slot pass without being bound.
+ */
+function loadedTexture(): THREE.Texture {
+  const texture = new THREE.Texture();
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+/**
+ * What a RAW slot's binding produces. Godot samples normal / roughness /
+ * metallic / AO / heightmap through samplers with no `source_color` hint
+ * (`scene/resources/material.cpp:1092,1030,1024,1128,1172`), so the loader's
+ * sRGB tag must come off — and it comes off a CLONE, since the loader's entry
+ * is shared with every other consumer of that path. The clone keeps the
+ * decoded `source`, which is what identifies it as this same image.
+ */
+function expectBoundRaw(map: THREE.Texture | null | undefined, from: THREE.Texture): void {
+  expect(map).toBeTruthy();
+  expect(map!.source).toBe(from.source);
+  expect(map!.colorSpace).toBe(THREE.NoColorSpace);
+}
+
 describe('buildStandardMaterial — scalar base', () => {
   it('creates a MeshStandardMaterial', () => {
     expect(build({ albedo_color: 'Color(1, 0, 0, 1)' })).toBeInstanceOf(THREE.MeshStandardMaterial);
@@ -219,7 +245,7 @@ describe('buildStandardMaterial — shading_mode', () => {
   });
 
   it('keeps the albedo map on the unshaded material', () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const material = buildStandardMaterial(parseStandardMaterial3DScalars({ shading_mode: '0' }), {
       albedo_texture: texture,
     }) as THREE.MeshBasicMaterial;
@@ -330,17 +356,17 @@ describe('buildStandardMaterial — blend modes', () => {
 
 describe('buildStandardMaterial — texture slots', () => {
   it('applies the albedo map', () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     expect(build({}, { albedo_texture: texture }).map).toBe(texture);
   });
 
   it('applies the normal map', () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const on = build(
       { normal_enabled: 'true', normal_texture: 'ExtResource("1")' },
       { normal_texture: texture }
     );
-    expect(on.normalMap).toBe(texture);
+    expectBoundRaw(on.normalMap, texture);
   });
 
   it('applies every slot it is handed — the feature gates are the decode’s', () => {
@@ -349,32 +375,33 @@ describe('buildStandardMaterial — texture slots', () => {
     // gate lives (`decode.test.ts`), so an unflagged slot is never RESOLVED and
     // never reaches here. Re-gating here would also split this adapter from the
     // reactive one, which applies whatever prop the node component passes.
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const scalars = parseStandardMaterial3DScalars({ normal_texture: 'ExtResource("1")' });
     expect(scalars.textureSlots).toEqual({});
-    expect(
+    expectBoundRaw(
       (
         buildStandardMaterial(scalars, {
           normal_texture: texture,
         }) as THREE.MeshStandardMaterial
-      ).normalMap
-    ).toBe(texture);
+      ).normalMap,
+      texture
+    );
   });
 
   it('applies the metallic and roughness maps', () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const material = build({}, { metallic_texture: texture, roughness_texture: texture });
-    expect(material.metalnessMap).toBe(texture);
-    expect(material.roughnessMap).toBe(texture);
+    expectBoundRaw(material.metalnessMap, texture);
+    expectBoundRaw(material.roughnessMap, texture);
   });
 
   it('applies the AO map', () => {
-    const texture = new THREE.Texture();
-    expect(build({ ao_enabled: 'true' }, { ao_texture: texture }).aoMap).toBe(texture);
+    const texture = loadedTexture();
+    expectBoundRaw(build({ ao_enabled: 'true' }, { ao_texture: texture }).aoMap, texture);
   });
 
   it('applies the emission map', () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     expect(build({ emission_enabled: 'true' }, { emission_texture: texture }).emissiveMap).toBe(
       texture
     );
@@ -386,16 +413,16 @@ describe('buildStandardMaterial — texture slots', () => {
     // through would render nothing where Godot renders the whole texture.
     const material = build(
       { emission_enabled: 'true', emission_energy_multiplier: '2' },
-      { emission_texture: new THREE.Texture() }
+      { emission_texture: loadedTexture() }
     );
     expect(material.emissive.getHex()).toBe(0xffffff);
     expect(material.emissiveIntensity).toBe(2);
   });
 
   it('applies the heightmap texture as a displacement map at Godot’s default depth', () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const on = build({ heightmap_enabled: 'true' }, { heightmap_texture: texture });
-    expect(on.displacementMap).toBe(texture);
+    expectBoundRaw(on.displacementMap, texture);
     expect(on.displacementScale).toBe(5);
   });
 
@@ -405,14 +432,14 @@ describe('buildStandardMaterial — texture slots', () => {
   });
 
   it('applies albedo and normal together', () => {
-    const albedo = new THREE.Texture();
-    const normal = new THREE.Texture();
+    const albedo = loadedTexture();
+    const normal = loadedTexture();
     const material = build(
       { normal_enabled: 'true', normal_texture: 'ExtResource("2")' },
       { albedo_texture: albedo, normal_texture: normal }
     );
     expect(material.map).toBe(albedo);
-    expect(material.normalMap).toBe(normal);
+    expectBoundRaw(material.normalMap, normal);
   });
 
   it('tolerates an enabled feature with no texture', () => {
@@ -427,7 +454,7 @@ describe('buildStandardMaterial — texture slots', () => {
 
 describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () => {
   it('maps uv1_scale straight onto a cloned texture’s repeat', () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const material = build({ uv1_scale: 'Vector3(0.5, 0.5, 0.5)' }, { albedo_texture: texture });
 
     expect(material.map).not.toBe(texture);
@@ -441,7 +468,7 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
   });
 
   it('honours a non-integer scale', () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const material = build({ uv1_scale: 'Vector3(2.4, 2.4, 2.4)' }, { albedo_texture: texture });
     expect(material.map!.repeat.x).toBeCloseTo(2.4, 5);
     expect(material.map!.repeat.y).toBeCloseTo(2.4, 5);
@@ -449,7 +476,7 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
   });
 
   it('honours uv1_offset, which the .tres path used to hard-code to zero', () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const material = build({ uv1_offset: 'Vector3(0.25, 0.5, 0)' }, { albedo_texture: texture });
     expect(material.map).not.toBe(texture);
     expect(material.map!.offset.x).toBeCloseTo(0.25, 5);
@@ -457,7 +484,7 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
   });
 
   it('applies the transform to every slot the material carries', () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const material = build(
       {
         uv1_scale: 'Vector3(0.25, 0.5, 1)',
@@ -474,7 +501,7 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
   });
 
   it('applies the transform to roughness, AO and emission slots too', () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const material = build(
       {
         uv1_scale: 'Vector3(0.5, 0.5, 0.5)',
@@ -491,7 +518,7 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
   });
 
   it('reads the x and y axes independently and ignores z', () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const material = build({ uv1_scale: 'Vector3(0.5, 2.0, 999)' }, { albedo_texture: texture });
     expect(material.map!.repeat.x).toBe(0.5);
     expect(material.map!.repeat.y).toBe(2.0);
@@ -500,14 +527,14 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
   it('hands back the shared texture for an identity transform', () => {
     // An identity scale asks for nothing, so there is nothing to clone — and a
     // clone would also flip wrapping, which is `texture_repeat`'s business.
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const material = build({ uv1_scale: 'Vector3(1, 1, 1)' }, { albedo_texture: texture });
     expect(material.map).toBe(texture);
     expect(material.map!.repeat.x).toBe(1);
   });
 
   it('hands back the shared texture when no transform is authored', () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     expect(build({}, { albedo_texture: texture }).map).toBe(texture);
     expect(texture.repeat.x).toBe(1);
   });
@@ -519,12 +546,12 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
   it('survives extreme scales', () => {
     const big = build(
       { uv1_scale: 'Vector3(1000, 1000, 1)' },
-      { albedo_texture: new THREE.Texture() }
+      { albedo_texture: loadedTexture() }
     );
     expect(big.map!.repeat.x).toBe(1000);
     const small = build(
       { uv1_scale: 'Vector3(0.01, 0.01, 1)' },
-      { albedo_texture: new THREE.Texture() }
+      { albedo_texture: loadedTexture() }
     );
     expect(small.map!.repeat.x).toBe(0.01);
     expect(small.map!.wrapS).toBe(THREE.RepeatWrapping);
@@ -534,7 +561,7 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
     // Textures load with RepeatWrapping because Godot's material default is
     // repeat, so a material authoring `texture_repeat = false` must diverge or
     // its atlas wraps to the opposite edge where Godot clamps.
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
 
@@ -547,7 +574,7 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
   });
 
   it('keeps the transform alongside every other scalar', () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const material = build(
       {
         albedo_color: 'Color(1, 0, 0, 1)',

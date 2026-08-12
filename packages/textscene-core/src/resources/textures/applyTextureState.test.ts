@@ -6,17 +6,35 @@
  * that needs different sampler state must clone rather than mutate, and a
  * material that needs none must get the original reference back.
  *
- * The case worth naming: a texture can diverge for TWO independent reasons (a UV
- * transform and a `texture_filter`), and it must still produce ONE clone.
+ * The case worth naming: a texture can diverge for several independent reasons
+ * (a UV transform, a `texture_filter`, a colour space the binding needs and the
+ * producer did not tag), and it must still produce ONE clone.
+ *
+ * Colour space arrives here as a plain input — WHICH one a Godot slot requires
+ * is `standardmaterial3d/textureBinding.ts`'s knowledge, and is tested there.
  */
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { applyTextureState, isMaterialOwnedTexture, type UVTransform } from './applyTextureState';
+import {
+  applyTextureState,
+  isMaterialOwnedTexture,
+  type MaterialTextureState,
+  type UVTransform,
+} from './applyTextureState';
 import { GODOT_ANISOTROPY_MAX } from './godotTextureFilter';
 
 function uv(sx: number, sy: number, ox = 0, oy = 0): UVTransform {
   return { scale: { x: sx, y: sy }, offset: { x: ox, y: oy } };
+}
+
+/**
+ * A state whose colour space matches a fresh `THREE.Texture`'s, so a case about
+ * UV, filter or wrapping isolates that reason alone. The colour-space cases
+ * below name theirs.
+ */
+function state(material: MaterialTextureState = {}) {
+  return { ...material, colorSpace: THREE.NoColorSpace };
 }
 
 describe('applyTextureState', () => {
@@ -25,29 +43,29 @@ describe('applyTextureState', () => {
       // Repeat wrapping is Godot's default, so a texture already carrying it
       // needs nothing of its own.
       const texture = new THREE.Texture();
-      expect(applyTextureState(texture, {})).toBe(texture);
+      expect(applyTextureState(texture, state({}))).toBe(texture);
     });
 
     it("returns the original for Godot's default filter, which is three's state already", () => {
       const texture = new THREE.Texture();
-      expect(applyTextureState(texture, { filter: 3 })).toBe(texture);
-      expect(applyTextureState(texture, { filter: undefined })).toBe(texture);
+      expect(applyTextureState(texture, state({ filter: 3 }))).toBe(texture);
+      expect(applyTextureState(texture, state({ filter: undefined }))).toBe(texture);
     });
 
     it('returns the original for an identity UV transform', () => {
       const texture = new THREE.Texture();
-      expect(applyTextureState(texture, { uv: uv(1, 1) })).toBe(texture);
+      expect(applyTextureState(texture, state({ uv: uv(1, 1) }))).toBe(texture);
     });
 
     it('treats values within the 1e-6 epsilon as identity', () => {
       const texture = new THREE.Texture();
-      const result = applyTextureState(texture, { uv: uv(1 + 5e-7, 1 - 5e-7, 5e-7, -5e-7) });
+      const result = applyTextureState(texture, state({ uv: uv(1 + 5e-7, 1 - 5e-7, 5e-7, -5e-7) }));
       expect(result).toBe(texture);
     });
 
     it('mutates nothing on the pass-through path', () => {
       const texture = new THREE.Texture();
-      applyTextureState(texture, { uv: uv(1, 1), filter: 3 });
+      applyTextureState(texture, state({ uv: uv(1, 1), filter: 3 }));
       expect(texture.repeat.x).toBe(1);
       expect(texture.version).toBe(0);
     });
@@ -56,7 +74,7 @@ describe('applyTextureState', () => {
   describe('UV divergence', () => {
     it('clones and sets repeat, offset and RepeatWrapping', () => {
       const texture = new THREE.Texture();
-      const result = applyTextureState(texture, { uv: uv(3, 4, 0.5, -0.25) });
+      const result = applyTextureState(texture, state({ uv: uv(3, 4, 0.5, -0.25) }));
 
       expect(result).not.toBe(texture);
       expect(result.repeat.x).toBe(3);
@@ -68,18 +86,18 @@ describe('applyTextureState', () => {
     });
 
     it('clones just outside the epsilon, for scale or offset alone', () => {
-      expect(applyTextureState(new THREE.Texture(), { uv: uv(1 + 1e-5, 1) }).repeat.x).toBeCloseTo(
+      expect(applyTextureState(new THREE.Texture(), state({ uv: uv(1 + 1e-5, 1) })).repeat.x).toBeCloseTo(
         1 + 1e-5,
         10
       );
-      expect(applyTextureState(new THREE.Texture(), { uv: uv(1, 1, 0, 1e-5) }).offset.y).toBeCloseTo(
+      expect(applyTextureState(new THREE.Texture(), state({ uv: uv(1, 1, 0, 1e-5) })).offset.y).toBeCloseTo(
         1e-5,
         10
       );
     });
 
     it('passes negative scales through verbatim (mirrored tiling)', () => {
-      const result = applyTextureState(new THREE.Texture(), { uv: uv(-1, 1) });
+      const result = applyTextureState(new THREE.Texture(), state({ uv: uv(-1, 1) }));
       expect(result.repeat.x).toBe(-1);
     });
 
@@ -87,7 +105,7 @@ describe('applyTextureState', () => {
       const texture = new THREE.Texture();
       const image = { width: 4, height: 4 };
       texture.image = image;
-      const result = applyTextureState(texture, { uv: uv(3, 4, 0.5, -0.25) });
+      const result = applyTextureState(texture, state({ uv: uv(3, 4, 0.5, -0.25) }));
 
       expect(result.image).toBe(image);
       expect(texture.repeat.x).toBe(1);
@@ -97,7 +115,7 @@ describe('applyTextureState', () => {
     });
 
     it('flags the clone for re-upload', () => {
-      expect(applyTextureState(new THREE.Texture(), { uv: uv(2, 2) }).version).toBeGreaterThanOrEqual(
+      expect(applyTextureState(new THREE.Texture(), state({ uv: uv(2, 2) })).version).toBeGreaterThanOrEqual(
         1
       );
     });
@@ -112,14 +130,15 @@ describe('applyTextureState', () => {
       const target = new THREE.WebGLRenderTarget(64, 64);
       expect(target.texture.isRenderTargetTexture).toBe(true);
 
-      expect(applyTextureState(target.texture, { filter: 0 })).toBe(target.texture);
-      expect(applyTextureState(target.texture, {})).toBe(target.texture);
+      expect(applyTextureState(target.texture, state({ filter: 0 }))).toBe(target.texture);
+      expect(applyTextureState(target.texture, state({}))).toBe(target.texture);
       // The UV transform is no different: a tiled ViewportTexture that froze
       // would be the same bug arriving through the other divergence.
       expect(
-        applyTextureState(target.texture, {
-          uv: { scale: { x: 4, y: 4 }, offset: { x: 0, y: 0 } },
-        })
+        applyTextureState(
+          target.texture,
+          state({ uv: { scale: { x: 4, y: 4 }, offset: { x: 0, y: 0 } } })
+        )
       ).toBe(target.texture);
     });
 
@@ -129,8 +148,8 @@ describe('applyTextureState', () => {
       texture.minFilter = THREE.LinearFilter;
       texture.generateMipmaps = false;
 
-      expect(applyTextureState(texture, {})).toBe(texture);
-      expect(applyTextureState(texture, { filter: undefined })).toBe(texture);
+      expect(applyTextureState(texture, state({}))).toBe(texture);
+      expect(applyTextureState(texture, state({ filter: undefined }))).toBe(texture);
       expect(texture.minFilter).toBe(THREE.LinearFilter);
     });
   });
@@ -142,7 +161,7 @@ describe('applyTextureState', () => {
       // the loaded texture, not cloned per material. Cloning for it would break
       // texture identity for essentially every material in the corpus.
       const texture = new THREE.Texture();
-      expect(applyTextureState(texture, {})).toBe(texture);
+      expect(applyTextureState(texture, state({}))).toBe(texture);
     });
 
     it('clones only when a material turns repeat OFF', () => {
@@ -150,7 +169,7 @@ describe('applyTextureState', () => {
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
 
-      const result = applyTextureState(texture, { repeat: false });
+      const result = applyTextureState(texture, state({ repeat: false }));
 
       expect(result).not.toBe(texture);
       expect(result.wrapS).toBe(THREE.ClampToEdgeWrapping);
@@ -160,14 +179,14 @@ describe('applyTextureState', () => {
     it('leaves a render target alone', () => {
       // Its wrapping is the target's business, and cloning detaches it.
       const target = new THREE.WebGLRenderTarget(8, 8);
-      expect(applyTextureState(target.texture, { repeat: false })).toBe(target.texture);
+      expect(applyTextureState(target.texture, state({ repeat: false }))).toBe(target.texture);
     });
   });
 
   describe('filter divergence', () => {
     it('clones and writes the sampler state', () => {
       const texture = new THREE.Texture();
-      const result = applyTextureState(texture, { filter: 0 });
+      const result = applyTextureState(texture, state({ filter: 0 }));
 
       expect(result).not.toBe(texture);
       expect(result.magFilter).toBe(THREE.NearestFilter);
@@ -177,7 +196,7 @@ describe('applyTextureState', () => {
 
     it('leaves the shared source sampling exactly as it was', () => {
       const texture = new THREE.Texture();
-      applyTextureState(texture, { filter: 5 });
+      applyTextureState(texture, state({ filter: 5 }));
 
       expect(texture.magFilter).toBe(THREE.LinearFilter);
       expect(texture.anisotropy).toBe(1);
@@ -190,7 +209,7 @@ describe('applyTextureState', () => {
       const image = { width: 4, height: 4 };
       texture.image = image;
 
-      const result = applyTextureState(texture, { uv: uv(2, 2), filter: 0 });
+      const result = applyTextureState(texture, state({ uv: uv(2, 2), filter: 0 }));
 
       expect(result).not.toBe(texture);
       expect(result.repeat.x).toBe(2);
@@ -209,8 +228,8 @@ describe('applyTextureState', () => {
       // at texture load: the loader caches ONE texture per path.
       const shared = new THREE.Texture();
 
-      const nearest = applyTextureState(shared, { filter: 0 });
-      const anisotropic = applyTextureState(shared, { filter: 5 });
+      const nearest = applyTextureState(shared, state({ filter: 0 }));
+      const anisotropic = applyTextureState(shared, state({ filter: 5 }));
 
       expect(nearest).not.toBe(anisotropic);
       expect(nearest.magFilter).toBe(THREE.NearestFilter);
@@ -220,10 +239,87 @@ describe('applyTextureState', () => {
     });
   });
 
+  describe('colour space', () => {
+    it('returns the original when the tag already matches the binding', () => {
+      const texture = new THREE.Texture();
+      texture.colorSpace = THREE.SRGBColorSpace;
+      expect(applyTextureState(texture, { colorSpace: THREE.SRGBColorSpace })).toBe(texture);
+    });
+
+    it('clones and pins when the binding samples raw bytes', () => {
+      const shared = new THREE.Texture();
+      shared.colorSpace = THREE.SRGBColorSpace;
+
+      const result = applyTextureState(shared, { colorSpace: THREE.NoColorSpace });
+
+      expect(result).not.toBe(shared);
+      expect(result.colorSpace).toBe(THREE.NoColorSpace);
+      // The shared cache entry keeps the tag its other consumers rely on.
+      expect(shared.colorSpace).toBe(THREE.SRGBColorSpace);
+    });
+
+    it('pins hard enough to survive a later write', () => {
+      // `@react-three/fiber` reasserts `SRGBColorSpace` on colour-map props on
+      // every commit, so a plain assignment would be undone silently.
+      const shared = new THREE.Texture();
+      shared.colorSpace = THREE.SRGBColorSpace;
+      const result = applyTextureState(shared, { colorSpace: THREE.NoColorSpace });
+
+      result.colorSpace = THREE.SRGBColorSpace;
+
+      expect(result.colorSpace).toBe(THREE.NoColorSpace);
+    });
+
+    it('clones and DECODES when the binding needs a decode the producer skipped', () => {
+      // The other direction is a real case, not a theoretical one: a producer
+      // that tags its output raw is describing the bytes, while the binding
+      // describes the sampler — and the sampler wins.
+      const shared = new THREE.Texture();
+      expect(shared.colorSpace).toBe(THREE.NoColorSpace);
+
+      const result = applyTextureState(shared, { colorSpace: THREE.SRGBColorSpace });
+
+      expect(result).not.toBe(shared);
+      expect(result.colorSpace).toBe(THREE.SRGBColorSpace);
+      expect(shared.colorSpace).toBe(THREE.NoColorSpace);
+    });
+
+    it('produces ONE clone when colour space and UV both diverge', () => {
+      const shared = new THREE.Texture();
+      shared.colorSpace = THREE.SRGBColorSpace;
+      const image = { width: 4, height: 4 };
+      shared.image = image;
+
+      const result = applyTextureState(shared, {
+        uv: uv(2, 2),
+        colorSpace: THREE.NoColorSpace,
+      });
+
+      expect(result.repeat.x).toBe(2);
+      expect(result.colorSpace).toBe(THREE.NoColorSpace);
+      expect(result.image).toBe(image);
+      expect(shared.repeat.x).toBe(1);
+      expect(shared.colorSpace).toBe(THREE.SRGBColorSpace);
+    });
+
+    it('leaves a render target on the colour space its viewport chose', () => {
+      // A SubViewport writes its target already tone-mapped and tags it
+      // LinearSRGB; re-tagging the live attachment would change what every
+      // other reader of that same target sees.
+      const target = new THREE.WebGLRenderTarget(8, 8);
+      target.texture.colorSpace = THREE.LinearSRGBColorSpace;
+
+      const result = applyTextureState(target.texture, { colorSpace: THREE.SRGBColorSpace });
+
+      expect(result).toBe(target.texture);
+      expect(result.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+    });
+  });
+
   describe('clone tagging', () => {
     it('tags clones so the owning material can dispose them', () => {
       const original = new THREE.Texture();
-      const clone = applyTextureState(original, { filter: 0 });
+      const clone = applyTextureState(original, state({ filter: 0 }));
 
       expect(isMaterialOwnedTexture(clone)).toBe(true);
       expect(isMaterialOwnedTexture(original)).toBe(false);

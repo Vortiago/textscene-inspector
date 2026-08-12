@@ -15,9 +15,8 @@
 
 import * as THREE from 'three';
 import { info } from '../../../logger';
-import { applyTextureState, type TextureState } from '../../textures/applyTextureState';
-import { GODOT_TEXTURE_FILTER_DEFAULT } from '../../textures/godotTextureFilter';
 import { resolveEmission } from './emission';
+import { bindSlotTexture, materialTextureState } from './textureBinding';
 import type { MaterialBlendState, StandardMaterial3DScalars, TextureSlot } from './types';
 
 /** A resolved texture per slot; absent or null means "nothing in that slot". */
@@ -103,28 +102,12 @@ export function materialBlendProps(scalars: StandardMaterial3DScalars): Material
 }
 
 /**
- * The per-material texture state (`uv1_scale` / `uv1_offset`, `texture_filter`,
- * `texture_repeat`) every slot on this material samples with.
- *
- * Only an AUTHORED filter is passed: comparing an unauthored material against
- * Godot's default would clone every texture whose sampler state merely differs
- * from it, re-uploading per material per slot for a filter nobody asked for.
- */
-export function materialTextureState(scalars: StandardMaterial3DScalars): TextureState {
-  return {
-    uv: { scale: scalars.uv1Scale, offset: scalars.uv1Offset },
-    filter:
-      scalars.textureFilter === GODOT_TEXTURE_FILTER_DEFAULT ? undefined : scalars.textureFilter,
-    repeat: scalars.textureRepeat,
-  };
-}
-
-/**
  * Build the material this decoded StandardMaterial3D describes.
  *
- * Texture state is applied here rather than at load: it is per-material in Godot
- * but lives on the `THREE.Texture` in three, and the loader caches one texture
- * per path — see `applyTextureState` for why that means cloning.
+ * Textures are bound here rather than at load: what a slot needs of the texture
+ * it samples is per-material and per-slot in Godot but lives on the
+ * `THREE.Texture` in three, and the loader caches one texture per path — see
+ * `textureBinding.ts` for the rule and for why that means cloning.
  */
 export function buildStandardMaterial(
   scalars: StandardMaterial3DScalars,
@@ -134,11 +117,12 @@ export function buildStandardMaterial(
   const slotTexture = (slot: TextureSlot): THREE.Texture | null => {
     const texture = textures[slot];
     if (!texture) return null;
-    const applied = applyTextureState(texture, state);
+    const applied = bindSlotTexture(texture, slot, state);
     if (applied !== texture) {
       info(
         `[StandardMaterial3D] Cloned ${slot} for uv1_scale=${scalars.uv1Scale.x},${scalars.uv1Scale.y} ` +
-          `texture_filter=${scalars.textureFilter} texture_repeat=${scalars.textureRepeat}`
+          `texture_filter=${scalars.textureFilter} texture_repeat=${scalars.textureRepeat} ` +
+          `colorSpace=${applied.colorSpace || 'none'}`
       );
     }
     return applied;

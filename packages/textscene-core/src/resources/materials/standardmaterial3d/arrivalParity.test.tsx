@@ -33,10 +33,10 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
-import { applyTextureState } from '../../textures/applyTextureState';
 import { resolveExtResourcePath } from '../../SubResourceResolver';
 import type { TscnExternalResource } from '../../../parser/types';
-import { buildStandardMaterial, materialTextureState, type ResolvedTextureSlots } from './build';
+import { buildStandardMaterial, type ResolvedTextureSlots } from './build';
+import { bindSlotTexture, materialTextureState } from './textureBinding';
 import { createMaterialFromContent } from './loadMaterial';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type TextureSlot } from './types';
@@ -261,12 +261,18 @@ const CASES: ParityCase[] = [
 /**
  * One shared texture per path, as the loader's cache hands out — so the two
  * paths' texture state is comparable and both land on the same `source`.
+ *
+ * Tagged `SRGBColorSpace` because that is what the loader does to every decoded
+ * image before any slot is known (`resources/formats/image/textureProcessing.ts`).
+ * Starting from three's own default instead would let a raw slot pass without
+ * anything having to bind it.
  */
 const TEXTURE_BY_PATH = new Map<string, THREE.Texture>();
 function textureFor(path: string): THREE.Texture {
   let texture = TEXTURE_BY_PATH.get(path);
   if (!texture) {
     texture = new THREE.Texture();
+    texture.colorSpace = THREE.SRGBColorSpace;
     TEXTURE_BY_PATH.set(path, texture);
   }
   return texture;
@@ -314,8 +320,9 @@ function meshTresCarryingIt(testCase: ParityCase): string {
 
 /**
  * The textures the inline (scene) path would hand the slot: resolved through the
- * scene's own `[ext_resource]` table, then carrying the material's texture state
- * — exactly what the node component does before rendering the slot.
+ * scene's own `[ext_resource]` table, then BOUND to their slots — exactly what
+ * the node component does before rendering the slot, and through the same
+ * interface the imperative adapter crosses.
  */
 function inlineTextures(testCase: ParityCase): ResolvedTextureSlots {
   const scalars = parseStandardMaterial3DScalars(testCase.properties);
@@ -326,7 +333,7 @@ function inlineTextures(testCase: ParityCase): ResolvedTextureSlots {
     if (reference === undefined) continue;
     const path = resolveExtResourcePath(reference, testCase.extResources ?? []);
     if (path === null) continue;
-    resolved[slot] = applyTextureState(textureFor(path), state);
+    resolved[slot] = bindSlotTexture(textureFor(path), slot, state);
   }
   return resolved;
 }
@@ -390,15 +397,9 @@ function snapshot(material: THREE.Material): MaterialSnapshot {
     maps[key] = texture
       ? [
           // `source` is shared by `Texture.clone()`, so this pins that both
-          // paths landed on the same IMAGE while allowing separate clones.
-          //
-          // Deliberately NOT a shared-vs-clone discriminator. The reactive slot
-          // routes every non-colour map through `useUndecodedTexture`, which
-          // clones so it can pin `NoColorSpace` against R3F's per-commit sRGB
-          // reassertion; the imperative adapter shares unless UV state forces a
-          // clone. `.source` identity is the documented equality for exactly
-          // that case (AGENTS.md), and the state fields below are what actually
-          // has to agree.
+          // paths landed on the same IMAGE while allowing separate clones —
+          // each path binds its own, and `.source` identity is the documented
+          // equality for that case (AGENTS.md).
           texture.source.uuid,
           texture.repeat.x,
           texture.repeat.y,
@@ -410,6 +411,10 @@ function snapshot(material: THREE.Material): MaterialSnapshot {
           texture.minFilter,
           texture.generateMipmaps,
           texture.anisotropy,
+          // The state the two paths silently disagreed on for as long as each
+          // decided it for itself. `''` is three's spelling of `NoColorSpace`,
+          // so it is normalised to a name a failure message can be read from.
+          texture.colorSpace || 'NoColorSpace',
         ].join('/')
       : 'none';
   }
@@ -510,6 +515,97 @@ describe('StandardMaterial3D arrival parity', () => {
       });
     });
   }
+
+  describe('every slot samples in the colour space Godot binds it with', () => {
+    // Equality between the paths is not enough on its own: the two agreed while
+    // BOTH were wrong for as long as neither asserted an absolute value. These
+    // are Godot's, from the `source_color` hints on the samplers
+    // `BaseMaterial3D::_update_shader` writes — `texture_albedo`
+    // (`scene/resources/material.cpp:969`) and `texture_emission` (:1066) carry
+    // it and are hardware-decoded; `texture_metallic` (:1024),
+    // `texture_roughness` (:1030), `texture_normal` (:1092),
+    // `texture_ambient_occlusion` (:1128) and `texture_heightmap` (:1172) do not
+    // and read stored bytes.
+    const EVERY_SLOT: ParityCase = {
+      name: 'every slot bound at once',
+      properties: {
+        albedo_texture: 'ExtResource("1_tex")',
+        emission_enabled: 'true',
+        emission_texture: 'ExtResource("3_em")',
+        normal_enabled: 'true',
+        normal_texture: 'ExtResource("2_n")',
+        roughness_texture: 'ExtResource("2_n")',
+        metallic_texture: 'ExtResource("1_tex")',
+        ao_enabled: 'true',
+        ao_texture: 'ExtResource("1_tex")',
+        heightmap_enabled: 'true',
+        heightmap_texture: 'ExtResource("1_tex")',
+      },
+      extResources: [
+        { id: '1_tex', path: ALBEDO, type: 'Texture2D' },
+        { id: '2_n', path: NORMAL, type: 'Texture2D' },
+        { id: '3_em', path: EMISSION, type: 'Texture2D' },
+      ],
+    };
+
+    const EXPECTED: Record<string, string> = {
+      map: THREE.SRGBColorSpace,
+      emissiveMap: THREE.SRGBColorSpace,
+      normalMap: THREE.NoColorSpace,
+      roughnessMap: THREE.NoColorSpace,
+      metalnessMap: THREE.NoColorSpace,
+      aoMap: THREE.NoColorSpace,
+      displacementMap: THREE.NoColorSpace,
+    };
+
+    function colorSpaces(material: THREE.Material): Record<string, string> {
+      const m = material as unknown as Record<string, THREE.Texture | null>;
+      const out: Record<string, string> = {};
+      for (const key of Object.keys(EXPECTED)) {
+        const texture = m[key];
+        out[key] = texture ? texture.colorSpace : 'missing';
+      }
+      return out;
+    }
+
+    it('through the imperative adapter, from a standalone .tres', async () => {
+      const material = await createMaterialFromContent(standaloneTres(EVERY_SLOT), loadTexture);
+      expect(colorSpaces(material)).toEqual(EXPECTED);
+    });
+
+    it('through the imperative adapter, from a [sub_resource] of another .tres', async () => {
+      const material = await createMaterialFromContent(
+        meshTresCarryingIt(EVERY_SLOT),
+        loadTexture,
+        'Mat_surface'
+      );
+      expect(colorSpaces(material)).toEqual(EXPECTED);
+    });
+
+    it('through the reactive JSX slot', async () => {
+      expect(colorSpaces(await renderThroughSlot(EVERY_SLOT))).toEqual(EXPECTED);
+    });
+
+    it('survives R3F reasserting sRGB on the reactive path', async () => {
+      // `applyProps` force-rewrites any 8-bit RGBA texture on a colour-map prop
+      // back to `SRGBColorSpace` on EVERY commit. A raw slot's tag has to be
+      // proof against that, not merely correct on first render.
+      const material = await renderThroughSlot(EVERY_SLOT);
+      const raw = (material as THREE.MeshStandardMaterial).roughnessMap!;
+      raw.colorSpace = THREE.SRGBColorSpace;
+      expect(raw.colorSpace).toBe(THREE.NoColorSpace);
+    });
+
+    it('leaves the loader’s shared cache entries on their own tag', async () => {
+      // Every retag is on a clone: one path's roughness binding must not turn
+      // another consumer's albedo into raw bytes.
+      await createMaterialFromContent(standaloneTres(EVERY_SLOT), loadTexture);
+      await renderThroughSlot(EVERY_SLOT);
+      for (const path of [ALBEDO, NORMAL, EMISSION]) {
+        expect(textureFor(path).colorSpace).toBe(THREE.SRGBColorSpace);
+      }
+    });
+  });
 
   it('covers every texture slot the decode can enumerate', () => {
     // A slot nobody exercises is a slot that can silently diverge again.

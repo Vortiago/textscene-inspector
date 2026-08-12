@@ -10,7 +10,6 @@
  */
 
 import * as THREE from 'three';
-import { useUndecodedTexture } from '../undecodedTexture';
 import { resolveEmission } from '../../resources/materials/standardmaterial3d/emission';
 import {
   GODOT_DEFAULT_ALBEDO,
@@ -20,6 +19,15 @@ import {
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import { materialBlendProps } from '../../resources/materials/standardmaterial3d/build';
 
+/**
+ * Every texture prop below must arrive ALREADY BOUND — put through
+ * `bindSlotTexture` for its Godot slot by whoever resolved it
+ * (`resources/materials/standardmaterial3d/textureBinding.ts`). That is what
+ * carries the material's UV transform, sampler filter, wrapping and colour
+ * space. This component re-decides none of it: the imperative adapter
+ * (`build.ts`) binds at the same seam, and a slot that corrected textures on
+ * arrival would be a second copy of the rule for the two to drift apart on.
+ */
 export interface StandardMaterialSlotProps {
   scalars: StandardMaterial3DScalars | null;
   albedoMap?: THREE.Texture;
@@ -75,27 +83,6 @@ export function StandardMaterialSlot({
   meshType: _meshType,
   attach,
 }: StandardMaterialSlotProps) {
-  // Godot marks exactly three of BaseMaterial3D's samplers `source_color` —
-  // `texture_albedo`, `texture_emission`, `texture_detail_albedo`
-  // (`scene/resources/material.cpp:969,1066,1137`), which is what makes the
-  // renderer bind their sRGB-typed GPU view and decode before every sample.
-  // Every sampler below carries `hint_default_white` / `hint_roughness_*` /
-  // `hint_normal` instead and is read RAW: a roughness value, a normal vector
-  // and a height are data, not light.
-  //
-  // `textureProcessing.ts` tags every loaded texture `SRGBColorSpace`, so
-  // without this each of these would be uploaded as `SRGB8_ALPHA8` and
-  // hardware-decoded — a normal map whose vectors are bent toward the
-  // surface, and roughness/metallic/AO/height read too dark. Hooks run
-  // unconditionally, before the no-scalars early return below.
-  const normalData = useUndecodedTexture(normalMap);
-  const roughnessData = useUndecodedTexture(roughnessMap);
-  const metalnessData = useUndecodedTexture(metalnessMap);
-  const aoData = useUndecodedTexture(aoMap);
-  const displacementData = useUndecodedTexture(displacementMap);
-  // `anisotropyMap` is absent: `repackFlowmap.ts` builds it from decoded pixels
-  // and already tags the result `NoColorSpace`.
-
   if (!scalars) {
     return (
       <meshStandardMaterial
@@ -187,12 +174,12 @@ export function StandardMaterialSlot({
     side: effectiveSide,
     shadowSide: shadowSide ?? null,
     map: albedoMap ?? null,
-    normalMap: normalData,
+    normalMap: normalMap ?? null,
     normalScale,
-    roughnessMap: roughnessData,
-    metalnessMap: metalnessData,
+    roughnessMap: roughnessMap ?? null,
+    metalnessMap: metalnessMap ?? null,
     emissiveMap: emissiveMap ?? null,
-    aoMap: aoData,
+    aoMap: aoMap ?? null,
     // Godot's `emission_operator` only becomes observable once a texture is in
     // play, and whether one resolved is knowable here and not at parse time.
     // Read field-by-field rather than spread: `scalars` is far wider than
@@ -207,7 +194,7 @@ export function StandardMaterialSlot({
     // Faithful in kind (a height texture raises the surface), approximate in
     // exact depth. Both are inert for a non-heightmap material: heightmapScale
     // is 0 and there is no displacementMap, so no vertices move.
-    displacementMap: displacementData,
+    displacementMap: displacementMap ?? null,
     displacementScale: scalars.heightmapScale,
   };
   // clearcoat (FEATURE_CLEARCOAT, a glossy coat), rim (FEATURE_RIM, a Fresnel

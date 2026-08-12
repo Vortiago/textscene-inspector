@@ -179,6 +179,10 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     const loader = makeLoader();
     const albedo = new THREE.Texture();
     const normal = new THREE.Texture();
+    // As the loader hands them out: every decoded image is tagged sRGB before
+    // any slot is known, which is exactly what the normal slot must undo.
+    albedo.colorSpace = THREE.SRGBColorSpace;
+    normal.colorSpace = THREE.SRGBColorSpace;
     preloadTexture(loader, 'res://textures/albedo.png', albedo);
     preloadTexture(loader, 'res://textures/normal.png', normal);
 
@@ -216,10 +220,11 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     expect(material).toBeDefined();
     expect(material!.normalMap).toBeDefined();
     // NOT identity, unlike the colour maps: a normal map is sampled RAW
-    // (`texture_normal : hint_roughness_normal`, no `source_color` —
-    // `StandardMaterialSlot.colorSpace.test.tsx` has the full citation), so
-    // the slot hands the material an undecoded CLONE. The clone shares the
-    // decoded `Source`, which is what identifies it as this same texture.
+    // (`scene/resources/material.cpp:1092` declares `texture_normal :
+    // hint_roughness_normal`, with no `source_color` — `textureBinding.ts` has
+    // the full citation), so the binding hands the material an undecoded CLONE.
+    // The clone shares the decoded `Source`, which is what identifies it as
+    // this same texture.
     expect(material!.normalMap).not.toBe(normal);
     expect(material!.normalMap!.source).toBe(normal.source);
     expect(material!.normalMap!.colorSpace).toBe(THREE.NoColorSpace);

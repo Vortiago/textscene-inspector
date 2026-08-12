@@ -19,7 +19,7 @@ import {
   type TextureLoaderFn,
 } from '../materials/standardmaterial3d/loadMaterial';
 import { parseSubResourcePath } from '../subResourcePath';
-import { isMaterialOwnedTexture } from '../textures/applyTextureState';
+import { releaseBoundTexture } from '../materials/standardmaterial3d/textureBinding';
 
 /**
  * Create a material processor that handles loading and caching materials.
@@ -64,7 +64,7 @@ function disposeMaterialAndOwnedTextures(material: THREE.Material): void {
   // three assigns every map in its constructor, so this cannot go stale the day
   // a new one is wired, and the ownership tag is the real discriminator anyway.
   for (const value of Object.values(material)) {
-    if (value instanceof THREE.Texture && isMaterialOwnedTexture(value)) value.dispose();
+    if (value instanceof THREE.Texture) releaseBoundTexture(value);
   }
   material.dispose();
 }

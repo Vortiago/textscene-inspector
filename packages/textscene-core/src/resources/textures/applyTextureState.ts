@@ -1,28 +1,36 @@
 /**
- * Per-material texture state — the UV transform and the sampler filter — applied
- * by cloning only when the material actually diverges from the shared source.
+ * Per-slot texture state — the UV transform, the sampler filter, the wrapping
+ * and the COLOUR SPACE — applied by cloning only when the binding actually
+ * diverges from the shared source.
  *
  * NOT A RESOURCE SLICE (ADR-0031): it decodes no Godot serialization and claims
- * no type name. It is a SHARED APPLIER over an already-loaded `THREE.Texture`,
- * consumed by every material slice's renderer — which is why it sits beside the
- * texture slices rather than inside one.
+ * no type name. It is the shared APPLIER over an already-loaded `THREE.Texture`,
+ * which is why it sits beside the texture slices rather than inside one.
+ *
+ * INTERNAL SEAM. Nothing outside `standardmaterial3d/textureBinding.ts` calls
+ * this in production. That module knows WHICH state a Godot texture slot
+ * requires; this one knows only how to make a texture carry a state it is
+ * handed. Keeping the two apart is what lets the rule live in one place while
+ * the mechanics stay reusable by any future material type.
  *
  * WHY CLONE. `useResource` returns the SAME cached `THREE.Texture` for every
- * consumer of a path (the identity-equality contract). Both things this module
- * applies live on the Texture rather than the Material in three, but are
- * per-MATERIAL in Godot — two materials can legitimately sample one image with
- * different tiling or different filtering. Mutating in place would make
- * whichever material built last silently win for all of them, an
- * order-dependent bug no test would catch.
+ * consumer of a path (the identity-equality contract). Everything this module
+ * applies lives on the Texture rather than the Material in three, but is
+ * per-MATERIAL (or per-SLOT) in Godot — two materials can legitimately sample
+ * one image with different tiling or filtering, and one image can legitimately
+ * be an albedo for one material and a roughness map for another. Mutating in
+ * place would make whichever material built last silently win for all of them,
+ * an order-dependent bug no test would catch.
  *
- * WHY ONE FUNCTION FOR BOTH. A texture can diverge for either reason
- * independently, and doing them in sequence would clone twice for the same
+ * WHY ONE FUNCTION FOR ALL OF THEM. A texture can diverge for each reason
+ * independently, and doing them in sequence would clone repeatedly for the same
  * material. Divergence is decided first, then a single clone carries whatever
  * applies.
  *
  * WHY MATERIAL-BUILD TIME rather than texture load. `createTextureFromBuffer`
- * receives bytes and a mime type; it has no idea which material is asking, so
- * the filter cannot be resolved there without inverting the dependency.
+ * receives bytes and a mime type; it has no idea which material or which slot is
+ * asking, so neither the filter nor the colour space can be resolved there
+ * without inverting the dependency.
  *
  * This replaces two near-identical `applyUVTransform` implementations (one per
  * material path). Their semantics differed slightly and this is the merged
@@ -50,7 +58,11 @@ export interface UVTransform {
   offset: { x: number; y: number };
 }
 
-export interface TextureState {
+/**
+ * The half of a binding that comes from the MATERIAL and is the same for every
+ * slot on it.
+ */
+export interface MaterialTextureState {
   /** Godot `uv1_scale` / `uv1_offset`. Omitted means no tiling transform. */
   uv?: UVTransform;
   /** Godot `BaseMaterial3D.texture_filter` ordinal. Omitted means its default. */
@@ -65,15 +77,63 @@ export interface TextureState {
   repeat?: boolean;
 }
 
+export interface TextureState extends MaterialTextureState {
+  /**
+   * The colour space this binding must sample in — REQUIRED, because a texture
+   * arrives carrying whatever its producer happened to tag and only the binding
+   * knows what the sampler needs. Declarative, not corrective: whatever the
+   * texture says now, it leaves here saying this.
+   */
+  colorSpace: THREE.ColorSpace;
+}
+
 /**
- * The texture this material should sample: the original when it needs nothing
- * of its own, otherwise a clone carrying every divergence at once.
+ * Permanently pins `texture.colorSpace`, immune to `@react-three/fiber`'s OWN
+ * automatic sRGB tagging: `applyProps` (`@react-three/fiber`'s `events-*.js`,
+ * the `colorMaps.includes(key)` branch — `colorMaps = ['map', 'emissiveMap',
+ * 'sheenColorMap', 'specularColorMap', 'envMap']`) force-rewrites ANY 8-bit
+ * RGBA texture assigned to one of those JSX props back to `SRGBColorSpace`, on
+ * every commit, whenever the R3F root is not in `linear` mode — which this
+ * codebase's `<Canvas>`s are not (`rootState.linear` defaults `false`, never
+ * overridden). That auto-tagging is invisible everywhere else in this codebase
+ * because every OTHER texture already wants `SRGBColorSpace`; a deliberately
+ * `NoColorSpace` `map` is the first thing here it fights. A plain assignment
+ * loses that fight silently on the very next commit — this pins the getter so
+ * the fight has no effect, rather than depending on REACT's effect ordering to
+ * win it back after the fact.
+ *
+ * The pin matters even for props R3F's `colorMaps` list does NOT name
+ * (`normalMap`, `roughnessMap`, …): the list is a dependency's internal detail,
+ * and a plain assignment would silently start losing the moment it grows.
+ */
+export function pinNoColorSpace(texture: THREE.Texture): THREE.Texture {
+  Object.defineProperty(texture, 'colorSpace', {
+    get: () => THREE.NoColorSpace,
+    set: () => {
+      // Discard `@react-three/fiber`'s own reassignment attempt — see the
+      // function doc comment above.
+    },
+    configurable: true,
+    enumerable: true,
+  });
+  return texture;
+}
+
+/**
+ * The texture this binding should sample: the original when it needs nothing of
+ * its own, otherwise a clone carrying every divergence at once.
  */
 export function applyTextureState(texture: THREE.Texture, state: TextureState): THREE.Texture {
-  // A render target is excluded OUTRIGHT, whatever the material asked for: its
+  // A render target is excluded OUTRIGHT, whatever the binding asked for: its
   // texture is the live attachment of a `WebGLRenderTarget` (a ViewportTexture),
   // and a clone shares only the source — the material would sample a copy that
   // no longer follows the target, i.e. a frozen frame.
+  //
+  // That exclusion now covers COLOUR SPACE too, and deliberately so: a
+  // SubViewport's target is written already tone-mapped and tagged
+  // `LinearSRGBColorSpace` by the viewport that owns it, and re-tagging the
+  // live attachment would change what every OTHER reader of that same target
+  // sees. A ViewportTexture keeps the colour space its producer chose.
   if (texture.isRenderTargetTexture) return texture;
 
   const filterState = godotTextureFilterState(state.filter);
@@ -91,7 +151,11 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
   // asked for.
   const filterDiverges =
     state.filter !== undefined && !textureFilterMatches(texture, filterState);
-  if (!uvDiverges && !filterDiverges && !wrapDiverges) return texture;
+  // The producer's tag is only the ARRIVAL state; a texture whose tag already
+  // matches what the sampler needs is shared untouched, exactly like every
+  // other kind of state here.
+  const colorSpaceDiverges = texture.colorSpace !== state.colorSpace;
+  if (!uvDiverges && !filterDiverges && !wrapDiverges && !colorSpaceDiverges) return texture;
 
   // ONE clone, however many reasons there were. `clone()` copies parameters and
   // shares `source`, so the image bytes are not duplicated.
@@ -107,6 +171,12 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
     cloned.wrapT = wrapping;
   }
   if (filterDiverges) applyTextureFilterState(cloned, filterState);
+  // Pinned rather than assigned for the undecoded case: R3F reasserts
+  // `SRGBColorSpace` on colour-map props every commit, so a plain write is
+  // silently undone. The decoding case wants exactly what R3F would reassert,
+  // so it needs no defence.
+  if (state.colorSpace === THREE.NoColorSpace) pinNoColorSpace(cloned);
+  else cloned.colorSpace = state.colorSpace;
   cloned.userData[MATERIAL_OWNED] = true;
   cloned.needsUpdate = true;
   return cloned;
