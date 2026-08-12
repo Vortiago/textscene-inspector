@@ -74,10 +74,23 @@ function newest(dir, keep) {
  * the build step that owns `dist/`.
  */
 function stalenessMessage() {
-  const built = newest(join(CORE, 'dist'), (n) => n.endsWith('.js'));
-  if (!built.at) return `packages/textscene-core/dist is not built — run \`${BUILD}\`.`;
+  if (!newest(join(CORE, 'dist'), (n) => n.endsWith('.js')).at) {
+    return `packages/textscene-core/dist is not built — run \`${BUILD}\`.`;
+  }
+  // Against tsc's OWN record of when it last evaluated the project, not against
+  // the newest emitted `.js`. An incremental build does not rewrite an output
+  // whose content did not change, so a no-op regeneration of a source file
+  // (`pnpm nodes:catalog` rewriting nodeBaseTypes.generated.ts byte-identically)
+  // left every `.js` older than it and no amount of rebuilding could clear the
+  // complaint. A guard whose prescribed remedy does not work gets bypassed.
+  let stamp;
+  try {
+    stamp = statSync(join(CORE, 'tsconfig.tsbuildinfo')).mtimeMs;
+  } catch {
+    return `packages/textscene-core has no tsconfig.tsbuildinfo — run \`${BUILD}\`.`;
+  }
   const source = newest(CORE_SRC, (n) => COMPILED.test(n) && !NOT_COMPILED.test(n));
-  if (source.at > built.at) {
+  if (source.at > stamp) {
     return (
       `packages/textscene-core/dist predates ${relative(CORE, source.file)} — this ledger would ` +
       `report the PREVIOUS revision's registries. Run \`${BUILD}\`.`
