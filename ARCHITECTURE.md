@@ -738,6 +738,7 @@ than `main + 200 KB gzipped`". History:
 - **Issue #215: `InternalTextLabel`'s drei `<Text>` converted to `React.lazy`.** It no longer sits in `webview.js`; it resolves in its own on-demand chunk the first time it actually renders. Result: **492,801 B gzipped — still 44.2 KB OVER budget**, a ~44 KB gz reduction from the troika split alone.
 - **Issue #241: GLTFLoader + SkeletonUtils converted to dynamic `import()` in `glbProcessing.ts`.** Both modules are now split into on-demand lazy chunks (`GLTFLoader-*.js`, `SkeletonUtils-*.js`) that only load on the first actual GLB resource request. Scenes without any GLB references pay no loading cost for the loader chain at all. Result (measured on PR #286): **496,404 B gzipped before the split, 484,921 B gzipped after**, an 11.2 KB gz reduction; that left the closure 36.5 KB OVER the original 447,543 B budget. Investigation confirmed DRACOLoader, KTX2Loader, and MeshoptDecoder are NOT imported anywhere in source — they only appear as string plugin-name literals inside GLTFLoader; none of the vendored fixture GLBs use Draco or Meshopt compression.
 - **Budget renegotiated (2026-07-14, PR #286): absolute ceiling of 600,000 B (600 kB) gzipped.** The original `main + 200 KB` criterion (447,543 B gz) came from the WI-R3F-6 PRD acceptance and predates GLB support becoming a committed, shipped feature. With the realistic lazy-loading landed (drei `<Text>`/troika in issue #215, GLTFLoader + SkeletonUtils in issue #241), the remaining closure is legitimate feature cost, so growth is accepted for now. Current closure of **484,921 B gz leaves ~115 KB headroom** under the new ceiling. Longer term the plan is to evaluate lighter rendering technologies to shrink the webview, not to squeeze this stack further.
+- **Budget renegotiated again: absolute ceiling of 1,000,000 B (1 MB) gzipped.** The native 2D-UI work left the closure at **579,655 B gz**, 6 KB under the previous 600 kB ceiling. The growth was audited rather than assumed: the Control painters, the MSDF atlas, the glyph metrics and the theme icons all sit OUTSIDE the initial-paint closure, behind the controls barrel's dynamic import, so the lazy split held. What grew is the parser/linter chunk, which must know every node type name to parse a scene at all and therefore cannot be deferred. The ceiling is set well clear of the current closure deliberately: three.js (~184 KB gz) and react-three-fiber (~52 KB gz) are together ~40% of it and cannot be deferred — nothing paints without them — and that stack is not being replaced in the foreseeable future, so a ceiling needing renegotiation every few months is friction rather than a guard. **Know what the number no longer does:** with this much slack it is a catastrophe stop, not an early warning, and it will not notice a lazy chunk quietly becoming eager — the regression this closure is actually prone to. The instrument for that is a growth check against a recorded current size, not a lower ceiling.
 
 WI-R3F-18 closed the gap (at the time) with three combined changes:
 
@@ -772,7 +773,7 @@ as GLTFLoader only loads on an actual GLB request.
 **Bundle-size guard.** `scripts/check-bundle-size.mjs` walks the
 static-import closure starting at `webview.js`, gzips the
 concatenation, and compares against the renegotiated absolute budget of
-**600,000 B gzipped**; it also runs the host-bundle react/three guard
+**1,000,000 B gzipped**; it also runs the host-bundle react/three guard
 described above. Wired into `pnpm validate` and CI
 (`.github/workflows/ci.yml`, issue #215), and the repo's
 `check:bundle-size` script passes `--enforce` (issue #241), so a budget
@@ -780,10 +781,11 @@ breach is a hard failure everywhere the script runs.
 
 **Status of the budget gate: ENFORCED.** On 2026-07-14 (PR #286,
 closing issue #241) the webview budget was renegotiated from
-`main + 200 KB` (447,543 B gz) to an absolute **600,000 B gzipped**
-ceiling, and `pnpm check:bundle-size` now passes `--enforce`, so
-`pnpm validate`, the pre-push hook, and CI hard-fail whenever the
-initial-paint closure exceeds 600 kB gz. Rationale: the original
+`main + 200 KB` (447,543 B gz) to an absolute ceiling, since raised again
+to **1,000,000 B gzipped** (see the bullet above), and
+`pnpm check:bundle-size` now passes `--enforce`, so `pnpm validate`, the
+pre-push hook, and CI hard-fail whenever the initial-paint closure
+exceeds it. Rationale: the original
 criterion predates GLB support and react-three-fiber becoming committed
 shipped features, and with the realistic lazy-loading done (troika
 `<Text>`, GLTFLoader/SkeletonUtils) the remaining closure is legitimate

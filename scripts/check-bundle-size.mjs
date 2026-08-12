@@ -2,7 +2,7 @@
 /**
  * Bundle-size guards for the VS Code extension:
  *
- * 1. The webview's initial-paint chunk (600 kB gzipped budget, see
+ * 1. The webview's initial-paint chunk (1 MB gzipped budget, see
  *    `main()` below — the repo's `check:bundle-size` script passes
  *    `--enforce`, so validate/pre-push/CI hard-fail when it is exceeded).
  * 2. The extension HOST bundles (`dist/extension.js` / `extension.web.js`),
@@ -154,10 +154,27 @@ function checkHostBundles() {
 //   484,921 B gz, leaving ~115 KB of headroom. Growth is acceptable for now;
 //   the future direction is exploring lighter rendering technologies,
 //   not squeezing this stack further.
-// MAIN_BASELINE_GZ (the pre-merge measurement of `main` from the original
-// budget) is kept only for the informational delta-vs-main report line.
-const MAIN_BASELINE_GZ = 247_543;
-const BUDGET_GZ = 600_000; // renegotiated absolute ceiling, gzipped
+// - Renegotiated to 1 MB after the native 2D-UI work, which left the closure at
+//   579,655 B gz — 6 KB under the old 600 kB ceiling. The growth was audited
+//   rather than assumed: the Control PAINTERS, the MSDF atlas, the glyph
+//   metrics and the theme icons all sit OUTSIDE this closure, behind the
+//   controls barrel's dynamic import, so the lazy split held. What grew is the
+//   parser/linter chunk, which must know every node type name to parse a scene
+//   at all and therefore cannot be deferred.
+//
+//   The ceiling is set well clear of the current closure DELIBERATELY. three.js
+//   (~184 KB gz) plus @react-three/fiber (~52 KB gz) are ~40% of it and cannot
+//   be deferred — nothing paints without them — and that stack is not being
+//   replaced in the foreseeable future. A ceiling that has to be renegotiated
+//   every few months is friction, not a guard.
+//
+//   KNOW WHAT THIS NUMBER NO LONGER DOES. With this much slack it is a
+//   catastrophe stop, not an early warning: it will not notice a lazy chunk
+//   quietly becoming eager, which is the regression this closure is actually
+//   prone to and the one the tighter ceiling happened to catch. If that starts
+//   mattering, the instrument for it is a growth check against a recorded
+//   current size, not a lower ceiling.
+const BUDGET_GZ = 1_000_000; // absolute ceiling, gzipped
 
 // Dead-weight chunks that must never ship in the VSIX. These appear when
 // someone imports from the `@react-three/drei` barrel instead of the
@@ -254,7 +271,6 @@ function main() {
     buffers.push(buf);
   }
   const totalGz = gzipSync(Buffer.concat(buffers)).length;
-  const overBaseline = totalGz - MAIN_BASELINE_GZ;
 
   console.log('\n=== VS Code webview initial-paint bundle ===');
   console.log(`Files (static-import closure): ${closure.size}`);
@@ -266,8 +282,6 @@ function main() {
   }
   console.log(`Total raw:        ${formatKb(totalRaw)}  (${totalRaw} B)`);
   console.log(`Total gzipped:    ${formatKb(totalGz)}  (${totalGz} B)`);
-  console.log(`Main baseline:    ${formatKb(MAIN_BASELINE_GZ)}  (${MAIN_BASELINE_GZ} B)`);
-  console.log(`Delta vs main:    ${overBaseline >= 0 ? '+' : ''}${formatKb(overBaseline)}  (${overBaseline} B)`);
   console.log(`Budget absolute:  ${formatKb(BUDGET_GZ)}  (${BUDGET_GZ} B)`);
 
   const overBudget = totalGz - BUDGET_GZ;
