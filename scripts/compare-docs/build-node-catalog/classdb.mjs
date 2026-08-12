@@ -31,8 +31,8 @@ function blobAfter(out, marker, what) {
 }
 
 /**
- * One engine run, both answers: the instantiable classes and every Node class's
- * own serialised properties.
+ * One engine run, all three answers: the instantiable classes, every Node
+ * class's own serialised properties, and the same rows for every Resource class.
  *
  * Kept as one spawn because starting Godot under xvfb dominates the cost, and
  * because two runs could straddle a version change and disagree about the same
@@ -48,6 +48,7 @@ export function enumerateGodotNodes() {
   return {
     classes: blobAfter(out, '###NODES_JSON###', 'the node list'),
     properties: blobAfter(out, '###PROPS_JSON###', 'the property list'),
+    resourceProperties: blobAfter(out, '###RESOURCE_PROPS_JSON###', 'the resource property list'),
   };
 }
 

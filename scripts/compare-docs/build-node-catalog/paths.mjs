@@ -19,4 +19,16 @@ export const OUT = join(here, '../node-catalog.json');
  * `--links-only` can refresh the catalog with no engine at all.
  */
 export const PROPS_OUT = join(here, '../node-properties.json');
+
+/**
+ * The same rows for every Resource class, from the same engine run.
+ *
+ * A third file rather than more keys in `PROPS_OUT`, for a sharper reason than
+ * the one above: `enginePropertyCoverage` pins an exact ledger against the node
+ * table, so Resource rows landing there would move a number that answers a
+ * question about Nodes. The hierarchies are disjoint, so nothing needs both
+ * files merged except `hintImplementationParity`, which is about hints rather
+ * than about either hierarchy.
+ */
+export const RESOURCE_PROPS_OUT = join(here, '../resource-properties.json');
 export const ENUM_GD = join(REPO_ROOT, 'scripts/godot-ref/enumerate-nodes.gd');

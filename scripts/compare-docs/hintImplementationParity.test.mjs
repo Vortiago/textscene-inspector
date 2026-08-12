@@ -11,20 +11,22 @@
  * An earlier version of this guard read the quoted hint out of the COMMENT
  * beside each validator. That worked, and was the wrong altitude: the comment
  * is a hand-copy of an authoritative record that already exists here.
- * `node-properties.json` is a live `ClassDB.class_get_property_list(c, true)`
- * captured by `pnpm nodes:properties` — 227 classes, 542 of their properties
- * carrying a `PROPERTY_HINT_RANGE`. Reading the engine's own capture instead of
- * our prose deletes every special case the text version needed: no
- * distinguishing `PROPERTY_HINT_ENUM`'s numeric label list from a range (the
- * capture states the hint as a number), no paren-balance walk to find the bound
- * near the comment, no floor on how many comments were found to stop the
- * subject being deleted along with the evidence.
+ * `node-properties.json` (227 classes, 542 ranged properties) and
+ * `resource-properties.json` (286 classes, 752 ranged properties) are a live
+ * `ClassDB.class_get_property_list(c, true)` captured by `pnpm
+ * nodes:properties`. Reading the engine's own capture instead of our prose
+ * deletes every special case the text version needed: no distinguishing
+ * `PROPERTY_HINT_ENUM`'s numeric label list from a range (the capture states
+ * the hint as a number), no paren-balance walk to find the bound near the
+ * comment, no floor on how many comments were found to stop the subject being
+ * deleted along with the evidence.
  *
- * Scope, stated because it is not the whole subject: the capture is Node
- * classes only, so the two Resource slices that quote a hint range
- * (`Environment`, `StandardMaterial3D`) are not covered here. Extending
- * `enumerate-nodes.gd` to `Resource` subclasses is the way in, and needs a
- * local Godot rather than a new mechanism.
+ * Scope, stated because it is not the whole subject: a row is keyed by the
+ * class that DECLARES the property, and `findValidator` walks node ancestry
+ * only, so a validator registered on a Resource leaf whose properties the
+ * engine declares on an abstract base is not reached — `StandardMaterial3D`'s
+ * are all `BaseMaterial3D`'s. Nothing checks those 35 today:
+ * `enginePropertyCoverage` reads the node capture alone.
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -33,6 +35,7 @@ import { join } from 'node:path';
 import { loadCoreLinter } from './loadCoreLinter.mjs';
 
 const PROPS = join(import.meta.dirname, 'node-properties.json');
+const RESOURCE_PROPS = join(import.meta.dirname, 'resource-properties.json');
 const DIST = join(import.meta.dirname, '../../packages/textscene-core/dist/linter/index.js');
 const built = existsSync(DIST);
 
@@ -159,13 +162,31 @@ function unimplementedEnds(hint, bounds) {
  * which is the first time anything in this repo could see them: the text guard
  * only ever looked where a comment happened to quote a hint. Lower it by
  * implementing a bound, never by widening what counts.
+ *
+ * It rose from 101 to 111 once the capture reached Resource classes, which is
+ * the subject growing rather than the bar dropping: the ten new ends were
+ * always open, and nothing here could see them before.
  */
-const UNIMPLEMENTED_HINT_ENDS = 101;
+const UNIMPLEMENTED_HINT_ENDS = 111;
+
+/**
+ * The engine's ranged properties, from both captures.
+ *
+ * Merging the two maps is safe because their keys cannot collide: `Node` and
+ * `Resource` are separate branches under `Object`, and `enumerate-nodes.gd`
+ * keys each blob by class name within one hierarchy.
+ */
+function engineProperties() {
+  return {
+    ...JSON.parse(readFileSync(PROPS, 'utf8')),
+    ...JSON.parse(readFileSync(RESOURCE_PROPS, 'utf8')),
+  };
+}
 
 /** Every ranged engine property we register a validator for, with both bounds. */
 async function rangedProperties() {
   const { validatorRegistry } = await loadCoreLinter();
-  const engine = JSON.parse(readFileSync(PROPS, 'utf8'));
+  const engine = engineProperties();
   const rows = [];
   for (const [nodeType, properties] of Object.entries(engine)) {
     for (const property of properties) {
@@ -201,6 +222,22 @@ describe.skipIf(!built)('the bound we implement against the bound Godot declared
       .filter((r) => !SETTER_OVERRIDES_HINT.has(r.label))
       .flatMap((r) => mismatches(r.hint, r.bounds).map((d) => `${r.label}: ${d}`));
     expect(wrong.sort()).toEqual([]);
+  });
+
+  it('reaches the Resource hints, not only the Node ones', () => {
+    // Named exactly, because a missing or empty `resource-properties.json`
+    // leaves the Node half alone comfortably over the floor above and this
+    // guard green while covering nothing it was extended to cover. These three
+    // were a source-comment guard's entire subject before the capture reached
+    // Resource classes.
+    const labels = new Set(rows.map((r) => r.label));
+    expect(
+      [
+        'Environment.tonemap_agx_contrast',
+        'Environment.tonemap_agx_white',
+        'Environment.tonemap_white',
+      ].filter((label) => !labels.has(label))
+    ).toEqual([]);
   });
 
   it('leaves no more hint ends unimplemented than the ledger allows', () => {

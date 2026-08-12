@@ -27,7 +27,7 @@ import { enumerateGodotNodes, godotVersion, supportedTypes } from './build-node-
 import { EXTRA_CLASSES, RESOURCE_CLASSES } from './build-node-catalog/extraClasses.mjs';
 import { groupOf } from './build-node-catalog/groups.mjs';
 import { attachLinks } from './build-node-catalog/links.mjs';
-import { OUT, PROPS_OUT } from './build-node-catalog/paths.mjs';
+import { OUT, PROPS_OUT, RESOURCE_PROPS_OUT } from './build-node-catalog/paths.mjs';
 
 const linksOnly = process.argv.includes('--links-only');
 // The engine half alone. Writing the property table needs a local godot and
@@ -49,19 +49,25 @@ const previousByName = new Map(
 // the node list itself needs a local godot + xvfb-run, the links only need the
 // network, and they go stale on different schedules.
 /** One row per class, sorted so a regenerated file diffs by content not by order. */
-function writeProperties(properties) {
+function writeProperties(properties, out) {
   const sorted = Object.fromEntries(
     Object.entries(properties)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([cls, props]) => [cls, [...props].sort((a, b) => a.name.localeCompare(b.name))])
   );
-  writeFileSync(PROPS_OUT, `${JSON.stringify(sorted, null, 2)}\n`);
+  writeFileSync(out, `${JSON.stringify(sorted, null, 2)}\n`);
   const count = Object.values(sorted).reduce((sum, p) => sum + p.length, 0);
-  console.log(`Wrote ${PROPS_OUT} - ${Object.keys(sorted).length} classes, ${count} properties.`);
+  console.log(`Wrote ${out} - ${Object.keys(sorted).length} classes, ${count} properties.`);
+}
+
+/** Both property tables from one enumeration, since one engine run yields both. */
+function writePropertyTables(enumerated) {
+  writeProperties(enumerated.properties, PROPS_OUT);
+  writeProperties(enumerated.resourceProperties, RESOURCE_PROPS_OUT);
 }
 
 if (propertiesOnly) {
-  writeProperties(enumerateGodotNodes().properties);
+  writePropertyTables(enumerateGodotNodes());
   process.exit(0);
 }
 
@@ -84,7 +90,7 @@ if (linksOnly) {
 } else {
   const supported = await supportedTypes();
   const enumerated = enumerateGodotNodes();
-  writeProperties(enumerated.properties);
+  writePropertyTables(enumerated);
   nodes = enumerated.classes
     // Editor-only plugins and engine-internal placeholders are not scene content.
     .filter((n) => !n.name.startsWith('Editor') && !n.name.endsWith('EditorPlugin') && n.name !== 'MissingNode')
