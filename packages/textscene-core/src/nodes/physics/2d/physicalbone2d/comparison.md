@@ -35,7 +35,7 @@ Strict parsing format-checks these `PhysicalBone2D` properties, plus 23 inherite
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `auto_configure_joint` | true or false |  |
-| `bone2d_index` | integer 0-1000 |  |
+| `bone2d_index` | integer 0-1000 | error below, warning above |
 | `bone2d_nodepath` | NodePath("path/to/node") |  |
 | `follow_bone_when_simulating` | true or false |  |
 | `simulate_physics` | true or false |  |

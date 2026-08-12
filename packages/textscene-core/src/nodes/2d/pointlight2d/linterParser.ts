@@ -50,6 +50,9 @@ textureScaleValidator.accepts = `float ${TEXTURE_SCALE_HINT_MIN}-${TEXTURE_SCALE
 // The error branch is the stronger claim, so it carries the tag; the warning
 // branch cites light_2d.cpp:479 in the comment at its call site.
 textureScaleValidator.grounding = { kind: 'enforced', cite: 'light_2d.cpp:444' };
+// Both range ends come from the hint alone, so both warn. The error above is
+// the exactly-zero replacement, which is not an end of the range.
+textureScaleValidator.tiers = { min: 'warning', max: 'warning' };
 
 validatorRegistry.registerAll('PointLight2D', {
   // light_2d.cpp:480 hints "0,1024,1,or_greater,suffix:px" (or_greater opens

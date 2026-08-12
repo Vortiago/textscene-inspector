@@ -38,7 +38,7 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | `floor_max_angle` | radians, 0° to 180° | warning |
 | `floor_snap_length` | float >= 0 | error below |
 | `floor_stop_on_slope` | true or false |  |
-| `max_slides` | integer > 0 |  |
+| `max_slides` | integer > 0 | error below |
 | `motion_mode` | enum 0-1 (GROUNDED/FLOATING) | warning |
 | `platform_floor_layers` | 32-bit layer mask (layers 1-32) | warning |
 | `platform_on_leave` | enum 0-2 (ADD_VELOCITY/ADD_UPWARD_VELOCITY/DO_NOTHING) | warning |

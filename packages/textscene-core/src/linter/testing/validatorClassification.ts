@@ -60,24 +60,91 @@ export function unclassifiedKeys(): string[] {
   return ungroundedLabels(UNGROUNDABLE);
 }
 
-/** The sweep, with the exemption set as a parameter so it can be emptied. */
-function ungroundedLabels(exempt: ReadonlySet<string>): string[] {
+/**
+ * Every registered validator and every leaf behind a wildcard dispatcher, with
+ * the label each is reported under, sorted.
+ *
+ * One walker for every registry-wide validator sweep. A second copy of it drifted
+ * within hours of being written: `boundGrounding`'s citation sweep grew a
+ * cycle-safety `Set` that this one lacked, so a shared leaf instance was walked
+ * once there and repeatedly here. `keep` is the only thing a sweep should have
+ * to supply.
+ */
+export function sweepValidators(
+  keep: (validator: PropertyValidator) => boolean,
+  /**
+   * What to walk. Defaults to the live registry; a test passes scratch
+   * validators so the walk itself can be proven to reach leaves and to dedupe,
+   * without the guard's bite resting on whatever the registry happens to hold.
+   */
+  roots: readonly Root[] = registryRoots()
+): string[] {
   const out: string[] = [];
+  // A leaf instance can be shared between dispatchers, so a plain recursion
+  // reports it once per parent.
+  const seen = new Set<PropertyValidator>();
 
   const visit = (validator: PropertyValidator, label: string): void => {
-    // The exemption covers THIS validator, never its subtree: returning early
-    // would let one exempt wildcard key excuse every leaf behind it.
-    if (!exempt.has(label) && !validator.formatOnly && !validator.grounding) {
-      out.push(label);
-    }
+    if (seen.has(validator)) return;
+    seen.add(validator);
+    if (keep(validator)) out.push(label);
     validator.leaves?.forEach((leaf, index) => visit(leaf, `${label}[${index}]`));
   };
 
+  for (const { label, validator } of roots) visit(validator, label);
+  return out.sort();
+}
+
+/** A validator and the label a sweep reports it under. */
+export interface Root {
+  label: string;
+  validator: PropertyValidator;
+}
+
+/** Every `Type.key` the registry resolves, as sweep roots. */
+function registryRoots(): Root[] {
+  const roots: Root[] = [];
   for (const { nodeType, key } of classifiableKeys()) {
     const validator = validatorRegistry.findValidator(nodeType, key);
-    if (validator) visit(validator, `${nodeType}.${key}`);
+    if (validator) roots.push({ label: `${nodeType}.${key}`, validator });
   }
-  return out.sort();
+  return roots;
+}
+
+/** The sweep, with the exemption set as a parameter so it can be emptied. */
+function ungroundedLabels(exempt: ReadonlySet<string>): string[] {
+  // The exemption is applied to the LABEL after the walk, never inside `keep`:
+  // excusing a validator must not excuse the subtree behind it, and one exempt
+  // wildcard key would otherwise cover every leaf it dispatches to.
+  return sweepValidators((v) => !v.formatOnly && !v.grounding).filter((l) => !exempt.has(l));
+}
+
+/**
+ * An `accepts` string that states a numeric range — `float 0-1`, `integer >= 0`,
+ * `enum 0-3 (…)`. A bare `float` or a `Vector3(x, y, z)` states none.
+ */
+const STATES_A_RANGE = /^(?:float|integer) (?:-?[\d.]+-|>= |<= )|^enum -?\d+-/;
+
+/**
+ * Validators whose `accepts` states a range while `tiers` says nothing about
+ * exceeding it — the pairing the generated sheet renders side by side.
+ *
+ * The two cells come from one validator and must agree: a row reading
+ * `integer 1-16384` beside an empty `Out of range` tells a reader the bound has
+ * no consequence. `accepts` and `grounding` each already have a registry sweep;
+ * `tiers` shipped without one and 55 validators built from an inline arrow
+ * (`v.strictInt`, `v.positiveInt` and their kin) went untagged — including
+ * three with an enforced floor and a hinted ceiling, the very split the field
+ * exists to express.
+ *
+ * Keyed on `accepts` rather than on `grounding` because plenty of grounded
+ * validators bound something other than a magnitude — a flags mask, an array's
+ * element type — and have no ends to report.
+ */
+export function rangeWithoutTiers(): string[] {
+  return sweepValidators(
+    (v) => v.accepts !== undefined && STATES_A_RANGE.test(v.accepts) && v.tiers === undefined
+  );
 }
 
 /**

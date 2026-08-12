@@ -37,12 +37,12 @@ Strict parsing format-checks these `Sprite3D` properties, plus 20 inherited from
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `frame` | integer >= 0 | error below |
-| `frame_coords` | Vector2i(x, y), both >= 0 |  |
-| `hframes` | integer > 0 |  |
+| `frame_coords` | Vector2i(x, y), both >= 0 | error below |
+| `hframes` | integer > 0 | error below |
 | `region_enabled` | true or false |  |
 | `region_rect` | Rect2(x, y, w, h) |  |
 | `texture` | null, SubResource("id") or ExtResource("id") |  |
-| `vframes` | integer > 0 |  |
+| `vframes` | integer > 0 | error below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

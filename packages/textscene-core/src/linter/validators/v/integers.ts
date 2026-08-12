@@ -37,7 +37,7 @@ export const integerCombinators = {
         numericRange('integer', opts.min, opts.max)
       ),
       opts,
-      opts.min !== undefined || opts.max !== undefined
+      { min: opts.min !== undefined, max: opts.max !== undefined }
     );
   },
 
@@ -54,7 +54,8 @@ export const integerCombinators = {
         ),
         'integer > 0'
       ),
-      opts
+      opts,
+      { min: true, max: false }
     );
   },
 
@@ -135,7 +136,7 @@ export const integerCombinators = {
         );
       }
       return null;
-    }, numericRange('integer', min, max)), opts, min !== undefined || max !== undefined);
+    }, numericRange('integer', min, max)), opts, { min: min !== undefined, max: max !== undefined });
   },
 
   /**
@@ -161,7 +162,8 @@ export const integerCombinators = {
         },
         'integer >= 0'
       ),
-      opts
+      opts,
+      { min: true, max: false }
     );
   },
 };

@@ -22,7 +22,9 @@ import { v } from './validators/v.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
 import {
   classifiableKeys,
+  rangeWithoutTiers,
   staleUngroundable,
+  sweepValidators,
   unclassifiedKeys,
 } from './testing/validatorClassification.js';
 import './index.js'; // side-effect: every slice registers its validators
@@ -51,32 +53,27 @@ import { ENGINE_CITE_RE } from './testing/engineCite.js';
 const UNCLASSIFIED_VALIDATOR_BUDGET = 0;
 
 /**
- * Every grounding in `validator`'s subtree whose cite names no engine location.
+ * A grounding whose cite names no engine location.
  *
- * Recurses into `.leaves` for the same reason `unclassifiedKeys` does: a
- * wildcard dispatcher's own tag vouches for nothing behind it, and 93 of the 237
- * leaf validators carry a grounding of their own. Reading only the dispatcher
- * let a leaf cite prose and stay green.
- *
- * `seen` is insurance against a shared or self-referential leaf instance, not a
- * filter — a validator reached twice makes the same claim both times.
+ * Rides the shared walk rather than recursing itself: a private copy of that
+ * recursion drifted from `unclassifiedKeys`' within hours of being written, one
+ * carrying a cycle-safety `Set` and the other not. Reaching leaves matters here
+ * because a wildcard dispatcher's own tag vouches for nothing behind it, and 93
+ * of the 237 leaf validators carry a grounding of their own.
  */
-function uncitedGroundings(
-  validator: PropertyValidator,
-  label: string,
-  seen = new Set<PropertyValidator>()
-): string[] {
-  if (seen.has(validator)) return [];
-  seen.add(validator);
-  const g = validator.grounding;
-  const out = g && !ENGINE_CITE_RE.test(g.cite) ? [`${label}: "${g.cite}"`] : [];
-  for (const [index, leaf] of (validator.leaves ?? []).entries()) {
-    out.push(...uncitedGroundings(leaf, `${label}[${index}]`, seen));
-  }
-  return out;
-}
+const citesNoEngineLocation = (validator: PropertyValidator): boolean =>
+  validator.grounding !== undefined && !ENGINE_CITE_RE.test(validator.grounding.cite);
 
 describe('bound grounding', () => {
+  it('states an out-of-range severity wherever it states a range', () => {
+    // The two travel together into one sheet row, so a range beside an empty
+    // `Out of range` cell tells a reader the bound has no consequence. This
+    // sweep is the one `tiers` shipped without: 55 validators built from an
+    // inline arrow went untagged, three of them with an enforced floor and a
+    // hinted ceiling, and nothing said so.
+    expect(rangeWithoutTiers()).toEqual([]);
+  });
+
   it('classifies every validator as format-only or grounded', () => {
     // The floor first: 1986 keys resolve to a validator today, and a budget of
     // zero is satisfied just as well by a registry that never loaded. Covers
@@ -96,15 +93,8 @@ describe('bound grounding', () => {
   it('gives every grounded bound a source citation', () => {
     // The citation is the whole point: `enforced` without a `file:line` is the
     // same unverifiable claim the invented thresholds used to make.
-    const keys = classifiableKeys();
-    expect(keys.length).toBeGreaterThan(1500);
-    const uncited: string[] = [];
-    const seen = new Set<PropertyValidator>();
-    for (const { nodeType, key } of keys) {
-      const validator = validatorRegistry.findValidator(nodeType, key);
-      if (validator) uncited.push(...uncitedGroundings(validator, `${nodeType}.${key}`, seen));
-    }
-    expect(uncited.sort()).toEqual([]);
+    expect(classifiableKeys().length).toBeGreaterThan(1500);
+    expect(sweepValidators(citesNoEngineLocation)).toEqual([]);
   });
 });
 
@@ -164,9 +154,11 @@ describe('the classification guard bites', () => {
     dispatcher.grounding = { kind: 'enforced', cite: 'generic_6dof_joint_3d.cpp:120' };
     dispatcher.leaves = [leaf];
 
-    expect(uncitedGroundings(dispatcher, 'Generic6DOFJoint3D.linear_limit_x/*')).toEqual([
-      'Generic6DOFJoint3D.linear_limit_x/*[0]: "the class reference gives 0 to 1"',
-    ]);
+    expect(
+      sweepValidators(citesNoEngineLocation, [
+        { label: 'Generic6DOFJoint3D.linear_limit_x/*', validator: dispatcher },
+      ])
+    ).toEqual(['Generic6DOFJoint3D.linear_limit_x/*[0]']);
   });
 
   it('reports a shared leaf instance once, however many slots reach it', () => {
@@ -178,7 +170,9 @@ describe('the classification guard bites', () => {
     outer.formatOnly = true;
     outer.leaves = [leaf, leaf];
 
-    expect(uncitedGroundings(outer, 'Type.key/*')).toEqual(['Type.key/*[0]: "no file here"']);
+    expect(
+      sweepValidators(citesNoEngineLocation, [{ label: 'Type.key/*', validator: outer }])
+    ).toEqual(['Type.key/*[0]']);
   });
 
   it('names an UNGROUNDABLE label that resolves to nothing, or to a grounded bound', () => {

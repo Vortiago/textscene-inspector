@@ -70,61 +70,41 @@ describe('NinePatchRect strict validators', () => {
     expect(accepted).toEqual([]);
   });
 
-  describe('axis_stretch_horizontal', () => {
-    // nine_patch_rect.h:39-43 / nine_patch_rect.cpp:86-88: STRETCH=0, TILE=1,
-    // TILE_FIT=2.
+  // nine_patch_rect.h:39-43 / nine_patch_rect.cpp:86-88: STRETCH=0, TILE=1,
+  // TILE_FIT=2. set_h_axis_stretch_mode (nine_patch_rect.cpp:164-171) and
+  // set_v_axis_stretch_mode (:177-184) both assign straight through with no
+  // ERR_FAIL_INDEX, so a value off the enum breaches only the ADD_PROPERTY hint,
+  // which constrains the editor.
+  describe.each([
+    ['axis_stretch_horizontal', 83],
+    ['axis_stretch_vertical', 84],
+  ])('%s (nine_patch_rect.cpp:%d)', (property, _hint) => {
     it('accepts 0 (AXIS_STRETCH_MODE_STRETCH, the documented default)', () => {
-      expect(check('axis_stretch_horizontal', '0')).toBeNull();
-    });
-
-    it('accepts 2 (AXIS_STRETCH_MODE_TILE_FIT, the top of the range)', () => {
-      expect(check('axis_stretch_horizontal', '2')).toBeNull();
-    });
-
-    it('a value beyond the enum (3) is only a WARNING, since set_h_axis_stretch_mode (nine_patch_rect.cpp:164-171) assigns straight through with no ERR_FAIL_INDEX and the ADD_PROPERTY hint (nine_patch_rect.cpp:83) only constrains the editor', () => {
-      const error = check('axis_stretch_horizontal', '3');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
-    });
-
-    it('a value below the enum (-1) is also only a WARNING (nine_patch_rect.cpp:83)', () => {
-      const error = check('axis_stretch_horizontal', '-1');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
-    });
-
-    it('rejects a non-numeric value', () => {
-      expect(check('axis_stretch_horizontal', 'stretch')).not.toBeNull();
-    });
-  });
-
-  describe('axis_stretch_vertical', () => {
-    it('accepts 0 (AXIS_STRETCH_MODE_STRETCH, the bottom of the range)', () => {
-      expect(check('axis_stretch_vertical', '0')).toBeNull();
+      expect(check(property, '0')).toBeNull();
     });
 
     it('accepts 1 (AXIS_STRETCH_MODE_TILE)', () => {
-      expect(check('axis_stretch_vertical', '1')).toBeNull();
+      expect(check(property, '1')).toBeNull();
     });
 
     it('accepts 2 (AXIS_STRETCH_MODE_TILE_FIT, the top of the range)', () => {
-      expect(check('axis_stretch_vertical', '2')).toBeNull();
+      expect(check(property, '2')).toBeNull();
     });
 
-    it('a value beyond the enum (3) is only a WARNING, since set_v_axis_stretch_mode (nine_patch_rect.cpp:177-184) assigns straight through with no ERR_FAIL_INDEX and the ADD_PROPERTY hint (nine_patch_rect.cpp:84) only constrains the editor', () => {
-      const error = check('axis_stretch_vertical', '3');
+    it('a value beyond the enum (3) is only a WARNING', () => {
+      const error = check(property, '3');
       expect(error).not.toBeNull();
       expect(error?.severity).toBe('warning');
     });
 
-    it('a value below the enum (-1) is also only a WARNING (nine_patch_rect.cpp:84)', () => {
-      const error = check('axis_stretch_vertical', '-1');
+    it('a value below the enum (-1) is also only a WARNING', () => {
+      const error = check(property, '-1');
       expect(error).not.toBeNull();
       expect(error?.severity).toBe('warning');
     });
 
     it('rejects a non-numeric value', () => {
-      expect(check('axis_stretch_vertical', 'tile')).not.toBeNull();
+      expect(check(property, 'stretch')).not.toBeNull();
     });
   });
 
@@ -142,107 +122,38 @@ describe('NinePatchRect strict validators', () => {
     });
   });
 
-  describe('patch_margin_left', () => {
-    it('accepts 0 (the documented default)', () => {
-      expect(check('patch_margin_left', '0')).toBeNull();
-    });
-
-    it('accepts 16384 (the top of the hinted range)', () => {
-      expect(check('patch_margin_left', '16384')).toBeNull();
-    });
-
-    it('a value beyond the hint (16385) is only a WARNING, since set_patch_margin (nine_patch_rect.cpp:120-130) ERR_FAIL_INDEXes the SIDE argument, not the margin value, which is assigned straight through, and the ADD_PROPERTYI hint (nine_patch_rect.cpp:78) only constrains the editor', () => {
-      const error = check('patch_margin_left', '16385');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
-    });
-
-    it('a negative value is also only a WARNING, since the hint has no or_greater/or_less and the setter does not clamp it', () => {
-      const error = check('patch_margin_left', '-1');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
-    });
-
-    it('rejects a non-numeric value', () => {
-      expect(check('patch_margin_left', 'wide')).not.toBeNull();
-    });
-  });
-
-  describe('patch_margin_top', () => {
+  // One ADD_PROPERTYI per Side, each hinting "0,16384,1,suffix:px" with no
+  // or_greater/or_less. set_patch_margin (nine_patch_rect.cpp:120-130)
+  // ERR_FAIL_INDEXes the SIDE argument, not the margin value, which is assigned
+  // straight through, so both closed ends are hinted only: a warning.
+  describe.each([
+    ['patch_margin_left', 78],
+    ['patch_margin_top', 79],
+    ['patch_margin_right', 80],
+    ['patch_margin_bottom', 81],
+  ])('%s', (property, cite) => {
     it('accepts 0', () => {
-      expect(check('patch_margin_top', '0')).toBeNull();
+      expect(check(property, '0')).toBeNull();
     });
 
     it('accepts 16384 (the top of the hinted range)', () => {
-      expect(check('patch_margin_top', '16384')).toBeNull();
+      expect(check(property, '16384')).toBeNull();
     });
 
-    it('a value beyond the hint (16385) is only a WARNING (nine_patch_rect.cpp:79)', () => {
-      const error = check('patch_margin_top', '16385');
+    it(`a value beyond the hint (16385) is only a WARNING (nine_patch_rect.cpp:${cite})`, () => {
+      const error = check(property, '16385');
       expect(error).not.toBeNull();
       expect(error?.severity).toBe('warning');
     });
 
-    it('a negative value is also only a WARNING (nine_patch_rect.cpp:79)', () => {
-      const error = check('patch_margin_top', '-1');
+    it(`a negative value is also only a WARNING (nine_patch_rect.cpp:${cite})`, () => {
+      const error = check(property, '-1');
       expect(error).not.toBeNull();
       expect(error?.severity).toBe('warning');
     });
 
     it('rejects a non-numeric value', () => {
-      expect(check('patch_margin_top', 'tall')).not.toBeNull();
-    });
-  });
-
-  describe('patch_margin_right', () => {
-    it('accepts 0', () => {
-      expect(check('patch_margin_right', '0')).toBeNull();
-    });
-
-    it('accepts 16384 (the top of the hinted range)', () => {
-      expect(check('patch_margin_right', '16384')).toBeNull();
-    });
-
-    it('a value beyond the hint (16385) is only a WARNING (nine_patch_rect.cpp:80)', () => {
-      const error = check('patch_margin_right', '16385');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
-    });
-
-    it('a negative value is also only a WARNING (nine_patch_rect.cpp:80)', () => {
-      const error = check('patch_margin_right', '-1');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
-    });
-
-    it('rejects a non-numeric value', () => {
-      expect(check('patch_margin_right', 'wide')).not.toBeNull();
-    });
-  });
-
-  describe('patch_margin_bottom', () => {
-    it('accepts 0', () => {
-      expect(check('patch_margin_bottom', '0')).toBeNull();
-    });
-
-    it('accepts 16384 (the top of the hinted range)', () => {
-      expect(check('patch_margin_bottom', '16384')).toBeNull();
-    });
-
-    it('a value beyond the hint (16385) is only a WARNING (nine_patch_rect.cpp:81)', () => {
-      const error = check('patch_margin_bottom', '16385');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
-    });
-
-    it('a negative value is also only a WARNING (nine_patch_rect.cpp:81)', () => {
-      const error = check('patch_margin_bottom', '-1');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
-    });
-
-    it('rejects a non-numeric value', () => {
-      expect(check('patch_margin_bottom', 'tall')).not.toBeNull();
+      expect(check(property, 'wide')).not.toBeNull();
     });
   });
 

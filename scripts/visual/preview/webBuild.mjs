@@ -4,8 +4,9 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { newestMtime } from '../../newestMtime.mjs';
 import { REPO_ROOT, WEB_DIST_INDEX } from './paths.mjs';
 
 const SKIP_BUILD_VALUES = new Set(['1', 'true', 'yes']);
@@ -26,34 +27,8 @@ const BUNDLED_SOURCE_DIRS = ['packages/textscene-core/src', 'apps/textscene-web/
 const BUNDLED_FILE = /\.(ts|tsx|js|jsx|css|json)$/;
 const NOT_BUNDLED = /\.(test|spec|contract)\.[jt]sx?$/;
 
-/** Newest mtime of a bundle-reachable file under `dir`, and which file carries it. */
-function newestMtime(dir) {
-  let newest = 0;
-  let newestFile = '';
-  const walk = (d) => {
-    let entries;
-    try {
-      entries = readdirSync(d, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const e of entries) {
-      const p = join(d, e.name);
-      if (e.isDirectory()) {
-        walk(p);
-        continue;
-      }
-      if (!BUNDLED_FILE.test(e.name) || NOT_BUNDLED.test(e.name)) continue;
-      const m = statSync(p).mtimeMs;
-      if (m > newest) {
-        newest = m;
-        newestFile = p;
-      }
-    }
-  };
-  walk(dir);
-  return { newest, newestFile };
-}
+/** Reaches the bundle, so an edit to it must reach `dist/` too. */
+const isBundled = (name) => BUNDLED_FILE.test(name) && !NOT_BUNDLED.test(name);
 
 /**
  * Refuse to capture from a bundle older than the sources it claims to contain.
@@ -71,10 +46,10 @@ export function assertWebBuildFresh() {
   }
   const builtAt = statSync(WEB_DIST_INDEX).mtimeMs;
   for (const dir of BUNDLED_SOURCE_DIRS) {
-    const { newest, newestFile } = newestMtime(join(REPO_ROOT, dir));
-    if (newest > builtAt) {
+    const { at, file } = newestMtime(join(REPO_ROOT, dir), isBundled);
+    if (at > builtAt) {
       console.error(
-        `[preview] dist/ predates ${relative(REPO_ROOT, newestFile)} — this capture would ` +
+        `[preview] dist/ predates ${relative(REPO_ROOT, file)} — this capture would ` +
           `reflect the PREVIOUS revision, not your change.\n` +
           `[preview] rebuild: pnpm --filter @textscene/core build && ` +
           `pnpm --filter @textscene/web-previewer build`

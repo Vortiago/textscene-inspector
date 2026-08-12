@@ -48,7 +48,7 @@ Strict parsing format-checks these `SplineIK3D` properties, plus 1 inherited fro
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `setting_count` | integer >= 0 |  |
+| `setting_count` | integer >= 0 | error below |
 | `settings/#/*` | per-setting spline fitting, plus ChainIK3D's bone chain setup |  |
 
 | Rule | Reports | Severity |

@@ -54,7 +54,7 @@ Strict parsing format-checks these `RigidBody2D` properties, plus 5 inherited fr
 | `freeze` | true or false |  |
 | `freeze_mode` | enum 0-1 (STATIC/KINEMATIC) | warning |
 | `gravity_scale` | float |  |
-| `inertia` | float >= 0 |  |
+| `inertia` | float >= 0 | error below |
 | `linear_damp` | float >= -1 | error below |
 | `linear_damp_mode` | enum 0-1 (COMBINE/REPLACE) | warning |
 | `linear_velocity` | Vector2(x, y) |  |

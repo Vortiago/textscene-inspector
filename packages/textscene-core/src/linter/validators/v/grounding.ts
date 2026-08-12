@@ -142,13 +142,28 @@ export function ground(
   validator: PropertyValidator,
   opts: Grounding,
   /**
-   * Whether this validator actually constrains a range. `v.float('width')` with
-   * no min or max is a format check, so it needs no grounding and must not be
+   * Which ends this validator actually constrains. `v.float('width')` with no
+   * min or max is a format check, so it needs no grounding and must not be
    * counted by the ratchet: marking every validator bounded inflated the count
    * with properties that have nothing to ground.
+   *
+   * Per END rather than a single flag, because the two ends carry independent
+   * severities and an open end must report none. A bare boolean means both.
    */
-  isBounded = true
+  bounded: boolean | { min: boolean; max: boolean } = true
 ): PropertyValidator {
+  const ends = typeof bounded === 'boolean' ? { min: bounded, max: bounded } : bounded;
+  const isBounded = ends.min || ends.max;
+  // Here rather than in the range factories, because this is the one function
+  // every combinator passes through: tagging at the factories left the 55
+  // validators built from an inline arrow — `v.strictInt`, `v.positiveInt` —
+  // silently untagged, and the sheet rendered their tier blank.
+  if (isBounded) {
+    validator.tiers = {
+      ...(ends.min ? { min: endSeverity(opts, 'min') } : {}),
+      ...(ends.max ? { max: endSeverity(opts, 'max') } : {}),
+    };
+  }
   const enforced = citeFor(opts.enforced, 'min') ?? citeFor(opts.enforced, 'max');
   const hinted = citeFor(opts.hinted, 'min') ?? citeFor(opts.hinted, 'max');
   if (enforced) {

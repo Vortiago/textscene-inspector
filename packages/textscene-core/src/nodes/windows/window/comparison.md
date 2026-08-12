@@ -80,7 +80,7 @@ Strict parsing format-checks these `Window` properties, plus 47 inherited from V
 | `content_scale_aspect` | enum 0-4 (IGNORE/KEEP/KEEP_WIDTH/KEEP_HEIGHT/EXPAND) | warning |
 | `content_scale_factor` | float 5e-324-8 | error below, warning above |
 | `content_scale_mode` | enum 0-2 (DISABLED/CANVAS_ITEMS/VIEWPORT) | warning |
-| `content_scale_size` | Vector2i(x, y), both >= 0 |  |
+| `content_scale_size` | Vector2i(x, y), both >= 0 | error below |
 | `content_scale_stretch` | enum 0-1 (FRACTIONAL/INTEGER) | warning |
 | `current_screen` | integer >= 0 | warning below |
 | `exclude_from_capture` | true or false |  |
@@ -89,9 +89,9 @@ Strict parsing format-checks these `Window` properties, plus 47 inherited from V
 | `force_native` | true or false |  |
 | `initial_position` | enum 0-5 (ABSOLUTE/CENTER_PRIMARY_SCREEN/CENTER_MAIN_WINDOW_SCREEN/CENTER_OTHER_SCREEN/CENTER_SCREEN_WITH_MOUSE_FOCUS/CENTER_SCREEN_WITH_KEYBOARD_FOCUS) | warning |
 | `keep_title_visible` | true or false |  |
-| `max_size` | Vector2i(x, y), both >= 0 |  |
+| `max_size` | Vector2i(x, y), both >= 0 | error below |
 | `maximize_disabled` | true or false |  |
-| `min_size` | Vector2i(x, y), both >= 0 |  |
+| `min_size` | Vector2i(x, y), both >= 0 | error below |
 | `minimize_disabled` | true or false |  |
 | `mode` | enum 0-4 (WINDOWED/MINIMIZED/MAXIMIZED/FULLSCREEN/EXCLUSIVE_FULLSCREEN) | warning |
 | `mouse_passthrough` | true or false |  |
@@ -101,7 +101,7 @@ Strict parsing format-checks these `Window` properties, plus 47 inherited from V
 | `popup_wm_hint` | true or false |  |
 | `position` | Vector2i(x, y) |  |
 | `sharp_corners` | true or false |  |
-| `size` | Vector2i(x, y), both >= 0 |  |
+| `size` | Vector2i(x, y), both >= 0 | error below |
 | `theme` | null, SubResource("id") or ExtResource("id") |  |
 | `theme_override_colors/*` | Color(r, g, b, a) |  |
 | `theme_override_constants/*` | integer -16384-16384 | warning |

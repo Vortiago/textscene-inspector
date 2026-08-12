@@ -281,7 +281,7 @@ Strict parsing format-checks these `PointLight2D` properties, plus 15 inherited 
 | `height` | float >= 0 | warning below |
 | `offset` | Vector2(x, y) |  |
 | `texture` | null, SubResource("id") or ExtResource("id") |  |
-| `texture_scale` | float 0.01-50, never exactly 0 |  |
+| `texture_scale` | float 0.01-50, never exactly 0 | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

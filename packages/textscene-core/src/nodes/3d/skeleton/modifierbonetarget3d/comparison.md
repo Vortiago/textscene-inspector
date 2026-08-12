@@ -34,7 +34,7 @@ Strict parsing format-checks these `ModifierBoneTarget3D` properties, plus 2 inh
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `bone` | integer >= -1 |  |
+| `bone` | integer >= -1 | error below |
 | `bone_name` | quoted string |  |
 
 | Rule | Reports | Severity |

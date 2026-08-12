@@ -61,23 +61,25 @@ function baseChainKeys(nodeType: string): Set<string> {
 }
 
 /**
- * Entries that suppress nothing: drop one and the violation count must rise.
+ * Entries that suppress nothing: no shadow the open sweep finds is spelled that
+ * way.
  *
  * An exemption whose slice stopped shadowing, or whose key was renamed away,
  * keeps sitting in the set waving the NEXT real shadow of that same string
- * through. Comparing counts rather than parsing messages means this asks the
- * guard itself, so it cannot drift from what the guard actually allows.
+ * through. Exact rather than leave-one-out because the set is consulted only as
+ * `has(label)`, so dropping one entry can un-suppress only the violation
+ * labelled with it. Reading the guard's own labels means this cannot drift from
+ * what the guard allows.
  */
 function deadOverrides(
   registrations: Array<{ nodeType: string; keys: string[] }>,
   inheritedKeysOf: (nodeType: string) => Set<string>,
   overrides: Set<string>
 ): string[] {
-  const allowed = findShadowViolations(registrations, inheritedKeysOf, overrides).length;
-  return [...overrides].filter((entry) => {
-    const without = new Set([...overrides].filter((other) => other !== entry));
-    return findShadowViolations(registrations, inheritedKeysOf, without).length === allowed;
-  });
+  const shadowed = new Set(
+    findShadowViolations(registrations, inheritedKeysOf, new Set()).map(({ label }) => label)
+  );
+  return [...overrides].filter((entry) => !shadowed.has(entry));
 }
 
 describe('ValidatorRegistry meta-guard: no shadow copies', () => {
@@ -93,7 +95,9 @@ describe('ValidatorRegistry meta-guard: no shadow copies', () => {
       new Set()
     );
     expect(violations).toHaveLength(1);
-    expect(violations[0]).toContain("'Child' re-declares 'transform'");
+    expect(violations[0]?.message).toContain("'Child' re-declares 'transform'");
+    // The label is what an exemption is matched against, so its spelling is load-bearing.
+    expect(violations[0]?.label).toBe('Child:transform');
   });
 
   it('an INTENTIONAL_OVERRIDES entry suppresses the seeded violation', () => {
@@ -129,7 +133,7 @@ describe('ValidatorRegistry meta-guard: no shadow copies', () => {
       new Set()
     );
     expect(violations).toHaveLength(1);
-    expect(violations[0]).toContain("'Child' re-declares 'transform'");
+    expect(violations[0]?.message).toContain("'Child' re-declares 'transform'");
   });
 
   it('no type re-declares a key that its base chain already registers', () => {
@@ -143,7 +147,7 @@ describe('ValidatorRegistry meta-guard: no shadow copies', () => {
 
     if (violations.length > 0) {
       throw new Error(
-        `Shadow copy anti-pattern detected — remove the duplicate key(s) and let the base-walk deliver them:\n\n${violations.join('\n\n')}`
+        `Shadow copy anti-pattern detected — remove the duplicate key(s) and let the base-walk deliver them:\n\n${violations.map(({ message }) => message).join('\n\n')}`
       );
     }
   });

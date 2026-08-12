@@ -15,13 +15,12 @@ import { Linter } from '../../../linter/Linter';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import '../../../linter/index';
 
-function lintErrors(raw: string): number {
-  return new Linter().lint(raw).filter(d => d.severity === 'error').length;
-}
+/** How many diagnostics of one severity a scene draws, from every rule. */
+const lintCount = (severity: 'error' | 'warning') => (raw: string): number =>
+  new Linter().lint(raw).filter(d => d.severity === severity).length;
 
-function lintWarnings(raw: string): number {
-  return new Linter().lint(raw).filter(d => d.severity === 'warning').length;
-}
+const lintErrors = lintCount('error');
+const lintWarnings = lintCount('warning');
 
 /**
  * Phase-1 warnings naming `prop`. A textureless scene always carries the

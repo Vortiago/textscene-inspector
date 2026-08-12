@@ -75,13 +75,19 @@ interface Quoted {
 function quotedHints(): Quoted[] {
   const found: Quoted[] = [];
   for (const file of [...walk(NODES, DECLARES_BOUNDS), ...walk(RESOURCES, DECLARES_BOUNDS)]) {
-    const lines = readFileSync(file, 'utf8').split('\n');
-    const type = readFileSync(file, 'utf8').match(/registerAll\(\s*'([^']+)'/)?.[1] ?? '?';
+    const source = readFileSync(file, 'utf8');
+    const lines = source.split('\n');
+    const type = source.match(/registerAll\(\s*'([^']+)'/)?.[1] ?? '?';
     for (let i = 0; i < lines.length; i++) {
       const key = lines[i]!.match(
         /^\s{2,}\[?[`']?([a-z_0-9/#*${}]+)[`']?\]?\s*:\s*(?:v\.|layerBitmask|maskedBitField|accepts|indexedFamily)/
       )?.[1];
       if (!key) continue;
+
+      // The comment block directly above the key: the claim under test.
+      let c = i - 1;
+      let comment = '';
+      while (c >= 0 && /^\s*(\/\/|\*|\/\*)/.test(lines[c]!)) { comment = `${lines[c]!}\n${comment}`; c--; }
 
       // The property's OWN expression, by paren balance: a fixed line window
       // reads a neighbour's bound and reports a disagreement that is not there.
@@ -97,11 +103,9 @@ function quotedHints(): Quoted[] {
         expr += `${lines[end]!}\n`;
         if (started && depth <= 0) break;
       }
-
-      let c = i - 1;
-      let comment = '';
-      while (c >= 0 && /^\s*(\/\/|\*|\/\*)/.test(lines[c]!)) { comment = `${lines[c]!}\n${comment}`; c--; }
+      // Resume past the expression, so a line inside it cannot match as a key.
       i = end;
+
       // `PROPERTY_HINT_ENUM` takes a comma-separated LABEL list, which reads
       // exactly like a range when the labels are numeric: VoxelGI's
       // "64,128,256,512" names four constants serialised as 0-3.

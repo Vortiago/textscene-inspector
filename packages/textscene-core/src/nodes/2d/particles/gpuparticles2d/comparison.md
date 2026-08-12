@@ -51,7 +51,7 @@ Strict parsing format-checks these `GPUParticles2D` properties, plus 12 inherite
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `amount` | integer 1-1000000 |  |
+| `amount` | integer 1-1000000 | error below, warning above |
 | `amount_ratio` | float 0-1 | warning |
 | `collision_base_size` | float >= 0 | warning below |
 | `draw_order` | enum 0-2 (INDEX/LIFETIME/REVERSE_LIFETIME) | warning |

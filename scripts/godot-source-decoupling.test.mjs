@@ -94,7 +94,7 @@ function scannableFiles() {
 
 /**
  * One read of the repo, shared by every assertion below. Walking and reading
- * ~3,800 tracked files per `it` costs about half a second of pure duplicate
+ * the ~5,600 tracked files per `it` costs about half a second of pure duplicate
  * work; `linter/reactFree.test.ts` hoists its own sweep for the same reason.
  */
 const SCANNED = scannableFiles().map((file) => ({
@@ -114,12 +114,21 @@ function offenders(re, allowed, scanned = SCANNED) {
   return hits;
 }
 
-/** The two sweeps as the assertions run them — pattern, allowlist and post-filter together. */
+/** The two sweeps — pattern, allowlist and post-filter together. */
 const checkoutHits = (allowed, scanned) =>
   offenders(CHECKOUT_RE, allowed, scanned).filter((h) => !URL_RE.test(h.text));
 
 const envHits = (allowed, scanned) =>
   offenders(ENV_RE, allowed, scanned).filter((h) => extname(h.file).toLowerCase() !== '.md');
+
+/**
+ * Both sweeps with the allowlist open, read once for every assertion below.
+ * `offenders` consults the allowlist only as `has(file)`, so an allowlisted
+ * sweep is exactly these hits minus the files the allowlist names, and a second
+ * pass over the repo to learn that costs another 40ms per assertion.
+ */
+const ALL_CHECKOUT_HITS = checkoutHits(new Set());
+const ALL_ENV_HITS = envHits(new Set());
 
 /**
  * Synthetic files fed to those sweeps, so the controls below prove what the
@@ -183,12 +192,9 @@ const ENV_CONTROLS = [
 const expectedHits = (controls) => controls.filter((c) => c.hit).map((c) => c.file);
 const hitFiles = (hits) => [...new Set(hits.map((h) => h.file))];
 
-/**
- * Allowlist entries the sweep would not report anyway. Exact rather than
- * leave-one-out because `allowed` is consulted only as `has(file)`.
- */
-const deadEntries = (allowed, hitsFor) => {
-  const reported = new Set(hitFiles(hitsFor(new Set())));
+/** Allowlist entries the open sweep would not report anyway. */
+const deadEntries = (allowed, openHits) => {
+  const reported = new Set(hitFiles(openHits));
   return [...allowed].filter((entry) => !reported.has(entry));
 };
 
@@ -196,11 +202,11 @@ const format = (hits) => hits.map((h) => `${h.file}:${h.line}  ${h.text}`);
 
 describe('Godot source stays a reading aid, not a dependency', () => {
   it('no tracked file names the local engine checkout', () => {
-    expect(format(checkoutHits(CHECKOUT_ALLOWED))).toEqual([]);
+    expect(format(ALL_CHECKOUT_HITS.filter((h) => !CHECKOUT_ALLOWED.has(h.file)))).toEqual([]);
   });
 
   it('no code file locates the engine source through the environment', () => {
-    expect(format(envHits(ENV_ALLOWED))).toEqual([]);
+    expect(format(ALL_ENV_HITS.filter((h) => !ENV_ALLOWED.has(h.file)))).toEqual([]);
   });
 
   it('scans a meaningful share of the repo, so a broken glob cannot pass it', () => {
@@ -213,7 +219,7 @@ describe('Godot source stays a reading aid, not a dependency', () => {
     // clone recipe in REFERENCES.md is a real offender kept on purpose, so run
     // the whole sweep with an empty allowlist and require it back.
     expect(CHECKOUT_ALLOWED.has('REFERENCES.md')).toBe(true);
-    expect(hitFiles(checkoutHits(new Set()))).toContain('REFERENCES.md');
+    expect(hitFiles(ALL_CHECKOUT_HITS)).toContain('REFERENCES.md');
   });
 
   it('reports every checkout shape, whatever the tag, and no citation', () => {
@@ -227,8 +233,9 @@ describe('Godot source stays a reading aid, not a dependency', () => {
   });
 
   it('names an allowlist entry that exempts nothing, and keeps the one that does', () => {
-    const dead = deadEntries(new Set(['scratch/repos-posix.ts', 'scratch/citation.ts']), (allowed) =>
-      checkoutHits(allowed, CHECKOUT_CONTROLS)
+    const dead = deadEntries(
+      new Set(['scratch/repos-posix.ts', 'scratch/citation.ts']),
+      checkoutHits(new Set(), CHECKOUT_CONTROLS)
     );
     expect(dead).toEqual(['scratch/citation.ts']);
   });
@@ -236,24 +243,7 @@ describe('Godot source stays a reading aid, not a dependency', () => {
   it('holds no allowlist entry that exempts nothing', () => {
     // A dead entry waves the next real hit on that path straight through, and
     // every other assertion here reads the same zero with or without it.
-    expect(deadEntries(CHECKOUT_ALLOWED, checkoutHits)).toEqual([]);
-    expect(deadEntries(ENV_ALLOWED, envHits)).toEqual([]);
-  });
-
-  it('matches the path shapes it exists to catch, and leaves a citation alone', () => {
-    expect(CHECKOUT_RE.test("readFileSync('/home/dev/godot-4.6.3/scene/3d/light_3d.cpp')")).toBe(
-      true
-    );
-    expect(CHECKOUT_RE.test("join(HOME, '/repos/godot/doc/classes/Range.xml')")).toBe(true);
-    // Citing where a bound came from is the encouraged practice, not a hit.
-    expect(CHECKOUT_RE.test('// scene/3d/camera_3d.cpp:682')).toBe(false);
-    expect(CHECKOUT_RE.test('// default per doc/classes/Range.xml')).toBe(false);
-  });
-
-  it('matches an environment lookup, and leaves an unrelated GODOT_ var alone', () => {
-    expect(ENV_RE.test('const root = process.env.GODOT_SRC;')).toBe(true);
-    expect(ENV_RE.test('process.env.GODOT_CHECKOUT ?? ""')).toBe(true);
-    // A path to the godot BINARY is a tool, not the source tree.
-    expect(ENV_RE.test("process.env.GODOT_BIN ?? 'godot'")).toBe(false);
+    expect(deadEntries(CHECKOUT_ALLOWED, ALL_CHECKOUT_HITS)).toEqual([]);
+    expect(deadEntries(ENV_ALLOWED, ALL_ENV_HITS)).toEqual([]);
   });
 });

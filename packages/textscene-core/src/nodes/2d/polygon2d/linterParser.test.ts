@@ -6,13 +6,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import './linterParser';
 
-function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'error');
-}
+/** The diagnostics of one severity: the error and warning tiers are asserted apart. */
+const ofSeverity = (severity: 'error' | 'warning') => (diagnostics: ReturnType<Linter['lint']>) =>
+  diagnostics.filter((d) => d.severity === severity);
 
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'warning');
-}
+const errorsOf = ofSeverity('error');
+const warningsOf = ofSeverity('warning');
 
 describe('Polygon2D strict validators', () => {
   let linter: Linter;

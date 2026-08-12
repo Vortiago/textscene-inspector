@@ -25,7 +25,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   mkdirSync,
   mkdtempSync,
-  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -35,6 +34,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { collectCoverage } from './coverage-report/collect.mjs';
+import { newestMtime } from './newestMtime.mjs';
 
 const CATALOG = join(import.meta.dirname, 'compare-docs/node-catalog.json');
 const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
@@ -51,34 +51,8 @@ const BUILD = 'pnpm --filter @textscene/core build';
 const COMPILED = /\.tsx?$/;
 const NOT_COMPILED = /\.d\.ts$|\.(test|spec)\.tsx?$/;
 
-/** Newest mtime under `dir` among files `keep` accepts, and which file carries it. */
-function newest(dir, keep) {
-  let at = 0;
-  let file = '';
-  const walk = (d) => {
-    let entries;
-    try {
-      entries = readdirSync(d, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const e of entries) {
-      const p = join(d, e.name);
-      if (e.isDirectory()) {
-        if (e.name !== 'testing') walk(p);
-        continue;
-      }
-      if (!keep(e.name)) continue;
-      const m = statSync(p).mtimeMs;
-      if (m > at) {
-        at = m;
-        file = p;
-      }
-    }
-  };
-  walk(dir);
-  return { at, file };
-}
+/** Newest kept file under `dir`; `testing/` is the excluded kit, at any depth. */
+const newest = (dir, keep) => newestMtime(dir, keep, (name) => name !== 'testing');
 
 /**
  * The ledger is read from the BUILT registries, so an unbuilt or stale `dist/`

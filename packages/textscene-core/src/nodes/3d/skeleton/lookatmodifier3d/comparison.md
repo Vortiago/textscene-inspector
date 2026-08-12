@@ -54,12 +54,12 @@ Strict parsing format-checks these `LookAtModifier3D` properties, plus 2 inherit
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `bone` | integer >= -1 |  |
+| `bone` | integer >= -1 | error below |
 | `bone_name` | quoted string |  |
 | `duration` | float >= 0 | warning below |
 | `ease_type` | enum 0-3 (In/Out/InOut/OutIn) | warning |
 | `forward_axis` | enum 0-5 (+X/-X/+Y/-Y/+Z/-Z) | warning |
-| `origin_bone` | integer >= -1 |  |
+| `origin_bone` | integer >= -1 | error below |
 | `origin_bone_name` | quoted string |  |
 | `origin_external_node` | NodePath("path/to/node") |  |
 | `origin_from` | enum 0-2 (Self/SpecificBone/ExternalNode) | warning |

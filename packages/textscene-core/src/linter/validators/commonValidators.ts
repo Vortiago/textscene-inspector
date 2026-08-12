@@ -171,8 +171,6 @@ export function createEnumValidator(
     }
     return null;
   };
-  // An enum is closed at both ends by construction.
-  validator.tiers = { min: valueSeverity, max: maxSeverity };
   return validator;
 }
 
@@ -240,12 +238,6 @@ export function createNumericRangeValidator(
     }
 
     return null;
-  };
-  // Only the ends that HAVE a bound: an open end rejects nothing, so tagging it
-  // with a severity would advertise a rejection this validator never makes.
-  validator.tiers = {
-    ...(min !== null ? { min: valueSeverity } : {}),
-    ...(max !== null ? { max: maxSeverity } : {}),
   };
   return validator;
 }

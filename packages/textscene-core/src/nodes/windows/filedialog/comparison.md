@@ -61,7 +61,7 @@ Strict parsing format-checks these `FileDialog` properties, plus 1 inherited fro
 | `layout_toggle_enabled` | true or false |  |
 | `mode_overrides_title` | true or false |  |
 | `option_#/*` | option name, values or default |  |
-| `option_count` | integer >= 0 |  |
+| `option_count` | integer >= 0 | error below |
 | `overwrite_warning_enabled` | true or false |  |
 | `recent_list_enabled` | true or false |  |
 | `root_subfolder` | quoted string |  |

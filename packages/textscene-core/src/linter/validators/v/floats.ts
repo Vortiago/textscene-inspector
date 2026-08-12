@@ -49,7 +49,7 @@ export const floatCombinators = {
         numericRange('float', opts.min, opts.max)
       ),
       opts,
-      opts.min !== undefined || opts.max !== undefined
+      { min: opts.min !== undefined, max: opts.max !== undefined }
     ));
   },
 
@@ -109,7 +109,8 @@ export const floatCombinators = {
         ),
         'float >= 0'
       ),
-      opts
+      opts,
+      { min: true, max: false }
     ));
   },
 
@@ -129,7 +130,8 @@ export const floatCombinators = {
         ),
         'float > 0'
       ),
-      opts
+      opts,
+      { min: true, max: false }
     );
   },
 };

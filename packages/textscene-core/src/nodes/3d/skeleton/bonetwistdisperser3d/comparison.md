@@ -73,7 +73,7 @@ Strict parsing format-checks these `BoneTwistDisperser3D` properties, plus 2 inh
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `mutable_bone_axes` | true or false |  |
-| `setting_count` | integer >= 0 |  |
+| `setting_count` | integer >= 0 | error below |
 | `settings/*` | settings/<i>/<leaf> and settings/<i>/joints/<j>/<leaf> |  |
 
 | Rule | Reports | Severity |

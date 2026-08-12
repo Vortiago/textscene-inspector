@@ -42,24 +42,37 @@ function shadowIdentity(key: string): string {
   return key;
 }
 
+/** One shadow, as both the allowlist's key for it and the report line. */
+export interface ShadowViolation {
+  /** `Type:key`, the exact string an exemption is spelled as. */
+  label: string;
+  message: string;
+}
+
 /**
  * The guard itself: every key a registration re-declares while its base chain
  * already carries it is a violation, unless allowlisted as `Type:key`.
  *
  * The allowlist is keyed on the LITERAL registration string, not the reduced
- * one, so an entry is greppable from the source line it exempts.
+ * one, so an entry is greppable from the source line it exempts — and `label`
+ * hands that same unreduced string back, so a caller can ask which exemptions
+ * matched without parsing `message`.
  */
 export function findShadowViolations(
   registrations: Array<{ nodeType: string; keys: string[] }>,
   inheritedKeysOf: (nodeType: string) => Set<string>,
   intentionalOverrides: Set<string>
-): string[] {
-  const violations: string[] = [];
+): ShadowViolation[] {
+  const violations: ShadowViolation[] = [];
   for (const { nodeType, keys } of registrations) {
     const inherited = new Set([...inheritedKeysOf(nodeType)].map(shadowIdentity));
     for (const key of keys) {
-      if (inherited.has(shadowIdentity(key)) && !intentionalOverrides.has(`${nodeType}:${key}`)) {
-        violations.push(`'${nodeType}' re-declares '${key}' which is already in its base chain`);
+      const label = `${nodeType}:${key}`;
+      if (inherited.has(shadowIdentity(key)) && !intentionalOverrides.has(label)) {
+        violations.push({
+          label,
+          message: `'${nodeType}' re-declares '${key}' which is already in its base chain`,
+        });
       }
     }
   }
