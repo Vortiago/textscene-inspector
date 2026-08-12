@@ -1,12 +1,35 @@
 /**
- * Sets up the test workspace by copying fixture scenes.
+ * Sets up the test workspace by mirroring the fixtures res:// root.
  * Mirrors the web app's copy-fixtures.js pattern.
  */
-import { copyFileSync, mkdirSync, readdirSync, rmSync, statSync } from 'fs';
+import { copyFileSync, mkdirSync, readdirSync, rmSync } from 'fs';
 import { join } from 'path';
 
 /**
- * Copies all test scenes from scenes/ to the test workspace.
+ * Copy a source tree verbatim into the workspace.
+ *
+ * No filter at all: what the directory contains IS the res:// namespace, and
+ * the extension resolves res:// against the workspace root, so anything left
+ * out would make VS Code disagree with Godot and the web previewer about what
+ * a fixture's references mean. (copy-fixtures.js drops files over Cloudflare
+ * Pages' 25 MiB ceiling; nothing deploys from a test workspace, so that one
+ * deployment-limit skip has no counterpart here.)
+ */
+function copyRecursive(src: string, dest: string): void {
+  for (const entry of readdirSync(src, { withFileTypes: true })) {
+    const from = join(src, entry.name);
+    const to = join(dest, entry.name);
+    if (entry.isDirectory()) {
+      mkdirSync(to, { recursive: true });
+      copyRecursive(from, to);
+    } else {
+      copyFileSync(from, to);
+    }
+  }
+}
+
+/**
+ * Mirrors scenes/fixtures/ into the test workspace.
  * @param workspaceRoot - Root directory of the test workspace
  */
 export function setupTestWorkspace(workspaceRoot: string): void {
@@ -25,70 +48,11 @@ export function setupTestWorkspace(workspaceRoot: string): void {
   // would point at the importer's output directory, not this file's.
   // workspaceRoot is <repo>/apps/textscene-vscode/.test-workspace.
   const projectRoot = join(workspaceRoot, '../../..');
-  const scenesRoot = join(projectRoot, 'scenes');
-  const fixturesSource = join(scenesRoot, 'fixtures');
-  const examplesSource = join(scenesRoot, 'examples');
+  const fixturesSource = join(projectRoot, 'scenes', 'fixtures');
   const fixturesTarget = join(workspaceRoot, 'fixtures');
 
   mkdirSync(fixturesTarget, { recursive: true });
+  copyRecursive(fixturesSource, fixturesTarget);
 
-  let copiedCount = 0;
-
-  // Copy from scenes/fixtures/
-  const fixtureFiles = readdirSync(fixturesSource).filter((file) =>
-    file.endsWith('.tscn'),
-  );
-  for (const file of fixtureFiles) {
-    copyFileSync(join(fixturesSource, file), join(fixturesTarget, file));
-    copiedCount++;
-  }
-
-  // Copy textures directory from scenes/fixtures/
-  const texturesSource = join(fixturesSource, 'textures');
-  const texturesTarget = join(fixturesTarget, 'textures');
-  try {
-    if (statSync(texturesSource).isDirectory()) {
-      mkdirSync(texturesTarget, { recursive: true });
-      const textureFiles = readdirSync(texturesSource);
-      for (const file of textureFiles) {
-        copyFileSync(join(texturesSource, file), join(texturesTarget, file));
-      }
-      console.log(
-        `  Copied ${textureFiles.length} texture files to fixtures/textures/`,
-      );
-    }
-  } catch {
-    // Textures directory doesn't exist yet, skip
-  }
-
-  // Copy from scenes/examples/
-  const exampleFiles = readdirSync(examplesSource).filter((file) =>
-    file.endsWith('.tscn'),
-  );
-  for (const file of exampleFiles) {
-    copyFileSync(join(examplesSource, file), join(fixturesTarget, file));
-    copiedCount++;
-  }
-
-  // Copy materials directory from scenes/materials/
-  const materialsSource = join(scenesRoot, 'materials');
-  const materialsTarget = join(fixturesTarget, 'materials');
-  try {
-    if (statSync(materialsSource).isDirectory()) {
-      mkdirSync(materialsTarget, { recursive: true });
-      const materialFiles = readdirSync(materialsSource);
-      for (const file of materialFiles) {
-        copyFileSync(join(materialsSource, file), join(materialsTarget, file));
-      }
-      console.log(
-        `  Copied ${materialFiles.length} material files to fixtures/materials/`,
-      );
-    }
-  } catch {
-    // Materials directory doesn't exist yet, skip
-  }
-
-  console.log(
-    `  Copied ${copiedCount} scene files (${fixtureFiles.length} fixtures + ${exampleFiles.length} examples)`,
-  );
+  console.log('  Mirrored scenes/fixtures/ to fixtures/ (res:// root)');
 }

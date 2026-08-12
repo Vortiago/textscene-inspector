@@ -1,6 +1,23 @@
 # TSCN Scenes
 
-This directory contains scene files organized into fixtures (minimal unit-level scenes) and examples (integration and complex demo scenes).
+`scenes/fixtures/` is a Godot `res://` root. Every `.tscn` the previewer offers
+by default sits at its top level, and every resource those scenes reference
+(`materials/`, `textures/`, `fonts/`) sits at the `res://` subpath the scene
+names. The web previewer mirrors the directory verbatim into
+`public/fixtures/`, the VS Code integration workspace mirrors it verbatim too,
+and `pnpm ref:godot` stages it as the project root — so all three resolve
+`res://` to the same bytes, exactly as opening the folder in VS Code does.
+
+Other directories under `scenes/` are their own roots and are NOT part of that
+namespace:
+
+| Directory | What it is |
+| --- | --- |
+| `fixtures/` | The default corpus's `res://` root — unit, edge, integration and example scenes plus their resources |
+| `upload-payloads/` | Files the `test-missing-*` fixtures deliberately CANNOT find. Kept out of every root so "missing" is true for Godot, the web previewer and VS Code alike; drag one into the previewer to watch a missing resource resolve |
+| `isometric/` | Vendored dungeon corpus — its own unmarked root (`scripts/corpusRoots.mjs`) |
+| `demos/<top>/<project>/` | Vendored godot-demo-projects, each with its own `project.godot` |
+| `games/` | On-demand vendored games (gitignored, see below) |
 
 ## Open-source games corpus (on-demand)
 
@@ -57,7 +74,7 @@ has to be changed there.
    - `scenes/fixtures/unit-capsule-mesh.tscn` - Blue capsule
    - `scenes/fixtures/unit-torus-mesh.tscn` - Orange torus (donut)
    - `scenes/fixtures/unit-prism-mesh.tscn` - Purple triangular prism
-   - `scenes/examples/integration-all-primitives.tscn` - **All primitives together with lighting**
+   - `scenes/fixtures/integration-all-primitives.tscn` - **All primitives together with lighting**
 
 4. Interact with the 3D view:
    - **Rotate**: Left mouse drag
@@ -79,15 +96,16 @@ has to be changed there.
    - Click "..." → "Install from VSIX"
    - Select `apps/textscene-vscode/textscene-inspector-0.0.1.vsix`
 
-3. Open any `.tscn` file from `scenes/fixtures/` or `scenes/examples/` in VS Code
+3. Open the `scenes/fixtures/` folder in VS Code and pick any `.tscn` in it
+   (opening the folder is what makes `res://` resolve)
 
 4. Click the preview icon in the top-right corner or use:
    - Command Palette (Ctrl+Shift+P) → "TextScene: Open Preview to the Side"
 
 ## Scene Organization
 
-### Fixtures (fixtures/)
-Minimal unit-level scenes for testing individual node types.
+### Unit scenes (`unit-*.tscn`)
+Minimal scenes for testing individual node types.
 
 | File | Mesh Type | Description | What to Verify |
 |------|-----------|-------------|----------------|
@@ -99,14 +117,16 @@ Minimal unit-level scenes for testing individual node types.
 | `unit-node3d-basic.tscn` | Node3D | Simple node | Basic node verification |
 | `unit-camera-basic.tscn` | Camera3D | Camera node | Camera setup verification |
 
-### Examples (examples/)
-Integration and complex demo scenes for testing multiple nodes together.
+### Integration and example scenes (`integration-*.tscn`, `example-*.tscn`)
+Complex scenes exercising multiple nodes together, alongside the unit scenes at
+the same `res://` root.
 
 | File | Contents | Purpose |
 |------|----------|---------|
 | `integration-all-primitives.tscn` | All 4 new mesh types + lighting | **Best for full verification** - Shows all primitives with proper materials and lighting |
 | `integration-lights-all-types.tscn` | Directional, Omni, and Spot lights | Light rendering verification |
-| `example-hallway.tscn` | Complex architectural scene | Performance/integration testing |
+| `integration-instanced-subscene.tscn` | Two instances of `res://unit-instance-child.tscn` | Sub-scene instancing |
+| `example-hallway-mockup.tscn` | Complex architectural scene | Performance/integration testing |
 | `example-hierarchy-deep.tscn` | Deep node hierarchy | Performance testing |
 | `example-hierarchy-wide.tscn` | Wide node hierarchy | Performance testing |
 

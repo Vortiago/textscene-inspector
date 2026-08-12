@@ -18,6 +18,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Child_cube",
+    "file": "child_cube.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Child_sphere",
+    "file": "child_sphere.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Complex 2d Gui",
     "file": "complex-2d-gui.tscn",
     "category": "Other"
@@ -828,21 +838,6 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
-    "name": "Uv Scale Showcase",
-    "file": "example-uv-scale-showcase.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Child_cube",
-    "file": "child_cube.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Child_sphere",
-    "file": "child_sphere.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
     "name": "Dodge Player",
     "file": "example-dodge-player.tscn",
     "category": "Examples - Complex Scenes"
@@ -888,64 +883,29 @@ export const fixtures: Fixture[] = [
     "category": "Examples - Complex Scenes"
   },
   {
+    "name": "Uv Scale Showcase",
+    "file": "example-uv-scale-showcase.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
     "name": "All Meshes",
     "file": "integration-all-meshes.tscn",
-    "category": "Examples - Complex Scenes"
+    "category": "Integration - Multi-Node"
   },
   {
     "name": "All Primitives",
     "file": "integration-all-primitives.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "External Only",
-    "file": "integration-external-only.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "External Separation",
-    "file": "integration-external-separation.tscn",
-    "category": "Examples - Complex Scenes"
+    "category": "Integration - Multi-Node"
   },
   {
     "name": "Instanced Subscene",
     "file": "integration-instanced-subscene.tscn",
-    "category": "Examples - Complex Scenes"
+    "category": "Integration - Multi-Node"
   },
   {
     "name": "Lights All Types",
     "file": "integration-lights-all-types.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Material Reuse",
-    "file": "integration-material-reuse.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Mixed Nodes",
-    "file": "integration-mixed-nodes.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Multiple Externals",
-    "file": "integration-multiple-externals.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Parent Child Scene",
-    "file": "integration-parent-child-scene.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Three Cubes",
-    "file": "integration-three-cubes.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Unsupported Hierarchy",
-    "file": "integration-unsupported-hierarchy.tscn",
-    "category": "Examples - Complex Scenes"
+    "category": "Integration - Multi-Node"
   },
   {
     "name": "Material Features",
@@ -953,9 +913,49 @@ export const fixtures: Fixture[] = [
     "category": "Integration - Multi-Node"
   },
   {
+    "name": "Material Reuse",
+    "file": "integration-material-reuse.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Mixed Nodes",
+    "file": "integration-mixed-nodes.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Multiple Externals",
+    "file": "integration-multiple-externals.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Parent Child Scene",
+    "file": "integration-parent-child-scene.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
     "name": "Plane Orientations",
     "file": "integration-plane-orientations.tscn",
     "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Three Cubes",
+    "file": "integration-three-cubes.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Unsupported Hierarchy",
+    "file": "integration-unsupported-hierarchy.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "External Only",
+    "file": "integration-external-only.tscn",
+    "category": "Integration - External Scenes"
+  },
+  {
+    "name": "External Separation",
+    "file": "integration-external-separation.tscn",
+    "category": "Integration - External Scenes"
   },
   {
     "name": "2d Geometry Parity",

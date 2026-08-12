@@ -47,8 +47,8 @@ re-recorded against synthetic/public fixtures.
 
 Committed regression coverage that used to run against the vendored corpus
 (wall-transform, instance-composition, and 2D-UI-overlay regression tests) now
-rests on synthetic fixtures checked into `scenes/examples/` and
-`scenes/fixtures/` that reproduce the same structural shapes (nested instance
+rests on synthetic fixtures checked into `scenes/fixtures/` that reproduce the
+same structural shapes (nested instance
 transforms, rotated planes, Control-heavy UI trees) without carrying any
 vendored asset or content. The `res://`-mirrored fixture layout described above
 is preserved as the historical record of how the closure was committed while

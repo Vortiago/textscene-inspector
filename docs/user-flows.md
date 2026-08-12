@@ -8,7 +8,7 @@ This document defines the user-visible scenarios that `browser-verifier` and `vs
 - **Fixture paths** are relative to the repo root and reference files that exist in the repo. Verifiers must not invent fixtures.
 - **PRD US** refers to the User Stories list in the R3F migration PRD (GitHub issue [#44](https://github.com/Vortiago/textscene-inspector/issues/44); the original `work_items/PRD-r3f-migration.md` was removed in the roadmap-to-issues migration).
 - **Screenshot points** mark frames the verifier should capture for the user-guide build. The user guide is assembled by `browser-verifier` (`docs/user-guide-web.md`) and `vscode-verifier` (`docs/user-guide-vscode.md`); this file is the source of truth for what each guide must cover.
-- **Scope update (post-MVS):** the categories originally listed as out of scope all have registered renderer slices now — 2D nodes (including the Control overlay), physics bodies (transform-only groups per ADR-0005, plus the CollisionShape3D gizmo), audio-player nodes (AudioStreamPlayer3D speaker gizmo), AnimationPlayer/AnimationTree, GPUParticles3D, Path3D/PathFollow3D, Skeleton3D, and Sprite3D. What actually falls through `<GenericNodeFallback>` today is any type with no registration at all — real examples in the shipped scenes are `Timer` (`scenes/fixtures/unit-unsupported-nodes.tscn`) and `GPUParticles2D` (`scenes/examples/example-dodge-player.tscn`). The fallback renders an invisible transform-only group (ADR-0008 — no placeholder gizmo); the scene tree flags such nodes with a "Not Implemented" chip. Audio *playback* remains unimplemented; animation *playback* is supported for AnimationPlayer (transport-driven, ADR-0011/0012) and AnimatedSprite2D (transport-driven frame playback, ADR-0015).
+- **Scope update (post-MVS):** the categories originally listed as out of scope all have registered renderer slices now — 2D nodes (including the Control overlay), physics bodies (transform-only groups per ADR-0005, plus the CollisionShape3D gizmo), audio-player nodes (AudioStreamPlayer3D speaker gizmo), AnimationPlayer/AnimationTree, GPUParticles3D, Path3D/PathFollow3D, Skeleton3D, and Sprite3D. What actually falls through `<GenericNodeFallback>` today is any type with no registration at all — real examples in the shipped scenes are `Timer` (`scenes/fixtures/unit-unsupported-nodes.tscn`) and `GPUParticles2D` (`scenes/fixtures/example-dodge-player.tscn`). The fallback renders an invisible transform-only group (ADR-0008 — no placeholder gizmo); the scene tree flags such nodes with a "Not Implemented" chip. Audio *playback* remains unimplemented; animation *playback* is supported for AnimationPlayer (transport-driven, ADR-0011/0012) and AnimatedSprite2D (transport-driven frame playback, ADR-0015).
 - **Helper gizmos:** DirectionalLight, OmniLight, SpotLight, Camera3D, and the AudioStreamPlayer3D speaker gizmo.
 - **`res://`** paths in the fixtures resolve relative to `scenes/`. The web app copies `scenes/` into its dev server; the VS Code extension resolves them relative to the workspace folder containing the `.tscn` file.
 
@@ -129,7 +129,7 @@ The web previewer is single-panel. It exposes a scene palette (Ctrl/Cmd+K, opene
 - **Target environment:** web
 - **User intent:** A user clicks a mesh in the 3D viewport and the corresponding node is highlighted in the scene-tree panel and its properties shown in the details panel.
 - **Steps:**
-  1. Select `scenes/examples/integration-three-cubes.tscn`.
+  1. Select `scenes/fixtures/integration-three-cubes.tscn`.
   2. Wait for the canvas to settle.
   3. Click on the canvas at the screen position of the rightmost cube.
   4. Read the scene-tree panel's selected entry.
@@ -188,7 +188,7 @@ The web previewer is single-panel. It exposes a scene palette (Ctrl/Cmd+K, opene
 - **Target environment:** web
 - **User intent:** A user wants to see where lights and cameras are placed in the scene, since those nodes do not produce geometry of their own.
 - **Steps:**
-  1. Select `scenes/examples/integration-lights-all-types.tscn`.
+  1. Select `scenes/fixtures/integration-lights-all-types.tscn`.
   2. Wait for the canvas to settle.
   3. Look for visible gizmo primitives at the transforms of `DirectionalLight3D`, `OmniLight3D`, and `SpotLight3D`.
   4. Switch to `scenes/fixtures/unit-camera-basic.tscn`.
@@ -300,7 +300,7 @@ The VS Code extension opens a webview Preview panel for `.tscn` files via the **
 - **Target environment:** vscode
 - **User intent:** A user uses the Outline panel to navigate a large scene without scrolling through the text.
 - **Steps:**
-  1. Open `scenes/examples/example-hierarchy-deep.tscn` in the text editor.
+  1. Open `scenes/fixtures/example-hierarchy-deep.tscn` in the text editor.
   2. Open the Outline view (`workbench.view.outline`).
   3. Read the outline tree's content.
   4. Click a node entry in the outline.
@@ -316,7 +316,7 @@ The VS Code extension opens a webview Preview panel for `.tscn` files via the **
 - **Target environment:** vscode
 - **User intent:** Same as WEB-06 but inside the VS Code webview, confirming click-to-select works under the webview's restricted environment.
 - **Steps:**
-  1. Open `scenes/examples/integration-three-cubes.tscn` and run `textscene.openPreviewToSide` to open its preview.
+  1. Open `scenes/fixtures/integration-three-cubes.tscn` and run `textscene.openPreviewToSide` to open its preview.
   2. Wait for the webview canvas to settle.
   3. Click on the webview canvas at the screen position of the middle cube.
   4. Read the webview's scene-tree panel for the selected entry.
@@ -377,7 +377,7 @@ Each `BOTH-` flow is run twice — once by `browser-verifier` against the web ap
 - **Target environment:** both
 - **User intent:** A user opens the canonical integration fixture and sees every MVS primitive, light, and material variation rendered correctly together — the WI-R3F-5 acceptance criterion (1).
 - **Steps:**
-  1. Open `scenes/examples/integration-all-primitives.tscn` (web: scene palette; vscode: `textscene.openPreviewToSide` preview).
+  1. Open `scenes/fixtures/integration-all-primitives.tscn` (web: scene palette; vscode: `textscene.openPreviewToSide` preview).
   2. Wait for the canvas to settle.
   3. Read the scene-tree panel.
   4. Inspect the canvas for visible primitives.
@@ -414,11 +414,11 @@ Each `BOTH-` flow is run twice — once by `browser-verifier` against the web ap
 - **Target environment:** both
 - **User intent:** A user opens a scene that contains DirectionalLight3D, OmniLight3D, and SpotLight3D and confirms all three are visualized (gizmo) and all three contribute illumination to nearby meshes.
 - **Steps:**
-  1. Open `scenes/examples/integration-lights-all-types.tscn`.
+  1. Open `scenes/fixtures/integration-lights-all-types.tscn`.
   2. Wait for the canvas to settle.
   3. Read the scene-tree panel: confirm `DirectionalLight3D`, `OmniLight3D`, `SpotLight3D` are present.
   4. Visually inspect for gizmo helpers at each light's transform.
-  5. Add a simple mesh receiver: the fixture lacks meshes by design — instead, the verifier should also load `scenes/examples/integration-mixed-nodes.tscn` (which contains both lights and meshes) and confirm shading variation across the meshes.
+  5. Add a simple mesh receiver: the fixture lacks meshes by design — instead, the verifier should also load `scenes/fixtures/integration-mixed-nodes.tscn` (which contains both lights and meshes) and confirm shading variation across the meshes.
 - **Expected observable outcomes:**
   - Step 4: Three gizmo helpers visible, shapes match light type (arrow / point / cone).
   - Step 5 (mixed-nodes fixture): meshes show shading variation consistent with multiple light sources — colored highlights from the spot light's tint, etc.

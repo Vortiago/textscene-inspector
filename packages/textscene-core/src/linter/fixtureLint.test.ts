@@ -1,10 +1,10 @@
 /**
  * Bulk fixture lint guard: every shipped scene file must lint clean.
  *
- * This turns the manual `pnpm lint:tscn scenes/fixtures/*.tscn
- * scenes/examples/*.tscn` sweep into an always-on test. Positive fixtures
- * and examples must produce zero error-severity diagnostics (warnings are
- * allowed — some scenes intentionally carry advisory warnings). Negative
+ * This turns the manual `pnpm lint:tscn scenes/fixtures/*.tscn` sweep into an
+ * always-on test. Positive fixtures must produce zero error-severity
+ * diagnostics (warnings are allowed — some scenes intentionally carry
+ * advisory warnings). Negative
  * `edge-*` fixtures listed in EDGE_FIXTURES_WITH_ERRORS must produce at
  * least one error, pinning that the rules they exist to trigger actually
  * fire — the gap class where a rule exists but its fixture silently stops
@@ -52,11 +52,9 @@ function lintFile(dir: string, file: string): { errors: number; messages: string
 
 describe('shipped scenes lint clean (bulk fixture guard)', () => {
   const fixturesDir = join(scenesRoot, 'fixtures');
-  const examplesDir = join(scenesRoot, 'examples');
 
-  it('finds the scenes directories (path layout guard)', () => {
+  it('finds the scenes directory (path layout guard)', () => {
     expect(tscnFiles(fixturesDir).length).toBeGreaterThan(0);
-    expect(tscnFiles(examplesDir).length).toBeGreaterThan(0);
   });
 
   it('every positive fixture produces zero error diagnostics', () => {
@@ -64,14 +62,6 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
     for (const file of tscnFiles(fixturesDir)) {
       if (EDGE_FIXTURES_WITH_ERRORS.has(file)) continue;
       failures.push(...lintFile(fixturesDir, file).messages);
-    }
-    expect(failures).toEqual([]);
-  });
-
-  it('every example scene produces zero error diagnostics', () => {
-    const failures: string[] = [];
-    for (const file of tscnFiles(examplesDir)) {
-      failures.push(...lintFile(examplesDir, file).messages);
     }
     expect(failures).toEqual([]);
   });

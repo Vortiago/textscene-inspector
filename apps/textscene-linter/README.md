@@ -23,13 +23,13 @@ This bundles `src/cli.ts` to `dist/cli.js` (the `tscn-lint` bin wraps it).
 node apps/textscene-linter/dist/cli.js scenes/fixtures/unit-plane-mesh.tscn
 
 # Multiple files via shell glob
-node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/examples/*.tscn
+node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/isometric/*.tscn
 
 # Directory argument — recurses into every .tscn file underneath
 node apps/textscene-linter/dist/cli.js scenes/
 
 # Plain output (no ANSI colors), e.g. for CI logs
-node apps/textscene-linter/dist/cli.js --no-color scenes/examples/example-hallway.tscn
+node apps/textscene-linter/dist/cli.js --no-color scenes/fixtures/example-hallway-mockup.tscn
 ```
 
 Diagnostics print to stdout (`text` format) or stdout as structured output

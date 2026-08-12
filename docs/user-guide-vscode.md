@@ -60,7 +60,7 @@ The verification flow asks for Ctrl-clicking a `res://` path in a `.tscn` source
 
 ![unit-external-material.tscn open with cursor on the res:// path](screenshots/vscode/vscode-04-a.png)
 
-![After F12 — editor unchanged, no jump to scenes/materials/metal.tres](screenshots/vscode/vscode-04-b.png)
+![After F12 — editor unchanged, no jump to scenes/fixtures/materials/metal.tres](screenshots/vscode/vscode-04-b.png)
 
 **Known issue:** The PRD's US-9 ("Cmd/Ctrl-clicking a `res://` path in a `.tscn` file to navigate to that resource") needs a new code path in `TscnDefinitionProvider` that recognises `res://` path tokens, resolves them workspace-relative, and returns a `Location` pointing at the on-disk file. This is a small extension to the existing provider but it has not been implemented. The salvaged provider's existing behavior (jumping from a usage to its definition heading **within the same file**) is unchanged from before the R3F migration.
 

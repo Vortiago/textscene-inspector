@@ -109,12 +109,11 @@ function generateName(filename) {
 // Read fixtures
 const rootDir = join(__dirname, '..');
 const fixturesDir = join(rootDir, 'scenes/fixtures');
-const examplesDir = join(rootDir, 'scenes/examples');
 
+// Top-level scenes only: `scenes/fixtures/` is the corpus's res:// root, so a
+// subdirectory in it is a res:// namespace (materials/, textures/, fonts/) or a
+// nested Godot project, not a shelf of selectable scenes.
 const fixtureFiles = readdirSync(fixturesDir)
-  .filter(f => f.endsWith('.tscn'))
-  .sort();
-const exampleFiles = readdirSync(examplesDir)
   .filter(f => f.endsWith('.tscn'))
   .sort();
 
@@ -312,11 +311,6 @@ const fixtures = [
     name: generateName(file),
     file,
     category: detectCategory(file),
-  })),
-  ...exampleFiles.map(file => ({
-    name: generateName(file),
-    file,
-    category: 'Examples - Complex Scenes',
   })),
   ...isometricFiles.map(file => ({
     name: generateName(file.split('/').pop().replace(/_/g, '-')),

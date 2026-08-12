@@ -6,7 +6,6 @@ import { FLATTENED_CORPUS_ROOTS } from '../../../scripts/corpusRoots.mjs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const scenesRoot = join(__dirname, '../../../scenes');
 const fixturesSource = join(scenesRoot, 'fixtures');
-const examplesSource = join(scenesRoot, 'examples');
 const fixturesTarget = join(__dirname, '../public/fixtures');
 
 // Cloudflare Pages rejects any deployment containing a file larger than 25 MiB.
@@ -18,84 +17,13 @@ const skippedLargeFiles = [];
 
 mkdirSync(fixturesTarget, { recursive: true });
 
-// Copy from scenes/fixtures/ — scenes (.tscn) plus any sibling text resources
-// (.tres) a fixture references via `res://<name>.tres` at the fixtures root
-// (e.g. an external ArrayMesh).
-const fixtureFiles = readdirSync(fixturesSource).filter(
-  (file) => file.endsWith('.tscn') || file.endsWith('.tres')
-);
-for (const file of fixtureFiles) {
-  copyFileSync(join(fixturesSource, file), join(fixturesTarget, file));
-}
-
-// Copy textures directory from scenes/fixtures/
-const texturesSource = join(fixturesSource, 'textures');
-const texturesTarget = join(fixturesTarget, 'textures');
-try {
-  if (statSync(texturesSource).isDirectory()) {
-    mkdirSync(texturesTarget, { recursive: true });
-    const textureFiles = readdirSync(texturesSource);
-    for (const file of textureFiles) {
-      copyFileSync(join(texturesSource, file), join(texturesTarget, file));
-    }
-    console.log(`Copied ${textureFiles.length} texture files to public/fixtures/textures/`);
-  }
-} catch {
-  // Textures directory doesn't exist yet, skip
-}
-
-// Copy fonts directory from scenes/fixtures/ — same shape as textures/ above,
-// for a unit fixture that needs its own small vendored font (raw .ttf/.otf/
-// .woff/.woff2, or a FontFile/FontVariation/SystemFont .tres) rather than
-// reaching into the demos corpus. Guarded by the same size limit as
-// `copyRecursive` below — unlike textures/materials, a font file can
-// plausibly be large enough (a CJK-covering face, an unsubsetted variable
-// font) to hit the Cloudflare Pages ceiling, so this loop must not silently
-// ship (or silently drop) an oversized one.
-const fontsSource = join(fixturesSource, 'fonts');
-const fontsTarget = join(fixturesTarget, 'fonts');
-try {
-  if (statSync(fontsSource).isDirectory()) {
-    mkdirSync(fontsTarget, { recursive: true });
-    const fontFiles = readdirSync(fontsSource);
-    let copiedCount = 0;
-    for (const file of fontFiles) {
-      const src = join(fontsSource, file);
-      if (statSync(src).size > MAX_DEPLOY_FILE_BYTES) {
-        skippedLargeFiles.push(relative(scenesRoot, src));
-        continue;
-      }
-      copyFileSync(src, join(fontsTarget, file));
-      copiedCount++;
-    }
-    console.log(`Copied ${copiedCount} font files to public/fixtures/fonts/`);
-  }
-} catch {
-  // Fonts directory doesn't exist yet, skip
-}
-
-// Copy from scenes/examples/
-const exampleFiles = readdirSync(examplesSource).filter((file) => file.endsWith('.tscn'));
-for (const file of exampleFiles) {
-  copyFileSync(join(examplesSource, file), join(fixturesTarget, file));
-}
-
-const totalFiles = fixtureFiles.length + exampleFiles.length;
-console.log(`Copied ${totalFiles} scene files to public/fixtures/ (${fixtureFiles.length} fixtures + ${exampleFiles.length} examples)`);
-
-// Mirror each flattened corpus (scenes/<root>/**) into public/fixtures/
-// PRESERVING its res:// subpath structure (components/, decorations/,
-// tileset/, …) so each scene's `res://...` reference resolves to /fixtures/...
-// at fetch time, and a scene one level down keeps that subpath as its fixture
-// id (`decorations/candle.tscn`).
-//
-// This is the DEFINITION of the flattening; scripts/corpusRoots.mjs names the
-// roots, and the Godot reference renderer and the sheet resolver read the same
-// list to undo it. A root copied here but missing there renders in the
-// previewer and nowhere else, which is why the list is shared rather than
-// spelled out three times.
-//
-// Absent on a fresh clone — the try/catch no-ops until the corpus is vendored.
+/**
+ * Mirror a source tree verbatim, minus files the deploy target refuses.
+ * The size skip is the ONLY filter: what a directory contains IS the res://
+ * namespace, so anything else here would make the previewer resolve res://
+ * differently from Godot (which reads the directory) and from VS Code (which
+ * opens it).
+ */
 function copyRecursive(src, dest) {
   for (const entry of readdirSync(src, { withFileTypes: true })) {
     const s = join(src, entry.name);
@@ -110,6 +38,28 @@ function copyRecursive(src, dest) {
     }
   }
 }
+
+// scenes/fixtures/ IS the res:// root of the previewer's default corpus, so it
+// is mirrored whole: every scene, every resource it references, at the same
+// relative path. Godot resolves res:// from the directory holding the scene
+// (or its project.godot), and VS Code opens that same directory — mirroring it
+// is what makes all three agree on what res:// means.
+copyRecursive(fixturesSource, fixturesTarget);
+console.log('Mirrored scenes/fixtures/ to public/fixtures/ (res:// root)');
+
+// Mirror each flattened corpus (scenes/<root>/**) into public/fixtures/
+// PRESERVING its res:// subpath structure (components/, decorations/,
+// tileset/, …) so each scene's `res://...` reference resolves to /fixtures/...
+// at fetch time, and a scene one level down keeps that subpath as its fixture
+// id (`decorations/candle.tscn`).
+//
+// This is the DEFINITION of the flattening; scripts/corpusRoots.mjs names the
+// roots, and the Godot reference renderer and the sheet resolver read the same
+// list to undo it. A root copied here but missing there renders in the
+// previewer and nowhere else, which is why the list is shared rather than
+// spelled out three times.
+//
+// Absent on a fresh clone — the try/catch no-ops until the corpus is vendored.
 for (const root of FLATTENED_CORPUS_ROOTS) {
   const source = join(scenesRoot, root);
   try {
@@ -168,22 +118,6 @@ if (!includeGames) {
     // so this only fires when the flag is set without vendoring.
     console.warn('VITE_INCLUDE_GAMES=1 but scenes/games/ is absent — run `pnpm vendor:games`');
   }
-}
-
-// Copy materials directory from scenes/materials/
-const materialsSource = join(scenesRoot, 'materials');
-const materialsTarget = join(fixturesTarget, 'materials');
-try {
-  if (statSync(materialsSource).isDirectory()) {
-    mkdirSync(materialsTarget, { recursive: true });
-    const materialFiles = readdirSync(materialsSource);
-    for (const file of materialFiles) {
-      copyFileSync(join(materialsSource, file), join(materialsTarget, file));
-    }
-    console.log(`Copied ${materialFiles.length} material files to public/fixtures/materials/`);
-  }
-} catch {
-  // Materials directory doesn't exist yet, skip
 }
 
 if (skippedLargeFiles.length > 0) {

@@ -4,8 +4,9 @@
  * Guards the generated fixture manifest against declared-but-missing scene files.
  *
  * Mirrors the path mapping used by scripts/copy-fixtures.js (and the root
- * scripts/generate-fixtures.js): scenes/fixtures/*.tscn and scenes/examples/*.tscn
- * are copied FLAT into public/fixtures/ (entry `file` is a basename), while
+ * scripts/generate-fixtures.js): scenes/fixtures/ is mirrored onto
+ * public/fixtures/ as its res:// root (a selectable entry's `file` is a
+ * basename, since every selectable scene sits at that root), while
  * scenes/isometric/** is mirrored recursively (entry `file` is a res://-relative
  * path) and scenes/demos/** is mirrored under public/fixtures/demos/ (entry
  * `file` starts with 'demos/'). A manifest entry is therefore valid iff its
@@ -23,11 +24,7 @@ import { fixtures, getFixturesByCategory } from './fixtures';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const scenesRoot = join(__dirname, '../../../scenes');
-const sourceRoots = [
-  join(scenesRoot, 'fixtures'),
-  join(scenesRoot, 'examples'),
-  join(scenesRoot, 'isometric'),
-];
+const sourceRoots = [join(scenesRoot, 'fixtures'), join(scenesRoot, 'isometric')];
 
 function fixtureExistsOnDisk(file: string): boolean {
   // demos/<top>/<project>/… entries mirror scenes/demos/ 1:1 (not flattened).

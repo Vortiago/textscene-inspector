@@ -80,10 +80,11 @@ async function rmRetry(dir) {
 
 const WT = process.cwd();
 const EXT = `${WT}/apps/textscene-vscode`;
-// Open the committed example scenes as the workspace: self-contained .tscn with
+// Open the fixtures res:// root as the workspace — the same directory the web
+// previewer mirrors, so `res://` resolves identically on both sides. It holds
 // no .csproj/.cs, so the C# Dev Kit never activates and hijacks focus with its
-// welcome page. Same scenes as the web showcase.
-const WS = `${WT}/scenes/examples`;
+// welcome page.
+const WS = `${WT}/scenes/fixtures`;
 const UD = `${WT}/.tmp/vsc-showcase-ud`;
 const OUT = `${WT}/docs/screenshots/vscode`;
 const PORT = 9222;
