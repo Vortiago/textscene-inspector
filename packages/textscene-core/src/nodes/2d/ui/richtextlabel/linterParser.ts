@@ -210,19 +210,14 @@ validatorRegistry.registerAll('RichTextLabel', {
 
   // Displayed Text (ADD_GROUP "Displayed Text", "", rich_text_label.cpp:7786-7790).
   // rich_text_label.cpp:7788: PROPERTY_HINT_RANGE "-1,128000,1", both ends
-  // closed (no or_greater/or_less), so ADR-0032 would otherwise warn on both.
-  // set_visible_characters (rich_text_label.cpp:7892-7948) bare-assigns
-  // `visible_characters = p_visible` with no clamp at all. The REAL ceiling is
-  // the document's total character count (get_total_character_count()), which
-  // depends on the parsed text and so is invisible to a per-property validator;
-  // enforcing the hint's 128000 literal would false-positive on any longer
-  // real document while still not catching the actual out-of-bounds case, so
-  // the ceiling is deliberately left unbounded here. Only the floor is
-  // checked. -1 is legal: it is the hint's own floor and the documented
-  // sentinel for "all characters displayed" (doc/classes/RichTextLabel.xml
-  // `visible_characters`).
+  // closed (no or_greater/or_less). set_visible_characters
+  // (rich_text_label.cpp:7892-7948) bare-assigns `visible_characters =
+  // p_visible` with no clamp, so both ends warn. -1 is the hint's own floor
+  // and the "all characters displayed" sentinel. Matches Label, which binds
+  // the same property with the same hint (label.cpp:1450).
   visible_characters: v.int('visible_characters', {
     min: -1,
+    max: 128000,
     hinted: 'rich_text_label.cpp:7788',
   }),
   // rich_text_label.cpp:7789: PROPERTY_HINT_ENUM, 5 entries (0-4).

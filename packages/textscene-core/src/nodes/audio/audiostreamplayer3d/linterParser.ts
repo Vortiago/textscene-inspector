@@ -60,10 +60,10 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   max_distance: v.nonNegativeFloat('max_distance', { enforced: 'audio_stream_player_3d.cpp:660' }),
   max_db: v.float('max_db'),
   // audio_stream_player_3d.cpp:704 is a bare assignment; the hint at :902
-  // ("1,20500,1,suffix:Hz") is advisory only.
+  // ("1,20500,1,suffix:Hz") closes both ends with no or_greater, so both warn.
   attenuation_filter_cutoff_hz: v.float('attenuation_filter_cutoff_hz', {
     min: 1,
-    message: "Property 'attenuation_filter_cutoff_hz' must be at least 1 Hz",
+    max: 20500,
     hinted: 'audio_stream_player_3d.cpp:902',
   }),
   attenuation_filter_db: v.float('attenuation_filter_db'),

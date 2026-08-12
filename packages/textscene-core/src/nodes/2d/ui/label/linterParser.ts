@@ -228,15 +228,15 @@ validatorRegistry.registerAll('Label', {
   // at all, so both ends are only the hint (warning, not error). -1 is the
   // documented "no limit" sentinel.
   max_lines_visible: v.int('max_lines_visible', { min: -1, max: 999, hinted: 'label.cpp:1448' }),
-  // label.cpp:1450 — PROPERTY_HINT_RANGE "-1,128000,1". set_visible_characters
-  // (label.cpp:1285-1299) is a bare assignment: no ERR_FAIL, no clamp; -1 is
-  // the documented "show all" sentinel (doc/classes/Label.xml). The REAL
-  // ceiling is `get_total_character_count()` — the length of the sibling
-  // `text` property — which a per-property validator cannot see, so only the
-  // -1 floor is checked here; the hint's 128000 is an editor-slider ceiling
-  // unrelated to that per-scene invariant and would either warn on nothing
-  // real or miss the actual bound, so it is deliberately not enforced.
-  visible_characters: v.int('visible_characters', { min: -1, hinted: 'label.cpp:1450' }),
+  // label.cpp:1450 — PROPERTY_HINT_RANGE "-1,128000,1", both ends closed (no
+  // or_greater). set_visible_characters (label.cpp:1285-1299) is a bare
+  // assignment with no ERR_FAIL and no clamp, so both ends are warnings. -1 is
+  // the hint's own floor and the "show all" sentinel.
+  visible_characters: v.int('visible_characters', {
+    min: -1,
+    max: 128000,
+    hinted: 'label.cpp:1450',
+  }),
   // label.cpp:1451 — PROPERTY_HINT_ENUM with 5 entries.
   // set_visible_characters_behavior (label.cpp:1334-1343) assigns
   // unconditionally, no ERR_FAIL.

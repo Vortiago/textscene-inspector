@@ -107,6 +107,38 @@ describe('CPUParticles2D strict validators', () => {
     });
   });
 
+  describe('fixed_fps', () => {
+    // cpu_particles_2d.cpp:1504 hints "0,1000,1,suffix:FPS" — no or_greater/
+    // or_less, so both ends are closed and `suffix:FPS` is a unit, not a bound.
+    // set_fixed_fps (cpu_particles_2d.cpp:283-285) is `fixed_fps = p_count;`,
+    // so out of hint is a WARNING at both ends (ADR-0032). Both endpoints are
+    // probed from both sides: the ceiling shipped unimplemented while the
+    // comment quoted it.
+    it('accepts both endpoints (0 and 1000)', () => {
+      expect(check('fixed_fps', '0')).toBeNull();
+      expect(check('fixed_fps', '1000')).toBeNull();
+    });
+
+    it('accepts 30, the value every scenes/fixtures CPUParticles2D writes', () => {
+      expect(check('fixed_fps', '30')).toBeNull();
+    });
+
+    it('warns one hint step (1) past either endpoint', () => {
+      expect(check('fixed_fps', '-1')?.severity).toBe('warning');
+      expect(check('fixed_fps', '1001')?.severity).toBe('warning');
+    });
+
+    it('reports the VALUE code, not the FORMAT one, for an out-of-hint number', () => {
+      expect(check('fixed_fps', '1001')?.code).toBe('INVALID_FIXED_FPS_VALUE');
+    });
+
+    it('rejects a non-numeric value (FORMAT branch, always an error)', () => {
+      const error = check('fixed_fps', 'fast');
+      expect(error?.code).toBe('INVALID_FIXED_FPS_FORMAT');
+      expect(error?.severity).toBe('error');
+    });
+  });
+
   describe('emission_colors', () => {
     // cpu_particles_2d.cpp:1591, PropertyInfo(Variant::PACKED_COLOR_ARRAY).
     // get_emission_colors (cpu_particles_2d.cpp:551-553) returns

@@ -77,10 +77,14 @@ validatorRegistry.registerAll('TabContainer', {
   // `ERR_FAIL_INDEX(p_current, get_tab_count())` (tab_bar.cpp:804), since a
   // negative index fails that check regardless of tab count; -1 itself is a
   // sentinel handled separately (tab_bar.cpp:798) meaning "no tab selected".
-  // The ceiling is checked against the live child count, invisible to a
-  // per-property validator, so only the floor is enforced here. The hint's
-  // 4096 is an arbitrary editor slider max, not a real bound, and is left open.
-  current_tab: v.int('current_tab', { min: -1, enforced: 'tab_bar.cpp:804' }),
+  // CEILING: 4096 exists only in the hint, which carries no or_greater, so it
+  // is a warning — the same split TabBar's own current_tab makes.
+  current_tab: v.int('current_tab', {
+    min: -1,
+    max: 4096,
+    enforced: { min: 'tab_bar.cpp:804' },
+    hinted: { max: 'tab_container.cpp:1209' },
+  }),
 
   // tab_container.cpp:1210, PROPERTY_HINT_ENUM "Top,Bottom". TabContainer's OWN
   // set_tabs_position has `ERR_FAIL_INDEX(p_tabs_position, POSITION_MAX)`

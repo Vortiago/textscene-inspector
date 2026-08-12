@@ -328,16 +328,21 @@ describe('RichTextLabel strict validators', () => {
     });
   });
 
-  describe('visible_characters (integer, floor-only at -1)', () => {
-    // rich_text_label.cpp:7788: PROPERTY_HINT_RANGE "-1,128000,1". The real
-    // ceiling is the parsed document's character count (invisible to a
-    // per-property validator), so only the floor is checked.
+  describe('visible_characters (integer -1-128000, both ends hinted)', () => {
+    // rich_text_label.cpp:7788: PROPERTY_HINT_RANGE "-1,128000,1", closed at
+    // both ends; the setter assigns straight through, so both ends warn.
     it('accepts -1, the documented "all characters" sentinel and the documented default', () => {
       expect(check('visible_characters', '-1')).toBeNull();
     });
 
-    it('accepts a large value past the hint ceiling: the real bound is the document length, which this validator cannot see', () => {
-      expect(check('visible_characters', '999999')).toBeNull();
+    it('accepts the hint ceiling exactly (128000, rich_text_label.cpp:7788)', () => {
+      expect(check('visible_characters', '128000')).toBeNull();
+    });
+
+    it('warns one past the ceiling (128001): the hint closes that end with no or_greater', () => {
+      const result = check('visible_characters', '128001');
+      expect(result).not.toBeNull();
+      expect(result?.severity).toBe('warning');
     });
 
     it('warns below the floor (-2): set_visible_characters assigns straight through with no clamp', () => {

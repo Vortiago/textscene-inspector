@@ -95,11 +95,15 @@ describe('Label3D Linter', () => {
         invalid: [{ value: 'RGB(255, 128, 0)', contains: ['Color('] }],
       },
       {
+        // label_3d.cpp:155 hints "0,127,1,suffix:px", closed at both ends;
+        // set_outline_size (label_3d.cpp:873-880) assigns straight through, so
+        // both endpoints load and one step past either only warns.
         prop: 'outline_size',
-        valid: [8, 0],
+        valid: [8, 0, 127],
         invalid: [
           { value: 'invalid', contains: ['must be a number'] },
-          { value: -5, contains: ['must be >= 0'] },
+          { value: -1, severity: 'warning', contains: ['must be between 0 and 127'] },
+          { value: 128, severity: 'warning', contains: ['must be between 0 and 127'] },
         ],
       },
       {

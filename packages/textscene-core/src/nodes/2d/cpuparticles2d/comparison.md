@@ -134,7 +134,7 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `emission_sphere_radius` | float >= 0 | warning below |
 | `emitting` | true or false |  |
 | `explosiveness` | float 0-1 | warning |
-| `fixed_fps` | integer >= 0 | warning below |
+| `fixed_fps` | integer 0-1000 | warning |
 | `fract_delta` | true or false |  |
 | `gravity` | Vector2(x, y) |  |
 | `hue_variation_curve` | null, SubResource("id") or ExtResource("id") |  |

@@ -311,12 +311,18 @@ describe('Label strict validators', () => {
       expect(check('visible_characters', '50')).toBeNull();
     });
 
-    it('says nothing about a value past the hint\'s 128000 — the real ceiling is the sibling text property\'s length, which a per-property validator cannot see', () => {
-      expect(check('visible_characters', '999999')).toBeNull();
+    it('accepts the hint ceiling exactly (128000, label.cpp:1450)', () => {
+      expect(check('visible_characters', '128000')).toBeNull();
+    });
+
+    it('warns one past the ceiling (128001) — the hint closes that end with no or_greater', () => {
+      const error = check('visible_characters', '128001');
+      expect(error).not.toBeNull();
+      expect(error?.severity).toBe('warning');
     });
 
     it('warns (not errors) below -1 — set_visible_characters (label.cpp:1285-1299) has no ERR_FAIL or clamp at all', () => {
-      const error = check('visible_characters', '-5');
+      const error = check('visible_characters', '-2');
       expect(error).not.toBeNull();
       expect(error?.severity).toBe('warning');
     });

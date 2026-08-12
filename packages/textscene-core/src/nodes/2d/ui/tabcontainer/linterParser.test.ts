@@ -63,7 +63,7 @@ describe('TabContainer strict validators', () => {
 
   // tab_container.cpp:1209, PROPERTY_HINT_RANGE "-1,4096,1". The floor is
   // enforced through TabBar::set_current_tab's ERR_FAIL_INDEX (tab_bar.cpp:804);
-  // the ceiling checks a runtime child count no static validator can see.
+  // the ceiling is the hint's alone, so it warns.
   describe('current_tab', () => {
     it('accepts -1, the "no tab selected" sentinel', () => {
       expect(check('current_tab', '-1')).toBeNull();
@@ -78,8 +78,14 @@ describe('TabContainer strict validators', () => {
       expect(error?.severity).toBe('error');
     });
 
-    it('accepts a large index: the ceiling is the runtime tab count, not a static bound', () => {
-      expect(check('current_tab', '4097')).toBeNull();
+    it('accepts the hint ceiling exactly (4096, tab_container.cpp:1209)', () => {
+      expect(check('current_tab', '4096')).toBeNull();
+    });
+
+    it('warns above 4096: the setter assigns through, only the hint names that end', () => {
+      const diagnostic = check('current_tab', '4097');
+      expect(diagnostic).not.toBeNull();
+      expect(diagnostic?.severity).toBe('warning');
     });
   });
 

@@ -45,7 +45,7 @@ Strict parsing format-checks these `TabContainer` properties, plus 53 inherited 
 | --- | --- | --- |
 | `all_tabs_in_front` | true or false |  |
 | `clip_tabs` | true or false |  |
-| `current_tab` | integer >= -1 | error below |
+| `current_tab` | integer -1-4096 | error below, warning above |
 | `deselect_enabled` | true or false |  |
 | `drag_to_rearrange_enabled` | true or false |  |
 | `switch_on_drag_hover` | true or false |  |

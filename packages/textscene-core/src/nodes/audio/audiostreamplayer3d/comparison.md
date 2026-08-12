@@ -39,7 +39,7 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inh
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `area_mask` | 32-bit layer mask (layers 1-32) | warning |
-| `attenuation_filter_cutoff_hz` | float >= 1 | warning below |
+| `attenuation_filter_cutoff_hz` | float 1-20500 | warning |
 | `attenuation_filter_db` | float |  |
 | `attenuation_model` | enum 0-3 (INVERSE_DISTANCE/INVERSE_SQUARE_DISTANCE/LOGARITHMIC/DISABLED) | error |
 | `autoplay` | true or false |  |
@@ -76,7 +76,7 @@ Beyond the shared audio-base fallbacks, every numeric property here defaults via
 `floatOr` without reproducing strict's range checks: unit_size falls back to 10
 (strict only warns below the hint's 0.1, since the setter is a bare assignment),
 max_distance to 0 with no non-negativity check,
-attenuation_filter_cutoff_hz to 5000 with no 1 Hz floor, and
+attenuation_filter_cutoff_hz to 5000 with no 1-20500 range check, and
 panning_strength/emission_angle_degrees to 1 and 45 with no 0-1/0-90 clamp.
 attenuation_model and doppler_tracking are the two enums: `enumOr` does enforce
 the strict 0-3/0-2 membership, warning and falling back to

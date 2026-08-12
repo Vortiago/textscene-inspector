@@ -63,7 +63,7 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 | `offset` | Vector2(x, y) |  |
 | `outline_modulate` | Color(r, g, b, a) |  |
 | `outline_render_priority` | integer -128-127 | error |
-| `outline_size` | float >= 0 | warning below |
+| `outline_size` | float 0-127 | warning |
 | `pixel_size` | float |  |
 | `render_priority` | integer -128-127 | error |
 | `shaded` | true or false |  |

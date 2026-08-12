@@ -137,10 +137,21 @@ describe('AudioStreamPlayer3D Linter', () => {
           invalid: [{ value: 'invalid', contains: ['max_db', 'must be a number'] }],
         },
         {
+          // audio_stream_player_3d.cpp:704 assigns straight through, so the
+          // hint at :902 ("1,20500,1,suffix:Hz") only warns — at both ends.
           prop: 'attenuation_filter_cutoff_hz',
           valid: [1, 5000, 10000, 20500],
           invalid: [
-            { value: 0.5, contains: ['attenuation_filter_cutoff_hz', 'at least 1 Hz'] },
+            {
+              value: 0.5,
+              contains: ['attenuation_filter_cutoff_hz', 'between 1 and 20500'],
+              severity: 'warning',
+            },
+            {
+              value: 20501,
+              contains: ['attenuation_filter_cutoff_hz', 'between 1 and 20500'],
+              severity: 'warning',
+            },
             { value: 'invalid', contains: ['attenuation_filter_cutoff_hz', 'must be a number'] },
           ],
         },

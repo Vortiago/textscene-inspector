@@ -12,9 +12,11 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('VoxelGI', {
-  // voxel_gi.cpp:570, PROPERTY_HINT_ENUM "64,128,256,512" (unlabelled hint values
-  // are sequential from 0). set_subdiv (:285-288) opens with
-  // `ERR_FAIL_INDEX(p_subdiv, SUBDIV_MAX)`, SUBDIV_MAX = 4 (voxel_gi.h), so an
+  // voxel_gi.cpp:570, PROPERTY_HINT_ENUM. The serialised values are the four
+  // BIND_ENUM_CONSTANTs SUBDIV_64/128/256/512 (:575-578), i.e. 0-3 — the hint
+  // string "64,128,256,512" is that enum's LABELS (the voxel counts), never a
+  // numeric range. set_subdiv (:285-288) opens with
+  // `ERR_FAIL_INDEX(p_subdiv, SUBDIV_MAX)`, SUBDIV_MAX = 4 (voxel_gi.h:106), so an
   // out-of-range write is refused outright rather than clamped.
   subdiv: v.enumInt(
     'subdiv',

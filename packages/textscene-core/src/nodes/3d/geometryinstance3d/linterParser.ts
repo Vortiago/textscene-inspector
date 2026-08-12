@@ -71,12 +71,12 @@ validatorRegistry.registerAll('GeometryInstance3D', {
   ignore_occlusion_culling: v.boolean('ignore_occlusion_culling'),
 
   // scene/3d/visual_instance_3d.cpp:604, ADD_PROPERTY(..., "lod_bias", PROPERTY_HINT_RANGE,
-  // "0.001,128,0.001"). The hint's 0.001 floor is an editor-slider convenience, not the
-  // documented validity floor: doc/classes/GeometryInstance3D.xml says "A value of 0 will
-  // force the mesh to its lowest level of detail" (0 is a meaningful, intentional value,
-  // not an error), and set_lod_bias:386-390 ERR_FAIL_COND(p_bias < 0.0) enforces exactly
-  // that floor. The hint's 128 ceiling is closed (no or_greater) but never checked by the
-  // setter, so it is a warning.
+  // "0.001,128,0.001"). The floor deliberately does NOT match the hint: set_lod_bias:387
+  // is `ERR_FAIL_COND(p_bias < 0.0)`, so the setter's floor is 0 and sits BELOW the hint's
+  // 0.001. A min end carries one bound, and it must be the more severe tier — coding
+  // 0.001 would downgrade `lod_bias = -5` from the error the setter makes it to a warning,
+  // which loses more than the unmodelled hint-only sliver [0, 0.001) is worth. The hint's
+  // 128 ceiling is closed (no or_greater) but never checked by the setter, so it warns.
   lod_bias: v.float('lod_bias', {
     min: 0,
     max: 128,
