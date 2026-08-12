@@ -1468,6 +1468,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "External Material Roughness",
+    "file": "unit-external-material-roughness.tscn",
+    "category": "Unit - External Resources"
+  },
+  {
     "name": "External Material",
     "file": "unit-external-material.tscn",
     "category": "Unit - External Resources"

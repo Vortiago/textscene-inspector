@@ -91,9 +91,11 @@ surface, not to the mesh as a whole, and `N` is the index in the mesh's
 `_surfaces` — an index past the mesh's surface count is dropped rather than
 adding a surface (`scene/3d/mesh_instance_3d.cpp:68,407`).
 
-An ArrayMesh resolves that order exactly, from either source — a `.tres` or a
-scene `[sub_resource]`. A primitive mesh (BoxMesh, SphereMesh, …) does not: see
-below.
+Every mesh kind resolves that order exactly, and from either source — a `.tres`
+or a scene `[sub_resource]`. Godot cannot tell the two apart: a material property
+is a `Ref<Material>` reduced to `->get_rid()` before the server sees it
+(`scene/3d/mesh_instance_3d.cpp:366`), so where the resource was loaded from is
+not represented past that call.
 
 ## Render layers
 
@@ -110,3 +112,4 @@ off the camera's layer would vanish outright rather than merely go undecalled.
 ## Known limitations
 
 - **CylinderMesh single cap** — three removes both end caps or neither, so a Godot cylinder with exactly one of `cap_top` / `cap_bottom` disabled renders with both caps.
+- **A `.tres` material's `billboard` and DOUBLE_SIDED shadow side** — a material that arrives as an external `.tres` is built whole by the resource pipeline and attached as it stands, so the two properties the NODE has to act on rather than the material do not reach it: the mesh does not turn to face the camera for `billboard_mode`, and a `cast_shadow = DOUBLE_SIDED` material casts from the front faces alone. Neither applies to a material declared as a scene `[sub_resource]`, where both reach the node.

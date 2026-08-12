@@ -509,6 +509,14 @@ export const GOLDEN_SCENES = [
   { name: 'material-ao', file: 'unit-material-ao.tscn' },
   { name: 'material-normal-map', file: 'unit-material-normal-map.tscn' },
   { name: 'material-textured', file: 'unit-material-textured.tscn' },
+  // The only golden whose material reaches a MeshInstance3D as an external
+  // `.tres` (the CSG one covers that node's own path), and the only one whose
+  // roughness map has any CONTRAST in it — every other roughness-bearing fixture
+  // declares its material inline and maps a flat 50% grey that renders
+  // identically to the scalar. Content is one specular highlight and a hard seam
+  // between a glossy cap and a rough one, so a diff is either the map failing to
+  // arrive (both caps go matte) or the lobe's width changing.
+  { name: 'external-material-roughness', file: 'unit-external-material-roughness.tscn' },
   { name: 'material-override', file: 'unit-material-override.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property showcase guard (12 spheres across 4 rows: basic PBR,

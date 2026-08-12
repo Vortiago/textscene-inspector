@@ -1,0 +1,159 @@
+/**
+ * A PRIMITIVE mesh's material may be an `ExtResource` naming a `.tres`, not only
+ * a `[sub_resource]` of the scene.
+ *
+ * Godot cannot tell the two apart. `MeshInstance3D::set_surface_override_material`
+ * (`scene/3d/mesh_instance_3d.cpp:366`) takes a `Ref<Material>` and hands the
+ * server nothing but `->get_rid()`; the same is true of the node-level
+ * `material_override` and of `PrimitiveMesh`'s own `material`. Where the resource
+ * was loaded from is not represented past that call, so every rank of the
+ * precedence chain accepts either arrival.
+ *
+ * The baked-ArrayMesh branch already routed a `.tres` through the material
+ * pipeline; the primitive branch resolved only `SubResource("id")` and let an
+ * `ExtResource` fall through to the renderer's default material — which is
+ * mid-grey (0.6 LINEAR) and therefore BRIGHTER than most authored albedos, so
+ * the failure reads as a blown-out surface rather than as a missing one.
+ */
+import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { MeshInstance3D } from './Component';
+import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { GODOT_DEFAULT_ALBEDO } from '../../../r3f/materials/godotDefaultMaterial';
+import type {
+  TscnExternalResource,
+  TscnInternalResource,
+  TscnNode,
+} from '../../../parser/types';
+import type { MeshInstance3DProperties } from './types';
+import { findMesh } from '../testing/reactThreeTestInstance';
+
+const EXTERNAL_PATH = 'res://dielectric.tres';
+const SECOND_EXTERNAL_PATH = 'res://second.tres';
+
+const EXTERNALS: readonly TscnExternalResource[] = [
+  { id: '1_ext', path: EXTERNAL_PATH, type: 'StandardMaterial3D' },
+  { id: '2_ext', path: SECOND_EXTERNAL_PATH, type: 'StandardMaterial3D' },
+  // A material ExtResource the pipeline has no builder for — not a `.tres`.
+  { id: '3_glb', path: 'res://packed.glb', type: 'Material' },
+];
+
+const INTERNALS: readonly TscnInternalResource[] = [
+  { id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } },
+  { id: 'Box_ext', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)', material: 'ExtResource("1_ext")' } },
+  { id: 'Mat_inline', type: 'StandardMaterial3D', data: { albedo_color: 'Color(0, 1, 0, 1)' } },
+];
+
+function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
+  const full: MeshInstance3DProperties = {
+    name: 'M',
+    mesh: 'SubResource("Box_1")',
+    surfaceMaterialOverrides: new Map(),
+    materialOverride: undefined,
+    ...properties,
+  };
+  return { name: 'M', type: 'MeshInstance3D', children: [], properties: full };
+}
+
+async function materialsOf(
+  node: TscnNode,
+  seeded: ReadonlyMap<string, THREE.Material> = new Map()
+): Promise<THREE.MeshStandardMaterial[]> {
+  const fake = createFakeResourceLoader();
+  for (const [path, material] of seeded) fake.materials.seed(path, material);
+  const renderer = await ReactThreeTestRenderer.create(
+    <ResourceLoaderProvider loader={fake.loader}>
+      <SceneResourcesProvider internalResources={INTERNALS} externalResources={EXTERNALS}>
+        <MeshInstance3D node={node} />
+      </SceneResourcesProvider>
+    </ResourceLoaderProvider>
+  );
+  const material = findMesh(renderer.scene).material;
+  return (Array.isArray(material) ? material : [material]) as THREE.MeshStandardMaterial[];
+}
+
+/** The loaded `.tres` materials, each identifiable by its own albedo. */
+function loadedMaterials(): Map<string, THREE.Material> {
+  return new Map<string, THREE.Material>([
+    [EXTERNAL_PATH, new THREE.MeshStandardMaterial({ color: 0x5ab7ff })],
+    [SECOND_EXTERNAL_PATH, new THREE.MeshStandardMaterial({ color: 0xff6ad5 })],
+  ]);
+}
+
+function isGodotDefaultMaterial(material: THREE.MeshStandardMaterial): boolean {
+  return material.color.equals(GODOT_DEFAULT_ALBEDO);
+}
+
+describe('<MeshInstance3D> external .tres material on a primitive mesh', () => {
+  it('loads surface_material_override/0 from an ExtResource .tres', async () => {
+    const seeded = loadedMaterials();
+    const materials = await materialsOf(
+      makeNode({ surfaceMaterialOverrides: new Map([[0, 'ExtResource("1_ext")']]) }),
+      seeded
+    );
+    expect(materials[0]).toBe(seeded.get(EXTERNAL_PATH));
+  });
+
+  it('loads material_override from an ExtResource .tres', async () => {
+    const seeded = loadedMaterials();
+    const materials = await materialsOf(
+      makeNode({ materialOverride: 'ExtResource("1_ext")' }),
+      seeded
+    );
+    expect(materials[0]).toBe(seeded.get(EXTERNAL_PATH));
+  });
+
+  it('loads the primitive mesh’s OWN material from an ExtResource .tres', async () => {
+    const seeded = loadedMaterials();
+    const materials = await materialsOf(makeNode({ mesh: 'SubResource("Box_ext")' }), seeded);
+    expect(materials[0]).toBe(seeded.get(EXTERNAL_PATH));
+  });
+
+  it('ranks material_override above a surface override that is an ExtResource', async () => {
+    const seeded = loadedMaterials();
+    const materials = await materialsOf(
+      makeNode({
+        surfaceMaterialOverrides: new Map([[0, 'ExtResource("2_ext")']]),
+        materialOverride: 'ExtResource("1_ext")',
+      }),
+      seeded
+    );
+    expect(materials[0]).toBe(seeded.get(EXTERNAL_PATH));
+  });
+
+  it('mixes arrivals across surfaces — an inline slot and a .tres slot', async () => {
+    const seeded = loadedMaterials();
+    const materials = await materialsOf(
+      makeNode({
+        surfaceMaterialOverrides: new Map([
+          [0, 'SubResource("Mat_inline")'],
+          [1, 'ExtResource("2_ext")'],
+        ]),
+      }),
+      seeded
+    );
+    expect(materials).toHaveLength(2);
+    expect(materials[0]!.color.getHex()).toBe(0x00ff00);
+    expect(materials[1]).toBe(seeded.get(SECOND_EXTERNAL_PATH));
+  });
+
+  it('draws Godot’s default material while the .tres is still loading', async () => {
+    // Nothing seeded: the load is in flight, and Godot draws its default surface
+    // for an invalid material RID — the same fallback an absent material takes.
+    const materials = await materialsOf(
+      makeNode({ surfaceMaterialOverrides: new Map([[0, 'ExtResource("1_ext")']]) })
+    );
+    expect(isGodotDefaultMaterial(materials[0]!)).toBe(true);
+  });
+
+  it('draws Godot’s default material for a material ExtResource that is not a .tres', async () => {
+    const materials = await materialsOf(
+      makeNode({ surfaceMaterialOverrides: new Map([[0, 'ExtResource("3_glb")']]) }),
+      loadedMaterials()
+    );
+    expect(isGodotDefaultMaterial(materials[0]!)).toBe(true);
+  });
+});
