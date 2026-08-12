@@ -41,6 +41,12 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
   (`context.addInitScript` patching `WebGL(2)RenderingContext.prototype`, the same
   mechanism `scripts/vscode/driveScene.mjs` uses) — no production file carries a test
   hook for it.
+  **Run it as `SHOWCASE_CHANNEL=bundled pnpm test:e2e:web`.** Everything going through
+  `scripts/showcase/browser.mjs` — this gate, `showcase/record.mjs`, `showcase/_verify.mjs`
+  — defaults to SYSTEM Chrome and dies at launch with "Chromium distribution 'chrome' is
+  not found" where only Playwright's bundled browser is installed. `bundled` is what CI
+  sets, so it is the configuration the gate is actually verified under. The failure looks
+  like a missing dependency rather than a missing variable, which is the trap.
 - Parity questions: `pnpm ref:godot <scene.tscn> [--camera x,y,z] [--probe x,y]` renders
   through real Godot 4.6 and prints exact pixels — measure, never derive. Needs local
   `godot` + `xvfb-run`, so it is a tool, not a gate. It injects the editor preview
