@@ -72,12 +72,13 @@ describe('CSGPolygon3D strict validators', () => {
   });
 
   it.each([
-    // csg_shape.cpp:2651, ERR_FAIL_COND(p_depth < 0.001): enforced floor.
-    ['depth = 0', 'depth'],
+    // csg_shape.cpp:2651, ERR_FAIL_COND(p_depth < 0.001): enforced floor, one
+    // step under it.
+    ['depth = 0.0009', 'depth'],
     // csg_shape.cpp:2681, ERR_FAIL_COND(p_spin_degrees < 0.01 || > 360):
-    // enforced both ends.
-    ['spin_degrees = 0', 'spin_degrees'],
-    ['spin_degrees = 361', 'spin_degrees'],
+    // enforced both ends, one step outside each.
+    ['spin_degrees = 0.009', 'spin_degrees'],
+    ['spin_degrees = 360.1', 'spin_degrees'],
     // csg_shape.cpp:2692, ERR_FAIL_COND(p_spin_sides < 3): enforced floor.
     ['spin_sides = 2', 'spin_sides'],
     ['path_node = "notapath"', 'path_node'],
@@ -111,6 +112,21 @@ describe('CSGPolygon3D strict validators', () => {
     expect(errorsOf(linter.lint(content))).toEqual([]);
     const warnings = warningsOf(linter.lint(content));
     expect(warnings.some((w) => w.message.includes(property))).toBe(true);
+  });
+
+  it.each([
+    // Both floors sit BELOW the hints' (:2601 "0.01,…", :2602 "1,360,0.1"), so
+    // these endpoints are hint-illegal yet engine-legal. The `[enforced,
+    // hinted)` sliver goes unwarned because one `min` slot holds one tier and
+    // it must be the more severe.
+    ['depth = 0.001', 'depth'],
+    ['spin_degrees = 0.01', 'spin_degrees'],
+    // :2681 refuses above 360, and the :2602 hint caps there too.
+    ['spin_degrees = 360', 'spin_degrees'],
+  ])('accepts the enforced endpoint %s in silence', (line, property) => {
+    const diagnostics = linter.lint(scene(line));
+    expect(errorsOf(diagnostics)).toEqual([]);
+    expect(warningsOf(diagnostics).some((w) => w.message.includes(property))).toBe(false);
   });
 
   it.each(['spin_sides = 3', 'spin_sides = 64'])('accepts the endpoint %s in silence', (line) => {

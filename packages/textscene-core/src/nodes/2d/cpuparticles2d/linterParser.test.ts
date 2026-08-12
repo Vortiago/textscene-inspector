@@ -139,6 +139,40 @@ describe('CPUParticles2D strict validators', () => {
     });
   });
 
+  describe('emission_sphere_radius', () => {
+    // cpu_particles_2d.cpp:1587 hints "0.01,128,0.01,suffix:px" — no
+    // or_greater/or_less, so both ends are closed and `suffix:px` is a unit.
+    // set_emission_sphere_radius (cpu_particles_2d.cpp:491-499) assigns
+    // unconditionally, so out of hint is a WARNING at both ends (ADR-0032),
+    // matching the CPUParticles3D twin. The floor shipped at 0 and the ceiling
+    // shipped absent while the comment quoted both.
+    it('accepts both endpoints (0.01 and 128)', () => {
+      expect(check('emission_sphere_radius', '0.01')).toBeNull();
+      expect(check('emission_sphere_radius', '128')).toBeNull();
+    });
+
+    it('accepts 16.0, the value scenes/fixtures/unit-cpuparticles2d.tscn:29 writes', () => {
+      expect(check('emission_sphere_radius', '16.0')).toBeNull();
+    });
+
+    it('warns one hint step (0.01) past either endpoint', () => {
+      expect(check('emission_sphere_radius', '0')?.severity).toBe('warning');
+      expect(check('emission_sphere_radius', '128.01')?.severity).toBe('warning');
+    });
+
+    it('reports the VALUE code, not the FORMAT one, for an out-of-hint number', () => {
+      expect(check('emission_sphere_radius', '128.01')?.code).toBe(
+        'INVALID_EMISSION_SPHERE_RADIUS_VALUE'
+      );
+    });
+
+    it('rejects a non-numeric value (FORMAT branch, always an error)', () => {
+      const error = check('emission_sphere_radius', 'wide');
+      expect(error?.code).toBe('INVALID_EMISSION_SPHERE_RADIUS_FORMAT');
+      expect(error?.severity).toBe('error');
+    });
+  });
+
   describe('emission_colors', () => {
     // cpu_particles_2d.cpp:1591, PropertyInfo(Variant::PACKED_COLOR_ARRAY).
     // get_emission_colors (cpu_particles_2d.cpp:551-553) returns

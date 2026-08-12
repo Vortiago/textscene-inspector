@@ -131,7 +131,7 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `emission_ring_inner_radius` | float |  |
 | `emission_ring_radius` | float |  |
 | `emission_shape` | enum 0-6 (POINT/SPHERE/SPHERE_SURFACE/RECTANGLE/POINTS/DIRECTED_POINTS/RING) | error |
-| `emission_sphere_radius` | float >= 0 | warning below |
+| `emission_sphere_radius` | float 0.01-128 | warning |
 | `emitting` | true or false |  |
 | `explosiveness` | float 0-1 | warning |
 | `fixed_fps` | integer 0-1000 | warning |

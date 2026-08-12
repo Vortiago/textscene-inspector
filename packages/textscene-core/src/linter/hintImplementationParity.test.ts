@@ -22,7 +22,6 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { walk } from './testing/ruleNameScrape.js';
 
-const NODES = join(import.meta.dirname, '../nodes');
 const RESOURCES = join(import.meta.dirname, '../resources');
 const DECLARES_BOUNDS = (name: string) =>
   name === 'linterParser.ts' || name === 'linterValidators.ts';
@@ -38,26 +37,12 @@ const QUOTED_HINT = /"(-?[\d.]+)\s*,\s*(-?[\d.]+)([^"]*)"/;
  * claim; an entry that stops corresponding to a real divergence fails below
  * rather than sitting here forever.
  */
-const SETTER_OVERRIDES_HINT: ReadonlyMap<string, string> = new Map([
-  // ERR_FAIL_COND(p_factor <= 0) is LOOSER than the hint's 0.5 floor, so 0.3 is
-  // a value Godot takes; one `min` cannot hold both, and the enforced one wins.
-  ['Window.content_scale_factor', 'window.cpp:1774'],
-  // ERR_FAIL_COND(p_aspect_ratio <= 0) is STRICTER than the hint's literal 0.
-  ['OpenXRCompositionLayerCylinder.aspect_ratio', 'openxr_composition_layer_cylinder.cpp:144'],
-  // The hint's -1 is the in-memory default the serializer omits; the setter's
-  // ERR_FAIL_COND_MSG(p_bone_idx < 0) refuses it outright.
-  ['PhysicalBone2D.bone2d_index', 'physical_bone_2d.cpp:229'],
-  // ERR_FAIL_COND(p_count < 1) sits ABOVE the hint's floor of 0, so the hint
-  // leaves no reachable band to warn on and the enforced floor is the only bound.
-  ['GPUParticles3D.draw_passes', 'gpu_particles_3d.cpp:266'],
-  // The three below share one shape: the setter's floor sits BELOW the hint's,
-  // so `[enforced, hinted)` is a real hint-only sliver that goes unreported.
-  // One `min` slot holds one tier, and it must be the more severe one — coding
-  // the hinted floor instead would downgrade a value the setter refuses from an
-  // error to a warning, which costs more than the sliver is worth.
-  ['GeometryInstance3D.lod_bias', 'visual_instance_3d.cpp:387'],
-  ['NavigationAgent3D.height', 'navigation_agent_3d.cpp:617'],
-]);
+/**
+ * Empty, and it should stay that way: every divergence found so far is on a Node
+ * class, which the engine-data guard owns. An entry here would mean a Resource
+ * whose setter disagrees with its own hint.
+ */
+const SETTER_OVERRIDES_HINT: ReadonlyMap<string, string> = new Map();
 
 interface Quoted {
   label: string;
@@ -74,7 +59,7 @@ interface Quoted {
 /** Every property whose preceding comment quotes a hint range, with the bound it declares. */
 function quotedHints(): Quoted[] {
   const found: Quoted[] = [];
-  for (const file of [...walk(NODES, DECLARES_BOUNDS), ...walk(RESOURCES, DECLARES_BOUNDS)]) {
+  for (const file of walk(RESOURCES, DECLARES_BOUNDS)) {
     const source = readFileSync(file, 'utf8');
     const lines = source.split('\n');
     const type = source.match(/registerAll\(\s*'([^']+)'/)?.[1] ?? '?';
@@ -161,9 +146,14 @@ describe('a quoted hint and the bound beside it', () => {
   const quoted = quotedHints();
 
   it('finds the quoted hints, so an empty sweep cannot pass for a clean one', () => {
-    // The floor is what stops the comment convention being abandoned silently:
-    // this guard reads comments, so deleting them all would otherwise be green.
-    expect(quoted.length).toBeGreaterThan(60);
+    // Exact, not a floor: three is small enough that a drop to two would hide
+    // inside any threshold, and this guard reads comments, so deleting one
+    // deletes the evidence along with the subject.
+    expect(quoted.map((q) => q.label).sort()).toEqual([
+      'Environment.tonemap_agx_contrast',
+      'Environment.tonemap_agx_white',
+      'Environment.tonemap_white',
+    ]);
   });
 
   it('implements every end the hint closes', () => {

@@ -63,7 +63,7 @@ export const vectorCombinators = {
         min === undefined ? 'Vector2i(x, y)' : `Vector2i(x, y), both >= ${min}`
       ),
       opts,
-      { min: min !== undefined, max: false }
+      { min }
     );
   },
 
@@ -128,7 +128,7 @@ export const vectorCombinators = {
         );
       }
       return null;
-    }, `Vector3(x, y, z), each ${numericRange('float', min, max)}`), opts, { min: min !== undefined, max: max !== undefined });
+    }, `Vector3(x, y, z), each ${numericRange('float', min, max)}`), opts, { min, max });
   },
 
   /** `Rect2(x, y, w, h)` format. */

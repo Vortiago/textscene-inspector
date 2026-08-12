@@ -82,8 +82,11 @@ validatorRegistry.registerAll('CPUParticles2D', {
   ),
   // cpu_particles_2d.cpp:1587 hints "0.01,128,0.01,suffix:px" hard both ends;
   // set_emission_sphere_radius (cpu_particles_2d.cpp:491-499) assigns
-  // unconditionally (only short-circuits if the value is unchanged).
-  emission_sphere_radius: v.nonNegativeFloat('emission_sphere_radius', {
+  // unconditionally (only short-circuits if the value is unchanged), so both
+  // ends are warnings. Same bound as the CPUParticles3D twin.
+  emission_sphere_radius: v.float('emission_sphere_radius', {
+    min: 0.01,
+    max: 128,
     hinted: 'cpu_particles_2d.cpp:1587',
   }),
   emission_rect_extents: v.vector2('emission_rect_extents'),

@@ -77,4 +77,14 @@ export type PropertyValidator = ((
    * rejection the validator never makes.
    */
   tiers?: { min?: ParseError['severity']; max?: ParseError['severity'] };
+
+  /**
+   * The numeric bound this validator enforces, per end, for the ends it has.
+   *
+   * Recorded so a guard can ask what the code implements without reading the
+   * source text around it. The engine's own `PROPERTY_HINT_RANGE` is captured
+   * from a live ClassDB into `node-properties.json`, so the two are directly
+   * comparable and the comment quoting the hint stops being load-bearing.
+   */
+  bounds?: { min?: number; max?: number };
 };

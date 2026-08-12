@@ -49,7 +49,7 @@ export const floatCombinators = {
         numericRange('float', opts.min, opts.max)
       ),
       opts,
-      { min: opts.min !== undefined, max: opts.max !== undefined }
+      { min: opts.min, max: opts.max }
     ));
   },
 
@@ -89,7 +89,8 @@ export const floatCombinators = {
       ),
       `radians, ${lowDeg}° to ${opts.maxDeg}°`
       ),
-      opts
+      opts,
+      { min, max }
     );
   },
 
@@ -110,7 +111,7 @@ export const floatCombinators = {
         'float >= 0'
       ),
       opts,
-      { min: true, max: false }
+      { min: 0 }
     ));
   },
 
@@ -131,7 +132,7 @@ export const floatCombinators = {
         'float > 0'
       ),
       opts,
-      { min: true, max: false }
+      { min: Number.MIN_VALUE }
     );
   },
 };

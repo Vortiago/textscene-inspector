@@ -142,26 +142,28 @@ export function ground(
   validator: PropertyValidator,
   opts: Grounding,
   /**
-   * Which ends this validator actually constrains. `v.float('width')` with no
-   * min or max is a format check, so it needs no grounding and must not be
-   * counted by the ratchet: marking every validator bounded inflated the count
-   * with properties that have nothing to ground.
+   * The bound this validator enforces, per end, by VALUE. An absent end is an
+   * open one: `v.float('width')` with neither is a format check, so it needs no
+   * grounding and must not be counted by the ratchet.
    *
-   * Per END rather than a single flag, because the two ends carry independent
-   * severities and an open end must report none. A bare boolean means both.
+   * Values rather than flags because two tags are derived from them — the
+   * severity each end reports, and the bound itself, which a guard compares
+   * against the engine's captured `PROPERTY_HINT_RANGE`.
    */
-  bounded: boolean | { min: boolean; max: boolean } = true
+  bounds: { min?: number; max?: number } = {}
 ): PropertyValidator {
-  const ends = typeof bounded === 'boolean' ? { min: bounded, max: bounded } : bounded;
-  const isBounded = ends.min || ends.max;
+  const hasMin = bounds.min !== undefined;
+  const hasMax = bounds.max !== undefined;
+  const isBounded = hasMin || hasMax;
   // Here rather than in the range factories, because this is the one function
   // every combinator passes through: tagging at the factories left the 55
   // validators built from an inline arrow — `v.strictInt`, `v.positiveInt` —
   // silently untagged, and the sheet rendered their tier blank.
   if (isBounded) {
+    validator.bounds = bounds;
     validator.tiers = {
-      ...(ends.min ? { min: endSeverity(opts, 'min') } : {}),
-      ...(ends.max ? { max: endSeverity(opts, 'max') } : {}),
+      ...(hasMin ? { min: endSeverity(opts, 'min') } : {}),
+      ...(hasMax ? { max: endSeverity(opts, 'max') } : {}),
     };
   }
   const enforced = citeFor(opts.enforced, 'min') ?? citeFor(opts.enforced, 'max');

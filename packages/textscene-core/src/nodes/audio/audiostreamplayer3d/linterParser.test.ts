@@ -1,6 +1,7 @@
 /**
- * AudioStreamPlayer3D strict validators — `playback_type`, not yet covered by
- * linter.test.ts.
+ * AudioStreamPlayer3D strict validators — `playback_type`, not covered by
+ * linter.test.ts, and `emission_angle_degrees`, whose value table there pins the
+ * band by value without stating the tier or why the floor sits below the hint's.
  *
  * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
  * unit under test is the validator, so a failure points at the validator
@@ -36,5 +37,23 @@ describe('AudioStreamPlayer3D strict validators: playback_type', () => {
     const error = check('playback_type', 'Stream');
     expect(error).not.toBeNull();
     expect(error!.message).toContain('must be a number');
+  });
+});
+
+describe('AudioStreamPlayer3D strict validators: emission_angle_degrees', () => {
+  // audio_stream_player_3d.cpp:687, ERR_FAIL_COND(p_angle < 0 || p_angle > 90) —
+  // the setter's band, wider at the floor than the "0.1,90,0.1,degrees" hint at :899.
+  it("accepts the setter's own ends, 0 and 90, not the hint's narrower 0.1 floor", () => {
+    expect(check('emission_angle_degrees', '0')).toBeNull();
+    expect(check('emission_angle_degrees', '90')).toBeNull();
+  });
+
+  it('stays silent through [0, 0.1), a hint-only sliver the setter accepts', () => {
+    expect(check('emission_angle_degrees', '0.05')).toBeNull();
+  });
+
+  it('errors one step past each enforced end', () => {
+    expect(check('emission_angle_degrees', '-0.1')?.severity).toBe('error');
+    expect(check('emission_angle_degrees', '90.1')?.severity).toBe('error');
   });
 });

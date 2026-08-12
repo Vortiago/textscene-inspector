@@ -172,9 +172,9 @@ validatorRegistry.registerAll('Viewport', {
   }),
   // set_scaling_3d_scale (viewport.cpp:4870-4878) does
   // `CLAMP(p_scaling_3d_scale, 0.1, 2.0)` — a real alteration, so ERROR. The
-  // clamp's 0.1 floor is NOT the ADD_PROPERTY hint's 0.25 (viewport.cpp:5178):
-  // the hint is stale relative to the code that actually runs, so the bound
-  // here is the clamp's, not the hint's.
+  // clamp floor 0.1 is looser than the hint's 0.25 (viewport.cpp:5178), which
+  // the setter takes verbatim; one min slot carries the more severe end, so
+  // the clamp's floor wins and [0.1, 0.25) is accepted silently.
   scaling_3d_scale: v.float('scaling_3d_scale', {
     min: 0.1,
     max: 2.0,

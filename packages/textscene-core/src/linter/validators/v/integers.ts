@@ -37,7 +37,7 @@ export const integerCombinators = {
         numericRange('integer', opts.min, opts.max)
       ),
       opts,
-      { min: opts.min !== undefined, max: opts.max !== undefined }
+      { min: opts.min, max: opts.max }
     );
   },
 
@@ -55,7 +55,7 @@ export const integerCombinators = {
         'integer > 0'
       ),
       opts,
-      { min: true, max: false }
+      { min: 1 }
     );
   },
 
@@ -85,7 +85,8 @@ export const integerCombinators = {
         ),
         `enum ${min}-${max} (${names})`
       ),
-      opts
+      opts,
+      { min, max }
     );
   },
 
@@ -136,7 +137,7 @@ export const integerCombinators = {
         );
       }
       return null;
-    }, numericRange('integer', min, max)), opts, { min: min !== undefined, max: max !== undefined });
+    }, numericRange('integer', min, max)), opts, { min, max });
   },
 
   /**
@@ -163,7 +164,7 @@ export const integerCombinators = {
         'integer >= 0'
       ),
       opts,
-      { min: true, max: false }
+      { min: 0 }
     );
   },
 };
