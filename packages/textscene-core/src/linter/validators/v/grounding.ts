@@ -108,6 +108,9 @@ export function withFiniteGuard(
     return validator(key, value, line);
   };
   guarded.accepts = validator.accepts;
+  // The wrapper only adds a finiteness branch ahead of the range checks, so the
+  // bounded ends and their tiers are the inner validator's unchanged.
+  guarded.tiers = validator.tiers;
   // Keep BOTH citations when the property also carries a range bound, the same
   // rule `ground` follows: the finite guard and the range guard are separate
   // lines in the setter, and dropping either makes it uncheckable.

@@ -34,8 +34,8 @@ Strict parsing format-checks these `MenuButton` properties, plus 13 inherited fr
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `item_count` | integer >= 0 | error |
-| `popup/item_#/*` | item | error |
+| `item_count` | integer >= 0 | error below |
+| `popup/item_#/*` | item |  |
 | `switch_on_hover` | true or false |  |
 
 | Rule | Reports | Severity |

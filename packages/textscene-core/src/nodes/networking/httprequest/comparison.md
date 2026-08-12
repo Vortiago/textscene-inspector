@@ -40,7 +40,7 @@ Strict parsing format-checks these `HTTPRequest` properties, plus 10 inherited f
 | `download_chunk_size` | integer 256-16777216 | error |
 | `download_file` | quoted string |  |
 | `max_redirects` | integer -1-64 | warning |
-| `timeout` | float >= 0 | error |
+| `timeout` | float >= 0 | error below |
 | `use_threads` | true or false |  |
 
 | Rule | Reports | Severity |

@@ -48,9 +48,9 @@ Strict parsing format-checks these `TileMap` properties, plus 12 inherited from 
 | `collision_animatable` | true or false |  |
 | `collision_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) | warning |
 | `format` | integer |  |
-| `layer_#/*` | layer | error |
+| `layer_#/*` | layer |  |
 | `navigation_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) | warning |
-| `rendering_quadrant_size` | integer 1-128 | error |
+| `rendering_quadrant_size` | integer 1-128 |  |
 | `tile_set` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |

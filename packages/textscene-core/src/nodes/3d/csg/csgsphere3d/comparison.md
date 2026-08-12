@@ -36,9 +36,9 @@ Strict parsing format-checks these `CSGSphere3D` properties, plus 18 inherited f
 | `flip_faces` | true or false |  |
 | `material` | null, SubResource("id") or ExtResource("id") |  |
 | `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) | warning |
-| `radial_segments` | integer >= 4 | error |
-| `radius` | float > 0 | error |
-| `rings` | integer >= 1 | error |
+| `radial_segments` | integer >= 4 | error below |
+| `radius` | float > 0 | error below |
+| `rings` | integer >= 1 | error below |
 | `smooth_faces` | true or false |  |
 
 | Rule | Reports | Severity |

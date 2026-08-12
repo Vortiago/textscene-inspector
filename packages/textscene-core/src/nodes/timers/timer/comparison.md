@@ -40,7 +40,7 @@ Strict parsing format-checks these `Timer` properties, plus 10 inherited from No
 | `one_shot` | true or false |  |
 | `paused` | true or false |  |
 | `process_callback` | enum 0-1 (PHYSICS/IDLE) | warning |
-| `wait_time` | float > 0 | error |
+| `wait_time` | float > 0 | error below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

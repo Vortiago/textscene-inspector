@@ -41,7 +41,7 @@ Strict parsing format-checks these `NavigationObstacle2D` properties, plus 12 in
 | `avoidance_enabled` | true or false |  |
 | `avoidance_layers` | 32-bit layer mask (layers 1-32) | warning |
 | `carve_navigation_mesh` | true or false |  |
-| `radius` | float 0-500 | error |
+| `radius` | float 0-500 | error below, warning above |
 | `velocity` | Vector2(x, y) |  |
 | `vertices` | PackedVector2Array(x, y, …) |  |
 

@@ -37,7 +37,7 @@ Strict parsing format-checks these `SpinBox` properties, plus 9 inherited from R
 | --- | --- | --- |
 | `alignment` | enum 0-3 (LEFT/CENTER/RIGHT/FILL) | error |
 | `custom_arrow_round` | true or false |  |
-| `custom_arrow_step` | float >= 0 | warning |
+| `custom_arrow_step` | float >= 0 | warning below |
 | `editable` | true or false |  |
 | `prefix` | quoted string |  |
 | `select_all_on_focus` | true or false |  |

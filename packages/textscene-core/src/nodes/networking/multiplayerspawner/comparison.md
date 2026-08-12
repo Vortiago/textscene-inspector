@@ -32,7 +32,7 @@ Strict parsing format-checks these `MultiplayerSpawner` properties, plus 10 inhe
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `_spawnable_scenes` | PackedStringArray("res://a.tscn", …) |  |
-| `spawn_limit` | integer >= 0 | warning |
+| `spawn_limit` | integer >= 0 | warning below |
 | `spawn_path` | NodePath("path/to/node") |  |
 
 | Rule | Reports | Severity |

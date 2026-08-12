@@ -53,21 +53,21 @@ Strict parsing format-checks these `GeometryInstance3D` properties, plus 1 inher
 | --- | --- | --- |
 | `cast_shadow` | enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY) | warning |
 | `custom_aabb` | AABB(x, y, z, w, h, d) |  |
-| `extra_cull_margin` | float 0-16384 | error |
-| `gi_lightmap_texel_scale` | float >= 0.01 | warning |
+| `extra_cull_margin` | float 0-16384 | error below, warning above |
+| `gi_lightmap_texel_scale` | float >= 0.01 | warning below |
 | `gi_mode` | enum 0-2 (DISABLED/STATIC/DYNAMIC) | warning |
 | `ignore_occlusion_culling` | true or false |  |
 | `instance_shader_parameters/*` | any Variant — the type comes from the attached shader's uniform declarations, not the .tscn |  |
-| `lod_bias` | float 0-128 | error |
+| `lod_bias` | float 0-128 | error below, warning above |
 | `material_overlay` | null, SubResource("id") or ExtResource("id") |  |
 | `material_override` | null, SubResource("id") or ExtResource("id") |  |
 | `sorting_offset` | float |  |
 | `sorting_use_aabb_center` | true or false |  |
 | `transparency` | float 0-1 | error |
-| `visibility_range_begin` | float >= 0 | warning |
-| `visibility_range_begin_margin` | float >= 0 | warning |
-| `visibility_range_end` | float >= 0 | warning |
-| `visibility_range_end_margin` | float >= 0 | warning |
+| `visibility_range_begin` | float >= 0 | warning below |
+| `visibility_range_begin_margin` | float >= 0 | warning below |
+| `visibility_range_end` | float >= 0 | warning below |
+| `visibility_range_end_margin` | float >= 0 | warning below |
 | `visibility_range_fade_mode` | enum 0-2 (DISABLED/SELF/DEPENDENCIES) | warning |
 
 | Rule | Reports | Severity |

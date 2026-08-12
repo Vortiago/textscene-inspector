@@ -32,7 +32,7 @@ Strict parsing format-checks these `GPUParticlesAttractorSphere3D` properties, p
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `radius` | float >= 0.01 | warning |
+| `radius` | float >= 0.01 | warning below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

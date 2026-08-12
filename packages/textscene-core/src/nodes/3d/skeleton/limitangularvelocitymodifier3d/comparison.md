@@ -53,11 +53,11 @@ Strict parsing format-checks these `LimitAngularVelocityModifier3D` properties, 
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `chain_count` | integer >= 0 | error |
-| `chains/#/*` | LimitAngularVelocityModifier3D chain | error |
+| `chain_count` | integer >= 0 |  |
+| `chains/#/*` | LimitAngularVelocityModifier3D chain |  |
 | `exclude` | true or false |  |
-| `joints/#/*` | read-only (derived from LimitAngularVelocityModifier3D's per-chain root_bone and end_bone) | error |
-| `max_angular_velocity` | float >= 0 | warning |
+| `joints/#/*` | read-only (derived from LimitAngularVelocityModifier3D's per-chain root_bone and end_bone) |  |
+| `max_angular_velocity` | float >= 0 | warning below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

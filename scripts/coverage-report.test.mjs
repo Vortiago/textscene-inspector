@@ -15,18 +15,31 @@
  * The third way is the build: that live registry is the one in `dist/`, so an
  * unbuilt or out-of-date `dist/` makes every assertion here agree about a
  * previous revision. It is checked first, and refused rather than measured.
+ *
+ * `pnpm validate` builds before it tests, so that precheck never fires in CI —
+ * it guards the local workflow alone. Its own tests therefore run against
+ * synthetic package roots under the temp dir, never against the real one.
  */
 
-import { beforeAll, describe, expect, it } from 'vitest';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, relative } from 'node:path';
 import { collectCoverage } from './coverage-report/collect.mjs';
 
 const CATALOG = join(import.meta.dirname, 'compare-docs/node-catalog.json');
 const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
 
 const CORE = join(import.meta.dirname, '../packages/textscene-core');
-const CORE_SRC = join(CORE, 'src');
 const BUILD = 'pnpm --filter @textscene/core build';
 
 /**
@@ -73,8 +86,8 @@ function newest(dir, keep) {
  * assertion still passes. Refuse to measure instead; building here would race
  * the build step that owns `dist/`.
  */
-function stalenessMessage() {
-  if (!newest(join(CORE, 'dist'), (n) => n.endsWith('.js')).at) {
+function stalenessMessage(core) {
+  if (!newest(join(core, 'dist'), (n) => n.endsWith('.js')).at) {
     return `packages/textscene-core/dist is not built — run \`${BUILD}\`.`;
   }
   // Against tsc's OWN record of when it last evaluated the project, not against
@@ -85,21 +98,21 @@ function stalenessMessage() {
   // complaint. A guard whose prescribed remedy does not work gets bypassed.
   let stamp;
   try {
-    stamp = statSync(join(CORE, 'tsconfig.tsbuildinfo')).mtimeMs;
+    stamp = statSync(join(core, 'tsconfig.tsbuildinfo')).mtimeMs;
   } catch {
     return `packages/textscene-core has no tsconfig.tsbuildinfo — run \`${BUILD}\`.`;
   }
-  const source = newest(CORE_SRC, (n) => COMPILED.test(n) && !NOT_COMPILED.test(n));
+  const source = newest(join(core, 'src'), (n) => COMPILED.test(n) && !NOT_COMPILED.test(n));
   if (source.at > stamp) {
     return (
-      `packages/textscene-core/dist predates ${relative(CORE, source.file)} — this ledger would ` +
+      `packages/textscene-core/dist predates ${relative(core, source.file)} — this ledger would ` +
       `report the PREVIOUS revision's registries. Run \`${BUILD}\`.`
     );
   }
   return null;
 }
 
-const stale = stalenessMessage();
+const stale = stalenessMessage(CORE);
 const coverage = stale ? null : await collectCoverage();
 
 describe('coverage ledger', () => {
@@ -144,5 +157,171 @@ describe('coverage ledger', () => {
         .map((ancestor) => `${n.name} scheduled before its ancestor ${ancestor}`)
     );
     expect(inverted).toEqual([]);
+  });
+});
+
+const OLD = 1_600_000_000;
+const MID = 1_650_000_000;
+const NEW = 1_700_000_000;
+
+const scratch = [];
+
+/** Synthetic package root; `files` maps a relative path to its mtime in epoch seconds. */
+function fakeCore(files) {
+  const root = mkdtempSync(join(tmpdir(), 'coverage-staleness-'));
+  scratch.push(root);
+  for (const [rel, mtime] of Object.entries(files)) {
+    const path = join(root, ...rel.split('/'));
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, '');
+    utimesSync(path, mtime, mtime);
+  }
+  return root;
+}
+
+afterAll(() => {
+  for (const root of scratch) rmSync(root, { recursive: true, force: true });
+});
+
+describe('newest', () => {
+  it('reports the newest kept file and its path, from any depth', () => {
+    const root = fakeCore({
+      'shallow.js': MID,
+      'a/b/c/deep.js': NEW,
+      'a/newer.txt': NEW,
+    });
+
+    expect(newest(root, (n) => n.endsWith('.js'))).toEqual({
+      at: NEW * 1000,
+      file: join(root, 'a', 'b', 'c', 'deep.js'),
+    });
+  });
+
+  it('never descends into a testing directory, at any depth', () => {
+    const root = fakeCore({
+      'kept.ts': OLD,
+      'testing/kit.ts': NEW,
+      'nodes/2d/testing/fixtures.ts': NEW,
+    });
+
+    expect(newest(root, () => true)).toEqual({ at: OLD * 1000, file: join(root, 'kept.ts') });
+  });
+
+  it('reports nothing for a directory that does not exist', () => {
+    expect(newest(join(fakeCore({}), 'absent'), () => true)).toEqual({ at: 0, file: '' });
+  });
+});
+
+describe('dist-freshness precheck', () => {
+  it('passes a build stamp that postdates every source', () => {
+    const root = fakeCore({
+      'dist/index.js': MID,
+      'tsconfig.tsbuildinfo': NEW,
+      'src/parser/TscnParser.ts': MID,
+    });
+
+    expect(stalenessMessage(root)).toBeNull();
+  });
+
+  it('passes on a fresh stamp even when every emitted file predates the sources', () => {
+    // The property the stamp was chosen for: incremental `tsc` leaves an output
+    // whose content did not change untouched, so comparing against the newest
+    // emitted `.js` makes the printed remedy unable to clear the complaint.
+    const root = fakeCore({
+      'dist/index.js': OLD,
+      'dist/core/nodes.js': OLD,
+      'src/index.ts': MID,
+      'tsconfig.tsbuildinfo': NEW,
+    });
+
+    expect(stalenessMessage(root)).toBeNull();
+  });
+
+  it('reports a source newer than the stamp, naming it and the remedy', () => {
+    const root = fakeCore({
+      'dist/index.js': NEW,
+      'tsconfig.tsbuildinfo': MID,
+      'src/index.ts': NEW,
+    });
+
+    expect(stalenessMessage(root)).toBe(
+      `packages/textscene-core/dist predates ${join('src', 'index.ts')} — this ledger would ` +
+        `report the PREVIOUS revision's registries. Run \`${BUILD}\`.`
+    );
+  });
+
+  it('finds a stale source nested deep in the slice tree', () => {
+    const root = fakeCore({
+      'dist/index.js': OLD,
+      'tsconfig.tsbuildinfo': MID,
+      'src/index.ts': OLD,
+      'src/nodes/2d/line2d/parser.ts': NEW,
+    });
+
+    expect(stalenessMessage(root)).toContain(join('src', 'nodes', '2d', 'line2d', 'parser.ts'));
+  });
+
+  it('counts a .tsx source', () => {
+    const root = fakeCore({
+      'dist/index.js': OLD,
+      'tsconfig.tsbuildinfo': MID,
+      'src/r3f/Scene.tsx': NEW,
+    });
+
+    expect(stalenessMessage(root)).toContain(join('src', 'r3f', 'Scene.tsx'));
+  });
+
+  it('ignores the sources tsc does not emit', () => {
+    const root = fakeCore({
+      'dist/index.js': OLD,
+      'tsconfig.tsbuildinfo': MID,
+      'src/index.ts': OLD,
+      'src/parser/TscnParser.test.ts': NEW,
+      'src/r3f/Scene.test.tsx': NEW,
+      'src/linter/rules.spec.ts': NEW,
+      'src/r3f/Scene.spec.tsx': NEW,
+      'src/types/ambient.d.ts': NEW,
+      'src/testing/kit.ts': NEW,
+      'src/nodes/2d/testing/fixtures.ts': NEW,
+      'src/nodes/2d/line2d/comparison.md': NEW,
+    });
+
+    expect(stalenessMessage(root)).toBeNull();
+  });
+
+  it('reports an unbuilt dist distinctly from a stale one', () => {
+    const noJs = fakeCore({
+      'dist/index.d.ts': NEW,
+      'tsconfig.tsbuildinfo': NEW,
+      'src/index.ts': OLD,
+    });
+    const staleBuild = fakeCore({
+      'dist/index.js': OLD,
+      'tsconfig.tsbuildinfo': MID,
+      'src/index.ts': NEW,
+    });
+
+    expect(stalenessMessage(noJs)).toBe(
+      `packages/textscene-core/dist is not built — run \`${BUILD}\`.`
+    );
+    expect(stalenessMessage(staleBuild)).toContain('predates');
+  });
+
+  it('accepts emit that only exists in nested dist directories', () => {
+    const root = fakeCore({
+      'dist/core/nodes/index.js': OLD,
+      'tsconfig.tsbuildinfo': NEW,
+      'src/index.ts': MID,
+    });
+
+    expect(stalenessMessage(root)).toBeNull();
+  });
+
+  it('reports a missing tsconfig.tsbuildinfo as its own remedy', () => {
+    const root = fakeCore({ 'dist/index.js': NEW, 'src/index.ts': OLD });
+
+    expect(stalenessMessage(root)).toBe(
+      `packages/textscene-core has no tsconfig.tsbuildinfo — run \`${BUILD}\`.`
+    );
   });
 });

@@ -38,9 +38,9 @@ Strict parsing format-checks these `RootMotionView` properties, plus 1 inherited
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `animation_path` | NodePath("path/to/node") |  |
-| `cell_size` | float >= 0.1 | warning |
+| `cell_size` | float >= 0.1 | warning below |
 | `color` | Color(r, g, b, a) |  |
-| `radius` | float >= 0.1 | warning |
+| `radius` | float >= 0.1 | warning below |
 | `zero_y` | true or false |  |
 
 | Rule | Reports | Severity |

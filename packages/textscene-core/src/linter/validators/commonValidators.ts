@@ -1,6 +1,7 @@
 /** Shared validator utilities for common property types */
 
 import type { ParseError } from '../../linter/types.js';
+import type { PropertyValidator } from '../propertyValidator.js';
 import { propertyError } from './propertyError.js';
 import { FLOAT_PATTERN_SOURCE } from '../../parser/vectors.js';
 
@@ -150,8 +151,8 @@ export function createEnumValidator(
    * excludes.
    */
   maxSeverity: ParseError['severity'] = valueSeverity
-): (key: string, value: string, line: number) => ParseError | null {
-  return (key, value, line) => {
+): PropertyValidator {
+  const validator: PropertyValidator = (key, value, line) => {
     const num = parseInt(value, 10);
     if (isNaN(num)) {
       return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
@@ -170,6 +171,9 @@ export function createEnumValidator(
     }
     return null;
   };
+  // An enum is closed at both ends by construction.
+  validator.tiers = { min: valueSeverity, max: maxSeverity };
+  return validator;
 }
 
 /**
@@ -191,8 +195,8 @@ export function createNumericRangeValidator(
   valueSeverity: ParseError['severity'] = 'error',
   /** Severity of the MAX branch. Defaults to the min's. */
   maxSeverity: ParseError['severity'] = valueSeverity
-): (key: string, value: string, line: number) => ParseError | null {
-  return (key, value, line) => {
+): PropertyValidator {
+  const validator: PropertyValidator = (key, value, line) => {
     let num: number;
     if (parseAsInt) {
       num = parseInt(value, 10);
@@ -237,6 +241,13 @@ export function createNumericRangeValidator(
 
     return null;
   };
+  // Only the ends that HAVE a bound: an open end rejects nothing, so tagging it
+  // with a severity would advertise a rejection this validator never makes.
+  validator.tiers = {
+    ...(min !== null ? { min: valueSeverity } : {}),
+    ...(max !== null ? { max: maxSeverity } : {}),
+  };
+  return validator;
 }
 
 /**

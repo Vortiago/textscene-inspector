@@ -46,7 +46,7 @@ Strict parsing format-checks these `SoftBody3D` properties, plus 5 inherited fro
 | `attachments/*` | attachment |  |
 | `collision_layer` | 32-bit layer mask (layers 1-32) | warning |
 | `collision_mask` | 32-bit layer mask (layers 1-32) | warning |
-| `damping_coefficient` | float >= 0 | warning |
+| `damping_coefficient` | float >= 0 | warning below |
 | `disable_mode` | enum 0-1 (REMOVE/KEEP_ACTIVE) | warning |
 | `drag_coefficient` | float 0-1 | warning |
 | `linear_stiffness` | float 0-1 | warning |
@@ -56,7 +56,7 @@ Strict parsing format-checks these `SoftBody3D` properties, plus 5 inherited fro
 | `ray_pickable` | true or false |  |
 | `shrinking_factor` | float |  |
 | `simulation_precision` | integer 1-100 | warning |
-| `total_mass` | float >= 0 | warning |
+| `total_mass` | float >= 0 | warning below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

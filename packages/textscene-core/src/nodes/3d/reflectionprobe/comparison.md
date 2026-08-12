@@ -47,7 +47,7 @@ Strict parsing format-checks these `ReflectionProbe` properties, plus 1 inherite
 | `ambient_color` | Color(r, g, b, a) |  |
 | `ambient_color_energy` | float 0-16 | warning |
 | `ambient_mode` | enum 0-2 (AMBIENT_DISABLED/AMBIENT_ENVIRONMENT/AMBIENT_COLOR) | warning |
-| `blend_distance` | float >= 0 | warning |
+| `blend_distance` | float >= 0 | warning below |
 | `box_projection` | true or false |  |
 | `cull_mask` | 32-bit layer mask (layers 1-32) | warning |
 | `enable_shadows` | true or false |  |

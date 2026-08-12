@@ -54,17 +54,17 @@ Strict parsing format-checks these `LookAtModifier3D` properties, plus 2 inherit
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `bone` | integer >= -1 | error |
+| `bone` | integer >= -1 |  |
 | `bone_name` | quoted string |  |
-| `duration` | float >= 0 | warning |
+| `duration` | float >= 0 | warning below |
 | `ease_type` | enum 0-3 (In/Out/InOut/OutIn) | warning |
 | `forward_axis` | enum 0-5 (+X/-X/+Y/-Y/+Z/-Z) | warning |
-| `origin_bone` | integer >= -1 | error |
+| `origin_bone` | integer >= -1 |  |
 | `origin_bone_name` | quoted string |  |
 | `origin_external_node` | NodePath("path/to/node") |  |
 | `origin_from` | enum 0-2 (Self/SpecificBone/ExternalNode) | warning |
 | `origin_offset` | Vector3(x, y, z) |  |
-| `origin_safe_margin` | float >= 0 | warning |
+| `origin_safe_margin` | float >= 0 | warning below |
 | `primary_damp_threshold` | float 0-1 | warning |
 | `primary_limit_angle` | radians, 0° to 360° | warning |
 | `primary_negative_damp_threshold` | float 0-1 | warning |

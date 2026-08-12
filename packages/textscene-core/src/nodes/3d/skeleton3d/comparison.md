@@ -33,9 +33,9 @@ Strict parsing format-checks these `Skeleton3D` properties, plus 17 inherited fr
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `animate_physical_bones` | true or false |  |
-| `bones/*` | bone pose component (float, Vector3 or Quaternion) | error |
+| `bones/*` | bone pose component (float, Vector3 or Quaternion) |  |
 | `modifier_callback_mode_process` | enum 0-2 (PHYSICS/IDLE/MANUAL) | warning |
-| `motion_scale` | float >= 5e-324 | error |
+| `motion_scale` | float >= 5e-324 | error below |
 | `show_rest_only` | true or false |  |
 
 | Rule | Reports | Severity |

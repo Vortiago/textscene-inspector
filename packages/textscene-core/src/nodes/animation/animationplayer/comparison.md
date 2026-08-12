@@ -54,7 +54,7 @@ Strict parsing format-checks these `AnimationPlayer` properties, plus 13 inherit
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `autoplay` | quoted string or &"name" |  |
-| `blend_times` | Array literal of (from, to, time) triples | error |
+| `blend_times` | Array literal of (from, to, time) triples |  |
 | `current_animation` | any value (no format constraint) |  |
 | `method_call_mode` | enum 0-1 (DEFERRED/IMMEDIATE) | warning |
 | `movie_quit_on_finish` | true or false |  |

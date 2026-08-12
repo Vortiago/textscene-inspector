@@ -65,8 +65,8 @@ Strict parsing format-checks these `SpringBoneSimulator3D` properties, plus 2 in
 | --- | --- | --- |
 | `external_force` | Vector3(x, y, z) |  |
 | `mutable_bone_axes` | true or false |  |
-| `setting_count` | integer >= 0 | error |
-| `settings/*` | SpringBoneSimulator3D settings/<i>/ bone chain setup | error |
+| `setting_count` | integer >= 0 |  |
+| `settings/*` | SpringBoneSimulator3D settings/<i>/ bone chain setup |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

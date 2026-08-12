@@ -59,7 +59,7 @@ Strict parsing format-checks these `GraphEdit` properties, plus 53 inherited fro
 | --- | --- | --- |
 | `connection_lines_antialiased` | true or false |  |
 | `connection_lines_curvature` | float |  |
-| `connection_lines_thickness` | float 0-100 | error |
+| `connection_lines_thickness` | float 0-100 | error below, warning above |
 | `connections` | Array literal ([...] or Array[Dictionary]([...])) |  |
 | `grid_pattern` | enum 0-1 (GRID_PATTERN_LINES/GRID_PATTERN_DOTS) | warning |
 | `minimap_enabled` | true or false |  |
@@ -81,7 +81,7 @@ Strict parsing format-checks these `GraphEdit` properties, plus 53 inherited fro
 | `zoom` | float |  |
 | `zoom_max` | float |  |
 | `zoom_min` | float |  |
-| `zoom_step` | float >= 0 | error |
+| `zoom_step` | float >= 0 | error below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

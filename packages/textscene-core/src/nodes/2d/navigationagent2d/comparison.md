@@ -66,29 +66,29 @@ Strict parsing format-checks these `NavigationAgent2D` properties, plus 10 inher
 | `avoidance_priority` | float 0-1 | error |
 | `debug_enabled` | true or false |  |
 | `debug_path_custom_color` | Color(r, g, b, a) |  |
-| `debug_path_custom_line_width` | float >= -1 | warning |
-| `debug_path_custom_point_size` | float >= 0 | error |
+| `debug_path_custom_line_width` | float >= -1 | warning below |
+| `debug_path_custom_point_size` | float >= 0 | error below |
 | `debug_use_custom` | true or false |  |
-| `max_neighbors` | integer >= 1 | warning |
-| `max_speed` | float >= 0 | error |
+| `max_neighbors` | integer >= 1 | warning below |
+| `max_speed` | float >= 0 | error below |
 | `navigation_layers` | 32-bit layer mask (layers 1-32) | warning |
-| `neighbor_distance` | float >= 0.1 | warning |
-| `path_desired_distance` | float >= 0.1 | warning |
-| `path_max_distance` | float >= 10 | warning |
-| `path_metadata_flags` | bit mask of PATH_METADATA_INCLUDE_TYPES (1) | PATH_METADATA_INCLUDE_RIDS (2) | PATH_METADATA_INCLUDE_OWNERS (4) | warning |
+| `neighbor_distance` | float >= 0.1 | warning below |
+| `path_desired_distance` | float >= 0.1 | warning below |
+| `path_max_distance` | float >= 10 | warning below |
+| `path_metadata_flags` | bit mask of PATH_METADATA_INCLUDE_TYPES (1) | PATH_METADATA_INCLUDE_RIDS (2) | PATH_METADATA_INCLUDE_OWNERS (4) |  |
 | `path_postprocessing` | enum 0-2 (PATH_POSTPROCESSING_CORRIDORFUNNEL/PATH_POSTPROCESSING_EDGECENTERED/PATH_POSTPROCESSING_NONE) | warning |
-| `path_return_max_length` | float >= 0 | error |
-| `path_return_max_radius` | float >= 0 | error |
-| `path_search_max_distance` | float >= 0 | error |
-| `path_search_max_polygons` | integer >= 0 | warning |
+| `path_return_max_length` | float >= 0 | error below |
+| `path_return_max_radius` | float >= 0 | error below |
+| `path_search_max_distance` | float >= 0 | error below |
+| `path_search_max_polygons` | integer >= 0 | warning below |
 | `pathfinding_algorithm` | enum 0-0 (PATHFINDING_ALGORITHM_ASTAR) | warning |
-| `radius` | float >= 0 | error |
-| `simplify_epsilon` | float >= 0 | error |
+| `radius` | float >= 0 | error below |
+| `simplify_epsilon` | float >= 0 | error below |
 | `simplify_path` | true or false |  |
-| `target_desired_distance` | float >= 0.1 | warning |
+| `target_desired_distance` | float >= 0.1 | warning below |
 | `target_position` | Vector2(x, y) |  |
-| `time_horizon_agents` | float >= 0 | error |
-| `time_horizon_obstacles` | float >= 0 | error |
+| `time_horizon_agents` | float >= 0 | error below |
+| `time_horizon_obstacles` | float >= 0 | error below |
 | `velocity` | Vector2(x, y) |  |
 
 | Rule | Reports | Severity |

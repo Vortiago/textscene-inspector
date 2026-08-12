@@ -45,7 +45,7 @@ Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inheri
 | `centered` | true or false |  |
 | `flip_h` | true or false |  |
 | `flip_v` | true or false |  |
-| `frame` | integer >= 0 | error |
+| `frame` | integer >= 0 |  |
 | `frame_progress` | float |  |
 | `offset` | Vector2(x, y) |  |
 | `playing` | true or false |  |

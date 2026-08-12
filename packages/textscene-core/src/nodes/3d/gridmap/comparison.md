@@ -39,17 +39,17 @@ Strict parsing format-checks these `GridMap` properties, plus 17 inherited from 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `bake_navigation` | true or false |  |
-| `baked_meshes` | Array of resource references ([SubResource("id"), …]) | error |
+| `baked_meshes` | Array of resource references ([SubResource("id"), …]) |  |
 | `cell_center_x` | true or false |  |
 | `cell_center_y` | true or false |  |
 | `cell_center_z` | true or false |  |
-| `cell_octant_size` | integer, nonzero, 1-1024 hinted | error |
+| `cell_octant_size` | integer, nonzero, 1-1024 hinted |  |
 | `cell_scale` | float |  |
 | `cell_size` | Vector3(x, y, z) |  |
 | `collision_layer` | 32-bit layer mask (layers 1-32) | warning |
 | `collision_mask` | 32-bit layer mask (layers 1-32) | warning |
 | `collision_priority` | float |  |
-| `data` | Dictionary literal { "cells": PackedInt32Array(...) } | error |
+| `data` | Dictionary literal { "cells": PackedInt32Array(...) } |  |
 | `mesh_library` | null, SubResource("id") or ExtResource("id") |  |
 | `physics_material` | null, SubResource("id") or ExtResource("id") |  |
 

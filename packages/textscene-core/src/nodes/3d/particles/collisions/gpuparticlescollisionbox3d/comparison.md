@@ -31,7 +31,7 @@ Strict parsing format-checks these `GPUParticlesCollisionBox3D` properties, plus
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `size` | Vector3(x, y, z), each float >= 0.01 | warning |
+| `size` | Vector3(x, y, z), each float >= 0.01 |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

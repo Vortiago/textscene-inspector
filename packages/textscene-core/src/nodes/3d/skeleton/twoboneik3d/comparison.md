@@ -47,8 +47,8 @@ Strict parsing format-checks these `TwoBoneIK3D` properties, plus 1 inherited fr
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `setting_count` | integer >= 0 | error |
-| `settings/*` | per-setting bone chain, pole direction and virtual end-bone setup | error |
+| `setting_count` | integer >= 0 |  |
+| `settings/*` | per-setting bone chain, pole direction and virtual end-bone setup |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

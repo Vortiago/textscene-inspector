@@ -39,9 +39,9 @@ Strict parsing format-checks these `OptionButton` properties, plus 13 inherited 
 | --- | --- | --- |
 | `allow_reselect` | true or false |  |
 | `fit_to_longest_item` | true or false |  |
-| `item_count` | integer >= 0 | error |
-| `popup/item_#/*` | item | error |
-| `selected` | integer >= -1 | error |
+| `item_count` | integer >= 0 | error below |
+| `popup/item_#/*` | item |  |
+| `selected` | integer >= -1 | error below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

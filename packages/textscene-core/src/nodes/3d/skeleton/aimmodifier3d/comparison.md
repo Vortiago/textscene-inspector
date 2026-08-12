@@ -35,8 +35,8 @@ Strict parsing format-checks these `AimModifier3D` properties, plus 2 inherited 
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `setting_count` | integer >= 0 | error |
-| `settings/#/*` | setting | error |
+| `setting_count` | integer >= 0 | error below |
+| `settings/#/*` | setting |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

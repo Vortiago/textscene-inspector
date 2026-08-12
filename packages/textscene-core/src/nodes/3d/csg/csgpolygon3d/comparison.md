@@ -94,13 +94,13 @@ Strict parsing format-checks these `CSGPolygon3D` properties, plus 18 inherited 
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `depth` | float >= 0.001 | error |
+| `depth` | float >= 0.001 | error below |
 | `flip_faces` | true or false |  |
 | `material` | null, SubResource("id") or ExtResource("id") |  |
 | `mode` | enum 0-2 (DEPTH/SPIN/PATH) | warning |
 | `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) | warning |
 | `path_continuous_u` | true or false |  |
-| `path_interval` | float > 0 | warning |
+| `path_interval` | float > 0 | warning below |
 | `path_interval_type` | enum 0-1 (DISTANCE/SUBDIVIDE) | warning |
 | `path_joined` | true or false |  |
 | `path_local` | true or false |  |
@@ -108,11 +108,11 @@ Strict parsing format-checks these `CSGPolygon3D` properties, plus 18 inherited 
 | `path_rotation` | enum 0-2 (POLYGON/PATH/PATH_FOLLOW) | warning |
 | `path_rotation_accurate` | true or false |  |
 | `path_simplify_angle` | float 0-180 | warning |
-| `path_u_distance` | float >= 0 | warning |
+| `path_u_distance` | float >= 0 | warning below |
 | `polygon` | PackedVector2Array(x, y, …) |  |
 | `smooth_faces` | true or false |  |
 | `spin_degrees` | float 0.01-360 | error |
-| `spin_sides` | integer 3-64 | error |
+| `spin_sides` | integer 3-64 | error below, warning above |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

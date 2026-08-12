@@ -46,7 +46,7 @@ Strict parsing format-checks these `Node2D` properties, plus 16 inherited from C
 | `position` | Vector2(x, y) |  |
 | `rotation` | float |  |
 | `rotation_degrees` | float |  |
-| `scale` | Vector2(x, y), no (near-)zero component | error |
+| `scale` | Vector2(x, y), no (near-)zero component |  |
 | `skew` | float |  |
 | `transform` | Transform2D(6 floats) |  |
 

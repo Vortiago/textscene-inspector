@@ -126,11 +126,11 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 | --- | --- | --- |
 | `albedo_mix` | float 0-1 | warning |
 | `cull_mask` | 32-bit layer mask (layers 1-32) | warning |
-| `distance_fade_begin` | float >= 0 | warning |
+| `distance_fade_begin` | float >= 0 | warning below |
 | `distance_fade_enabled` | true or false |  |
-| `distance_fade_length` | float >= 0 | warning |
-| `emission_energy` | float >= 0 | warning |
-| `lower_fade` | float >= 0 | error |
+| `distance_fade_length` | float >= 0 | warning below |
+| `emission_energy` | float >= 0 | warning below |
+| `lower_fade` | float >= 0 | error below |
 | `modulate` | Color(r, g, b, a) |  |
 | `normal_fade` | float 0-0.999 | warning |
 | `size` | Vector3(x, y, z) |  |
@@ -139,7 +139,7 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 | `texture_emission` | null, SubResource("id") or ExtResource("id") |  |
 | `texture_normal` | null, SubResource("id") or ExtResource("id") |  |
 | `texture_orm` | null, SubResource("id") or ExtResource("id") |  |
-| `upper_fade` | float >= 0 | error |
+| `upper_fade` | float >= 0 | error below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

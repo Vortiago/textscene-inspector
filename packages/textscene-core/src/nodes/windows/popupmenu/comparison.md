@@ -39,12 +39,12 @@ Strict parsing format-checks these `PopupMenu` properties, plus 45 inherited fro
 | `hide_on_checkable_item_selection` | true or false |  |
 | `hide_on_item_selection` | true or false |  |
 | `hide_on_state_item_selection` | true or false |  |
-| `item_#/*` | item_<index>/<leaf> (see popup_menu.cpp, PropertyListHelper-backed) | error |
-| `item_count` | integer >= 0 | error |
+| `item_#/*` | item_<index>/<leaf> (see popup_menu.cpp, PropertyListHelper-backed) |  |
+| `item_count` | integer >= 0 | error below |
 | `prefer_native_menu` | true or false |  |
 | `shrink_height` | true or false |  |
 | `shrink_width` | true or false |  |
-| `submenu_popup_delay` | float >= 5e-324 | error |
+| `submenu_popup_delay` | float >= 5e-324 | error below |
 | `system_menu_id` | enum 0-5 (NONE/APPLICATION_MENU/WINDOW_MENU/HELP_MENU/DOCK) | warning |
 
 | Rule | Reports | Severity |

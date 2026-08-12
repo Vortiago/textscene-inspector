@@ -103,7 +103,7 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `amount` | integer > 0 | error |
+| `amount` | integer > 0 |  |
 | `angle_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `angle_max` | float |  |
 | `angle_min` | float |  |
@@ -120,8 +120,8 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `color_initial_ramp` | null, SubResource("id") or ExtResource("id") |  |
 | `color_ramp` | null, SubResource("id") or ExtResource("id") |  |
 | `damping_curve` | null, SubResource("id") or ExtResource("id") |  |
-| `damping_max` | float >= 0 | warning |
-| `damping_min` | float >= 0 | warning |
+| `damping_max` | float >= 0 | warning below |
+| `damping_min` | float >= 0 | warning below |
 | `direction` | Vector2(x, y) |  |
 | `draw_order` | enum 0-1 (INDEX/LIFETIME) | warning |
 | `emission_colors` | PackedColorArray(r, g, b, a, …) |  |
@@ -131,10 +131,10 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `emission_ring_inner_radius` | float |  |
 | `emission_ring_radius` | float |  |
 | `emission_shape` | enum 0-6 (POINT/SPHERE/SPHERE_SURFACE/RECTANGLE/POINTS/DIRECTED_POINTS/RING) | error |
-| `emission_sphere_radius` | float >= 0 | warning |
+| `emission_sphere_radius` | float >= 0 | warning below |
 | `emitting` | true or false |  |
 | `explosiveness` | float 0-1 | warning |
-| `fixed_fps` | integer >= 0 | warning |
+| `fixed_fps` | integer >= 0 | warning below |
 | `fract_delta` | true or false |  |
 | `gravity` | Vector2(x, y) |  |
 | `hue_variation_curve` | null, SubResource("id") or ExtResource("id") |  |
@@ -142,7 +142,7 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `hue_variation_min` | float -1-1 | warning |
 | `initial_velocity_max` | float |  |
 | `initial_velocity_min` | float |  |
-| `lifetime` | float > 0 | error |
+| `lifetime` | float > 0 | error below |
 | `lifetime_randomness` | float 0-1 | warning |
 | `linear_accel_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `linear_accel_max` | float |  |
@@ -153,18 +153,18 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `orbit_velocity_max` | float |  |
 | `orbit_velocity_min` | float |  |
 | `particle_flag_align_y` | true or false |  |
-| `preprocess` | float >= 0 | warning |
+| `preprocess` | float >= 0 | warning below |
 | `radial_accel_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `radial_accel_max` | float |  |
 | `radial_accel_min` | float |  |
 | `randomness` | float 0-1 | warning |
 | `scale_amount_curve` | null, SubResource("id") or ExtResource("id") |  |
-| `scale_amount_max` | float >= 0 | warning |
-| `scale_amount_min` | float >= 0 | warning |
+| `scale_amount_max` | float >= 0 | warning below |
+| `scale_amount_min` | float >= 0 | warning below |
 | `scale_curve_x` | null, SubResource("id") or ExtResource("id") |  |
 | `scale_curve_y` | null, SubResource("id") or ExtResource("id") |  |
-| `seed` | integer >= 0 | warning |
-| `speed_scale` | float >= 0 | warning |
+| `seed` | integer >= 0 |  |
+| `speed_scale` | float >= 0 | warning below |
 | `split_scale` | true or false |  |
 | `spread` | float 0-180 | warning |
 | `tangential_accel_curve` | null, SubResource("id") or ExtResource("id") |  |

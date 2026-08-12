@@ -17,8 +17,22 @@
  * which is why the gallery cannot compute it and reads the generated JSON instead.
  */
 
-/** How each ADR-0032 tier reads in the sheet's `Out of range` column. */
-const TIER_LABEL = { enforced: 'error', hinted: 'warning' };
+/**
+ * The sheet's `Out of range` cell, from the severity each BOUNDED end reports.
+ *
+ * Not from `grounding.kind`: that collapses to `enforced` when EITHER end is,
+ * so a property with an enforced floor and a hinted ceiling (`extra_cull_margin`)
+ * rendered a flat "error" and told the reader exceeding the ceiling stops a
+ * build, which it does not. The two ends are named separately whenever they
+ * disagree, and an open end is simply absent.
+ */
+export function outOfRangeCell(tiers) {
+  if (!tiers) return '';
+  const { min, max } = tiers;
+  if (min && max) return min === max ? min : `${min} below, ${max} above`;
+  if (min) return `${min} below`;
+  return max ? `${max} above` : '';
+}
 
 /** Validated properties for `type`, each attributed to the type that declares it. */
 export function validatorsFor(type, validatorRegistry, baseTypes) {
@@ -44,12 +58,12 @@ export function validatorsFor(type, validatorRegistry, baseTypes) {
         property: key,
         declaredOn: current,
         accepts: validator?.accepts ?? '',
-        // ADR-0032's tier. `hinted` means only the inspector's
-        // PROPERTY_HINT_RANGE states the bound, so exceeding it warns; the
-        // setter itself takes the value. Carried here because the tier decides
-        // whether a diagnostic stops a build, which is the first thing a reader
-        // of this table needs and the sheet used to state wrongly for all of them.
-        grounding: validator?.grounding?.kind ?? '',
+        // What each bounded end actually reports (ADR-0032). Read per end
+        // rather than from `grounding.kind`, which cannot express a property
+        // whose floor the setter enforces and whose ceiling only the inspector
+        // hint states. The tier is the first thing a reader of this table needs,
+        // and the sheet used to state it wrongly for every property.
+        tiers: validator?.tiers,
         ...(removed.has(key) ? { unavailable: true } : {}),
       });
     }
@@ -142,7 +156,7 @@ export function renderCoverage(type, coverage) {
         const accepts = v.unavailable ? '**not available on this type**' : v.accepts;
         // Blank for a validator with no bound to exceed: a format-only check has
         // no "out of range", and claiming one would invent a tier it never reports.
-        const tier = v.unavailable || !v.grounding ? '' : TIER_LABEL[v.grounding];
+        const tier = v.unavailable ? '' : outOfRangeCell(v.tiers);
         lines.push(`| \`${v.property}\` | ${accepts} | ${tier} |`);
       }
     }

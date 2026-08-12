@@ -35,10 +35,10 @@ Strict parsing format-checks these `NavigationRegion2D` properties, plus 12 inhe
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `enabled` | true or false |  |
-| `enter_cost` | float >= 0 | error |
+| `enter_cost` | float >= 0 | error below |
 | `navigation_layers` | 32-bit layer mask (layers 1-32) | warning |
 | `navigation_polygon` | null, SubResource("id") or ExtResource("id") |  |
-| `travel_cost` | float >= 0 | error |
+| `travel_cost` | float >= 0 | error below |
 | `use_edge_connections` | true or false |  |
 
 | Rule | Reports | Severity |

@@ -52,15 +52,15 @@ Strict parsing format-checks these `Sprite2D` properties, plus 12 inherited from
 | `centered` | true or false |  |
 | `flip_h` | true or false |  |
 | `flip_v` | true or false |  |
-| `frame` | integer >= 0 | error |
-| `frame_coords` | Vector2i(x, y), both >= 0 | error |
-| `hframes` | integer 1-16384 | error |
+| `frame` | integer >= 0 |  |
+| `frame_coords` | Vector2i(x, y), both >= 0 |  |
+| `hframes` | integer 1-16384 |  |
 | `offset` | Vector2(x, y) |  |
 | `region_enabled` | true or false |  |
 | `region_filter_clip_enabled` | true or false |  |
 | `region_rect` | Rect2(x, y, w, h) |  |
 | `texture` | null, SubResource("id") or ExtResource("id") |  |
-| `vframes` | integer 1-16384 | error |
+| `vframes` | integer 1-16384 |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

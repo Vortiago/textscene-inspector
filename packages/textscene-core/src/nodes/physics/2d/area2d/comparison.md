@@ -41,7 +41,7 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `angular_damp` | float >= 0 | warning |
+| `angular_damp` | float >= 0 | warning below |
 | `angular_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) | warning |
 | `audio_bus_name` | quoted string or &"name" |  |
 | `audio_bus_override` | true or false |  |
@@ -49,9 +49,9 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 | `gravity_direction` | Vector2(x, y) |  |
 | `gravity_point` | true or false |  |
 | `gravity_point_center` | Vector2(x, y) |  |
-| `gravity_point_unit_distance` | float >= 0 | warning |
+| `gravity_point_unit_distance` | float >= 0 | warning below |
 | `gravity_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) | warning |
-| `linear_damp` | float >= 0 | warning |
+| `linear_damp` | float >= 0 | warning below |
 | `linear_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) | warning |
 | `monitorable` | true or false |  |
 | `monitoring` | true or false |  |

@@ -34,7 +34,7 @@ Strict parsing format-checks these `Area3D` properties, plus 6 inherited from Co
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `angular_damp` | float >= 0 | warning |
+| `angular_damp` | float >= 0 | warning below |
 | `angular_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) | warning |
 | `audio_bus_name` | quoted string or &"name" |  |
 | `audio_bus_override` | true or false |  |
@@ -42,9 +42,9 @@ Strict parsing format-checks these `Area3D` properties, plus 6 inherited from Co
 | `gravity_direction` | Vector3(x, y, z) |  |
 | `gravity_point` | true or false |  |
 | `gravity_point_center` | Vector3(x, y, z) |  |
-| `gravity_point_unit_distance` | float >= 0 | warning |
+| `gravity_point_unit_distance` | float >= 0 | warning below |
 | `gravity_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) | warning |
-| `linear_damp` | float >= 0 | warning |
+| `linear_damp` | float >= 0 | warning below |
 | `linear_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) | warning |
 | `monitorable` | true or false |  |
 | `monitoring` | true or false |  |
@@ -53,8 +53,8 @@ Strict parsing format-checks these `Area3D` properties, plus 6 inherited from Co
 | `reverb_bus_enabled` | true or false |  |
 | `reverb_bus_name` | quoted string or &"name" |  |
 | `reverb_bus_uniformity` | float 0-1 | warning |
-| `wind_attenuation_factor` | float >= 0 | warning |
-| `wind_force_magnitude` | float >= 0 | warning |
+| `wind_attenuation_factor` | float >= 0 | warning below |
+| `wind_force_magnitude` | float >= 0 | warning below |
 | `wind_source_path` | NodePath("path/to/node") |  |
 
 | Rule | Reports | Severity |

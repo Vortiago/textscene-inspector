@@ -29,7 +29,7 @@ Strict parsing format-checks these `ResourcePreloader` properties, plus 10 inher
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `resources` | [PackedStringArray(names...), [SubResource/ExtResource, …]] with matching, non-null entries | error |
+| `resources` | [PackedStringArray(names...), [SubResource/ExtResource, …]] with matching, non-null entries |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

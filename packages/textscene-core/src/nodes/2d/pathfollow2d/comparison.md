@@ -48,7 +48,7 @@ Strict parsing format-checks these `PathFollow2D` properties, plus 12 inherited 
 | `cubic_interp` | true or false |  |
 | `h_offset` | float |  |
 | `loop` | true or false |  |
-| `progress` | float | error |
+| `progress` | float |  |
 | `progress_ratio` | float |  |
 | `rotates` | true or false |  |
 | `v_offset` | float |  |

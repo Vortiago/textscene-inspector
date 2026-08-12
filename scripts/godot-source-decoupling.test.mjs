@@ -103,9 +103,9 @@ const SCANNED = scannableFiles().map((file) => ({
 }));
 
 /** `[{ file, line, text }]` for every line matching `re`, outside `allowed`. */
-function offenders(re, allowed) {
+function offenders(re, allowed, scanned = SCANNED) {
   const hits = [];
-  for (const { file, body } of SCANNED) {
+  for (const { file, body } of scanned) {
     if (allowed.has(file) || !re.test(body)) continue;
     body.split('\n').forEach((text, i) => {
       if (re.test(text)) hits.push({ file, line: i + 1, text: text.trim().slice(0, 120) });
@@ -114,19 +114,93 @@ function offenders(re, allowed) {
   return hits;
 }
 
+/** The two sweeps as the assertions run them — pattern, allowlist and post-filter together. */
+const checkoutHits = (allowed, scanned) =>
+  offenders(CHECKOUT_RE, allowed, scanned).filter((h) => !URL_RE.test(h.text));
+
+const envHits = (allowed, scanned) =>
+  offenders(ENV_RE, allowed, scanned).filter((h) => extname(h.file).toLowerCase() !== '.md');
+
+/**
+ * Synthetic files fed to those sweeps, so the controls below prove what the
+ * patterns catch without depending on what the repo happens to contain. They
+ * stay in-memory and inside this file, which the allowlists already cover:
+ * a scratch file on disk carrying these strings would be a real violation.
+ *
+ * Every row has to be able to fail. A tag row names a version OTHER than the
+ * current pin, or the whole arm could be rewritten as the `4.6.3` literal and
+ * still pass; `4.10` fails a `\d` that is not `\d+`; the backslash row fails a
+ * separator class narrowed to `/`.
+ */
+const CHECKOUT_CONTROLS = [
+  {
+    file: 'scratch/tag-current.ts',
+    hit: true,
+    body: "readFileSync('/home/dev/godot-4.6.3/scene/3d/light_3d.cpp')",
+  },
+  {
+    file: 'scratch/tag-next.ts',
+    hit: true,
+    body: "readFileSync('/home/dev/godot-4.7.0/scene/3d/light_3d.cpp')",
+  },
+  { file: 'scratch/tag-two-part.mjs', hit: true, body: "const root = '/opt/godot-4.10/doc';" },
+  {
+    file: 'scratch/repos-posix.ts',
+    hit: true,
+    body: "join(HOME, '/repos/godot/doc/classes/Range.xml')",
+  },
+  {
+    file: 'scratch/repos-windows.ts',
+    hit: true,
+    body: 'join(HOME, "\\repos\\godot\\doc\\classes\\Range.xml")',
+  },
+  // Citing where a bound came from is the encouraged practice, not a hit.
+  {
+    file: 'scratch/citation.ts',
+    hit: false,
+    body: '// scene/3d/camera_3d.cpp:682\n// default per doc/classes/Range.xml',
+  },
+  {
+    file: 'scratch/doc-link.mjs',
+    hit: false,
+    body: "const tree = 'https://api.github.com/repos/godotengine/godot/git/trees/master';",
+  },
+];
+
+/** One row per `ENV_RE` alternative: two of six would leave the rest rewritable. */
+const ENV_CONTROLS = [
+  { file: 'scratch/env-src.ts', hit: true, body: 'const root = process.env.GODOT_SRC;' },
+  { file: 'scratch/env-source.ts', hit: true, body: 'const root = process.env.GODOT_SOURCE;' },
+  { file: 'scratch/env-sources.ts', hit: true, body: 'const root = process.env.GODOT_SOURCES;' },
+  { file: 'scratch/env-root.ts', hit: true, body: 'const root = process.env.GODOT_ROOT;' },
+  { file: 'scratch/env-checkout.mjs', hit: true, body: 'process.env.GODOT_CHECKOUT ?? ""' },
+  { file: 'scratch/env-engine.mjs', hit: true, body: 'process.env.GODOT_ENGINE ?? ""' },
+  // A path to the godot BINARY is a tool, and prose may name the variable.
+  { file: 'scratch/env-binary.ts', hit: false, body: "process.env.GODOT_BIN ?? 'godot'" },
+  { file: 'scratch/env-prose.md', hit: false, body: 'Export `GODOT_SRC` before authoring.' },
+];
+
+const expectedHits = (controls) => controls.filter((c) => c.hit).map((c) => c.file);
+const hitFiles = (hits) => [...new Set(hits.map((h) => h.file))];
+
+/**
+ * Allowlist entries the sweep would not report anyway. Exact rather than
+ * leave-one-out because `allowed` is consulted only as `has(file)`.
+ */
+const deadEntries = (allowed, hitsFor) => {
+  const reported = new Set(hitFiles(hitsFor(new Set())));
+  return [...allowed].filter((entry) => !reported.has(entry));
+};
+
 const format = (hits) => hits.map((h) => `${h.file}:${h.line}  ${h.text}`);
 
 describe('Godot source stays a reading aid, not a dependency', () => {
   it('no tracked file names the local engine checkout', () => {
-    const local = offenders(CHECKOUT_RE, CHECKOUT_ALLOWED).filter((h) => !URL_RE.test(h.text));
-    expect(format(local)).toEqual([]);
+    expect(format(checkoutHits(CHECKOUT_ALLOWED))).toEqual([]);
   });
 
   it('no code file locates the engine source through the environment', () => {
-    const codeOnly = offenders(ENV_RE, ENV_ALLOWED).filter(
-      (h) => extname(h.file).toLowerCase() !== '.md'
-    );
-    expect(format(codeOnly)).toEqual([]);
+    expect(format(envHits(ENV_ALLOWED))).toEqual([]);
   });
 
   it('scans a meaningful share of the repo, so a broken glob cannot pass it', () => {
@@ -139,8 +213,31 @@ describe('Godot source stays a reading aid, not a dependency', () => {
     // clone recipe in REFERENCES.md is a real offender kept on purpose, so run
     // the whole sweep with an empty allowlist and require it back.
     expect(CHECKOUT_ALLOWED.has('REFERENCES.md')).toBe(true);
-    const unallowed = offenders(CHECKOUT_RE, new Set()).filter((h) => !URL_RE.test(h.text));
-    expect(unallowed.map((h) => h.file)).toContain('REFERENCES.md');
+    expect(hitFiles(checkoutHits(new Set()))).toContain('REFERENCES.md');
+  });
+
+  it('reports every checkout shape, whatever the tag, and no citation', () => {
+    expect(hitFiles(checkoutHits(new Set(), CHECKOUT_CONTROLS))).toEqual(
+      expectedHits(CHECKOUT_CONTROLS)
+    );
+  });
+
+  it('reports every environment spelling, and leaves prose and the binary alone', () => {
+    expect(hitFiles(envHits(new Set(), ENV_CONTROLS))).toEqual(expectedHits(ENV_CONTROLS));
+  });
+
+  it('names an allowlist entry that exempts nothing, and keeps the one that does', () => {
+    const dead = deadEntries(new Set(['scratch/repos-posix.ts', 'scratch/citation.ts']), (allowed) =>
+      checkoutHits(allowed, CHECKOUT_CONTROLS)
+    );
+    expect(dead).toEqual(['scratch/citation.ts']);
+  });
+
+  it('holds no allowlist entry that exempts nothing', () => {
+    // A dead entry waves the next real hit on that path straight through, and
+    // every other assertion here reads the same zero with or without it.
+    expect(deadEntries(CHECKOUT_ALLOWED, checkoutHits)).toEqual([]);
+    expect(deadEntries(ENV_ALLOWED, envHits)).toEqual([]);
   });
 
   it('matches the path shapes it exists to catch, and leaves a citation alone', () => {

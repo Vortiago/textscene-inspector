@@ -45,7 +45,7 @@ Strict parsing format-checks these `PathFollow3D` properties, plus 17 inherited 
 | `cubic_interp` | true or false |  |
 | `h_offset` | float |  |
 | `loop` | true or false |  |
-| `progress` | float | error |
+| `progress` | float |  |
 | `progress_ratio` | float |  |
 | `rotation_mode` | enum 0-4 (NONE/Y/XY/XYZ/ORIENTED) | warning |
 | `tilt_enabled` | true or false |  |

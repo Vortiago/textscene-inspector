@@ -33,7 +33,7 @@ Strict parsing format-checks these `GraphNode` properties, plus 6 inherited from
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `ignore_invalid_connection_type` | true or false |  |
-| `slot/*` | slot | error |
+| `slot/*` | slot |  |
 | `slots_focus_mode` | enum 1-3 (Click/All/Accessibility) | error |
 | `title` | quoted string |  |
 

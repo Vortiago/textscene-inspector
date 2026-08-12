@@ -63,8 +63,8 @@ Strict parsing format-checks these `LineEdit` properties, plus 53 inherited from
 | `alignment` | enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL) | error |
 | `backspace_deletes_composite_character_enabled` | true or false |  |
 | `caret_blink` | true or false |  |
-| `caret_blink_interval` | float > 0 | error |
-| `caret_column` | integer >= 0 | error |
+| `caret_blink_interval` | float > 0 | error below |
+| `caret_column` | integer >= 0 | error below |
 | `caret_force_displayed` | true or false |  |
 | `caret_mid_grapheme` | true or false |  |
 | `clear_button_enabled` | true or false |  |
@@ -79,13 +79,13 @@ Strict parsing format-checks these `LineEdit` properties, plus 53 inherited from
 | `icon_expand_mode` | enum 0-2 (EXPAND_MODE_ORIGINAL_SIZE/EXPAND_MODE_FIT_TO_TEXT/EXPAND_MODE_FIT_TO_LINE_EDIT) | warning |
 | `keep_editing_on_text_submit` | true or false |  |
 | `language` | quoted string |  |
-| `max_length` | integer >= 0 | error |
+| `max_length` | integer >= 0 | error below |
 | `middle_mouse_paste_enabled` | true or false |  |
 | `placeholder_text` | quoted string |  |
 | `right_icon` | null, SubResource("id") or ExtResource("id") |  |
 | `right_icon_scale` | float 0.1-1 | warning |
 | `secret` | true or false |  |
-| `secret_character` | quoted string, at most one character | error |
+| `secret_character` | quoted string, at most one character |  |
 | `select_all_on_focus` | true or false |  |
 | `selecting_enabled` | true or false |  |
 | `shortcut_keys_enabled` | true or false |  |

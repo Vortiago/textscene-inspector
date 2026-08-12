@@ -44,12 +44,12 @@ Strict parsing format-checks these `CSGTorus3D` properties, plus 18 inherited fr
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `flip_faces` | true or false |  |
-| `inner_radius` | float > 0 | warning |
+| `inner_radius` | float > 0 | warning below |
 | `material` | null, SubResource("id") or ExtResource("id") |  |
 | `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) | warning |
-| `outer_radius` | float > 0 | warning |
-| `ring_sides` | integer 3-64 | error |
-| `sides` | integer 3-64 | error |
+| `outer_radius` | float > 0 | warning below |
+| `ring_sides` | integer 3-64 | error below, warning above |
+| `sides` | integer 3-64 | error below, warning above |
 | `smooth_faces` | true or false |  |
 
 | Rule | Reports | Severity |

@@ -43,10 +43,10 @@ Strict parsing format-checks these `ImporterMeshInstance3D` properties, plus 17 
 | `mesh` | null, SubResource("id") or ExtResource("id") |  |
 | `skeleton_path` | NodePath("path/to/node") |  |
 | `skin` | null, SubResource("id") or ExtResource("id") |  |
-| `visibility_range_begin` | float >= 0 | warning |
-| `visibility_range_begin_margin` | float >= 0 | warning |
-| `visibility_range_end` | float >= 0 | warning |
-| `visibility_range_end_margin` | float >= 0 | warning |
+| `visibility_range_begin` | float >= 0 | warning below |
+| `visibility_range_begin_margin` | float >= 0 | warning below |
+| `visibility_range_end` | float >= 0 | warning below |
+| `visibility_range_end_margin` | float >= 0 | warning below |
 | `visibility_range_fade_mode` | enum 0-2 (DISABLED/SELF/DEPENDENCIES) | warning |
 
 | Rule | Reports | Severity |

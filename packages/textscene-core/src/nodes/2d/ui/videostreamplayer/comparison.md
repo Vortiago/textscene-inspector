@@ -47,9 +47,9 @@ Strict parsing format-checks these `VideoStreamPlayer` properties, plus 53 inher
 | `expand` | true or false |  |
 | `loop` | true or false |  |
 | `paused` | true or false |  |
-| `speed_scale` | float >= 0 | error |
+| `speed_scale` | float >= 0 | error below |
 | `stream` | null, SubResource("id") or ExtResource("id") |  |
-| `volume_db` | float -80-24 | error |
+| `volume_db` | float -80-24 | error below, warning above |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

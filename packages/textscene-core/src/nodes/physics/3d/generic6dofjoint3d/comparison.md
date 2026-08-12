@@ -40,18 +40,18 @@ Strict parsing format-checks these `Generic6DOFJoint3D` properties, plus 4 inher
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `angular_limit_x/*` | angular limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) | warning |
-| `angular_limit_y/*` | angular limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) | warning |
-| `angular_limit_z/*` | angular limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) | warning |
+| `angular_limit_x/*` | angular limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `angular_limit_y/*` | angular limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `angular_limit_z/*` | angular limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
 | `angular_motor_x/*` | angular motor parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
 | `angular_motor_y/*` | angular motor parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
 | `angular_motor_z/*` | angular motor parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
-| `angular_spring_x/*` | angular spring parameter (see generic_6dof_joint_3d.cpp _bind_methods) | warning |
-| `angular_spring_y/*` | angular spring parameter (see generic_6dof_joint_3d.cpp _bind_methods) | warning |
-| `angular_spring_z/*` | angular spring parameter (see generic_6dof_joint_3d.cpp _bind_methods) | warning |
-| `linear_limit_x/*` | linear limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) | warning |
-| `linear_limit_y/*` | linear limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) | warning |
-| `linear_limit_z/*` | linear limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) | warning |
+| `angular_spring_x/*` | angular spring parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `angular_spring_y/*` | angular spring parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `angular_spring_z/*` | angular spring parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `linear_limit_x/*` | linear limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `linear_limit_y/*` | linear limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `linear_limit_z/*` | linear limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
 | `linear_motor_x/*` | linear motor parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
 | `linear_motor_y/*` | linear motor parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
 | `linear_motor_z/*` | linear motor parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |

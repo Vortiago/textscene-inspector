@@ -47,7 +47,7 @@ Strict parsing format-checks these `PhysicalBone3D` properties, plus 6 inherited
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `angular_damp` | float >= 0 | error |
+| `angular_damp` | float >= 0 | error below |
 | `angular_damp_mode` | enum 0-1 (COMBINE/REPLACE) | warning |
 | `angular_velocity` | Vector3(x, y, z) |  |
 | `body_offset` | Transform3D(12 floats) |  |
@@ -61,10 +61,10 @@ Strict parsing format-checks these `PhysicalBone3D` properties, plus 6 inherited
 | `joint_offset` | Transform3D(12 floats) |  |
 | `joint_rotation` | Vector3(x, y, z) |  |
 | `joint_type` | enum 0-5 (NONE/PIN/CONE/HINGE/SLIDER/6DOF) | warning |
-| `linear_damp` | float >= 0 | error |
+| `linear_damp` | float >= 0 | error below |
 | `linear_damp_mode` | enum 0-1 (COMBINE/REPLACE) | warning |
 | `linear_velocity` | Vector3(x, y, z) |  |
-| `mass` | float >= 5e-324 | error |
+| `mass` | float >= 5e-324 | error below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

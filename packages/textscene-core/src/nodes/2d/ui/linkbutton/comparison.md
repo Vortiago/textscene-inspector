@@ -34,7 +34,7 @@ Strict parsing format-checks these `LinkButton` properties, plus 10 inherited fr
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `ellipsis_char` | quoted string, at most one character | error |
+| `ellipsis_char` | quoted string, at most one character |  |
 | `language` | quoted string |  |
 | `structured_text_bidi_override` | enum 0-6 (STRUCTURED_TEXT_DEFAULT/STRUCTURED_TEXT_URI/STRUCTURED_TEXT_FILE/STRUCTURED_TEXT_EMAIL/STRUCTURED_TEXT_LIST/STRUCTURED_TEXT_GDSCRIPT/STRUCTURED_TEXT_CUSTOM) | warning |
 | `structured_text_bidi_override_options` | Array literal ([...]) |  |

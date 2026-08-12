@@ -48,14 +48,14 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 | `alpha_hash_scale` | float 0-2 | warning |
 | `alpha_scissor_threshold` | float 0-1 | warning |
 | `autowrap_mode` | enum 0-3 (AUTOWRAP_OFF/AUTOWRAP_ARBITRARY/AUTOWRAP_WORD/AUTOWRAP_WORD_SMART) | warning |
-| `autowrap_trim_flags` | bit mask of BREAK_TRIM_INDENT (32) | BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128) | error |
+| `autowrap_trim_flags` | bit mask of BREAK_TRIM_INDENT (32) | BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128) |  |
 | `billboard` | enum 0-2 (DISABLED/ENABLED/FIXED_Y) | error |
 | `double_sided` | true or false |  |
 | `fixed_size` | true or false |  |
 | `font` | null, SubResource("id") or ExtResource("id") |  |
-| `font_size` | float > 0 | warning |
+| `font_size` | float > 0 | warning below |
 | `horizontal_alignment` | enum 0-3 (LEFT/CENTER/RIGHT/FILL) | error |
-| `justification_flags` | bit mask of JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128) | warning |
+| `justification_flags` | bit mask of JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128) |  |
 | `language` | quoted string |  |
 | `line_spacing` | float |  |
 | `modulate` | Color(r, g, b, a) |  |
@@ -63,7 +63,7 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 | `offset` | Vector2(x, y) |  |
 | `outline_modulate` | Color(r, g, b, a) |  |
 | `outline_render_priority` | integer -128-127 | error |
-| `outline_size` | float >= 0 | warning |
+| `outline_size` | float >= 0 | warning below |
 | `pixel_size` | float |  |
 | `render_priority` | integer -128-127 | error |
 | `shaded` | true or false |  |

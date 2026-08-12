@@ -158,6 +158,19 @@ export interface InvalidCase {
 }
 
 /**
+ * Assert one invalid case's diagnostic — the whole body of every generated reject `it`.
+ * Exported so a test drives it directly and every declared field is proven to still bite.
+ */
+export function expectInvalidCase(content: string, prop: string, invalid: InvalidCase): Diagnostic {
+  return expectDiagnostic(content, {
+    prop,
+    ruleName: invalid.ruleName,
+    contains: invalid.contains,
+    severity: invalid.severity,
+  });
+}
+
+/**
  * How a valid value is asserted:
  * - `'clean'` (default): the scene must produce zero diagnostics.
  * - `'no-error'`: the scene must produce no *error*-severity diagnostics, but may
@@ -234,12 +247,7 @@ export function runPropertyValidation(
       for (const invalid of propCase.invalid ?? []) {
         it(`rejects ${renderValue(invalid.value)}`, () => {
           const underTest = node(nodeType, { [propCase.prop]: invalid.value }, nodeOptions);
-          expectDiagnostic(scene(...prefix, underTest), {
-            prop: propCase.prop,
-            ruleName: invalid.ruleName,
-            contains: invalid.contains,
-            severity: invalid.severity,
-          });
+          expectInvalidCase(scene(...prefix, underTest), propCase.prop, invalid);
         });
       }
     });

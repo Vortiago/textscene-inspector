@@ -225,7 +225,7 @@ Strict parsing format-checks these `SubViewport` properties, plus 47 inherited f
 | --- | --- | --- |
 | `render_target_clear_mode` | enum 0-2 (ALWAYS/NEVER/ONCE) | warning |
 | `render_target_update_mode` | enum 0-4 (DISABLED/ONCE/WHEN_VISIBLE/WHEN_PARENT_VISIBLE/ALWAYS) | warning |
-| `size` | Vector2i(x, y), both >= 2 | error |
+| `size` | Vector2i(x, y), both >= 2 |  |
 | `size_2d_override` | Vector2i(x, y) |  |
 | `size_2d_override_stretch` | true or false |  |
 

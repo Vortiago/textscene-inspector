@@ -60,11 +60,11 @@ Strict parsing format-checks these `Camera2D` properties, plus 12 inherited from
 | `limit_top` | integer |  |
 | `offset` | Vector2(x, y) |  |
 | `position_smoothing_enabled` | true or false |  |
-| `position_smoothing_speed` | float >= 0 | error |
+| `position_smoothing_speed` | float >= 0 | error below |
 | `process_callback` | enum 0-1 (PHYSICS/IDLE) | warning |
 | `rotation_smoothing_enabled` | true or false |  |
-| `rotation_smoothing_speed` | float >= 0 | error |
-| `zoom` | Vector2(x, y), neither component (near-)zero | error |
+| `rotation_smoothing_speed` | float >= 0 | error below |
+| `zoom` | Vector2(x, y), neither component (near-)zero |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

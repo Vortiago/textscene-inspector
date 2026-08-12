@@ -43,7 +43,7 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 | `autowrap_mode` | enum 0-3 (AUTOWRAP_OFF/AUTOWRAP_ARBITRARY/AUTOWRAP_WORD/AUTOWRAP_WORD_SMART) | warning |
 | `backspace_deletes_composite_character_enabled` | true or false |  |
 | `caret_blink` | true or false |  |
-| `caret_blink_interval` | float > 0 | error |
+| `caret_blink_interval` | float > 0 | error below |
 | `caret_draw_when_editable_disabled` | true or false |  |
 | `caret_mid_grapheme` | true or false |  |
 | `caret_move_on_right_click` | true or false |  |
@@ -69,11 +69,11 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 | `placeholder_text` | quoted string |  |
 | `scroll_fit_content_height` | true or false |  |
 | `scroll_fit_content_width` | true or false |  |
-| `scroll_horizontal` | integer >= 0 | error |
+| `scroll_horizontal` | integer >= 0 | error below |
 | `scroll_past_end_of_file` | true or false |  |
 | `scroll_smooth` | true or false |  |
-| `scroll_v_scroll_speed` | float >= 1 | error |
-| `scroll_vertical` | float >= 0 | error |
+| `scroll_v_scroll_speed` | float >= 1 | error below |
+| `scroll_vertical` | float >= 0 | error below |
 | `selecting_enabled` | true or false |  |
 | `shortcut_keys_enabled` | true or false |  |
 | `structured_text_bidi_override` | enum 0-6 (STRUCTURED_TEXT_DEFAULT/STRUCTURED_TEXT_URI/STRUCTURED_TEXT_FILE/STRUCTURED_TEXT_EMAIL/STRUCTURED_TEXT_LIST/STRUCTURED_TEXT_GDSCRIPT/STRUCTURED_TEXT_CUSTOM) | warning |

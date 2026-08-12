@@ -42,8 +42,8 @@ Strict parsing format-checks these `Parallax2D` properties, plus 12 inherited fr
 | `ignore_camera_scroll` | true or false |  |
 | `limit_begin` | Vector2(x, y) |  |
 | `limit_end` | Vector2(x, y) |  |
-| `repeat_size` | Vector2(x, y), each >= 0 | error |
-| `repeat_times` | integer >= 1 | error |
+| `repeat_size` | Vector2(x, y), each >= 0 |  |
+| `repeat_times` | integer >= 1 |  |
 | `screen_offset` | Vector2(x, y) |  |
 | `scroll_offset` | Vector2(x, y) |  |
 | `scroll_scale` | Vector2(x, y) |  |

@@ -34,7 +34,7 @@ Strict parsing format-checks these `SpringBoneCollisionSphere3D` properties, plu
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `inside` | true or false |  |
-| `radius` | float >= 0 | warning |
+| `radius` | float >= 0 | warning below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

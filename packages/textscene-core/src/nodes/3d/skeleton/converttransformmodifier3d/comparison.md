@@ -51,8 +51,8 @@ Strict parsing format-checks these `ConvertTransformModifier3D` properties, plus
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `setting_count` | integer >= 0 | error |
-| `settings/*` | per-setting apply/ and reference/ transform_mode, axis, range_min, range_max, plus relative, additive and the BoneConstraint3D leaves | error |
+| `setting_count` | integer >= 0 | error below |
+| `settings/*` | per-setting apply/ and reference/ transform_mode, axis, range_min, range_max, plus relative, additive and the BoneConstraint3D leaves |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

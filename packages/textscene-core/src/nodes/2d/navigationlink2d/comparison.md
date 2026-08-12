@@ -38,10 +38,10 @@ Strict parsing format-checks these `NavigationLink2D` properties, plus 12 inheri
 | `bidirectional` | true or false |  |
 | `enabled` | true or false |  |
 | `end_position` | Vector2(x, y) |  |
-| `enter_cost` | float >= 0 | error |
+| `enter_cost` | float >= 0 | error below |
 | `navigation_layers` | 32-bit layer mask (layers 1-32) | warning |
 | `start_position` | Vector2(x, y) |  |
-| `travel_cost` | float >= 0 | error |
+| `travel_cost` | float >= 0 | error below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

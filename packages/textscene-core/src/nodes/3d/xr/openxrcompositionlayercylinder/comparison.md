@@ -49,10 +49,10 @@ Strict parsing format-checks these `OpenXRCompositionLayerCylinder` properties, 
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `aspect_ratio` | float 5e-324-100 | error |
-| `central_angle` | float > 0 | error |
-| `fallback_segments` | integer >= 1 | error |
-| `radius` | float > 0 | error |
+| `aspect_ratio` | float 5e-324-100 | error below, warning above |
+| `central_angle` | float > 0 | error below |
+| `fallback_segments` | integer >= 1 | error below |
+| `radius` | float > 0 | error below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

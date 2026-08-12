@@ -50,10 +50,10 @@ Strict parsing format-checks these `OpenXRCompositionLayerEquirect` properties, 
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `central_horizontal_angle` | float > 0 | error |
-| `fallback_segments` | integer >= 1 | error |
+| `central_horizontal_angle` | float > 0 | error below |
+| `fallback_segments` | integer >= 1 | error below |
 | `lower_vertical_angle` | float 5e-324-1.5708963267948965 | error |
-| `radius` | float > 0 | error |
+| `radius` | float > 0 | error below |
 | `upper_vertical_angle` | float 5e-324-1.5708963267948965 | error |
 
 | Rule | Reports | Severity |

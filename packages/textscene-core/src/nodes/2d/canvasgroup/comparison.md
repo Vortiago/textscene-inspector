@@ -40,8 +40,8 @@ Strict parsing format-checks these `CanvasGroup` properties, plus 12 inherited f
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `clear_margin` | float >= 0 | error |
-| `fit_margin` | float >= 0 | error |
+| `clear_margin` | float >= 0 | error below |
+| `fit_margin` | float >= 0 | error below |
 | `use_mipmaps` | true or false |  |
 
 | Rule | Reports | Severity |

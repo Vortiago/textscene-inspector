@@ -53,12 +53,12 @@ Strict parsing format-checks these `LightmapGI` properties, plus 1 inherited fro
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `bias` | float >= 0.00001 | error |
-| `bounce_indirect_energy` | float 0-2 | error |
+| `bias` | float >= 0.00001 | error below |
+| `bounce_indirect_energy` | float 0-2 | error below, warning above |
 | `bounces` | integer 0-16 | error |
 | `camera_attributes` | null, SubResource("id") or ExtResource("id") |  |
 | `denoiser_range` | integer 1-20 | warning |
-| `denoiser_strength` | float >= 0.001 | warning |
+| `denoiser_strength` | float >= 0.001 | warning below |
 | `directional` | true or false |  |
 | `environment_custom_color` | Color(r, g, b, a) |  |
 | `environment_custom_energy` | float 0-64 | warning |
@@ -71,8 +71,8 @@ Strict parsing format-checks these `LightmapGI` properties, plus 1 inherited fro
 | `quality` | enum 0-3 (LOW/MEDIUM/HIGH/ULTRA) | warning |
 | `shadowmask_mode` | enum 0-2 (NONE/REPLACE/OVERLAY) | warning |
 | `supersampling` | true or false |  |
-| `supersampling_factor` | float 1-8 | error |
-| `texel_scale` | float 0.00999-100 | error |
+| `supersampling_factor` | float 1-8 | error below, warning above |
+| `texel_scale` | float 0.00999-100 | error below, warning above |
 | `use_denoiser` | true or false |  |
 | `use_texture_for_bounces` | true or false |  |
 

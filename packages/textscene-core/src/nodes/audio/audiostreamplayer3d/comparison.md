@@ -39,7 +39,7 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inh
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `area_mask` | 32-bit layer mask (layers 1-32) | warning |
-| `attenuation_filter_cutoff_hz` | float >= 1 | warning |
+| `attenuation_filter_cutoff_hz` | float >= 1 | warning below |
 | `attenuation_filter_db` | float |  |
 | `attenuation_model` | enum 0-3 (INVERSE_DISTANCE/INVERSE_SQUARE_DISTANCE/LOGARITHMIC/DISABLED) | error |
 | `autoplay` | true or false |  |
@@ -49,10 +49,10 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inh
 | `emission_angle_enabled` | true or false |  |
 | `emission_angle_filter_attenuation_db` | float |  |
 | `max_db` | float |  |
-| `max_distance` | float >= 0 | error |
-| `max_polyphony` | integer >= 1 | error |
-| `panning_strength` | float >= 0 | error |
-| `pitch_scale` | float >= 5e-324 | error |
+| `max_distance` | float >= 0 | error below |
+| `max_polyphony` | integer >= 1 | error below |
+| `panning_strength` | float >= 0 | error below |
+| `pitch_scale` | float >= 5e-324 | error below |
 | `playback_type` | enum 0-2 (DEFAULT/STREAM/SAMPLE) | warning |
 | `playing` | true or false |  |
 | `stream` | null, SubResource("id") or ExtResource("id") |  |

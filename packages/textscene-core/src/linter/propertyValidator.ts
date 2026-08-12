@@ -65,4 +65,16 @@ export type PropertyValidator = ((
    * warning. Absent means the bound has not been audited yet.
    */
   grounding?: { kind: 'enforced' | 'hinted'; cite: string };
+
+  /**
+   * The severity each BOUNDED end reports, for the ends that have a bound.
+   *
+   * `grounding.kind` collapses to `enforced` when either end is, which is right
+   * for "does this bound need a citation" and wrong for "what happens if I
+   * exceed it": `extra_cull_margin` has an enforced floor and a hinted ceiling,
+   * so one end errors and the other warns. An end with no bound is absent here
+   * rather than defaulted, because claiming a tier for an open end invents a
+   * rejection the validator never makes.
+   */
+  tiers?: { min?: ParseError['severity']; max?: ParseError['severity'] };
 };

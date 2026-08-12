@@ -38,7 +38,7 @@ Strict parsing format-checks these `AspectRatioContainer` properties, plus 53 in
 | --- | --- | --- |
 | `alignment_horizontal` | enum 0-2 (ALIGNMENT_BEGIN/ALIGNMENT_CENTER/ALIGNMENT_END) | warning |
 | `alignment_vertical` | enum 0-2 (ALIGNMENT_BEGIN/ALIGNMENT_CENTER/ALIGNMENT_END) | warning |
-| `ratio` | float >= 0.001 | warning |
+| `ratio` | float >= 0.001 | warning below |
 | `stretch_mode` | enum 0-3 (STRETCH_WIDTH_CONTROLS_HEIGHT/STRETCH_HEIGHT_CONTROLS_WIDTH/STRETCH_FIT/STRETCH_COVER) | warning |
 
 | Rule | Reports | Severity |

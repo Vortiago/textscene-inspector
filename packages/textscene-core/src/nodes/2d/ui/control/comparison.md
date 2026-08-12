@@ -93,12 +93,12 @@ Strict parsing format-checks these `Control` properties, plus 16 inherited from 
 | `scale` | Vector2(x, y) |  |
 | `shortcut_context` | null or NodePath("path/to/node") |  |
 | `size_flags_horizontal` | integer |  |
-| `size_flags_stretch_ratio` | float >= 0 | warning |
+| `size_flags_stretch_ratio` | float >= 0 | warning below |
 | `size_flags_vertical` | integer |  |
 | `theme` | null, SubResource("id") or ExtResource("id") |  |
 | `theme_override_colors/*` | Color(r, g, b, a) |  |
 | `theme_override_constants/*` | integer -16384-16384 | warning |
-| `theme_override_font_sizes/*` | integer >= 1 | warning |
+| `theme_override_font_sizes/*` | integer >= 1 | warning below |
 | `theme_override_fonts/*` | null, SubResource("id") or ExtResource("id") |  |
 | `theme_override_icons/*` | null, SubResource("id") or ExtResource("id") |  |
 | `theme_override_styles/*` | null, SubResource("id") or ExtResource("id") |  |

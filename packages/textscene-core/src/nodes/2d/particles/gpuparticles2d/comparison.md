@@ -51,9 +51,9 @@ Strict parsing format-checks these `GPUParticles2D` properties, plus 12 inherite
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `amount` | integer 1-1000000 | error |
+| `amount` | integer 1-1000000 |  |
 | `amount_ratio` | float 0-1 | warning |
-| `collision_base_size` | float >= 0 | warning |
+| `collision_base_size` | float >= 0 | warning below |
 | `draw_order` | enum 0-2 (INDEX/LIFETIME/REVERSE_LIFETIME) | warning |
 | `emitting` | true or false |  |
 | `explosiveness` | float 0-1 | warning |
@@ -61,10 +61,10 @@ Strict parsing format-checks these `GPUParticles2D` properties, plus 12 inherite
 | `fract_delta` | true or false |  |
 | `interp_to_end` | float 0-1 | error |
 | `interpolate` | true or false |  |
-| `lifetime` | float > 0 | error |
+| `lifetime` | float > 0 | error below |
 | `local_coords` | true or false |  |
 | `one_shot` | true or false |  |
-| `preprocess` | float >= 0 | warning |
+| `preprocess` | float >= 0 | warning below |
 | `process_material` | null, SubResource("id") or ExtResource("id") |  |
 | `randomness` | float 0-1 | warning |
 | `seed` | integer 0-4294967295 | warning |
@@ -72,7 +72,7 @@ Strict parsing format-checks these `GPUParticles2D` properties, plus 12 inherite
 | `sub_emitter` | NodePath("path/to/node") |  |
 | `texture` | null, SubResource("id") or ExtResource("id") |  |
 | `trail_enabled` | true or false |  |
-| `trail_lifetime` | float >= 0.01 | error |
+| `trail_lifetime` | float >= 0.01 | error below |
 | `trail_section_subdivisions` | integer 1-1024 | error |
 | `trail_sections` | integer 2-128 | error |
 | `use_fixed_seed` | true or false |  |

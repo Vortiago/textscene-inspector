@@ -41,8 +41,8 @@ Strict parsing format-checks these `NavigationObstacle3D` properties, plus 17 in
 | `avoidance_enabled` | true or false |  |
 | `avoidance_layers` | 32-bit layer mask (layers 1-32) | warning |
 | `carve_navigation_mesh` | true or false |  |
-| `height` | float 0-100 | error |
-| `radius` | float 0-100 | error |
+| `height` | float 0-100 | error below, warning above |
+| `radius` | float 0-100 | error below, warning above |
 | `use_3d_avoidance` | true or false |  |
 | `velocity` | Vector3(x, y, z) |  |
 | `vertices` | PackedVector3Array(x, y, z, …) |  |

@@ -44,9 +44,9 @@ Strict parsing format-checks these `ScrollContainer` properties, plus 53 inherit
 | `horizontal_scroll_mode` | enum 0-4 (DISABLED/AUTO/SHOW_ALWAYS/SHOW_NEVER/RESERVE) | warning |
 | `scroll_deadzone` | integer |  |
 | `scroll_hint_mode` | enum 0-3 (DISABLED/ALL/TOP_AND_LEFT/BOTTOM_AND_RIGHT) | warning |
-| `scroll_horizontal` | integer >= 0 | error |
+| `scroll_horizontal` | integer >= 0 | error below |
 | `scroll_horizontal_custom_step` | float -1-4096 | warning |
-| `scroll_vertical` | integer >= 0 | error |
+| `scroll_vertical` | integer >= 0 | error below |
 | `scroll_vertical_custom_step` | float -1-4096 | warning |
 | `tile_scroll_hint` | true or false |  |
 | `vertical_scroll_mode` | enum 0-4 (DISABLED/AUTO/SHOW_ALWAYS/SHOW_NEVER/RESERVE) | warning |

@@ -50,7 +50,7 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `amount` | integer 1-1000000 | error |
+| `amount` | integer 1-1000000 | error below, warning above |
 | `angle_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `angle_max` | float |  |
 | `angle_min` | float |  |
@@ -67,8 +67,8 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 | `color_initial_ramp` | null, SubResource("id") or ExtResource("id") |  |
 | `color_ramp` | null, SubResource("id") or ExtResource("id") |  |
 | `damping_curve` | null, SubResource("id") or ExtResource("id") |  |
-| `damping_max` | float >= 0 | warning |
-| `damping_min` | float >= 0 | warning |
+| `damping_max` | float >= 0 | warning below |
+| `damping_min` | float >= 0 | warning below |
 | `direction` | Vector3(x, y, z) |  |
 | `draw_order` | enum 0-2 (INDEX/LIFETIME/VIEW_DEPTH) | error |
 | `emission_box_extents` | Vector3(x, y, z) |  |
@@ -77,9 +77,9 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 | `emission_points` | PackedVector3Array(x, y, z, …) |  |
 | `emission_ring_axis` | Vector3(x, y, z) |  |
 | `emission_ring_cone_angle` | float 0-90 | warning |
-| `emission_ring_height` | float >= 0 | warning |
-| `emission_ring_inner_radius` | float >= 0 | warning |
-| `emission_ring_radius` | float >= 0 | warning |
+| `emission_ring_height` | float >= 0 | warning below |
+| `emission_ring_inner_radius` | float >= 0 | warning below |
+| `emission_ring_radius` | float >= 0 | warning below |
 | `emission_shape` | enum 0-6 (POINT/SPHERE/SPHERE_SURFACE/BOX/POINTS/DIRECTED_POINTS/RING) | error |
 | `emission_sphere_radius` | float 0.01-128 | warning |
 | `emitting` | true or false |  |
@@ -91,9 +91,9 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 | `hue_variation_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `hue_variation_max` | float -1-1 | warning |
 | `hue_variation_min` | float -1-1 | warning |
-| `initial_velocity_max` | float >= 0 | warning |
-| `initial_velocity_min` | float >= 0 | warning |
-| `lifetime` | float > 0 | error |
+| `initial_velocity_max` | float >= 0 | warning below |
+| `initial_velocity_min` | float >= 0 | warning below |
+| `lifetime` | float > 0 | error below |
 | `lifetime_randomness` | float 0-1 | warning |
 | `linear_accel_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `linear_accel_max` | float |  |
@@ -107,14 +107,14 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 | `particle_flag_align_y` | true or false |  |
 | `particle_flag_disable_z` | true or false |  |
 | `particle_flag_rotate_y` | true or false |  |
-| `preprocess` | float >= 0 | warning |
+| `preprocess` | float >= 0 | warning below |
 | `radial_accel_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `radial_accel_max` | float |  |
 | `radial_accel_min` | float |  |
 | `randomness` | float 0-1 | warning |
 | `scale_amount_curve` | null, SubResource("id") or ExtResource("id") |  |
-| `scale_amount_max` | float >= 0 | warning |
-| `scale_amount_min` | float >= 0 | warning |
+| `scale_amount_max` | float >= 0 | warning below |
+| `scale_amount_min` | float >= 0 | warning below |
 | `scale_curve_x` | null, SubResource("id") or ExtResource("id") |  |
 | `scale_curve_y` | null, SubResource("id") or ExtResource("id") |  |
 | `scale_curve_z` | null, SubResource("id") or ExtResource("id") |  |

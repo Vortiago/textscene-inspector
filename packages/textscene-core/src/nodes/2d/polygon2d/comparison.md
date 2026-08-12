@@ -52,7 +52,7 @@ Strict parsing format-checks these `Polygon2D` properties, plus 12 inherited fro
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `antialiased` | true or false |  |
-| `bones` | Array literal [bone_path, PackedFloat32Array(weights), …] | error |
+| `bones` | Array literal [bone_path, PackedFloat32Array(weights), …] |  |
 | `color` | Color(r, g, b, a) |  |
 | `internal_vertex_count` | integer 0-1000 | warning |
 | `invert_border` | float |  |

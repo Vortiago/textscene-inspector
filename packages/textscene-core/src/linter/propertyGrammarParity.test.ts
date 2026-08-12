@@ -27,7 +27,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { baseChain } from './nodeBaseTypes.js';
-import { ASYMMETRY_ALLOWLIST } from './propertyGrammarParityAllowlist.js';
+import { ASYMMETRY_ALLOWLIST, type AsymmetryEntry } from './propertyGrammarParityAllowlist.js';
 import { checkParity, collectSlices, getFullValidatorKeys } from './testing/propertyGrammarParityCheck.js';
 import {
   extractNodeType,
@@ -35,6 +35,93 @@ import {
   nodesRoot,
 } from './testing/propertyGrammarParityScan.js';
 import './index.js';
+
+/** One slice as the staleness scan sees it: the type it speaks for, and the keys its parser reads. */
+interface SliceReads {
+  nodeType: string;
+  parserProps: ReadonlySet<string>;
+}
+
+interface StaleScanInput {
+  allowlist: Readonly<Record<string, AsymmetryEntry>>;
+  slices: readonly SliceReads[];
+  baseChainOf: (nodeType: string) => readonly string[];
+  validatorKeysOf: (nodeType: string) => ReadonlySet<string>;
+}
+
+/**
+ * The allowlist entries that no longer describe a live asymmetry.
+ *
+ * Takes its world as arguments so the quantifier below can be pinned on seeded
+ * data. On the real tree it discriminates only because some descendants close a
+ * base's key while their siblings do not — an accident of today's content, not a
+ * property of the guard — so `.every()` vs `.some()` is settled by the seeded
+ * partial-closure cases beside this guard, never by what the tree happens to hold.
+ *
+ * The slices an entry answers for: its own, plus every slice below it.
+ *
+ * A base class validates for its descendants without parsing anything of its
+ * own (it reuses the base parser), so it has no parser.ts and never appears in
+ * `collectSlices`. Asking only for its own slice therefore let a `continue` skip
+ * the whole entry, and 89 keys across 9 base entries — all 32 Viewport gaps
+ * among them — were never checked at all: closing one of those gaps moved
+ * nothing. The entry is consulted up the base chain, so the slices below it are
+ * exactly the population it speaks for.
+ */
+function findStaleEntries({
+  allowlist,
+  slices,
+  baseChainOf,
+  validatorKeysOf,
+}: StaleScanInput): string[] {
+  const staleSections: string[] = [];
+  const coveredSlices = (nodeType: string) =>
+    slices.filter((s) => s.nodeType === nodeType || baseChainOf(s.nodeType).includes(nodeType));
+
+  for (const [nodeType, entry] of Object.entries(allowlist)) {
+    const covered = coveredSlices(nodeType);
+    if (covered.length === 0) {
+      // Node type no longer has a slice pair — allowlist entry is stale.
+      staleSections.push(
+        `${nodeType}: no parser.ts+linterParser.ts pair found, and no slice inherits from it`
+      );
+      continue;
+    }
+
+    // The asymmetry has closed once EVERY slice the entry answers for reads
+    // the key; one leaf reading it leaves the entry doing real work for the
+    // rest. So a base covering many slices — CanvasItem 37, VisualInstance3D
+    // 16, GeometryInstance3D 10 — only reports once the last of them closes,
+    // and narrowing such an entry to the leaves that still need it is an edit
+    // to the allowlist rather than to this guard.
+    const readEverywhere = (key: string) => covered.every((s) => s.parserProps.has(key));
+    // Validators resolve up the base chain with no slice needed, so this is
+    // the same set a slice of this type would carry.
+    const validatorKeys = validatorKeysOf(nodeType);
+
+    // parserOnly keys should NOT have a validator; linterOnly keys should
+    // NOT be read by the parser — otherwise the asymmetry has been fixed.
+    for (const key of entry.parserOnly ?? []) {
+      if (validatorKeys.has(key)) {
+        staleSections.push(`${nodeType}.parserOnly['${key}']: now has a validator — remove from allowlist`);
+      }
+    }
+    for (const key of entry.linterOnly ?? []) {
+      if (readEverywhere(key)) {
+        staleSections.push(`${nodeType}.linterOnly['${key}']: now read by the parser — remove from allowlist`);
+      }
+    }
+    for (const key of entry.renderGap ?? []) {
+      if (readEverywhere(key)) {
+        staleSections.push(
+          `${nodeType}.renderGap['${key}']: now read by the parser — the gap closed, remove from allowlist`
+        );
+      }
+    }
+  }
+
+  return staleSections;
+}
 
 describe('property-grammar parity guard', () => {
   it('every slice pair has symmetric property coverage (or an allowlisted asymmetry)', () => {
@@ -53,66 +140,105 @@ describe('property-grammar parity guard', () => {
   });
 
   it('allowlist entries stay honest: every listed key is genuinely asymmetric', () => {
-    const slices = collectSlices();
-    const staleSections: string[] = [];
-
-    /**
-     * The slices an entry answers for: its own, plus every slice below it.
-     *
-     * A base class validates for its descendants without parsing anything of
-     * its own (it reuses the base parser), so it has no parser.ts and never
-     * appears in `collectSlices`. Asking only for its own slice therefore let a
-     * `continue` skip the whole entry, and 89 keys across 9 base entries — all
-     * 32 Viewport gaps among them — were never checked at all: closing one of
-     * those gaps moved nothing. The entry is consulted up the base chain, so the
-     * slices below it are exactly the population it speaks for.
-     */
-    const coveredSlices = (nodeType: string) =>
-      slices.filter((s) => s.nodeType === nodeType || baseChain(s.nodeType).includes(nodeType));
-
-    for (const [nodeType, entry] of Object.entries(ASYMMETRY_ALLOWLIST)) {
-      const covered = coveredSlices(nodeType);
-      if (covered.length === 0) {
-        // Node type no longer has a slice pair — allowlist entry is stale.
-        staleSections.push(
-          `${nodeType}: no parser.ts+linterParser.ts pair found, and no slice inherits from it`
-        );
-        continue;
-      }
-
-      // The asymmetry has closed once EVERY slice the entry answers for reads
-      // the key; one leaf reading it leaves the entry doing real work for the
-      // rest. So a base covering many slices — CanvasItem 37, VisualInstance3D
-      // 16, GeometryInstance3D 10 — only reports once the last of them closes,
-      // and narrowing such an entry to the leaves that still need it is an edit
-      // to the allowlist rather than to this guard.
-      const readEverywhere = (key: string) => covered.every((s) => s.parserProps.has(key));
-      // Validators resolve up the base chain with no slice needed, so this is
-      // the same set a slice of this type would carry.
-      const validatorKeys = getFullValidatorKeys(nodeType);
-
-      // parserOnly keys should NOT have a validator; linterOnly keys should
-      // NOT be read by the parser — otherwise the asymmetry has been fixed.
-      for (const key of entry.parserOnly ?? []) {
-        if (validatorKeys.has(key)) {
-          staleSections.push(`${nodeType}.parserOnly['${key}']: now has a validator — remove from allowlist`);
-        }
-      }
-      for (const key of entry.linterOnly ?? []) {
-        if (readEverywhere(key)) {
-          staleSections.push(`${nodeType}.linterOnly['${key}']: now read by the parser — remove from allowlist`);
-        }
-      }
-      for (const key of entry.renderGap ?? []) {
-        if (readEverywhere(key)) {
-          staleSections.push(
-            `${nodeType}.renderGap['${key}']: now read by the parser — the gap closed, remove from allowlist`
-          );
-        }
-      }
-    }
+    const staleSections = findStaleEntries({
+      allowlist: ASYMMETRY_ALLOWLIST,
+      slices: collectSlices(),
+      baseChainOf: baseChain,
+      validatorKeysOf: getFullValidatorKeys,
+    });
 
     expect(staleSections, `Stale allowlist entries found:\n  ${staleSections.join('\n  ')}`).toEqual([]);
+  });
+
+  /**
+   * The staleness verdict, seeded rather than borrowed.
+   *
+   * On the real tree the quantifier bites only because of a live split —
+   * MeshInstance3D closes VisualInstance3D's `layers` while its siblings do not.
+   * Close that split either way and `.every()` and `.some()` agree on every
+   * entry, so a weakening edit would pass in silence. These cases own the
+   * semantics: a partly-closed key still has work to do, a fully-closed one does not.
+   */
+  describe('staleness verdict on seeded slices', () => {
+    const BASE = 'ScratchBase';
+    const CLOSER = 'ScratchCloser'; // a descendant whose parser reads the key
+    const LAGGARD = 'ScratchLaggard'; // a descendant whose parser does not
+    const KEY = 'scratch_key';
+    const reason = 'seeded';
+
+    const CHAINS: Readonly<Record<string, readonly string[]>> = {
+      [CLOSER]: [BASE],
+      [LAGGARD]: [BASE],
+      Unrelated: [],
+    };
+    const noValidators = () => new Set<string>();
+
+    const scan = (
+      reads: Readonly<Record<string, readonly string[]>>,
+      entry: AsymmetryEntry,
+      validatorKeysOf: (nodeType: string) => ReadonlySet<string> = noValidators
+    ) =>
+      findStaleEntries({
+        allowlist: { [BASE]: entry },
+        slices: Object.entries(reads).map(([nodeType, keys]) => ({
+          nodeType,
+          parserProps: new Set(keys),
+        })),
+        baseChainOf: (nodeType) => CHAINS[nodeType] ?? [],
+        validatorKeysOf,
+      });
+
+    const PARTIAL = { [CLOSER]: [KEY], [LAGGARD]: [] };
+    const CLOSED = { [CLOSER]: [KEY], [LAGGARD]: [KEY] };
+    const OPEN = { [CLOSER]: [], [LAGGARD]: [] };
+
+    it('partial closure keeps a linterOnly entry alive — the laggard still needs it', () => {
+      expect(scan(PARTIAL, { linterOnly: [KEY], reason })).toEqual([]);
+    });
+
+    it('partial closure keeps a renderGap entry alive', () => {
+      expect(scan(PARTIAL, { renderGap: [KEY], reason })).toEqual([]);
+    });
+
+    it('no descendant reading the key keeps the entry alive', () => {
+      expect(scan(OPEN, { renderGap: [KEY], reason })).toEqual([]);
+    });
+
+    it('full closure reports a linterOnly entry stale', () => {
+      expect(scan(CLOSED, { linterOnly: [KEY], reason })).toEqual([
+        `${BASE}.linterOnly['${KEY}']: now read by the parser — remove from allowlist`,
+      ]);
+    });
+
+    it('full closure reports a renderGap entry stale', () => {
+      expect(scan(CLOSED, { renderGap: [KEY], reason })).toEqual([
+        `${BASE}.renderGap['${KEY}']: now read by the parser — the gap closed, remove from allowlist`,
+      ]);
+    });
+
+    it('a slice outside the entry’s subtree does not vote, in either direction', () => {
+      const entry: AsymmetryEntry = { renderGap: [KEY], reason };
+      // Abstaining outsider cannot keep a closed entry alive.
+      expect(scan({ ...CLOSED, Unrelated: [] }, entry)).toEqual([
+        `${BASE}.renderGap['${KEY}']: now read by the parser — the gap closed, remove from allowlist`,
+      ]);
+      // Reading outsider cannot close it either.
+      expect(scan({ [LAGGARD]: [], Unrelated: [KEY] }, entry)).toEqual([]);
+    });
+
+    it('a parserOnly key is stale exactly when a validator exists', () => {
+      const entry: AsymmetryEntry = { parserOnly: [KEY], reason };
+      expect(scan(OPEN, entry)).toEqual([]);
+      expect(scan(OPEN, entry, () => new Set([KEY]))).toEqual([
+        `${BASE}.parserOnly['${KEY}']: now has a validator — remove from allowlist`,
+      ]);
+    });
+
+    it('an entry no slice answers for is stale', () => {
+      expect(scan({}, { linterOnly: [KEY], reason })).toEqual([
+        `${BASE}: no parser.ts+linterParser.ts pair found, and no slice inherits from it`,
+      ]);
+    });
   });
 
   it('every allowlisted key is a key some side actually declares', () => {

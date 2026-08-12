@@ -63,14 +63,14 @@ Strict parsing format-checks these `ItemList` properties, plus 53 inherited from
 | `allow_search` | true or false |  |
 | `auto_height` | true or false |  |
 | `auto_width` | true or false |  |
-| `fixed_column_width` | integer >= 0 | error |
+| `fixed_column_width` | integer >= 0 | error below |
 | `fixed_icon_size` | Vector2i(x, y) |  |
 | `icon_mode` | enum 0-1 (ICON_MODE_TOP/ICON_MODE_LEFT) | error |
-| `icon_scale` | float | error |
-| `item_#/*` | item_<index>/<leaf> (see item_list.cpp, PropertyListHelper-backed) | error |
-| `item_count` | integer >= 0 | error |
-| `max_columns` | integer >= 0 | error |
-| `max_text_lines` | integer >= 1 | error |
+| `icon_scale` | float |  |
+| `item_#/*` | item_<index>/<leaf> (see item_list.cpp, PropertyListHelper-backed) |  |
+| `item_count` | integer >= 0 | error below |
+| `max_columns` | integer >= 0 | error below |
+| `max_text_lines` | integer >= 1 | error below |
 | `same_column_width` | true or false |  |
 | `scroll_hint_mode` | enum 0-3 (SCROLL_HINT_MODE_DISABLED/SCROLL_HINT_MODE_BOTH/SCROLL_HINT_MODE_TOP/SCROLL_HINT_MODE_BOTTOM) | warning |
 | `select_mode` | enum 0-2 (SELECT_SINGLE/SELECT_MULTI/SELECT_TOGGLE) | warning |

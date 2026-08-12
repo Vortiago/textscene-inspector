@@ -30,7 +30,7 @@ Strict parsing format-checks these `DirectionalLight2D` properties, plus 15 inhe
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `height` | float 0-1 | warning |
-| `max_distance` | float >= 0 | warning |
+| `max_distance` | float >= 0 | warning below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

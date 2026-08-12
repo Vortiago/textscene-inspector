@@ -28,7 +28,7 @@ Strict parsing format-checks these `BoneConstraint3D` properties, plus 2 inherit
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `settings/#/*` | BoneConstraint3D setting | error |
+| `settings/#/*` | BoneConstraint3D setting |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

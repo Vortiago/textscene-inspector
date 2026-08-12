@@ -36,7 +36,7 @@ Strict parsing format-checks these `GridContainer` properties, plus 53 inherited
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `columns` | integer 1-1024 | error |
+| `columns` | integer 1-1024 | error below, warning above |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -34,10 +34,10 @@ Strict parsing format-checks these `MultiplayerSynchronizer` properties, plus 10
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `delta_interval` | float 0-5 | error |
+| `delta_interval` | float 0-5 | error below, warning above |
 | `public_visibility` | true or false |  |
 | `replication_config` | null, SubResource("id") or ExtResource("id") |  |
-| `replication_interval` | float 0-5 | error |
+| `replication_interval` | float 0-5 | error below, warning above |
 | `root_path` | NodePath("path/to/node") |  |
 | `visibility_update_mode` | enum 0-2 (VISIBILITY_PROCESS_IDLE/VISIBILITY_PROCESS_PHYSICS/VISIBILITY_PROCESS_NONE) | warning |
 

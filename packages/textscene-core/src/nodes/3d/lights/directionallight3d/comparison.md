@@ -43,7 +43,7 @@ Strict parsing format-checks these `DirectionalLight3D` properties, plus 27 inhe
 | `directional_shadow_fade_start` | float 0-1 | warning |
 | `directional_shadow_max_distance` | float |  |
 | `directional_shadow_mode` | enum 0-2 (ORTHOGONAL/PARALLEL_2_SPLITS/PARALLEL_4_SPLITS) | warning |
-| `directional_shadow_pancake_size` | float >= 0 | warning |
+| `directional_shadow_pancake_size` | float >= 0 | warning below |
 | `directional_shadow_split_1` | float 0-1 | warning |
 | `directional_shadow_split_2` | float 0-1 | warning |
 | `directional_shadow_split_3` | float 0-1 | warning |
