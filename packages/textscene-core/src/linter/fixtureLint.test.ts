@@ -109,6 +109,9 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
   ).files
 );
 
+/** How many fixtures that list is meant to hold; see the pin at the bottom. */
+const NEGATIVE_FIXTURE_COUNT = 3;
+
 function tscnFiles(dir: string): string[] {
   return readdirSync(dir)
     .filter((f) => f.endsWith('.tscn'))
@@ -187,19 +190,27 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
     expect(failures).toEqual([]);
   });
 
-  it('every negative edge fixture still produces at least one error (rules fire)', () => {
-    const silent: string[] = [];
+  it('keeps the negative list honest: every entry exists and still errors', () => {
+    // Take an entry away and the sweep above must fail. A listed fixture that
+    // was deleted, or that someone fixed, exempts nothing and has silently
+    // stopped being a negative test. Existence is checked first, so a deleted
+    // entry reports as stale rather than as an ENOENT out of the linter.
+    const existing = new Set(tscnFiles(fixturesDir));
+    const stale: string[] = [];
     for (const file of INTEGRATION_FIXTURES_WITH_ERRORS) {
-      if (lintFile(fixturesDir, file).errors === 0) {
-        silent.push(file);
+      if (!existing.has(file)) {
+        stale.push(`${file}: listed but no longer in scenes/fixtures`);
+      } else if (lintFile(fixturesDir, file).errors === 0) {
+        stale.push(`${file}: listed as a negative fixture but produces no error`);
       }
     }
-    expect(silent).toEqual([]);
+    expect(stale).toEqual([]);
   });
 
-  it('INTEGRATION_FIXTURES_WITH_ERRORS only lists files that exist', () => {
-    const existing = new Set(tscnFiles(fixturesDir));
-    const stale = [...INTEGRATION_FIXTURES_WITH_ERRORS].filter((f) => !existing.has(f));
-    expect(stale).toEqual([]);
+  it('pins how many negative fixtures there are, so the list cannot empty itself', () => {
+    // Exact equality, not a floor: retiring a fixture and its entry together
+    // leaves every check above green, so the count is the only thing that can
+    // notice, and it must be touched deliberately in either direction.
+    expect(INTEGRATION_FIXTURES_WITH_ERRORS.size).toBe(NEGATIVE_FIXTURE_COUNT);
   });
 });

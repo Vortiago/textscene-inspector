@@ -57,12 +57,17 @@ export function classifiableKeys(): { nodeType: string; key: string }[] {
  * validators, and the sweep saw 18 functions.
  */
 export function unclassifiedKeys(): string[] {
+  return ungroundedLabels(UNGROUNDABLE);
+}
+
+/** The sweep, with the exemption set as a parameter so it can be emptied. */
+function ungroundedLabels(exempt: ReadonlySet<string>): string[] {
   const out: string[] = [];
 
   const visit = (validator: PropertyValidator, label: string): void => {
     // The exemption covers THIS validator, never its subtree: returning early
     // would let one exempt wildcard key excuse every leaf behind it.
-    if (!UNGROUNDABLE.has(label) && !validator.formatOnly && !validator.grounding) {
+    if (!exempt.has(label) && !validator.formatOnly && !validator.grounding) {
       out.push(label);
     }
     validator.leaves?.forEach((leaf, index) => visit(leaf, `${label}[${index}]`));
@@ -73,4 +78,18 @@ export function unclassifiedKeys(): string[] {
     if (validator) visit(validator, `${nodeType}.${key}`);
   }
   return out.sort();
+}
+
+/**
+ * Exemptions that exempt nothing: the label resolves to no validator at all, or
+ * to one that has since been grounded.
+ *
+ * Asked by emptying the set rather than by re-deriving each label, so the check
+ * consumes the sweep's own output and cannot disagree with it about what a
+ * label means. A dead entry is worse than none: it silently pre-forgives the
+ * next validator to be registered under that exact name.
+ */
+export function staleUngroundable(entries: ReadonlySet<string> = UNGROUNDABLE): string[] {
+  const ungrounded = new Set(ungroundedLabels(new Set()));
+  return [...entries].filter((label) => !ungrounded.has(label)).sort();
 }

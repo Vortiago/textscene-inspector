@@ -20,7 +20,11 @@ import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { v } from './validators/v.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
-import { classifiableKeys, unclassifiedKeys } from './testing/validatorClassification.js';
+import {
+  classifiableKeys,
+  staleUngroundable,
+  unclassifiedKeys,
+} from './testing/validatorClassification.js';
 import './index.js'; // side-effect: every slice registers its validators
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
 
@@ -80,6 +84,13 @@ describe('bound grounding', () => {
     // neither tag, so it lands here however many real values it rejects.
     expect(classifiableKeys().length).toBeGreaterThan(1500);
     expect(unclassifiedKeys()).toHaveLength(UNCLASSIFIED_VALIDATOR_BUDGET);
+  });
+
+  it('holds no UNGROUNDABLE entry that exempts nothing', () => {
+    // The budget above reads zero whether the named validator is still there or
+    // not, so without this the exemption outlives its subject and pre-forgives
+    // whatever is registered under that label next.
+    expect(staleUngroundable()).toEqual([]);
   });
 
   it('gives every grounded bound a source citation', () => {
@@ -168,6 +179,17 @@ describe('the classification guard bites', () => {
     outer.leaves = [leaf, leaf];
 
     expect(uncitedGroundings(outer, 'Type.key/*')).toEqual(['Type.key/*[0]: "no file here"']);
+  });
+
+  it('names an UNGROUNDABLE label that resolves to nothing, or to a grounded bound', () => {
+    // Both ways an entry dies: its type or key goes away, and its validator
+    // gains the citation that was missing. The grounded control is the removal
+    // this file already pins a cite for below.
+    expect(
+      staleUngroundable(
+        new Set(['NoSuchType.no_such_key', 'HBoxContainer.vertical', 'AreaLight3D.area_range'])
+      )
+    ).toEqual(['HBoxContainer.vertical', 'NoSuchType.no_such_key']);
   });
 
   it('puts removal-only types in the swept key list, not just in the registry', () => {

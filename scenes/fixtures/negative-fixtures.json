@@ -1,5 +1,5 @@
 {
-  "comment": "Fixtures that MUST produce at least one lint error. Each is an app-shell or extension integration fixture: a really broken file the VS Code integration suite opens, and that docs/user-guide-web.md walks a user through to demonstrate the parse-error banner. Read by linter/fixtureLint.test.ts (which asserts they DO error) and by lint-staged.config.mjs (which must not fail the commit when they do). A linter red test does not belong here: assert the validator or rule directly.",
+  "comment": "Fixtures that MUST produce at least one lint error. Each is an app-shell or extension integration fixture: a really broken file the VS Code integration suite opens, and that docs/user-guide-web.md walks a user through to demonstrate the parse-error banner. Read by linter/fixtureLint.test.ts (which asserts they DO error) and by lint-staged.config.mjs (which must not fail the commit when they do). A linter red test does not belong here: assert the validator or rule directly. Adding or retiring an entry also moves NEGATIVE_FIXTURE_COUNT in that test, which is what keeps a retirement deliberate.",
   "files": [
     "edge-invalid-cast-shadow.tscn",
     "edge-invalid-transform.tscn",

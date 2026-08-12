@@ -16,15 +16,12 @@ import './index.js'; // trigger all validator registrations
 /**
  * Keys a subclass re-declares on purpose, as `Type:key`.
  *
- * Empty, and that is the point. The four entries this once held were the
- * fixed-orientation containers, which do not re-declare `vertical` at all —
- * they REMOVE it, via `registerUnavailable`, so there is no shadow to allow.
- * Narrowing has its own mechanism now, which means a re-declaration is once
- * again always the drift this guard exists to catch.
- *
  * Add here only for a subclass that genuinely re-declares a base key and
  * accepts something DIFFERENT, not less; a leaf that accepts less belongs in
- * `registerUnavailable`.
+ * `registerUnavailable`, which removes the key rather than shadowing it.
+ *
+ * Every entry must still suppress a shadow the live registry has — the sweep
+ * below pins the set to exactly the shadows that exist, from both directions.
  */
 const INTENTIONAL_OVERRIDES = new Set<string>([
   // Godot builds ONE `settings/<i>/…` family cooperatively: each class's
@@ -63,6 +60,26 @@ function baseChainKeys(nodeType: string): Set<string> {
   return new Set(baseChain(nodeType).flatMap((ancestor) => validatorRegistry.getOwnKeys(ancestor)));
 }
 
+/**
+ * Entries that suppress nothing: drop one and the violation count must rise.
+ *
+ * An exemption whose slice stopped shadowing, or whose key was renamed away,
+ * keeps sitting in the set waving the NEXT real shadow of that same string
+ * through. Comparing counts rather than parsing messages means this asks the
+ * guard itself, so it cannot drift from what the guard actually allows.
+ */
+function deadOverrides(
+  registrations: Array<{ nodeType: string; keys: string[] }>,
+  inheritedKeysOf: (nodeType: string) => Set<string>,
+  overrides: Set<string>
+): string[] {
+  const allowed = findShadowViolations(registrations, inheritedKeysOf, overrides).length;
+  return [...overrides].filter((entry) => {
+    const without = new Set([...overrides].filter((other) => other !== entry));
+    return findShadowViolations(registrations, inheritedKeysOf, without).length === allowed;
+  });
+}
+
 describe('ValidatorRegistry meta-guard: no shadow copies', () => {
   // A scratch chain where 'Child' inherits 'transform': proves the guard fires
   // before trusting the real registry's silence.
@@ -86,6 +103,15 @@ describe('ValidatorRegistry meta-guard: no shadow copies', () => {
       new Set(['Child:transform'])
     );
     expect(violations).toHaveLength(0);
+  });
+
+  it('names the entry that suppresses nothing, and keeps the one that does', () => {
+    const dead = deadOverrides(
+      [{ nodeType: 'Child', keys: ['transform'] }],
+      scratchInherited,
+      new Set(['Child:transform', 'Child:own_prop'])
+    );
+    expect(dead).toEqual(['Child:own_prop']);
   });
 
   it('sees a key a spread contributed, which a source scrape cannot', () => {
@@ -120,6 +146,17 @@ describe('ValidatorRegistry meta-guard: no shadow copies', () => {
         `Shadow copy anti-pattern detected — remove the duplicate key(s) and let the base-walk deliver them:\n\n${violations.join('\n\n')}`
       );
     }
+  });
+
+  it('holds no INTENTIONAL_OVERRIDES entry that exempts nothing', () => {
+    const registrations = ownKeyRegistrations(validatorRegistry);
+    expect(registrations.length).toBeGreaterThan(200);
+
+    const dead = deadOverrides(registrations, baseChainKeys, INTENTIONAL_OVERRIDES).map(
+      (entry) => `${entry} suppresses no shadow the live registry still has`
+    );
+
+    expect(dead).toEqual([]);
   });
 
   it('Light3D validators are reachable for every concrete light subclass via the base-walk', () => {
