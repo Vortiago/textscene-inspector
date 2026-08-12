@@ -16,10 +16,10 @@ import './sliceRegistrations.js';
 import { resourceSliceRegistry } from './sliceRegistration';
 
 /**
- * Binary types no slice owns yet — audio and fonts, which this previewer
- * neither decodes nor renders. Kept verbatim from the list this
- * function used before the registry existed so a provider keeps fetching them
- * as bytes; each moves out of here when its slice lands.
+ * Binary types no slice owns yet — audio, which this previewer neither decodes
+ * nor renders. Kept verbatim from the list this function used before the
+ * registry existed so a provider keeps fetching them as bytes; each moves out
+ * of here when its slice lands.
  */
 const UNOWNED_BINARY_TYPES: readonly string[] = [
   'AudioStream',
@@ -28,22 +28,8 @@ const UNOWNED_BINARY_TYPES: readonly string[] = [
   'AudioStreamMP3',
 ];
 
-/**
- * Extensions of the same unowned binary formats, plus the raw font containers.
- * Fonts are matched by EXTENSION and never by the `FontFile` type name: a
- * `FontFile` ExtResource just as often points at a text `.tres` wrapper — one
- * carrying `fallbacks` rather than font bytes of its own — and fetching that as
- * bytes yields a string no parser can read.
- */
-const UNOWNED_BINARY_EXTENSIONS: readonly string[] = [
-  '.wav',
-  '.ogg',
-  '.mp3',
-  '.ttf',
-  '.otf',
-  '.woff',
-  '.woff2',
-];
+/** Extensions of the same unowned binary formats. */
+const UNOWNED_BINARY_EXTENSIONS: readonly string[] = ['.wav', '.ogg', '.mp3'];
 
 /**
  * The file extension of a path, dot-prefixed and lowercased, or null when the

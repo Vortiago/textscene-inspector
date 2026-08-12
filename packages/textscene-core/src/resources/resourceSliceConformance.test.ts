@@ -142,6 +142,8 @@ describe('resource-slice claim coverage', () => {
       glb: 'Node using GLB mesh',
       resource: 'Resource',
       arraymesh: 'Node using ArrayMesh',
+      font: 'Node using font',
+      theme: 'Node using theme',
     };
     const failures: string[] = [];
     for (const reg of all) {

@@ -1,7 +1,7 @@
 /**
  * The one DOM-touching orchestrator in this font's pipeline: turns a
- * resolved `FontResource` (`resources/processing/fontProcessing.ts` — the
- * output of `resources/processing/themeProcessing.ts`'s `resolveThemeFontIn`,
+ * resolved `FontResource` (`resources/fonts/font/` — the
+ * output of `styles/theme/lookup.ts`'s `resolveThemeFontIn`,
  * a CONCURRENT packet's own ancestor/type-chain walk over `SolveNode`'s
  * `fontOverrides`/`themeChain`/`projectTheme` fields — see this file's own
  * doc for the join-point contract) into a `FontMetrics` (`./fontMetrics.ts`),
@@ -46,7 +46,7 @@
  *
  * `text/resolveNodeFontMetrics.ts`'s `resolveNodeFontMetrics(solveNode,
  * themeKey)` is the seam every widget's solver/painter actually calls — it
- * wraps `themeProcessing.ts`'s `resolveThemeFontIn` (walking
+ * wraps `theme/lookup.ts`'s `resolveThemeFontIn` (walking
  * `solveNode.fontOverrides`/`.themeChain`/`.projectTheme`) and THIS module's
  * own `peekSceneFontMetrics` in one place. `peekSceneFontMetrics(font,
  * nodePath)` itself is the ONE call a synchronous solve pass
@@ -75,7 +75,7 @@ import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { parseSfntScalars, type SfntScalars } from './sfntTables';
 import { createRuntimeFontMetrics, type CanvasFontMetrics, type DesignUnitWidthFn } from './runtimeFontMetrics';
 import { resolveFontFileBytes } from './sceneFontResolution';
-import type { FontFileResource, FontResource } from '../../../../resources/processing/fontProcessing';
+import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 
 // Same detection `r3f/internalTextLabel.tsx` already uses for its own

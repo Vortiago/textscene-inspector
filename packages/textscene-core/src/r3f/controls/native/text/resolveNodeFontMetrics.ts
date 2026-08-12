@@ -1,6 +1,6 @@
 /**
  * The ONE join point between the theme RESOLUTION half of this feature
- * (`resources/processing/themeProcessing.ts`'s `resolveThemeFontIn`/
+ * (`styles/theme/lookup.ts`'s `resolveThemeFontIn`/
  * `resolveThemeFontSizeIn`, walking a `SolveNode`'s `fontOverrides`/
  * `themeChain`/`projectTheme` via a per-node `ThemeResolutionScope`) and each
  * grain's own consumption half: `resolveNodeFontMetrics` feeds the PAINTING
@@ -44,7 +44,7 @@ import {
   resolveThemeFontSizeIn,
   themeResolutionScope,
   type ThemeResolutionScope,
-} from '../../../../resources/processing/themeProcessing';
+} from '../../../../resources/styles/theme/lookup';
 import { peekSceneFontMetrics } from './sceneFontLoader';
 import type { FontMetrics } from './fontMetrics';
 

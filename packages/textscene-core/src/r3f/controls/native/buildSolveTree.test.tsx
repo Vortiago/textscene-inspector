@@ -25,8 +25,8 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext';
-import type { ThemeResource } from '../../../resources/processing/themeProcessing';
-import type { FontResource } from '../../../resources/processing/fontProcessing';
+import type { ThemeResource } from '../../../resources/styles/theme/types';
+import type { FontResource } from '../../../resources/fonts/font/types';
 import { resolveSceneFontMetrics } from './text/sceneFontLoader';
 import { useBuildSolveTree } from './buildSolveTree';
 import { TscnParser } from '../../../parser/TscnParser';

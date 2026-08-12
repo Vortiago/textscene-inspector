@@ -10,8 +10,8 @@ import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
 import { createThemeProcessor } from './createThemeProcessor';
-import type { ThemeResource } from '../processing/themeProcessing';
-import type { FontLoaderFn, FontResource } from '../processing/fontProcessing';
+import type { ThemeResource } from '../styles/theme/types';
+import type { FontLoaderFn, FontResource } from '../fonts/font/types';
 
 /** Shaped like scenes/demos/gui/ui_mirroring/ui_mirroring.tscn's inline Theme (here as a standalone file). */
 const THEME_TRES = [

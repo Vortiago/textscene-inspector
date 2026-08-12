@@ -28,7 +28,7 @@ import type { LabelProperties } from './types';
 import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { labelMinimumSize, labelShapingWidthPx, LABEL_THEME_KEYS, LABEL_THEME_FONT_KEY, LABEL_DEFAULT_FONT_COLOR, labelTextTheme, layoutLabelLines } from './nativeSolver';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import type { FontResource } from '../../../../resources/processing/fontProcessing';
+import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 
 /** `labelMinimumSize`'s `size` half only — every test below except the dedicated `meta` describe cares only about this, exactly like before `{ size, meta }` existed. */

@@ -1,22 +1,22 @@
 /**
- * Pure walk of a `FontResource` graph (`../../../../resources/processing/fontProcessing.ts`
- * — read-only from here, this module never edits that pipeline) down to the
+ * Pure walk of a `FontResource` graph (`../../../../resources/fonts/font/` —
+ * read-only from here, this module never edits that pipeline) down to the
  * one thing this engine's runtime font loader needs: real font bytes.
  *
  * Godot's three Font resource kinds recurse into each other (a `.tres`
  * wrapper's own `fallbacks`, a `FontVariation`'s `base_font`) before real
- * bytes are ever reached — `fontProcessing.ts`'s own doc has the full shape.
+ * bytes are ever reached — the Font slice's `types.ts` has the full shape.
  * This walk mirrors that recursion exactly once, so `sceneFontLoader.ts`
  * (the DOM-touching orchestrator) and its tests never need to re-derive
  * "which face actually renders" from the raw resource tree themselves.
  *
  * `SystemFont` (`kind: 'system'`) always fails to resolve here — its
  * `font_names` are OS family names this previewer has no access to load
- * bytes for (`fontProcessing.ts`'s own doc). A `SystemFont` behind a
+ * bytes for (the Font slice's `types.ts`). A `SystemFont` behind a
  * `fallbacks` list is skipped in favour of the next entry that DOES resolve,
  * exactly like a `FontFile` fallback with no bytes of its own is.
  */
-import type { FontFileResource, FontResource } from '../../../../resources/processing/fontProcessing';
+import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 
 export interface ResolvedFontBytes {
   /** Raw font bytes, ready for `new FontFace(name, bytes)`. */

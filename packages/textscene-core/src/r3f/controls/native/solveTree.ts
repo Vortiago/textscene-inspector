@@ -10,8 +10,8 @@
 
 import type { TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
-import type { FontResource } from '../../../resources/processing/fontProcessing';
-import type { ThemeResource } from '../../../resources/processing/themeProcessing';
+import type { FontResource } from '../../../resources/fonts/font/types';
+import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { Vec2 } from './rect';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 
@@ -52,7 +52,7 @@ export interface SolveNode {
    * `theme`, if it has one, is index 0 (`Control::get_theme_font`'s ancestor
    * walk, `scene/theme/theme_owner.cpp`'s `ThemeOwner::_get_next_owner_node`).
    * An ancestor Control with NO `theme` set contributes no entry. Feeds
-   * `themeProcessing.ts`'s `resolveThemeFontIn`/`resolveThemeFontSizeIn`.
+   * `theme/lookup.ts`'s `resolveThemeFontIn`/`resolveThemeFontSizeIn`.
    * Required — see `fontOverrides`'s own doc for why.
    */
   themeChain: readonly ThemeResource[];

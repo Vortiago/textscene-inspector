@@ -45,13 +45,10 @@ import {
 import { useResourceLoader } from '../../../resources/useResource';
 import { inlineTexture2DSize } from '../../../resources/useTexture2D';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
-import type { FontResource } from '../../../resources/processing/fontProcessing';
-import {
-  resolveInlineFontResource,
-  resolveInlineThemeResource,
-  type FontCacheReader,
-  type ThemeResource,
-} from '../../../resources/processing/themeProcessing';
+import { resolveInlineFontResource } from '../../../resources/fonts/font/decode';
+import type { FontCacheReader, FontResource } from '../../../resources/fonts/font/types';
+import { resolveInlineThemeResource } from '../../../resources/styles/theme/decode';
+import type { ThemeResource } from '../../../resources/styles/theme/types';
 import { onSceneFontMetricsSettled } from './text/sceneFontLoader';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../liveSceneTree';
@@ -173,7 +170,7 @@ function buildForest(
    * (`scene/gui/control.cpp:3089-3093`). Every declared key stays in the
    * result even when its ref fails to resolve (`null`): a local override,
    * once declared, wins UNCONDITIONALLY over any ancestor theme — see
-   * `themeProcessing.resolveThemeFontIn`'s doc for why key PRESENCE (not the
+   * `theme/lookup.ts`'s `resolveThemeFontIn` doc for why key PRESENCE (not the
    * resolved value) is what encodes "authored".
    */
   function resolveFontOverrides(

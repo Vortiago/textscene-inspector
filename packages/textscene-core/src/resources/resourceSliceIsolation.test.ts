@@ -69,16 +69,14 @@ describe('Godot-resource parsing stays in the loading layer', () => {
   const PARSE_ALLOWED = new Set([
     'parser/parsedResource.test.ts',
     'resources/processors/createTresResourceProcessor.ts',
-    // The two slices whose decode consumes whole-file content by design:
-    // materials orchestrate sub-resource addressing, ArrayMesh reads the
-    // byte-payload dictionaries.
+    // The slices whose decode consumes whole-file content by design: materials
+    // orchestrate sub-resource addressing, ArrayMesh reads the byte-payload
+    // dictionaries, and fonts/themes both address a named `[sub_resource]`
+    // inside a shared `.tres` before their pure decode sees a property bag.
     'resources/materials/standardmaterial3d/loadMaterial.ts',
     'resources/meshes/arraymesh/decode.ts',
-    // Not slices: fonts and themes are served by their own processors, so no
-    // decode.ts exists for them to parse through. Promoting them to slices
-    // removes these two — and the `busTypeFor` fallback in ResourceLoader.
-    'resources/processing/fontProcessing.ts',
-    'resources/processing/themeProcessing.ts',
+    'resources/fonts/font/loadFont.ts',
+    'resources/styles/theme/loadTheme.ts',
   ]);
   const VALUE_IMPORT_RE =
     /import\s+(?!type\b)[^;]*?from\s+'[^']*parsedResource(?:\.js)?'|import\(\s*'[^']*parsedResource(?:\.js)?'\s*\)/;

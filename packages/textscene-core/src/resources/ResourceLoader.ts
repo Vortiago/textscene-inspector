@@ -45,8 +45,8 @@ import { createFontProcessor } from './processors/createFontProcessor';
 import { createThemeProcessor } from './processors/createThemeProcessor';
 import { runClearCachesSequence } from './clearCachesSequence';
 import { resourceFilePath } from './subResourcePath';
-import type { FontResource } from './processing/fontProcessing';
-import type { ThemeResource } from './processing/themeProcessing';
+import type { FontResource } from './fonts/font/types';
+import type { ThemeResource } from './styles/theme/types';
 import { resourceSliceRegistry } from './sliceRegistration';
 import './sliceRegistrations.js';
 import type { ParsedResource } from '../parser/parsedResource';
@@ -62,16 +62,7 @@ import * as logger from '../logger';
  */
 export function busTypeFor(resourceType: string | undefined): ResourceType | null {
   if (!resourceType) return null;
-  const claimed = resourceSliceRegistry.busTypeFor(resourceType);
-  if (claimed) return claimed;
-  // Fonts and themes are served by their own processors rather than by a
-  // registered slice, so the claim table cannot answer for them. Promoting them
-  // to slices would fold these two lines back into the lookup above.
-  if (resourceType === 'FontFile' || resourceType === 'SystemFont' || resourceType === 'FontVariation') {
-    return 'font';
-  }
-  if (resourceType === 'Theme') return 'theme';
-  return null;
+  return resourceSliceRegistry.busTypeFor(resourceType);
 }
 
 export class ResourceLoader {

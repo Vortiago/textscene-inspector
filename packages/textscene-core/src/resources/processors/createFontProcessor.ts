@@ -27,7 +27,8 @@
 import type { FileEventBus } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import { buildFontResource, type FontResource } from '../processing/fontProcessing';
+import { buildFontResource } from '../fonts/font/loadFont';
+import type { FontResource } from '../fonts/font/types';
 
 export function createFontProcessor(
   fileEventBus: FileEventBus | undefined,

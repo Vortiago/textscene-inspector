@@ -26,7 +26,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { FontResource } from '../../../../resources/processing/fontProcessing';
+import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import type { ButtonProperties } from './types';
 import {

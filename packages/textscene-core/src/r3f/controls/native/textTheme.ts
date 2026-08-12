@@ -18,7 +18,7 @@
  * (`Theme::get_font_size`, `scene/resources/theme.cpp:658-666`); otherwise
  * `defaults.fontSizePx` (this previewer's OWN `ThemeDB::get_fallback_font_size()`
  * stand-in). Colour has NO such ancestor walk — this codebase decodes no
- * `Theme` colour data at all (`themeProcessing.ts`'s own scope), so it stays
+ * `Theme` colour data at all (the Theme slice's own scope), so it stays
  * override-or-default exactly as before.
  */
 import type { ControlColor } from '../../../nodes/2d/ui/control/types';

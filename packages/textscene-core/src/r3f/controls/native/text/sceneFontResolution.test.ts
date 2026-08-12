@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveFontFileBytes } from './sceneFontResolution';
-import type { FontFileResource, FontResource } from '../../../../resources/processing/fontProcessing';
+import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 
 function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource[] = []): FontFileResource {
   return { kind: 'file', bytes, mimeType: bytes ? 'font/ttf' : undefined, fallbacks, properties: {} };

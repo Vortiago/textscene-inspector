@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { onSceneFontMetricsSettled, peekSceneFontMetrics, resolveSceneFontMetrics } from './sceneFontLoader';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import * as logger from '../../../../logger';
-import type { FontFileResource, FontResource } from '../../../../resources/processing/fontProcessing';
+import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 
 function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource[] = []): FontFileResource {
   return { kind: 'file', bytes, mimeType: bytes ? 'font/ttf' : undefined, fallbacks, properties: {} };

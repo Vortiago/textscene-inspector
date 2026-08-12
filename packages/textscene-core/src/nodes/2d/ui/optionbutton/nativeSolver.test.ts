@@ -33,7 +33,7 @@ import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { resolveButtonDrawState } from '../../../../r3f/controls/native/buttonBase';
-import type { FontResource } from '../../../../resources/processing/fontProcessing';
+import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import type { OptionButtonProperties } from './types';
 import {

@@ -29,9 +29,6 @@ export type ResourceBusType =
   | 'glb'
   | 'resource'
   | 'arraymesh'
-  // The loader serves these two through their own processors rather than a
-  // registered slice, so no claim carries them — but they are bus tags all the
-  // same, and this union is what `ResourceEventBus` aliases.
   | 'font'
   | 'theme';
 

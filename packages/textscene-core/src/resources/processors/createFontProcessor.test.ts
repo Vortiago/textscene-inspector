@@ -10,7 +10,7 @@ import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
 import { createFontProcessor } from './createFontProcessor';
-import type { FontResource, FontFileResource, FontVariationResource } from '../processing/fontProcessing';
+import type { FontResource, FontFileResource, FontVariationResource } from '../fonts/font/types';
 
 /** Shaped like scenes/demos/2d/role_playing_game/theme/fonts/montserrat_extra_bold_16.tres. */
 const MONTSERRAT_16_TRES = [

@@ -1,5 +1,5 @@
 /**
- * `resolveNodeFontMetrics` — the join between `themeProcessing.ts`'s
+ * `resolveNodeFontMetrics` — the join between the Theme slice's
  * `resolveThemeFontIn` (walking `SolveNode.fontOverrides`/`.themeChain`/
  * `.projectTheme`) and `sceneFontLoader.ts`'s `peekSceneFontMetrics`.
  *
@@ -17,12 +17,12 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { SolveNode } from '../solveTree';
 import { solveNode } from '../testing/solveNode';
-import type { ThemeResource } from '../../../../resources/processing/themeProcessing';
-import type { FontResource } from '../../../../resources/processing/fontProcessing';
+import type { ThemeResource } from '../../../../resources/styles/theme/types';
+import type { FontResource } from '../../../../resources/fonts/font/types';
 import { resolveNodeFontMetrics, resolveNodeFontSizePx } from './resolveNodeFontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import * as logger from '../../../../logger';
-import * as themeProcessing from '../../../../resources/processing/themeProcessing';
+import * as themeLookup from '../../../../resources/styles/theme/lookup';
 import * as sceneFontLoader from './sceneFontLoader';
 
 // `sceneFontLoader.ts`'s own warn-dedupe is keyed by RESOURCE OBJECT IDENTITY
@@ -153,7 +153,7 @@ describe('the ancestor-Theme walk is cached PER SolveNode OBJECT, not merely per
   let scopeSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    scopeSpy = vi.spyOn(themeProcessing, 'themeResolutionScope');
+    scopeSpy = vi.spyOn(themeLookup, 'themeResolutionScope');
   });
 
   afterEach(() => {

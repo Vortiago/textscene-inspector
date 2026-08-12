@@ -51,7 +51,7 @@ import type { CheckBoxProperties } from './types';
  * `theme->set_font(SceneStringName(font), "CheckBox", Ref<Font>());` — its
  * OWN default-theme registration, under CheckBox's own native type, not
  * inherited from Button's (Godot's theme lookup walks native inheritance
- * only when THIS type has no entry of its own — `themeProcessing.ts`'s
+ * only when THIS type has no entry of its own — the Theme slice's
  * `buildThemeTypeChain`). Fed to `resolveNodeFontMetrics` by both this module
  * and `Component.tsx` so the two agree on which font this CheckBox is in.
  */

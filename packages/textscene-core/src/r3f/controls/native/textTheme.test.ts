@@ -5,12 +5,12 @@
  * ancestor-Theme walk `resolveNodeFontMetrics` already performs for the font
  * itself (`resolveNodeFontSizePx`/`Control::get_theme_font_size`,
  * `scene/gui/control.cpp:3107-3129`); colour does not (no `Theme` colour
- * decode exists in this codebase — `themeProcessing.ts`'s own scope).
+ * decode exists in this codebase — the Theme slice's own scope).
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from './solveTree';
 import { solveNode as emptySolveNode } from './testing/solveNode';
-import type { ThemeResource } from '../../../resources/processing/themeProcessing';
+import type { ThemeResource } from '../../../resources/styles/theme/types';
 import { resolveTextTheme, type TextThemeKeys } from './textTheme';
 
 const LABEL_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };

@@ -23,8 +23,9 @@
 import type { FileEventBus, FileData } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import { buildThemeResource, type ThemeResource } from '../processing/themeProcessing';
-import type { FontLoaderFn } from '../processing/fontProcessing';
+import { buildThemeResource } from '../styles/theme/loadTheme';
+import type { ThemeResource } from '../styles/theme/types';
+import type { FontLoaderFn } from '../fonts/font/types';
 
 export function createThemeProcessor(
   fileEventBus: FileEventBus | undefined,

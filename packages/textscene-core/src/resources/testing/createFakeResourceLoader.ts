@@ -30,8 +30,8 @@ import { MetadataStore } from '../MetadataStore';
 import { busTypeFor, type ResourceLoader } from '../ResourceLoader';
 import { runClearCachesSequence } from '../clearCachesSequence';
 import type { ArrayMeshResource } from '../processors/createArrayMeshProcessor';
-import type { FontResource } from '../processing/fontProcessing';
-import type { ThemeResource } from '../processing/themeProcessing';
+import type { FontResource } from '../fonts/font/types';
+import type { ThemeResource } from '../styles/theme/types';
 
 export interface FakeProcessor<T> {
   /** Backing cache — `undefined` = never requested, `null` = failed/sentinel-miss, value = loaded. */
