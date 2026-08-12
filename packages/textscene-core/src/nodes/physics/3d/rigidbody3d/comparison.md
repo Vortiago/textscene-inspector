@@ -32,33 +32,33 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin RigidBody3D -->
-Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited from CollisionObject3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited from CollisionObject3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `angular_damp` | float >= 0 |
-| `angular_damp_mode` | enum 0-1 (COMBINE/REPLACE) |
-| `angular_velocity` | Vector3(x, y, z) |
-| `can_sleep` | true or false |
-| `center_of_mass` | Vector3(x, y, z) |
-| `center_of_mass_mode` | enum 0-1 (AUTO/CUSTOM) |
-| `constant_force` | Vector3(x, y, z) |
-| `constant_torque` | Vector3(x, y, z) |
-| `contact_monitor` | true or false |
-| `continuous_cd` | true or false |
-| `custom_integrator` | true or false |
-| `freeze` | true or false |
-| `freeze_mode` | enum 0-1 (STATIC/KINEMATIC) |
-| `gravity_scale` | float |
-| `inertia` | Vector3(x, y, z), each float >= 0 |
-| `linear_damp` | float >= 0 |
-| `linear_damp_mode` | enum 0-1 (COMBINE/REPLACE) |
-| `linear_velocity` | Vector3(x, y, z) |
-| `lock_rotation` | true or false |
-| `mass` | float >= 5e-324 |
-| `max_contacts_reported` | integer 0-4095 |
-| `physics_material_override` | null, SubResource("id") or ExtResource("id") |
-| `sleeping` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `angular_damp` | float >= 0 | error |
+| `angular_damp_mode` | enum 0-1 (COMBINE/REPLACE) | warning |
+| `angular_velocity` | Vector3(x, y, z) |  |
+| `can_sleep` | true or false |  |
+| `center_of_mass` | Vector3(x, y, z) |  |
+| `center_of_mass_mode` | enum 0-1 (AUTO/CUSTOM) | warning |
+| `constant_force` | Vector3(x, y, z) |  |
+| `constant_torque` | Vector3(x, y, z) |  |
+| `contact_monitor` | true or false |  |
+| `continuous_cd` | true or false |  |
+| `custom_integrator` | true or false |  |
+| `freeze` | true or false |  |
+| `freeze_mode` | enum 0-1 (STATIC/KINEMATIC) | warning |
+| `gravity_scale` | float |  |
+| `inertia` | Vector3(x, y, z), each float >= 0 | error |
+| `linear_damp` | float >= 0 | error |
+| `linear_damp_mode` | enum 0-1 (COMBINE/REPLACE) | warning |
+| `linear_velocity` | Vector3(x, y, z) |  |
+| `lock_rotation` | true or false |  |
+| `mass` | float >= 5e-324 | error |
+| `max_contacts_reported` | integer 0-4095 | error |
+| `physics_material_override` | null, SubResource("id") or ExtResource("id") |  |
+| `sleeping` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

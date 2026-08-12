@@ -32,32 +32,32 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin CodeEdit -->
-Strict parsing format-checks these `CodeEdit` properties, plus 47 inherited from TextEdit, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `CodeEdit` properties, plus 47 inherited from TextEdit, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `auto_brace_completion_enabled` | true or false |
-| `auto_brace_completion_highlight_matching` | true or false |
-| `auto_brace_completion_pairs` | Dictionary { "open": "close", … }, each key a symbol-only string |
-| `code_completion_enabled` | true or false |
-| `code_completion_prefixes` | string array (Array[String]([…]), PackedStringArray(…) or […]), each a single character |
-| `delimiter_comments` | string array (Array[String]([…]), PackedStringArray(…) or […]), each a symbol-only "start[ end]" delimiter key |
-| `delimiter_strings` | string array (Array[String]([…]), PackedStringArray(…) or […]), each a symbol-only "start[ end]" delimiter key |
-| `gutters_draw_bookmarks` | true or false |
-| `gutters_draw_breakpoints_gutter` | true or false |
-| `gutters_draw_executing_lines` | true or false |
-| `gutters_draw_fold_gutter` | true or false |
-| `gutters_draw_line_numbers` | true or false |
-| `gutters_line_numbers_min_digits` | integer 1-5 |
-| `gutters_zero_pad_line_numbers` | true or false |
-| `indent_automatic` | true or false |
-| `indent_automatic_prefixes` | string array (Array[String]([…]), PackedStringArray(…) or […]), each a single character |
-| `indent_size` | integer >= 1 |
-| `indent_use_spaces` | true or false |
-| `line_folding` | true or false |
-| `line_length_guidelines` | int array (PackedInt32Array(…), Array[int]([…]) or […]) |
-| `symbol_lookup_on_click` | true or false |
-| `symbol_tooltip_on_hover` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `auto_brace_completion_enabled` | true or false |  |
+| `auto_brace_completion_highlight_matching` | true or false |  |
+| `auto_brace_completion_pairs` | Dictionary { "open": "close", … }, each key a symbol-only string | error |
+| `code_completion_enabled` | true or false |  |
+| `code_completion_prefixes` | string array (Array[String]([…]), PackedStringArray(…) or […]), each a single character | error |
+| `delimiter_comments` | string array (Array[String]([…]), PackedStringArray(…) or […]), each a symbol-only "start[ end]" delimiter key | error |
+| `delimiter_strings` | string array (Array[String]([…]), PackedStringArray(…) or […]), each a symbol-only "start[ end]" delimiter key | error |
+| `gutters_draw_bookmarks` | true or false |  |
+| `gutters_draw_breakpoints_gutter` | true or false |  |
+| `gutters_draw_executing_lines` | true or false |  |
+| `gutters_draw_fold_gutter` | true or false |  |
+| `gutters_draw_line_numbers` | true or false |  |
+| `gutters_line_numbers_min_digits` | integer 1-5 | warning |
+| `gutters_zero_pad_line_numbers` | true or false |  |
+| `indent_automatic` | true or false |  |
+| `indent_automatic_prefixes` | string array (Array[String]([…]), PackedStringArray(…) or […]), each a single character | error |
+| `indent_size` | integer >= 1 | error |
+| `indent_use_spaces` | true or false |  |
+| `line_folding` | true or false |  |
+| `line_length_guidelines` | int array (PackedInt32Array(…), Array[int]([…]) or […]) |  |
+| `symbol_lookup_on_click` | true or false |  |
+| `symbol_tooltip_on_hover` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

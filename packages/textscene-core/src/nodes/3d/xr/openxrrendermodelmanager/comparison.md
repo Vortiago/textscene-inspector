@@ -30,12 +30,12 @@ children they configure are spawned only once a live XR runtime reports active d
 ## Linting
 
 <!-- lint:begin OpenXRRenderModelManager -->
-Strict parsing format-checks these `OpenXRRenderModelManager` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `OpenXRRenderModelManager` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `make_local_to_pose` | quoted string |
-| `tracker` | enum 0-3 (Any/None set/Left Hand/Right Hand) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `make_local_to_pose` | quoted string |  |
+| `tracker` | enum 0-3 (Any/None set/Left Hand/Right Hand) | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -87,18 +87,38 @@ describe('NinePatchRect strict validators', () => {
       expect(error?.severity).toBe('warning');
     });
 
+    it('a value below the enum (-1) is also only a WARNING (nine_patch_rect.cpp:83)', () => {
+      const error = check('axis_stretch_horizontal', '-1');
+      expect(error).not.toBeNull();
+      expect(error?.severity).toBe('warning');
+    });
+
     it('rejects a non-numeric value', () => {
       expect(check('axis_stretch_horizontal', 'stretch')).not.toBeNull();
     });
   });
 
   describe('axis_stretch_vertical', () => {
+    it('accepts 0 (AXIS_STRETCH_MODE_STRETCH, the bottom of the range)', () => {
+      expect(check('axis_stretch_vertical', '0')).toBeNull();
+    });
+
     it('accepts 1 (AXIS_STRETCH_MODE_TILE)', () => {
       expect(check('axis_stretch_vertical', '1')).toBeNull();
     });
 
+    it('accepts 2 (AXIS_STRETCH_MODE_TILE_FIT, the top of the range)', () => {
+      expect(check('axis_stretch_vertical', '2')).toBeNull();
+    });
+
     it('a value beyond the enum (3) is only a WARNING, since set_v_axis_stretch_mode (nine_patch_rect.cpp:177-184) assigns straight through with no ERR_FAIL_INDEX and the ADD_PROPERTY hint (nine_patch_rect.cpp:84) only constrains the editor', () => {
       const error = check('axis_stretch_vertical', '3');
+      expect(error).not.toBeNull();
+      expect(error?.severity).toBe('warning');
+    });
+
+    it('a value below the enum (-1) is also only a WARNING (nine_patch_rect.cpp:84)', () => {
+      const error = check('axis_stretch_vertical', '-1');
       expect(error).not.toBeNull();
       expect(error?.severity).toBe('warning');
     });
@@ -153,8 +173,18 @@ describe('NinePatchRect strict validators', () => {
       expect(check('patch_margin_top', '0')).toBeNull();
     });
 
+    it('accepts 16384 (the top of the hinted range)', () => {
+      expect(check('patch_margin_top', '16384')).toBeNull();
+    });
+
     it('a value beyond the hint (16385) is only a WARNING (nine_patch_rect.cpp:79)', () => {
       const error = check('patch_margin_top', '16385');
+      expect(error).not.toBeNull();
+      expect(error?.severity).toBe('warning');
+    });
+
+    it('a negative value is also only a WARNING (nine_patch_rect.cpp:79)', () => {
+      const error = check('patch_margin_top', '-1');
       expect(error).not.toBeNull();
       expect(error?.severity).toBe('warning');
     });
@@ -169,8 +199,18 @@ describe('NinePatchRect strict validators', () => {
       expect(check('patch_margin_right', '0')).toBeNull();
     });
 
+    it('accepts 16384 (the top of the hinted range)', () => {
+      expect(check('patch_margin_right', '16384')).toBeNull();
+    });
+
     it('a value beyond the hint (16385) is only a WARNING (nine_patch_rect.cpp:80)', () => {
       const error = check('patch_margin_right', '16385');
+      expect(error).not.toBeNull();
+      expect(error?.severity).toBe('warning');
+    });
+
+    it('a negative value is also only a WARNING (nine_patch_rect.cpp:80)', () => {
+      const error = check('patch_margin_right', '-1');
       expect(error).not.toBeNull();
       expect(error?.severity).toBe('warning');
     });
@@ -185,8 +225,18 @@ describe('NinePatchRect strict validators', () => {
       expect(check('patch_margin_bottom', '0')).toBeNull();
     });
 
+    it('accepts 16384 (the top of the hinted range)', () => {
+      expect(check('patch_margin_bottom', '16384')).toBeNull();
+    });
+
     it('a value beyond the hint (16385) is only a WARNING (nine_patch_rect.cpp:81)', () => {
       const error = check('patch_margin_bottom', '16385');
+      expect(error).not.toBeNull();
+      expect(error?.severity).toBe('warning');
+    });
+
+    it('a negative value is also only a WARNING (nine_patch_rect.cpp:81)', () => {
+      const error = check('patch_margin_bottom', '-1');
       expect(error).not.toBeNull();
       expect(error?.severity).toBe('warning');
     });

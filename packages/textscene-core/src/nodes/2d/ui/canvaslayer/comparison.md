@@ -26,18 +26,18 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin CanvasLayer -->
-Strict parsing format-checks these `CanvasLayer` properties, plus 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `CanvasLayer` properties, plus 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `follow_viewport_enabled` | true or false |
-| `follow_viewport_scale` | float |
-| `layer` | integer -2147483648-2147483647 |
-| `offset` | Vector2(x, y) |
-| `rotation` | float |
-| `scale` | Vector2(x, y) |
-| `transform` | Transform2D(6 floats) |
-| `visible` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `follow_viewport_enabled` | true or false |  |
+| `follow_viewport_scale` | float |  |
+| `layer` | integer -2147483648-2147483647 | warning |
+| `offset` | Vector2(x, y) |  |
+| `rotation` | float |  |
+| `scale` | Vector2(x, y) |  |
+| `transform` | Transform2D(6 floats) |  |
+| `visible` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

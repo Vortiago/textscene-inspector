@@ -29,20 +29,20 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin AudioStreamPlayer -->
-Strict parsing format-checks these `AudioStreamPlayer` properties, plus 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AudioStreamPlayer` properties, plus 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `autoplay` | true or false |
-| `bus` | quoted string or &"name" |
-| `max_polyphony` | integer >= 1 |
-| `mix_target` | enum 0-2 (STEREO/SURROUND/CENTER) |
-| `pitch_scale` | float > 0 |
-| `playback_type` | enum 0-2 (DEFAULT/STREAM/SAMPLE) |
-| `playing` | true or false |
-| `stream` | null, SubResource("id") or ExtResource("id") |
-| `stream_paused` | true or false |
-| `volume_db` | float |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `autoplay` | true or false |  |
+| `bus` | quoted string or &"name" |  |
+| `max_polyphony` | integer >= 1 | error |
+| `mix_target` | enum 0-2 (STEREO/SURROUND/CENTER) | warning |
+| `pitch_scale` | float > 0 | error |
+| `playback_type` | enum 0-2 (DEFAULT/STREAM/SAMPLE) | warning |
+| `playing` | true or false |  |
+| `stream` | null, SubResource("id") or ExtResource("id") |  |
+| `stream_paused` | true or false |  |
+| `volume_db` | float |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

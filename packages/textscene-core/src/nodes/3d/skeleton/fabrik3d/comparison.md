@@ -34,7 +34,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin FABRIK3D -->
-Strict parsing format-checks the inherited set (6 inherited from IterateIK3D, 1 inherited from IKModifier3D, 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node); `FABRIK3D` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (6 inherited from IterateIK3D, 1 inherited from IKModifier3D, 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node); `FABRIK3D` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

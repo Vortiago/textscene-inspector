@@ -77,6 +77,19 @@ describe('Label3D Linter', () => {
         ],
       },
       {
+        // set_horizontal_alignment (label_3d.cpp:678) opens with
+        // ERR_FAIL_INDEX((int)p_alignment, 4), so both ends are refused
+        // outright — errors, not the :156 hint's warning tier. Both endpoints
+        // are probed from both sides: 0 and 3 load, -1 and 4 do not.
+        prop: 'horizontal_alignment',
+        valid: [0, 3],
+        invalid: [
+          { value: 4, severity: 'error', contains: ['must be 0-3'] },
+          { value: -1, severity: 'error', contains: ['must be 0-3'] },
+          { value: 'invalid', contains: ['must be a number'] },
+        ],
+      },
+      {
         prop: 'modulate',
         valid: ['Color(1, 0.5, 0, 1)'],
         invalid: [{ value: 'RGB(255, 128, 0)', contains: ['Color('] }],

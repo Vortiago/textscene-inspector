@@ -28,15 +28,15 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin Skeleton3D -->
-Strict parsing format-checks these `Skeleton3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Skeleton3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `animate_physical_bones` | true or false |
-| `bones/*` | bone pose component (float, Vector3 or Quaternion) |
-| `modifier_callback_mode_process` | enum 0-2 (PHYSICS/IDLE/MANUAL) |
-| `motion_scale` | float >= 5e-324 |
-| `show_rest_only` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `animate_physical_bones` | true or false |  |
+| `bones/*` | bone pose component (float, Vector3 or Quaternion) | error |
+| `modifier_callback_mode_process` | enum 0-2 (PHYSICS/IDLE/MANUAL) | warning |
+| `motion_scale` | float >= 5e-324 | error |
+| `show_rest_only` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

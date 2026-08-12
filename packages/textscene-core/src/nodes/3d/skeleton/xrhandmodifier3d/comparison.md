@@ -31,12 +31,12 @@ never runs, and nothing in the scene moves.
 ## Linting
 
 <!-- lint:begin XRHandModifier3D -->
-Strict parsing format-checks these `XRHandModifier3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `XRHandModifier3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `bone_update` | enum 0-1 (FULL/ROTATION_ONLY) |
-| `hand_tracker` | quoted string or &"name" |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `bone_update` | enum 0-1 (FULL/ROTATION_ONLY) | error |
+| `hand_tracker` | quoted string or &"name" |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

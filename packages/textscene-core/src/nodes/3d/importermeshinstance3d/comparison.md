@@ -34,20 +34,20 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin ImporterMeshInstance3D -->
-Strict parsing format-checks these `ImporterMeshInstance3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `ImporterMeshInstance3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `cast_shadow` | enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY) |
-| `layer_mask` | 32-bit layer mask (layers 1-32) |
-| `mesh` | null, SubResource("id") or ExtResource("id") |
-| `skeleton_path` | NodePath("path/to/node") |
-| `skin` | null, SubResource("id") or ExtResource("id") |
-| `visibility_range_begin` | float >= 0 |
-| `visibility_range_begin_margin` | float >= 0 |
-| `visibility_range_end` | float >= 0 |
-| `visibility_range_end_margin` | float >= 0 |
-| `visibility_range_fade_mode` | enum 0-2 (DISABLED/SELF/DEPENDENCIES) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `cast_shadow` | enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY) | warning |
+| `layer_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `mesh` | null, SubResource("id") or ExtResource("id") |  |
+| `skeleton_path` | NodePath("path/to/node") |  |
+| `skin` | null, SubResource("id") or ExtResource("id") |  |
+| `visibility_range_begin` | float >= 0 | warning |
+| `visibility_range_begin_margin` | float >= 0 | warning |
+| `visibility_range_end` | float >= 0 | warning |
+| `visibility_range_end_margin` | float >= 0 | warning |
+| `visibility_range_fade_mode` | enum 0-2 (DISABLED/SELF/DEPENDENCIES) | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

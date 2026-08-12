@@ -35,21 +35,21 @@ this static capture.
 ## Linting
 
 <!-- lint:begin ScrollContainer -->
-Strict parsing format-checks these `ScrollContainer` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `ScrollContainer` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `draw_focus_border` | true or false |
-| `follow_focus` | true or false |
-| `horizontal_scroll_mode` | enum 0-4 (DISABLED/AUTO/SHOW_ALWAYS/SHOW_NEVER/RESERVE) |
-| `scroll_deadzone` | integer |
-| `scroll_hint_mode` | enum 0-3 (DISABLED/ALL/TOP_AND_LEFT/BOTTOM_AND_RIGHT) |
-| `scroll_horizontal` | integer >= 0 |
-| `scroll_horizontal_custom_step` | float -1-4096 |
-| `scroll_vertical` | integer >= 0 |
-| `scroll_vertical_custom_step` | float -1-4096 |
-| `tile_scroll_hint` | true or false |
-| `vertical_scroll_mode` | enum 0-4 (DISABLED/AUTO/SHOW_ALWAYS/SHOW_NEVER/RESERVE) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `draw_focus_border` | true or false |  |
+| `follow_focus` | true or false |  |
+| `horizontal_scroll_mode` | enum 0-4 (DISABLED/AUTO/SHOW_ALWAYS/SHOW_NEVER/RESERVE) | warning |
+| `scroll_deadzone` | integer |  |
+| `scroll_hint_mode` | enum 0-3 (DISABLED/ALL/TOP_AND_LEFT/BOTTOM_AND_RIGHT) | warning |
+| `scroll_horizontal` | integer >= 0 | error |
+| `scroll_horizontal_custom_step` | float -1-4096 | warning |
+| `scroll_vertical` | integer >= 0 | error |
+| `scroll_vertical_custom_step` | float -1-4096 | warning |
+| `tile_scroll_hint` | true or false |  |
+| `vertical_scroll_mode` | enum 0-4 (DISABLED/AUTO/SHOW_ALWAYS/SHOW_NEVER/RESERVE) | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -33,19 +33,19 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin NavigationObstacle3D -->
-Strict parsing format-checks these `NavigationObstacle3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `NavigationObstacle3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `affect_navigation_mesh` | true or false |
-| `avoidance_enabled` | true or false |
-| `avoidance_layers` | 32-bit layer mask (layers 1-32) |
-| `carve_navigation_mesh` | true or false |
-| `height` | float 0-100 |
-| `radius` | float 0-100 |
-| `use_3d_avoidance` | true or false |
-| `velocity` | Vector3(x, y, z) |
-| `vertices` | PackedVector3Array(x, y, z, …) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `affect_navigation_mesh` | true or false |  |
+| `avoidance_enabled` | true or false |  |
+| `avoidance_layers` | 32-bit layer mask (layers 1-32) | warning |
+| `carve_navigation_mesh` | true or false |  |
+| `height` | float 0-100 | error |
+| `radius` | float 0-100 | error |
+| `use_3d_avoidance` | true or false |  |
+| `velocity` | Vector3(x, y, z) |  |
+| `vertices` | PackedVector3Array(x, y, z, …) |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

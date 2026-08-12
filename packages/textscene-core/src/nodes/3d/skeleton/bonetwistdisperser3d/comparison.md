@@ -68,13 +68,13 @@ naming because a scene file cannot show them:
 ## Linting
 
 <!-- lint:begin BoneTwistDisperser3D -->
-Strict parsing format-checks these `BoneTwistDisperser3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `BoneTwistDisperser3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `mutable_bone_axes` | true or false |
-| `setting_count` | integer >= 0 |
-| `settings/*` | settings/<i>/<leaf> and settings/<i>/joints/<j>/<leaf> |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `mutable_bone_axes` | true or false |  |
+| `setting_count` | integer >= 0 | error |
+| `settings/*` | settings/<i>/<leaf> and settings/<i>/joints/<j>/<leaf> | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

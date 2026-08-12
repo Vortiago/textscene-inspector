@@ -33,17 +33,17 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin NavigationObstacle2D -->
-Strict parsing format-checks these `NavigationObstacle2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `NavigationObstacle2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `affect_navigation_mesh` | true or false |
-| `avoidance_enabled` | true or false |
-| `avoidance_layers` | 32-bit layer mask (layers 1-32) |
-| `carve_navigation_mesh` | true or false |
-| `radius` | float 0-500 |
-| `velocity` | Vector2(x, y) |
-| `vertices` | PackedVector2Array(x, y, …) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `affect_navigation_mesh` | true or false |  |
+| `avoidance_enabled` | true or false |  |
+| `avoidance_layers` | 32-bit layer mask (layers 1-32) | warning |
+| `carve_navigation_mesh` | true or false |  |
+| `radius` | float 0-500 | error |
+| `velocity` | Vector2(x, y) |  |
+| `vertices` | PackedVector2Array(x, y, …) |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

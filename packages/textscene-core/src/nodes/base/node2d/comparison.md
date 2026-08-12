@@ -33,22 +33,22 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin Node2D -->
-Strict parsing format-checks these `Node2D` properties, plus 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Node2D` properties, plus 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `global_position` | Vector2(x, y) |
-| `global_rotation` | float |
-| `global_rotation_degrees` | float |
-| `global_scale` | Vector2(x, y) |
-| `global_skew` | float |
-| `global_transform` | Transform2D(6 floats) |
-| `position` | Vector2(x, y) |
-| `rotation` | float |
-| `rotation_degrees` | float |
-| `scale` | Vector2(x, y), no (near-)zero component |
-| `skew` | float |
-| `transform` | Transform2D(6 floats) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `global_position` | Vector2(x, y) |  |
+| `global_rotation` | float |  |
+| `global_rotation_degrees` | float |  |
+| `global_scale` | Vector2(x, y) |  |
+| `global_skew` | float |  |
+| `global_transform` | Transform2D(6 floats) |  |
+| `position` | Vector2(x, y) |  |
+| `rotation` | float |  |
+| `rotation_degrees` | float |  |
+| `scale` | Vector2(x, y), no (near-)zero component | error |
+| `skew` | float |  |
+| `transform` | Transform2D(6 floats) |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

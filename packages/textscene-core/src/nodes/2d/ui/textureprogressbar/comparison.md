@@ -40,26 +40,26 @@ Not captured yet — nothing renders, so there is nothing to compare pixels agai
 ## Linting
 
 <!-- lint:begin TextureProgressBar -->
-Strict parsing format-checks these `TextureProgressBar` properties, plus 9 inherited from Range, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `TextureProgressBar` properties, plus 9 inherited from Range, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `fill_mode` | enum 0-8 (FILL_LEFT_TO_RIGHT/FILL_RIGHT_TO_LEFT/FILL_TOP_TO_BOTTOM/FILL_BOTTOM_TO_TOP/FILL_CLOCKWISE/FILL_COUNTER_CLOCKWISE/FILL_BILINEAR_LEFT_AND_RIGHT/FILL_BILINEAR_TOP_AND_BOTTOM/FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE) |
-| `nine_patch_stretch` | true or false |
-| `radial_center_offset` | Vector2(x, y) |
-| `radial_fill_degrees` | float 0-360 |
-| `radial_initial_angle` | float 0-360 |
-| `stretch_margin_bottom` | integer 0-16384 |
-| `stretch_margin_left` | integer 0-16384 |
-| `stretch_margin_right` | integer 0-16384 |
-| `stretch_margin_top` | integer 0-16384 |
-| `texture_over` | null, SubResource("id") or ExtResource("id") |
-| `texture_progress` | null, SubResource("id") or ExtResource("id") |
-| `texture_progress_offset` | Vector2(x, y) |
-| `texture_under` | null, SubResource("id") or ExtResource("id") |
-| `tint_over` | Color(r, g, b, a) |
-| `tint_progress` | Color(r, g, b, a) |
-| `tint_under` | Color(r, g, b, a) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `fill_mode` | enum 0-8 (FILL_LEFT_TO_RIGHT/FILL_RIGHT_TO_LEFT/FILL_TOP_TO_BOTTOM/FILL_BOTTOM_TO_TOP/FILL_CLOCKWISE/FILL_COUNTER_CLOCKWISE/FILL_BILINEAR_LEFT_AND_RIGHT/FILL_BILINEAR_TOP_AND_BOTTOM/FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE) | error |
+| `nine_patch_stretch` | true or false |  |
+| `radial_center_offset` | Vector2(x, y) |  |
+| `radial_fill_degrees` | float 0-360 | error |
+| `radial_initial_angle` | float 0-360 | error |
+| `stretch_margin_bottom` | integer 0-16384 | warning |
+| `stretch_margin_left` | integer 0-16384 | warning |
+| `stretch_margin_right` | integer 0-16384 | warning |
+| `stretch_margin_top` | integer 0-16384 | warning |
+| `texture_over` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_progress` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_progress_offset` | Vector2(x, y) |  |
+| `texture_under` | null, SubResource("id") or ExtResource("id") |  |
+| `tint_over` | Color(r, g, b, a) |  |
+| `tint_progress` | Color(r, g, b, a) |  |
+| `tint_under` | Color(r, g, b, a) |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

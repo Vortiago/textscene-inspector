@@ -28,15 +28,15 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin GPUParticlesCollisionSDF3D -->
-Strict parsing format-checks these `GPUParticlesCollisionSDF3D` properties, plus 1 inherited from GPUParticlesCollision3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `GPUParticlesCollisionSDF3D` properties, plus 1 inherited from GPUParticlesCollision3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `bake_mask` | 32-bit layer mask (layers 1-32) |
-| `resolution` | enum 0-5 (16/32/64/128/256/512) |
-| `size` | Vector3(x, y, z), each float >= 0.01 |
-| `texture` | null, SubResource("id") or ExtResource("id") |
-| `thickness` | float 0-2 |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `bake_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `resolution` | enum 0-5 (16/32/64/128/256/512) | warning |
+| `size` | Vector3(x, y, z), each float >= 0.01 | warning |
+| `texture` | null, SubResource("id") or ExtResource("id") |  |
+| `thickness` | float 0-2 | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

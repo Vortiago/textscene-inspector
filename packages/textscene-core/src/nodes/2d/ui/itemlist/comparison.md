@@ -54,29 +54,29 @@ anything ItemList declares.
 ## Linting
 
 <!-- lint:begin ItemList -->
-Strict parsing format-checks these `ItemList` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `ItemList` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `allow_reselect` | true or false |
-| `allow_rmb_select` | true or false |
-| `allow_search` | true or false |
-| `auto_height` | true or false |
-| `auto_width` | true or false |
-| `fixed_column_width` | integer >= 0 |
-| `fixed_icon_size` | Vector2i(x, y) |
-| `icon_mode` | enum 0-1 (ICON_MODE_TOP/ICON_MODE_LEFT) |
-| `icon_scale` | float |
-| `item_#/*` | item_<index>/<leaf> (see item_list.cpp, PropertyListHelper-backed) |
-| `item_count` | integer >= 0 |
-| `max_columns` | integer >= 0 |
-| `max_text_lines` | integer >= 1 |
-| `same_column_width` | true or false |
-| `scroll_hint_mode` | enum 0-3 (SCROLL_HINT_MODE_DISABLED/SCROLL_HINT_MODE_BOTH/SCROLL_HINT_MODE_TOP/SCROLL_HINT_MODE_BOTTOM) |
-| `select_mode` | enum 0-2 (SELECT_SINGLE/SELECT_MULTI/SELECT_TOGGLE) |
-| `text_overrun_behavior` | enum 0-6 (OVERRUN_NO_TRIMMING/OVERRUN_TRIM_CHAR/OVERRUN_TRIM_WORD/OVERRUN_TRIM_ELLIPSIS/OVERRUN_TRIM_WORD_ELLIPSIS/OVERRUN_TRIM_ELLIPSIS_FORCE/OVERRUN_TRIM_WORD_ELLIPSIS_FORCE) |
-| `tile_scroll_hint` | true or false |
-| `wraparound_items` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `allow_reselect` | true or false |  |
+| `allow_rmb_select` | true or false |  |
+| `allow_search` | true or false |  |
+| `auto_height` | true or false |  |
+| `auto_width` | true or false |  |
+| `fixed_column_width` | integer >= 0 | error |
+| `fixed_icon_size` | Vector2i(x, y) |  |
+| `icon_mode` | enum 0-1 (ICON_MODE_TOP/ICON_MODE_LEFT) | error |
+| `icon_scale` | float | error |
+| `item_#/*` | item_<index>/<leaf> (see item_list.cpp, PropertyListHelper-backed) | error |
+| `item_count` | integer >= 0 | error |
+| `max_columns` | integer >= 0 | error |
+| `max_text_lines` | integer >= 1 | error |
+| `same_column_width` | true or false |  |
+| `scroll_hint_mode` | enum 0-3 (SCROLL_HINT_MODE_DISABLED/SCROLL_HINT_MODE_BOTH/SCROLL_HINT_MODE_TOP/SCROLL_HINT_MODE_BOTTOM) | warning |
+| `select_mode` | enum 0-2 (SELECT_SINGLE/SELECT_MULTI/SELECT_TOGGLE) | warning |
+| `text_overrun_behavior` | enum 0-6 (OVERRUN_NO_TRIMMING/OVERRUN_TRIM_CHAR/OVERRUN_TRIM_WORD/OVERRUN_TRIM_ELLIPSIS/OVERRUN_TRIM_WORD_ELLIPSIS/OVERRUN_TRIM_ELLIPSIS_FORCE/OVERRUN_TRIM_WORD_ELLIPSIS_FORCE) | warning |
+| `tile_scroll_hint` | true or false |  |
+| `wraparound_items` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

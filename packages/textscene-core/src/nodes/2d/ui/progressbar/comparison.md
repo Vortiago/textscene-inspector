@@ -27,14 +27,14 @@ Not captured yet — nothing renders, so there is nothing to compare pixels agai
 ## Linting
 
 <!-- lint:begin ProgressBar -->
-Strict parsing format-checks these `ProgressBar` properties, plus 9 inherited from Range, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `ProgressBar` properties, plus 9 inherited from Range, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `editor_preview_indeterminate` | true or false |
-| `fill_mode` | enum 0-3 (FILL_BEGIN_TO_END/FILL_END_TO_BEGIN/FILL_TOP_TO_BOTTOM/FILL_BOTTOM_TO_TOP) |
-| `indeterminate` | true or false |
-| `show_percentage` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `editor_preview_indeterminate` | true or false |  |
+| `fill_mode` | enum 0-3 (FILL_BEGIN_TO_END/FILL_END_TO_BEGIN/FILL_TOP_TO_BOTTOM/FILL_BOTTOM_TO_TOP) | error |
+| `indeterminate` | true or false |  |
+| `show_percentage` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

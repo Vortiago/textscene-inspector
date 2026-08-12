@@ -46,15 +46,15 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin OpenXRCompositionLayerEquirect -->
-Strict parsing format-checks these `OpenXRCompositionLayerEquirect` properties, plus 18 inherited from OpenXRCompositionLayer, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `OpenXRCompositionLayerEquirect` properties, plus 18 inherited from OpenXRCompositionLayer, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `central_horizontal_angle` | float > 0 |
-| `fallback_segments` | integer >= 1 |
-| `lower_vertical_angle` | float 5e-324-1.5708963267948965 |
-| `radius` | float > 0 |
-| `upper_vertical_angle` | float 5e-324-1.5708963267948965 |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `central_horizontal_angle` | float > 0 | error |
+| `fallback_segments` | integer >= 1 | error |
+| `lower_vertical_angle` | float 5e-324-1.5708963267948965 | error |
+| `radius` | float > 0 | error |
+| `upper_vertical_angle` | float 5e-324-1.5708963267948965 | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -152,10 +152,14 @@ validatorRegistry.registerAll('Polygon2D', {
   antialiased: v.boolean('antialiased'),
   invert_enabled: v.boolean('invert_enabled'),
   invert_border: v.float('invert_border'),
-  // polygon_2d.cpp:722 hints "0,1000" hard both ends; set_internal_vertex_count
-  // (polygon_2d.cpp:418-420) assigns unconditionally, no ERR_FAIL/clamp — a
-  // warning, not an error (ADR-0032).
-  internal_vertex_count: v.int('internal_vertex_count', { min: 0, hinted: 'polygon_2d.cpp:722' }),
+  // polygon_2d.cpp:722 hints "0,1000" hard both ends (no or_greater);
+  // set_internal_vertex_count (polygon_2d.cpp:418-420) assigns unconditionally,
+  // no ERR_FAIL/clamp — a warning, not an error (ADR-0032).
+  internal_vertex_count: v.int('internal_vertex_count', {
+    min: 0,
+    max: 1000,
+    hinted: 'polygon_2d.cpp:722',
+  }),
   bones: bonesValidator(),
   // polygon_2d.cpp:710, NODE_PATH + NODE_PATH_VALID_TYPES "Skeleton2D".
   // set_skeleton (polygon_2d.cpp:597-602) has an early equality return, then a

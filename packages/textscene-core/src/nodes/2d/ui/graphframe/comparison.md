@@ -32,16 +32,16 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin GraphFrame -->
-Strict parsing format-checks these `GraphFrame` properties, plus 6 inherited from GraphElement, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `GraphFrame` properties, plus 6 inherited from GraphElement, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `autoshrink_enabled` | true or false |
-| `autoshrink_margin` | integer 0-128 |
-| `drag_margin` | integer 0-128 |
-| `tint_color` | Color(r, g, b, a) |
-| `tint_color_enabled` | true or false |
-| `title` | quoted string |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `autoshrink_enabled` | true or false |  |
+| `autoshrink_margin` | integer 0-128 | warning |
+| `drag_margin` | integer 0-128 | warning |
+| `tint_color` | Color(r, g, b, a) |  |
+| `tint_color_enabled` | true or false |  |
+| `title` | quoted string |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

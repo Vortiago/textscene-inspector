@@ -30,16 +30,16 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin PinJoint2D -->
-Strict parsing format-checks these `PinJoint2D` properties, plus 4 inherited from Joint2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `PinJoint2D` properties, plus 4 inherited from Joint2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `angular_limit_enabled` | true or false |
-| `angular_limit_lower` | radians, -180° to 180° |
-| `angular_limit_upper` | radians, -180° to 180° |
-| `motor_enabled` | true or false |
-| `motor_target_velocity` | float |
-| `softness` | float 0-16 |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `angular_limit_enabled` | true or false |  |
+| `angular_limit_lower` | radians, -180° to 180° | warning |
+| `angular_limit_upper` | radians, -180° to 180° | warning |
+| `motor_enabled` | true or false |  |
+| `motor_target_velocity` | float |  |
+| `softness` | float 0-16 | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -33,13 +33,13 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin RetargetModifier3D -->
-Strict parsing format-checks these `RetargetModifier3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `RetargetModifier3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `enable` | bit mask of TRANSFORM_FLAG_POSITION (1) | TRANSFORM_FLAG_ROTATION (2) | TRANSFORM_FLAG_SCALE (4) |
-| `profile` | null, SubResource("id") or ExtResource("id") |
-| `use_global_pose` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `enable` | bit mask of TRANSFORM_FLAG_POSITION (1) | TRANSFORM_FLAG_ROTATION (2) | TRANSFORM_FLAG_SCALE (4) | warning |
+| `profile` | null, SubResource("id") or ExtResource("id") |  |
+| `use_global_pose` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

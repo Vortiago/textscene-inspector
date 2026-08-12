@@ -33,24 +33,24 @@ pixel, but the colours are dimmer and shifted. Godot draws pure white
 ## Linting
 
 <!-- lint:begin Line2D -->
-Strict parsing format-checks these `Line2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Line2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `antialiased` | true or false |
-| `begin_cap_mode` | enum 0-2 (NONE/BOX/ROUND) |
-| `closed` | true or false |
-| `default_color` | Color(r, g, b, a) |
-| `end_cap_mode` | enum 0-2 (NONE/BOX/ROUND) |
-| `gradient` | null, SubResource("id") or ExtResource("id") |
-| `joint_mode` | enum 0-2 (SHARP/BEVEL/ROUND) |
-| `points` | PackedVector2Array(x, y, …) |
-| `round_precision` | integer 1-32 |
-| `sharp_limit` | float >= 0 |
-| `texture` | null, SubResource("id") or ExtResource("id") |
-| `texture_mode` | enum 0-2 (NONE/TILE/STRETCH) |
-| `width` | float |
-| `width_curve` | null, SubResource("id") or ExtResource("id") |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `antialiased` | true or false |  |
+| `begin_cap_mode` | enum 0-2 (NONE/BOX/ROUND) | warning |
+| `closed` | true or false |  |
+| `default_color` | Color(r, g, b, a) |  |
+| `end_cap_mode` | enum 0-2 (NONE/BOX/ROUND) | warning |
+| `gradient` | null, SubResource("id") or ExtResource("id") |  |
+| `joint_mode` | enum 0-2 (SHARP/BEVEL/ROUND) | warning |
+| `points` | PackedVector2Array(x, y, …) |  |
+| `round_precision` | integer 1-32 | error |
+| `sharp_limit` | float >= 0 | error |
+| `texture` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_mode` | enum 0-2 (NONE/TILE/STRETCH) | warning |
+| `width` | float |  |
+| `width_curve` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -31,14 +31,14 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin VoxelGI -->
-Strict parsing format-checks these `VoxelGI` properties, plus 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `VoxelGI` properties, plus 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `camera_attributes` | null, SubResource("id") or ExtResource("id") |
-| `data` | null, SubResource("id") or ExtResource("id") |
-| `size` | Vector3(x, y, z), each float >= 1 |
-| `subdiv` | enum 0-3 (SUBDIV_64/SUBDIV_128/SUBDIV_256/SUBDIV_512) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `camera_attributes` | null, SubResource("id") or ExtResource("id") |  |
+| `data` | null, SubResource("id") or ExtResource("id") |  |
+| `size` | Vector3(x, y, z), each float >= 1 | error |
+| `subdiv` | enum 0-3 (SUBDIV_64/SUBDIV_128/SUBDIV_256/SUBDIV_512) | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

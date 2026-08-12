@@ -28,14 +28,14 @@ Not captured yet — nothing renders, so there is nothing to compare pixels agai
 ## Linting
 
 <!-- lint:begin GraphNode -->
-Strict parsing format-checks these `GraphNode` properties, plus 6 inherited from GraphElement, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `GraphNode` properties, plus 6 inherited from GraphElement, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `ignore_invalid_connection_type` | true or false |
-| `slot/*` | slot |
-| `slots_focus_mode` | enum 1-3 (Click/All/Accessibility) |
-| `title` | quoted string |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `ignore_invalid_connection_type` | true or false |  |
+| `slot/*` | slot | error |
+| `slots_focus_mode` | enum 1-3 (Click/All/Accessibility) | error |
+| `title` | quoted string |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

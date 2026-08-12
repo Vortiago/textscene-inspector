@@ -27,14 +27,14 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin FlowContainer -->
-Strict parsing format-checks these `FlowContainer` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `FlowContainer` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `alignment` | enum 0-2 (ALIGNMENT_BEGIN/ALIGNMENT_CENTER/ALIGNMENT_END) |
-| `last_wrap_alignment` | enum 0-3 (LAST_WRAP_ALIGNMENT_INHERIT/LAST_WRAP_ALIGNMENT_BEGIN/LAST_WRAP_ALIGNMENT_CENTER/LAST_WRAP_ALIGNMENT_END) |
-| `reverse_fill` | true or false |
-| `vertical` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `alignment` | enum 0-2 (ALIGNMENT_BEGIN/ALIGNMENT_CENTER/ALIGNMENT_END) | warning |
+| `last_wrap_alignment` | enum 0-3 (LAST_WRAP_ALIGNMENT_INHERIT/LAST_WRAP_ALIGNMENT_BEGIN/LAST_WRAP_ALIGNMENT_CENTER/LAST_WRAP_ALIGNMENT_END) | warning |
+| `reverse_fill` | true or false |  |
+| `vertical` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

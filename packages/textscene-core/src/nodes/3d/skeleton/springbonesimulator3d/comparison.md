@@ -59,14 +59,14 @@ None visible in this fixture: the node draws nothing in either engine.
 ## Linting
 
 <!-- lint:begin SpringBoneSimulator3D -->
-Strict parsing format-checks these `SpringBoneSimulator3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `SpringBoneSimulator3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `external_force` | Vector3(x, y, z) |
-| `mutable_bone_axes` | true or false |
-| `setting_count` | integer >= 0 |
-| `settings/*` | SpringBoneSimulator3D settings/<i>/ bone chain setup |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `external_force` | Vector3(x, y, z) |  |
+| `mutable_bone_axes` | true or false |  |
+| `setting_count` | integer >= 0 | error |
+| `settings/*` | SpringBoneSimulator3D settings/<i>/ bone chain setup | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

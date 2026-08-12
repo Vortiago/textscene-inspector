@@ -36,20 +36,20 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin VideoStreamPlayer -->
-Strict parsing format-checks these `VideoStreamPlayer` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `VideoStreamPlayer` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `audio_track` | integer 0-128 |
-| `autoplay` | true or false |
-| `buffering_msec` | integer 10-1000 |
-| `bus` | quoted string or &"name" |
-| `expand` | true or false |
-| `loop` | true or false |
-| `paused` | true or false |
-| `speed_scale` | float >= 0 |
-| `stream` | null, SubResource("id") or ExtResource("id") |
-| `volume_db` | float -80-24 |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `audio_track` | integer 0-128 | warning |
+| `autoplay` | true or false |  |
+| `buffering_msec` | integer 10-1000 | warning |
+| `bus` | quoted string or &"name" |  |
+| `expand` | true or false |  |
+| `loop` | true or false |  |
+| `paused` | true or false |  |
+| `speed_scale` | float >= 0 | error |
+| `stream` | null, SubResource("id") or ExtResource("id") |  |
+| `volume_db` | float -80-24 | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

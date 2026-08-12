@@ -31,17 +31,17 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin NavigationLink2D -->
-Strict parsing format-checks these `NavigationLink2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `NavigationLink2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `bidirectional` | true or false |
-| `enabled` | true or false |
-| `end_position` | Vector2(x, y) |
-| `enter_cost` | float >= 0 |
-| `navigation_layers` | 32-bit layer mask (layers 1-32) |
-| `start_position` | Vector2(x, y) |
-| `travel_cost` | float >= 0 |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `bidirectional` | true or false |  |
+| `enabled` | true or false |  |
+| `end_position` | Vector2(x, y) |  |
+| `enter_cost` | float >= 0 | error |
+| `navigation_layers` | 32-bit layer mask (layers 1-32) | warning |
+| `start_position` | Vector2(x, y) |  |
+| `travel_cost` | float >= 0 | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

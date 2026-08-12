@@ -45,13 +45,13 @@ default-value overrides of Light3D members, so they stay Light3D's to validate.
 ## Linting
 
 <!-- lint:begin AreaLight3D -->
-Strict parsing format-checks these `AreaLight3D` properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AreaLight3D` properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `area_normalize_energy` | true or false |
-| `area_range` | float > 0 |
-| `area_size` | Vector2(x, y) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `area_normalize_energy` | true or false |  |
+| `area_range` | float > 0 |  |
+| `area_size` | Vector2(x, y) |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

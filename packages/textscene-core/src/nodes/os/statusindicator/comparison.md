@@ -28,14 +28,14 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin StatusIndicator -->
-Strict parsing format-checks these `StatusIndicator` properties, plus 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `StatusIndicator` properties, plus 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `icon` | null, SubResource("id") or ExtResource("id") |
-| `menu` | NodePath("path/to/node") |
-| `tooltip` | quoted string |
-| `visible` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `icon` | null, SubResource("id") or ExtResource("id") |  |
+| `menu` | NodePath("path/to/node") |  |
+| `tooltip` | quoted string |  |
+| `visible` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

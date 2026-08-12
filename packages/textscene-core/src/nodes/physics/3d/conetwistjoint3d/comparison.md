@@ -29,15 +29,15 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin ConeTwistJoint3D -->
-Strict parsing format-checks these `ConeTwistJoint3D` properties, plus 4 inherited from Joint3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `ConeTwistJoint3D` properties, plus 4 inherited from Joint3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `bias` | float 0.01-16 |
-| `relaxation` | float 0.01-16 |
-| `softness` | float 0.01-16 |
-| `swing_span` | radians, -180° to 180° |
-| `twist_span` | radians, -40000° to 40000° |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `bias` | float 0.01-16 | warning |
+| `relaxation` | float 0.01-16 | warning |
+| `softness` | float 0.01-16 | warning |
+| `swing_span` | radians, -180° to 180° | warning |
+| `twist_span` | radians, -40000° to 40000° | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

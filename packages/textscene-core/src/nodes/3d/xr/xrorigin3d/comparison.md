@@ -34,12 +34,12 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin XROrigin3D -->
-Strict parsing format-checks these `XROrigin3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `XROrigin3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `current` | true or false |
-| `world_scale` | float 0.01-1000 |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `current` | true or false |  |
+| `world_scale` | float 0.01-1000 | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -41,17 +41,17 @@ See "Why 2D colours read paler in our captures" in docs/comparison/README.md.
 ## Linting
 
 <!-- lint:begin TileMap -->
-Strict parsing format-checks these `TileMap` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `TileMap` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `collision_animatable` | true or false |
-| `collision_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) |
-| `format` | integer |
-| `layer_#/*` | layer |
-| `navigation_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) |
-| `rendering_quadrant_size` | integer 1-128 |
-| `tile_set` | null, SubResource("id") or ExtResource("id") |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `collision_animatable` | true or false |  |
+| `collision_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) | warning |
+| `format` | integer |  |
+| `layer_#/*` | layer | error |
+| `navigation_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) | warning |
+| `rendering_quadrant_size` | integer 1-128 | error |
+| `tile_set` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

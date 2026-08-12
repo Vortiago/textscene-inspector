@@ -47,7 +47,7 @@ track and a 32px grabber on both sides. See the HSlider sheet.
 ## Linting
 
 <!-- lint:begin VSlider -->
-Strict parsing format-checks the inherited set (5 inherited from Slider, 9 inherited from Range, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `VSlider` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (5 inherited from Slider, 9 inherited from Range, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `VSlider` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

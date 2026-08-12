@@ -30,12 +30,12 @@ None. The node has no runtime visual in Godot, so there is nothing to diverge on
 ## Linting
 
 <!-- lint:begin VisibleOnScreenEnabler3D -->
-Strict parsing format-checks these `VisibleOnScreenEnabler3D` properties, plus 1 inherited from VisibleOnScreenNotifier3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `VisibleOnScreenEnabler3D` properties, plus 1 inherited from VisibleOnScreenNotifier3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `enable_mode` | enum 0-2 (ENABLE_MODE_INHERIT/ENABLE_MODE_ALWAYS/ENABLE_MODE_WHEN_PAUSED) |
-| `enable_node_path` | NodePath("path/to/node") |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `enable_mode` | enum 0-2 (ENABLE_MODE_INHERIT/ENABLE_MODE_ALWAYS/ENABLE_MODE_WHEN_PAUSED) | warning |
+| `enable_node_path` | NodePath("path/to/node") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

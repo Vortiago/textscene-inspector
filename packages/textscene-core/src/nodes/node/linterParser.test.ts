@@ -38,12 +38,27 @@ describe('Node strict validators', () => {
       expect(check('process_mode', '4')).toBeNull();
     });
 
-    it('rejects 5, one past the enum', () => {
-      expect(check('process_mode', '5')).not.toBeNull();
+    it('warns one past each end: -1 and 5', () => {
+      // node.cpp:4056 hints five labels and set_process_mode (node.cpp:663-689)
+      // carries no ERR_FAIL_INDEX, so the hint is the only bound — warning tier.
+      expect(check('process_mode', '5')?.severity).toBe('warning');
+      expect(check('process_mode', '-1')?.severity).toBe('warning');
+    });
+  });
+
+  describe('process_thread_group', () => {
+    it('accepts 0 (INHERIT) and 2 (SUB_THREAD), the ends of the three-label hint', () => {
+      // ProcessThreadGroup is densely 0-2 (node.h:83-87, BIND_ENUM_CONSTANT
+      // node.cpp:4009-4011); node.cpp:4061 hints "Inherit,Main Thread,Sub Thread".
+      expect(check('process_thread_group', '0')).toBeNull();
+      expect(check('process_thread_group', '2')).toBeNull();
     });
 
-    it('rejects a negative value', () => {
-      expect(check('process_mode', '-1')).not.toBeNull();
+    it('warns one past each end: -1 and 3', () => {
+      // set_process_thread_group (node.cpp:1194) bare-assigns after a main-thread
+      // guard, so nothing but the inspector hint bounds it.
+      expect(check('process_thread_group', '-1')?.severity).toBe('warning');
+      expect(check('process_thread_group', '3')?.severity).toBe('warning');
     });
   });
 
@@ -66,22 +81,31 @@ describe('Node strict validators', () => {
   });
 
   describe('physics_interpolation_mode', () => {
-    it('accepts 2 (OFF), the last constant', () => {
+    it('accepts 0 (INHERIT) and 2 (OFF), the ends of the three-label hint', () => {
+      expect(check('physics_interpolation_mode', '0')).toBeNull();
       expect(check('physics_interpolation_mode', '2')).toBeNull();
     });
 
-    it('rejects 3', () => {
-      expect(check('physics_interpolation_mode', '3')).not.toBeNull();
+    it('warns one past each end: -1 and 3', () => {
+      // node.cpp:4066 hints "Inherit,On,Off"; set_physics_interpolation_mode
+      // (node.cpp:935-949) bare-assigns.
+      expect(check('physics_interpolation_mode', '-1')?.severity).toBe('warning');
+      expect(check('physics_interpolation_mode', '3')?.severity).toBe('warning');
     });
   });
 
   describe('auto_translate_mode', () => {
-    it('accepts 1 (ALWAYS), which the corpus carries', () => {
+    it('accepts 0 (INHERIT), 1 (ALWAYS, which the corpus carries) and 2 (DISABLED)', () => {
+      expect(check('auto_translate_mode', '0')).toBeNull();
       expect(check('auto_translate_mode', '1')).toBeNull();
+      expect(check('auto_translate_mode', '2')).toBeNull();
     });
 
-    it('rejects 3', () => {
-      expect(check('auto_translate_mode', '3')).not.toBeNull();
+    it('warns one past each end: -1 and 3', () => {
+      // node.cpp:4069 hints "Inherit,Always,Disabled"; set_auto_translate_mode
+      // (node.cpp:1331-1340) bare-assigns apart from a root-node ERR_FAIL_MSG.
+      expect(check('auto_translate_mode', '-1')?.severity).toBe('warning');
+      expect(check('auto_translate_mode', '3')?.severity).toBe('warning');
     });
   });
 

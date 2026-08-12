@@ -38,13 +38,13 @@ distance-falloff divergence does not surface at this range.
 ## Linting
 
 <!-- lint:begin OmniLight3D -->
-Strict parsing format-checks these `OmniLight3D` properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `OmniLight3D` properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `omni_attenuation` | float |
-| `omni_range` | float |
-| `omni_shadow_mode` | enum 0-1 (DUAL_PARABOLOID/CUBE) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `omni_attenuation` | float |  |
+| `omni_range` | float |  |
+| `omni_shadow_mode` | enum 0-1 (DUAL_PARABOLOID/CUBE) | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

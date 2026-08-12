@@ -30,12 +30,12 @@ drive live per-frame tracking data the previewer never has.
 ## Linting
 
 <!-- lint:begin XRFaceModifier3D -->
-Strict parsing format-checks these `XRFaceModifier3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `XRFaceModifier3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `face_tracker` | quoted string or &"name" |
-| `target` | NodePath("path/to/node") |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `face_tracker` | quoted string or &"name" |  |
+| `target` | NodePath("path/to/node") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

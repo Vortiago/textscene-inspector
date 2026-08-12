@@ -32,19 +32,19 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin NinePatchRect -->
-Strict parsing format-checks these `NinePatchRect` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `NinePatchRect` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `axis_stretch_horizontal` | enum 0-2 (AXIS_STRETCH_MODE_STRETCH/AXIS_STRETCH_MODE_TILE/AXIS_STRETCH_MODE_TILE_FIT) |
-| `axis_stretch_vertical` | enum 0-2 (AXIS_STRETCH_MODE_STRETCH/AXIS_STRETCH_MODE_TILE/AXIS_STRETCH_MODE_TILE_FIT) |
-| `draw_center` | true or false |
-| `patch_margin_bottom` | integer 0-16384 |
-| `patch_margin_left` | integer 0-16384 |
-| `patch_margin_right` | integer 0-16384 |
-| `patch_margin_top` | integer 0-16384 |
-| `region_rect` | Rect2(x, y, w, h) |
-| `texture` | null, SubResource("id") or ExtResource("id") |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `axis_stretch_horizontal` | enum 0-2 (AXIS_STRETCH_MODE_STRETCH/AXIS_STRETCH_MODE_TILE/AXIS_STRETCH_MODE_TILE_FIT) | warning |
+| `axis_stretch_vertical` | enum 0-2 (AXIS_STRETCH_MODE_STRETCH/AXIS_STRETCH_MODE_TILE/AXIS_STRETCH_MODE_TILE_FIT) | warning |
+| `draw_center` | true or false |  |
+| `patch_margin_bottom` | integer 0-16384 | warning |
+| `patch_margin_left` | integer 0-16384 | warning |
+| `patch_margin_right` | integer 0-16384 | warning |
+| `patch_margin_top` | integer 0-16384 | warning |
+| `region_rect` | Rect2(x, y, w, h) |  |
+| `texture` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

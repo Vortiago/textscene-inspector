@@ -27,7 +27,7 @@ This previewer's Cameras panel matches the node type `Camera3D` exactly (`r3f/co
 ## Linting
 
 <!-- lint:begin XRCamera3D -->
-Strict parsing format-checks the inherited set (15 inherited from Camera3D, 17 inherited from Node3D, 10 inherited from Node); `XRCamera3D` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (15 inherited from Camera3D, 17 inherited from Node3D, 10 inherited from Node); `XRCamera3D` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

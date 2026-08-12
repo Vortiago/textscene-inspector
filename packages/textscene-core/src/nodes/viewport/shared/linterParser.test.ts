@@ -98,9 +98,13 @@ describe('Viewport shared validators', () => {
   });
 
   it.each(['SubViewport', 'Window'])('bounds msaa_3d to the four Godot modes on %s', (nodeType) => {
+    // ERR_FAIL_INDEX(p_msaa, MSAA_MAX) at viewport.cpp:3763, MSAA_MAX = 4
+    // (viewport.h:119-126); the macro refuses < 0 too. Same guard and enum as
+    // msaa_2d below.
     const validator = validatorRegistry.findValidator(nodeType, 'msaa_3d')!;
     for (const value of ['0', '1', '2', '3']) expect(validator('msaa_3d', value, 1)).toBeNull();
-    expect(validator('msaa_3d', '4', 1)).not.toBeNull();
+    expect(validator('msaa_3d', '4', 1)?.severity).toBe('error');
+    expect(validator('msaa_3d', '-1', 1)?.severity).toBe('error');
   });
 
   it('leaves SubViewport-only members off the shared set', () => {
@@ -132,6 +136,17 @@ describe('Viewport shared validators', () => {
       const validator = find('msaa_2d');
       for (const value of ['0', '1', '2', '3']) expect(validator('msaa_2d', value, 1)).toBeNull();
       const rejected = validator('msaa_2d', '4', 1);
+      expect(rejected).not.toBeNull();
+      expect(rejected!.severity).toBe('error');
+    });
+
+    it('accepts canvas_item_default_texture_filter 3 (Nearest Mipmap); rejects 4 and -1, both outside DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX (viewport.cpp:3968)', () => {
+      // MAX = 4 (viewport.h:188-194), and ERR_FAIL_INDEX refuses < 0 as well.
+      const validator = find('canvas_item_default_texture_filter');
+      for (const value of ['0', '1', '2', '3']) {
+        expect(validator('canvas_item_default_texture_filter', value, 1)).toBeNull();
+      }
+      const rejected = validator('canvas_item_default_texture_filter', '4', 1);
       expect(rejected).not.toBeNull();
       expect(rejected!.severity).toBe('error');
     });
@@ -182,6 +197,23 @@ describe('Viewport shared validators', () => {
         expect(rejected!.severity).toBe('error');
       }
     );
+
+    it.each([
+      'msaa_2d',
+      'canvas_item_default_texture_filter',
+      'canvas_item_default_texture_repeat',
+      'screen_space_aa',
+      'sdf_oversize',
+      'sdf_scale',
+      'positional_shadow_atlas_quad_0',
+      'positional_shadow_atlas_quad_1',
+      'positional_shadow_atlas_quad_2',
+      'positional_shadow_atlas_quad_3',
+    ])('errors at -1 on %s: ERR_FAIL_INDEX refuses `m_index < 0` as well (error_macros.h:138)', (key) => {
+      const rejected = find(key)(key, '-1', 1);
+      expect(rejected).not.toBeNull();
+      expect(rejected!.severity).toBe('error');
+    });
   });
 
   describe('enums that bare-assign, no ERR_FAIL_INDEX (warning tier)', () => {
@@ -226,6 +258,18 @@ describe('Viewport shared validators', () => {
       const validator = find('vrs_update_mode');
       for (const value of ['0', '1', '2']) expect(validator('vrs_update_mode', value, 1)).toBeNull();
       const warned = validator('vrs_update_mode', '3', 1);
+      expect(warned).not.toBeNull();
+      expect(warned!.severity).toBe('warning');
+    });
+
+    it.each([
+      'anisotropic_filtering_level',
+      'debug_draw',
+      'scaling_3d_mode',
+      'vrs_mode',
+      'vrs_update_mode',
+    ])('warns at -1 on %s: a label-list hint starts at index 0, and no setter refuses it', (key) => {
+      const warned = find(key)(key, '-1', 1);
       expect(warned).not.toBeNull();
       expect(warned!.severity).toBe('warning');
     });

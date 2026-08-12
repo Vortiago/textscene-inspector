@@ -40,25 +40,25 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin ReflectionProbe -->
-Strict parsing format-checks these `ReflectionProbe` properties, plus 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `ReflectionProbe` properties, plus 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `ambient_color` | Color(r, g, b, a) |
-| `ambient_color_energy` | float 0-16 |
-| `ambient_mode` | enum 0-2 (AMBIENT_DISABLED/AMBIENT_ENVIRONMENT/AMBIENT_COLOR) |
-| `blend_distance` | float >= 0 |
-| `box_projection` | true or false |
-| `cull_mask` | 32-bit layer mask (layers 1-32) |
-| `enable_shadows` | true or false |
-| `intensity` | float 0-1 |
-| `interior` | true or false |
-| `max_distance` | float 0-262144 |
-| `mesh_lod_threshold` | float 0-1024 |
-| `origin_offset` | Vector3(x, y, z) |
-| `reflection_mask` | 32-bit layer mask (layers 1-32) |
-| `size` | Vector3(x, y, z) |
-| `update_mode` | enum 0-1 (UPDATE_ONCE/UPDATE_ALWAYS) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `ambient_color` | Color(r, g, b, a) |  |
+| `ambient_color_energy` | float 0-16 | warning |
+| `ambient_mode` | enum 0-2 (AMBIENT_DISABLED/AMBIENT_ENVIRONMENT/AMBIENT_COLOR) | warning |
+| `blend_distance` | float >= 0 | warning |
+| `box_projection` | true or false |  |
+| `cull_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `enable_shadows` | true or false |  |
+| `intensity` | float 0-1 | warning |
+| `interior` | true or false |  |
+| `max_distance` | float 0-262144 | error |
+| `mesh_lod_threshold` | float 0-1024 | warning |
+| `origin_offset` | Vector3(x, y, z) |  |
+| `reflection_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `size` | Vector3(x, y, z) |  |
+| `update_mode` | enum 0-1 (UPDATE_ONCE/UPDATE_ALWAYS) | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

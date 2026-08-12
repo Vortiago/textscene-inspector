@@ -27,13 +27,13 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin MultiplayerSpawner -->
-Strict parsing format-checks these `MultiplayerSpawner` properties, plus 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `MultiplayerSpawner` properties, plus 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `_spawnable_scenes` | PackedStringArray("res://a.tscn", …) |
-| `spawn_limit` | integer >= 0 |
-| `spawn_path` | NodePath("path/to/node") |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `_spawnable_scenes` | PackedStringArray("res://a.tscn", …) |  |
+| `spawn_limit` | integer >= 0 | warning |
+| `spawn_path` | NodePath("path/to/node") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -36,21 +36,21 @@ Position, scale, and the played frames match at each moment of the clip.
 ## Linting
 
 <!-- lint:begin AnimatedSprite2D -->
-Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `animation` | any value (no format constraint) |
-| `autoplay` | any value (no format constraint) |
-| `centered` | true or false |
-| `flip_h` | true or false |
-| `flip_v` | true or false |
-| `frame` | integer >= 0 |
-| `frame_progress` | float |
-| `offset` | Vector2(x, y) |
-| `playing` | true or false |
-| `speed_scale` | float |
-| `sprite_frames` | null, SubResource("id") or ExtResource("id") |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `animation` | any value (no format constraint) |  |
+| `autoplay` | any value (no format constraint) |  |
+| `centered` | true or false |  |
+| `flip_h` | true or false |  |
+| `flip_v` | true or false |  |
+| `frame` | integer >= 0 | error |
+| `frame_progress` | float |  |
+| `offset` | Vector2(x, y) |  |
+| `playing` | true or false |  |
+| `speed_scale` | float |  |
+| `sprite_frames` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

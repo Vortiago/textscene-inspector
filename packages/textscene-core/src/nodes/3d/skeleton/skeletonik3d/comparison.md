@@ -40,19 +40,19 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin SkeletonIK3D -->
-Strict parsing format-checks these `SkeletonIK3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `SkeletonIK3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `magnet` | Vector3(x, y, z) |
-| `max_iterations` | integer |
-| `min_distance` | float |
-| `override_tip_basis` | true or false |
-| `root_bone` | quoted string or &"name" |
-| `target` | Transform3D(12 floats) |
-| `target_node` | NodePath("path/to/node") |
-| `tip_bone` | quoted string or &"name" |
-| `use_magnet` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `magnet` | Vector3(x, y, z) |  |
+| `max_iterations` | integer |  |
+| `min_distance` | float |  |
+| `override_tip_basis` | true or false |  |
+| `root_bone` | quoted string or &"name" |  |
+| `target` | Transform3D(12 floats) |  |
+| `target_node` | NodePath("path/to/node") |  |
+| `tip_bone` | quoted string or &"name" |  |
+| `use_magnet` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

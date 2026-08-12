@@ -68,16 +68,16 @@ exact for a sub-viewport and irrelevant on the 2D stage, where no scroll runs.
 ## Linting
 
 <!-- lint:begin ParallaxBackground -->
-Strict parsing format-checks these `ParallaxBackground` properties, plus 8 inherited from CanvasLayer, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `ParallaxBackground` properties, plus 8 inherited from CanvasLayer, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `scroll_base_offset` | Vector2(x, y) |
-| `scroll_base_scale` | Vector2(x, y) |
-| `scroll_ignore_camera_zoom` | true or false |
-| `scroll_limit_begin` | Vector2(x, y) |
-| `scroll_limit_end` | Vector2(x, y) |
-| `scroll_offset` | Vector2(x, y) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `scroll_base_offset` | Vector2(x, y) |  |
+| `scroll_base_scale` | Vector2(x, y) |  |
+| `scroll_ignore_camera_zoom` | true or false |  |
+| `scroll_limit_begin` | Vector2(x, y) |  |
+| `scroll_limit_end` | Vector2(x, y) |  |
+| `scroll_offset` | Vector2(x, y) |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

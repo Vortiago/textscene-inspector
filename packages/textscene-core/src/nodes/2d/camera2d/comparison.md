@@ -34,37 +34,37 @@ blue fill rather than the layout:
 ## Linting
 
 <!-- lint:begin Camera2D -->
-Strict parsing format-checks these `Camera2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Camera2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `anchor_mode` | enum 0-1 (FIXED_TOP_LEFT/DRAG_CENTER) |
-| `drag_bottom_margin` | float 0-1 |
-| `drag_horizontal_enabled` | true or false |
-| `drag_horizontal_offset` | float -1-1 |
-| `drag_left_margin` | float 0-1 |
-| `drag_right_margin` | float 0-1 |
-| `drag_top_margin` | float 0-1 |
-| `drag_vertical_enabled` | true or false |
-| `drag_vertical_offset` | float -1-1 |
-| `editor_draw_drag_margin` | true or false |
-| `editor_draw_limits` | true or false |
-| `editor_draw_screen` | true or false |
-| `enabled` | true or false |
-| `ignore_rotation` | true or false |
-| `limit_bottom` | integer |
-| `limit_enabled` | true or false |
-| `limit_left` | integer |
-| `limit_right` | integer |
-| `limit_smoothed` | true or false |
-| `limit_top` | integer |
-| `offset` | Vector2(x, y) |
-| `position_smoothing_enabled` | true or false |
-| `position_smoothing_speed` | float >= 0 |
-| `process_callback` | enum 0-1 (PHYSICS/IDLE) |
-| `rotation_smoothing_enabled` | true or false |
-| `rotation_smoothing_speed` | float >= 0 |
-| `zoom` | Vector2(x, y), neither component (near-)zero |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `anchor_mode` | enum 0-1 (FIXED_TOP_LEFT/DRAG_CENTER) | warning |
+| `drag_bottom_margin` | float 0-1 | warning |
+| `drag_horizontal_enabled` | true or false |  |
+| `drag_horizontal_offset` | float -1-1 | warning |
+| `drag_left_margin` | float 0-1 | warning |
+| `drag_right_margin` | float 0-1 | warning |
+| `drag_top_margin` | float 0-1 | warning |
+| `drag_vertical_enabled` | true or false |  |
+| `drag_vertical_offset` | float -1-1 | warning |
+| `editor_draw_drag_margin` | true or false |  |
+| `editor_draw_limits` | true or false |  |
+| `editor_draw_screen` | true or false |  |
+| `enabled` | true or false |  |
+| `ignore_rotation` | true or false |  |
+| `limit_bottom` | integer |  |
+| `limit_enabled` | true or false |  |
+| `limit_left` | integer |  |
+| `limit_right` | integer |  |
+| `limit_smoothed` | true or false |  |
+| `limit_top` | integer |  |
+| `offset` | Vector2(x, y) |  |
+| `position_smoothing_enabled` | true or false |  |
+| `position_smoothing_speed` | float >= 0 | error |
+| `process_callback` | enum 0-1 (PHYSICS/IDLE) | warning |
+| `rotation_smoothing_enabled` | true or false |  |
+| `rotation_smoothing_speed` | float >= 0 | error |
+| `zoom` | Vector2(x, y), neither component (near-)zero | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

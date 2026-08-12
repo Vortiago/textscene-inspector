@@ -49,25 +49,25 @@ not exercise is where the real gaps are, so they are listed rather than shown:
 ## Linting
 
 <!-- lint:begin AnimationPlayer -->
-Strict parsing format-checks these `AnimationPlayer` properties, plus 13 inherited from AnimationMixer, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AnimationPlayer` properties, plus 13 inherited from AnimationMixer, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `autoplay` | quoted string or &"name" |
-| `blend_times` | Array literal of (from, to, time) triples |
-| `current_animation` | any value (no format constraint) |
-| `method_call_mode` | enum 0-1 (DEFERRED/IMMEDIATE) |
-| `movie_quit_on_finish` | true or false |
-| `next/*` | quoted string or &"name" |
-| `playback/play` | any value (no format constraint) |
-| `playback_active` | true or false |
-| `playback_auto_capture` | true or false |
-| `playback_auto_capture_duration` | float |
-| `playback_auto_capture_ease_type` | enum 0-3 (IN/OUT/IN_OUT/OUT_IN) |
-| `playback_auto_capture_transition_type` | enum 0-11 (LINEAR/SINE/QUINT/QUART/QUAD/EXPO/ELASTIC/CUBIC/CIRC/BOUNCE/BACK/SPRING) |
-| `playback_default_blend_time` | float |
-| `playback_process_mode` | enum 0-2 (PHYSICS/IDLE/MANUAL) |
-| `speed_scale` | float |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `autoplay` | quoted string or &"name" |  |
+| `blend_times` | Array literal of (from, to, time) triples | error |
+| `current_animation` | any value (no format constraint) |  |
+| `method_call_mode` | enum 0-1 (DEFERRED/IMMEDIATE) | warning |
+| `movie_quit_on_finish` | true or false |  |
+| `next/*` | quoted string or &"name" |  |
+| `playback/play` | any value (no format constraint) |  |
+| `playback_active` | true or false |  |
+| `playback_auto_capture` | true or false |  |
+| `playback_auto_capture_duration` | float |  |
+| `playback_auto_capture_ease_type` | enum 0-3 (IN/OUT/IN_OUT/OUT_IN) | warning |
+| `playback_auto_capture_transition_type` | enum 0-11 (LINEAR/SINE/QUINT/QUART/QUAD/EXPO/ELASTIC/CUBIC/CIRC/BOUNCE/BACK/SPRING) | warning |
+| `playback_default_blend_time` | float |  |
+| `playback_process_mode` | enum 0-2 (PHYSICS/IDLE/MANUAL) | warning |
+| `speed_scale` | float |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

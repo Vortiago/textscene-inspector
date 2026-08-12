@@ -61,22 +61,44 @@ describe('CanvasItem shared validators', () => {
   });
 
   it.each(['Sprite2D', 'Label'])('bounds texture_filter on %s, silent on both before', (nodeType) => {
+    // ERR_FAIL_INDEX(p_texture_filter, TEXTURE_FILTER_MAX) at canvas_item.cpp:1667,
+    // TEXTURE_FILTER_MAX = 7 (canvas_item.h:52-60); the macro refuses < 0 too.
     const validator = validatorRegistry.findValidator(nodeType, 'texture_filter')!;
     for (const value of ['0', '3', '6']) expect(validator('texture_filter', value, 1)).toBeNull();
-    expect(validator('texture_filter', '7', 1)).not.toBeNull();
+    expect(validator('texture_filter', '7', 1)?.severity).toBe('error');
+    expect(validator('texture_filter', '-1', 1)?.severity).toBe('error');
+  });
+
+  it.each(['Sprite2D', 'Label'])('bounds texture_repeat on %s', (nodeType) => {
+    // ERR_FAIL_INDEX(p_texture_repeat, TEXTURE_REPEAT_MAX) at canvas_item.cpp:1722,
+    // TEXTURE_REPEAT_MAX = 4 (canvas_item.h:63-68), so 3 (MIRROR) is the ceiling
+    // and the macro refuses < 0 at the other end.
+    const validator = validatorRegistry.findValidator(nodeType, 'texture_repeat')!;
+    for (const value of ['0', '1', '2', '3']) {
+      expect(validator('texture_repeat', value, 1)).toBeNull();
+    }
+    expect(validator('texture_repeat', '4', 1)?.severity).toBe('error');
+    expect(validator('texture_repeat', '-1', 1)?.severity).toBe('error');
   });
 
   it.each(['Sprite2D', 'Label'])('bounds clip_children on %s', (nodeType) => {
+    // ERR_FAIL_COND(p_clip_mode >= CLIP_CHILDREN_MAX) at canvas_item.cpp:1733,
+    // CLIP_CHILDREN_MAX = 3 (canvas_item.h:71-75). Only the ceiling is guarded;
+    // ClipChildrenMode declares no underlying type, so whether -1 survives the
+    // cast is compiler-defined and the floor stays unprobed.
     const validator = validatorRegistry.findValidator(nodeType, 'clip_children')!;
     expect(validator('clip_children', '2', 1)).toBeNull();
-    expect(validator('clip_children', '3', 1)).not.toBeNull();
+    expect(validator('clip_children', '3', 1)?.severity).toBe('error');
   });
 
   it('keeps z_index inside the rendering server range', () => {
+    // ERR_FAIL_COND against RS::CANVAS_ITEM_Z_MIN/_MAX = -4096/4096
+    // (canvas_item.cpp:668-669, rendering_server.h:103).
     const validator = validatorRegistry.findValidator('Sprite2D', 'z_index')!;
     expect(validator('z_index', '-4096', 1)).toBeNull();
     expect(validator('z_index', '4096', 1)).toBeNull();
-    expect(validator('z_index', '5000', 1)).not.toBeNull();
+    expect(validator('z_index', '-4097', 1)?.severity).toBe('error');
+    expect(validator('z_index', '4097', 1)?.severity).toBe('error');
   });
 
   it('warns on light_mask and visibility_layer outside the 32-bit width', () => {

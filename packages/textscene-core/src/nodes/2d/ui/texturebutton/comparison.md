@@ -37,20 +37,20 @@ Not captured yet, since nothing renders and there is nothing to compare pixels a
 ## Linting
 
 <!-- lint:begin TextureButton -->
-Strict parsing format-checks these `TextureButton` properties, plus 10 inherited from BaseButton, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `TextureButton` properties, plus 10 inherited from BaseButton, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `flip_h` | true or false |
-| `flip_v` | true or false |
-| `ignore_texture_size` | true or false |
-| `stretch_mode` | enum 0-6 (STRETCH_SCALE/STRETCH_TILE/STRETCH_KEEP/STRETCH_KEEP_CENTERED/STRETCH_KEEP_ASPECT/STRETCH_KEEP_ASPECT_CENTERED/STRETCH_KEEP_ASPECT_COVERED) |
-| `texture_click_mask` | null, SubResource("id") or ExtResource("id") |
-| `texture_disabled` | null, SubResource("id") or ExtResource("id") |
-| `texture_focused` | null, SubResource("id") or ExtResource("id") |
-| `texture_hover` | null, SubResource("id") or ExtResource("id") |
-| `texture_normal` | null, SubResource("id") or ExtResource("id") |
-| `texture_pressed` | null, SubResource("id") or ExtResource("id") |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `flip_h` | true or false |  |
+| `flip_v` | true or false |  |
+| `ignore_texture_size` | true or false |  |
+| `stretch_mode` | enum 0-6 (STRETCH_SCALE/STRETCH_TILE/STRETCH_KEEP/STRETCH_KEEP_CENTERED/STRETCH_KEEP_ASPECT/STRETCH_KEEP_ASPECT_CENTERED/STRETCH_KEEP_ASPECT_COVERED) | warning |
+| `texture_click_mask` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_disabled` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_focused` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_hover` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_normal` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_pressed` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

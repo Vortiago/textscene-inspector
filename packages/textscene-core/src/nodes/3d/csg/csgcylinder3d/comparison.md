@@ -37,18 +37,18 @@ None visible in this fixture. Measured at 0.052% against Godot 4.6.3 with
 ## Linting
 
 <!-- lint:begin CSGCylinder3D -->
-Strict parsing format-checks these `CSGCylinder3D` properties, plus 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `CSGCylinder3D` properties, plus 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `cone` | true or false |
-| `flip_faces` | true or false |
-| `height` | float > 0 |
-| `material` | null, SubResource("id") or ExtResource("id") |
-| `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) |
-| `radius` | float > 0 |
-| `sides` | integer 3-64 |
-| `smooth_faces` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `cone` | true or false |  |
+| `flip_faces` | true or false |  |
+| `height` | float > 0 | warning |
+| `material` | null, SubResource("id") or ExtResource("id") |  |
+| `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) | warning |
+| `radius` | float > 0 | warning |
+| `sides` | integer 3-64 | error |
+| `smooth_faces` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

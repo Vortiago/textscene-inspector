@@ -36,13 +36,13 @@ the background instead of once through the group's own buffer.
 ## Linting
 
 <!-- lint:begin CanvasGroup -->
-Strict parsing format-checks these `CanvasGroup` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `CanvasGroup` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `clear_margin` | float >= 0 |
-| `fit_margin` | float >= 0 |
-| `use_mipmaps` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `clear_margin` | float >= 0 | error |
+| `fit_margin` | float >= 0 | error |
+| `use_mipmaps` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

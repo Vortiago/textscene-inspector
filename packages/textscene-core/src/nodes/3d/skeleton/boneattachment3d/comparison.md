@@ -32,15 +32,15 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin BoneAttachment3D -->
-Strict parsing format-checks these `BoneAttachment3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `BoneAttachment3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `bone_idx` | integer >= -1 |
-| `bone_name` | quoted string or &"name" |
-| `external_skeleton` | NodePath("path/to/node") |
-| `override_pose` | true or false |
-| `use_external_skeleton` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `bone_idx` | integer >= -1 | error |
+| `bone_name` | quoted string or &"name" |  |
+| `external_skeleton` | NodePath("path/to/node") |  |
+| `override_pose` | true or false |  |
+| `use_external_skeleton` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -26,12 +26,12 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin GrooveJoint2D -->
-Strict parsing format-checks these `GrooveJoint2D` properties, plus 4 inherited from Joint2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `GrooveJoint2D` properties, plus 4 inherited from Joint2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `initial_offset` | float 1-65535 |
-| `length` | float 1-65535 |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `initial_offset` | float 1-65535 | warning |
+| `length` | float 1-65535 | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

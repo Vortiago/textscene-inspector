@@ -25,11 +25,11 @@ compare against Godot.
 ## Linting
 
 <!-- lint:begin ConfirmationDialog -->
-Strict parsing format-checks these `ConfirmationDialog` properties, plus 5 inherited from AcceptDialog, 45 inherited from Window, 47 inherited from Viewport, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `ConfirmationDialog` properties, plus 5 inherited from AcceptDialog, 45 inherited from Window, 47 inherited from Viewport, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `cancel_button_text` | quoted string |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `cancel_button_text` | quoted string |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

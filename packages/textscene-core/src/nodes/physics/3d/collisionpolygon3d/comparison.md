@@ -30,16 +30,16 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin CollisionPolygon3D -->
-Strict parsing format-checks these `CollisionPolygon3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `CollisionPolygon3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `debug_color` | Color(r, g, b, a) |
-| `debug_fill` | true or false |
-| `depth` | float |
-| `disabled` | true or false |
-| `margin` | float 0.001-10 |
-| `polygon` | PackedVector2Array(x, y, …) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `debug_color` | Color(r, g, b, a) |  |
+| `debug_fill` | true or false |  |
+| `depth` | float |  |
+| `disabled` | true or false |  |
+| `margin` | float 0.001-10 | warning |
+| `polygon` | PackedVector2Array(x, y, …) |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

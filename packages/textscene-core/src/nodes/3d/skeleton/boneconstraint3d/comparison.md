@@ -24,11 +24,11 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin BoneConstraint3D -->
-Strict parsing format-checks these `BoneConstraint3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `BoneConstraint3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `settings/#/*` | BoneConstraint3D setting |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `settings/#/*` | BoneConstraint3D setting | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

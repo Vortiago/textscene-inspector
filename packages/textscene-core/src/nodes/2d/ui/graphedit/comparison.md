@@ -53,35 +53,35 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin GraphEdit -->
-Strict parsing format-checks these `GraphEdit` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `GraphEdit` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `connection_lines_antialiased` | true or false |
-| `connection_lines_curvature` | float |
-| `connection_lines_thickness` | float 0-100 |
-| `connections` | Array literal ([...] or Array[Dictionary]([...])) |
-| `grid_pattern` | enum 0-1 (GRID_PATTERN_LINES/GRID_PATTERN_DOTS) |
-| `minimap_enabled` | true or false |
-| `minimap_opacity` | float |
-| `minimap_size` | Vector2(x, y) |
-| `panning_scheme` | enum 0-1 (SCROLL_ZOOMS/SCROLL_PANS) |
-| `right_disconnects` | true or false |
-| `scroll_offset` | Vector2(x, y) |
-| `show_arrange_button` | true or false |
-| `show_grid` | true or false |
-| `show_grid_buttons` | true or false |
-| `show_menu` | true or false |
-| `show_minimap_button` | true or false |
-| `show_zoom_buttons` | true or false |
-| `show_zoom_label` | true or false |
-| `snapping_distance` | integer 2-100 |
-| `snapping_enabled` | true or false |
-| `type_names` | Dictionary literal ({…}) |
-| `zoom` | float |
-| `zoom_max` | float |
-| `zoom_min` | float |
-| `zoom_step` | float >= 0 |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `connection_lines_antialiased` | true or false |  |
+| `connection_lines_curvature` | float |  |
+| `connection_lines_thickness` | float 0-100 | error |
+| `connections` | Array literal ([...] or Array[Dictionary]([...])) |  |
+| `grid_pattern` | enum 0-1 (GRID_PATTERN_LINES/GRID_PATTERN_DOTS) | warning |
+| `minimap_enabled` | true or false |  |
+| `minimap_opacity` | float |  |
+| `minimap_size` | Vector2(x, y) |  |
+| `panning_scheme` | enum 0-1 (SCROLL_ZOOMS/SCROLL_PANS) | warning |
+| `right_disconnects` | true or false |  |
+| `scroll_offset` | Vector2(x, y) |  |
+| `show_arrange_button` | true or false |  |
+| `show_grid` | true or false |  |
+| `show_grid_buttons` | true or false |  |
+| `show_menu` | true or false |  |
+| `show_minimap_button` | true or false |  |
+| `show_zoom_buttons` | true or false |  |
+| `show_zoom_label` | true or false |  |
+| `snapping_distance` | integer 2-100 | error |
+| `snapping_enabled` | true or false |  |
+| `type_names` | Dictionary literal ({…}) |  |
+| `zoom` | float |  |
+| `zoom_max` | float |  |
+| `zoom_min` | float |  |
+| `zoom_step` | float >= 0 | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

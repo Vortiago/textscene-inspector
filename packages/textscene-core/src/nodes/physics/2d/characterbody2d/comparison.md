@@ -32,25 +32,25 @@ without running the game.
 ## Linting
 
 <!-- lint:begin CharacterBody2D -->
-Strict parsing format-checks these `CharacterBody2D` properties, plus 5 inherited from CollisionObject2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `CharacterBody2D` properties, plus 5 inherited from CollisionObject2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `floor_block_on_wall` | true or false |
-| `floor_constant_speed` | true or false |
-| `floor_max_angle` | radians, 0° to 180° |
-| `floor_snap_length` | float >= 0 |
-| `floor_stop_on_slope` | true or false |
-| `max_slides` | integer > 0 |
-| `motion_mode` | enum 0-1 (GROUNDED/FLOATING) |
-| `platform_floor_layers` | 32-bit layer mask (layers 1-32) |
-| `platform_on_leave` | enum 0-2 (ADD_VELOCITY/ADD_UPWARD_VELOCITY/DO_NOTHING) |
-| `platform_wall_layers` | 32-bit layer mask (layers 1-32) |
-| `safe_margin` | float |
-| `slide_on_ceiling` | true or false |
-| `up_direction` | Vector2(x, y) |
-| `velocity` | Vector2(x, y) |
-| `wall_min_slide_angle` | radians, 0° to 180° |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `floor_block_on_wall` | true or false |  |
+| `floor_constant_speed` | true or false |  |
+| `floor_max_angle` | radians, 0° to 180° | warning |
+| `floor_snap_length` | float >= 0 | error |
+| `floor_stop_on_slope` | true or false |  |
+| `max_slides` | integer > 0 | error |
+| `motion_mode` | enum 0-1 (GROUNDED/FLOATING) | warning |
+| `platform_floor_layers` | 32-bit layer mask (layers 1-32) | warning |
+| `platform_on_leave` | enum 0-2 (ADD_VELOCITY/ADD_UPWARD_VELOCITY/DO_NOTHING) | warning |
+| `platform_wall_layers` | 32-bit layer mask (layers 1-32) | warning |
+| `safe_margin` | float |  |
+| `slide_on_ceiling` | true or false |  |
+| `up_direction` | Vector2(x, y) |  |
+| `velocity` | Vector2(x, y) |  |
+| `wall_min_slide_angle` | radians, 0° to 180° | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

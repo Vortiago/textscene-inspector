@@ -32,16 +32,16 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin AnimatedSprite3D -->
-Strict parsing format-checks these `AnimatedSprite3D` properties, plus 20 inherited from SpriteBase3D, 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AnimatedSprite3D` properties, plus 20 inherited from SpriteBase3D, 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `animation` | quoted string or &"name" |
-| `autoplay` | quoted string or &"name" |
-| `frame` | integer >= 0 |
-| `frame_progress` | float |
-| `speed_scale` | float |
-| `sprite_frames` | null, SubResource("id") or ExtResource("id") |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `animation` | quoted string or &"name" |  |
+| `autoplay` | quoted string or &"name" |  |
+| `frame` | integer >= 0 | error |
+| `frame_progress` | float |  |
+| `speed_scale` | float |  |
+| `sprite_frames` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

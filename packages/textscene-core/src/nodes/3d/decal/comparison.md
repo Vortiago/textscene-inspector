@@ -120,26 +120,26 @@ geometry:
 ## Linting
 
 <!-- lint:begin Decal -->
-Strict parsing format-checks these `Decal` properties, plus 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Decal` properties, plus 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `albedo_mix` | float 0-1 |
-| `cull_mask` | 32-bit layer mask (layers 1-32) |
-| `distance_fade_begin` | float >= 0 |
-| `distance_fade_enabled` | true or false |
-| `distance_fade_length` | float >= 0 |
-| `emission_energy` | float >= 0 |
-| `lower_fade` | float >= 0 |
-| `modulate` | Color(r, g, b, a) |
-| `normal_fade` | float 0-0.999 |
-| `size` | Vector3(x, y, z) |
-| `sorting_offset` | float |
-| `texture_albedo` | null, SubResource("id") or ExtResource("id") |
-| `texture_emission` | null, SubResource("id") or ExtResource("id") |
-| `texture_normal` | null, SubResource("id") or ExtResource("id") |
-| `texture_orm` | null, SubResource("id") or ExtResource("id") |
-| `upper_fade` | float >= 0 |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `albedo_mix` | float 0-1 | warning |
+| `cull_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `distance_fade_begin` | float >= 0 | warning |
+| `distance_fade_enabled` | true or false |  |
+| `distance_fade_length` | float >= 0 | warning |
+| `emission_energy` | float >= 0 | warning |
+| `lower_fade` | float >= 0 | error |
+| `modulate` | Color(r, g, b, a) |  |
+| `normal_fade` | float 0-0.999 | warning |
+| `size` | Vector3(x, y, z) |  |
+| `sorting_offset` | float |  |
+| `texture_albedo` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_emission` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_normal` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_orm` | null, SubResource("id") or ExtResource("id") |  |
+| `upper_fade` | float >= 0 | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

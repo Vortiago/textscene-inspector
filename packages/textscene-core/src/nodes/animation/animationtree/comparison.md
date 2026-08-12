@@ -50,15 +50,15 @@ hardcodes `AnimationPlayer` as the driver, so it cannot select an
 ## Linting
 
 <!-- lint:begin AnimationTree -->
-Strict parsing format-checks these `AnimationTree` properties, plus 13 inherited from AnimationMixer, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AnimationTree` properties, plus 13 inherited from AnimationMixer, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `advance_expression_base_node` | NodePath("path/to/node") |
-| `anim_player` | NodePath("path/to/node") |
-| `parameters/*` | any Variant — the type comes from the live AnimationNode graph, not the .tscn |
-| `process_callback` | enum 0-2 (PHYSICS/IDLE/MANUAL) |
-| `tree_root` | null, SubResource("id") or ExtResource("id") |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `advance_expression_base_node` | NodePath("path/to/node") |  |
+| `anim_player` | NodePath("path/to/node") |  |
+| `parameters/*` | any Variant — the type comes from the live AnimationNode graph, not the .tscn |  |
+| `process_callback` | enum 0-2 (PHYSICS/IDLE/MANUAL) | warning |
+| `tree_root` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -113,6 +113,47 @@ describe('AnimationMixer strict validators', () => {
     });
   });
 
+  describe('audio_max_polyphony: ERR_FAIL_COND(p < 0 || p > 128), animation_mixer.cpp:542', () => {
+    it("accepts the setter's own ends, 0 and 128, not the narrower 1,127 hint at :2468", () => {
+      expect(check('AnimationMixer', 'audio_max_polyphony', '0')).toBeNull();
+      expect(check('AnimationMixer', 'audio_max_polyphony', '128')).toBeNull();
+    });
+
+    it('errors one past each end: -1 and 129', () => {
+      expect(check('AnimationMixer', 'audio_max_polyphony', '-1')?.severity).toBe('error');
+      expect(check('AnimationMixer', 'audio_max_polyphony', '129')?.severity).toBe('error');
+    });
+  });
+
+  describe('callback-mode enums: hinted only, every setter bare-assigns', () => {
+    it('accepts callback_mode_process 0 (Physics) and 2 (Manual); warns at -1 and 3', () => {
+      // animation_mixer.cpp:2471 hints "Physics,Idle,Manual";
+      // set_callback_mode_process (:501) has no ERR_FAIL_INDEX.
+      expect(check('AnimationMixer', 'callback_mode_process', '0')).toBeNull();
+      expect(check('AnimationMixer', 'callback_mode_process', '2')).toBeNull();
+      expect(check('AnimationMixer', 'callback_mode_process', '-1')?.severity).toBe('warning');
+      expect(check('AnimationMixer', 'callback_mode_process', '3')?.severity).toBe('warning');
+    });
+
+    it('accepts callback_mode_method 0 (Deferred) and 1 (Immediate); warns at -1 and 2', () => {
+      // animation_mixer.cpp:2472 hints two labels only;
+      // set_callback_mode_method (:522) is a one-line assign.
+      expect(check('AnimationMixer', 'callback_mode_method', '0')).toBeNull();
+      expect(check('AnimationMixer', 'callback_mode_method', '1')).toBeNull();
+      expect(check('AnimationMixer', 'callback_mode_method', '-1')?.severity).toBe('warning');
+      expect(check('AnimationMixer', 'callback_mode_method', '2')?.severity).toBe('warning');
+    });
+
+    it('accepts callback_mode_discrete 0 (Dominant) and 2 (Force Continuous); warns at -1 and 3', () => {
+      // animation_mixer.cpp:2473 hints "Dominant,Recessive,Force Continuous";
+      // set_callback_mode_discrete (:531) assigns then clears caches.
+      expect(check('AnimationMixer', 'callback_mode_discrete', '0')).toBeNull();
+      expect(check('AnimationMixer', 'callback_mode_discrete', '2')).toBeNull();
+      expect(check('AnimationMixer', 'callback_mode_discrete', '-1')?.severity).toBe('warning');
+      expect(check('AnimationMixer', 'callback_mode_discrete', '3')?.severity).toBe('warning');
+    });
+  });
+
   describe('reaches AnimationPlayer and AnimationTree through the base-walk', () => {
     it.each(['AnimationPlayer', 'AnimationTree'])('%s resolves all three AnimationMixer keys', (nodeType) => {
       expect(check(nodeType, 'anims/Walk', 'SubResource("Animation_1")')).toBeNull();

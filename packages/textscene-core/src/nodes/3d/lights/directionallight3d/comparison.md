@@ -35,19 +35,19 @@ out by the bright sky-ambient fill.
 ## Linting
 
 <!-- lint:begin DirectionalLight3D -->
-Strict parsing format-checks these `DirectionalLight3D` properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `DirectionalLight3D` properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `directional_shadow_blend_splits` | true or false |
-| `directional_shadow_fade_start` | float 0-1 |
-| `directional_shadow_max_distance` | float |
-| `directional_shadow_mode` | enum 0-2 (ORTHOGONAL/PARALLEL_2_SPLITS/PARALLEL_4_SPLITS) |
-| `directional_shadow_pancake_size` | float >= 0 |
-| `directional_shadow_split_1` | float 0-1 |
-| `directional_shadow_split_2` | float 0-1 |
-| `directional_shadow_split_3` | float 0-1 |
-| `sky_mode` | enum 0-2 (LIGHT_AND_SKY/LIGHT_ONLY/SKY_ONLY) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `directional_shadow_blend_splits` | true or false |  |
+| `directional_shadow_fade_start` | float 0-1 | warning |
+| `directional_shadow_max_distance` | float |  |
+| `directional_shadow_mode` | enum 0-2 (ORTHOGONAL/PARALLEL_2_SPLITS/PARALLEL_4_SPLITS) | warning |
+| `directional_shadow_pancake_size` | float >= 0 | warning |
+| `directional_shadow_split_1` | float 0-1 | warning |
+| `directional_shadow_split_2` | float 0-1 | warning |
+| `directional_shadow_split_3` | float 0-1 | warning |
+| `sky_mode` | enum 0-2 (LIGHT_AND_SKY/LIGHT_ONLY/SKY_ONLY) | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

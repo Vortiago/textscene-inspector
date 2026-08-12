@@ -49,22 +49,38 @@ describe('Slider shared validators', () => {
       expect(check('HSlider', 'tick_count', '4096')).toBeNull();
     });
 
-    it('rejects 4097, since neither end is softened by or_greater', () => {
-      expect(check('HSlider', 'tick_count', '4097')).not.toBeNull();
+    it('rejects 4097 with a WARNING, since neither end is softened by or_greater and set_ticks (slider.cpp:386-392) assigns straight through', () => {
+      const error = check('HSlider', 'tick_count', '4097');
+      expect(error).not.toBeNull();
+      expect(error?.severity).toBe('warning');
     });
 
-    it('rejects a negative count', () => {
-      expect(check('VSlider', 'tick_count', '-1')).not.toBeNull();
+    it('rejects a negative count, also a WARNING (slider.cpp:467)', () => {
+      const error = check('VSlider', 'tick_count', '-1');
+      expect(error).not.toBeNull();
+      expect(error?.severity).toBe('warning');
     });
   });
 
   describe('ticks_position', () => {
+    it('accepts 0 (TICK_POSITION_BOTTOM_RIGHT), the first bound constant', () => {
+      expect(check('HSlider', 'ticks_position', '0')).toBeNull();
+    });
+
     it('accepts 3 (TICK_POSITION_CENTER), the last bound constant', () => {
       expect(check('HSlider', 'ticks_position', '3')).toBeNull();
     });
 
-    it('rejects 4, one past the four BIND_ENUM_CONSTANT lines', () => {
-      expect(check('HSlider', 'ticks_position', '4')).not.toBeNull();
+    it('rejects 4 with a WARNING, one past the four BIND_ENUM_CONSTANT lines (slider.cpp:471-474); set_ticks_position (slider.cpp:416-422) has no ERR_FAIL', () => {
+      const error = check('HSlider', 'ticks_position', '4');
+      expect(error).not.toBeNull();
+      expect(error?.severity).toBe('warning');
+    });
+
+    it('rejects -1 with a WARNING (slider.cpp:469)', () => {
+      const error = check('VSlider', 'ticks_position', '-1');
+      expect(error).not.toBeNull();
+      expect(error?.severity).toBe('warning');
     });
   });
 

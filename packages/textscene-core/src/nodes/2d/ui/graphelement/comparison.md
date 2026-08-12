@@ -34,16 +34,16 @@ Not captured yet — nothing renders, so there is nothing to compare pixels agai
 ## Linting
 
 <!-- lint:begin GraphElement -->
-Strict parsing format-checks these `GraphElement` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `GraphElement` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `draggable` | true or false |
-| `position_offset` | Vector2(x, y) |
-| `resizable` | true or false |
-| `scaling_menus` | true or false |
-| `selectable` | true or false |
-| `selected` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `draggable` | true or false |  |
+| `position_offset` | Vector2(x, y) |  |
+| `resizable` | true or false |  |
+| `scaling_menus` | true or false |  |
+| `selectable` | true or false |  |
+| `selected` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

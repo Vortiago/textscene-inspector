@@ -82,6 +82,31 @@ describe('CPUParticles2D strict validators', () => {
     });
   });
 
+  describe('hue_variation_min / hue_variation_max', () => {
+    // cpu_particles_2d.cpp:1646-1647 hint "-1,1,0.01" — closed both ends, no
+    // or_greater/or_less. set_param_min/set_param_max (cpu_particles_2d.cpp:
+    // 352, 367) ERR_FAIL_INDEX the Parameter enum only, never the value, so
+    // out-of-hint is a WARNING. Both endpoints are probed from both sides:
+    // a mid-range accept alone leaves the bound's location unpinned.
+    it.each(['hue_variation_min', 'hue_variation_max'])('accepts both endpoints of %s', (prop) => {
+      expect(check(prop, '-1')).toBeNull();
+      expect(check(prop, '1')).toBeNull();
+    });
+
+    it.each(['hue_variation_min', 'hue_variation_max'])(
+      'warns one hint step (0.01) past either endpoint of %s',
+      (prop) => {
+        expect(check(prop, '-1.01')?.severity).toBe('warning');
+        expect(check(prop, '1.01')?.severity).toBe('warning');
+      }
+    );
+
+    it('reports the VALUE code, not the FORMAT one, for an out-of-hint number', () => {
+      expect(check('hue_variation_min', '2')?.code).toBe('INVALID_HUE_VARIATION_MIN_VALUE');
+      expect(check('hue_variation_max', '2')?.code).toBe('INVALID_HUE_VARIATION_MAX_VALUE');
+    });
+  });
+
   describe('emission_colors', () => {
     // cpu_particles_2d.cpp:1591, PropertyInfo(Variant::PACKED_COLOR_ARRAY).
     // get_emission_colors (cpu_particles_2d.cpp:551-553) returns

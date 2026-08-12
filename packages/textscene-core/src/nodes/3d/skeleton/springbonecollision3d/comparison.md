@@ -31,14 +31,14 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin SpringBoneCollision3D -->
-Strict parsing format-checks these `SpringBoneCollision3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `SpringBoneCollision3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `bone` | integer |
-| `bone_name` | quoted string or &"name" |
-| `position_offset` | Vector3(x, y, z) |
-| `rotation_offset` | Quaternion(x, y, z, w) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `bone` | integer |  |
+| `bone_name` | quoted string or &"name" |  |
+| `position_offset` | Vector3(x, y, z) |  |
+| `rotation_offset` | Quaternion(x, y, z, w) |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

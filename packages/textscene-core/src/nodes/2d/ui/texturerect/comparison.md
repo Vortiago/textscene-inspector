@@ -28,15 +28,15 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin TextureRect -->
-Strict parsing format-checks these `TextureRect` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `TextureRect` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `expand_mode` | enum 0-5 (EXPAND_KEEP_SIZE/EXPAND_IGNORE_SIZE/EXPAND_FIT_WIDTH/EXPAND_FIT_WIDTH_PROPORTIONAL/EXPAND_FIT_HEIGHT/EXPAND_FIT_HEIGHT_PROPORTIONAL) |
-| `flip_h` | true or false |
-| `flip_v` | true or false |
-| `stretch_mode` | enum 0-6 (STRETCH_SCALE/STRETCH_TILE/STRETCH_KEEP/STRETCH_KEEP_CENTERED/STRETCH_KEEP_ASPECT/STRETCH_KEEP_ASPECT_CENTERED/STRETCH_KEEP_ASPECT_COVERED) |
-| `texture` | null, SubResource("id") or ExtResource("id") |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `expand_mode` | enum 0-5 (EXPAND_KEEP_SIZE/EXPAND_IGNORE_SIZE/EXPAND_FIT_WIDTH/EXPAND_FIT_WIDTH_PROPORTIONAL/EXPAND_FIT_HEIGHT/EXPAND_FIT_HEIGHT_PROPORTIONAL) | warning |
+| `flip_h` | true or false |  |
+| `flip_v` | true or false |  |
+| `stretch_mode` | enum 0-6 (STRETCH_SCALE/STRETCH_TILE/STRETCH_KEEP/STRETCH_KEEP_CENTERED/STRETCH_KEEP_ASPECT/STRETCH_KEEP_ASPECT_CENTERED/STRETCH_KEEP_ASPECT_COVERED) | warning |
+| `texture` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

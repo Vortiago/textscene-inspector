@@ -34,31 +34,31 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin AudioStreamPlayer3D -->
-Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `area_mask` | 32-bit layer mask (layers 1-32) |
-| `attenuation_filter_cutoff_hz` | float >= 1 |
-| `attenuation_filter_db` | float |
-| `attenuation_model` | enum 0-3 (INVERSE_DISTANCE/INVERSE_SQUARE_DISTANCE/LOGARITHMIC/DISABLED) |
-| `autoplay` | true or false |
-| `bus` | quoted string or &"name" |
-| `doppler_tracking` | enum 0-2 (DISABLED/IDLE_STEP/PHYSICS_STEP) |
-| `emission_angle_degrees` | float 0-90 |
-| `emission_angle_enabled` | true or false |
-| `emission_angle_filter_attenuation_db` | float |
-| `max_db` | float |
-| `max_distance` | float >= 0 |
-| `max_polyphony` | integer >= 1 |
-| `panning_strength` | float >= 0 |
-| `pitch_scale` | float >= 5e-324 |
-| `playback_type` | enum 0-2 (DEFAULT/STREAM/SAMPLE) |
-| `playing` | true or false |
-| `stream` | null, SubResource("id") or ExtResource("id") |
-| `stream_paused` | true or false |
-| `unit_size` | float |
-| `volume_db` | float |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `area_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `attenuation_filter_cutoff_hz` | float >= 1 | warning |
+| `attenuation_filter_db` | float |  |
+| `attenuation_model` | enum 0-3 (INVERSE_DISTANCE/INVERSE_SQUARE_DISTANCE/LOGARITHMIC/DISABLED) | error |
+| `autoplay` | true or false |  |
+| `bus` | quoted string or &"name" |  |
+| `doppler_tracking` | enum 0-2 (DISABLED/IDLE_STEP/PHYSICS_STEP) | warning |
+| `emission_angle_degrees` | float 0-90 | error |
+| `emission_angle_enabled` | true or false |  |
+| `emission_angle_filter_attenuation_db` | float |  |
+| `max_db` | float |  |
+| `max_distance` | float >= 0 | error |
+| `max_polyphony` | integer >= 1 | error |
+| `panning_strength` | float >= 0 | error |
+| `pitch_scale` | float >= 5e-324 | error |
+| `playback_type` | enum 0-2 (DEFAULT/STREAM/SAMPLE) | warning |
+| `playing` | true or false |  |
+| `stream` | null, SubResource("id") or ExtResource("id") |  |
+| `stream_paused` | true or false |  |
+| `unit_size` | float |  |
+| `volume_db` | float |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

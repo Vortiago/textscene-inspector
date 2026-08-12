@@ -29,15 +29,15 @@ compare against Godot.
 ## Linting
 
 <!-- lint:begin AcceptDialog -->
-Strict parsing format-checks these `AcceptDialog` properties, plus 45 inherited from Window, 47 inherited from Viewport, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `AcceptDialog` properties, plus 45 inherited from Window, 47 inherited from Viewport, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `dialog_autowrap` | true or false |
-| `dialog_close_on_escape` | true or false |
-| `dialog_hide_on_ok` | true or false |
-| `dialog_text` | quoted string |
-| `ok_button_text` | quoted string |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `dialog_autowrap` | true or false |  |
+| `dialog_close_on_escape` | true or false |  |
+| `dialog_hide_on_ok` | true or false |  |
+| `dialog_text` | quoted string |  |
+| `ok_button_text` | quoted string |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

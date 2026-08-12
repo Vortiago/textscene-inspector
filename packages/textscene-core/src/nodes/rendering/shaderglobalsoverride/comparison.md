@@ -26,11 +26,11 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin ShaderGlobalsOverride -->
-Strict parsing format-checks these `ShaderGlobalsOverride` properties, plus 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `ShaderGlobalsOverride` properties, plus 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `params/*` | any Variant — the type lives in project.godot, not the .tscn |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `params/*` | any Variant — the type lives in project.godot, not the .tscn |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

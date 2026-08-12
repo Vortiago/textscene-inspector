@@ -31,16 +31,16 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin Timer -->
-Strict parsing format-checks these `Timer` properties, plus 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Timer` properties, plus 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `autostart` | true or false |
-| `ignore_time_scale` | true or false |
-| `one_shot` | true or false |
-| `paused` | true or false |
-| `process_callback` | enum 0-1 (PHYSICS/IDLE) |
-| `wait_time` | float > 0 |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `autostart` | true or false |  |
+| `ignore_time_scale` | true or false |  |
+| `one_shot` | true or false |  |
+| `paused` | true or false |  |
+| `process_callback` | enum 0-1 (PHYSICS/IDLE) | warning |
+| `wait_time` | float > 0 | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -33,14 +33,14 @@ None visible in this fixture. Measured at 0.011% against Godot 4.6.3 with
 ## Linting
 
 <!-- lint:begin CSGBox3D -->
-Strict parsing format-checks these `CSGBox3D` properties, plus 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `CSGBox3D` properties, plus 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `flip_faces` | true or false |
-| `material` | null, SubResource("id") or ExtResource("id") |
-| `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) |
-| `size` | Vector3(x, y, z) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `flip_faces` | true or false |  |
+| `material` | null, SubResource("id") or ExtResource("id") |  |
+| `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) | warning |
+| `size` | Vector3(x, y, z) |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

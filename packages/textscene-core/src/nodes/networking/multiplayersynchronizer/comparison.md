@@ -30,16 +30,16 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin MultiplayerSynchronizer -->
-Strict parsing format-checks these `MultiplayerSynchronizer` properties, plus 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `MultiplayerSynchronizer` properties, plus 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `delta_interval` | float 0-5 |
-| `public_visibility` | true or false |
-| `replication_config` | null, SubResource("id") or ExtResource("id") |
-| `replication_interval` | float 0-5 |
-| `root_path` | NodePath("path/to/node") |
-| `visibility_update_mode` | enum 0-2 (VISIBILITY_PROCESS_IDLE/VISIBILITY_PROCESS_PHYSICS/VISIBILITY_PROCESS_NONE) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `delta_interval` | float 0-5 | error |
+| `public_visibility` | true or false |  |
+| `replication_config` | null, SubResource("id") or ExtResource("id") |  |
+| `replication_interval` | float 0-5 | error |
+| `root_path` | NodePath("path/to/node") |  |
+| `visibility_update_mode` | enum 0-2 (VISIBILITY_PROCESS_IDLE/VISIBILITY_PROCESS_PHYSICS/VISIBILITY_PROCESS_NONE) | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

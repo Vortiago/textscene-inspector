@@ -23,6 +23,28 @@ function check(property: string, value: string) {
   return validator!(property, value, 1);
 }
 
+/** Assert a `joint_constraints/...` key warns (never errors) for an out-of-range value. */
+function expectRangeWarning(key: string, value: string) {
+  const leaf = key.slice(key.lastIndexOf('/') + 1);
+  const error = check(key, value);
+  expect(error?.code, `${key} = ${value}`).toBe(`INVALID_${leaf.toUpperCase()}_VALUE`);
+  expect(error?.severity, `${key} = ${value}`).toBe('warning');
+}
+
+/**
+ * Pin where a bound sits, not just that one exists: both bounds are accepted and
+ * one hint step outside either is rejected, so widening the validator reds a case.
+ */
+function expectHintedRange(
+  key: string,
+  bounds: { min: string; belowMin: string; max: string; aboveMax: string }
+) {
+  expect(check(key, bounds.min), `${key} = ${bounds.min}`).toBeNull();
+  expect(check(key, bounds.max), `${key} = ${bounds.max}`).toBeNull();
+  expectRangeWarning(key, bounds.belowMin);
+  expectRangeWarning(key, bounds.aboveMax);
+}
+
 describe('PhysicalBone3D strict validators', () => {
   it('registers validators of its own', () => {
     expect(validatorRegistry.getOwnKeys('PhysicalBone3D')).not.toEqual([]);
@@ -208,19 +230,25 @@ describe('PhysicalBone3D strict validators', () => {
   // every bound in this describe block is hinted, not enforced: out-of-range
   // warns rather than errors.
   describe('joint_constraints/* — flat leaves (Pin/Cone/Hinge/Slider)', () => {
-    // PinJointData::_get_property_list — physical_bone_3d.cpp:160-162
-    it('warns past damping 0.01-8.0 (Pin) rather than erroring', () => {
+    // PinJointData::_get_property_list — physical_bone_3d.cpp:160-162. Every
+    // hint below steps by 0.01, so ±0.01 is the first value off each end.
+    it('pins damping to 0.01-8.0 (physical_bone_3d.cpp:161)', () => {
       expect(check('joint_constraints/damping', '1.0')).toBeNull();
-      const error = check('joint_constraints/damping', '9');
-      expect(error?.code).toBe('INVALID_DAMPING_VALUE');
-      expect(error?.severity).toBe('warning');
+      expectHintedRange('joint_constraints/damping', {
+        min: '0.01',
+        belowMin: '0',
+        max: '8.0',
+        aboveMax: '8.01',
+      });
     });
 
-    it('warns past impulse_clamp 0.0-64.0 (Pin) rather than erroring', () => {
-      expect(check('joint_constraints/impulse_clamp', '0')).toBeNull();
-      const error = check('joint_constraints/impulse_clamp', '65');
-      expect(error?.code).toBe('INVALID_IMPULSE_CLAMP_VALUE');
-      expect(error?.severity).toBe('warning');
+    it('pins impulse_clamp to 0.0-64.0 (physical_bone_3d.cpp:162)', () => {
+      expectHintedRange('joint_constraints/impulse_clamp', {
+        min: '0.0',
+        belowMin: '-0.01',
+        max: '64.0',
+        aboveMax: '64.01',
+      });
     });
 
     // bias is registered by both PinJointData (0.01-0.99, line 160) and
@@ -230,49 +258,81 @@ describe('PhysicalBone3D strict validators', () => {
       expect(check('joint_constraints/bias', '5.0')).toBeNull();
     });
 
-    it('warns on a bias value below either bound rather than erroring', () => {
-      const error = check('joint_constraints/bias', '0');
-      expect(error?.code).toBe('INVALID_BIAS_VALUE');
-      expect(error?.severity).toBe('warning');
+    it('pins bias to the union 0.01-16.0 (physical_bone_3d.cpp:160,235)', () => {
+      expectHintedRange('joint_constraints/bias', {
+        min: '0.01',
+        belowMin: '0',
+        max: '16.0',
+        aboveMax: '16.01',
+      });
     });
 
     // ConeJointData::_get_property_list — physical_bone_3d.cpp:233-237
-    it('warns past swing_span -180 to 180 rather than erroring', () => {
+    it('pins swing_span to -180..180 (physical_bone_3d.cpp:233)', () => {
       expect(check('joint_constraints/swing_span', '19.999992')).toBeNull();
-      const error = check('joint_constraints/swing_span', '200');
-      expect(error?.code).toBe('INVALID_SWING_SPAN_VALUE');
-      expect(error?.severity).toBe('warning');
+      expectHintedRange('joint_constraints/swing_span', {
+        min: '-180',
+        belowMin: '-180.01',
+        max: '180',
+        aboveMax: '180.01',
+      });
     });
 
     it('accepts twist_span past its soft-bounded range (both or_less and or_greater)', () => {
       expect(check('joint_constraints/twist_span', '50000')).toBeNull();
     });
 
-    it('warns past softness and relaxation 0.01-16.0 rather than erroring', () => {
-      expect(check('joint_constraints/softness', '0.8')).toBeNull();
-      const softness = check('joint_constraints/softness', '17');
-      expect(softness?.code).toBe('INVALID_SOFTNESS_VALUE');
-      expect(softness?.severity).toBe('warning');
-      expect(check('joint_constraints/relaxation', '1.0')).toBeNull();
-      const relaxation = check('joint_constraints/relaxation', '17');
-      expect(relaxation?.code).toBe('INVALID_RELAXATION_VALUE');
-      expect(relaxation?.severity).toBe('warning');
+    // Every Cone/Hinge/Slider leaf hinted "0.01,16,0.01" — no or_greater or
+    // or_less on any of them, so both ends are real bounds.
+    it.each([
+      ['softness', 'physical_bone_3d.cpp:236'],
+      ['relaxation', 'physical_bone_3d.cpp:237'],
+      ['angular_limit_softness', 'physical_bone_3d.cpp:320'],
+      ['angular_limit_relaxation', 'physical_bone_3d.cpp:321'],
+      ['linear_limit_softness', 'physical_bone_3d.cpp:434'],
+      ['linear_limit_restitution', 'physical_bone_3d.cpp:435'],
+      ['angular_limit_restitution', 'physical_bone_3d.cpp:441'],
+    ])('pins %s to 0.01-16 (%s)', (leaf) => {
+      expectHintedRange(`joint_constraints/${leaf}`, {
+        min: '0.01',
+        belowMin: '0',
+        max: '16',
+        aboveMax: '16.01',
+      });
     });
 
     // HingeJointData::_get_property_list — physical_bone_3d.cpp:316-321
-    it('warns past the hinge angular_limit_* bounds rather than erroring', () => {
+    it('rejects a non-boolean angular_limit_enabled (physical_bone_3d.cpp:316)', () => {
       expect(check('joint_constraints/angular_limit_enabled', 'true')).toBeNull();
       expect(check('joint_constraints/angular_limit_enabled', 'yes')?.code).toBe(
         'INVALID_ANGULAR_LIMIT_ENABLED_FORMAT'
       );
-      expect(check('joint_constraints/angular_limit_upper', '90')).toBeNull();
-      const upper = check('joint_constraints/angular_limit_upper', '181');
-      expect(upper?.code).toBe('INVALID_ANGULAR_LIMIT_UPPER_VALUE');
-      expect(upper?.severity).toBe('warning');
+    });
+
+    // Hinge :317-318 and Slider :438-439 register these with the same bound.
+    it.each([
+      ['angular_limit_upper', 'physical_bone_3d.cpp:317'],
+      ['angular_limit_lower', 'physical_bone_3d.cpp:318'],
+    ])('pins %s to -180..180 (%s)', (leaf) => {
+      expect(check(`joint_constraints/${leaf}`, '90')).toBeNull();
+      expectHintedRange(`joint_constraints/${leaf}`, {
+        min: '-180',
+        belowMin: '-180.01',
+        max: '180',
+        aboveMax: '180.01',
+      });
+    });
+
+    it('pins angular_limit_bias to 0.01-0.99 (physical_bone_3d.cpp:319)', () => {
       expect(check('joint_constraints/angular_limit_bias', '0.3')).toBeNull();
-      const bias = check('joint_constraints/angular_limit_bias', '1.0');
-      expect(bias?.code).toBe('INVALID_ANGULAR_LIMIT_BIAS_VALUE');
-      expect(bias?.severity).toBe('warning');
+      expectHintedRange('joint_constraints/angular_limit_bias', {
+        min: '0.01',
+        belowMin: '0',
+        max: '0.99',
+        aboveMax: '1.0',
+      });
+      // Sub-step, so a ceiling drifted to 0.999 is caught too.
+      expectRangeWarning('joint_constraints/angular_limit_bias', '0.995');
     });
 
     // SliderJointData::_get_property_list — physical_bone_3d.cpp:432-442
@@ -281,15 +341,18 @@ describe('PhysicalBone3D strict validators', () => {
       expect(check('joint_constraints/linear_limit_lower', '-99999')).toBeNull();
     });
 
-    it('warns past linear_limit_damping / angular_limit_damping 0-16.0 rather than erroring', () => {
-      expect(check('joint_constraints/linear_limit_damping', '0')).toBeNull();
-      const linear = check('joint_constraints/linear_limit_damping', '17');
-      expect(linear?.code).toBe('INVALID_LINEAR_LIMIT_DAMPING_VALUE');
-      expect(linear?.severity).toBe('warning');
-      expect(check('joint_constraints/angular_limit_damping', '16')).toBeNull();
-      const angular = check('joint_constraints/angular_limit_damping', '-1');
-      expect(angular?.code).toBe('INVALID_ANGULAR_LIMIT_DAMPING_VALUE');
-      expect(angular?.severity).toBe('warning');
+    // Hinted "0,16.0,0.01": floor 0, not the 0.01 its softness/restitution
+    // neighbours carry.
+    it.each([
+      ['linear_limit_damping', 'physical_bone_3d.cpp:436'],
+      ['angular_limit_damping', 'physical_bone_3d.cpp:442'],
+    ])('pins %s to 0-16.0 (%s)', (leaf) => {
+      expectHintedRange(`joint_constraints/${leaf}`, {
+        min: '0',
+        belowMin: '-0.01',
+        max: '16.0',
+        aboveMax: '16.01',
+      });
     });
   });
 
@@ -311,11 +374,29 @@ describe('PhysicalBone3D strict validators', () => {
       expect(check('joint_constraints/z/erp', '-99999')).toBeNull();
     });
 
-    it('bounds axis-prefixed angular_limit_upper the same as the flat Hinge leaf, and warns rather than errors', () => {
-      expect(check('joint_constraints/x/angular_limit_upper', '90')).toBeNull();
-      const error = check('joint_constraints/x/angular_limit_upper', '181');
-      expect(error?.code).toBe('INVALID_ANGULAR_LIMIT_UPPER_VALUE');
-      expect(error?.severity).toBe('warning');
+    it('bounds axis-prefixed angular_limit_upper the same as the flat Hinge leaf (physical_bone_3d.cpp:696)', () => {
+      expectHintedRange('joint_constraints/x/angular_limit_upper', {
+        min: '-180',
+        belowMin: '-180.01',
+        max: '180',
+        aboveMax: '180.01',
+      });
+    });
+
+    // Leaves SixDOFJointData alone registers, all hinted "0.01,16,0.01" — the
+    // axis prefix is the only form Godot ever writes them under.
+    it.each([
+      ['linear_restitution', 'physical_bone_3d.cpp:693'],
+      ['linear_damping', 'physical_bone_3d.cpp:694'],
+      ['angular_restitution', 'physical_bone_3d.cpp:699'],
+      ['angular_damping', 'physical_bone_3d.cpp:700'],
+    ])('pins x/%s to 0.01-16 (%s)', (leaf) => {
+      expectHintedRange(`joint_constraints/x/${leaf}`, {
+        min: '0.01',
+        belowMin: '0',
+        max: '16',
+        aboveMax: '16.01',
+      });
     });
   });
 

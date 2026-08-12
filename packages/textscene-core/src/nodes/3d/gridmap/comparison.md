@@ -34,24 +34,24 @@ a placeholder-material effect — the GridMap geometry itself matches.
 ## Linting
 
 <!-- lint:begin GridMap -->
-Strict parsing format-checks these `GridMap` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `GridMap` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `bake_navigation` | true or false |
-| `baked_meshes` | Array of resource references ([SubResource("id"), …]) |
-| `cell_center_x` | true or false |
-| `cell_center_y` | true or false |
-| `cell_center_z` | true or false |
-| `cell_octant_size` | integer, nonzero, 1-1024 hinted |
-| `cell_scale` | float |
-| `cell_size` | Vector3(x, y, z) |
-| `collision_layer` | 32-bit layer mask (layers 1-32) |
-| `collision_mask` | 32-bit layer mask (layers 1-32) |
-| `collision_priority` | float |
-| `data` | Dictionary literal { "cells": PackedInt32Array(...) } |
-| `mesh_library` | null, SubResource("id") or ExtResource("id") |
-| `physics_material` | null, SubResource("id") or ExtResource("id") |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `bake_navigation` | true or false |  |
+| `baked_meshes` | Array of resource references ([SubResource("id"), …]) | error |
+| `cell_center_x` | true or false |  |
+| `cell_center_y` | true or false |  |
+| `cell_center_z` | true or false |  |
+| `cell_octant_size` | integer, nonzero, 1-1024 hinted | error |
+| `cell_scale` | float |  |
+| `cell_size` | Vector3(x, y, z) |  |
+| `collision_layer` | 32-bit layer mask (layers 1-32) | warning |
+| `collision_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `collision_priority` | float |  |
+| `data` | Dictionary literal { "cells": PackedInt32Array(...) } | error |
+| `mesh_library` | null, SubResource("id") or ExtResource("id") |  |
+| `physics_material` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

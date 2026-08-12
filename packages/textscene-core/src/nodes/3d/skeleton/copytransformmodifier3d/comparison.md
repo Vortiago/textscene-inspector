@@ -42,12 +42,12 @@ the modifier would visibly move a bone renders as the unmodified rest pose.
 ## Linting
 
 <!-- lint:begin CopyTransformModifier3D -->
-Strict parsing format-checks these `CopyTransformModifier3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `CopyTransformModifier3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `setting_count` | integer >= 0 |
-| `settings/#/*` | per-setting copy, axes and invert bit masks, plus relative and additive |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `setting_count` | integer >= 0 | error |
+| `settings/#/*` | per-setting copy, axes and invert bit masks, plus relative and additive | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

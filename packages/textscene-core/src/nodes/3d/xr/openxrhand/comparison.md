@@ -34,15 +34,15 @@ property drives live per-frame tracking data the previewer never has.
 ## Linting
 
 <!-- lint:begin OpenXRHand -->
-Strict parsing format-checks these `OpenXRHand` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `OpenXRHand` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `bone_update` | enum 0-1 (Full/Rotation Only) |
-| `hand` | enum 0-1 (Left/Right) |
-| `hand_skeleton` | NodePath("path/to/node") |
-| `motion_range` | enum 0-1 (Unobstructed/Conform to controller) |
-| `skeleton_rig` | enum 0-1 (OpenXR/Humanoid) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `bone_update` | enum 0-1 (Full/Rotation Only) | error |
+| `hand` | enum 0-1 (Left/Right) | error |
+| `hand_skeleton` | NodePath("path/to/node") |  |
+| `motion_range` | enum 0-1 (Unobstructed/Conform to controller) | error |
+| `skeleton_rig` | enum 0-1 (OpenXR/Humanoid) | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

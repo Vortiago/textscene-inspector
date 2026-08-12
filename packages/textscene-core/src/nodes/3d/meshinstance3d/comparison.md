@@ -40,15 +40,15 @@ otherwise matches.
 ## Linting
 
 <!-- lint:begin MeshInstance3D -->
-Strict parsing format-checks these `MeshInstance3D` properties, plus 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `MeshInstance3D` properties, plus 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `blend_shapes/*` | float -1-1 |
-| `mesh` | null, SubResource("id") or ExtResource("id") |
-| `skeleton` | NodePath("path/to/node") |
-| `skin` | null, SubResource("id") or ExtResource("id") |
-| `surface_material_override/*` | null, SubResource("id") or ExtResource("id") |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `blend_shapes/*` | float -1-1 | warning |
+| `mesh` | null, SubResource("id") or ExtResource("id") |  |
+| `skeleton` | NodePath("path/to/node") |  |
+| `skin` | null, SubResource("id") or ExtResource("id") |  |
+| `surface_material_override/*` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

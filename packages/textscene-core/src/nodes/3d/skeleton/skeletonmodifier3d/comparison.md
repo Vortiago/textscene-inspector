@@ -28,12 +28,12 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin SkeletonModifier3D -->
-Strict parsing format-checks these `SkeletonModifier3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `SkeletonModifier3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `active` | true or false |
-| `influence` | float 0-1 |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `active` | true or false |  |
+| `influence` | float 0-1 | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

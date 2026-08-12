@@ -35,7 +35,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin XRController3D -->
-Strict parsing format-checks the inherited set (3 inherited from XRNode3D, 17 inherited from Node3D, 10 inherited from Node); `XRController3D` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (3 inherited from XRNode3D, 17 inherited from Node3D, 10 inherited from Node); `XRController3D` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

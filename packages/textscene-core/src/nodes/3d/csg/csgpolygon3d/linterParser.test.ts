@@ -100,6 +100,9 @@ describe('CSGPolygon3D strict validators', () => {
     // set_path_simplify_angle:2728-2732 is a bare assignment; the hint
     // (:2607) is advisory.
     ['path_simplify_angle = 181', 'path_simplify_angle'],
+    // csg_shape.cpp:2603 hints "3,64,1", closed (no or_greater), while
+    // set_spin_sides:2692 ERR_FAIL_CONDs the floor only: the ceiling warns.
+    ['spin_sides = 65', 'spin_sides'],
     // csg_shape.cpp:1040 hints the operation enum but set_operation:933-937
     // is a bare assignment.
     ['operation = 5', 'operation'],
@@ -108,6 +111,16 @@ describe('CSGPolygon3D strict validators', () => {
     expect(errorsOf(linter.lint(content))).toEqual([]);
     const warnings = warningsOf(linter.lint(content));
     expect(warnings.some((w) => w.message.includes(property))).toBe(true);
+  });
+
+  it.each(['spin_sides = 3', 'spin_sides = 64'])('accepts the endpoint %s in silence', (line) => {
+    // csg_shape.cpp:2692 ERR_FAIL_COND(p_spin_sides < 3) and the :2603 hint
+    // "3,64,1": both endpoints are legal, so neither may warn. Checking
+    // warnings (not just errors) is what pins the ceiling's LOCATION — a
+    // drifted `max` still leaves the error list empty.
+    const diagnostics = linter.lint(scene(line));
+    expect(errorsOf(diagnostics)).toEqual([]);
+    expect(warningsOf(diagnostics).some((w) => w.message.includes('spin_sides'))).toBe(false);
   });
 
   it('accepts path_u_distance = 0, which Godot allows and means no U scaling', () => {

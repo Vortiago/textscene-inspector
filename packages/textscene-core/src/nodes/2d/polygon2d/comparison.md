@@ -47,26 +47,26 @@ harder edges at this size.
 ## Linting
 
 <!-- lint:begin Polygon2D -->
-Strict parsing format-checks these `Polygon2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Polygon2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `antialiased` | true or false |
-| `bones` | Array literal [bone_path, PackedFloat32Array(weights), …] |
-| `color` | Color(r, g, b, a) |
-| `internal_vertex_count` | integer >= 0 |
-| `invert_border` | float |
-| `invert_enabled` | true or false |
-| `offset` | Vector2(x, y) |
-| `polygon` | PackedVector2Array(x, y, …) |
-| `polygons` | Array of PackedInt32Array(i0, i1, …) or bare [i0, i1, …] index lists |
-| `skeleton` | NodePath("path/to/node") |
-| `texture` | null, SubResource("id") or ExtResource("id") |
-| `texture_offset` | Vector2(x, y) |
-| `texture_rotation` | float |
-| `texture_scale` | Vector2(x, y) |
-| `uv` | PackedVector2Array(x, y, …) |
-| `vertex_colors` | PackedColorArray(r, g, b, a, …) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `antialiased` | true or false |  |
+| `bones` | Array literal [bone_path, PackedFloat32Array(weights), …] | error |
+| `color` | Color(r, g, b, a) |  |
+| `internal_vertex_count` | integer 0-1000 | warning |
+| `invert_border` | float |  |
+| `invert_enabled` | true or false |  |
+| `offset` | Vector2(x, y) |  |
+| `polygon` | PackedVector2Array(x, y, …) |  |
+| `polygons` | Array of PackedInt32Array(i0, i1, …) or bare [i0, i1, …] index lists |  |
+| `skeleton` | NodePath("path/to/node") |  |
+| `texture` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_offset` | Vector2(x, y) |  |
+| `texture_rotation` | float |  |
+| `texture_scale` | Vector2(x, y) |  |
+| `uv` | PackedVector2Array(x, y, …) |  |
+| `vertex_colors` | PackedColorArray(r, g, b, a, …) |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

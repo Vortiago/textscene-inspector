@@ -123,6 +123,33 @@ describe('radius', () => {
     expect(result).not.toBeNull();
     expect(result?.severity).toBe('warning');
   });
+
+  // Both endpoints, from both sides: a mid-range accept plus a wildly
+  // out-of-range reject pins the TIER of each bound but not its LOCATION.
+  it('accepts the floor 0 itself (ERR_FAIL_COND_MSG at :247 refuses only below it)', () => {
+    expect(check('radius', '0.0')).toBeNull();
+  });
+
+  it('rejects one hint step below the floor as an error', () => {
+    // navigation_obstacle_2d.cpp:72 hints step 0.01, so -0.01 is the first
+    // value the :247 `p_radius < 0.0` guard refuses. The VALUE code separates
+    // this from the FORMAT branch, which also reports 'error' and so would
+    // satisfy the severity assertion while pinning no bound at all.
+    const result = check('radius', '-0.01');
+    expect(result?.code).toBe('INVALID_RADIUS_VALUE');
+    expect(result?.severity).toBe('error');
+  });
+
+  it('accepts the hinted ceiling 500 itself', () => {
+    // navigation_obstacle_2d.cpp:72, "0.0,500,0.01,suffix:px" — closed, no or_greater.
+    expect(check('radius', '500.0')).toBeNull();
+  });
+
+  it('warns one hint step above the ceiling', () => {
+    const result = check('radius', '500.01');
+    expect(result?.code).toBe('INVALID_RADIUS_VALUE');
+    expect(result?.severity).toBe('warning');
+  });
 });
 
 describe('vertices', () => {

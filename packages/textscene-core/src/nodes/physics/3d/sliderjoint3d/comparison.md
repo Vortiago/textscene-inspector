@@ -46,32 +46,32 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin SliderJoint3D -->
-Strict parsing format-checks these `SliderJoint3D` properties, plus 4 inherited from Joint3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `SliderJoint3D` properties, plus 4 inherited from Joint3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `angular_limit/damping` | float 0-16 |
-| `angular_limit/lower_angle` | radians, -180° to 180° |
-| `angular_limit/restitution` | float 0.01-16 |
-| `angular_limit/softness` | float 0.01-16 |
-| `angular_limit/upper_angle` | radians, -180° to 180° |
-| `angular_motion/damping` | float 0-16 |
-| `angular_motion/restitution` | float 0.01-16 |
-| `angular_motion/softness` | float 0.01-16 |
-| `angular_ortho/damping` | float 0-16 |
-| `angular_ortho/restitution` | float 0.01-16 |
-| `angular_ortho/softness` | float 0.01-16 |
-| `linear_limit/damping` | float 0-16 |
-| `linear_limit/lower_distance` | float -1024-1024 |
-| `linear_limit/restitution` | float 0.01-16 |
-| `linear_limit/softness` | float 0.01-16 |
-| `linear_limit/upper_distance` | float -1024-1024 |
-| `linear_motion/damping` | float 0-16 |
-| `linear_motion/restitution` | float 0.01-16 |
-| `linear_motion/softness` | float 0.01-16 |
-| `linear_ortho/damping` | float 0-16 |
-| `linear_ortho/restitution` | float 0.01-16 |
-| `linear_ortho/softness` | float 0.01-16 |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `angular_limit/damping` | float 0-16 | warning |
+| `angular_limit/lower_angle` | radians, -180° to 180° | warning |
+| `angular_limit/restitution` | float 0.01-16 | warning |
+| `angular_limit/softness` | float 0.01-16 | warning |
+| `angular_limit/upper_angle` | radians, -180° to 180° | warning |
+| `angular_motion/damping` | float 0-16 | warning |
+| `angular_motion/restitution` | float 0.01-16 | warning |
+| `angular_motion/softness` | float 0.01-16 | warning |
+| `angular_ortho/damping` | float 0-16 | warning |
+| `angular_ortho/restitution` | float 0.01-16 | warning |
+| `angular_ortho/softness` | float 0.01-16 | warning |
+| `linear_limit/damping` | float 0-16 | warning |
+| `linear_limit/lower_distance` | float -1024-1024 | warning |
+| `linear_limit/restitution` | float 0.01-16 | warning |
+| `linear_limit/softness` | float 0.01-16 | warning |
+| `linear_limit/upper_distance` | float -1024-1024 | warning |
+| `linear_motion/damping` | float 0-16 | warning |
+| `linear_motion/restitution` | float 0.01-16 | warning |
+| `linear_motion/softness` | float 0.01-16 | warning |
+| `linear_ortho/damping` | float 0-16 | warning |
+| `linear_ortho/restitution` | float 0.01-16 | warning |
+| `linear_ortho/softness` | float 0.01-16 | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

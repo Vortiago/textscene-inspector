@@ -42,9 +42,17 @@ describe('Control Linter', () => {
       invalid: [{ value: 'x', contains: ['must be a number'] }],
     },
     {
+      // control.cpp:861, ERR_FAIL_INDEX((int)p_direction, 3) — enforced at both
+      // ends. The early return above it (control.cpp:857) compares against
+      // data.h_grow, which only ever holds a value that already cleared the
+      // guard, so an out-of-range write can never take it.
       prop: 'grow_horizontal',
       valid: [0, 1, 2],
-      invalid: [{ value: 9, contains: ['between 0 and 2'] }],
+      invalid: [
+        { value: 3, contains: ['between 0 and 2'], severity: 'error' },
+        { value: -1, contains: ['between 0 and 2'], severity: 'error' },
+        { value: 9, contains: ['between 0 and 2'] },
+      ],
     },
     {
       prop: 'size_flags_horizontal',
@@ -116,6 +124,8 @@ describe('Control Linter', () => {
       ['size_flags_vertical', 'fill'],
       ['size_flags_stretch_ratio', 'half'],
       ['custom_minimum_size', 'Vector2(1)'],
+      ['mouse_filter', 'x'],
+      ['focus_mode', 'x'],
       ['theme_override_font_sizes/font_size', 'big'],
       ['theme_override_fonts/font', 'notaref'],
       ['accessibility_name', 'unquoted'],
@@ -154,6 +164,37 @@ describe('Control Linter', () => {
   // Bounded enums (ADR-0032): pin the last accepted constant AND the first
   // rejected value, from the engine's own count, not the label-list length.
   runPropertyValidation({ nodeType: 'Control' }, [
+    {
+      // control.cpp:1923, ERR_FAIL_INDEX(p_filter, 3) — enforced at both ends,
+      // and it precedes the redundant-set early return, so nothing shadows it.
+      prop: 'mouse_filter',
+      valid: [0, 2],
+      invalid: [
+        { value: 3, contains: ['0-2'], severity: 'error' },
+        { value: -1, contains: ['0-2'], severity: 'error' },
+      ],
+    },
+    {
+      // control.cpp:2267, ERR_FAIL_INDEX((int)p_focus_mode, 4) — enforced;
+      // FOCUS_ACCESSIBILITY=3 is the last constant (control.h:65-70).
+      prop: 'focus_mode',
+      valid: [0, 3],
+      invalid: [
+        { value: 4, contains: ['0-3'], severity: 'error' },
+        { value: -1, contains: ['0-3'], severity: 'error' },
+      ],
+    },
+    {
+      // control.cpp:878, ERR_FAIL_INDEX((int)p_direction, 3) — enforced. The
+      // early return at control.cpp:874 compares against data.v_grow, which
+      // only holds values that already cleared the guard, so it never shadows it.
+      prop: 'grow_vertical',
+      valid: [0, 2],
+      invalid: [
+        { value: 3, contains: ['between 0 and 2'], severity: 'error' },
+        { value: -1, contains: ['between 0 and 2'], severity: 'error' },
+      ],
+    },
     {
       // control.cpp:4312, 3 BIND_ENUM_CONSTANTs (display_server.cpp:1768-1770).
       // Hinted only: control.cpp:2191-2196 has no ERR_FAIL.

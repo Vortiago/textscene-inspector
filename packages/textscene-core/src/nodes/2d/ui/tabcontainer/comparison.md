@@ -39,23 +39,23 @@ Not captured yet: nothing renders, so there is nothing to compare pixels against
 ## Linting
 
 <!-- lint:begin TabContainer -->
-Strict parsing format-checks these `TabContainer` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `TabContainer` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `all_tabs_in_front` | true or false |
-| `clip_tabs` | true or false |
-| `current_tab` | integer >= -1 |
-| `deselect_enabled` | true or false |
-| `drag_to_rearrange_enabled` | true or false |
-| `switch_on_drag_hover` | true or false |
-| `tab_#/*` | tab |
-| `tab_alignment` | enum 0-2 (Left/Center/Right) |
-| `tab_focus_mode` | enum 0-2 (None/Click/All) |
-| `tabs_position` | enum 0-1 (Top/Bottom) |
-| `tabs_rearrange_group` | integer |
-| `tabs_visible` | true or false |
-| `use_hidden_tabs_for_min_size` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `all_tabs_in_front` | true or false |  |
+| `clip_tabs` | true or false |  |
+| `current_tab` | integer >= -1 | error |
+| `deselect_enabled` | true or false |  |
+| `drag_to_rearrange_enabled` | true or false |  |
+| `switch_on_drag_hover` | true or false |  |
+| `tab_#/*` | tab | error |
+| `tab_alignment` | enum 0-2 (Left/Center/Right) | error |
+| `tab_focus_mode` | enum 0-2 (None/Click/All) | warning |
+| `tabs_position` | enum 0-1 (Top/Bottom) | error |
+| `tabs_rearrange_group` | integer |  |
+| `tabs_visible` | true or false |  |
+| `use_hidden_tabs_for_min_size` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

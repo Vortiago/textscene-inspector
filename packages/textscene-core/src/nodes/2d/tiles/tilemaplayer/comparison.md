@@ -32,23 +32,23 @@ blue background (~214 vs ~223 on the blue channel) all match.
 ## Linting
 
 <!-- lint:begin TileMapLayer -->
-Strict parsing format-checks these `TileMapLayer` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `TileMapLayer` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `collision_enabled` | true or false |
-| `collision_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) |
-| `enabled` | true or false |
-| `navigation_enabled` | true or false |
-| `navigation_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) |
-| `occlusion_enabled` | true or false |
-| `physics_quadrant_size` | integer >= 1 |
-| `rendering_quadrant_size` | integer >= 1 |
-| `tile_map_data` | PackedByteArray(…) bytes, or a base64-quoted PackedByteArray("…") (decoded by the tilemaplayer-invalid-tile-data rule) |
-| `tile_set` | null, SubResource("id") or ExtResource("id") |
-| `use_kinematic_bodies` | true or false |
-| `x_draw_order_reversed` | true or false |
-| `y_sort_origin` | integer |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `collision_enabled` | true or false |  |
+| `collision_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) | warning |
+| `enabled` | true or false |  |
+| `navigation_enabled` | true or false |  |
+| `navigation_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) | warning |
+| `occlusion_enabled` | true or false |  |
+| `physics_quadrant_size` | integer >= 1 | error |
+| `rendering_quadrant_size` | integer >= 1 | error |
+| `tile_map_data` | PackedByteArray(…) bytes, or a base64-quoted PackedByteArray("…") (decoded by the tilemaplayer-invalid-tile-data rule) |  |
+| `tile_set` | null, SubResource("id") or ExtResource("id") |  |
+| `use_kinematic_bodies` | true or false |  |
+| `x_draw_order_reversed` | true or false |  |
+| `y_sort_origin` | integer |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

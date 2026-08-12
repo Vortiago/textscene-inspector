@@ -33,12 +33,12 @@ None visible in this fixture — the node draws nothing in either engine.
 ## Linting
 
 <!-- lint:begin VisibleOnScreenNotifier2D -->
-Strict parsing format-checks these `VisibleOnScreenNotifier2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `VisibleOnScreenNotifier2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `rect` | Rect2(x, y, w, h) |
-| `show_rect` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `rect` | Rect2(x, y, w, h) |  |
+| `show_rect` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

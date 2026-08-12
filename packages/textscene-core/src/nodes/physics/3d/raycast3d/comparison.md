@@ -34,20 +34,20 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin RayCast3D -->
-Strict parsing format-checks these `RayCast3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `RayCast3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `collide_with_areas` | true or false |
-| `collide_with_bodies` | true or false |
-| `collision_mask` | 32-bit layer mask (layers 1-32) |
-| `debug_shape_custom_color` | Color(r, g, b, a) |
-| `debug_shape_thickness` | integer 1-5 |
-| `enabled` | true or false |
-| `exclude_parent` | true or false |
-| `hit_back_faces` | true or false |
-| `hit_from_inside` | true or false |
-| `target_position` | Vector3(x, y, z) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `collide_with_areas` | true or false |  |
+| `collide_with_bodies` | true or false |  |
+| `collision_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `debug_shape_custom_color` | Color(r, g, b, a) |  |
+| `debug_shape_thickness` | integer 1-5 | warning |
+| `enabled` | true or false |  |
+| `exclude_parent` | true or false |  |
+| `hit_back_faces` | true or false |  |
+| `hit_from_inside` | true or false |  |
+| `target_position` | Vector3(x, y, z) |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

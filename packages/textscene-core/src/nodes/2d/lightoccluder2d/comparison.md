@@ -89,13 +89,13 @@ is why every wedge above reads as a one-pixel step.
 ## Linting
 
 <!-- lint:begin LightOccluder2D -->
-Strict parsing format-checks these `LightOccluder2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `LightOccluder2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `occluder` | null, SubResource("id") or ExtResource("id") |
-| `occluder_light_mask` | 32-bit layer mask (layers 1-32) |
-| `sdf_collision` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `occluder` | null, SubResource("id") or ExtResource("id") |  |
+| `occluder_light_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `sdf_collision` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

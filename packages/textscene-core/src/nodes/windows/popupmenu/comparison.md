@@ -31,21 +31,21 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin PopupMenu -->
-Strict parsing format-checks these `PopupMenu` properties, plus 45 inherited from Window, 47 inherited from Viewport, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `PopupMenu` properties, plus 45 inherited from Window, 47 inherited from Viewport, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `allow_search` | true or false |
-| `hide_on_checkable_item_selection` | true or false |
-| `hide_on_item_selection` | true or false |
-| `hide_on_state_item_selection` | true or false |
-| `item_#/*` | item_<index>/<leaf> (see popup_menu.cpp, PropertyListHelper-backed) |
-| `item_count` | integer >= 0 |
-| `prefer_native_menu` | true or false |
-| `shrink_height` | true or false |
-| `shrink_width` | true or false |
-| `submenu_popup_delay` | float >= 5e-324 |
-| `system_menu_id` | enum 0-5 (NONE/APPLICATION_MENU/WINDOW_MENU/HELP_MENU/DOCK) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `allow_search` | true or false |  |
+| `hide_on_checkable_item_selection` | true or false |  |
+| `hide_on_item_selection` | true or false |  |
+| `hide_on_state_item_selection` | true or false |  |
+| `item_#/*` | item_<index>/<leaf> (see popup_menu.cpp, PropertyListHelper-backed) | error |
+| `item_count` | integer >= 0 | error |
+| `prefer_native_menu` | true or false |  |
+| `shrink_height` | true or false |  |
+| `shrink_width` | true or false |  |
+| `submenu_popup_delay` | float >= 5e-324 | error |
+| `system_menu_id` | enum 0-5 (NONE/APPLICATION_MENU/WINDOW_MENU/HELP_MENU/DOCK) | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

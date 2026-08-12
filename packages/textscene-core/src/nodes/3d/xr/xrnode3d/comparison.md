@@ -34,13 +34,13 @@ A previewer has no XR runtime, so the tracker never moves it.
 ## Linting
 
 <!-- lint:begin XRNode3D -->
-Strict parsing format-checks these `XRNode3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `XRNode3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `pose` | quoted string or &"name" |
-| `show_when_tracked` | true or false |
-| `tracker` | quoted string or &"name" |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `pose` | quoted string or &"name" |  |
+| `show_when_tracked` | true or false |  |
+| `tracker` | quoted string or &"name" |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

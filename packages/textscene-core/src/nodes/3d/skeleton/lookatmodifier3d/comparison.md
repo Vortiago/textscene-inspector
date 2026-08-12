@@ -50,40 +50,40 @@ None visible in this fixture: the node draws nothing in either engine.
 ## Linting
 
 <!-- lint:begin LookAtModifier3D -->
-Strict parsing format-checks these `LookAtModifier3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `LookAtModifier3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `bone` | integer >= -1 |
-| `bone_name` | quoted string |
-| `duration` | float >= 0 |
-| `ease_type` | enum 0-3 (In/Out/InOut/OutIn) |
-| `forward_axis` | enum 0-5 (+X/-X/+Y/-Y/+Z/-Z) |
-| `origin_bone` | integer >= -1 |
-| `origin_bone_name` | quoted string |
-| `origin_external_node` | NodePath("path/to/node") |
-| `origin_from` | enum 0-2 (Self/SpecificBone/ExternalNode) |
-| `origin_offset` | Vector3(x, y, z) |
-| `origin_safe_margin` | float >= 0 |
-| `primary_damp_threshold` | float 0-1 |
-| `primary_limit_angle` | radians, 0° to 360° |
-| `primary_negative_damp_threshold` | float 0-1 |
-| `primary_negative_limit_angle` | radians, 0° to 180° |
-| `primary_positive_damp_threshold` | float 0-1 |
-| `primary_positive_limit_angle` | radians, 0° to 180° |
-| `primary_rotation_axis` | enum 0-2 (X/Y/Z) |
-| `relative` | true or false |
-| `secondary_damp_threshold` | float 0-1 |
-| `secondary_limit_angle` | radians, 0° to 360° |
-| `secondary_negative_damp_threshold` | float 0-1 |
-| `secondary_negative_limit_angle` | radians, 0° to 180° |
-| `secondary_positive_damp_threshold` | float 0-1 |
-| `secondary_positive_limit_angle` | radians, 0° to 180° |
-| `symmetry_limitation` | true or false |
-| `target_node` | NodePath("path/to/node") |
-| `transition_type` | enum 0-11 (Linear/Sine/Quint/Quart/Quad/Expo/Elastic/Cubic/Circ/Bounce/Back/Spring) |
-| `use_angle_limitation` | true or false |
-| `use_secondary_rotation` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `bone` | integer >= -1 | error |
+| `bone_name` | quoted string |  |
+| `duration` | float >= 0 | warning |
+| `ease_type` | enum 0-3 (In/Out/InOut/OutIn) | warning |
+| `forward_axis` | enum 0-5 (+X/-X/+Y/-Y/+Z/-Z) | warning |
+| `origin_bone` | integer >= -1 | error |
+| `origin_bone_name` | quoted string |  |
+| `origin_external_node` | NodePath("path/to/node") |  |
+| `origin_from` | enum 0-2 (Self/SpecificBone/ExternalNode) | warning |
+| `origin_offset` | Vector3(x, y, z) |  |
+| `origin_safe_margin` | float >= 0 | warning |
+| `primary_damp_threshold` | float 0-1 | warning |
+| `primary_limit_angle` | radians, 0° to 360° | warning |
+| `primary_negative_damp_threshold` | float 0-1 | warning |
+| `primary_negative_limit_angle` | radians, 0° to 180° | warning |
+| `primary_positive_damp_threshold` | float 0-1 | warning |
+| `primary_positive_limit_angle` | radians, 0° to 180° | warning |
+| `primary_rotation_axis` | enum 0-2 (X/Y/Z) | warning |
+| `relative` | true or false |  |
+| `secondary_damp_threshold` | float 0-1 | warning |
+| `secondary_limit_angle` | radians, 0° to 360° | warning |
+| `secondary_negative_damp_threshold` | float 0-1 | warning |
+| `secondary_negative_limit_angle` | radians, 0° to 180° | warning |
+| `secondary_positive_damp_threshold` | float 0-1 | warning |
+| `secondary_positive_limit_angle` | radians, 0° to 180° | warning |
+| `symmetry_limitation` | true or false |  |
+| `target_node` | NodePath("path/to/node") |  |
+| `transition_type` | enum 0-11 (Linear/Sine/Quint/Quart/Quad/Expo/Elastic/Cubic/Circ/Bounce/Back/Spring) | warning |
+| `use_angle_limitation` | true or false |  |
+| `use_secondary_rotation` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

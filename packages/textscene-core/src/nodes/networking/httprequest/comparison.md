@@ -31,17 +31,17 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin HTTPRequest -->
-Strict parsing format-checks these `HTTPRequest` properties, plus 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `HTTPRequest` properties, plus 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `accept_gzip` | true or false |
-| `body_size_limit` | integer -1-2000000000 |
-| `download_chunk_size` | integer 256-16777216 |
-| `download_file` | quoted string |
-| `max_redirects` | integer -1-64 |
-| `timeout` | float >= 0 |
-| `use_threads` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `accept_gzip` | true or false |  |
+| `body_size_limit` | integer -1-2000000000 | warning |
+| `download_chunk_size` | integer 256-16777216 | error |
+| `download_file` | quoted string |  |
+| `max_redirects` | integer -1-64 | warning |
+| `timeout` | float >= 0 | error |
+| `use_threads` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

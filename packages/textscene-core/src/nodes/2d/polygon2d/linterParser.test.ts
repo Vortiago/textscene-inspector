@@ -10,6 +10,10 @@ function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
   return diagnostics.filter((d) => d.severity === 'error');
 }
 
+function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
+  return diagnostics.filter((d) => d.severity === 'warning');
+}
+
 describe('Polygon2D strict validators', () => {
   let linter: Linter;
 
@@ -136,6 +140,35 @@ polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7)]
     it('accepts a trailing comma inside a bare [i0, i1, …] element (same bracket grammar as the outer array)', () => {
       const content = `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\npolygons = [[0, 1, 2,]]\n`;
       expect(errorsOf(linter.lint(content))).toEqual([]);
+    });
+  });
+
+  describe('internal_vertex_count', () => {
+    // polygon_2d.cpp:722, PROPERTY_HINT_RANGE "0,1000" — closed both ends, no
+    // or_greater. set_internal_vertex_count (polygon_2d.cpp:418-420) is a bare
+    // assignment, so out-of-hint warns and never errors. The endpoint-accept
+    // cases below have to check WARNINGS, not just errors: a drifted ceiling
+    // would still leave the error list empty.
+    function diagnose(value: string) {
+      return linter.lint(
+        `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\ninternal_vertex_count = ${value}\n`
+      );
+    }
+
+    it.each(['0', '1000'])('accepts the hint endpoint %s in silence', (value) => {
+      const diagnostics = diagnose(value);
+      expect(errorsOf(diagnostics)).toEqual([]);
+      expect(warningsOf(diagnostics).some((w) => w.message.includes('internal_vertex_count'))).toBe(
+        false
+      );
+    });
+
+    it.each(['-1', '1001'])('warns, and never errors, one step past the hint at %s', (value) => {
+      const diagnostics = diagnose(value);
+      expect(errorsOf(diagnostics)).toEqual([]);
+      expect(warningsOf(diagnostics).some((w) => w.message.includes('internal_vertex_count'))).toBe(
+        true
+      );
     });
   });
 

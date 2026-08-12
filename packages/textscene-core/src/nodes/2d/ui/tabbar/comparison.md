@@ -54,25 +54,25 @@ to compare against Godot's.
 ## Linting
 
 <!-- lint:begin TabBar -->
-Strict parsing format-checks these `TabBar` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `TabBar` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `clip_tabs` | true or false |
-| `close_with_middle_mouse` | true or false |
-| `current_tab` | integer -1-4096 |
-| `deselect_enabled` | true or false |
-| `drag_to_rearrange_enabled` | true or false |
-| `max_tab_width` | integer 0-99999 |
-| `scroll_to_selected` | true or false |
-| `scrolling_enabled` | true or false |
-| `select_with_rmb` | true or false |
-| `switch_on_drag_hover` | true or false |
-| `tab_#/*` | tab |
-| `tab_alignment` | enum 0-2 (LEFT/CENTER/RIGHT) |
-| `tab_close_display_policy` | enum 0-2 (SHOW_NEVER/SHOW_ACTIVE_ONLY/SHOW_ALWAYS) |
-| `tab_count` | integer >= 0 |
-| `tabs_rearrange_group` | integer |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `clip_tabs` | true or false |  |
+| `close_with_middle_mouse` | true or false |  |
+| `current_tab` | integer -1-4096 | error |
+| `deselect_enabled` | true or false |  |
+| `drag_to_rearrange_enabled` | true or false |  |
+| `max_tab_width` | integer 0-99999 | error |
+| `scroll_to_selected` | true or false |  |
+| `scrolling_enabled` | true or false |  |
+| `select_with_rmb` | true or false |  |
+| `switch_on_drag_hover` | true or false |  |
+| `tab_#/*` | tab | error |
+| `tab_alignment` | enum 0-2 (LEFT/CENTER/RIGHT) | error |
+| `tab_close_display_policy` | enum 0-2 (SHOW_NEVER/SHOW_ACTIVE_ONLY/SHOW_ALWAYS) | error |
+| `tab_count` | integer >= 0 | error |
+| `tabs_rearrange_group` | integer |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

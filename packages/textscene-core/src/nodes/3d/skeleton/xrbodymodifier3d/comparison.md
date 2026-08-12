@@ -32,13 +32,13 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin XRBodyModifier3D -->
-Strict parsing format-checks these `XRBodyModifier3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `XRBodyModifier3D` properties, plus 2 inherited from SkeletonModifier3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `body_tracker` | quoted string or &"name" |
-| `body_update` | bit mask of BODY_UPDATE_UPPER_BODY (1) | BODY_UPDATE_LOWER_BODY (2) | BODY_UPDATE_HANDS (4) |
-| `bone_update` | enum 0-1 (BONE_UPDATE_FULL/BONE_UPDATE_ROTATION_ONLY) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `body_tracker` | quoted string or &"name" |  |
+| `body_update` | bit mask of BODY_UPDATE_UPPER_BODY (1) | BODY_UPDATE_LOWER_BODY (2) | BODY_UPDATE_HANDS (4) | warning |
+| `bone_update` | enum 0-1 (BONE_UPDATE_FULL/BONE_UPDATE_ROTATION_ONLY) | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

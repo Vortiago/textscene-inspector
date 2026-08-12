@@ -30,13 +30,13 @@ properties describe is not simulated by either at load time.
 ## Linting
 
 <!-- lint:begin StaticBody2D -->
-Strict parsing format-checks these `StaticBody2D` properties, plus 5 inherited from CollisionObject2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `StaticBody2D` properties, plus 5 inherited from CollisionObject2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `constant_angular_velocity` | float |
-| `constant_linear_velocity` | Vector2(x, y) |
-| `physics_material_override` | null, SubResource("id") or ExtResource("id") |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `constant_angular_velocity` | float |  |
+| `constant_linear_velocity` | Vector2(x, y) |  |
+| `physics_material_override` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

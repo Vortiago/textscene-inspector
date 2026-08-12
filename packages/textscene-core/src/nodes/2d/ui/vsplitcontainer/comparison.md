@@ -41,11 +41,11 @@ Measured through Godot 4.6.3 — 300 px tall columns (top | gap | bottom):
 ## Linting
 
 <!-- lint:begin VSplitContainer -->
-Strict parsing format-checks the inherited set (10 inherited from SplitContainer, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `VSplitContainer` declares none of its own. Every validator failure is an **error**. `VSplitContainer` also REFUSES `vertical`, which its base declares but this class cannot carry.
+Strict parsing format-checks the inherited set (10 inherited from SplitContainer, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `VSplitContainer` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032). `VSplitContainer` also REFUSES `vertical`, which its base declares but this class cannot carry.
 
-| Property | Accepts |
-| --- | --- |
-| `vertical` | **not available on this type** |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `vertical` | **not available on this type** |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

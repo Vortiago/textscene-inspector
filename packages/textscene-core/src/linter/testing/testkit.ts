@@ -144,6 +144,17 @@ export interface InvalidCase {
   contains?: string[];
   /** Also require the located diagnostic to carry this rule (e.g. `'strict-parser'`). */
   ruleName?: string;
+  /**
+   * Also require the located diagnostic to carry this severity.
+   *
+   * ADR-0032's tier is the substance of a bound, not decoration: `enforced`
+   * means Godot's setter refuses the value, `hinted` means only the inspector
+   * hint does. The two are derived from each other in the DSL, so a flipped
+   * tier stays self-consistent and every global guard passes. Naming the
+   * expected severity here is what puts the claim in a second file, where an
+   * accidental flip has something to break.
+   */
+  severity?: Severity;
 }
 
 /**
@@ -227,6 +238,7 @@ export function runPropertyValidation(
             prop: propCase.prop,
             ruleName: invalid.ruleName,
             contains: invalid.contains,
+            severity: invalid.severity,
           });
         });
       }

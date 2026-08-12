@@ -34,18 +34,18 @@ Not captured yet.
 ## Linting
 
 <!-- lint:begin FoldableContainer -->
-Strict parsing format-checks these `FoldableContainer` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `FoldableContainer` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `foldable_group` | null, SubResource("id") or ExtResource("id") |
-| `folded` | true or false |
-| `language` | quoted string |
-| `title` | quoted string |
-| `title_alignment` | enum 0-2 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT) |
-| `title_position` | enum 0-1 (POSITION_TOP/POSITION_BOTTOM) |
-| `title_text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) |
-| `title_text_overrun_behavior` | enum 0-4 (OVERRUN_NO_TRIMMING/OVERRUN_TRIM_CHAR/OVERRUN_TRIM_WORD/OVERRUN_TRIM_ELLIPSIS/OVERRUN_TRIM_WORD_ELLIPSIS) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `foldable_group` | null, SubResource("id") or ExtResource("id") |  |
+| `folded` | true or false |  |
+| `language` | quoted string |  |
+| `title` | quoted string |  |
+| `title_alignment` | enum 0-2 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT) | error |
+| `title_position` | enum 0-1 (POSITION_TOP/POSITION_BOTTOM) | error |
+| `title_text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error |
+| `title_text_overrun_behavior` | enum 0-4 (OVERRUN_NO_TRIMMING/OVERRUN_TRIM_CHAR/OVERRUN_TRIM_WORD/OVERRUN_TRIM_ELLIPSIS/OVERRUN_TRIM_WORD_ELLIPSIS) | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

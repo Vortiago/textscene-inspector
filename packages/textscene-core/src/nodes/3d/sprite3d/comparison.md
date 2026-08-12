@@ -32,17 +32,17 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin Sprite3D -->
-Strict parsing format-checks these `Sprite3D` properties, plus 20 inherited from SpriteBase3D, 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Sprite3D` properties, plus 20 inherited from SpriteBase3D, 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `frame` | integer >= 0 |
-| `frame_coords` | Vector2i(x, y), both >= 0 |
-| `hframes` | integer > 0 |
-| `region_enabled` | true or false |
-| `region_rect` | Rect2(x, y, w, h) |
-| `texture` | null, SubResource("id") or ExtResource("id") |
-| `vframes` | integer > 0 |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `frame` | integer >= 0 | error |
+| `frame_coords` | Vector2i(x, y), both >= 0 | error |
+| `hframes` | integer > 0 | error |
+| `region_enabled` | true or false |  |
+| `region_rect` | Rect2(x, y, w, h) |  |
+| `texture` | null, SubResource("id") or ExtResource("id") |  |
+| `vframes` | integer > 0 | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

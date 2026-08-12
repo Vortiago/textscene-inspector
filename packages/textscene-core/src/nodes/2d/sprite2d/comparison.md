@@ -45,22 +45,22 @@ output; the Below sprite is that shift plus the tint multiply, not a separate
 ## Linting
 
 <!-- lint:begin Sprite2D -->
-Strict parsing format-checks these `Sprite2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Sprite2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `centered` | true or false |
-| `flip_h` | true or false |
-| `flip_v` | true or false |
-| `frame` | integer >= 0 |
-| `frame_coords` | Vector2i(x, y), both >= 0 |
-| `hframes` | integer 1-16384 |
-| `offset` | Vector2(x, y) |
-| `region_enabled` | true or false |
-| `region_filter_clip_enabled` | true or false |
-| `region_rect` | Rect2(x, y, w, h) |
-| `texture` | null, SubResource("id") or ExtResource("id") |
-| `vframes` | integer 1-16384 |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `centered` | true or false |  |
+| `flip_h` | true or false |  |
+| `flip_v` | true or false |  |
+| `frame` | integer >= 0 | error |
+| `frame_coords` | Vector2i(x, y), both >= 0 | error |
+| `hframes` | integer 1-16384 | error |
+| `offset` | Vector2(x, y) |  |
+| `region_enabled` | true or false |  |
+| `region_filter_clip_enabled` | true or false |  |
+| `region_rect` | Rect2(x, y, w, h) |  |
+| `texture` | null, SubResource("id") or ExtResource("id") |  |
+| `vframes` | integer 1-16384 | error |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

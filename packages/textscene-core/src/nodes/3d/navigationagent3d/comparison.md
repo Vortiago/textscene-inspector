@@ -64,43 +64,43 @@ members only) does not bind at all.
 ## Linting
 
 <!-- lint:begin NavigationAgent3D -->
-Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `avoidance_enabled` | true or false |
-| `avoidance_layers` | 32-bit layer mask (layers 1-32) |
-| `avoidance_mask` | 32-bit layer mask (layers 1-32) |
-| `avoidance_priority` | float 0-1 |
-| `debug_enabled` | true or false |
-| `debug_path_custom_color` | Color(r, g, b, a) |
-| `debug_path_custom_point_size` | float >= 0 |
-| `debug_use_custom` | true or false |
-| `height` | float >= 0 |
-| `keep_y_velocity` | true or false |
-| `max_neighbors` | integer >= 1 |
-| `max_speed` | float >= 0 |
-| `navigation_layers` | 32-bit layer mask (layers 1-32) |
-| `neighbor_distance` | float >= 0.1 |
-| `path_desired_distance` | float >= 0.1 |
-| `path_height_offset` | float >= -100 |
-| `path_max_distance` | float >= 0.01 |
-| `path_metadata_flags` | bit mask of PATH_METADATA_INCLUDE_TYPES (1) | PATH_METADATA_INCLUDE_RIDS (2) | PATH_METADATA_INCLUDE_OWNERS (4) |
-| `path_postprocessing` | enum 0-2 (PATH_POSTPROCESSING_CORRIDORFUNNEL/PATH_POSTPROCESSING_EDGECENTERED/PATH_POSTPROCESSING_NONE) |
-| `path_return_max_length` | float >= 0 |
-| `path_return_max_radius` | float >= 0 |
-| `path_search_max_distance` | float >= 0 |
-| `path_search_max_polygons` | integer >= 0 |
-| `pathfinding_algorithm` | enum 0-0 (PATHFINDING_ALGORITHM_ASTAR) |
-| `radius` | float >= 0 |
-| `simplify_epsilon` | float >= 0 |
-| `simplify_path` | true or false |
-| `target_desired_distance` | float >= 0.1 |
-| `target_position` | Vector3(x, y, z) |
-| `time_horizon_agents` | float >= 0 |
-| `time_horizon_obstacles` | float >= 0 |
-| `use_3d_avoidance` | true or false |
-| `velocity` | Vector3(x, y, z) |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `avoidance_enabled` | true or false |  |
+| `avoidance_layers` | 32-bit layer mask (layers 1-32) | warning |
+| `avoidance_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `avoidance_priority` | float 0-1 | error |
+| `debug_enabled` | true or false |  |
+| `debug_path_custom_color` | Color(r, g, b, a) |  |
+| `debug_path_custom_point_size` | float >= 0 | error |
+| `debug_use_custom` | true or false |  |
+| `height` | float >= 0 | error |
+| `keep_y_velocity` | true or false |  |
+| `max_neighbors` | integer >= 1 | warning |
+| `max_speed` | float >= 0 | error |
+| `navigation_layers` | 32-bit layer mask (layers 1-32) | warning |
+| `neighbor_distance` | float >= 0.1 | warning |
+| `path_desired_distance` | float >= 0.1 | warning |
+| `path_height_offset` | float >= -100 | warning |
+| `path_max_distance` | float >= 0.01 | warning |
+| `path_metadata_flags` | bit mask of PATH_METADATA_INCLUDE_TYPES (1) | PATH_METADATA_INCLUDE_RIDS (2) | PATH_METADATA_INCLUDE_OWNERS (4) | warning |
+| `path_postprocessing` | enum 0-2 (PATH_POSTPROCESSING_CORRIDORFUNNEL/PATH_POSTPROCESSING_EDGECENTERED/PATH_POSTPROCESSING_NONE) | warning |
+| `path_return_max_length` | float >= 0 | error |
+| `path_return_max_radius` | float >= 0 | error |
+| `path_search_max_distance` | float >= 0 | error |
+| `path_search_max_polygons` | integer >= 0 | warning |
+| `pathfinding_algorithm` | enum 0-0 (PATHFINDING_ALGORITHM_ASTAR) | warning |
+| `radius` | float >= 0 | error |
+| `simplify_epsilon` | float >= 0 | error |
+| `simplify_path` | true or false |  |
+| `target_desired_distance` | float >= 0.1 | warning |
+| `target_position` | Vector3(x, y, z) |  |
+| `time_horizon_agents` | float >= 0 | error |
+| `time_horizon_obstacles` | float >= 0 | error |
+| `use_3d_avoidance` | true or false |  |
+| `velocity` | Vector3(x, y, z) |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

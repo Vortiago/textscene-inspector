@@ -2,9 +2,12 @@
  * What the linter actually does to one node type, read from the LIVE registries.
  *
  * Two independent families, and the difference matters to a reader:
- *   - **Validators** run during strict parsing, per property, and are always
- *     `error`. They inherit down the base chain, so a Node3D subclass gets the
- *     transform/visible set without declaring it.
+ *   - **Validators** run during strict parsing, per property. A malformed value
+ *     is an `error`; an out-of-range one is an `error` only where Godot's setter
+ *     refuses it and a `warning` where only the inspector hint states the bound
+ *     (ADR-0032), which is what the `grounding` field carries. They inherit down
+ *     the base chain, so a Node3D subclass gets the transform/visible set
+ *     without declaring it.
  *   - **Rules** run after parsing. `RuleRegistry` matches the node type exactly,
  *     EXCEPT for a rule carrying an `applicableNodeTypeMatcher` (which is
  *     executed here, not guessed) and a rule declaring no applicable types at
@@ -13,6 +16,9 @@
  * Because matchers are predicates, this can only be computed by running them —
  * which is why the gallery cannot compute it and reads the generated JSON instead.
  */
+
+/** How each ADR-0032 tier reads in the sheet's `Out of range` column. */
+const TIER_LABEL = { enforced: 'error', hinted: 'warning' };
 
 /** Validated properties for `type`, each attributed to the type that declares it. */
 export function validatorsFor(type, validatorRegistry, baseTypes) {
@@ -38,6 +44,12 @@ export function validatorsFor(type, validatorRegistry, baseTypes) {
         property: key,
         declaredOn: current,
         accepts: validator?.accepts ?? '',
+        // ADR-0032's tier. `hinted` means only the inspector's
+        // PROPERTY_HINT_RANGE states the bound, so exceeding it warns; the
+        // setter itself takes the value. Carried here because the tier decides
+        // whether a diagnostic stops a build, which is the first thing a reader
+        // of this table needs and the sheet used to state wrongly for all of them.
+        grounding: validator?.grounding?.kind ?? '',
         ...(removed.has(key) ? { unavailable: true } : {}),
       });
     }
@@ -118,17 +130,20 @@ export function renderCoverage(type, coverage) {
           .join(', ')}, which its base declares but this class cannot carry.`
       : '';
     lines.push(
-      `Strict parsing format-checks ${scope}. Every validator failure is an **error**.${refusalNote}`
+      `Strict parsing format-checks ${scope}. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).${refusalNote}`
     );
     if (own.length) {
       lines.push('');
-      lines.push('| Property | Accepts |');
-      lines.push('| --- | --- |');
+      lines.push('| Property | Accepts | Out of range |');
+      lines.push('| --- | --- | --- |');
       for (const v of own) {
         // A removed key is not a property with a narrow domain; it is one this
         // class refuses outright, so it must not read as an accepted value.
         const accepts = v.unavailable ? '**not available on this type**' : v.accepts;
-        lines.push(`| \`${v.property}\` | ${accepts} |`);
+        // Blank for a validator with no bound to exceed: a format-only check has
+        // no "out of range", and claiming one would invent a tier it never reports.
+        const tier = v.unavailable || !v.grounding ? '' : TIER_LABEL[v.grounding];
+        lines.push(`| \`${v.property}\` | ${accepts} | ${tier} |`);
       }
     }
   }

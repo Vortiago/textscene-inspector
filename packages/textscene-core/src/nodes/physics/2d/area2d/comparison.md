@@ -37,25 +37,25 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin Area2D -->
-Strict parsing format-checks these `Area2D` properties, plus 5 inherited from CollisionObject2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Area2D` properties, plus 5 inherited from CollisionObject2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `angular_damp` | float >= 0 |
-| `angular_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
-| `audio_bus_name` | quoted string or &"name" |
-| `audio_bus_override` | true or false |
-| `gravity` | float |
-| `gravity_direction` | Vector2(x, y) |
-| `gravity_point` | true or false |
-| `gravity_point_center` | Vector2(x, y) |
-| `gravity_point_unit_distance` | float >= 0 |
-| `gravity_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
-| `linear_damp` | float >= 0 |
-| `linear_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) |
-| `monitorable` | true or false |
-| `monitoring` | true or false |
-| `priority` | float |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `angular_damp` | float >= 0 | warning |
+| `angular_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) | warning |
+| `audio_bus_name` | quoted string or &"name" |  |
+| `audio_bus_override` | true or false |  |
+| `gravity` | float |  |
+| `gravity_direction` | Vector2(x, y) |  |
+| `gravity_point` | true or false |  |
+| `gravity_point_center` | Vector2(x, y) |  |
+| `gravity_point_unit_distance` | float >= 0 | warning |
+| `gravity_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) | warning |
+| `linear_damp` | float >= 0 | warning |
+| `linear_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) | warning |
+| `monitorable` | true or false |  |
+| `monitoring` | true or false |  |
+| `priority` | float |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

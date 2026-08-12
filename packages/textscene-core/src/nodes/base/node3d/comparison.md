@@ -33,27 +33,27 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin Node3D -->
-Strict parsing format-checks these `Node3D` properties, plus 10 inherited from Node. Every validator failure is an **error**.
+Strict parsing format-checks these `Node3D` properties, plus 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts |
-| --- | --- |
-| `basis` | Basis(9 floats) |
-| `global_basis` | Basis(9 floats) |
-| `global_position` | Vector3(x, y, z) |
-| `global_rotation` | Vector3(x, y, z) |
-| `global_rotation_degrees` | Vector3(x, y, z) |
-| `global_transform` | Transform3D(12 floats) |
-| `position` | Vector3(x, y, z) |
-| `quaternion` | Quaternion(x, y, z, w) |
-| `rotation` | Vector3(x, y, z) |
-| `rotation_degrees` | Vector3(x, y, z) |
-| `rotation_edit_mode` | enum 0-2 (Euler/Quaternion/Basis) |
-| `rotation_order` | enum 0-5 (XYZ/XZY/YXZ/YZX/ZXY/ZYX) |
-| `scale` | Vector3(x, y, z) |
-| `top_level` | true or false |
-| `transform` | Transform3D(12 floats) |
-| `visibility_parent` | NodePath("path/to/node") |
-| `visible` | true or false |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `basis` | Basis(9 floats) |  |
+| `global_basis` | Basis(9 floats) |  |
+| `global_position` | Vector3(x, y, z) |  |
+| `global_rotation` | Vector3(x, y, z) |  |
+| `global_rotation_degrees` | Vector3(x, y, z) |  |
+| `global_transform` | Transform3D(12 floats) |  |
+| `position` | Vector3(x, y, z) |  |
+| `quaternion` | Quaternion(x, y, z, w) |  |
+| `rotation` | Vector3(x, y, z) |  |
+| `rotation_degrees` | Vector3(x, y, z) |  |
+| `rotation_edit_mode` | enum 0-2 (Euler/Quaternion/Basis) | warning |
+| `rotation_order` | enum 0-5 (XYZ/XZY/YXZ/YZX/ZXY/ZYX) | error |
+| `scale` | Vector3(x, y, z) |  |
+| `top_level` | true or false |  |
+| `transform` | Transform3D(12 floats) |  |
+| `visibility_parent` | NodePath("path/to/node") |  |
+| `visible` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
