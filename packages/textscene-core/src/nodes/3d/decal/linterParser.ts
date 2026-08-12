@@ -18,9 +18,11 @@ validatorRegistry.registerAll('Decal', {
   // decal.cpp:246, "0,16,0.01,or_greater"; set_emission_energy (:70-73) is a
   // bare assignment.
   emission_energy: v.nonNegativeFloat('emission_energy', { hinted: 'decal.cpp:246' }),
-  // decal.cpp:251, "0,0.999,0.001"; set_normal_fade (:106-109) is a bare
+  // decal.cpp:251, "0,0.999,0.001"; the ceiling stops one step short because
+  // "A Normal Fade of 1.0 causes the decal to be invisible even if fully
+  // perpendicular to a surface" (:249). set_normal_fade (:106-109) is a bare
   // assignment.
-  normal_fade: v.float('normal_fade', { min: 0, max: 1, hinted: 'decal.cpp:251' }),
+  normal_fade: v.float('normal_fade', { min: 0, max: 0.999, hinted: 'decal.cpp:251' }),
   // decal.cpp:254-255 hint these PROPERTY_HINT_EXP_EASING with NO range: an
   // easing-curve editor, not a 0-1 bound. The setters DO clamp the low end
   // (`upper_fade = MAX(p_fade, 0.0)`, :89; `lower_fade = MAX(p_fade, 0.0)`,

@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 import './nodes/index'; // side-effect: populate the component registry
 import '../parser/TscnParser'; // side-effect: populate the parser registry
 import { nodeRegistry } from '../core/NodeRegistry';
-import { isRenderableNodeType, rendersOwnVisual, INTERNAL_DISPLAY_NODE_TYPES } from './nodeSupport';
+import { isRenderableNodeType, rendersOwnVisual } from './nodeSupport';
 
 describe('isRenderableNodeType', () => {
   it('treats the render-only GLBSceneRoot as supported (it renders)', () => {
@@ -20,12 +20,6 @@ describe('isRenderableNodeType', () => {
 
   it('treats the base Node as supported', () => {
     expect(isRenderableNodeType('Node')).toBe(true);
-  });
-
-  it('treats registered internal-display types as supported', () => {
-    for (const t of INTERNAL_DISPLAY_NODE_TYPES) {
-      expect(isRenderableNodeType(t)).toBe(true);
-    }
   });
 
   it('flags a genuinely unknown type as unsupported', () => {

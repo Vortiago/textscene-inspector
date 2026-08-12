@@ -132,7 +132,7 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 | `emission_energy` | float >= 0 |
 | `lower_fade` | float >= 0 |
 | `modulate` | Color(r, g, b, a) |
-| `normal_fade` | float 0-1 |
+| `normal_fade` | float 0-0.999 |
 | `size` | Vector3(x, y, z) |
 | `sorting_offset` | float |
 | `texture_albedo` | null, SubResource("id") or ExtResource("id") |

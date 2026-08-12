@@ -74,22 +74,6 @@ describe('StrictTscnParser', () => {
       expect(result.scene).toBeDefined();
     });
 
-    it('should accept node with instance attribute (PackedScene)', () => {
-      const content = `[gd_scene load_steps=2 format=3]
-
-[ext_resource type="PackedScene" path="res://enemy.tscn" id="1_abc"]
-
-[node name="Root" type="Node3D"]
-
-[node name="Enemy1" instance=ExtResource("1_abc") parent="."]
-`;
-
-      const result = parser.parse(content);
-
-      expect(result.errors).toHaveLength(0);
-      expect(result.scene).toBeDefined();
-    });
-
     it('parses an index-only child node without polluting its properties', () => {
       const content = `[gd_scene load_steps=1 format=3]
 

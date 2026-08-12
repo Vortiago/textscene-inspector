@@ -87,42 +87,5 @@ describe('Linter', () => {
       expect(visitOrder.indexOf('Root')).toBeLessThan(visitOrder.indexOf('Child'));
       expect(visitOrder.indexOf('Child')).toBeLessThan(visitOrder.indexOf('GrandChild'));
     });
-
-    it('should lint deeply nested hierarchies', () => {
-      const visitedNodes: string[] = [];
-
-      const testRule: LintRule = {
-        meta: {
-          name: 'test-recursive-rule',
-          description: 'Track visited nodes',
-          category: 'validation',
-        },
-        check: (context) => {
-          visitedNodes.push(context.node.name);
-          return [];
-        },
-      };
-
-      ruleRegistry.register(testRule);
-
-      // Note: buildSceneTree requires exact path matching for deep nesting
-      // Use child names that match the parent path structure
-      const content = `[gd_scene load_steps=1 format=3]
-
-[node name="Level0" type="Node3D"]
-
-[node name="Level1" type="Node3D" parent="."]
-
-[node name="Level2" type="Node3D" parent="Level1"]
-`;
-
-      linter.lint(content);
-
-      // 3-level hierarchy is enough to test recursive linting
-      expect(visitedNodes.length).toBeGreaterThanOrEqual(3);
-      expect(visitedNodes).toContain('Level0');
-      expect(visitedNodes).toContain('Level1');
-      expect(visitedNodes).toContain('Level2');
-    });
   });
 });

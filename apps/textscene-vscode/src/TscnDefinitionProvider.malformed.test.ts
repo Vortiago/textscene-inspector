@@ -82,7 +82,7 @@ describe('TscnDefinitionProvider', () => {
   // ============================================================================
 
   describe('Document Boundaries', () => {
-    it('should find definition when resource is on first line', () => {
+    it('should find definition when resource heading is on last line', () => {
       const content = `mesh = SubResource("BoxMesh_1")
 [sub_resource type="BoxMesh" id="BoxMesh_1"]`;
 
@@ -100,24 +100,6 @@ describe('TscnDefinitionProvider', () => {
     });
 
     it('should find definition when resource heading is on first line', () => {
-      const content = `[sub_resource type="BoxMesh" id="BoxMesh_1"]
-
-mesh = SubResource("BoxMesh_1")`;
-
-      const document = createMockDocument(content);
-      const position = new vscode.Position(2, 15);
-
-      const definition = provider.provideDefinition(
-        document,
-        position,
-        mockCancellationToken
-      ) as vscode.Location;
-
-      expect(definition).toBeDefined();
-      expect(definition.range.start.line).toBe(0);
-    });
-
-    it('should find definition when resource is on last line', () => {
       const content = `[sub_resource type="BoxMesh" id="BoxMesh_1"]
 
 mesh = SubResource("BoxMesh_1")`;

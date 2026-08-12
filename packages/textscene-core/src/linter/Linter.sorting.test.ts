@@ -19,6 +19,8 @@ describe('Linter', () => {
       ruleRegistry['rules'].delete('test-error-rule');
       ruleRegistry['rules'].delete('test-warning-rule');
       ruleRegistry['rules'].delete('test-info-rule');
+      ruleRegistry['rules'].delete('test-warning-1');
+      ruleRegistry['rules'].delete('test-warning-2');
     });
 
     it('should sort diagnostics by severity (errors first)', () => {
@@ -112,11 +114,10 @@ describe('Linter', () => {
       const diagnostics = linter.lint(content);
 
       const warnings = diagnostics.filter(d => d.severity === 'warning');
-      expect(warnings).toHaveLength(2);
 
-      // Cleanup
-      ruleRegistry['rules'].delete('test-warning-1');
-      ruleRegistry['rules'].delete('test-warning-2');
+      // The severity-only comparator is a stable sort, so equal-severity
+      // diagnostics keep the order their rules were registered in.
+      expect(warnings.map(d => d.message)).toEqual(['Warning 1', 'Warning 2']);
     });
   });
 });

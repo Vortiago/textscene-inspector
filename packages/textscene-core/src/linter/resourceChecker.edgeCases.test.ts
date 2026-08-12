@@ -61,6 +61,19 @@ describe('checkResourceExists', () => {
       expect(checkResourceExists(scene, '')).toBe(false);
     });
 
+    it('should return true for a cleared slot, which names nothing on purpose', () => {
+      // `variant_parser.cpp:699` reads a bare `null` as `Variant()` and every
+      // `Ref<T>` setter takes it, so nothing is missing. Shared by every rule
+      // that asks this question, so the arm is pinned here once.
+      const scene: TscnScene = {
+        nodes: [],
+        externalResources: [],
+        internalResources: [],
+      };
+
+      expect(checkResourceExists(scene, 'null')).toBe(true);
+    });
+
     it('should return false for malformed reference', () => {
       const scene: TscnScene = {
         nodes: [],

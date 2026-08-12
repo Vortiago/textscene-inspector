@@ -47,8 +47,12 @@ describe('PopupPanel strict validators', () => {
     });
 
     it('still rejects a malformed size, proving the base-walk is a real validator and not a pass-through', () => {
+      // Called unconditionally: `validator?.(…)` yields `undefined` when the
+      // lookup misses, and `undefined` satisfies `not.toBeNull()` — the
+      // rejection claim would hold precisely when no validator resolves.
       const validator = validatorRegistry.findValidator('PopupPanel', 'size');
-      expect(validator?.('size', 'Vector2i(-1, 600)', 1)).not.toBeNull();
+      if (!validator) throw new Error('no validator resolved for PopupPanel.size');
+      expect(validator('size', 'Vector2i(-1, 600)', 1)).not.toBeNull();
     });
   });
 
@@ -60,9 +64,9 @@ describe('PopupPanel strict validators', () => {
     // resolves here through Window's generic `theme_override_styles/*` wildcard
     // (themeOverrides.ts), confirming PopupPanel needs no entry of its own for it.
     const validator = validatorRegistry.findValidator('PopupPanel', 'theme_override_styles/panel');
-    expect(validator).not.toBeNull();
-    expect(validator?.('theme_override_styles/panel', 'SubResource("StyleBoxFlat_1")', 1)).toBeNull();
-    expect(validator?.('theme_override_styles/panel', 'not-a-resource', 1)).not.toBeNull();
+    if (!validator) throw new Error('no validator resolved for PopupPanel.theme_override_styles/panel');
+    expect(validator('theme_override_styles/panel', 'SubResource("StyleBoxFlat_1")', 1)).toBeNull();
+    expect(validator('theme_override_styles/panel', 'not-a-resource', 1)).not.toBeNull();
   });
 
   describe('the fixture, property by property', () => {

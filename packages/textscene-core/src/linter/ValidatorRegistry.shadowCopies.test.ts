@@ -1,21 +1,16 @@
 /**
- * Meta-guard: no linterParser.ts may re-declare a key that its base chain
- * already carries — a shadow copy silently drifts from the base validator.
+ * Meta-guard: no type may re-declare a key that its base chain already carries —
+ * a shadow copy silently drifts from the base validator.
  *
- * The text scan is `testing/shadowCopyScan.ts`; what lives here is the
- * inventory of deliberate exceptions and the run against the real tree.
+ * The comparison is `testing/shadowCopyScan.ts`; what lives here is the
+ * inventory of deliberate exceptions and the run against the real registry.
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { validatorRegistry } from './ValidatorRegistry.js';
+import { ValidatorRegistry, validatorRegistry } from './ValidatorRegistry.js';
 import { baseChain } from './nodeBaseTypes.js';
-import { nodesRoot } from './testing/ruleNameScrape.js';
-import {
-  extractRegisteredKeys,
-  findShadowViolations,
-  walkLinterParsers,
-} from './testing/shadowCopyScan.js';
+import { v } from './validators/v.js';
+import { findShadowViolations, ownKeyRegistrations } from './testing/shadowCopyScan.js';
 import './index.js'; // trigger all validator registrations
 
 /**
@@ -70,19 +65,13 @@ function baseChainKeys(nodeType: string): Set<string> {
 
 describe('ValidatorRegistry meta-guard: no shadow copies', () => {
   // A scratch chain where 'Child' inherits 'transform': proves the guard fires
-  // before trusting the filesystem scan's silence.
+  // before trusting the real registry's silence.
   const scratchInherited = (nodeType: string): Set<string> =>
     new Set(nodeType === 'Child' ? ['transform'] : []);
 
   it('fails on a seeded duplicate key', () => {
-    const source = `
-      validatorRegistry.registerAll('Child', {
-        transform: v.transform3d('transform'),
-        own_prop: v.boolean('own_prop'),
-      });
-    `;
     const violations = findShadowViolations(
-      extractRegisteredKeys(source),
+      [{ nodeType: 'Child', keys: ['transform', 'own_prop'] }],
       scratchInherited,
       new Set()
     );
@@ -91,47 +80,40 @@ describe('ValidatorRegistry meta-guard: no shadow copies', () => {
   });
 
   it('an INTENTIONAL_OVERRIDES entry suppresses the seeded violation', () => {
-    const source = `
-      validatorRegistry.registerAll('Child', {
-        transform: v.transform3d('transform'),
-      });
-    `;
     const violations = findShadowViolations(
-      extractRegisteredKeys(source),
+      [{ nodeType: 'Child', keys: ['transform'] }],
       scratchInherited,
       new Set(['Child:transform'])
     );
     expect(violations).toHaveLength(0);
   });
 
-  it('sees keys declared after a nested option object', () => {
-    // The deleted shadow copies sat at the END of registrations that contain
-    // option objects — the extraction must not stop at the first nested `}`.
-    const source = `
-      validatorRegistry.registerAll('Child', {
-        rings: v.int('rings', { min: 1 }),
-        transform: v.transform3d('transform'),
-      });
-    `;
-    const parsed = extractRegisteredKeys(source);
-    expect(parsed[0]!.keys).toEqual(['rings', 'transform']);
+  it('sees a key a spread contributed, which a source scrape cannot', () => {
+    // Why the own half reads the registry rather than the source text: a shared
+    // key group spread into `registerAll` declares its keys with no `key:` line
+    // to find, and twenty registrations arrive that way.
+    const SHARED_KEYS = { transform: v.transform3d('transform') };
+    const scratch = new ValidatorRegistry({ Child: 'Base' });
+    scratch.registerAll('Base', { transform: v.transform3d('transform') });
+    scratch.registerAll('Child', { ...SHARED_KEYS, own_prop: v.boolean('own_prop') });
+
+    const violations = findShadowViolations(
+      ownKeyRegistrations(scratch),
+      (nodeType) => new Set(nodeType === 'Child' ? scratch.getOwnKeys('Base') : []),
+      new Set()
+    );
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toContain("'Child' re-declares 'transform'");
   });
 
-  it('no linterParser.ts re-declares a key that its base chain already registers', () => {
-    const files = walkLinterParsers(nodesRoot);
-    expect(files.length).toBeGreaterThan(0);
+  it('no type re-declares a key that its base chain already registers', () => {
+    const registrations = ownKeyRegistrations(validatorRegistry);
+    // The population floor, asserted on the array the guard is about to read: a
+    // registry that never loaded reports no shadows just as convincingly as a
+    // clean one.
+    expect(registrations.length).toBeGreaterThan(200);
 
-    const violations: string[] = [];
-
-    for (const file of files) {
-      const source = readFileSync(file, 'utf8');
-      const found = findShadowViolations(
-        extractRegisteredKeys(source),
-        baseChainKeys,
-        INTENTIONAL_OVERRIDES
-      );
-      violations.push(...found.map((v) => `${file}\n  → ${v}`));
-    }
+    const violations = findShadowViolations(registrations, baseChainKeys, INTENTIONAL_OVERRIDES);
 
     if (violations.length > 0) {
       throw new Error(

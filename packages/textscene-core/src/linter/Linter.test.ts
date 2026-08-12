@@ -3,7 +3,7 @@
  * whole scene.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Linter } from './Linter.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import type { LintRule } from './types.js';
@@ -16,6 +16,11 @@ describe('Linter', () => {
   });
 
   describe('Two-Phase Validation', () => {
+    afterEach(() => {
+      ruleRegistry['rules'].delete('test-rule');
+      ruleRegistry['rules'].delete('test-combined-rule');
+    });
+
     it('should run Phase 1 (strict parsing) first', () => {
       const content = `[gd_scene load_steps=1 format=3]
 
@@ -40,18 +45,6 @@ describe('Linter', () => {
       const parseError = diagnostics.find(d => d.ruleName === 'strict-parser');
       expect(parseError).toBeDefined();
       expect(parseError!.severity).toBe('error');
-    });
-
-    it('should skip Phase 2 (semantic validation) when parse errors found', () => {
-      const content = `[gd_scene load_steps=1 format=3]
-
-[node name="Root"]
-`;
-
-      const diagnostics = linter.lint(content);
-
-      // Should only have parse errors, not semantic rule violations
-      expect(diagnostics.every(d => d.ruleName === 'strict-parser')).toBe(true);
     });
 
     it('should run Phase 2 (semantic validation) when parsing succeeds', () => {
@@ -84,14 +77,28 @@ describe('Linter', () => {
       const ruleViolation = diagnostics.find(d => d.ruleName === 'test-rule');
       expect(ruleViolation).toBeDefined();
       expect(ruleViolation!.severity).toBe('warning');
-
-      // Cleanup
-      ruleRegistry['rules'].delete('test-rule');
     });
 
     it('should combine parse errors and rule violations when both exist', () => {
-      // This test validates the architecture but currently parse errors prevent Phase 2
-      // In a scenario where we might change this behavior, this test documents expected outcome
+      // The strict parser returns a scene even for a heading it rejected, so a
+      // parse error never suppresses the rule phase.
+      const testRule: LintRule = {
+        meta: {
+          name: 'test-combined-rule',
+          description: 'Test rule',
+          category: 'validation',
+        },
+        check: (context) => [{
+          severity: 'warning',
+          message: 'Test warning',
+          nodeName: context.node.name,
+          nodeType: context.node.type,
+          ruleName: 'test-combined-rule',
+        }],
+      };
+
+      ruleRegistry.register(testRule);
+
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Root"]
@@ -99,8 +106,16 @@ describe('Linter', () => {
 
       const diagnostics = linter.lint(content);
 
-      // Currently: only parse errors (Phase 2 skipped)
-      expect(diagnostics.every(d => d.ruleName === 'strict-parser')).toBe(true);
+      const parseError = diagnostics.find(d => d.ruleName === 'strict-parser');
+      expect(parseError).toBeDefined();
+      expect(parseError!.severity).toBe('error');
+
+      const ruleViolation = diagnostics.find(d => d.ruleName === 'test-combined-rule');
+      expect(ruleViolation).toBeDefined();
+      expect(ruleViolation!.severity).toBe('warning');
+      expect(ruleViolation!.nodeName).toBe('Root');
+      // The rejected heading gave the node no type, and it still reached phase 2.
+      expect(ruleViolation!.nodeType).toBe('');
     });
   });
 

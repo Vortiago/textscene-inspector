@@ -1,6 +1,7 @@
 /**
  * Linter: turning a strict-parser `ParseError` into a diagnostic — position,
- * severity, code and the `strict-parser` rule name.
+ * severity, message and the `strict-parser` rule name. `Diagnostic` has no
+ * `code`, so the `ParseError` one does not survive the conversion.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -14,25 +15,6 @@ describe('Linter', () => {
   });
 
   describe('Parse Error to Diagnostic Conversion', () => {
-    it('should convert parse error to diagnostic format', () => {
-      const content = `[gd_scene load_steps=1 format=3]
-
-[node name="Root"]
-`;
-
-      const diagnostics = linter.lint(content);
-
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const diagnostic = diagnostics[0]!;
-
-      expect(diagnostic).toHaveProperty('severity');
-      expect(diagnostic).toHaveProperty('message');
-      expect(diagnostic).toHaveProperty('nodeName');
-      expect(diagnostic).toHaveProperty('nodeType');
-      expect(diagnostic).toHaveProperty('ruleName');
-      expect(diagnostic).toHaveProperty('location');
-    });
-
     it('should set ruleName to "strict-parser" for parse errors', () => {
       const content = `[gd_scene load_steps=1 format=3]
 

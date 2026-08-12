@@ -37,10 +37,6 @@ import {
 import './index.js';
 
 describe('property-grammar parity guard', () => {
-  it('finds slice pairs to check (sanity: walk is not empty)', () => {
-    expect(collectSlices().length).toBeGreaterThan(0);
-  });
-
   it('every slice pair has symmetric property coverage (or an allowlisted asymmetry)', () => {
     const violations = checkParity();
 
@@ -57,22 +53,26 @@ describe('property-grammar parity guard', () => {
   });
 
   it('allowlist entries stay honest: every listed key is genuinely asymmetric', () => {
-    const slicesByType = new Map(collectSlices().map((s) => [s.nodeType, s]));
+    const slices = collectSlices();
     const staleSections: string[] = [];
 
-    // A base class validates for its descendants without parsing anything of
-    // its own (it reuses the base parser), so it has no parser.ts and never
-    // appears in `collectSlices`. Its allowlist entry is still live: the
-    // base-walk delivers those keys to every leaf below it, and one entry there
-    // is what keeps a dozen identical leaf entries from existing.
-    const validatingBases = new Set(
-      collectSlices().flatMap((s) => baseChain(s.nodeType))
-    );
+    /**
+     * The slices an entry answers for: its own, plus every slice below it.
+     *
+     * A base class validates for its descendants without parsing anything of
+     * its own (it reuses the base parser), so it has no parser.ts and never
+     * appears in `collectSlices`. Asking only for its own slice therefore let a
+     * `continue` skip the whole entry, and 89 keys across 9 base entries — all
+     * 32 Viewport gaps among them — were never checked at all: closing one of
+     * those gaps moved nothing. The entry is consulted up the base chain, so the
+     * slices below it are exactly the population it speaks for.
+     */
+    const coveredSlices = (nodeType: string) =>
+      slices.filter((s) => s.nodeType === nodeType || baseChain(s.nodeType).includes(nodeType));
 
     for (const [nodeType, entry] of Object.entries(ASYMMETRY_ALLOWLIST)) {
-      const slice = slicesByType.get(nodeType);
-      if (!slice) {
-        if (validatingBases.has(nodeType)) continue;
+      const covered = coveredSlices(nodeType);
+      if (covered.length === 0) {
         // Node type no longer has a slice pair — allowlist entry is stale.
         staleSections.push(
           `${nodeType}: no parser.ts+linterParser.ts pair found, and no slice inherits from it`
@@ -80,20 +80,31 @@ describe('property-grammar parity guard', () => {
         continue;
       }
 
+      // The asymmetry has closed once EVERY slice the entry answers for reads
+      // the key; one leaf reading it leaves the entry doing real work for the
+      // rest. So a base covering many slices — CanvasItem 37, VisualInstance3D
+      // 16, GeometryInstance3D 10 — only reports once the last of them closes,
+      // and narrowing such an entry to the leaves that still need it is an edit
+      // to the allowlist rather than to this guard.
+      const readEverywhere = (key: string) => covered.every((s) => s.parserProps.has(key));
+      // Validators resolve up the base chain with no slice needed, so this is
+      // the same set a slice of this type would carry.
+      const validatorKeys = getFullValidatorKeys(nodeType);
+
       // parserOnly keys should NOT have a validator; linterOnly keys should
       // NOT be read by the parser — otherwise the asymmetry has been fixed.
       for (const key of entry.parserOnly ?? []) {
-        if (slice.validatorKeys.has(key)) {
+        if (validatorKeys.has(key)) {
           staleSections.push(`${nodeType}.parserOnly['${key}']: now has a validator — remove from allowlist`);
         }
       }
       for (const key of entry.linterOnly ?? []) {
-        if (slice.parserProps.has(key)) {
+        if (readEverywhere(key)) {
           staleSections.push(`${nodeType}.linterOnly['${key}']: now read by the parser — remove from allowlist`);
         }
       }
       for (const key of entry.renderGap ?? []) {
-        if (slice.parserProps.has(key)) {
+        if (readEverywhere(key)) {
           staleSections.push(
             `${nodeType}.renderGap['${key}']: now read by the parser — the gap closed, remove from allowlist`
           );
@@ -226,6 +237,8 @@ describe('property-grammar parity guard', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>
       extractNodeType(readFileSync(join(dir, 'linterParser.ts'), 'utf8'))
     );
+    // Doubles as the population floor: an empty walk fails here, and again in
+    // the honesty check, which would then call every allowlist entry stale.
     expect(collectSlices()).toHaveLength(SWEPT_SLICES);
     expect(
       withLinterParser.length - collectSlices().length,

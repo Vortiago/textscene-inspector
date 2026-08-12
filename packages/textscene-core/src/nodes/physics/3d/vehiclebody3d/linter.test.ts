@@ -60,9 +60,21 @@ describe('VehicleBody3D Linter', () => {
       // vehiclebody3d-needs-wheels warning, which these format cases are not about.
       { nodeType: 'VehicleBody3D', acceptChild: collisionShape3d, acceptMode: 'no-error' },
       [
-        { prop: 'engine_force', valid: [0, 40.0, -25.5], invalid: [{ value: 'fast' }] },
+        // `ruleName` on these two rejections is load-bearing: the wheel-less
+        // scene's needs-wheels warning names engine_force and steering in its
+        // own message, so a rejection matched by property alone is satisfied by
+        // that advisory whether or not the validator fires.
+        {
+          prop: 'engine_force',
+          valid: [0, 40.0, -25.5],
+          invalid: [{ value: 'fast', ruleName: 'strict-parser' }],
+        },
         { prop: 'brake', valid: [0, 25.0], invalid: [{ value: 'hard' }] },
-        { prop: 'steering', valid: [0, -0.4, 0.4], invalid: [{ value: 'left' }] },
+        {
+          prop: 'steering',
+          valid: [0, -0.4, 0.4],
+          invalid: [{ value: 'left', ruleName: 'strict-parser' }],
+        },
         { prop: 'mass', valid: [40.0, 0.5], invalid: [{ value: '0' }, { value: '-1' }] },
         { prop: 'center_of_mass_mode', valid: [0, 1], invalid: [{ value: '5' }] },
         { prop: 'visible', valid: ['true', 'false'], invalid: [{ value: 'maybe' }] },

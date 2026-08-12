@@ -23,16 +23,24 @@ function lintWarnings(raw: string): number {
   return new Linter().lint(raw).filter(d => d.severity === 'warning').length;
 }
 
+/**
+ * Phase-1 warnings naming `prop`. A textureless scene always carries the
+ * `pointlight2d-requires-texture` advisory, so a bare warning count says
+ * nothing about whether the validator under test fired.
+ */
+function propWarnings(raw: string, prop: string): number {
+  return new Linter()
+    .lint(raw)
+    .filter(
+      d => d.severity === 'warning' && d.ruleName === 'strict-parser' && d.message.includes(prop)
+    ).length;
+}
+
 describe('PointLight2D linterParser validators', () => {
   it('warns (not errors) on an invalid blend_mode (light_2d.cpp:190-192 has no ERR_FAIL_INDEX)', () => {
     const scene = `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nblend_mode = 9`;
-    expect(lintWarnings(scene)).toBeGreaterThan(0);
+    expect(propWarnings(scene, 'blend_mode')).toBe(1);
     expect(lintErrors(scene)).toBe(0);
-  });
-
-  it('accepts a valid blend_mode', () => {
-    // blend_mode=0 itself is clean (any baseline errors from missing texture are expected
-    // but we're checking the validator doesn't add extra)
   });
 
   it('rejects a non-boolean enabled', () => {
@@ -41,7 +49,9 @@ describe('PointLight2D linterParser validators', () => {
   });
 
   it('accepts a valid enabled', () => {
-    // enabled=true itself is clean
+    const scene = `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\ntexture = ExtResource("1")\nenabled = true`;
+    expect(lintErrors(scene)).toBe(0);
+    expect(lintWarnings(scene)).toBe(0);
   });
 
   it('rejects invalid color format', () => {
@@ -55,7 +65,7 @@ describe('PointLight2D linterParser validators', () => {
 
   it('warns (not errors) on negative energy (light_2d.cpp:98-100 assigns unconditionally)', () => {
     const scene = `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nenergy = -1`;
-    expect(lintWarnings(scene)).toBeGreaterThan(0);
+    expect(propWarnings(scene, 'energy')).toBe(1);
     expect(lintErrors(scene)).toBe(0);
   });
 
@@ -81,7 +91,7 @@ describe('PointLight2D linterParser validators', () => {
 
   it('warns (not errors) on a negative height (light_2d.cpp:89-92 assigns unconditionally)', () => {
     const scene = `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nheight = -1`;
-    expect(lintWarnings(scene)).toBeGreaterThan(0);
+    expect(propWarnings(scene, 'height')).toBe(1);
     expect(lintErrors(scene)).toBe(0);
   });
 
@@ -174,7 +184,8 @@ describe('PointLight2D linterParser validators', () => {
       `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\n` +
       `range_z_min = -99999\nrange_layer_max = 2147483647`;
     expect(lintErrors(scene)).toBe(0);
-    expect(lintWarnings(scene)).toBeGreaterThan(0);
+    expect(propWarnings(scene, 'range_z_min')).toBe(1);
+    expect(propWarnings(scene, 'range_layer_max')).toBe(0);
   });
 
   it('rejects a non-integer range window', () => {

@@ -9,6 +9,7 @@ import {
   lint,
   expectClean,
   expectDiagnostic,
+  expectNoDiagnostic,
   runPropertyValidation,
 } from '../../../linter/testing/testkit';
 import './linterParser';
@@ -166,6 +167,14 @@ describe('MeshInstance3D Linter', () => {
         ruleName: 'valid-meshinstance3d-resources',
       });
       expect(diagnostics[0]!.message).toContain('Mesh resource not found');
+    });
+
+    it('reports nothing for a cleared mesh slot', () => {
+      // `mesh = null` is an emptied slot, not a dangling reference: Godot writes
+      // it and reloads it, so reporting a missing resource is a false error.
+      const content = scene(node('MeshInstance3D', { mesh: 'null' }, { name: 'ClearedMesh' }));
+      expectNoDiagnostic(content, { ruleName: 'valid-meshinstance3d-resources' });
+      expectClean(content);
     });
 
     it('should pass when all resources exist', () => {

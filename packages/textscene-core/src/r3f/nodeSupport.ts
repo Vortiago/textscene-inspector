@@ -1,30 +1,23 @@
 /**
  * Shared "does the previewer handle this node type?" check for the scene tree
  * and the inspector. A node is supported when it has a parser registration, a
- * render component, is the base `Node`, or is a recognised internal/synthetic
- * display type (created programmatically, not authored — e.g. the GLB scene
- * root and the synthetic nodes for a GLB's internal hierarchy). Without the
- * component-registry + internal-type checks, render-only types like
- * `GLBSceneRoot` were wrongly flagged "Not implemented" even though they render.
+ * render component, is the base `Node`, or is a GLB-synthesised display type
+ * (created programmatically, not authored — the GLB scene root and the nodes
+ * standing in for a GLB's internal hierarchy). Without the component-registry
+ * and GLB checks, render-only types like `GLBSceneRoot` were wrongly flagged
+ * "Not implemented" even though they render.
  */
 
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
 
-/**
- * Synthetic node types with no parser registration that are nonetheless valid
- * to display (and select/hide) in the tree. The GLB-internal hierarchy types
- * are registered here.
- */
-export const INTERNAL_DISPLAY_NODE_TYPES: ReadonlySet<string> = new Set<string>([]);
-
 export function isRenderableNodeType(type: string): boolean {
   return (
     type === 'Node' ||
     nodeRegistry.getRegistration(type) !== null ||
-    // Covers the GLB-synthesised types, the internal display types and every
-    // component registration, so those conditions live in one place.
+    // Covers the GLB-synthesised types and every component registration, so
+    // those conditions live in one place.
     rendersOwnVisual(type) !== 'not-implemented'
   );
 }
@@ -53,7 +46,7 @@ export function isRenderableNodeType(type: string): boolean {
  */
 export function rendersOwnVisual(type: string): 'draws' | 'transform-only' | 'not-implemented' {
   // Synthetic GLB types render through the GLB path, not a registration.
-  if (type.startsWith('GLB') || INTERNAL_DISPLAY_NODE_TYPES.has(type)) return 'draws';
+  if (type.startsWith('GLB')) return 'draws';
   // A declared intent wins over the Control fallback below: a Control-family
   // type that registers `transform-only` must be able to say so, or its sheet
   // would be held to `linter-only` by sheets.test.mjs while the badge insisted

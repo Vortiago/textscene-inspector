@@ -48,9 +48,9 @@ validatorRegistry.registerAll('Node3D', {
   visible: v.boolean('visible'),
   top_level: v.boolean('top_level'),
   visibility_parent: v.nodePath('visibility_parent'),
-  // node_3d.cpp:760, ERR_FAIL_INDEX(int32_t(p_order), 6).
+  // node_3d.cpp:759, ERR_FAIL_INDEX(int32_t(p_order), 6).
   rotation_order: v.enumInt('rotation_order', 0, 5, ROTATION_ORDER, {
-    enforced: 'node_3d.cpp:760',
+    enforced: 'node_3d.cpp:759',
   }),
   // node_3d.cpp:1532, PROPERTY_HINT_ENUM "Euler,Quaternion,Basis". Unlike
   // rotation_order's neighbouring ERR_FAIL_INDEX, set_rotation_edit_mode

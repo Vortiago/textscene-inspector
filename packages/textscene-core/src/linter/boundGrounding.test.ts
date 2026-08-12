@@ -46,6 +46,32 @@ import { ENGINE_CITE_RE } from './testing/engineCite.js';
  */
 const UNCLASSIFIED_VALIDATOR_BUDGET = 0;
 
+/**
+ * Every grounding in `validator`'s subtree whose cite names no engine location.
+ *
+ * Recurses into `.leaves` for the same reason `unclassifiedKeys` does: a
+ * wildcard dispatcher's own tag vouches for nothing behind it, and 93 of the 237
+ * leaf validators carry a grounding of their own. Reading only the dispatcher
+ * let a leaf cite prose and stay green.
+ *
+ * `seen` is insurance against a shared or self-referential leaf instance, not a
+ * filter — a validator reached twice makes the same claim both times.
+ */
+function uncitedGroundings(
+  validator: PropertyValidator,
+  label: string,
+  seen = new Set<PropertyValidator>()
+): string[] {
+  if (seen.has(validator)) return [];
+  seen.add(validator);
+  const g = validator.grounding;
+  const out = g && !ENGINE_CITE_RE.test(g.cite) ? [`${label}: "${g.cite}"`] : [];
+  for (const [index, leaf] of (validator.leaves ?? []).entries()) {
+    out.push(...uncitedGroundings(leaf, `${label}[${index}]`, seen));
+  }
+  return out;
+}
+
 describe('bound grounding', () => {
   it('classifies every validator as format-only or grounded', () => {
     // The floor first: 1986 keys resolve to a validator today, and a budget of
@@ -62,9 +88,10 @@ describe('bound grounding', () => {
     const keys = classifiableKeys();
     expect(keys.length).toBeGreaterThan(1500);
     const uncited: string[] = [];
+    const seen = new Set<PropertyValidator>();
     for (const { nodeType, key } of keys) {
-      const g = validatorRegistry.findValidator(nodeType, key)?.grounding;
-      if (g && !ENGINE_CITE_RE.test(g.cite)) uncited.push(`${nodeType}.${key}: "${g.cite}"`);
+      const validator = validatorRegistry.findValidator(nodeType, key);
+      if (validator) uncited.push(...uncitedGroundings(validator, `${nodeType}.${key}`, seen));
     }
     expect(uncited.sort()).toEqual([]);
   });
@@ -114,6 +141,33 @@ describe('the classification guard bites', () => {
 
   it('catches a bound whose grounding was left off', () => {
     expect(unclassified(v.float('fov', { min: 1, max: 179 }))).toBe(true);
+  });
+
+  it('reads the cite on a leaf, which the dispatcher above it does not vouch for', () => {
+    // A dispatcher cites the guard that refuses an unresolvable index; the bound
+    // on each sub-property lives in the leaf. Checking the dispatcher alone let
+    // a leaf name the class reference instead of a setter and stay green.
+    const leaf: PropertyValidator = () => null;
+    leaf.grounding = { kind: 'hinted', cite: 'the class reference gives 0 to 1' };
+    const dispatcher: PropertyValidator = () => null;
+    dispatcher.grounding = { kind: 'enforced', cite: 'generic_6dof_joint_3d.cpp:120' };
+    dispatcher.leaves = [leaf];
+
+    expect(uncitedGroundings(dispatcher, 'Generic6DOFJoint3D.linear_limit_x/*')).toEqual([
+      'Generic6DOFJoint3D.linear_limit_x/*[0]: "the class reference gives 0 to 1"',
+    ]);
+  });
+
+  it('reports a shared leaf instance once, however many slots reach it', () => {
+    // One leaf instance can back several sub-properties, so the walk must not
+    // treat re-encountering it as a second defect.
+    const leaf: PropertyValidator = () => null;
+    leaf.grounding = { kind: 'enforced', cite: 'no file here' };
+    const outer: PropertyValidator = () => null;
+    outer.formatOnly = true;
+    outer.leaves = [leaf, leaf];
+
+    expect(uncitedGroundings(outer, 'Type.key/*')).toEqual(['Type.key/*[0]: "no file here"']);
   });
 
   it('puts removal-only types in the swept key list, not just in the registry', () => {

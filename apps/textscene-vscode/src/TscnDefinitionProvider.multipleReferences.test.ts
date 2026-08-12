@@ -106,37 +106,7 @@ collision_mesh = SubResource("BoxMesh_1")
   // ============================================================================
 
   describe('Mixed SubResource and ExtResource', () => {
-    it('should correctly distinguish between SubResource and ExtResource', () => {
-      const content = `[ext_resource type="PackedScene" path="res://Door.tscn" id="Door"]
-
-mesh = SubResource("BoxMesh_1")
-instance = ExtResource("Door")
-
-[sub_resource type="BoxMesh" id="BoxMesh_1"]`;
-
-      const document = createMockDocument(content);
-
-      // SubResource
-      const subDef = provider.provideDefinition(
-        document,
-        new vscode.Position(2, 15),
-        mockCancellationToken
-      ) as vscode.Location;
-
-      expect(subDef).toBeDefined();
-      expect(subDef.range.start.line).toBe(5);
-
-      // ExtResource
-      const extDef = provider.provideDefinition(
-        document,
-        new vscode.Position(3, 20),
-        mockCancellationToken
-      ) as vscode.Location;
-
-      expect(extDef).toBeDefined();
-      expect(extDef.range.start.line).toBe(0);
-    });
-
+    // Same id in both namespaces: the only shape where a kind-blind lookup is catchable.
     it('should not confuse SubResource and ExtResource with same ID', () => {
       const content = `[ext_resource type="PackedScene" path="res://Scene.tscn" id="Resource_1"]
 

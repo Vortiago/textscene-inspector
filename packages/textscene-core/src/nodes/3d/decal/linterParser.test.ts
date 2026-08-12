@@ -77,6 +77,29 @@ albedo_mix = 1.5
     expect(warnings[0]!.message).toContain('albedo_mix');
   });
 
+  it('accepts normal_fade at the 0.999 ceiling and warns at 1.0', () => {
+    // decal.cpp:251 hints "0,0.999,0.001" — 1.0 makes the decal invisible even
+    // when fully perpendicular, so the hint stops one step short. The setter
+    // (:106-109) is a bare assignment, so past the ceiling is a warning.
+    const atCeiling = `[gd_scene format=3]
+
+[node name="X" type="Decal"]
+normal_fade = 0.999
+`;
+    const pastCeiling = `[gd_scene format=3]
+
+[node name="X" type="Decal"]
+normal_fade = 1.0
+`;
+
+    expect(linter.lint(atCeiling).filter((d) => d.message.includes('normal_fade'))).toEqual([]);
+
+    const found = linter.lint(pastCeiling).filter((d) => d.message.includes('normal_fade'));
+    expect(found).toHaveLength(1);
+    expect(found[0]!.severity).toBe('warning');
+    expect(found[0]!.message).toContain('0.999');
+  });
+
   it('accepts an upper_fade/lower_fade above 1 — they are curve exponents, not ratios', () => {
     // class_decal.html: "Sets the curve over which the decal will fade as the
     // surface gets further from the center of the AABB. Only positive values are

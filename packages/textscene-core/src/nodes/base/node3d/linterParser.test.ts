@@ -85,7 +85,7 @@ describe('Node3D transform validators', () => {
     });
 
     // set_rotation_edit_mode (node_3d.cpp:717-746) has no ERR_FAIL_INDEX at
-    // all, unlike its neighbour set_rotation_order (node_3d.cpp:760)'s
+    // all, unlike its neighbour set_rotation_order (node_3d.cpp:759)'s
     // `ERR_FAIL_INDEX(int32_t(p_order), 6)` — two enums in the same file,
     // adjacent, different tiers. Out of range is a WARNING, not an error.
     it('warns rather than errors outside the enum, unlike rotation_order', () => {

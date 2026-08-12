@@ -19,7 +19,7 @@ import './linter';
 describe('Skeleton3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
     it('should pass validation for valid Skeleton3D properties', () => {
-      // Note: animate_physical_bones = true triggers an INFO message about deprecated feature
+      // animate_physical_bones = true draws a deprecation warning, not an error.
       expectNoErrors(
         scene(
           node('Skeleton3D', {
@@ -222,23 +222,19 @@ describe('Skeleton3D Linter', () => {
       });
     });
 
+    // No rule reads the mode, so each legal value must leave the scene wholly
+    // clean; filtering the absence by one rule name would pass whatever fired.
     describe('modifier_callback_mode_process (no diagnostic)', () => {
-      it('should not produce a diagnostic for PHYSICS mode', () => {
-        expectNoDiagnostic(scene(node('Skeleton3D', { modifier_callback_mode_process: 0 })), {
-          ruleName: 'skeleton3d-modifier-mode',
-        });
+      it('leaves PHYSICS mode clean', () => {
+        expectClean(scene(node('Skeleton3D', { modifier_callback_mode_process: 0 })));
       });
 
-      it('should not produce a diagnostic for MANUAL mode', () => {
-        expectNoDiagnostic(scene(node('Skeleton3D', { modifier_callback_mode_process: 2 })), {
-          ruleName: 'skeleton3d-modifier-mode',
-        });
+      it('leaves MANUAL mode clean', () => {
+        expectClean(scene(node('Skeleton3D', { modifier_callback_mode_process: 2 })));
       });
 
-      it('should not produce a diagnostic for default IDLE mode', () => {
-        expectNoDiagnostic(scene(node('Skeleton3D', { modifier_callback_mode_process: 1 })), {
-          ruleName: 'skeleton3d-modifier-mode',
-        });
+      it('leaves the default IDLE mode clean', () => {
+        expectClean(scene(node('Skeleton3D', { modifier_callback_mode_process: 1 })));
       });
     });
 

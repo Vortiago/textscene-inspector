@@ -14,7 +14,9 @@
  *     component is exactly what keeps the "Not implemented" badge honest.
  *
  * `--dry-run` prints the full plan and writes nothing, so these assert the plan
- * without touching the tree.
+ * without touching the tree. The plan is file NAMES, so the one case about
+ * generated CONTENT — the node2d `canvasItem` flag — renders that template
+ * directly instead.
  *
  * Every case writes nothing and shares no state, so all of them are launched at
  * module scope and awaited together: each run is ~100ms of Node cold start and
@@ -27,6 +29,8 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { BASES } from './new-node-slice/bases.mjs';
+import { reusedParserFiles } from './new-node-slice/templates/reusedParser.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -253,11 +257,26 @@ describe('new-node-slice intent shapes', () => {
   });
 
   it('marks a node2d slice canvasItem, so it lands in the 2D workspace', () => {
-    // `canvasItemRegistry.guard.test.ts` requires every 2D-suffixed type to be
-    // a canvasItem; without the flag the dispatcher renders it in the 3D
-    // viewport instead, and the guard catches it only after the slice is built.
+    // Without the flag the dispatcher renders the slice in the 3D viewport, and
+    // `canvasItemRegistry.guard.test.ts` catches it only once the slice is
+    // built. The flag lives in generated CONTENT and `--dry-run` prints only
+    // names, so the plan settles the routing and the template is rendered
+    // directly for the emit.
     expect(results.transformOnly2D.ok).toBe(true);
     expect(results.transformOnly2D.out).toMatch(/base: node2d, intent: transform-only/);
+    expect(results.transformOnly2D.out).toMatch(/create {2}nodes\/2d\/raycast2d\/index\.r3f\.ts/);
+
+    const emitted = reusedParserFiles({
+      typeName: 'RayCast2D',
+      lower: 'raycast2d',
+      camel: 'rayCast2D',
+      intent: 'transform-only',
+      base: BASES.node2d,
+      toSrc: '../../../',
+      toBase: '../../base/node2d',
+      reusedParser: { fn: 'parseNode2D', importPath: '../../base/node2d/parser' },
+    });
+    expect(emitted.get('index.r3f.ts')).toMatch(/^\s*canvasItem: true,$/m);
   });
 
   it('writes nothing on a dry run', () => {

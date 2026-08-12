@@ -1,67 +1,27 @@
 /**
- * Source scan behind the shadow-copy meta-guard: which keys a `linterParser.ts`
+ * The comparison behind the shadow-copy meta-guard: which keys a type
  * re-declares while its base chain already carries them.
  *
- * Pure text work, deliberately separate from the guard that uses it — the same
- * functions run twice, once over a seeded string (to prove the guard fires) and
- * once over the real tree, and those two callers must not be able to drift.
- */
-
-import { walk } from './ruleNameScrape.js';
-
-/**
- * Every `linterParser.ts` under `dir`.
+ * Both halves read the LIVE registry. An earlier version scraped literal `key:`
+ * lines out of each `linterParser.ts` for the own half while the inherited half
+ * already read the registry, and that asymmetry was a hole: a key contributed by
+ * a `...spread` inside `registerAll` has no `key:` line to scrape, so twenty
+ * registrations were invisible and could shadow a base undetected.
  *
- * The sibling `walk` rather than a local copy, and specifically one that lets
- * an unreadable directory THROW: a walk that swallows the error and returns
- * `[]` turns this guard's own failure into a pass over an empty population.
+ * Kept separate from the guard that uses it so the same functions run twice,
+ * once over a scratch registry (to prove the guard fires) and once over the real
+ * one, and those two callers cannot drift.
  */
-export const walkLinterParsers = (dir: string): string[] => walk(dir, 'linterParser.ts');
 
-/**
- * Slice of `source` from `start` (just past an opening `{`) to its balanced
- * closing `}`. Good enough for validator registrations: none of the scanned
- * sources put braces inside string literals.
- */
-function balancedBody(source: string, start: number): string {
-  let depth = 1;
-  for (let i = start; i < source.length; i++) {
-    const ch = source[i];
-    if (ch === '{') depth++;
-    else if (ch === '}' && --depth === 0) return source.slice(start, i);
-  }
-  return source.slice(start);
-}
+import type { ValidatorRegistry } from '../ValidatorRegistry.js';
 
-/**
- * Extract (nodeType, key[]) from a linterParser.ts source file. Finds each
- * `validatorRegistry.registerAll('TypeName', { … })` call, captures the full
- * balanced object literal, and reads only its top-level keys — nested option
- * objects like `v.int('rings', { min: 1 })` are stripped first so keys
- * declared after them are still seen.
- */
-export function extractRegisteredKeys(source: string): Array<{ nodeType: string; keys: string[] }> {
-  const results: Array<{ nodeType: string; keys: string[] }> = [];
-  const headRe = /registerAll\(\s*'([^']+)'\s*,\s*\{/g;
-  let head: RegExpExecArray | null;
-  while ((head = headRe.exec(source)) !== null) {
-    const nodeType = head[1]!;
-    let body = balancedBody(source, headRe.lastIndex);
-    // Repeatedly drop innermost object literals until only top-level keys remain.
-    for (let prev = ''; prev !== body; ) {
-      prev = body;
-      body = body.replace(/\{[^{}]*\}/g, '');
-    }
-    const keys: string[] = [];
-    const keyRe = /^\s*(?:'([^']+)'|([\w/*]+))\s*:/gm;
-    let keyMatch: RegExpExecArray | null;
-    while ((keyMatch = keyRe.exec(body)) !== null) {
-      const key = keyMatch[1] ?? keyMatch[2];
-      if (key) keys.push(key);
-    }
-    results.push({ nodeType, keys });
-  }
-  return results;
+/** What each registered type declares of its own, as the guard's input. */
+export function ownKeyRegistrations(
+  registry: ValidatorRegistry
+): Array<{ nodeType: string; keys: string[] }> {
+  return registry
+    .getRegisteredNodeTypes()
+    .map((nodeType) => ({ nodeType, keys: registry.getOwnKeys(nodeType) }));
 }
 
 /**

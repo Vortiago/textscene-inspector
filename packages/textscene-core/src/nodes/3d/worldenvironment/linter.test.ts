@@ -169,6 +169,32 @@ camera_attributes = SubResource("Cam_1")
         );
       });
 
+      it('treats a leading cleared environment as an empty slot, not as the winner', () => {
+        // `environment = null` is `Ref::is_null()`, so the node never joins the
+        // group (world_environment.cpp:39-40) and the next one along is the one
+        // Godot honours — while the cleared node itself has no visible effect.
+        const content = `[gd_scene format=3]
+
+[sub_resource type="Environment" id="env_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="ClearedEnv" type="WorldEnvironment" parent="."]
+environment = null
+
+[node name="RealEnv" type="WorldEnvironment" parent="."]
+environment = SubResource("env_1")
+`;
+
+        expectNoDiagnostic(content, { ruleName: 'single-worldenvironment' });
+        expectNoDiagnostic(content, { ruleName: 'valid-worldenvironment-resources' });
+        const cleared = expectDiagnostic(content, {
+          ruleName: 'worldenvironment-requires-environment',
+          severity: 'warning',
+        });
+        expect(cleared.nodeName).toBe('ClearedEnv');
+      });
+
       it('should detect non-existent environment resource', () => {
         expectDiagnostic(
           `[gd_scene format=3]

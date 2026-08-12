@@ -1,6 +1,6 @@
 /**
- * Tests for RuleRegistry: the store — registering, reading back, clearing, and
- * running what came out. Which rules a node type SELECTS is the sibling
+ * Tests for RuleRegistry: the store — registering, reading back, and clearing.
+ * Which rules a node type SELECTS is the sibling
  * `RuleRegistry.nodeTypeMatching.test.ts`.
  */
 
@@ -127,68 +127,6 @@ describe('RuleRegistry', () => {
       expect(registry.getRules()).toHaveLength(1);
       expect(registry.getRule('rule-1')).toBeUndefined();
       expect(registry.getRule('rule-2')).toBe(rule2);
-    });
-  });
-
-  describe('rule execution', () => {
-    it('should execute rule check function', () => {
-      const mockCheck = vi.fn(() => [
-        {
-          severity: 'error' as const,
-          message: 'Test error',
-          nodeName: 'TestNode',
-          nodeType: 'MeshInstance3D',
-          ruleName: 'test-rule',
-        },
-      ]);
-
-      const rule: LintRule = {
-        meta: {
-          name: 'test-rule',
-          description: 'Test rule',
-          category: 'validation',
-          applicableNodeTypes: ['MeshInstance3D'],
-        },
-        check: mockCheck,
-      };
-
-      registry.register(rule);
-
-      const foundRule = registry.getRule('test-rule');
-      expect(foundRule).toBe(rule);
-
-      const context = {
-        scene: { nodes: [], externalResources: [], internalResources: [] },
-        node: { name: 'TestNode', type: 'MeshInstance3D', properties: {}, children: [] },
-        properties: {},
-      };
-
-      const diagnostics = foundRule!.check(context);
-      expect(mockCheck).toHaveBeenCalledWith(context);
-      expect(diagnostics).toHaveLength(1);
-      expect(diagnostics[0]?.message).toBe('Test error');
-    });
-
-    it('should execute rule and return empty array for valid node', () => {
-      const rule: LintRule = {
-        meta: {
-          name: 'test-rule',
-          description: 'Test rule',
-          category: 'validation',
-        },
-        check: () => [], // No diagnostics
-      };
-
-      registry.register(rule);
-
-      const context = {
-        scene: { nodes: [], externalResources: [], internalResources: [] },
-        node: { name: 'ValidNode', type: 'Node3D', properties: {}, children: [] },
-        properties: {},
-      };
-
-      const diagnostics = rule.check(context);
-      expect(diagnostics).toEqual([]);
     });
   });
 });

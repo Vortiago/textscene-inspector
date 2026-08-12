@@ -132,4 +132,31 @@ describe('Godot source stays a reading aid, not a dependency', () => {
   it('scans a meaningful share of the repo, so a broken glob cannot pass it', () => {
     expect(SCANNED.length).toBeGreaterThan(200);
   });
+
+  it('flags the allowlisted REFERENCES.md mention once the allowlist is dropped', () => {
+    // Every assertion above is an emptiness check, so a pattern that matches
+    // nothing passes all of them and the guard is disarmed in silence. The
+    // clone recipe in REFERENCES.md is a real offender kept on purpose, so run
+    // the whole sweep with an empty allowlist and require it back.
+    expect(CHECKOUT_ALLOWED.has('REFERENCES.md')).toBe(true);
+    const unallowed = offenders(CHECKOUT_RE, new Set()).filter((h) => !URL_RE.test(h.text));
+    expect(unallowed.map((h) => h.file)).toContain('REFERENCES.md');
+  });
+
+  it('matches the path shapes it exists to catch, and leaves a citation alone', () => {
+    expect(CHECKOUT_RE.test("readFileSync('/home/dev/godot-4.6.3/scene/3d/light_3d.cpp')")).toBe(
+      true
+    );
+    expect(CHECKOUT_RE.test("join(HOME, '/repos/godot/doc/classes/Range.xml')")).toBe(true);
+    // Citing where a bound came from is the encouraged practice, not a hit.
+    expect(CHECKOUT_RE.test('// scene/3d/camera_3d.cpp:682')).toBe(false);
+    expect(CHECKOUT_RE.test('// default per doc/classes/Range.xml')).toBe(false);
+  });
+
+  it('matches an environment lookup, and leaves an unrelated GODOT_ var alone', () => {
+    expect(ENV_RE.test('const root = process.env.GODOT_SRC;')).toBe(true);
+    expect(ENV_RE.test('process.env.GODOT_CHECKOUT ?? ""')).toBe(true);
+    // A path to the godot BINARY is a tool, not the source tree.
+    expect(ENV_RE.test("process.env.GODOT_BIN ?? 'godot'")).toBe(false);
+  });
 });
