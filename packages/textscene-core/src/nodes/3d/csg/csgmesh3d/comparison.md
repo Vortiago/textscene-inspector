@@ -1,6 +1,7 @@
 ---
 type: CSGMesh3D
 category: 3D
+status: unreviewed
 fixture: unit-csg-mesh.tscn
 image: unit-csg-mesh
 renders_as: a solid built from an arbitrary Mesh resource

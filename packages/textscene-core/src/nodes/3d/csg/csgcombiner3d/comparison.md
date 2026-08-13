@@ -1,6 +1,7 @@
 ---
 type: CSGCombiner3D
 category: 3D
+status: unreviewed
 renders_as: a grouping node whose children fold into one solid
 ---
 

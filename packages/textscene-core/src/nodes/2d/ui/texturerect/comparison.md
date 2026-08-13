@@ -1,6 +1,7 @@
 ---
 type: TextureRect
 category: 2D
+status: unreviewed
 fixture: unit-texture-rect.tscn
 image: unit-texture-rect
 renders_as: an HTML img element

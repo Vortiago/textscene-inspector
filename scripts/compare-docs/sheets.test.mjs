@@ -31,6 +31,7 @@ import {
 } from './sheetSources.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const NODES_ROOT = join(HERE, '../../packages/textscene-core/src/nodes');
 
 const KNOWN_KEYS = new Set([
   'type',
@@ -278,23 +279,46 @@ describe('comparison sheets', () => {
    * asserted; whether to show an image pair stays an editorial call per sheet.
    */
   /**
-   * The `index.r3f.ts` that registers a slice's component, or null.
+   * The type names an `index.r3f.ts` actually registers.
    *
-   * Usually the slice's own. But a family whose members differ only by name
-   * registers once in a loop from the directory ABOVE — `physics/2d/index.r3f.ts`
-   * does exactly that for StaticBody2D, RigidBody2D and CharacterBody2D, which
-   * therefore own no `index.r3f.ts` at all. Reading only the slice directory
-   * called that "no registration", so those three could never claim
-   * `linter-only` however honestly they drew nothing. That is the same
-   * loop-registration blind spot the coverage scrape had, one directory up.
-   *
-   * Walking to the nearest ancestor is sound because these loops register one
-   * intent for the whole family: whatever it says is what every member gets.
+   * Inline `typeName: 'Foo'` literals, plus the one shape that has none: a
+   * family whose members differ only by name registers in a LOOP over a
+   * constant its React-free sibling `index.ts` exports. Resolving that constant
+   * is what makes the answer by-type instead of by-position.
    */
-  function registrationFileFor(sliceDir) {
+  function typesRegisteredBy(r3fFile) {
+    const source = readFileSync(r3fFile, 'utf8');
+    const inline = [...source.matchAll(/typeName:\s*'([A-Za-z0-9_]+)'/g)].map((m) => m[1]);
+    if (inline.length > 0) return inline;
+    const looped = /import \{\s*([A-Z0-9_]+)\s*\} from '\.\/index'/.exec(source);
+    if (!looped) return [];
+    const sibling = readFileSync(join(dirname(r3fFile), 'index.ts'), 'utf8');
+    const literal = new RegExp(`${looped[1]}\\s*=\\s*\\[([^\\]]*)\\]`).exec(sibling);
+    return literal ? [...literal[1].matchAll(/'([A-Za-z0-9_]+)'/g)].map((m) => m[1]) : [];
+  }
+
+  /**
+   * The registration that speaks for `type`, or null — its file and its intent.
+   *
+   * The walk to an ancestor is for the family loops: `physics/2d/index.r3f.ts`
+   * registers StaticBody2D, RigidBody2D and CharacterBody2D, none of which owns
+   * an `index.r3f.ts`, so reading only the slice directory called all three
+   * unregistered and they could never claim `linter-only` however honestly they
+   * drew nothing.
+   *
+   * But the ancestor must NAME the type. Crediting the nearest one positionally
+   * meant any future slice under a family directory inherited an intent from a
+   * file that had never heard of it — and in the direction that stays quiet, a
+   * DRAWING slice under `physics/2d/` could claim `linter-only` and pass.
+   */
+  function registrationFor(sliceDir, type) {
     for (let dir = sliceDir; dir.includes(`${sep}nodes`); dir = dirname(dir)) {
       const candidate = join(dir, 'index.r3f.ts');
-      if (existsSync(candidate)) return candidate;
+      if (!existsSync(candidate)) continue;
+      if (!typesRegisteredBy(candidate).includes(type)) continue;
+      const source = readFileSync(candidate, 'utf8');
+      const intent = /renderIntent:\s*'([a-z-]+)'/.exec(source);
+      return { file: candidate, intent: intent ? intent[1] : 'draws' };
     }
     return null;
   }
@@ -306,21 +330,55 @@ describe('comparison sheets', () => {
     const sliceSheets = sheets
       .filter((s) => s.file.includes(`${sep}nodes${sep}`))
       .map((s) => {
-        const r3f = registrationFileFor(dirname(s.file));
-        const source = r3f === null ? '' : readFileSync(r3f, 'utf8');
+        const registration = registrationFor(dirname(s.file), s.meta.type);
         return {
           ...s,
-          hasComponent: r3f !== null,
-          transformOnly: /renderIntent:\s*'transform-only'/.test(source),
+          hasComponent: registration !== null,
+          transformOnly: registration?.intent === 'transform-only',
           // A `pending` registration mounts a base component while the node's
           // own visual is still missing, so it is a gap that happens to be
           // registered — presence of a file cannot settle the status alone.
-          pending: /renderIntent:\s*'pending'/.test(source),
+          pending: registration?.intent === 'pending',
         };
       });
 
     it('finds slice-backed sheets, so a bad filter cannot vacuously pass', () => {
       expect(sliceSheets.length).toBeGreaterThan(50);
+    });
+
+    it('credits a family loop only to the types it registers', () => {
+      // The one loop registration in the tree, and the case the by-type lookup
+      // exists for: three slices own no `index.r3f.ts` and must still resolve,
+      // while a fourth slice in the same directory must not inherit it.
+      const family = join(NODES_ROOT, 'physics/2d/index.r3f.ts');
+      expect(typesRegisteredBy(family).sort()).toEqual([
+        'CharacterBody2D',
+        'RigidBody2D',
+        'StaticBody2D',
+      ]);
+      expect(registrationFor(join(NODES_ROOT, 'physics/2d/rigidbody2d'), 'RigidBody2D')?.file).toBe(
+        family
+      );
+      expect(registrationFor(join(NODES_ROOT, 'physics/2d/rigidbody2d'), 'ProgressBar')).toBeNull();
+    });
+
+    it('gives every slice-backed sheet a status, so none sits outside the checks', () => {
+      // `KNOWN_KEYS` permits `status:`; nothing required it. Every assertion in
+      // this block filters on a status literal, so a sheet without one matched
+      // none of them — 59 of 251 sheets, a quarter of the gallery, exempt from
+      // the guard this block describes as bidirectional. The count floor above
+      // could not notice: it is built from the path filter alone.
+      //
+      // Resource sheets are in THIS check and not the four below. They have no
+      // render registration to agree with — a Resource slice registers through
+      // `registerResourceSlice` (ADR-0031), and `nodeComponentRegistry` is not
+      // its table — but the status is still a claim, and it was unasserted
+      // twice over: absent, and outside the `nodes` path filter.
+      const slice = (s) =>
+        s.file.includes(`${sep}nodes${sep}`) || s.file.includes(`${sep}resources${sep}`);
+      const backed = sheets.filter(slice);
+      expect(backed.length).toBeGreaterThan(240);
+      expect(backed.filter((s) => !s.meta.status).map((s) => s.label)).toEqual([]);
     });
 
     it('backs every `linter-only` sheet with a transform-only registration', () => {

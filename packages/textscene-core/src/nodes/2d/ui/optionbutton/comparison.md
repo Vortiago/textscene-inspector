@@ -1,6 +1,7 @@
 ---
 type: OptionButton
 category: 2D
+status: unreviewed
 fixture: unit-optionbutton.tscn
 image: unit-optionbutton
 renders_as: a collapsed dropdown box

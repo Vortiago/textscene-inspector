@@ -1,6 +1,7 @@
 ---
 type: CollisionShape2D
 category: 2D
+status: unreviewed
 fixture: unit-collisionshape2d.tscn
 image: unit-collisionshape2d
 visual: false

@@ -1,6 +1,7 @@
 ---
 type: Marker2D
 category: 2D
+status: unreviewed
 fixture: unit-marker2d.tscn
 image: unit-marker2d
 visual: false

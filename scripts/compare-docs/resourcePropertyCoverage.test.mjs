@@ -101,9 +101,13 @@ describe('resource property coverage', { timeout: 60_000 }, () => {
   });
 
   let validatorRegistry;
+  // 60s, matching the suite option above rather than the 10s hook default.
+  // Loading the built barrel is the whole cost of this file, and three ledgers
+  // do it at once under a full `--project scripts` run — comfortably fast
+  // alone, and over the default when they contend.
   beforeAll(async () => {
     ({ validatorRegistry } = await loadCoreLinter());
-  });
+  }, 60_000);
 
   it('scopes to the ancestry of what we register', () => {
     const covered = coveredClasses(validatorRegistry.getRegisteredNodeTypes(), bases);

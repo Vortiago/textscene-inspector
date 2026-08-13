@@ -1,6 +1,7 @@
 ---
 type: PathFollow2D
 category: 2D
+status: unreviewed
 fixture: unit-pathfollow2d.tscn
 image: unit-pathfollow2d
 renders_as: a transform-only follower with a selection-gated dot

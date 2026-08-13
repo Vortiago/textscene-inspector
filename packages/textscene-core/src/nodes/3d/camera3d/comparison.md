@@ -1,6 +1,7 @@
 ---
 type: Camera3D
 category: 3D
+status: unreviewed
 fixture: unit-camera3d.tscn
 image: unit-camera3d
 renders_as: a selection-gated frustum gizmo

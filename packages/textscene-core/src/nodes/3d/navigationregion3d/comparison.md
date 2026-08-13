@@ -1,6 +1,7 @@
 ---
 type: NavigationRegion3D
 category: 3D
+status: unreviewed
 fixture: unit-navigation-region-3d.tscn
 image: unit-navigation-region-3d
 visual: false

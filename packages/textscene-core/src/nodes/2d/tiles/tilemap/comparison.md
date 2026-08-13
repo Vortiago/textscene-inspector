@@ -1,6 +1,7 @@
 ---
 type: TileMap
 category: 2D
+status: unreviewed
 fixture: unit-tile-map.tscn
 image: unit-tile-map
 renders_as: batched textured tile quads

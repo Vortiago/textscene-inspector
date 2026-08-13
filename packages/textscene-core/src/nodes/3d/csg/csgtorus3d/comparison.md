@@ -1,6 +1,7 @@
 ---
 type: CSGTorus3D
 category: 3D
+status: unreviewed
 fixture: unit-csg-torus.tscn
 image: unit-csg-torus
 renders_as: a solid torus mesh

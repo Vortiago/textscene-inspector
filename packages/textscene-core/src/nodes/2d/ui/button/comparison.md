@@ -1,6 +1,7 @@
 ---
 type: Button
 category: 2D
+status: unreviewed
 fixture: unit-button.tscn
 image: unit-button
 renders_as: a positioned HTML div

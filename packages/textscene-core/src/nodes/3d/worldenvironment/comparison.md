@@ -1,6 +1,7 @@
 ---
 type: WorldEnvironment
 category: 3D
+status: unreviewed
 fixture: unit-world-environment-basic.tscn
 image: unit-world-environment-basic
 renders_as: the scene's background and environment lighting

@@ -1,6 +1,7 @@
 ---
 type: CSGCylinder3D
 category: 3D
+status: unreviewed
 fixture: unit-csg-cylinder.tscn
 image: unit-csg-cylinder
 renders_as: a solid cylinder or cone mesh

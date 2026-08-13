@@ -1,6 +1,7 @@
 ---
 type: GridMap
 category: 3D
+status: unreviewed
 fixture: unit-grid-map.tscn
 image: unit-grid-map
 renders_as: a THREE.InstancedMesh per MeshLibrary item

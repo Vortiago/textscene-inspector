@@ -1,6 +1,7 @@
 ---
 type: Path2D
 category: 2D
+status: unreviewed
 fixture: unit-path2d.tscn
 image: unit-path2d
 visual: false

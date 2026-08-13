@@ -1,6 +1,7 @@
 ---
 type: MeshInstance3D
 category: 3D
+status: unreviewed
 fixture: unit-torus-mesh.tscn
 image: unit-torus-mesh
 renders_as: a THREE.Mesh

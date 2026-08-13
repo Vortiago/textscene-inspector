@@ -269,9 +269,13 @@ describe('the bound we implement against the bound Godot declared', () => {
   // walking the capture is the whole cost here, and paying it three times took
   // the first test past vitest's 5s default under a full concurrent run.
   let rows;
+  // 60s, matching the suite option above rather than the 10s hook default.
+  // Loading the built barrel is the whole cost of this file, and three ledgers
+  // do it at once under a full `--project scripts` run — comfortably fast
+  // alone, and over the default when they contend.
   beforeAll(async () => {
     rows = await rangedProperties();
-  });
+  }, 60_000);
 
   it('bounds no end to a number the engine does not state', () => {
     // The floor first: a comparison over an empty list is green for the wrong

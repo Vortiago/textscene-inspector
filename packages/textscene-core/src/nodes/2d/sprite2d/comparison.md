@@ -1,6 +1,7 @@
 ---
 type: Sprite2D
 category: 2D
+status: unreviewed
 fixture: unit-sprite2d.tscn
 image: unit-sprite2d
 renders_as: an unlit textured quad

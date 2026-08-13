@@ -1,6 +1,7 @@
 ---
 type: PanelContainer
 category: 2D
+status: unreviewed
 fixture: unit-panel-container.tscn
 image: unit-panel-container
 renders_as: a StyleBox panel around its child

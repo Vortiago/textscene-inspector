@@ -1,6 +1,7 @@
 ---
 type: Polygon2D
 category: 2D
+status: unreviewed
 fixture: unit-polygon2d.tscn
 image: unit-polygon2d
 renders_as: a filled, optionally textured mesh

@@ -1,6 +1,7 @@
 ---
 type: PathFollow3D
 category: 3D
+status: unreviewed
 fixture: unit-pathfollow-3d.tscn
 image: unit-pathfollow-3d
 renders_as: a curve-positioned transform group

@@ -1,6 +1,7 @@
 ---
 type: AnimatedSprite2D
 category: 2D
+status: unreviewed
 fixture: unit-animatedsprite2d.tscn
 image: unit-animatedsprite2d
 renders_as: a textured quad

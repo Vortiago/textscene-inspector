@@ -1,6 +1,7 @@
 ---
 type: SpotLight3D
 category: 3D
+status: unreviewed
 fixture: unit-spot-light-3d.tscn
 image: unit-spot-light-3d
 renders_as: a THREE.SpotLight

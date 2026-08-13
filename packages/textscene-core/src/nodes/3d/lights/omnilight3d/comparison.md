@@ -1,6 +1,7 @@
 ---
 type: OmniLight3D
 category: 3D
+status: unreviewed
 fixture: unit-omni-light-3d.tscn
 image: unit-omni-light-3d
 renders_as: a THREE.PointLight

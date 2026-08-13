@@ -1,6 +1,7 @@
 ---
 type: ColorRect
 category: 2D
+status: unreviewed
 fixture: unit-color-rect.tscn
 image: unit-color-rect
 renders_as: a color-filled div

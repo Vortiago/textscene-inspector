@@ -1,6 +1,7 @@
 ---
 type: Label3D
 category: 3D
+status: unreviewed
 fixture: unit-label3d.tscn
 image: unit-label3d
 renders_as: a canvas-textured plane

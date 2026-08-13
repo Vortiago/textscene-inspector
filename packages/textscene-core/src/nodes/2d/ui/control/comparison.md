@@ -1,6 +1,7 @@
 ---
 type: Control
 category: 2D
+status: unreviewed
 fixture: unit-control-state.tscn
 image: unit-control-state
 renders_as: a full-rect layout region

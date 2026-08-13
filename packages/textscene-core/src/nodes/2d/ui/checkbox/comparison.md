@@ -1,6 +1,7 @@
 ---
 type: CheckBox
 category: 2D
+status: unreviewed
 fixture: unit-checkbox.tscn
 image: unit-checkbox
 renders_as: an inline HTML row with a drawn check indicator

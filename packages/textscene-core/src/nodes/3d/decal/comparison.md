@@ -1,6 +1,7 @@
 ---
 type: Decal
 category: 3D
+status: unreviewed
 fixture: unit-decal.tscn
 image: unit-decal
 renders_as: a texture projected onto the surfaces its box intersects

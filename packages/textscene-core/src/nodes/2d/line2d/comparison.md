@@ -1,6 +1,7 @@
 ---
 type: Line2D
 category: 2D
+status: unreviewed
 fixture: unit-line2d.tscn
 image: unit-line2d
 renders_as: a stroked mesh polyline

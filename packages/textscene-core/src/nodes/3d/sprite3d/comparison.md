@@ -1,6 +1,7 @@
 ---
 type: Sprite3D
 category: 3D
+status: unreviewed
 fixture: unit-sprite3d.tscn
 image: unit-sprite3d
 renders_as: an unlit textured THREE.Mesh quad

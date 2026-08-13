@@ -1,6 +1,7 @@
 ---
 type: StandardMaterial3D
 category: Resources
+status: unreviewed
 renders_as: a THREE.MeshStandardMaterial / MeshPhysicalMaterial
 ---
 

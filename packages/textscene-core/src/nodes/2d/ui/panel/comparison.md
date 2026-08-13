@@ -1,6 +1,7 @@
 ---
 type: Panel
 category: 2D
+status: unreviewed
 fixture: unit-panel.tscn
 image: unit-panel
 renders_as: a StyleBox-painted <div>

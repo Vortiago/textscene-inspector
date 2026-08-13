@@ -1,6 +1,7 @@
 ---
 type: CanvasLayer
 category: 2D
+status: unreviewed
 fixture: unit-canvas-layer.tscn
 image: unit-canvas-layer
 renders_as: a full-rect passthrough layer hosting Control children

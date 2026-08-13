@@ -1,6 +1,7 @@
 ---
 type: Path3D
 category: 3D
+status: unreviewed
 fixture: unit-path3d.tscn
 image: unit-path3d
 renders_as: a selection-gated curve gizmo

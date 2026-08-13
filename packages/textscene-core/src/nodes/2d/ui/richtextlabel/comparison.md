@@ -1,6 +1,7 @@
 ---
 type: RichTextLabel
 category: 2D
+status: unreviewed
 fixture: unit-rich-text-label.tscn
 image: unit-rich-text-label
 renders_as: a positioned HTML div of styled text

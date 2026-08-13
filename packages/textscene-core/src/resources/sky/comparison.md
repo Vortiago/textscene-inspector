@@ -1,6 +1,7 @@
 ---
 type: Sky
 category: Resources
+status: unreviewed
 renders_as: a THREE PMREM environment + background
 ---
 

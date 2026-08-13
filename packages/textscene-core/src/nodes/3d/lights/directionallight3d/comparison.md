@@ -1,6 +1,7 @@
 ---
 type: DirectionalLight3D
 category: 3D
+status: unreviewed
 fixture: unit-directional-light-3d.tscn
 image: unit-directional-light-3d
 renders_as: a THREE.DirectionalLight

@@ -1,6 +1,7 @@
 ---
 type: AreaLight3D
 category: 3D
+status: unreviewed
 group: Lighting
 fixture: unit-area-light3d.tscn
 image: unit-area-light3d

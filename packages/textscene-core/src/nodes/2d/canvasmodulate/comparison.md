@@ -1,6 +1,7 @@
 ---
 type: CanvasModulate
 category: 2D
+status: unreviewed
 fixture: unit-canvas-modulate.tscn
 image: unit-canvas-modulate
 group: Canvas effects

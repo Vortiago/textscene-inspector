@@ -1,6 +1,7 @@
 ---
 type: Label
 category: 2D
+status: unreviewed
 fixture: unit-label-2d.tscn
 image: unit-label-2d
 renders_as: a positioned HTML div in the Control overlay

@@ -1,6 +1,7 @@
 ---
 type: CSGPolygon3D
 category: 3D
+status: unreviewed
 renders_as: a 2D profile swept into a solid
 ---
 

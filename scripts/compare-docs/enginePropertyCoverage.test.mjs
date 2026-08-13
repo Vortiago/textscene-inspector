@@ -113,10 +113,14 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
   // twice and raced the timeout separately.
   let validatorRegistry;
   let nodeRegistry;
+  // 60s, matching the suite option above rather than the 10s hook default.
+  // Loading the built barrel is the whole cost of this file, and three ledgers
+  // do it at once under a full `--project scripts` run — comfortably fast
+  // alone, and over the default when they contend.
   beforeAll(async () => {
     ({ validatorRegistry } = await loadCoreLinter());
     ({ nodeRegistry } = await loadCoreParser());
-  });
+  }, 60_000);
 
   it('the captured table covers the classes it should', () => {
     // Abstract bases are the point: they declare the most and can never be

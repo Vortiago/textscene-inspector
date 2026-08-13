@@ -1,6 +1,7 @@
 ---
 type: ArrayMesh
 category: Resources
+status: unreviewed
 renders_as: one merged THREE.BufferGeometry with a draw group per surface
 ---
 
