@@ -97,9 +97,17 @@ describe.skipIf(!built)('resource property coverage', { timeout: 60_000 }, () =>
 
   it('scopes to the ancestry of what we register', () => {
     const covered = coveredClasses(validatorRegistry.getRegisteredNodeTypes(), bases);
-    // The classes a `[sub_resource type="StandardMaterial3D"]` resolves
-    // through, up from the one that declares the material properties.
-    for (const cls of ['BaseMaterial3D', 'Material', 'Resource']) {
+    // Named, because the scope is derived from what is registered: deleting a
+    // registration would drop its rows from the count rather than fail it, so
+    // the ledger's zero would survive the coverage going away.
+    for (const cls of [
+      'BaseMaterial3D',
+      'Material',
+      'Resource',
+      'Environment',
+      'PrimitiveMesh',
+      'Mesh',
+    ]) {
       expect([...covered]).toContain(cls);
     }
     // Resource is in as an ancestor, and its other subtrees stay out with it.
