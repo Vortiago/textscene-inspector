@@ -54,9 +54,10 @@ validatorRegistry.registerAll('Label3D', {
     hinted: 'label_3d.cpp:155',
   }),
   outline_modulate: v.color('outline_modulate'),
-  // label_3d.cpp:154 hints "1,256,1,or_greater"; set_font_size:861-868 is a
-  // bare assignment (only guarded against a redundant set).
-  font_size: v.positiveFloat('font_size', undefined, { hinted: 'label_3d.cpp:154' }),
+  // label_3d.cpp:154 hints "1,256,1,or_greater" and declares Variant::INT;
+  // set_font_size:861-868 is a bare assignment (only guarded against a
+  // redundant set), so the floor is the hint's and `or_greater` opens the top.
+  font_size: v.int('font_size', { min: 1, hinted: 'label_3d.cpp:154' }),
   // Godot documents line_spacing as "can be negative", so no bound here.
   line_spacing: v.float('line_spacing'),
   // set_horizontal_alignment:678, ERR_FAIL_INDEX((int)p_alignment, 4): the

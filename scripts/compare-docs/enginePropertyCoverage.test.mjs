@@ -32,13 +32,17 @@
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { stalenessMessage } from '../distFreshness.mjs';
 import { loadCoreLinter, loadCoreParser } from './loadCoreLinter.mjs';
 
 const PROPS = join(import.meta.dirname, 'node-properties.json');
-const DIST = join(import.meta.dirname, '../../packages/textscene-core/dist/linter/index.js');
-const built = existsSync(DIST);
+const CORE = join(import.meta.dirname, '../../packages/textscene-core');
+// Not `existsSync(dist)`: that cannot tell a fresh build from one predating
+// the very change being measured, and it SKIPS rather than fails, so a run
+// with no build at all reads green over a guard that never executed.
+const stale = stalenessMessage(CORE, 'this coverage ledger');
 
 /**
  * Unvalidated properties, per class, counted where the ENGINE declares them.
@@ -95,8 +99,15 @@ function unvalidatedByClass(engine, validatorRegistry, covered) {
 // Loading the built barrel (every slice self-registers) comfortably exceeds
 // vitest's 5s default, and under a full-monorepo run it exceeded it in the one
 // place the isolated run never did. Same shape as loadCoreLinter.test.mjs.
-describe.skipIf(!built)('engine property coverage', { timeout: 60_000 }, () => {
+describe('engine property coverage', { timeout: 60_000 }, () => {
   const engine = JSON.parse(readFileSync(PROPS, 'utf8'));
+
+  // Fails every assertion below with one actionable message rather than letting
+  // them agree with a previous revision's registry.
+  beforeAll(() => {
+    if (stale) throw new Error(stale);
+  });
+
 
   // One load for the whole file: two independent awaits paid the barrel cost
   // twice and raced the timeout separately.

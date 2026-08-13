@@ -80,8 +80,11 @@ describe('Camera3D Linter', () => {
           valid: [10.0],
           with: { projection: 1 },
           invalid: [
-            { value: 0, contains: ['greater than 0'] },
-            { value: -5.0, contains: ['greater than 0'] },
+            // camera_3d.cpp:731 refuses `<= CMP_EPSILON`, not `<= 0`, so the
+            // whole band up to 1e-5 is refused too.
+            { value: 0, contains: ['0.00001'] },
+            { value: -5.0, contains: ['0.00001'] },
+            { value: 0.000001, contains: ['0.00001'] },
             { value: 'invalid', contains: ['must be a number'] },
           ],
         },
@@ -194,9 +197,11 @@ describe('Camera3D Linter', () => {
       });
     });
 
-    // Only PROJECTION_FRUSTUM (2) reaches projection.cpp:367's
-    // `ERR_FAIL_COND(p_far <= p_near)`; the mode dispatch at camera_3d.cpp:102-115
-    // sends perspective and orthogonal to setters with no such guard.
+    // The two cells differ. `near == far` loses the projection in every mode —
+    // dropped before `set_identity` under perspective, written as inf under
+    // orthogonal, refused under frustum. `near > far` is refused only by
+    // frustum's `ERR_FAIL_COND(p_far <= p_near)` (projection.cpp:367); the other
+    // two write a finite, merely inverted matrix.
     describe('clipping planes relationship', () => {
       it('should error when near >= far under the frustum projection', () => {
         expectDiagnostic(

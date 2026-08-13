@@ -100,7 +100,7 @@ Strict parsing format-checks these `CSGPolygon3D` properties, plus 18 inherited 
 | `mode` | enum 0-2 (DEPTH/SPIN/PATH) | warning |
 | `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) | warning |
 | `path_continuous_u` | true or false |  |
-| `path_interval` | float > 0 | warning below |
+| `path_interval` | float >= 0.01 | warning below |
 | `path_interval_type` | enum 0-1 (DISTANCE/SUBDIVIDE) | warning |
 | `path_joined` | true or false |  |
 | `path_local` | true or false |  |

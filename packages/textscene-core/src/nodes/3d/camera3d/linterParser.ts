@@ -9,6 +9,7 @@
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
+import { CMP_EPSILON } from '../../../godot/math.js';
 
 const PROJECTION = { 0: 'PERSPECTIVE', 1: 'ORTHOGONAL', 2: 'FRUSTUM' };
 // camera_3d.h:50-52: `enum KeepAspect { KEEP_WIDTH, KEEP_HEIGHT };` has exactly
@@ -33,8 +34,10 @@ validatorRegistry.registerAll('Camera3D', {
     message: "Property 'fov' must be between 1 and 179 degrees",
     enforced: 'camera_3d.cpp:725',
   }),
-  // camera_3d.cpp:731, ERR_FAIL_COND(p_size <= CMP_EPSILON).
-  size: v.positiveFloat('size', undefined, { enforced: 'camera_3d.cpp:731' }),
+  // camera_3d.cpp:731, ERR_FAIL_COND(p_size <= CMP_EPSILON). The predicate's
+  // own constant, not a stand-in for "positive": the strictly-positive floor
+  // accepted the whole band up to 1e-5, which the setter refuses.
+  size: v.float('size', { min: CMP_EPSILON, enforced: 'camera_3d.cpp:731' }),
   frustum_offset: v.vector2('frustum_offset'),
   // set_near:736 / set_far:746 are bare assignments; their hints (:685/:686)
   // are advisory, so the low ends are warnings in linter.ts, not errors.

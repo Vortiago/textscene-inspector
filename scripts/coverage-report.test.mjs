@@ -27,66 +27,20 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
-  statSync,
   utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join } from 'node:path';
 import { collectCoverage } from './coverage-report/collect.mjs';
-import { newestMtime } from './newestMtime.mjs';
+import { BUILD, newest, stalenessMessage } from './distFreshness.mjs';
 
 const CATALOG = join(import.meta.dirname, 'compare-docs/node-catalog.json');
 const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
 
 const CORE = join(import.meta.dirname, '../packages/textscene-core');
-const BUILD = 'pnpm --filter @textscene/core build';
 
-/**
- * `tsc` emits `src/**` minus the tests, the test kit and the ambient
- * declarations, so an edit to those is not staleness: a guard that fires on
- * work it cannot be measuring is one people learn to bypass. Mirrors the
- * package tsconfig's `exclude`.
- */
-const COMPILED = /\.tsx?$/;
-const NOT_COMPILED = /\.d\.ts$|\.(test|spec)\.tsx?$/;
-
-/** Newest kept file under `dir`; `testing/` is the excluded kit, at any depth. */
-const newest = (dir, keep) => newestMtime(dir, keep, (name) => name !== 'testing');
-
-/**
- * The ledger is read from the BUILT registries, so an unbuilt or stale `dist/`
- * has this file reporting a previous revision's coverage as fact — and every
- * assertion still passes. Refuse to measure instead; building here would race
- * the build step that owns `dist/`.
- */
-function stalenessMessage(core) {
-  if (!newest(join(core, 'dist'), (n) => n.endsWith('.js')).at) {
-    return `packages/textscene-core/dist is not built — run \`${BUILD}\`.`;
-  }
-  // Against tsc's OWN record of when it last evaluated the project, not against
-  // the newest emitted `.js`. An incremental build does not rewrite an output
-  // whose content did not change, so a no-op regeneration of a source file
-  // (`pnpm nodes:catalog` rewriting nodeBaseTypes.generated.ts byte-identically)
-  // left every `.js` older than it and no amount of rebuilding could clear the
-  // complaint. A guard whose prescribed remedy does not work gets bypassed.
-  let stamp;
-  try {
-    stamp = statSync(join(core, 'tsconfig.tsbuildinfo')).mtimeMs;
-  } catch {
-    return `packages/textscene-core has no tsconfig.tsbuildinfo — run \`${BUILD}\`.`;
-  }
-  const source = newest(join(core, 'src'), (n) => COMPILED.test(n) && !NOT_COMPILED.test(n));
-  if (source.at > stamp) {
-    return (
-      `packages/textscene-core/dist predates ${relative(core, source.file)} — this ledger would ` +
-      `report the PREVIOUS revision's registries. Run \`${BUILD}\`.`
-    );
-  }
-  return null;
-}
-
-const stale = stalenessMessage(CORE);
+const stale = stalenessMessage(CORE, 'this ledger');
 const coverage = stale ? null : await collectCoverage();
 
 describe('coverage ledger', () => {

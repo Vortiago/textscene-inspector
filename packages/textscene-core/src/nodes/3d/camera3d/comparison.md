@@ -46,7 +46,7 @@ Strict parsing format-checks these `Camera3D` properties, plus 17 inherited from
 | `keep_aspect` | enum 0-1 (KEEP_WIDTH/KEEP_HEIGHT) | warning |
 | `near` | float |  |
 | `projection` | enum 0-2 (PERSPECTIVE/ORTHOGONAL/FRUSTUM) | error |
-| `size` | float > 0 | error below |
+| `size` | float >= 0.00001 | error below |
 | `v_offset` | float |  |
 
 | Rule | Reports | Severity |

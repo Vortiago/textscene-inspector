@@ -53,7 +53,7 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 | `double_sided` | true or false |  |
 | `fixed_size` | true or false |  |
 | `font` | null, SubResource("id") or ExtResource("id") |  |
-| `font_size` | float > 0 | warning below |
+| `font_size` | integer >= 1 | warning below |
 | `horizontal_alignment` | enum 0-3 (LEFT/CENTER/RIGHT/FILL) | error |
 | `justification_flags` | bit mask of JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128) |  |
 | `language` | quoted string |  |

@@ -198,6 +198,21 @@ describe('the classification guard bites', () => {
     expect(swept).toContain('VSplitContainer.vertical');
   });
 
+  it('states the numbers wherever it states a tier', () => {
+    // `ground()` sets `tiers` and `bounds` together, so a validator carrying one
+    // without the other cannot have come from the DSL: it is hand-rolled, or it
+    // went through a wrapper that forwarded only half.
+    //
+    // The pair is not decoration. `tiers` decides the SEVERITY of a bound and
+    // `bounds` carries the NUMBERS that `hintImplementationParity` compares
+    // against Godot's own hint — so a validator with only the first enforces a
+    // range that no guard can check against the engine, and silently counts as
+    // an unimplemented end while being fully implemented.
+    expect(sweepValidators((val) => val.tiers !== undefined && val.bounds === undefined)).toEqual(
+      []
+    );
+  });
+
   it('reaches removals, which getOwnKeys deliberately omits', () => {
     // HBoxContainer takes `vertical` away from BoxContainer. That refuses every
     // value of a key a scene can carry, so it needs the same citation a bound

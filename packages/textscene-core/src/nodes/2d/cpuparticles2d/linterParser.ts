@@ -15,26 +15,32 @@ const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME' };
 
 validatorRegistry.registerAll('CPUParticles2D', {
   emitting: v.boolean('emitting'),
-  // cpu_particles_2d.cpp:1492 hints "1,1000000,1,exp" but set_amount
-  // (cpu_particles_2d.cpp:67-68) only ERR_FAIL_COND_MSGs below 1; the
-  // 1000000 ceiling is never setter-enforced, so — unlike GPUParticles2D's
-  // twin — no max is coded here at all.
-  amount: v.positiveInt('amount', "Property 'amount' must be greater than 0", {
-    enforced: 'cpu_particles_2d.cpp:67',
+  // cpu_particles_2d.cpp:1492 hints "1,1000000,1,exp", closed at both ends.
+  // set_amount (cpu_particles_2d.cpp:67-68) ERR_FAIL_COND_MSGs below 1, so the
+  // floor is enforced; the ceiling is never checked, which makes it a warning
+  // rather than nothing at all. The CPUParticles3D twin reads the same hint the
+  // same way.
+  amount: v.int('amount', {
+    min: 1,
+    max: 1000000,
+    enforced: { min: 'cpu_particles_2d.cpp:67' },
+    hinted: { max: 'cpu_particles_2d.cpp:1492' },
   }),
   texture: v.resourceReference('texture'),
 
   // cpu_particles_2d.cpp:1495 hints "0.01,600.0,...,or_greater", but
-  // set_lifetime (cpu_particles_2d.cpp:85-87) ERR_FAIL_COND_MSGs at `<= 0`,
+  // set_lifetime (cpu_particles_2d.cpp:86) ERR_FAIL_COND_MSGs at `<= 0`,
   // not at the hint's 0.01 — the setter, not the hint, is what governs.
-  lifetime: v.positiveFloat('lifetime', undefined, { enforced: 'cpu_particles_2d.cpp:85' }),
+  lifetime: v.positiveFloat('lifetime', undefined, { enforced: 'cpu_particles_2d.cpp:86' }),
   one_shot: v.boolean('one_shot'),
   // cpu_particles_2d.cpp:1497 hints "0.00,10.0,...,or_greater"; set_pre_process_time
   // (cpu_particles_2d.cpp:94-96) assigns unconditionally.
   preprocess: v.nonNegativeFloat('preprocess', { hinted: 'cpu_particles_2d.cpp:1497' }),
-  // cpu_particles_2d.cpp:1498 hints "0,64,0.01" hard both ends; set_speed_scale
-  // (cpu_particles_2d.cpp:129-131) assigns unconditionally.
-  speed_scale: v.nonNegativeFloat('speed_scale', { hinted: 'cpu_particles_2d.cpp:1498' }),
+  // cpu_particles_2d.cpp:1498 hints "0,64,0.01", closed at both ends;
+  // set_speed_scale (cpu_particles_2d.cpp:129-131) assigns unconditionally, so
+  // both ends warn. A closed end that the setter ignores is the definition of
+  // the hinted tier, not a reason to leave it uncoded.
+  speed_scale: v.float('speed_scale', { min: 0, max: 64, hinted: 'cpu_particles_2d.cpp:1498' }),
   // cpu_particles_2d.cpp:1499 hints "0,1,0.01" hard both ends;
   // set_explosiveness_ratio (cpu_particles_2d.cpp:98-100) assigns unconditionally.
   explosiveness: v.float('explosiveness', { min: 0, max: 1, hinted: 'cpu_particles_2d.cpp:1499' }),

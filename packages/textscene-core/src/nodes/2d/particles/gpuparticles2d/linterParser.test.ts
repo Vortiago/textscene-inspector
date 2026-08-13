@@ -180,7 +180,7 @@ describe('GPUParticles2D strict validators', () => {
 
   describe('lifetime', () => {
     // gpu_particles_2d.cpp:947 hints "0.01,600.0,0.01,or_greater,…", but
-    // set_lifetime (gpu_particles_2d.cpp:77-78) ERR_FAILs only at `<= 0` —
+    // set_lifetime (gpu_particles_2d.cpp:78) ERR_FAILs only at `<= 0` —
     // the setter, not the hint, governs (ADR-0032), so 0.001 is legal.
     it('accepts a typical value', () => {
       expect(check('lifetime', '2.0')).toBeNull();

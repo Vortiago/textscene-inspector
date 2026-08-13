@@ -29,6 +29,9 @@ const inertia2d: PropertyValidator = (key, value, line) => {
 inertia2d.grounding = { kind: 'enforced', cite: 'rigid_body_2d.cpp:328' };
 // Floor only, and the setter is what refuses it. There is no ceiling.
 inertia2d.tiers = { min: 'error' };
+// rigid_body_2d.cpp:643 hints "0,1000,0.01,or_greater,exp,suffix:kg⋅px²" — the
+// `or_greater` opens the max, so only the floor is a bound.
+inertia2d.bounds = { min: 0 };
 
 validatorRegistry.registerAll('RigidBody2D', {
   // rigid_body_2d.cpp:318, ERR_FAIL_COND(p_mass <= 0): the setter refuses.

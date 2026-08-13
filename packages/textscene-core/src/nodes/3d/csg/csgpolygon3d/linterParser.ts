@@ -44,7 +44,7 @@ validatorRegistry.registerAll('CSGPolygon3D', {
   }),
   // set_path_interval:2716-2719 is a bare assignment; the hint (:2606) is
   // advisory only.
-  path_interval: v.positiveFloat('path_interval', undefined, { hinted: 'csg_shape.cpp:2606' }),
+  path_interval: v.float('path_interval', { min: 0.01, hinted: 'csg_shape.cpp:2606' }),
   // set_path_simplify_angle:2728-2732 is a bare assignment; the hint (:2607)
   // is advisory only.
   path_simplify_angle: v.float('path_simplify_angle', {

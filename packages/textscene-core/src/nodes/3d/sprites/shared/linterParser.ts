@@ -51,8 +51,10 @@ validatorRegistry.registerAll('SpriteBase3D', {
   modulate: v.color('modulate'),
   // sprite_3d.cpp:682 hints "0.0001,128,0.0000001" (closed, no or_greater);
   // set_pixel_size:397-403 is a bare assignment (only guarded against a
-  // redundant set), so out-of-hint is a warning, not an error.
-  pixel_size: v.positiveFloat('pixel_size', undefined, { hinted: 'sprite_3d.cpp:682' }),
+  // redundant set), so BOTH ends are warnings rather than errors. Coded, not
+  // just cited: a `hinted:` naming numbers the validator does not carry left
+  // `pixel_size = 500.0` silent while the Label3D twin warned on it.
+  pixel_size: v.float('pixel_size', { min: 0.0001, max: 128, hinted: 'sprite_3d.cpp:682' }),
   // set_axis:410-411, ERR_FAIL_INDEX(p_axis, 3): the setter refuses.
   axis: v.enumInt('axis', 0, 2, AXIS, { enforced: 'sprite_3d.cpp:411' }),
   // set_billboard_mode:597-598, ERR_FAIL_INDEX(p_mode, 3): the setter refuses.

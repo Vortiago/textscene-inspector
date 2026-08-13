@@ -53,6 +53,9 @@ textureScaleValidator.grounding = { kind: 'enforced', cite: 'light_2d.cpp:444' }
 // Both range ends come from the hint alone, so both warn. The error above is
 // the exactly-zero replacement, which is not an end of the range.
 textureScaleValidator.tiers = { min: 'warning', max: 'warning' };
+// The numbers beside the tiers: light_2d.cpp:479 hints "0.01,50,0.01". A tier
+// without them is a bound no guard can compare against the engine.
+textureScaleValidator.bounds = { min: TEXTURE_SCALE_HINT_MIN, max: TEXTURE_SCALE_HINT_MAX };
 
 validatorRegistry.registerAll('PointLight2D', {
   // light_2d.cpp:480 hints "0,1024,1,or_greater,suffix:px" (or_greater opens

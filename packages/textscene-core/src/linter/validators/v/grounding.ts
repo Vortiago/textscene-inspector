@@ -109,14 +109,25 @@ export function withFiniteGuard(
   };
   guarded.accepts = validator.accepts;
   // The wrapper only adds a finiteness branch ahead of the range checks, so the
-  // bounded ends and their tiers are the inner validator's unchanged.
+  // bounded ends, their tiers and the NUMBERS stay the inner validator's.
+  // `bounds` is what `hintImplementationParity` compares against the engine's
+  // hint, so dropping it took the property out of that comparison and counted
+  // it as unimplemented while it was fully implemented.
   guarded.tiers = validator.tiers;
+  guarded.bounds = validator.bounds;
+  // `formatOnly` is deliberately NOT forwarded, even though it is dropped the
+  // same way: `inf`/`nan` are legal TSCN float literals, so this guard rejects a
+  // real value and owes a citation — which is exactly what `formatOnly` denies.
+  //
   // Keep BOTH citations when the property also carries a range bound, the same
   // rule `ground` follows: the finite guard and the range guard are separate
   // lines in the setter, and dropping either makes it uncheckable.
   const inner = validator.grounding?.cite;
   guarded.grounding = {
-    kind: 'enforced',
+    // The inner kind wins where there is one. The finite branch is always an
+    // error and says so directly, so stamping `enforced` unconditionally would
+    // only mislabel a `hinted:` bound whose range branch still warns.
+    kind: validator.grounding?.kind ?? 'enforced',
     cite: inner && inner !== cite ? `${cite}, ${inner}` : cite,
   };
   return guarded;

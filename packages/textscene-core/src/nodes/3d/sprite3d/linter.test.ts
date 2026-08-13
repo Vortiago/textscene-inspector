@@ -66,11 +66,17 @@ pixel_size = 0.01
         invalid: [{ value: 10, contains: ['axis', '0-2'] }],
       },
       {
+        // sprite_3d.cpp:682 hints "0.0001,128" closed at both ends and the
+        // setter assigns straight through, so out-of-band is the hinted tier:
+        // a warning, and the ceiling reports as well as the floor. It used to
+        // be a bare "> 0" error, which both invented a severity and let
+        // `pixel_size = 500.0` through in silence.
         prop: 'pixel_size',
-        valid: [0.01],
+        valid: [0.01, 0.0001, 128],
         invalid: [
-          { value: 0, contains: ['pixel_size', 'greater than 0'] },
-          { value: -0.5, contains: ['pixel_size', 'greater than 0'] },
+          { value: 0, severity: 'warning', contains: ['pixel_size', '0.0001', '128'] },
+          { value: -0.5, severity: 'warning', contains: ['pixel_size', '0.0001', '128'] },
+          { value: 500.0, severity: 'warning', contains: ['pixel_size', '128'] },
         ],
       },
       {

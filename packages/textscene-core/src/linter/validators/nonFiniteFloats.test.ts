@@ -116,6 +116,21 @@ describe('a property whose setter guards is_finite', () => {
     expect(both.grounding?.cite).toBe('texture_progress_bar.cpp:592, texture_progress_bar.cpp:594');
   });
 
+  it('keeps the bounds themselves, not just their citation', () => {
+    // `hintImplementationParity` compares `bounds` against the engine's own
+    // PROPERTY_HINT_RANGE numbers. A wrapper that forwarded the cite but
+    // dropped the numbers took the property out of that comparison silently,
+    // and it counted as an unimplemented end while being fully implemented.
+    const both = v.float('radial_initial_angle', {
+      min: 0,
+      max: 360,
+      enforced: 'texture_progress_bar.cpp:594',
+      finite: 'texture_progress_bar.cpp:592',
+    });
+    expect(both.bounds).toEqual({ min: 0, max: 360 });
+    expect(both.tiers).toEqual({ min: 'error', max: 'error' });
+  });
+
   it('applies to nonNegativeFloat too, where zoom_step needs it', () => {
     const step = v.nonNegativeFloat('zoom_step', {
       enforced: { min: 'graph_edit.cpp:2465' },

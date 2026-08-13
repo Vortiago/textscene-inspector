@@ -2,14 +2,16 @@
 
 /**
  * `RenderingServer::MATERIAL_RENDER_PRIORITY_MIN` / `_MAX`
- * (`servers/rendering/rendering_server.h:257-258`), the closed range every
+ * (`servers/rendering/rendering_server.h:258-259`), the closed range every
  * material render-order property is held to.
  *
  * A RenderingServer fact, not any node's: it grounds `SpriteBase3D.render_priority`
- * (`sprite_3d.cpp:383`) and both `Label3D.render_priority` (`label_3d.cpp:766`)
- * and `Label3D.outline_render_priority` (`label_3d.cpp:778`). Those two classes
- * share no ancestor that owns the property, so there is no slice to hoist onto
- * and re-spelling the pair per slice is how the numbers drift apart.
+ * (`sprite_3d.cpp:383`), both `Label3D.render_priority` (`label_3d.cpp:766`) and
+ * `Label3D.outline_render_priority` (`label_3d.cpp:778`), and `Material.render_priority`
+ * (`material.cpp:65`), where `material.h:74-75` aliases the pair straight from the
+ * RS enum. A Material resource and a SpriteBase3D node share no ancestor that
+ * owns the property, so there is no slice to hoist onto and re-spelling the pair
+ * per slice is how the numbers drift apart.
  *
  * ENFORCED, not merely hinted: each setter opens with
  * `ERR_FAIL_COND(p_priority < MIN || p_priority > MAX)`, so a value outside the

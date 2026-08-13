@@ -20,14 +20,18 @@
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { stalenessMessage } from '../distFreshness.mjs';
 import { loadCoreLinter } from './loadCoreLinter.mjs';
 
 const PROPS = join(import.meta.dirname, 'resource-properties.json');
 const BASES = join(import.meta.dirname, 'resource-bases.json');
-const DIST = join(import.meta.dirname, '../../packages/textscene-core/dist/linter/index.js');
-const built = existsSync(DIST);
+const CORE = join(import.meta.dirname, '../../packages/textscene-core');
+// Not `existsSync(dist)`: that cannot tell a fresh build from one predating
+// the very change being measured, and it SKIPS rather than fails, so a run
+// with no build at all reads green over a guard that never executed.
+const stale = stalenessMessage(CORE, 'this coverage ledger');
 
 /**
  * Properties in scope with no validator.
@@ -86,9 +90,15 @@ function unvalidatedByClass(engine, validatorRegistry, covered) {
   return rows.sort((a, b) => b.missing.length - a.missing.length);
 }
 
-describe.skipIf(!built)('resource property coverage', { timeout: 60_000 }, () => {
+describe('resource property coverage', { timeout: 60_000 }, () => {
   const engine = JSON.parse(readFileSync(PROPS, 'utf8'));
   const bases = JSON.parse(readFileSync(BASES, 'utf8'));
+
+  // Fails every assertion below with one actionable message rather than letting
+  // them agree with a previous revision's registry.
+  beforeAll(() => {
+    if (stale) throw new Error(stale);
+  });
 
   let validatorRegistry;
   beforeAll(async () => {

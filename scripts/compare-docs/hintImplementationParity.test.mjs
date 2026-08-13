@@ -27,14 +27,18 @@
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { stalenessMessage } from '../distFreshness.mjs';
 import { loadCoreLinter } from './loadCoreLinter.mjs';
 
 const PROPS = join(import.meta.dirname, 'node-properties.json');
 const RESOURCE_PROPS = join(import.meta.dirname, 'resource-properties.json');
-const DIST = join(import.meta.dirname, '../../packages/textscene-core/dist/linter/index.js');
-const built = existsSync(DIST);
+const CORE = join(import.meta.dirname, '../../packages/textscene-core');
+// Not `existsSync(dist)`: that cannot tell a fresh build from one predating
+// the very change being measured, and it SKIPS rather than fails, so a run
+// with no build at all reads green over a guard that never executed.
+const stale = stalenessMessage(CORE, 'this hint-parity ledger');
 
 /** `PropertyInfo::hint` for `PROPERTY_HINT_RANGE`. */
 const HINT_RANGE = 1;
@@ -49,8 +53,8 @@ const HINT_RANGE = 1;
  */
 const SETTER_OVERRIDES_HINT = new Map([
   // Window.content_scale_factor and OpenXRCompositionLayerCylinder.aspect_ratio
-  // used to sit here; both are the strictly-positive shape `mismatches` now
-  // recognises as a class, so an entry for either would exempt nothing.
+  // sit in STRICTLY_POSITIVE_SETTER below instead: their divergence is the
+  // shared `<= 0` refusal, not a floor named independently of the hint.
   // The hint's -1 is the in-memory default the serializer omits; the setter's
   // ERR_FAIL_COND_MSG(p_bone_idx < 0) refuses it outright.
   ['PhysicalBone2D.bone2d_index', 'physical_bone_2d.cpp:229'],
@@ -82,6 +86,45 @@ const SETTER_OVERRIDES_HINT = new Map([
   // A clamp, not a refusal: `p > 4 ? p : 4` means 1..3 are values Godot never
   // stores, so the floor sits ABOVE the hint's and leaves no band to warn on.
   ['CSGSphere3D.radial_segments', 'csg_shape.cpp:1489'],
+  // `ERR_FAIL_COND(p_size <= CMP_EPSILON)` refuses at 1e-5, two orders below
+  // the hint's 0.001, so the band between them loads and the enforced end wins.
+  ['Camera3D.size', 'camera_3d.cpp:731'],
+]);
+
+/**
+ * Properties whose setter refuses everything `<= 0` while the hint's floor sits
+ * higher, so `Number.MIN_VALUE` is the honest encoding of the enforced end.
+ *
+ * A roster rather than a rule, for the reason `SETTER_OVERRIDES_HINT` is one:
+ * the class-wide version exempted eight properties whose floor was fabricated
+ * rather than derived, and nothing could see the difference. Each entry names
+ * the predicate, so the claim is checkable and a stale one fails below.
+ *
+ * One `min` slot holds one tier and it must be the more severe: a value the
+ * setter refuses cannot be reported as a warning about a slider's range.
+ */
+const STRICTLY_POSITIVE_SETTER = new Map([
+  ['AudioStreamPlayer.pitch_scale', 'audio_stream_player_internal.cpp:314'],
+  ['AudioStreamPlayer2D.pitch_scale', 'audio_stream_player_internal.cpp:314'],
+  ['AudioStreamPlayer3D.pitch_scale', 'audio_stream_player_internal.cpp:314'],
+  ['AudioStreamPlayer2D.max_distance', 'audio_stream_player_2d.cpp:300'],
+  ['CPUParticles2D.lifetime', 'cpu_particles_2d.cpp:86'],
+  ['CPUParticles3D.lifetime', 'cpu_particles_3d.cpp:92'],
+  ['GPUParticles2D.lifetime', 'gpu_particles_2d.cpp:78'],
+  ['GPUParticles3D.lifetime', 'gpu_particles_3d.cpp:82'],
+  ['CSGSphere3D.radius', 'csg_shape.cpp:1478'],
+  ['LineEdit.caret_blink_interval', 'line_edit.cpp:2050'],
+  ['TextEdit.caret_blink_interval', 'text_edit.cpp:5198'],
+  ['Timer.wait_time', 'timer.cpp:93'],
+  ['PhysicalBone3D.mass', 'physical_bone_3d.cpp:1190'],
+  ['RigidBody2D.mass', 'rigid_body_2d.cpp:318'],
+  ['RigidBody3D.mass', 'rigid_body_3d.cpp:334'],
+  // Not an ERR_FAIL_COND but the same refusal: the setter assigns 1 and returns.
+  ['Skeleton3D.motion_scale', 'skeleton_3d.cpp:586'],
+  ['Window.content_scale_factor', 'window.cpp:1774'],
+  // The hint's floor is 0 INCLUSIVE while the setter refuses `<= 0`, so this is
+  // the one entry where MIN_VALUE is stricter than the hint rather than looser.
+  ['OpenXRCompositionLayerCylinder.aspect_ratio', 'openxr_composition_layer_cylinder.cpp:144'],
 ]);
 
 /**
@@ -116,16 +159,20 @@ function parseHint(hintString) {
  * by the wrong rule, and when ours is the narrower one it reports an error on a
  * file Godot opens — this repo's recurring defect. Must be empty.
  */
-function mismatches(hint, bounds) {
+function mismatches(label, hint, bounds) {
   const out = [];
   const { min, max } = bounds ?? {};
-  // `Number.MIN_VALUE` is not a number anyone chose — it is how "the setter
-  // refuses anything <= 0" is spelled, from an `ERR_FAIL_COND(p_x <= 0)`. Around
-  // two dozen properties pair it with a hint whose floor sits higher, and the
-  // story is the same every time: the enforced floor is the real one, the band
-  // between them is a hint-only sliver, and one `min` slot must hold the more
-  // severe end. Listing them individually would be two dozen copies of one fact.
-  if (!hint.openMin && min !== undefined && min !== Number.MIN_VALUE && min !== hint.lo) {
+  // A `Number.MIN_VALUE` floor is exempt only where an entry says why. It used
+  // to be exempt as a CLASS, on the reasoning that the value is never chosen
+  // but spelled from an `ERR_FAIL_COND(p_x <= 0)`, so the enforced floor is the
+  // real one and the band up to the hint's is a hint-only sliver. True of 18
+  // properties and false of 8, and a blanket rule could not tell them apart:
+  // seven had no setter guard at all and one refused at CMP_EPSILON, so the
+  // floor was fabricated and the exemption hid it. Worse, it could be reached
+  // by switching combinator — `v.positiveFloat` bakes the value in — so a red
+  // here had a way to be silenced that was not implementing the bound.
+  const exempt = STRICTLY_POSITIVE_SETTER.has(label) && min === Number.MIN_VALUE;
+  if (!hint.openMin && min !== undefined && !exempt && min !== hint.lo) {
     out.push(`we floor at ${min}, engine at ${hint.lo}`);
   }
   if (!hint.openMax && max !== undefined && max !== hint.hi) {
@@ -163,8 +210,19 @@ function unimplementedEnds(hint, bounds) {
  * It rose to 111 once the capture reached Resource classes — the subject
  * growing, not the bar dropping — and fell back to 101 when those ends, all
  * Environment ceilings, were implemented.
+ *
+ * 101 to 96 was not implementation either way: five ends were already coded and
+ * invisible here, because three validators carried a tier without the numbers
+ * beside it. `withFiniteGuard` forwarded the citation and dropped `bounds`, and
+ * two hand-rolled validators never set it. `boundGrounding.test.ts` now fails on
+ * that pairing, so an end cannot go missing from this ledger again by being
+ * unreadable rather than unimplemented.
+ *
+ * 96 to 93 is implementation: `SpriteBase3D.pixel_size`'s ceiling, and the
+ * `amount` and `speed_scale` ceilings CPUParticles2D had declined while its 3D
+ * twin coded both from the identical hint.
  */
-const UNIMPLEMENTED_HINT_ENDS = 101;
+const UNIMPLEMENTED_HINT_ENDS = 93;
 
 /**
  * The engine's ranged properties, from both captures.
@@ -200,7 +258,13 @@ async function rangedProperties() {
   return rows;
 }
 
-describe.skipIf(!built)('the bound we implement against the bound Godot declared', () => {
+describe('the bound we implement against the bound Godot declared', () => {
+  // Fails every assertion below with one actionable message rather than letting
+  // them agree with a previous revision's registry.
+  beforeAll(() => {
+    if (stale) throw new Error(stale);
+  });
+
   // Once for the file, not once per assertion: loading the built linter and
   // walking the capture is the whole cost here, and paying it three times took
   // the first test past vitest's 5s default under a full concurrent run.
@@ -217,7 +281,7 @@ describe.skipIf(!built)('the bound we implement against the bound Godot declared
 
     const wrong = rows
       .filter((r) => !SETTER_OVERRIDES_HINT.has(r.label))
-      .flatMap((r) => mismatches(r.hint, r.bounds).map((d) => `${r.label}: ${d}`));
+      .flatMap((r) => mismatches(r.label, r.hint, r.bounds).map((d) => `${r.label}: ${d}`));
     expect(wrong.sort()).toEqual([]);
   });
 
@@ -248,8 +312,29 @@ describe.skipIf(!built)('the bound we implement against the bound Godot declared
     const byLabel = new Map(rows.map((r) => [r.label, r]));
     const dead = [...SETTER_OVERRIDES_HINT.keys()].filter((label) => {
       const row = byLabel.get(label);
-      return row === undefined || mismatches(row.hint, row.bounds).length === 0;
+      return row === undefined || mismatches(label, row.hint, row.bounds).length === 0;
     });
     expect(dead).toEqual([]);
+  });
+
+  it('holds no strictly-positive entry for a property that no longer floors there', () => {
+    // The same ratchet the override roster gets. Without it the list only ever
+    // grows, and an entry that stopped describing the code would go on exempting
+    // whatever replaced it — which is how the class-wide version hid eight.
+    const byLabel = new Map(rows.map((r) => [r.label, r]));
+    const dead = [...STRICTLY_POSITIVE_SETTER.keys()].filter((label) => {
+      const row = byLabel.get(label);
+      return row === undefined || row.bounds?.min !== Number.MIN_VALUE;
+    });
+    expect(dead).toEqual([]);
+  });
+
+  it('cites an engine line for every strictly-positive entry', () => {
+    // Same standard the bounds themselves are held to: a roster whose reasons
+    // cannot be checked is a list of opinions.
+    const uncited = [...STRICTLY_POSITIVE_SETTER.entries()]
+      .filter(([, cite]) => !/^[\w/]+\.(cpp|h):\d+$/.test(cite))
+      .map(([label, cite]) => `${label}: ${cite}`);
+    expect(uncited).toEqual([]);
   });
 });

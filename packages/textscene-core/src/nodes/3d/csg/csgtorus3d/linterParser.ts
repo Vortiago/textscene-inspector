@@ -12,8 +12,8 @@ const OPERATION = { 0: 'UNION', 1: 'INTERSECTION', 2: 'SUBTRACTION' };
 validatorRegistry.registerAll('CSGTorus3D', {
   // set_inner_radius/set_outer_radius (csg_shape.cpp:2081-2093) are bare
   // assignments; the hints (:2072-2073) are advisory only.
-  inner_radius: v.positiveFloat('inner_radius', undefined, { hinted: 'csg_shape.cpp:2072' }),
-  outer_radius: v.positiveFloat('outer_radius', undefined, { hinted: 'csg_shape.cpp:2073' }),
+  inner_radius: v.float('inner_radius', { min: 0.001, hinted: 'csg_shape.cpp:2072' }),
+  outer_radius: v.float('outer_radius', { min: 0.001, hinted: 'csg_shape.cpp:2073' }),
   // set_sides:2100-2101 ERR_FAIL_COND(p_sides < 3): the floor is enforced.
   // The hint's (:2074) ceiling of 64 is closed (no or_greater) but never
   // checked by the setter, so it is a warning, not an error.

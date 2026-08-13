@@ -103,7 +103,7 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `amount` | integer > 0 | error below |
+| `amount` | integer 1-1000000 | error below, warning above |
 | `angle_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `angle_max` | float |  |
 | `angle_min` | float |  |
@@ -164,7 +164,7 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `scale_curve_x` | null, SubResource("id") or ExtResource("id") |  |
 | `scale_curve_y` | null, SubResource("id") or ExtResource("id") |  |
 | `seed` | integer >= 0 | warning below |
-| `speed_scale` | float >= 0 | warning below |
+| `speed_scale` | float 0-64 | warning |
 | `split_scale` | true or false |  |
 | `spread` | float 0-180 | warning |
 | `tangential_accel_curve` | null, SubResource("id") or ExtResource("id") |  |
