@@ -8,6 +8,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import { propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
+import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 
 const CENTER_OF_MASS_MODE = { 0: 'AUTO', 1: 'CUSTOM' };
 const DAMP_MODE = { 0: 'COMBINE', 1: 'REPLACE' };
@@ -16,8 +17,11 @@ const CCD_MODE = { 0: 'DISABLED', 1: 'CAST_RAY', 2: 'CAST_SHAPE' };
 
 /** 2D inertia is a scalar (rotational mass around Z), unlike 3D's Vector3. */
 const inertia2d: PropertyValidator = (key, value, line) => {
-  const num = parseFloat(value);
-  if (isNaN(num)) {
+  // `parseGodotFloat`, not `parseFloat`: `inf` and `nan` are literals Godot
+  // writes and reloads, and `rigid_body_2d.cpp:328` refuses neither, so a
+  // format error on one reports a value the engine accepts.
+  const num = parseGodotFloat(value);
+  if (num === null) {
     return propertyError(key, line, `Property 'inertia' must be a number, got: "${value}". In 2D, inertia is a scalar value.`, 'INVALID_INERTIA_FORMAT');
   }
   if (num < 0) {
@@ -41,7 +45,7 @@ validatorRegistry.registerAll('RigidBody2D', {
   mass: v.positiveFloat(
     'mass',
     "Property 'mass' must be greater than 0. Physics bodies require positive mass.",
-    { hintedMin: 0.001, enforced: { min: 'rigid_body_2d.cpp:318' }, hinted: { min: 'rigid_body_2d.cpp:742' } }
+    { min: 0.001, enforced: { min: 'rigid_body_2d.cpp:318' }, hinted: { min: 'rigid_body_2d.cpp:742' } }
   ),
   physics_material_override: v.resourceReference('physics_material_override'),
   gravity_scale: v.float('gravity_scale'),

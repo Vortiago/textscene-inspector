@@ -12,14 +12,17 @@ import '../lights/shared/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v, propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 
 /** 0 is altered (error); anything else outside the hint band only warns. */
 const TEXTURE_SCALE_HINT_MIN = 0.01;
 const TEXTURE_SCALE_HINT_MAX = 50;
 
 const textureScaleValidator: PropertyValidator = (key, value, line) => {
-  const parsed = parseFloat(value);
-  if (Number.isNaN(parsed)) {
+  // `parseGodotFloat`, not `parseFloat`: `light_2d.cpp:444` substitutes only for
+  // exactly 0, so a non-finite literal is a value the setter keeps.
+  const parsed = parseGodotFloat(value);
+  if (parsed === null) {
     return propertyError(
       key,
       line,

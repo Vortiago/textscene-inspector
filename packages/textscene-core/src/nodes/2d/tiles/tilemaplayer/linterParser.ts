@@ -4,7 +4,7 @@ import '../../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { propertyError, shape, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { IS_VALID_INT_RE } from '../../../../godot/index.js';
+import { firstNonNumericElement } from '../../../../linter/validators/v/packedArrays.js';
 
 /**
  * tile_map_layer.h:341-345, DebugVisibilityMode. BIND_ENUM_CONSTANT count is 3
@@ -63,15 +63,14 @@ const tileMapDataValidator: PropertyValidator = shape((key, value, line) => {
     }
     return null;
   }
-  for (const part of body.split(',')) {
-    if (!IS_VALID_INT_RE.test(part.trim())) {
-      return propertyError(
-        key,
-        line,
-        `Property 'tile_map_data' contains a non-integer value: "${part.trim()}"`,
-        'INVALID_TILE_MAP_DATA_FORMAT'
-      );
-    }
+  const offender = firstNonNumericElement(body);
+  if (offender !== null) {
+    return propertyError(
+      key,
+      line,
+      `Property 'tile_map_data' contains a non-numeric value: "${offender}"`,
+      'INVALID_TILE_MAP_DATA_FORMAT'
+    );
   }
   return null;
 }, 'PackedByteArray(…) bytes, or a base64-quoted PackedByteArray("…") (decoded by the tilemaplayer-invalid-tile-data rule)');

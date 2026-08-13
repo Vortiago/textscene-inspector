@@ -167,12 +167,13 @@ describe('AnimationTree Linter', () => {
         invalid: [{ value: '".."', contains: ['advance_expression_base_node', 'NodePath'] }],
       },
       {
-        // animation_mixer.cpp:542, ERR_FAIL_COND(p_audio_max_polyphony < 0 || ... > 128).
+        // Two tiers: animation_mixer.cpp:542 ERR_FAILs outside 0..128, the hint
+        // at :2468 is the narrower 1,127. Only the hint band is silent.
         prop: 'audio_max_polyphony',
-        valid: [0, 1, 8, 16, 32, 64, 128],
+        valid: [1, 8, 16, 32, 64, 127],
         invalid: [
-          { value: -5, contains: ['audio_max_polyphony', 'between 0 and 128'] },
-          { value: 1000, contains: ['audio_max_polyphony', 'between 0 and 128'] },
+          { value: -5, contains: ['audio_max_polyphony', 'at least 0'] },
+          { value: 1000, contains: ['audio_max_polyphony', 'at most 128'] },
           { value: 'many', contains: ['audio_max_polyphony', 'must be a number'] },
         ],
       },
@@ -436,17 +437,22 @@ describe('AnimationTree Linter', () => {
     });
 
     describe('audio_max_polyphony', () => {
-      it('carries no advisory of its own, only the enforced bound', () => {
+      it('carries no advisory of its own, only the two bounds', () => {
         // The old "very low" (< 8) and "very high" (> 128) arms were invented
-        // thresholds. Godot states neither: animation_mixer.cpp:542 ERR_FAILs
-        // outside 0-128 and says nothing about taste inside it, so the
-        // validator is the whole story and 4 is a legal value.
-        expectNoDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: 4 })), {
-          prop: 'audio_max_polyphony',
-        });
-        for (const value of [0, 8, 32, 128]) {
+        // thresholds. Godot states neither, so inside the hint band there is
+        // nothing to say and 4 is a legal value.
+        for (const value of [1, 4, 8, 32, 127]) {
           expectNoDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: value })), {
             prop: 'audio_max_polyphony',
+          });
+        }
+      });
+
+      it('warns on the band the setter allows and the hint at :2468 does not', () => {
+        for (const value of [0, 128]) {
+          expectDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: value })), {
+            prop: 'audio_max_polyphony',
+            severity: 'warning',
           });
         }
       });

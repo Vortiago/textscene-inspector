@@ -120,44 +120,31 @@ describe('rule emits meta-guard', () => {
     expect([...new Set(undeclared)].sort()).toEqual([]);
   });
 
-  it('declares the names each arm-builder call actually produces', () => {
-    const armSuffixes = armBuilderSuffixes(allFiles);
+  it('declares the names each rule-name-builder call actually produces', () => {
+    const { suffixes, unresolvable } = armBuilderSuffixes(allFiles);
 
     // Anti-vacuity, tied to reality rather than to a floor. Every advisory arm
     // that interpolated its rule prefix has since become a validator bound, so
-    // the population is legitimately empty and a count would only measure how
-    // far that conversion got. What must stay true is that no arm builder
-    // escapes BOTH scrapes: one whose names are interpolated belongs here, and
-    // one whose names are literal is already covered by the literal scrape
-    // above. This is trivially satisfied at zero and bites the moment a builder
-    // is added whose names this scrape cannot resolve.
-    const unresolvable: string[] = [];
-    for (const file of allFiles) {
-      const src = readFileSync(file, 'utf8');
-      for (const fn of src.matchAll(/export function (\w+Arms)\(/g)) {
-        const builder = fn[1]!;
-        if (armSuffixes.has(builder)) continue;
-        const end = src.indexOf('\n}', fn.index!);
-        const body = src.slice(fn.index!, end === -1 ? undefined : end);
-        // A bare identifier or quoted string reaches the literal scrape; a
-        // template does not, and one this scrape could not resolve either is
-        // a name nothing checks.
-        if (!/ruleName:\s*`/.test(body)) continue;
-        unresolvable.push(builder);
-      }
-    }
+    // both populations are legitimately empty and a count would only measure
+    // how far that conversion got. What must stay true is that no builder
+    // escapes BOTH scrapes: one whose names are interpolated belongs in
+    // `suffixes`, one whose names are literal is covered by the literal scrape
+    // above, and one that interpolates in a shape the scrape cannot read is a
+    // name nothing pins to a rule. That third case is what this asserts away.
     expect(unresolvable.sort()).toEqual([]);
+    if (suffixes.size === 0) return;
 
     const missing: string[] = [];
+    const callRe = new RegExp(String.raw`\b(${[...suffixes.keys()].join('|')})\(\s*'([^']+)'`, 'g');
     for (const file of ruleFiles()) {
       const owners = declaredRuleNames(file)
         .map((n) => byRuleName.get(n))
         .filter((r) => r !== undefined);
       if (!owners.length) continue;
       const src = readFileSync(file, 'utf8');
-      for (const call of src.matchAll(/(\w+Arms)\(\s*'([^']+)'/g)) {
+      for (const call of src.matchAll(callRe)) {
         const [, builder, prefix] = call;
-        for (const suffix of armSuffixes.get(builder!) ?? []) {
+        for (const suffix of suffixes.get(builder!) ?? []) {
           const expected = `${prefix}${suffix}`;
           const covered = owners.some((r) =>
             (r!.meta.emits ?? []).some((e) => e.ruleName === expected)

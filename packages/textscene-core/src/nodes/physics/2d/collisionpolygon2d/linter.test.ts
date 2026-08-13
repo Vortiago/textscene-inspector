@@ -14,6 +14,9 @@ import {
   expectClean,
   expectDiagnostic,
   expectNoDiagnostic,
+  instanced,
+  override,
+  packedScene,
 } from '../../../../linter/testing/testkit';
 import { readFixture } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
@@ -56,30 +59,19 @@ describe('CollisionPolygon2D Linter', () => {
     // index fallback's truthy "0". Neither can be measured against
     // CollisionObject2D, and warning anyway fires on scenes built to be
     // instanced.
-    const instancedParent = `[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://body.tscn" id="1_body"]
-
-[node name="Root" type="Node2D"]
-
-[node name="Body" parent="." instance=ExtResource("1_body")]
-
-[node name="Poly" type="CollisionPolygon2D" parent="Body"]
-polygon = ${validPolygon}
-`;
-    const overrideParent = `[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://body.tscn" id="1_body"]
-
-[node name="Root" type="Node2D"]
-
-[node name="Body" parent="." instance=ExtResource("1_body")]
-
-[node name="Inner" parent="Body" index="0"]
-
-[node name="Poly" type="CollisionPolygon2D" parent="Body/Inner"]
-polygon = ${validPolygon}
-`;
+    const instancedParent = scene(
+      packedScene,
+      node('Node2D', {}, { name: 'Root' }),
+      instanced('Body', { parent: '.' }),
+      node('CollisionPolygon2D', { polygon: validPolygon }, { name: 'Poly', parent: 'Body' })
+    );
+    const overrideParent = scene(
+      packedScene,
+      node('Node2D', {}, { name: 'Root' }),
+      instanced('Body', { parent: '.' }),
+      override('Inner', 0, { parent: 'Body' }),
+      node('CollisionPolygon2D', { polygon: validPolygon }, { name: 'Poly', parent: 'Body/Inner' })
+    );
     expectNoDiagnostic(instancedParent, { ruleName: 'collisionpolygon2d-invalid-parent' });
     expectNoDiagnostic(overrideParent, { ruleName: 'collisionpolygon2d-invalid-parent' });
   });

@@ -16,11 +16,12 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { VECTOR2I_REGEX } from '../../../linter/validators/index.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
+import { intComponent } from '../../../linter/validators/commonValidators.js';
 
 function parseVector2i(raw: string): { x: number; y: number } | null {
   const match = VECTOR2I_REGEX.exec(raw);
   if (!match) return null;
-  return { x: parseInt(match[1]!, 10), y: parseInt(match[2]!, 10) };
+  return { x: intComponent(match[1]), y: intComponent(match[2]) };
 }
 
 function checkWindow(context: RuleContext): Diagnostic[] {

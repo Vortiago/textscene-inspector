@@ -9,6 +9,35 @@ import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
 
 /**
+ * The first element of an already-extracted array body that Godot's tokenizer
+ * could not read, or `null` when every one of them is a number.
+ *
+ * One grammar for every packed array, int-typed ones included.
+ * `PackedInt32Array` is parsed by `_parse_construct<int32_t>`
+ * (`variant_parser.cpp:1428-1430`) — the SAME helper as `Vector2i` and as the
+ * float arrays, which takes any number token and narrows it on assignment. The
+ * five int-array validators that used `IS_VALID_INT_RE` instead reported a
+ * format error on `PackedInt32Array(2e3, 0, 0)`, a file Godot opens.
+ * `IS_VALID_INT_RE` describes `String::is_valid_int()`, which is the grammar of
+ * an index inside a property KEY, not of a Variant literal.
+ *
+ * Returns the offending text rather than a `ParseError` so each caller keeps
+ * its own property name, message wording and error code. Takes the raw body or
+ * already-split parts, for the callers that must strip a trailing comma first.
+ */
+export function firstNonNumericElement(body: string | readonly string[]): string | null {
+  for (const part of typeof body === 'string' ? body.split(',') : body) {
+    const trimmed = part.trim();
+    // The component GRAMMAR, not a numeric parse: `Number()` refuses `inf`,
+    // which `rtos_fix` writes into these arrays too (variant_parser.cpp:2504,
+    // :2519, :2534), while `parseFloat` would accept the trailing garbage in
+    // `1abc` that Godot's tokenizer stops at.
+    if (!TSCN_FLOAT_RE.test(trimmed)) return trimmed;
+  }
+  return null;
+}
+
+/**
  * `Packed<Kind>Array(n1, n2, …)` — an arbitrary-length list of fixed-size
  * TUPLES (2 floats per Vector2, 3 per Vector3, 4 per Color), format-only.
  *
@@ -52,19 +81,14 @@ function packedTupleArray(
     const body = match[1]!.trim();
     if (body === '') return null;
 
-    for (const part of body.split(',')) {
-      // The component GRAMMAR, not a numeric parse: `Number()` refuses `inf`,
-      // which `rtos_fix` writes into these arrays too (variant_parser.cpp:2504,
-      // :2519, :2534), while `parseFloat` would accept the trailing garbage in
-      // `1abc` that Godot's tokenizer stops at.
-      if (!TSCN_FLOAT_RE.test(part.trim())) {
-        return propertyError(
-          key,
-          line,
-          `Property '${name}' contains a non-numeric value: "${part.trim()}"`,
-          formatErr
-        );
-      }
+    const offender = firstNonNumericElement(body);
+    if (offender !== null) {
+      return propertyError(
+        key,
+        line,
+        `Property '${name}' contains a non-numeric value: "${offender}"`,
+        formatErr
+      );
     }
     return null;
   }, acceptsLabel);

@@ -46,7 +46,7 @@ validatorRegistry.registerAll('GPUParticles3D', {
   // "0.01,600.0,0.01,or_greater,exp,suffix:s"), so (0, 0.01) loads into Godot
   // and only warns.
   lifetime: v.positiveFloat('lifetime', undefined, {
-    hintedMin: 0.01,
+    min: 0.01,
     enforced: 'gpu_particles_3d.cpp:82',
     hinted: 'gpu_particles_3d.cpp:825',
   }),

@@ -19,7 +19,7 @@ validatorRegistry.registerAll('Timer', {
   wait_time: v.positiveFloat(
     'wait_time',
     "Property 'wait_time' must be greater than 0. A Timer needs a positive interval to fire.",
-    { hintedMin: 0.001, enforced: 'timer.cpp:93', hinted: 'timer.cpp:240' }
+    { min: 0.001, enforced: 'timer.cpp:93', hinted: 'timer.cpp:240' }
   ),
   autostart: v.boolean('autostart'),
   one_shot: v.boolean('one_shot'),

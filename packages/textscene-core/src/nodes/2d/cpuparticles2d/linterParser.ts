@@ -33,7 +33,7 @@ validatorRegistry.registerAll('CPUParticles2D', {
   // ERR_FAIL_COND_MSGs at `<= 0`, below the hint's floor, so (0, 0.01) loads
   // into Godot and only warns.
   lifetime: v.positiveFloat('lifetime', undefined, {
-    hintedMin: 0.01,
+    min: 0.01,
     enforced: 'cpu_particles_2d.cpp:86',
     hinted: 'cpu_particles_2d.cpp:1495',
   }),

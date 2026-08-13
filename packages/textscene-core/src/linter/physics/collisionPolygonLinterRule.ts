@@ -23,6 +23,7 @@ import { isZeroApprox } from '../../godot/math.js';
 import { basisColumnScales } from './basisColumnScales.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
+import { parseGodotInt } from '../validators/commonValidators.js';
 
 /**
  * Matches the same wrapper `v.packedVector2Array` accepts; a value that doesn't
@@ -115,8 +116,9 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
         // build_mode default BUILD_SOLIDS = 0 (collision_polygon_2d.h:48);
         // absent key means the default, same as every other property this
         // codebase omits at default.
-        const buildMode = rawProps.build_mode === undefined ? 0 : parseInt(rawProps.build_mode, 10);
-        if (!Number.isNaN(buildMode)) {
+        const buildMode =
+          rawProps.build_mode === undefined ? 0 : parseGodotInt(rawProps.build_mode);
+        if (buildMode !== null) {
           if (buildMode === 0 && pointCount < 3) {
             diagnostics.push({
               severity: 'warning',

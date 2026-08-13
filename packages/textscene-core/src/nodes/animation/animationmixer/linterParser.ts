@@ -90,15 +90,17 @@ validatorRegistry.registerAll('AnimationMixer', {
   root_node: v.nodePath('root_node'),
   root_motion_track: v.nodePath('root_motion_track'),
   root_motion_local: v.boolean('root_motion_local'),
-  // animation_mixer.cpp:542 `ERR_FAIL_COND(p < 0 || p > 128)` — the SETTER's
-  // band, which is wider than the `1,127,1` hint at :2468. The enforced ends
-  // are what a value is refused for, so they are what is checked; a value of 0
-  // or 128 clears the setter while sitting outside the inspector's hint, and
-  // the DSL has no way to carry a second, narrower warning band on one end.
+  // Two tiers on both ends. animation_mixer.cpp:542
+  // `ERR_FAIL_COND(p < 0 || p > 128)` refuses outside 0..128, and the hint at
+  // :2468 is the narrower `1,127,1`, so 0 and 128 clear the setter while
+  // sitting outside what the inspector offers.
   audio_max_polyphony: v.int('audio_max_polyphony', {
-    min: 0,
-    max: 128,
-    enforced: 'animation_mixer.cpp:542',
+    min: 1,
+    max: 127,
+    enforcedMin: { at: 0 },
+    enforcedMax: { at: 128 },
+    enforced: { min: 'animation_mixer.cpp:542', max: 'animation_mixer.cpp:542' },
+    hinted: { min: 'animation_mixer.cpp:2468', max: 'animation_mixer.cpp:2468' },
   }),
   // :2471-2473, three ENUM hints whose setters (:501, :522, :531) all assign
   // straight through with no ERR_FAIL_INDEX, so out of range is a warning.

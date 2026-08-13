@@ -16,6 +16,7 @@
  */
 
 import { warn } from '../../logger';
+import { finiteTupleRegex, storedInt } from '../../parser/vectors';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
@@ -189,7 +190,7 @@ function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileMode
   return tiles;
 }
 
-const VECTOR2I_RE = /^Vector2i\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/;
+const VECTOR2I_RE = finiteTupleRegex('Vector2i', 2);
 
 function vec2iOr(value: unknown, fallback: Vec2i, label: string): Vec2i {
   if (value === undefined || value === null) return fallback;
@@ -198,5 +199,5 @@ function vec2iOr(value: unknown, fallback: Vec2i, label: string): Vec2i {
     warn(`[TileSet] invalid ${label} "${String(value)}" — using default`);
     return fallback;
   }
-  return { x: parseInt(m[1]!, 10), y: parseInt(m[2]!, 10) };
+  return { x: storedInt(m[1]), y: storedInt(m[2]) };
 }

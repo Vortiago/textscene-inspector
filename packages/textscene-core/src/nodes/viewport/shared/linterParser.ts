@@ -170,15 +170,18 @@ validatorRegistry.registerAll('Viewport', {
   scaling_3d_mode: v.enumInt('scaling_3d_mode', 0, 4, SCALING_3D_MODE, {
     hinted: 'viewport.cpp:5177',
   }),
-  // set_scaling_3d_scale (viewport.cpp:4870-4878) does
-  // `CLAMP(p_scaling_3d_scale, 0.1, 2.0)` — a real alteration, so ERROR. The
-  // clamp floor 0.1 is looser than the hint's 0.25 (viewport.cpp:5178), which
-  // the setter takes verbatim; one min slot carries the more severe end, so
-  // the clamp's floor wins and [0.1, 0.25) is accepted silently.
+  // Asymmetric. `CLAMP(p, 0.1, 2.0)` (viewport.cpp:4875) alters at both ends,
+  // but only the floor sits outside the hint's `0.25,2.0,0.01`
+  // (viewport.cpp:5178): below 0.1 is altered and errors, [0.1, 0.25) loads
+  // unaltered while the inspector excludes it and so warns. The two ceilings
+  // coincide at 2.0, leaving no band for a warning above it — the clamp gets
+  // there first, so that end is one tier and it is the error.
   scaling_3d_scale: v.float('scaling_3d_scale', {
-    min: 0.1,
+    min: 0.25,
     max: 2.0,
-    enforced: 'viewport.cpp:4875',
+    enforcedMin: { at: 0.1 },
+    enforced: { min: 'viewport.cpp:4875', max: 'viewport.cpp:4875' },
+    hinted: { min: 'viewport.cpp:5178' },
   }),
   // viewport.cpp:5179 hints RANGE "-2,2,0.001". set_texture_mipmap_bias
   // (viewport.cpp:4904-4912) bare-assigns.

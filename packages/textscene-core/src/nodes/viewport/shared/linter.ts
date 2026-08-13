@@ -44,6 +44,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { VECTOR2I_REGEX } from '../../../linter/validators/index.js';
+import { intComponent } from '../../../linter/validators/commonValidators.js';
 
 function checkViewportSize(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -58,8 +59,8 @@ function checkViewportSize(context: RuleContext): Diagnostic[] {
 
   const match = VECTOR2I_REGEX.exec(raw);
   if (!match) return [];
-  const x = parseInt(match[1]!, 10);
-  const y = parseInt(match[2]!, 10);
+  const x = intComponent(match[1]);
+  const y = intComponent(match[2]);
   if (x > 1 && y > 1) return [];
 
   return [

@@ -66,9 +66,6 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // No range advisories: `pitch_scale`, `volume_db` and `unit_size` all carry
-  // their hint bounds on their validators in linterParser.ts.
-
   return diagnostics;
 }
 

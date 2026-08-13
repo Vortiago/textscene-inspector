@@ -33,7 +33,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { collectCoverage } from './coverage-report/collect.mjs';
-import { BUILD, newest, stalenessMessage } from './distFreshness.mjs';
+import { BUILD, newest, requireFreshDist, stalenessMessage } from './distFreshness.mjs';
 
 const CATALOG = join(import.meta.dirname, 'compare-docs/node-catalog.json');
 const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
@@ -43,15 +43,13 @@ const CORE = join(import.meta.dirname, '../packages/textscene-core');
 // Both computed in `beforeAll`, never at module scope: the walk reads a tree a
 // concurrent `tsc --build` may be writing, and a throw during module evaluation
 // surfaces as a vitest collection error instead of the actionable message.
-let stale;
 let coverage;
 
 describe('coverage ledger', () => {
   // Fails every assertion below with one actionable message rather than letting
   // them agree with stale data.
   beforeAll(async () => {
-    stale = stalenessMessage(CORE, 'this ledger');
-    if (stale) throw new Error(stale);
+    requireFreshDist(CORE, 'this ledger');
     coverage = await collectCoverage();
   }, 60_000);
 

@@ -174,18 +174,14 @@ describe('Skeleton3D Linter', () => {
     describe('motion_scale is the validator\u2019s, not this rule\u2019s', () => {
       // Both bounds live on the validator: `set_motion_scale`
       // (skeleton_3d.cpp:586) substitutes 1 at or below 0, and the hint
-      // (:1293, "0.001,10,0.001,or_greater") warns above that. This rule used
-      // to repeat the enforced end and report it twice on the same node.
+      // (:1293, "0.001,10,0.001,or_greater") warns above that. A rule arm here
+      // repeating the enforced end reported it twice on the same node. The
+      // clean cases are in `motion_scale validation` above.
       it('reports the refused value exactly once', () => {
         const diagnostics = lint(scene(node('Skeleton3D', { motion_scale: '-1.0' })));
         const errors = diagnostics.filter((d) => d.severity === 'error');
         expect(errors).toHaveLength(1);
         expect(errors[0]?.message).toContain('greater than 0');
-      });
-
-      it('stays silent inside the hint range and above its open max end', () => {
-        expectClean(scene(node('Skeleton3D', { motion_scale: '0.05' })));
-        expectClean(scene(node('Skeleton3D', { motion_scale: '50.0' })));
       });
     });
 

@@ -9,6 +9,13 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
+import { intComponent, parseGodotInt } from '../../../linter/validators/commonValidators.js';
+import { VECTOR2I_REGEX } from '../../../linter/validators/vectorValidators.js';
+
+/** An absent `hframes`/`vframes` is Godot's default of 1; an unreadable one is `null`. */
+function gridCount(raw: string | undefined): number | null {
+  return raw === undefined ? 1 : parseGodotInt(raw);
+}
 
 /**
  * Validate Sprite2D semantic rules (resource references, frame validation, etc.)
@@ -50,11 +57,11 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
   // the authored grid and the out-of-range write is refused at load, not at
   // some later runtime call.
   if (rawProps.frame !== undefined) {
-    const frame = parseInt(rawProps.frame, 10);
-    const hframes = rawProps.hframes !== undefined ? parseInt(rawProps.hframes, 10) : 1;
-    const vframes = rawProps.vframes !== undefined ? parseInt(rawProps.vframes, 10) : 1;
+    const frame = parseGodotInt(rawProps.frame);
+    const hframes = gridCount(rawProps.hframes);
+    const vframes = gridCount(rawProps.vframes);
 
-    if (!isNaN(frame) && !isNaN(hframes) && !isNaN(vframes)) {
+    if (frame !== null && hframes !== null && vframes !== null) {
       const maxFrame = hframes * vframes;
       if (frame >= maxFrame) {
         diagnostics.push({
@@ -70,14 +77,14 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
 
   // Validate frame_coords is within valid grid range
   if (rawProps.frame_coords !== undefined) {
-    const coordsMatch = /^Vector2i\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/.exec(rawProps.frame_coords);
+    const coordsMatch = VECTOR2I_REGEX.exec(rawProps.frame_coords);
     if (coordsMatch) {
-      const coordX = parseInt(coordsMatch[1] || '0', 10);
-      const coordY = parseInt(coordsMatch[2] || '0', 10);
-      const hframes = rawProps.hframes !== undefined ? parseInt(rawProps.hframes, 10) : 1;
-      const vframes = rawProps.vframes !== undefined ? parseInt(rawProps.vframes, 10) : 1;
+      const coordX = intComponent(coordsMatch[1]);
+      const coordY = intComponent(coordsMatch[2]);
+      const hframes = gridCount(rawProps.hframes);
+      const vframes = gridCount(rawProps.vframes);
 
-      if (!isNaN(coordX) && !isNaN(coordY) && !isNaN(hframes) && !isNaN(vframes)) {
+      if (!isNaN(coordX) && !isNaN(coordY) && hframes !== null && vframes !== null) {
         if (coordX >= hframes) {
           diagnostics.push({
             severity: 'error',

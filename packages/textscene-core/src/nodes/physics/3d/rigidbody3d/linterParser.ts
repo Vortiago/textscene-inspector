@@ -19,7 +19,7 @@ validatorRegistry.registerAll('RigidBody3D', {
   mass: v.positiveFloat(
     'mass',
     "Property 'mass' must be greater than 0. Physics bodies require positive mass.",
-    { hintedMin: 0.001, enforced: { min: 'rigid_body_3d.cpp:334' }, hinted: { min: 'rigid_body_3d.cpp:764' } }
+    { min: 0.001, enforced: { min: 'rigid_body_3d.cpp:334' }, hinted: { min: 'rigid_body_3d.cpp:764' } }
   ),
   physics_material_override: v.resourceReference('physics_material_override'),
   gravity_scale: v.float('gravity_scale'),

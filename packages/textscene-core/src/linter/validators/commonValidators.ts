@@ -124,7 +124,16 @@ export function parseGodotInt(value: string): number | null {
   if (!TSCN_FLOAT_RE.test(trimmed)) return null;
   const asFloat = parseGodotFloat(trimmed);
   if (asFloat === null) return null;
-  return Number.isFinite(asFloat) ? Math.trunc(asFloat) : asFloat;
+  return asStoredInt(asFloat);
+}
+
+/**
+ * A number as the int32 an INT slot STORES: truncated toward zero, which is
+ * what the C++ conversion does. Non-finite passes through unchanged, so every
+ * comparison against it stays false.
+ */
+function asStoredInt(num: number): number {
+  return Number.isFinite(num) ? Math.trunc(num) : num;
 }
 
 /**
@@ -139,6 +148,19 @@ export function parseGodotInt(value: string): number | null {
  */
 export function tupleComponent(text: string | undefined): number {
   return parseGodotFloat(text ?? '') ?? NaN;
+}
+
+/**
+ * The same, for a component of an `i`-suffixed composite: the int32 Godot
+ * stores rather than the number as written.
+ *
+ * Exported because the tuple regexes are exported, and a caller that `.exec()`s
+ * one and then reaches for `parseInt` gets 2 out of `2e1` and NaN out of `inf`
+ * — the accident {@link parseGodotInt} exists to stop, reintroduced one capture
+ * at a time.
+ */
+export function intComponent(text: string | undefined): number {
+  return asStoredInt(tupleComponent(text));
 }
 
 /**
@@ -285,21 +307,16 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
     maxSeverity = valueSeverity,
   } = spec;
   const validator: PropertyValidator = (key, value, line) => {
-    let num: number;
-    if (parseAsInt) {
-      const parsed = parseGodotInt(value);
-      if (parsed === null) {
-        return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
-      }
-      num = parsed;
-    } else {
-      // `inf`/`nan` are legal float literals, so the miss signal is null and a
-      // parsed NaN falls through to the range checks, which it never trips.
-      const parsed = parseGodotFloat(value);
-      if (parsed === null) {
-        return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
-      }
-      num = parsed;
+    // `inf`/`nan` are legal literals in either slot, so the miss signal is null
+    // and a parsed NaN falls through to the range checks, which it never trips.
+    const num = parseAsInt ? parseGodotInt(value) : parseGodotFloat(value);
+    if (num === null) {
+      return propertyError(
+        key,
+        line,
+        `Property '${propertyName}' must be a number, got: "${value}"`,
+        errorCodeFormat
+      );
     }
 
     // The setter's own ends first: they are the more severe tier, and the band

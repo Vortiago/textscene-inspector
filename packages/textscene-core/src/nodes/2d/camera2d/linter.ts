@@ -11,7 +11,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { isViewportBoundary } from '../../viewport/subviewport/viewportBoundary.js';
 import { searchAncestors } from '../../../linter/parentType.js';
-import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
+import { parseGodotFloat, parseGodotInt } from '../../../linter/validators/commonValidators.js';
 
 /**
  * The SubViewport a node draws into, or null for the scene's own viewport.
@@ -122,10 +122,10 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
 
   // Validate limit consistency
   if (rawProps.limit_left !== undefined && rawProps.limit_right !== undefined) {
-    const left = parseInt(rawProps.limit_left, 10);
-    const right = parseInt(rawProps.limit_right, 10);
+    const left = parseGodotInt(rawProps.limit_left);
+    const right = parseGodotInt(rawProps.limit_right);
 
-    if (!isNaN(left) && !isNaN(right) && right < left) {
+    if (left !== null && right !== null && right < left) {
       diagnostics.push({
         severity: 'warning',
         message: `Camera2D 'limit_right' (${right}) is less than 'limit_left' (${left}). This creates an invalid horizontal scroll area and may cause unexpected camera behavior.`,
@@ -137,10 +137,10 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
   }
 
   if (rawProps.limit_top !== undefined && rawProps.limit_bottom !== undefined) {
-    const top = parseInt(rawProps.limit_top, 10);
-    const bottom = parseInt(rawProps.limit_bottom, 10);
+    const top = parseGodotInt(rawProps.limit_top);
+    const bottom = parseGodotInt(rawProps.limit_bottom);
 
-    if (!isNaN(top) && !isNaN(bottom) && bottom < top) {
+    if (top !== null && bottom !== null && bottom < top) {
       diagnostics.push({
         severity: 'warning',
         message: `Camera2D 'limit_bottom' (${bottom}) is less than 'limit_top' (${top}). This creates an invalid vertical scroll area and may cause unexpected camera behavior.`,

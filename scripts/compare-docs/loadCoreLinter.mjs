@@ -106,24 +106,20 @@ export async function loadCoreParser() {
  * Not re-exported by the linter barrel, so it is loaded from its own module
  * (the resolve hook above is process-wide, so this works the same way).
  */
-/**
- * `RADIAN_ROUNDTRIP_EPSILON` — the slack `v.radians` adds to a converted degree
- * bound, so the hint-parity ledger compares against the same number the
- * combinator applied. Read from the built module rather than retyped, since a
- * second copy would drift by exactly the amount being measured.
- *
- * Not re-exported by the linter barrel, so it is loaded from its own module.
- */
-export async function loadRadianEpsilon() {
-  const mod = await import(
-    pathToFileURL(join(DIST, 'linter/validators/v/floats.js')).href
-  );
-  return mod.RADIAN_ROUNDTRIP_EPSILON;
-}
-
 export async function loadClassBaseTypes() {
   const mod = await import(
     pathToFileURL(join(here, '../../packages/textscene-core/dist/linter/classBaseTypes.js')).href
   );
   return mod.CLASS_BASE_TYPES;
+}
+
+/**
+ * `RADIAN_ROUNDTRIP_EPSILON` — the slack `v.radians` adds to a converted degree
+ * bound, so the hint-parity ledger compares against the same number the
+ * combinator applied. Read from the built module rather than retyped, since a
+ * second copy would drift by exactly the amount being measured.
+ */
+export async function loadRadianEpsilon() {
+  const mod = await import(pathToFileURL(join(DIST, 'linter/validators/v/floats.js')).href);
+  return mod.RADIAN_ROUNDTRIP_EPSILON;
 }

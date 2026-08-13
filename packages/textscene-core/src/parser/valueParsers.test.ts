@@ -162,11 +162,15 @@ describe('vec2iOr / parseOptionalVector2i', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('REJECTS float components — the reason this is not parseVector2 (error path)', () => {
-    // `Vector2i(1.5, 2)` is not a thing Godot writes; accepting it would let a
-    // float silently become a pixel count via parseInt truncation.
-    expect(vec2iOr('Vector2i(1.5, 2)', { x: 9, y: 9 })).toEqual({ x: 9, y: 9 });
-    expect(parseOptionalVector2i('Vector2i(1.5, 2)')).toBeUndefined();
+  it('TRUNCATES a float or exponent component, as the INT conversion does', () => {
+    // `_parse_construct<int32_t>` (variant_parser.cpp:552-596) takes any number
+    // token and pushes it into a `Vector<int32_t>`, so Godot loads these and
+    // narrows toward zero. Refusing them fell back to a default size on a
+    // scene Godot opens. That `itos` cannot WRITE one bounds nothing.
+    expect(vec2iOr('Vector2i(1.5, 2)', { x: 9, y: 9 })).toEqual({ x: 1, y: 2 });
+    expect(vec2iOr('Vector2i(-1.5, 2)', { x: 9, y: 9 })).toEqual({ x: -1, y: 2 });
+    expect(vec2iOr('Vector2i(2e1, 2e1)', { x: 9, y: 9 })).toEqual({ x: 20, y: 20 });
+    expect(parseOptionalVector2i('Vector2i(1.5, 2)')).toEqual({ x: 1, y: 2 });
   });
 
   it('warns-then-falls-back on a present-but-malformed value (error path)', () => {

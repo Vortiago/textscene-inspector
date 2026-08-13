@@ -113,11 +113,18 @@ polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7)]
       expect(errors[0]!.message).toContain('polygons');
     });
 
-    it('rejects a non-integer index inside a polygons entry', () => {
+    // `_parse_construct<int32_t>` (variant_parser.cpp:1428-1430) takes any
+    // number token and narrows it, so Godot loads this as index 1.
+    it('truncates a float index rather than refusing it', () => {
       const content = `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\npolygons = [PackedInt32Array(0, 1.5, 2)]\n`;
+      expect(errorsOf(linter.lint(content))).toEqual([]);
+    });
+
+    it('still rejects an index Godot cannot tokenise at all', () => {
+      const content = `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\npolygons = [PackedInt32Array(0, 1abc, 2)]\n`;
       const errors = errorsOf(linter.lint(content));
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0]!.message).toContain('non-integer');
+      expect(errors[0]!.message).toContain('non-numeric');
     });
 
     it('accepts a trailing comma before the closing bracket (variant_parser.cpp:1658 accepts it too)', () => {

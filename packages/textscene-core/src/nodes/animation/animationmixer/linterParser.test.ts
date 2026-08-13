@@ -114,9 +114,14 @@ describe('AnimationMixer strict validators', () => {
   });
 
   describe('audio_max_polyphony: ERR_FAIL_COND(p < 0 || p > 128), animation_mixer.cpp:542', () => {
-    it("accepts the setter's own ends, 0 and 128, not the narrower 1,127 hint at :2468", () => {
-      expect(check('AnimationMixer', 'audio_max_polyphony', '0')).toBeNull();
-      expect(check('AnimationMixer', 'audio_max_polyphony', '128')).toBeNull();
+    it('accepts the hint band 1..127 silently', () => {
+      expect(check('AnimationMixer', 'audio_max_polyphony', '1')).toBeNull();
+      expect(check('AnimationMixer', 'audio_max_polyphony', '127')).toBeNull();
+    });
+
+    it("warns on the band the setter allows and the hint at :2468 does not, 0 and 128", () => {
+      expect(check('AnimationMixer', 'audio_max_polyphony', '0')?.severity).toBe('warning');
+      expect(check('AnimationMixer', 'audio_max_polyphony', '128')?.severity).toBe('warning');
     });
 
     it('errors one past each end: -1 and 129', () => {

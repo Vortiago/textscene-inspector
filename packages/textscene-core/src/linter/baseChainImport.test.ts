@@ -11,41 +11,23 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { dirname, relative, resolve } from 'node:path';
 // The table the registry is CONSTRUCTED with: both hierarchies merged, catalog
 // plus the uncatalogued entries. Walking the node half alone gives every
 // resource type a null chain, and the sweep passes over them vacuously.
 import { CLASS_BASE_TYPES } from './classBaseTypes.js';
-
-const here = dirname(fileURLToPath(import.meta.url)); // .../src/linter
-const srcRoot = resolve(here, '..');
+import { allSourceFiles, srcRoot, walk } from './testing/ruleNameScrape.js';
 
 /** The two filenames a registration lives in, one per hierarchy. */
 const REGISTRATION_FILENAMES = new Set(['linterParser.ts', 'linterValidators.ts']);
 
 /** Every registration module under `src/`, at any depth. */
-function findRegistrationModules(dir: string): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...findRegistrationModules(full));
-    else if (REGISTRATION_FILENAMES.has(entry.name)) out.push(full);
-  }
-  return out;
-}
+const findRegistrationModules = (): string[] =>
+  walk(srcRoot, (name) => REGISTRATION_FILENAMES.has(name));
 
-/** Every non-test `.ts` under `src/`, so the population can be checked complete. */
-function findSourceModules(dir: string): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...findSourceModules(full));
-    else if (entry.name.endsWith('.ts') && !entry.name.includes('.test.')) out.push(full);
-  }
-  return out;
-}
+/** Every non-test source module, so the population can be checked complete. */
+const findSourceModules = (): string[] => allSourceFiles();
 
 const REGISTRATION_CALL = /\bvalidatorRegistry\.register(?:All|Unavailable)\(/;
 
@@ -137,7 +119,7 @@ function nearestValidatorAncestor(type: string, owners: Map<string, string>): st
 }
 
 describe('base-chain imports', () => {
-  const files = findRegistrationModules(srcRoot);
+  const files = findRegistrationModules();
   const owners = buildOwners(files);
 
   it('finds the slices, so the sweep cannot pass vacuously', () => {
@@ -150,7 +132,7 @@ describe('base-chain imports', () => {
 
   it('holds every registering module, so a third filename cannot hide', () => {
     const population = new Set(files);
-    const missed = findSourceModules(srcRoot)
+    const missed = findSourceModules()
       .filter((f) => REGISTRATION_CALL.test(readFileSync(f, 'utf8')) && !population.has(f))
       .map((f) => relative(srcRoot, f));
     expect(

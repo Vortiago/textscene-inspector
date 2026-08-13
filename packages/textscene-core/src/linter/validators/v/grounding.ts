@@ -151,7 +151,7 @@ export function maybeFinite(
  */
 export function ground(
   validator: PropertyValidator,
-  opts: Grounding,
+  opts: EndedGrounding,
   /**
    * The bound this validator enforces, per end, by VALUE. An absent end is an
    * open one: `v.float('width')` with neither is a format check, so it needs no
@@ -193,7 +193,7 @@ export function ground(
     // for a validator that refuses.
     const separate = { min: bounds.enforcedMin !== undefined, max: bounds.enforcedMax !== undefined };
     const tierFor = (end: 'min' | 'max') =>
-      (end === 'min' ? hasMin : hasMax) ? endSeverity(opts, end, separate[end]) : 'error';
+      (end === 'min' ? hasMin : hasMax) ? endSeverity({ ...opts, ...bounds }, end) : 'error';
     validator.tiers = {
       ...(hasMin || separate.min ? { min: tierFor('min') } : {}),
       ...(hasMax || separate.max ? { max: tierFor('max') } : {}),
@@ -225,16 +225,18 @@ export function ground(
  * it, `error` when the setter does. Un-audited ends keep erroring, which is the
  * pre-split behaviour.
  */
-export function endSeverity(
-  opts: Grounding,
-  end: 'min' | 'max',
-  /**
-   * True when the setter's own limit at this end is a SEPARATE, further-out
-   * bound (`enforcedMin`/`enforcedMax`). The `enforced:` citation then belongs
-   * to that one, and the end being scored here is the hint's, which warns.
-   */
-  separateEnforcedEnd = false
-): Severity {
+export function endSeverity(opts: EndedGrounding, end: 'min' | 'max'): Severity {
+  // A SEPARATE, further-out setter limit at this end owns the `enforced:`
+  // citation, leaving the end scored here as the hint's, which warns. Derived
+  // rather than passed: it was the third argument, and at every call site it
+  // spelled exactly this expression — one that a new combinator can forget.
+  const separateEnforcedEnd = (end === 'min' ? opts.enforcedMin : opts.enforcedMax) !== undefined;
   if (!separateEnforcedEnd && citeFor(opts.enforced, end)) return 'error';
   return citeFor(opts.hinted, end) ? 'warning' : 'error';
 }
+
+/** A `Grounding` alongside the setter's own ends, which decide each end's tier. */
+export type EndedGrounding = Grounding & {
+  enforcedMin?: EnforcedEnd;
+  enforcedMax?: EnforcedEnd;
+};

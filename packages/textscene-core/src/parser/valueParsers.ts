@@ -30,15 +30,15 @@
  * their node slice, and the throwing `parseColor` in `standardmaterial3d` keeps
  * its own contract. `Rect2` graduated the same way `Vector2i` did: a second
  * slice's hand-rolled grammar accepted `1.2.3` and stored a NaN region — an
- * invisible frame — so the canonical-grammar reader lives here now. `Vector2i` was such a one-off until a third slice needed it
- * (`SubViewport.size`/`size_2d_override`, after `Sprite2D`/`Sprite3D`
- * `frame_coords`); it has its own integer grammar — `parseVector2`'s float
- * scanner would accept `Vector2i(1.5, 2)` — so it lives here as its own pair
- * rather than as a third hand-synced copy.
+ * invisible frame — so the canonical-grammar reader lives here now. `Vector2i`
+ * was such a one-off until a third slice needed it (`SubViewport.size` /
+ * `size_2d_override`, after `Sprite2D`/`Sprite3D` `frame_coords`), and it keeps
+ * its own pair here because the components are TRUNCATED, not because the
+ * grammar differs — Godot reads an INT slot with any number token and converts.
  */
 
 import { warn } from '../logger';
-import { FLOAT_PATTERN_SOURCE, parseVector2, type Vector2 } from './vectors';
+import { finiteTupleRegex, parseVector2, storedInt, type Vector2 } from './vectors';
 import { nodePathLiteral } from '../godot/index.js';
 
 export interface Rect2Value {
@@ -48,9 +48,7 @@ export interface Rect2Value {
   height: number;
 }
 
-const RECT2_PATTERN = new RegExp(
-  String.raw`^Rect2\s*\(\s*(${FLOAT_PATTERN_SOURCE})\s*,\s*(${FLOAT_PATTERN_SOURCE})\s*,\s*(${FLOAT_PATTERN_SOURCE})\s*,\s*(${FLOAT_PATTERN_SOURCE})\s*\)$`
-);
+const RECT2_PATTERN = finiteTupleRegex('Rect2', 4);
 
 /**
  * `Rect2(x, y, w, h)` → a rect; undefined when absent (silently) or present
@@ -194,11 +192,16 @@ export function vec2Or(value: string | undefined, fallback: Vector2, context = '
 }
 
 /**
- * The one `Vector2i(x, y)` grammar — integer-only, which is why it cannot reuse
- * `parseVector2`'s float scanner. Godot writes Vector2i wherever a value is a
+ * The one `Vector2i(x, y)` grammar. Godot writes Vector2i wherever a value is a
  * pixel count (`SubViewport.size`, `Sprite2D.frame_coords`).
+ *
+ * The same component grammar as the float composites, not `-?\d+`: Godot reads
+ * an INT slot with `_parse_construct<int32_t>`, which takes any number token
+ * and converts it. `SubViewport.size = Vector2i(2e1, 2e1)` is a file Godot
+ * loads as `(20, 20)`, and the narrower grammar warned-and-fell-back to the
+ * default instead — a viewport drawn at the wrong size on a valid scene.
  */
-const VECTOR2I_PATTERN = /^Vector2i\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/;
+const VECTOR2I_PATTERN = finiteTupleRegex('Vector2i', 2);
 
 /**
  * Parse a `Vector2i(x, y)` property, falling back when absent and
@@ -212,7 +215,7 @@ export function vec2iOr(value: string | undefined, fallback: Vector2, context = 
     warn(`${context}: invalid Vector2i "${value}", using fallback`);
     return fallback;
   }
-  return { x: Number(match[1]), y: Number(match[2]) };
+  return { x: storedInt(match[1]), y: storedInt(match[2]) };
 }
 
 /**
@@ -231,7 +234,7 @@ export function parseOptionalVector2i(
     warn(`${context}: invalid Vector2i "${value}"`);
     return undefined;
   }
-  return { x: Number(match[1]), y: Number(match[2]) };
+  return { x: storedInt(match[1]), y: storedInt(match[2]) };
 }
 
 /**

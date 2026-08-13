@@ -34,7 +34,7 @@ validatorRegistry.registerAll('AudioStreamPlayer', {
   // "0.01,4,0.01,or_greater" — `or_greater` opens the ceiling. The two floors
   // sit apart, so (0, 0.01) loads into Godot and only warns.
   pitch_scale: v.positiveFloat('pitch_scale', undefined, {
-    hintedMin: 0.01,
+    min: 0.01,
     enforced: 'audio_stream_player_internal.cpp:314',
     hinted: 'audio_stream_player.cpp:284',
   }),

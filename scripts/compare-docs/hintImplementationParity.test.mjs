@@ -29,7 +29,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { stalenessMessage } from '../distFreshness.mjs';
+import { requireFreshDist } from '../distFreshness.mjs';
 import { loadCoreLinter, loadRadianEpsilon } from './loadCoreLinter.mjs';
 
 const PROPS = join(import.meta.dirname, 'node-properties.json');
@@ -42,7 +42,6 @@ const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 // Computed in `beforeAll`, never at module scope: it walks a tree a concurrent
 // `tsc --build` may be writing, and a throw during module evaluation surfaces
 // as a vitest collection error instead of the actionable message.
-let stale;
 
 /** `PropertyInfo::hint` for `PROPERTY_HINT_RANGE`. */
 const HINT_RANGE = 1;
@@ -70,12 +69,6 @@ const SETTER_OVERRIDES_HINT = new Map([
   ['PhysicalBone2D.bone2d_index', 'physical_bone_2d.cpp:229'],
   // ERR_FAIL_COND(p_count < 1) sits ABOVE the hint's floor of 0.
   ['GPUParticles3D.draw_passes', 'gpu_particles_3d.cpp:266'],
-  // CLAMP(p, 0.1, 2.0) passes [0.1, 0.25) through unaltered, so the hint's 0.25
-  // is advisory and the clamp's 0.1 is the end that alters a value.
-  ['Viewport.scaling_3d_scale', 'viewport.cpp:4875'],
-  // One ERR_FAIL_COND spanning 0..128 inclusive, WIDER than the hint at both
-  // ends. The 128 is the literal in the predicate, not a power-of-two guess.
-  ['AnimationMixer.audio_max_polyphony', 'animation_mixer.cpp:542'],
   // A clamp, not a refusal: `p > 4 ? p : 4` means 1..3 are values Godot never
   // stores, so the floor sits ABOVE the hint's.
   ['CSGSphere3D.radial_segments', 'csg_shape.cpp:1489'],
@@ -83,7 +76,6 @@ const SETTER_OVERRIDES_HINT = new Map([
   // it, so the altered floor sits ABOVE the hint's 0.
   ['Decal.size', 'decal.cpp:34'],
 ]);
-
 
 /**
  * A `PROPERTY_HINT_RANGE` string as the engine states it: `"lo,hi"`,
@@ -144,7 +136,7 @@ const sameBound = (ours, theirs, tolerance) => Math.abs(ours - theirs) <= tolera
  * by the wrong rule, and when ours is the narrower one it reports an error on a
  * file Godot opens — this repo's recurring defect. Must be empty.
  */
-function mismatches(label, hint, bounds) {
+function mismatches(hint, bounds) {
   const out = [];
   const { min, max } = bounds ?? {};
   const { lo, hi, tolerance } = hintBounds(hint);
@@ -195,7 +187,6 @@ function unimplementedEnds(hint, bounds) {
   return ends;
 }
 
-
 /**
  * The engine's ranged properties, from both captures.
  *
@@ -234,8 +225,7 @@ describe('the bound we implement against the bound Godot declared', () => {
   // Fails every assertion below with one actionable message rather than letting
   // them agree with a previous revision's registry.
   beforeAll(() => {
-    stale = stalenessMessage(CORE, 'this hint-parity ledger');
-    if (stale) throw new Error(stale);
+    requireFreshDist(CORE, 'this hint-parity ledger');
   });
 
   // Once for the file, not once per assertion: loading the built linter and
@@ -259,7 +249,7 @@ describe('the bound we implement against the bound Godot declared', () => {
 
     const wrong = rows
       .filter((r) => !SETTER_OVERRIDES_HINT.has(r.label))
-      .flatMap((r) => mismatches(r.label, r.hint, r.bounds).map((d) => `${r.label}: ${d}`));
+      .flatMap((r) => mismatches(r.hint, r.bounds).map((d) => `${r.label}: ${d}`));
     expect(wrong.sort()).toEqual([]);
   });
 
@@ -293,7 +283,7 @@ describe('the bound we implement against the bound Godot declared', () => {
     const byLabel = new Map(rows.map((r) => [r.label, r]));
     const dead = [...SETTER_OVERRIDES_HINT.keys()].filter((label) => {
       const row = byLabel.get(label);
-      return row === undefined || mismatches(label, row.hint, row.bounds).length === 0;
+      return row === undefined || mismatches(row.hint, row.bounds).length === 0;
     });
     expect(dead).toEqual([]);
   });

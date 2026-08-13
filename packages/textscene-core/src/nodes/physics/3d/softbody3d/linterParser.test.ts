@@ -273,8 +273,13 @@ describe('SoftBody3D strict validators', () => {
       expect(check('pinned_points', 'PackedInt32Array(0, 3, 7)')).toBeNull();
     });
 
-    it('rejects a non-integer element', () => {
-      expect(check('pinned_points', '[0, 1.5]')?.code).toBe('INVALID_PINNED_POINTS_FORMAT');
+    // variant_parser.cpp:1428-1430 narrows toward zero; Godot loads point 1.
+    it('truncates a float element rather than refusing it', () => {
+      expect(check('pinned_points', '[0, 1.5]')).toBeNull();
+    });
+
+    it('still rejects an element Godot cannot tokenise at all', () => {
+      expect(check('pinned_points', '[0, 1abc]')?.code).toBe('INVALID_PINNED_POINTS_FORMAT');
     });
 
     it('rejects a value that is neither array spelling', () => {

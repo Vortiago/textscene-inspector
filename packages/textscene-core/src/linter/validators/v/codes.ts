@@ -25,9 +25,10 @@ export function valueCode(name: string): string {
 /**
  * `float 0-1` / `float >= 0` / `integer 1-256` / `float`, from the bounds.
  *
- * A setter end outside the hint's is named first and the hint's follows in
- * parentheses, because the two report at different tiers and a reader of the
- * sheet needs to know which number is refused and which merely warns.
+ * The hint's ends wherever it states any; the setter's own only at an end where
+ * no hint end exists. Never both — see the body for why naming both would
+ * overstate the accepted range. The tier each end reports at belongs in the
+ * sheet's "Out of range" column, not here.
  */
 export function numericRange(
   kind: 'float' | 'integer',

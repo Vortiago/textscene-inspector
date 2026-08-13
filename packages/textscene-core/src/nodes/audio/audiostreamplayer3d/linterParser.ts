@@ -45,7 +45,7 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
     'pitch_scale',
     "Property 'pitch_scale' must be greater than 0. Zero or negative pitch breaks audio playback.",
     {
-      hintedMin: 0.01,
+      min: 0.01,
       enforced: 'audio_stream_player_internal.cpp:314',
       hinted: 'audio_stream_player_3d.cpp:887',
     }

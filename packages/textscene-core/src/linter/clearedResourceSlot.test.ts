@@ -28,10 +28,11 @@
  * without also being answered for here.
  */
 
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { lint, node, scene, subResource } from './testing/testkit.js';
+import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
 import '../linter/index.js';
 
 interface Slot {
@@ -88,6 +89,22 @@ const SLOTS: Slot[] = [
       prop: 'shape',
       parent: { block: staticBody3d, path: '.' },
       expected: ['warning collisionshape3d-requires-shape'],
+    },
+  ]),
+  // No diagnostic either way: the slot is optional, so a cleared one is silent
+  // for the same reason an absent one is. The pair still belongs here — the
+  // defect this guards against is a cleared slot reading as a DANGLING
+  // reference, which would report where absence does not.
+  ...at('linter/physics/rigidBodyLinterRule.ts', [
+    {
+      type: 'RigidBody2D',
+      prop: 'physics_material_override',
+      expected: ['warning rigidbody2d-needs-collision-shape'],
+    },
+    {
+      type: 'RigidBody3D',
+      prop: 'physics_material_override',
+      expected: ['warning rigidbody3d-needs-collision-shape'],
     },
   ]),
   ...at('linter/physics/navigationRegionLinterRule.ts', [
@@ -295,7 +312,6 @@ function shapeOf(content: string): string[] {
     .sort();
 }
 
-const SRC = join(import.meta.dirname, '..');
 /** Where the predicates live: its own calls are the definition, not a slot. */
 const PREDICATE_MODULE = 'linter/resourceChecker.ts';
 const HELPER_CALL_RE = /\b(?:resourceSlotIsEmpty|heldResource)\(([^()]*)\)/g;
@@ -307,17 +323,13 @@ const COMPUTED_KEY_RE = /\[\s*([A-Za-z_$][\w$]*)\s*\]\s*$/;
 /** A `.tscn` property key, which is how a resolved literal is told from a stray one. */
 const PROPERTY_KEY_RE = /^[a-z][a-z0-9_]*$/;
 
-/** Every non-test source file under `src`, relative to it. */
-function sourceFiles(dir: string = SRC): string[] {
-  const found: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) found.push(...sourceFiles(full));
-    else if (/\.tsx?$/.test(entry.name) && !entry.name.includes('.test.')) {
-      found.push(relative(SRC, full));
-    }
-  }
-  return found;
+/**
+ * Every non-test source file under `src`, relative to it. The shared walk, not
+ * a local one: it carries the anti-vacuity floor, and a guard that names its
+ * own roots answers "anywhere I remembered" rather than "anywhere".
+ */
+function sourceFiles(): string[] {
+  return allSourceFiles().map((f) => relative(srcRoot, f));
 }
 
 /** The `.tscn` property keys among an expression's string literals, ascending. */
@@ -362,7 +374,7 @@ function sweptSlots(): { slots: string[]; unreadable: string[] } {
   const unreadable: string[] = [];
   for (const file of sourceFiles()) {
     if (file === PREDICATE_MODULE) continue;
-    const source = readFileSync(join(SRC, file), 'utf8');
+    const source = readFileSync(join(srcRoot, file), 'utf8');
     let bracketed = 0;
     for (const [call, rawArg] of source.matchAll(HELPER_CALL_RE)) {
       bracketed++;
@@ -393,13 +405,16 @@ describe('an explicitly cleared resource slot reads as an empty one', () => {
     }
   );
 
+  // One sweep for both assertions: it reads every source file in the package.
+  const swept = sweptSlots();
+
   it('answers for every slot the shared predicates are asked about', () => {
     const rows = [...new Set(SLOTS.map((s) => `${s.site} ${s.prop}`))].sort();
-    expect(sweptSlots().slots).toEqual(rows);
+    expect(swept.slots).toEqual(rows);
   });
 
   it('reads every call site, so none can hide behind an argument this scan cannot follow', () => {
-    expect(sweptSlots().unreadable).toEqual([]);
+    expect(swept.unreadable).toEqual([]);
   });
 
   it('still reports a slot that names a resource nothing declares', () => {

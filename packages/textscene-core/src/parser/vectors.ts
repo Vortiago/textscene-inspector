@@ -32,9 +32,35 @@ export interface Vector3 {
  */
 export const FLOAT_PATTERN_SOURCE = String.raw`[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?`;
 
-const F = FLOAT_PATTERN_SOURCE;
-const VECTOR2_RE = new RegExp(String.raw`^Vector2\s*\(\s*(${F})\s*,\s*(${F})\s*\)$`);
-const VECTOR3_RE = new RegExp(String.raw`^Vector3\s*\(\s*(${F})\s*,\s*(${F})\s*,\s*(${F})\s*\)$`);
+/**
+ * The anchored regex for a fixed-arity composite written with the FINITE
+ * grammar above, each component its own capture group.
+ *
+ * The renderer's counterpart to the linter's `makeFloatTupleRegex`, and the
+ * only place a decoder may get one: a hand-rolled `(-?[\d.eE+-]+)` reads as
+ * equivalent and is not — it accepts `e+-.` and rejects nothing useful — while
+ * a hand-rolled `(-?\d+)` for an `i`-suffixed composite refuses values Godot
+ * loads. `godotLiteralGrammar.guard.test.ts` keeps composite grammars to this
+ * function and its linter sibling.
+ *
+ * The `i`-suffixed composites (`Vector2i`, `Rect2i`) use this same grammar,
+ * deliberately: `_parse_construct<int32_t>` (`variant_parser.cpp:577-592`)
+ * takes any number token and converts it, so `Vector2i(2e1, 0)` is a file Godot
+ * loads as `(20, 0)`. Read their captures through {@link storedInt}.
+ */
+export function finiteTupleRegex(typeName: string, arity: number): RegExp {
+  const component = `(${FLOAT_PATTERN_SOURCE})`;
+  const body = Array.from({ length: arity }, () => component).join(String.raw`\s*,\s*`);
+  return new RegExp(String.raw`^${typeName}\s*\(\s*${body}\s*\)$`);
+}
+
+/** One matched component of an `i`-suffixed composite, as the int32 Godot stores. */
+export function storedInt(text: string | undefined): number {
+  return Math.trunc(parseFloat(text ?? ''));
+}
+
+const VECTOR2_RE = finiteTupleRegex('Vector2', 2);
+const VECTOR3_RE = finiteTupleRegex('Vector3', 3);
 
 /**
  * `Color(r, g, b, a)` — the SAME float grammar as the vectors above. Compiled ONCE and shared by
@@ -42,9 +68,7 @@ const VECTOR3_RE = new RegExp(String.raw`^Vector3\s*\(\s*(${F})\s*,\s*(${F})\s*,
  * the channel grammar and never rebuild this regex per parse/lint call. No `g` flag, so `.test()`
  * and `.match()` on the shared instance are stateless.
  */
-export const COLOR_RE = new RegExp(
-  String.raw`^Color\s*\(\s*(${F})\s*,\s*(${F})\s*,\s*(${F})\s*,\s*(${F})\s*\)$`,
-);
+export const COLOR_RE = finiteTupleRegex('Color', 4);
 
 export function parseVector2(value: string): Vector2 {
   const match = value.match(VECTOR2_RE);

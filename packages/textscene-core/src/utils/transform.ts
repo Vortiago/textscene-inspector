@@ -5,34 +5,37 @@
 import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
 import { warn } from '../logger';
 import { isEqualApprox } from '../godot/math.js';
+import { finiteTupleRegex } from '../parser/vectors';
+
+const TRANSFORM3D_RE = finiteTupleRegex('Transform3D', 12);
+const CALL_PREFIX = 'Transform3D(';
 
 /**
  * Parse Transform3D from string format.
  * Example: "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)"
+ *
+ * Arity is reported apart from grammar because the two are different authoring
+ * mistakes: a six-component matrix is a Transform2D pasted into a 3D slot,
+ * while a component that will not parse is a typo.
  */
 export function parseTransform3D(transformString: string): Transform3D {
-  const match = transformString.match(/Transform3D\(([\d\s.,e+-]+)\)/);
-  if (!match || !match[1]) {
+  const match = TRANSFORM3D_RE.exec(transformString);
+  if (!match) {
+    const trimmed = transformString.trim();
+    if (trimmed.startsWith(CALL_PREFIX) && trimmed.endsWith(')')) {
+      const count = trimmed.slice(CALL_PREFIX.length, -1).split(',').length;
+      if (count !== 12) {
+        throw new Error(`Transform3D must have 12 values, got ${count}: ${transformString}`);
+      }
+    }
     throw new Error(`Invalid Transform3D format: ${transformString}`);
   }
 
-  const values = match[1]
-    .split(',')
-    .map((v) => parseFloat(v.trim()))
-    .filter((v) => !isNaN(v));
-
-  if (values.length !== 12) {
-    throw new Error(
-      `Transform3D must have 12 values, got ${values.length}: ${transformString}`
-    );
-  }
-
-  const [
-    bx_x, bx_y, bx_z,
-    by_x, by_y, by_z,
-    bz_x, bz_y, bz_z,
-    o_x, o_y, o_z
-  ] = values as [number, number, number, number, number, number, number, number, number, number, number, number];
+  const [bx_x, bx_y, bx_z, by_x, by_y, by_z, bz_x, bz_y, bz_z, o_x, o_y, o_z] = match
+    .slice(1)
+    .map((v) => parseFloat(v)) as [
+    number, number, number, number, number, number, number, number, number, number, number, number,
+  ];
 
   return {
     basis_x: { x: bx_x, y: bx_y, z: bx_z },

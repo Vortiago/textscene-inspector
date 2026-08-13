@@ -369,13 +369,16 @@ describe('Viewport shared validators', () => {
   });
 
   describe('scaling_3d_scale: CLAMP(0.1, 2.0) at viewport.cpp:4875, error tier', () => {
-    it('accepts the clamp boundaries 0.1 and 2.0, not the looser hint floor 0.25 at viewport.cpp:5178', () => {
+    it('accepts the hint band 0.25..2.0 silently', () => {
       const validator = find('scaling_3d_scale');
-      expect(validator('scaling_3d_scale', '0.1', 1)).toBeNull();
+      expect(validator('scaling_3d_scale', '0.25', 1)).toBeNull();
       expect(validator('scaling_3d_scale', '2.0', 1)).toBeNull();
-      // 0.2 sits inside the CLAMP but below the hint's 0.25 floor: the setter
-      // stores it unaltered, so the error tier must stay clean here.
-      expect(validator('scaling_3d_scale', '0.2', 1)).toBeNull();
+    });
+
+    it('warns on [0.1, 0.25): the CLAMP stores it unaltered, the hint at :5178 excludes it', () => {
+      const validator = find('scaling_3d_scale');
+      expect(validator('scaling_3d_scale', '0.1', 1)!.severity).toBe('warning');
+      expect(validator('scaling_3d_scale', '0.2', 1)!.severity).toBe('warning');
     });
 
     it('errors just outside the clamp: 0.099 and 2.001', () => {

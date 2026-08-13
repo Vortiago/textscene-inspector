@@ -43,10 +43,43 @@ export function node(
   options: NodeOptions = {}
 ): string {
   const name = options.name ?? type;
+  return heading(`name="${name}" type="${type}"`, props, options);
+}
+
+/**
+ * A node whose type Godot does not spell: the two headings that carry no
+ * `type=` attribute at all.
+ *
+ * `instanced` is `[node name="X" parent="." instance=ExtResource("id")]` — the
+ * type lives in the referenced PackedScene. `override` is
+ * `[node name="X" parent="Y" index="0"]` — a property override on a node inside
+ * an instance, where the parser's index fallback supplies a type-shaped `"0"`.
+ *
+ * Both live here because they are the shapes every `*-invalid-parent` rule must
+ * stay silent about, and five slice tests were spelling the grammar by hand to
+ * say so. A copy that gets an attribute subtly wrong tests nothing and looks
+ * like it does.
+ */
+export function instanced(
+  name: string,
+  options: NodeOptions & { id?: string } = {}
+): string {
+  const id = options.id ?? PACKED_SCENE_ID;
+  return heading(`name="${name}" instance=ExtResource("${id}")`, {}, options);
+}
+
+export function override(name: string, index = 0, options: NodeOptions = {}): string {
+  return heading(`name="${name}" index="${index}"`, {}, options);
+}
+
+function heading(
+  attributes: string,
+  props: Record<string, PropValue>,
+  options: NodeOptions
+): string {
   const parentAttr = options.parent ? ` parent="${options.parent}"` : '';
-  const heading = `[node name="${name}" type="${type}"${parentAttr}]`;
   const lines = Object.entries(props).map(([key, value]) => `${key} = ${renderValue(value)}`);
-  return [heading, ...lines].join('\n');
+  return [`[node ${attributes}${parentAttr}]`, ...lines].join('\n');
 }
 
 /**
@@ -69,6 +102,10 @@ export const collisionShape3d = node('CollisionShape3D', {}, { parent: '.' });
 
 /** A resolvable `AudioStream` ext_resource block (id `1_abc`) for AudioStreamPlayer scenes. */
 export const audioStream = '[ext_resource type="AudioStream" path="res://sound.ogg" id="1_abc"]';
+
+const PACKED_SCENE_ID = '1_body';
+/** The `PackedScene` ext_resource {@link instanced} refers to by default. */
+export const packedScene = `[ext_resource type="PackedScene" path="res://body.tscn" id="${PACKED_SCENE_ID}"]`;
 
 /** Compose node blocks into a full scene with the `[gd_scene format=3]` header. */
 export function scene(...blocks: string[]): string {

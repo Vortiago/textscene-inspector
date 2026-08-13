@@ -30,7 +30,7 @@ import { arrayBody, INT_ARRAY_FORMS } from './arrayForms.js';
 import { bracePairsValidator } from './bracePairValidators.js';
 import { delimiterArrayValidator } from './delimiterValidators.js';
 import { prefixArrayValidator } from './prefixValidators.js';
-import { IS_VALID_INT_RE } from '../../../../godot/index.js';
+import { firstNonNumericElement } from '../../../../linter/validators/v/packedArrays.js';
 
 /**
  * `line_length_guidelines` — `set_line_length_guidelines`
@@ -52,16 +52,14 @@ function lineLengthGuidelinesValidator(): PropertyValidator {
       );
     }
     if (body === '') return null;
-    for (const part of body.split(',')) {
-      const trimmed = part.trim();
-      if (!IS_VALID_INT_RE.test(trimmed)) {
-        return propertyError(
-          key,
-          line,
-          `Property 'line_length_guidelines' contains a non-integer value: "${trimmed}"`,
-          code
-        );
-      }
+    const offender = firstNonNumericElement(body);
+    if (offender !== null) {
+      return propertyError(
+        key,
+        line,
+        `Property 'line_length_guidelines' contains a non-numeric value: "${offender}"`,
+        code
+      );
     }
     return null;
   }, 'int array (PackedInt32Array(…), Array[int]([…]) or […])');

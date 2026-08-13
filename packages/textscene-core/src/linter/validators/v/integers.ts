@@ -36,8 +36,8 @@ export const integerCombinators = {
           message: opts.message,
           errorCodeFormat: formatCode(name),
           errorCodeValue: valueCode(name),
-          minSeverity: endSeverity(opts, 'min', opts.enforcedMin !== undefined),
-          maxSeverity: endSeverity(opts, 'max', opts.enforcedMax !== undefined),
+          minSeverity: endSeverity(opts, 'min'),
+          maxSeverity: endSeverity(opts, 'max'),
         }),
         numericRange('integer', opts.min, opts.max, opts)
       ),

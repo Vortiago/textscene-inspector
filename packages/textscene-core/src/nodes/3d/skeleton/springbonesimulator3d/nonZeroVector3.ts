@@ -6,6 +6,7 @@
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { VECTOR3_REGEX, accepts, propertyError } from '../../../../linter/validators/index.js';
 import { CMP_EPSILON } from '../../../../godot/index.js';
+import { tupleComponent } from '../../../../linter/validators/commonValidators.js';
 
 /**
  * A gravity direction, which the setter refuses outright when it is zero.
@@ -39,11 +40,7 @@ export function nonZeroVector3(name: string, cite: string): PropertyValidator {
         `INVALID_${name.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}_FORMAT`,
       );
     }
-    // `parseFloat`, not `tupleComponent`: the components are only ever tested
-    // for ZERO-ness, and a non-finite one answers "not zero" whether it reads as
-    // NaN or as Infinity. There is no bound here for the coarser parse to stop
-    // applying to.
-    const components = [match[1], match[2], match[3]].map((c) => parseFloat(c ?? '0'));
+    const components = [match[1], match[2], match[3]].map(tupleComponent);
     if (components.every((c) => Math.abs(c) < CMP_EPSILON)) {
       return propertyError(
         key,

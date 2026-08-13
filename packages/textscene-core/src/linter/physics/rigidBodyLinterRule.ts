@@ -8,7 +8,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { checkResourceExists } from '../resourceChecker.js';
+import { checkResourceExists, heldResource } from '../resourceChecker.js';
 import {
   hasCollisionShapeChild,
   collisionShapeTypesPhrase,
@@ -27,10 +27,8 @@ import { tupleComponent } from '../validators/commonValidators.js';
  * `collisionshape3d-non-uniform-scale` run (collision_object_3d.cpp:744,
  * collision_shape_3d.cpp:155) — a UNIFORM (2,2,2) scale trips this one too.
  *
- * Declared locally rather than in
- * `godot/math.ts`: this repo's engine-facts module has no home for it yet,
- * flagged as a `godot/math.ts` candidate rather than added here on this
- * rule's own authority.
+ * Local rather than in `godot/`: it is a rigid-body tolerance, not a maths
+ * constant, and this is its only reader.
  */
 const RIGID_BODY_SCALE_TOLERANCE = 0.05;
 
@@ -67,17 +65,17 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     const diagnostics: Diagnostic[] = [];
     const { node, scene } = context;
 
-
     // Access raw properties from the node (Record<string, string>)
     const rawProps = node.properties as unknown as Record<string, string>;
 
     // Check if physics_material_override resource exists (if specified)
-    if (rawProps.physics_material_override) {
-      const resourceExists = checkResourceExists(scene, rawProps.physics_material_override);
+    const physicsMaterial = heldResource(rawProps.physics_material_override);
+    if (physicsMaterial !== undefined) {
+      const resourceExists = checkResourceExists(scene, physicsMaterial);
       if (!resourceExists) {
         diagnostics.push({
           severity: 'error',
-          message: `Physics material resource not found: ${rawProps.physics_material_override}`,
+          message: `Physics material resource not found: ${physicsMaterial}`,
           nodeName: node.name,
           nodeType: node.type,
           ruleName: `valid-${prefix}-resources`,
@@ -95,7 +93,6 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
         ruleName: `${prefix}-needs-collision-shape`,
       });
     }
-
 
     // `linear_damp` / `angular_damp` get no advisory: both hints
     // (rigid_body_2d.cpp:763/767 "-1,100,0.001,or_greater",

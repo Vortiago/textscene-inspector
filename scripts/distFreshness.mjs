@@ -43,11 +43,10 @@ export const newest = (dir, keep) => newestMtime(dir, keep, (name) => name !== '
  * @param what - what the caller is about to measure, for the message.
  */
 export function stalenessMessage(core, what = 'this ledger') {
+  // Unreadable and empty prescribe the same remedy, and an unreadable walk
+  // reports `at === 0` anyway, so one branch covers both.
   const built = newest(join(core, 'dist'), (n) => n.endsWith('.js'));
-  if (built.failed) {
-    return `packages/textscene-core/dist could not be read — run \`${BUILD}\`.`;
-  }
-  if (!built.at) {
+  if (built.failed || !built.at) {
     return `packages/textscene-core/dist is not built — run \`${BUILD}\`.`;
   }
 
@@ -73,9 +72,9 @@ export function stalenessMessage(core, what = 'this ledger') {
   // engine's own answer to "did this produce the outputs you are about to
   // measure". Without it, `touch tsconfig.tsbuildinfo` also cleared the
   // complaint outright.
-  const failing = (record.semanticDiagnosticsPerFile ?? []).filter(Array.isArray);
-  if (failing.length) {
-    const first = record.fileNames?.[failing[0][0] - 1] ?? 'a source file';
+  const failing = (record.semanticDiagnosticsPerFile ?? []).find(Array.isArray);
+  if (failing) {
+    const first = record.fileNames?.[failing[0] - 1] ?? 'a source file';
     return (
       `packages/textscene-core last built with type errors (${first}), so dist is ` +
       `incomplete and ${what} would measure whatever survived. Run \`${BUILD}\`.`
@@ -110,4 +109,17 @@ export function stalenessMessage(core, what = 'this ledger') {
     );
   }
   return null;
+}
+
+/**
+ * The `beforeAll` every dist-reading ledger needs, as one call.
+ *
+ * Never at module scope, and that is the whole reason this is shared rather
+ * than inlined four times: the walk reads a tree a concurrent `tsc --build` may
+ * still be writing, and a throw during module evaluation surfaces as a vitest
+ * collection error instead of the actionable message this exists to print.
+ */
+export function requireFreshDist(core, what = 'this ledger') {
+  const stale = stalenessMessage(core, what);
+  if (stale) throw new Error(stale);
 }

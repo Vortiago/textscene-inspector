@@ -5,7 +5,7 @@
  * get_configuration_warnings() (:235-252), so all three are WARNINGS.
  */
 import { describe, it, expect } from 'vitest';
-import { node, scene, lint, expectDiagnostic, expectNoDiagnostic, expectClean } from '../../../../linter/testing/testkit';
+import { node, scene, lint, expectDiagnostic, expectNoDiagnostic, expectClean , instanced, override, packedScene} from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
@@ -39,30 +39,19 @@ describe('CollisionPolygon3D Linter', () => {
     // The 2D twin carries the same case: an `instance=` parent's `type` is the
     // ExtResource ref and an override heading's is the index fallback's "0",
     // and neither can be measured against CollisionObject3D.
-    const instancedParent = `[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://body.tscn" id="1_body"]
-
-[node name="Root" type="Node3D"]
-
-[node name="Body" parent="." instance=ExtResource("1_body")]
-
-[node name="Poly" type="CollisionPolygon3D" parent="Body"]
-polygon = ${validPolygon}
-`;
-    const overrideParent = `[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://body.tscn" id="1_body"]
-
-[node name="Root" type="Node3D"]
-
-[node name="Body" parent="." instance=ExtResource("1_body")]
-
-[node name="Inner" parent="Body" index="0"]
-
-[node name="Poly" type="CollisionPolygon3D" parent="Body/Inner"]
-polygon = ${validPolygon}
-`;
+    const instancedParent = scene(
+      packedScene,
+      node('Node3D', {}, { name: 'Root' }),
+      instanced('Body', { parent: '.' }),
+      node('CollisionPolygon3D', { polygon: validPolygon }, { name: 'Poly', parent: 'Body' })
+    );
+    const overrideParent = scene(
+      packedScene,
+      node('Node3D', {}, { name: 'Root' }),
+      instanced('Body', { parent: '.' }),
+      override('Inner', 0, { parent: 'Body' }),
+      node('CollisionPolygon3D', { polygon: validPolygon }, { name: 'Poly', parent: 'Body/Inner' })
+    );
     expectNoDiagnostic(instancedParent, { ruleName: 'collisionpolygon3d-invalid-parent' });
     expectNoDiagnostic(overrideParent, { ruleName: 'collisionpolygon3d-invalid-parent' });
   });

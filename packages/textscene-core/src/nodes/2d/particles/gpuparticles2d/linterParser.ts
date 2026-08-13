@@ -65,7 +65,7 @@ validatorRegistry.registerAll('GPUParticles2D', {
   // ERR_FAILs at `<= 0`, below the hint's floor, so (0, 0.01) loads into Godot
   // and only warns.
   lifetime: v.positiveFloat('lifetime', undefined, {
-    hintedMin: 0.01,
+    min: 0.01,
     enforced: 'gpu_particles_2d.cpp:78',
     hinted: 'gpu_particles_2d.cpp:947',
   }),

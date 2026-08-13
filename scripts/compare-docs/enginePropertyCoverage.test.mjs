@@ -34,7 +34,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { stalenessMessage } from '../distFreshness.mjs';
+import { requireFreshDist } from '../distFreshness.mjs';
 import { loadCoreLinter, loadCoreParser } from './loadCoreLinter.mjs';
 
 const PROPS = join(import.meta.dirname, 'node-properties.json');
@@ -46,7 +46,6 @@ const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 // Computed in `beforeAll`, never at module scope: it walks a tree a concurrent
 // `tsc --build` may be writing, and a throw during module evaluation surfaces
 // as a vitest collection error instead of the actionable message.
-let stale;
 
 /**
  * Unvalidated properties, per class, counted where the ENGINE declares them.
@@ -109,8 +108,7 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
   // Fails every assertion below with one actionable message rather than letting
   // them agree with a previous revision's registry.
   beforeAll(() => {
-    stale = stalenessMessage(CORE, 'this coverage ledger');
-    if (stale) throw new Error(stale);
+    requireFreshDist(CORE, 'this coverage ledger');
   });
 
 

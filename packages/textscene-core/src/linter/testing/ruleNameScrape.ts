@@ -66,8 +66,13 @@ const isSourceModule = (name: string) => /\.tsx?$/.test(name) && !/\.test\.tsx?$
  * "anywhere I remembered". `src/parser`, `src/r3f` and `src/resources` were all
  * outside the earlier `[nodesRoot, linterDir]` pair, and so was every `.tsx`,
  * which is where a helper lands the moment someone moves it out of the linter.
+ *
+ * Memoized: five guards call this, several of them more than once, and the walk
+ * dominated their runtime.
  */
-export const allSourceFiles = (): string[] => atLeast(walk(srcRoot, isSourceModule), 1000, 'allSourceFiles');
+let sourceFileCache: string[] | undefined;
+export const allSourceFiles = (): string[] =>
+  (sourceFileCache ??= atLeast(walk(srcRoot, isSourceModule), 1000, 'allSourceFiles'));
 
 const RULE_NAME_RE = /^\s*name:\s*'([^']+)'/gm;
 

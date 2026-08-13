@@ -10,6 +10,10 @@ import {
   expectClean,
   expectDiagnostic,
   expectNoDiagnostic,
+  instanced,
+  override,
+  packedScene,
+  subResource,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
@@ -293,34 +297,21 @@ shape = SubResource("shape_1")
       // `instance=` and parses with the index fallback's truthy "0". Neither is
       // a class this file states, and warning anyway fires on every body
       // assembled by instancing one.
-      const instancedParent = `[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://body.tscn" id="1_body"]
-
-[sub_resource type="BoxShape3D" id="shape_1"]
-
-[node name="Root" type="Node3D"]
-
-[node name="Body" parent="." instance=ExtResource("1_body")]
-
-[node name="Collision" type="CollisionShape3D" parent="Body"]
-shape = SubResource("shape_1")
-`;
-      const overrideParent = `[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://body.tscn" id="1_body"]
-
-[sub_resource type="BoxShape3D" id="shape_1"]
-
-[node name="Root" type="Node3D"]
-
-[node name="Body" parent="." instance=ExtResource("1_body")]
-
-[node name="Inner" parent="Body" index="0"]
-
-[node name="Collision" type="CollisionShape3D" parent="Body/Inner"]
-shape = SubResource("shape_1")
-`;
+      const instancedParent = scene(
+        packedScene,
+        subResource('BoxShape3D', {}, 'shape_1'),
+        node('Node3D', {}, { name: 'Root' }),
+        instanced('Body', { parent: '.' }),
+        node('CollisionShape3D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: 'Body' })
+      );
+      const overrideParent = scene(
+        packedScene,
+        subResource('BoxShape3D', {}, 'shape_1'),
+        node('Node3D', {}, { name: 'Root' }),
+        instanced('Body', { parent: '.' }),
+        override('Inner', 0, { parent: 'Body' }),
+        node('CollisionShape3D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: 'Body/Inner' })
+      );
       expectNoDiagnostic(instancedParent, { ruleName: 'collisionshape3d-invalid-parent' });
       expectNoDiagnostic(overrideParent, { ruleName: 'collisionshape3d-invalid-parent' });
     });

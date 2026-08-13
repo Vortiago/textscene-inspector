@@ -151,12 +151,20 @@ describe('CodeEdit strict validators', () => {
       expect(check('line_length_guidelines', '80, 120')).not.toBeNull();
     });
 
-    it('rejects a non-integer element inside the typed form', () => {
-      expect(check('line_length_guidelines', 'Array[int]([80.5])')).not.toBeNull();
+    // Both spellings narrow a float rather than refusing it: the packed form
+    // through `_parse_construct<int32_t>` (variant_parser.cpp:1428-1430), the
+    // typed form through `ContainerTypeValidate`, which converts an element
+    // whose type `can_convert_strict`s to the array's — and FLOAT does, to INT.
+    it('truncates a float element in the typed form', () => {
+      expect(check('line_length_guidelines', 'Array[int]([80.5])')).toBeNull();
     });
 
-    it('rejects a non-integer element', () => {
-      expect(check('line_length_guidelines', 'PackedInt32Array(80.5)')).not.toBeNull();
+    it('truncates a float element in the packed form', () => {
+      expect(check('line_length_guidelines', 'PackedInt32Array(80.5)')).toBeNull();
+    });
+
+    it('still rejects an element Godot cannot tokenise at all', () => {
+      expect(check('line_length_guidelines', 'PackedInt32Array(80abc)')).not.toBeNull();
     });
   });
 

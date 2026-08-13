@@ -12,7 +12,8 @@ import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, shape, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import { dropTrailingComma, IS_VALID_INT_RE, splitTopLevel } from '../../../godot/index.js';
+import { dropTrailingComma, splitTopLevel } from '../../../godot/index.js';
+import { firstNonNumericElement } from '../../../linter/validators/v/packedArrays.js';
 
 const BRACKET_ARRAY_RE = /^\s*\[([\s\S]*)\]\s*$/;
 const PACKED_INT32_ELEMENT_RE = /^PackedInt32Array\s*\(([\s\S]*)\)$/;
@@ -79,15 +80,14 @@ function polygonsValidator(): PropertyValidator {
       const inner = el[1]!.trim();
       if (inner === '') continue;
       const indices = bare ? dropTrailingComma(inner.split(',')) : inner.split(',');
-      for (const part of indices) {
-        if (!IS_VALID_INT_RE.test(part.trim())) {
-          return propertyError(
-            key,
-            line,
-            `Property 'polygons' contains a non-integer index: "${part.trim()}"`,
-            code
-          );
-        }
+      const offender = firstNonNumericElement(indices);
+      if (offender !== null) {
+        return propertyError(
+          key,
+          line,
+          `Property 'polygons' contains a non-numeric index: "${offender}"`,
+          code
+        );
       }
     }
     return null;

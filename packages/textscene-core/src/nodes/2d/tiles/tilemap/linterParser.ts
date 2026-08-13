@@ -13,7 +13,7 @@ import { accepts, propertyError, v } from '../../../../linter/validators/index.j
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../../../godot/rendering.js';
-import { IS_VALID_INT_RE } from '../../../../godot/index.js';
+import { firstNonNumericElement } from '../../../../linter/validators/v/packedArrays.js';
 
 // `\s*` at both ends and before the paren: Godot's tokenizer discards any
 // character <= 32 before a token (variant_parser.cpp:415-417), so a padded
@@ -51,15 +51,14 @@ const tileDataValidator: PropertyValidator = accepts((key, value, line) => {
   }
   const body = match[1]!.trim();
   if (body === '') return null;
-  for (const part of body.split(',')) {
-    if (!IS_VALID_INT_RE.test(part.trim())) {
-      return propertyError(
-        key,
-        line,
-        `Property 'tile_data' contains a non-integer value: "${part.trim()}"`,
-        'INVALID_TILE_DATA_FORMAT'
-      );
-    }
+  const offender = firstNonNumericElement(body);
+  if (offender !== null) {
+    return propertyError(
+      key,
+      line,
+      `Property 'tile_data' contains a non-numeric value: "${offender}"`,
+      'INVALID_TILE_DATA_FORMAT'
+    );
   }
   return null;
 }, 'PackedInt32Array(…) of cell triplets (decoded by the tilemap-invalid-tile-data rule)');

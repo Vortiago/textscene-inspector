@@ -63,10 +63,6 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // No range advisories: every hint band this node has is on its validator in
-  // linterParser.ts, which reports the setter's floor and the hint's as
-  // separate ends.
-
   return diagnostics;
 }
 

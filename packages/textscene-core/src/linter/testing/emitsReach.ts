@@ -67,29 +67,63 @@ export function reachablePairs(file: string): EmittedPair[] {
 }
 
 /**
- * Every arm builder in the tree, as the concrete rule-name suffixes one CALL
- * produces.
+ * Every rule-name builder in the tree, as the concrete suffixes one CALL
+ * produces — plus the ones whose names this scrape could not resolve.
  *
  * A slice using one holds no literal name at all: the builder returns
  * `rangeAdvisories(node, { <prop>: someArms('<ruleprefix>') })` and every name
  * is interpolated inside the builder, so resolving the CALL site is what pins
- * those names to the calling rule. An arm builder whose names are literal is
- * already reached by the literal scrape and does not appear here.
+ * those names to the calling rule. A builder whose names are literal is already
+ * reached by the literal scrape and appears in neither list here.
+ *
+ * Keyed on the BODY — an exported function interpolating one of its own
+ * PARAMETERS into `ruleName` — and not on an `…Arms` identifier, which is the
+ * mistake this replaced. Nothing enforces that naming, so a future
+ * `pitchAdvisories(prefix)` carrying the same template was invisible to this
+ * scrape AND to the literal one, and the guard meant to notice it reported an
+ * empty list and passed.
+ *
+ * A function interpolating a LOCAL it derived itself is a different mechanism
+ * and deliberately absent: the dim-parameterized physics factories build
+ * `prefix` from a `'2D'`/`'3D'` argument, so no call site states the name and
+ * there is no exact suffix to pin. Those are covered by `reachablePairs` plus
+ * `pairMatches`, which wildcard-matches `${…}` against the rule's declaration.
+ * The parameter case is the one where an exact name IS knowable, which is why
+ * failing to resolve one is a defect rather than a category.
  */
-export function armBuilderSuffixes(files: string[]): Map<string, string[]> {
-  const suffixesByBuilder = new Map<string, string[]>();
+export interface ArmBuilders {
+  /** Builder name -> the rule-name suffixes one call appends to its prefix. */
+  suffixes: Map<string, string[]>;
+  /** Builders interpolating a parameter this scrape could not resolve a suffix from. */
+  unresolvable: string[];
+}
+
+/** The identifiers in a function's parameter list, as source text. */
+function parameterNames(signature: string): Set<string> {
+  return new Set([...signature.matchAll(/(?:^|[(,])\s*(\w+)\s*[,:)]/g)].map((m) => m[1]!));
+}
+
+export function armBuilderSuffixes(files: string[]): ArmBuilders {
+  const suffixes = new Map<string, string[]>();
+  const unresolvable: string[] = [];
   for (const file of files) {
     const src = readFileSync(file, 'utf8');
-    for (const fn of src.matchAll(/export function (\w+Arms)\(\s*(\w+)/g)) {
-      const [, builder, param] = fn;
+    for (const fn of src.matchAll(/export function (\w+)\(([^)]*)\)/g)) {
+      const [, builder, signature] = fn;
       const start = fn.index!;
       const end = src.indexOf('\n}', start);
       const body = src.slice(start, end === -1 ? undefined : end);
-      const suffixes = [...body.matchAll(/ruleName:\s*`\$\{(\w+)\}([^`]*)`/g)]
-        .filter((m) => m[1] === param)
-        .map((m) => m[2]!);
-      if (suffixes.length) suffixesByBuilder.set(builder!, [...new Set(suffixes)]);
+      // A bare identifier or quoted string reaches the literal scrape; only a
+      // template is this function's business.
+      const templated = [...body.matchAll(/ruleName:\s*`\$\{(\w+)\}([^`]*)`/g)];
+      if (!templated.length) continue;
+      const params = parameterNames(signature!);
+      const fromParam = templated.filter((m) => params.has(m[1]!));
+      if (!fromParam.length) continue;
+      const found = fromParam.map((m) => m[2]!).filter((s) => s !== '');
+      if (found.length) suffixes.set(builder!, [...new Set(found)]);
+      else unresolvable.push(builder!);
     }
   }
-  return suffixesByBuilder;
+  return { suffixes, unresolvable };
 }

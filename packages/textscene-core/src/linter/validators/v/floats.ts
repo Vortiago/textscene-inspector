@@ -44,8 +44,8 @@ export const floatCombinators = {
           message: opts.message,
           errorCodeFormat: formatCode(name),
           errorCodeValue: valueCode(name),
-          minSeverity: endSeverity(opts, 'min', opts.enforcedMin !== undefined),
-          maxSeverity: endSeverity(opts, 'max', opts.enforcedMax !== undefined),
+          minSeverity: endSeverity(opts, 'min'),
+          maxSeverity: endSeverity(opts, 'max'),
         }),
         numericRange('float', opts.min, opts.max, opts)
       ),
@@ -122,30 +122,34 @@ export const floatCombinators = {
    * floor where the hint's floor was still unimplemented, and it needed a
    * per-property exemption roster to stay quiet about it.
    *
-   * Pass the hint's own floor as `hintedMin` where the property has one, and
-   * the band between the two reports as a warning instead of vanishing.
+   * Pass the hint's own floor as `min` where the property has one — the same
+   * slot every other combinator uses for it — and the band between the two
+   * reports as a warning instead of vanishing.
    */
   positiveFloat(
     name: string,
     message?: string,
-    opts: Grounding & { hintedMin?: number } = {}
+    opts: Grounding & { min?: number } = {}
   ): PropertyValidator {
     const enforcedMin = { at: 0, exclusive: true };
+    // The setter's end merged into `opts`, so `endSeverity` derives the tier
+    // here the same way it does for every other combinator.
+    const grounded = { ...opts, enforcedMin };
     return ground(
       accepts(
         createNumericRangeValidator({
           propertyName: name,
-          min: opts.hintedMin ?? null,
+          min: opts.min ?? null,
           enforcedMin,
           enforcedMessage: message ?? `Property '${name}' must be greater than 0`,
           errorCodeFormat: formatCode(name),
           errorCodeValue: valueCode(name),
-          minSeverity: endSeverity(opts, 'min', true),
+          minSeverity: endSeverity(grounded, 'min'),
         }),
-        numericRange('float', opts.hintedMin, undefined, { enforcedMin })
+        numericRange('float', opts.min, undefined, { enforcedMin })
       ),
-      opts,
-      { min: opts.hintedMin, enforcedMin }
+      grounded,
+      { min: opts.min, enforcedMin }
     );
   },
 };

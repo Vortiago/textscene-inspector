@@ -82,7 +82,7 @@ validatorRegistry.registerAll('Skeleton3D', {
     'motion_scale',
     "Property 'motion_scale' must be greater than 0. Godot substitutes 1.0 for anything at or below it.",
     {
-      hintedMin: 0.001,
+      min: 0.001,
       enforced: 'skeleton_3d.cpp:586',
       hinted: 'skeleton_3d.cpp:1293',
     }

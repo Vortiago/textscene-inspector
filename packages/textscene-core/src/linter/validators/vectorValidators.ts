@@ -3,19 +3,7 @@
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
 import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
-import { tupleComponent } from './commonValidators.js';
-
-/**
- * One MATCHED component of an integer tuple, as the int32 Godot stores.
- *
- * Non-finite stays non-finite rather than collapsing to a number, so a bound
- * comparison against it is false and reports nothing, exactly as the float
- * validators treat one.
- */
-function intComponent(text: string | undefined): number {
-  const parsed = tupleComponent(text);
-  return Number.isFinite(parsed) ? Math.trunc(parsed) : parsed;
-}
+import { intComponent } from './commonValidators.js';
 
 /**
  * Vector3 format: Vector3(x, y, z). Re-derived from the canonical float grammar
@@ -35,7 +23,6 @@ export const VECTOR3_REGEX = makeFloatTupleRegex('Vector3', 3);
  */
 export const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 
-/** Vector2i format: Vector2i(x, y) - two comma-separated integers */
 /**
  * `Vector2i(x, y)`, with the components Godot's parser actually takes.
  *

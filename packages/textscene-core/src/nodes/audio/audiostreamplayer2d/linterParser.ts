@@ -34,7 +34,7 @@ validatorRegistry.registerAll('AudioStreamPlayer2D', {
     'pitch_scale',
     "Property 'pitch_scale' must be greater than 0. Zero or negative pitch breaks audio playback.",
     {
-      hintedMin: 0.01,
+      min: 0.01,
       enforced: 'audio_stream_player_internal.cpp:314',
       hinted: 'audio_stream_player_2d.cpp:432',
     }
@@ -47,7 +47,7 @@ validatorRegistry.registerAll('AudioStreamPlayer2D', {
   // the ceiling and the hint's floor of 1 sits above the setter's, so
   // (0, 1) loads into Godot and only warns.
   max_distance: v.positiveFloat('max_distance', undefined, {
-    hintedMin: 1,
+    min: 1,
     enforced: 'audio_stream_player_2d.cpp:300',
     hinted: 'audio_stream_player_2d.cpp:436',
   }),

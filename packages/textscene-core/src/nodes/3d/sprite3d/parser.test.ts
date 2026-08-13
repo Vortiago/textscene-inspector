@@ -84,9 +84,15 @@ describe('parseSprite3D properties', () => {
     expect(props.frame_coords).toEqual({ x: 2, y: 1 });
   });
 
-  it('drops malformed frame_coords without throwing', () => {
+  it('truncates a float frame_coords the way the INT conversion does', () => {
+    // `_parse_construct<int32_t>` (variant_parser.cpp:552-596) takes any number
+    // token, so Godot loads this as frame (1, 2) and so must the previewer.
     const props = parseSprite3D(HEADING, { frame_coords: 'Vector2i(1.5, 2.5)' });
-    // Floats are rejected by the Vector2i regex; field stays undefined.
+    expect(props.frame_coords).toEqual({ x: 1, y: 2 });
+  });
+
+  it('drops malformed frame_coords without throwing', () => {
+    const props = parseSprite3D(HEADING, { frame_coords: 'Vector2i(1abc, 2)' });
     expect(props.frame_coords).toBeUndefined();
   });
 

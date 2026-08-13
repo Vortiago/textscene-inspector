@@ -11,11 +11,11 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseColor } from '../../../utils/colorParser';
 import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { finiteTupleRegex } from '../../../parser/vectors';
 import { warn } from '../../../logger';
 import type { Node2DProperties, Vector2 } from './types';
 
-const TRANSFORM2D_RE =
-  /^Transform2D\(\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*\)$/;
+const TRANSFORM2D_RE = finiteTupleRegex('Transform2D', 6);
 
 export function parseNode2D(
   heading: ParsedHeading,

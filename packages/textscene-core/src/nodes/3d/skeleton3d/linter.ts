@@ -22,7 +22,6 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-
   // Type guard for properties
   if (!isSkeleton3DProperties(node.properties)) {
     return diagnostics;
@@ -31,10 +30,7 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // No `motion_scale` arm. Both of its bounds live on the validator in
-  // linterParser.ts: `set_motion_scale` (skeleton_3d.cpp:586) substitutes 1 at
-  // or below 0, and the hint's own 0.001 floor warns above that. A rule
-  // repeating the enforced end here reported it twice on the same node.
+  // `motion_scale` is validated in linterParser.ts, both tiers of it.
 
   // Warning: show_rest_only = true (debugging mode, animations disabled)
   if (rawProps.show_rest_only === 'true') {
@@ -69,7 +65,7 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
 const skeleton3DValidationRule: LintRule = {
   meta: {
     name: 'valid-skeleton3d-usage',
-    description: 'Validates Skeleton3D debug modes and bone-attachment usage',
+    description: 'Validates Skeleton3D debug and deprecated-feature flags',
     category: 'validation',
     applicableNodeTypes: ['Skeleton3D'],
     emits: [

@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { node, scene, lint, expectDiagnostic, expectNoDiagnostic } from '../../../../linter/testing/testkit';
+import { node, scene, lint, expectDiagnostic, expectNoDiagnostic , instanced, override, packedScene} from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
@@ -36,30 +36,19 @@ describe('PhysicalBone2D Linter', () => {
       // ancestor whose class is declared elsewhere could be the Skeleton2D, the
       // next bone in the chain, or the terminator. Deciding it is none of the
       // three warns on every rig assembled by instancing one.
-      const instancedAncestor = `[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://skeleton.tscn" id="1_skel"]
-
-[node name="Root" type="Node2D"]
-
-[node name="Skel" parent="." instance=ExtResource("1_skel")]
-
-[node name="Bone" type="PhysicalBone2D" parent="Skel"]
-bone2d_index = 0
-`;
-      const overrideAncestor = `[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://skeleton.tscn" id="1_skel"]
-
-[node name="Root" type="Node2D"]
-
-[node name="Rig" parent="." instance=ExtResource("1_skel")]
-
-[node name="Skel" parent="Rig" index="0"]
-
-[node name="Bone" type="PhysicalBone2D" parent="Rig/Skel"]
-bone2d_index = 0
-`;
+      const instancedAncestor = scene(
+        packedScene,
+        node('Node2D', {}, { name: 'Root' }),
+        instanced('Skel', { parent: '.' }),
+        node('PhysicalBone2D', { bone2d_index: 0 }, { name: 'Bone', parent: 'Skel' })
+      );
+      const overrideAncestor = scene(
+        packedScene,
+        node('Node2D', {}, { name: 'Root' }),
+        instanced('Rig', { parent: '.' }),
+        override('Skel', 0, { parent: 'Rig' }),
+        node('PhysicalBone2D', { bone2d_index: 0 }, { name: 'Bone', parent: 'Rig/Skel' })
+      );
       expectNoDiagnostic(instancedAncestor, { ruleName: 'physicalbone2d-missing-skeleton-parent' });
       expectNoDiagnostic(overrideAncestor, { ruleName: 'physicalbone2d-missing-skeleton-parent' });
     });

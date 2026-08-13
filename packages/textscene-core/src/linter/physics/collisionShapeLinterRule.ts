@@ -17,6 +17,7 @@ import { isZeroApprox } from '../../godot/math.js';
 import { basisColumnScales } from './basisColumnScales.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
+import { parseGodotFloat } from '../validators/commonValidators.js';
 
 export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
   // `one_way_collision` carries PROPERTY_HINT_GROUP_ENABLE for the
@@ -195,9 +196,9 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
 
     // WARNING: one_way_collision_margin set but one_way_collision is false (2D only)
     if (dim === '2D' && rawProps.one_way_collision_margin && rawProps.one_way_collision !== 'true') {
-      const margin = parseFloat(rawProps.one_way_collision_margin);
+      const margin = parseGodotFloat(rawProps.one_way_collision_margin);
       // Only warn if margin is non-zero and one_way_collision is explicitly false or not set
-      if (!isNaN(margin) && margin > 0) {
+      if (margin !== null && margin > 0) {
         diagnostics.push({
           severity: 'warning',
           message: `${type} '${node.name}' has 'one_way_collision_margin' set to ${margin}, but 'one_way_collision' is ${rawProps.one_way_collision || 'not set (defaults to false)'}. The margin will have no effect unless 'one_way_collision' is true.`,
