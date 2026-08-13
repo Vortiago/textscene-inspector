@@ -51,16 +51,16 @@ const stale = stalenessMessage(CORE, 'this coverage ledger');
  * `Control`'s slice, not in each of the forty leaves that inherit it, so the
  * diff is per declaring class and the base-walk is deliberately not applied.
  */
-// 191 at the guard's introduction, then closed in two waves: 102, then 85.
-//
 // The four left are all correctly unvalidated, and the number should stay at 4
 // rather than reaching 0. `ShapeCast2D`/`ShapeCast3D.collision_result` and
 // `LimitAngularVelocityModifier3D.joint_count` each pass an empty setter string
 // to their ADD_PROPERTY, so `ClassDB::set_property` drops the write before any
 // `_set` runs and a .tscn cannot express them. `OpenXRRenderModel.render_model`
 // is a DIFFERENT shape and its setter is real (`set_render_model`): it is
-// `Variant::RID`, a runtime handle with no literal a scene author could write. Each is pinned by a test asserting `findValidator` returns
-// null, so a later sweep cannot "close" them by inventing coverage.
+// `Variant::RID`, a runtime handle with no literal a scene author could write.
+//
+// Each is pinned by a test asserting `findValidator` returns null, so a later
+// sweep cannot "close" them by inventing coverage.
 const EXPECTED_UNVALIDATED = 4;
 
 /**

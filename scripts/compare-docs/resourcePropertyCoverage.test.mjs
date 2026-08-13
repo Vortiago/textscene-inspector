@@ -36,10 +36,9 @@ const stale = stalenessMessage(CORE, 'this coverage ledger');
 /**
  * Properties in scope with no validator.
  *
- * Measured at 176 when the guard was introduced, and closed in the same change,
- * so zero is the standing state rather than an aspiration. Raise it only for a
- * property a `.tscn` cannot express — an empty ADD_PROPERTY setter string, a
- * runtime-only RID — and say which.
+ * Zero is the standing state. Raise it only for a property a `.tscn` cannot
+ * express — an empty ADD_PROPERTY setter string, a runtime-only RID — and say
+ * which.
  */
 const EXPECTED_UNVALIDATED = 0;
 

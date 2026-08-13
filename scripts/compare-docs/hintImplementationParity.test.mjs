@@ -202,25 +202,10 @@ function unimplementedEnds(hint, bounds) {
 /**
  * Ends the engine closes and we leave open, as a ledger.
  *
- * Measured at 102 when the engine-data comparison replaced the comment scrape,
- * which is the first time anything in this repo could see them: the text guard
- * only ever looked where a comment happened to quote a hint. Lower it by
- * implementing a bound, never by widening what counts.
- *
- * It rose to 111 once the capture reached Resource classes — the subject
- * growing, not the bar dropping — and fell back to 101 when those ends, all
- * Environment ceilings, were implemented.
- *
- * 101 to 96 was not implementation either way: five ends were already coded and
- * invisible here, because three validators carried a tier without the numbers
- * beside it. `withFiniteGuard` forwarded the citation and dropped `bounds`, and
- * two hand-rolled validators never set it. `boundGrounding.test.ts` now fails on
- * that pairing, so an end cannot go missing from this ledger again by being
- * unreadable rather than unimplemented.
- *
- * 96 to 93 is implementation: `SpriteBase3D.pixel_size`'s ceiling, and the
- * `amount` and `speed_scale` ceilings CPUParticles2D had declined while its 3D
- * twin coded both from the identical hint.
+ * Lower it by implementing a bound, never by widening what counts. A drop is
+ * not automatically progress: an end also leaves this count when a validator
+ * becomes unreadable here, which is why `boundGrounding.test.ts` fails on a
+ * validator carrying `tiers` without `bounds`.
  */
 const UNIMPLEMENTED_HINT_ENDS = 93;
 

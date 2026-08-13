@@ -37,7 +37,7 @@ import { ENGINE_CITE_RE } from './testing/engineCite.js';
  * and another added in the same edit, and cannot distinguish a gap that became
  * a rule from one quietly re-typed to a decline.
  *
- * Down from 45 in one pass. The one that remains is close to permanent: Godot
+ * The one that remains is close to permanent: Godot
  * decides `CSGShape3D`'s empty-or-non-manifold check from the combined boolean
  * brush (`csg_shape.cpp:981`, after `_get_brush()` folds the subtree at
  * `:453-511`), which no scene file describes. A narrower rule for a CSG leaf's
