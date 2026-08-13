@@ -72,11 +72,26 @@ describe('validator coverage meta-guard', () => {
     .map((f) => ({ file: f, types: extractAll(f, REGISTER_ALL_RE) }))
     .filter((e) => e.types.length > 0);
 
-  it('every registerAll node type is live in validatorRegistry', () => {
+  it('counts the slices whose whole contribution is a removal', () => {
+    // They call `registerUnavailable` and no `registerAll`, so the narrow
+    // scrape never visited them and neither of the two sweeps below could see a
+    // removal that stopped running.
+    expect(registering.flatMap((e) => e.types)).toEqual(
+      expect.arrayContaining(['HBoxContainer', 'VSplitContainer', 'VFlowContainer'])
+    );
+  });
+
+  it('every registered node type is live in validatorRegistry', () => {
     // 241 linterParser.ts files register today; a walk that found none would
     // otherwise report an empty `dead` list and pass.
     expect(registering.length).toBeGreaterThan(200);
-    const live = new Set(validatorRegistry.getRegisteredNodeTypes());
+    // Removals are registered separately from validators: a fixed-orientation
+    // container adds none of its own, so it is absent from
+    // `getRegisteredNodeTypes()` while being very much alive.
+    const live = new Set([
+      ...validatorRegistry.getRegisteredNodeTypes(),
+      ...validatorRegistry.getTypesWithRemovals(),
+    ]);
     const dead = registering
       .flatMap((e) => e.types.map((t) => ({ t, file: e.file })))
       .filter(({ t }) => !live.has(t))

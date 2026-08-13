@@ -64,7 +64,18 @@ export const allSourceFiles = (): string[] =>
   );
 
 const RULE_NAME_RE = /^\s*name:\s*'([^']+)'/gm;
-export const REGISTER_ALL_RE = /registerAll\(\s*'([^']+)'/g;
+
+/**
+ * The types a `linterParser.ts` speaks for — BOTH spellings.
+ *
+ * A slice whose whole contribution is subtractive (`HBoxContainer` fixing the
+ * orientation `BoxContainer` exposes) calls only `registerUnavailable`, so
+ * matching `registerAll` alone dropped six slices out of every sweep built on
+ * this constant. Note that a removal is registered apart from the validators,
+ * so such a type is absent from `getRegisteredNodeTypes()` and a consumer
+ * comparing against the live registry must union `getTypesWithRemovals()` in.
+ */
+export const REGISTER_ALL_RE = /register(?:All|Unavailable)\(\s*'([^']+)'/g;
 
 // A slice may also declare its rule via a shared dim-parameterized factory
 // (e.g. `makeAreaLinterRule('2D')`) instead of an inline `name: '...'` literal.

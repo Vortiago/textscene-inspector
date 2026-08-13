@@ -91,6 +91,27 @@ describe('VehicleWheel3D Linter', () => {
       expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-not-under-vehicle-body' });
     });
 
+    it('says nothing when the parent is an override of a node inside an instance', () => {
+      // An override heading carries neither `type=` nor `instance=`, so its real
+      // class lives in the instanced scene this linter never opens — the same
+      // wall an `instance=` parent hits. `StrictTscnParser.ts:26` fills `type`
+      // from the `index` fallback, so the heading below has a TRUTHY type of
+      // "0" and only `overridesExistingNode` reveals what it is.
+      const content = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://car.tscn" id="1_car"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Car" parent="." instance=ExtResource("1_car")]
+
+[node name="Body" parent="Car" index="0"]
+
+[node name="Wheel5" type="VehicleWheel3D" parent="Car/Body"]
+`;
+      expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-not-under-vehicle-body' });
+    });
+
     it('warns for a wheel nested under a container inside the body — Godot requires a direct child', () => {
       const content = scene(
         vehicleBody,

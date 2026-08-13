@@ -59,11 +59,22 @@ function importedLinterParsers(source: string): string[] {
   return [...source.matchAll(LINTER_PARSER_IMPORT)].map((m) => m[1]!);
 }
 
-/** Type -> the file whose `registerAll` owns it, tiers included. */
+/**
+ * Type -> the file that owns its validators, tiers included.
+ *
+ * Both spellings count. A slice whose whole relationship to its base is
+ * SUBTRACTIVE — the six fixed-orientation containers, which only take away the
+ * `vertical` their base exposes — calls `registerUnavailable` and no
+ * `registerAll` at all. Scraping the one spelling dropped them from the
+ * population AND from the ancestor set this sweep resolves against, so a
+ * descendant could reach BoxContainer, skip VBoxContainer entirely, and read as
+ * clean while quietly accepting the removed key.
+ */
 function buildOwners(files: string[]): Map<string, string> {
   const owners = new Map<string, string>();
   for (const file of files) {
-    for (const m of readFileSync(file, 'utf8').matchAll(/registerAll\(\s*'([A-Za-z0-9_]+)'/g)) {
+    const source = readFileSync(file, 'utf8');
+    for (const m of source.matchAll(/register(?:All|Unavailable)\(\s*'([A-Za-z0-9_]+)'/g)) {
       owners.set(m[1]!, file);
     }
   }
@@ -120,6 +131,23 @@ describe('base-chain imports', () => {
     expect(files.length).toBeGreaterThan(150);
     expect(owners.size).toBeGreaterThan(150);
     expect(owners.has('Node')).toBe(true);
+  });
+
+  it('counts a slice whose whole contribution is a removal', () => {
+    // A fixed-orientation container calls only `registerUnavailable`, so a
+    // population scraped from `registerAll` alone never visits it — and a
+    // descendant that reached BoxContainer while skipping VBoxContainer would
+    // silently accept the `vertical` the removal exists to take away.
+    expect([...owners.keys()]).toEqual(
+      expect.arrayContaining([
+        'HBoxContainer',
+        'VBoxContainer',
+        'HSplitContainer',
+        'VSplitContainer',
+        'HFlowContainer',
+        'VFlowContainer',
+      ])
+    );
   });
 
   it('detects both import spellings, before trusting its own silence', () => {

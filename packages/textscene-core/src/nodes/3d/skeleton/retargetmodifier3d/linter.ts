@@ -26,22 +26,20 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
-import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { isTypeUnknowable } from '../../../../linter/parentType.js';
 
 const RULE_NAME = 'retargetmodifier3d-no-child-skeleton';
 
-/** A child whose type this file does not state: an instance, or an index= override. */
-function hasUnknownType(child: TscnNode): boolean {
-  return Boolean(child.instance) || child.overridesExistingNode === true;
-}
 
 function checkRetargetModifier3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const children = node.children;
 
-  if (children.some(hasUnknownType)) return [];
+  // A child whose type this file does not state: an instance, an index=
+  // override, or a heading with no identifier at all.
+  if (children.some(isTypeUnknowable)) return [];
   if (children.some((child) => descendsFrom(child.type, 'Skeleton3D'))) return [];
 
   const what =
