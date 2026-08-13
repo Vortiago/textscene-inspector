@@ -95,6 +95,18 @@ describe('Label3D Linter', () => {
         invalid: [{ value: 'RGB(255, 128, 0)', contains: ['Color('] }],
       },
       {
+        // label_3d.cpp:154 hints "1,256,1,or_greater,suffix:px" and declares
+        // Variant::INT; set_font_size (label_3d.cpp:861-867) only guards against
+        // a redundant set, so the floor warns and `or_greater` leaves the top
+        // open. A float literal loads: Godot coerces it into the INT property.
+        prop: 'font_size',
+        valid: [16, 1, 256, 9000, 12.5],
+        invalid: [
+          { value: 'invalid', contains: ['must be a number'] },
+          { value: 0, severity: 'warning', contains: ['font_size'] },
+        ],
+      },
+      {
         // label_3d.cpp:155 hints "0,127,1,suffix:px", closed at both ends;
         // set_outline_size (label_3d.cpp:873-880) assigns straight through, so
         // both endpoints load and one step past either only warns.
