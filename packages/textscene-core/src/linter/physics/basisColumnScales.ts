@@ -5,15 +5,16 @@ import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
 import { tupleComponent } from '../validators/commonValidators.js';
 
 /**
- * Unsigned basis-column magnitudes of a `Transform3D(...)` literal, or null when
- * it does not parse — collision_shape_3d.cpp:153, `get_transform().get_basis()`.
+ * Basis-column magnitudes of a `Transform3D(...)` literal, or null when it does
+ * not parse — collision_shape_3d.cpp:153, `get_transform().get_basis()`.
  * `parseTransform3D` returns Godot's Basis ROWS (utils/transform.ts docblock), so
  * column `i` is the `i`-th component picked from each of the three rows.
  *
- * Godot's actual `get_scale()` (basis.cpp:300-321) multiplies these magnitudes
- * by a single `det_sign` shared across all three axes, which cancels out of
- * every pairwise difference below — so the unsigned form is exact for this
- * equality check, never an approximation of it.
+ * Godot's `get_scale()` (basis.cpp:300-321) multiplies these magnitudes by a
+ * single `det_sign`. That factor cancels out of a pairwise difference at ±1, so
+ * the unsigned form is exact for the equality check the callers run — but NOT at
+ * 0. `SIGN` is three-valued (typedefs.h:123-126), so a degenerate basis scales
+ * to (0, 0, 0), which is uniform however unequal the magnitudes are.
  *
  * Does NOT handle `inf`/`nan` components — see
  * {@link basisColumnScalesGodotFloat} for the caller that needs to.
@@ -21,6 +22,9 @@ import { tupleComponent } from '../validators/commonValidators.js';
 export function basisColumnScales(raw: string): [number, number, number] | null {
   try {
     const { basis_x, basis_y, basis_z } = parseTransform3D(raw);
+    // Exact, like `SIGN` itself: a determinant of 1e-30 signs to +1 in Godot and
+    // really does have a scale, so an epsilon here would silence a live warning.
+    if (determinantOfRows(basis_x, basis_y, basis_z) === 0) return [0, 0, 0];
     return [
       Math.hypot(basis_x.x, basis_y.x, basis_z.x),
       Math.hypot(basis_x.y, basis_y.y, basis_z.y),
@@ -29,6 +33,19 @@ export function basisColumnScales(raw: string): [number, number, number] | null 
   } catch {
     return null; // malformed literal is linterParser.ts's job, not this rule's
   }
+}
+
+/** `Basis::determinant()` (basis.h:350-354) over the three parsed rows. */
+function determinantOfRows(
+  r0: { x: number; y: number; z: number },
+  r1: { x: number; y: number; z: number },
+  r2: { x: number; y: number; z: number }
+): number {
+  return (
+    r0.x * (r1.y * r2.z - r2.y * r1.z) -
+    r1.x * (r0.y * r2.z - r2.y * r0.z) +
+    r2.x * (r0.y * r1.z - r1.y * r0.z)
+  );
 }
 
 const TRANSFORM3D_REGEX = makeFloatTupleRegex('Transform3D', 12);

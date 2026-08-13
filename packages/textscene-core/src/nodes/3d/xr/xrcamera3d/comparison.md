@@ -1,16 +1,16 @@
 ---
 type: XRCamera3D
 category: 3D
-status: linter-only
+status: unreviewed
 fixture: unit-xr-camera-3d.tscn
 # image: unit-xr-camera-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: a selection-gated frustum gizmo, as Camera3D
 ---
 
 # XRCamera3D
 
-This node draws nothing at runtime — Godot renders the game, not the editor, and even Camera3D's own frustum gizmo is editor-only — so the previewer renders it as a transform-only group (ADR-0008), with no gizmo of its own: its children still show, and that absence is the whole story.
+The headset's eye, which XRServer drives from tracking data at runtime. It is a Camera3D and the previewer treats it as one: the same selection-gated frustum gizmo (ADR-0018), from the same component. `visual: false` because that gizmo is selection-gated, so a plain capture has nothing to pair.
 
 ## Properties exercised
 

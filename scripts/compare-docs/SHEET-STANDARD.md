@@ -170,6 +170,11 @@ to look. It is **checked, not trusted** — the sheet must be backed by a
 selection-gated gizmo (ADR-0018) does not make a node visual, and a node that should
 draw but does not yet is `unimplemented`, never this.
 
+An `unimplemented` slice MAY still register its base component, under
+`renderIntent: 'pending'`; the status follows the declared intent, not the presence of
+a file. Registering nothing would also cost the node its `visible` flag and put it in
+both workspaces, so the two questions are kept apart.
+
 **"Draws nothing" is not the same as "nothing to compare."** A driver — an
 AnimationPlayer, an AnimationTree, a RemoteTransform3D — has no geometry of its own
 yet moves something you can watch, so it belongs on the normal `done`/`limitation`

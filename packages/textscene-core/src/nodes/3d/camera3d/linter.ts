@@ -34,34 +34,42 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
   // omits defaults when serialising, and camera3d/parser.ts defaults it the
   // same way, so an absent key means 75 rather than missing.
 
-  // ERROR: near must be less than far, but ONLY under the frustum projection.
+  // ERROR: the projection the pair produces, per mode.
   //
-  // `_update_camera_mode` (camera_3d.cpp:102-115) dispatches on `mode`, and only
-  // PROJECTION_FRUSTUM reaches `Projection::set_frustum`'s
-  // `ERR_FAIL_COND(p_far <= p_near)` (projection.cpp:367, via camera_3d.cpp:280).
-  // `Projection::set_perspective` (projection.cpp:252, :278) and `set_orthogonal`
-  // (:344, :356) carry no such guard, and `Camera3D::set_near`/`set_far`
-  // (camera_3d.cpp:736, :746) assign straight through with no clamp — so on the
-  // DEFAULT perspective projection the engine refuses nothing and a degenerate
-  // matrix is not an ADR-0032 error. A hint cannot rescue it either: both hints
-  // end in `or_greater` and neither constrains the pair.
-  if (
-    rawProps.near !== undefined &&
-    rawProps.far !== undefined &&
-    parseInt(rawProps.projection ?? '', 10) === PROJECTION_FRUSTUM
-  ) {
+  // `Camera3D::set_near`/`set_far` (camera_3d.cpp:736, :746) assign straight
+  // through, so the tier comes from what `_update_camera_mode`
+  // (camera_3d.cpp:102-115) then hands the pair to, and the three modes differ:
+  //
+  //   near == far — no mode survives it. `set_perspective` returns at
+  //     projection.cpp:263, BEFORE the `set_identity()` on the next line, so the
+  //     whole write is dropped and the camera keeps a default identity
+  //     projection. `set_orthogonal` has no guard at all and divides by
+  //     `zfar - znear` at projection.cpp:351, storing inf (NaN when both are 0).
+  //     `set_frustum` refuses outright.
+  //   near > far — only frustum refuses, at projection.cpp:367's
+  //     `ERR_FAIL_COND(p_far <= p_near)`. Elsewhere deltaZ is merely negative,
+  //     the matrix is written, and depth is inverted but finite.
+  //
+  // Both hints end in `or_greater` (camera_3d.cpp:685-686), so neither end
+  // constrains the pair and there is no warning tier to fall back to.
+  if (rawProps.near !== undefined && rawProps.far !== undefined) {
     // `parseGodotFloat`, not `parseFloat`: `inf` / `-inf` / `inf_neg` are float
     // literals Godot writes and reloads (variant_parser.cpp:150-155), and
     // `parseFloat` reads every one of them as NaN — which makes `near >= far`
     // false and silently skips the pair the ERR_FAIL_COND does refuse.
     const near = parseGodotFloat(rawProps.near);
     const far = parseGodotFloat(rawProps.far);
+    const frustum = parseInt(rawProps.projection ?? '', 10) === PROJECTION_FRUSTUM;
 
     if (near !== null && far !== null && !isNaN(near) && !isNaN(far)) {
-      if (near >= far) {
+      const message =
+        near === far
+          ? `Camera3D 'near' and 'far' clipping planes are both ${near}. Godot cannot build a projection from a zero depth range: it drops the write under perspective and stores an infinite one under orthogonal.`
+          : `Camera3D 'near' clipping plane (${near}) must be less than 'far' clipping plane (${far}). Invalid clipping planes will cause rendering issues.`;
+      if (near === far || (frustum && near > far)) {
         diagnostics.push({
           severity: 'error',
-          message: `Camera3D 'near' clipping plane (${near}) must be less than 'far' clipping plane (${far}). Invalid clipping planes will cause rendering issues.`,
+          message,
           nodeName: node.name,
           nodeType: node.type,
           ruleName: 'camera3d-invalid-clipping-planes',

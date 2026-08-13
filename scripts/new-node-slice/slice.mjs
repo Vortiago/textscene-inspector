@@ -76,10 +76,10 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, chain
       `'../nodes/${category}/`
     ),
   ];
-  // A `pending` slice registers no component at all, so there is nothing to wire
-  // into the render barrel — that absence is what keeps the "Not implemented"
-  // badge honest.
-  if (intent !== 'pending') {
+  // The badge is kept honest by `renderIntent`, not by the absent registration,
+  // so a `pending` slice still wires its base — unless the base is `control`,
+  // whose component lays out rather than passing through.
+  if (files.has('index.r3f.ts')) {
     wirings.push(
       wireImport(
         join(CORE_SRC, 'r3f/nodes/index.ts'),
@@ -142,8 +142,8 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, chain
   5. pnpm build:linter && pnpm lint:tscn scenes/fixtures/${fixtureName}${
     intent === 'pending'
       ? `
-  6. When someone renders it: add index.r3f.ts, wire r3f/nodes/index.ts, and move
-     the sheet off \`status: unimplemented\`.`
+  6. When someone renders it: add Component.tsx, point index.r3f.ts at it, drop
+     \`renderIntent\`, and move the sheet off \`status: unimplemented\`.`
       : intent === 'transform-only'
         ? ''
         : `

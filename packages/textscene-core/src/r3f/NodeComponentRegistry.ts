@@ -41,16 +41,18 @@ export interface NodeComponentRegistration {
    * Whether this type draws anything of its own.
    *
    * `'transform-only'` says the node is finished and correct while drawing
-   * nothing — a Timer, a joint, an XR tracker (ADR-0008). It registers a base
-   * component so its children land in the right transform space, and its
-   * comparison sheet reads `linter-only`. Defaults to `'draws'`.
+   * nothing — a Timer, a joint, an XR tracker (ADR-0008). Its comparison sheet
+   * reads `linter-only`. Defaults to `'draws'`.
    *
-   * A type that SHOULD draw but does not yet registers no component at all and
-   * falls through to `GenericNodeFallback`; that absence is what
-   * `rendersOwnVisual` reports as "not implemented". The distinction matters
-   * because a parser registration alone already clears the tree's badge.
+   * `'pending'` says Godot draws this and we do not yet: the badge and the
+   * sheet call it a gap, but the base component stays registered. Absence of a
+   * registration says the same thing about the badge and three other things
+   * besides — `GenericNodeFallback` carries no `visible`, and
+   * `drawsInWorkspace` reads an unregistered type as belonging to BOTH
+   * canvases, so a 3D emitter drags its subtree into the 2D one. Declaring the
+   * gap is not the same as forfeiting the transform space it lives in.
    */
-  renderIntent?: 'draws' | 'transform-only';
+  renderIntent?: 'draws' | 'transform-only' | 'pending';
 }
 
 class NodeComponentRegistryImpl {
@@ -87,6 +89,17 @@ class NodeComponentRegistryImpl {
   /** True when the type registered as drawing nothing of its own (ADR-0008). */
   isTransformOnly(typeName: string): boolean {
     return this.registry.get(typeName)?.renderIntent === 'transform-only';
+  }
+
+  /** True when the type registered a base component while its own visual is still a gap. */
+  isPending(typeName: string): boolean {
+    return this.registry.get(typeName)?.renderIntent === 'pending';
+  }
+
+  /** The declared intent, or undefined when the type registers no component. */
+  renderIntentOf(typeName: string): NodeComponentRegistration['renderIntent'] | undefined {
+    const registration = this.registry.get(typeName);
+    return registration === undefined ? undefined : (registration.renderIntent ?? 'draws');
   }
 
   /** The CSG registration for a type, or undefined when it is not a CSG shape. */

@@ -382,6 +382,27 @@ transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 1, 0)
       expectNoDiagnostic(content, { ruleName: 'collisionshape3d-non-uniform-scale' });
     });
 
+    it('does not warn on a flattened basis, where SIGN(det) makes Godot read (0, 0, 0)', () => {
+      // `Basis::get_scale()` is `SIGN(determinant()) * get_scale_abs()`
+      // (basis.cpp:321), and `SIGN` is three-valued (typedefs.h:123-126). A
+      // determinant of 0 therefore reads as a UNIFORM (0, 0, 0) and
+      // collision_shape_3d.cpp:153-156 stays silent, however unequal the
+      // column magnitudes are.
+      expectNoDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="BoxShape3D" id="shape_1"]
+
+[node name="StaticBody" type="StaticBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("shape_1")
+transform = Transform3D(2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0)
+`,
+        { ruleName: 'collisionshape3d-non-uniform-scale' }
+      );
+    });
+
     it('does not warn when transform is absent, since the identity is uniform', () => {
       expectNoDiagnostic(
         `[gd_scene format=3]

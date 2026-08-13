@@ -255,4 +255,15 @@ describe('NavigationObstacle2D global-skew check (navigation_obstacle_2d.cpp:340
     expect(only(SKEW_RULE, content)).toEqual([]);
     expect(only(SCALE_RULE, content)).toHaveLength(1);
   });
+
+  it("says nothing when the two axes are parallel but non-zero, where SIGN(det) is 0", () => {
+    // The zero-LENGTH guard above does not cover a zero DETERMINANT: here both
+    // columns have length, but they are parallel. `get_skew()` multiplies
+    // `columns[1].normalized()` by `SIGN(det)` (transform_2d.cpp:74), which is
+    // exactly 0 (typedefs.h:123-126), so the dot is 0 and the skew is exactly
+    // 0 — navigation_obstacle_2d.cpp:340 compares `!= 0.0` and stays silent.
+    // Composed, since Node2D never serialises `transform` directly.
+    const content = `[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\nscale = Vector2(1, 0)\n\n[node name="Obstacle" type="NavigationObstacle2D" parent="."]\nradius = 10.0\nrotation = 0.785398\n`;
+    expect(only(SKEW_RULE, content)).toEqual([]);
+  });
 });

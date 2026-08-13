@@ -211,13 +211,15 @@ describe('Camera3D Linter', () => {
       });
 
       it('should error when near equals far under the frustum projection', () => {
+        // Frustum is the one mode that refuses BOTH cells, so it reports the
+        // zero-depth-range reason the other two share rather than the ordering.
         expectDiagnostic(
           scene(node('Camera3D', { projection: 2, size: 1.0, near: 100.0, far: 100.0 })),
           {
             prop: 'clipping',
             severity: 'error',
             nodeType: 'Camera3D',
-            contains: ['must be less than'],
+            contains: ['zero depth range'],
           }
         );
       });
@@ -235,11 +237,29 @@ describe('Camera3D Linter', () => {
         ['perspective, written', { projection: 0, fov: 75.0 }],
         ['perspective, defaulted by omission', { fov: 75.0 }],
         ['orthogonal', { projection: 1, size: 10.0 }],
-      ])('stays silent on near >= far under %s', (_label, props) => {
+      ])('stays silent on near > far under %s', (_label, props) => {
+        // deltaZ is non-zero, so the matrix is written and merely inverted.
         const diagnostics = lint(scene(node('Camera3D', { ...props, near: 100.0, far: 50.0 })));
         expect(
           diagnostics.filter((d) => d.ruleName === 'camera3d-invalid-clipping-planes')
         ).toHaveLength(0);
+      });
+
+      // near == far is a different cell from near > far, and every mode loses
+      // the projection at it — the perspective write is dropped before
+      // `set_identity` (projection.cpp:263), the orthogonal one divides by
+      // `zfar - znear` and stores inf (projection.cpp:351).
+      it.each([
+        ['perspective, written', { projection: 0, fov: 75.0 }],
+        ['perspective, defaulted by omission', { fov: 75.0 }],
+        ['orthogonal', { projection: 1, size: 10.0 }],
+      ])('errors on near == far under %s', (_label, props) => {
+        expectDiagnostic(scene(node('Camera3D', { ...props, near: 100.0, far: 100.0 })), {
+          prop: 'clipping',
+          severity: 'error',
+          nodeType: 'Camera3D',
+          contains: ['100'],
+        });
       });
     });
 

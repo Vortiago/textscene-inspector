@@ -307,11 +307,15 @@ describe('comparison sheets', () => {
       .filter((s) => s.file.includes(`${sep}nodes${sep}`))
       .map((s) => {
         const r3f = registrationFileFor(dirname(s.file));
+        const source = r3f === null ? '' : readFileSync(r3f, 'utf8');
         return {
           ...s,
           hasComponent: r3f !== null,
-          transformOnly:
-            r3f !== null && /renderIntent:\s*'transform-only'/.test(readFileSync(r3f, 'utf8')),
+          transformOnly: /renderIntent:\s*'transform-only'/.test(source),
+          // A `pending` registration mounts a base component while the node's
+          // own visual is still missing, so it is a gap that happens to be
+          // registered — presence of a file cannot settle the status alone.
+          pending: /renderIntent:\s*'pending'/.test(source),
         };
       });
 
@@ -343,10 +347,21 @@ describe('comparison sheets', () => {
       expect(bad).toEqual([]);
     });
 
-    it('leaves every `unimplemented` sheet without a render component', () => {
+    it('leaves every `unimplemented` sheet without a component that claims to draw', () => {
+      // Not "without a component": a gap may still register its base to keep
+      // `visible` and the workspace split working, and says so with
+      // `renderIntent: 'pending'`. What stays forbidden is a sheet calling the
+      // node a gap while its registration claims a finished visual.
       const bad = sliceSheets
-        .filter((s) => s.meta.status === 'unimplemented' && s.hasComponent)
-        .map((s) => `${s.label}: claims unimplemented but registers a render component`);
+        .filter((s) => s.meta.status === 'unimplemented' && s.hasComponent && !s.pending)
+        .map((s) => `${s.label}: claims unimplemented but registers a drawing component`);
+      expect(bad).toEqual([]);
+    });
+
+    it('never lets a `pending` registration claim a finished status', () => {
+      const bad = sliceSheets
+        .filter((s) => s.pending && s.meta.status !== 'unimplemented')
+        .map((s) => `${s.label}: registers pending but its status is '${s.meta.status}'`);
       expect(bad).toEqual([]);
     });
   });

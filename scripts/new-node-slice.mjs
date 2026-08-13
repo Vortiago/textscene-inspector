@@ -26,9 +26,13 @@
  *   transform-only  ADR-0008: draws nothing BY DESIGN and is therefore finished.
  *                   Reuses the base parser and component, registers
  *                   `renderIntent: 'transform-only'`, status `linter-only`.
- *   pending         should draw, does not yet. Reuses the base parser, registers
- *                   NO component (GenericNodeFallback handles it), status
- *                   `unimplemented`.
+ *   pending         should draw, does not yet. Reuses the base parser and
+ *                   registers the base component under `renderIntent: 'pending'`
+ *                   — the badge reads the intent, not the absence, so the gap is
+ *                   honest without forfeiting `visible` and the workspace split.
+ *                   `--base control` is the exception and registers nothing: its
+ *                   component lays out anchors rather than passing through.
+ *                   Status `unimplemented`.
  *
  * `--chain` no longer writes anything: NODE_BASE_TYPES is derived from the node
  * catalog, so a real Godot type already has its base. It is still required as a

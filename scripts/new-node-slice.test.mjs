@@ -31,6 +31,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { BASES } from './new-node-slice/bases.mjs';
 import { reusedParserFiles } from './new-node-slice/templates/reusedParser.mjs';
+import { drawsFiles } from './new-node-slice/templates/drawsSlice.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -277,6 +278,62 @@ describe('new-node-slice intent shapes', () => {
       reusedParser: { fn: 'parseNode2D', importPath: '../../base/node2d/parser' },
     });
     expect(emitted.get('index.r3f.ts')).toMatch(/^\s*canvasItem: true,$/m);
+  });
+
+  it('routes a `draws` slice to the same workspace its base declares', () => {
+    // The flag is the base's, not the intent's, and the two templates emit it
+    // independently. A `draws` slice missing it fails differently per base:
+    // node2d turns canvasItemRegistry.guard red immediately, while node drops
+    // `container` and the subtree silently vanishes from the 2D canvas with no
+    // guard to notice.
+    for (const [baseKey, flag] of [
+      ['node2d', /^\s*canvasItem: true,$/m],
+      ['node', /^\s*container: true,$/m],
+    ]) {
+      const emitted = drawsFiles({
+        typeName: 'Widget',
+        camel: 'widget',
+        base: BASES[baseKey],
+        toSrc: '../../../',
+        toBase: `../../${BASES[baseKey].dir}`,
+        reusedParser: { fn: BASES[baseKey].parser, importPath: `../../${BASES[baseKey].dir}/parser` },
+      });
+      expect(emitted.get('index.r3f.ts'), baseKey).toMatch(flag);
+    }
+  });
+
+  it('mounts a `pending` slice on its base rather than dropping to the fallback', () => {
+    // A gap still needs `visible` and the workspace split, and
+    // `GenericNodeFallback` carries neither. `renderIntent: 'pending'` is what
+    // keeps the badge honest instead of the absent registration.
+    const emitted = reusedParserFiles({
+      typeName: 'ReflectionProbe',
+      lower: 'reflectionprobe',
+      camel: 'reflectionProbe',
+      intent: 'pending',
+      base: BASES.node3d,
+      toSrc: '../../../',
+      toBase: '../../base/node3d',
+      reusedParser: { fn: 'parseNode3D', importPath: '../../base/node3d/parser' },
+    });
+    expect(emitted.get('index.r3f.ts')).toMatch(/^\s*renderIntent: 'pending',$/m);
+  });
+
+  it('leaves a `pending` Control on the passthrough fallback', () => {
+    // Deliberately not symmetric. The Node bases mount an invisible transform
+    // group, but mounting `Control` swaps `display: contents` passthrough for
+    // positioned anchor-laid-out divs — a render change, not a badge fix.
+    const emitted = reusedParserFiles({
+      typeName: 'ProgressBar',
+      lower: 'progressbar',
+      camel: 'progressBar',
+      intent: 'pending',
+      base: BASES.control,
+      toSrc: '../../../../',
+      toBase: '../../../2d/ui/control',
+      reusedParser: { fn: 'parseControl', importPath: '../../../2d/ui/control/parser' },
+    });
+    expect(emitted.has('index.r3f.ts')).toBe(false);
   });
 
   it('writes nothing on a dry run', () => {

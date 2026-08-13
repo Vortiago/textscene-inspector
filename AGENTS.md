@@ -68,7 +68,10 @@ Scaffold: `pnpm new:node <TypeName> <category-dir> --intent <draws|transform-onl
 together, because `sheets.test.mjs` asserts they agree: `draws` = own
 types/parser/Component and `unreviewed`; `transform-only` = ADR-0008, reuses the base,
 registers `renderIntent: 'transform-only'`, `linter-only`; `pending` = parsed but not
-drawn, registers NO component, `unimplemented`. `--chain` names the Godot parent and is
+drawn, registers the base under `renderIntent: 'pending'` (except `--base control`),
+`unimplemented`. The badge reads the declared intent, never the absence of a
+registration: dropping the registration also drops `visible` and puts the type in both
+workspaces. `--chain` names the Godot parent and is
 checked against ClassDB: `NODE_BASE_TYPES` is derived from the node catalog's ancestry
 (`pnpm nodes:base-types` → `linter/nodeBaseTypes.generated.ts`), so nothing is written
 by hand, but a type name Godot does not know gets no base and silently receives zero

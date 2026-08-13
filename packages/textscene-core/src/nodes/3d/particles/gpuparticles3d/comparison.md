@@ -9,9 +9,10 @@ renders_as: nothing yet — Godot draws a particle cloud, the previewer does not
 
 # GPUParticles3D
 
-A GPU-simulated particle emitter. The previewer renders it as a transform-only
-node (ADR-0008) — it does not run the particle simulation, so it contributes no
-visible geometry to the frame.
+A GPU-simulated particle emitter. The previewer does not run the simulation, so
+it contributes no visible geometry — a gap, not a design (`renderIntent:
+'pending'`). The Node3D base still mounts, so the emitter's transform, its
+`visible` flag and its exclusion from the 2D canvas all behave.
 
 ## Properties exercised
 

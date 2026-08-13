@@ -2,6 +2,10 @@
  * The files a `draws` slice gets: its own types, parser, Component and the
  * tests for both, plus the two registrations.
  *
+ * The registration carries `base.workspaceFlag` for the same reason the
+ * transform-only template does: which canvas draws a type follows from its
+ * base, not from whether it has a Component of its own.
+ *
  * The indentation below is the emitted file's, not this module's.
  */
 
@@ -126,7 +130,10 @@ export { ${camel}Registration };
       `import { nodeComponentRegistry } from '${toSrc}r3f/NodeComponentRegistry';
 import { ${typeName} } from './Component';
 
-nodeComponentRegistry.register({ typeName: '${typeName}', Component: ${typeName} });
+nodeComponentRegistry.register({
+  typeName: '${typeName}',
+  Component: ${typeName},
+${base.workspaceFlag ? `  ${base.workspaceFlag}\n` : ''}});
 
 export { ${typeName} };
 `

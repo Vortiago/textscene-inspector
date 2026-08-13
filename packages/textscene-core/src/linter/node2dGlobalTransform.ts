@@ -214,20 +214,29 @@ export function isConformal(transform: Transform2DMatrix): boolean {
  * length) keeps genuine skew — even a few degrees of it — well clear of the
  * tolerance while absorbing that float dust.
  *
- * A degenerate (zero-length) axis is handled explicitly rather than left to
- * fall out of the division: `Vector2::normalize()` (`core/math/vector2.cpp:52-58`)
+ * Two degenerate cases short-circuit, and they are different:
+ *
+ * A zero-LENGTH axis — `Vector2::normalize()` (`core/math/vector2.cpp:52-58`)
  * guards `if (l != 0)` and otherwise leaves the vector at `(0, 0)`, so
- * `columns[0].normalized().dot(...)` is exactly `0` whenever either column
- * is degenerate, making `get_skew()` exactly `0` too — Godot stays SILENT on
- * skew here (even though the SAME degenerate transform trips the separate
- * zero-scale check). Dividing by a zero length instead would produce `NaN`,
- * which `isZeroApprox` calls not-zero — the opposite answer.
+ * `columns[0].normalized().dot(...)` is exactly `0`, making `get_skew()` exactly
+ * `0` too. Dividing by a zero length instead would produce `NaN`, which
+ * `isZeroApprox` calls not-zero — the opposite answer.
+ *
+ * A zero DETERMINANT with two non-zero axes — the axes are parallel, and
+ * `get_skew()` multiplies `columns[1].normalized()` by `SIGN(det)`, which is
+ * exactly `0` (`typedefs.h:123-126`). Same silence, and the length guard above
+ * does not reach it. Exact, matching `SIGN`: at `det == 1e-30` the sign is `+1`
+ * and Godot really does report skew.
+ *
+ * Godot stays SILENT on skew in both, even though either transform trips the
+ * separate zero-scale check.
  */
 export function hasZeroGlobalSkew(transform: Transform2DMatrix): boolean {
   const { a, b, c, d } = transform;
   const len0 = Math.hypot(a, b);
   const len1 = Math.hypot(c, d);
   if (len0 === 0 || len1 === 0) return true; // Vector2::normalize()'s zero-vector guard
+  if (a * d - c * b === 0) return true; // SIGN(det) == 0 zeroes the second axis
   const normalizedDot = (a * c + b * d) / (len0 * len1);
   return isZeroApprox(normalizedDot);
 }

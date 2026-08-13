@@ -22,9 +22,14 @@ export function reusedParserFiles({ typeName, lower, camel, intent, base, toSrc,
      ? `.
  * Draws nothing by design (ADR-0008), so index.r3f.ts registers ${base.component}
  * and its children still land in the right transform space.`
-     : `.
+     : base.invisibleBase
+       ? `.
+ * Not rendered yet: index.r3f.ts registers ${base.component} under
+ * \`renderIntent: 'pending'\`, so the tree still reports it as not implemented
+ * while \`visible\` and the workspace split keep working.`
+       : `.
  * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.`
+ * GenericControlFallback and the tree keeps reporting it as not implemented.`
  }
  */
 
@@ -41,12 +46,21 @@ nodeRegistry.register(${camel}Registration);
 export { ${camel}Registration };
 `
     );
-    if (intent === 'transform-only') {
+    // A `pending` slice mounts the base too, and says so with its own intent:
+    // `GenericNodeFallback` carries no `visible`, and an unregistered type reads
+    // as belonging to BOTH canvases. Only `control` opts out — see `invisibleBase`.
+    if (intent === 'transform-only' || (intent === 'pending' && base.invisibleBase)) {
+      const pending = intent === 'pending';
       files.set(
         'index.r3f.ts',
         `/**
- * ${typeName} draws nothing of its own (ADR-0008) — reuse the ${base.component}
- * component so its children still land in the right transform space.
+ * ${typeName} ${
+   pending
+     ? `draws nothing here YET — the badge reads "not implemented". The
+ * ${base.component} base still mounts, for \`visible\` and the workspace split.`
+     : `draws nothing of its own (ADR-0008) — reuse the ${base.component}
+ * component so its children still land in the right transform space.`
+ }
  */
 
 import { nodeComponentRegistry } from '${toSrc}r3f/NodeComponentRegistry';
@@ -55,7 +69,7 @@ import { ${base.component} } from '${toBase}/Component';
 nodeComponentRegistry.register({
   typeName: '${typeName}',
   Component: ${base.component},
-${base.workspaceFlag ? `  ${base.workspaceFlag}\n` : ''}  renderIntent: 'transform-only',
+${base.workspaceFlag ? `  ${base.workspaceFlag}\n` : ''}  renderIntent: '${intent}',
 });
 `
       );

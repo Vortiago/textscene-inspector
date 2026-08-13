@@ -29,6 +29,7 @@ export const BASES = {
     propsType: 'Node3DProperties',
     parserTestCases: NODE3D_PARSER_TEST_CASES,
     hasLinterParser: true,
+    invisibleBase: true,
   },
   node2d: {
     dir: 'base/node2d',
@@ -40,6 +41,7 @@ export const BASES = {
     workspaceFlag: 'canvasItem: true,',
     parserTestCases: NODE2D_PARSER_TEST_CASES,
     hasLinterParser: true,
+    invisibleBase: true,
   },
   control: {
     workspaceFlag: '',
@@ -52,6 +54,10 @@ export const BASES = {
     // A leaf declares only its OWN members.
     parserTestCases: CONTROL_PARSER_TEST_CASES,
     hasLinterParser: true,
+    // The one base a `pending` slice must NOT mount: `Control` lays out anchors
+    // and offsets into positioned divs, where the others are invisible groups.
+    // Mounting it to fix a badge would be a render change.
+    invisibleBase: false,
   },
   node: {
     dir: 'node',
@@ -65,5 +71,6 @@ export const BASES = {
     // `nodes/node/` registers the ten process/threading/editor keys every type
     // inherits, so a leaf must import it like any other base.
     hasLinterParser: true,
+    invisibleBase: true,
   },
 };
