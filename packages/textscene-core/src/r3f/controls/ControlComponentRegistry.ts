@@ -65,17 +65,22 @@ export interface NativeControlComponentProps {
    */
   childRects: ReadonlyMap<string, Rect2>;
   /**
-   * This Control's draw-order key — `bandBase(canvasLayer) + paintIndex`
-   * (`native/controlDrawOrder.ts`) — for the painter's own mesh(es). Every 2D
+   * This Control's place in the canvas — the SAME key every Node2D canvas item
+   * takes (`canvasPaintOrder.ts`), for the painter's own mesh(es). Every 2D
    * material in this codebase is transparent + depthWrite=false, so three's
    * transparent sort decides paint order from this value, never from z.
+   *
+   * A painter that wraps pixels in a GROUP of its own must put this on that
+   * group as well: three reads a drawn object's position from its nearest
+   * enclosing group first, so a bare group resets everything inside it to the
+   * front of the canvas.
    */
   renderOrder: number;
   /**
    * A SECOND draw-order key for chrome that must draw AFTER this node's
    * ENTIRE subtree, regardless of `renderOrder` (this node's OWN paint
-   * slot — every descendant necessarily exceeds it, since `paintIndex` is a
-   * single pre-order counter across the whole tree). Godot's own answer to
+   * slot — every descendant necessarily exceeds it, since a node draws at the
+   * front of the range its subtree occupies). Godot's own answer to
    * "draw after my children" is `INTERNAL_MODE_BACK`: `Node::add_child(...,
    * INTERNAL_MODE_BACK)` places a child AFTER every normal child regardless
    * of when it was added, and `ScrollContainer` is exactly such a case —
@@ -86,15 +91,14 @@ export interface NativeControlComponentProps {
    * same reason (their own source files), so this is a general capability
    * on the contract, not a `ScrollContainer` special case.
    *
-   * `bandBase(canvasLayer) + subtreeLastPaintIndex`
-   * (`native/controlDrawOrder.ts`'s `controlRenderOrder`, fed
-   * `SolvedControl.subtreeLastPaintIndex` — `native/controlRectSolver.ts`'s
-   * `assignPaintIndex`). That value equals the LAST descendant's own
-   * `renderOrder` (or this node's own, if it is a leaf), and the solver
-   * hands the next sibling EXACTLY one past it — so a painter using this
-   * value must offset by a FRACTION strictly inside that one-wide gap (e.g.
-   * `+0.25`/`+0.5` for two layers of chrome) to draw after every descendant
-   * without ever reaching the next sibling's own paint slot.
+   * The canvas key at the LAST draw-sequence value in this node's own run —
+   * a subtree owns a CONTIGUOUS range (`canvasPaintOrder.ts`), so "after all
+   * of it" is simply that range's end. It equals the last descendant's own
+   * `renderOrder` (or this node's own, if it is a leaf), and the next sibling
+   * starts EXACTLY one past it — so a painter using this value must offset by
+   * a FRACTION strictly inside that one-wide gap (e.g. `+0.25`/`+0.5` for two
+   * layers of chrome) to draw after every descendant without ever reaching the
+   * next sibling's own slot.
    *
    * REQUIRED even though only `INTERNAL_MODE_BACK`-style painters read it.
    * Making it optional would let a painter fall back to `renderOrder` when it

@@ -1,12 +1,13 @@
 /**
  * YSortDispatcher — collects children of a y_sort_enabled node, sorts them
- * by (effectiveZ bucket → sortY → tree order), assigns rank-based z, and
- * re-renders in that order.
+ * by (effectiveZ bucket → sortY → tree order), and re-renders in that order.
  *
- * Within-bucket rank-based z sub-steps:
- *   z = effectiveZ * Z_INDEX_STEP + ((rank + 1) / (K + 1)) * slot.width
- * where slot.width (≤ Z_INDEX_STEP * 0.5) is this y-sort subtree's allotted
- * draw-order band (narrowed when sibling y-sort subtrees share a z-index step).
+ * The sort reaches the renderer as DRAW SEQUENCE: this node owns a contiguous
+ * run of sequence values covering its whole subtree (`canvasPaintOrder.ts`),
+ * and the pass re-packs that run in sorted order. Self-contained by
+ * construction — nothing outside can land inside the run — and each item keeps
+ * a sub-run as wide as its own subtree needs, so a sorted item's descendants
+ * draw between it and the next-ranked item with no budget to ration.
  *
  * A y_sort_enabled TileMapLayer is decomposed per-Y-group via `groupBySortY`:
  * each distinct sort-Y becomes a separate tileGroup item at its own rank,
@@ -23,7 +24,7 @@
 import { Fragment, useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
-import { useYSortContext, useYSortSlot, type YSortContextValue } from './contexts/YSortContext.js';
+import { useYSortContext, type YSortContextValue } from './contexts/YSortContext.js';
 import {
   Modulate2DContext,
   multiplyModulate,
@@ -37,12 +38,20 @@ import { useCanvasItemLighting } from './lighting2d/useCanvasItemLighting.js';
 import {
   EffectiveZProvider,
   accumulateCanvasItemZ,
+  useCanvasLayerIndex,
   useEffectiveZ,
 } from './lighting2d/canvasItemPlacement.js';
+import {
+  allocatePaintRange,
+  canvasRenderOrder,
+  paintRangeSize,
+  type PaintRange,
+} from './canvasPaintOrder.js';
+import { PaintRangeProvider, useLayerRank, usePaintRange } from './contexts/PaintOrderContext.js';
 import { canvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer.js';
 import { CanvasItemBlendMode } from '../resources/materials/canvasitemmaterial/types.js';
-import { Z_INDEX_STEP, node2dGroupProps, node2dGroupSpread } from './node2dTransform.js';
-import { drawnSources, tileSourceZ } from './tileSourceZ.js';
+import { node2dGroupProps, node2dGroupSpread } from './node2dTransform.js';
+import { drawnSources } from './drawnSources.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData.js';
@@ -241,6 +250,8 @@ function LiftedAncestors({
       })
     );
     wrapped = (
+      // paint-order-safe: a lifted ancestor's restored transform, which
+      // wraps the item's own group rather than sitting inside it.
       <group {...spread} visible={props.visible !== false}>
         {wrapped}
       </group>
@@ -285,9 +296,15 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
   // in the tree, so their selection paths have to be rebuilt from this node's
   // own path (the dispatcher provided it when it rendered this node).
   const basePath = useNodePath() ?? node.name;
-  // Ranks are laid out within THIS subtree's tree-order slot width (so sibling
-  // y-sort subtrees don't overlap); the slot base is already in the group's z.
-  const slot = useYSortSlot();
+  // This node's own run of draw-sequence values, and the sequence it draws its
+  // own pixels at — the sorted items go after it, exactly as Godot appends the
+  // y-sorted node itself before descending (`_collect_ysort_children`).
+  const paintRange = usePaintRange();
+  const ownSequence = useMemo(
+    () => allocatePaintRange(paintRange, node.children, true).self,
+    [paintRange, node.children]
+  );
+  const layerRank = useLayerRank(useCanvasLayerIndex());
 
   // Collect raw items (y_sort TileMapLayer → one tileGroup placeholder per layer).
   const rawItems = useMemo(() => collectYSortedItems(node, parent, 0), [node, parent]);
@@ -371,24 +388,42 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
     return result;
   }, [items]);
 
+  // Re-pack this subtree's own run of draw-sequence values in SORTED order.
+  //
+  // The run was allocated by tree position and sized to cover the whole
+  // subtree, so re-laying it out here is self-contained: nothing outside can
+  // land inside it, whatever order this pass chooses. Each item keeps a run as
+  // wide as its own subtree needs, which is what lets a sorted item's
+  // descendants draw between it and the next-ranked item without a budget to
+  // ration — the reason the fractional scheme this replaces had to narrow a
+  // shrinking float band at every level.
+  const packed = useMemo(() => {
+    let cursor = ownSequence + 1;
+    return sorted.map(({ item }) => {
+      // A tile-group item is ONE drawn group with no subtree — several of them
+      // come out of a single layer, and they are what that layer's own reserve
+      // was held back for. Sizing them by the layer node they name would claim
+      // a fresh reserve PER ROW and run off the end of the parent's run.
+      const size = item.kind === 'tileGroup' || !item.node ? 1 : paintRangeSize(item.node);
+      const range: PaintRange = { base: cursor, size };
+      cursor += size;
+      return { item, range };
+    });
+  }, [sorted, ownSequence]);
+
   return (
     <>
-      {sorted.map(({ item, rank, bucketSize: K }) => {
-        const sortZ = ((rank + 1) / (K + 1)) * slot.width;
-        const fullZ = item.effectiveZ * Z_INDEX_STEP + sortZ;
-
+      {packed.map(({ item, range }) => {
         if (item.kind === 'tileGroup' && item.node) {
-          // The Y-group's whole draw position (z-index bucket + rank) rides the group;
-          // its meshes sit at their own per-source sub-step RELATIVE to it (see the
-          // group's `position` below), so the rank is applied ONCE. Key on the layer's
-          // name so sibling y-sort TileMapLayers can't collide on a shared treeOrder.
+          // Key on the layer's name so sibling y-sort TileMapLayers can't
+          // collide on a shared treeOrder.
           return (
             <Fragment key={`tg-${item.node.name}-${item.treeOrder}`}>
               <LiftedAncestors liftedPast={item.liftedPast}>
                 <TileGroupRenderer
                   item={item}
-                  z={fullZ}
-                  band={slot.width / (K + 1)}
+                  layerRank={layerRank}
+                  sequence={range.base}
                   node={item.node}
                 />
               </LiftedAncestors>
@@ -397,21 +432,15 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
         }
 
         if (item.node) {
-          // The item's own descendants draw between its rank and the next one,
-          // so hand them exactly that gap. Without the narrowing a nested
-          // subtree spends the whole fine range and reaches past its sibling's
-          // rank, which reverses the pair the sort just ordered.
           return (
-            <YSortZProvider key={`n-${item.treeOrder}`} value={fullZ}>
-              <YSortSlotProvider value={{ base: 0, width: slot.width / (K + 1) }}>
-                <LiftedAncestors liftedPast={item.liftedPast}>
-                  <DispatchedNode
-                    node={item.node}
-                    path={liftedPath(basePath, item.liftedPast, item.node.name)}
-                  />
-                </LiftedAncestors>
-              </YSortSlotProvider>
-            </YSortZProvider>
+            <PaintRangeProvider key={`n-${item.treeOrder}`} value={range}>
+              <LiftedAncestors liftedPast={item.liftedPast}>
+                <DispatchedNode
+                  node={item.node}
+                  path={liftedPath(basePath, item.liftedPast, item.node.name)}
+                />
+              </LiftedAncestors>
+            </PaintRangeProvider>
           );
         }
         return null;
@@ -421,16 +450,33 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
 }
 
 
-/** Render a TileMapLayer Y-group as TileSourceMeshes at draw position `z`. */
-function TileGroupRenderer({ item, z, band, node }: {
+/** Render a TileMapLayer Y-group as TileSourceMeshes at one canvas draw position. */
+function TileGroupRenderer({ item, layerRank, sequence, node }: {
   item: YSortItem;
-  /** The Y-group's full draw position (z-index bucket + y-sort rank), carried by the group. */
-  z: number;
-  /** Gap to the next rank — the room this group's atlas sources may use. */
-  band: number;
+  /** The canvas this row draws on, as a rank (`canvasPaintOrder.ts`). */
+  layerRank: number;
+  /**
+   * The Y-group's draw sequence. Composed into the full key HERE rather than by
+   * the caller, because the third term — `z_final` — is only correct inside
+   * `<LiftedAncestors>`: that is what provides the accumulated `EffectiveZ`,
+   * while `item.effectiveZ` is accumulated from `YSortContext`, which has no
+   * provider anywhere and so always starts at 0. Keying off the latter dropped
+   * every `z_index` at or above the y-sort root, splitting a node against
+   * itself — its own body in the real bucket, its tile rows in bucket 0.
+   *
+   * The key rides the GROUP so all of this row's atlas batches share it; their
+   * own `renderOrder` then orders them WITHIN it, a batching artifact rather
+   * than a draw position (Godot interleaves a layer's cells in scan order).
+   */
+  sequence: number;
   node: TscnNode;
 }): ReactNode | null {
   const tileProps = node.properties as TileMapLayerProperties;
+  const renderOrder = canvasRenderOrder({
+    layerRank,
+    zFinal: accumulateCanvasItemZ(useEffectiveZ(), tileProps),
+    sequence,
+  });
   const { model, status } = useTileSetModel(tileProps.tile_set);
   // A y-sorted layer is decomposed into per-Y groups here instead of rendering
   // through <TileMapLayer>, so its CanvasItem tint has to be resolved here too —
@@ -475,20 +521,25 @@ function TileGroupRenderer({ item, z, band, node }: {
     return (
       <group
         name={`TileGroup_${node.name}_${item.treeOrder}`}
-        position={[originX, originY, z]}
+        position={[originX, originY, 0]}
+        renderOrder={renderOrder}
       />
     );
   }
 
   return (
-    <group name={`TileGroup_${node.name}_${item.treeOrder}`} position={[originX, originY, z]}>
-      {cellsBySource.map(({ sourceId, sourceIndex, sourceCount, source, cells: sourceCells }) => (
+    <group
+      name={`TileGroup_${node.name}_${item.treeOrder}`}
+      position={[originX, originY, 0]}
+      renderOrder={renderOrder}
+    >
+      {cellsBySource.map(({ sourceId, sourceIndex, source, cells: sourceCells }) => (
         <TileSourceMesh
           key={`${sourceId}_${item.treeOrder}`}
           source={source}
           cells={sourceCells}
           grid={model}
-          z={tileSourceZ(sourceIndex, sourceCount, band)}
+          renderOrder={sourceIndex}
           color={color}
           opacity={opacity}
           name={node.name}
@@ -503,7 +554,6 @@ function TileGroupRenderer({ item, z, band, node }: {
 // --- Imports needed by components above ---
 
 import { TileSourceMesh } from './TileSourceMesh.js';
-import { YSortSlotProvider, YSortZProvider } from './contexts/YSortContext.js';
 // Sorted children go back through the ONE dispatcher rather than a second
 // renderer here: that is what keeps `instance=` sub-scenes, selection
 // registration, hidden-node gating and the workspace split working under

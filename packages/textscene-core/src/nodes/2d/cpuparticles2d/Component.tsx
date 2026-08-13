@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
+import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useCanvas2DMap } from '../../../r3f/canvas2DTextureDecode';
@@ -137,7 +138,7 @@ function ParticleField({
   useEffect(() => () => geometry?.dispose(), [geometry]);
 
   return (
-    <group ref={setContainer} name={`${name}_Particles`}>
+    <CanvasItemGroup ref={setContainer} name={`${name}_Particles`}>
       {missing ? (
         // One marker for the emitter, not one per particle: the Resources tab
         // is where the path is named, and N overlapping magenta quads would
@@ -159,6 +160,6 @@ function ParticleField({
           />
         </mesh>
       ) : null}
-    </group>
+    </CanvasItemGroup>
   );
 }

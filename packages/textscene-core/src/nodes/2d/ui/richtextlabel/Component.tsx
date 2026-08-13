@@ -54,6 +54,7 @@
  * every other native text painter.
  */
 import { useMemo } from 'react';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { multiplyModulate, useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
@@ -122,7 +123,7 @@ export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeCon
           ? underlineRectPx(placement.layout.lines[0]!.glyphs, placement.layout.baselineOffsetPx, underlineMetrics)
           : null;
         return (
-          <group key={index} position={[0, -y, 0]}>
+          <CanvasItemGroup key={index} position={[0, -y, 0]}>
             <TextRun
               layout={placement.layout}
               fontSizePx={placement.fontSizePx}
@@ -133,7 +134,7 @@ export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeCon
               renderOrder={renderOrder}
             />
             {underline && (
-              <group position={[underline.x0, -underline.topPx, 0]}>
+              <CanvasItemGroup position={[underline.x0, -underline.topPx, 0]}>
                 <ControlQuad
                   width={underline.x1 - underline.x0}
                   height={underline.heightPx}
@@ -141,9 +142,9 @@ export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeCon
                   opacity={runTint.a * RICH_TEXT_LABEL_UNDERLINE_ALPHA}
                   renderOrder={renderOrder}
                 />
-              </group>
+              </CanvasItemGroup>
             )}
-          </group>
+          </CanvasItemGroup>
         );
       })}
     </>

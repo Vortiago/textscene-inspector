@@ -7,6 +7,7 @@
  * width, 8px along the split axis) instead of `hsplitter`.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
@@ -61,7 +62,7 @@ export function VSplitContainer({ solveNode, rect, theme, renderOrder, meta }: N
   const iconRect = splitGrabberIconRect(true, { width: rect.w, height: rect.h }, draggerPos, separation, ICON_SIZE);
 
   return (
-    <group position={[iconRect.x, -iconRect.y, 0]}>
+    <CanvasItemGroup position={[iconRect.x, -iconRect.y, 0]}>
       <ControlQuad
         renderOrder={renderOrder}
         width={iconRect.w}
@@ -70,6 +71,6 @@ export function VSplitContainer({ solveNode, rect, theme, renderOrder, meta }: N
         opacity={tint.opacity}
         map={texture}
       />
-    </group>
+    </CanvasItemGroup>
   );
 }

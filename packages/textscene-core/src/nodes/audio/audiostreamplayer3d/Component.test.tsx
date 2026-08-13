@@ -130,8 +130,13 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     // Godot draws a camera-facing CIRCLE of lines at
     // `unit_size x soft_multiplier`; the default ATTENUATION_INVERSE_DISTANCE
     // multiplier is 12, so 25 x 12 = 300 — not unit_size raw.
-    const line = (group!.instance as unknown as THREE.Object3D).children[0] as THREE.Line;
-    const position = line.geometry.getAttribute('position');
+    // Traversed, not indexed: `<GizmoLine>` now wraps its line in a group that
+    // carries the gizmo's draw order (`GIZMO_GROUP_ORDER`).
+    let line: THREE.Line | undefined;
+    (group!.instance as unknown as THREE.Object3D).traverse((o) => {
+      if (!line && (o as THREE.Line).isLine) line = o as THREE.Line;
+    });
+    const position = line!.geometry.getAttribute('position');
     let max = 0;
     for (let i = 0; i < position.count; i++) {
       max = Math.max(max, Math.hypot(position.getX(i), position.getY(i), position.getZ(i)));

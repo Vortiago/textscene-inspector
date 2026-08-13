@@ -1,14 +1,15 @@
 /**
  * Parity: legacy TileMap renders each enabled layer's cells in order — layer
- * z_index moves a full Z_INDEX_STEP (interleaves with sibling CanvasItems),
- * layer index breaks ties with TILE_LAYER_STEP.
+ * draw order within the node is a rank over `(layer z_index, layer index,
+ * atlas source)`, carried by each batch mesh's own `renderOrder`.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
+import { PAINT_SEQUENCE_STRIDE } from '../../../../r3f/canvasPaintOrder';
 import { parseTileMap } from './parser';
 import { TileMap } from './Component';
-import { Z_INDEX_STEP, TILE_LAYER_STEP } from '../../../../r3f/node2dTransform';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
@@ -64,19 +65,17 @@ describe('TileMap render parity', () => {
 
     const meshes = r.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(2);
-    const [layer0, layer1] = meshes.map((m) => m.instance as THREE.Mesh);
-    // Atlas sources sit at a FRACTION of one layer step rather than at the
-    // layer base, so a layer's sources can never reach the layer above it.
-    // The FIRST source takes no nudge at all — a lone source must not lift the
-    // layer off the z it shares with its siblings.
-    const sourceNudge = 0;
-    expect(layer0!.position.z).toBeCloseTo(sourceNudge, 8);
-    expect(layer1!.position.z).toBeCloseTo(
-      1 * Z_INDEX_STEP + 1 * TILE_LAYER_STEP + sourceNudge,
-      8
-    );
-    // The ordering the rule exists for still holds.
-    expect(layer1!.position.z).toBeGreaterThan(layer0!.position.z);
+    const [layer0, layer1] = meshes.map((m) => m.instance as THREE.Object3D);
+    // Godot's TileMap `add_child`s a real `TileMapLayer` CanvasItem per layer
+    // and forwards `set_z_index` to it (`scene/2d/tile_map.cpp:279,376`), so a
+    // layer is a canvas item in its own right: its key rides its GROUP, which
+    // is what three reads a drawn object's position from.
+    const zBucket = (o: THREE.Object3D) => Math.floor(nearestGroupOrder(o) / PAINT_SEQUENCE_STRIDE);
+    expect(nearestGroupOrder(layer0!)).toBeLessThan(nearestGroupOrder(layer1!));
+    // …and `layer_1/z_index = 1` puts that layer a whole z BUCKET up, which is
+    // what lets it interleave with the TileMap's siblings rather than only with
+    // the other layers. A rank shared across one canvas item cannot express it.
+    expect(zBucket(layer1!)).toBe(zBucket(layer0!) + 1);
   });
 
   it('renders an empty group for a TileMap with a tile_set but zero layers', async () => {

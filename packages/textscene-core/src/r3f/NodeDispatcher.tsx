@@ -35,12 +35,18 @@ import type * as THREE from 'three';
 import type { TscnExternalResource, TscnNode, TscnScene } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
 import {
-  hasYSortDescendant,
-  YSortSlotProvider,
-  YSortZProvider,
-  useYSortSlot,
-  useYSortZContext,
-} from './contexts/YSortContext.js';
+  allocatePaintRange,
+  canvasLayerOf,
+  CANVAS_LAYER_TYPES,
+  declaredCanvasLayers,
+  layerRanks,
+  WHOLE_CANVAS_RANGE,
+} from './canvasPaintOrder.js';
+import {
+  LayerRanksProvider,
+  PaintRangeProvider,
+  usePaintRange,
+} from './contexts/PaintOrderContext.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { GenericNodeFallback } from './internal/generic-node-fallback/index';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
@@ -66,7 +72,6 @@ import { node2dGroupProps } from './node2dTransform.js';
 import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
 import {
   CanvasLayerIndexProvider,
-  DEFAULT_CANVAS_LAYER,
   EffectiveZProvider,
 } from './lighting2d/canvasItemPlacement.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
@@ -122,8 +127,15 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
   }, [nodes]);
 
   const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
+  // The canvas's layer ranks and the root nodes' draw-sequence runs, both pure
+  // functions of the same tree — which is exactly why the Control walk can
+  // derive the same numbers from the same nodes without this walk telling it.
+  const ranks = useMemo(() => layerRanks(declaredCanvasLayers(nodes)), [nodes]);
+  const rootRanges = useMemo(() => allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children, [nodes]);
 
   return (
+    // paint-order-safe: the delegated pointer root, ABOVE every canvas
+    // item — each item's own wrapper is nearer to its pixels.
     <group
       onPointerDown={handlers.onPointerDown}
       onPointerUp={handlers.onPointerUp}
@@ -135,9 +147,13 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
           each item multiplies it into its OWN pixels once, and an Unshaded item
           skips it entirely, exactly as Godot's base pass does. */}
       <CanvasModulateContext.Provider value={canvasModulate}>
-        {nodes.map((node) => (
-          <DispatchedNode key={node.name} node={node} path={node.name} />
-        ))}
+        <LayerRanksProvider value={ranks}>
+          {nodes.map((node, i) => (
+            <PaintRangeProvider key={node.name} value={rootRanges[i]!}>
+              <DispatchedNode node={node} path={node.name} />
+            </PaintRangeProvider>
+          ))}
+        </LayerRanksProvider>
       </CanvasModulateContext.Provider>
     </group>
   );
@@ -242,7 +258,20 @@ function PlainNode({
   const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
   const { hiddenNodePaths, registerNodeObject, unregisterNodeObject } = useSelection();
   const workspace = useCanvasWorkspace();
-  const parentSlot = useYSortSlot();
+  const paintRange = usePaintRange();
+  // Before the early returns, for rules-of-hooks. Memoized because
+  // `allocatePaintRange` sizes each child by walking its whole subtree:
+  // unmemoized, every node re-walks its descendants on every render, which is
+  // quadratic in depth across a scene.
+  const allocated = useMemo(
+    () =>
+      allocatePaintRange(
+        paintRange,
+        node.children,
+        (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true
+      ),
+    [paintRange, node.children, node.properties]
+  );
   const isHidden = hiddenNodePaths.has(path);
 
   const wrapperRef = useCallback(
@@ -269,9 +298,6 @@ function PlainNode({
   const isCanvasItem =
     !isViewportSurface(node.type) &&
     (nodeComponentRegistry.isCanvasItem(node.type) || TWO_D_UI_TYPES.has(node.type));
-  // Memoized (before the early returns, for rules-of-hooks) so the recursive
-  // subtree scan for the slot distributor runs once per node, not every render.
-  const hasYSortChild = useMemo(() => hasYSortDescendant(node), [node]);
   // A CanvasLayer is its OWN canvas: the root canvas's CanvasModulate does not
   // reach it, and any CanvasModulate inside it tints only this layer. The
   // subtree scan already refuses to descend into a CanvasLayer when LOOKING for
@@ -290,16 +316,15 @@ function PlainNode({
   // later change publish one without the others.
   const canvasLayer = useMemo(
     () =>
-      node.type === 'CanvasLayer'
+      CANVAS_LAYER_TYPES.has(node.type)
         ? {
             modulate: canvasModulateColor(node.children),
-            index: (node.properties as { layer?: number }).layer ?? DEFAULT_CANVAS_LAYER,
+            index: canvasLayerOf(node),
           }
         : null,
     [node]
   );
 
-  const rankZ = useYSortZContext();
   if (workspace === '3d' && isCanvasItem) return null;
   if (
     workspace === '2d' &&
@@ -317,61 +342,27 @@ function PlainNode({
     return null;
   }
 
-  // If this non-y-sort container has a y-sort descendant, divide its z-slot into a
-  // tree-order sub-slot per child, so sibling y-sort subtrees (e.g. Floor vs Walls
-  // under the non-y-sorted dungeon root) get DISJOINT, tree-ordered z-bands instead
-  // of both landing in the same fine band. A y-sort child sorts within its slot; a
-  // plain child just sits at its slot base. Pure non-y-sort scenes never distribute.
-  const distribute =
-    isCanvasItem &&
-    (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled !== true &&
-    node.children.length > 0 &&
-    hasYSortChild;
-  // A y-sort pass hands its rank z to exactly ONE node — the item it sorted,
-  // i.e. this one when `rankZ` is set. That rank is this node's whole draw
-  // position; its descendants are part of the same atomic unit and draw at their
-  // own z RELATIVE to it. So the rank is consumed here and cleared for the
-  // subtree — leaving it in context would re-add it at every nesting level. The
-  // slot is NOT reset: the y-sort pass already narrowed it to the gap before this
-  // item's next-ranked sibling, which is exactly the band the subtree may use.
-  const consumedRank = rankZ !== null;
-  const subWidth = distribute ? parentSlot.width / node.children.length : 0;
-  const inlineChildren = node.children.map((child, i) => {
-    const el = <DispatchedNode key={child.name} node={child} path={joinPath(path, child.name)} />;
-    return distribute ? (
-      <YSortSlotProvider key={child.name} value={{ base: i * subWidth, width: subWidth }}>
-        {el}
-      </YSortSlotProvider>
-    ) : (
-      el
-    );
-  });
+  // Every child gets its own run of draw-sequence values, in the order Godot's
+  // walk visits them — `show_behind_parent` children ahead of this node, the
+  // rest after it. A child's run covers its whole subtree, so nothing inside it
+  // can reach a sibling's sequence however deeply it nests.
+  const inlineChildren = node.children.map((child, i) => (
+    <PaintRangeProvider key={child.name} value={allocated.children[i]!}>
+      <DispatchedNode node={child} path={joinPath(path, child.name)} />
+    </PaintRangeProvider>
+  ));
 
   const children: ReactNode[] = [];
   if (inlineChildren.length > 0) {
-    children.push(
-      consumedRank ? (
-        <YSortZProvider key="__inline" value={null}>
-          {inlineChildren}
-        </YSortZProvider>
-      ) : (
-        <Fragment key="__inline">{inlineChildren}</Fragment>
-      )
-    );
+    children.push(<Fragment key="__inline">{inlineChildren}</Fragment>);
   }
   if (extraChildren) {
-    // Rank-cleared exactly like the inline children. These are an instance's
-    // injected sub-scene ROOTS; leaving the parent's rank readable made every
-    // root adopt it as its own z, collapsing a multi-root sub-scene onto one
-    // draw position and discarding each root's own `z_index`.
+    // An instance's injected sub-scene roots draw after this node's authored
+    // children, from the room `reservesRoom` held back for exactly them.
     children.push(
-      consumedRank ? (
-        <YSortZProvider key="__extra" value={null}>
-          {extraChildren}
-        </YSortZProvider>
-      ) : (
-        <Fragment key="__extra">{extraChildren}</Fragment>
-      )
+      <PaintRangeProvider key="__extra" value={allocated.tail}>
+        {extraChildren}
+      </PaintRangeProvider>
     );
   }
 
@@ -396,6 +387,10 @@ function PlainNode({
   // `node` object (e.g. the user fixed the authored data that crashed it).
   return (
     <NodePathProvider path={path}>
+      {/* paint-order-safe: the selection wrapper, OUTSIDE the item's own
+          group — `<CanvasItem2D>` renders that one inside this and it is
+          nearer to every mesh. A type that draws without the CanvasItem
+          ritual takes the key from `useCanvasItemRenderOrder` instead. */}
       <group ref={wrapperRef} visible={!isHidden}>
         <ErrorBoundary
           resetKeys={[node]}
@@ -445,6 +440,7 @@ function PlainNode({
 function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const { externalResources } = useSceneResources();
   const loader = useResourceLoader();
+  const paintRange = usePaintRange();
   const instanceRef = node.instance ?? '';
   const scenePath = resolveInstancePath(instanceRef, externalResources);
 
@@ -500,6 +496,15 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // memoizes a recursive subtree scan on node identity, so an unmemoized strip
   // would re-run that scan on every render of every instance with an override.
   const shallow = useMemo(() => withoutDeepChildren(node), [node]);
+  // The injected roots are dispatched INSIDE `shallow`'s PlainNode, which hands
+  // them its tail; splitting that tail here keeps each root's subtree in a run
+  // of its own, exactly as an authored child would get.
+  const injectedRanges = useMemo(
+    () =>
+      allocatePaintRange(allocatePaintRange(paintRange, shallow.children).tail, loadedScene?.nodes ?? [])
+        .children,
+    [paintRange, shallow.children, loadedScene?.nodes]
+  );
 
   // Unresolvable ref or failed load: keep the node visible with a magenta
   // placeholder child, matching the missing-texture UX.
@@ -535,8 +540,10 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
           internalResources={loadedScene.internalResources}
           externalResources={loadedScene.externalResources}
         >
-          {loadedScene.nodes.map((child) => (
-            <DispatchedNode key={child.name} node={child} path={joinPath(path, child.name)} />
+          {loadedScene.nodes.map((child, i) => (
+            <PaintRangeProvider key={child.name} value={injectedRanges[i]!}>
+              <DispatchedNode node={child} path={joinPath(path, child.name)} />
+            </PaintRangeProvider>
           ))}
         </SceneResourcesProvider>
       </PlainNode>

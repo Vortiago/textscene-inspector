@@ -26,6 +26,7 @@
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
  */
 import { useMemo } from 'react';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -112,7 +113,7 @@ export function CheckBox({ solveNode, rect, renderOrder, theme }: NativeControlC
 
   return (
     <>
-      <group position={[content.iconRect.x, -content.iconRect.y, 0]}>
+      <CanvasItemGroup position={[content.iconRect.x, -content.iconRect.y, 0]}>
         <ControlQuad
           renderOrder={renderOrder}
           width={content.iconRect.w}
@@ -121,9 +122,9 @@ export function CheckBox({ solveNode, rect, renderOrder, theme }: NativeControlC
           opacity={tint.opacity}
           map={iconTexture}
         />
-      </group>
+      </CanvasItemGroup>
       {content.textOffset && layout && (
-        <group position={[content.textOffset.x, -content.textOffset.y, 0]}>
+        <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
           <TextRun
             layout={layout}
             fontSizePx={fontSizePx}
@@ -131,7 +132,7 @@ export function CheckBox({ solveNode, rect, renderOrder, theme }: NativeControlC
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />
-        </group>
+        </CanvasItemGroup>
       )}
     </>
   );

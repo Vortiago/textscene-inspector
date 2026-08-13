@@ -26,6 +26,7 @@
  * transform of its own.
  */
 import { useEffect, useMemo } from 'react';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -130,7 +131,7 @@ export function TextureRect({ solveNode, rect, renderOrder }: NativeControlCompo
   if (!draw || !preparedTexture) return null;
 
   return (
-    <group position={[draw.offset.x, -draw.offset.y, 0]}>
+    <CanvasItemGroup position={[draw.offset.x, -draw.offset.y, 0]}>
       <ControlQuad
         renderOrder={renderOrder}
         width={draw.size.x}
@@ -139,6 +140,6 @@ export function TextureRect({ solveNode, rect, renderOrder }: NativeControlCompo
         opacity={tint.opacity}
         map={preparedTexture}
       />
-    </group>
+    </CanvasItemGroup>
   );
 }

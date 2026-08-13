@@ -10,8 +10,7 @@ import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { canvasItemBlendState } from '../../../../resources/materials/canvasitemmaterial/renderer';
 import { CanvasItemBlendMode } from '../../../../resources/materials/canvasitemmaterial/types';
-import { drawnSources, tileSourceZ } from '../../../../r3f/tileSourceZ';
-import { useYSortSlot } from '../../../../r3f/contexts/YSortContext';
+import { drawnSources } from '../../../../r3f/drawnSources';
 import { TileSourceMesh } from '../../../../r3f/TileSourceMesh';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
 import type { TileMapLayerProperties } from './types';
@@ -22,7 +21,6 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
   const cells = props.cells ?? null;
 
   // The tree-order band this layer may spread its atlas sources across.
-  const slot = useYSortSlot();
 
   // Stable per-source partition: parsed cells never change identity, so the
   // batched geometries survive unrelated re-renders (and only rebuild on data).
@@ -37,13 +35,13 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
       props={props}
       body={({ color, opacity }, material, lighting) =>
         props.enabled && status === 'loaded' && model && cellsBySource
-          ? cellsBySource.map(({ sourceId, sourceIndex, sourceCount, source, cells: sourceCells }) => (
+          ? cellsBySource.map(({ sourceId, sourceIndex, source, cells: sourceCells }) => (
               <TileSourceMesh
                 key={sourceId}
                 source={source}
                 cells={sourceCells}
                 grid={model}
-                z={tileSourceZ(sourceIndex, sourceCount, slot.width)}
+                renderOrder={sourceIndex}
                 color={color}
                 opacity={opacity}
                 name={node.name}

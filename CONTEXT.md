@@ -148,6 +148,14 @@ _Avoid_: "UI renderer"; "ControlDispatcher" for current code (retired term — s
 The two-phase pass that computes every Control's `Rect2` before anything paints: bottom-up `get_combined_minimum_size` (a widget's own minimum, `custom_minimum_size`-floored, merging upward through nested containers), then top-down `fit_child_in_rect` (a free/anchored Control resolves against its parent's rect — the viewport for a root — while a container child resolves through that parent's registered `ContainerLayoutFn`). Pure TS, framework-free, ported line-by-line from Godot 4.6.3's `scene/gui/control.cpp`. Runs once per generation over the whole `SolveNode` forest (`buildSolveTree`); **ControlCanvasWalker** is its only caller (ADR-0031).
 _Avoid_: "layout solve" — **layout_mode** and its `ContainerLayoutFn` registration (`controlSolverRegistry`) already name a different axis (free vs anchored vs container-managed); this is the rect arithmetic that axis feeds into, not the classification itself.
 
+**Canvas paint order** (`r3f/canvasPaintOrder.ts`):
+Where a canvas item draws in the 2D canvas, as Godot decides it: `(canvas layer, z_final, draw sequence)`, in that precedence. An item's node TYPE is in none of it — a Control and a Sprite2D are both CanvasItems and interleave purely by this key, so "UI draws over the world" is a convention of how scenes are authored, never a rule. Packed into one integer on each item's wrapper group; the pixels inside are ordered among themselves by their own `renderOrder` (ADR-0036).
+_Avoid_: "z order" / "z offset" — draw order costs no depth at all, and the fractional-z scheme those words named is retired; **z_final** is only one term of the key.
+
+**Draw sequence**:
+An item's position in Godot's single pre-order walk of the canvas — the third and weakest term of **canvas paint order**. Tree order, except that `show_behind_parent` children are visited before their parent and a y-sorted subtree is visited in its sorted order. Handed out as contiguous RANGES, one per subtree, which is what lets the y-sort pass reorder the items it collected by re-packing its own range alone.
+_Avoid_: "paint index" (retired term — it counted Controls only, and could not be compared against world content).
+
 **Viewport mode**:
 The single `'2D' | '3D'` display state of the center viewport — `3D` mounts the R3F canvas, `2D` mounts the pannable 2D stage (project-viewport frame + the 2D world canvas, which composites the 2D world and every Control/CanvasLayer subtree as canvas items in one Godot-tree-order draw); chosen by an auto-default heuristic on the scene root type, overridable by the toolbar toggle.
 _Avoid_: "2D mode" alone (it is one of two values of one state).

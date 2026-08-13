@@ -1,14 +1,28 @@
 /**
- * Parity: CanvasItem.show_behind_parent — the node draws just behind its
- * parent (a small negative Z offset in the conjugated 2D group frame).
+ * Parity: CanvasItem.show_behind_parent — the node draws BEFORE the parent it
+ * hangs under, which `_cull_canvas_item` does by visiting the behind-children
+ * ahead of attaching the parent itself (`renderer_canvas_cull.cpp:477-490`).
+ * That is a position in the draw sequence, so it reaches the renderer as the
+ * child's `renderOrder` (`canvasPaintOrder.ts`), not as a depth offset.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Node2D } from './Component';
 import { parseNode2D } from './parser';
-import { Z_INDEX_STEP } from '../../../r3f/node2dTransform';
+import {
+  allocatePaintRange,
+  canvasRenderOrder,
+  layerRankOf,
+  layerRanks,
+  WHOLE_CANVAS_RANGE,
+} from '../../../r3f/canvasPaintOrder';
+import { PaintRangeProvider } from '../../../r3f/contexts/PaintOrderContext';
 import type { TscnNode } from '../../../parser/types';
+
+/** The world canvas's rank — derived, never hardcoded: only a rank's ORDER
+  * is meaningful, and spacing them for undeclared layers moved the value. */
+const WORLD_RANK = layerRankOf(layerRanks([]), 0);
 
 const heading = { type: 'node', attributes: { type: 'Node2D', name: 'N' } };
 
@@ -22,16 +36,31 @@ describe('Node2D show_behind_parent parity (#36)', () => {
     expect(parseNode2D(heading, { show_behind_parent: 'true' }).show_behind_parent).toBe(true);
   });
 
-  it('show_behind_parent=true offsets the group behind its parent (negative Z)', async () => {
-    const r = await ReactThreeTestRenderer.create(<Node2D node={node({ show_behind_parent: 'true' })} />);
-    const group = r.scene.children[0]!.instance as { position: { z: number } };
-    expect(group.position.z).toBeLessThan(0);
+  it('show_behind_parent=true draws the child BEFORE the parent it hangs under', async () => {
+    // Needs the parent: the flag decides where the PARENT places this child in
+    // its own run, so a node rendered on its own cannot express it.
+    const child = node({ show_behind_parent: 'true' });
+    const parent: TscnNode = { ...node(), name: 'P', children: [child] };
+    // The range the dispatcher would hand this child, from the production
+    // allocator — a literal here would just restate what it computes.
+    const childRange = allocatePaintRange(WHOLE_CANVAS_RANGE, parent.children).children[0]!;
+    const r = await ReactThreeTestRenderer.create(
+      <Node2D node={parent}>
+        <PaintRangeProvider value={childRange}>
+          <Node2D node={child} />
+        </PaintRangeProvider>
+      </Node2D>
+    );
+    const groups = r.scene.findAllByType('Group').map((g) => g.instance);
+    const parentGroup = groups.find((g) => g.name === 'P')!;
+    const childGroup = groups.find((g) => g.name === 'N')!;
+    expect(childGroup.renderOrder).toBeLessThan(parentGroup.renderOrder);
   });
 
-  it('default sits at z_index plane (no negative offset)', async () => {
+  it('default sits in its own z_index bucket, with no behind-parent shift', async () => {
     const r = await ReactThreeTestRenderer.create(<Node2D node={node({ z_index: '1' })} />);
-    const group = r.scene.children[0]!.instance as { position: { z: number } };
-    expect(group.position.z).toBeCloseTo(Z_INDEX_STEP, 5);
+    const group = r.scene.children[0]!.instance as { renderOrder: number };
+    expect(group.renderOrder).toBe(canvasRenderOrder({ layerRank: WORLD_RANK, zFinal: 1, sequence: 0 }));
   });
 });
 

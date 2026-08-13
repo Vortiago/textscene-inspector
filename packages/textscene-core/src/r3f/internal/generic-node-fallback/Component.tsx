@@ -34,6 +34,8 @@ export function GenericNodeFallback({ node, children }: NodeComponentProps) {
 
   const userData = { isPlaceholder: true, nodeType: node.type, nodeName: node.name };
 
+  // paint-order-safe: both fallbacks render no pixels of their own, only
+  // dispatched children, each of which brings its own canvas-item wrapper.
   if (node.type.endsWith('2D')) {
     return (
       <group name={node.name} userData={userData}>
@@ -42,6 +44,7 @@ export function GenericNodeFallback({ node, children }: NodeComponentProps) {
     );
   }
 
+  // paint-order-safe: see above — children only.
   return (
     <group name={node.name} position={position} rotation={rotation} scale={scale} userData={userData}>
       {children}

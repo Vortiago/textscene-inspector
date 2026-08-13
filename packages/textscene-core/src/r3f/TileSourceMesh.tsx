@@ -20,8 +20,13 @@ export interface TileSourceMeshProps {
   source: AtlasSourceModel;
   cells: readonly DrawableCell[];
   grid: TileGrid;
-  /** Local +Z offset for layer/source draw order within the node. */
-  z: number;
+  /**
+   * Draw order WITHIN the enclosing tile group — a legacy TileMap's layer index
+   * or an atlas source's position among the batches. The group itself carries
+   * the item's place in the canvas (`canvasPaintOrder.ts`), and three compares
+   * that `groupOrder` before this, so these need only separate siblings.
+   */
+  renderOrder: number;
   /** Own-pixel tint from the node's CanvasItem ritual (linear space). */
   color: THREE.Color;
   opacity: number;
@@ -33,7 +38,7 @@ export interface TileSourceMeshProps {
   lighting?: CanvasItemLightingProps;
 }
 
-export function TileSourceMesh({ source, cells, grid, z, color, opacity, name, blend, lighting }: TileSourceMeshProps) {
+export function TileSourceMesh({ source, cells, grid, renderOrder, color, opacity, name, blend, lighting }: TileSourceMeshProps) {
   const texResult = useResource<THREE.Texture>(source.texturePath ?? '', 'Texture2D');
   const { texture: tex, defines: decodeDefines } = useCanvas2DMap(texResult.value);
   const image = tex?.image as { width?: number; height?: number } | undefined;
@@ -66,7 +71,7 @@ export function TileSourceMesh({ source, cells, grid, z, color, opacity, name, b
   if (!tex || !geometry) return null;
 
   return (
-    <mesh position={[0, 0, z]} geometry={geometry}>
+    <mesh renderOrder={renderOrder} geometry={geometry}>
       <meshBasicMaterial
         map={tex}
         color={color}

@@ -54,9 +54,9 @@ export const DEFAULT_CANVAS_LAYER = 1;
  *
  * The ONE integer-z accumulation in the codebase: the y-sort pass buckets by the
  * same value, exactly as Godot does — `_collect_ysort_children` (lines 160-166)
- * and `_cull_canvas_item` (816-820) are the same six lines twice. Distinct from
- * `canvasItemZ`, which is a LOCAL fractional draw-order offset composed by the
- * THREE transform hierarchy rather than a number accumulated here.
+ * and `_cull_canvas_item` (816-820) are the same six lines twice. The result is
+ * read twice over: as the light cull's z window, and as the `z_final` term of
+ * a canvas item's draw-order key (`canvasPaintOrder.ts`).
  */
 export function accumulateCanvasItemZ(
   parentZ: number,

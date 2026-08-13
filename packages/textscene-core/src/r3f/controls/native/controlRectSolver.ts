@@ -32,23 +32,6 @@ import { resolveControlLayout, type ControlLayoutOrder } from '../controlAnchors
 export interface SolvedControl {
   rect: Rect2;
   minSize: Vec2;
-  paintIndex: number;
-  /**
-   * The paint index of the LAST node visited within this node's own
-   * subtree (pre-order, siblings pre-sorted by `z_index` — same walk as
-   * `paintIndex`) — its own index when it is a leaf. A plain pre-order fact,
-   * not a second traversal: `assignPaintIndex` already has this number in
-   * hand as `counter - 1` right after recursing into a node's children.
-   *
-   * Exists so chrome that must draw AFTER an entire subtree — Godot's
-   * `INTERNAL_MODE_BACK` children, e.g. `ScrollContainer`'s `h_scroll`/
-   * `v_scroll` (`scene/gui/scroll_container.cpp:919,924`) — can derive a
-   * render order from it instead of the node's own `paintIndex`, which every
-   * descendant necessarily exceeds. See `native/controlDrawOrder.ts`'s
-   * `controlRenderOrder` and `ControlComponentRegistry.ts`'s
-   * `NativeControlComponentProps.subtreeChromeRenderOrder`.
-   */
-  subtreeLastPaintIndex: number;
   /**
    * This node's own intermediate, if its registered `MinimumSizeFn`/
    * `ContainerLayoutFn` attached one (`MinimumSizeResult.meta` /
@@ -302,61 +285,26 @@ export function createSolveContext(
   return ctx;
 }
 
-// --- Paint order --------------------------------------------------------------
-
-/** `CanvasItem.z_index` (`scene/main/canvas_item.h:101`), default 0. */
-function zIndexOf(n: SolveNode): number {
-  return controlProps(n).zIndex ?? 0;
-}
-
-/** `assignPaintIndex`'s parallel outputs — one pre-order walk, several facts about the whole tree. */
-interface PaintIndexResult {
-  order: ReadonlyMap<string, number>;
-  subtreeLast: ReadonlyMap<string, number>;
-  /**
-   * Whether ANY node in this tree is a type registered via
-   * `controlSolverRegistry.registerSizeDependentMinimum` — decides whether
-   * `solveControlTree` runs its bounded second pass at all (see
-   * `SolveContext.tentativeRect`'s own doc). Computed during this SAME
-   * pre-order walk rather than a separate scan: every solve already pays for
-   * this traversal, so piggybacking the check costs nothing extra, and
-   * skipping it entirely for the (overwhelmingly common) tree with no such
-   * type keeps a plain single-pass solve exactly as cheap as before this
-   * existed.
-   */
-  hasSizeDependentMinimum: boolean;
-}
-
 /**
- * Pre-order traversal, siblings stably sorted by `z_index` first — Godot's
- * own CanvasItem paint order: a node draws before its children, and children
- * (like the roots passed in) draw in ascending `z_index` order among
- * themselves, ties keeping scene-tree order (`Array.prototype.sort` is
- * stable).
+ * Whether any node in the tree is a type registered via
+ * `controlSolverRegistry.registerSizeDependentMinimum`, which decides whether
+ * `solveControlTree` runs its bounded second pass at all (see
+ * `SolveContext.tentativeRect`'s own doc). Skipping the pass entirely for the
+ * overwhelmingly common tree with no such type keeps a plain single-pass solve
+ * exactly as cheap as it was before that pass existed.
  *
- * Also records each node's `subtreeLast` — the paint index of the last node
- * visited within its own subtree — as `counter - 1` right after recursing
- * into its children, so this stays the one traversal rather than a second
- * pass over the same tree.
+ * This used to ride a pre-order walk that also numbered every node for paint
+ * order. Draw order is no longer the solver's business — a Control takes the
+ * same canvas key as every other CanvasItem, from the draw sequence
+ * `buildSolveTree` allocates over its LIVE siblings (`canvasPaintOrder.ts`) —
+ * so what is left is this one question.
  */
-function assignPaintIndex(roots: readonly SolveNode[]): PaintIndexResult {
-  const order = new Map<string, number>();
-  const subtreeLast = new Map<string, number>();
-  let counter = 0;
-  let hasSizeDependentMinimum = false;
-
-  const visit = (nodes: readonly SolveNode[]): void => {
-    const sorted = [...nodes].sort((a, b) => zIndexOf(a) - zIndexOf(b));
-    for (const node of sorted) {
-      if (controlSolverRegistry.isSizeDependentMinimum(node.node.type)) hasSizeDependentMinimum = true;
-      order.set(node.path, counter++);
-      visit(node.children);
-      subtreeLast.set(node.path, counter - 1);
-    }
-  };
-
-  visit(roots);
-  return { order, subtreeLast, hasSizeDependentMinimum };
+function hasSizeDependentMinimum(roots: readonly SolveNode[]): boolean {
+  for (const node of roots) {
+    if (controlSolverRegistry.isSizeDependentMinimum(node.node.type)) return true;
+    if (hasSizeDependentMinimum(node.children)) return true;
+  }
+  return false;
 }
 
 // --- Phase 2: top-down rect assignment ---------------------------------------
@@ -365,15 +313,12 @@ function record(
   n: SolveNode,
   rect: Rect2,
   minSize: Vec2,
-  paintIndex: PaintIndexResult,
   out: Map<string, SolvedControl>,
   meta?: unknown
 ): void {
   out.set(n.path, {
     rect,
     minSize,
-    paintIndex: paintIndex.order.get(n.path) ?? 0,
-    subtreeLastPaintIndex: paintIndex.subtreeLast.get(n.path) ?? 0,
     meta,
   });
 }
@@ -386,7 +331,6 @@ function solveFree(
   n: SolveNode,
   parentRect: Rect2,
   ctx: SolveContext,
-  paintIndexOf: PaintIndexResult,
   out: Map<string, SolvedControl>
 ): void {
   const minSize = ctx.combinedMinimumSize(n);
@@ -402,8 +346,8 @@ function solveFree(
       layout.growVertical
     );
   }
-  record(n, rect, minSize, paintIndexOf, out, ctx.minimumSizeMeta?.(n));
-  dispatchChildren(n, rect, ctx, paintIndexOf, out);
+  record(n, rect, minSize, out, ctx.minimumSizeMeta?.(n));
+  dispatchChildren(n, rect, ctx, out);
 }
 
 /**
@@ -421,14 +365,13 @@ function dispatchChildren(
   n: SolveNode,
   rect: Rect2,
   ctx: SolveContext,
-  paintIndexOf: PaintIndexResult,
   out: Map<string, SolvedControl>
 ): void {
   const containerFn = controlSolverRegistry.containerLayout(n.node.type);
 
   if (!containerFn) {
     for (const child of n.children) {
-      solveFree(child, rect, ctx, paintIndexOf, out);
+      solveFree(child, rect, ctx, out);
     }
     return;
   }
@@ -477,8 +420,8 @@ function dispatchChildren(
       const childLayout = resolveNodeLayout(child, ctx, controlLayoutOrder(child));
       childRect = floorAtMinimumSize(assigned, minSize, childLayout.growHorizontal, childLayout.growVertical);
     }
-    record(child, childRect, minSize, paintIndexOf, out, meta);
-    dispatchChildren(child, childRect, ctx, paintIndexOf, out);
+    record(child, childRect, minSize, out, meta);
+    dispatchChildren(child, childRect, ctx, out);
   }
 }
 
@@ -497,7 +440,7 @@ function dispatchChildren(
  * ONLY the rects (and anything downstream of them, e.g. an ancestor
  * container's own size) that a size-dependent type's corrected minimum
  * actually touches. A tree with no such type pays nothing beyond the
- * membership check `assignPaintIndex` already performed.
+ * membership check `hasSizeDependentMinimum` already performed.
  *
  * Bounded at exactly one extra pass, not a loop to convergence: the ONE
  * self-reference this codebase models (a control's OWN size feeding its OWN
@@ -515,19 +458,17 @@ export function solveControlTree(
   viewport: Rect2,
   ctx: SolveContext
 ): ReadonlyMap<string, SolvedControl> {
-  const paintIndexOf = assignPaintIndex(roots);
-
   const out = new Map<string, SolvedControl>();
   for (const root of roots) {
-    solveFree(root, viewport, ctx, paintIndexOf, out);
+    solveFree(root, viewport, ctx, out);
   }
 
-  if (!paintIndexOf.hasSizeDependentMinimum) return out;
+  if (!hasSizeDependentMinimum(roots)) return out;
 
   const pass2Ctx = createSolveContext(ctx.theme, ctx.measureText, (n) => out.get(n.path)?.rect);
   const out2 = new Map<string, SolvedControl>();
   for (const root of roots) {
-    solveFree(root, viewport, pass2Ctx, paintIndexOf, out2);
+    solveFree(root, viewport, pass2Ctx, out2);
   }
   return out2;
 }

@@ -33,6 +33,8 @@ import { nativeTheme } from './nativeTheme';
 import type { Rect2 } from './rect';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import { canvasModulateColor, CanvasModulateContext } from '../../canvasModulate';
+import { declaredCanvasLayers, layerRanks } from '../../canvasPaintOrder';
+import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
 import { measureText } from './text/measurer';
 
 export interface ControlCanvasLayerProps {
@@ -66,16 +68,23 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
     [viewportSize.width, viewportSize.height]
   );
   const canvasModulate = useMemo(() => canvasModulateColor(rootNodes), [rootNodes]);
+  // The same ranks `NodeDispatcher` derives, from the same nodes — this walk is
+  // its SIBLING rather than its descendant, so it cannot inherit them, and a
+  // Control ranked against a different layer set than the world would order
+  // against it wrongly.
+  const ranks = useMemo(() => layerRanks(declaredCanvasLayers(rootNodes)), [rootNodes]);
 
   return (
     <CanvasModulateContext.Provider value={canvasModulate}>
-      <ControlCanvasWalker
-        tree={tree}
-        generation={generation}
-        viewport={viewport}
-        theme={theme}
-        measurer={measureText}
-      />
+      <LayerRanksProvider value={ranks}>
+        <ControlCanvasWalker
+          tree={tree}
+          generation={generation}
+          viewport={viewport}
+          theme={theme}
+          measurer={measureText}
+        />
+      </LayerRanksProvider>
     </CanvasModulateContext.Provider>
   );
 }

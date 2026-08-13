@@ -23,7 +23,7 @@
  * the ACTIVE stylebox's margins — `ofs_max`/`x_ofs`'s box in
  * `NOTIFICATION_DRAW`, `line_edit.cpp:1392-1427`). `useWorldClipPlanes`
  * (`native/controlClipping.tsx`) does the work — local planes for the rect it
- * is given, transformed to world space through the `<group ref={anchorRef}>`
+ * is given, transformed to world space through the `<CanvasItemGroup ref={anchorRef}>`
  * below and merged onto whatever this node inherited, so an enclosing
  * `ScrollContainer`'s clip is narrowed further and never overridden.
  *
@@ -35,6 +35,7 @@
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
  */
 import { useMemo } from 'react';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -109,10 +110,10 @@ export function LineEdit({ solveNode, rect, renderOrder, theme }: NativeControlC
   const { anchorRef, clippingPlanes } = useWorldClipPlanes(content.contentRect);
 
   return (
-    <group ref={anchorRef}>
+    <CanvasItemGroup ref={anchorRef}>
       {!props.flat && <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />}
       {layout && (
-        <group position={[content.textOffset.x, -content.textOffset.y, 0]}>
+        <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
           <TextRun
             layout={layout}
             fontSizePx={fontSizePx}
@@ -120,8 +121,8 @@ export function LineEdit({ solveNode, rect, renderOrder, theme }: NativeControlC
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />
-        </group>
+        </CanvasItemGroup>
       )}
-    </group>
+    </CanvasItemGroup>
   );
 }

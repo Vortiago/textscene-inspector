@@ -68,25 +68,23 @@ derived from Godot's own source, some read back from a throwaway Godot project's
 that draw nothing, which pixel-probing cannot) — the rect solve for the vboxcontainer
 fixture predicted every child rect to 0 px this way.
 
-### `renderOrder`, not a second z-banding scheme, for draw order
+### `renderOrder`, not a fractional z offset, for draw order
 
-Every 2D canvas material in this codebase is `transparent` + `depthWrite={false}`, so
-three's transparent-object sort — which compares `THREE.Object3D.renderOrder` BEFORE
-camera distance — decides paint order outright, at no frustum cost. A fractional-z
-scheme (packing layer + paint index into a group's z position) was considered and
-rejected on plain arithmetic: the 2D world camera sits at `position:[0,0,1000]`,
-`near:0.1`, `far:4000`, so usable z is `(-3000, 999.9)`, and 2D world content already
-spans z `±409.6` (`canvasItemZ × Z_INDEX_STEP` 0.1) — no room left for a second
-per-layer banding scheme on top of that one.
+**Superseded in part by ADR-0036** — read that for the rule in force. What stands:
+every 2D canvas material here is `transparent` + `depthWrite={false}`, so three's
+transparent-object sort decides paint order outright, at no frustum cost, and a
+fractional-z scheme cannot express it — the 2D world camera sits at
+`position:[0,0,1000]`, `near:0.1`, `far:4000`, leaving usable z `(-3000, 999.9)`
+against world content already spanning `±409.6`.
 
-`renderOrder = bandBase(layer) + paintIndex`
-(`packages/textscene-core/src/r3f/controls/native/controlDrawOrder.ts`): `paintIndex`
-is one pre-order counter across the whole Control tree passed to a single solve;
-`layer` is the enclosing `CanvasLayer.layer` (Godot default 1) or `WORLD_CANVAS_LAYER`
-with none, banded so a layer never collides with world content's own default
-`renderOrder` 0. This is also how `CanvasLayer.layer` finally reaches the canvas's
-draw order — under the DOM overlay it existed only inside the Control registry, never
-the canvas z pipeline (the Control half of issue #358).
+What was WRONG, and what ADR-0036 replaces: this ADR put Controls in a band one whole
+stride ABOVE world content, on the belief that "an ordinary UI root on the default
+canvas still paints after the 2D world within it" matched Godot. It does not — a
+`Control` is a `CanvasItem` and interleaves with its Node2D siblings in tree order, so
+the band inverted every scene with a Control authored before world content.
+
+`CanvasLayer.layer` reaching the canvas's draw order at all (the Control half of issue
+#358) dates from here and survives; ADR-0036 extends it to world content too.
 
 ### Clip planes, not the stencil buffer, for `ScrollContainer`
 

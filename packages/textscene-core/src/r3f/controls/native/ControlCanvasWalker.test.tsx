@@ -18,10 +18,16 @@ import { nativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type ContainerLayoutFn } from './solverRegistry';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
-import { bandBase } from './controlDrawOrder';
+import { canvasRenderOrder, layerRankOf, layerRanks } from '../../canvasPaintOrder';
+import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
+import { withPaintRanges } from './testing/solveNode';
 import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
 import { CanvasLayerIndexProvider, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN, useEffectiveZ } from '../../lighting2d/canvasItemPlacement';
 import { solveNode as emptySolveNode } from './testing/solveNode';
+
+/** The world canvas's rank — derived, never hardcoded: only a rank's ORDER
+  * is meaningful, and spacing them for undeclared layers moved the value. */
+const WORLD_RANK = layerRankOf(layerRanks([]), 0);
 
 // A stand-in for the real `canvaslayer/Component.tsx` (a different
 // slice's file, not this suite's concern): just enough to prove the WALKER
@@ -212,21 +218,30 @@ describe('<ControlCanvasWalker>', () => {
     expect(groups.every((g) => g.rotation.z === 0)).toBe(true);
   });
 
-  it("assigns a fallback painter's renderOrder from bandBase(0) plus its solved paintIndex, with no enclosing CanvasLayer", async () => {
+  it("takes each Control's renderOrder from the shared canvas key at its own draw sequence", async () => {
     const child = solveNode('Root/Child', 'TestType', { anchorsPreset: 15 });
     const root = solveNode('Root', 'TestType', { anchorsPreset: 15 }, [child]);
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      <ControlCanvasWalker
+        tree={withPaintRanges([root])}
+        generation={0}
+        viewport={VIEWPORT}
+        theme={THEME}
+        measurer={null}
+      />
     );
 
     const lines = renderer.scene.findAllByType('LineSegments').map((l) => l.instance as { renderOrder: number });
-    // Pre-order, so Root gets paintIndex 0 and Child gets paintIndex 1.
-    expect(lines.some((l) => l.renderOrder === bandBase(0) + 0)).toBe(true);
-    expect(lines.some((l) => l.renderOrder === bandBase(0) + 1)).toBe(true);
+    // The SAME key a Node2D canvas item takes — no band of its own, which is
+    // what lets a Control interleave with the world rather than sit above it.
+    // Pre-order: Root draws at the first sequence in its run, Child at the next.
+    const at = (sequence: number) => canvasRenderOrder({ layerRank: WORLD_RANK, zFinal: 0, sequence });
+    expect(lines.some((l) => l.renderOrder === at(1))).toBe(true);
+    expect(lines.some((l) => l.renderOrder === at(2))).toBe(true);
   });
 
-  it('bands every Control under a CanvasLayer by its layer property, reaching arbitrarily nested descendants', async () => {
+  it('puts every Control under a CanvasLayer on that layer, reaching arbitrarily nested descendants', async () => {
     controlComponentRegistry.register({
       typeName: 'CanvasLayer',
       Component: StubCanvasLayerNative,
@@ -238,15 +253,39 @@ describe('<ControlCanvasWalker>', () => {
     const layer = solveNode('Layer', 'CanvasLayer', { layer: 5 }, [child]);
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ControlCanvasWalker tree={[layer]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      <LayerRanksProvider value={layerRanks([5])}>
+        <ControlCanvasWalker
+          tree={withPaintRanges([layer])}
+          generation={0}
+          viewport={VIEWPORT}
+          theme={THEME}
+          measurer={null}
+        />
+      </LayerRanksProvider>
     );
 
-    const lines = renderer.scene.findAllByType('LineSegments').map((l) => l.instance as { renderOrder: number });
-    expect(lines.some((l) => l.renderOrder === bandBase(5) + 1)).toBe(true);
-    expect(lines.some((l) => l.renderOrder === bandBase(5) + 2)).toBe(true);
+    const lines = renderer.scene
+      .findAllByType('LineSegments')
+      .map((l) => (l.instance as { renderOrder: number }).renderOrder);
+    const onLayer = (sequence: number) =>
+      canvasRenderOrder({ layerRank: layerRankOf(layerRanks([5]), 5), zFinal: 0, sequence });
+    // BOTH descendants reach the layer — the nested Grandchild as much as the
+    // Child — and at CONSECUTIVE sequences, which is what "arbitrarily nested"
+    // means here. Asserting only "above the world" would hold for ANY sequence,
+    // including one that dropped the Grandchild entirely: every rank-5 key
+    // already exceeds every world key by construction.
+    expect(lines).toContain(onLayer(2));
+    expect(lines).toContain(onLayer(3));
+    // …and the layer as a whole still sits above the world canvas.
+    const worldCeiling = canvasRenderOrder({
+      layerRank: layerRankOf(layerRanks([5]), 0),
+      zFinal: CANVAS_ITEM_Z_MAX,
+      sequence: 0,
+    });
+    expect(lines.every((order) => order > worldCeiling)).toBe(true);
   });
 
-  it('gives a negative-layer CanvasLayer a band below the world default, still reaching its Control', async () => {
+  it('draws a negative-layer CanvasLayer under the world canvas, still reaching its Control', async () => {
     controlComponentRegistry.register({
       typeName: 'CanvasLayer',
       Component: StubCanvasLayerNative,
@@ -255,17 +294,34 @@ describe('<ControlCanvasWalker>', () => {
     });
     const child = solveNode('Layer/Child', 'TestType', { anchorsPreset: 15 });
     const layer = solveNode('Layer', 'CanvasLayer', { layer: -1 }, [child]);
+    const worldSide = solveNode('WorldSide', 'TestType', { anchorsPreset: 15 });
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ControlCanvasWalker tree={[layer]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      <LayerRanksProvider value={layerRanks([-1])}>
+        <ControlCanvasWalker
+          tree={withPaintRanges([layer, worldSide])}
+          generation={0}
+          viewport={VIEWPORT}
+          theme={THEME}
+          measurer={null}
+        />
+      </LayerRanksProvider>
     );
 
     const lines = renderer.scene.findAllByType('LineSegments').map((l) => l.instance as { renderOrder: number });
-    expect(lines.some((l) => l.renderOrder === bandBase(-1) + 1)).toBe(true);
-    expect(lines.some((l) => l.renderOrder < 0)).toBe(true);
+    // Godot's `layer < 0` draws BEFORE the world canvas — and it is the LAYER
+    // that decides, not the draw sequence: the Control on layer -1 comes first
+    // in the tree here, but so would a layer -1 Control authored last.
+    const worldFloor = canvasRenderOrder({
+      layerRank: layerRankOf(layerRanks([-1]), 0),
+      zFinal: CANVAS_ITEM_Z_MIN,
+      sequence: 0,
+    });
+    expect(lines.some((l) => l.renderOrder < worldFloor)).toBe(true);
+    expect(lines.some((l) => l.renderOrder >= worldFloor)).toBe(true);
   });
 
-  it("hands the painter subtreeChromeRenderOrder derived from the solved subtreeLastPaintIndex — the deepest descendant's own renderOrder, one less than the next sibling's", async () => {
+  it("hands the painter subtreeChromeRenderOrder from the END of its own draw-sequence run — the deepest descendant's own renderOrder, one less than the next sibling's", async () => {
     controlComponentRegistry.register({
       typeName: 'TestOrderType',
       Component: ({ subtreeChromeRenderOrder }) => (
@@ -278,7 +334,13 @@ describe('<ControlCanvasWalker>', () => {
     const sibling = solveNode('Sibling', 'TestType', { anchorsPreset: 15 });
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ControlCanvasWalker tree={[root, sibling]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      <ControlCanvasWalker
+        tree={withPaintRanges([root, sibling])}
+        generation={0}
+        viewport={VIEWPORT}
+        theme={THEME}
+        measurer={null}
+      />
     );
 
     const probe = renderer.scene
@@ -286,14 +348,14 @@ describe('<ControlCanvasWalker>', () => {
       .map((g) => g.instance as { name: string; renderOrder: number })
       .find((g) => g.name === 'order-probe')!;
     const lines = renderer.scene.findAllByType('LineSegments').map((l) => l.instance as { renderOrder: number });
-    // Fallback lines for the unregistered descendants/sibling: Child=1,
-    // Grandchild=2 (both under Root's TestOrderType painter), Sibling=3.
-    const grandchildOrder = bandBase(0) + 2;
-    const siblingOrder = bandBase(0) + 3;
+    // Root's run covers Root, Child and Grandchild; the next sibling starts one
+    // past its end. So the chrome slot is the run's LAST value, which is both
+    // the deepest descendant's own and exactly one below the sibling's.
+    const at = (sequence: number) => canvasRenderOrder({ layerRank: WORLD_RANK, zFinal: 0, sequence });
+    const grandchildOrder = at(3);
+    const siblingOrder = at(4);
     expect(lines.some((l) => l.renderOrder === grandchildOrder)).toBe(true);
     expect(lines.some((l) => l.renderOrder === siblingOrder)).toBe(true);
-    // Root's own subtree's last paint index is Grandchild's — same value —
-    // and exactly one less than the next sibling's own paintIndex.
     expect(probe.renderOrder).toBe(grandchildOrder);
     expect(probe.renderOrder).toBe(siblingOrder - 1);
   });

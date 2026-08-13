@@ -80,6 +80,8 @@ export function LightOccluder2D({ node, children }: NodeComponentProps) {
       body={() => (
         <>
           {/* Empty anchor: carries no geometry, only the occluder's world matrix. */}
+          {/* paint-order-safe: an empty anchor the shadow pass reads a world
+              transform from — it draws nothing, so it orders nothing. */}
           <group ref={setAnchor} />
           {visible && positions ? <GizmoLine positions={positions} /> : null}
         </>

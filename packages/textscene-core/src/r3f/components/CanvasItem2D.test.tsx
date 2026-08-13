@@ -11,6 +11,11 @@ import { parseNode2D } from '../../nodes/base/node2d/parser';
 import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { CanvasItem2D } from './CanvasItem2D';
+import { canvasRenderOrder, layerRankOf, layerRanks } from '../canvasPaintOrder';
+
+/** The world canvas's rank — derived, never hardcoded: only a rank's ORDER
+  * is meaningful, and spacing them for undeclared layers moved the value. */
+const WORLD_RANK = layerRankOf(layerRanks([]), 0);
 
 const heading = { type: 'node', attributes: { type: 'Node2D', name: 'CI' } };
 
@@ -42,7 +47,9 @@ describe('CanvasItem2D', () => {
     expect(group.name).toBe('CI');
     expect(group.position.x).toBeCloseTo(100, 5);
     expect(group.position.y).toBeCloseTo(-50, 5); // Godot +Y down → three −Y
-    expect(group.position.z).toBeCloseTo(0.2, 5); // z_index 2 × Z_INDEX_STEP 0.1
+    // Draw order is `renderOrder`, not depth — the group stays in the z=0 plane.
+    expect(group.position.z).toBeCloseTo(0, 5);
+    expect(group.renderOrder).toBe(canvasRenderOrder({ layerRank: WORLD_RANK, zFinal: 2, sequence: 0 }));
     expect(group.rotation.z).toBeCloseTo(-0.5, 5); // clockwise-positive → negated
   });
 

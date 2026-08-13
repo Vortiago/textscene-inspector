@@ -55,6 +55,11 @@ import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import type { SolveNode } from './solveTree';
+import {
+  allocatePaintRange,
+  WHOLE_CANVAS_RANGE,
+  type PaintRange,
+} from '../../canvasPaintOrder';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import { parseStyleBox } from './parseStyleBox';
 import type { Vec2 } from './rect';
@@ -238,15 +243,22 @@ function buildForest(
     return { x: image?.width ?? 0, y: image?.height ?? 0 };
   }
 
+  /** A `y_sort_enabled` parent re-orders its children, so the behind/ahead split does not apply. */
+  function sortsChildren(node: TscnNode): boolean {
+    return (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true;
+  }
+
   function walk(
     list: readonly TscnNode[],
     parentPath: string,
     scope: SceneScope,
-    themeChain: readonly ThemeResource[]
+    themeChain: readonly ThemeResource[],
+    ranges: readonly PaintRange[]
   ): SolveNode[] {
     const { externalResources: ext } = scope;
     const out: SolveNode[] = [];
-    for (const node of list) {
+    for (const [index, node] of list.entries()) {
+      const paintRange = ranges[index] ?? WHOLE_CANVAS_RANGE;
       // A SubViewport owns its own World2D (ADR-0033); its Control subtree is
       // drawn by its own viewport surface, never by the enclosing canvas.
       if (isViewportBoundary(node.type)) continue;
@@ -286,13 +298,48 @@ function buildForest(
           ? [ownTheme, ...themeChain]
           : themeChain;
 
-      const children = groups.flatMap((g) => walk(g.children, path, g.scope, nodeThemeChain));
+      // The SAME allocation the world walk applies to the same children, from
+      // the same pure function — which is what makes the two walks' sequence
+      // numbers comparable without either knowing the other exists.
+      // Which children the world walk allocates from the node's OWN run, and
+      // which from the tail it reserves.
+      //
+      // `NodeDispatcher` dispatches a node's authored children inline and an
+      // instance's injected sub-scene ROOTS from `allocated.tail`. This walk
+      // sees both as `liveChildGroups` output, so it has to make the same
+      // split — otherwise a Control inside a multi-root instance is numbered
+      // against a different scale than the world content it interleaves with,
+      // and the two walks' whole reason for deriving the same numbers from the
+      // same nodes is lost.
+      const injected = (origin: string) => origin === 'subscene' || origin === 'glb';
+      const inlineChildren = groups.filter((g) => !injected(g.origin)).flatMap((g) => g.children);
+      const allocated = allocatePaintRange(paintRange, inlineChildren, sortsChildren(collapsed));
+      const injectedRanges = allocatePaintRange(
+        allocated.tail,
+        groups.filter((g) => injected(g.origin)).flatMap((g) => g.children)
+      ).children;
+
+      // Each group walks with the slice of ranges belonging to ITS children.
+      // Both allocations are over flattened lists, so the slices are handed
+      // back out in the order they were taken.
+      const children: SolveNode[] = [];
+      let takenInline = 0;
+      let takenInjected = 0;
+      for (const group of groups) {
+        const count = group.children.length;
+        const groupRanges = injected(group.origin)
+          ? injectedRanges.slice(takenInjected, (takenInjected += count))
+          : allocated.children.slice(takenInline, (takenInline += count));
+        children.push(...walk(group.children, path, group.scope, nodeThemeChain, groupRanges));
+      }
 
       if (isControl) {
         out.push({
           path,
           node: collapsed,
           children,
+          paintRange,
+          paintSequence: allocated.self,
           styleBoxes: resolveStyleBoxes(collapsed, ownScope.internalResources),
           textureSize: resolveTextureSize(
             collapsed,
@@ -312,7 +359,13 @@ function buildForest(
     return out;
   }
 
-  const tree = walk(nodes, '', { externalResources, internalResources }, []);
+  const tree = walk(
+    nodes,
+    '',
+    { externalResources, internalResources },
+    [],
+    allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children
+  );
   return {
     tree,
     pendingScenes: [...pendingScenes],

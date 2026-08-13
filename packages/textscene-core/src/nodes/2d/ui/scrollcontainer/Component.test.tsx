@@ -17,6 +17,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
+import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -151,13 +152,12 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
   it('draws both bars off subtreeChromeRenderOrder — track +0.25, grabber +0.5 — strictly above every descendant and strictly below the next sibling', async () => {
     // `scene/gui/scroll_container.cpp:919,924` adds `h_scroll`/`v_scroll` via
     // `INTERNAL_MODE_BACK`, which paints them AFTER the whole subtree, not at
-    // this node's own paint slot. `subtreeChromeRenderOrder` is
-    // `bandBase(layer) + subtreeLastPaintIndex` — the LAST descendant's own
-    // renderOrder — and the next sibling gets exactly one past it
-    // (`controlRectSolver.ts`'s `assignPaintIndex`), so the fractional
-    // offsets below must land strictly inside that one-wide gap.
+    // this node's own paint slot. `subtreeChromeRenderOrder` is the LAST
+    // draw-sequence value in this node's own subtree run, and the next sibling
+    // starts one past it (`canvasPaintOrder.ts`), so the fractional offsets
+    // below must land strictly inside that one-wide gap.
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 399, y: 800 } });
-    const deepestDescendantOrder = 12; // stands in for subtreeLastPaintIndex's own renderOrder.
+    const deepestDescendantOrder = 12; // stands in for the end of this node's draw-sequence run.
     const renderer = await ReactThreeTestRenderer.create(
       <ScrollContainer
         {...painterEnv()}
@@ -175,10 +175,12 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
     const allMeshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     const descendant = allMeshes.find((m) => m.name === 'deepest-descendant')!;
     const bars = allMeshes.filter((m) => m.name !== 'deepest-descendant');
-    const orders = bars.map((m) => m.renderOrder).sort((a, b) => a - b);
+    // Read as three does — from each bar's nearest enclosing group, which is
+    // where a drawn item's place in the canvas lives (`canvasPaintOrder.ts`).
+    const orders = bars.map(nearestGroupOrder).sort((a, b) => a - b);
     expect(orders).toEqual([deepestDescendantOrder + 0.25, deepestDescendantOrder + 0.5]);
     // Strictly above every descendant this node ever draws...
-    expect(orders[0]!).toBeGreaterThan(descendant.renderOrder);
+    expect(orders[0]!).toBeGreaterThan(nearestGroupOrder(descendant));
     // ...and strictly below the next sibling's own paint slot.
     expect(orders[1]!).toBeLessThan(deepestDescendantOrder + 1);
   });

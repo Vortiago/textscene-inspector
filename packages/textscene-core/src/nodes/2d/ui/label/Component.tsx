@@ -7,7 +7,7 @@
  * Godot aligns EVERY LINE of a Label independently by its own width
  * (`Label::_get_line_rect`) — a single merged multi-line `<TextRun>` (sharing
  * one x origin) cannot express that once lines differ in width, so this
- * draws one `<TextRun>` per line, each in its own positioned `<group>`
+ * draws one `<TextRun>` per line, each in its own positioned `<CanvasItemGroup>`
  * (`nativeSolver.ts`'s `layoutLabelLines`, which returns each line's own box
  * top — `<TextRun>` anchors the line at its baseline from there itself,
  * `buildGlyphQuadArrays`'s own doc).
@@ -20,9 +20,14 @@
  * linear once, matching `TextRun`'s own contract (its `tint` prop is sRGB,
  * converted internally).
  *
- * `renderOrder` is passed to each line's `<TextRun>` directly: three.js reads
- * `renderOrder` per rendered object and never inherits it from a wrapping
- * `<group>`, so the per-line mesh has to carry it itself.
+ * DRAW ORDER. Two halves, and getting only the first right is what once made
+ * every Label's glyphs disappear behind the backdrop they were drawn over:
+ * `renderOrder` is passed to each line's `<TextRun>` directly, because three
+ * reads it per rendered object and never inherits it from a wrapping group —
+ * but three reads the nearest enclosing GROUP's order FIRST, so each line's
+ * group must carry the Control's canvas key too. `<CanvasItemGroup>` is what
+ * supplies that; a bare `<group>` here resets it to zero
+ * (`r3f/canvasPaintOrder.ts`).
  *
  * TEXT LAYOUT: reads `meta` (`nativeSolver.ts`'s `labelMinimumSize` — see its
  * own doc) when autowrap is OFF (Label's default), instead of re-shaping —
@@ -37,6 +42,7 @@
  * it is provably identical.
  */
 import { useMemo } from 'react';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -122,7 +128,7 @@ export function Label({ solveNode, rect, renderOrder, theme, meta }: NativeContr
   return (
     <>
       {placements.map((placement, index) => (
-        <group key={index} position={[placement.x, -placement.y, 0]}>
+        <CanvasItemGroup key={index} position={[placement.x, -placement.y, 0]}>
           <TextRun
             layout={lineLayouts[index]!}
             fontSizePx={textTheme.fontSizePx}
@@ -130,7 +136,7 @@ export function Label({ solveNode, rect, renderOrder, theme, meta }: NativeContr
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />
-        </group>
+        </CanvasItemGroup>
       ))}
     </>
   );

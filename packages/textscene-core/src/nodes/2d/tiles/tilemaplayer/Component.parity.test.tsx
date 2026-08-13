@@ -126,7 +126,7 @@ describe('TileMapLayer render parity', () => {
     const firstMap = (first!.material as THREE.MeshBasicMaterial).map;
     const secondMap = (second!.material as THREE.MeshBasicMaterial).map;
     expect(firstMap).not.toBe(secondMap);
-    expect(second!.position.z).toBeGreaterThan(first!.position.z);
+    expect(second!.renderOrder).toBeGreaterThan(first!.renderOrder);
   });
 
   it('keeps 100 cells of one source in a single batched mesh (400 vertices)', async () => {

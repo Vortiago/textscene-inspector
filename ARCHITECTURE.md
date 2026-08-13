@@ -323,19 +323,36 @@ generation over `buildSolveTree`'s live-tree walk, then emits one `<group>` per
 Control at its solved rect; a registered `Native` painter draws that node's own
 chrome, `ControlFallback` an outline when none is registered.
 
-**Draw order is `THREE.Object3D.renderOrder`, not a second z-banding scheme**
-(`controlDrawOrder.ts`). Every 2D canvas material in this codebase is
-`transparent` + `depthWrite={false}`, so three's transparent-object sort — which
-compares `renderOrder` BEFORE camera distance — decides paint order outright. A
-fractional-z scheme was rejected on plain arithmetic: the 2D camera sits at
-`position:[0,0,1000]`, `near:0.1`, `far:4000` (usable z range `(-3000, 999.9)`),
-and 2D world content already spans z `±409.6` (`canvasItemZ × Z_INDEX_STEP`) — no
-headroom left for a second per-layer band on top of that one. `renderOrder =
-bandBase(layer) + paintIndex` bands by the enclosing `CanvasLayer.layer` (Godot
-default 1; `WORLD_CANVAS_LAYER` with none) and offsets by one pre-order paint
-index per node, which is also how `CanvasLayer.layer` reaches the canvas's draw
-order for the first time — under the DOM overlay it existed only in the Control
-registry.
+**Draw order is ONE integer per canvas item, shared by every 2D node**
+(`canvasPaintOrder.ts`). Godot draws a canvas in a single pre-order walk that
+appends each item to a list indexed by its `z_final`, then draws those lists in
+z order (`renderer_canvas_cull.cpp`), so the key is `(canvas layer, z_final,
+position in the walk)` — and the item's node TYPE is in none of it. A `Control`
+and a `Sprite2D` interleave purely by that key; "UI draws over the world" is a
+convention of how scenes are authored, not a rule of the renderer.
+
+That key is packed into `THREE.Object3D.renderOrder` on each canvas item's
+wrapper group. Every 2D material here is `transparent` + `depthWrite={false}`,
+so three's transparent sort decides paint order outright, and it compares
+`groupOrder` — the nearest enclosing group's `renderOrder` — before anything
+else. The meshes INSIDE an item keep their own small `renderOrder` for the
+item's private layering (an atlas batch's source index, a ScrollContainer's
+bars). Two ordinal levels, which is exactly what the two rules need. A group
+that sits between an item and its pixels must therefore carry the item's key
+too, or it resets those pixels to the front of the canvas.
+
+Draw sequence is handed out as contiguous RANGES: a node owns
+`[base, base + size)` and its descendants are allocated inside it, which is what
+lets the y-sort pass re-order the items it collected by re-packing its own range
+alone. `buildSolveTree` allocates the same ranges over the same live tree for
+Controls, so the two walks agree without talking to each other.
+
+This replaced a fractional `+Z` scheme (`z_index × 0.1`, with y-sort ranks and
+tile sub-steps dividing what was left of each step). That scheme could only
+approximate the order — the budget shrank with every level of nesting, so the
+machinery rationing it grew alongside, and the plain un-y-sorted case had no
+draw sequence at all, falling back to `Object3D.id` mount order. That is why a
+Control mounted in its own pass could never interleave with the world.
 
 **Clipping is clip planes, not the stencil buffer** (`controlClipping.tsx`). The
 on-screen 2D `<Canvas>` requests no stencil buffer at all (`World2DCanvas.tsx`'s

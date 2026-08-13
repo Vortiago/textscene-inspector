@@ -85,7 +85,11 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
   if (!geometry) return null;
 
   return (
-    <group scale={[1, -1, 1]}>
+    // The flip group carries `renderOrder` as well as the mesh: three reads a
+    // drawn object's place in the canvas from its NEAREST enclosing group
+    // (`canvasPaintOrder.ts`), so a bare group here would reset every StyleBox
+    // in the previewer to the front of the canvas.
+    <group scale={[1, -1, 1]} renderOrder={renderOrder}>
       <mesh renderOrder={renderOrder}>
         <primitive object={geometry} attach="geometry" />
         <meshBasicMaterial

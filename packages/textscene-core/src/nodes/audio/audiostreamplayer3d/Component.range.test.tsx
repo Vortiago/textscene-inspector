@@ -72,7 +72,14 @@ function gizmoGroup(
 
 /** Largest vertex distance from the gizmo's own origin, in its local space. */
 function gizmoExtent(object: THREE.Object3D): number {
-  const line = object.children[0] as THREE.Line;
+  // Found by traversal, not by index: `<GizmoLine>` wraps its line in a group
+  // carrying the gizmo's draw order (`GIZMO_GROUP_ORDER`), so the line is no
+  // longer a direct child.
+  let line: THREE.Line | undefined;
+  object.traverse((o) => {
+    if (!line && (o as THREE.Line).isLine) line = o as THREE.Line;
+  });
+  if (!line) throw new Error('gizmo drew no line');
   const position = line.geometry.getAttribute('position');
   let max = 0;
   for (let i = 0; i < position.count; i++) {

@@ -11,8 +11,8 @@
  * global flip group is needed, and world coordinates stay readable (a node at
  * Godot `(100, 50)` sits at three.js `(100, -50)`).
  *
- * `z` carries draw order (from `z_index` / tree order) as a small `+Z` offset so
- * higher-z content sits nearer a `+Z` camera; pixels are 1 world unit.
+ * Pixels are 1 world unit, and the whole 2D scene sits in the z=0 plane: draw
+ * order is `renderOrder`, not depth (`canvasPaintOrder.ts`).
  */
 
 import * as THREE from 'three';
@@ -29,36 +29,6 @@ export interface Node2DGroupProps {
    * into a Matrix4 instead. Consumers apply it via `node2dGroupSpread`.
    */
   matrix?: THREE.Matrix4;
-}
-
-/** Draw-order spacing per z-index step (world units along +Z toward the camera). */
-export const Z_INDEX_STEP = 0.1;
-
-/**
- * Fine draw-order range WITHIN one z-index step, shared by y-sort ranks and the
- * tree-order slots that separate sibling y-sort subtrees (see YSortSlotContext).
- * Half a step so a `show_behind_parent` node (which sits at `-Z_INDEX_STEP*0.5`)
- * never collides with the fine band above the layer base.
- */
-export const YSORT_FINE_RANGE = Z_INDEX_STEP * 0.5;
-
-/**
- * Sub-z_index draw-order spacing inside a TileMap node: legacy layers stack by
- * index within one z_index step, and each layer's atlas sources get a smaller
- * deterministic nudge (Godot interleaves cells across sources in scan order —
- * unattainable under per-source batching).
- */
-export const TILE_LAYER_STEP = Z_INDEX_STEP / 64;
-export const TILE_SOURCE_STEP = Z_INDEX_STEP / 1024;
-
-/**
- * The +Z draw-order offset for a CanvasItem: `z_index` scaled by the step,
- * nudged half a step BACK when `show_behind_parent` is set so the node sits
- * just behind its parent's origin (Godot draws it underneath the parent).
- */
-export function canvasItemZ(props: { z_index: number; show_behind_parent?: boolean }): number {
-  const base = props.z_index * Z_INDEX_STEP;
-  return props.show_behind_parent ? base - Z_INDEX_STEP * 0.5 : base;
 }
 
 export function node2dGroupProps(t: Node2DLocalTransform, z = 0): Node2DGroupProps {

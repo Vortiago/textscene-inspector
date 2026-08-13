@@ -13,6 +13,7 @@ import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { Vec2 } from './rect';
+import type { PaintRange } from '../../canvasPaintOrder';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 
 // Re-exported for existing importers of the type from its former home —
@@ -30,6 +31,23 @@ export interface SolveNode {
   node: TscnNode;
   /** From `liveChildGroups`; each child's own scope is already resolved. */
   children: readonly SolveNode[];
+  /**
+   * The run of canvas draw-sequence values this node's subtree owns
+   * (`canvasPaintOrder.ts`).
+   *
+   * Derived here from the node's position among ALL its live siblings, Controls
+   * and Node2Ds alike — which this walk can see and the Control tree alone
+   * cannot, since a Control promotes past a non-Control ancestor and loses its
+   * place among that ancestor's children on the way. Without it a Control could
+   * only be ordered against other Controls, and a background `ColorRect`
+   * authored first would draw over the sprites that follow it.
+   */
+  paintRange: PaintRange;
+  /**
+   * The draw-sequence value this node draws its OWN pixels at — its position in
+   * Godot's walk, after any `show_behind_parent` children and before the rest.
+   */
+  paintSequence: number;
   /** This node's `theme_override_styles/*` StyleBoxes, resolved in ITS scope. */
   styleBoxes: Readonly<Record<string, StyleBoxFlatData>>;
   /** `null` until the node's texture (if any) has loaded. */

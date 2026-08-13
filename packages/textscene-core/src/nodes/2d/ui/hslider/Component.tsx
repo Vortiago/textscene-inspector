@@ -23,6 +23,7 @@
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -62,24 +63,24 @@ export function HSlider({ solveNode, rect, theme, renderOrder }: NativeControlCo
 
   return (
     <>
-      <group position={[trackRect.x, -trackRect.y, 0]}>
+      <CanvasItemGroup position={[trackRect.x, -trackRect.y, 0]}>
         <StyleBoxQuad
           styleBox={trackBase}
           color={tint.own}
           rect={{ x: 0, y: 0, w: trackRect.w, h: trackRect.h }}
           renderOrder={renderOrder}
         />
-      </group>
-      <group position={[fillRect.x, -fillRect.y, 0]}>
+      </CanvasItemGroup>
+      <CanvasItemGroup position={[fillRect.x, -fillRect.y, 0]}>
         <StyleBoxQuad
           styleBox={fillBase}
           color={tint.own}
           rect={{ x: 0, y: 0, w: fillRect.w, h: fillRect.h }}
           renderOrder={renderOrder}
         />
-      </group>
+      </CanvasItemGroup>
       {tickRects.map((tickRect, i) => (
-        <group key={tickIndices[i]} position={[tickRect.x, -tickRect.y, 0]}>
+        <CanvasItemGroup key={tickIndices[i]} position={[tickRect.x, -tickRect.y, 0]}>
           <ControlQuad
             renderOrder={renderOrder}
             width={tickRect.w}
@@ -88,9 +89,9 @@ export function HSlider({ solveNode, rect, theme, renderOrder }: NativeControlCo
             opacity={tint.opacity}
             map={tickTexture}
           />
-        </group>
+        </CanvasItemGroup>
       ))}
-      <group position={[grabberRect.x, -grabberRect.y, 0]}>
+      <CanvasItemGroup position={[grabberRect.x, -grabberRect.y, 0]}>
         <ControlQuad
           renderOrder={renderOrder}
           width={grabberRect.w}
@@ -99,7 +100,7 @@ export function HSlider({ solveNode, rect, theme, renderOrder }: NativeControlCo
           opacity={tint.opacity}
           map={grabberTexture}
         />
-      </group>
+      </CanvasItemGroup>
     </>
   );
 }

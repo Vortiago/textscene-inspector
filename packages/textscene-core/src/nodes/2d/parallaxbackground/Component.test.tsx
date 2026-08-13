@@ -242,22 +242,4 @@ describe('<ParallaxBackground>', () => {
     expect(wrapper.scale.x).toBe(1);
   });
 
-  it('pushes its CanvasLayer `layer` onto the subtree as renderOrder', async () => {
-    const storeCamera = { current: null as THREE.Camera | null };
-    const renderer = await ReactThreeTestRenderer.create(
-      <>
-        <StoreCamera into={storeCamera} />
-        <ParallaxBackground node={backgroundNode()}>
-          <mesh name="art">
-            <boxGeometry />
-            <meshBasicMaterial />
-          </mesh>
-        </ParallaxBackground>
-      </>
-    );
-    const scene = renderer.scene.instance;
-    fireRender(scene, storeCamera.current!);
-
-    expect(scene.getObjectByName('art')!.renderOrder).toBe(-100);
-  });
 });

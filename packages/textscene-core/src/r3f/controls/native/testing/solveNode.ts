@@ -25,7 +25,13 @@
  * with a partial explicit object.
  */
 
+import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../solveTree';
+import {
+  allocatePaintRange,
+  WHOLE_CANVAS_RANGE,
+  type PaintRange,
+} from '../../../canvasPaintOrder';
 
 /**
  * Frozen because they are SHARED across every node this factory builds, where a
@@ -46,7 +52,14 @@ const NO_THEME_CHAIN: SolveNode['themeChain'] = Object.freeze([]);
  */
 export function solveNode(): Pick<
   SolveNode,
-  'children' | 'styleBoxes' | 'textureSize' | 'fontOverrides' | 'themeChain' | 'projectTheme'
+  | 'children'
+  | 'styleBoxes'
+  | 'textureSize'
+  | 'fontOverrides'
+  | 'themeChain'
+  | 'projectTheme'
+  | 'paintRange'
+  | 'paintSequence'
 > {
   return {
     children: [],
@@ -55,5 +68,53 @@ export function solveNode(): Pick<
     fontOverrides: NO_FONT_OVERRIDES,
     themeChain: NO_THEME_CHAIN,
     projectTheme: null,
+    // The whole canvas, which is what a lone Control owns. A test asserting
+    // draw order between several of them wants `withPaintRanges` instead —
+    // these defaults deliberately TIE, rather than inventing an order a
+    // hand-built tree never stated.
+    paintRange: WHOLE_CANVAS_RANGE,
+    paintSequence: WHOLE_CANVAS_RANGE.base,
+  };
+}
+
+/**
+ * Assign each node in a hand-built `SolveNode` tree the draw-sequence run it
+ * would get from `buildSolveTree`, so a test can assert paint ORDER.
+ *
+ * Production allocates over a node's LIVE children — every sibling, Control or
+ * not — because that is the order Godot's walk visits. A hand-built tree has
+ * only its Controls, so this allocates over those: the same pre-order rule
+ * applied to the only siblings such a tree declares.
+ */
+export function withPaintRanges(
+  roots: readonly SolveNode[],
+  range: PaintRange = WHOLE_CANVAS_RANGE
+): SolveNode[] {
+  // Delegated to the production allocator, exactly as `buildSolveTree` and
+  // `NodeDispatcher` do for the root list — a hand-rolled cursor here started
+  // roots one value LOWER than production does, so every test built on it was
+  // green against sequences the renderer never emits.
+  const allocated = allocatePaintRange(range, roots.map(shadowTree));
+  return roots.map((root, i) => assignRange(root, allocated.children[i]!));
+}
+
+/**
+ * A hand-built `SolveNode` carries its children on ITSELF and leaves
+ * `node.children` empty, so the production allocator — which reads the node
+ * tree — would size every subtree at 1 and overlap the siblings. This rebuilds
+ * the `TscnNode` tree the allocator expects.
+ */
+function shadowTree(n: SolveNode): TscnNode {
+  return { ...n.node, children: n.children.map(shadowTree) };
+}
+
+/** Split `own` between a node and its children through the PRODUCTION allocator. */
+function assignRange(node: SolveNode, own: PaintRange): SolveNode {
+  const allocated = allocatePaintRange(own, node.children.map(shadowTree));
+  return {
+    ...node,
+    paintRange: own,
+    paintSequence: allocated.self,
+    children: node.children.map((child, i) => assignRange(child, allocated.children[i]!)),
   };
 }

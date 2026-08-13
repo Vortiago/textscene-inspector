@@ -117,6 +117,8 @@ function ContentGroundGrid() {
 }
 
 function EmptySceneIndicator() {
+  // paint-order-safe: the empty-scene indicator, mounted where no scene and
+  // so no canvas item exists.
   return (
     <group userData={{ tscnEmptyState: true }}>
       <GroundGrid />

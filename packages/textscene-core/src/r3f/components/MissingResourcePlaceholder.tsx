@@ -21,6 +21,7 @@
  * affordance, not a placeholder widget).
  */
 import * as THREE from 'three';
+import { CanvasItemGroup } from './CanvasItemGroup';
 
 export type MissingResourcePlaceholderShape = 'box' | 'plane';
 
@@ -46,7 +47,7 @@ export function MissingResourcePlaceholder({
   scale,
 }: Props) {
   return (
-    <group name={name} position={position} rotation={rotation} scale={scale}>
+    <CanvasItemGroup name={name} position={position} rotation={rotation} scale={scale}>
       {shape === 'box' ? (
         <mesh>
           <boxGeometry args={BOX_SIZE} />
@@ -63,6 +64,6 @@ export function MissingResourcePlaceholder({
           />
         </mesh>
       )}
-    </group>
+    </CanvasItemGroup>
   );
 }

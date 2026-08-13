@@ -55,6 +55,7 @@
  * same `NOTIFICATION_DRAW`), then handed to every `ViewportSurfaceNative`.
  */
 import { useEffect, useMemo } from 'react';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry.js';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad.js';
@@ -73,6 +74,7 @@ import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../..
 import { isViewportBoundary } from '../../../viewport/subviewport/viewportBoundary.js';
 import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
 import type { SubViewportContainerProperties } from './types.js';
+import { WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
@@ -164,6 +166,10 @@ function ViewportSurfaceNative({
       path,
       node: viewport,
       children: [],
+      // A SubViewport draws into its own target, so this root orders nothing
+      // against the enclosing canvas — it starts a fresh range of its own.
+      paintRange: WHOLE_CANVAS_RANGE,
+      paintSequence: WHOLE_CANVAS_RANGE.base,
       styleBoxes: {},
       textureSize: null,
       // This synthetic root stands in for the SubViewport itself (never a
@@ -190,7 +196,7 @@ function ViewportSurfaceNative({
   const { anchorRef, clip } = useWorldClipPlanes(clipRect);
 
   return (
-    <group ref={anchorRef} scale={[scale, scale, 1]}>
+    <CanvasItemGroup ref={anchorRef} scale={[scale, scale, 1]}>
       <ControlClipProvider value={clip}>
         {cyclic ? (
           <ControlFallback
@@ -234,7 +240,7 @@ function ViewportSurfaceNative({
           snapToPixels
         />
       </ControlClipProvider>
-    </group>
+    </CanvasItemGroup>
   );
 }
 
@@ -280,7 +286,7 @@ export function SubViewportContainer({
           // Each successive viewport draws ON TOP of the last (Godot's own
           // tree-order stacking) — a fraction below the next paint index's
           // integer slot, matching the small-offset convention
-          // `controlDrawOrder.ts` documents (e.g. a scrollbar grabber's `+0.5`).
+          // the painter contract documents (e.g. a scrollbar grabber's `+0.5`).
           renderOrder={renderOrder + (index + 1) / 100}
           theme={theme}
           measureText={measureText}

@@ -54,21 +54,20 @@
  * (`ControlComponentRegistry.ts`'s `NativeControlComponentProps`), NOT this
  * node's own `renderOrder` — using `renderOrder` was the ORIGINAL, now-wrong
  * rule, and it drew both bars UNDER the scrolled content instead of over it:
- * `paintIndex` is a single pre-order counter across the WHOLE tree
- * (`native/controlRectSolver.ts`'s `assignPaintIndex`), so every descendant
- * of this ScrollContainer necessarily gets a LARGER paint index — and so a
- * larger `renderOrder` — than this node's own. Godot never draws its
+ * a node draws at the FRONT of the draw-sequence run its subtree occupies
+ * (`canvasPaintOrder.ts`), so every descendant of this ScrollContainer
+ * necessarily gets a larger sequence — and so a larger key — than this node's
+ * own. Godot never draws its
  * scrollbars at this node's own paint slot either: `h_scroll`/`v_scroll` are
  * added via `Node::add_child(..., INTERNAL_MODE_BACK)`
  * (`scene/gui/scroll_container.cpp:919,924`), which places them AFTER every
  * normal child regardless of when they were added, so they paint LAST among
  * this node's own descendants.
  *
- * `subtreeChromeRenderOrder` is `bandBase(layer) + subtreeLastPaintIndex` —
- * the paint index of the LAST descendant in this node's own subtree
- * (`SolvedControl.subtreeLastPaintIndex`, `native/controlRectSolver.ts`) —
- * so it equals that descendant's OWN `renderOrder`, and the solver hands
- * this node's next SIBLING exactly one past it. Both bars must therefore
+ * `subtreeChromeRenderOrder` is the canvas key at the END of this node's own
+ * draw-sequence run — a subtree owns a CONTIGUOUS range, so that is the last
+ * descendant's own `renderOrder`, and this node's next SIBLING starts exactly
+ * one past it. Both bars must therefore
  * land in that one-wide gap: track at `subtreeChromeRenderOrder + 0.25`,
  * grabber at `+ 0.5` — FRACTIONAL, not `+1`/`+2`, so a `+1` bar can never
  * reach the next sibling's own paint slot the way an integer offset could.
@@ -79,6 +78,7 @@
  * ordering between them is not load-bearing.
  */
 import { useMemo } from 'react';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { createSolveContext } from '../../../../r3f/controls/native/controlRectSolver';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
@@ -181,12 +181,12 @@ function ScrollBarChrome({ bar, track, grabber, color, chromeRenderOrder, snapTo
   // handed and applies the Godot→three y flip itself, so a caller supplies the
   // offset through a group and nothing else.
   return (
-    <group position={[origin.x, -origin.y, 0]}>
+    <CanvasItemGroup position={[origin.x, -origin.y, 0]}>
       <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={chromeRenderOrder + 0.25} />
-      <group position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}>
+      <CanvasItemGroup position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}>
         <StyleBoxQuad styleBox={grabber} color={color} rect={bar.grabberRect} renderOrder={chromeRenderOrder + 0.5} />
-      </group>
-    </group>
+      </CanvasItemGroup>
+    </CanvasItemGroup>
   );
 }
 
@@ -230,7 +230,7 @@ export function ScrollContainer({
   const { anchorRef, clip } = useWorldClipPlanes(ownRect);
 
   return (
-    <group ref={anchorRef}>
+    <CanvasItemGroup ref={anchorRef}>
       <ControlClipProvider value={clip}>
         <ScrollBarChrome
           bar={layout.horizontal}
@@ -250,6 +250,6 @@ export function ScrollContainer({
         />
         {children}
       </ControlClipProvider>
-    </group>
+    </CanvasItemGroup>
   );
 }

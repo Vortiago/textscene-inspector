@@ -1,6 +1,6 @@
 /**
  * <Node2D> — invisible 2D transform container. Maps the Godot 2D transform
- * onto a <group> with z_index draw-order offset, and modulate context.
+ * onto a <group> with its canvas draw-order key, and modulate context.
  *
  * When `y_sort_enabled` is true, children are NOT rendered directly.
  * Instead, <YSortDispatcher> collects them, sorts by (effectiveZ bucket →

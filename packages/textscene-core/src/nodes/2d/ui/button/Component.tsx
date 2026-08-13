@@ -43,6 +43,7 @@
  * `HSplitContainer`'s custom-minimum-size fallback does.
  */
 import { useMemo } from 'react';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
@@ -177,7 +178,7 @@ export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeCont
     <>
       {!props.flat && <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />}
       {content.icon && iconTexture && (
-        <group position={[content.icon.rect.x, -content.icon.rect.y, 0]}>
+        <CanvasItemGroup position={[content.icon.rect.x, -content.icon.rect.y, 0]}>
           <ControlQuad
             renderOrder={renderOrder}
             width={content.icon.rect.w}
@@ -186,10 +187,10 @@ export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeCont
             opacity={tintedIconColorSrgb.a}
             map={iconTexture}
           />
-        </group>
+        </CanvasItemGroup>
       )}
       {content.text && layout && (
-        <group position={[content.text.offset.x, -content.text.offset.y, 0]}>
+        <CanvasItemGroup position={[content.text.offset.x, -content.text.offset.y, 0]}>
           <TextRun
             layout={layout}
             fontSizePx={fontSizePx}
@@ -197,7 +198,7 @@ export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeCont
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />
-        </group>
+        </CanvasItemGroup>
       )}
     </>
   );

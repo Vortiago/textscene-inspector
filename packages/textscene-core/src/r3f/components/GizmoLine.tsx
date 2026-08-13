@@ -15,6 +15,20 @@ import * as THREE from 'three';
 /** Render order for selection-gated gizmos — above ordinary scene content. */
 export const GIZMO_RENDER_ORDER = 10;
 
+/**
+ * The GROUP order a gizmo draws at — above every canvas item there can be.
+ *
+ * A gizmo is editor chrome, not a CanvasItem, so it does not take a place in
+ * the canvas the way `canvasPaintOrder.ts` assigns one. It also cannot rely on
+ * `renderOrder` alone to stay on top: three compares the nearest enclosing
+ * group's order FIRST, and in the 2D canvas that group is the gizmo's own node,
+ * sitting at whatever position the scene gave it — so a gizmo would fall behind
+ * anything authored after its node. Lifting the group clear of the key space
+ * keeps "over scene content" true, which is the whole point of a selection
+ * affordance.
+ */
+export const GIZMO_GROUP_ORDER = Number.MAX_SAFE_INTEGER;
+
 export interface GizmoLineProps {
   /** Flat line-segment vertex positions `[x0,y0,z0, x1,y1,z1, …]`. */
   positions: Float32Array;
@@ -34,16 +48,18 @@ export function GizmoLine({ positions, colors, color }: GizmoLineProps) {
   useEffect(() => () => geometry.dispose(), [geometry]);
 
   return (
-    <lineSegments renderOrder={GIZMO_RENDER_ORDER}>
-      <primitive object={geometry} attach="geometry" />
-      {/* Default to white so vertex-colored gizmos multiply against white (and we
-          never hand the material an undefined color). */}
-      <lineBasicMaterial
-        color={color ?? 0xffffff}
-        vertexColors={!!colors}
-        depthWrite={false}
-        transparent
-      />
-    </lineSegments>
+    <group renderOrder={GIZMO_GROUP_ORDER}>
+      <lineSegments renderOrder={GIZMO_RENDER_ORDER}>
+        <primitive object={geometry} attach="geometry" />
+        {/* Default to white so vertex-colored gizmos multiply against white (and we
+            never hand the material an undefined color). */}
+        <lineBasicMaterial
+          color={color ?? 0xffffff}
+          vertexColors={!!colors}
+          depthWrite={false}
+          transparent
+        />
+      </lineSegments>
+    </group>
   );
 }

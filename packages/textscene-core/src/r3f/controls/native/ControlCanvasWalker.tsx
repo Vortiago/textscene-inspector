@@ -47,7 +47,9 @@ import { controlComponentRegistry } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
 import { Modulate2DContext, useControlTint } from './useControlTint';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
-import { controlRenderOrder } from './controlDrawOrder';
+import { canvasRenderOrder } from '../../canvasPaintOrder';
+import { CanvasItemGroup, CanvasItemKeyProvider } from '../../components/CanvasItemGroup';
+import { useLayerRank } from '../../contexts/PaintOrderContext';
 import { snapControlsToPixelsEnabled, snappedControlOrigin } from './controlPixelSnap';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import {
@@ -162,11 +164,8 @@ function ControlNodeGroup({
   // ancestor's own painter published — see the `wrapsChildren` branch
   // below, which the registration declares rather than the walker testing a
   // type name.
-  // `paintIndex` is the solver's own pre-order counter (`controlRectSolver.ts`),
-  // so `renderOrder` is deterministic across the whole tree by construction —
-  // see `controlDrawOrder.ts` for why this replaces a z offset entirely.
   const layer = useCanvasLayerIndex();
-  const renderOrder = controlRenderOrder(layer, solvedEntry?.paintIndex ?? 0);
+  const layerRank = useLayerRank(layer);
   // Godot's `z_final`: this Control's own `z_index` accumulated onto the
   // ambient a CanvasItem2D ancestor (or an enclosing CanvasLayer's painter,
   // which resets it to 0 — a fresh canvas) published, clamped exactly as
@@ -179,11 +178,25 @@ function ControlNodeGroup({
   // flag reorders draw order, not z accumulation.
   const parentEffectiveZ = useEffectiveZ();
   const effectiveZ = accumulateCanvasItemZ(parentEffectiveZ, { z_index: props.zIndex ?? 0 });
-  // Second draw-order key, for chrome that must draw after this node's WHOLE
-  // subtree (Godot's `INTERNAL_MODE_BACK` — see `NativeControlComponentProps.
-  // subtreeChromeRenderOrder`'s own doc for why). Same band, but keyed off
-  // the LAST paint index in this node's own subtree rather than its own.
-  const subtreeChromeRenderOrder = controlRenderOrder(layer, solvedEntry?.subtreeLastPaintIndex ?? 0);
+
+  // This Control's place in the canvas — the SAME key, from the same function,
+  // that every Node2D canvas item takes (`canvasPaintOrder.ts`). Its sequence
+  // comes from the node's position among ALL its live siblings, which is what
+  // lets it interleave with them rather than sitting in a band of its own.
+  const renderOrder = canvasRenderOrder({
+    layerRank,
+    zFinal: effectiveZ,
+    sequence: solveNode.paintSequence,
+  });
+  // Second key, for chrome that must draw after this node's WHOLE subtree
+  // (Godot's `INTERNAL_MODE_BACK` — see `NativeControlComponentProps.
+  // subtreeChromeRenderOrder`'s own doc). The subtree owns a CONTIGUOUS run, so
+  // "after all of it" is simply the run's last value.
+  const subtreeChromeRenderOrder = canvasRenderOrder({
+    layerRank,
+    zFinal: effectiveZ,
+    sequence: solveNode.paintRange.base + solveNode.paintRange.size - 1,
+  });
 
   // `Container::fit_child_in_rect` resets a container child's transform, so a
   // node whose parent imposes a layout has an EFFECTIVE rotation of 0 and an
@@ -287,20 +300,31 @@ function ControlNodeGroup({
   );
 
   return (
+    // Every group this node emits carries the key, not just the outermost:
+    // three takes `groupOrder` from the NEAREST enclosing group, so a bare
+    // transform group in between would reset the item's place in the canvas to
+    // zero for the pixels inside it.
     <group
       name={`${solveNode.node.type}:${solveNode.node.name}`}
       position={[origin.x, -origin.y, 0]}
       visible={isVisible}
+      renderOrder={renderOrder}
     >
-      <Modulate2DContext.Provider value={tint.inherited}>
-        {hasOwnTransform ? (
-          <group position={[pivotX, -pivotY, 0]} rotation={[0, 0, 0 - rotation]} scale={[scaleX, scaleY, 1]}>
-            <group position={[-pivotX, pivotY, 0]}>{content}</group>
-          </group>
-        ) : (
-          content
-        )}
-      </Modulate2DContext.Provider>
+      <CanvasItemKeyProvider value={renderOrder}>
+        <Modulate2DContext.Provider value={tint.inherited}>
+          {hasOwnTransform ? (
+            <CanvasItemGroup
+              position={[pivotX, -pivotY, 0]}
+              rotation={[0, 0, 0 - rotation]}
+              scale={[scaleX, scaleY, 1]}
+            >
+              <CanvasItemGroup position={[-pivotX, pivotY, 0]}>{content}</CanvasItemGroup>
+            </CanvasItemGroup>
+          ) : (
+            content
+          )}
+        </Modulate2DContext.Provider>
+      </CanvasItemKeyProvider>
     </group>
   );
 }

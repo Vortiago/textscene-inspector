@@ -24,6 +24,7 @@
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
  */
 import { useMemo } from 'react';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -106,7 +107,7 @@ export function OptionButton({ solveNode, rect, renderOrder, theme }: NativeCont
   return (
     <>
       <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
-      <group position={[content.arrowRect.x, -content.arrowRect.y, 0]}>
+      <CanvasItemGroup position={[content.arrowRect.x, -content.arrowRect.y, 0]}>
         <ControlQuad
           renderOrder={renderOrder}
           width={content.arrowRect.w}
@@ -115,9 +116,9 @@ export function OptionButton({ solveNode, rect, renderOrder, theme }: NativeCont
           opacity={tint.opacity}
           map={arrowTexture}
         />
-      </group>
+      </CanvasItemGroup>
       {hasText && layout && (
-        <group position={[content.textOffset.x, -content.textOffset.y, 0]}>
+        <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
           <TextRun
             layout={layout}
             fontSizePx={fontSizePx}
@@ -125,7 +126,7 @@ export function OptionButton({ solveNode, rect, renderOrder, theme }: NativeCont
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />
-        </group>
+        </CanvasItemGroup>
       )}
     </>
   );
