@@ -3,6 +3,9 @@
  * mesh carries and none of them declares.
  */
 
+// Registers Mesh and, through it, Resource, so the inherited keys resolve when
+// this module loads alone.
+import '../mesh/linterValidators.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 

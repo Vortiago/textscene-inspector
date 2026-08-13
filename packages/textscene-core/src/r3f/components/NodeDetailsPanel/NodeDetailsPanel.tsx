@@ -6,6 +6,7 @@
  */
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
+import { isCamera3DType } from '../../cameraNodeTypes.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { useLiveNode } from '../../useLiveSceneTree.js';
@@ -40,7 +41,7 @@ export function NodeDetailsPanel() {
     ? registration.propertyFormatter(node.properties)
     : [];
 
-  const showCameraActions = node.type === 'Camera3D' && cameraControl !== null;
+  const showCameraActions = isCamera3DType(node.type) && cameraControl !== null;
   const isActiveCamera =
     cameraControl !== null && cameraControl.activeCameraPath === path;
 

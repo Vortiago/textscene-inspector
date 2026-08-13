@@ -11,7 +11,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { referencedResourceType, resourceSlotIsEmpty } from '../resourceChecker.js';
-import { findParentNode } from '../linterUtils.js';
+import { parentTypeVerdict, verdictParent } from '../parentType.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
 import { isZeroApprox } from '../../godot/math.js';
 import { basisColumnScales } from './basisColumnScales.js';
@@ -69,19 +69,23 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
-    // WARNING: Check if parent is a valid physics body type
-    const parent = findParentNode(scene.nodes, node);
-    if (parent) {
-      if (!descendsFrom(parent.type, collisionObject)) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `${type} '${node.name}' has parent '${parent.name}' of type '${parent.type}', which is not a ${collisionObject}. ${advice}`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-invalid-parent`,
-        });
-      }
-    } else {
+    // WARNING: Check if parent is a valid physics body type. Through the
+    // verdict for its `unknowable` arm: an instanced or override parent takes
+    // its class from a scene this linter never opens, so its `type` here is an
+    // ExtResource ref or the index fallback's "0", and comparing either against
+    // a CollisionObject warns on every body assembled by instancing one. Every
+    // later check below reads the same parent, and each is silent without one.
+    const placement = parentTypeVerdict(scene, node, collisionObject);
+    const parent = verdictParent(placement);
+    if (placement.kind === 'mismatch') {
+      diagnostics.push({
+        severity: 'warning',
+        message: `${type} '${node.name}' has parent '${placement.parent.name}' of type '${placement.parent.type}', which is not a ${collisionObject}. ${advice}`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: `${prefix}-invalid-parent`,
+      });
+    } else if (placement.kind === 'root') {
       // WARNING: CollisionShape at root level (no parent)
       diagnostics.push({
         severity: 'warning',

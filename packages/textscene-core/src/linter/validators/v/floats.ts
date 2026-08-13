@@ -35,21 +35,22 @@ export const floatCombinators = {
   float(name: string, opts: FloatOpts = {}): PropertyValidator {
     return maybeFinite(name, opts, ground(
       accepts(
-        createNumericRangeValidator(
-          name,
-          opts.min ?? null,
-          opts.max ?? null,
-          false,
-          opts.message,
-          formatCode(name),
-          valueCode(name),
-          endSeverity(opts, 'min'),
-          endSeverity(opts, 'max')
-        ),
-        numericRange('float', opts.min, opts.max)
+        createNumericRangeValidator({
+          propertyName: name,
+          min: opts.min ?? null,
+          max: opts.max ?? null,
+          enforcedMin: opts.enforcedMin,
+          enforcedMax: opts.enforcedMax,
+          message: opts.message,
+          errorCodeFormat: formatCode(name),
+          errorCodeValue: valueCode(name),
+          minSeverity: endSeverity(opts, 'min', opts.enforcedMin !== undefined),
+          maxSeverity: endSeverity(opts, 'max', opts.enforcedMax !== undefined),
+        }),
+        numericRange('float', opts.min, opts.max, opts)
       ),
       opts,
-      { min: opts.min, max: opts.max }
+      { min: opts.min, max: opts.max, enforcedMin: opts.enforcedMin, enforcedMax: opts.enforcedMax }
     ));
   },
 
@@ -76,17 +77,16 @@ export const floatCombinators = {
     const lowDeg = opts.minDeg ?? 0;
     return ground(
       accepts(
-      createNumericRangeValidator(
-        name,
+      createNumericRangeValidator({
+        propertyName: name,
         min,
         max,
-        false,
-        `Property '${name}' must be between ${min.toFixed(4)} and ${max.toFixed(4)} radians (${lowDeg} to ${opts.maxDeg} degrees)`,
-        formatCode(name),
-        valueCode(name),
-        endSeverity(opts, 'min'),
-        endSeverity(opts, 'max')
-      ),
+        message: `Property '${name}' must be between ${min.toFixed(4)} and ${max.toFixed(4)} radians (${lowDeg} to ${opts.maxDeg} degrees)`,
+        errorCodeFormat: formatCode(name),
+        errorCodeValue: valueCode(name),
+        minSeverity: endSeverity(opts, 'min'),
+        maxSeverity: endSeverity(opts, 'max'),
+      }),
       `radians, ${lowDeg}° to ${opts.maxDeg}°`
       ),
       opts,
@@ -98,16 +98,13 @@ export const floatCombinators = {
   nonNegativeFloat(name: string, opts: Grounding = {}): PropertyValidator {
     return maybeFinite(name, opts, ground(
       accepts(
-        createNumericRangeValidator(
-          name,
-          0,
-          null,
-          false,
-          undefined,
-          formatCode(name),
-          valueCode(name),
-          endSeverity(opts, 'min')
-        ),
+        createNumericRangeValidator({
+          propertyName: name,
+          min: 0,
+          errorCodeFormat: formatCode(name),
+          errorCodeValue: valueCode(name),
+          minSeverity: endSeverity(opts, 'min'),
+        }),
         'float >= 0'
       ),
       opts,
@@ -115,24 +112,40 @@ export const floatCombinators = {
     ));
   },
 
-  /** Float > 0 (strict). Useful for distances, energies, near/far planes. */
-  positiveFloat(name: string, message?: string, opts: Grounding = {}): PropertyValidator {
+  /**
+   * Float > 0 (strict), the shape of `ERR_FAIL_COND(p_x <= 0)`.
+   *
+   * An EXCLUSIVE end at 0 rather than an inclusive one at `Number.MIN_VALUE`.
+   * The old spelling was a fiction that happened to behave: no positive double
+   * sits below `MIN_VALUE`, so it read the same, but it occupied the `min` slot
+   * with a number no engine line states. That made the hint-parity ledger see a
+   * floor where the hint's floor was still unimplemented, and it needed a
+   * per-property exemption roster to stay quiet about it.
+   *
+   * Pass the hint's own floor as `hintedMin` where the property has one, and
+   * the band between the two reports as a warning instead of vanishing.
+   */
+  positiveFloat(
+    name: string,
+    message?: string,
+    opts: Grounding & { hintedMin?: number } = {}
+  ): PropertyValidator {
+    const enforcedMin = { at: 0, exclusive: true };
     return ground(
       accepts(
-        createNumericRangeValidator(
-          name,
-          Number.MIN_VALUE,
-          null,
-          false,
-          message ?? `Property '${name}' must be greater than 0`,
-          formatCode(name),
-          valueCode(name),
-          endSeverity(opts, 'min')
-        ),
-        'float > 0'
+        createNumericRangeValidator({
+          propertyName: name,
+          min: opts.hintedMin ?? null,
+          enforcedMin,
+          enforcedMessage: message ?? `Property '${name}' must be greater than 0`,
+          errorCodeFormat: formatCode(name),
+          errorCodeValue: valueCode(name),
+          minSeverity: endSeverity(opts, 'min', true),
+        }),
+        numericRange('float', opts.hintedMin, undefined, { enforcedMin })
       ),
       opts,
-      { min: Number.MIN_VALUE }
+      { min: opts.hintedMin, enforcedMin }
     );
   },
 };

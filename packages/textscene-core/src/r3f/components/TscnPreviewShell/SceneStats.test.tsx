@@ -73,4 +73,28 @@ describe('<SceneStats>', () => {
     // expanded live tree.
     expect(screen.getByTestId('scene-info-nodes').textContent).toBe('2 nodes');
   });
+
+  // The chip counts by Godot's class tree, not the literal type name: an
+  // XRCamera3D is a Camera3D and draws through that component.
+  it('counts a Camera3D subclass (XRCamera3D)', () => {
+    const parsed = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="World" type="Node3D"]
+
+[node name="Eye" type="Camera3D" parent="."]
+
+[node name="Headset" type="XRCamera3D" parent="."]
+`);
+    const sceneGraph = createSceneGraphFromTscnScene(parsed, 'res://xr.tscn');
+
+    render(
+      <ResourceLoaderProvider loader={makeLoader({})}>
+        <HierarchyProvider value={{ sceneGraph, panelId: 'stats-xr' }}>
+          <SceneStats />
+        </HierarchyProvider>
+      </ResourceLoaderProvider>
+    );
+
+    expect(screen.getByText('2 cameras')).toBeTruthy();
+  });
 });

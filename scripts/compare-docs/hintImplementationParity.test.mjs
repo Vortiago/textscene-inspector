@@ -30,7 +30,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { stalenessMessage } from '../distFreshness.mjs';
-import { loadCoreLinter } from './loadCoreLinter.mjs';
+import { loadCoreLinter, loadRadianEpsilon } from './loadCoreLinter.mjs';
 
 const PROPS = join(import.meta.dirname, 'node-properties.json');
 const RESOURCE_PROPS = join(import.meta.dirname, 'resource-properties.json');
@@ -38,10 +38,17 @@ const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 // Not `existsSync(dist)`: that cannot tell a fresh build from one predating
 // the very change being measured, and it SKIPS rather than fails, so a run
 // with no build at all reads green over a guard that never executed.
-const stale = stalenessMessage(CORE, 'this hint-parity ledger');
+//
+// Computed in `beforeAll`, never at module scope: it walks a tree a concurrent
+// `tsc --build` may be writing, and a throw during module evaluation surfaces
+// as a vitest collection error instead of the actionable message.
+let stale;
 
 /** `PropertyInfo::hint` for `PROPERTY_HINT_RANGE`. */
 const HINT_RANGE = 1;
+
+/** Loaded from the built combinator in `beforeAll`; see {@link hintBounds}. */
+let RADIAN_ROUNDTRIP_EPSILON;
 
 /**
  * Ends where the code departs from the hint on purpose, because the SETTER
@@ -52,83 +59,31 @@ const HINT_RANGE = 1;
  * fails below rather than sitting here forever.
  */
 const SETTER_OVERRIDES_HINT = new Map([
-  // Window.content_scale_factor and OpenXRCompositionLayerCylinder.aspect_ratio
-  // sit in STRICTLY_POSITIVE_SETTER below instead: their divergence is the
-  // shared `<= 0` refusal, not a floor named independently of the hint.
+  // Only ends where the setter leaves NO reachable band for the hint to warn
+  // on, because it refuses or alters at or beyond the hint's own number. An end
+  // whose setter sits FURTHER OUT than the hint is not an override: both tiers
+  // are reachable, and `enforcedMin`/`enforcedMax` carries the setter's while
+  // `min`/`max` keeps the hint's, so nothing needs exempting.
+  //
   // The hint's -1 is the in-memory default the serializer omits; the setter's
   // ERR_FAIL_COND_MSG(p_bone_idx < 0) refuses it outright.
   ['PhysicalBone2D.bone2d_index', 'physical_bone_2d.cpp:229'],
-  // ERR_FAIL_COND(p_count < 1) sits ABOVE the hint's floor of 0, so the hint
-  // leaves no reachable band to warn on and the enforced floor is the only bound.
+  // ERR_FAIL_COND(p_count < 1) sits ABOVE the hint's floor of 0.
   ['GPUParticles3D.draw_passes', 'gpu_particles_3d.cpp:266'],
-  // Both below: the setter's floor sits BELOW the hint's, so `[enforced, hinted)`
-  // is a real hint-only sliver that goes unreported. One `min` slot holds one
-  // tier and it must be the more severe, or a value the setter refuses would
-  // report as a warning.
-  ['GeometryInstance3D.lod_bias', 'visual_instance_3d.cpp:387'],
-  ['NavigationAgent3D.height', 'navigation_agent_3d.cpp:618'],
-  ['NavigationAgent2D.radius', 'navigation_agent_2d.cpp:571'],
-  ['NavigationAgent2D.max_speed', 'navigation_agent_2d.cpp:620'],
-  ['NavigationAgent3D.radius', 'navigation_agent_3d.cpp:608'],
-  ['NavigationAgent3D.max_speed', 'navigation_agent_3d.cpp:684'],
   // CLAMP(p, 0.1, 2.0) passes [0.1, 0.25) through unaltered, so the hint's 0.25
   // is advisory and the clamp's 0.1 is the end that alters a value.
   ['Viewport.scaling_3d_scale', 'viewport.cpp:4875'],
-  // Setter floors named independently of the hint, and below it.
-  ['CSGPolygon3D.depth', 'csg_shape.cpp:2651'],
-  ['CSGPolygon3D.spin_degrees', 'csg_shape.cpp:2681'],
-  ['AudioStreamPlayer3D.emission_angle_degrees', 'audio_stream_player_3d.cpp:687'],
-  // The floor is the setter's predicate reproduced exactly, `0.01 - CMP_EPSILON`.
-  ['LightmapGI.texel_scale', 'lightmap_gi.cpp:1749'],
   // One ERR_FAIL_COND spanning 0..128 inclusive, WIDER than the hint at both
   // ends. The 128 is the literal in the predicate, not a power-of-two guess.
   ['AnimationMixer.audio_max_polyphony', 'animation_mixer.cpp:542'],
   // A clamp, not a refusal: `p > 4 ? p : 4` means 1..3 are values Godot never
-  // stores, so the floor sits ABOVE the hint's and leaves no band to warn on.
+  // stores, so the floor sits ABOVE the hint's.
   ['CSGSphere3D.radial_segments', 'csg_shape.cpp:1489'],
-  // `ERR_FAIL_COND(p_size <= CMP_EPSILON)` refuses at 1e-5, two orders below
-  // the hint's 0.001, so the band between them loads and the enforced end wins.
-  ['Camera3D.size', 'camera_3d.cpp:731'],
   // `size = p_size.maxf(0.001)` raises anything under 0.001 rather than refusing
-  // it, so the altered floor sits ABOVE the hint's 0 and leaves no band to warn on.
+  // it, so the altered floor sits ABOVE the hint's 0.
   ['Decal.size', 'decal.cpp:34'],
 ]);
 
-/**
- * Properties whose setter refuses everything `<= 0` while the hint's floor sits
- * higher, so `Number.MIN_VALUE` is the honest encoding of the enforced end.
- *
- * A roster rather than a rule, for the reason `SETTER_OVERRIDES_HINT` is one:
- * the class-wide version exempted eight properties whose floor was fabricated
- * rather than derived, and nothing could see the difference. Each entry names
- * the predicate, so the claim is checkable and a stale one fails below.
- *
- * One `min` slot holds one tier and it must be the more severe: a value the
- * setter refuses cannot be reported as a warning about a slider's range.
- */
-const STRICTLY_POSITIVE_SETTER = new Map([
-  ['AudioStreamPlayer.pitch_scale', 'audio_stream_player_internal.cpp:314'],
-  ['AudioStreamPlayer2D.pitch_scale', 'audio_stream_player_internal.cpp:314'],
-  ['AudioStreamPlayer3D.pitch_scale', 'audio_stream_player_internal.cpp:314'],
-  ['AudioStreamPlayer2D.max_distance', 'audio_stream_player_2d.cpp:300'],
-  ['CPUParticles2D.lifetime', 'cpu_particles_2d.cpp:86'],
-  ['CPUParticles3D.lifetime', 'cpu_particles_3d.cpp:92'],
-  ['GPUParticles2D.lifetime', 'gpu_particles_2d.cpp:78'],
-  ['GPUParticles3D.lifetime', 'gpu_particles_3d.cpp:82'],
-  ['CSGSphere3D.radius', 'csg_shape.cpp:1478'],
-  ['LineEdit.caret_blink_interval', 'line_edit.cpp:2050'],
-  ['TextEdit.caret_blink_interval', 'text_edit.cpp:5198'],
-  ['Timer.wait_time', 'timer.cpp:93'],
-  ['PhysicalBone3D.mass', 'physical_bone_3d.cpp:1190'],
-  ['RigidBody2D.mass', 'rigid_body_2d.cpp:318'],
-  ['RigidBody3D.mass', 'rigid_body_3d.cpp:334'],
-  // Not an ERR_FAIL_COND but the same refusal: the setter assigns 1 and returns.
-  ['Skeleton3D.motion_scale', 'skeleton_3d.cpp:586'],
-  ['Window.content_scale_factor', 'window.cpp:1774'],
-  // The hint's floor is 0 INCLUSIVE while the setter refuses `<= 0`, so this is
-  // the one entry where MIN_VALUE is stricter than the hint rather than looser.
-  ['OpenXRCompositionLayerCylinder.aspect_ratio', 'openxr_composition_layer_cylinder.cpp:144'],
-]);
 
 /**
  * A `PROPERTY_HINT_RANGE` string as the engine states it: `"lo,hi"`,
@@ -150,10 +105,37 @@ function parseHint(hintString) {
     openMin: flags.includes('or_less'),
     openMax: flags.includes('or_greater'),
     // The inspector shows degrees while the `.tscn` stores radians, so the
-    // engine's numbers and ours are in different units and not comparable.
+    // engine's numbers and ours are in different units. Converted rather than
+    // skipped: `v.radians` stores the converted bounds, so the two ARE
+    // comparable, and skipping them hid 46 ranged properties from every
+    // assertion here, 33 of them closed at both ends.
     degrees: flags.includes('radians_as_degrees'),
   };
 }
+
+/**
+ * The hint's bounds in the unit the `.tscn` stores, with the tolerance
+ * `v.radians` builds in.
+ *
+ * That epsilon is not slack this file invents: Godot stores these as float32
+ * and writes them back in decimal, so a value the editor set to exactly PI
+ * reloads a hair off and a bound at float64 PI would reject the engine's own
+ * output. Imported from the combinator that applies it, never retyped, or the
+ * ledger and the code it measures drift by exactly the amount being compared.
+ */
+function hintBounds(hint) {
+  if (!hint.degrees) return { lo: hint.lo, hi: hint.hi, tolerance: 0 };
+  return {
+    lo: (hint.lo * Math.PI) / 180 - RADIAN_ROUNDTRIP_EPSILON,
+    hi: (hint.hi * Math.PI) / 180 + RADIAN_ROUNDTRIP_EPSILON,
+    // A float32 round-trip near PI is ~2.4e-7, so this is comfortably wider
+    // than any real drift while still catching a bound in the wrong place.
+    tolerance: RADIAN_ROUNDTRIP_EPSILON / 100,
+  };
+}
+
+/** Equal to within what the radian round-trip can move a bound. */
+const sameBound = (ours, theirs, tolerance) => Math.abs(ours - theirs) <= tolerance;
 
 /**
  * Ends we bound to a DIFFERENT number than the engine states.
@@ -165,21 +147,27 @@ function parseHint(hintString) {
 function mismatches(label, hint, bounds) {
   const out = [];
   const { min, max } = bounds ?? {};
-  // A `Number.MIN_VALUE` floor is exempt only where an entry says why. It used
-  // to be exempt as a CLASS, on the reasoning that the value is never chosen
-  // but spelled from an `ERR_FAIL_COND(p_x <= 0)`, so the enforced floor is the
-  // real one and the band up to the hint's is a hint-only sliver. True of 18
-  // properties and false of 8, and a blanket rule could not tell them apart:
-  // seven had no setter guard at all and one refused at CMP_EPSILON, so the
-  // floor was fabricated and the exemption hid it. Worse, it could be reached
-  // by switching combinator — `v.positiveFloat` bakes the value in — so a red
-  // here had a way to be silenced that was not implementing the bound.
-  const exempt = STRICTLY_POSITIVE_SETTER.has(label) && min === Number.MIN_VALUE;
-  if (!hint.openMin && min !== undefined && !exempt && min !== hint.lo) {
-    out.push(`we floor at ${min}, engine at ${hint.lo}`);
+  const { lo, hi, tolerance } = hintBounds(hint);
+  // No `Number.MIN_VALUE` exemption, and none needed. A setter refusing `<= 0`
+  // is spelled `enforcedMin: { at: 0, exclusive: true }`, which leaves the `min`
+  // slot free to carry the hint's own floor, so the two tiers no longer compete
+  // for one number and there is nothing to exempt. The old blanket rule was
+  // exempting eight properties whose floor was fabricated rather than derived,
+  // and could be reached by switching combinator, so a red here had a way to be
+  // silenced that was not implementing the bound.
+  if (!hint.openMin && min !== undefined && !sameBound(min, lo, tolerance)) {
+    out.push(`we floor at ${min}, engine at ${lo}`);
   }
-  if (!hint.openMax && max !== undefined && max !== hint.hi) {
-    out.push(`we cap at ${max}, engine at ${hint.hi}`);
+  if (!hint.openMax && max !== undefined && !sameBound(max, hi, tolerance)) {
+    out.push(`we cap at ${max}, engine at ${hi}`);
+  }
+  // The policy's other half, which nothing checked: `or_greater` / `or_less`
+  // OPENS that end, so a bound there rejects a value the engine invites.
+  if (hint.openMin && min !== undefined) {
+    out.push(`we floor at ${min}, engine leaves that end open (or_less)`);
+  }
+  if (hint.openMax && max !== undefined) {
+    out.push(`we cap at ${max}, engine leaves that end open (or_greater)`);
   }
   return out;
 }
@@ -195,6 +183,13 @@ function mismatches(label, hint, bounds) {
 function unimplementedEnds(hint, bounds) {
   const { min, max } = bounds ?? {};
   const ends = [];
+  // `bounds.min` is the OUTER end, so a setter floor further out
+  // (`bounds.enforcedMin`) does not implement the hint's: it reports the values
+  // the engine refuses and stays silent on the band the inspector excludes but
+  // the engine loads. Reading either slot here counted three properties as
+  // implemented while `TextEdit.caret_blink_interval = 0.05`,
+  // `CSGSphere3D.radius = 0.0005` and `AudioStreamPlayer.pitch_scale = 0.005`
+  // all passed without a word.
   if (!hint.openMin && min === undefined) ends.push('min');
   if (!hint.openMax && max === undefined) ends.push('max');
   return ends;
@@ -224,7 +219,7 @@ async function rangedProperties() {
     for (const property of properties) {
       if (property.hint !== HINT_RANGE) continue;
       const hint = parseHint(property.hint_string);
-      if (!hint || hint.degrees) continue;
+      if (!hint) continue;
       // A property we validate nowhere is `enginePropertyCoverage`'s subject,
       // not this one: absent coverage is a different claim from wrong coverage.
       const validator = validatorRegistry.findValidator(nodeType, property.name);
@@ -239,6 +234,7 @@ describe('the bound we implement against the bound Godot declared', () => {
   // Fails every assertion below with one actionable message rather than letting
   // them agree with a previous revision's registry.
   beforeAll(() => {
+    stale = stalenessMessage(CORE, 'this hint-parity ledger');
     if (stale) throw new Error(stale);
   });
 
@@ -251,6 +247,7 @@ describe('the bound we implement against the bound Godot declared', () => {
   // do it at once under a full `--project scripts` run — comfortably fast
   // alone, and over the default when they contend.
   beforeAll(async () => {
+    RADIAN_ROUNDTRIP_EPSILON = await loadRadianEpsilon();
     rows = await rangedProperties();
   }, 60_000);
 
@@ -301,22 +298,10 @@ describe('the bound we implement against the bound Godot declared', () => {
     expect(dead).toEqual([]);
   });
 
-  it('holds no strictly-positive entry for a property that no longer floors there', () => {
-    // The same ratchet the override roster gets. Without it the list only ever
-    // grows, and an entry that stopped describing the code would go on exempting
-    // whatever replaced it — which is how the class-wide version hid eight.
-    const byLabel = new Map(rows.map((r) => [r.label, r]));
-    const dead = [...STRICTLY_POSITIVE_SETTER.keys()].filter((label) => {
-      const row = byLabel.get(label);
-      return row === undefined || row.bounds?.min !== Number.MIN_VALUE;
-    });
-    expect(dead).toEqual([]);
-  });
-
-  it('cites an engine line for every strictly-positive entry', () => {
+  it('cites an engine line for every override', () => {
     // Same standard the bounds themselves are held to: a roster whose reasons
     // cannot be checked is a list of opinions.
-    const uncited = [...STRICTLY_POSITIVE_SETTER.entries()]
+    const uncited = [...SETTER_OVERRIDES_HINT.entries()]
       .filter(([, cite]) => !/^[\w/]+\.(cpp|h):\d+$/.test(cite))
       .map(([label, cite]) => `${label}: ${cite}`);
     expect(uncited).toEqual([]);

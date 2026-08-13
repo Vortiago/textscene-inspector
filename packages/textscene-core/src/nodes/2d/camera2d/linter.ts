@@ -8,9 +8,9 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { findParentNode, isValidProperties } from '../../../linter/linterUtils.js';
+import { isValidProperties } from '../../../linter/linterUtils.js';
 import { isViewportBoundary } from '../../viewport/subviewport/viewportBoundary.js';
-import { isTypeUnknowable } from '../../../linter/parentType.js';
+import { searchAncestors } from '../../../linter/parentType.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 
 /**
@@ -29,11 +29,11 @@ import { parseGodotFloat } from '../../../linter/validators/commonValidators.js'
  * which is the real scene-root viewport, so two such cameras never compare equal.
  */
 function viewportScopeOf(scene: TscnScene, node: TscnNode): TscnNode | null | undefined {
-  for (let n = findParentNode(scene.nodes, node); n; n = findParentNode(scene.nodes, n)) {
-    if (isTypeUnknowable(n)) return undefined;
-    if (isViewportBoundary(n.type)) return n;
-  }
-  return null;
+  const search = searchAncestors(scene, node, (ancestor) =>
+    isViewportBoundary(ancestor.type) ? ancestor : undefined
+  );
+  if (search.kind === 'unknowable') return undefined;
+  return search.kind === 'found' ? search.value : null;
 }
 
 /** Enabled unless the key says otherwise: `enabled` defaults true (camera_2d.h:67). */

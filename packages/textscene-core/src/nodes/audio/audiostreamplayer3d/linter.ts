@@ -8,9 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
-import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
-import { player3DPitchArms } from '../sharedLinterChecks.js';
+import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
 
 /**
  * Validate AudioStreamPlayer3D semantic rules
@@ -31,11 +29,15 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
   // default, audio_stream_player_3d.cpp defines no configuration warning, and a
   // script or an AnimationPlayer audio track may supply the stream instead.
 
-  // ERROR: stream resource doesn't exist
-  if (rawProps.stream !== undefined && !checkResourceExists(scene, rawProps.stream)) {
+  // ERROR: stream resource doesn't exist. `heldResource`, not a presence check:
+  // `stream = null` and `stream =` are both empty slots that Godot reads as the
+  // absent case, and asking `!== undefined` reported the second one here on top
+  // of the strict parser's own format error.
+  const stream = heldResource(rawProps.stream);
+  if (stream !== undefined && !checkResourceExists(scene, stream)) {
     diagnostics.push({
       severity: 'error',
-      message: `Stream resource "${rawProps.stream}" does not exist in scene. AudioStreamPlayer3D will not play audio.`,
+      message: `Stream resource "${stream}" does not exist in scene. AudioStreamPlayer3D will not play audio.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'audiostreamplayer3d-missing-stream-resource',
@@ -64,13 +66,8 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // The pitch band only: `volume_db` and `unit_size` carry their hint bounds on
-  // their validators in linterParser.ts.
-  diagnostics.push(
-    ...rangeAdvisories(node, {
-      pitch_scale: player3DPitchArms('audiostreamplayer3d'),
-    })
-  );
+  // No range advisories: `pitch_scale`, `volume_db` and `unit_size` all carry
+  // their hint bounds on their validators in linterParser.ts.
 
   return diagnostics;
 }
@@ -111,11 +108,6 @@ const audioStreamPlayer3DValidationRule: LintRule = {
           at: 'audio_stream_player_3d.cpp:898',
           unused: 'the group-enable toggle gates the whole emission_angle group',
         },
-      },
-      {
-        ruleName: 'audiostreamplayer3d-unusual-pitch',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'audio_stream_player_3d.cpp:887' },
       },
     ],
   },

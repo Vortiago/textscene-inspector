@@ -47,7 +47,7 @@ Strict parsing format-checks these `Node2D` properties, plus 16 inherited from C
 | `rotation` | float |  |
 | `rotation_degrees` | float |  |
 | `scale` | Vector2(x, y), no (near-)zero component |  |
-| `skew` | float |  |
+| `skew` | radians, -89.9° to 89.9° | warning |
 | `transform` | Transform2D(6 floats) |  |
 
 | Rule | Reports | Severity |

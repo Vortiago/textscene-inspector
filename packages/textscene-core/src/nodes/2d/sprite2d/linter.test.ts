@@ -114,12 +114,13 @@ describe('Sprite2D Linter', () => {
       },
       {
         prop: 'frame_coords',
-        valid: ['Vector2i(1, 2)', 'Vector2i(0, 0)'],
+        // A float component is legal: `_parse_construct<int32_t>`
+        // (variant_parser.cpp:577-592) converts it, so Godot stores (1, 2).
+        valid: ['Vector2i(1, 2)', 'Vector2i(0, 0)', 'Vector2i(1.5, 2.5)'],
         with: { hframes: 4, vframes: 3 },
         invalid: [
           { value: 'Vector2i(-1, 0)', contains: ['frame_coords', 'non-negative'] },
           { value: 'Vector2(1, 2)', contains: ['frame_coords', 'Vector2i'] },
-          { value: 'Vector2i(1.5, 2.5)', contains: ['frame_coords'] },
         ],
       },
     ]);

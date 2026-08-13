@@ -206,12 +206,17 @@ describe('Window strict validators', () => {
       expect(check('content_scale_stretch', '2')?.message).toContain('0-1');
     });
 
-    it('accepts content_scale_factor inside the hint, and below its floor too', () => {
-      // The hint's 0.5 floor is not enforced by anything: 0.1 loads and runs,
-      // so it is not diagnosed at all.
+    it('accepts content_scale_factor inside the hint', () => {
       expect(check('content_scale_factor', '0.5')).toBeNull();
       expect(check('content_scale_factor', '8.0')).toBeNull();
-      expect(check('content_scale_factor', '0.1')).toBeNull();
+    });
+
+    it('warns below the hinted 0.5 floor, which nothing enforces', () => {
+      // 0.1 loads and runs — the setter only refuses `<= 0` (window.cpp:1774),
+      // so the hint's floor is the inspector's limit and warns.
+      const warning = check('content_scale_factor', '0.1');
+      expect(warning?.severity).toBe('warning');
+      expect(warning?.message).toContain('between 0.5 and 8');
     });
 
     it('warns above the hinted 8.0 ceiling rather than erroring', () => {

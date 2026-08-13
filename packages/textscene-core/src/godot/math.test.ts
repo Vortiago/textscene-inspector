@@ -5,11 +5,33 @@
  * diverged before they were folded into this module.
  */
 import { describe, it, expect } from 'vitest';
-import { CMP_EPSILON, isZeroApprox, isEqualApprox, smoothstep } from './math.js';
+import { CMP_EPSILON, isZeroApprox, isEqualApprox, sign, smoothstep } from './math.js';
 
 describe('CMP_EPSILON', () => {
   it('is math_defs.h:50, not the 1e-6 a private copy stood in with', () => {
     expect(CMP_EPSILON).toBe(0.00001);
+  });
+});
+
+describe('sign', () => {
+  it('is +1, -1 or 0, with zero unsigned', () => {
+    expect(sign(3.5)).toBe(1);
+    expect(sign(-3.5)).toBe(-1);
+    expect(sign(0)).toBe(0);
+    expect(sign(-0)).toBe(0);
+  });
+
+  it('reads NaN as 0, where Math.sign reads NaN', () => {
+    // Both of `SIGN`'s comparisons are false for NaN, so it falls through to
+    // the 0 branch. This is the whole reason the engine's spelling is
+    // transcribed rather than delegated.
+    expect(sign(NaN)).toBe(0);
+    expect(Math.sign(NaN)).toBeNaN();
+  });
+
+  it('signs the infinities', () => {
+    expect(sign(Infinity)).toBe(1);
+    expect(sign(-Infinity)).toBe(-1);
   });
 });
 

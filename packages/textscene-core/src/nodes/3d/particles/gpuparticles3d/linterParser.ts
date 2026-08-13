@@ -41,9 +41,15 @@ validatorRegistry.registerAll('GPUParticles3D', {
   // gpu_particles_3d.cpp:822 hints "0,1,0.0001"; set_amount_ratio (:730-733)
   // is a bare assignment, so out of range is a warning.
   amount_ratio: v.float('amount_ratio', { min: 0, max: 1, hinted: 'gpu_particles_3d.cpp:822' }),
-  // gpu_particles_3d.cpp:81-84, ERR_FAIL_COND_MSG(p_lifetime <= 0, ...): the
-  // setter refuses.
-  lifetime: v.positiveFloat('lifetime', undefined, { enforced: 'gpu_particles_3d.cpp:82' }),
+  // gpu_particles_3d.cpp:82, ERR_FAIL_COND_MSG(p_lifetime <= 0, ...): the
+  // setter refuses below the hint's own floor (:825,
+  // "0.01,600.0,0.01,or_greater,exp,suffix:s"), so (0, 0.01) loads into Godot
+  // and only warns.
+  lifetime: v.positiveFloat('lifetime', undefined, {
+    hintedMin: 0.01,
+    enforced: 'gpu_particles_3d.cpp:82',
+    hinted: 'gpu_particles_3d.cpp:825',
+  }),
   one_shot: v.boolean('one_shot'),
   // gpu_particles_3d.cpp:828 hints "0.00,10.0,0.01,or_greater,exp";
   // set_pre_process_time:124-127 is a bare assignment.

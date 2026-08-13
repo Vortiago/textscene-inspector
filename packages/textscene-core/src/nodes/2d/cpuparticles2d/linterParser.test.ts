@@ -37,6 +37,27 @@ describe('CPUParticles2D strict validators', () => {
     expect(accepted).toEqual([]);
   });
 
+  describe('lifetime', () => {
+    // set_lifetime (cpu_particles_2d.cpp:86) ERR_FAIL_COND_MSGs at `<= 0`,
+    // while the hint (:1495, "0.01,600.0,0.01,or_greater,exp,suffix:s") floors
+    // at 0.01 and opens the ceiling.
+    it('errors at or below the floor the setter refuses', () => {
+      expect(check('lifetime', '0')?.severity).toBe('error');
+      expect(check('lifetime', '-1')?.severity).toBe('error');
+    });
+
+    it('warns between the refused floor and the hinted one', () => {
+      const warning = check('lifetime', '0.005');
+      expect(warning?.severity).toBe('warning');
+      expect(warning?.message).toContain('0.01');
+    });
+
+    it('accepts the hint floor and anything past the open ceiling', () => {
+      expect(check('lifetime', '0.01')).toBeNull();
+      expect(check('lifetime', '99999')).toBeNull();
+    });
+  });
+
   describe('draw_order', () => {
     // cpu_particles_2d.cpp:1509, ADD_PROPERTY hints PROPERTY_HINT_ENUM
     // "Index,Lifetime" (enum 0-1). set_draw_order (cpu_particles_2d.cpp:

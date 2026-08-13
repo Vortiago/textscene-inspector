@@ -52,16 +52,22 @@ function atLeast<T>(items: T[], floor: number, what: string): T[] {
 /** Every `linter.ts` under `src/nodes/` — one per slice that declares a rule. */
 export const ruleFiles = (): string[] => atLeast(walk(nodesRoot, 'linter.ts'), 100, 'ruleFiles');
 
-/** A source module, as opposed to a test: the population a scrape reads. */
-const isSourceTs = (name: string) => /\.ts$/.test(name) && !/\.test\.ts$/.test(name);
+/** `.../src` — the whole package, not one subtree of it. */
+export const srcRoot = resolve(linterDir, '..');
 
-/** Every source module a diagnostic could be named in: the slices and the linter itself. */
-export const allSourceFiles = (): string[] =>
-  atLeast(
-    [nodesRoot, linterDir].flatMap((root) => walk(root, isSourceTs)),
-    1000,
-    'allSourceFiles'
-  );
+/** A source module, as opposed to a test: the population a scrape reads. */
+const isSourceModule = (name: string) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name);
+
+/**
+ * Every source module in the package, `.tsx` included.
+ *
+ * The whole of `src/` rather than a list of subtrees: a guard built on this
+ * asks "does this exist anywhere", and a walk that names its roots answers
+ * "anywhere I remembered". `src/parser`, `src/r3f` and `src/resources` were all
+ * outside the earlier `[nodesRoot, linterDir]` pair, and so was every `.tsx`,
+ * which is where a helper lands the moment someone moves it out of the linter.
+ */
+export const allSourceFiles = (): string[] => atLeast(walk(srcRoot, isSourceModule), 1000, 'allSourceFiles');
 
 const RULE_NAME_RE = /^\s*name:\s*'([^']+)'/gm;
 

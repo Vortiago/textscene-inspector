@@ -224,8 +224,11 @@ describe('ItemList counts and sizes', () => {
     expect(check('fixed_icon_size', 'Vector2i(-4, -4)')).toBeNull();
   });
 
-  it('rejects a float or a Vector2 spelling of fixed_icon_size', () => {
-    expect(check('fixed_icon_size', 'Vector2i(32.5, 24)')).not.toBeNull();
+  it('takes a float component, which Godot converts, and rejects the wrong type name', () => {
+    // `_parse_construct<int32_t>` (variant_parser.cpp:577-592) takes any number
+    // token, so `32.5` loads as 32. `Vector2` is a different Variant type and
+    // does not convert.
+    expect(check('fixed_icon_size', 'Vector2i(32.5, 24)')).toBeNull();
     expect(check('fixed_icon_size', 'Vector2(32, 24)')).not.toBeNull();
   });
 });

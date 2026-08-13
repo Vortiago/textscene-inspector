@@ -548,5 +548,12 @@ uv1_scale = Vector2(0.5, 0.5)
         diagnostics.filter((d) => d.severity === 'error' && d.message.includes('uv1_scale'))
       ).toHaveLength(1);
     });
+
+    it('inherits Material keys through the base-walk without re-declaring them', () => {
+      // Only this slice is imported here, so the ancestor resolves solely
+      // because this module registers Material's chain on the way in.
+      expect(validatorRegistry.findValidator('StandardMaterial3D', 'render_priority')).not.toBeNull();
+      expect(validatorRegistry.getOwnKeys('BaseMaterial3D')).not.toContain('render_priority');
+    });
   });
 });

@@ -3,6 +3,19 @@
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
 import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
+import { tupleComponent } from './commonValidators.js';
+
+/**
+ * One MATCHED component of an integer tuple, as the int32 Godot stores.
+ *
+ * Non-finite stays non-finite rather than collapsing to a number, so a bound
+ * comparison against it is false and reports nothing, exactly as the float
+ * validators treat one.
+ */
+function intComponent(text: string | undefined): number {
+  const parsed = tupleComponent(text);
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : parsed;
+}
 
 /**
  * Vector3 format: Vector3(x, y, z). Re-derived from the canonical float grammar
@@ -23,7 +36,16 @@ export const VECTOR3_REGEX = makeFloatTupleRegex('Vector3', 3);
 export const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 
 /** Vector2i format: Vector2i(x, y) - two comma-separated integers */
-export const VECTOR2I_REGEX = /^Vector2i\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/;
+/**
+ * `Vector2i(x, y)`, with the components Godot's parser actually takes.
+ *
+ * `_parse_construct<int32_t>` (variant_parser.cpp:577-592) accepts any number
+ * token and pushes it into a `Vector<int32_t>`, so a component written as a
+ * float or in exponent notation loads and truncates toward zero. A `-?\d+`
+ * component grammar reported a format error on `Vector2i(2e1, 0)`, which Godot
+ * stores as `Vector2i(20, 0)`.
+ */
+export const VECTOR2I_REGEX = makeFloatTupleRegex('Vector2i', 2);
 
 /**
  * Creates a Vector2 validator
@@ -64,8 +86,10 @@ export function createVector2iValidator(
     }
 
     if (minComponent !== undefined) {
-      const x = parseInt(match[1] || '0', 10);
-      const y = parseInt(match[2] || '0', 10);
+      // Truncated toward zero, the way the int32 conversion does, so `0.9`
+      // is bounded as the 0 Godot stores rather than as the 0.9 it was written.
+      const x = intComponent(match[1]);
+      const y = intComponent(match[2]);
       if (x < minComponent || y < minComponent) {
         // The 0 case keeps its long-standing wording; every per-node test that
         // asserts a substring of it is asserting the engine's floor, not the phrasing.

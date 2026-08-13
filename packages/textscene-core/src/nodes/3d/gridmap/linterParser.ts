@@ -12,7 +12,7 @@ import { accepts, layerBitmask, propertyError, v } from '../../../linter/validat
 import { ARRAY_LITERAL_RE, packedArrayCallAnywhere, RESOURCE_REF_RE } from '../../../godot/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
-import { parseGodotFloat, TSCN_FLOAT_RE } from '../../../linter/validators/commonValidators.js';
+import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
 
 const DICT_LITERAL_RE = /^\{[\s\S]*\}$/;
 const CELLS_RE = new RegExp(`"cells"\\s*:\\s*${packedArrayCallAnywhere('PackedInt32Array').source}`);
@@ -101,24 +101,9 @@ const CELL_OCTANT_SIZE_HINT_MAX = 1024;
  * warning.
  */
 const cellOctantSizeValidator: PropertyValidator = accepts((key, value, line) => {
-  // Anchored, because `parseInt` stops at the first non-digit: it read `8abc` as
-  // 8 and passed a file Godot rejects, and read `2e3` as 2 while Godot stores
-  // 2000. The property is Variant::INT but the tokenizer sets is_float on the
-  // `e` (variant_parser.cpp:446-448) and the FLOAT is converted on assignment,
-  // so a float literal is legal here and truncates toward zero: `5e-1` becomes 0
-  // and trips the zero guard below.
-  const trimmed = value.trim();
-  if (!TSCN_FLOAT_RE.test(trimmed)) {
-    return propertyError(
-      key,
-      line,
-      `Property 'cell_octant_size' must be a number, got: "${value}"`,
-      'INVALID_CELL_OCTANT_SIZE_FORMAT'
-    );
-  }
-  const asFloat = parseGodotFloat(trimmed);
-  const parsed = asFloat === null || Number.isNaN(asFloat) ? NaN : Math.trunc(asFloat);
-  if (isNaN(parsed)) {
+  // `parseGodotInt`, so `5e-1` truncates to 0 and trips the zero guard below.
+  const parsed = parseGodotInt(value);
+  if (parsed === null) {
     return propertyError(
       key,
       line,

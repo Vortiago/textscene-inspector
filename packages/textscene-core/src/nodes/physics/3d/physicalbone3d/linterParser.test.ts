@@ -136,8 +136,18 @@ describe('PhysicalBone3D strict validators', () => {
       expect(check('mass', '5000')).toBeNull();
     });
 
-    it('rejects a value below the hard minimum', () => {
+    it('rejects a value the setter refuses', () => {
       expect(check('mass', '0')?.code).toBe('INVALID_MASS_VALUE');
+      expect(check('mass', '0')?.severity).toBe('error');
+      expect(check('mass', '-1')?.severity).toBe('error');
+    });
+
+    // set_mass (:1190) refuses `<= 0` while the hint's floor is 0.01, so
+    // (0, 0.01) loads into Godot and the inspector still excludes it.
+    it('warns between the refused floor and the hinted one', () => {
+      const warning = check('mass', '0.005');
+      expect(warning?.severity).toBe('warning');
+      expect(warning?.message).toContain('0.01');
     });
 
     it('rejects a non-numeric value', () => {

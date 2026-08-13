@@ -47,8 +47,8 @@
  */
 
 import type { TscnNode, TscnScene } from '../parser/types.js';
-import { findParentNode, isUnderInstance } from './linterUtils.js';
-import { isTypeUnknowable } from './parentType.js';
+import { isUnderInstance } from './linterUtils.js';
+import { isTypeUnknowable, knownParent } from './parentType.js';
 
 /** `UNIQUE_NODE_PREFIX` (string_name.h:36). */
 const UNIQUE_NODE_PREFIX = '%';
@@ -136,15 +136,15 @@ export function resolveNodePath(
     if (name === '.') continue;
 
     if (name === '..') {
-      const parent = findParentNode(scene.nodes, current);
-      // `:1920-1922` returns null here, and standalone in the editor that is
-      // exactly what happens. But this file's root is only the runtime root
-      // while the scene is open on its own: instanced anywhere, the `..` lands
-      // on a parent the file never names. Declining is the same call the
+      // `:1920-1922` returns null at the root, and standalone in the editor
+      // that is exactly what happens. But this file's root is only the runtime
+      // root while the scene is open on its own: instanced anywhere, the `..`
+      // lands on a parent the file never names. Declining is the same call the
       // `instance=` cases make, and reporting instead would fire on every scene
-      // built to be instanced.
-      if (!parent) return UNKNOWABLE;
-      current = parent;
+      // built to be instanced — so `root` and `unknowable` land together.
+      const step = knownParent(scene, current);
+      if (step.kind !== 'known') return UNKNOWABLE;
+      current = step.parent;
       continue;
     }
 

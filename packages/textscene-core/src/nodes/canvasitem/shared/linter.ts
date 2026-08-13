@@ -45,8 +45,9 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { findParentNode, isValidProperties } from '../../../linter/linterUtils.js';
+import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
+import { sweepAncestors } from '../../../linter/parentType.js';
 import { CLIP_CHILDREN_DISABLED } from '../../../godot/canvasItem.js';
 
 /** `clip_children` on `candidate`, per canvas_item.h:72-75 — non-zero and parseable. */
@@ -67,18 +68,18 @@ function checkCanvasItemClipAncestry(context: RuleContext): Diagnostic[] {
   if (!clipsChildren(node)) return [];
 
   const diagnostics: Diagnostic[] = [];
-  let clippingAncestor: TscnNode | null = null;
-  let canvasGroupAncestor: TscnNode | null = null;
-  let current = findParentNode(scene.nodes, node);
-  while (current && (!clippingAncestor || !canvasGroupAncestor)) {
-    if (!clippingAncestor && descendsFrom(current.type, 'CanvasItem') && clipsChildren(current)) {
-      clippingAncestor = current;
-    }
-    if (!canvasGroupAncestor && descendsFrom(current.type, 'CanvasGroup')) {
-      canvasGroupAncestor = current;
-    }
-    current = findParentNode(scene.nodes, current);
-  }
+  // `sweepAncestors` rather than a terminating walk: Godot's own loop
+  // (canvas_item.cpp:1302-1320) climbs to the root without letting a type end
+  // it, so an ancestor whose class lives in another scene subtracts nothing
+  // from what the ones above it prove. Nearest first, so `[0]` is Godot's pick.
+  const clipping: TscnNode[] = [];
+  const groups: TscnNode[] = [];
+  sweepAncestors(scene, node, (ancestor) => {
+    if (descendsFrom(ancestor.type, 'CanvasItem') && clipsChildren(ancestor)) clipping.push(ancestor);
+    if (descendsFrom(ancestor.type, 'CanvasGroup')) groups.push(ancestor);
+  });
+  const clippingAncestor = clipping[0];
+  const canvasGroupAncestor = groups[0];
 
   if (clippingAncestor) {
     diagnostics.push({

@@ -59,8 +59,8 @@ Strict parsing format-checks these `RigidBody2D` properties, plus 5 inherited fr
 | `linear_damp_mode` | enum 0-1 (COMBINE/REPLACE) | warning |
 | `linear_velocity` | Vector2(x, y) |  |
 | `lock_rotation` | true or false |  |
-| `mass` | float >= 5e-324 | error below |
-| `max_contacts_reported` | integer 0-4095 | error |
+| `mass` | float >= 0.001 | error at or below 0, warning below 0.001 |
+| `max_contacts_reported` | integer >= 0 | error below 0, error at or above 4096 |
 | `physics_material_override` | null, SubResource("id") or ExtResource("id") |  |
 | `sleeping` | true or false |  |
 
@@ -71,7 +71,6 @@ Strict parsing format-checks these `RigidBody2D` properties, plus 5 inherited fr
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-rigidbody2d` (type-family match) | `valid-rigidbody2d-resources` | error |
 |  | `rigidbody2d-needs-collision-shape` | warning |
-|  | `rigidbody2d-mass-too-low` | warning |
 |  | `rigidbody2d-max-contacts-without-monitor` | warning |
 |  | `rigidbody2d-scale-overridden-at-runtime` | warning |
 <!-- lint:end -->

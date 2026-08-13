@@ -31,21 +31,10 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // Only the value the setter actually refuses. The hint is "0.001,10,0.001,
-  // or_greater" (skeleton_3d.cpp:1293), so an open max end makes a large scale
-  // legal, and anything down to 0.001 sits inside the hint's own range.
-  if (rawProps.motion_scale !== undefined) {
-    const motionScale = parseFloat(rawProps.motion_scale);
-    if (!isNaN(motionScale) && motionScale <= 0) {
-      diagnostics.push({
-        severity: 'error',
-        message: `motion_scale is ${motionScale}. Godot replaces it with 1.0, so the authored value never applies.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'valid-skeleton3d-motion-scale',
-      });
-    }
-  }
+  // No `motion_scale` arm. Both of its bounds live on the validator in
+  // linterParser.ts: `set_motion_scale` (skeleton_3d.cpp:586) substitutes 1 at
+  // or below 0, and the hint's own 0.001 floor warns above that. A rule
+  // repeating the enforced end here reported it twice on the same node.
 
   // Warning: show_rest_only = true (debugging mode, animations disabled)
   if (rawProps.show_rest_only === 'true') {
@@ -80,15 +69,10 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
 const skeleton3DValidationRule: LintRule = {
   meta: {
     name: 'valid-skeleton3d-usage',
-    description: 'Validates Skeleton3D motion_scale values and debug modes',
+    description: 'Validates Skeleton3D debug modes and bone-attachment usage',
     category: 'validation',
     applicableNodeTypes: ['Skeleton3D'],
     emits: [
-      {
-        ruleName: 'valid-skeleton3d-motion-scale',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'skeleton_3d.cpp:586' },
-      },
       {
         ruleName: 'skeleton3d-debug-mode',
         severity: 'warning',

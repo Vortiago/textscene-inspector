@@ -288,6 +288,42 @@ shape = SubResource("capsule_shape")
       expectNoDiagnostic(content, { ruleName: 'collisionshape2d-invalid-parent' });
     });
 
+    it('says nothing about a parent whose type is declared in another scene', () => {
+      // The 3D twin carries the same case: an `instance=` parent's `type` is
+      // the ExtResource ref, an override heading's is the index fallback's "0",
+      // and neither can be measured against CollisionObject2D.
+      const instancedParent = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://body.tscn" id="1_body"]
+
+[sub_resource type="RectangleShape2D" id="shape_1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Body" parent="." instance=ExtResource("1_body")]
+
+[node name="Collision" type="CollisionShape2D" parent="Body"]
+shape = SubResource("shape_1")
+`;
+      const overrideParent = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://body.tscn" id="1_body"]
+
+[sub_resource type="RectangleShape2D" id="shape_1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Body" parent="." instance=ExtResource("1_body")]
+
+[node name="Inner" parent="Body" index="0"]
+
+[node name="Collision" type="CollisionShape2D" parent="Body/Inner"]
+shape = SubResource("shape_1")
+`;
+      expectNoDiagnostic(instancedParent, { ruleName: 'collisionshape2d-invalid-parent' });
+      expectNoDiagnostic(overrideParent, { ruleName: 'collisionshape2d-invalid-parent' });
+    });
+
     it('should warn when parent is invalid type (Sprite2D)', () => {
       const content = scene(
         rectShape,

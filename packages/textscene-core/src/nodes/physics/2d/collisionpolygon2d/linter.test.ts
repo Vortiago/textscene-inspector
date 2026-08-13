@@ -49,6 +49,41 @@ describe('CollisionPolygon2D Linter', () => {
     );
   });
 
+  it('says nothing about a parent whose type is declared in another scene', () => {
+    // `instance=` names a PackedScene, not a class, so `type` here is the
+    // ExtResource ref; an override heading (neither `type=` nor `instance=`)
+    // takes its class from the instance it sits inside and parses with the
+    // index fallback's truthy "0". Neither can be measured against
+    // CollisionObject2D, and warning anyway fires on scenes built to be
+    // instanced.
+    const instancedParent = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://body.tscn" id="1_body"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Body" parent="." instance=ExtResource("1_body")]
+
+[node name="Poly" type="CollisionPolygon2D" parent="Body"]
+polygon = ${validPolygon}
+`;
+    const overrideParent = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://body.tscn" id="1_body"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Body" parent="." instance=ExtResource("1_body")]
+
+[node name="Inner" parent="Body" index="0"]
+
+[node name="Poly" type="CollisionPolygon2D" parent="Body/Inner"]
+polygon = ${validPolygon}
+`;
+    expectNoDiagnostic(instancedParent, { ruleName: 'collisionpolygon2d-invalid-parent' });
+    expectNoDiagnostic(overrideParent, { ruleName: 'collisionpolygon2d-invalid-parent' });
+  });
+
   it('does not warn about the parent when it is an Area2D (also a CollisionObject2D)', () => {
     expectNoDiagnostic(
       scene(

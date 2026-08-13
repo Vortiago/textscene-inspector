@@ -70,10 +70,11 @@ export function reachablePairs(file: string): EmittedPair[] {
  * Every arm builder in the tree, as the concrete rule-name suffixes one CALL
  * produces.
  *
- * A slice using one holds no literal name at all: AudioStreamPlayer2D returns
- * `rangeAdvisories(node, { pitch_scale: player2DPitchArms('audiostreamplayer2d') })`
- * and every name is interpolated inside the builder. Resolving the call site is
- * what pins those names to the calling rule.
+ * A slice using one holds no literal name at all: the builder returns
+ * `rangeAdvisories(node, { <prop>: someArms('<ruleprefix>') })` and every name
+ * is interpolated inside the builder, so resolving the CALL site is what pins
+ * those names to the calling rule. An arm builder whose names are literal is
+ * already reached by the literal scrape and does not appear here.
  */
 export function armBuilderSuffixes(files: string[]): Map<string, string[]> {
   const suffixesByBuilder = new Map<string, string[]>();

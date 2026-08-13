@@ -53,7 +53,11 @@ validatorRegistry.registerAll('Node2D', {
   rotation: v.float('rotation'),
   rotation_degrees: v.float('rotation_degrees'),
   scale: scaleValidator,
-  skew: v.float('skew'),
+  // node_2d.cpp:503, PROPERTY_HINT_RANGE "-89.9,89.9,0.1,radians_as_degrees":
+  // the inspector shows degrees, the .tscn stores radians, so the extents are
+  // ±1.56905 rad. set_skew (:178-185) is a bare assignment with no clamp,
+  // unlike set_scale beside it, so out of range warns.
+  skew: v.radians('skew', { minDeg: -89.9, maxDeg: 89.9, hinted: 'node_2d.cpp:503' }),
   transform: v.transform2d('transform'),
   global_position: v.vector2('global_position'),
   global_rotation: v.float('global_rotation'),

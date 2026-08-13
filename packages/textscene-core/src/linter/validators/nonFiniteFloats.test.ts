@@ -177,10 +177,22 @@ describe('a COMPOSITE literal with a non-finite component', () => {
     );
   });
 
-  it.each(NON_FINITE)('still rejects %s in an INTEGER composite', (value) => {
-    // Vector2i serialises through `itos` (variant_parser.cpp:2044), so it has
-    // no spelling for a non-finite component and Godot never writes one.
-    expect(v.vector2i('size')('size', `Vector2i(${value}, 8)`, 1)?.code).toBe('INVALID_SIZE_FORMAT');
+  it.each(NON_FINITE)('accepts %s in an INTEGER composite, which Godot READS', (value) => {
+    // Vector2i serialises through `itos` (variant_parser.cpp:2044), so Godot
+    // never WRITES one. That bounds nothing: `_parse_construct<int32_t>`
+    // (:577-592) runs the same identifier branch every constructor does, and
+    // `stor_fix` (:149-159) resolves all four for any slot, so the file loads.
+    // What the serialiser emits never limits what the loader accepts.
+    expect(v.vector2i('size')('size', `Vector2i(${value}, 8)`, 1)).toBeNull();
+  });
+
+  it('says nothing about a bound it cannot compare a non-finite against', () => {
+    // Every comparison against NaN is false, which is the honest answer for a
+    // component that is not on the number line. `inf` is genuinely above any
+    // floor, so it passes for the ordinary reason.
+    const bounded = v.vector2i('size', { min: 1, enforced: 'viewport.cpp:1120' });
+    expect(bounded('size', 'Vector2i(nan, 8)', 1)).toBeNull();
+    expect(bounded('size', 'Vector2i(inf, 8)', 1)).toBeNull();
   });
 });
 

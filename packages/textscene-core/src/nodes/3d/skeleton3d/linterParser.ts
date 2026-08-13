@@ -74,13 +74,19 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
 };
 
 validatorRegistry.registerAll('Skeleton3D', {
-  // skeleton_3d.cpp:586-590: `if (p_motion_scale <= 0) { motion_scale = 1; ERR_FAIL_MSG(...); }`.
-  motion_scale: v.float('motion_scale', {
-    min: Number.MIN_VALUE,
-    message:
-      "Property 'motion_scale' must be greater than 0. A value of 0 or less prevents animations from applying.",
-    enforced: 'skeleton_3d.cpp:586',
-  }),
+  // skeleton_3d.cpp:586-588: `if (p_motion_scale <= 0) { motion_scale = 1;
+  // ERR_FAIL_MSG(...); }` — an alteration, not a refusal. The hint (:1293,
+  // "0.001,10,0.001,or_greater") floors higher and opens the ceiling, so
+  // (0, 0.001) is stored as authored and only warns.
+  motion_scale: v.positiveFloat(
+    'motion_scale',
+    "Property 'motion_scale' must be greater than 0. Godot substitutes 1.0 for anything at or below it.",
+    {
+      hintedMin: 0.001,
+      enforced: 'skeleton_3d.cpp:586',
+      hinted: 'skeleton_3d.cpp:1293',
+    }
+  ),
   // skeleton_3d.cpp:1294, plain BOOL ADD_PROPERTY, no hint. set_show_rest_only
   // (:814-817) is a bare assignment (plus a signal emit, not a rejection).
   show_rest_only: v.boolean('show_rest_only'),

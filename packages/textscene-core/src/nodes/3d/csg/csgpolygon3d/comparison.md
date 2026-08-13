@@ -95,7 +95,7 @@ Strict parsing format-checks these `CSGPolygon3D` properties, plus 18 inherited 
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `depth` | float >= 0.001 | error below |
+| `depth` | float >= 0.01 | error below 0.001, warning below 0.01 |
 | `flip_faces` | true or false |  |
 | `material` | null, SubResource("id") or ExtResource("id") |  |
 | `mode` | enum 0-2 (DEPTH/SPIN/PATH) | warning |
@@ -112,7 +112,7 @@ Strict parsing format-checks these `CSGPolygon3D` properties, plus 18 inherited 
 | `path_u_distance` | float >= 0 | warning below |
 | `polygon` | PackedVector2Array(x, y, …) |  |
 | `smooth_faces` | true or false |  |
-| `spin_degrees` | float 0.01-360 | error |
+| `spin_degrees` | float 1-360 | error below 0.01, warning below 1, error above 360 |
 | `spin_sides` | integer 3-64 | error below, warning above |
 
 | Rule | Reports | Severity |

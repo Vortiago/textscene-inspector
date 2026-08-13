@@ -28,10 +28,15 @@ validatorRegistry.registerAll('CPUParticles2D', {
   }),
   texture: v.resourceReference('texture'),
 
-  // cpu_particles_2d.cpp:1495 hints "0.01,600.0,...,or_greater", but
-  // set_lifetime (cpu_particles_2d.cpp:86) ERR_FAIL_COND_MSGs at `<= 0`,
-  // not at the hint's 0.01 — the setter, not the hint, is what governs.
-  lifetime: v.positiveFloat('lifetime', undefined, { enforced: 'cpu_particles_2d.cpp:86' }),
+  // cpu_particles_2d.cpp:1495 hints "0.01,600.0,0.01,or_greater,exp,suffix:s",
+  // whose ceiling `or_greater` opens. set_lifetime (cpu_particles_2d.cpp:86)
+  // ERR_FAIL_COND_MSGs at `<= 0`, below the hint's floor, so (0, 0.01) loads
+  // into Godot and only warns.
+  lifetime: v.positiveFloat('lifetime', undefined, {
+    hintedMin: 0.01,
+    enforced: 'cpu_particles_2d.cpp:86',
+    hinted: 'cpu_particles_2d.cpp:1495',
+  }),
   one_shot: v.boolean('one_shot'),
   // cpu_particles_2d.cpp:1497 hints "0.00,10.0,...,or_greater"; set_pre_process_time
   // (cpu_particles_2d.cpp:94-96) assigns unconditionally.

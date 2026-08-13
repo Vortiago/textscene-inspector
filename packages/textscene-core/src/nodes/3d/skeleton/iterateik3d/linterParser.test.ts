@@ -128,6 +128,13 @@ describe('angular_delta_limit', () => {
     expect(check('angular_delta_limit', '3.2')?.severity).toBe('warning');
   });
 
+  it('accepts a zero-degree float32 round-trip that lands just under the floor', () => {
+    // The stored value is float32 and written back in decimal, so 0 degrees can
+    // reload a hair negative; a floor at exactly 0 is one epsilon tighter than
+    // the hint permits.
+    expect(check('angular_delta_limit', '-0.00005')).toBeNull();
+  });
+
   it('warns below zero', () => {
     expect(check('angular_delta_limit', '-0.5')?.severity).toBe('warning');
   });

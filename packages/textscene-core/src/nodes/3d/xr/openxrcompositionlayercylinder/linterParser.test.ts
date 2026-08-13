@@ -105,8 +105,16 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
 
   describe('aspect_ratio', () => {
     // cylinder.cpp:144, ERR_FAIL_COND(p_aspect_ratio <= 0): enforced floor.
+    // The hint's own floor (:73, "0,100") is 0 INCLUSIVE, so the setter is the
+    // stricter of the two and every value the hint would warn on is refused
+    // first — there is no warned band under the floor.
     it('errors at 0', () => {
       expect(check('aspect_ratio', '0')?.severity).toBe('error');
+      expect(check('aspect_ratio', '-1')?.severity).toBe('error');
+    });
+
+    it('accepts the smallest positive value the setter allows', () => {
+      expect(check('aspect_ratio', '0.001')).toBeNull();
     });
     // cylinder.cpp:73 hints "0,100": hinted-only ceiling, since the setter
     // never caps it.

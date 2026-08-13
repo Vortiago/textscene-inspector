@@ -37,13 +37,19 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
     max: 80,
     hinted: 'audio_stream_player_3d.cpp:883',
   }),
-  // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0).
-  pitch_scale: v.float('pitch_scale', {
-    min: Number.MIN_VALUE,
-    message:
-      "Property 'pitch_scale' must be greater than 0. Zero or negative pitch breaks audio playback.",
-    enforced: 'audio_stream_player_internal.cpp:314',
-  }),
+  // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0),
+  // against a hint (audio_stream_player_3d.cpp:887) of
+  // "0.01,4,0.01,or_greater" — `or_greater` opens the ceiling. The two floors
+  // sit apart, so (0, 0.01) loads into Godot and only warns.
+  pitch_scale: v.positiveFloat(
+    'pitch_scale',
+    "Property 'pitch_scale' must be greater than 0. Zero or negative pitch breaks audio playback.",
+    {
+      hintedMin: 0.01,
+      enforced: 'audio_stream_player_internal.cpp:314',
+      hinted: 'audio_stream_player_3d.cpp:887',
+    }
+  ),
   playing: v.boolean('playing'),
   autoplay: v.boolean('autoplay'),
   stream_paused: v.boolean('stream_paused'),
@@ -98,12 +104,23 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   // Bare uint32_t assignment (:669): the parameter type is the ceiling.
   area_mask: layerBitmask('area_mask', { hinted: 'audio_stream_player_3d.cpp:895' }),
   emission_angle_enabled: v.boolean('emission_angle_enabled'),
-  // audio_stream_player_3d.cpp:687, ERR_FAIL_COND(p_angle < 0 || p_angle > 90); the
-  // hint at :899 is degrees (not radians_as_degrees), so no conversion applies.
+  // Two tiers, because the setter and the hint disagree at the floor.
+  // audio_stream_player_3d.cpp:687 ERR_FAIL_CONDs `p_angle < 0 || p_angle > 90`,
+  // while the hint at :899 reads "0.1,90,0.1,degrees". That is a bare `degrees`
+  // unit LABEL on a value already stored in degrees, not `radians_as_degrees`,
+  // so nothing is converted. The setter's floor sits BELOW the hint's, leaving
+  // [0, 0.1) reachable: the engine loads it, the inspector excludes it, so it
+  // warns while anything under 0 errors. Both agree at 90, so that end is one
+  // tier, the setter's.
   emission_angle_degrees: v.float('emission_angle_degrees', {
-    min: 0,
+    enforcedMin: { at: 0 },
+    min: 0.1,
     max: 90,
-    enforced: 'audio_stream_player_3d.cpp:687',
+    enforced: {
+      min: 'audio_stream_player_3d.cpp:687',
+      max: 'audio_stream_player_3d.cpp:687',
+    },
+    hinted: { min: 'audio_stream_player_3d.cpp:899' },
   }),
   // audio_stream_player_3d.cpp:900, PROPERTY_HINT_RANGE "-80,0,0.1,suffix:dB":
   // both ends closed. set_emission_angle_filter_attenuation_db (:696-697) is a

@@ -55,7 +55,7 @@ Strict parsing format-checks these `LightmapGI` properties, plus 1 inherited fro
 | --- | --- | --- |
 | `bias` | float >= 0.00001 | error below |
 | `bounce_indirect_energy` | float 0-2 | error below, warning above |
-| `bounces` | integer 0-16 | error |
+| `bounces` | integer >= 0 | error below 0, error above 16 |
 | `camera_attributes` | null, SubResource("id") or ExtResource("id") |  |
 | `denoiser_range` | integer 1-20 | warning |
 | `denoiser_strength` | float >= 0.001 | warning below |
@@ -72,7 +72,7 @@ Strict parsing format-checks these `LightmapGI` properties, plus 1 inherited fro
 | `shadowmask_mode` | enum 0-2 (NONE/REPLACE/OVERLAY) | warning |
 | `supersampling` | true or false |  |
 | `supersampling_factor` | float 1-8 | error below, warning above |
-| `texel_scale` | float 0.00999-100 | error below, warning above |
+| `texel_scale` | float 0.01-100 | error below 0.00999, warning below 0.01, warning above 100 |
 | `use_denoiser` | true or false |  |
 | `use_texture_for_bounces` | true or false |  |
 

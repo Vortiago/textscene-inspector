@@ -9,7 +9,9 @@
  * Godot's own constants instead of printing a bare numeric range.
  */
 
-import { validatorRegistry } from '../../linter/ValidatorRegistry';
+// Registers Resource, so the inherited keys resolve when this module loads alone.
+import '../resource/linterValidators.js';
+import { validatorRegistry } from '../../linter/ValidatorRegistry.js';
 import { backgroundKeys } from './backgroundValidators.js';
 import { fogKeys } from './fogValidators.js';
 import { postProcessKeys } from './postProcessValidators.js';

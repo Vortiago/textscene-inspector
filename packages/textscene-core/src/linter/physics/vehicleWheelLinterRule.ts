@@ -12,10 +12,9 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { findParentNode } from '../linterUtils.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import { isTypeUnknowable } from '../parentType.js';
+import { parentTypeVerdict } from '../parentType.js';
 
 export function makeVehicleWheelLinterRule(dim: PhysicsDim): LintRule {
   const type = `VehicleWheel${dim}`;
@@ -36,11 +35,12 @@ export function makeVehicleWheelLinterRule(dim: PhysicsDim): LintRule {
     // editable child of an instanced vehicle. Same caution as
     // nodes/2d/parallaxlayer/linter.ts and physics/joints/shared/linter.ts.
     //
-    // `parent === null` stays outside the predicate: this rule WARNS at the
-    // root, and folding the two together would silence it there.
-    const parent = findParentNode(scene.nodes, node);
-    const parentUnknowable = parent !== null && isTypeUnknowable(parent);
-    if (!parentUnknowable && (parent === null || parent.type !== bodyType)) {
+    // `root` stays a warning while `unknowable` does not: this rule WARNS at
+    // the scene root, and collapsing the two arms would silence it there.
+    // `cast_to<VehicleBody3D>` (vehicle_body_3d.cpp:147) accepts subclasses,
+    // which is the comparison `parentTypeVerdict` makes.
+    const placement = parentTypeVerdict(scene, node, bodyType);
+    if (placement.kind === 'root' || placement.kind === 'mismatch') {
       diagnostics.push({
         severity: 'warning',
         message: `${type} '${node.name}' is not a direct child of a ${bodyType}. Godot only attaches wheels that are direct children of the vehicle body; this wheel will do nothing.`,

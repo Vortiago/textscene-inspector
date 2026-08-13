@@ -329,6 +329,16 @@ describe('LookAtModifier3D strict validators', () => {
       expect(check(property, '-0.5')?.severity).toBe('warning');
     });
 
+    it.each([...HALF_TURN_ANGLES, ...FULL_TURN_ANGLES])(
+      '%s accepts a zero-degree round-trip that lands just under the floor',
+      (property) => {
+        // Every one of these is a float32 the engine writes back in decimal, so
+        // a value the editor set to 0 degrees reloads a hair negative. A floor
+        // at exactly 0 is one epsilon tighter than the hint permits.
+        expect(check(property, '-0.00005')).toBeNull();
+      }
+    );
+
     it('states the radian bound and the degree hint side by side', () => {
       // The message has to name both units, or a reader cannot tell which one
       // the number in the scene is in.

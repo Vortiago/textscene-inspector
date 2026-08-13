@@ -188,3 +188,40 @@ zoom = Vector2(2, 2)
     expect(probe.getAttribute('data-mode')).toBe('2D');
   });
 });
+
+describe('<CamerasPanel> with a Camera3D subclass', () => {
+  // The panel follows Godot's class tree, not the literal type name: an
+  // XRCamera3D IS a Camera3D and mounts that component, so it belongs in the
+  // 3D list, the rows that swap the viewport camera.
+  it('lists an XRCamera3D as a 3D camera row and activates it on click', () => {
+    const parsed = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="World" type="Node3D"]
+
+[node name="Origin" type="XROrigin3D" parent="."]
+
+[node name="Headset" type="XRCamera3D" parent="Origin"]
+`);
+    const sceneGraph = createSceneGraphFromTscnScene(parsed, 'res://xr.tscn');
+    render(
+      <HierarchyProvider value={{ sceneGraph, panelId: 'cams-xr' }}>
+        <CameraControlProvider>
+          <ViewportModeProvider>
+            <Probe />
+            <CamerasPanel />
+          </ViewportModeProvider>
+        </CameraControlProvider>
+      </HierarchyProvider>
+    );
+
+    const row = screen.getByRole('button', { name: /Headset/ });
+    fireEvent.click(row);
+
+    // `data-active` is the 3D row's own marker; a 2D row would have switched
+    // the workspace instead.
+    expect(screen.getByRole('button', { name: /Headset/ }).getAttribute('data-active')).toBe(
+      'true'
+    );
+    expect(screen.getByTestId('probe').getAttribute('data-mode')).not.toBe('2D');
+  });
+});

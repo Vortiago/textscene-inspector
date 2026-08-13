@@ -13,6 +13,7 @@
  * which is exactly why they get the shared two and nothing more.
  */
 
+import { parseGodotInt } from '../validators/commonValidators.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import type { PhysicsDim } from './dim.js';
 import { checkResourceExists, heldResource, referencedResourceType } from '../resourceChecker.js';
@@ -62,7 +63,9 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
       });
     }
 
-    const mask = Number.parseInt(props.collision_mask ?? '', 10);
+    // `parseGodotInt` reads the value Godot stores; `parseInt` stops at the
+    // first character it cannot use and misses an exponent-written zero.
+    const mask = parseGodotInt(props.collision_mask ?? '');
     if (mask === 0) {
       diagnostics.push({
         severity: 'warning',

@@ -57,14 +57,18 @@ validatorRegistry.registerAll('ReflectionProbe', {
   blend_distance: v.float('blend_distance', { min: 0, hinted: 'reflection_probe.cpp:262' }),
 
   // reflection_probe.cpp:263 hints PROPERTY_HINT_RANGE
-  // "0,16384,0.1,or_greater,exp,suffix:m" — 16384 reads as a SOFT slider extent
-  // (or_greater), but set_max_distance (:80-84) clamps unconditionally:
-  // `max_distance = CLAMP(p_distance, 0.0, 262'144.0);` (reflection_probe.cpp:81),
-  // with a comment explaining reflections break past that distance due to
-  // floating-point precision. The hint's soft ceiling is overridden by a HARD
-  // one the hint text never mentions, so both ends are `enforced` at 0 and
-  // 262144, not the hinted 16384.
-  max_distance: v.float('max_distance', { min: 0, max: 262144, enforced: 'reflection_probe.cpp:81' }),
+  // "0,16384,0.1,or_greater,exp,suffix:m": floor closed at 0, ceiling open, so
+  // 16384 is only a slider extent. set_max_distance (:80-84) clamps
+  // unconditionally: `max_distance = CLAMP(p_distance, 0.0, 262'144.0);`
+  // (reflection_probe.cpp:81), with a comment explaining reflections break past
+  // that distance due to floating-point precision. A clamp ALTERS the value, so
+  // both ends error; the 262144 is `enforcedMax` rather than `max` because the
+  // hint states no ceiling at all, and 262144 itself passes through unaltered.
+  max_distance: v.float('max_distance', {
+    min: 0,
+    enforcedMax: { at: 262144 },
+    enforced: 'reflection_probe.cpp:81',
+  }),
 
   // reflection_probe.cpp:264, PROPERTY_HINT_NONE ("suffix:m" only — a unit
   // label, not a range). set_size (:99-117) assigns `size = p_size;` UNCLAMPED;

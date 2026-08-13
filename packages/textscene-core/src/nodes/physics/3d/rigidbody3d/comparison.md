@@ -55,8 +55,8 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited fr
 | `linear_damp_mode` | enum 0-1 (COMBINE/REPLACE) | warning |
 | `linear_velocity` | Vector3(x, y, z) |  |
 | `lock_rotation` | true or false |  |
-| `mass` | float >= 5e-324 | error below |
-| `max_contacts_reported` | integer 0-4095 | error |
+| `mass` | float >= 0.001 | error at or below 0, warning below 0.001 |
+| `max_contacts_reported` | integer >= 0 | error below 0, error at or above 4096 |
 | `physics_material_override` | null, SubResource("id") or ExtResource("id") |  |
 | `sleeping` | true or false |  |
 
@@ -67,7 +67,6 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited fr
 | `valid-collisionobject3d-scale` (type-family match) | `collisionobject3d-non-uniform-scale` | warning |
 | `valid-rigidbody3d` (type-family match) | `valid-rigidbody3d-resources` | error |
 |  | `rigidbody3d-needs-collision-shape` | warning |
-|  | `rigidbody3d-mass-too-low` | warning |
 |  | `rigidbody3d-max-contacts-without-monitor` | warning |
 |  | `rigidbody3d-scale-overridden-at-runtime` | warning |
 <!-- lint:end -->

@@ -73,11 +73,15 @@ validatorRegistry.registerAll('CPUParticles3D', {
   }),
 
   // ADD_GROUP("Time", "") — cpu_particles_3d.cpp:1557.
-  // cpu_particles_3d.cpp:1558 — "0.01,600.0,0.01,or_greater,exp,suffix:s": or_greater lifts
-  // the 600 ceiling. set_lifetime:91-94 ERR_FAIL_COND_MSG(p_lifetime <= 0) enforces a floor
-  // of "> 0", not the hint's 0.01 (which is only the slider's displayed minimum) — a value
-  // like 0.005 loaded here but was refused by Godot.
-  lifetime: v.positiveFloat('lifetime', undefined, { enforced: 'cpu_particles_3d.cpp:92' }),
+  // cpu_particles_3d.cpp:1558 — "0.01,600.0,0.01,or_greater,exp,suffix:s":
+  // or_greater lifts the 600 ceiling. set_lifetime (:92)
+  // ERR_FAIL_COND_MSG(p_lifetime <= 0) refuses below the hint's floor, so
+  // (0, 0.01) loads into Godot and only warns.
+  lifetime: v.positiveFloat('lifetime', undefined, {
+    hintedMin: 0.01,
+    enforced: 'cpu_particles_3d.cpp:92',
+    hinted: 'cpu_particles_3d.cpp:1558',
+  }),
   // cpu_particles_3d.cpp:1559 — plain BOOL, no hint.
   one_shot: v.boolean('one_shot'),
   // cpu_particles_3d.cpp:1560 — "0.00,10.0,0.01,or_greater,exp,suffix:s": or_greater lifts

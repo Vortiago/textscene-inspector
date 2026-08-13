@@ -22,7 +22,7 @@ XRCamera3D declares no properties of its own (`xr_nodes.cpp` has no `XRCamera3D:
 
 ## Divergences
 
-This previewer's Cameras panel matches the node type `Camera3D` exactly (`r3f/components/TscnPreviewShell/CamerasPanel.tsx:28,39`), so an XRCamera3D is never offered as a preview camera even though Godot treats it as a full camera. Godot's second XRCamera3D configuration warning — an OFF `physics_interpolation_mode` while FTI is project-enabled — is not modelled here: it depends on `SceneTree::is_fti_enabled_in_project()`, a project setting no `.tscn` carries, so this linter has nothing to check it against. There is otherwise no runtime output to compare — the node draws nothing in either Godot or here, by design.
+Godot's second XRCamera3D configuration warning — an OFF `physics_interpolation_mode` while FTI is project-enabled — is not modelled here: it depends on `SceneTree::is_fti_enabled_in_project()`, a project setting no `.tscn` carries, so this linter has nothing to check it against. There is otherwise no runtime output to compare — the node draws nothing in either Godot or here, by design.
 
 ## Linting
 
@@ -34,6 +34,7 @@ Strict parsing format-checks the inherited set (15 inherited from Camera3D, 17 i
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-camera3d-properties` (type-family match) | `camera3d-invalid-clipping-planes` | error |
+|  | `camera3d-zero-depth-range` | error |
 | `valid-xrcamera3d-parent` | `xrcamera3d-parent-not-xrorigin3d` | warning |
 <!-- lint:end -->
 

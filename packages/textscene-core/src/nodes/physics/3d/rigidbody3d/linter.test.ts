@@ -128,13 +128,14 @@ custom_integrator = false
       { prop: 'custom_integrator', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
       {
         // rigid_body_3d.cpp:524, ERR_FAIL_INDEX_MSG(p_amount,
-        // MAX_CONTACTS_REPORTED_3D_MAX=4096): the engine enforces [0, 4095].
+        // MAX_CONTACTS_REPORTED_3D_MAX=4096): fails on `< 0 || >= 4096`, so the
+        // setter closes the hint's open ceiling one below the constant.
         prop: 'max_contacts_reported',
         valid: [0, 1, 10, 100, 4095],
         with: { contact_monitor: true },
         invalid: [
-          { value: -5, contains: ['between 0 and 4095'] },
-          { value: 4096, contains: ['between 0 and 4095'] },
+          { value: -5, contains: ['non-negative'] },
+          { value: 4096, contains: ['less than 4096'] },
         ],
       },
       {
@@ -190,9 +191,11 @@ physics_material_override = SubResource("mat_1")
     // rigid_body_3d.cpp:764 hints "0.001,1000,0.001,or_greater": the high end is
     // open, so only the gap between the setter's ERR_FAIL (mass <= 0, :334) and
     // the hint's 0.001 is advisory.
+    // Reported by the validator's hinted floor rather than a rule: the two said
+    // the same thing, and only the validator's is visible to the hint ledger.
     it('should warn about mass below the hint', () => {
       expectDiagnostic(scene(node('RigidBody3D', { mass: 0.0005 }), collisionShape3d), {
-        ruleName: 'rigidbody3d-mass-too-low',
+        prop: 'mass',
         severity: 'warning',
         contains: ['0.0005', '0.001'],
       });

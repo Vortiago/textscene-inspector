@@ -1,18 +1,19 @@
 /**
  * Parallax2D registration — parsed and validated, not yet rendered.
  *
- * Registering NO component is the point: the dispatcher falls back to
- * GenericNodeFallback, and `rendersOwnVisual` reports 'not-implemented' so the
- * tree and inspector keep saying so until someone draws it.
+ * The slice registers a base component under `renderIntent: 'pending'`, so the
+ * badge reads a gap while `visible` and the workspace split still behave.
  */
 
 import { describe, expect, it, vi } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
+import { rendersOwnVisual } from '../../../r3f/nodeSupport';
 import { TscnParser } from '../../../parser/TscnParser';
 import * as logger from '../../../logger';
 import { parseNode2D } from '../../base/node2d/parser';
 import './index';
+import './index.r3f';
 
 describe('Parallax2D registration', () => {
   it('registers the parseNode2D parse it reuses', () => {
@@ -21,8 +22,9 @@ describe('Parallax2D registration', () => {
     expect(registration!.parser).toBe(parseNode2D);
   });
 
-  it('registers no render component, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.get('Parallax2D')).toBeUndefined();
+  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
+    expect(nodeComponentRegistry.renderIntentOf('Parallax2D')).toBe('pending');
+    expect(rendersOwnVisual('Parallax2D')).toBe('not-implemented');
   });
 
   it('lands in the lenient parser tree with its type preserved and no fallback warning', () => {

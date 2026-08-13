@@ -86,6 +86,17 @@ export type PropertyValidator = ((
    * from a live ClassDB into `node-properties.json` and
    * `resource-properties.json`, so the two are directly comparable and the
    * comment quoting the hint stops being load-bearing.
+   *
+   * `min`/`max` are the OUTER ends, so where a hint states one it is the hint's
+   * own number and that is what the ledger compares. `enforcedMin`/`enforcedMax`
+   * are the setter's, further out and always an error, present only where the
+   * two differ. Both are needed: one slot per end could not say that
+   * `pitch_scale` is refused at `<= 0` and merely hinted from 0.01.
    */
-  bounds?: { min?: number; max?: number };
+  bounds?: {
+    min?: number;
+    max?: number;
+    enforcedMin?: { at: number; exclusive?: boolean };
+    enforcedMax?: { at: number; exclusive?: boolean };
+  };
 };

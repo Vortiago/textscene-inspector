@@ -13,6 +13,9 @@ import {
   createEnumValidator,
   createNumericRangeValidator,
   createPositiveIntegerValidator,
+  parseGodotFloat,
+  parseGodotInt,
+  TSCN_FLOAT_RE,
 } from '../commonValidators.js';
 import { formatCode, numericRange, valueCode } from './codes.js';
 import { accepts, endSeverity, ground, shape, type Grounding } from './grounding.js';
@@ -23,21 +26,23 @@ export const integerCombinators = {
   int(name: string, opts: IntOpts = {}): PropertyValidator {
     return ground(
       accepts(
-        createNumericRangeValidator(
-          name,
-          opts.min ?? null,
-          opts.max ?? null,
-          true,
-          opts.message,
-          formatCode(name),
-          valueCode(name),
-          endSeverity(opts, 'min'),
-          endSeverity(opts, 'max')
-        ),
-        numericRange('integer', opts.min, opts.max)
+        createNumericRangeValidator({
+          propertyName: name,
+          min: opts.min ?? null,
+          max: opts.max ?? null,
+          enforcedMin: opts.enforcedMin,
+          enforcedMax: opts.enforcedMax,
+          parseAsInt: true,
+          message: opts.message,
+          errorCodeFormat: formatCode(name),
+          errorCodeValue: valueCode(name),
+          minSeverity: endSeverity(opts, 'min', opts.enforcedMin !== undefined),
+          maxSeverity: endSeverity(opts, 'max', opts.enforcedMax !== undefined),
+        }),
+        numericRange('integer', opts.min, opts.max, opts)
       ),
       opts,
-      { min: opts.min, max: opts.max }
+      { min: opts.min, max: opts.max, enforcedMin: opts.enforcedMin, enforcedMax: opts.enforcedMax }
     );
   },
 
@@ -91,17 +96,16 @@ export const integerCombinators = {
   },
 
   /**
-   * Lenient integer — `parseInt(value, 10)` accepts trailing decimals
-   * ("10.5" → 10). Used for properties like Camera2D's `limit_*` where
-   * the upstream Godot parser is tolerant. The "must be a number" /
-   * "must be an integer" wording follows the per-node test wording.
+   * Lenient integer — a float literal in the slot is accepted and truncated
+   * ("10.5" → 10), which is what Godot does on assignment to a `Variant::INT`.
+   * Used for properties like Camera2D's `limit_*`. The "must be an integer"
+   * wording follows the per-node test wording.
    */
   lenientInt(name: string): PropertyValidator {
     const formatErr = formatCode(name);
     return shape(
       (key, value, line) => {
-      const parsed = parseInt(value, 10);
-      if (isNaN(parsed)) {
+      if (parseGodotInt(value) === null) {
         return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
       }
       return null;
@@ -121,8 +125,18 @@ export const integerCombinators = {
     const valueErr = valueCode(name);
     const { min, max } = opts;
     return ground(accepts((key, value, line) => {
-      const parsed = parseFloat(value);
-      if (isNaN(parsed) || !Number.isInteger(parsed)) {
+      // `parseGodotFloat` behind the anchored grammar, not `parseFloat`, which
+      // reads `8abc` as 8 and admits a literal Godot's parser cannot.
+      const parsed = parseGodotFloat(value.trim());
+      // Whole-valued OR non-finite. `inf` and `nan` are identifiers `stor_fix`
+      // (variant_parser.cpp:149-159) resolves for any slot, so the file loads;
+      // `Number.isInteger` is false for both and would report a format error on
+      // a literal `v.int` accepts, which is a split no engine line supports.
+      if (
+        !TSCN_FLOAT_RE.test(value.trim()) ||
+        parsed === null ||
+        !(Number.isInteger(parsed) || !Number.isFinite(parsed))
+      ) {
         return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
       }
       const belowMin = min !== undefined && parsed < min;
@@ -152,8 +166,8 @@ export const integerCombinators = {
     return ground(
       accepts(
         (key, value, line) => {
-          const parsed = parseFloat(value);
-          if (isNaN(parsed) || !Number.isInteger(parsed)) {
+          const parsed = parseGodotFloat(value.trim());
+          if (!TSCN_FLOAT_RE.test(value.trim()) || parsed === null || !Number.isInteger(parsed)) {
             return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
           }
           if (parsed < 0) {

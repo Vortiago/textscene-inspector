@@ -1,27 +1,13 @@
 /**
- * Semantic lint checks shared by the AudioStreamPlayer family. The
- * unusual-pitch band was copy-pasted verbatim across the 2D/3D `linter.ts`
- * files (architecture review) — only the rule-name prefix differed — so it is a
- * **Range advisory** arm now, flowing through the shared `rangeAdvisories`
- * combinator.
+ * Semantic lint checks shared by the AudioStreamPlayer family: the checks that
+ * need the whole scene tree, which no per-property validator can see.
  *
- * Only the band a validator CANNOT state lives here. `pitch_scale`'s does not
- * fit one: `min` already holds the setter's enforced `> 0` refusal, and the
- * hint's higher 0.01 floor is a second, milder end the slot cannot carry. Every
- * other hint bound is on the property's validator in each slice's
- * `linterParser.ts` — a rule beside a bound makes the linter report one value
- * twice.
- *
- * `pitch_scale` is declared on three SEPARATE concrete classes (no shared base
- * ADD_PROPERTY), so each player's citation is a different `file:line` even
- * though the hint text is identical. A single helper taking that citation as a
- * parameter would hide it from `rangeAdvisoryGrounding.test.ts`, whose source
- * scrape can only see a quoted citation written directly on the arm object, so
- * each player gets its own arm-building function instead (the shape
- * `lights/shared/linterChecks.ts` uses for `omniRangeArms` / `spotRangeArms`).
+ * Hint bands are NOT here. Every one of them lives on the property's validator
+ * in each slice's `linterParser.ts`, which carries the setter's floor and the
+ * hint's as separate ends — a rule beside a bound makes the linter report one
+ * value twice.
  */
 
-import type { RangeArm } from '../../linter/rangeAdvisory.js';
 import type { TscnNode, TscnScene } from '../../parser/types.js';
 import { extractNodePath, isValidProperties } from '../../linter/linterUtils.js';
 import { resolveNodePath } from '../../linter/nodePathResolve.js';
@@ -83,40 +69,4 @@ function collectByType(nodes: readonly TscnNode[], type: string): TscnNode[] {
   return out;
 }
 
-/**
- * `pitch_scale`'s **Range advisory** for AudioStreamPlayer2D: a POSITIVE
- * pitch below the bottom of the hint. `floor: 0` keeps non-positive values
- * with the slice's own error (the setter refuses them outright). The hint
- * text is identical across all three players ("0.01,4,0.01,or_greater"), but
- * each concrete class declares its own line, so this gets its own citation.
- * audio_stream_player_2d.cpp:432, PROPERTY_HINT_RANGE "0.01,4,0.01,or_greater".
- */
-export function player2DPitchArms(rulePrefix: string): RangeArm[] {
-  return [
-    {
-      under: 0.01,
-      floor: 0,
-      ruleName: `${rulePrefix}-unusual-pitch`,
-      cite: 'audio_stream_player_2d.cpp:432',
-      message: (pitchScale) => `Pitch scale is ${pitchScale}. The editor range starts at 0.01.`,
-    },
-  ];
-}
-
-/**
- * `pitch_scale`'s **Range advisory** for AudioStreamPlayer3D. Same band as
- * `player2DPitchArms`, own citation line.
- * audio_stream_player_3d.cpp:887, PROPERTY_HINT_RANGE "0.01,4,0.01,or_greater".
- */
-export function player3DPitchArms(rulePrefix: string): RangeArm[] {
-  return [
-    {
-      under: 0.01,
-      floor: 0,
-      ruleName: `${rulePrefix}-unusual-pitch`,
-      cite: 'audio_stream_player_3d.cpp:887',
-      message: (pitchScale) => `Pitch scale is ${pitchScale}. The editor range starts at 0.01.`,
-    },
-  ];
-}
 

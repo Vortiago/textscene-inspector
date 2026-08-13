@@ -64,7 +64,7 @@ Strict parsing format-checks these `PhysicalBone3D` properties, plus 6 inherited
 | `linear_damp` | float >= 0 | error below |
 | `linear_damp_mode` | enum 0-1 (COMBINE/REPLACE) | warning |
 | `linear_velocity` | Vector3(x, y, z) |  |
-| `mass` | float >= 5e-324 | error below |
+| `mass` | float >= 0.01 | error at or below 0, warning below 0.01 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

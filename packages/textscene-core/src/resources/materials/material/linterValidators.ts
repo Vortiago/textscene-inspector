@@ -3,6 +3,8 @@
  * ShaderMaterial, CanvasItemMaterial and the rest.
  */
 
+// Registers Resource, so the inherited keys resolve when this module loads alone.
+import '../../resource/linterValidators.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 import {

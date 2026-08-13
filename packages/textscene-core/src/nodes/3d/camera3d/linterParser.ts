@@ -34,10 +34,17 @@ validatorRegistry.registerAll('Camera3D', {
     message: "Property 'fov' must be between 1 and 179 degrees",
     enforced: 'camera_3d.cpp:725',
   }),
-  // camera_3d.cpp:731, ERR_FAIL_COND(p_size <= CMP_EPSILON). The predicate's
-  // own constant, not a stand-in for "positive": the strictly-positive floor
-  // accepted the whole band up to 1e-5, which the setter refuses.
-  size: v.float('size', { min: CMP_EPSILON, enforced: 'camera_3d.cpp:731' }),
+  // Two tiers on the floor. camera_3d.cpp:731 `ERR_FAIL_COND(p_size <=
+  // CMP_EPSILON)` refuses the endpoint too, hence `exclusive`; the hint
+  // (:683, "0.001,100,0.001,or_greater,suffix:m") states 0.001, two orders
+  // above, so the band between them loads and only warns. `or_greater` leaves
+  // the ceiling open.
+  size: v.float('size', {
+    enforcedMin: { at: CMP_EPSILON, exclusive: true },
+    min: 0.001,
+    enforced: { min: 'camera_3d.cpp:731' },
+    hinted: { min: 'camera_3d.cpp:683' },
+  }),
   frustum_offset: v.vector2('frustum_offset'),
   // camera_3d.cpp:685 hints "0.001,10,0.001,or_greater,exp,suffix:m" — `or_greater`
   // opens the top. set_near (:737) is a bare assignment, so the floor only warns.

@@ -34,13 +34,15 @@ inertia2d.tiers = { min: 'error' };
 inertia2d.bounds = { min: 0 };
 
 validatorRegistry.registerAll('RigidBody2D', {
-  // rigid_body_2d.cpp:318, ERR_FAIL_COND(p_mass <= 0): the setter refuses.
-  mass: v.float('mass', {
-    min: Number.MIN_VALUE,
-    message:
-      "Property 'mass' must be greater than 0. Physics bodies require positive mass.",
-    enforced: 'rigid_body_2d.cpp:318',
-  }),
+  // Two tiers on the floor. rigid_body_2d.cpp:318
+  // `ERR_FAIL_COND(p_mass <= 0)` refuses the endpoint too; the hint (:742,
+  // "0.001,1000,0.001,or_greater,exp,suffix:kg") states 0.001, so the band
+  // between them loads and only warns. `or_greater` leaves the ceiling open.
+  mass: v.positiveFloat(
+    'mass',
+    "Property 'mass' must be greater than 0. Physics bodies require positive mass.",
+    { hintedMin: 0.001, enforced: { min: 'rigid_body_2d.cpp:318' }, hinted: { min: 'rigid_body_2d.cpp:742' } }
+  ),
   physics_material_override: v.resourceReference('physics_material_override'),
   gravity_scale: v.float('gravity_scale'),
   // rigid_body_2d.cpp:746 "Auto,Custom". set_center_of_mass_mode (:337-358) is a
@@ -66,13 +68,16 @@ validatorRegistry.registerAll('RigidBody2D', {
   // so out-of-range warns.
   continuous_cd: v.enumInt('continuous_cd', 0, 2, CCD_MODE, { hinted: 'rigid_body_2d.cpp:757' }),
   contact_monitor: v.boolean('contact_monitor'),
-  // rigid_body_2d.cpp:759 hints "0,64,1,or_greater" (min 0 stated, max open), but
-  // the real bound comes from the setter: rigid_body_2d.cpp:501,
-  // ERR_FAIL_INDEX_MSG(p_amount, MAX_CONTACTS_REPORTED_2D_MAX) where the
-  // constant is 4096, so the engine enforces [0, 4095] on both ends.
+  // rigid_body_2d.cpp:759 hints "0,64,1,or_greater": floor closed at 0, ceiling
+  // open, so 64 is only a slider extent. rigid_body_2d.cpp:501,
+  // ERR_FAIL_INDEX_MSG(p_amount, MAX_CONTACTS_REPORTED_2D_MAX) closes both ends
+  // instead — the constant is 4096 (servers/physics_2d/physics_server_2d.h:37)
+  // and ERR_FAIL_INDEX fails on `p_amount < 0 || p_amount >= p_size`, hence the
+  // exclusive ceiling. It sits in `enforcedMax` because the hint states no
+  // ceiling for it to narrow.
   max_contacts_reported: v.int('max_contacts_reported', {
     min: 0,
-    max: 4095,
+    enforcedMax: { at: 4096, exclusive: true },
     enforced: 'rigid_body_2d.cpp:501',
   }),
   linear_velocity: v.vector2('linear_velocity'),

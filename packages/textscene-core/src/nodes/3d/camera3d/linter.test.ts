@@ -206,74 +206,168 @@ describe('Camera3D Linter', () => {
       });
     });
 
-    // The two cells differ. `near == far` loses the projection in every mode —
-    // dropped before `set_identity` under perspective, written as inf under
-    // orthogonal, refused under frustum. `near > far` is refused only by
-    // frustum's `ERR_FAIL_COND(p_far <= p_near)` (projection.cpp:367); the other
-    // two write a finite, merely inverted matrix.
+    // Each mode reaches a different `Projection` setter (camera_3d.cpp:104-114
+    // stores, and `_get_camera_projection` at :272-282 builds), so each licenses
+    // a different tier:
+    //
+    //   frustum      `ERR_FAIL_COND(p_far <= p_near)` (projection.cpp:367)
+    //                refuses BOTH cells.
+    //   perspective  returns at projection.cpp:263 when `deltaZ == 0`, BEFORE
+    //                the `set_identity()` at :268 — a dropped write, and only at
+    //                that cell. `near > far` merely inverts a written matrix.
+    //   orthogonal   projection.cpp:344 has no guard at all: it writes inf at
+    //                :351 and says nothing. No ERR_FAIL, no clamp, no dropped
+    //                write, and both hints end in `or_greater`
+    //                (camera_3d.cpp:685-686) so no warning tier either. Camera3D
+    //                declares no `get_configuration_warnings`, so nothing is
+    //                licensed and nothing is reported.
     describe('clipping planes relationship', () => {
-      it('should error when near >= far under the frustum projection', () => {
+      /** Both clipping-plane rule names, so a split cannot make an assertion vacuous. */
+      const clipping = (content: string) =>
+        lint(content).filter(
+          (d) =>
+            d.ruleName === 'camera3d-invalid-clipping-planes' ||
+            d.ruleName === 'camera3d-zero-depth-range'
+        );
+
+      it('should error when near > far under the frustum projection', () => {
         expectDiagnostic(
           scene(node('Camera3D', { projection: 2, size: 1.0, near: 100.0, far: 50.0 })),
           {
             prop: 'clipping',
             severity: 'error',
             nodeType: 'Camera3D',
-            contains: ['near', 'far', '100', '50'],
+            ruleName: 'camera3d-invalid-clipping-planes',
+            contains: ['near', 'far', '100', '50', 'frustum'],
           }
         );
       });
 
       it('should error when near equals far under the frustum projection', () => {
-        // Frustum is the one mode that refuses BOTH cells, so it reports the
-        // zero-depth-range reason the other two share rather than the ordering.
+        // One ERR_FAIL_COND covers both cells, so frustum reports one reason.
         expectDiagnostic(
           scene(node('Camera3D', { projection: 2, size: 1.0, near: 100.0, far: 100.0 })),
           {
             prop: 'clipping',
             severity: 'error',
             nodeType: 'Camera3D',
-            contains: ['zero depth range'],
+            ruleName: 'camera3d-invalid-clipping-planes',
+            contains: ['frustum', '100'],
           }
         );
       });
 
       it('should not error when near < far', () => {
-        expectNoDiagnostic(
-          scene(node('Camera3D', { projection: 2, size: 1.0, near: 0.1, far: 100.0 })),
-          { prop: 'clipping' }
-        );
+        expect(
+          clipping(scene(node('Camera3D', { projection: 2, size: 1.0, near: 0.1, far: 100.0 })))
+        ).toHaveLength(0);
       });
 
-      // `projection` absent means PROJECTION_PERSPECTIVE (camera_3d.h:66), the case
-      // that used to draw an error for a pair Godot stores untouched.
+      // `projection` absent means PROJECTION_PERSPECTIVE (camera_3d.h:66).
       it.each([
         ['perspective, written', { projection: 0, fov: 75.0 }],
         ['perspective, defaulted by omission', { fov: 75.0 }],
         ['orthogonal', { projection: 1, size: 10.0 }],
       ])('stays silent on near > far under %s', (_label, props) => {
         // deltaZ is non-zero, so the matrix is written and merely inverted.
-        const diagnostics = lint(scene(node('Camera3D', { ...props, near: 100.0, far: 50.0 })));
-        expect(
-          diagnostics.filter((d) => d.ruleName === 'camera3d-invalid-clipping-planes')
-        ).toHaveLength(0);
+        expect(clipping(scene(node('Camera3D', { ...props, near: 100.0, far: 50.0 })))).toHaveLength(
+          0
+        );
       });
 
-      // near == far is a different cell from near > far, and every mode loses
-      // the projection at it — the perspective write is dropped before
-      // `set_identity` (projection.cpp:263), the orthogonal one divides by
-      // `zfar - znear` and stores inf (projection.cpp:351).
       it.each([
         ['perspective, written', { projection: 0, fov: 75.0 }],
         ['perspective, defaulted by omission', { fov: 75.0 }],
-        ['orthogonal', { projection: 1, size: 10.0 }],
+        // camera_3d.cpp:341 assigns `mode` only for 0/1/2, so an out-of-enum
+        // value is dropped and the camera stays on its camera_3d.h:66 default.
+        ['an out-of-enum projection, dropped back to perspective', { projection: 5, fov: 75.0 }],
       ])('errors on near == far under %s', (_label, props) => {
         expectDiagnostic(scene(node('Camera3D', { ...props, near: 100.0, far: 100.0 })), {
           prop: 'clipping',
           severity: 'error',
           nodeType: 'Camera3D',
-          contains: ['100'],
+          ruleName: 'camera3d-zero-depth-range',
+          contains: ['100', 'perspective'],
         });
+      });
+
+      it('stays silent on near == far under the orthogonal projection', () => {
+        // projection.cpp:344 writes -2.0/(zfar - znear) as inf and returns. The
+        // value is stored untouched and no hint end is crossed, so ADR-0032
+        // licenses neither tier.
+        expect(
+          clipping(scene(node('Camera3D', { projection: 1, size: 10.0, near: 100.0, far: 100.0 })))
+        ).toHaveLength(0);
+      });
+
+      // `inf`/`nan` are legal float literals (variant_parser.cpp:150-155), and
+      // the two modes part company on them because the conditions differ.
+      it('stays silent on near == far == inf under perspective, where deltaZ is nan', () => {
+        // projection.cpp:260 computes `inf - inf` as nan, and `nan == 0` is
+        // false, so :263 does NOT return and the matrix is written.
+        expect(
+          clipping(scene(node('Camera3D', { projection: 0, fov: 75.0, near: 'inf', far: 'inf' })))
+        ).toHaveLength(0);
+      });
+
+      it('errors on near == far == inf under frustum, where inf <= inf still fails', () => {
+        expectDiagnostic(
+          scene(node('Camera3D', { projection: 2, size: 1.0, near: 'inf', far: 'inf' })),
+          {
+            prop: 'clipping',
+            severity: 'error',
+            ruleName: 'camera3d-invalid-clipping-planes',
+          }
+        );
+      });
+
+      it.each([
+        ['frustum', { projection: 2, size: 1.0 }],
+        ['perspective', { projection: 0, fov: 75.0 }],
+      ])('stays silent on a nan plane under %s, where every comparison is false', (_l, props) => {
+        expect(
+          clipping(scene(node('Camera3D', { ...props, near: 'nan', far: 'nan' })))
+        ).toHaveLength(0);
+      });
+
+      // An absent plane is Godot's default, not an absent value: camera_3d.h:72
+      // is `_near = 0.05` and :73 is `_far = 4000.0`, and the serialiser omits a
+      // property sitting at its default. The pair is still a pair.
+      it('errors when the written far meets the defaulted near', () => {
+        expectDiagnostic(scene(node('Camera3D', { projection: 0, fov: 75.0, far: 0.05 })), {
+          prop: 'clipping',
+          severity: 'error',
+          ruleName: 'camera3d-zero-depth-range',
+          contains: ['0.05'],
+        });
+      });
+
+      it('errors when the written near meets the defaulted far', () => {
+        expectDiagnostic(scene(node('Camera3D', { projection: 0, fov: 75.0, near: 4000 })), {
+          prop: 'clipping',
+          severity: 'error',
+          ruleName: 'camera3d-zero-depth-range',
+          contains: ['4000'],
+        });
+      });
+
+      it('errors when a written far falls below the defaulted near under frustum', () => {
+        expectDiagnostic(scene(node('Camera3D', { projection: 2, size: 1.0, far: 0.04 })), {
+          prop: 'clipping',
+          severity: 'error',
+          ruleName: 'camera3d-invalid-clipping-planes',
+          contains: ['0.05', '0.04'],
+        });
+      });
+
+      it.each([
+        ['both defaulted', {}],
+        ['near written, far defaulted', { near: 0.1 }],
+        ['far written, near defaulted', { far: 1000.0 }],
+      ])('stays silent when the defaults keep the range open: %s', (_label, props) => {
+        expect(clipping(scene(node('Camera3D', { projection: 0, fov: 75.0, ...props })))).toHaveLength(
+          0
+        );
       });
     });
 

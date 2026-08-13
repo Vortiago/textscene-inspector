@@ -137,11 +137,15 @@ validatorRegistry.registerAll('NavigationAgent2D', {
   // navigation_agent_2d.cpp:712-715 is a bare assignment (VECTOR2, USAGE_NO_EDITOR
   // at :161 — still serialises, object.h:132); no bound beyond the literal's shape.
   velocity: v.vector2('velocity'),
-  // navigation_agent_2d.cpp:570-579, ERR_FAIL_COND_MSG(p_radius < 0.0, "Radius must be positive.").
+  // Two tiers on the floor. navigation_agent_2d.cpp:571,
+  // `ERR_FAIL_COND_MSG(p_radius < 0.0, "Radius must be positive.")` refuses
+  // below 0; the hint (:162, "0.01,500,0.01,or_greater,suffix:px") floors at
+  // 0.01, so [0, 0.01) loads and only warns. `or_greater` opens the ceiling.
   radius: v.float('radius', {
-    min: 0,
-    message: "Property 'radius' must be >= 0.",
-    enforced: 'navigation_agent_2d.cpp:571',
+    enforcedMin: { at: 0 },
+    min: 0.01,
+    enforced: { min: 'navigation_agent_2d.cpp:571' },
+    hinted: { min: 'navigation_agent_2d.cpp:162' },
   }),
   // set_neighbor_distance (cpp:581-589) is a bare assignment; the hint at :163
   // ("0.1,100000,0.01,or_greater") gives an advisory floor of 0.1.
@@ -169,11 +173,16 @@ validatorRegistry.registerAll('NavigationAgent2D', {
     message: "Property 'time_horizon_obstacles' must be >= 0.",
     enforced: 'navigation_agent_2d.cpp:611',
   }),
-  // navigation_agent_2d.cpp:619-627, ERR_FAIL_COND_MSG(p_max_speed < 0.0, "Max speed must be positive.").
+  // Two tiers on the floor. navigation_agent_2d.cpp:620,
+  // `ERR_FAIL_COND_MSG(p_max_speed < 0.0, "Max speed must be positive.")`
+  // refuses below 0; the hint (:167, "0.01,100000,0.01,or_greater,suffix:px/s")
+  // floors at 0.01, so [0, 0.01) loads and only warns. `or_greater` opens the
+  // ceiling.
   max_speed: v.float('max_speed', {
-    min: 0,
-    message: "Property 'max_speed' must be >= 0.",
-    enforced: 'navigation_agent_2d.cpp:620',
+    enforcedMin: { at: 0 },
+    min: 0.01,
+    enforced: { min: 'navigation_agent_2d.cpp:620' },
+    hinted: { min: 'navigation_agent_2d.cpp:167' },
   }),
   // Bare uint32_t assignment (set_avoidance_layers, cpp:932-935); PROPERTY_HINT_LAYERS_AVOIDANCE
   // at :168 is a UI-control hint, not a range.

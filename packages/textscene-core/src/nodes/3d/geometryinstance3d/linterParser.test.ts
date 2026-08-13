@@ -131,20 +131,32 @@ describe('GeometryInstance3D strict validators', () => {
       expect(check('lod_bias', '1.0')).toBeNull();
     });
 
-    it('accepts 0 — doc: "forces the mesh to its lowest level of detail", setter allows it', () => {
-      expect(check('lod_bias', '0')).toBeNull();
+    // Three bands on the floor: set_lod_bias:387 refuses below 0, the :604
+    // hint floors at 0.001, so [0, 0.001) loads and only warns.
+    it.each(['0', '0.0005'])('warns on %s, inside the hint-only band', (value) => {
+      const error = check('lod_bias', value);
+      expect(error).not.toBeNull();
+      expect(error?.severity).toBe('warning');
+    });
+
+    it('accepts the hint floor 0.001 in silence', () => {
+      expect(check('lod_bias', '0.001')).toBeNull();
     });
 
     it('accepts the upper editor bound (128)', () => {
       expect(check('lod_bias', '128')).toBeNull();
     });
 
-    it('rejects a negative value — setter is ERR_FAIL_COND(p_bias < 0.0)', () => {
-      expect(check('lod_bias', '-0.001')).not.toBeNull();
+    it('errors on a negative value — setter is ERR_FAIL_COND(p_bias < 0.0)', () => {
+      const error = check('lod_bias', '-0.001');
+      expect(error).not.toBeNull();
+      expect(error?.severity).toBe('error');
     });
 
-    it('rejects a value past the 128 editor bound', () => {
-      expect(check('lod_bias', '128.001')).not.toBeNull();
+    it('warns past the 128 editor bound — the hint closes it, no setter does', () => {
+      const error = check('lod_bias', '128.001');
+      expect(error).not.toBeNull();
+      expect(error?.severity).toBe('warning');
     });
   });
 

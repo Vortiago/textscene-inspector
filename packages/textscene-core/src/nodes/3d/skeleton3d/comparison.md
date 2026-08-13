@@ -35,15 +35,14 @@ Strict parsing format-checks these `Skeleton3D` properties, plus 17 inherited fr
 | `animate_physical_bones` | true or false |  |
 | `bones/*` | bone pose component (float, Vector3 or Quaternion) |  |
 | `modifier_callback_mode_process` | enum 0-2 (PHYSICS/IDLE/MANUAL) | warning |
-| `motion_scale` | float >= 5e-324 | error below |
+| `motion_scale` | float >= 0.001 | error at or below 0, warning below 0.001 |
 | `show_rest_only` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-skeleton3d-usage` | `valid-skeleton3d-motion-scale` | error |
-|  | `skeleton3d-debug-mode` | warning |
+| `valid-skeleton3d-usage` | `skeleton3d-debug-mode` | warning |
 |  | `skeleton3d-deprecated-feature` | warning |
 <!-- lint:end -->
 

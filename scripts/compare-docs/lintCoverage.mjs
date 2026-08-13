@@ -26,9 +26,27 @@
  * build, which it does not. The two ends are named separately whenever they
  * disagree, and an open end is simply absent.
  */
-export function outOfRangeCell(tiers) {
+export function outOfRangeCell(tiers, bounds) {
   if (!tiers) return '';
   const { min, max } = tiers;
+  // Where the setter's own end sits outside the hint's, one end reports at two
+  // tiers and the collapsed wording below cannot say so: "warning below" over a
+  // property that ERRORS past 0 states the milder half and hides the other.
+  const { enforcedMin, enforcedMax } = bounds ?? {};
+  if (enforcedMin || enforcedMax) {
+    const parts = [];
+    // An outer end the setter's already subsumes reports nothing reachable:
+    // where the refusal starts at or above the hint's floor, no value can be
+    // below the hint without being refused first, and naming the band anyway
+    // describes a warning that can never fire.
+    const minReachable = min && bounds?.min !== undefined && (!enforcedMin || enforcedMin.at < bounds.min);
+    const maxReachable = max && bounds?.max !== undefined && (!enforcedMax || enforcedMax.at > bounds.max);
+    if (enforcedMin) parts.push(`error ${enforcedMin.exclusive ? 'at or below' : 'below'} ${enforcedMin.at}`);
+    if (minReachable) parts.push(`${min} below ${bounds.min}`);
+    if (maxReachable) parts.push(`${max} above ${bounds.max}`);
+    if (enforcedMax) parts.push(`error ${enforcedMax.exclusive ? 'at or above' : 'above'} ${enforcedMax.at}`);
+    return parts.join(', ');
+  }
   if (min && max) return min === max ? min : `${min} below, ${max} above`;
   if (min) return `${min} below`;
   return max ? `${max} above` : '';
@@ -64,6 +82,9 @@ export function validatorsFor(type, validatorRegistry, baseTypes) {
         // hint states. The tier is the first thing a reader of this table needs,
         // and the sheet used to state it wrongly for every property.
         tiers: validator?.tiers,
+        // The NUMBERS behind those tiers, needed only where an end carries two
+        // of them: the cell must name both the refused and the hinted limit.
+        bounds: validator?.bounds,
         ...(removed.has(key) ? { unavailable: true } : {}),
       });
     }
@@ -156,7 +177,7 @@ export function renderCoverage(type, coverage) {
         const accepts = v.unavailable ? '**not available on this type**' : v.accepts;
         // Blank for a validator with no bound to exceed: a format-only check has
         // no "out of range", and claiming one would invent a tier it never reports.
-        const tier = v.unavailable ? '' : outOfRangeCell(v.tiers);
+        const tier = v.unavailable ? '' : outOfRangeCell(v.tiers, v.bounds);
         lines.push(`| \`${v.property}\` | ${accepts} | ${tier} |`);
       }
     }

@@ -11,7 +11,7 @@
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import type { Severity } from '../../types.js';
 import { propertyError } from '../propertyError.js';
-import { parseGodotFloat } from '../commonValidators.js';
+import { parseGodotFloat, type EnforcedEnd } from '../commonValidators.js';
 import { valueCode } from './codes.js';
 
 /**
@@ -160,21 +160,43 @@ export function ground(
    * Values rather than flags because two tags are derived from them — the
    * severity each end reports, and the bound itself, which a guard compares
    * against the engine's captured `PROPERTY_HINT_RANGE`.
+   *
+   * `min`/`max` are the OUTER ends, so they stay the hint's numbers where a
+   * hint states them; `enforcedMin`/`enforcedMax` are the setter's own, which
+   * report as errors from further out.
    */
-  bounds: { min?: number; max?: number } = {}
+  bounds: {
+    min?: number;
+    max?: number;
+    enforcedMin?: EnforcedEnd;
+    enforcedMax?: EnforcedEnd;
+  } = {}
 ): PropertyValidator {
   const hasMin = bounds.min !== undefined;
   const hasMax = bounds.max !== undefined;
-  const isBounded = hasMin || hasMax;
+  // A setter end rejects real values just as a hint end does, so a validator
+  // carrying only one is bounded and owes a citation.
+  const isBounded =
+    hasMin || hasMax || bounds.enforcedMin !== undefined || bounds.enforcedMax !== undefined;
   // Here rather than in the range factories, because this is the one function
   // every combinator passes through: tagging at the factories left the 55
   // validators built from an inline arrow — `v.strictInt`, `v.positiveInt` —
   // silently untagged, and the sheet rendered their tier blank.
   if (isBounded) {
     validator.bounds = bounds;
+    // The tier of the OUTER end. Where the setter has an end of its own, that
+    // one is always an error and lives in `bounds`, so this reports what a
+    // value between the two says: the hint's tier, not the setter's.
+    // An end with ONLY a setter limit still rejects values, and always as an
+    // error. Leaving it out left `tiers` empty for every strictly-positive
+    // property, and the generated sheet then rendered a blank out-of-range cell
+    // for a validator that refuses.
+    const separate = { min: bounds.enforcedMin !== undefined, max: bounds.enforcedMax !== undefined };
+    const tierFor = (end: 'min' | 'max') =>
+      (end === 'min' ? hasMin : hasMax) ? endSeverity(opts, end, separate[end]) : 'error';
     validator.tiers = {
-      ...(hasMin ? { min: endSeverity(opts, 'min') } : {}),
-      ...(hasMax ? { max: endSeverity(opts, 'max') } : {}),
+      ...(hasMin || separate.min ? { min: tierFor('min') } : {}),
+      ...(hasMax || separate.max ? { max: tierFor('max') } : {}),
     };
   }
   const enforced = citeFor(opts.enforced, 'min') ?? citeFor(opts.enforced, 'max');
@@ -203,7 +225,16 @@ export function ground(
  * it, `error` when the setter does. Un-audited ends keep erroring, which is the
  * pre-split behaviour.
  */
-export function endSeverity(opts: Grounding, end: 'min' | 'max'): Severity {
-  if (citeFor(opts.enforced, end)) return 'error';
+export function endSeverity(
+  opts: Grounding,
+  end: 'min' | 'max',
+  /**
+   * True when the setter's own limit at this end is a SEPARATE, further-out
+   * bound (`enforcedMin`/`enforcedMax`). The `enforced:` citation then belongs
+   * to that one, and the end being scored here is the hint's, which warns.
+   */
+  separateEnforcedEnd = false
+): Severity {
+  if (!separateEnforcedEnd && citeFor(opts.enforced, end)) return 'error';
   return citeFor(opts.hinted, end) ? 'warning' : 'error';
 }

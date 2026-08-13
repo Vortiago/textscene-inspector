@@ -126,15 +126,15 @@ validatorRegistry.registerAll('TextEdit', {
   ),
   caret_blink: v.boolean('caret_blink'),
   // text_edit.cpp:7583 hints "0.1,10,0.01,suffix:s", closed both ends.
-  // text_edit.cpp:5198, ERR_FAIL_COND(p_interval <= 0): the setter refuses the
-  // floor and assigns anything above it straight through, so the 10 ceiling is
-  // the hint's alone and warns.
+  // text_edit.cpp:5198, ERR_FAIL_COND(p_interval <= 0): the setter refuses at
+  // 0, below the hint's own floor, and assigns anything above it straight
+  // through, so (0, 0.1) and everything past 10 warn.
   caret_blink_interval: v.float('caret_blink_interval', {
-    min: Number.MIN_VALUE,
+    enforcedMin: { at: 0, exclusive: true },
+    min: 0.1,
     max: 10,
     enforced: { min: 'text_edit.cpp:5198' },
-    hinted: { max: 'text_edit.cpp:7583' },
-    message: "Property 'caret_blink_interval' must be greater than 0 and no more than 10",
+    hinted: 'text_edit.cpp:7583',
   }),
   caret_draw_when_editable_disabled: v.boolean('caret_draw_when_editable_disabled'),
   caret_move_on_right_click: v.boolean('caret_move_on_right_click'),

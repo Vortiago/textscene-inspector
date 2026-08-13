@@ -51,7 +51,7 @@ Strict parsing format-checks these `AreaLight3D` properties, plus 27 inherited f
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `area_normalize_energy` | true or false |  |
-| `area_range` | float > 0 | error below |
+| `area_range` | float > 0 | error at or below 0 |
 | `area_size` | Vector2(x, y) |  |
 
 | Rule | Reports | Severity |

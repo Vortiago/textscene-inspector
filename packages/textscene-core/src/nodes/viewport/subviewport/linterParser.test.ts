@@ -43,8 +43,15 @@ describe('SubViewport linter', () => {
       );
     });
 
-    it('rejects a float-valued size — Vector2i is integer-only (error path)', () => {
-      expectDiagnostic(scene(node('SubViewport', { size: 'Vector2i(600.5, 400)' })), {
+    it('takes a float-valued size, which Godot converts rather than refuses', () => {
+      // `_parse_construct<int32_t>` (variant_parser.cpp:577-592) accepts any
+      // number token, so this loads as Vector2i(600, 400). The component is
+      // bounded as the 600 Godot stores.
+      expectClean(scene(node('SubViewport', { size: 'Vector2i(600.5, 400)' })));
+    });
+
+    it('still rejects a size whose truncated component is below the floor', () => {
+      expectDiagnostic(scene(node('SubViewport', { size: 'Vector2i(0.9, 400)' })), {
         prop: 'size',
         severity: 'error',
       });

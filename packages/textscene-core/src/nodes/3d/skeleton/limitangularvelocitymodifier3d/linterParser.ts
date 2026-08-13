@@ -21,24 +21,27 @@
  * eight. The fourth route is genuinely unused: `PropertyListHelper` and
  * `register_property` both return zero hits across the `.cpp` and the `.h`.
  *
- * ## No radian conversion is in force anywhere in this file
+ * ## The one radian bound here is hand-built, not `v.radians`
  *
  * `max_angular_velocity` IS a `radians_as_degrees` property, so the hint's
- * numbers are DEGREES while the `.tscn` stores RADIANS. It still ends up with
- * no converted bound, and that is a conclusion rather than an oversight: the
- * hint reads `"0,720,or_greater,radians_as_degrees,suffix:°/s"` (:272, whose
- * suffix is concatenated from `String(U"°") + "/s"` rather than written flat)
- * and `or_greater` OPENS the max end, which leaves the floor as the only
- * reportable bound, and 0 degrees is 0 radians in either unit.
+ * numbers are DEGREES while the `.tscn` stores RADIANS. The hint reads
+ * `"0,720,or_greater,radians_as_degrees,suffix:°/s"` (:272, whose suffix is
+ * concatenated from `String(U"°") + "/s"` rather than written flat), and
+ * `or_greater` OPENS the max end, so the floor is the only reportable bound.
+ * Converted, that floor is 0 radians, widened by `RADIAN_ROUNDTRIP_EPSILON`
+ * exactly as `v.radians` widens one: the value is a double fed from a float32
+ * inspector spinner and written back in decimal, so a spinner set to 0 reloads
+ * a hair negative and a floor at exactly 0 rejects it.
  *
- * `v.radians` is therefore deliberately not used. It requires a `maxDeg` and
- * closes the ceiling at `maxDeg * PI / 180`, which here is 720 degrees =
- * 12.566371 radians (4 * PI), so it would reject the 20 rad/s that the
- * inspector's own open-ended spinner produces. Bounding on the raw hint number
- * instead (`max: 720`) is the other way to get this wrong, and is worse: 720
- * RADIANS is 41253 degrees per second, so it would accept anything a scene
- * could plausibly contain while rejecting nothing. linterParser.test.ts pins
- * both failure modes with explicit accept cases at 12.566371, 12.6 and 800.
+ * `v.radians` itself cannot express that. It requires a `maxDeg` and closes the
+ * ceiling at `maxDeg * PI / 180`, which here is 720 degrees = 12.566371 radians
+ * (4 * PI), so it would reject the 20 rad/s that the inspector's own open-ended
+ * spinner produces. Bounding on the raw hint number instead (`max: 720`) is the
+ * other way to get this wrong, and is worse: 720 RADIANS is 41253 degrees per
+ * second, so it would accept anything a scene could plausibly contain while
+ * rejecting nothing. linterParser.test.ts pins both failure modes with explicit
+ * accept cases at 12.566371, 12.6 and 800. The epsilon is imported rather than
+ * retyped, so this floor and every `v.radians` one move together.
  *
  * ## `joint_count` is getter-only, so it gets no validator
  *
@@ -58,6 +61,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
+import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
 
 /**
  * The four `chains/<i>/` leaves, keyed exactly as `_get_property_list` spells
@@ -161,14 +165,15 @@ validatorRegistry.registerAll('LimitAngularVelocityModifier3D', {
   // limit_angular_velocity_modifier_3d.cpp:272, PROPERTY_HINT_RANGE
   // "0,720,or_greater,radians_as_degrees,suffix:°/s". The stored unit is
   // RADIANS and the hint's numbers are DEGREES, but `or_greater` opens the max
-  // end, so the ceiling is unreportable and the floor converts to itself:
-  // 0 degrees = 0 radians. set_max_angular_velocity (:231-233) is a bare
+  // end, so the ceiling is unreportable and 0 degrees converts to 0 radians,
+  // widened by the shared radian epsilon since a float32 round-trip of zero
+  // lands just under it. set_max_angular_velocity (:231-233) is a bare
   // assignment with no clamp, so the hint governs the inspector spinner alone
   // and a value below the floor is a WARNING (ADR-0032). No
   // ERR_FAIL_COND(!is_finite(...)) anywhere in that setter, so `inf` and `nan`
   // are values it keeps; only `-inf` trips the floor, exactly as -0.01 does.
   max_angular_velocity: v.float('max_angular_velocity', {
-    min: 0,
+    min: -RADIAN_ROUNDTRIP_EPSILON,
     hinted: 'limit_angular_velocity_modifier_3d.cpp:272',
   }),
 

@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 import './nodes/index'; // side-effect: populate the component registry
 import '../parser/TscnParser'; // side-effect: populate the parser registry
 import { nodeRegistry } from '../core/NodeRegistry';
+import { nodeComponentRegistry } from './NodeComponentRegistry';
 import { isRenderableNodeType, rendersOwnVisual } from './nodeSupport';
 
 describe('isRenderableNodeType', () => {
@@ -75,11 +76,20 @@ describe('rendersOwnVisual', () => {
     const states = [...new Set(nodeRegistry.getAllTypeNames().map(rendersOwnVisual))];
     expect(states.filter((s) => !KNOWN.includes(s))).toEqual([]);
 
-    // Both of these must stay occupied. `not-implemented` deliberately is NOT
-    // required: `Window` is the only type in it, so demanding the bucket be
-    // non-empty would turn this red on the wave that finally draws a Window —
-    // failing the fix rather than the regression.
     expect(states).toContain('draws');
     expect(states).toContain('transform-only');
+  });
+
+  it('reports every declared gap as not-implemented, whatever it registered', () => {
+    // Derived from the registry rather than pinned, so it stays true as types
+    // move out of the bucket and stays non-vacuous while any remain. A pending
+    // slice DOES register a base component, so the answer cannot come from the
+    // absence of a registration: it has to come from the declared intent, and
+    // that early return is what this pins.
+    const pending = nodeRegistry
+      .getAllTypeNames()
+      .filter((type) => nodeComponentRegistry.renderIntentOf(type) === 'pending');
+    expect(pending.length).toBeGreaterThan(0);
+    expect(pending.filter((type) => rendersOwnVisual(type) !== 'not-implemented')).toEqual([]);
   });
 });

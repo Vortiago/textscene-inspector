@@ -18,22 +18,33 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import type { TscnNode, TscnScene } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties, findParentNode } from '../../../../linter/linterUtils.js';
+import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { parentTypeVerdict, searchAncestors } from '../../../../linter/parentType.js';
+import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+
+/** What `_find_skeleton_parent()` would settle on, read off this file alone. */
+type SkeletonAncestry = 'found' | 'absent' | 'unknowable';
 
 /**
  * physical_bone_2d.cpp:79-95 `_find_skeleton_parent()` — walks up through a
  * chain of PhysicalBone2D ancestors until it reaches a Skeleton2D. Any other
  * type stops the walk immediately (the engine's `current_parent` goes null),
  * so a PhysicalBone2D under, say, a plain Node2D never finds one either.
+ *
+ * `unknowable` is a third answer rather than a second way of saying `absent`:
+ * an ancestor whose class is declared in the scene it was instanced from could
+ * be the Skeleton2D, the next bone in the chain, or the type that ends the
+ * walk, and calling it none of the three warns on every rig built that way.
+ * The engine's casts are `cast_to`, so subclasses count, hence `descendsFrom`.
  */
-function hasSkeletonAncestor(scene: TscnScene, node: TscnNode): boolean {
-  let current = findParentNode(scene.nodes, node);
-  while (current) {
-    if (current.type === 'Skeleton2D') return true;
-    if (current.type !== 'PhysicalBone2D') return false;
-    current = findParentNode(scene.nodes, current);
-  }
-  return false;
+function skeletonAncestry(scene: TscnScene, node: TscnNode): SkeletonAncestry {
+  const search = searchAncestors<'found' | 'absent'>(scene, node, (ancestor) => {
+    if (descendsFrom(ancestor.type, 'Skeleton2D')) return 'found';
+    if (!descendsFrom(ancestor.type, 'PhysicalBone2D')) return 'absent';
+    return undefined;
+  });
+  if (search.kind === 'unknowable') return 'unknowable';
+  return search.kind === 'found' ? search.value : 'absent';
 }
 
 /**
@@ -49,9 +60,11 @@ function checkPhysicalBone2D(context: RuleContext): Diagnostic[] {
   if (!isValidProperties(node.properties)) return diagnostics;
 
   const rawProps = node.properties as Record<string, string>;
-  const parent = findParentNode(scene.nodes, node);
+  const ancestry = skeletonAncestry(scene, node);
 
-  if (!hasSkeletonAncestor(scene, node)) {
+  // `unknowable` answers neither warning: the first needs to know the ancestor
+  // is not a Skeleton2D, the second needs to know it is.
+  if (ancestry === 'absent') {
     diagnostics.push({
       severity: 'warning',
       message: `PhysicalBone2D '${node.name}' has no Skeleton2D ancestor. A PhysicalBone2D only works with a Skeleton2D or another PhysicalBone2D as a parent node.`,
@@ -59,7 +72,7 @@ function checkPhysicalBone2D(context: RuleContext): Diagnostic[] {
       nodeType: node.type,
       ruleName: 'physicalbone2d-missing-skeleton-parent',
     });
-  } else {
+  } else if (ancestry === 'found') {
     const boneIndex = rawProps.bone2d_index !== undefined ? parseFloat(rawProps.bone2d_index) : -1;
     if (!(boneIndex > -1)) {
       diagnostics.push({
@@ -72,7 +85,9 @@ function checkPhysicalBone2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  if (parent?.type === 'PhysicalBone2D') {
+  // `cast_to<PhysicalBone2D>(get_parent())` (physical_bone_2d.cpp:119), so
+  // subclasses count and an unseeable parent decides nothing.
+  if (parentTypeVerdict(scene, node, 'PhysicalBone2D').kind === 'satisfied') {
     const hasJointChild = node.children.some((child) => JOINT2D_TYPES.has(child.type));
     if (!hasJointChild) {
       diagnostics.push({

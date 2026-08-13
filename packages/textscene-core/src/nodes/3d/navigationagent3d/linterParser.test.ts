@@ -354,8 +354,15 @@ describe('NavigationAgent3D strict validators', () => {
       expect(err).not.toBeNull();
       expect(err!.severity).toBe('error');
     });
-    it('accepts exactly zero (edge)', () => {
-      expect(check('height', '0')).toBeNull();
+    // Three bands: the setter refuses below 0 (:618), the hint floors at 0.01
+    // (:173), so [0, 0.01) loads and only warns.
+    it.each(['0', '0.005'])('warns on %s, inside the hint-only band', (value) => {
+      const err = check('height', value);
+      expect(err).not.toBeNull();
+      expect(err!.severity).toBe('warning');
+    });
+    it('accepts the hint floor 0.01 in silence', () => {
+      expect(check('height', '0.01')).toBeNull();
     });
   });
 
@@ -368,8 +375,15 @@ describe('NavigationAgent3D strict validators', () => {
       expect(err).not.toBeNull();
       expect(err!.severity).toBe('error');
     });
-    it('accepts exactly zero (edge)', () => {
-      expect(check('radius', '0')).toBeNull();
+    // Three bands: the setter refuses below 0 (:608), the hint floors at 0.01
+    // (:174), so [0, 0.01) loads and only warns.
+    it.each(['0', '0.005'])('warns on %s, inside the hint-only band', (value) => {
+      const err = check('radius', value);
+      expect(err).not.toBeNull();
+      expect(err!.severity).toBe('warning');
+    });
+    it('accepts the hint floor 0.01 in silence', () => {
+      expect(check('radius', '0.01')).toBeNull();
     });
   });
 
@@ -438,8 +452,15 @@ describe('NavigationAgent3D strict validators', () => {
       expect(err).not.toBeNull();
       expect(err!.severity).toBe('error');
     });
-    it('accepts exactly zero (edge)', () => {
-      expect(check('max_speed', '0')).toBeNull();
+    // Three bands: the setter refuses below 0 (:684), the hint floors at 0.01
+    // (:179), so [0, 0.01) loads and only warns.
+    it.each(['0', '0.005'])('warns on %s, inside the hint-only band', (value) => {
+      const err = check('max_speed', value);
+      expect(err).not.toBeNull();
+      expect(err!.severity).toBe('warning');
+    });
+    it('accepts the hint floor 0.01 in silence', () => {
+      expect(check('max_speed', '0.01')).toBeNull();
     });
   });
 

@@ -2,10 +2,11 @@
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
 import type { TscnNode } from '../../../parser/types.js';
+import { isCamera3DType } from '../../cameraNodeTypes.js';
 import styles from './TscnPreviewShell.module.css';
 
 /** Stable predicate so `useLiveSceneNodes`' memo doesn't recompute each render. */
-const isCamera3D = (n: TscnNode): boolean => n.type === 'Camera3D';
+const isCamera3D = (n: TscnNode): boolean => isCamera3DType(n.type);
 
 /**
  * Compact scene stat chips for the top bar. Each chip's text is a single node

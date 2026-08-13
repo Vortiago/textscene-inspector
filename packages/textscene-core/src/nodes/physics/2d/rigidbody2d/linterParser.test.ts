@@ -93,6 +93,37 @@ describe('RigidBody2D strict validators (physics state)', () => {
     });
   });
 
+  describe('max_contacts_reported', () => {
+    // rigid_body_2d.cpp:501, ERR_FAIL_INDEX_MSG(p_amount,
+    // MAX_CONTACTS_REPORTED_2D_MAX): the constant is 4096
+    // (physics_server_2d.h:37) and ERR_FAIL_INDEX fails on `>=`, so the setter
+    // refuses 4096 and everything above it. Hint :759 is "0,64,1,or_greater".
+    it('accepts the largest count the setter takes', () => {
+      expect(check('max_contacts_reported', '4095')).toBeNull();
+    });
+
+    it('accepts a count far past the hint slider extent of 64', () => {
+      expect(check('max_contacts_reported', '2000')).toBeNull();
+    });
+
+    it('refuses the constant itself and above — ERR_FAIL_INDEX fails at >= 4096', () => {
+      const error = check('max_contacts_reported', '4096');
+      expect(error?.severity).toBe('error');
+      expect(error?.message).toContain('less than 4096');
+      expect(error?.message).toContain("Godot's setter refuses the write");
+      expect(check('max_contacts_reported', '100000')?.severity).toBe('error');
+    });
+
+    it('refuses a negative count', () => {
+      expect(check('max_contacts_reported', '-5')?.severity).toBe('error');
+    });
+
+    it('carries the setter ceiling in the enforced slot, leaving the or_greater end of `bounds` open', () => {
+      const validator = validatorRegistry.findValidator('RigidBody2D', 'max_contacts_reported');
+      expect(validator?.bounds).toEqual({ min: 0, enforcedMax: { at: 4096, exclusive: true } });
+    });
+  });
+
   describe('can_sleep, sleeping, custom_integrator', () => {
     it.each(['can_sleep', 'sleeping', 'custom_integrator'])('accepts true/false for %s', (property) => {
       expect(check(property, 'true')).toBeNull();

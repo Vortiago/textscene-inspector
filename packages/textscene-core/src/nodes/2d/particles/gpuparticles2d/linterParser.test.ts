@@ -194,8 +194,10 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('lifetime', '0.01')).toBeNull();
     });
 
-    it('accepts below the hint floor, which the setter does not reject', () => {
-      expect(check('lifetime', '0.001')).toBeNull();
+    it('warns below the hint floor, which the setter does not reject', () => {
+      const warning = check('lifetime', '0.001');
+      expect(warning?.severity).toBe('warning');
+      expect(warning?.message).toContain('0.01');
     });
 
     it('rejects a non-numeric value', () => {

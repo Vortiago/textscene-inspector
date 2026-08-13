@@ -31,7 +31,11 @@ const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 // Not `existsSync(dist)`: that cannot tell a fresh build from one predating
 // the very change being measured, and it SKIPS rather than fails, so a run
 // with no build at all reads green over a guard that never executed.
-const stale = stalenessMessage(CORE, 'this coverage ledger');
+//
+// Computed in `beforeAll`, never at module scope: it walks a tree a concurrent
+// `tsc --build` may be writing, and a throw during module evaluation surfaces
+// as a vitest collection error instead of the actionable message.
+let stale;
 
 /**
  * Properties in scope with no validator.
@@ -96,6 +100,7 @@ describe('resource property coverage', { timeout: 60_000 }, () => {
   // Fails every assertion below with one actionable message rather than letting
   // them agree with a previous revision's registry.
   beforeAll(() => {
+    stale = stalenessMessage(CORE, 'this coverage ledger');
     if (stale) throw new Error(stale);
   });
 

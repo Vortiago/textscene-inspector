@@ -10,14 +10,6 @@
 import '../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
-
-/**
- * PI/2 plus `v.radians`' round-trip epsilon (v.ts), so the float32 value
- * Godot's own serialiser writes for the exact boundary does not warn against
- * a bound it produced itself.
- */
-const PI_OVER_2 = Math.PI / 2 + RADIAN_ROUNDTRIP_EPSILON;
 
 validatorRegistry.registerAll('OpenXRCompositionLayerEquirect', {
   // openxr_composition_layer_equirect.cpp:76, PROPERTY_HINT_NONE.
@@ -34,22 +26,23 @@ validatorRegistry.registerAll('OpenXRCompositionLayerEquirect', {
   }),
   // :78 hints "0,90,0.1,or_less,or_greater,radians_as_degrees" — both ends
   // open, grounds nothing. set_upper_vertical_angle (:164-171),
-  // ERR_FAIL_COND(p_angle <= 0 || p_angle > PI/2) is a REAL closed range in
-  // radians (the .tscn's stored unit), tighter than the fully-open hint.
+  // ERR_FAIL_COND(p_angle <= 0 || p_angle > (Math::PI / 2.0)) is a REAL closed
+  // range in radians (the .tscn's stored unit), so both ends are the setter's
+  // and neither belongs in the hint's `min`/`max` slots. The ceiling is the
+  // predicate's own literal: no radian round-trip epsilon, because the bound is
+  // stated in radians rather than converted from a degree hint.
   upper_vertical_angle: v.float('upper_vertical_angle', {
-    min: Number.MIN_VALUE,
-    max: PI_OVER_2,
+    enforcedMin: { at: 0, exclusive: true },
+    enforcedMax: { at: Math.PI / 2 },
     enforced: 'openxr_composition_layer_equirect.cpp:165',
-    message: "Property 'upper_vertical_angle' must be greater than 0 and no more than PI/2 radians (~1.5708).",
   }),
   // :79, same hint shape as upper_vertical_angle. set_lower_vertical_angle
-  // (:177-184), ERR_FAIL_COND(p_angle <= 0 || p_angle > PI/2) — identical
-  // bound, independent property.
+  // (:177-184), ERR_FAIL_COND(p_angle <= 0 || p_angle > (Math::PI / 2.0)) —
+  // identical bound, independent property.
   lower_vertical_angle: v.float('lower_vertical_angle', {
-    min: Number.MIN_VALUE,
-    max: PI_OVER_2,
-    enforced: 'openxr_composition_layer_equirect.cpp:177',
-    message: "Property 'lower_vertical_angle' must be greater than 0 and no more than PI/2 radians (~1.5708).",
+    enforcedMin: { at: 0, exclusive: true },
+    enforcedMax: { at: Math.PI / 2 },
+    enforced: 'openxr_composition_layer_equirect.cpp:178',
   }),
   // :80, PROPERTY_HINT_NONE. set_fallback_segments (:190-194),
   // ERR_FAIL_COND(p_fallback_segments == 0) — same uint32_t shape as

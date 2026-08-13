@@ -188,6 +188,17 @@ describe('ReflectionProbe strict validators', () => {
       const error = check('max_distance', '262145');
       expect(error?.severity).toBe('error');
       expect(error?.code).toBe('INVALID_MAX_DISTANCE_VALUE');
+      expect(error?.message).toContain('at most 262144');
+      expect(error?.message).toContain("Godot's setter refuses the write");
+    });
+
+    it('still refuses a value far past the clamp — or_greater opens the HINT, not the clamp', () => {
+      expect(check('max_distance', '1000000')?.severity).toBe('error');
+    });
+
+    it('carries the clamp ceiling in the enforced slot, leaving the or_greater end of `bounds` open', () => {
+      const validator = validatorRegistry.findValidator('ReflectionProbe', 'max_distance');
+      expect(validator?.bounds).toEqual({ min: 0, enforcedMax: { at: 262144 } });
     });
 
     it('errors below the enforced floor', () => {

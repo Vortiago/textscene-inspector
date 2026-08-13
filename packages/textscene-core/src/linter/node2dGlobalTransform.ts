@@ -58,12 +58,12 @@
  */
 
 import type { TscnNode, TscnScene } from '../parser/types.js';
-import { findParentNode, isValidProperties } from './linterUtils.js';
-import { isTypeUnknowable } from './parentType.js';
+import { isValidProperties } from './linterUtils.js';
+import { searchAncestors } from './parentType.js';
 import { descendsFrom } from './nodeBaseTypes.js';
 import { makeFloatTupleRegex } from './validators/floatTupleValidator.js';
 import { TSCN_FLOAT_RE, parseGodotFloat, tupleComponent } from './validators/commonValidators.js';
-import { isEqualApprox, isZeroApprox } from '../godot/math.js';
+import { isEqualApprox, isZeroApprox, sign } from '../godot/math.js';
 
 /** Godot's own `Transform2D` layout: x-axis `(a, b)`, y-axis `(c, d)`, origin `(tx, ty)`. */
 export interface Transform2DMatrix {
@@ -152,16 +152,19 @@ export type GlobalTransform2DVerdict =
 /** Resolve `node`'s global `Transform2D`, composed statically. See the module docblock. */
 export function resolveGlobalTransform2D(scene: TscnScene, node: TscnNode): GlobalTransform2DVerdict {
   const chain: TscnNode[] = [node];
-  let current: TscnNode = node;
 
-  while (!isTopLevel(current)) {
-    const parent = findParentNode(scene.nodes, current);
-    if (!parent) break; // scene root: nothing more to compose
-    if (isTypeUnknowable(parent)) return { kind: 'unknowable' };
-    if (!descendsFrom(parent.type, 'CanvasItem')) break; // known terminus: Node, CanvasLayer, ...
-    if (!descendsFrom(parent.type, 'Node2D')) return { kind: 'unknowable' }; // Control: composes, undecodable here
-    chain.push(parent);
-    current = parent;
+  // `top_level` detaches a node from its parent's transform, so the climb never
+  // starts — not even to ask whether the parent is knowable.
+  if (!isTopLevel(node)) {
+    const search = searchAncestors<'terminus' | 'control'>(scene, node, (parent) => {
+      if (!descendsFrom(parent.type, 'CanvasItem')) return 'terminus'; // Node, CanvasLayer, ...
+      if (!descendsFrom(parent.type, 'Node2D')) return 'control'; // composes, undecodable here
+      chain.push(parent);
+      // A `top_level` ancestor composes, then stops the climb above itself.
+      return isTopLevel(parent) ? 'terminus' : undefined;
+    });
+    if (search.kind === 'unknowable') return { kind: 'unknowable' };
+    if (search.kind === 'found' && search.value === 'control') return { kind: 'unknowable' };
   }
 
   let composed = IDENTITY;
@@ -174,14 +177,17 @@ export function resolveGlobalTransform2D(scene: TscnScene, node: TscnNode): Glob
 /**
  * `Transform2D::get_scale()` (`transform_2d.cpp:115-118`): the x column's
  * unsigned length, and the y column's length signed by the transform's shared
- * determinant sign — `SIGN(0) === 0` in Godot (`core/typedefs.h:124`), which
- * `Math.sign` matches for a degenerate (zero-determinant) transform.
+ * determinant sign.
+ *
+ * The engine's `SIGN` (`typedefs.h:123-126`), not `Math.sign`: they part ways
+ * on NaN, which a serialised `nan` component puts into the determinant while
+ * leaving the y column itself finite.
  */
 export function globalScale(transform: Transform2DMatrix): { x: number; y: number } {
   const det = transform.a * transform.d - transform.c * transform.b;
   return {
     x: Math.hypot(transform.a, transform.b),
-    y: Math.sign(det) * Math.hypot(transform.c, transform.d),
+    y: sign(det) * Math.hypot(transform.c, transform.d),
   };
 }
 

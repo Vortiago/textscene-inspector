@@ -22,6 +22,7 @@
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 
 /** Subclasses whose constructor sets toggle_mode, so absence means true. */
 const TOGGLE_MODE_ON_BY_DEFAULT = new Set([
@@ -41,9 +42,10 @@ function checkButtonGroup(context: RuleContext): Diagnostic[] {
 
   const props = node.properties as Record<string, string>;
 
-  // An empty or absent reference is how Godot serialises "no group".
-  const group = props.button_group?.trim();
-  if (!group || group === 'null') return [];
+  // An absent, empty or explicitly cleared reference is how Godot serialises
+  // "no group", and `get_button_group().is_valid()` (base_button.cpp:525) is
+  // false for all three.
+  if (resourceSlotIsEmpty(props.button_group)) return [];
 
   const toggleMode =
     props.toggle_mode === undefined

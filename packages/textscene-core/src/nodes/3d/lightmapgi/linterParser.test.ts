@@ -195,6 +195,17 @@ describe('LightmapGI strict validators', () => {
       const error = check('bounces', '17');
       expect(error).not.toBeNull();
       expect(error?.severity).toBe('error');
+      expect(error?.message).toContain('at most 16');
+      expect(error?.message).toContain("Godot's setter refuses the write");
+    });
+
+    it('still refuses a value far past 16 — or_greater opens the HINT, not the setter', () => {
+      expect(check('bounces', '1000')?.severity).toBe('error');
+    });
+
+    it('carries the setter ceiling in the enforced slot, leaving the or_greater end of `bounds` open', () => {
+      const validator = validatorRegistry.findValidator('LightmapGI', 'bounces');
+      expect(validator?.bounds).toEqual({ min: 0, enforcedMax: { at: 16 } });
     });
 
     it('accepts a fractional value — Variant::_to_int (variant.h:369-370) truncates, it never refuses', () => {
@@ -358,11 +369,20 @@ describe('LightmapGI strict validators', () => {
       expect(check('texel_scale', '100')).toBeNull();
     });
 
-    it('accepts a value fractionally under 0.01 that is within CMP_EPSILON — set_texel_scale checks against (0.01 - CMP_EPSILON), not a bare 0.01', () => {
-      expect(check('texel_scale', '0.0099999')).toBeNull();
+    it('accepts the hint floor 0.01 in silence', () => {
+      expect(check('texel_scale', '0.01')).toBeNull();
     });
 
-    it('rejects a value below (0.01 - CMP_EPSILON) — set_texel_scale is ERR_FAIL_COND(p_multiplier < (0.01 - CMP_EPSILON))', () => {
+    // The band is one CMP_EPSILON wide: set_texel_scale:1749 refuses below
+    // (0.01 - CMP_EPSILON) while the :1932 hint floors at a bare 0.01, so a
+    // value in between loads and only warns.
+    it('warns on a value fractionally under 0.01 but within CMP_EPSILON, which the setter still takes', () => {
+      const error = check('texel_scale', '0.0099999');
+      expect(error).not.toBeNull();
+      expect(error?.severity).toBe('warning');
+    });
+
+    it('errors below (0.01 - CMP_EPSILON) — set_texel_scale is ERR_FAIL_COND(p_multiplier < (0.01 - CMP_EPSILON))', () => {
       const error = check('texel_scale', '0.005');
       expect(error).not.toBeNull();
       expect(error?.severity).toBe('error');

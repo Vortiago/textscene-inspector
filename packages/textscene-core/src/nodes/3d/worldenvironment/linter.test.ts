@@ -527,6 +527,35 @@ camera_attributes = invalid_format
       );
     });
 
+    it('reads an empty environment value as an empty slot, not as a reference that failed to resolve', () => {
+      // `environment = ` is a format error, and the strict parser reports it.
+      // The semantic rule must then read the slot the way every other swept
+      // resource slot reads it, as holding nothing, rather than resolving
+      // `''` as a reference and reporting a second, rule-level error, and
+      // rather than counting the node as one that declares an environment,
+      // which hands it the group's first place and blames the node that
+      // actually has one.
+      const content = `[gd_scene format=3]
+
+[sub_resource type="Environment" id="env_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Empty" type="WorldEnvironment" parent="."]
+environment =
+
+[node name="Real" type="WorldEnvironment" parent="."]
+environment = SubResource("env_1")
+`;
+      expectDiagnostic(content, { ruleName: 'strict-parser', severity: 'error' });
+      expectNoDiagnostic(content, { ruleName: 'valid-worldenvironment-resources' });
+      expectNoDiagnostic(content, { ruleName: 'single-worldenvironment' });
+      expectDiagnostic(content, {
+        ruleName: 'worldenvironment-requires-environment',
+        severity: 'warning',
+      });
+    });
+
     it('should handle WorldEnvironment with no properties at all', () => {
       expectDiagnostic(
         `[gd_scene format=3]

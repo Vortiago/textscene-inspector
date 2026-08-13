@@ -39,7 +39,10 @@ whole reason this fixture exists. Its hint reads `0,720,or_greater`, in DEGREES
 per second, while the `.tscn` stores RADIANS per second: 720 degrees is 4 PI, or
 12.566371 stored, and the class default of 6.2831855 is one full turn a second.
 `or_greater` opens the top of that hint, so the only bound anything can report
-is the floor, and 0 is 0 in both units.
+is the floor. 0 degrees is 0 radians, so the conversion is the identity there,
+but the coded floor still carries the shared radian round-trip tolerance: the
+value is a double fed from a float32 spinner and written back in decimal, so a
+spinner set to 0 reloads a hair negative.
 
 ## Divergences
 
@@ -57,7 +60,7 @@ Strict parsing format-checks these `LimitAngularVelocityModifier3D` properties, 
 | `chains/#/*` | LimitAngularVelocityModifier3D chain |  |
 | `exclude` | true or false |  |
 | `joints/#/*` | read-only (derived from LimitAngularVelocityModifier3D's per-chain root_bone and end_bone) |  |
-| `max_angular_velocity` | float >= 0 | warning below |
+| `max_angular_velocity` | float >= -0.0001 | warning below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

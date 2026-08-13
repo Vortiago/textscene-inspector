@@ -6,6 +6,7 @@
  * per-property bound, stays in each slice's linterParser.ts.
  */
 
+import { parseGodotInt } from '../validators/commonValidators.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import {
   hasCollisionShapeChild,
@@ -46,7 +47,10 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
     // (:631 / :831) that linterParser.ts already reports as an error.
 
     // Warning: Floor-specific properties set but motion_mode is FLOATING (1)
-    const motionMode = rawProps.motion_mode !== undefined ? parseInt(rawProps.motion_mode, 10) : 0;
+    // `parseGodotInt` truncates the way the INT conversion does, so a float or
+    // exponent literal in the enum slot resolves to the constant Godot stores.
+    const motionMode =
+      rawProps.motion_mode !== undefined ? parseGodotInt(rawProps.motion_mode) : 0;
     if (motionMode === 1) {
       // FLOATING mode
       const floorProperties = [

@@ -3,6 +3,7 @@
 import { parseTransform3D } from '../../utils/transform.js';
 import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
 import { tupleComponent } from '../validators/commonValidators.js';
+import { sign } from '../../godot/math.js';
 
 /**
  * Basis-column magnitudes of a `Transform3D(...)` literal, or null when it does
@@ -71,8 +72,8 @@ export function basisColumnScalesGodotFloat(raw: string): [number, number, numbe
   if (!match) return null;
   const n = match.slice(1, 10).map(tupleComponent);
   const col = (i: number): number => Math.hypot(n[i]!, n[i + 3]!, n[i + 6]!);
-  const sign = detSign(n as number[]);
-  return [sign * col(0), sign * col(1), sign * col(2)];
+  const axisSign = detSign(n as number[]);
+  return [axisSign * col(0), axisSign * col(1), axisSign * col(2)];
 }
 
 /**
@@ -97,5 +98,5 @@ function detSign(n: number[]): number {
     number, number, number, number, number, number, number, number, number,
   ];
   const det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
-  return det > 0 ? 1 : det < 0 ? -1 : 0;
+  return sign(det);
 }

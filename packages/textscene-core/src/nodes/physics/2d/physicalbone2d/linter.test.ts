@@ -30,6 +30,40 @@ describe('PhysicalBone2D Linter', () => {
       );
     });
 
+    it('says nothing when an ancestor takes its type from another scene', () => {
+      // `_find_skeleton_parent` (physical_bone_2d.cpp:79-95) stops at the first
+      // ancestor that is neither a Skeleton2D nor a PhysicalBone2D, so an
+      // ancestor whose class is declared elsewhere could be the Skeleton2D, the
+      // next bone in the chain, or the terminator. Deciding it is none of the
+      // three warns on every rig assembled by instancing one.
+      const instancedAncestor = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://skeleton.tscn" id="1_skel"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Skel" parent="." instance=ExtResource("1_skel")]
+
+[node name="Bone" type="PhysicalBone2D" parent="Skel"]
+bone2d_index = 0
+`;
+      const overrideAncestor = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://skeleton.tscn" id="1_skel"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Rig" parent="." instance=ExtResource("1_skel")]
+
+[node name="Skel" parent="Rig" index="0"]
+
+[node name="Bone" type="PhysicalBone2D" parent="Rig/Skel"]
+bone2d_index = 0
+`;
+      expectNoDiagnostic(instancedAncestor, { ruleName: 'physicalbone2d-missing-skeleton-parent' });
+      expectNoDiagnostic(overrideAncestor, { ruleName: 'physicalbone2d-missing-skeleton-parent' });
+    });
+
     it('passes when the direct parent is a Skeleton2D', () => {
       expectNoDiagnostic(
         scene(

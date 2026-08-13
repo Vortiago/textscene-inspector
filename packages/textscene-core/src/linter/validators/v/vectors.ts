@@ -10,7 +10,7 @@
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { tupleComponent } from '../commonValidators.js';
-import { floatTupleValidator } from '../floatTupleValidator.js';
+import { floatTupleValidator, makeFloatTupleRegex } from '../floatTupleValidator.js';
 import {
   VECTOR3_REGEX,
   createRect2Validator,
@@ -22,7 +22,10 @@ import {
 import { formatCode, numericRange, valueCode } from './codes.js';
 import { accepts, endSeverity, ground, shape, type Grounding } from './grounding.js';
 
-const RECT2I_RE = /^Rect2i\(\s*-?\d+\s*,\s*-?\d+\s*,\s*-?\d+\s*,\s*-?\d+\s*\)$/;
+// The component grammar Godot's parser takes, not `-?\d+`:
+// `_parse_construct<int32_t>` (variant_parser.cpp:577-592) accepts any number
+// token and converts it, so a float or exponent component loads and truncates.
+const RECT2I_RE = makeFloatTupleRegex('Rect2i', 4);
 
 export const vectorCombinators = {
   /** `Rect2i(x, y, w, h)` integer format. */

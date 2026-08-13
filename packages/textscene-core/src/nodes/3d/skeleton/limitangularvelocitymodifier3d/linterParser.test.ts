@@ -136,10 +136,17 @@ describe('LimitAngularVelocityModifier3D max_angular_velocity', () => {
     expect(check('max_angular_velocity', '20.0')).toBeNull();
   });
 
+  it('carries the radian epsilon on the floor, which 0 degrees round-trips under', () => {
+    // 0 degrees is 0 radians, so the conversion is the identity here, but the
+    // tolerance is not. Godot stores this as a double fed from a float32
+    // inspector spinner and writes it back in decimal, so a value set to 0
+    // reloads a hair negative, and a floor at exactly 0 rejects it.
+    expect(check('max_angular_velocity', '-0.00005')).toBeNull();
+  });
+
   it('warns below the floor, which the two units share', () => {
-    // 0 degrees is 0 radians, so no conversion applies to this end. The hint
-    // states the floor and set_max_angular_velocity (:231-233) assigns straight
-    // through with no clamp, so ADR-0032 makes it a warning.
+    // The hint states the floor and set_max_angular_velocity (:231-233) assigns
+    // straight through with no clamp, so ADR-0032 makes it a warning.
     expect(check('max_angular_velocity', '0')).toBeNull();
     expect(check('max_angular_velocity', '0.0')).toBeNull();
     const below = check('max_angular_velocity', '-0.01');

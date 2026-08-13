@@ -166,6 +166,24 @@ pitch_scale = -1.0
       expect(diagnostics[0]!.message).toContain('greater than 0');
     });
 
+    // audio_stream_player.cpp:284 hints "0.01,4,0.01,or_greater" while
+    // audio_stream_player_internal.cpp:314 refuses `<= 0`, so the two ends sit
+    // apart and (0, 0.01) is a band Godot loads and the inspector excludes.
+    it('reports the refused floor and the hinted floor at different tiers', () => {
+      const at = (value: string) =>
+        linter.lint(`[gd_scene format=3]
+
+[node name="Player" type="AudioStreamPlayer"]
+pitch_scale = ${value}
+`);
+      expect(at('0')[0]!.severity).toBe('error');
+      const warned = at('0.005');
+      expect(warned).toHaveLength(1);
+      expect(warned[0]!.severity).toBe('warning');
+      expect(warned[0]!.message).toContain('0.01');
+      expect(at('0.01')).toHaveLength(0);
+    });
+
     it('should reject non-numeric pitch_scale', () => {
       const content = `[gd_scene format=3]
 

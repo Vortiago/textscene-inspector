@@ -140,25 +140,22 @@ validatorRegistry.registerAll('Window', {
     },
     { hinted: 'window.cpp:3465' }
   ),
-  // window.cpp:3466 — PROPERTY_HINT_RANGE "0.5,8.0,0.01" reads as both bounds
-  // hard (no or_greater/or_less token), but that is the hint's own syntax, not
-  // enforcement: set_content_scale_factor (window.cpp:1772-1776) only does
-  // `ERR_FAIL_COND(p_factor <= 0)` (window.cpp:1774) — the 0.5 floor and the
-  // 8.0 ceiling are never checked. The one place content_scale_factor gets
-  // altered afterward is `_update_viewport_size` (window.cpp:1240-1247)
+  // window.cpp:3466 — PROPERTY_HINT_RANGE "0.5,8.0,0.01" closes both ends, but
+  // that is the hint's own syntax, not enforcement: set_content_scale_factor
+  // (window.cpp:1772-1776) only does `ERR_FAIL_COND(p_factor <= 0)` (:1774) —
+  // neither 0.5 nor 8.0 is ever checked. The one place content_scale_factor
+  // gets altered afterward is `_update_viewport_size` (window.cpp:1240-1247)
   // flooring it to >= 1, and only when content_scale_stretch is INTEGER — an
   // unrelated, conditional side effect, not a bound on this property.
   //
-  // So the ends carry different authority: the floor is the setter's own
-  // `> 0` and errors, while the 8.0 ceiling is stated by nothing but the hint
-  // and warns. The hint's 0.5 floor is not represented, because one `min`
-  // cannot hold both an enforced `> 0` and a hinted `>= 0.5`, and the enforced
-  // one is the value the engine actually refuses.
+  // Three tiers, then: at or below 0 errors, and the hint's own [0.5, 8.0]
+  // warns on both sides.
   content_scale_factor: v.float('content_scale_factor', {
-    min: Number.MIN_VALUE,
+    enforcedMin: { at: 0, exclusive: true },
+    min: 0.5,
     max: 8.0,
     enforced: { min: 'window.cpp:1774' },
-    hinted: { max: 'window.cpp:3466' },
+    hinted: 'window.cpp:3466',
   }),
 
   // "Accessibility" group.

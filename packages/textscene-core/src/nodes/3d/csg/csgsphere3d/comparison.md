@@ -38,7 +38,7 @@ Strict parsing format-checks these `CSGSphere3D` properties, plus 18 inherited f
 | `material` | null, SubResource("id") or ExtResource("id") |  |
 | `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) | warning |
 | `radial_segments` | integer 4-100 | error below, warning above |
-| `radius` | float 5e-324-100 | error below, warning above |
+| `radius` | float 0.001-100 | error at or below 0, warning below 0.001, warning above 100 |
 | `rings` | integer 1-100 | error below, warning above |
 | `smooth_faces` | true or false |  |
 

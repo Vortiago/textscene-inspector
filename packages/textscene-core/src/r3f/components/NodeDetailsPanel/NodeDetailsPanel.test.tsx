@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { NodeDetailsPanel } from './NodeDetailsPanel';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
+import { CameraControlProvider } from '../../contexts/CameraControlContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import type { TscnNode } from '../../../parser/types';
@@ -160,5 +161,51 @@ describe('<NodeDetailsPanel>', () => {
 
     expect(screen.getByText(/External/i)).toBeTruthy();
     expect(screen.getByText('res://door.tscn')).toBeTruthy();
+  });
+});
+
+describe('<NodeDetailsPanel> camera actions', () => {
+  function cameraWrap(graph: ReturnType<typeof createSceneGraphFromTscnScene>) {
+    return function Wrapper({ children }: { children: ReactNode }) {
+      return (
+        <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
+          <SelectionProvider>
+            <CameraControlProvider>{children}</CameraControlProvider>
+          </SelectionProvider>
+        </HierarchyProvider>
+      );
+    };
+  }
+
+  async function selectAndRender(type: string) {
+    const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Eye', type)] });
+    render(
+      <>
+        <NodeDetailsPanel />
+        <Selector path="Eye" />
+      </>,
+      { wrapper: cameraWrap(graph) }
+    );
+    await act(async () => {
+      screen.getByTestId('select-node').click();
+    });
+  }
+
+  it('offers "Use This Camera" for a Camera3D', async () => {
+    await selectAndRender('Camera3D');
+    expect(screen.getByRole('button', { name: 'Use This Camera' })).toBeTruthy();
+  });
+
+  // The action follows Godot's class tree, not the literal type name: the
+  // renderer mounts the Camera3D component for an XRCamera3D, so the inspector
+  // must let the user look through it.
+  it('offers "Use This Camera" for a Camera3D subclass (XRCamera3D)', async () => {
+    await selectAndRender('XRCamera3D');
+    expect(screen.getByRole('button', { name: 'Use This Camera' })).toBeTruthy();
+  });
+
+  it('offers no camera action for a non-camera node', async () => {
+    await selectAndRender('Node3D');
+    expect(screen.queryByRole('button', { name: 'Use This Camera' })).toBeNull();
   });
 });

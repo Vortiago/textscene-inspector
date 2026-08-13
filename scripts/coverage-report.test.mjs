@@ -40,15 +40,20 @@ const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
 
 const CORE = join(import.meta.dirname, '../packages/textscene-core');
 
-const stale = stalenessMessage(CORE, 'this ledger');
-const coverage = stale ? null : await collectCoverage();
+// Both computed in `beforeAll`, never at module scope: the walk reads a tree a
+// concurrent `tsc --build` may be writing, and a throw during module evaluation
+// surfaces as a vitest collection error instead of the actionable message.
+let stale;
+let coverage;
 
 describe('coverage ledger', () => {
   // Fails every assertion below with one actionable message rather than letting
   // them agree with stale data.
-  beforeAll(() => {
+  beforeAll(async () => {
+    stale = stalenessMessage(CORE, 'this ledger');
     if (stale) throw new Error(stale);
-  });
+    coverage = await collectCoverage();
+  }, 60_000);
 
   it('agrees with the catalog on which types are supported', () => {
     const catalogSupported = catalog.nodes
@@ -94,14 +99,24 @@ const NEW = 1_700_000_000;
 
 const scratch = [];
 
-/** Synthetic package root; `files` maps a relative path to its mtime in epoch seconds. */
-function fakeCore(files) {
+/** A clean `tsc --build` record: no file carries diagnostics. */
+const CLEAN_BUILD = { fileNames: [], semanticDiagnosticsPerFile: [] };
+
+/**
+ * Synthetic package root.
+ *
+ * @param files - relative path → mtime in epoch seconds.
+ * @param record - what `tsconfig.tsbuildinfo` contains, when the case is about
+ *   tsc's own record rather than about mtimes. Its shape is load-bearing now:
+ *   the stamp's mtime alone cannot tell a clean build from a failed one.
+ */
+function fakeCore(files, record = CLEAN_BUILD) {
   const root = mkdtempSync(join(tmpdir(), 'coverage-staleness-'));
   scratch.push(root);
   for (const [rel, mtime] of Object.entries(files)) {
     const path = join(root, ...rel.split('/'));
     mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, '');
+    writeFileSync(path, rel === 'tsconfig.tsbuildinfo' ? JSON.stringify(record) : '');
     utimesSync(path, mtime, mtime);
   }
   return root;
@@ -122,6 +137,7 @@ describe('newest', () => {
     expect(newest(root, (n) => n.endsWith('.js'))).toEqual({
       at: NEW * 1000,
       file: join(root, 'a', 'b', 'c', 'deep.js'),
+      failed: false,
     });
   });
 
@@ -132,11 +148,26 @@ describe('newest', () => {
       'nodes/2d/testing/fixtures.ts': NEW,
     });
 
-    expect(newest(root, () => true)).toEqual({ at: OLD * 1000, file: join(root, 'kept.ts') });
+    expect(newest(root, () => true)).toEqual({
+      at: OLD * 1000,
+      file: join(root, 'kept.ts'),
+      failed: false,
+    });
   });
 
-  it('reports nothing for a directory that does not exist', () => {
-    expect(newest(join(fakeCore({}), 'absent'), () => true)).toEqual({ at: 0, file: '' });
+  it('separates a directory that does not exist from one that is empty', () => {
+    // Collapsing the two returned 0 for a tree that could not be read, and the
+    // freshness guard then compared that 0 against the stamp and passed.
+    expect(newest(join(fakeCore({}), 'absent'), () => true)).toEqual({
+      at: 0,
+      file: '',
+      failed: true,
+    });
+    expect(newest(fakeCore({ 'note.txt': OLD }), (n) => n.endsWith('.js'))).toEqual({
+      at: 0,
+      file: '',
+      failed: false,
+    });
   });
 });
 
@@ -249,7 +280,70 @@ describe('dist-freshness precheck', () => {
     const root = fakeCore({ 'dist/index.js': NEW, 'src/index.ts': OLD });
 
     expect(stalenessMessage(root)).toBe(
-      `packages/textscene-core has no tsconfig.tsbuildinfo — run \`${BUILD}\`.`
+      `packages/textscene-core has no readable tsconfig.tsbuildinfo — run \`${BUILD}\`.`
     );
+  });
+
+  it('refuses a stamp written by a build that did not typecheck', () => {
+    // tsc writes the stamp whether or not the build succeeded, so its mtime
+    // says only that tsc ran. `semanticDiagnosticsPerFile` carries an array per
+    // file it recorded errors against, which is the engine's own answer.
+    const root = fakeCore(
+      { 'dist/index.js': MID, 'tsconfig.tsbuildinfo': NEW, 'src/index.ts': MID },
+      {
+        fileNames: ['./src/broken.ts'],
+        semanticDiagnosticsPerFile: [[1, [{ messageText: 'Cannot find name', code: 2304 }]]],
+      }
+    );
+
+    expect(stalenessMessage(root)).toContain('last built with type errors (./src/broken.ts)');
+  });
+
+  it('passes a stamp whose diagnostics list holds only clean file ids', () => {
+    // A bare id means "checked, no errors"; only the array form is a failure.
+    const root = fakeCore(
+      { 'dist/index.js': MID, 'tsconfig.tsbuildinfo': NEW, 'src/index.ts': MID },
+      { fileNames: ['./src/index.ts'], semanticDiagnosticsPerFile: [1] }
+    );
+
+    expect(stalenessMessage(root)).toBeNull();
+  });
+
+  it('refuses a build whose source has since been deleted', () => {
+    // Unlinking a file bumps no mtime under `src`, so the stamp comparison is
+    // blind to it and a dist still carrying the removed slice's registration
+    // reads fresh forever.
+    const root = fakeCore(
+      { 'dist/index.js': MID, 'tsconfig.tsbuildinfo': NEW, 'src/index.ts': MID },
+      { fileNames: ['./src/index.ts', './src/nodes/gone/parser.ts'], semanticDiagnosticsPerFile: [] }
+    );
+
+    expect(stalenessMessage(root)).toContain('./src/nodes/gone/parser.ts, which no longer exists');
+  });
+
+  it('does not mistake a deleted TEST file for a stale build', () => {
+    // tsc never emitted it, so its absence dates nothing.
+    const root = fakeCore(
+      { 'dist/index.js': MID, 'tsconfig.tsbuildinfo': NEW, 'src/index.ts': MID },
+      { fileNames: ['./src/index.ts', './src/nodes/gone/parser.test.ts'], semanticDiagnosticsPerFile: [] }
+    );
+
+    expect(stalenessMessage(root)).toBeNull();
+  });
+
+  it('refuses to answer when the source tree cannot be walked', () => {
+    // `newestMtime` used to return 0 for an unreadable tree, which read as
+    // "older than the stamp" and passed the guard over a walk that never ran.
+    const absent = fakeCore({ 'dist/index.js': MID, 'tsconfig.tsbuildinfo': NEW });
+    expect(stalenessMessage(absent)).toContain('could not be walked');
+
+    // Present but holding nothing tsc compiles is a different complaint: the
+    // walk worked and there is simply no subject to measure against.
+    const empty = fakeCore({
+      'dist/index.js': MID,
+      'tsconfig.tsbuildinfo': NEW,
+      'src/notes.md': OLD,
+    });
+    expect(stalenessMessage(empty)).toContain('no compiled sources');
   });
 });

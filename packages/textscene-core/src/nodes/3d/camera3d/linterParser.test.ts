@@ -73,6 +73,36 @@ describe('Camera3D compositor', () => {
   });
 });
 
+/**
+ * Two tiers on one end. `set_size` refuses `p_size <= CMP_EPSILON`
+ * (camera_3d.cpp:731) while the hint's floor is 0.001
+ * (camera_3d.cpp:683, "0.001,100,0.001,or_greater,suffix:m"), so the band
+ * between them loads and only warns.
+ */
+describe('Camera3D size', () => {
+  it('refuses the endpoint itself, as the ERR_FAIL_COND does', () => {
+    // `<= CMP_EPSILON`, not `<`. An inclusive floor at the same constant
+    // accepts exactly the value the setter drops.
+    const err = check('size', '1e-05');
+    expect(err?.severity).toBe('error');
+  });
+
+  it('errors below the setter floor', () => {
+    expect(check('size', '0')?.severity).toBe('error');
+    expect(check('size', '-5.0')?.severity).toBe('error');
+  });
+
+  it('warns between the setter floor and the hint floor', () => {
+    const err = check('size', '0.0005');
+    expect(err?.severity).toBe('warning');
+  });
+
+  it('accepts from the hint floor up, with the ceiling left open by or_greater', () => {
+    expect(check('size', '0.001')).toBeNull();
+    expect(check('size', '5000')).toBeNull();
+  });
+});
+
 describe('Camera3D environment', () => {
   it('accepts a SubResource reference — camera_3d.cpp:674', () => {
     expect(check('environment', 'SubResource("Environment_1")')).toBeNull();

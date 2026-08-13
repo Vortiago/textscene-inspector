@@ -208,12 +208,15 @@ describe('AudioStreamPlayer3D Linter', () => {
           ],
         },
         {
+          // Two tiers: audio_stream_player_3d.cpp:687 refuses below 0 and above
+          // 90, the :899 hint "0.1,90,0.1,degrees" excludes [0, 0.1) as well.
           prop: 'emission_angle_degrees',
-          valid: [0, 45, 60, 90],
+          valid: [0.1, 45, 60, 90],
           with: { emission_angle_enabled: true },
           invalid: [
-            { value: -10, contains: ['emission_angle_degrees', 'between 0 and 90'] },
-            { value: 120, contains: ['emission_angle_degrees', 'between 0 and 90'] },
+            { value: 0.05, contains: ['emission_angle_degrees', 'between 0.1 and 90'], severity: 'warning' },
+            { value: -10, contains: ['emission_angle_degrees', 'at least 0'] },
+            { value: 120, contains: ['emission_angle_degrees', 'between 0.1 and 90'] },
           ],
         },
         {
@@ -322,19 +325,26 @@ describe('AudioStreamPlayer3D Linter', () => {
 
     // pitch_scale: refused at <= 0 (audio_stream_player_internal.cpp:314), hinted
     // "0.01,4,0.01,or_greater" (:887), so only 0 < x < 0.01 warns.
-    describe('pitch_scale warnings', () => {
-      it('should warn below the hint', () => {
+    describe('pitch_scale bands', () => {
+      it('errors at or below the setter floor', () => {
+        expectDiagnostic(withStream({ pitch_scale: 0 }), {
+          ruleName: 'strict-parser',
+          severity: 'error',
+          contains: ['pitch_scale', 'greater than 0'],
+        });
+      });
+
+      it('warns between the setter floor and the hint floor', () => {
         expectDiagnostic(withStream({ pitch_scale: 0.005 }), {
-          ruleName: 'audiostreamplayer3d-unusual-pitch',
+          ruleName: 'strict-parser',
           severity: 'warning',
-          nodeType: 'AudioStreamPlayer3D',
-          contains: ['0.005', '0.01'],
+          contains: ['pitch_scale', '0.01'],
         });
       });
 
       it.each([0.01, 0.3, 1.2, 3.0])('says nothing about pitch_scale %s', (pitchScale) => {
         const pitchWarning = lint(withStream({ pitch_scale: pitchScale })).find(d =>
-          d.message.includes('Pitch scale')
+          d.message.includes('pitch_scale')
         );
         expect(pitchWarning).toBeUndefined();
       });
@@ -417,10 +427,11 @@ describe('AudioStreamPlayer3D Linter', () => {
       const diagnostics = lint(
         withStream({ volume_db: -90, pitch_scale: 0.005, emission_angle_degrees: 45.0 })
       );
-      // volume_db's warning is the validator's, so it arrives as `strict-parser`.
+      // volume_db's and pitch_scale's warnings are their validators', so both
+      // arrive as `strict-parser`.
       expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
         'audiostreamplayer3d-emission-angle-not-enabled',
-        'audiostreamplayer3d-unusual-pitch',
+        'strict-parser',
         'strict-parser',
       ]);
       expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);

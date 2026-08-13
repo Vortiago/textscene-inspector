@@ -223,10 +223,16 @@ validatorRegistry.registerAll('PhysicalBone3D', {
   joint_rotation: v.vector3('joint_rotation'),
   // physical_bone_3d.cpp:895 — Transform3D, PROPERTY_HINT_NONE (format only, "suffix:m")
   body_offset: v.transform3d('body_offset'),
-  // physical_bone_3d.cpp:897 hints "0.01,1000,0.01,or_greater,exp,suffix:kg", but
-  // set_mass (:1189-1190) is `ERR_FAIL_COND(p_mass <= 0)`: the real enforced
-  // floor is exclusive 0, not the hint's 0.01.
-  mass: v.float('mass', { min: Number.MIN_VALUE, enforced: 'physical_bone_3d.cpp:1190' }),
+  // physical_bone_3d.cpp:897 hints "0.01,1000,0.01,or_greater,exp,suffix:kg" —
+  // `or_greater` opens the ceiling. set_mass (:1190) is
+  // `ERR_FAIL_COND(p_mass <= 0)`, so the setter refuses at 0 and (0, 0.01) is
+  // a value Godot stores that the inspector excludes.
+  mass: v.float('mass', {
+    enforcedMin: { at: 0, exclusive: true },
+    min: 0.01,
+    enforced: { min: 'physical_bone_3d.cpp:1190' },
+    hinted: { min: 'physical_bone_3d.cpp:897' },
+  }),
   // physical_bone_3d.cpp:898 hints "0,1,0.01". set_friction (:1199-1200) is
   // `ERR_FAIL_COND(p_friction < 0 || p_friction > 1)`: both ends enforced.
   friction: v.float('friction', { min: 0, max: 1, enforced: 'physical_bone_3d.cpp:1200' }),

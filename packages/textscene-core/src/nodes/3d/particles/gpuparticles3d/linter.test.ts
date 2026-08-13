@@ -83,11 +83,14 @@ describe('GPUParticles3D Linter', () => {
         ],
       },
       {
+        // set_lifetime (gpu_particles_3d.cpp:82) refuses `<= 0`; the hint
+        // (:825) floors at 0.01, so (0, 0.01) loads and only warns.
         prop: 'lifetime',
-        valid: [0.1, 1.0, 2.5, 5.0, 10.0],
+        valid: [0.01, 0.1, 1.0, 2.5, 5.0, 10.0],
         invalid: [
           { value: '0.0', contains: ['greater than 0'] },
           { value: '-2.0', contains: ['greater than 0'] },
+          { value: '0.005', contains: ['lifetime', '0.01'], severity: 'warning' },
           { value: '"forever"', contains: ['number'] },
         ],
       },

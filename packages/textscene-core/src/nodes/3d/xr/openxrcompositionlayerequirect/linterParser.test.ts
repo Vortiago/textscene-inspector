@@ -120,8 +120,9 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
   });
 
   describe('upper_vertical_angle / lower_vertical_angle', () => {
-    // equirect.cpp:165 / :177, ERR_FAIL_COND(p_angle <= 0 || p_angle > PI/2) —
-    // a real closed range, tighter than the fully-open hint (:78-79).
+    // equirect.cpp:165 / :178, ERR_FAIL_COND(p_angle <= 0 || p_angle > (Math::PI
+    // / 2.0)) — a real closed range in radians, where the hint (:78-79) opens
+    // both ends with or_less,or_greater and so grounds neither.
     it('accepts values up to PI/2', () => {
       expect(check('upper_vertical_angle', '1')).toBeNull();
       expect(check('upper_vertical_angle', String(Math.PI / 2))).toBeNull();
@@ -135,6 +136,27 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
       expect(check('upper_vertical_angle', '2')?.severity).toBe('error');
       expect(check('lower_vertical_angle', '3.2')?.severity).toBe('error');
     });
+    it('errors just past PI/2 — the ceiling is the predicate\'s literal, with no epsilon widening it', () => {
+      expect(check('upper_vertical_angle', '1.5709')?.severity).toBe('error');
+      expect(check('lower_vertical_angle', '1.5709')?.severity).toBe('error');
+    });
+    it('names the setter as the reason at each end', () => {
+      expect(check('upper_vertical_angle', '2')?.message).toContain("Godot's setter refuses the write");
+      expect(check('upper_vertical_angle', '0')?.message).toContain('greater than 0');
+    });
+    it.each(['upper_vertical_angle', 'lower_vertical_angle'])(
+      'holds %s entirely in the enforced slots, leaving both open hint ends of `bounds` open',
+      (property) => {
+        const validator = validatorRegistry.findValidator(
+          'OpenXRCompositionLayerEquirect',
+          property
+        );
+        expect(validator?.bounds).toEqual({
+          enforcedMin: { at: 0, exclusive: true },
+          enforcedMax: { at: Math.PI / 2 },
+        });
+      }
+    );
   });
 
   describe('fallback_segments', () => {

@@ -25,6 +25,7 @@ import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../nodeTransform';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types';
+import { placeholderUserData } from './placeholderUserData';
 
 export function GenericNodeFallback({ node, children }: NodeComponentProps) {
   const { position, rotation, scale } = useMemo(
@@ -32,7 +33,7 @@ export function GenericNodeFallback({ node, children }: NodeComponentProps) {
     [node.properties]
   );
 
-  const userData = { isPlaceholder: true, nodeType: node.type, nodeName: node.name };
+  const userData = placeholderUserData(node);
 
   if (node.type.endsWith('2D')) {
     return (

@@ -12,11 +12,14 @@ const PROCESS_CALLBACK_VALUES = { 0: 'PHYSICS', 1: 'IDLE' };
 // Timer is a plain Node (see nodeBaseTypes.ts) — no spatial validators;
 // only the type-specific property surface is registered here.
 validatorRegistry.registerAll('Timer', {
-  // timer.cpp:93, ERR_FAIL_COND_MSG(p_time <= 0, "Time should be greater than zero.").
+  // timer.cpp:93, ERR_FAIL_COND_MSG(p_time <= 0, "Time should be greater than
+  // zero."), against a hint (:240) of "0.001,4096,0.001,or_greater,exp,suffix:s"
+  // whose ceiling `or_greater` opens. The two floors sit apart, so (0, 0.001)
+  // loads into Godot and only warns.
   wait_time: v.positiveFloat(
     'wait_time',
     "Property 'wait_time' must be greater than 0. A Timer needs a positive interval to fire.",
-    { enforced: 'timer.cpp:93' }
+    { hintedMin: 0.001, enforced: 'timer.cpp:93', hinted: 'timer.cpp:240' }
   ),
   autostart: v.boolean('autostart'),
   one_shot: v.boolean('one_shot'),

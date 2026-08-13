@@ -19,13 +19,17 @@ validatorRegistry.registerAll('OpenXRCompositionLayerCylinder', {
     enforced: 'openxr_composition_layer_cylinder.cpp:131',
   }),
   // :73 hints "0,100" closed both ends. set_aspect_ratio (:143-150),
-  // ERR_FAIL_COND(p_aspect_ratio <= 0) refuses the floor (stricter than the
-  // hint's literal 0), but never caps the ceiling — 100 is hinted-only.
+  // ERR_FAIL_COND(p_aspect_ratio <= 0), refuses the floor but never caps the
+  // ceiling — 100 is hinted-only. The setter is the STRICTER end here: it
+  // excludes 0 while the hint includes it, so nothing reaches the `min: 0`
+  // branch and it stands only as the hint's own number. Both are stated
+  // because reading one off the other is how a bound drifts.
   aspect_ratio: v.float('aspect_ratio', {
-    min: Number.MIN_VALUE,
+    enforcedMin: { at: 0, exclusive: true },
+    min: 0,
     max: 100,
     enforced: { min: 'openxr_composition_layer_cylinder.cpp:144' },
-    hinted: { max: 'openxr_composition_layer_cylinder.cpp:73' },
+    hinted: 'openxr_composition_layer_cylinder.cpp:73',
   }),
   // :74 hints "0,360,0.1,or_less,or_greater,radians_as_degrees" — both ends
   // open, so the hint grounds nothing. set_central_angle (:156-163),

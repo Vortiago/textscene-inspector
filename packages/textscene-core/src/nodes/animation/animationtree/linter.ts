@@ -11,7 +11,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { RESOURCE_REF_RE } from '../../../godot/index.js';
-import { isClearedResource } from '../../../linter/resourceChecker.js';
+import { heldResource } from '../../../linter/resourceChecker.js';
 
 /**
  * Extract resource ID from SubResource("id") or ExtResource("id") format
@@ -66,10 +66,12 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // WARNING: tree_root not set (AnimationTree won't do anything without it)
+  // WARNING: tree_root not set (AnimationTree won't do anything without it).
   // A cleared slot (`tree_root = null`) is a set-to-nothing, which is exactly
-  // what this warning is about, so it counts as absent here and as not-dangling below.
-  if (!rawProps.tree_root || isClearedResource(rawProps.tree_root)) {
+  // what this warning is about, so it counts as absent here and as not-dangling
+  // below. One predicate, so the two arms cannot drift apart.
+  const treeRoot = heldResource(rawProps.tree_root);
+  if (treeRoot === undefined) {
     diagnostics.push({
       severity: 'warning',
       message: `AnimationTree 'tree_root' is not set. AnimationTree requires a root animation node (AnimationNodeBlendTree or AnimationNodeStateMachine) to function.`,
@@ -77,20 +79,16 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
       nodeType: node.type,
       ruleName: 'animationtree-missing-tree-root',
     });
-  }
-
-  // ERROR: tree_root resource doesn't exist in scene
-  if (rawProps.tree_root && !isClearedResource(rawProps.tree_root)) {
-    if (!resourceExists(scene, rawProps.tree_root)) {
-      const resourceId = extractResourceId(rawProps.tree_root);
-      diagnostics.push({
-        severity: 'error',
-        message: `AnimationTree 'tree_root' references resource "${resourceId}" which does not exist in the scene. Ensure the resource is defined in sub_resources or ext_resources.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'animationtree-tree-root-not-found',
-      });
-    }
+  } else if (!resourceExists(scene, treeRoot)) {
+    // ERROR: tree_root resource doesn't exist in scene
+    const resourceId = extractResourceId(treeRoot);
+    diagnostics.push({
+      severity: 'error',
+      message: `AnimationTree 'tree_root' references resource "${resourceId}" which does not exist in the scene. Ensure the resource is defined in sub_resources or ext_resources.`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'animationtree-tree-root-not-found',
+    });
   }
 
   // An absent `anim_player` gets no diagnostic: set_animation_player treats the

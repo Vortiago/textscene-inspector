@@ -41,19 +41,28 @@ describe('AudioStreamPlayer3D strict validators: playback_type', () => {
 });
 
 describe('AudioStreamPlayer3D strict validators: emission_angle_degrees', () => {
-  // audio_stream_player_3d.cpp:687, ERR_FAIL_COND(p_angle < 0 || p_angle > 90) —
-  // the setter's band, wider at the floor than the "0.1,90,0.1,degrees" hint at :899.
-  it("accepts the setter's own ends, 0 and 90, not the hint's narrower 0.1 floor", () => {
-    expect(check('emission_angle_degrees', '0')).toBeNull();
+  // Two tiers, because the setter and the hint disagree at the floor:
+  // audio_stream_player_3d.cpp:687 ERR_FAIL_CONDs `p_angle < 0 || p_angle > 90`,
+  // while the hint at :899 is "0.1,90,0.1,degrees". The `degrees` flag is a unit
+  // LABEL, not `radians_as_degrees`, so nothing is converted here.
+  it("accepts the hint's own band", () => {
+    expect(check('emission_angle_degrees', '0.1')).toBeNull();
+    expect(check('emission_angle_degrees', '45')).toBeNull();
     expect(check('emission_angle_degrees', '90')).toBeNull();
   });
 
-  it('stays silent through [0, 0.1), a hint-only sliver the setter accepts', () => {
-    expect(check('emission_angle_degrees', '0.05')).toBeNull();
+  it('warns through [0, 0.1), which the setter accepts and the hint excludes', () => {
+    expect(check('emission_angle_degrees', '0')?.severity).toBe('warning');
+    expect(check('emission_angle_degrees', '0.05')?.severity).toBe('warning');
   });
 
-  it('errors one step past each enforced end', () => {
-    expect(check('emission_angle_degrees', '-0.1')?.severity).toBe('error');
+  it('errors below the setter floor, which sits under the hint', () => {
+    const below = check('emission_angle_degrees', '-0.1');
+    expect(below?.severity).toBe('error');
+    expect(below?.message).toContain('at least 0');
+  });
+
+  it('errors above 90, where the setter and the hint agree', () => {
     expect(check('emission_angle_degrees', '90.1')?.severity).toBe('error');
   });
 });

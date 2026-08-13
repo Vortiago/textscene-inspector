@@ -61,9 +61,14 @@ validatorRegistry.registerAll('GPUParticles2D', {
   texture: v.resourceReference('texture'),
 
   // gpu_particles_2d.cpp:947 hints "0.01,600.0,0.01,or_greater,exp,suffix:s",
-  // but set_lifetime (gpu_particles_2d.cpp:78) ERR_FAILs at `<= 0`, not at
-  // the hint's 0.01 — the setter governs, so the real floor is `> 0`.
-  lifetime: v.positiveFloat('lifetime', undefined, { enforced: 'gpu_particles_2d.cpp:78' }),
+  // whose ceiling `or_greater` opens. set_lifetime (gpu_particles_2d.cpp:78)
+  // ERR_FAILs at `<= 0`, below the hint's floor, so (0, 0.01) loads into Godot
+  // and only warns.
+  lifetime: v.positiveFloat('lifetime', undefined, {
+    hintedMin: 0.01,
+    enforced: 'gpu_particles_2d.cpp:78',
+    hinted: 'gpu_particles_2d.cpp:947',
+  }),
 
   // gpu_particles_2d.cpp:948 hints "0.00,1.0,0.001" — no `or_greater`/`or_less`,
   // hard both ends. set_interp_to_end (gpu_particles_2d.cpp:210-211) CLAMPs to

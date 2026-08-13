@@ -6,6 +6,7 @@
  * this rule handles the semantic checks that need full scene context.
  */
 
+import { parseGodotInt } from '../validators/commonValidators.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import {
   hasCollisionShapeChild,
@@ -89,8 +90,11 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
     // Warning: collision_mask is 0 and monitoring is true (won't detect anything)
     const collisionMask = rawProps.collision_mask;
     if (monitoring === 'true' && collisionMask !== undefined) {
-      const mask = parseInt(collisionMask, 10);
-      if (!isNaN(mask) && mask === 0) {
+      // `parseGodotInt`, not `parseInt`: the latter stops at the first
+      // character it cannot use, so `1e-1` read as 1 and missed the zero mask
+      // Godot actually stores.
+      const mask = parseGodotInt(collisionMask);
+      if (mask === 0) {
         diagnostics.push({
           severity: 'warning',
           message: `${type} '${node.name}' has 'monitoring' enabled but 'collision_mask' is 0. The area won't detect any collision layers.`,

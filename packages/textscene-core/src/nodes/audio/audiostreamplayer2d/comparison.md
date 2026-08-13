@@ -38,10 +38,10 @@ Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inh
 | `attenuation` | float |  |
 | `autoplay` | true or false |  |
 | `bus` | quoted string or &"name" |  |
-| `max_distance` | float > 0 | error below |
+| `max_distance` | float >= 1 | error at or below 0, warning below 1 |
 | `max_polyphony` | integer >= 1 | error below |
 | `panning_strength` | float >= 0 | error below |
-| `pitch_scale` | float >= 5e-324 | error below |
+| `pitch_scale` | float >= 0.01 | error at or below 0, warning below 0.01 |
 | `playback_type` | enum 0-2 (DEFAULT/STREAM/SAMPLE) | warning |
 | `playing` | true or false |  |
 | `stream` | null, SubResource("id") or ExtResource("id") |  |
@@ -55,8 +55,6 @@ Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inh
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-audiostreamplayer2d-properties` | `audiostreamplayer2d-missing-stream-resource` | error |
 |  | `audiostreamplayer2d-autoplay-without-stream` | warning |
-|  | `audiostreamplayer2d-small-max-distance` | warning |
-|  | `audiostreamplayer2d-unusual-pitch` | warning |
 <!-- lint:end -->
 
 Beyond the shared audio-base fallbacks (pitch_scale, volume_db, bus, and the

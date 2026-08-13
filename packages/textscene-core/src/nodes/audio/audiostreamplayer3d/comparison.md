@@ -46,14 +46,14 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inh
 | `autoplay` | true or false |  |
 | `bus` | quoted string or &"name" |  |
 | `doppler_tracking` | enum 0-2 (DISABLED/IDLE_STEP/PHYSICS_STEP) | warning |
-| `emission_angle_degrees` | float 0-90 | error |
+| `emission_angle_degrees` | float 0.1-90 | error below 0, warning below 0.1, error above 90 |
 | `emission_angle_enabled` | true or false |  |
 | `emission_angle_filter_attenuation_db` | float -80-0 | warning |
 | `max_db` | float -24-6 | warning |
 | `max_distance` | float >= 0 | error below |
 | `max_polyphony` | integer >= 1 | error below |
 | `panning_strength` | float >= 0 | error below |
-| `pitch_scale` | float >= 5e-324 | error below |
+| `pitch_scale` | float >= 0.01 | error at or below 0, warning below 0.01 |
 | `playback_type` | enum 0-2 (DEFAULT/STREAM/SAMPLE) | warning |
 | `playing` | true or false |  |
 | `stream` | null, SubResource("id") or ExtResource("id") |  |
@@ -68,7 +68,6 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inh
 | `valid-audiostreamplayer3d-properties` | `audiostreamplayer3d-missing-stream-resource` | error |
 |  | `audiostreamplayer3d-emission-angle-not-enabled` | warning |
 |  | `audiostreamplayer3d-emission-filter-not-enabled` | warning |
-|  | `audiostreamplayer3d-unusual-pitch` | warning |
 <!-- lint:end -->
 
 Beyond the shared audio-base fallbacks, every numeric property here defaults via

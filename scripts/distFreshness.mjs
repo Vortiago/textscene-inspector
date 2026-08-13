@@ -18,7 +18,7 @@
  * the local workflow alone.
  */
 
-import { statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { newestMtime } from './newestMtime.mjs';
 
@@ -43,22 +43,66 @@ export const newest = (dir, keep) => newestMtime(dir, keep, (name) => name !== '
  * @param what - what the caller is about to measure, for the message.
  */
 export function stalenessMessage(core, what = 'this ledger') {
-  if (!newest(join(core, 'dist'), (n) => n.endsWith('.js')).at) {
+  const built = newest(join(core, 'dist'), (n) => n.endsWith('.js'));
+  if (built.failed) {
+    return `packages/textscene-core/dist could not be read — run \`${BUILD}\`.`;
+  }
+  if (!built.at) {
     return `packages/textscene-core/dist is not built — run \`${BUILD}\`.`;
   }
+
   // Against tsc's OWN record of when it last evaluated the project, not against
   // the newest emitted `.js`. An incremental build does not rewrite an output
   // whose content did not change, so a no-op regeneration of a source file
   // (`pnpm nodes:catalog` rewriting nodeBaseTypes.generated.ts byte-identically)
   // left every `.js` older than it and no amount of rebuilding could clear the
   // complaint. A guard whose prescribed remedy does not work gets bypassed.
+  const stampPath = join(core, 'tsconfig.tsbuildinfo');
   let stamp;
+  let record;
   try {
-    stamp = statSync(join(core, 'tsconfig.tsbuildinfo')).mtimeMs;
+    stamp = statSync(stampPath).mtimeMs;
+    record = JSON.parse(readFileSync(stampPath, 'utf8'));
   } catch {
-    return `packages/textscene-core has no tsconfig.tsbuildinfo — run \`${BUILD}\`.`;
+    return `packages/textscene-core has no readable tsconfig.tsbuildinfo — run \`${BUILD}\`.`;
   }
+
+  // The stamp is WRITTEN BY A BUILD THAT FAILED, so its mtime alone says only
+  // that tsc ran. `semanticDiagnosticsPerFile` holds an array for each file tsc
+  // recorded errors against, and is empty on a clean build, which makes it the
+  // engine's own answer to "did this produce the outputs you are about to
+  // measure". Without it, `touch tsconfig.tsbuildinfo` also cleared the
+  // complaint outright.
+  const failing = (record.semanticDiagnosticsPerFile ?? []).filter(Array.isArray);
+  if (failing.length) {
+    const first = record.fileNames?.[failing[0][0] - 1] ?? 'a source file';
+    return (
+      `packages/textscene-core last built with type errors (${first}), so dist is ` +
+      `incomplete and ${what} would measure whatever survived. Run \`${BUILD}\`.`
+    );
+  }
+
+  // A DELETED source bumps no mtime under `src`, so the comparison below cannot
+  // see one and a dist still carrying the removed slice's self-registration
+  // reads fresh forever. tsc's file list is the record of what the build saw:
+  // a name in it that is no longer on disk dates the build exactly.
+  const removed = (record.fileNames ?? [])
+    .filter((f) => f.startsWith('./src/') && COMPILED.test(f) && !NOT_COMPILED.test(f))
+    .find((f) => !existsSync(join(core, f)));
+  if (removed) {
+    return (
+      `packages/textscene-core/dist was built from ${removed}, which no longer exists — ` +
+      `${what} would still see what it registered. Run \`${BUILD}\`.`
+    );
+  }
+
   const source = newest(join(core, 'src'), (n) => COMPILED.test(n) && !NOT_COMPILED.test(n));
+  if (source.failed) {
+    return `packages/textscene-core/src could not be walked, so ${what} cannot be trusted.`;
+  }
+  if (!source.at) {
+    return `packages/textscene-core/src has no compiled sources, so ${what} has no subject.`;
+  }
   if (source.at > stamp) {
     return (
       `packages/textscene-core/dist predates ${relative(core, source.file)} — ${what} would ` +

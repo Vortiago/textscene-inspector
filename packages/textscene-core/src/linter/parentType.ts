@@ -91,11 +91,122 @@ export function parentTypeVerdict(
   node: TscnNode,
   wantedType: string
 ): ParentVerdict {
+  const step = knownParent(scene, node);
+  if (step.kind !== 'known') return step;
+  const { parent } = step;
+  if (descendsFrom(parent.type, wantedType)) return { kind: 'satisfied', parent };
+  return { kind: 'mismatch', parent };
+}
+
+/** One step up the tree, with the knowability question already answered. */
+export type ParentLookup =
+  /** A parent whose `type` this file really states. */
+  | { kind: 'known'; parent: TscnNode }
+  /** No parent: this node is the scene root. */
+  | { kind: 'root' }
+  /** There is a parent, but its type lives in a scene this linter never opens. */
+  | { kind: 'unknowable' };
+
+/**
+ * `node`'s parent, or the reason no rule may reason about it.
+ *
+ * The narrow primitive behind everything else here, and the ONLY way out of
+ * this module to a parent node. `findParentNode` hands back the raw heading,
+ * type and all, and a caller holding one has to remember a check that is
+ * invisible when forgotten — which is how three rules came to warn about
+ * parents declared in another file. This one cannot be held without the answer.
+ */
+export function knownParent(scene: TscnScene, node: TscnNode): ParentLookup {
   const parent = findParentNode(scene.nodes, node);
   if (!parent) return { kind: 'root' };
   if (isTypeUnknowable(parent)) return { kind: 'unknowable' };
-  if (descendsFrom(parent.type, wantedType)) return { kind: 'satisfied', parent };
-  return { kind: 'mismatch', parent };
+  return { kind: 'known', parent };
+}
+
+/** Where an ancestor walk stopped. */
+export type AncestorSearch<T> =
+  /** `visit` returned a value at some ancestor; the walk stopped there. */
+  | { kind: 'found'; value: T }
+  /** An ancestor the walk had to pass takes its type from another scene. */
+  | { kind: 'unknowable' }
+  /** The walk reached the scene root without `visit` returning anything. */
+  | { kind: 'exhausted' };
+
+/**
+ * Climb `node`'s ancestors, nearest first, until `visit` returns a value.
+ *
+ * `visit` is called ONLY with an ancestor whose type this file states: every
+ * step goes through `knownParent`, so an instanced, override or typeless
+ * ancestor ends the walk at `unknowable` before `visit` ever sees it. That
+ * contract is what makes a bare `ancestor.type` read inside `visit` correct —
+ * the check is in the walk, once, instead of at each caller's discretion.
+ *
+ * A caller that wants to keep climbing returns `undefined`; a caller that wants
+ * to stop returns anything else, and one that also wants to decline the whole
+ * question returns its own sentinel and maps it. Godot's own walks differ too
+ * much to fold into the primitive — `Bone2D` stops at the first non-Bone2D
+ * ancestor while the `clip_children` checks read every ancestor to the root —
+ * so what varies stays in `visit` and what must not vary stays here.
+ */
+export function searchAncestors<T>(
+  scene: TscnScene,
+  node: TscnNode,
+  visit: (ancestor: TscnNode) => T | undefined
+): AncestorSearch<T> {
+  let current = node;
+  for (;;) {
+    const step = knownParent(scene, current);
+    if (step.kind === 'root') return { kind: 'exhausted' };
+    if (step.kind === 'unknowable') return { kind: 'unknowable' };
+    const value = visit(step.parent);
+    if (value !== undefined) return { kind: 'found', value };
+    current = step.parent;
+  }
+}
+
+/**
+ * Visit every ancestor whose type this file states, nearest first, to the root.
+ *
+ * The difference from `searchAncestors` is Godot's, not a convenience.
+ * `CanvasItem::get_configuration_warnings()` (`canvas_item.cpp:1302-1320`)
+ * walks `n = n->get_parent()` to the top and never consults a type to decide
+ * whether to CONTINUE, so an ancestor this file cannot classify subtracts
+ * nothing: a clipping ancestor found above one is still that node's ancestor at
+ * runtime. A chain-terminating walk cannot skip an ancestor that way, because
+ * the one it skipped might have been the terminator, which is why that shape
+ * declines with `unknowable` instead.
+ *
+ * Nothing is reported about what was skipped, deliberately: a skipped ancestor
+ * can only ADD a hit, never withdraw one, so a caller that found a hit is still
+ * right and a caller that found none stays silent either way.
+ *
+ * The engine breaks out early once every warning it can raise has fired
+ * (`canvas_item.cpp:1321-1325`); that is an optimisation over a handful of
+ * ancestors, with nothing observable riding on it.
+ */
+export function sweepAncestors(
+  scene: TscnScene,
+  node: TscnNode,
+  visit: (ancestor: TscnNode) => void
+): void {
+  let current = findParentNode(scene.nodes, node);
+  while (current) {
+    if (!isTypeUnknowable(current)) visit(current);
+    current = findParentNode(scene.nodes, current);
+  }
+}
+
+/**
+ * The parent a verdict resolved to, or null when it named none.
+ *
+ * `satisfied` and `mismatch` both carry one, and several rules ask a second
+ * question of the same parent — Godot's own checks routinely do, the way
+ * `CollisionPolygon2D` tests its parent for `CollisionObject2D` and then again
+ * for `Area2D` (`collision_polygon_2d.cpp:235-254`). Handing back the node is
+ * safe here and only here: this one is already past `isTypeUnknowable`.
+ */
+export function verdictParent(verdict: ParentVerdict): TscnNode | null {
+  return verdict.kind === 'satisfied' || verdict.kind === 'mismatch' ? verdict.parent : null;
 }
 
 /**

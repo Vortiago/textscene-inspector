@@ -76,10 +76,10 @@ Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inher
 | `debug_path_custom_color` | Color(r, g, b, a) |  |
 | `debug_path_custom_point_size` | float >= 0 | error below |
 | `debug_use_custom` | true or false |  |
-| `height` | float >= 0 | error below |
+| `height` | float >= 0.01 | error below 0, warning below 0.01 |
 | `keep_y_velocity` | true or false |  |
 | `max_neighbors` | integer >= 1 | warning below |
-| `max_speed` | float >= 0 | error below |
+| `max_speed` | float >= 0.01 | error below 0, warning below 0.01 |
 | `navigation_layers` | 32-bit layer mask (layers 1-32) | warning |
 | `neighbor_distance` | float >= 0.1 | warning below |
 | `path_desired_distance` | float >= 0.1 | warning below |
@@ -92,7 +92,7 @@ Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inher
 | `path_search_max_distance` | float >= 0 | error below |
 | `path_search_max_polygons` | integer >= 0 | warning below |
 | `pathfinding_algorithm` | enum 0-0 (PATHFINDING_ALGORITHM_ASTAR) | warning |
-| `radius` | float >= 0 | error below |
+| `radius` | float >= 0.01 | error below 0, warning below 0.01 |
 | `simplify_epsilon` | float >= 0 | error below |
 | `simplify_path` | true or false |  |
 | `target_desired_distance` | float >= 0.1 | warning below |

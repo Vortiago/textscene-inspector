@@ -287,6 +287,44 @@ shape = SubResource("shape_1")
       expectNoDiagnostic(content, { ruleName: 'collisionshape3d-invalid-parent' });
     });
 
+    it('says nothing about a parent whose type is declared in another scene', () => {
+      // An `instance=` heading names a PackedScene, so `type` is the
+      // ExtResource ref; an override heading has neither `type=` nor
+      // `instance=` and parses with the index fallback's truthy "0". Neither is
+      // a class this file states, and warning anyway fires on every body
+      // assembled by instancing one.
+      const instancedParent = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://body.tscn" id="1_body"]
+
+[sub_resource type="BoxShape3D" id="shape_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Body" parent="." instance=ExtResource("1_body")]
+
+[node name="Collision" type="CollisionShape3D" parent="Body"]
+shape = SubResource("shape_1")
+`;
+      const overrideParent = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://body.tscn" id="1_body"]
+
+[sub_resource type="BoxShape3D" id="shape_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Body" parent="." instance=ExtResource("1_body")]
+
+[node name="Inner" parent="Body" index="0"]
+
+[node name="Collision" type="CollisionShape3D" parent="Body/Inner"]
+shape = SubResource("shape_1")
+`;
+      expectNoDiagnostic(instancedParent, { ruleName: 'collisionshape3d-invalid-parent' });
+      expectNoDiagnostic(overrideParent, { ruleName: 'collisionshape3d-invalid-parent' });
+    });
+
     it('should warn when parent is invalid type (MeshInstance3D)', () => {
       const content = `[gd_scene format=3]
 

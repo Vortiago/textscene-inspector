@@ -27,7 +27,11 @@ validatorRegistry.registerAll('CharacterBody3D', {
   floor_block_on_wall: v.boolean('floor_block_on_wall'),
   // character_body_3d.cpp:933, PROPERTY_HINT_RANGE "0,180,0.1,radians_as_degrees",
   // no or_greater; the setter (:822-824) is a bare assignment, so out-of-range warns.
-  floor_max_angle: v.radians('floor_max_angle', { maxDeg: 180, hinted: 'character_body_3d.cpp:933' }),
+  floor_max_angle: v.radians('floor_max_angle', {
+    minDeg: 0,
+    maxDeg: 180,
+    hinted: 'character_body_3d.cpp:933',
+  }),
   // character_body_3d.cpp:831, ERR_FAIL_COND(p_floor_snap_length < 0): the setter refuses.
   floor_snap_length: v.float('floor_snap_length', {
     min: 0,
@@ -37,6 +41,7 @@ validatorRegistry.registerAll('CharacterBody3D', {
   // character_body_3d.cpp:927, PROPERTY_HINT_RANGE "0,180,0.1,radians_as_degrees";
   // the setter (:839-841) is a bare assignment, so out-of-range warns.
   wall_min_slide_angle: v.radians('wall_min_slide_angle', {
+    minDeg: 0,
     maxDeg: 180,
     hinted: 'character_body_3d.cpp:927',
   }),

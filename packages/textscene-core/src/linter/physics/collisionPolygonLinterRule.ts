@@ -16,7 +16,8 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { isValidProperties, findParentNode } from '../linterUtils.js';
+import { isValidProperties } from '../linterUtils.js';
+import { parentTypeVerdict, verdictParent } from '../parentType.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
 import { isZeroApprox } from '../../godot/math.js';
 import { basisColumnScales } from './basisColumnScales.js';
@@ -67,9 +68,14 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
     const rawProps = node.properties;
 
     // collision_polygon_2d.cpp:235-237 / collision_polygon_3d.cpp:238-240 —
-    // `!Object::cast_to<CollisionObject<dim>>(get_parent())`.
-    const parent = findParentNode(scene.nodes, node);
-    if (!parent) {
+    // `!Object::cast_to<CollisionObject<dim>>(get_parent())`. The `unknowable`
+    // arm is why this goes through the verdict: an instanced or override parent
+    // declares its class in a scene this linter never opens, and measuring the
+    // ExtResource ref against CollisionObject<dim> warns on every body built by
+    // instancing one.
+    const placement = parentTypeVerdict(scene, node, collisionObject);
+    const parent = verdictParent(placement);
+    if (placement.kind === 'root') {
       diagnostics.push({
         severity: 'warning',
         message: `${type} '${node.name}' has no parent node. ${advice}`,
@@ -77,10 +83,10 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
         nodeType: node.type,
         ruleName: `${prefix}-no-parent`,
       });
-    } else if (!descendsFrom(parent.type, collisionObject)) {
+    } else if (placement.kind === 'mismatch') {
       diagnostics.push({
         severity: 'warning',
-        message: `${type} '${node.name}' has parent '${parent.name}' of type '${parent.type}', which is not a ${collisionObject}. ${advice}`,
+        message: `${type} '${node.name}' has parent '${placement.parent.name}' of type '${placement.parent.type}', which is not a ${collisionObject}. ${advice}`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: `${prefix}-invalid-parent`,

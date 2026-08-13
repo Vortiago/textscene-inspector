@@ -24,6 +24,28 @@ describe('v.vector2 / v.vector2i / v.vector3', () => {
     expect(v.vector2i('grid')('grid', 'Vector2i(0, 0)', 1)).toBeNull();
   });
 
+  // `_parse_construct<int32_t>` (variant_parser.cpp:577-592) takes any number
+  // token and converts it, so a component Godot writes as a float or in
+  // exponent notation loads and truncates toward zero. A `-?\d+` component
+  // grammar reported a format error on a file Godot opens.
+  it('vector2i takes the component spellings Godot converts', () => {
+    expect(v.vector2i('grid')('grid', 'Vector2i(2e1, 0)', 1)).toBeNull();
+    expect(v.vector2i('grid')('grid', 'Vector2i(1.5, 0)', 1)).toBeNull();
+  });
+
+  it('vector2i truncates a converted component toward zero before bounding it', () => {
+    // Godot stores 0 here, which is below the floor; reading `-0.5` as -0 or
+    // as -1 would answer differently.
+    const validator = v.vector2i('size', { min: 1, enforced: 'viewport.cpp:1120' });
+    expect(validator('size', 'Vector2i(0.9, 4)', 1)).not.toBeNull();
+    expect(validator('size', 'Vector2i(1.9, 4)', 1)).toBeNull();
+  });
+
+  it('rect2i takes the same component spellings', () => {
+    expect(v.rect2i('region')('region', 'Rect2i(0, 0, 2e1, 16)', 1)).toBeNull();
+    expect(v.rect2i('region')('region', 'Rect2i(0, 0, abc, 16)', 1)).not.toBeNull();
+  });
+
   it('vector2i with a min rejects a component below it', () => {
     const err = v.vector2i('grid', { min: 0, enforced: 'window.cpp:1190' })('grid', 'Vector2i(-1, 0)', 1);
     expect(err!.code).toBe('INVALID_GRID_VALUE');

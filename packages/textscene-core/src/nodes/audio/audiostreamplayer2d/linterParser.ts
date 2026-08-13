@@ -26,19 +26,30 @@ validatorRegistry.registerAll('AudioStreamPlayer2D', {
     max: 24,
     hinted: 'audio_stream_player_2d.cpp:430',
   }),
-  // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0).
-  pitch_scale: v.float('pitch_scale', {
-    min: Number.MIN_VALUE,
-    message:
-      "Property 'pitch_scale' must be greater than 0. Zero or negative pitch breaks audio playback.",
-    enforced: 'audio_stream_player_internal.cpp:314',
-  }),
+  // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0),
+  // against a hint (audio_stream_player_2d.cpp:432) of
+  // "0.01,4,0.01,or_greater" — `or_greater` opens the ceiling. The two floors
+  // sit apart, so (0, 0.01) loads into Godot and only warns.
+  pitch_scale: v.positiveFloat(
+    'pitch_scale',
+    "Property 'pitch_scale' must be greater than 0. Zero or negative pitch breaks audio playback.",
+    {
+      hintedMin: 0.01,
+      enforced: 'audio_stream_player_internal.cpp:314',
+      hinted: 'audio_stream_player_2d.cpp:432',
+    }
+  ),
   playing: v.boolean('playing'),
   autoplay: v.boolean('autoplay'),
   stream_paused: v.boolean('stream_paused'),
-  // audio_stream_player_2d.cpp:300, ERR_FAIL_COND(p_pixels <= 0.0).
+  // audio_stream_player_2d.cpp:300, ERR_FAIL_COND(p_pixels <= 0.0), against a
+  // hint (:436) of "1,4096,1,or_greater,exp,suffix:px" — `or_greater` opens
+  // the ceiling and the hint's floor of 1 sits above the setter's, so
+  // (0, 1) loads into Godot and only warns.
   max_distance: v.positiveFloat('max_distance', undefined, {
+    hintedMin: 1,
     enforced: 'audio_stream_player_2d.cpp:300',
+    hinted: 'audio_stream_player_2d.cpp:436',
   }),
   // audio_stream_player_2d.cpp:437 is PROPERTY_HINT_EXP_EASING (no range) and
   // set_attenuation (:308) is a bare assignment, so there is no bound to check.

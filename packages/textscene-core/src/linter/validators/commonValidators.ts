@@ -98,6 +98,36 @@ export function parseGodotFloat(value: string): number | null {
 }
 
 /**
+ * A TSCN literal as the integer Godot would STORE in a `Variant::INT` slot, or
+ * `null` when the text is not a literal Godot's tokenizer can read.
+ *
+ * Not `parseInt`. Two distinct accidents come from `parseInt` stopping at the
+ * first character it cannot use, and both cleared bounds silently:
+ *
+ * - `2e4` read as 2. The tokenizer sets `is_float` on the `e`
+ *   (variant_parser.cpp:446-448), and the FLOAT is converted on assignment, so
+ *   Godot stores 20000 and any ceiling below it should have reported.
+ * - `8abc` read as 8. Godot's parser cannot read that at all, so it is a format
+ *   error rather than a value in range.
+ *
+ * A float literal in an INT slot is legal and truncates TOWARD ZERO, which is
+ * what the C++ conversion does, so `5.9` is 5 and `-5.9` is -5.
+ *
+ * Non-finite passes through unchanged, the same way the float reader treats it.
+ * `inf` and `nan` are identifiers `stor_fix` (variant_parser.cpp:149-159)
+ * resolves for any slot, so Godot's parser reads them here too and the file
+ * loads; every comparison against the result is then false, which is the right
+ * answer for a value that cannot be placed on the number line.
+ */
+export function parseGodotInt(value: string): number | null {
+  const trimmed = value.trim();
+  if (!TSCN_FLOAT_RE.test(trimmed)) return null;
+  const asFloat = parseGodotFloat(trimmed);
+  if (asFloat === null) return null;
+  return Number.isFinite(asFloat) ? Math.trunc(asFloat) : asFloat;
+}
+
+/**
  * One capture group of an ALREADY-MATCHED float tuple, as a number.
  *
  * The component grammar and {@link parseGodotFloat} are derived from the same
@@ -153,8 +183,8 @@ export function createEnumValidator(
   maxSeverity: ParseError['severity'] = valueSeverity
 ): PropertyValidator {
   const validator: PropertyValidator = (key, value, line) => {
-    const num = parseInt(value, 10);
-    if (isNaN(num)) {
+    const num = parseGodotInt(value);
+    if (num === null) {
       return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
     }
     if (num < min || num > max) {
@@ -175,32 +205,93 @@ export function createEnumValidator(
 }
 
 /**
- * Creates a numeric range validator for float/int values
+ * The setter's OWN limit at one end, where it sits outside the hint's.
+ *
+ * The two are separate tiers and both are reachable, so one slot cannot hold
+ * them: `AudioStreamPlayer.pitch_scale` is refused at `<= 0` and hinted from
+ * 0.01, and collapsing that to a single floor either errors on 0.005 (a value
+ * Godot loads) or says nothing about it (a value the inspector excludes).
  */
-export function createNumericRangeValidator(
-  propertyName: string,
-  min: number | null,
-  max: number | null,
-  parseAsInt: boolean = false,
-  customMessage?: string,
-  errorCodeFormat: string = 'INVALID_FORMAT',
-  errorCodeValue: string = 'INVALID_VALUE',
+export interface EnforcedEnd {
+  /** The limit itself. */
+  at: number;
+  /** `ERR_FAIL_COND(x <= at)` rather than `< at`: the endpoint is refused too. */
+  exclusive?: boolean;
+}
+
+/** What a numeric range validator checks, and how it reports each end. */
+export interface NumericRangeSpec {
+  propertyName: string;
+  /** Outer floor. Its severity is `minSeverity`, so a hinted one warns. */
+  min?: number | null;
+  /** Outer ceiling. */
+  max?: number | null;
   /**
-   * Severity of the MIN branch; the FORMAT branch stays an error.
+   * The setter's floor, below `min`. Anything under it is an ERROR whatever
+   * `minSeverity` says, and the band up to `min` still reports at that tier.
+   */
+  enforcedMin?: EnforcedEnd;
+  /** The setter's ceiling, above `max`. */
+  enforcedMax?: EnforcedEnd;
+  parseAsInt?: boolean;
+  /** Replaces the derived text on the OUTER ends only. */
+  message?: string;
+  /** Replaces the derived text on the setter's own ends, which state a different reason. */
+  enforcedMessage?: string;
+  errorCodeFormat?: string;
+  errorCodeValue?: string;
+  /**
+   * Severity of the outer MIN branch; the FORMAT branch stays an error.
    * Separate from the max because a property can have an enforced floor and a
    * merely hinted ceiling (ADR-0032).
    */
-  valueSeverity: ParseError['severity'] = 'error',
-  /** Severity of the MAX branch. Defaults to the min's. */
-  maxSeverity: ParseError['severity'] = valueSeverity
-): PropertyValidator {
+  minSeverity?: ParseError['severity'];
+  /** Severity of the outer MAX branch. Defaults to the min's. */
+  maxSeverity?: ParseError['severity'];
+}
+
+/** `must be greater than 3` / `must be at least 3`, per exclusivity. */
+function refusalMessage(
+  propertyName: string,
+  end: EnforcedEnd,
+  side: 'min' | 'max',
+  num: number
+): string {
+  const relation =
+    side === 'min'
+      ? end.exclusive
+        ? 'greater than'
+        : 'at least'
+      : end.exclusive
+        ? 'less than'
+        : 'at most';
+  return `Property '${propertyName}' must be ${relation} ${end.at} (got ${num}); Godot's setter refuses the write.`;
+}
+
+/** Creates a numeric range validator for float/int values. */
+export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyValidator {
+  const {
+    propertyName,
+    min = null,
+    max = null,
+    enforcedMin,
+    enforcedMax,
+    parseAsInt = false,
+    message: customMessage,
+    enforcedMessage,
+    errorCodeFormat = 'INVALID_FORMAT',
+    errorCodeValue = 'INVALID_VALUE',
+    minSeverity: valueSeverity = 'error',
+    maxSeverity = valueSeverity,
+  } = spec;
   const validator: PropertyValidator = (key, value, line) => {
     let num: number;
     if (parseAsInt) {
-      num = parseInt(value, 10);
-      if (isNaN(num)) {
+      const parsed = parseGodotInt(value);
+      if (parsed === null) {
         return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
       }
+      num = parsed;
     } else {
       // `inf`/`nan` are legal float literals, so the miss signal is null and a
       // parsed NaN falls through to the range checks, which it never trips.
@@ -209,6 +300,25 @@ export function createNumericRangeValidator(
         return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
       }
       num = parsed;
+    }
+
+    // The setter's own ends first: they are the more severe tier, and the band
+    // between them and the hint's ends is what the outer checks below report.
+    if (enforcedMin && (enforcedMin.exclusive ? num <= enforcedMin.at : num < enforcedMin.at)) {
+      return propertyError(
+        key,
+        line,
+        enforcedMessage ?? refusalMessage(propertyName, enforcedMin, 'min', num),
+        errorCodeValue
+      );
+    }
+    if (enforcedMax && (enforcedMax.exclusive ? num >= enforcedMax.at : num > enforcedMax.at)) {
+      return propertyError(
+        key,
+        line,
+        enforcedMessage ?? refusalMessage(propertyName, enforcedMax, 'max', num),
+        errorCodeValue
+      );
     }
 
     // Check min constraint
@@ -255,8 +365,8 @@ export function createPositiveIntegerValidator(
   valueSeverity: ParseError['severity'] = 'error'
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
-    const num = parseInt(value, 10);
-    if (isNaN(num)) {
+    const num = parseGodotInt(value);
+    if (num === null) {
       return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
     }
     if (num <= 0) {

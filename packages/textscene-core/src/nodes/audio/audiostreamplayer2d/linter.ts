@@ -8,15 +8,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { checkResourceExists, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
-import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
-import { player2DPitchArms, isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
-
-// audio_stream_player_2d.cpp:436, max_distance PROPERTY_HINT_RANGE
-// "1,4096,1,or_greater,exp,suffix:px": the top end is open, so only the bottom
-// is advisory. set_max_distance (:299) ERR_FAILs at <= 0, which linterParser.ts
-// reports as an error, so the advisory floors at 0.
-const MAX_DISTANCE_HINT_MIN = 1;
+import { checkResourceExists, heldResource, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
+import { isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
 
 /**
  * Validate AudioStreamPlayer2D semantic rules
@@ -45,10 +38,14 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
   // script may assign one at runtime.
 
   // ERROR: stream resource doesn't exist
-  if (rawProps.stream !== undefined && !checkResourceExists(scene, rawProps.stream)) {
+  // `heldResource`, not a presence check: `stream = null` and `stream =` are
+  // both empty slots Godot reads as the absent case, and asking `!== undefined`
+  // reported the second on top of the strict parser's own format error.
+  const stream = heldResource(rawProps.stream);
+  if (stream !== undefined && !checkResourceExists(scene, stream)) {
     diagnostics.push({
       severity: 'error',
-      message: `Stream resource "${rawProps.stream}" does not exist in scene. AudioStreamPlayer2D will not play audio.`,
+      message: `Stream resource "${stream}" does not exist in scene. AudioStreamPlayer2D will not play audio.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'audiostreamplayer2d-missing-stream-resource',
@@ -66,25 +63,9 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Range advisories: distance and pitch bands. `attenuation` carries none:
-  // audio_stream_player_2d.cpp:437 declares it PROPERTY_HINT_EXP_EASING, which
-  // states no range, and set_attenuation (:308) is a bare assignment.
-  // `volume_db`'s band is the validator's, in linterParser.ts.
-  diagnostics.push(
-    ...rangeAdvisories(node, {
-      max_distance: [
-        {
-          under: MAX_DISTANCE_HINT_MIN,
-          floor: 0,
-          ruleName: 'audiostreamplayer2d-small-max-distance',
-          cite: 'audio_stream_player_2d.cpp:436',
-          message: (maxDistance) =>
-            `Property 'max_distance' is ${maxDistance}. The editor range starts at ${MAX_DISTANCE_HINT_MIN} px.`,
-        },
-      ],
-      pitch_scale: player2DPitchArms('audiostreamplayer2d'),
-    })
-  );
+  // No range advisories: every hint band this node has is on its validator in
+  // linterParser.ts, which reports the setter's floor and the hint's as
+  // separate ends.
 
   return diagnostics;
 }
@@ -116,16 +97,6 @@ const audioStreamPlayer2DValidationRule: LintRule = {
           at: 'audio_stream_player_internal.cpp:139',
           unused: 'play_basic returns an empty playback, so autoplay produces no sound',
         },
-      },
-      {
-        ruleName: 'audiostreamplayer2d-small-max-distance',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'audio_stream_player_2d.cpp:436' },
-      },
-      {
-        ruleName: 'audiostreamplayer2d-unusual-pitch',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'audio_stream_player_2d.cpp:432' },
       },
     ],
   },

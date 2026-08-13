@@ -51,6 +51,18 @@ describe('Skeleton3D Linter', () => {
         });
       });
 
+      // skeleton_3d.cpp:586 substitutes 1 for anything `<= 0`, while the hint
+      // (:1293, "0.001,10,0.001,or_greater") floors at 0.001, so (0, 0.001) is
+      // a band Godot keeps as authored and the inspector excludes.
+      it('warns between the substituted floor and the hinted one', () => {
+        expectDiagnostic(scene(node('Skeleton3D', { motion_scale: '0.0005' })), {
+          ruleName: 'strict-parser',
+          severity: 'warning',
+          contains: ['motion_scale', '0.001'],
+        });
+        expectClean(scene(node('Skeleton3D', { motion_scale: '0.001' })));
+      });
+
       it('should reject invalid motion_scale format', () => {
         expectDiagnostic(scene(node('Skeleton3D', { motion_scale: 'not_a_number' })), {
           prop: 'motion_scale',
@@ -159,34 +171,21 @@ describe('Skeleton3D Linter', () => {
   });
 
   describe('Semantic Validation (Usage Context)', () => {
-    describe('motion_scale warnings', () => {
-      it('warns on a negative motion_scale, which the setter also replaces', () => {
-        expectDiagnostic(scene(node('Skeleton3D', { motion_scale: '-1.0' })), {
-          ruleName: 'valid-skeleton3d-motion-scale',
-          severity: 'error',
-          contains: ['Godot replaces it with 1.0'],
-        });
+    describe('motion_scale is the validator\u2019s, not this rule\u2019s', () => {
+      // Both bounds live on the validator: `set_motion_scale`
+      // (skeleton_3d.cpp:586) substitutes 1 at or below 0, and the hint
+      // (:1293, "0.001,10,0.001,or_greater") warns above that. This rule used
+      // to repeat the enforced end and report it twice on the same node.
+      it('reports the refused value exactly once', () => {
+        const diagnostics = lint(scene(node('Skeleton3D', { motion_scale: '-1.0' })));
+        const errors = diagnostics.filter((d) => d.severity === 'error');
+        expect(errors).toHaveLength(1);
+        expect(errors[0]?.message).toContain('greater than 0');
       });
 
       it('stays silent inside the hint range and above its open max end', () => {
-        // skeleton_3d.cpp:1293 is "0.001,10,0.001,or_greater": 0.05 sits inside
-        // the range and `or_greater` opens the top, so neither warns.
         expectClean(scene(node('Skeleton3D', { motion_scale: '0.05' })));
         expectClean(scene(node('Skeleton3D', { motion_scale: '50.0' })));
-      });
-
-      it('should not warn about normal motion_scale values', () => {
-        expectNoDiagnostic(scene(node('Skeleton3D', { motion_scale: '1.0' })), {
-          ruleName: 'valid-skeleton3d-motion-scale',
-        });
-      });
-
-      it('should accept motion_scale at boundary of acceptable range', () => {
-        for (const value of ['0.1', '0.5', '2.0', '10.0']) {
-          expectNoDiagnostic(scene(node('Skeleton3D', { motion_scale: value })), {
-            ruleName: 'valid-skeleton3d-motion-scale',
-          });
-        }
       });
     });
 

@@ -45,6 +45,17 @@ describe('CSGSphere3D strict validators', () => {
     expect(errors[0]!.message).toContain('radius');
   });
 
+  // csg_shape.cpp:1478 refuses `<= 0` while :1470 hints a floor of 0.001, so
+  // (0, 0.001) is a band Godot loads and the inspector excludes.
+  it('separates the radius floor the setter refuses from the one the hint states', () => {
+    expect(errorsOf(linter.lint(scene('radius = -1')))).toHaveLength(1);
+    const belowHint = linter.lint(scene('radius = 0.0005'));
+    expect(errorsOf(belowHint)).toEqual([]);
+    expect(warningsOf(belowHint).map((w) => w.message)).toHaveLength(1);
+    expect(warningsOf(belowHint)[0]!.message).toContain('0.001');
+    expect(linter.lint(scene('radius = 0.001'))).toEqual([]);
+  });
+
   it.each([
     // csg_shape.cpp:1489, `radial_segments = p_radial_segments > 4 ?
     // p_radial_segments : 4`: 1-3 are altered on load, so they are errors

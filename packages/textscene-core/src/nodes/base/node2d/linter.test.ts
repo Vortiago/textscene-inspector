@@ -207,6 +207,30 @@ describe('Node2D Linter', () => {
       });
     });
 
+    it('accepts the converted ends of the ±89.9 degree hint', () => {
+      // node_2d.cpp:503, PROPERTY_HINT_RANGE "-89.9,89.9,0.1,radians_as_degrees":
+      // the inspector shows degrees, the .tscn stores radians, so the extents
+      // are ±1.56905 rad. Bounding on ±89.9 RADIANS would reject nothing a
+      // scene can contain.
+      expectClean(scene(node('Node2D', { skew: 1.569 })));
+      expectClean(scene(node('Node2D', { skew: -1.569 })));
+    });
+
+    it('warns, not errors, past the skew hint', () => {
+      // set_skew (node_2d.cpp:178-185) is a bare assignment with no clamp,
+      // unlike set_scale below it, so the hint governs the inspector alone.
+      expectDiagnostic(scene(node('Node2D', { skew: 1.6 })), {
+        ruleName: 'strict-parser',
+        severity: 'warning',
+        contains: ['skew', '89.9 degrees'],
+      });
+      expectDiagnostic(scene(node('Node2D', { skew: -1.6 })), {
+        ruleName: 'strict-parser',
+        severity: 'warning',
+        contains: ['skew', '89.9 degrees'],
+      });
+    });
+
     it('should pass validation for valid global_skew', () => {
       expectClean(scene(node('Node2D', { global_skew: 0.3 })));
     });

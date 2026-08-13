@@ -29,9 +29,14 @@ validatorRegistry.registerAll('AudioStreamPlayer', {
     max: 24,
     hinted: 'audio_stream_player.cpp:282',
   }),
-  // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0).
+  // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0),
+  // against a hint (audio_stream_player.cpp:284) of
+  // "0.01,4,0.01,or_greater" — `or_greater` opens the ceiling. The two floors
+  // sit apart, so (0, 0.01) loads into Godot and only warns.
   pitch_scale: v.positiveFloat('pitch_scale', undefined, {
+    hintedMin: 0.01,
     enforced: 'audio_stream_player_internal.cpp:314',
+    hinted: 'audio_stream_player.cpp:284',
   }),
   playing: v.boolean('playing'),
   autoplay: v.boolean('autoplay'),

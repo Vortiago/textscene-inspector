@@ -167,6 +167,7 @@ validatorRegistry.registerAll('LookAtModifier3D', {
   // which lands exactly on the converted ceiling. set_primary_limit_angle
   // (:283-285) assigns.
   primary_limit_angle: v.radians('primary_limit_angle', {
+    minDeg: 0,
     maxDeg: 360,
     hinted: 'look_at_modifier_3d.cpp:494',
   }),
@@ -179,6 +180,7 @@ validatorRegistry.registerAll('LookAtModifier3D', {
   // stored bound is 0..PI, the header default for both (look_at_modifier_3d.h:77,
   // :79). Setters at :299-301 and :315-317.
   primary_positive_limit_angle: v.radians('primary_positive_limit_angle', {
+    minDeg: 0,
     maxDeg: 180,
     hinted: 'look_at_modifier_3d.cpp:497',
   }),
@@ -187,6 +189,7 @@ validatorRegistry.registerAll('LookAtModifier3D', {
     'look_at_modifier_3d.cpp:498'
   ),
   primary_negative_limit_angle: v.radians('primary_negative_limit_angle', {
+    minDeg: 0,
     maxDeg: 180,
     hinted: 'look_at_modifier_3d.cpp:499',
   }),
@@ -199,6 +202,7 @@ validatorRegistry.registerAll('LookAtModifier3D', {
   // primary_limit_angle; header default `Math::TAU` (look_at_modifier_3d.h:82),
   // setter :331-333.
   secondary_limit_angle: v.radians('secondary_limit_angle', {
+    minDeg: 0,
     maxDeg: 360,
     hinted: 'look_at_modifier_3d.cpp:502',
   }),
@@ -211,6 +215,7 @@ validatorRegistry.registerAll('LookAtModifier3D', {
   // header defaults `Math::PI` (look_at_modifier_3d.h:84, :86), setters at
   // :347-349 and :363-365.
   secondary_positive_limit_angle: v.radians('secondary_positive_limit_angle', {
+    minDeg: 0,
     maxDeg: 180,
     hinted: 'look_at_modifier_3d.cpp:505',
   }),
@@ -219,6 +224,7 @@ validatorRegistry.registerAll('LookAtModifier3D', {
     'look_at_modifier_3d.cpp:506'
   ),
   secondary_negative_limit_angle: v.radians('secondary_negative_limit_angle', {
+    minDeg: 0,
     maxDeg: 180,
     hinted: 'look_at_modifier_3d.cpp:507',
   }),

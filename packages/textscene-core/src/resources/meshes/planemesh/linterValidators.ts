@@ -7,6 +7,9 @@
  * from that slice to this class and to QuadMesh alike.
  */
 
+// Registers PrimitiveMesh and, through it, the rest of the chain, so the
+// inherited keys resolve when this module loads alone.
+import '../primitivemesh/linterValidators.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 

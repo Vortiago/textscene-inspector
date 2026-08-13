@@ -122,8 +122,7 @@ validatorRegistry.registerAll('PopupMenu', {
   // only, no range). set_submenu_popup_delay (popup_menu.cpp:3040-3045)
   // clamps any value <= 0 up to 0.01, a genuine alteration, so the floor is
   // enforced despite the absent hint.
-  submenu_popup_delay: v.float('submenu_popup_delay', {
-    min: Number.MIN_VALUE,
+  submenu_popup_delay: v.positiveFloat('submenu_popup_delay', undefined, {
     enforced: 'popup_menu.cpp:3041',
   }),
   // popup_menu.cpp:3261, Variant::BOOL, no hint. set_allow_search

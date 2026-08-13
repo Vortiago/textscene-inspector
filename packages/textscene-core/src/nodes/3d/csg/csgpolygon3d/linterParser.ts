@@ -15,17 +15,27 @@ validatorRegistry.registerAll('CSGPolygon3D', {
   polygon: v.packedVector2Array('polygon'),
   // set_mode:2639-2645 is a bare assignment; the hint (:2600) is advisory.
   mode: v.enumInt('mode', 0, 2, MODE, { hinted: 'csg_shape.cpp:2600' }),
-  // set_depth:2651 ERR_FAIL_COND(p_depth < 0.001): the real floor is 0.001,
-  // not the ~0 `positiveFloat` used to carry — a value like 0.0005 loaded
-  // here but was refused by Godot.
-  depth: v.float('depth', { min: 0.001, enforced: 'csg_shape.cpp:2651' }),
-  // set_spin_degrees:2681 ERR_FAIL_COND(p_spin_degrees < 0.01 ||
-  // p_spin_degrees > 360): the real floor is 0.01, not the hint's (:2602)
-  // displayed minimum of 1 — a value like 0.5 loaded here but was refused.
-  spin_degrees: v.float('spin_degrees', {
+  // Two tiers on the floor. set_depth:2651 `ERR_FAIL_COND(p_depth < 0.001)`
+  // refuses below 0.001; the hint (:2601,
+  // "0.01,100.0,0.01,or_greater,exp,suffix:m") floors an order above, so
+  // [0.001, 0.01) loads and only warns. `or_greater` opens the ceiling.
+  depth: v.float('depth', {
+    enforcedMin: { at: 0.001 },
     min: 0.01,
+    enforced: { min: 'csg_shape.cpp:2651' },
+    hinted: { min: 'csg_shape.cpp:2601' },
+  }),
+  // Two tiers on the floor, one on the ceiling. set_spin_degrees:2681 is
+  // `ERR_FAIL_COND(p_spin_degrees < 0.01 || p_spin_degrees > 360)`, so 0.01 is
+  // refused below and 360 is refused above; the hint (:2602, "1,360,0.1")
+  // floors at 1, so [0.01, 1) loads and only warns. The two agree at 360, so
+  // that end carries the setter's tier alone.
+  spin_degrees: v.float('spin_degrees', {
+    enforcedMin: { at: 0.01 },
+    min: 1,
     max: 360,
     enforced: 'csg_shape.cpp:2681',
+    hinted: { min: 'csg_shape.cpp:2602' },
   }),
   // set_spin_sides:2692 ERR_FAIL_COND(p_spin_sides < 3): the floor is
   // enforced. The hint's (:2603) ceiling of 64 is closed (no or_greater) but

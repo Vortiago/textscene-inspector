@@ -16,18 +16,9 @@ import {
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
-import { rangeAdvisories } from '../rangeAdvisory.js';
 import { basisColumnScalesGodotFloat } from './basisColumnScales.js';
 import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
 import { tupleComponent } from '../validators/commonValidators.js';
-
-/**
- * `mass` hint, rigid_body_2d.cpp:742 / rigid_body_3d.cpp:764 —
- * PROPERTY_HINT_RANGE "0.001,1000,0.001,or_greater,exp,suffix:kg". The high end
- * is open, so only the low end is advisory; mass <= 0 is refused outright by
- * ERR_FAIL_COND in the setter (:318 / :334) and is linterParser.ts's error.
- */
-const MASS_HINT_MIN = 0.001;
 
 /**
  * Per-axis scale tolerance, shared by both dimensions: rigid_body_3d.cpp:667
@@ -36,7 +27,7 @@ const MASS_HINT_MIN = 0.001;
  * `collisionshape3d-non-uniform-scale` run (collision_object_3d.cpp:744,
  * collision_shape_3d.cpp:155) — a UNIFORM (2,2,2) scale trips this one too.
  *
- * Declared locally (matching `MASS_HINT_MIN` above) rather than in
+ * Declared locally rather than in
  * `godot/math.ts`: this repo's engine-facts module has no home for it yet,
  * flagged as a `godot/math.ts` candidate rather than added here on this
  * rule's own authority.
@@ -62,7 +53,6 @@ function parseScale2D(raw: string | undefined): { x: number; y: number } {
 export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `RigidBody${dim}`;
   const prefix = `rigidbody${dimSuffix(dim)}`;
-  const massHintCite = dim === '2D' ? 'rigid_body_2d.cpp:742' : 'rigid_body_3d.cpp:764';
   // `_body_state_changed` reads the contact list, and everything
   // `max_contacts_reported` bounds, only inside `if (contact_monitor)`. Same
   // line number in both files, but they are two separate facts.
@@ -106,22 +96,6 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
-    // Warning: mass below the range the inspector offers. `floor: 0` leaves
-    // mass <= 0 to the setter-backed error rather than double-reporting it.
-    diagnostics.push(
-      ...rangeAdvisories(node, {
-        mass: [
-          {
-            under: MASS_HINT_MIN,
-            floor: 0,
-            ruleName: `${prefix}-mass-too-low`,
-            message: (mass) =>
-              `${type} '${node.name}' has mass ${mass}. The editor range for mass starts at ${MASS_HINT_MIN}.`,
-            cite: massHintCite,
-          },
-        ],
-      })
-    );
 
     // `linear_damp` / `angular_damp` get no advisory: both hints
     // (rigid_body_2d.cpp:763/767 "-1,100,0.001,or_greater",
@@ -239,11 +213,6 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
           ruleName: `${prefix}-needs-collision-shape`,
           severity: 'warning',
           grounding: { kind: 'configuration-warning' },
-        },
-        {
-          ruleName: `${prefix}-mass-too-low`,
-          severity: 'warning',
-          grounding: { kind: 'engine', at: massHintCite },
         },
         {
           ruleName: `${prefix}-max-contacts-without-monitor`,

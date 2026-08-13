@@ -210,15 +210,16 @@ describe('LineEdit strict validators', () => {
     });
   });
 
-  describe('caret_blink_interval (floor enforced > 0, ceiling hinted at 10)', () => {
+  describe('caret_blink_interval (setter refuses <= 0, hint states 0.1 to 10)', () => {
     // line_edit.cpp:2050 — ERR_FAIL_COND(p_interval <= 0). The
-    // PROPERTY_HINT_RANGE "0.1,10,0.01" (line_edit.cpp:3510) ceiling is an
-    // editor slider the setter never applies, so it warns.
+    // PROPERTY_HINT_RANGE "0.1,10,0.01" (line_edit.cpp:3510) is an editor
+    // slider the setter never applies, so both of its ends warn.
     it('accepts the documented default (0.65)', () => {
       expect(check('caret_blink_interval', '0.65')).toBeNull();
     });
 
-    it('accepts the hint ceiling of 10', () => {
+    it('accepts the hint floor of 0.1 and its ceiling of 10', () => {
+      expect(check('caret_blink_interval', '0.1')).toBeNull();
       expect(check('caret_blink_interval', '10')).toBeNull();
     });
 
@@ -226,13 +227,21 @@ describe('LineEdit strict validators', () => {
       const error = check('caret_blink_interval', '10.01');
       expect(error).not.toBeNull();
       expect(error!.severity).toBe('warning');
-      expect(error!.message).toContain('no more than 10');
+      expect(error!.message).toContain('between 0.1 and 10');
+    });
+
+    it('warns between the refused floor and the hinted one', () => {
+      const warning = check('caret_blink_interval', '0.05');
+      expect(warning).not.toBeNull();
+      expect(warning!.severity).toBe('warning');
+      expect(warning!.message).toContain('between 0.1 and 10');
     });
 
     it('errors on 0, which the setter refuses', () => {
       const error = check('caret_blink_interval', '0');
       expect(error).not.toBeNull();
       expect(error!.severity).toBe('error');
+      expect(error!.message).toContain('greater than 0');
     });
 
     it('errors on a negative value', () => {

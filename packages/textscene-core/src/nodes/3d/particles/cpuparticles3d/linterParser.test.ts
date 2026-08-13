@@ -62,8 +62,17 @@ describe('CPUParticles3D strict validators', () => {
       expect(check('lifetime', '99999')).toBeNull();
     });
 
-    it('rejects lifetime below the hard floor', () => {
+    it('rejects lifetime the setter refuses', () => {
       expect(check('lifetime', '0')?.code).toBe('INVALID_LIFETIME_VALUE');
+      expect(check('lifetime', '0')?.severity).toBe('error');
+    });
+
+    // set_lifetime (:92) refuses `<= 0`; the hint (:1558) floors at 0.01, so
+    // (0, 0.01) is a band Godot loads and the inspector excludes.
+    it('warns between the refused floor and the hinted one', () => {
+      const warning = check('lifetime', '0.005');
+      expect(warning?.severity).toBe('warning');
+      expect(warning?.message).toContain('0.01');
     });
 
     it('accepts a boolean one_shot', () => {

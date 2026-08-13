@@ -12,13 +12,15 @@ const DAMP_MODE = { 0: 'COMBINE', 1: 'REPLACE' };
 const FREEZE_MODE = { 0: 'STATIC', 1: 'KINEMATIC' };
 
 validatorRegistry.registerAll('RigidBody3D', {
-  // rigid_body_3d.cpp:334, ERR_FAIL_COND(p_mass <= 0): the setter refuses.
-  mass: v.float('mass', {
-    min: Number.MIN_VALUE,
-    message:
-      "Property 'mass' must be greater than 0. Physics bodies require positive mass.",
-    enforced: 'rigid_body_3d.cpp:334',
-  }),
+  // Two tiers on the floor. rigid_body_3d.cpp:334
+  // `ERR_FAIL_COND(p_mass <= 0)` refuses the endpoint too; the hint (:764,
+  // "0.001,1000,0.001,or_greater,exp,suffix:kg") states 0.001, so the band
+  // between them loads and only warns. `or_greater` leaves the ceiling open.
+  mass: v.positiveFloat(
+    'mass',
+    "Property 'mass' must be greater than 0. Physics bodies require positive mass.",
+    { hintedMin: 0.001, enforced: { min: 'rigid_body_3d.cpp:334' }, hinted: { min: 'rigid_body_3d.cpp:764' } }
+  ),
   physics_material_override: v.resourceReference('physics_material_override'),
   gravity_scale: v.float('gravity_scale'),
   // rigid_body_3d.cpp:768 "Auto,Custom". set_center_of_mass_mode (:356-377) is a
@@ -71,13 +73,16 @@ validatorRegistry.registerAll('RigidBody3D', {
   freeze: v.boolean('freeze'),
   continuous_cd: v.boolean('continuous_cd'),
   contact_monitor: v.boolean('contact_monitor'),
-  // rigid_body_3d.cpp:781 hints "0,64,1,or_greater" (min 0 stated, max open),
-  // but the real bound comes from the setter: rigid_body_3d.cpp:524,
-  // ERR_FAIL_INDEX_MSG(p_amount, MAX_CONTACTS_REPORTED_3D_MAX) where the
-  // constant is 4096, so the engine enforces [0, 4095] on both ends.
+  // rigid_body_3d.cpp:781 hints "0,64,1,or_greater": floor closed at 0, ceiling
+  // open, so 64 is only a slider extent. rigid_body_3d.cpp:524,
+  // ERR_FAIL_INDEX_MSG(p_amount, MAX_CONTACTS_REPORTED_3D_MAX) closes both ends
+  // instead — the constant is 4096 (servers/physics_3d/physics_server_3d.h:36)
+  // and ERR_FAIL_INDEX fails on `p_amount < 0 || p_amount >= p_size`, hence the
+  // exclusive ceiling. It sits in `enforcedMax` because the hint states no
+  // ceiling for it to narrow.
   max_contacts_reported: v.int('max_contacts_reported', {
     min: 0,
-    max: 4095,
+    enforcedMax: { at: 4096, exclusive: true },
     enforced: 'rigid_body_3d.cpp:524',
   }),
   can_sleep: v.boolean('can_sleep'),

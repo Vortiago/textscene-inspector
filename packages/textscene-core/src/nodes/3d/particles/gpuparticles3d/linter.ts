@@ -12,8 +12,8 @@ import { checkResourceExists, heldResource } from '../../../../linter/resourceCh
 import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 
-/** `MAX_DRAW_PASSES = 4` (gpu_particles_3d.h:56). */
-const MAX_DRAW_PASSES = 4;
+/** One key per draw pass; `MAX_DRAW_PASSES = 4` (gpu_particles_3d.h:56). */
+const DRAW_PASS_KEYS = ['draw_pass_1', 'draw_pass_2', 'draw_pass_3', 'draw_pass_4'] as const;
 
 /**
  * Validate GPUParticles3D semantic rules (resource references, trail config, etc.)
@@ -55,19 +55,17 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
   // (gpu_particles_3d.cpp:462-467) clears PROPERTY_USAGE_NONE for every index
   // under `draw_passes`, so draw_pass_2..4 are ordinary serialised keys the
   // moment an author raises the count — and a dangling id in one fails the load
-  // exactly like draw_pass_1. Counting up to MAX_DRAW_PASSES rather than
-  // scraping keys gives index order for free and ignores a `draw_pass_9` Godot
-  // never writes.
+  // exactly like draw_pass_1. Naming the four keys rather than scraping them
+  // gives index order for free and ignores a `draw_pass_9` Godot never writes.
   //
   // `null` is the serialised form of an EMPTY pass, which `draw_passes = 2` with
   // one mesh writes and Godot reloads without complaint
   // (`scenes/demos/3d/particles/test.tscn`), so it is skipped rather than read
   // as a reference that failed to resolve.
   const drawPasses: [key: string, ref: string][] = [];
-  for (let i = 1; i <= MAX_DRAW_PASSES; i++) {
-    const key = `draw_pass_${i}`;
-    const raw = rawProps[key];
-    if (raw && raw !== 'null') drawPasses.push([key, raw]);
+  for (const key of DRAW_PASS_KEYS) {
+    const mesh = heldResource(rawProps[key]);
+    if (mesh !== undefined) drawPasses.push([key, mesh]);
   }
   for (const [key, raw] of drawPasses) {
     if (!checkResourceExists(scene, raw)) {

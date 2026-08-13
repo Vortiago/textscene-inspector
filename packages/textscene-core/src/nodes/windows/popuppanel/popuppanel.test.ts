@@ -1,18 +1,21 @@
 /**
  * PopupPanel registration: parsed and validated, not yet rendered.
  *
- * Registering NO component is the point: the dispatcher falls back to
- * GenericNodeFallback, and `rendersOwnVisual` reports 'not-implemented' so the
- * tree and inspector keep saying so until someone draws it.
+ * The slice registers a base component under `renderIntent: 'pending'`, so the
+ * badge reads a gap. The `Node` base applies no `visible` and an unregistered
+ * type already sat in both canvases, so unlike the Node2D/Node3D-based pending
+ * slices this registration buys the declared gap alone.
  */
 
 import { describe, expect, it, vi } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
+import { rendersOwnVisual } from '../../../r3f/nodeSupport';
 import { TscnParser } from '../../../parser/TscnParser';
 import * as logger from '../../../logger';
 import { parseNode } from '../../node/parser';
 import './index';
+import './index.r3f';
 
 describe('PopupPanel registration', () => {
   it('registers the parseNode parse it reuses', () => {
@@ -21,8 +24,9 @@ describe('PopupPanel registration', () => {
     expect(registration!.parser).toBe(parseNode);
   });
 
-  it('registers no render component, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.get('PopupPanel')).toBeUndefined();
+  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
+    expect(nodeComponentRegistry.renderIntentOf('PopupPanel')).toBe('pending');
+    expect(rendersOwnVisual('PopupPanel')).toBe('not-implemented');
   });
 
   it('lands in the lenient parser tree with its type preserved and no fallback warning', () => {

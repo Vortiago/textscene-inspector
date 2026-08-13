@@ -18,6 +18,8 @@
  * linter to walk SubResources rather than just nodes, which it does not yet do.
  */
 
+// Registers Material, so the inherited keys resolve when this module loads alone.
+import '../material/linterValidators.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { featureKeys } from './features.js';
 import { pbrKeys } from './pbr.js';

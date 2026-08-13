@@ -3,6 +3,7 @@
  * {@link Grounding} that says which of them the engine actually enforces.
  */
 
+import type { EnforcedEnd } from '../commonValidators.js';
 import type { Grounding } from './grounding.js';
 
 export interface FloatOpts extends Grounding {
@@ -10,6 +11,18 @@ export interface FloatOpts extends Grounding {
   min?: number;
   /** Inclusive maximum. Omit for no upper bound. */
   max?: number;
+  /**
+   * The setter's own floor, where it sits BELOW `min`. Values under it are an
+   * ERROR whatever tier `min` reports at, and the band between the two still
+   * reports at `min`'s tier, so a property refused at `<= 0` and hinted from
+   * 0.01 says the right thing about both 0 and 0.005.
+   *
+   * `min` stays the number the hint states, which is what the hint-parity
+   * ledger compares against the engine's captured `PROPERTY_HINT_RANGE`.
+   */
+  enforcedMin?: EnforcedEnd;
+  /** The setter's own ceiling, where it sits above `max`. */
+  enforcedMax?: EnforcedEnd;
   /** Custom range message override (replaces the auto-derived "must be …" text). */
   message?: string;
 }

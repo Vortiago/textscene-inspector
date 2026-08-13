@@ -93,7 +93,7 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 | `hue_variation_min` | float -1-1 | warning |
 | `initial_velocity_max` | float >= 0 | warning below |
 | `initial_velocity_min` | float >= 0 | warning below |
-| `lifetime` | float > 0 | error below |
+| `lifetime` | float >= 0.01 | error at or below 0, warning below 0.01 |
 | `lifetime_randomness` | float 0-1 | warning |
 | `linear_accel_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `linear_accel_max` | float |  |

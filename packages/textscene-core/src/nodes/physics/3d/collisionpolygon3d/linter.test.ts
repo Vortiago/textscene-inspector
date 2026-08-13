@@ -35,6 +35,38 @@ describe('CollisionPolygon3D Linter', () => {
     });
   });
 
+  it('says nothing about a parent whose type is declared in another scene', () => {
+    // The 2D twin carries the same case: an `instance=` parent's `type` is the
+    // ExtResource ref and an override heading's is the index fallback's "0",
+    // and neither can be measured against CollisionObject3D.
+    const instancedParent = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://body.tscn" id="1_body"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Body" parent="." instance=ExtResource("1_body")]
+
+[node name="Poly" type="CollisionPolygon3D" parent="Body"]
+polygon = ${validPolygon}
+`;
+    const overrideParent = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://body.tscn" id="1_body"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Body" parent="." instance=ExtResource("1_body")]
+
+[node name="Inner" parent="Body" index="0"]
+
+[node name="Poly" type="CollisionPolygon3D" parent="Body/Inner"]
+polygon = ${validPolygon}
+`;
+    expectNoDiagnostic(instancedParent, { ruleName: 'collisionpolygon3d-invalid-parent' });
+    expectNoDiagnostic(overrideParent, { ruleName: 'collisionpolygon3d-invalid-parent' });
+  });
+
   it('accepts a parent several levels removed from CollisionObject3D in name only, via the real ancestry (RigidBody3D)', () => {
     expectNoDiagnostic(
       scene(node('RigidBody3D'), node('CollisionPolygon3D', { polygon: validPolygon }, { parent: '.' })),

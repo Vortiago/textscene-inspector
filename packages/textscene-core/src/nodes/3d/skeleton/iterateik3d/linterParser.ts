@@ -161,6 +161,7 @@ validatorRegistry.registerAll('IterateIK3D', {
   // the stored unit. set_angular_delta_limit (iterate_ik_3d.cpp:185) assigns
   // straight through, so both ends warn.
   angular_delta_limit: v.radians('angular_delta_limit', {
+    minDeg: 0,
     maxDeg: 180,
     hinted: 'iterate_ik_3d.cpp:396',
   }),

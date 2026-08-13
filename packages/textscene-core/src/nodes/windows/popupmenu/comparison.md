@@ -44,7 +44,7 @@ Strict parsing format-checks these `PopupMenu` properties, plus 45 inherited fro
 | `prefer_native_menu` | true or false |  |
 | `shrink_height` | true or false |  |
 | `shrink_width` | true or false |  |
-| `submenu_popup_delay` | float >= 5e-324 | error below |
+| `submenu_popup_delay` | float > 0 | error at or below 0 |
 | `system_menu_id` | enum 0-5 (NONE/APPLICATION_MENU/WINDOW_MENU/HELP_MENU/DOCK) | warning |
 
 | Rule | Reports | Severity |

@@ -15,6 +15,7 @@ import {
 } from './contexts/YSortContext.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { GenericNodeFallback } from './internal/generic-node-fallback/index';
+import { placeholderUserData } from './internal/generic-node-fallback/placeholderUserData.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { useSelection } from './contexts/SelectionContext.js';
@@ -92,6 +93,17 @@ export function PlainNode({
             index: (node.properties as { layer?: number }).layer ?? DEFAULT_CANVAS_LAYER,
           }
         : null,
+    [node]
+  );
+
+  // A `pending` type mounts a base component, so `GenericNodeFallback`, the
+  // only other place the placeholder marker is set, never runs for it. Publish
+  // the marker on the wrapper, the Object3D `registerNodeObject` resolves for
+  // this path. Spread, never `userData={undefined}`: that would wipe THREE's
+  // own default `{}` off every other node's wrapper.
+  const marker = useMemo(
+    () =>
+      nodeComponentRegistry.isPending(node.type) ? { userData: placeholderUserData(node) } : null,
     [node]
   );
 
@@ -180,7 +192,7 @@ export function PlainNode({
   // `node` object (e.g. the user fixed the authored data that crashed it).
   return (
     <NodePathProvider path={path}>
-      <group ref={wrapperRef} visible={!isHidden}>
+      <group ref={wrapperRef} visible={!isHidden} {...marker}>
         <ErrorBoundary
           resetKeys={[node]}
           fallback={() => (

@@ -22,10 +22,11 @@ import { camera2DView } from '../../../nodes/2d/camera2d/cameraView.js';
 import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
+import { isCamera2DType, isCamera3DType } from '../../cameraNodeTypes.js';
 import styles from './TscnPreviewShell.module.css';
 
 /** Stable predicate so `useLiveSceneNodes`' memo doesn't recompute each render. */
-const isCameraNode = (n: TscnNode): boolean => n.type === 'Camera3D' || n.type === 'Camera2D';
+const isCameraNode = (n: TscnNode): boolean => isCamera3DType(n.type) || isCamera2DType(n.type);
 
 export function CamerasPanel() {
   const { sceneGraph } = useHierarchy();
@@ -36,8 +37,8 @@ export function CamerasPanel() {
 
   // From the LIVE scene tree, so cameras inside instanced sub-scenes appear.
   const cameras = useLiveSceneNodes(isCameraNode);
-  const cameras3d = cameras.filter((c) => c.node.type === 'Camera3D');
-  const cameras2d = cameras.filter((c) => c.node.type === 'Camera2D');
+  const cameras3d = cameras.filter((c) => isCamera3DType(c.node.type));
+  const cameras2d = cameras.filter((c) => isCamera2DType(c.node.type));
 
   if (cameras3d.length === 0 && cameras2d.length === 0) {
     return <div className={styles.emptyState}>No camera nodes in this scene.</div>;

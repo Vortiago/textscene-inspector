@@ -47,6 +47,21 @@ export function isEqualApprox(a: number, b: number): boolean {
 }
 
 /**
+ * `SIGN` (typedefs.h:123-126): `m_v > 0 ? +1 : (m_v < 0 ? -1 : 0)`.
+ *
+ * Not `Math.sign`, and the gap is NaN. Both of the engine's comparisons are
+ * false for it, so `SIGN(nan)` falls through to 0 while `Math.sign(nan)` is
+ * NaN — and `nan` is a float literal Godot writes and reloads, so it reaches
+ * every determinant computed off a serialised transform. The two agree
+ * everywhere else, including on the zero that `Basis::get_scale`
+ * (basis.cpp:321-322) and `Transform2D::get_scale` (transform_2d.cpp:115-118)
+ * multiply a degenerate transform's signed axis by.
+ */
+export function sign(value: number): number {
+  return value > 0 ? 1 : value < 0 ? -1 : 0;
+}
+
+/**
  * `Math::smoothstep` (math_funcs.h:568-577), the clamping Hermite interpolation
  * GLSL spells the same way.
  *

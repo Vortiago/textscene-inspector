@@ -115,15 +115,28 @@ describe('CSGPolygon3D strict validators', () => {
   });
 
   it.each([
-    // Both floors sit BELOW the hints' (:2601 "0.01,…", :2602 "1,360,0.1"), so
-    // these endpoints are hint-illegal yet engine-legal. The `[enforced,
-    // hinted)` sliver goes unwarned because one `min` slot holds one tier and
-    // it must be the more severe.
+    // Both setter floors sit BELOW the hints' (:2601 "0.01,…", :2602
+    // "1,360,0.1"), so the endpoint the setter accepts is still outside what
+    // the inspector offers: engine-legal, hint-illegal, hence a warning.
     ['depth = 0.001', 'depth'],
+    ['depth = 0.005', 'depth'],
     ['spin_degrees = 0.01', 'spin_degrees'],
-    // :2681 refuses above 360, and the :2602 hint caps there too.
+    ['spin_degrees = 0.5', 'spin_degrees'],
+  ])('warns (not errors) on %s, inside the hint-only band', (line, property) => {
+    const diagnostics = linter.lint(scene(line));
+    expect(errorsOf(diagnostics)).toEqual([]);
+    expect(warningsOf(diagnostics).some((w) => w.message.includes(property))).toBe(true);
+  });
+
+  it.each([
+    // The hints' own floors: :2601 states 0.01 for depth, :2602 states 1 for
+    // spin_degrees. Inside both tiers, so silent.
+    ['depth = 0.01', 'depth'],
+    ['spin_degrees = 1', 'spin_degrees'],
+    // :2681 refuses above 360, and the :2602 hint caps there too, so the
+    // shared endpoint is legal at both tiers.
     ['spin_degrees = 360', 'spin_degrees'],
-  ])('accepts the enforced endpoint %s in silence', (line, property) => {
+  ])('accepts the hint floor %s in silence', (line, property) => {
     const diagnostics = linter.lint(scene(line));
     expect(errorsOf(diagnostics)).toEqual([]);
     expect(warningsOf(diagnostics).some((w) => w.message.includes(property))).toBe(false);

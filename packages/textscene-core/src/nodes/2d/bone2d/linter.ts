@@ -32,9 +32,9 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { findParentNode, isValidProperties } from '../../../linter/linterUtils.js';
+import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
-import { isTypeUnknowable } from '../../../linter/parentType.js';
+import { knownParent, searchAncestors } from '../../../linter/parentType.js';
 import { makeFloatTupleRegex } from '../../../linter/validators/floatTupleValidator.js';
 
 const CHAIN_RULE = 'bone2d-chain-does-not-terminate';
@@ -53,18 +53,20 @@ type AncestryVerdict =
 
 /** Mirrors `Bone2D::_notification(NOTIFICATION_ENTER_TREE)` (skeleton_2d.cpp:99-113). */
 function ancestryVerdict(scene: TscnScene, node: TscnNode): AncestryVerdict {
-  let current = findParentNode(scene.nodes, node);
-  if (!current) return 'invalid-parent'; // root: parent_bone and skeleton both stay null
+  const parent = knownParent(scene, node);
+  if (parent.kind === 'root') return 'invalid-parent'; // parent_bone and skeleton both stay null
+  if (parent.kind === 'unknowable') return 'unknowable';
+  const parentIsBone2D = descendsFrom(parent.parent.type, 'Bone2D');
 
-  if (isTypeUnknowable(current)) return 'unknowable';
-  const parentIsBone2D = descendsFrom(current.type, 'Bone2D');
-
-  while (current) {
-    if (isTypeUnknowable(current)) return 'unknowable';
-    if (descendsFrom(current.type, 'Skeleton2D')) return 'satisfied';
-    if (!descendsFrom(current.type, 'Bone2D')) break;
-    current = findParentNode(scene.nodes, current);
-  }
+  // The chain ends at the first ancestor that is neither, so an ancestor whose
+  // class this file never states could be the Skeleton2D or the terminator.
+  const search = searchAncestors<'satisfied' | 'chain-end'>(scene, node, (ancestor) => {
+    if (descendsFrom(ancestor.type, 'Skeleton2D')) return 'satisfied';
+    if (!descendsFrom(ancestor.type, 'Bone2D')) return 'chain-end';
+    return undefined;
+  });
+  if (search.kind === 'unknowable') return 'unknowable';
+  if (search.kind === 'found' && search.value === 'satisfied') return 'satisfied';
 
   return parentIsBone2D ? 'chain-broken' : 'invalid-parent';
 }

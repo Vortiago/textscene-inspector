@@ -1,48 +1,56 @@
 /**
- * Every slice that registers validators must IMPORT its nearest
- * validator-bearing ancestor, so the base chain registers when that slice alone
- * is loaded.
+ * Every module that registers validators — a node slice's `linterParser.ts`, a
+ * resource slice's `linterValidators.ts` — must reach its nearest
+ * validator-bearing ancestor in `CLASS_BASE_TYPES` through its own imports, so
+ * that loading it alone registers the whole chain `findValidator` walks.
  *
- * Registration is a module side effect. `findValidator` walks NODE_BASE_TYPES,
- * but an ancestor that was never imported has registered nothing for the walk to
- * find, so an inherited key resolves to null. Production never saw this —
- * `linter/index.ts` imports every slice — but a scoped test loads only its own
- * module graph, which is precisely where a slice test lives.
- *
- * The cost was invisible and real: 44 slices could not assert ANY inherited
- * behaviour, and every one of them looked like it could. `CollisionShape3D`
- * showed the shape — a test asserting `transform` resolves failed, not because
- * Node3D was wrong but because nothing had loaded it.
- *
- * The scaffold emits this import for new slices, and the `INHERITED` identity
- * table it now generates fails without it. This guard covers the ones written
- * before either existed, and stops a hand-written slice from reintroducing it.
+ * Registration is a module side effect, so an ancestor nothing imported has
+ * registered nothing for the walk to find and an inherited key resolves to
+ * null. Production never sees it — `linter/index.ts` imports every slice — but
+ * a scoped slice test loads only its own module graph.
  */
 
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-// The MERGED table (catalog plus the uncatalogued entries), not the generated
-// half: a type missing from ClassDB still has a chain here.
-import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
+// The table the registry is CONSTRUCTED with: both hierarchies merged, catalog
+// plus the uncatalogued entries. Walking the node half alone gives every
+// resource type a null chain, and the sweep passes over them vacuously.
+import { CLASS_BASE_TYPES } from './classBaseTypes.js';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/linter
-const nodesRoot = resolve(here, '../nodes');
+const srcRoot = resolve(here, '..');
 
-/** Every `linterParser.ts` under `nodes/`, at any depth. */
-function findLinterParsers(dir: string): string[] {
+/** The two filenames a registration lives in, one per hierarchy. */
+const REGISTRATION_FILENAMES = new Set(['linterParser.ts', 'linterValidators.ts']);
+
+/** Every registration module under `src/`, at any depth. */
+function findRegistrationModules(dir: string): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...findLinterParsers(full));
-    else if (entry.name === 'linterParser.ts') out.push(full);
+    if (entry.isDirectory()) out.push(...findRegistrationModules(full));
+    else if (REGISTRATION_FILENAMES.has(entry.name)) out.push(full);
   }
   return out;
 }
 
+/** Every non-test `.ts` under `src/`, so the population can be checked complete. */
+function findSourceModules(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...findSourceModules(full));
+    else if (entry.name.endsWith('.ts') && !entry.name.includes('.test.')) out.push(full);
+  }
+  return out;
+}
+
+const REGISTRATION_CALL = /\bvalidatorRegistry\.register(?:All|Unavailable)\(/;
+
 /**
- * EVERY `linterParser.js` a file imports, named and side-effect alike.
+ * EVERY registration module a file imports, named and side-effect alike.
  *
  * A named import registers the module just as a bare one does — `AimModifier3D`
  * pulls `boneConstraintBaseLeaves` from its base and is thereby chained. Matching
@@ -52,11 +60,16 @@ function findLinterParsers(dir: string): string[] {
  * is not the property under test. A slice importing a sibling's or a cousin's
  * parser satisfies that and still fails to register its own chain, which is the
  * very defect this file exists to catch.
+ *
+ * The two names are enumerated, never a wildcard: `linter\w*\.js` would drag a
+ * node slice's `linter.js` rule module in, and `\w*Validators\.js` a resource
+ * slice's `backgroundValidators.js` key modules. Neither registers anything.
  */
-const LINTER_PARSER_IMPORT = /^import\s+(?:[^;]*?\sfrom\s+)?'([^']*linterParser\.js)';/gm;
+const REGISTRATION_IMPORT =
+  /^import\s+(?:[^;]*?\sfrom\s+)?'([^']*linter(?:Parser|Validators)\.js)';/gm;
 
-function importedLinterParsers(source: string): string[] {
-  return [...source.matchAll(LINTER_PARSER_IMPORT)].map((m) => m[1]!);
+function importedRegistrationModules(source: string): string[] {
+  return [...source.matchAll(REGISTRATION_IMPORT)].map((m) => m[1]!);
 }
 
 /**
@@ -82,7 +95,7 @@ function buildOwners(files: string[]): Map<string, string> {
 }
 
 /**
- * Every `linterParser.ts` reachable from `file` by following imports, itself
+ * Every registration module reachable from `file` by following imports, itself
  * included.
  *
  * TRANSITIVE, because registration is: `ColorPicker` imports VBoxContainer's
@@ -91,7 +104,7 @@ function buildOwners(files: string[]): Map<string, string> {
  * when seven were and two were not — and told the same story about both, which
  * is worse than either answer alone.
  */
-function reachableLinterParsers(file: string): Set<string> {
+function reachableRegistrationModules(file: string): Set<string> {
   const seen = new Set<string>();
   const queue = [file];
   while (queue.length > 0) {
@@ -104,7 +117,7 @@ function reachableLinterParsers(file: string): Set<string> {
     } catch {
       continue; // a specifier that resolves nowhere is tsc's problem, not this guard's
     }
-    for (const spec of importedLinterParsers(source)) {
+    for (const spec of importedRegistrationModules(source)) {
       queue.push(resolve(dirname(current), spec.replace(/\.js$/, '.ts')));
     }
   }
@@ -114,23 +127,37 @@ function reachableLinterParsers(file: string): Set<string> {
 /** The closest ancestor that registers validators, or null at the terminal. */
 function nearestValidatorAncestor(type: string, owners: Map<string, string>): string | null {
   const seen = new Set<string>();
-  let current: string | undefined = NODE_BASE_TYPES[type];
+  let current: string | undefined = CLASS_BASE_TYPES[type];
   while (current && !seen.has(current)) {
     if (owners.has(current)) return current;
     seen.add(current);
-    current = NODE_BASE_TYPES[current];
+    current = CLASS_BASE_TYPES[current];
   }
   return null;
 }
 
 describe('base-chain imports', () => {
-  const files = findLinterParsers(nodesRoot);
+  const files = findRegistrationModules(srcRoot);
   const owners = buildOwners(files);
 
   it('finds the slices, so the sweep cannot pass vacuously', () => {
     expect(files.length).toBeGreaterThan(150);
     expect(owners.size).toBeGreaterThan(150);
+    // One terminal per hierarchy: both halves are in the population.
     expect(owners.has('Node')).toBe(true);
+    expect(owners.has('Resource')).toBe(true);
+  });
+
+  it('holds every registering module, so a third filename cannot hide', () => {
+    const population = new Set(files);
+    const missed = findSourceModules(srcRoot)
+      .filter((f) => REGISTRATION_CALL.test(readFileSync(f, 'utf8')) && !population.has(f))
+      .map((f) => relative(srcRoot, f));
+    expect(
+      missed,
+      `These modules register validators under a filename the sweep does not collect,\n` +
+        `so their base chain is unchecked:\n  ${missed.join('\n  ')}`
+    ).toEqual([]);
   });
 
   it('counts a slice whose whole contribution is a removal', () => {
@@ -151,17 +178,25 @@ describe('base-chain imports', () => {
   });
 
   it('detects both import spellings, before trusting its own silence', () => {
-    expect(importedLinterParsers("import '../../base/node2d/linterParser.js';")).toEqual([
+    expect(importedRegistrationModules("import '../../base/node2d/linterParser.js';")).toEqual([
       '../../base/node2d/linterParser.js',
     ]);
-    expect(importedLinterParsers("import { LEAVES } from '../base/linterParser.js';")).toEqual([
-      '../base/linterParser.js',
+    expect(importedRegistrationModules("import { LEAVES } from '../base/linterParser.js';")).toEqual(
+      ['../base/linterParser.js']
+    );
+    expect(importedRegistrationModules("import '../material/linterValidators.js';")).toEqual([
+      '../material/linterValidators.js',
     ]);
-    expect(importedLinterParsers("import { v } from '../validators/index.js';")).toEqual([]);
+    expect(importedRegistrationModules("import { v } from '../validators/index.js';")).toEqual([]);
+    // A resource slice's key modules end in `Validators.js` and register nothing;
+    // collecting one would report a chain that does not exist.
+    expect(importedRegistrationModules("import { bg } from './backgroundValidators.js';")).toEqual(
+      []
+    );
     // Several slices import two ancestors (a tier plus a spatial base); all must
     // be collected, or resolving against the computed one becomes a coin flip.
     expect(
-      importedLinterParsers(
+      importedRegistrationModules(
         "import '../../base/node3d/linterParser.js';\nimport '../../base/node2d/linterParser.js';"
       )
     ).toHaveLength(2);
@@ -170,15 +205,15 @@ describe('base-chain imports', () => {
   it('every slice REACHES the ancestor the base chain names', () => {
     const wrong: string[] = [];
     for (const [type, file] of [...owners].sort()) {
-      // `Node` is the terminal of every chain and has nothing above it.
+      // `Node` and `Resource` terminate their hierarchies and have nothing above.
       const ancestor = nearestValidatorAncestor(type, owners);
       if (!ancestor) continue;
       const wanted = owners.get(ancestor)!;
-      if (!reachableLinterParsers(file).has(wanted)) {
-        const direct = importedLinterParsers(readFileSync(file, 'utf8'));
+      if (!reachableRegistrationModules(file).has(wanted)) {
+        const direct = importedRegistrationModules(readFileSync(file, 'utf8'));
         wrong.push(
-          `${type} (${relative(nodesRoot, file)}) imports [${direct.join(', ') || 'nothing'}] ` +
-            `and reaches no ${ancestor} (${relative(nodesRoot, wanted)}) from there`
+          `${type} (${relative(srcRoot, file)}) imports [${direct.join(', ') || 'nothing'}] ` +
+            `and reaches no ${ancestor} (${relative(srcRoot, wanted)}) from there`
         );
       }
     }

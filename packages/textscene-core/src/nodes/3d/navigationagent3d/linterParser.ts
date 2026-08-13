@@ -163,25 +163,24 @@ validatorRegistry.registerAll('NavigationAgent3D', {
   // navigation_agent_3d.cpp:776-779 is a bare assignment (VECTOR3, USAGE_NO_EDITOR
   // at :172 — still serialises, object.h:132); no bound beyond the literal's shape.
   velocity: v.vector3('velocity'),
-  // navigation_agent_3d.cpp:617-624, ERR_FAIL_COND_MSG(p_height < 0.0, "Height must be positive.").
-  // The hint at :173 ("0.01,100,0.01,or_greater") states a tighter floor of
-  // 0.01; `v.float` carries one threshold per end, so [0, 0.01) is accepted
-  // silently rather than warned. Pre-existing behaviour, matching the 2D twin's
-  // identical radius/height/max_speed shape (navigation_agent_2d.cpp:162):
-  // kept as the enforced tier alone rather than adding a second, narrower
-  // warning band this wave.
+  // Two tiers on the floor. navigation_agent_3d.cpp:618,
+  // `ERR_FAIL_COND_MSG(p_height < 0.0, "Height must be positive.")` refuses
+  // below 0; the hint (:173, "0.01,100,0.01,or_greater,suffix:m") floors at
+  // 0.01, so [0, 0.01) loads and only warns. `or_greater` opens the ceiling.
   height: v.float('height', {
-    min: 0,
-    message: "Property 'height' must be >= 0.",
-    enforced: 'navigation_agent_3d.cpp:618',
+    enforcedMin: { at: 0 },
+    min: 0.01,
+    enforced: { min: 'navigation_agent_3d.cpp:618' },
+    hinted: { min: 'navigation_agent_3d.cpp:173' },
   }),
-  // navigation_agent_3d.cpp:607-615, ERR_FAIL_COND_MSG(p_radius < 0.0, "Radius must be positive.").
-  // Same [0, 0.01) gap as `height` above: the hint at :174 states 0.01, the
-  // setter enforces only 0.0.
+  // Same split as `height`. navigation_agent_3d.cpp:608,
+  // `ERR_FAIL_COND_MSG(p_radius < 0.0, "Radius must be positive.")`; the hint
+  // (:174, "0.01,100,0.01,or_greater,suffix:m") floors at 0.01.
   radius: v.float('radius', {
-    min: 0,
-    message: "Property 'radius' must be >= 0.",
-    enforced: 'navigation_agent_3d.cpp:608',
+    enforcedMin: { at: 0 },
+    min: 0.01,
+    enforced: { min: 'navigation_agent_3d.cpp:608' },
+    hinted: { min: 'navigation_agent_3d.cpp:174' },
   }),
   // set_neighbor_distance (cpp:645-652) is a bare assignment; the hint at :175
   // ("0.1,10000,0.01,or_greater") gives an advisory floor of 0.1.
@@ -209,13 +208,14 @@ validatorRegistry.registerAll('NavigationAgent3D', {
     message: "Property 'time_horizon_obstacles' must be >= 0.",
     enforced: 'navigation_agent_3d.cpp:675',
   }),
-  // navigation_agent_3d.cpp:683-690, ERR_FAIL_COND_MSG(p_max_speed < 0.0, "Max speed must be positive.").
-  // Same [0, 0.01) gap as `height`/`radius` above: the hint at :179 states
-  // 0.01, the setter enforces only 0.0.
+  // Same split as `height`/`radius`. navigation_agent_3d.cpp:684,
+  // `ERR_FAIL_COND_MSG(p_max_speed < 0.0, "Max speed must be positive.")`; the
+  // hint (:179, "0.01,10000,0.01,or_greater,suffix:m/s") floors at 0.01.
   max_speed: v.float('max_speed', {
-    min: 0,
-    message: "Property 'max_speed' must be >= 0.",
-    enforced: 'navigation_agent_3d.cpp:684',
+    enforcedMin: { at: 0 },
+    min: 0.01,
+    enforced: { min: 'navigation_agent_3d.cpp:684' },
+    hinted: { min: 'navigation_agent_3d.cpp:179' },
   }),
   // set_use_3d_avoidance (cpp:630-634) is a bare assignment (plus a
   // notify_property_list_changed call that only re-runs _validate_property's

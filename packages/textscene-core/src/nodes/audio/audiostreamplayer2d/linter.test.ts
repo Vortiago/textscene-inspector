@@ -239,14 +239,22 @@ describe('AudioStreamPlayer2D Linter', () => {
 
     // audio_stream_player_2d.cpp:436 — max_distance PROPERTY_HINT_RANGE
     // "1,4096,1,or_greater,exp,suffix:px": the top end is open, and <= 0 is the
-    // setter's own error, so only 0 < x < 1 warns.
-    describe('max_distance warnings', () => {
-      it('should warn when max_distance is below the hint', () => {
+    // setter's own error (:300), so only 0 < x < 1 warns. Both ends live on the
+    // validator, which carries the setter's floor and the hint's separately.
+    describe('max_distance bands', () => {
+      it('errors at or below the setter floor', () => {
+        expectDiagnostic(withStream({ max_distance: 0 }), {
+          ruleName: 'strict-parser',
+          severity: 'error',
+          contains: ['max_distance', 'greater than 0'],
+        });
+      });
+
+      it('warns between the setter floor and the hint floor', () => {
         expectDiagnostic(withStream({ max_distance: 0.5 }), {
-          ruleName: 'audiostreamplayer2d-small-max-distance',
+          ruleName: 'strict-parser',
           severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-          contains: ['max_distance', '0.5', '1'],
+          contains: ['max_distance', '1'],
         });
       });
 
@@ -268,13 +276,20 @@ describe('AudioStreamPlayer2D Linter', () => {
 
     // audio_stream_player_internal.cpp:314 rejects pitch_scale <= 0; the hint
     // (:432, "0.01,4,0.01,or_greater") leaves the top open, so only 0 < x < 0.01 warns.
-    describe('pitch_scale warnings', () => {
-      it('should warn below the hint', () => {
+    describe('pitch_scale bands', () => {
+      it('errors at or below the setter floor', () => {
+        expectDiagnostic(withStream({ pitch_scale: 0 }), {
+          ruleName: 'strict-parser',
+          severity: 'error',
+          contains: ['pitch_scale', 'greater than 0'],
+        });
+      });
+
+      it('warns between the setter floor and the hint floor', () => {
         expectDiagnostic(withStream({ pitch_scale: 0.005 }), {
-          ruleName: 'audiostreamplayer2d-unusual-pitch',
+          ruleName: 'strict-parser',
           severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-          contains: ['Pitch scale', '0.005', '0.01'],
+          contains: ['pitch_scale', '0.01'],
         });
       });
 
@@ -355,11 +370,11 @@ describe('AudioStreamPlayer2D Linter', () => {
       const diagnostics = lint(
         withStream({ volume_db: -90, pitch_scale: 0.005, max_distance: 0.5, attenuation: 15 })
       );
-      // Three warnings, volume_db's from the validator rather than a rule;
-      // attenuation has no hint band (EXP_EASING) and stays silent.
+      // Three warnings, all three the validators' own hint bands; attenuation
+      // has no hint band (EXP_EASING) and stays silent.
       expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
-        'audiostreamplayer2d-small-max-distance',
-        'audiostreamplayer2d-unusual-pitch',
+        'strict-parser',
+        'strict-parser',
         'strict-parser',
       ]);
       expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);

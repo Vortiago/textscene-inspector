@@ -81,6 +81,64 @@ describe('v.int', () => {
     const err = v.int('layers', { min: 1, max: 20 })('layers', '21', 1);
     expect(err!.code).toBe('INVALID_LAYERS_VALUE');
   });
+
+  // The tokenizer sets is_float on the `e` (variant_parser.cpp:446-448) and the
+  // FLOAT is truncated on assignment, so Godot stores 20000 here. `parseInt`
+  // stops at the `e` and reads 2, which clears every bound the property has.
+  it('reads exponent notation the way Godot stores it', () => {
+    const err = v.int('hframes', { min: 1, max: 16384 })('hframes', '2e4', 1);
+    expect(err).not.toBeNull();
+    expect(err!.message).toContain('20000');
+  });
+
+  // Same stop-at-the-first-non-digit accident in the other direction: Godot's
+  // parser cannot read this at all, and `parseInt` reads 8.
+  it('rejects a trailing-garbage value Godot cannot read', () => {
+    const err = v.int('hframes', { min: 1, max: 16384 })('hframes', '8abc', 1);
+    expect(err!.code).toBe('INVALID_HFRAMES_FORMAT');
+  });
+
+  // A float literal in an INT slot is legal and truncates toward zero.
+  it('truncates a float literal toward zero', () => {
+    expect(v.int('frame', { min: 0, max: 10 })('frame', '5.9', 1)).toBeNull();
+    expect(v.int('frame', { min: 1, max: 10 })('frame', '0.9', 1)).not.toBeNull();
+  });
+});
+
+describe('the int combinators agree on what Godot can read', () => {
+  // `inf` / `nan` are identifiers `stor_fix` (variant_parser.cpp:149-159)
+  // resolves for ANY slot, so the file loads whichever combinator guards it.
+  // Two int combinators giving opposite answers on one literal is a split no
+  // engine line supports, and `strictInt`'s `Number.isInteger` produced exactly
+  // that while `v.int` accepted it.
+  // Unbounded, so this is about the FORMAT branch alone. A non-finite value
+  // against a real bound is a range question and answered separately below.
+  it.each(['inf', '-inf', 'inf_neg', 'nan'])('both take %s', (literal) => {
+    expect(v.int('frame')('frame', literal, 1)).toBeNull();
+    expect(v.strictInt('frame')('frame', literal, 1)).toBeNull();
+  });
+
+  it('bounds a non-finite the same way, once there is a bound', () => {
+    // `inf` really is above a ceiling of 10; `nan` compares false against both
+    // ends, so neither combinator may claim it is out of range.
+    expect(v.int('frame', { max: 10 })('frame', 'inf', 1)).not.toBeNull();
+    expect(v.strictInt('frame', { max: 10 })('frame', 'inf', 1)).not.toBeNull();
+    expect(v.int('frame', { min: 0, max: 10 })('frame', 'nan', 1)).toBeNull();
+    expect(v.strictInt('frame', { min: 0, max: 10 })('frame', 'nan', 1)).toBeNull();
+  });
+
+  it.each(['8abc', '', 'Infinity', '1.2.3'])('both refuse %o', (literal) => {
+    expect(v.int('frame')('frame', literal, 1)).not.toBeNull();
+    expect(v.strictInt('frame')('frame', literal, 1)).not.toBeNull();
+  });
+
+  // Where they DO differ, deliberately: `strictInt` guards a discrete index and
+  // refuses a fractional literal outright, while `v.int` truncates it the way
+  // the INT conversion does.
+  it('still differ on a fractional literal, which is the point of strictInt', () => {
+    expect(v.int('frame', { min: 0, max: 10 })('frame', '5.5', 1)).toBeNull();
+    expect(v.strictInt('frame', { min: 0, max: 10 })('frame', '5.5', 1)).not.toBeNull();
+  });
 });
 
 describe('v.positiveInt', () => {
@@ -91,6 +149,12 @@ describe('v.positiveInt', () => {
   it('rejects 0 and negative', () => {
     expect(v.positiveInt('count')('count', '0', 1)).not.toBeNull();
     expect(v.positiveInt('count')('count', '-3', 1)).not.toBeNull();
+  });
+
+  // `5e-1` truncates to 0, which is the value this combinator refuses.
+  it('reads exponent notation the way Godot stores it', () => {
+    expect(v.positiveInt('count')('count', '5e-1', 1)).not.toBeNull();
+    expect(v.positiveInt('count')('count', '2e3', 1)).toBeNull();
   });
 });
 
@@ -116,6 +180,13 @@ describe('v.enumInt', () => {
     const labels = { 0: 'A', 1: 'B' };
     const err = v.enumInt('mode', 0, 1, labels)('mode', 'abc', 1);
     expect(err!.code).toBe('INVALID_MODE_FORMAT');
+  });
+
+  it('reads exponent notation the way Godot stores it', () => {
+    const labels = { 0: 'A', 1: 'B' };
+    const err = v.enumInt('mode', 0, 1, labels)('mode', '1e2', 1);
+    expect(err).not.toBeNull();
+    expect(err!.message).toContain('100');
   });
 });
 

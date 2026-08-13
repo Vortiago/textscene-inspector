@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { checkResourceExists, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
+import { checkResourceExists, heldResource, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
 
 function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
@@ -23,10 +23,14 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
   const rawProps = node.properties as Record<string, string>;
 
   // ERROR: stream is set but does not resolve
-  if (rawProps.stream !== undefined && !checkResourceExists(scene, rawProps.stream)) {
+  // `heldResource`, not a presence check: `stream = null` and `stream =` are
+  // both empty slots Godot reads as the absent case, and asking `!== undefined`
+  // reported the second on top of the strict parser's own format error.
+  const stream = heldResource(rawProps.stream);
+  if (stream !== undefined && !checkResourceExists(scene, stream)) {
     diagnostics.push({
       severity: 'error',
-      message: `Stream resource "${rawProps.stream}" does not exist in scene. AudioStreamPlayer will not play audio.`,
+      message: `Stream resource "${stream}" does not exist in scene. AudioStreamPlayer will not play audio.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'audiostreamplayer-missing-stream-resource',

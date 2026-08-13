@@ -68,16 +68,21 @@ validatorRegistry.registerAll('LightmapGI', {
     hinted: { max: 'lightmap_gi.cpp:1921' },
   }),
 
-  // lightmap_gi.cpp:1922, PROPERTY_HINT_RANGE "0,6,1,or_greater" — but
-  // set_bounces (:1721-1724) is `ERR_FAIL_COND(p_bounces < 0 || p_bounces > 16)`,
-  // a HARD ceiling of 16 despite the hint's `or_greater` opening its own display
-  // max of 6. The setter wins: both ends are enforced at 0 and 16, not 0 and
-  // "unbounded". `v.int` (not `v.strictInt`) is deliberate: the bound `int
-  // p_bounces` parameter is filled by `Variant::_to_int` (variant.h:369-370),
-  // whose FLOAT branch is `return T(_data._float)` — a plain truncating cast,
-  // no refusal — so `bounces = 5.9` loads as `5` with no diagnostic from Godot
-  // either.
-  bounces: v.int('bounces', { min: 0, max: 16, enforced: 'lightmap_gi.cpp:1722' }),
+  // lightmap_gi.cpp:1922, PROPERTY_HINT_RANGE "0,6,1,or_greater": floor closed
+  // at 0, ceiling open. set_bounces (:1721-1724) is
+  // `ERR_FAIL_COND(p_bounces < 0 || p_bounces > 16)`, so the setter closes both
+  // — the floor at the hint's own 0, and a ceiling of 16 the hint never states.
+  // The 16 is `enforcedMax` rather than `max` so the open hint end stays open;
+  // `> 16` fails, so 16 itself loads. `v.int` (not `v.strictInt`) is deliberate:
+  // the bound `int p_bounces` parameter is filled by `Variant::_to_int`
+  // (variant.h:369-370), whose FLOAT branch is `return T(_data._float)` — a
+  // plain truncating cast, no refusal — so `bounces = 5.9` loads as `5` with no
+  // diagnostic from Godot either.
+  bounces: v.int('bounces', {
+    min: 0,
+    enforcedMax: { at: 16 },
+    enforced: 'lightmap_gi.cpp:1722',
+  }),
 
   // lightmap_gi.cpp:1923, PROPERTY_HINT_RANGE "0,2,0.01" (no or_greater).
   // set_bounce_indirect_energy (:1730-1733) is `ERR_FAIL_COND(p_indirect_energy <
@@ -127,17 +132,17 @@ validatorRegistry.registerAll('LightmapGI', {
   // share a value in this build); `or_greater` leaves the ceiling open.
   bias: v.float('bias', { min: 0.00001, enforced: 'lightmap_gi.cpp:1740' }),
 
-  // lightmap_gi.cpp:1932, PROPERTY_HINT_RANGE "0.01,100.0,0.01" (no or_greater).
-  // set_texel_scale (:1748-1751) is `ERR_FAIL_COND(p_multiplier < (0.01 -
-  // CMP_EPSILON))`: the floor is enforced, but AT 0.01 minus the engine's own
-  // epsilon, not a bare 0.01 — a value fractionally under 0.01 that Godot still
-  // accepts must not be flagged here. The ceiling has no `or_greater`, so it is
-  // only ever a hint.
+  // Two tiers on the floor, a narrow one. set_texel_scale:1749 is
+  // `ERR_FAIL_COND(p_multiplier < (0.01 - CMP_EPSILON))`, so the setter refuses
+  // one epsilon below the hint's floor rather than at it; the hint (:1932,
+  // "0.01,100.0,0.01") floors at 0.01, so that epsilon-wide band loads and only
+  // warns. The ceiling has no `or_greater` and no setter check, so it warns.
   texel_scale: v.float('texel_scale', {
-    min: 0.01 - CMP_EPSILON,
+    enforcedMin: { at: 0.01 - CMP_EPSILON },
+    min: 0.01,
     max: 100,
     enforced: { min: 'lightmap_gi.cpp:1749' },
-    hinted: { max: 'lightmap_gi.cpp:1932' },
+    hinted: 'lightmap_gi.cpp:1932',
   }),
 
   // lightmap_gi.cpp:1933, PROPERTY_HINT_RANGE "2048,16384,1". set_max_texture_size
