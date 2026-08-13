@@ -6,7 +6,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../../linter/resourceChecker.js';
+import { checkResourceExists, resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { decodeTileMapData } from '../shared/tileData.js';
 
 function checkTileMapLayer(context: RuleContext): Diagnostic[] {
@@ -15,7 +15,7 @@ function checkTileMapLayer(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  if (rawProps.tile_map_data && !rawProps.tile_set) {
+  if (rawProps.tile_map_data && resourceSlotIsEmpty(rawProps.tile_set)) {
     diagnostics.push({
       severity: 'warning',
       message: `TileMapLayer has tile data but no 'tile_set' — its tiles cannot render.`,

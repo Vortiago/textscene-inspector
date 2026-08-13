@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { checkResourceExists, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import {
   player2DVolumeArms,
@@ -41,7 +41,8 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
   // targets this node (animation_mixer.cpp:889-897 builds its own polyphonic
   // playback and never reads the node's `stream`), so a node driven that way
   // is not silent despite having no `stream` of its own.
-  const drivenByAnimation = rawProps.stream === undefined && isDrivenByAnimationAudioTrack(scene, node);
+  const streamEmpty = resourceSlotIsEmpty(rawProps.stream);
+  const drivenByAnimation = streamEmpty && isDrivenByAnimationAudioTrack(scene, node);
 
   // A player with no `stream` at all gets no diagnostic: that is the serialised
   // default, audio_stream_player_2d.cpp defines no configuration warning, and a
@@ -59,7 +60,7 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
   }
 
   // WARNING: autoplay enabled but no stream set
-  if (rawProps.autoplay === 'true' && rawProps.stream === undefined && !drivenByAnimation) {
+  if (rawProps.autoplay === 'true' && streamEmpty && !drivenByAnimation) {
     diagnostics.push({
       severity: 'warning',
       message: `Property 'autoplay' is enabled but no 'stream' is set. Audio will not play automatically.`,

@@ -16,7 +16,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnInternalResource } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
 import { SUB_RESOURCE_REF_ANYWHERE_RE, packedArrayCallAnywhere } from '../../../godot/index.js';
 
 const POINTS_RE = new RegExp(`"points"\\s*:\\s*${packedArrayCallAnywhere('PackedVector3Array').source}`);
@@ -35,7 +35,8 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
 
   // WARNING: a curve-less Path3D is valid (the curve can be assigned at
   // runtime) but draws nothing until one is set.
-  if (!rawProps.curve) {
+  const curve = heldResource(rawProps.curve);
+  if (curve === undefined) {
     diagnostics.push({
       severity: 'warning',
       message: `Path3D '${node.name}' is missing required property 'curve'. A Path3D without a Curve3D resource is useless.`,
@@ -45,7 +46,7 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
     });
   } else {
     // ERROR: Check if curve resource exists in scene
-    const resourceExists = checkResourceExists(scene, rawProps.curve);
+    const resourceExists = checkResourceExists(scene, curve);
     if (!resourceExists) {
       diagnostics.push({
         severity: 'error',
@@ -55,7 +56,7 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
         ruleName: 'valid-path3d-resources',
       });
     } else {
-      diagnostics.push(...checkCurve3DData(context, rawProps.curve));
+      diagnostics.push(...checkCurve3DData(context, curve));
     }
   }
 

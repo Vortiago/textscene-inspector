@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { checkResourceExists, heldResource, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { DEFAULT_ANIMATION_NAME, literalText } from '../../../godot/index.js';
 
 /**
@@ -22,7 +22,8 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   const rawProps = node.properties as unknown as Record<string, string>;
 
   // Check if sprite_frames resource exists (REQUIRED - AnimatedSprite2D is useless without SpriteFrames)
-  if (!rawProps.sprite_frames) {
+  const spriteFrames = heldResource(rawProps.sprite_frames);
+  if (spriteFrames === undefined) {
     diagnostics.push({
       severity: 'warning',
       message: `AnimatedSprite2D requires a 'sprite_frames' property. AnimatedSprite2D cannot play animations without a SpriteFrames resource.`,
@@ -32,7 +33,7 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
     });
   } else {
     // sprite_frames is specified - check if it exists
-    const resourceExists = checkResourceExists(scene, rawProps.sprite_frames);
+    const resourceExists = checkResourceExists(scene, spriteFrames);
     if (!resourceExists) {
       diagnostics.push({
         severity: 'error',
@@ -54,7 +55,7 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   if (
     rawProps.animation &&
     literalText(rawProps.animation) !== DEFAULT_ANIMATION_NAME &&
-    !rawProps.sprite_frames
+    resourceSlotIsEmpty(rawProps.sprite_frames)
   ) {
     diagnostics.push({
       severity: 'error',

@@ -17,6 +17,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 
 function checkGPUParticles2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -25,7 +26,7 @@ function checkGPUParticles2D(context: RuleContext): Diagnostic[] {
   const props = node.properties as Record<string, string>;
   const diagnostics: Diagnostic[] = [];
 
-  if (!props.process_material) {
+  if (resourceSlotIsEmpty(props.process_material)) {
     diagnostics.push({
       severity: 'warning',
       message:

@@ -10,7 +10,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { checkResourceExists } from '../resourceChecker.js';
+import { checkResourceExists, heldResource } from '../resourceChecker.js';
 import { hiddenOrUnknowableInTree } from '../parentType.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
@@ -30,8 +30,8 @@ export function makeNavigationRegionLinterRule(dim: PhysicsDim): LintRule {
 
     const rawProps = node.properties as unknown as Record<string, string>;
 
-    const ref = rawProps[property];
-    if (!ref) {
+    const ref = heldResource(rawProps[property]);
+    if (ref === undefined) {
       // navigation_region_2d.cpp:302-306 and navigation_region_3d.cpp:255-259,
       // the same check twice: gated on `is_visible_in_tree() &&
       // is_inside_tree()`. `is_inside_tree()` is trivially true for any node

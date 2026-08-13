@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { checkResourceExists, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import { basePlayerVolumeArms, isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
 
@@ -42,7 +42,7 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
   // the point).
   if (
     rawProps.autoplay === 'true' &&
-    rawProps.stream === undefined &&
+    resourceSlotIsEmpty(rawProps.stream) &&
     !isDrivenByAnimationAudioTrack(scene, node)
   ) {
     diagnostics.push({

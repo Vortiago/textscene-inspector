@@ -24,13 +24,14 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
+import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 
 const RULE_NAME = 'lightoccluder2d-requires-occluder';
 
 function checkLightOccluder2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   if (!isValidProperties(node.properties)) return [];
-  if (node.properties.occluder !== undefined) return [];
+  if (!resourceSlotIsEmpty(node.properties.occluder)) return [];
 
   return [
     {

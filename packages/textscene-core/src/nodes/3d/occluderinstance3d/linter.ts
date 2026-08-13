@@ -38,6 +38,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
+import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 
 function checkOccluderInstance3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -66,7 +67,7 @@ function checkOccluderInstance3D(context: RuleContext): Diagnostic[] {
   // OccluderInstance3D with no Occluder resource is valid Godot (a script may
   // assign one at runtime, or the node exists purely as a bake target), it
   // simply performs no occlusion culling until one is set.
-  if (rawProps.occluder === undefined) {
+  if (resourceSlotIsEmpty(rawProps.occluder)) {
     diagnostics.push({
       severity: 'warning',
       message: `OccluderInstance3D '${node.name}' has no 'occluder', so it performs no occlusion culling until one is assigned.`,

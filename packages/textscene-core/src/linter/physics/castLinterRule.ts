@@ -15,7 +15,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import type { PhysicsDim } from './dim.js';
-import { checkResourceExists, referencedResourceType } from '../resourceChecker.js';
+import { checkResourceExists, heldResource, referencedResourceType } from '../resourceChecker.js';
 import { dimSuffix } from './dim.js';
 
 /** Which of the two cast families — they differ only by the `shape` property. */
@@ -76,7 +76,8 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
     if (kind === 'Shape') {
       // "This node cannot interact with other objects unless a Shape2D is
       // assigned." — scene/2d/physics/shape_cast_2d.cpp:407, and its 3D twin.
-      if (props.shape === undefined) {
+      const shape = heldResource(props.shape);
+      if (shape === undefined) {
         diagnostics.push({
           severity: 'warning',
           message: `${type} '${node.name}' has no 'shape'. It cannot interact with other objects until a ${shapeType} is assigned.`,
@@ -84,7 +85,7 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
           nodeType: node.type,
           ruleName: `${prefix}-missing-shape`,
         });
-      } else if (!checkResourceExists(context.scene, props.shape)) {
+      } else if (!checkResourceExists(context.scene, shape)) {
         // An error, not advice, and the same severity `CollisionShape2D/3D`
         // already gives a dangling `shape` — the two nodes take the identical
         // property and a broken reference is equally fatal on either.

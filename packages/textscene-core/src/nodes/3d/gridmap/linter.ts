@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
 
 function checkGridMap(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -18,7 +18,8 @@ function checkGridMap(context: RuleContext): Diagnostic[] {
 
   // If mesh_library is absent, flag as a warning — valid in Godot but the
   // GridMap will render nothing and likely isn't visible.
-  if (!rawProps.mesh_library) {
+  const meshLibrary = heldResource(rawProps.mesh_library);
+  if (meshLibrary === undefined) {
     diagnostics.push({
       severity: 'warning',
       message:
@@ -27,7 +28,7 @@ function checkGridMap(context: RuleContext): Diagnostic[] {
       nodeType: node.type,
       ruleName: 'gridmap-requires-mesh-library',
     });
-  } else if (!checkResourceExists(scene, rawProps.mesh_library)) {
+  } else if (!checkResourceExists(scene, meshLibrary)) {
     diagnostics.push({
       severity: 'error',
       message: `MeshLibrary resource not found: ${rawProps.mesh_library} (mesh_library)`,

@@ -10,7 +10,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { referencedResourceType } from '../resourceChecker.js';
+import { referencedResourceType, resourceSlotIsEmpty } from '../resourceChecker.js';
 import { findParentNode } from '../linterUtils.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
 import { isZeroApprox } from '../../godot/math.js';
@@ -46,10 +46,11 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // funnel through one linear scan of the scene's resource tables, so asking
     // separately for existence and for type scanned the same tables twice on
     // every shape-bearing node in the corpus.
-    const shapeType = rawProps.shape ? referencedResourceType(scene, rawProps.shape) : undefined;
+    const shapeEmpty = resourceSlotIsEmpty(rawProps.shape);
+    const shapeType = shapeEmpty ? undefined : referencedResourceType(scene, rawProps.shape);
 
     // ERROR: shape property is REQUIRED
-    if (!rawProps.shape) {
+    if (shapeEmpty) {
       diagnostics.push({
         severity: 'warning',
         message: `${type} '${node.name}' is missing required property 'shape'. A collision shape needs a shape resource to define its collision geometry.`,

@@ -51,6 +51,38 @@ export function isClearedResource(resourceRef: string | undefined): boolean {
 }
 
 /**
+ * Whether a resource slot holds NOTHING — the question every "this node needs a
+ * resource" rule is actually asking.
+ *
+ * Three spellings, one state: the key is absent, the value is empty, or the
+ * author wrote a bare `null`. Godot cannot tell them apart — all three reach the
+ * `Ref<T>` as an invalid reference (`variant_parser.cpp:699` reads the token as
+ * `Variant()`), so every `is_null()` in a `get_configuration_warnings()` answers
+ * the same for all three.
+ *
+ * It lives here rather than at the two dozen call sites because the sites that
+ * hand-rolled it drifted the same way: `'null'` is a TRUTHY string, so `!ref`
+ * steps over it and `checkResourceExists` then reports the slot as fine, leaving
+ * the node silently unreported. `clearedResourceSlot.test.ts` holds the two
+ * spellings to one answer.
+ */
+export function resourceSlotIsEmpty(resourceRef: string | undefined): boolean {
+  return !resourceRef?.trim() || isClearedResource(resourceRef);
+}
+
+/**
+ * The reference a slot actually holds, or `undefined` when it holds nothing.
+ *
+ * The same question as {@link resourceSlotIsEmpty}, answered as a value so a
+ * rule can branch and then USE it. Three slices had already hand-rolled this
+ * shape; the point of naming it is that the empty test and the value that
+ * survives it can no longer disagree.
+ */
+export function heldResource(resourceRef: string | undefined): string | undefined {
+  return resourceSlotIsEmpty(resourceRef) ? undefined : resourceRef;
+}
+
+/**
  * Whether a reference is anything OTHER than a dangling one.
  *
  * A malformed reference is `false` here rather than throwing — its format is

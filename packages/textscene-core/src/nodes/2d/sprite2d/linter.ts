@@ -8,7 +8,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
 
 /**
  * Validate Sprite2D semantic rules (resource references, frame validation, etc.)
@@ -22,7 +22,8 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
   const rawProps = node.properties as unknown as Record<string, string>;
 
   // Check if texture resource exists (REQUIRED - Sprite2D is useless without texture)
-  if (!rawProps.texture) {
+  const texture = heldResource(rawProps.texture);
+  if (texture === undefined) {
     diagnostics.push({
       severity: 'warning',
       message: `Sprite2D requires a 'texture' property. Sprite2D is not visible without a texture.`,
@@ -32,7 +33,7 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
     });
   } else {
     // Texture is specified - check if it exists
-    const resourceExists = checkResourceExists(scene, rawProps.texture);
+    const resourceExists = checkResourceExists(scene, texture);
     if (!resourceExists) {
       diagnostics.push({
         severity: 'error',

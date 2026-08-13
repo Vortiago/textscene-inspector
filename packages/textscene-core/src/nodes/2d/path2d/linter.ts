@@ -18,7 +18,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
 
 function checkPath2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -26,7 +26,8 @@ function checkPath2D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  if (!rawProps.curve) {
+  const curve = heldResource(rawProps.curve);
+  if (curve === undefined) {
     // A script commonly assigns the curve at runtime — don't warn in that case.
     if (!rawProps.script) {
       diagnostics.push({
@@ -37,7 +38,7 @@ function checkPath2D(context: RuleContext): Diagnostic[] {
         ruleName: 'path2d-missing-curve',
       });
     }
-  } else if (!checkResourceExists(scene, rawProps.curve)) {
+  } else if (!checkResourceExists(scene, curve)) {
     diagnostics.push({
       severity: 'error',
       message: `Curve resource not found: ${rawProps.curve}. The referenced Curve2D resource must exist in the scene.`,

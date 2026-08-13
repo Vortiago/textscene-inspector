@@ -38,6 +38,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { parsePackedVector2Array } from '../../../resources/shapes/packedArray.js';
+import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 
 const MISSING_MESH_RULE = 'csgmesh3d-requires-mesh';
 const INSUFFICIENT_POINTS_RULE = 'csgpolygon3d-insufficient-points';
@@ -46,9 +47,9 @@ function checkCSGShape3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const properties = node.properties as unknown as Record<string, string>;
 
-  // csg_shape.cpp:224-225: `Ref<Mesh> mesh` field-initialises to null (no
-  // default assignment), so absence IS the trigger.
-  if (node.type === 'CSGMesh3D' && !properties.mesh) {
+  // csg_shape.h:224: `Ref<Mesh> mesh` field-initialises to null (no default
+  // assignment), so an empty slot IS the trigger, however it is spelled.
+  if (node.type === 'CSGMesh3D' && resourceSlotIsEmpty(properties.mesh)) {
     return [
       {
         severity: 'warning',

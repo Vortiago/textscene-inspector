@@ -29,7 +29,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../../linter/resourceChecker.js';
+import { checkResourceExists, heldResource } from '../../../../linter/resourceChecker.js';
 
 function checkCPUParticles3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
@@ -37,7 +37,8 @@ function checkCPUParticles3D(context: RuleContext): Diagnostic[] {
   const rawProps = node.properties as unknown as Record<string, string>;
   const diagnostics: Diagnostic[] = [];
 
-  if (!rawProps.mesh) {
+  const mesh = heldResource(rawProps.mesh);
+  if (mesh === undefined) {
     diagnostics.push({
       severity: 'warning',
       message: 'Nothing is visible because no mesh has been assigned.',
@@ -45,7 +46,7 @@ function checkCPUParticles3D(context: RuleContext): Diagnostic[] {
       nodeType: node.type,
       ruleName: 'cpuparticles3d-requires-mesh',
     });
-  } else if (!checkResourceExists(scene, rawProps.mesh)) {
+  } else if (!checkResourceExists(scene, mesh)) {
     diagnostics.push({
       severity: 'error',
       message: `Mesh resource not found: ${rawProps.mesh}`,

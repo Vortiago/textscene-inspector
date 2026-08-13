@@ -31,6 +31,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { POINT_LIGHT_2D_RANGE_DEFAULTS } from './types.js';
+import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 
 const WINDOWS = [
   {
@@ -72,7 +73,7 @@ function checkPointLight2D(context: RuleContext): Diagnostic[] {
   // light_2d.cpp:431-439: PointLight2D::get_configuration_warnings pushes this
   // exact message when `texture` is null. A `.tscn` that never authors the key
   // IS that null default, so absence is the trigger.
-  if (props.texture === undefined) {
+  if (resourceSlotIsEmpty(props.texture)) {
     diagnostics.push({
       severity: 'warning',
       message:

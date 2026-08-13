@@ -25,7 +25,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { checkResourceExists, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 
 const TEXTURE_PROPS = [
   'texture_albedo',
@@ -41,7 +41,7 @@ function checkDecal(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  const referencedTextures = TEXTURE_PROPS.filter((prop) => rawProps[prop]);
+  const referencedTextures = TEXTURE_PROPS.filter((prop) => !resourceSlotIsEmpty(rawProps[prop]));
 
   // A decal with no texture at all projects nothing — valid in Godot, but
   // almost certainly a mistake, so flag it as a warning.
@@ -71,7 +71,11 @@ function checkDecal(context: RuleContext): Diagnostic[] {
 
   // decal.cpp:188: a Normal/ORM map blends onto the Albedo texture's alpha
   // channel, so it does nothing without one.
-  if ((rawProps.texture_normal || rawProps.texture_orm) && !rawProps.texture_albedo) {
+  if (
+    (!resourceSlotIsEmpty(rawProps.texture_normal) ||
+      !resourceSlotIsEmpty(rawProps.texture_orm)) &&
+    resourceSlotIsEmpty(rawProps.texture_albedo)
+  ) {
     diagnostics.push({
       severity: 'warning',
       message:

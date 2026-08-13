@@ -14,6 +14,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 
 /**
  * Validate SoftBody3D semantic rules.
@@ -26,7 +27,7 @@ function checkSoftBody3D(context: RuleContext): Diagnostic[] {
   if (!isValidProperties(node.properties)) return [];
   const rawProps = node.properties as Record<string, string>;
 
-  if (!rawProps.mesh || rawProps.mesh.trim() === '') {
+  if (resourceSlotIsEmpty(rawProps.mesh)) {
     diagnostics.push({
       severity: 'warning',
       message: 'This body will be ignored until you set a mesh.',

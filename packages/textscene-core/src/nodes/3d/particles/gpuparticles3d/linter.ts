@@ -8,7 +8,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../../linter/resourceChecker.js';
+import { checkResourceExists, heldResource } from '../../../../linter/resourceChecker.js';
 import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 
@@ -31,7 +31,8 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
 
   // WARNING: a material-less emitter is valid (the material can be assigned
   // at runtime) but renders no particles until one is set.
-  if (!rawProps.process_material) {
+  const processMaterial = heldResource(rawProps.process_material);
+  if (processMaterial === undefined) {
     diagnostics.push({
       severity: 'warning',
       message: `GPUParticles3D has no 'process_material' set. Particles will not render until one is assigned`,
@@ -41,7 +42,7 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
     });
   } else {
     // Check if process_material resource exists
-    const resourceExists = checkResourceExists(scene, rawProps.process_material);
+    const resourceExists = checkResourceExists(scene, processMaterial);
     if (!resourceExists) {
       diagnostics.push({
         severity: 'error',

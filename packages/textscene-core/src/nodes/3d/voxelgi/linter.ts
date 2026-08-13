@@ -21,6 +21,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 
 const MISSING_DATA_RULE = 'voxelgi-missing-data';
 
@@ -28,7 +29,7 @@ function checkVoxelGI(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const properties = node.properties as unknown as Record<string, string>;
 
-  if (properties.data) return [];
+  if (!resourceSlotIsEmpty(properties.data)) return [];
 
   return [
     {

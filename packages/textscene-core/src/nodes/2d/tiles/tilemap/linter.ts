@@ -34,7 +34,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../../linter/resourceChecker.js';
+import { checkResourceExists, resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { decodeLegacyTileData } from '../shared/tileData.js';
 
 const LAYER_DATA_KEY_RE = /^layer_(\d+)\/tile_data$/;
@@ -121,7 +121,7 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
     });
   }
 
-  if (layerData.length > 0 && !rawProps.tile_set) {
+  if (layerData.length > 0 && resourceSlotIsEmpty(rawProps.tile_set)) {
     diagnostics.push({
       severity: 'warning',
       message: `TileMap has tile data but no 'tile_set' — its tiles cannot render.`,
