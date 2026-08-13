@@ -148,6 +148,15 @@ describe('FogVolume strict validators', () => {
     it('accepts `nan` silently — every comparison against it is false, same as every other float validator', () => {
       expect(check('size', 'Vector3(nan, 2, 2)')).toBeNull();
     });
+
+    it('records the hinted 0.01 floor as its bound, at the hinted tier', () => {
+      // What the hint ledger reads. A hand-rolled validator gets no `ground()`
+      // call, so an unrecorded bound counts as unimplemented however many
+      // values the function above rejects.
+      const validator = validatorRegistry.findValidator('FogVolume', 'size');
+      expect(validator?.bounds).toEqual({ min: 0.01 });
+      expect(validator?.tiers).toEqual({ min: 'warning' });
+    });
   });
 
   describe('shape', () => {

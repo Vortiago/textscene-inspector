@@ -43,7 +43,7 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | `platform_floor_layers` | 32-bit layer mask (layers 1-32) | warning |
 | `platform_on_leave` | enum 0-2 (ADD_VELOCITY/ADD_UPWARD_VELOCITY/DO_NOTHING) | warning |
 | `platform_wall_layers` | 32-bit layer mask (layers 1-32) | warning |
-| `safe_margin` | float |  |
+| `safe_margin` | float 0.001-256 | warning |
 | `slide_on_ceiling` | true or false |  |
 | `up_direction` | Vector3(x, y, z) |  |
 | `velocity` | Vector3(x, y, z) |  |
@@ -56,8 +56,6 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | `valid-collisionobject3d-scale` (type-family match) | `collisionobject3d-non-uniform-scale` | warning |
 | `valid-characterbody3d` | `characterbody3d-needs-collision-shape` | warning |
 |  | `characterbody3d-floor-props-in-floating-mode` | warning |
-|  | `characterbody3d-safe-margin-too-small` | warning |
-|  | `characterbody3d-safe-margin-too-large` | warning |
 <!-- lint:end -->
 
 CharacterBody3D has no `parser.ts` either: it reuses `parseNode3D` directly,

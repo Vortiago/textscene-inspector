@@ -8,7 +8,6 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 
@@ -36,7 +35,7 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
 
   // ERROR: the projection the pair produces, per mode.
   //
-  // `Camera3D::set_near`/`set_far` (camera_3d.cpp:736, :746) assign straight
+  // `Camera3D::set_near`/`set_far` (camera_3d.cpp:737, :747) assign straight
   // through, so the tier comes from what `_update_camera_mode`
   // (camera_3d.cpp:102-115) then hands the pair to, and the three modes differ:
   //
@@ -78,35 +77,6 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Range advisories: clipping planes below the range the editor offers. Both
-  // hints end in `or_greater`, so neither has a high bound, and `fov` needs none
-  // here — Camera3D::set_fov ERR_FAILs outside 1-179, which linterParser.ts
-  // reports as an error.
-  diagnostics.push(
-    ...rangeAdvisories(node, {
-      near: [
-        {
-          // camera_3d.cpp:685 — near PROPERTY_HINT_RANGE "0.001,10,0.001,or_greater,exp,suffix:m"
-          under: 0.001,
-          ruleName: 'camera3d-small-near-plane',
-          cite: 'camera_3d.cpp:685',
-          message: (near) =>
-            `Camera3D 'near' clipping plane is ${near}. The editor range for 'near' starts at 0.001; below that, depth precision degrades.`,
-        },
-      ],
-      far: [
-        {
-          // camera_3d.cpp:686 — far PROPERTY_HINT_RANGE "0.01,4000,0.01,or_greater,exp,suffix:m"
-          under: 0.01,
-          ruleName: 'camera3d-small-far-plane',
-          cite: 'camera_3d.cpp:686',
-          message: (far) =>
-            `Camera3D 'far' clipping plane is ${far}. The editor range for 'far' starts at 0.01.`,
-        },
-      ],
-    })
-  );
-
   return diagnostics;
 }
 
@@ -116,23 +86,13 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
 const camera3DValidationRule: LintRule = {
   meta: {
     name: 'valid-camera3d-properties',
-    description: 'Validates Camera3D property values, required properties, clipping plane relationships, and performance considerations',
+    description: "Validates the Camera3D near/far clipping-plane pair, which neither plane's own bound can express",
     category: 'validation',
     emits: [
       {
         ruleName: 'camera3d-invalid-clipping-planes',
         severity: 'error',
         grounding: { kind: 'engine', at: 'projection.cpp:367' },
-      },
-      {
-        ruleName: 'camera3d-small-near-plane',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'camera_3d.cpp:685' },
-      },
-      {
-        ruleName: 'camera3d-small-far-plane',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'camera_3d.cpp:686' },
       },
     ],
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Camera3D'),

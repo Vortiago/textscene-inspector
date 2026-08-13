@@ -158,12 +158,16 @@ validatorRegistry.registerAll('LineEdit', {
 
   // -- Caret (ADD_GROUP "Caret", "caret_", line_edit.cpp:3508-3513) -----------
   caret_blink: v.boolean('caret_blink'),
-  // line_edit.cpp:3510 — PROPERTY_HINT_RANGE "0.1,10,0.01" is the editor slider
-  // only; set_caret_blink_interval (line_edit.cpp:2049-2052) enforces just
-  // `ERR_FAIL_COND(p_interval <= 0)` (line_edit.cpp:2050), so any positive float
-  // is engine-valid even past the slider's 10 ceiling.
-  caret_blink_interval: v.positiveFloat('caret_blink_interval', undefined, {
-    enforced: 'line_edit.cpp:2050',
+  // line_edit.cpp:3510 hints "0.1,10,0.01", closed both ends.
+  // line_edit.cpp:2050, ERR_FAIL_COND(p_interval <= 0): the setter refuses the
+  // floor and assigns anything above it straight through, so the 10 ceiling is
+  // the hint's alone and warns.
+  caret_blink_interval: v.float('caret_blink_interval', {
+    min: Number.MIN_VALUE,
+    max: 10,
+    enforced: { min: 'line_edit.cpp:2050' },
+    hinted: { max: 'line_edit.cpp:3510' },
+    message: "Property 'caret_blink_interval' must be greater than 0 and no more than 10",
   }),
   // line_edit.cpp:3511 — PROPERTY_HINT_RANGE "0,1000,1,or_greater". set_caret_column
   // (line_edit.cpp:2272-2281) clamps below 0 up to 0 (line_edit.cpp:2277-2279) —

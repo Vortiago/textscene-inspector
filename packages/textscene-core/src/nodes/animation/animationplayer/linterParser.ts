@@ -124,9 +124,14 @@ validatorRegistry.registerAll('AnimationPlayer', {
     AUTO_CAPTURE_EASE_TYPE,
     { hinted: 'animation_player.cpp:1045' }
   ),
-  // animation_player.cpp:822 is a bare assignment, so the hint at :1046
-  // ("0,4096,0.01") is advisory: out-of-range is a warning in linter.ts.
-  playback_default_blend_time: v.float('playback_default_blend_time'),
+  // animation_player.cpp:1046 hints "0,4096,0.01,suffix:s", closed both ends.
+  // set_default_blend_time (animation_player.cpp:823) is a bare assignment, so
+  // both ends are the hint's alone and warn.
+  playback_default_blend_time: v.float('playback_default_blend_time', {
+    min: 0,
+    max: 4096,
+    hinted: 'animation_player.cpp:1046',
+  }),
   // animation_player.cpp:1035/:57-59, redirected through AnimationMixer's
   // callback_mode_process/method (animation_mixer.cpp:501-509,522-525): both
   // bare assignments, no engine-side range check on the raw int.

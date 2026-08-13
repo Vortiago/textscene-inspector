@@ -1,5 +1,5 @@
 /**
- * Tests for Label3D linter (strict parser + semantic rules)
+ * Tests for the Label3D strict-parser validators.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -7,13 +7,10 @@ import {
   node,
   scene,
   expectClean,
-  expectNoDiagnostic,
-  expectDiagnostic,
   runPropertyValidation,
 } from '../../../linter/testing/testkit';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
-import './linter';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -56,11 +53,20 @@ describe('Label3D Linter', () => {
 
     runPropertyValidation({ nodeType: 'Label3D' }, [
       {
-        // label_3d.cpp:954 is a bare assignment, so the hint at :131
-        // ("0.0001,128,0.0001") only warns: 0 and -0.5 load, they do not error.
+        // label_3d.cpp:131 hints "0.0001,128,0.0001,suffix:m", closed at both
+        // ends; set_pixel_size (:954) is a bare assignment, so one step past
+        // either endpoint warns rather than erroring.
         prop: 'pixel_size',
         valid: [0.01, 0.0001, 128],
-        invalid: [{ value: 'invalid', contains: ['must be a number'] }],
+        invalid: [
+          { value: 'invalid', contains: ['must be a number'] },
+          {
+            value: 0.00001,
+            severity: 'warning',
+            contains: ['must be between 0.0001 and 128'],
+          },
+          { value: 200, severity: 'warning', contains: ['must be between 0.0001 and 128'] },
+        ],
       },
       {
         prop: 'pixel_size',
@@ -331,34 +337,6 @@ describe('Label3D Linter', () => {
       });
       it('warns on JUSTIFICATION_TRIM_EDGE_SPACES (4), kept but not hinted', () => {
         expect(check('justification_flags', '4')?.severity).toBe('warning');
-      });
-    });
-  });
-
-  describe('Semantic Validation Rules', () => {
-    // label_3d.cpp:131 — pixel_size PROPERTY_HINT_RANGE "0.0001,128,0.0001", closed
-    // at both ends and enforced at neither.
-    it('should warn when pixel_size is above the hint', () => {
-      expectDiagnostic(scene(node('Label3D', { text: '"Test"', pixel_size: 200 })), {
-        ruleName: 'label3d-large-pixel-size',
-        severity: 'warning',
-        nodeType: 'Label3D',
-        contains: ['pixel_size', '200', '128'],
-      });
-    });
-
-    it('should warn when pixel_size is below the hint', () => {
-      expectDiagnostic(scene(node('Label3D', { text: '"Test"', pixel_size: 0.00001 })), {
-        ruleName: 'label3d-small-pixel-size',
-        severity: 'warning',
-        nodeType: 'Label3D',
-        contains: ['pixel_size', '0.0001'],
-      });
-    });
-
-    it.each([0.0001, 2.0, 128])('says nothing about pixel_size %s', (pixelSize) => {
-      expectNoDiagnostic(scene(node('Label3D', { text: '"Test"', pixel_size: pixelSize })), {
-        prop: 'pixel_size',
       });
     });
   });

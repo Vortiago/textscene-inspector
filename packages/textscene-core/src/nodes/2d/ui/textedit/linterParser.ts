@@ -125,13 +125,16 @@ validatorRegistry.registerAll('TextEdit', {
     { hinted: 'text_edit.cpp:7581' }
   ),
   caret_blink: v.boolean('caret_blink'),
-  // text_edit.cpp:7583 — PROPERTY_HINT_RANGE "0.1,10,0.01,suffix:s" is the
-  // editor slider only; TextEdit::set_caret_blink_interval enforces just
-  // `ERR_FAIL_COND(p_interval <= 0)` (text_edit.cpp:5198), so any positive
-  // float is engine-valid even past the slider's 10 ceiling. Deliberately
-  // wider than the hint: do not "correct" this toward 0.1-10.
-  caret_blink_interval: v.positiveFloat('caret_blink_interval', undefined, {
-    enforced: 'text_edit.cpp:5198',
+  // text_edit.cpp:7583 hints "0.1,10,0.01,suffix:s", closed both ends.
+  // text_edit.cpp:5198, ERR_FAIL_COND(p_interval <= 0): the setter refuses the
+  // floor and assigns anything above it straight through, so the 10 ceiling is
+  // the hint's alone and warns.
+  caret_blink_interval: v.float('caret_blink_interval', {
+    min: Number.MIN_VALUE,
+    max: 10,
+    enforced: { min: 'text_edit.cpp:5198' },
+    hinted: { max: 'text_edit.cpp:7583' },
+    message: "Property 'caret_blink_interval' must be greater than 0 and no more than 10",
   }),
   caret_draw_when_editable_disabled: v.boolean('caret_draw_when_editable_disabled'),
   caret_move_on_right_click: v.boolean('caret_move_on_right_click'),

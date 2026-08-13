@@ -103,10 +103,13 @@ describe('AudioStreamPlayer2D Linter', () => {
         },
         {
           // audio_stream_player_2d.cpp:430 hints "-80,24,suffix:dB", closed at both
-          // ends; outside it warns (set_volume_db :209 only refuses NaN).
+          // ends; outside it warns (set_volume_db :209-211 only refuses NaN).
           prop: 'volume_db',
-          acceptMode: 'no-error',
-          valid: [-80.0, 24, -90, 25],
+          valid: [-80.0, 0, 24],
+          invalid: [
+            { value: -80.1, contains: ['volume_db', 'between -80 and 24'], severity: 'warning' },
+            { value: 24.1, contains: ['volume_db', 'between -80 and 24'], severity: 'warning' },
+          ],
         },
         {
           // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0),
@@ -260,30 +263,8 @@ describe('AudioStreamPlayer2D Linter', () => {
       });
     });
 
-    // audio_stream_player_2d.cpp:430 — volume_db PROPERTY_HINT_RANGE "-80,24,suffix:dB".
-    describe('volume_db warnings', () => {
-      it('should warn below the hint', () => {
-        expectDiagnostic(withStream({ volume_db: -90 }), {
-          ruleName: 'audiostreamplayer2d-extreme-volume',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-          contains: ['Volume', '-90', '-80'],
-        });
-      });
-
-      it('should warn above the hint', () => {
-        expectDiagnostic(withStream({ volume_db: 25 }), {
-          ruleName: 'audiostreamplayer2d-extreme-volume',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-          contains: ['Volume', '25', '24'],
-        });
-      });
-
-      it.each([-80, -70, -6.0, 24])('says nothing about volume_db %s', (volumeDb) => {
-        expectClean(withStream({ volume_db: volumeDb }));
-      });
-    });
+    // volume_db's band is the validator's (linterParser.ts), not a rule's — the
+    // accept/reject table above covers it.
 
     // audio_stream_player_internal.cpp:314 rejects pitch_scale <= 0; the hint
     // (:432, "0.01,4,0.01,or_greater") leaves the top open, so only 0 < x < 0.01 warns.
@@ -374,12 +355,14 @@ describe('AudioStreamPlayer2D Linter', () => {
       const diagnostics = lint(
         withStream({ volume_db: -90, pitch_scale: 0.005, max_distance: 0.5, attenuation: 15 })
       );
-      // Three warnings; attenuation has no hint band (EXP_EASING) and stays silent.
+      // Three warnings, volume_db's from the validator rather than a rule;
+      // attenuation has no hint band (EXP_EASING) and stays silent.
       expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
-        'audiostreamplayer2d-extreme-volume',
         'audiostreamplayer2d-small-max-distance',
         'audiostreamplayer2d-unusual-pitch',
+        'strict-parser',
       ]);
+      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
     });
 
     it('should handle zero pitch_scale semantic validation', () => {

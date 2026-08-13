@@ -50,9 +50,13 @@ validatorRegistry.registerAll('CharacterBody3D', {
   // 0..4294967295 bound.
   platform_floor_layers: layerBitmask('platform_floor_layers', { hinted: 'character_body_3d.cpp:938' }),
   platform_wall_layers: layerBitmask('platform_wall_layers', { hinted: 'character_body_3d.cpp:939' }),
-  // character_body_3d.cpp:636 is a bare assignment, so the hint at
-  // :942 ("0.001,256,0.001") is advisory: out-of-range is a warning, not an error.
-  safe_margin: v.float('safe_margin'),
+  // character_body_3d.cpp:942 hints "0.001,256,0.001,suffix:m", closed both
+  // ends; set_safe_margin (:637) is a bare assignment, so both ends warn.
+  safe_margin: v.float('safe_margin', {
+    min: 0.001,
+    max: 256,
+    hinted: 'character_body_3d.cpp:942',
+  }),
   // character_body_3d.cpp:813, ERR_FAIL_COND(p_max_slides < 1): the setter refuses.
   max_slides: v.positiveInt(
     'max_slides',

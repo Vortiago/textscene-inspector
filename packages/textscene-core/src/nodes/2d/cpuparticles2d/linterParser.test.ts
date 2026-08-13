@@ -173,6 +173,103 @@ describe('CPUParticles2D strict validators', () => {
     });
   });
 
+  describe('seed', () => {
+    // cpu_particles_2d.cpp:1502 hints "0," + itos(UINT32_MAX) + ",1" — closed
+    // both ends. set_seed (cpu_particles_2d.cpp:613) is `seed = p_seed;` on a
+    // uint32_t param, which coerces rather than refuses, so both ends WARN.
+    it('accepts both endpoints (0 and UINT32_MAX)', () => {
+      expect(check('seed', '0')).toBeNull();
+      expect(check('seed', '4294967295')).toBeNull();
+    });
+
+    it('accepts 4242, the value scenes/fixtures/unit-cpuparticles2d.tscn:25 writes', () => {
+      expect(check('seed', '4242')).toBeNull();
+    });
+
+    it('warns one hint step (1) past either endpoint', () => {
+      expect(check('seed', '-1')?.severity).toBe('warning');
+      expect(check('seed', '4294967296')?.severity).toBe('warning');
+    });
+
+    it('reports the VALUE code, not the FORMAT one, for an out-of-hint number', () => {
+      expect(check('seed', '4294967296')?.code).toBe('INVALID_SEED_VALUE');
+    });
+
+    it('rejects a fractional value (FORMAT branch, always an error)', () => {
+      const error = check('seed', '4.5');
+      expect(error?.code).toBe('INVALID_SEED_FORMAT');
+      expect(error?.severity).toBe('error');
+    });
+  });
+
+  describe('initial_velocity_min / initial_velocity_max', () => {
+    // cpu_particles_2d.cpp:1602-1603 hint "0,1000,0.01,or_greater,suffix:px/s".
+    // `or_greater` opens the CEILING, so only the floor is a bound and 1000 is
+    // not one; `suffix:px/s` is a unit. Routed through set_param_min/
+    // set_param_max (cpu_particles_2d.cpp:353, 368), whose ERR_FAIL_INDEX guards
+    // the Parameter index and never the value, so the floor WARNS.
+    it.each(['initial_velocity_min', 'initial_velocity_max'])(
+      'accepts the floor 0 of %s',
+      (prop) => {
+        expect(check(prop, '0')).toBeNull();
+      }
+    );
+
+    it('accepts the real values scenes/fixtures/unit-cpuparticles2d.tscn:33-34 write (90.0 / 150.0)', () => {
+      expect(check('initial_velocity_min', '90.0')).toBeNull();
+      expect(check('initial_velocity_max', '150.0')).toBeNull();
+    });
+
+    it.each(['initial_velocity_min', 'initial_velocity_max'])(
+      'leaves the or_greater ceiling open on %s — 5000 is far past the hint top of 1000 and legal',
+      (prop) => {
+        expect(check(prop, '5000')).toBeNull();
+      }
+    );
+
+    it.each(['initial_velocity_min', 'initial_velocity_max'])(
+      'warns one hint step (0.01) below 0 on %s',
+      (prop) => {
+        const warning = check(prop, '-0.01');
+        expect(warning?.code).toBe(`INVALID_${prop.toUpperCase()}_VALUE`);
+        expect(warning?.severity).toBe('warning');
+      }
+    );
+
+    it('rejects a non-numeric value (FORMAT branch, always an error)', () => {
+      const error = check('initial_velocity_min', 'fast');
+      expect(error?.code).toBe('INVALID_INITIAL_VELOCITY_MIN_FORMAT');
+      expect(error?.severity).toBe('error');
+    });
+  });
+
+  describe('anim_offset_min / anim_offset_max', () => {
+    // cpu_particles_2d.cpp:1653-1654 hint "0,1,0.0001" — closed both ends, no
+    // or_greater/or_less. The same index-only set_param_min/set_param_max guard
+    // (:353, :368) leaves the value unchecked, so both ends WARN.
+    it.each(['anim_offset_min', 'anim_offset_max'])('accepts both endpoints of %s', (prop) => {
+      expect(check(prop, '0')).toBeNull();
+      expect(check(prop, '1')).toBeNull();
+    });
+
+    it('accepts 1.0, the value scenes/demos/2d/particles/particles.tscn:64 writes for anim_offset_max', () => {
+      expect(check('anim_offset_max', '1.0')).toBeNull();
+    });
+
+    it.each(['anim_offset_min', 'anim_offset_max'])(
+      'warns one hint step (0.0001) past either endpoint of %s',
+      (prop) => {
+        expect(check(prop, '-0.0001')?.severity).toBe('warning');
+        expect(check(prop, '1.0001')?.severity).toBe('warning');
+      }
+    );
+
+    it('reports the VALUE code, not the FORMAT one, for an out-of-hint number', () => {
+      expect(check('anim_offset_min', '2')?.code).toBe('INVALID_ANIM_OFFSET_MIN_VALUE');
+      expect(check('anim_offset_max', '2')?.code).toBe('INVALID_ANIM_OFFSET_MAX_VALUE');
+    });
+  });
+
   describe('emission_colors', () => {
     // cpu_particles_2d.cpp:1591, PropertyInfo(Variant::PACKED_COLOR_ARRAY).
     // get_emission_colors (cpu_particles_2d.cpp:551-553) returns

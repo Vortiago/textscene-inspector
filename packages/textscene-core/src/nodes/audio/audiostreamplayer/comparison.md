@@ -42,14 +42,13 @@ Strict parsing format-checks these `AudioStreamPlayer` properties, plus 10 inher
 | `playing` | true or false |  |
 | `stream` | null, SubResource("id") or ExtResource("id") |  |
 | `stream_paused` | true or false |  |
-| `volume_db` | float |  |
+| `volume_db` | float -80-24 | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-audiostreamplayer-properties` | `audiostreamplayer-missing-stream-resource` | error |
 |  | `audiostreamplayer-autoplay-without-stream` | warning |
-|  | `audiostreamplayer-extreme-volume` | warning |
 <!-- lint:end -->
 
 pitch_scale, volume_db, and the playing/autoplay/stream_paused flags fall back

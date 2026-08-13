@@ -53,4 +53,24 @@ describe('Light2D shared validators', () => {
     const missing = KEYS.filter((key) => !validatorRegistry.findValidator(nodeType, key));
     expect(missing).toEqual([]);
   });
+
+  // light_2d.cpp:311-312 hint RS::CANVAS_LAYER_MIN..MAX, both ends closed. The
+  // setters (light_2d.cpp:125-128, :134-137) only assign, so out of band warns.
+  describe.each(['range_layer_min', 'range_layer_max'])('%s', (property) => {
+    const check = (value: string) => {
+      const validator = validatorRegistry.findValidator('Light2D', property);
+      expect(validator, `no validator registered for Light2D.${property}`).not.toBeNull();
+      return validator!(property, value, 1);
+    };
+
+    it.each(['-2147483648', '0', '2147483647'])('accepts the in-band value %s', (value) => {
+      expect(check(value)).toBeNull();
+    });
+
+    it.each(['-2147483649', '2147483648'])('warns one step outside on %s', (value) => {
+      const error = check(value);
+      expect(error?.severity).toBe('warning');
+      expect(error?.message).toContain(property);
+    });
+  });
 });

@@ -29,7 +29,14 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   // delegates to AudioStreamPlayerInternal::set_stream
   // (audio_stream_player_internal.cpp:254-263), a bare assignment: format-only.
   stream: v.resourceReference('stream'),
-  volume_db: v.float('volume_db'),
+  // audio_stream_player_3d.cpp:883, PROPERTY_HINT_RANGE "-80,80,suffix:dB" — a
+  // wider ceiling than the 2D/base players' 24. set_volume_db (:552-554)
+  // ERR_FAILs on NaN only and otherwise assigns straight through, so both ends warn.
+  volume_db: v.float('volume_db', {
+    min: -80,
+    max: 80,
+    hinted: 'audio_stream_player_3d.cpp:883',
+  }),
   // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0).
   pitch_scale: v.float('pitch_scale', {
     min: Number.MIN_VALUE,
@@ -53,12 +60,15 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   attenuation_model: v.enumInt('attenuation_model', 0, 3, ATTENUATION_MODEL, {
     enforced: 'audio_stream_player_3d.cpp:721',
   }),
-  // audio_stream_player_3d.cpp:569 is a bare assignment, so the hint at :885
-  // ("0.1,100,0.01,or_greater") is advisory: below 0.1 is a warning in linter.ts.
-  unit_size: v.float('unit_size'),
+  // audio_stream_player_3d.cpp:885, PROPERTY_HINT_RANGE "0.1,100,0.01,or_greater":
+  // or_greater opens the ceiling, so only the floor is a bound. set_unit_size
+  // (:569-570) is a bare assignment, so below 0.1 warns.
+  unit_size: v.float('unit_size', { min: 0.1, hinted: 'audio_stream_player_3d.cpp:885' }),
   // audio_stream_player_3d.cpp:660, ERR_FAIL_COND(p_metres < 0.0).
   max_distance: v.nonNegativeFloat('max_distance', { enforced: 'audio_stream_player_3d.cpp:660' }),
-  max_db: v.float('max_db'),
+  // audio_stream_player_3d.cpp:886, PROPERTY_HINT_RANGE "-24,6,suffix:dB": both
+  // ends closed. set_max_db (:578-579) is a bare assignment, so both warn.
+  max_db: v.float('max_db', { min: -24, max: 6, hinted: 'audio_stream_player_3d.cpp:886' }),
   // audio_stream_player_3d.cpp:704 is a bare assignment; the hint at :902
   // ("1,20500,1,suffix:Hz") closes both ends with no or_greater, so both warn.
   attenuation_filter_cutoff_hz: v.float('attenuation_filter_cutoff_hz', {
@@ -66,7 +76,13 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
     max: 20500,
     hinted: 'audio_stream_player_3d.cpp:902',
   }),
-  attenuation_filter_db: v.float('attenuation_filter_db'),
+  // audio_stream_player_3d.cpp:903, PROPERTY_HINT_RANGE "-80,0,0.1,suffix:dB":
+  // both ends closed. set_attenuation_filter_db (:712-713) is a bare assignment.
+  attenuation_filter_db: v.float('attenuation_filter_db', {
+    min: -80,
+    max: 0,
+    hinted: 'audio_stream_player_3d.cpp:903',
+  }),
   // audio_stream_player_3d.cpp:730 is a bare assignment (only an equal-check early
   // return); no engine-side range check on the raw int.
   doppler_tracking: v.enumInt('doppler_tracking', 0, 2, DOPPLER_TRACKING, {
@@ -89,7 +105,14 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
     max: 90,
     enforced: 'audio_stream_player_3d.cpp:687',
   }),
-  emission_angle_filter_attenuation_db: v.float('emission_angle_filter_attenuation_db'),
+  // audio_stream_player_3d.cpp:900, PROPERTY_HINT_RANGE "-80,0,0.1,suffix:dB":
+  // both ends closed. set_emission_angle_filter_attenuation_db (:696-697) is a
+  // bare assignment.
+  emission_angle_filter_attenuation_db: v.float('emission_angle_filter_attenuation_db', {
+    min: -80,
+    max: 0,
+    hinted: 'audio_stream_player_3d.cpp:900',
+  }),
   bus: busValidator,
   // audio_stream_player_internal.cpp:322 drops the write when <= 0.
   max_polyphony: v.int('max_polyphony', {

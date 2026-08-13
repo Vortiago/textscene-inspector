@@ -21,6 +21,14 @@ import { layerBitmask } from '../../../../linter/validators/layerBitmask.js';
 import { v } from '../../../../linter/validators/index.js';
 import { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX } from '../../../../godot/rendering.js';
 
+/**
+ * `RenderingServer::CANVAS_LAYER_MIN` / `_MAX`
+ * (`servers/rendering/rendering_server.h:105-106`), int32's own limits, which
+ * `light_2d.cpp:311-312` spell into the hint with `itos`.
+ */
+const CANVAS_LAYER_MIN = -2147483648;
+const CANVAS_LAYER_MAX = 2147483647;
+
 validatorRegistry.registerAll('Light2D', {
   enabled: v.boolean('enabled'),
   editor_only: v.boolean('editor_only'),
@@ -47,13 +55,21 @@ validatorRegistry.registerAll('Light2D', {
   // silence.
   range_z_min: v.int('range_z_min', { min: CANVAS_ITEM_Z_MIN, max: CANVAS_ITEM_Z_MAX, hinted: 'light_2d.cpp:309' }),
   range_z_max: v.int('range_z_max', { min: CANVAS_ITEM_Z_MIN, max: CANVAS_ITEM_Z_MAX, hinted: 'light_2d.cpp:310' }),
-  // light_2d.cpp:311-312 hints RS::CANVAS_LAYER_MIN..MAX
-  // (rendering_server.h:105-106), which are int32's own limits rather than a
-  // narrower engine rule: the hint excludes nothing an int property can legally
-  // hold. Format-only, then — a bound here could never fire, and the absence is
-  // deliberate rather than an oversight.
-  range_layer_min: v.int('range_layer_min'),
-  range_layer_max: v.int('range_layer_max'),
+  // light_2d.cpp:311-312 hint the closed range RS::CANVAS_LAYER_MIN..MAX, and a
+  // `.tscn` INT literal is int64, so a value past int32 is expressible and out
+  // of band. `Light2D::set_layer_range_min`/`_max` (light_2d.cpp:125-128,
+  // :134-137) only assign and forward to the RenderingServer — no clamp, no
+  // ERR_FAIL — so both ends are warnings.
+  range_layer_min: v.int('range_layer_min', {
+    min: CANVAS_LAYER_MIN,
+    max: CANVAS_LAYER_MAX,
+    hinted: 'light_2d.cpp:311',
+  }),
+  range_layer_max: v.int('range_layer_max', {
+    min: CANVAS_LAYER_MIN,
+    max: CANVAS_LAYER_MAX,
+    hinted: 'light_2d.cpp:312',
+  }),
   // light_2d.cpp:313/320, PROPERTY_HINT_LAYERS_2D_RENDER on both — not a
   // PROPERTY_HINT_RANGE, so there is no numeric hint to ground a bound on.
   // set_item_cull_mask (light_2d.cpp:143-145) and set_item_shadow_cull_mask

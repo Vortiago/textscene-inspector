@@ -18,7 +18,11 @@ The fixture sets one representative property per group, spread across the `x`/`y
 axis suffix so every axis letter is exercised at least once. Strict validation is
 registered as a wildcard per `<group>_<axis>/*` (18 patterns: 6 groups × 3 axes, all
 sharing one leaf table per group — Godot's own `ADD_PROPERTYI` calls give x/y/z
-byte-identical `PropertyInfo` per leaf) rather than as ~80 individual keys.
+byte-identical `PropertyInfo` per leaf) rather than as ~80 individual keys. The leaves
+carrying a `PROPERTY_HINT_RANGE` bound are additionally registered under their exact
+`<group>_<axis>/<leaf>` key, which changes no verdict — the wildcard forwards to the
+same leaf function — but puts the bound where a registry sweep can read it instead of
+seeing only a dispatcher that has none.
 
 | Group (wildcard) | Value set | Effect |
 | --- | --- | --- |
@@ -41,17 +45,44 @@ Strict parsing format-checks these `Generic6DOFJoint3D` properties, plus 4 inher
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `angular_limit_x/*` | angular limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `angular_limit_x/damping` | float 0.01-16 | warning |
+| `angular_limit_x/lower_angle` | radians, -180° to 180° | warning |
+| `angular_limit_x/restitution` | float 0.01-16 | warning |
+| `angular_limit_x/softness` | float 0.01-16 | warning |
+| `angular_limit_x/upper_angle` | radians, -180° to 180° | warning |
 | `angular_limit_y/*` | angular limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `angular_limit_y/damping` | float 0.01-16 | warning |
+| `angular_limit_y/lower_angle` | radians, -180° to 180° | warning |
+| `angular_limit_y/restitution` | float 0.01-16 | warning |
+| `angular_limit_y/softness` | float 0.01-16 | warning |
+| `angular_limit_y/upper_angle` | radians, -180° to 180° | warning |
 | `angular_limit_z/*` | angular limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `angular_limit_z/damping` | float 0.01-16 | warning |
+| `angular_limit_z/lower_angle` | radians, -180° to 180° | warning |
+| `angular_limit_z/restitution` | float 0.01-16 | warning |
+| `angular_limit_z/softness` | float 0.01-16 | warning |
+| `angular_limit_z/upper_angle` | radians, -180° to 180° | warning |
 | `angular_motor_x/*` | angular motor parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
 | `angular_motor_y/*` | angular motor parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
 | `angular_motor_z/*` | angular motor parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
 | `angular_spring_x/*` | angular spring parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `angular_spring_x/equilibrium_point` | radians, -180° to 180° | warning |
 | `angular_spring_y/*` | angular spring parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `angular_spring_y/equilibrium_point` | radians, -180° to 180° | warning |
 | `angular_spring_z/*` | angular spring parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `angular_spring_z/equilibrium_point` | radians, -180° to 180° | warning |
 | `linear_limit_x/*` | linear limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `linear_limit_x/damping` | float 0.01-16 | warning |
+| `linear_limit_x/restitution` | float 0.01-16 | warning |
+| `linear_limit_x/softness` | float 0.01-16 | warning |
 | `linear_limit_y/*` | linear limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `linear_limit_y/damping` | float 0.01-16 | warning |
+| `linear_limit_y/restitution` | float 0.01-16 | warning |
+| `linear_limit_y/softness` | float 0.01-16 | warning |
 | `linear_limit_z/*` | linear limit parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
+| `linear_limit_z/damping` | float 0.01-16 | warning |
+| `linear_limit_z/restitution` | float 0.01-16 | warning |
+| `linear_limit_z/softness` | float 0.01-16 | warning |
 | `linear_motor_x/*` | linear motor parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
 | `linear_motor_y/*` | linear motor parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |
 | `linear_motor_z/*` | linear motor parameter (see generic_6dof_joint_3d.cpp _bind_methods) |  |

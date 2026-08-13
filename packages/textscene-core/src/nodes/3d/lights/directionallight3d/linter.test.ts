@@ -37,11 +37,14 @@ describe('DirectionalLight3D Linter', () => {
     runPropertyValidation({ nodeType: 'DirectionalLight3D' }, [
       {
         // light_3d.cpp:389 hints "0,16,0.001,or_greater" and Light3D::set_param:36
-        // guards the param index, not the value, so a negative energy warns.
+        // guards the param index, not the value, so a negative energy warns. 0 is
+        // the hint's floor, 150 is above its open ceiling.
         prop: 'light_energy',
-        valid: [1.5, 0, '-1.0'],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'invalid', contains: ['must be a number'] }],
+        valid: [1.5, 0, 150],
+        invalid: [
+          { value: 'invalid', contains: ['must be a number'] },
+          { value: '-1.0', contains: ['non-negative'], severity: 'warning' },
+        ],
       },
       {
         prop: 'light_color',
@@ -125,12 +128,14 @@ describe('DirectionalLight3D Linter', () => {
         invalid: [{ value: 1.2, contains: ['between 0 and 1'] }],
       },
       {
-        // light_3d.cpp:584 hints "0,8192,0.1,or_greater", unenforced, so a negative
-        // loads and only warns.
+        // light_3d.cpp:584 hints "0,8192,0.1,or_greater,exp", unenforced, so a
+        // negative loads and only warns; 15000 is above the open ceiling.
         prop: 'directional_shadow_max_distance',
-        valid: ['100.0', 0, -100],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'invalid', contains: ['must be a number'] }],
+        valid: ['100.0', 0, 15000],
+        invalid: [
+          { value: 'invalid', contains: ['must be a number'] },
+          { value: -100, contains: ['non-negative'], severity: 'warning' },
+        ],
       },
       {
         prop: 'directional_shadow_pancake_size',
@@ -195,21 +200,21 @@ describe('DirectionalLight3D Linter', () => {
     describe('light energy warnings', () => {
       it('should warn on negative light_energy', () => {
         expectDiagnostic(scene(node('DirectionalLight3D', { light_energy: -0.005 })), {
-          prop: 'Light energy',
+          prop: 'light_energy',
           severity: 'warning',
-          contains: ['Light energy is negative', '-0.005'],
+          contains: ['non-negative', '-0.005'],
         });
       });
 
       it('should not warn above the open top of the hint', () => {
         expectNoDiagnostic(scene(node('DirectionalLight3D', { light_energy: 150 })), {
-          prop: 'Light energy',
+          prop: 'light_energy',
         });
       });
 
       it('should not warn on normal light_energy values', () => {
         expectNoDiagnostic(scene(node('DirectionalLight3D', { light_energy: 1.5 })), {
-          prop: 'Light energy',
+          prop: 'light_energy',
         });
       });
     });
@@ -232,30 +237,34 @@ describe('DirectionalLight3D Linter', () => {
     });
 
     // light_3d.cpp:584 — directional_shadow_max_distance PROPERTY_HINT_RANGE
-    // "0,8192,0.1,or_greater": the high end is open, so 15000 is in band.
+    // "0,8192,0.1,or_greater,exp": the high end is open, so 15000 is in band.
     describe('negative shadow distance warning', () => {
       it('should warn on negative shadow_max_distance', () => {
         expectDiagnostic(
           scene(node('DirectionalLight3D', { directional_shadow_max_distance: -1 })),
           {
-            ruleName: 'directionallight3d-negative-shadow-distance',
+            prop: 'directional_shadow_max_distance',
             severity: 'warning',
-            contains: ['Shadow max distance is negative', '-1'],
+            contains: ['non-negative', '-1'],
           }
         );
+      });
+
+      it('accepts the hint floor of 0', () => {
+        expectClean(scene(node('DirectionalLight3D', { directional_shadow_max_distance: 0 })));
       });
 
       it('should not warn above the open top of the hint', () => {
         expectNoDiagnostic(
           scene(node('DirectionalLight3D', { directional_shadow_max_distance: 15000 })),
-          { prop: 'Shadow max distance' }
+          { prop: 'directional_shadow_max_distance' }
         );
       });
 
       it('should not warn on reasonable shadow_max_distance', () => {
         expectNoDiagnostic(
           scene(node('DirectionalLight3D', { directional_shadow_max_distance: 500 })),
-          { prop: 'Shadow max distance' }
+          { prop: 'directional_shadow_max_distance' }
         );
       });
     });

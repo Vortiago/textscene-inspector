@@ -111,8 +111,8 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `angular_velocity_max` | float |  |
 | `angular_velocity_min` | float |  |
 | `anim_offset_curve` | null, SubResource("id") or ExtResource("id") |  |
-| `anim_offset_max` | float |  |
-| `anim_offset_min` | float |  |
+| `anim_offset_max` | float 0-1 | warning |
+| `anim_offset_min` | float 0-1 | warning |
 | `anim_speed_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `anim_speed_max` | float |  |
 | `anim_speed_min` | float |  |
@@ -140,8 +140,8 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `hue_variation_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `hue_variation_max` | float -1-1 | warning |
 | `hue_variation_min` | float -1-1 | warning |
-| `initial_velocity_max` | float |  |
-| `initial_velocity_min` | float |  |
+| `initial_velocity_max` | float >= 0 | warning below |
+| `initial_velocity_min` | float >= 0 | warning below |
 | `lifetime` | float > 0 | error below |
 | `lifetime_randomness` | float 0-1 | warning |
 | `linear_accel_curve` | null, SubResource("id") or ExtResource("id") |  |
@@ -163,7 +163,7 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `scale_amount_min` | float >= 0 | warning below |
 | `scale_curve_x` | null, SubResource("id") or ExtResource("id") |  |
 | `scale_curve_y` | null, SubResource("id") or ExtResource("id") |  |
-| `seed` | integer >= 0 | warning below |
+| `seed` | integer 0-4294967295 | warning |
 | `speed_scale` | float 0-64 | warning |
 | `split_scale` | true or false |  |
 | `spread` | float 0-180 | warning |

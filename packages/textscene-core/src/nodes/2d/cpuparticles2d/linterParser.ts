@@ -48,10 +48,11 @@ validatorRegistry.registerAll('CPUParticles2D', {
   // set_randomness_ratio (cpu_particles_2d.cpp:102-104) assigns unconditionally.
   randomness: v.float('randomness', { min: 0, max: 1, hinted: 'cpu_particles_2d.cpp:1500' }),
   use_fixed_seed: v.boolean('use_fixed_seed'),
-  // cpu_particles_2d.cpp:1502 hints "0,4294967295,1" hard both ends;
-  // set_seed (cpu_particles_2d.cpp:612-614) assigns unconditionally — the
+  // cpu_particles_2d.cpp:1502 hints "0," + itos(UINT32_MAX) + ",1" hard both
+  // ends; set_seed (cpu_particles_2d.cpp:613) is `seed = p_seed;` — the
   // uint32_t param coerces an out-of-range value rather than rejecting it.
-  seed: v.strictNonNegativeInt('seed', { hinted: 'cpu_particles_2d.cpp:1502' }),
+  // UINT32_MAX as a literal, as in the three sibling particle slices.
+  seed: v.strictInt('seed', { min: 0, max: 4294967295, hinted: 'cpu_particles_2d.cpp:1502' }),
   // cpu_particles_2d.cpp:1503 hints "0,1,0.01" hard both ends;
   // set_lifetime_randomness (cpu_particles_2d.cpp:106-108) assigns unconditionally.
   lifetime_randomness: v.float('lifetime_randomness', { min: 0, max: 1, hinted: 'cpu_particles_2d.cpp:1503' }),
@@ -119,8 +120,16 @@ validatorRegistry.registerAll('CPUParticles2D', {
   spread: v.float('spread', { min: 0, max: 180, hinted: 'cpu_particles_2d.cpp:1598' }),
   gravity: v.vector2('gravity'),
 
-  initial_velocity_min: v.float('initial_velocity_min'),
-  initial_velocity_max: v.float('initial_velocity_max'),
+  // cpu_particles_2d.cpp:1602-1603 hint "0,1000,0.01,or_greater,suffix:px/s":
+  // or_greater opens the ceiling and `suffix:` is a unit, so only the floor
+  // binds. set_param_min/set_param_max (cpu_particles_2d.cpp:353, 368)
+  // ERR_FAIL_INDEX the Parameter enum, never the value.
+  initial_velocity_min: v.nonNegativeFloat('initial_velocity_min', {
+    hinted: 'cpu_particles_2d.cpp:1602',
+  }),
+  initial_velocity_max: v.nonNegativeFloat('initial_velocity_max', {
+    hinted: 'cpu_particles_2d.cpp:1603',
+  }),
   angular_velocity_min: v.float('angular_velocity_min'),
   angular_velocity_max: v.float('angular_velocity_max'),
   angular_velocity_curve: v.resourceReference('angular_velocity_curve'),
@@ -159,8 +168,10 @@ validatorRegistry.registerAll('CPUParticles2D', {
   anim_speed_min: v.float('anim_speed_min'),
   anim_speed_max: v.float('anim_speed_max'),
   anim_speed_curve: v.resourceReference('anim_speed_curve'),
-  anim_offset_min: v.float('anim_offset_min'),
-  anim_offset_max: v.float('anim_offset_max'),
+  // cpu_particles_2d.cpp:1653-1654 hint "0,1,0.0001" hard both ends; the same
+  // generic set_param_min/max (:353, :368) guards only the Parameter index.
+  anim_offset_min: v.float('anim_offset_min', { min: 0, max: 1, hinted: 'cpu_particles_2d.cpp:1653' }),
+  anim_offset_max: v.float('anim_offset_max', { min: 0, max: 1, hinted: 'cpu_particles_2d.cpp:1654' }),
   anim_offset_curve: v.resourceReference('anim_offset_curve'),
 
   color: v.color('color'),

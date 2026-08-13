@@ -65,7 +65,7 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 | `outline_modulate` | Color(r, g, b, a) |  |
 | `outline_render_priority` | integer -128-127 | error |
 | `outline_size` | float 0-127 | warning |
-| `pixel_size` | float |  |
+| `pixel_size` | float 0.0001-128 | warning |
 | `render_priority` | integer -128-127 | error |
 | `shaded` | true or false |  |
 | `structured_text_bidi_override` | enum 0-6 (STRUCTURED_TEXT_DEFAULT/STRUCTURED_TEXT_URI/STRUCTURED_TEXT_FILE/STRUCTURED_TEXT_EMAIL/STRUCTURED_TEXT_LIST/STRUCTURED_TEXT_GDSCRIPT/STRUCTURED_TEXT_CUSTOM) | warning |
@@ -81,8 +81,6 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-label3d-properties` | `label3d-small-pixel-size` | warning |
-|  | `label3d-large-pixel-size` | warning |
 | `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
 |  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |

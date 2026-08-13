@@ -46,7 +46,7 @@ Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inh
 | `playing` | true or false |  |
 | `stream` | null, SubResource("id") or ExtResource("id") |  |
 | `stream_paused` | true or false |  |
-| `volume_db` | float |  |
+| `volume_db` | float -80-24 | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
@@ -56,7 +56,6 @@ Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inh
 | `valid-audiostreamplayer2d-properties` | `audiostreamplayer2d-missing-stream-resource` | error |
 |  | `audiostreamplayer2d-autoplay-without-stream` | warning |
 |  | `audiostreamplayer2d-small-max-distance` | warning |
-|  | `audiostreamplayer2d-extreme-volume` | warning |
 |  | `audiostreamplayer2d-unusual-pitch` | warning |
 <!-- lint:end -->
 

@@ -4,10 +4,10 @@
  * Mirrors the AudioStreamPlayer2D/3D semantic rules for the non-positional
  * AudioStreamPlayer, minus the positional ones (max_distance / attenuation).
  * A streamless player is VALID (the stream can be set at runtime), so it is
- * NOT an error; the advisory cases (autoplay with no stream, extreme volume)
- * are WARNINGS — which the bulk fixtureLint guard allows. Only a dangling
- * stream reference is an error. (Format validation of volume_db / pitch_scale
- * / max_polyphony types already lives in linterParser.ts.)
+ * NOT an error; the advisory case (autoplay with no stream) is a WARNING —
+ * which the bulk fixtureLint guard allows. Only a dangling stream reference is
+ * an error. (volume_db's hint band, and format validation of pitch_scale /
+ * max_polyphony, live on the validators in linterParser.ts.)
  */
 
 import { describe, it } from 'vitest';
@@ -84,23 +84,6 @@ _data = {
         node('AnimationPlayer', { 'libraries/': 'SubResource("lib")' }, { parent: '.' }),
         node('AudioStreamPlayer', { autoplay: true }, { name: 'Pickup', parent: '.' })
       )
-    );
-  });
-
-  it('warns on an extreme volume_db (stream present)', () => {
-    expectDiagnostic(
-      scene(
-        audioStream,
-        node(
-          'AudioStreamPlayer',
-          { stream: 'ExtResource("1_abc")', volume_db: '-100.0' },
-          { name: 'Player' }
-        )
-      ),
-      {
-        ruleName: 'audiostreamplayer-extreme-volume',
-        severity: 'warning',
-      }
     );
   });
 });

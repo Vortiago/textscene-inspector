@@ -1,22 +1,23 @@
 /**
  * Semantic lint checks shared by the AudioStreamPlayer family. The
- * extreme-volume / unusual-pitch bands were copy-pasted verbatim across the
- * 2D/3D/base `linter.ts` files (architecture review) — only the rule-name prefix
- * and the volume thresholds differed — so they are **Range advisory** arms now,
- * flowing through the shared `rangeAdvisories` combinator.
+ * unusual-pitch band was copy-pasted verbatim across the 2D/3D `linter.ts`
+ * files (architecture review) — only the rule-name prefix differed — so it is a
+ * **Range advisory** arm now, flowing through the shared `rangeAdvisories`
+ * combinator.
  *
- * Only ADVISORY bands live here. A condition the setter refuses outright
- * belongs on the property's validator in each slice's `linterParser.ts`, which
- * already carries the same `enforced:` citation and reports at the same tier;
- * a semantic rule beside it makes the linter report one value twice.
+ * Only the band a validator CANNOT state lives here. `pitch_scale`'s does not
+ * fit one: `min` already holds the setter's enforced `> 0` refusal, and the
+ * hint's higher 0.01 floor is a second, milder end the slot cannot carry. Every
+ * other hint bound is on the property's validator in each slice's
+ * `linterParser.ts` — a rule beside a bound makes the linter report one value
+ * twice.
  *
- * `volume_db` and `pitch_scale` are declared on three SEPARATE concrete
- * classes (no shared base ADD_PROPERTY), so each player's citation is a
- * different `file:line` even where the band itself is identical text. A
- * single helper taking that citation as a parameter would hide it from
- * `rangeAdvisoryGrounding.test.ts`, whose source scrape can only see a
- * quoted citation written directly on the arm object, so each player gets
- * its own arm-building function instead (the shape
+ * `pitch_scale` is declared on three SEPARATE concrete classes (no shared base
+ * ADD_PROPERTY), so each player's citation is a different `file:line` even
+ * though the hint text is identical. A single helper taking that citation as a
+ * parameter would hide it from `rangeAdvisoryGrounding.test.ts`, whose source
+ * scrape can only see a quoted citation written directly on the arm object, so
+ * each player gets its own arm-building function instead (the shape
  * `lights/shared/linterChecks.ts` uses for `omniRangeArms` / `spotRangeArms`).
  */
 
@@ -80,77 +81,6 @@ function collectByType(nodes: readonly TscnNode[], type: string): TscnNode[] {
   };
   walk(nodes);
   return out;
-}
-
-/**
- * `volume_db`'s **Range advisory** for the plain AudioStreamPlayer.
- * audio_stream_player.cpp:282, PROPERTY_HINT_RANGE "-80,24,suffix:dB": both
- * ends closed. `set_volume_db` (audio_stream_player.cpp:69-71) only ERR_FAILs
- * on NaN, so the band is advisory rather than enforced. `rulePrefix` is the
- * node-type slug so each caller keeps its own `<prefix>-extreme-volume` rule
- * name.
- */
-export function basePlayerVolumeArms(rulePrefix: string): RangeArm[] {
-  return [
-    {
-      under: -80,
-      ruleName: `${rulePrefix}-extreme-volume`,
-      cite: 'audio_stream_player.cpp:282',
-      message: (volumeDb) => `Volume is ${volumeDb} dB. The editor range starts at -80 dB.`,
-    },
-    {
-      over: 24,
-      ruleName: `${rulePrefix}-extreme-volume`,
-      cite: 'audio_stream_player.cpp:282',
-      message: (volumeDb) => `Volume is ${volumeDb} dB. The editor range stops at 24 dB.`,
-    },
-  ];
-}
-
-/**
- * `volume_db`'s **Range advisory** for AudioStreamPlayer2D. Same "-80,24"
- * band as the base player, but declared on its own `ADD_PROPERTY` line.
- * audio_stream_player_2d.cpp:430, PROPERTY_HINT_RANGE "-80,24,suffix:dB".
- * `set_volume_db` (audio_stream_player_2d.cpp:209-211) only ERR_FAILs on NaN.
- */
-export function player2DVolumeArms(rulePrefix: string): RangeArm[] {
-  return [
-    {
-      under: -80,
-      ruleName: `${rulePrefix}-extreme-volume`,
-      cite: 'audio_stream_player_2d.cpp:430',
-      message: (volumeDb) => `Volume is ${volumeDb} dB. The editor range starts at -80 dB.`,
-    },
-    {
-      over: 24,
-      ruleName: `${rulePrefix}-extreme-volume`,
-      cite: 'audio_stream_player_2d.cpp:430',
-      message: (volumeDb) => `Volume is ${volumeDb} dB. The editor range stops at 24 dB.`,
-    },
-  ];
-}
-
-/**
- * `volume_db`'s **Range advisory** for AudioStreamPlayer3D: a wider band
- * (+80 dB, not +24) than the other two players.
- * audio_stream_player_3d.cpp:883, PROPERTY_HINT_RANGE "-80,80,suffix:dB".
- * `set_volume_db` (audio_stream_player_3d.cpp:552-554) only ERR_FAILs on NaN.
- */
-export function player3DVolumeArms(rulePrefix: string): RangeArm[] {
-  return [
-    {
-      under: -80,
-      ruleName: `${rulePrefix}-extreme-volume`,
-      cite: 'audio_stream_player_3d.cpp:883',
-      message: (volumeDb) => `Volume is ${volumeDb} dB. The editor range starts at -80 dB.`,
-    },
-    {
-      over: 80,
-      ruleName: `${rulePrefix}-extreme-volume`,
-      cite: 'audio_stream_player_3d.cpp:883',
-      message: (volumeDb) => `Volume is ${volumeDb} dB. The editor range stops at 80 dB.`,
-    },
-  ];
 }
 
 /**

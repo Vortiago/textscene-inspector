@@ -135,22 +135,45 @@ describe('CharacterBody3D Linter', () => {
         }
       });
 
-      // character_body_3d.cpp:636 is a bare assignment, so the hint at :942
-      // ("0.001,256,0.001") only warns — a negative is no longer an error.
+      // character_body_3d.cpp:637 is a bare assignment, so the hint at :942
+      // ("0.001,256,0.001,suffix:m") only warns — a negative is not an error.
+      // The bound lives on the validator; no rule reports it.
       it('should warn, not error, on negative safe_margin', () => {
         expectDiagnostic(scene(node('CharacterBody3D', { safe_margin: -0.5 }), collisionShape3d), {
-          ruleName: 'characterbody3d-safe-margin-too-small',
+          prop: 'safe_margin',
           severity: 'warning',
           contains: ['-0.5', '0.001'],
         });
       });
 
+      it('should warn just below the hint floor', () => {
+        expectDiagnostic(
+          scene(node('CharacterBody3D', { safe_margin: 0.0009 }), collisionShape3d),
+          {
+            prop: 'safe_margin',
+            severity: 'warning',
+            contains: ['between 0.001 and 256'],
+          }
+        );
+      });
+
       it('should warn about safe_margin above the hint', () => {
         expectDiagnostic(scene(node('CharacterBody3D', { safe_margin: 300 }), collisionShape3d), {
-          ruleName: 'characterbody3d-safe-margin-too-large',
+          prop: 'safe_margin',
           severity: 'warning',
           contains: ['300', '256'],
         });
+      });
+
+      it('should warn just above the hint ceiling', () => {
+        expectDiagnostic(
+          scene(node('CharacterBody3D', { safe_margin: 256.001 }), collisionShape3d),
+          {
+            prop: 'safe_margin',
+            severity: 'warning',
+            contains: ['between 0.001 and 256'],
+          }
+        );
       });
 
       it.each([0.001, 0.5, 256])('says nothing about safe_margin %s', (margin) => {

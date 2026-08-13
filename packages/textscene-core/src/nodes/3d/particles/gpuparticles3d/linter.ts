@@ -12,9 +12,6 @@ import { checkResourceExists, heldResource } from '../../../../linter/resourceCh
 import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 
-/** Top of the `amount` hint, gpu_particles_3d.cpp:821 — "1,1000000,1,exp". */
-const MAX_HINTED_PARTICLE_AMOUNT = 1000000;
-
 /** `MAX_DRAW_PASSES = 4` (gpu_particles_3d.h:56). */
 const MAX_DRAW_PASSES = 4;
 
@@ -140,22 +137,6 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Warning: amount above the ceiling the inspector offers. gpu_particles_3d.cpp:821
-  // hints "1,1000000,1,exp" — no `or_greater`, so 1,000,000 is a real top end —
-  // but set_amount (:76) only refuses values below 1, so exceeding it is advisory.
-  if (rawProps.amount) {
-    const amount = parseInt(rawProps.amount, 10);
-    if (!isNaN(amount) && amount > MAX_HINTED_PARTICLE_AMOUNT) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `Particle amount is ${amount}. The editor range for 'amount' stops at ${MAX_HINTED_PARTICLE_AMOUNT}; counts this high are a severe performance risk`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'gpuparticles3d-performance',
-      });
-    }
-  }
-
   return diagnostics;
 }
 
@@ -165,7 +146,7 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
 const gpuParticles3DValidationRule: LintRule = {
   meta: {
     name: 'valid-gpuparticles3d-resources',
-    description: 'Validates GPUParticles3D resource references, trail configuration, sub-emitter paths, and performance considerations',
+    description: 'Validates GPUParticles3D resource references, draw-pass meshes, and sub-emitter paths',
     category: 'validation',
     applicableNodeTypes: ['GPUParticles3D'],
     emits: [
@@ -202,11 +183,6 @@ const gpuParticles3DValidationRule: LintRule = {
         ruleName: 'gpuparticles3d-sub-emitter-wrong-type',
         severity: 'warning',
         grounding: { kind: 'engine', at: 'gpu_particles_3d.cpp:823' },
-      },
-      {
-        ruleName: 'gpuparticles3d-performance',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'gpu_particles_3d.cpp:821' },
       },
     ],
   },

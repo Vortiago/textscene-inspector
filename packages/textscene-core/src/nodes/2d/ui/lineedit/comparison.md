@@ -63,7 +63,7 @@ Strict parsing format-checks these `LineEdit` properties, plus 53 inherited from
 | `alignment` | enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL) | error |
 | `backspace_deletes_composite_character_enabled` | true or false |  |
 | `caret_blink` | true or false |  |
-| `caret_blink_interval` | float > 0 | error below |
+| `caret_blink_interval` | float 5e-324-10 | error below, warning above |
 | `caret_column` | integer >= 0 | error below |
 | `caret_force_displayed` | true or false |  |
 | `caret_mid_grapheme` | true or false |  |

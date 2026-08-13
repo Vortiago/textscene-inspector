@@ -80,11 +80,14 @@ describe('Light3D shared validators', () => {
       {
         // light_3d.cpp:389 hints "0,16,0.001,or_greater", and Light3D::set_param:36
         // guards the param INDEX rather than the value, so a negative energy is
-        // loaded as written: it warns in the slice rule, it does not error here.
+        // loaded as written: it warns, it does not error. `or_greater` opens the
+        // ceiling, so 150 is in band.
         prop: 'light_energy',
-        valid: [1.0, '-0.5'],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'bad', contains: ['must be a number'] }],
+        valid: [1.0, 0, 150],
+        invalid: [
+          { value: 'bad', contains: ['must be a number'] },
+          { value: '-0.5', contains: ['non-negative'], severity: 'warning' },
+        ],
       },
       {
         prop: 'light_color',
@@ -253,6 +256,22 @@ describe('Light3D shared validators', () => {
         expect(error?.message).toContain(property);
       }
     );
+  });
+
+  describe('light_energy: the hint floor, with the ceiling left open', () => {
+    it('accepts the inclusive floor of 0 (light_3d.cpp:389, "0,16,0.001,or_greater")', () => {
+      expect(check('light_energy', '0')).toBeNull();
+    });
+
+    it('accepts past the hint ceiling, which `or_greater` opens', () => {
+      expect(check('light_energy', '150')).toBeNull();
+    });
+
+    it('warns rather than errors below the floor', () => {
+      const error = check('light_energy', '-0.001');
+      expect(error?.severity).toBe('warning');
+      expect(error?.message).toContain('light_energy');
+    });
   });
 
   describe('light_temperature and light_angular_distance: closed hint bounds fire on both ends', () => {

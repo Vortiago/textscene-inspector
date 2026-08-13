@@ -9,8 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
-import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
-import { basePlayerVolumeArms, isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
+import { isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
 
 function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -54,12 +53,6 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
     });
   }
 
-  diagnostics.push(
-    ...rangeAdvisories(node, {
-      volume_db: basePlayerVolumeArms('audiostreamplayer'),
-    })
-  );
-
   return diagnostics;
 }
 
@@ -88,11 +81,6 @@ const audioStreamPlayerValidationRule: LintRule = {
           at: 'audio_stream_player_internal.cpp:139',
           unused: 'play_basic returns an empty playback, so autoplay produces no sound',
         },
-      },
-      {
-        ruleName: 'audiostreamplayer-extreme-volume',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'audio_stream_player.cpp:282' },
       },
     ],
   },

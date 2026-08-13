@@ -81,6 +81,15 @@ accepts(
 // Both citations kept (per v.ts's `ground()` convention) since the two ends
 // of the SAME bound are grounded differently.
 sizeValidator.grounding = { kind: 'enforced', cite: 'fog_volume.cpp:78, fog_volume.cpp:46' };
+// The BOUND is the hint's 0.01 — the first threshold a descending component
+// crosses, and the number fog_volume.cpp:46 states — reported at the hinted
+// tier because nothing in `set_size` applies it. The stricter 0-clamp below it
+// is a second branch of the same end, not a second bound, and `bounds` carries
+// one number per end. Declared so the hint ledger can read what is implemented
+// here; `ground()` does this for every DSL combinator and cannot reach a
+// hand-rolled one.
+sizeValidator.bounds = { min: 0.01 };
+sizeValidator.tiers = { min: 'warning' };
 
 validatorRegistry.registerAll('FogVolume', {
   size: sizeValidator,

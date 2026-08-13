@@ -10,5 +10,8 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('Marker3D', {
-  gizmo_extents: v.float('gizmo_extents'),
+  // marker_3d.cpp:49 hints "0,10,0.01,or_greater,suffix:m" — `or_greater` opens
+  // the top. set_gizmo_extents (:37) only compares before assigning, so the
+  // floor warns.
+  gizmo_extents: v.float('gizmo_extents', { min: 0, hinted: { min: 'marker_3d.cpp:49' } }),
 });

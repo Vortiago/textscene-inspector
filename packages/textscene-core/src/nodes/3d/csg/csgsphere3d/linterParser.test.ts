@@ -70,6 +70,32 @@ describe('CSGSphere3D strict validators', () => {
     expect(warningsOf(diagnostics).some((w) => w.message.includes(property))).toBe(false);
   });
 
+  it.each([
+    // csg_shape.cpp:1470/:1471/:1472 close all three ceilings; nothing in the
+    // setters clamps the top, so the endpoint itself is silent.
+    ['radius = 100.0', 'radius'],
+    ['radial_segments = 100', 'radial_segments'],
+    ['rings = 100', 'rings'],
+  ])('accepts the hinted ceiling %s in silence', (line, property) => {
+    const diagnostics = linter.lint(scene(line));
+    expect(errorsOf(diagnostics)).toEqual([]);
+    expect(warningsOf(diagnostics).some((w) => w.message.includes(property))).toBe(false);
+  });
+
+  it.each([
+    // One step past each hinted ceiling (the hints' steps are 0.001 and 1).
+    // Hint-only, so a WARNING: set_radius only ERR_FAIL_CONDs `<= 0`, and both
+    // integer setters clamp their floor and leave the top alone.
+    ['radius = 100.001', 'radius'],
+    ['radial_segments = 101', 'radial_segments'],
+    ['rings = 101', 'rings'],
+  ])('warns (not errors) one step above the ceiling: %s', (line, property) => {
+    const diagnostics = linter.lint(scene(line));
+    expect(errorsOf(diagnostics)).toEqual([]);
+    const warnings = warningsOf(diagnostics).filter((w) => w.message.includes(property));
+    expect(warnings.length).toBe(1);
+  });
+
   it('warns (not errors) on an out-of-range operation enum', () => {
     // csg_shape.cpp:1040 hints the enum but set_operation:933-937 is a bare
     // assignment, so out-of-range is a warning, not an error (ADR-0032).

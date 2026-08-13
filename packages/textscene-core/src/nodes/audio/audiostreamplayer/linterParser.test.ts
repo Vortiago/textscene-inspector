@@ -86,6 +86,17 @@ stream = "res://sound.ogg"
   });
 
   describe('volume_db validation', () => {
+    // audio_stream_player.cpp:282 hints "-80,24,suffix:dB", closed at both ends;
+    // set_volume_db (:69-71) only refuses NaN, so outside it warns.
+    it('warns, not errors, one step past each end of the hint', () => {
+      for (const value of ['-80.1', '24.1']) {
+        const error = check('volume_db', value);
+        expect(error).not.toBeNull();
+        expect(error!.severity).toBe('warning');
+        expect(error!.message).toContain('between -80 and 24');
+      }
+    });
+
     it('should accept positive, zero, and negative volume_db', () => {
       const validValues = ['24.0', '0.0', '-80.0'];
       for (const value of validValues) {

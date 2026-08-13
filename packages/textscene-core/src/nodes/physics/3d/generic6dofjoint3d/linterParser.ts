@@ -44,16 +44,18 @@ import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js'
 
 // generic_6dof_joint_3d.cpp:52-73 — ADD_GROUP("Linear Limit", "linear_limit_"),
 // identical PropertyInfo per leaf on the x/y/z ADD_PROPERTYI trio, dispatched
-// through set_param_x/y/z (:199-206 etc.), each `ERR_FAIL_INDEX(p_param,
-// PARAM_MAX)` guarding the Param enum index only, then a bare
-// `params_x[p_param] = p_value` — so every bound below is hinted.
+// through set_param_x/y/z. Each opens with `ERR_FAIL_INDEX(p_param, PARAM_MAX)`
+// (:200, :215, :229) guarding the Param enum INDEX only — no predicate touches
+// p_value — then assigns it straight through (:201, :216, :230). An index guard
+// grounds no value bound, so every bound below is hinted.
 const LINEAR_LIMIT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   enabled: v.boolean('enabled'),
   // upper_distance/lower_distance: PROPERTY_HINT_NONE, "suffix:m" — no
   // PROPERTY_HINT_RANGE at all, so unbounded.
   upper_distance: v.float('upper_distance'),
   lower_distance: v.float('lower_distance'),
-  // softness/restitution/damping: PROPERTY_HINT_RANGE "0.01,16,0.01" (:57-59).
+  // softness/restitution/damping: PROPERTY_HINT_RANGE "0.01,16,0.01", closed at
+  // both ends (:57-59); set_param_x/y/z assigns the value unaltered, so hinted.
   softness: v.float('softness', { min: 0.01, max: 16, hinted: 'generic_6dof_joint_3d.cpp:57' }),
   restitution: v.float('restitution', {
     min: 0.01,
@@ -99,16 +101,18 @@ const ANGULAR_LIMIT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
     maxDeg: 180,
     hinted: 'generic_6dof_joint_3d.cpp:110',
   }),
-  // softness/damping: PROPERTY_HINT_RANGE "0.01,16,0.01" (:111, :113).
+  // softness/damping: PROPERTY_HINT_RANGE "0.01,16,0.01", closed at both ends
+  // (:111, :113); set_param_x/y/z assigns the value unaltered, so hinted.
   softness: v.float('softness', { min: 0.01, max: 16, hinted: 'generic_6dof_joint_3d.cpp:111' }),
-  // The hint (:112) floors at 0.01, but the constructor sets this param to 0 on
-  // every axis (:330, :360, :390), so Godot's own default sits below its own
-  // hint. A floor its default violates states nothing about legal values, so
-  // only the ceiling is checked. The linear group has no such conflict: its
-  // restitution defaults to 0.5.
+  // Both ends from the hint (:112), like its linear twin, even though the
+  // constructor writes 0 on every axis (:330, :360, :390) — below Godot's own
+  // floor. That contradiction is the engine's; the hint is what the engine
+  // DECLARES, the setter guards only the param index, and a warning saying 0 is
+  // outside the inspector's range is true either way.
   restitution: v.float('restitution', {
+    min: 0.01,
     max: 16,
-    hinted: { max: 'generic_6dof_joint_3d.cpp:112' },
+    hinted: 'generic_6dof_joint_3d.cpp:112',
   }),
   damping: v.float('damping', { min: 0.01, max: 16, hinted: 'generic_6dof_joint_3d.cpp:113' }),
   // force_limit: PROPERTY_HINT_NONE, "suffix:kg⋅m²/s² (Nm)" — unbounded.
@@ -253,28 +257,36 @@ const angularSpringValidator = groupValidator(
   { kind: 'hinted', cite: 'generic_6dof_joint_3d.cpp:154' }
 );
 
-validatorRegistry.registerAll('Generic6DOFJoint3D', {
-  'linear_limit_x/*': linearLimitValidator,
-  'linear_limit_y/*': linearLimitValidator,
-  'linear_limit_z/*': linearLimitValidator,
+/** The six groups, each registered under all three axis suffixes below. */
+const GROUPS = [
+  { prefix: 'linear_limit', dispatcher: linearLimitValidator, leaves: LINEAR_LIMIT_LEAVES },
+  { prefix: 'linear_motor', dispatcher: linearMotorValidator, leaves: LINEAR_MOTOR_LEAVES },
+  { prefix: 'linear_spring', dispatcher: linearSpringValidator, leaves: LINEAR_SPRING_LEAVES },
+  { prefix: 'angular_limit', dispatcher: angularLimitValidator, leaves: ANGULAR_LIMIT_LEAVES },
+  { prefix: 'angular_motor', dispatcher: angularMotorValidator, leaves: ANGULAR_MOTOR_LEAVES },
+  { prefix: 'angular_spring', dispatcher: angularSpringValidator, leaves: ANGULAR_SPRING_LEAVES },
+] as const;
 
-  'linear_motor_x/*': linearMotorValidator,
-  'linear_motor_y/*': linearMotorValidator,
-  'linear_motor_z/*': linearMotorValidator,
+/**
+ * Wildcard per group per axis, plus an EXACT key for every leaf carrying a bound.
+ *
+ * The exact keys change no verdict: `findOwnValidator` resolves them before the
+ * wildcards, and the dispatcher forwards the FULL key to the same leaf function
+ * unchanged, so both routes return the identical `ParseError`. What changes is
+ * what the registry REPORTS — a sweep reading `bounds`/`tiers` off
+ * `findValidator` otherwise sees the dispatcher, which carries neither and must
+ * not claim either, since `enabled` and `upper_distance` sit in the same group
+ * with no bound at all. Selected by `validator.bounds` rather than by a list of
+ * leaf names, so a leaf that later gains a bound is exposed with it.
+ */
+const registrations: Record<string, PropertyValidator> = {};
+for (const { prefix, dispatcher, leaves } of GROUPS) {
+  for (const axis of ['x', 'y', 'z']) {
+    registrations[`${prefix}_${axis}/*`] = dispatcher;
+    for (const [leaf, validator] of Object.entries(leaves)) {
+      if (validator.bounds) registrations[`${prefix}_${axis}/${leaf}`] = validator;
+    }
+  }
+}
 
-  'linear_spring_x/*': linearSpringValidator,
-  'linear_spring_y/*': linearSpringValidator,
-  'linear_spring_z/*': linearSpringValidator,
-
-  'angular_limit_x/*': angularLimitValidator,
-  'angular_limit_y/*': angularLimitValidator,
-  'angular_limit_z/*': angularLimitValidator,
-
-  'angular_motor_x/*': angularMotorValidator,
-  'angular_motor_y/*': angularMotorValidator,
-  'angular_motor_z/*': angularMotorValidator,
-
-  'angular_spring_x/*': angularSpringValidator,
-  'angular_spring_y/*': angularSpringValidator,
-  'angular_spring_z/*': angularSpringValidator,
-});
+validatorRegistry.registerAll('Generic6DOFJoint3D', registrations);

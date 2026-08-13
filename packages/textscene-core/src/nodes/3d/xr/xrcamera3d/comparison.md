@@ -34,8 +34,6 @@ Strict parsing format-checks the inherited set (15 inherited from Camera3D, 17 i
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-camera3d-properties` (type-family match) | `camera3d-invalid-clipping-planes` | error |
-|  | `camera3d-small-near-plane` | warning |
-|  | `camera3d-small-far-plane` | warning |
 | `valid-xrcamera3d-parent` | `xrcamera3d-parent-not-xrorigin3d` | warning |
 <!-- lint:end -->
 

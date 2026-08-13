@@ -18,7 +18,14 @@ validatorRegistry.registerAll('AudioStreamPlayer2D', {
   // delegates to AudioStreamPlayerInternal::set_stream
   // (audio_stream_player_internal.cpp:254-263), a bare assignment: format-only.
   stream: v.resourceReference('stream'),
-  volume_db: v.float('volume_db'),
+  // audio_stream_player_2d.cpp:430, PROPERTY_HINT_RANGE "-80,24,suffix:dB": both
+  // ends closed. set_volume_db (:209-211) ERR_FAILs on NaN only and otherwise
+  // assigns straight through, so out of range warns.
+  volume_db: v.float('volume_db', {
+    min: -80,
+    max: 24,
+    hinted: 'audio_stream_player_2d.cpp:430',
+  }),
   // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0).
   pitch_scale: v.float('pitch_scale', {
     min: Number.MIN_VALUE,

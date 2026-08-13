@@ -43,7 +43,7 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 18 inherite
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `amount` | integer > 0 |  |
+| `amount` | integer 1-1000000 | error below, warning above |
 | `amount_ratio` | float 0-1 | warning |
 | `collision_base_size` | float >= 0 | warning below |
 | `draw_order` | enum 0-3 (INDEX/LIFETIME/REVERSE_LIFETIME/VIEW_DEPTH) | warning |
@@ -84,7 +84,6 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 18 inherite
 |  | `gpuparticles3d-no-draw-pass-mesh` | warning |
 |  | `valid-gpuparticles3d-sub-emitter` | error |
 |  | `gpuparticles3d-sub-emitter-wrong-type` | warning |
-|  | `gpuparticles3d-performance` | warning |
 | `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
 |  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |

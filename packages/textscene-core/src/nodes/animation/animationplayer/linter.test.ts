@@ -116,12 +116,22 @@ describe('AnimationPlayer Linter', () => {
           invalid: [{ value: 'fast', contains: ['speed_scale', 'must be a number'] }],
         },
         {
-          // animation_player.cpp:822 is a bare assignment, so the hint at :1046
-          // ("0,4096,0.01") only warns.
+          // animation_player.cpp:823 is a bare assignment, so the hint at :1046
+          // ("0,4096,0.01,suffix:s") only warns at either end.
           prop: 'playback_default_blend_time',
-          valid: [0, 0.1, 0.5, 1.0, 2.0, 3.0, 4096, -0.5, 5000],
+          valid: [0, 0.1, 0.5, 1.0, 2.0, 3.0, 4096],
           invalid: [
             { value: 'instant', contains: ['playback_default_blend_time', 'must be a number'] },
+            {
+              value: -0.01,
+              severity: 'warning',
+              contains: ['playback_default_blend_time', 'between 0 and 4096'],
+            },
+            {
+              value: 4096.01,
+              severity: 'warning',
+              contains: ['playback_default_blend_time', 'between 0 and 4096'],
+            },
           ],
         },
         {
@@ -262,21 +272,22 @@ describe('AnimationPlayer Linter', () => {
     });
 
     // animation_player.cpp:1046 — playback_default_blend_time PROPERTY_HINT_RANGE
-    // "0,4096,0.01,suffix:s", closed at both ends and enforced at neither.
+    // "0,4096,0.01,suffix:s", closed at both ends and enforced at neither, so the
+    // bound lives on the validator and no rule reports it.
     describe('blend time warnings', () => {
       it('should warn when blend time is above the hint', () => {
         expectDiagnostic(scene(node('AnimationPlayer', { playback_default_blend_time: 5000 })), {
-          ruleName: 'animationplayer-large-blend-time',
+          prop: 'playback_default_blend_time',
           severity: 'warning',
-          contains: ['playback_default_blend_time', '5000', '4096'],
+          contains: ['5000', '4096'],
         });
       });
 
       it('should warn, not error, on a negative blend time', () => {
         expectDiagnostic(scene(node('AnimationPlayer', { playback_default_blend_time: -0.5 })), {
-          ruleName: 'animationplayer-negative-blend-time',
+          prop: 'playback_default_blend_time',
           severity: 'warning',
-          contains: ['playback_default_blend_time', '-0.5'],
+          contains: ['-0.5'],
         });
       });
 

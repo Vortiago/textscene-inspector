@@ -76,9 +76,10 @@ describe('GPUParticles3D Linter', () => {
         prop: 'amount',
         valid: [1, 100, 1000, 10000, 50000, 150000, 1000000],
         invalid: [
-          { value: 0, contains: ['greater than 0'] },
-          { value: -100, contains: ['greater than 0'] },
-          { value: '"many"', contains: ['integer'] },
+          { value: 0, contains: ['between 1 and 1000000'], severity: 'error' },
+          { value: -100, contains: ['between 1 and 1000000'], severity: 'error' },
+          { value: 1000001, contains: ['between 1 and 1000000'], severity: 'warning' },
+          { value: '"many"', contains: ['number'] },
         ],
       },
       {
@@ -571,24 +572,9 @@ sub_emitter = NodePath("Emitter")
     });
   });
 
-  describe('Performance Warnings', () => {
-    // gpu_particles_3d.cpp:821 — amount PROPERTY_HINT_RANGE "1,1000000,1,exp": no
-    // `or_greater`, so 1,000,000 is a real ceiling, but set_amount (:76) refuses
-    // only values below 1, which makes exceeding it a warning.
-    it('should warn for a particle count above the hint', () => {
-      expectDiagnostic(
-        `[gd_scene format=3]
-
-[sub_resource type="ParticleProcessMaterial" id="process_1"]
-
-[node name="HighParticleCount" type="GPUParticles3D"]
-process_material = SubResource("process_1")
-amount = 1500000
-`,
-        { prop: 'performance', severity: 'warning', contains: ['1500000', '1000000'] }
-      );
-    });
-
+  describe('Amount and lifetime', () => {
+    // The `amount` ceiling is the validator's hinted bound (linterParser.ts), not
+    // a rule: a rule beside it double-reported the same value.
     it.each([75000, 1000000])('says nothing about amount %s', (amount) => {
       expectClean(`[gd_scene format=3]
 

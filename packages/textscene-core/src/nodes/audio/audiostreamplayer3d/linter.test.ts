@@ -72,10 +72,13 @@ describe('AudioStreamPlayer3D Linter', () => {
         },
         {
           // audio_stream_player_3d.cpp:883 hints "-80,80,suffix:dB" — wider than the
-          // 2D/base players — and set_volume_db (:552) only refuses NaN.
+          // 2D/base players — and set_volume_db (:552-554) only refuses NaN.
           prop: 'volume_db',
-          acceptMode: 'no-error',
-          valid: [-80.0, 80, -90, 100],
+          valid: [-80.0, 0, 80],
+          invalid: [
+            { value: -80.1, contains: ['volume_db', 'between -80 and 80'], severity: 'warning' },
+            { value: 80.1, contains: ['volume_db', 'between -80 and 80'], severity: 'warning' },
+          ],
         },
         {
           // audio_stream_player_internal.cpp:314 refuses <= 0; hint :887 is
@@ -111,16 +114,16 @@ describe('AudioStreamPlayer3D Linter', () => {
           ],
         },
         {
-          // audio_stream_player_3d.cpp:569 is a bare assignment, so the hint at
-          // :885 ("0.1,100,0.01,or_greater") only warns: 0 and -5 load fine.
+          // audio_stream_player_3d.cpp:569-570 is a bare assignment, so the hint at
+          // :885 ("0.1,100,0.01,or_greater") only warns; or_greater leaves 500 legal.
           prop: 'unit_size',
           valid: [0.1, 10.0, 500],
-          invalid: [{ value: 'invalid', contains: ['unit_size', 'must be a number'] }],
-        },
-        {
-          prop: 'unit_size',
-          valid: [0, -5.0],
-          acceptMode: 'no-error',
+          invalid: [
+            { value: 0.09, contains: ['unit_size', '>= 0.1'], severity: 'warning' },
+            { value: 0, contains: ['unit_size', '>= 0.1'], severity: 'warning' },
+            { value: -5.0, contains: ['unit_size', '>= 0.1'], severity: 'warning' },
+            { value: 'invalid', contains: ['unit_size', 'must be a number'] },
+          ],
         },
         {
           // 0 = unlimited
@@ -132,9 +135,15 @@ describe('AudioStreamPlayer3D Linter', () => {
           ],
         },
         {
+          // audio_stream_player_3d.cpp:886 hints "-24,6,suffix:dB", closed at both
+          // ends; set_max_db (:578-579) is a bare assignment, so outside it warns.
           prop: 'max_db',
           valid: [-24, 0, 3, 6],
-          invalid: [{ value: 'invalid', contains: ['max_db', 'must be a number'] }],
+          invalid: [
+            { value: -24.1, contains: ['max_db', 'between -24 and 6'], severity: 'warning' },
+            { value: 6.1, contains: ['max_db', 'between -24 and 6'], severity: 'warning' },
+            { value: 'invalid', contains: ['max_db', 'must be a number'] },
+          ],
         },
         {
           // audio_stream_player_3d.cpp:704 assigns straight through, so the
@@ -156,9 +165,23 @@ describe('AudioStreamPlayer3D Linter', () => {
           ],
         },
         {
+          // audio_stream_player_3d.cpp:903 hints "-80,0,0.1,suffix:dB", closed at
+          // both ends; set_attenuation_filter_db (:712-713) is a bare assignment.
           prop: 'attenuation_filter_db',
-          valid: [-80, -24, 0, 6],
-          invalid: [{ value: 'invalid', contains: ['attenuation_filter_db', 'must be a number'] }],
+          valid: [-80, -24, 0],
+          invalid: [
+            {
+              value: -80.1,
+              contains: ['attenuation_filter_db', 'between -80 and 0'],
+              severity: 'warning',
+            },
+            {
+              value: 0.1,
+              contains: ['attenuation_filter_db', 'between -80 and 0'],
+              severity: 'warning',
+            },
+            { value: 'invalid', contains: ['attenuation_filter_db', 'must be a number'] },
+          ],
         },
         {
           // DISABLED, IDLE_STEP, PHYSICS_STEP
@@ -194,10 +217,27 @@ describe('AudioStreamPlayer3D Linter', () => {
           ],
         },
         {
+          // audio_stream_player_3d.cpp:900 hints "-80,0,0.1,suffix:dB", closed at
+          // both ends; set_emission_angle_filter_attenuation_db (:696-697) is a
+          // bare assignment.
           prop: 'emission_angle_filter_attenuation_db',
-          valid: [-24, -12, 0, 6],
+          valid: [-80, -24, -12, 0],
           with: { emission_angle_enabled: true },
           invalid: [
+            {
+              value: -80.1,
+              contains: ['emission_angle_filter_attenuation_db', 'between -80 and 0'],
+              // Pinned to the validator: the emission-filter-not-enabled rule
+              // names the same property and also warns on this scene.
+              ruleName: 'strict-parser',
+              severity: 'warning',
+            },
+            {
+              value: 0.1,
+              contains: ['emission_angle_filter_attenuation_db', 'between -80 and 0'],
+              ruleName: 'strict-parser',
+              severity: 'warning',
+            },
             {
               value: 'invalid',
               contains: ['emission_angle_filter_attenuation_db', 'must be a number'],
@@ -276,51 +316,9 @@ describe('AudioStreamPlayer3D Linter', () => {
       });
     });
 
-    // audio_stream_player_3d.cpp:883 — volume_db PROPERTY_HINT_RANGE "-80,80,suffix:dB".
-    describe('volume_db warnings', () => {
-      it('should warn below the hint', () => {
-        expectDiagnostic(withStream({ volume_db: -90 }), {
-          ruleName: 'audiostreamplayer3d-extreme-volume',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer3D',
-          contains: ['-90', '-80'],
-        });
-      });
-
-      it('should warn above the hint', () => {
-        expectDiagnostic(withStream({ volume_db: 100 }), {
-          ruleName: 'audiostreamplayer3d-extreme-volume',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer3D',
-          contains: ['100', '80'],
-        });
-      });
-
-      it.each([-80, -50, -6.0, 10, 80])('says nothing about volume_db %s', (volumeDb) => {
-        const volumeWarning = lint(withStream({ volume_db: volumeDb })).find(d =>
-          d.message.includes('Volume')
-        );
-        expect(volumeWarning).toBeUndefined();
-      });
-    });
-
-    // audio_stream_player_3d.cpp:885 — unit_size PROPERTY_HINT_RANGE
-    // "0.1,100,0.01,or_greater": the top end is open, and set_unit_size (:569) is a
-    // bare assignment, so a non-positive unit size warns rather than erroring.
-    describe('unit_size warnings', () => {
-      it('should warn, not error, below the hint', () => {
-        expectDiagnostic(withStream({ unit_size: 0 }), {
-          ruleName: 'audiostreamplayer3d-small-unit-size',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer3D',
-          contains: ['unit_size', '0.1'],
-        });
-      });
-
-      it.each([0.1, 10.0, 500])('says nothing about unit_size %s', (unitSize) => {
-        expectClean(withStream({ unit_size: unitSize }));
-      });
-    });
+    // volume_db and unit_size carry their hint bands on their validators
+    // (linterParser.ts); no rule reports them, so the accept/reject table above
+    // is where their ends are pinned.
 
     // pitch_scale: refused at <= 0 (audio_stream_player_internal.cpp:314), hinted
     // "0.01,4,0.01,or_greater" (:887), so only 0 < x < 0.01 warns.
@@ -419,11 +417,13 @@ describe('AudioStreamPlayer3D Linter', () => {
       const diagnostics = lint(
         withStream({ volume_db: -90, pitch_scale: 0.005, emission_angle_degrees: 45.0 })
       );
+      // volume_db's warning is the validator's, so it arrives as `strict-parser`.
       expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
         'audiostreamplayer3d-emission-angle-not-enabled',
-        'audiostreamplayer3d-extreme-volume',
         'audiostreamplayer3d-unusual-pitch',
+        'strict-parser',
       ]);
+      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
     });
   });
 });

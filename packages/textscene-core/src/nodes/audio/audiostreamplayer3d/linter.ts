@@ -10,12 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
-import { player3DVolumeArms, player3DPitchArms } from '../sharedLinterChecks.js';
-
-// audio_stream_player_3d.cpp:885, unit_size PROPERTY_HINT_RANGE
-// "0.1,100,0.01,or_greater": top end open, and set_unit_size (:569) is a bare
-// assignment, so the bottom is a warning rather than an error.
-const UNIT_SIZE_HINT_MIN = 0.1;
+import { player3DPitchArms } from '../sharedLinterChecks.js';
 
 /**
  * Validate AudioStreamPlayer3D semantic rules
@@ -69,19 +64,10 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Range advisories: volume, unit size and pitch bands.
+  // The pitch band only: `volume_db` and `unit_size` carry their hint bounds on
+  // their validators in linterParser.ts.
   diagnostics.push(
     ...rangeAdvisories(node, {
-      volume_db: player3DVolumeArms('audiostreamplayer3d'),
-      unit_size: [
-        {
-          under: UNIT_SIZE_HINT_MIN,
-          ruleName: 'audiostreamplayer3d-small-unit-size',
-          cite: 'audio_stream_player_3d.cpp:885',
-          message: (unitSize) =>
-            `Property 'unit_size' is ${unitSize}. The editor range starts at ${UNIT_SIZE_HINT_MIN}.`,
-        },
-      ],
       pitch_scale: player3DPitchArms('audiostreamplayer3d'),
     })
   );
@@ -109,11 +95,6 @@ const audioStreamPlayer3DValidationRule: LintRule = {
         },
       },
       {
-        ruleName: 'audiostreamplayer3d-small-unit-size',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'audio_stream_player_3d.cpp:885' },
-      },
-      {
         ruleName: 'audiostreamplayer3d-emission-angle-not-enabled',
         severity: 'warning',
         grounding: {
@@ -130,11 +111,6 @@ const audioStreamPlayer3DValidationRule: LintRule = {
           at: 'audio_stream_player_3d.cpp:898',
           unused: 'the group-enable toggle gates the whole emission_angle group',
         },
-      },
-      {
-        ruleName: 'audiostreamplayer3d-extreme-volume',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'audio_stream_player_3d.cpp:883' },
       },
       {
         ruleName: 'audiostreamplayer3d-unusual-pitch',

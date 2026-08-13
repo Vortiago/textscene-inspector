@@ -44,16 +44,14 @@ Strict parsing format-checks these `OmniLight3D` properties, plus 27 inherited f
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `omni_attenuation` | float |  |
-| `omni_range` | float |  |
+| `omni_range` | float >= 0 | warning below |
 | `omni_shadow_mode` | enum 0-1 (DUAL_PARABOLOID/CUBE) | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-omnilight3d-properties` | `omnilight3d-negative-energy` | warning |
-|  | `omnilight3d-negative-range` | warning |
-|  | `omnilight3d-projector-without-shadow` | warning |
+| `valid-omnilight3d-properties` | `omnilight3d-projector-without-shadow` | warning |
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 

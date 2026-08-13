@@ -32,7 +32,7 @@ Strict parsing format-checks these `Marker3D` properties, plus 17 inherited from
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `gizmo_extents` | float |  |
+| `gizmo_extents` | float >= 0 | warning below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

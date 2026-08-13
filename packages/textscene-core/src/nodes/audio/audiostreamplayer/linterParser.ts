@@ -21,7 +21,14 @@ const MIX_TARGET = { 0: 'STEREO', 1: 'SURROUND', 2: 'CENTER' };
 
 validatorRegistry.registerAll('AudioStreamPlayer', {
   stream: v.resourceReference('stream'),
-  volume_db: v.float('volume_db'),
+  // audio_stream_player.cpp:282, PROPERTY_HINT_RANGE "-80,24,suffix:dB": both
+  // ends closed. set_volume_db (:69-71) ERR_FAILs on NaN only and otherwise
+  // assigns straight through, so out of range warns.
+  volume_db: v.float('volume_db', {
+    min: -80,
+    max: 24,
+    hinted: 'audio_stream_player.cpp:282',
+  }),
   // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0).
   pitch_scale: v.positiveFloat('pitch_scale', undefined, {
     enforced: 'audio_stream_player_internal.cpp:314',

@@ -120,12 +120,15 @@ describe('CharacterBody2D Linter', () => {
         valid: [0, 1, 65535, 4294967295],
       },
       {
-        // character_body_2d.cpp:537 is a bare assignment, so the hint at :757
-        // ("0.001,256,0.001") only warns; 0 and -0.5 load fine.
+        // character_body_2d.cpp:538 is a bare assignment, so the hint at :757
+        // ("0.001,256,0.001,suffix:px") only warns at either end.
         prop: 'safe_margin',
-        valid: [0.001, 0.01, 0.1, 256, 0, -0.5],
-        acceptMode: 'no-error',
-        invalid: [{ value: '"wide"', contains: ['must be a number'] }],
+        valid: [0.001, 0.01, 0.1, 256],
+        invalid: [
+          { value: '"wide"', contains: ['must be a number'] },
+          { value: 0, severity: 'warning', contains: ['between 0.001 and 256'] },
+          { value: 256.001, severity: 'warning', contains: ['between 0.001 and 256'] },
+        ],
       },
       {
         prop: 'collision_priority',
@@ -174,12 +177,13 @@ describe('CharacterBody2D Linter', () => {
       expectClean(scene(node('CharacterBody2D', { max_slides: slides }), collisionShape2d));
     });
 
-    // character_body_2d.cpp:757 hints "0.001,256,0.001", closed at both ends.
+    // character_body_2d.cpp:757 hints "0.001,256,0.001", closed at both ends and
+    // enforced at neither, so the validator carries it and no rule reports it.
     it('should warn about safe_margin above the hint', () => {
       expectDiagnostic(
         scene(node('CharacterBody2D', { safe_margin: 300 }), collisionShape2d),
         {
-          ruleName: 'characterbody2d-safe-margin-too-large',
+          prop: 'safe_margin',
           severity: 'warning',
           contains: ['300', '256'],
         }
@@ -190,7 +194,7 @@ describe('CharacterBody2D Linter', () => {
       expectDiagnostic(
         scene(node('CharacterBody2D', { safe_margin: 0.0001 }), collisionShape2d),
         {
-          ruleName: 'characterbody2d-safe-margin-too-small',
+          prop: 'safe_margin',
           severity: 'warning',
           contains: ['0.0001', '0.001'],
         }

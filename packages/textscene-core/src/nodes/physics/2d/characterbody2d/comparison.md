@@ -46,7 +46,7 @@ Strict parsing format-checks these `CharacterBody2D` properties, plus 5 inherite
 | `platform_floor_layers` | 32-bit layer mask (layers 1-32) | warning |
 | `platform_on_leave` | enum 0-2 (ADD_VELOCITY/ADD_UPWARD_VELOCITY/DO_NOTHING) | warning |
 | `platform_wall_layers` | 32-bit layer mask (layers 1-32) | warning |
-| `safe_margin` | float |  |
+| `safe_margin` | float 0.001-256 | warning |
 | `slide_on_ceiling` | true or false |  |
 | `up_direction` | Vector2(x, y) |  |
 | `velocity` | Vector2(x, y) |  |
@@ -59,8 +59,6 @@ Strict parsing format-checks these `CharacterBody2D` properties, plus 5 inherite
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-characterbody2d` | `characterbody2d-needs-collision-shape` | warning |
 |  | `characterbody2d-floor-props-in-floating-mode` | warning |
-|  | `characterbody2d-safe-margin-too-small` | warning |
-|  | `characterbody2d-safe-margin-too-large` | warning |
 <!-- lint:end -->
 
 `velocity` is checked for `Vector2(x, y)` shape only. It has no bound in either

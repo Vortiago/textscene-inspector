@@ -44,7 +44,7 @@ Strict parsing format-checks these `GridMap` properties, plus 17 inherited from 
 | `cell_center_x` | true or false |  |
 | `cell_center_y` | true or false |  |
 | `cell_center_z` | true or false |  |
-| `cell_octant_size` | integer, nonzero, 1-1024 hinted |  |
+| `cell_octant_size` | integer, nonzero, 1-1024 hinted | warning |
 | `cell_scale` | float |  |
 | `cell_size` | Vector3(x, y, z) |  |
 | `collision_layer` | 32-bit layer mask (layers 1-32) | warning |

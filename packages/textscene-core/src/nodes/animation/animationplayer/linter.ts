@@ -8,17 +8,9 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import { extractLibraries, isActive } from './parser.js';
 import { literalText } from '../../../godot/index.js';
 import { resolveAnimations } from './animationResolver.js';
-
-/**
- * Top of the `playback_default_blend_time` hint, animation_player.cpp:1046 —
- * PROPERTY_HINT_RANGE "0,4096,0.01,suffix:s". Neither end is open and
- * `set_default_blend_time` (:822) is a bare assignment, so both are advisory.
- */
-const BLEND_TIME_HINT_MAX = 4096;
 
 /**
  * Validate AnimationPlayer semantic rules
@@ -113,27 +105,8 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: blend time outside the range the inspector offers (range advisory)
-  diagnostics.push(
-    ...rangeAdvisories(node, {
-      playback_default_blend_time: [
-        {
-          under: 0,
-          ruleName: 'animationplayer-negative-blend-time',
-          message: (blendTime) =>
-            `AnimationPlayer 'playback_default_blend_time' is ${blendTime} seconds. The editor range starts at 0.`,
-          cite: 'animation_player.cpp:1046',
-        },
-        {
-          over: BLEND_TIME_HINT_MAX,
-          ruleName: 'animationplayer-large-blend-time',
-          message: (blendTime) =>
-            `AnimationPlayer 'playback_default_blend_time' is ${blendTime} seconds. The editor range stops at ${BLEND_TIME_HINT_MAX}.`,
-          cite: 'animation_player.cpp:1046',
-        },
-      ],
-    })
-  );
+  // `playback_default_blend_time` gets no advisory: linterParser.ts carries the
+  // hint's 0..4096 as a warning-tier bound on the validator.
 
   // WARNING: the mixer is switched off. Godot raises no configuration warning
   // for this — AnimationMixer declares no get_configuration_warnings() override
@@ -180,16 +153,6 @@ const animationPlayerValidationRule: LintRule = {
         ruleName: 'animationplayer-current-animation-missing',
         severity: 'error',
         grounding: { kind: 'engine', at: 'animation_player.cpp:429' },
-      },
-      {
-        ruleName: 'animationplayer-negative-blend-time',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'animation_player.cpp:1046' },
-      },
-      {
-        ruleName: 'animationplayer-large-blend-time',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'animation_player.cpp:1046' },
       },
       {
         ruleName: 'animationplayer-inactive',

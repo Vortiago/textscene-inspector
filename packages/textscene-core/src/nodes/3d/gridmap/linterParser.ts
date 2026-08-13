@@ -94,10 +94,11 @@ const CELL_OCTANT_SIZE_HINT_MAX = 1024;
 
 /**
  * `cell_octant_size`: grid_map.cpp:1253 `PROPERTY_HINT_RANGE "1,1024,1"`, but
- * `set_octant_size` (:313-317) only guards `ERR_FAIL_COND(p_size == 0)` — an
- * ENFORCED refusal of exactly zero, not a floor. A negative or >1024 value
- * that is not 0 is not refused by the setter at all, so it only warns, per
- * the hint. Zero is checked first so the error wins over the warning.
+ * `set_octant_size` (:313-317) only guards `ERR_FAIL_COND(p_size == 0)`
+ * (:314) — an ENFORCED refusal of exactly zero, not a floor. A negative or
+ * >1024 value that is not 0 is not refused by the setter at all, so it only
+ * warns, per the hint. Zero is checked first so the error wins over the
+ * warning.
  */
 const cellOctantSizeValidator: PropertyValidator = accepts((key, value, line) => {
   // Anchored, because `parseInt` stops at the first non-digit: it read `8abc` as
@@ -129,7 +130,7 @@ const cellOctantSizeValidator: PropertyValidator = accepts((key, value, line) =>
     return propertyError(
       key,
       line,
-      "Property 'cell_octant_size' must not be 0 (grid_map.cpp:313 refuses the write)",
+      "Property 'cell_octant_size' must not be 0 (grid_map.cpp:314 refuses the write)",
       'INVALID_CELL_OCTANT_SIZE_VALUE'
     );
   }
@@ -144,7 +145,13 @@ const cellOctantSizeValidator: PropertyValidator = accepts((key, value, line) =>
   }
   return null;
 }, 'integer, nonzero, 1-1024 hinted');
-cellOctantSizeValidator.grounding = { kind: 'enforced', cite: 'grid_map.cpp:313, grid_map.cpp:1253' };
+cellOctantSizeValidator.grounding = { kind: 'enforced', cite: 'grid_map.cpp:314, grid_map.cpp:1253' };
+// Both ends of the hint, at the hinted tier: nothing in `set_octant_size`
+// applies either. Declared because `ground()` cannot reach a hand-rolled
+// validator, and an unrecorded bound reads as unimplemented to the hint ledger.
+// The zero refusal above is a separate predicate, not an end of this range.
+cellOctantSizeValidator.bounds = { min: CELL_OCTANT_SIZE_HINT_MIN, max: CELL_OCTANT_SIZE_HINT_MAX };
+cellOctantSizeValidator.tiers = { min: 'warning', max: 'warning' };
 
 validatorRegistry.registerAll('GridMap', {
   mesh_library: v.resourceReference('mesh_library'),

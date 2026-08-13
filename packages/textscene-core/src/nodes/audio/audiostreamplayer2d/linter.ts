@@ -10,11 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
-import {
-  player2DVolumeArms,
-  player2DPitchArms,
-  isDrivenByAnimationAudioTrack,
-} from '../sharedLinterChecks.js';
+import { player2DPitchArms, isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
 
 // audio_stream_player_2d.cpp:436, max_distance PROPERTY_HINT_RANGE
 // "1,4096,1,or_greater,exp,suffix:px": the top end is open, so only the bottom
@@ -70,9 +66,10 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Range advisories: distance / volume / pitch bands. `attenuation` carries
-  // none: audio_stream_player_2d.cpp:437 declares it PROPERTY_HINT_EXP_EASING,
-  // which states no range, and set_attenuation (:308) is a bare assignment.
+  // Range advisories: distance and pitch bands. `attenuation` carries none:
+  // audio_stream_player_2d.cpp:437 declares it PROPERTY_HINT_EXP_EASING, which
+  // states no range, and set_attenuation (:308) is a bare assignment.
+  // `volume_db`'s band is the validator's, in linterParser.ts.
   diagnostics.push(
     ...rangeAdvisories(node, {
       max_distance: [
@@ -85,7 +82,6 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
             `Property 'max_distance' is ${maxDistance}. The editor range starts at ${MAX_DISTANCE_HINT_MIN} px.`,
         },
       ],
-      volume_db: player2DVolumeArms('audiostreamplayer2d'),
       pitch_scale: player2DPitchArms('audiostreamplayer2d'),
     })
   );
@@ -125,11 +121,6 @@ const audioStreamPlayer2DValidationRule: LintRule = {
         ruleName: 'audiostreamplayer2d-small-max-distance',
         severity: 'warning',
         grounding: { kind: 'engine', at: 'audio_stream_player_2d.cpp:436' },
-      },
-      {
-        ruleName: 'audiostreamplayer2d-extreme-volume',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'audio_stream_player_2d.cpp:430' },
       },
       {
         ruleName: 'audiostreamplayer2d-unusual-pitch',

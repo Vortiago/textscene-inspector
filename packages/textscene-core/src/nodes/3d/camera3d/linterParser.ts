@@ -39,10 +39,12 @@ validatorRegistry.registerAll('Camera3D', {
   // accepted the whole band up to 1e-5, which the setter refuses.
   size: v.float('size', { min: CMP_EPSILON, enforced: 'camera_3d.cpp:731' }),
   frustum_offset: v.vector2('frustum_offset'),
-  // set_near:736 / set_far:746 are bare assignments; their hints (:685/:686)
-  // are advisory, so the low ends are warnings in linter.ts, not errors.
-  near: v.float('near'),
-  far: v.float('far'),
+  // camera_3d.cpp:685 hints "0.001,10,0.001,or_greater,exp,suffix:m" — `or_greater`
+  // opens the top. set_near (:737) is a bare assignment, so the floor only warns.
+  near: v.float('near', { min: 0.001, hinted: { min: 'camera_3d.cpp:685' } }),
+  // camera_3d.cpp:686 hints "0.01,4000,0.01,or_greater,exp,suffix:m"; set_far
+  // (:747) is a bare assignment too, so the floor warns and the top stays open.
+  far: v.float('far', { min: 0.01, hinted: { min: 'camera_3d.cpp:686' } }),
   // camera_3d.cpp:586-591, `set_keep_aspect_mode` is a bare assignment: the
   // hint (:672) is advisory, not enforcement.
   keep_aspect: v.enumInt('keep_aspect', 0, 1, KEEP_ASPECT, { hinted: 'camera_3d.cpp:672' }),

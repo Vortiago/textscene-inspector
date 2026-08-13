@@ -56,7 +56,7 @@ Strict parsing format-checks these `Polygon2D` properties, plus 12 inherited fro
 | `bones` | Array literal [bone_path, PackedFloat32Array(weights), …] |  |
 | `color` | Color(r, g, b, a) |  |
 | `internal_vertex_count` | integer 0-1000 | warning |
-| `invert_border` | float |  |
+| `invert_border` | float 0.1-16384 | warning |
 | `invert_enabled` | true or false |  |
 | `offset` | Vector2(x, y) |  |
 | `polygon` | PackedVector2Array(x, y, …) |  |

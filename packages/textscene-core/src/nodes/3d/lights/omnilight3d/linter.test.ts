@@ -37,11 +37,14 @@ describe('OmniLight3D Linter', () => {
       {
         // light_3d.cpp:389 hints "0,16,0.001,or_greater" and Light3D::set_param:36
         // guards the param index, not the value, so a negative energy loads: it
-        // warns rather than erroring.
+        // warns rather than erroring. 0 is the hint's own floor and 150 is above
+        // its open ceiling, so both are in band.
         prop: 'light_energy',
-        valid: [2.5, 0, -1.0],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'invalid', contains: ['must be a number'] }],
+        valid: [2.5, 0, 150],
+        invalid: [
+          { value: 'invalid', contains: ['must be a number'] },
+          { value: -1.0, contains: ['non-negative'], severity: 'warning' },
+        ],
       },
       {
         prop: 'light_color',
@@ -115,12 +118,14 @@ describe('OmniLight3D Linter', () => {
           ],
         },
       {
-        // light_3d.cpp:639 hints "0,4096,0.001,or_greater", unenforced, so 0 is
-        // legal and a negative only warns.
+        // light_3d.cpp:639 hints "0,4096,0.001,or_greater,exp", unenforced, so 0
+        // is legal, 1500 is above the open ceiling, and a negative only warns.
         prop: 'omni_range',
-        valid: [10.0, 0, -5.0],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'invalid', contains: ['must be a number'] }],
+        valid: [10.0, 0, 1500],
+        invalid: [
+          { value: 'invalid', contains: ['must be a number'] },
+          { value: -5.0, contains: ['non-negative'], severity: 'warning' },
+        ],
       },
       {
         // light_3d.cpp:640 hints "-10,10,0.001,or_greater,or_less": the range
@@ -138,10 +143,10 @@ describe('OmniLight3D Linter', () => {
       },
     ]);
 
-    // Zero-energy accept cases trigger a "very low" warning, so only the
-    // absence of *errors* is asserted (cannot use expectClean).
+    // 0 is the hint's own floor (light_3d.cpp:389), so a switched-off light is
+    // in band.
     it('should accept zero light_energy', () => {
-      expectNoErrors(scene(node('OmniLight3D', { light_energy: 0, omni_range: 5.0 })));
+      expectClean(scene(node('OmniLight3D', { light_energy: 0, omni_range: 5.0 })));
     });
 
     it('should accept zero omni_attenuation', () => {
@@ -168,41 +173,41 @@ describe('OmniLight3D Linter', () => {
     describe('light energy warnings', () => {
       it('should warn on negative light_energy', () => {
         expectDiagnostic(scene(node('OmniLight3D', { light_energy: -1, omni_range: 5.0 })), {
-          prop: 'Light energy',
+          prop: 'light_energy',
           severity: 'warning',
-          contains: ['negative', '-1'],
+          contains: ['non-negative', '-1'],
         });
       });
 
       it('should not warn at the bottom of the hint (0)', () => {
         expectNoDiagnostic(scene(node('OmniLight3D', { light_energy: 0, omni_range: 5.0 })), {
-          prop: 'Light energy',
+          prop: 'light_energy',
         });
       });
 
       it('should not warn above the open top of the hint', () => {
         expectNoDiagnostic(scene(node('OmniLight3D', { light_energy: 150, omni_range: 5.0 })), {
-          prop: 'Light energy',
+          prop: 'light_energy',
         });
       });
     });
 
-    // light_3d.cpp:639 — omni_range PROPERTY_HINT_RANGE "0,4096,0.001,or_greater".
+    // light_3d.cpp:639 — omni_range PROPERTY_HINT_RANGE "0,4096,0.001,or_greater,exp".
     describe('omni_range warnings', () => {
       it('should warn on negative omni_range', () => {
         expectDiagnostic(scene(node('OmniLight3D', { omni_range: -0.5 })), {
-          prop: 'Light range',
+          prop: 'omni_range',
           severity: 'warning',
-          contains: ['negative', '-0.5'],
+          contains: ['non-negative', '-0.5'],
         });
       });
 
       it('should not warn on a tiny but non-negative omni_range', () => {
-        expectNoDiagnostic(scene(node('OmniLight3D', { omni_range: 0.05 })), { prop: 'Light range' });
+        expectNoDiagnostic(scene(node('OmniLight3D', { omni_range: 0.05 })), { prop: 'omni_range' });
       });
 
       it('should not warn above the open top of the hint', () => {
-        expectNoDiagnostic(scene(node('OmniLight3D', { omni_range: 1500 })), { prop: 'Light range' });
+        expectNoDiagnostic(scene(node('OmniLight3D', { omni_range: 1500 })), { prop: 'omni_range' });
       });
     });
 
@@ -345,7 +350,7 @@ describe('OmniLight3D Linter', () => {
       expectClean(scene(node('OmniLight3D', { omni_range: 0 })));
       const diagnostics = lint(scene(node('OmniLight3D', { omni_range: -0.01 })));
       const warning = diagnostics.find(
-        d => d.severity === 'warning' && d.message.includes('Light range is negative')
+        d => d.severity === 'warning' && d.message.includes('omni_range')
       );
       expect(warning).toBeDefined();
     });
@@ -357,12 +362,9 @@ describe('OmniLight3D Linter', () => {
       // Two out-of-band properties, two warnings: omni_attenuation's hint is open
       // at both ends (light_3d.cpp:640), so 7.0 contributes nothing.
       expect(diagnostics).toHaveLength(2);
-      const energyWarning = diagnostics.find(d =>
-        d.message.includes('Light energy is negative')
-      );
-      const rangeWarning = diagnostics.find(d => d.message.includes('Light range is negative'));
-      expect(energyWarning).toBeDefined();
-      expect(rangeWarning).toBeDefined();
+      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
+      expect(diagnostics.some(d => d.message.includes('light_energy'))).toBe(true);
+      expect(diagnostics.some(d => d.message.includes('omni_range'))).toBe(true);
       expect(diagnostics.some(d => d.message.includes('attenuation'))).toBe(false);
     });
   });

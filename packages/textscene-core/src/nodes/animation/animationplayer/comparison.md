@@ -65,7 +65,7 @@ Strict parsing format-checks these `AnimationPlayer` properties, plus 13 inherit
 | `playback_auto_capture_duration` | float |  |
 | `playback_auto_capture_ease_type` | enum 0-3 (IN/OUT/IN_OUT/OUT_IN) | warning |
 | `playback_auto_capture_transition_type` | enum 0-11 (LINEAR/SINE/QUINT/QUART/QUAD/EXPO/ELASTIC/CUBIC/CIRC/BOUNCE/BACK/SPRING) | warning |
-| `playback_default_blend_time` | float |  |
+| `playback_default_blend_time` | float 0-4096 | warning |
 | `playback_process_mode` | enum 0-2 (PHYSICS/IDLE/MANUAL) | warning |
 | `speed_scale` | float |  |
 
@@ -74,8 +74,6 @@ Strict parsing format-checks these `AnimationPlayer` properties, plus 13 inherit
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-animationplayer-properties` | `animationplayer-autoplay-missing` | warning |
 |  | `animationplayer-current-animation-missing` | error |
-|  | `animationplayer-negative-blend-time` | warning |
-|  | `animationplayer-large-blend-time` | warning |
 |  | `animationplayer-inactive` | warning |
 <!-- lint:end -->
 

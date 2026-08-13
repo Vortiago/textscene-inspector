@@ -46,19 +46,16 @@ Strict parsing format-checks these `SpotLight3D` properties, plus 27 inherited f
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `spot_angle` | float |  |
+| `spot_angle` | float 0-180 | warning |
 | `spot_angle_attenuation` | float |  |
 | `spot_attenuation` | float |  |
-| `spot_range` | float |  |
+| `spot_range` | float >= 0 | warning below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-spotlight3d-properties` | `spotlight3d-negative-energy` | warning |
-|  | `spotlight3d-negative-range` | warning |
-|  | `spotlight3d-spot-angle-out-of-range` | warning |
-|  | `spotlight3d-shadow-angle-too-wide` | warning |
+| `valid-spotlight3d-properties` | `spotlight3d-shadow-angle-too-wide` | warning |
 |  | `spotlight3d-projector-without-shadow` | warning |
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->

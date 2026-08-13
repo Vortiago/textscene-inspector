@@ -88,17 +88,23 @@ pixel_size = 0.01
         ],
       },
       {
+        // sprite_3d.cpp:1014/:1015 hint "1,16384,1", closed both ends; only the
+        // floor is setter-enforced (:924/:905), so the ceiling warns.
         prop: 'hframes',
-        valid: [4],
+        valid: [4, 1, 16384],
         invalid: [
-          { value: 0, contains: ['hframes', 'greater than 0'] },
-          { value: -1, contains: ['hframes', 'greater than 0'] },
+          { value: 0, severity: 'error', contains: ['hframes', 'between 1 and 16384'] },
+          { value: -1, severity: 'error', contains: ['hframes', 'between 1 and 16384'] },
+          { value: 16385, severity: 'warning', contains: ['hframes', 'between 1 and 16384'] },
         ],
       },
       {
         prop: 'vframes',
-        valid: [4],
-        invalid: [{ value: 0, contains: ['vframes', 'greater than 0'] }],
+        valid: [4, 1, 16384],
+        invalid: [
+          { value: 0, severity: 'error', contains: ['vframes', 'between 1 and 16384'] },
+          { value: 16385, severity: 'warning', contains: ['vframes', 'between 1 and 16384'] },
+        ],
       },
       {
         prop: 'frame',

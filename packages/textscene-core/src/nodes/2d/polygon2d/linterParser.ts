@@ -151,7 +151,14 @@ validatorRegistry.registerAll('Polygon2D', {
   texture: v.resourceReference('texture'),
   antialiased: v.boolean('antialiased'),
   invert_enabled: v.boolean('invert_enabled'),
-  invert_border: v.float('invert_border'),
+  // polygon_2d.cpp:714 hints "0.1,16384,0.1,suffix:px", closed both ends (no
+  // or_greater/or_less); set_invert_border (:516-517) is a bare assignment, so
+  // both ends warn rather than erroring (ADR-0032).
+  invert_border: v.float('invert_border', {
+    min: 0.1,
+    max: 16384,
+    hinted: 'polygon_2d.cpp:714',
+  }),
   // polygon_2d.cpp:722 hints "0,1000" hard both ends (no or_greater);
   // set_internal_vertex_count (polygon_2d.cpp:418-420) assigns unconditionally,
   // no ERR_FAIL/clamp — a warning, not an error (ADR-0032).

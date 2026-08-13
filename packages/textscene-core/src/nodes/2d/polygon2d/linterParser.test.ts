@@ -142,6 +142,30 @@ polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7)]
     });
   });
 
+  describe('invert_border', () => {
+    // polygon_2d.cpp:714, PROPERTY_HINT_RANGE "0.1,16384,0.1,suffix:px" —
+    // closed both ends. set_invert_border (polygon_2d.cpp:516-517) is a bare
+    // assignment, so out-of-hint warns and never errors.
+    function diagnose(value: string) {
+      return linter.lint(
+        `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\ninvert_border = ${value}\n`
+      );
+    }
+
+    it.each(['0.1', '16384', '100.0'])('accepts %s in silence', (value) => {
+      // 100.0 is the engine default (polygon_2d.h:61), so it must stay silent too.
+      const diagnostics = diagnose(value);
+      expect(errorsOf(diagnostics)).toEqual([]);
+      expect(warningsOf(diagnostics).some((w) => w.message.includes('invert_border'))).toBe(false);
+    });
+
+    it.each(['0.0', '16384.1'])('warns, and never errors, one step past the hint at %s', (value) => {
+      const diagnostics = diagnose(value);
+      expect(errorsOf(diagnostics)).toEqual([]);
+      expect(warningsOf(diagnostics).some((w) => w.message.includes('invert_border'))).toBe(true);
+    });
+  });
+
   describe('internal_vertex_count', () => {
     // polygon_2d.cpp:722, PROPERTY_HINT_RANGE "0,1000" — closed both ends, no
     // or_greater. set_internal_vertex_count (polygon_2d.cpp:418-420) is a bare

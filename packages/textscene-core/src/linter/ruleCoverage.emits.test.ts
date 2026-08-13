@@ -121,11 +121,12 @@ describe('rule emits meta-guard', () => {
   });
 
   it('declares the names each arm-builder call actually produces', () => {
-    // Eight builders today. At zero the loop below body-checks nothing, and a
-    // slice adding a second arm builder would again change what it reports with
-    // every test still green.
+    // Anti-vacuity, not a census: on an empty map the loop below body-checks
+    // nothing, and a broken scrape is indistinguishable from "no builders left".
+    // Deliberately not a count — the population shrinks whenever an advisory arm
+    // becomes a validator bound, and a pinned number turns that into churn.
     const armSuffixes = armBuilderSuffixes(allFiles);
-    expect(armSuffixes.size).toBeGreaterThan(4);
+    expect(armSuffixes.size).toBeGreaterThan(0);
 
     const missing: string[] = [];
     for (const file of ruleFiles()) {

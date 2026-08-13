@@ -1,9 +1,6 @@
 /**
  * GPUParticles3D strict validators for linting.
  * Migrated to the declarative `v` namespace.
- *
- * `amount` keeps a bespoke validator because it has THREE branches
- * (format / non-positive / excessive).
  */
 
 // The base chain. Registration happens on import, so a test that loads only
@@ -12,8 +9,6 @@
 import '../../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { propertyError } from '../../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 // gpu_particles_3d.cpp:843 hints 4 labels ("Index,Lifetime,Reverse
 // Lifetime,View Depth"); BIND_ENUM_CONSTANT binds all 4 (:857-860). The
@@ -31,26 +26,18 @@ const TRANSFORM_ALIGN = {
   3: 'Z_BILLBOARD_Y_TO_VELOCITY',
 };
 
-const amountValidator: PropertyValidator = (key, value, line) => {
-  const num = parseInt(value, 10);
-  if (isNaN(num)) {
-    return propertyError(key, line, `Property 'amount' must be an integer, got: "${value}"`, 'INVALID_AMOUNT_FORMAT');
-  }
-  // gpu_particles_3d.cpp:76, ERR_FAIL_COND_MSG(p_amount < 1): the setter refuses.
-  if (num < 1) {
-    return propertyError(key, line, `Property 'amount' must be greater than 0 (got ${num}). Particles need a positive amount to render`, 'INVALID_AMOUNT_VALUE');
-  }
-  // The hint's ceiling (:821, "1,1000000,1,exp") is not enforced, so exceeding it
-  // is the rule's `gpuparticles3d-performance` warning rather than an error here.
-  return null;
-};
-// Tagged by hand (not built through `v`) so `boundGrounding.test.ts`'s sweep
-// sees this bound too.
-amountValidator.grounding = { kind: 'enforced', cite: 'gpu_particles_3d.cpp:76' };
-
 validatorRegistry.registerAll('GPUParticles3D', {
   emitting: v.boolean('emitting'),
-  amount: amountValidator,
+  // gpu_particles_3d.cpp:821 hints "1,1000000,1,exp", closed at both ends
+  // (`exp` is slider scaling). set_amount:76 ERR_FAIL_COND_MSGs below 1, so the
+  // floor is enforced; the ceiling is never checked, so it warns. Same shape as
+  // the CPUParticles3D and CPUParticles2D twins.
+  amount: v.int('amount', {
+    min: 1,
+    max: 1000000,
+    enforced: { min: 'gpu_particles_3d.cpp:76' },
+    hinted: { max: 'gpu_particles_3d.cpp:821' },
+  }),
   // gpu_particles_3d.cpp:822 hints "0,1,0.0001"; set_amount_ratio (:730-733)
   // is a bare assignment, so out of range is a warning.
   amount_ratio: v.float('amount_ratio', { min: 0, max: 1, hinted: 'gpu_particles_3d.cpp:822' }),
@@ -156,6 +143,3 @@ validatorRegistry.registerAll('GPUParticles3D', {
     enforced: 'gpu_particles_3d.cpp:88',
   }),
 });
-
-// Shown in the generated `## Linting` table of this node's sheet.
-amountValidator.accepts = 'integer > 0';

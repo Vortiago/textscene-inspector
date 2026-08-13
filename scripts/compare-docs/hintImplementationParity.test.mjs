@@ -89,6 +89,9 @@ const SETTER_OVERRIDES_HINT = new Map([
   // `ERR_FAIL_COND(p_size <= CMP_EPSILON)` refuses at 1e-5, two orders below
   // the hint's 0.001, so the band between them loads and the enforced end wins.
   ['Camera3D.size', 'camera_3d.cpp:731'],
+  // `size = p_size.maxf(0.001)` raises anything under 0.001 rather than refusing
+  // it, so the altered floor sits ABOVE the hint's 0 and leaves no band to warn on.
+  ['Decal.size', 'decal.cpp:34'],
 ]);
 
 /**
@@ -182,32 +185,21 @@ function mismatches(label, hint, bounds) {
 }
 
 /**
- * Ends the engine closes and we leave open.
+ * Which ends the engine closes and we leave open — `['min']`, `['max']`, both or
+ * none.
  *
- * The cheaper half: a value past the hint goes unreported where it should draw
- * a warning, which costs a diagnostic rather than causing a false one. Counted
- * rather than listed, as a ledger that only goes DOWN — the same shape
- * `enginePropertyCoverage` uses, and for the same reason: the population is a
- * standing backlog, so demanding zero today would mean exempting a hundred
- * entries and learning nothing from any of them.
+ * A value past a hint goes unreported where it should draw a warning: it costs a
+ * diagnostic rather than causing a false one, which is why this half is a list
+ * of exceptions and the mismatch half must be empty.
  */
 function unimplementedEnds(hint, bounds) {
   const { min, max } = bounds ?? {};
-  let count = 0;
-  if (!hint.openMin && min === undefined) count++;
-  if (!hint.openMax && max === undefined) count++;
-  return count;
+  const ends = [];
+  if (!hint.openMin && min === undefined) ends.push('min');
+  if (!hint.openMax && max === undefined) ends.push('max');
+  return ends;
 }
 
-/**
- * Ends the engine closes and we leave open, as a ledger.
- *
- * Lower it by implementing a bound, never by widening what counts. A drop is
- * not automatically progress: an end also leaves this count when a validator
- * becomes unreadable here, which is why `boundGrounding.test.ts` fails on a
- * validator carrying `tiers` without `bounds`.
- */
-const UNIMPLEMENTED_HINT_ENDS = 93;
 
 /**
  * The engine's ranged properties, from both captures.
@@ -290,11 +282,14 @@ describe('the bound we implement against the bound Godot declared', () => {
     ).toEqual([]);
   });
 
-  it('leaves no more hint ends unimplemented than the ledger allows', () => {
-    const open = rows.reduce((sum, r) => sum + unimplementedEnds(r.hint, r.bounds), 0);
-    // Exact, not a ceiling: it must fall when a bound is implemented and rise
-    // only when someone means it to, and both require editing the constant.
-    expect(open).toBe(UNIMPLEMENTED_HINT_ENDS);
+  it('implements every end the engine closes', () => {
+    // No exceptions list, and none earned: every closed hint end in the engine's
+    // capture is coded. An entry here would need a reason the end cannot be
+    // expressed at all, not a reason it is inconvenient.
+    const open = rows
+      .flatMap((r) => unimplementedEnds(r.hint, r.bounds).map((end) => `${r.label} ${end}`))
+      .sort();
+    expect(open).toEqual([]);
   });
 
   it('holds no override for a property that no longer departs from the engine', () => {

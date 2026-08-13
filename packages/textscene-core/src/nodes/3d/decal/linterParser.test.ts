@@ -62,6 +62,48 @@ size = Vector3(1, 2)
     expect(errors[0]!.message).toContain('size');
   });
 
+  it('accepts the enforced size floor exactly', () => {
+    // Vector3(0.001, …) is `size = p_size.maxf(0.001)`'s fixed point, and
+    // scenes/demos/3d/decals/decal.tscn ships exactly this value.
+    const content = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://albedo.png" id="1_a"]
+
+[node name="X" type="Decal"]
+texture_albedo = ExtResource("1_a")
+size = Vector3(0.001, 0.001, 0.001)
+`;
+
+    expect(linter.lint(content)).toEqual([]);
+  });
+
+  it('errors one step below the size floor, which the setter clamps up', () => {
+    // decal.cpp:34 rewrites any component under 0.001, so the value in the file
+    // is not the value Godot loads: the error tier, not the hint's warning.
+    const content = `[gd_scene format=3]
+
+[node name="X" type="Decal"]
+size = Vector3(0.0009, 2, 2)
+`;
+
+    const errors = errorsOf(linter.lint(content));
+    expect(errors.length).toBe(1);
+    expect(errors[0]!.message).toContain('size');
+  });
+
+  it('accepts a size far above the hinted 1024, which `or_greater` leaves open', () => {
+    const content = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://albedo.png" id="1_a"]
+
+[node name="X" type="Decal"]
+texture_albedo = ExtResource("1_a")
+size = Vector3(4096, 4096, 4096)
+`;
+
+    expect(linter.lint(content)).toEqual([]);
+  });
+
   it('warns (not errors) on an albedo_mix outside 0..1', () => {
     // decal.cpp:248 hints "0,1,0.01" but set_albedo_mix (:79-83) is a bare
     // assignment, so out-of-range is a warning, not an error (ADR-0032).

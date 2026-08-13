@@ -41,15 +41,15 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inh
 | --- | --- | --- |
 | `area_mask` | 32-bit layer mask (layers 1-32) | warning |
 | `attenuation_filter_cutoff_hz` | float 1-20500 | warning |
-| `attenuation_filter_db` | float |  |
+| `attenuation_filter_db` | float -80-0 | warning |
 | `attenuation_model` | enum 0-3 (INVERSE_DISTANCE/INVERSE_SQUARE_DISTANCE/LOGARITHMIC/DISABLED) | error |
 | `autoplay` | true or false |  |
 | `bus` | quoted string or &"name" |  |
 | `doppler_tracking` | enum 0-2 (DISABLED/IDLE_STEP/PHYSICS_STEP) | warning |
 | `emission_angle_degrees` | float 0-90 | error |
 | `emission_angle_enabled` | true or false |  |
-| `emission_angle_filter_attenuation_db` | float |  |
-| `max_db` | float |  |
+| `emission_angle_filter_attenuation_db` | float -80-0 | warning |
+| `max_db` | float -24-6 | warning |
 | `max_distance` | float >= 0 | error below |
 | `max_polyphony` | integer >= 1 | error below |
 | `panning_strength` | float >= 0 | error below |
@@ -58,18 +58,16 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inh
 | `playing` | true or false |  |
 | `stream` | null, SubResource("id") or ExtResource("id") |  |
 | `stream_paused` | true or false |  |
-| `unit_size` | float |  |
-| `volume_db` | float |  |
+| `unit_size` | float >= 0.1 | warning below |
+| `volume_db` | float -80-80 | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-audiostreamplayer3d-properties` | `audiostreamplayer3d-missing-stream-resource` | error |
-|  | `audiostreamplayer3d-small-unit-size` | warning |
 |  | `audiostreamplayer3d-emission-angle-not-enabled` | warning |
 |  | `audiostreamplayer3d-emission-filter-not-enabled` | warning |
-|  | `audiostreamplayer3d-extreme-volume` | warning |
 |  | `audiostreamplayer3d-unusual-pitch` | warning |
 <!-- lint:end -->
 

@@ -46,9 +46,13 @@ validatorRegistry.registerAll('DirectionalLight3D', {
     max: 1,
     hinted: 'light_3d.cpp:583',
   }),
-  // light_3d.cpp:584, PROPERTY_HINT_RANGE "0,8192,0.1,or_greater" — unenforced
-  // (Light3D::set_param:36 guards the index), so the low end is a warning.
-  directional_shadow_max_distance: v.float('directional_shadow_max_distance'),
+  // light_3d.cpp:584, PROPERTY_HINT_RANGE "0,8192,0.1,or_greater,exp":
+  // `or_greater` opens the ceiling and `exp` is slider scaling, so only the 0
+  // floor is a bound. Light3D::set_param:36 guards the param index, not the
+  // value, so it warns.
+  directional_shadow_max_distance: v.nonNegativeFloat('directional_shadow_max_distance', {
+    hinted: 'light_3d.cpp:584',
+  }),
   directional_shadow_pancake_size: v.nonNegativeFloat('directional_shadow_pancake_size', {
     hinted: 'light_3d.cpp:585',
   }),

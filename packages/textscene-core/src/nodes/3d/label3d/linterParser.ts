@@ -39,9 +39,9 @@ const VERTICAL_ALIGNMENT = { 0: 'TOP', 1: 'CENTER', 2: 'BOTTOM', 3: 'FILL' };
 
 validatorRegistry.registerAll('Label3D', {
   text: v.quotedString('text'),
-  // label_3d.cpp:954 is a bare assignment, so the hint at :131
-  // ("0.0001,128,0.0001") is advisory: out-of-range is a warning, not an error.
-  pixel_size: v.float('pixel_size'),
+  // label_3d.cpp:131 hints "0.0001,128,0.0001,suffix:m" — closed at both ends;
+  // set_pixel_size:956 only compares before assigning, so both ends warn.
+  pixel_size: v.float('pixel_size', { min: 0.0001, max: 128, hinted: 'label_3d.cpp:131' }),
   // set_billboard_mode:1001, ERR_FAIL_INDEX(p_mode, 3): the setter refuses.
   billboard: v.enumInt('billboard', 0, 2, BILLBOARD, { enforced: 'label_3d.cpp:1001' }),
   modulate: v.color('modulate'),

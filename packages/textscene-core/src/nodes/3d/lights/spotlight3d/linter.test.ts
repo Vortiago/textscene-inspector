@@ -49,11 +49,14 @@ describe('SpotLight3D Linter', () => {
     runPropertyValidation({ nodeType: 'SpotLight3D' }, [
       {
         // light_3d.cpp:389 hints "0,16,0.001,or_greater" and Light3D::set_param:36
-        // guards the param index, not the value, so a negative energy warns.
+        // guards the param index, not the value, so a negative energy warns. 0 is
+        // the hint's floor, 150 is above its open ceiling.
         prop: 'light_energy',
-        valid: [2.5, 0, -1.0],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'invalid', contains: ['must be a number'] }],
+        valid: [2.5, 0, 150],
+        invalid: [
+          { value: 'invalid', contains: ['must be a number'] },
+          { value: -1.0, contains: ['non-negative'], severity: 'warning' },
+        ],
       },
       {
         // light_3d.cpp:673 hints "-10,10,0.01,or_greater,or_less": the range
@@ -145,24 +148,27 @@ describe('SpotLight3D Linter', () => {
           ],
         },
       {
-        // light_3d.cpp:672 hints "0,4096,0.001,or_greater", unenforced, so 0 is
-        // legal and a negative only warns.
+        // light_3d.cpp:672 hints "0,4096,0.001,or_greater,exp,suffix:m",
+        // unenforced, so 0 is legal, 1500 is above the open ceiling, and a
+        // negative only warns.
         prop: 'spot_range',
-        valid: [10.0, 0, -5.0],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'invalid', contains: ['must be a number'] }],
+        valid: [10.0, 0, 1500],
+        invalid: [
+          { value: 'invalid', contains: ['must be a number'] },
+          { value: -5.0, contains: ['non-negative'], severity: 'warning' },
+        ],
       },
       {
         // light_3d.cpp:674 hints "0,180,0.01,degrees" — 180, not 90 — and
-        // set_param does not enforce it, so 91-180 is in band and outside it warns.
+        // set_param does not enforce it, so 91-180 is in band and both closed
+        // ends warn just outside.
         prop: 'spot_angle',
         valid: [0, 30, 45, 60, 90, 91, 180],
-        invalid: [{ value: 'invalid', contains: ['must be a number'] }],
-      },
-      {
-        prop: 'spot_angle',
-        valid: [-5, 181],
-        acceptMode: 'no-error',
+        invalid: [
+          { value: 'invalid', contains: ['must be a number'] },
+          { value: -5, contains: ['between 0 and 180'], severity: 'warning' },
+          { value: 181, contains: ['between 0 and 180'], severity: 'warning' },
+        ],
       },
     ]);
   });
@@ -199,32 +205,33 @@ describe('SpotLight3D Linter', () => {
     describe('light energy warnings', () => {
       it('should warn on negative light_energy', () => {
         expectDiagnostic(scene(node('SpotLight3D', { light_energy: -0.005 })), {
-          ruleName: 'spotlight3d-negative-energy',
+          prop: 'light_energy',
           severity: 'warning',
-          contains: ['Light energy', 'negative', '-0.005'],
+          contains: ['non-negative', '-0.005'],
         });
       });
 
       it.each([0, 1.5, 150])('says nothing about light_energy %s', (energy) => {
         expectNoDiagnostic(scene(node('SpotLight3D', { light_energy: energy })), {
-          prop: 'Light energy',
+          prop: 'light_energy',
         });
       });
     });
 
-    // light_3d.cpp:672 — spot_range PROPERTY_HINT_RANGE "0,4096,0.001,or_greater".
+    // light_3d.cpp:672 — spot_range PROPERTY_HINT_RANGE
+    // "0,4096,0.001,or_greater,exp,suffix:m".
     describe('spot_range warnings', () => {
       it('should warn on negative spot_range', () => {
         expectDiagnostic(scene(node('SpotLight3D', { spot_range: -0.05 })), {
-          ruleName: 'spotlight3d-negative-range',
+          prop: 'spot_range',
           severity: 'warning',
-          contains: ['Light range', 'negative', '-0.05'],
+          contains: ['non-negative', '-0.05'],
         });
       });
 
       it.each([0, 0.05, 10.0, 1500])('says nothing about spot_range %s', (range) => {
         expectNoDiagnostic(scene(node('SpotLight3D', { spot_range: range })), {
-          prop: 'Light range',
+          prop: 'spot_range',
         });
       });
     });
@@ -258,23 +265,23 @@ describe('SpotLight3D Linter', () => {
     describe('spot_angle warnings', () => {
       it('should warn below the hint', () => {
         expectDiagnostic(scene(node('SpotLight3D', { spot_angle: -0.5 })), {
-          ruleName: 'spotlight3d-spot-angle-out-of-range',
+          prop: 'spot_angle',
           severity: 'warning',
-          contains: ['Spot angle', 'negative', '-0.5'],
+          contains: ['between 0 and 180', '-0.5'],
         });
       });
 
       it('should warn above the hint', () => {
         expectDiagnostic(scene(node('SpotLight3D', { spot_angle: 181 })), {
-          ruleName: 'spotlight3d-spot-angle-out-of-range',
+          prop: 'spot_angle',
           severity: 'warning',
-          contains: ['Spot angle', '181', '180'],
+          contains: ['between 0 and 180', '181'],
         });
       });
 
       it.each([0, 0.5, 45.0, 91, 180])('says nothing about spot_angle %s', (angle) => {
         expectNoDiagnostic(scene(node('SpotLight3D', { spot_angle: angle })), {
-          prop: 'Spot angle',
+          prop: 'spot_angle',
         });
       });
     });
@@ -439,9 +446,9 @@ describe('SpotLight3D Linter', () => {
       expectClean(scene(node('SpotLight3D', { spot_angle: 0 })));
       expectClean(scene(node('SpotLight3D', { spot_angle: 180 })));
       expectDiagnostic(scene(node('SpotLight3D', { spot_angle: 180.01 })), {
-        ruleName: 'spotlight3d-spot-angle-out-of-range',
+        prop: 'spot_angle',
         severity: 'warning',
-        contains: ['180'],
+        contains: ['between 0 and 180'],
       });
     });
 
@@ -460,11 +467,12 @@ describe('SpotLight3D Linter', () => {
       // Three properties below their hints warn; the two attenuations have no
       // hint band at all (light_3d.cpp:673/:675) and stay silent.
       expect(diagnostics).toHaveLength(3);
-      expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
-        'spotlight3d-negative-energy',
-        'spotlight3d-negative-range',
-        'spotlight3d-spot-angle-out-of-range',
-      ]);
+      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
+      expect(
+        ['light_energy', 'spot_range', 'spot_angle'].filter(
+          (property) => !diagnostics.some((d) => d.message.includes(property))
+        )
+      ).toEqual([]);
     });
 
     it('should handle spot_angle at exact boundaries', () => {

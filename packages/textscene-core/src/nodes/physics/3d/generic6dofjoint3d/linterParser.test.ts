@@ -58,16 +58,20 @@ describe('Generic6DOFJoint3D strict validators', () => {
       expect(check('linear_limit_x/lower_distance', '-99999')).toBeNull();
     });
 
-    it('warns past softness/restitution/damping 0.01-16 (set_param_x/y/z index-guards only)', () => {
-      expect(check('linear_limit_x/softness', '0.01')).toBeNull();
-      expect(check('linear_limit_x/softness', '16')).toBeNull();
-      expect(check('linear_limit_x/softness', '16.5')?.code).toBe('INVALID_SOFTNESS_VALUE');
-      expect(check('linear_limit_x/softness', '16.5')?.severity).toBe('warning');
-      expect(check('linear_limit_x/restitution', '17')?.code).toBe('INVALID_RESTITUTION_VALUE');
-      expect(check('linear_limit_x/restitution', '17')?.severity).toBe('warning');
-      expect(check('linear_limit_x/damping', '0')?.code).toBe('INVALID_DAMPING_VALUE');
-      expect(check('linear_limit_x/damping', '0')?.severity).toBe('warning');
-    });
+    // Both ends closed, one step (0.01) outside each.
+    it.each(['softness', 'restitution', 'damping'])(
+      'accepts %s at both endpoints and warns one step past either (0.01-16, hinted)',
+      (leaf) => {
+        expect(check(`linear_limit_x/${leaf}`, '0.01')).toBeNull();
+        expect(check(`linear_limit_x/${leaf}`, '16')).toBeNull();
+        const code = `INVALID_${leaf.toUpperCase()}_VALUE`;
+        for (const outside of ['0', '16.01']) {
+          const error = check(`linear_limit_x/${leaf}`, outside);
+          expect(error?.code, outside).toBe(code);
+          expect(error?.severity, outside).toBe('warning');
+        }
+      }
+    );
   });
 
   // generic_6dof_joint_3d.cpp:77-79 — ADD_GROUP("Linear Motor", "linear_motor_"), axis y.
@@ -125,22 +129,32 @@ describe('Generic6DOFJoint3D strict validators', () => {
       expect(lower?.severity).toBe('warning');
     });
 
-    it('warns past softness/restitution/damping 0.01-16 (set_param_x/y/z index-guards only)', () => {
-      expect(check('angular_limit_x/softness', '0.01')).toBeNull();
-      const restitution = check('angular_limit_x/restitution', '17');
-      expect(restitution?.code).toBe('INVALID_RESTITUTION_VALUE');
-      expect(restitution?.severity).toBe('warning');
-      expect(check('angular_limit_x/damping', '16')).toBeNull();
-    });
+    it.each(['softness', 'damping'])(
+      'accepts %s at both endpoints and warns one step past either (0.01-16, hinted)',
+      (leaf) => {
+        expect(check(`angular_limit_x/${leaf}`, '0.01')).toBeNull();
+        expect(check(`angular_limit_x/${leaf}`, '16')).toBeNull();
+        const code = `INVALID_${leaf.toUpperCase()}_VALUE`;
+        for (const outside of ['0', '16.01']) {
+          const error = check(`angular_limit_x/${leaf}`, outside);
+          expect(error?.code, outside).toBe(code);
+          expect(error?.severity, outside).toBe('warning');
+        }
+      }
+    );
 
-    it('accepts an angular restitution of 0, which is Godot own constructor default', () => {
-      // The hint floors at 0.01 (:112) but the constructor writes 0 on every
-      // axis (:330, :360, :390). A scene serialising the default must not warn.
-      expect(check('angular_limit_x/restitution', '0')).toBeNull();
-      expect(check('angular_limit_y/restitution', '0')).toBeNull();
-      expect(check('angular_limit_z/restitution', '0')).toBeNull();
-      // The linear group keeps its floor: that restitution defaults to 0.5.
-      expect(check('linear_limit_x/restitution', '0')?.severity).toBe('warning');
+    it('warns on an angular restitution of 0, below the hint Godot declares', () => {
+      // Godot's constructor writes 0 on every axis (:330, :360, :390), under its
+      // own hint floor of 0.01 (:112). The contradiction is the engine's: the
+      // hint is what it DECLARES, `set_param_*` guards only the param index, and
+      // 0 really is outside the range the inspector offers. A default is also
+      // omitted when serialised, so this fires only on an explicit 0.
+      for (const axis of ['x', 'y', 'z']) {
+        expect(check(`angular_limit_${axis}/restitution`, '0')?.severity, axis).toBe('warning');
+      }
+      expect(check('angular_limit_x/restitution', '0.01')).toBeNull();
+      expect(check('angular_limit_x/restitution', '16')).toBeNull();
+      expect(check('angular_limit_x/restitution', '16.01')?.code).toBe('INVALID_RESTITUTION_VALUE');
     });
 
     it('accepts force_limit/erp unbounded', () => {
@@ -233,6 +247,70 @@ describe('Generic6DOFJoint3D strict validators', () => {
       // Confirms tagging one instance covers all 18 registrations, not just 6.
       expect(dispatcher('linear_limit_x/*')).toBe(dispatcher('linear_limit_y/*'));
       expect(dispatcher('linear_limit_y/*')).toBe(dispatcher('linear_limit_z/*'));
+    });
+  });
+
+  // A sweep that reads `bounds`/`tiers` off `findValidator` gets the dispatcher,
+  // which carries neither, so every bound in this slice read as UNIMPLEMENTED
+  // while being fully coded. Each bounded leaf is therefore also registered
+  // under its exact key, where the wildcard cannot hide it. Without these cases
+  // the exact registrations can be deleted with every other test still green.
+  describe('bounded leaves are readable off the registry, not only behind the wildcard', () => {
+    const AXES = ['x', 'y', 'z'];
+    const BOTH_ENDS = { min: 0.01, max: 16 };
+
+    function reported(key: string) {
+      const validator = validatorRegistry.findValidator('Generic6DOFJoint3D', key);
+      expect(validator, `no validator registered for Generic6DOFJoint3D.${key}`).not.toBeNull();
+      return validator!;
+    }
+
+    it.each([
+      ['linear_limit', 'softness'],
+      ['linear_limit', 'restitution'],
+      ['linear_limit', 'damping'],
+      ['angular_limit', 'softness'],
+      ['angular_limit', 'damping'],
+    ])('reports %s_*/%s as 0.01-16, both ends warning', (group, leaf) => {
+      for (const axis of AXES) {
+        const validator = reported(`${group}_${axis}/${leaf}`);
+        expect(validator.bounds, `${group}_${axis}/${leaf}`).toEqual(BOTH_ENDS);
+        expect(validator.tiers, `${group}_${axis}/${leaf}`).toEqual({
+          min: 'warning',
+          max: 'warning',
+        });
+      }
+    });
+
+    it('reports angular restitution with both ends, as its linear twin does', () => {
+      for (const axis of AXES) {
+        const validator = reported(`angular_limit_${axis}/restitution`);
+        expect(validator.bounds, axis).toEqual({ min: 0.01, max: 16 });
+        expect(validator.tiers, axis).toEqual({ min: 'warning', max: 'warning' });
+      }
+    });
+
+    it('leaves an unbounded leaf to the wildcard rather than claiming a bound for it', () => {
+      // The dispatcher must stay bound-free: `enabled` and `upper_distance` sit
+      // in the same group with no hint at all, so a bound tagged on the group
+      // would misdescribe them.
+      expect(validatorRegistry.getOwnKeys('Generic6DOFJoint3D')).not.toContain(
+        'linear_limit_x/upper_distance'
+      );
+      expect(reported('linear_limit_x/upper_distance').bounds).toBeUndefined();
+      expect(reported('linear_limit_x/*').bounds).toBeUndefined();
+    });
+
+    it('returns the same verdict through the exact key as through the wildcard', () => {
+      // The exact registration is a reporting change, not a behavioural one: the
+      // dispatcher forwards the FULL key to this same leaf function.
+      const leaf = reported('linear_limit_x/softness');
+      const viaWildcard = reported('linear_limit_x/*');
+      for (const value of ['0', '0.01', '8', '16', '16.01', 'fast']) {
+        expect(leaf('linear_limit_x/softness', value, 1), value).toEqual(
+          viaWildcard('linear_limit_x/softness', value, 1)
+        );
+      }
     });
   });
 });

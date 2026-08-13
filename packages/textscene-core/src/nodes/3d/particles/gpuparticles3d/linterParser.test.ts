@@ -37,6 +37,37 @@ describe('GPUParticles3D strict validators', () => {
     expect(accepted).toEqual([]);
   });
 
+  describe('amount', () => {
+    // gpu_particles_3d.cpp:821 hints "1,1000000,1,exp" — no or_greater, so
+    // 1,000,000 is a real ceiling and `exp` is slider scaling, not a bound.
+    // set_amount:76 opens `ERR_FAIL_COND_MSG(p_amount < 1, ...)`, so the floor is
+    // an ERROR and the unenforced ceiling a WARNING (ADR-0032).
+    it('accepts the enforced floor 1 and the hinted ceiling 1000000', () => {
+      expect(check('amount', '1')).toBeNull();
+      expect(check('amount', '1000000')).toBeNull();
+    });
+
+    it('accepts 200, the value scenes/fixtures/unit-gpuparticles3d.tscn:34 writes', () => {
+      expect(check('amount', '200')).toBeNull();
+    });
+
+    it('rejects a non-numeric value (FORMAT branch, always an error)', () => {
+      expect(check('amount', 'many')?.code).toBe('INVALID_AMOUNT_FORMAT');
+    });
+
+    it('errors at 0, one step below the floor ERR_FAIL_COND_MSG(p_amount < 1) refuses', () => {
+      const error = check('amount', '0');
+      expect(error?.code).toBe('INVALID_AMOUNT_VALUE');
+      expect(error?.severity).toBe('error');
+    });
+
+    it('warns at 1000001, one step above the hint-only ceiling no setter guard bounds', () => {
+      const warning = check('amount', '1000001');
+      expect(warning?.code).toBe('INVALID_AMOUNT_VALUE');
+      expect(warning?.severity).toBe('warning');
+    });
+  });
+
   describe('amount_ratio', () => {
     // gpu_particles_3d.cpp:822, ADD_PROPERTY hints PROPERTY_HINT_RANGE
     // "0,1,0.0001" — no or_greater/or_less, so both ends are hint-only.

@@ -1,9 +1,9 @@
 /**
  * Dimension-parameterized semantic linter rule for CharacterBody2D / CharacterBody3D.
  *
- * The two slices were ~85% identical; what remains dimension-specific is the pair
- * of per-dimension engine citations. Format validation stays in each slice's
- * linterParser.ts.
+ * The two slices were ~85% identical; what remains dimension-specific is the
+ * collision-shape family and one engine citation. Format validation, and every
+ * per-property bound, stays in each slice's linterParser.ts.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
@@ -13,21 +13,10 @@ import {
 } from './hasCollisionShapeChild.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import { rangeAdvisories } from '../rangeAdvisory.js';
-
-/**
- * `safe_margin` hint, character_body_2d.cpp:757 / character_body_3d.cpp:942 —
- * PROPERTY_HINT_RANGE "0.001,256,0.001". Neither end carries `or_greater` /
- * `or_less`, and both setters (:537 / :636) are bare assignments, so the two
- * ends are advisory bounds rather than enforced ones.
- */
-const SAFE_MARGIN_HINT_MIN = 0.001;
-const SAFE_MARGIN_HINT_MAX = 256;
 
 export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `CharacterBody${dim}`;
   const prefix = `characterbody${dimSuffix(dim)}`;
-  const safeMarginHintCite = dim === '2D' ? 'character_body_2d.cpp:757' : 'character_body_3d.cpp:942';
   // `_validate_property` strips PROPERTY_USAGE_EDITOR from every `floor_` key
   // while motion_mode is FLOATING, so the inspector offers none of them there.
   const floorPropsCite = dim === '2D' ? 'character_body_2d.cpp:672' : 'character_body_3d.cpp:957';
@@ -92,27 +81,8 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
     // PROPERTY_USAGE_NO_EDITOR, so no range is stated. The setter's
     // ERR_FAIL_COND(< 1) (:613 / :813) is an error in linterParser.ts.
 
-    // Warnings: safe_margin outside the range the inspector offers.
-    diagnostics.push(
-      ...rangeAdvisories(node, {
-        safe_margin: [
-          {
-            under: SAFE_MARGIN_HINT_MIN,
-            ruleName: `${prefix}-safe-margin-too-small`,
-            message: (safeMargin) =>
-              `${type} '${node.name}' has safe_margin ${safeMargin}. The editor range starts at ${SAFE_MARGIN_HINT_MIN}.`,
-            cite: safeMarginHintCite,
-          },
-          {
-            over: SAFE_MARGIN_HINT_MAX,
-            ruleName: `${prefix}-safe-margin-too-large`,
-            message: (safeMargin) =>
-              `${type} '${node.name}' has safe_margin ${safeMargin}. The editor range stops at ${SAFE_MARGIN_HINT_MAX}.`,
-            cite: safeMarginHintCite,
-          },
-        ],
-      })
-    );
+    // `safe_margin` gets no advisory: each slice's linterParser.ts carries the
+    // hint's 0.001..256 as a warning-tier bound on the validator.
 
     return diagnostics;
   }
@@ -137,16 +107,6 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
             at: floorPropsCite,
             unused: 'floating mode strips every floor_ key from the property list',
           },
-        },
-        {
-          ruleName: `${prefix}-safe-margin-too-small`,
-          severity: 'warning',
-          grounding: { kind: 'engine', at: safeMarginHintCite },
-        },
-        {
-          ruleName: `${prefix}-safe-margin-too-large`,
-          severity: 'warning',
-          grounding: { kind: 'engine', at: safeMarginHintCite },
         },
       ],
     },

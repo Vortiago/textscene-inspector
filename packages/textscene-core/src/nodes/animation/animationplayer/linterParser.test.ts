@@ -112,4 +112,31 @@ describe('AnimationPlayer strict validators: Playback Options group', () => {
       expect(error!.message).toContain('must be a number');
     });
   });
+
+  describe('playback_default_blend_time', () => {
+    it('accepts both ends of the hint (animation_player.cpp:1046, "0,4096,0.01")', () => {
+      expect(check('playback_default_blend_time', '0')).toBeNull();
+      expect(check('playback_default_blend_time', '4096')).toBeNull();
+    });
+
+    it('warns, not errors, below 0 (animation_player.cpp:823 is a bare assignment)', () => {
+      const error = check('playback_default_blend_time', '-0.01');
+      expect(error).not.toBeNull();
+      expect(error!.severity).toBe('warning');
+      expect(error!.message).toContain('between 0 and 4096');
+    });
+
+    it('warns, not errors, above 4096', () => {
+      const error = check('playback_default_blend_time', '4096.01');
+      expect(error).not.toBeNull();
+      expect(error!.severity).toBe('warning');
+      expect(error!.message).toContain('between 0 and 4096');
+    });
+
+    it('rejects a non-numeric value', () => {
+      const error = check('playback_default_blend_time', 'instant');
+      expect(error).not.toBeNull();
+      expect(error!.message).toContain('must be a number');
+    });
+  });
 });

@@ -43,7 +43,7 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 | `autowrap_mode` | enum 0-3 (AUTOWRAP_OFF/AUTOWRAP_ARBITRARY/AUTOWRAP_WORD/AUTOWRAP_WORD_SMART) | warning |
 | `backspace_deletes_composite_character_enabled` | true or false |  |
 | `caret_blink` | true or false |  |
-| `caret_blink_interval` | float > 0 | error below |
+| `caret_blink_interval` | float 5e-324-10 | error below, warning above |
 | `caret_draw_when_editable_disabled` | true or false |  |
 | `caret_mid_grapheme` | true or false |  |
 | `caret_move_on_right_click` | true or false |  |

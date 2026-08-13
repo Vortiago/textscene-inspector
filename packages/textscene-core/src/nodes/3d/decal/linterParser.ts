@@ -11,7 +11,12 @@ validatorRegistry.registerAll('Decal', {
   texture_normal: v.resourceReference('texture_normal'),
   texture_orm: v.resourceReference('texture_orm'),
   texture_emission: v.resourceReference('texture_emission'),
-  size: v.vector3('size'),
+  // decal.cpp:235 hints "0,1024,0.001,or_greater,suffix:m" — `or_greater` opens
+  // the 1024 ceiling. set_size (:34) is `size = p_size.maxf(0.001)`, a
+  // per-component clamp (Vector3::maxf, core/math/vector3.h:105), so the floor
+  // the engine applies is 0.001 and sits ABOVE the hint's 0: every component
+  // below it is altered on load, which is the error tier.
+  size: v.boundedVector3('size', { min: 0.001, enforced: 'decal.cpp:34' }),
   modulate: v.color('modulate'),
   // decal.cpp:248, "0,1,0.01"; set_albedo_mix (:79-83) is a bare assignment.
   albedo_mix: v.float('albedo_mix', { min: 0, max: 1, hinted: 'decal.cpp:248' }),

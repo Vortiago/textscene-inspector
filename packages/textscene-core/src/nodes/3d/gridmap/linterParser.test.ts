@@ -108,7 +108,7 @@ describe('GridMap strict validators', () => {
       expect(error!.code).toBe('INVALID_CELL_OCTANT_SIZE_FORMAT');
     });
 
-    it('errors on exactly 0 (grid_map.cpp:313, ERR_FAIL_COND refuses the write)', () => {
+    it('errors on exactly 0 (grid_map.cpp:314, ERR_FAIL_COND refuses the write)', () => {
       const error = check('cell_octant_size', '0');
       expect(error).not.toBeNull();
       expect(error!.code).toBe('INVALID_CELL_OCTANT_SIZE_VALUE');
@@ -127,6 +127,19 @@ describe('GridMap strict validators', () => {
       expect(error).not.toBeNull();
       expect(error!.code).toBe('INVALID_CELL_OCTANT_SIZE_VALUE');
       expect(error!.severity).toBe('warning');
+    });
+
+    it('warns one step above the ceiling, the hint step being 1', () => {
+      expect(check('cell_octant_size', '1025')?.severity).toBe('warning');
+    });
+
+    it('records both hint ends as its bound, at the hinted tier', () => {
+      // What the hint ledger reads: a hand-rolled validator gets no `ground()`
+      // call, so an unrecorded bound counts as unimplemented however many
+      // values the function rejects.
+      const validator = validatorRegistry.findValidator('GridMap', 'cell_octant_size');
+      expect(validator?.bounds).toEqual({ min: 1, max: 1024 });
+      expect(validator?.tiers).toEqual({ min: 'warning', max: 'warning' });
     });
   });
 

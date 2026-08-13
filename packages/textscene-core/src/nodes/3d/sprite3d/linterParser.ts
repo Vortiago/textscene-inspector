@@ -21,10 +21,25 @@ import { v } from '../../../linter/validators/index.js';
 validatorRegistry.registerAll('Sprite3D', {
   texture: v.resourceReference('texture'),
   // `transparency` is GeometryInstance3D's and arrives via the base-walk.
-  // set_hframes/set_vframes (sprite_3d.cpp:923-926/904-907)
-  // ERR_FAIL_COND_MSG below 1: the setter refuses.
-  hframes: v.positiveInt('hframes', undefined, { enforced: 'sprite_3d.cpp:924' }),
-  vframes: v.positiveInt('vframes', undefined, { enforced: 'sprite_3d.cpp:905' }),
+  // sprite_3d.cpp:1014/:1015 hint "1,16384,1", closed both ends.
+  // set_hframes/set_vframes (:924/:905) ERR_FAIL_COND_MSG below 1 — the setter
+  // refuses the floor — while nothing enforces the 16384 ceiling, so it warns.
+  // Same numbers as the Sprite2D twin (sprite_2d.cpp:543-544). `int`, not
+  // `strictInt`: the property is Variant::INT and a float literal in that slot
+  // is read and truncated on assignment (variant_parser.cpp:446-448), so
+  // `hframes = 5.5` is a file Godot opens and must not be a format error.
+  hframes: v.int('hframes', {
+    min: 1,
+    max: 16384,
+    enforced: { min: 'sprite_3d.cpp:924' },
+    hinted: { max: 'sprite_3d.cpp:1014' },
+  }),
+  vframes: v.int('vframes', {
+    min: 1,
+    max: 16384,
+    enforced: { min: 'sprite_3d.cpp:905' },
+    hinted: { max: 'sprite_3d.cpp:1015' },
+  }),
   // Sprite3D::set_frame:877-879, ERR_FAIL_INDEX(p_frame, int64_t(vframes) *
   // hframes): the floor (0) is enforced (a negative index fails the same
   // unsigned bounds check), but the ceiling depends on hframes/vframes as set

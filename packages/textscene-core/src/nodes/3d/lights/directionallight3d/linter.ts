@@ -8,32 +8,20 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { rangeAdvisories } from '../../../../linter/rangeAdvisory.js';
-import { lightEnergyArms } from '../shared/linterChecks.js';
 
 /**
  * Validate DirectionalLight3D semantic rules
+ *
+ * No range advisory here: `directional_shadow_max_distance`'s and
+ * `light_energy`'s hint floors are validator bounds (light_3d.cpp:584, :389).
+ * What remains is cross-field consistency (shadow mode vs. which split fields
+ * the inspector still shows).
  */
 function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
-  const diagnostics = rangeAdvisories(node, {
-    light_energy: lightEnergyArms('directionallight3d'),
-    directional_shadow_max_distance: [
-      {
-        // light_3d.cpp:584, PROPERTY_HINT_RANGE "0,8192,0.1,or_greater,exp": high end open, low end 0
-        under: 0,
-        ruleName: 'directionallight3d-negative-shadow-distance',
-        cite: 'light_3d.cpp:584',
-        message: (maxDistance) =>
-          `Shadow max distance is negative (${maxDistance}). The editor range for directional_shadow_max_distance starts at 0.`,
-      },
-    ],
-  });
+  const diagnostics: Diagnostic[] = [];
 
-  // The remaining check is cross-field consistency (shadow mode vs. which split
-  // fields the inspector still shows), not a range advisory, so it stays
-  // hand-written.
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }
@@ -96,17 +84,6 @@ const directionalLight3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['DirectionalLight3D'],
     emits: [
-      // via lightEnergyArms('directionallight3d')
-      {
-        ruleName: 'directionallight3d-negative-energy',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'light_3d.cpp:389' },
-      },
-      {
-        ruleName: 'directionallight3d-negative-shadow-distance',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'light_3d.cpp:584' },
-      },
       {
         ruleName: 'directionallight3d-unused-splits',
         severity: 'warning',
