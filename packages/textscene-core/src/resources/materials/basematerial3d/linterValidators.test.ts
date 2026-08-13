@@ -1,5 +1,9 @@
 /**
- * Tests for StandardMaterial3D linter validators
+ * Tests for the BaseMaterial3D linter validators.
+ *
+ * Deliberately asked for through `StandardMaterial3D`, the leaf a scene names:
+ * the properties are registered one hop up, so every lookup here also asserts
+ * that the resource base-walk delivers them. The last block pins that directly.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -7,7 +11,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import { Linter } from '../../../linter/Linter';
 import './linterValidators'; // Import to trigger registration
 
-describe('StandardMaterial3D Linter Validators', () => {
+describe('BaseMaterial3D Linter Validators', () => {
   describe('normal_enabled validator', () => {
     it('should accept "true"', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'normal_enabled');
@@ -510,6 +514,39 @@ uv1_scale = Vector3(0.5 0.5 0.5)
       );
       expect(uv1ScaleErrors.length).toBeGreaterThan(0);
       expect(uv1ScaleErrors[0]!.severity).toBe('error');
+    });
+  });
+
+  describe('registered where Godot declares them', () => {
+    it('registers on BaseMaterial3D, so a lookup on it resolves directly', () => {
+      // The class the engine declares them on, and the key a guard reading
+      // `class_get_property_list('BaseMaterial3D', true)` looks up. It resolved
+      // to null while these sat on the leaf, so nothing could check them.
+      expect(validatorRegistry.getOwnKeys('BaseMaterial3D')).toContain('albedo_color');
+      expect(validatorRegistry.getOwnKeys('StandardMaterial3D')).toEqual([]);
+    });
+
+    it('reaches ORMMaterial3D, the sibling leaf that inherits the same set', () => {
+      // ORMMaterial3D declares nothing of its own: everything it can carry is
+      // BaseMaterial3D's, and it validated none of it before the base-walk
+      // covered the Resource hierarchy.
+      const validator = validatorRegistry.findValidator('ORMMaterial3D', 'albedo_color');
+      expect(validator).not.toBeNull();
+      expect(validator!('albedo_color', 'Color(1, 0)', 1)?.severity).toBe('error');
+    });
+
+    it('reports through the Linter on an ORMMaterial3D sub-resource', () => {
+      const content = `[gd_scene load_steps=2 format=3]
+
+[sub_resource type="ORMMaterial3D" id="Material_1"]
+uv1_scale = Vector2(0.5, 0.5)
+
+[node name="Root" type="Node3D"]
+`;
+      const diagnostics = new Linter().lint(content);
+      expect(
+        diagnostics.filter((d) => d.severity === 'error' && d.message.includes('uv1_scale'))
+      ).toHaveLength(1);
     });
   });
 });

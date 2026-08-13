@@ -31,4 +31,14 @@ export const PROPS_OUT = join(here, '../node-properties.json');
  * than about either hierarchy.
  */
 export const RESOURCE_PROPS_OUT = join(here, '../resource-properties.json');
+
+/**
+ * Resource class → immediate base, Resource terminal.
+ *
+ * The catalog's per-node `chain` covers instantiable classes only, which on
+ * this side would drop both ends of the chain that matters: the classes that
+ * DECLARE the properties are abstract, and the leaves a `.tscn` names declare
+ * nothing. A flat map, since one hop per class is what the walk consumes.
+ */
+export const RESOURCE_BASES_OUT = join(here, '../resource-bases.json');
 export const ENUM_GD = join(REPO_ROOT, 'scripts/godot-ref/enumerate-nodes.gd');

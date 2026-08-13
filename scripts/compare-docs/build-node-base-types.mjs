@@ -1,9 +1,10 @@
 /**
- * Derives the linter's node-type → base-type table from the node catalog's
- * ancestry and writes it as a TypeScript module.
+ * Derives the linter's class → base-type tables from the engine captures and
+ * writes them as TypeScript modules — one for the Node hierarchy, one for the
+ * Resource hierarchy.
  *
  * Usage:
- *   pnpm nodes:base-types      # -> packages/textscene-core/src/linter/nodeBaseTypes.generated.ts
+ *   pnpm nodes:base-types      # -> packages/textscene-core/src/linter/{node,resource}BaseTypes.generated.ts
  *
  * The catalog stores each node's full `chain` up to `Object`, so every hop in
  * it is a fact from Godot's own ClassDB rather than a judgement call. Emitting
@@ -12,9 +13,14 @@
  * day it is registered on an intermediate, instead of the day somebody
  * remembers to re-point every leaf at it.
  *
- * Reads the committed `node-catalog.json`, never Godot: CI has no engine, and
- * `nodeBaseTypes.sync.test.ts` re-derives from the same file to prove the
- * committed output is current.
+ * The Resource side arrives already flattened to one hop per class
+ * (`resource-bases.json`), because the catalog's `chain` covers instantiable
+ * NODE classes only and every class that declares a material or mesh property
+ * is abstract.
+ *
+ * Reads the committed captures, never Godot: CI has no engine, and the test
+ * beside this file re-derives from the same inputs to prove both committed
+ * outputs are current.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -23,16 +29,15 @@ import { pathToFileURL } from 'node:url';
 
 const here = import.meta.dirname;
 export const CATALOG = join(here, 'node-catalog.json');
-export const OUT = join(
-  here,
-  '..',
-  '..',
-  'packages',
-  'textscene-core',
-  'src',
-  'linter',
-  'nodeBaseTypes.generated.ts'
-);
+export const RESOURCE_BASES = join(here, 'resource-bases.json');
+
+/** `src/linter/<name>` in the core package. */
+function linterModule(name) {
+  return join(here, '..', '..', 'packages', 'textscene-core', 'src', 'linter', name);
+}
+
+export const OUT = linterModule('nodeBaseTypes.generated.ts');
+export const RESOURCE_OUT = linterModule('resourceBaseTypes.generated.ts');
 
 /**
  * Node-type → immediate-base map covering every class the catalog's ancestry
@@ -62,6 +67,13 @@ export function deriveBaseTypes(nodes) {
   return Object.fromEntries([...derived].sort(([a], [b]) => a.localeCompare(b)));
 }
 
+/** One `Child: 'Parent',` line per entry, in the object literal's indentation. */
+function renderEntries(table) {
+  return Object.entries(table)
+    .map(([child, parent]) => `  ${child}: '${parent}',`)
+    .join('\n');
+}
+
 /**
  * The module source for a derived table.
  *
@@ -70,9 +82,7 @@ export function deriveBaseTypes(nodes) {
  *   reader can tell which engine the ancestry came from.
  */
 export function renderModule(table, version) {
-  const entries = Object.entries(table)
-    .map(([child, parent]) => `  ${child}: '${parent}',`)
-    .join('\n');
+  const entries = renderEntries(table);
   return `/**
  * Node-type → base-type table, derived from Godot ${version}'s ClassDB.
  * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
@@ -89,16 +99,62 @@ ${entries}
 `;
 }
 
+/**
+ * The module source for the Resource hierarchy.
+ *
+ * The engine emits this one already flattened, so there is no chain to walk and
+ * nothing to derive — the value here is the same as the node module's: a table
+ * the linter can import, checked in because CI has no engine.
+ *
+ * @param table - `resource-bases.json`, class → immediate base.
+ * @param version - the engine both captures came from.
+ */
+export function renderResourceModule(table, version) {
+  return `/**
+ * Resource-type → base-type table, derived from Godot ${version}'s ClassDB.
+ * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
+ *
+ * Every Resource class, instantiable or not and property-declaring or not:
+ * \`StandardMaterial3D\` declares nothing and \`BaseMaterial3D\`, which declares
+ * the material properties, is abstract, so a table filtered on either would
+ * break the one chain a scene names. \`Resource\` is the terminal and has no
+ * entry. ValidatorRegistry.ts merges it with the node table to build the walk.
+ */
+
+export const RESOURCE_BASE_TYPES_GENERATED: Readonly<Record<string, string>> = Object.freeze({
+${renderEntries(table)}
+});
+`;
+}
+
 /** The module source the committed artifact must equal. */
 export function renderFromCatalog() {
   const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
   return renderModule(deriveBaseTypes(catalog.nodes), catalog.godotVersion ?? 'unknown');
 }
 
+/**
+ * The Resource module the committed artifact must equal.
+ *
+ * The version comes from the catalog because the two captures are written by
+ * one engine run; `resource-bases.json` is a bare map with nowhere to put it.
+ */
+export function renderFromResourceBases() {
+  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
+  return renderResourceModule(
+    JSON.parse(readFileSync(RESOURCE_BASES, 'utf8')),
+    catalog.godotVersion ?? 'unknown'
+  );
+}
+
 // Only write when run as a CLI, so the test can import the derivation.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const source = renderFromCatalog();
-  writeFileSync(OUT, source);
-  const count = source.match(/^ {2}\w+: '/gm)?.length ?? 0;
-  console.log(`Wrote ${OUT} — ${count} base-type entries.`);
+  for (const [path, source] of [
+    [OUT, renderFromCatalog()],
+    [RESOURCE_OUT, renderFromResourceBases()],
+  ]) {
+    writeFileSync(path, source);
+    const count = source.match(/^ {2}\w+: '/gm)?.length ?? 0;
+    console.log(`Wrote ${path} — ${count} base-type entries.`);
+  }
 }

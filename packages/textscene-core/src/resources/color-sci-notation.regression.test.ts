@@ -21,7 +21,7 @@ import { parseColor } from './materials/standardmaterial3d/parser';
 import { decodeEnvironment } from './environment/decode';
 import { validatorRegistry } from '../linter/ValidatorRegistry';
 import './environment/linterValidators';
-import './materials/standardmaterial3d/linterValidators';
+import './materials/basematerial3d/linterValidators';
 
 const MAT_SCI = 'Color(1.8771e-06, 0.751954, 0.25936, 1)';
 const ENV_SCI = 'Color(1.01075e-06, 0, 0.451248, 1)';

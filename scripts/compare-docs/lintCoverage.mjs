@@ -128,7 +128,7 @@ export function renderCoverage(type, coverage) {
 
   if (validators.length === 0) {
     lines.push(
-      `Strict parsing format-checks nothing on this node: no validators are registered for \`${type}\`, and it inherits none.`
+      `Strict parsing format-checks nothing here: no validators are registered for \`${type}\`, and it inherits none.`
     );
   } else {
     // A removal is not a check, so a type whose only own entry is a removal must

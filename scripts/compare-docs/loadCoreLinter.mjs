@@ -98,13 +98,17 @@ export async function loadCoreParser() {
 }
 
 /**
- * `NODE_BASE_TYPES` — the node-type → base-type table `findValidator` walks.
+ * `CLASS_BASE_TYPES` — the class → base-type table `findValidator` walks, node
+ * and resource hierarchies both. A sheet reading the node table alone would
+ * show `StandardMaterial3D` as validating nothing, since its properties are
+ * declared and registered one hop up on `BaseMaterial3D`.
+ *
  * Not re-exported by the linter barrel, so it is loaded from its own module
  * (the resolve hook above is process-wide, so this works the same way).
  */
-export async function loadNodeBaseTypes() {
+export async function loadClassBaseTypes() {
   const mod = await import(
-    pathToFileURL(join(here, '../../packages/textscene-core/dist/linter/nodeBaseTypes.js')).href
+    pathToFileURL(join(here, '../../packages/textscene-core/dist/linter/classBaseTypes.js')).href
   );
-  return mod.NODE_BASE_TYPES;
+  return mod.CLASS_BASE_TYPES;
 }

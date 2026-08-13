@@ -26,7 +26,7 @@ import {
   parseFrontmatter,
   sheetLabel,
 } from './sheetSources.mjs';
-import { loadCoreLinter, loadNodeBaseTypes } from './loadCoreLinter.mjs';
+import { loadClassBaseTypes, loadCoreLinter } from './loadCoreLinter.mjs';
 import { coverageFor, renderCoverage } from './lintCoverage.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -70,7 +70,7 @@ function applyBlock(text, type, rendered) {
 const check = process.argv.includes('--check');
 
 const core = await loadCoreLinter();
-const baseTypes = await loadNodeBaseTypes();
+const baseTypes = await loadClassBaseTypes();
 const registries = {
   ruleRegistry: core.ruleRegistry,
   validatorRegistry: core.validatorRegistry,
@@ -79,7 +79,9 @@ const registries = {
 
 // Loaded before the sheet loop so a sheet's `type:` can be checked against it.
 const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
-const knownTypes = new Set([...catalog.nodes, ...(catalog.extras ?? [])].map((n) => n.name));
+const knownTypes = new Set(
+  [...catalog.nodes, ...(catalog.resources ?? []), ...(catalog.extras ?? [])].map((n) => n.name)
+);
 
 const stale = [];
 let written = 0;

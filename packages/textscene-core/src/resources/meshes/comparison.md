@@ -79,6 +79,17 @@ their primitive, so a LINES-only mesh does not read as a byte defect. An
 `attribute_data` record narrower than the format implies costs that surface its UVs only;
 a wider one is an unmodelled CUSTOM channel and reads fine.
 
+## Linting
+
+<!-- lint:begin ArrayMesh -->
+Strict parsing format-checks the inherited set (1 inherited from Mesh, 2 inherited from Resource); `ArrayMesh` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+<!-- lint:end -->
+
+The lenient parser never rejects a mesh property: an unreadable `subdivide_width` or `uv2_padding` falls back to Godot's default through the shared value decoders, and a mesh whose arrays are malformed renders as nothing rather than failing the scene.
 ## Known limitations
 
 - **Texture slots on a scene SubResource material are unwired**, on every surface —

@@ -28,6 +28,17 @@ black grid confirm the U/V orientation matches Godot (measured to ~2% earlier).
 An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the
 sphere and ground it lights match Godot's.
 
+## Linting
+
+<!-- lint:begin Sky -->
+Strict parsing format-checks the inherited set (2 inherited from Resource); `Sky` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+<!-- lint:end -->
+
+The lenient parser never rejects: an unreadable Sky property falls back to Godot's default through the shared value decoders, and an unresolvable material or panorama leaves the background at its fallback rather than failing the scene.
 ## Known limitations
 
 - **Shader / compressed-cubemap skies** — a `Sky` whose material is a user `shader_type sky` `ShaderMaterial`, or whose panorama is a binary `CompressedCubemap`, is not resolved (we neither run GDShaders nor decode compressed cubemaps). The background falls back to a mid-blue solid and metallic surfaces reflect near-black; AgX, fog, and flat ambient still apply, so diffuse surfaces are unchanged. `ReflectionProbe` is likewise unsupported.

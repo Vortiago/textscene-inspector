@@ -8,7 +8,7 @@
  * re-exported here, so no importer moves.
  */
 
-import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
+import { CLASS_BASE_TYPES } from './classBaseTypes.js';
 import type { PropertyValidator } from './propertyValidator.js';
 import { buildWildcardIndex, matchesIndexedKey, type WildcardEntry } from './wildcardIndex.js';
 import { unavailableValidator, type Removal } from './unavailableKey.js';
@@ -34,9 +34,9 @@ export class ValidatorRegistry {
   private wildcards = new Map<string, WildcardEntry[]>();
 
   /**
-   * @param baseTypes - node-type → base-type map driving the inheritance walk in
-   *   `findValidator` (see nodeBaseTypes.ts). Defaults to `{}` (no inheritance,
-   *   pure exact/wildcard matching); the shared singleton wires NODE_BASE_TYPES.
+   * @param baseTypes - class → base-type map driving the inheritance walk in
+   *   `findValidator` (see classBaseTypes.ts). Defaults to `{}` (no inheritance,
+   *   pure exact/wildcard matching); the shared singleton wires the real one.
    */
   constructor(private baseTypes: Readonly<Record<string, string>> = {}) {}
 
@@ -149,7 +149,7 @@ export class ValidatorRegistry {
   findValidator(nodeType: string, propertyKey: string): PropertyValidator | null {
     // A hop counter, not a visited Set: this runs for every property of every
     // node, and the Set was an allocation on every call including every miss.
-    // `NODE_BASE_TYPES` is derived from ClassDB ancestry, so it is acyclic by
+    // The table is derived from ClassDB ancestry, so it is acyclic by
     // construction; the bound only stops a malformed hand-built registry from
     // spinning, which is what the Set was really guarding.
     let type: string | undefined = nodeType;
@@ -217,6 +217,24 @@ export class ValidatorRegistry {
   }
 
   /**
+   * The chain `findValidator` walks above `nodeType`, nearest first.
+   *
+   * Exposed so a guard about inheritance asks the registry what it inherits
+   * FROM instead of importing a table and assuming it is the same one: the
+   * shadow-copy guard read the node table after this walk had gained Godot's
+   * resource ancestry, and `QuadMesh` shadowing `PlaneMesh` read as clean.
+   */
+  baseChainOf(nodeType: string): string[] {
+    const chain: string[] = [];
+    let type: string | undefined = this.baseTypes[nodeType];
+    for (let hops = 0; type !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
+      chain.push(type);
+      type = this.baseTypes[type];
+    }
+    return chain;
+  }
+
+  /**
    * Node types that currently have validators registered
    */
   getRegisteredNodeTypes(): string[] {
@@ -243,7 +261,8 @@ export class ValidatorRegistry {
 }
 
 /**
- * Singleton instance of ValidatorRegistry, wired with the real node base-type
- * table so every subclass inherits its base validators.
+ * Singleton instance of ValidatorRegistry, wired with Godot's real ancestry —
+ * node and resource alike (classBaseTypes.ts) — so every subclass inherits its
+ * base validators.
  */
-export const validatorRegistry = new ValidatorRegistry(NODE_BASE_TYPES);
+export const validatorRegistry = new ValidatorRegistry(CLASS_BASE_TYPES);

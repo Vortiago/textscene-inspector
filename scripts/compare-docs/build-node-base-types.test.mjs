@@ -11,7 +11,15 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { deriveBaseTypes, OUT, renderFromCatalog } from './build-node-base-types.mjs';
+import {
+  deriveBaseTypes,
+  OUT,
+  RESOURCE_BASES,
+  RESOURCE_OUT,
+  renderFromCatalog,
+  renderFromResourceBases,
+} from './build-node-base-types.mjs';
+import { RESOURCE_CLASSES } from './build-node-catalog/extraClasses.mjs';
 
 describe('deriveBaseTypes', () => {
   it('emits one entry per hop, not just the leaf', () => {
@@ -55,5 +63,24 @@ describe('deriveBaseTypes', () => {
 
   it('the committed nodeBaseTypes.generated.ts matches the committed catalog', () => {
     expect(readFileSync(OUT, 'utf8')).toBe(renderFromCatalog());
+  });
+
+  it('the committed resourceBaseTypes.generated.ts matches the captured bases', () => {
+    expect(readFileSync(RESOURCE_OUT, 'utf8')).toBe(renderFromResourceBases());
+  });
+
+  it('the gallery hand-writes no resource chain the capture disagrees with', () => {
+    // RESOURCE_CLASSES predates the capture and spells its ancestry by hand.
+    // The capture can now answer, so the two are compared rather than one of
+    // them being trusted.
+    const bases = JSON.parse(readFileSync(RESOURCE_BASES, 'utf8'));
+    const derived = (name) => {
+      const chain = [];
+      for (let c = bases[name]; c !== undefined; c = bases[c]) chain.push(c);
+      return chain;
+    };
+    for (const { name, chain } of RESOURCE_CLASSES) {
+      expect(chain, `${name}`).toEqual(derived(name));
+    }
   });
 });

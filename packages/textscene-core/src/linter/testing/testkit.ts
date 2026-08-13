@@ -49,6 +49,20 @@ export function node(
   return [heading, ...lines].join('\n');
 }
 
+/**
+ * Build one `[sub_resource ...]` heading plus its property lines. Validated
+ * through the same `findValidator` as the node half.
+ */
+export function subResource(
+  type: string,
+  props: Record<string, PropValue> = {},
+  id = 'Res_1'
+): string {
+  const heading = `[sub_resource type="${type}" id="${id}"]`;
+  const lines = Object.entries(props).map(([key, value]) => `${key} = ${renderValue(value)}`);
+  return [heading, ...lines].join('\n');
+}
+
 /** The canonical accept-case children for physics bodies (a child CollisionShape). */
 export const collisionShape2d = node('CollisionShape2D', {}, { parent: '.' });
 export const collisionShape3d = node('CollisionShape3D', {}, { parent: '.' });
@@ -214,6 +228,43 @@ export interface PropertyValidationOptions {
   baseProps?: Record<string, PropValue>;
   /** Default accept mode for all cases (default `'clean'`; per-case `acceptMode` overrides). */
   acceptMode?: AcceptMode;
+}
+
+/**
+ * The same accept/reject table, driven through a `[sub_resource]` section.
+ *
+ * A resource has no place in a scene tree, so there is no parent, child or
+ * base-props apparatus: the block is the resource plus a root node, because a
+ * scene without one is a different thing to lint. `runPropertyValidation`'s
+ * options are deliberately not reused — half of them would be dead.
+ */
+export function runResourcePropertyValidation(
+  resourceType: string,
+  cases: PropertyCase[],
+  options: { acceptMode?: AcceptMode } = {}
+): void {
+  const root = node('Node3D', {}, { name: 'Root' });
+  for (const propCase of cases) {
+    const mode = propCase.acceptMode ?? options.acceptMode ?? 'clean';
+    describe(`${resourceType}.${propCase.prop} validation`, () => {
+      for (const value of propCase.valid ?? []) {
+        it(`accepts ${renderValue(value)}`, () => {
+          const content = scene(
+            subResource(resourceType, { [propCase.prop]: value, ...propCase.with }),
+            root
+          );
+          if (mode === 'no-error') expectNoErrors(content);
+          else expectClean(content);
+        });
+      }
+      for (const invalid of propCase.invalid ?? []) {
+        it(`rejects ${renderValue(invalid.value)}`, () => {
+          const content = scene(subResource(resourceType, { [propCase.prop]: invalid.value }), root);
+          expectInvalidCase(content, propCase.prop, invalid);
+        });
+      }
+    });
+  }
 }
 
 /**

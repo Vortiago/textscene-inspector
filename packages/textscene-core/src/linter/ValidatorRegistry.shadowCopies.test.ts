@@ -8,7 +8,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { ValidatorRegistry, validatorRegistry } from './ValidatorRegistry.js';
-import { baseChain } from './nodeBaseTypes.js';
 import { v } from './validators/v.js';
 import { findShadowViolations, ownKeyRegistrations } from './testing/shadowCopyScan.js';
 import './index.js'; // trigger all validator registrations
@@ -55,9 +54,17 @@ const INTENTIONAL_OVERRIDES = new Set<string>([
   'SplineIK3D:settings/#/*',
 ]);
 
-/** Collect all keys registered for a type by walking up its base chain. */
+/**
+ * Collect all keys registered for a type by walking up its base chain.
+ *
+ * The registry's own chain, not the node table: those were the same thing until
+ * the walk gained Godot's resource ancestry, and reading the narrower one made
+ * every resource shadow invisible.
+ */
 function baseChainKeys(nodeType: string): Set<string> {
-  return new Set(baseChain(nodeType).flatMap((ancestor) => validatorRegistry.getOwnKeys(ancestor)));
+  return new Set(
+    validatorRegistry.baseChainOf(nodeType).flatMap((ancestor) => validatorRegistry.getOwnKeys(ancestor))
+  );
 }
 
 /**

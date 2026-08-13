@@ -6,6 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
+import { RESOURCE_BASE_TYPES_GENERATED } from './resourceBaseTypes.generated.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import '../linter/index.js'; // trigger all validator registrations
 
@@ -63,18 +64,17 @@ describe('NODE_BASE_TYPES', () => {
     expect(chain('CanvasLayer')).toEqual(['CanvasLayer', 'Node']);
   });
 
-  it('gives every registered node type a resolvable chain to Node', () => {
-    // Base classes register directly; resources are property sets with no node
-    // inheritance. Every other registered node type must have a base entry so
-    // its inherited transform/visible/layout validators resolve — this guards
-    // against adding a node slice while forgetting the base table.
-    const BASE_TYPES = new Set(['Node3D', 'Node2D', 'Control', 'Node']);
-    const RESOURCE_TYPES = new Set(['Environment', 'StandardMaterial3D', 'PlaneMesh', 'QuadMesh']);
+  it('gives every registered type a resolvable chain to its root', () => {
+    // A registered type that reaches neither root silently receives no
+    // inherited validation, which is what this guards. Which hierarchy a type
+    // belongs to is read from the tables, never from a hand-kept list: the
+    // resource half used to be four names here, and a fifth registration would
+    // have failed the guard rather than been checked by it.
     for (const type of validatorRegistry.getRegisteredNodeTypes()) {
-      if (BASE_TYPES.has(type) || RESOURCE_TYPES.has(type)) continue;
-      expect(NODE_BASE_TYPES[type], `${type} missing from NODE_BASE_TYPES`).toBeDefined();
-      const c = chain(type);
-      expect(c[c.length - 1]).toBe('Node');
+      const root = validatorRegistry.baseChainOf(type).at(-1) ?? type;
+      expect([root, type], `${type} reaches no root`).toContain(
+        type in RESOURCE_BASE_TYPES_GENERATED || type === 'Resource' ? 'Resource' : 'Node'
+      );
     }
   });
 });

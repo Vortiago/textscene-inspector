@@ -162,10 +162,13 @@ import '../nodes/paths/path3d/index.linter.js';
 import '../nodes/paths/pathfollow3d/index.linter.js';
 
 // Import resource validators
-import '../resources/materials/standardmaterial3d/linterValidators.js';
+import '../resources/materials/basematerial3d/linterValidators.js';
 import '../resources/environment/index.linter.js';
 import '../resources/meshes/planemesh/linterValidators.js';
-import '../resources/meshes/quadmesh/linterValidators.js';
+import '../resources/meshes/mesh/linterValidators.js';
+import '../resources/meshes/primitivemesh/linterValidators.js';
+import '../resources/materials/material/linterValidators.js';
+import '../resources/resource/linterValidators.js';
 import '../nodes/2d/tiles/tilemaplayer/index.linter.js';
 import '../nodes/2d/tiles/tilemap/index.linter.js';
 import '../nodes/2d/remotetransform2d/index.linter.js';

@@ -27,7 +27,12 @@ import { enumerateGodotNodes, godotVersion, supportedTypes } from './build-node-
 import { EXTRA_CLASSES, RESOURCE_CLASSES } from './build-node-catalog/extraClasses.mjs';
 import { groupOf } from './build-node-catalog/groups.mjs';
 import { attachLinks } from './build-node-catalog/links.mjs';
-import { OUT, PROPS_OUT, RESOURCE_PROPS_OUT } from './build-node-catalog/paths.mjs';
+import {
+  OUT,
+  PROPS_OUT,
+  RESOURCE_BASES_OUT,
+  RESOURCE_PROPS_OUT,
+} from './build-node-catalog/paths.mjs';
 
 const linksOnly = process.argv.includes('--links-only');
 // The engine half alone. Writing the property table needs a local godot and
@@ -60,10 +65,15 @@ function writeProperties(properties, out) {
   console.log(`Wrote ${out} - ${Object.keys(sorted).length} classes, ${count} properties.`);
 }
 
-/** Both property tables from one enumeration, since one engine run yields both. */
+/** Every engine table from one enumeration, since one run yields them all. */
 function writePropertyTables(enumerated) {
   writeProperties(enumerated.properties, PROPS_OUT);
   writeProperties(enumerated.resourceProperties, RESOURCE_PROPS_OUT);
+  const bases = Object.fromEntries(
+    Object.entries(enumerated.resourceBases).sort(([a], [b]) => a.localeCompare(b))
+  );
+  writeFileSync(RESOURCE_BASES_OUT, `${JSON.stringify(bases, null, 2)}\n`);
+  console.log(`Wrote ${RESOURCE_BASES_OUT} - ${Object.keys(bases).length} classes.`);
 }
 
 if (propertiesOnly) {

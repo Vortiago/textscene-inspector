@@ -237,8 +237,8 @@ describe('CLI bundle purity', () => {
   // runtime always contains its Symbol.for("react. element registrations
   // and react-dom module ids. Plain substrings like 'three' or 'react'
   // would false-positive on ordinary prose, so we use these structural
-  // markers plus a 1 MB size backstop (the lean bundle is ~230 KB; pulling
-  // in three.js alone adds well over 1 MB unminified).
+  // markers plus a size backstop: pulling in three.js alone adds well over
+  // 1 MB unminified.
   it('contains no three.js or React markers', () => {
     const bundle = readFileSync(cliPath, 'utf-8');
 
@@ -257,7 +257,12 @@ describe('CLI bundle purity', () => {
     expect(bundle).toContain('tscn-lint');
   });
 
-  it('stays under the 1 MB size backstop', () => {
-    expect(statSync(cliPath).size).toBeLessThan(1024 * 1024);
+  it('stays under the size backstop', () => {
+    // A backstop for a leak the markers above miss, not a budget for the
+    // linter's own growth: every validator wave adds to this bundle, and
+    // bundling three.js or react-dom would add more than the whole of it.
+    // Raise it when honest growth reaches it; do not raise it to admit a
+    // dependency the markers just failed on.
+    expect(statSync(cliPath).size).toBeLessThan(1_400_000);
   });
 });

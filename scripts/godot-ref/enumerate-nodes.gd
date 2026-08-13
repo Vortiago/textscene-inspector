@@ -1,6 +1,6 @@
-# Dumps what only a running engine can answer, as three JSON blobs each after a
+# Dumps what only a running engine can answer, as four JSON blobs each after a
 # marker line. Driven by build-node-catalog/classdb.mjs. Re-run against a newer
-# Godot to refresh all three.
+# Godot to refresh all four.
 #
 # ###NODES_JSON### every INSTANTIABLE Node class, with its dimension (3D / 2D /
 #   Other) and full ancestor chain.
@@ -15,6 +15,12 @@
 #   blob rather than more rows in the one above, because the two hierarchies are
 #   disjoint and their consumers are not the same: the node property table backs
 #   a node-coverage ledger that Resource rows would silently move.
+#
+# ###RESOURCE_BASES_JSON### every Resource class's immediate base, Resource
+#   terminal. Unfiltered on purpose: StandardMaterial3D declares nothing (so it
+#   is absent from the blob above) and BaseMaterial3D, which declares its whole
+#   property set, is abstract. Either filter would break the one chain a scene
+#   walks.
 extends SceneTree
 
 # PROPERTY_USAGE_STORAGE. The one flag that decides whether a property can reach
@@ -44,12 +50,16 @@ func _init() -> void:
 	var classes: Array = []
 	var properties: Dictionary = {}
 	var resource_properties: Dictionary = {}
+	var resource_bases: Dictionary = {}
 
 	for c in ClassDB.get_class_list():
 		if ClassDB.is_parent_class(c, "Resource"):
 			var res_own: Array = own_properties(c)
 			if res_own.size() > 0:
 				resource_properties[c] = res_own
+			# Unfiltered, unlike the two blobs above: see the header.
+			if c != "Resource":
+				resource_bases[c] = ClassDB.get_parent_class(c)
 			continue
 		if not ClassDB.is_parent_class(c, "Node"):
 			continue
@@ -78,4 +88,6 @@ func _init() -> void:
 	print(JSON.stringify(properties))
 	print("###RESOURCE_PROPS_JSON###")
 	print(JSON.stringify(resource_properties))
+	print("###RESOURCE_BASES_JSON###")
+	print(JSON.stringify(resource_bases))
 	quit()

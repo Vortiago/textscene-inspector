@@ -74,3 +74,15 @@ engine ignores them too.
 Rasterisation is synchronous and costs roughly a second for a shipped 1024x1024
 seamless field, once per resource: Godot generates the same texture on a worker
 thread.
+
+## Linting
+
+<!-- lint:begin Texture2D -->
+Strict parsing format-checks the inherited set (2 inherited from Resource); `Texture2D` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+<!-- lint:end -->
+
+The lenient parser never rejects a texture property: an unreadable value falls back to Godot's default through the shared value decoders, and a reference it cannot resolve leaves the slot empty, so the consumer renders untextured rather than failing the scene.

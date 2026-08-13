@@ -11,8 +11,7 @@
  * An earlier version of this guard read the quoted hint out of the COMMENT
  * beside each validator. That worked, and was the wrong altitude: the comment
  * is a hand-copy of an authoritative record that already exists here.
- * `node-properties.json` (227 classes, 542 ranged properties) and
- * `resource-properties.json` (286 classes, 752 ranged properties) are a live
+ * `node-properties.json` and `resource-properties.json` are a live
  * `ClassDB.class_get_property_list(c, true)` captured by `pnpm
  * nodes:properties`. Reading the engine's own capture instead of our prose
  * deletes every special case the text version needed: no distinguishing
@@ -21,12 +20,10 @@
  * comment, no floor on how many comments were found to stop the subject being
  * deleted along with the evidence.
  *
- * Scope, stated because it is not the whole subject: a row is keyed by the
- * class that DECLARES the property, and `findValidator` walks node ancestry
- * only, so a validator registered on a Resource leaf whose properties the
- * engine declares on an abstract base is not reached — `StandardMaterial3D`'s
- * are all `BaseMaterial3D`'s. Nothing checks those 35 today:
- * `enginePropertyCoverage` reads the node capture alone.
+ * A row is keyed by the class that DECLARES the property, so it only reaches a
+ * resource validator because the base-walk now covers Godot's resource
+ * ancestry (classBaseTypes.ts). Registered on the leaf a scene names, as
+ * `StandardMaterial3D`'s once were, they would be invisible here.
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -163,11 +160,11 @@ function unimplementedEnds(hint, bounds) {
  * only ever looked where a comment happened to quote a hint. Lower it by
  * implementing a bound, never by widening what counts.
  *
- * It rose from 101 to 111 once the capture reached Resource classes, which is
- * the subject growing rather than the bar dropping: the ten new ends were
- * always open, and nothing here could see them before.
+ * It rose to 111 once the capture reached Resource classes — the subject
+ * growing, not the bar dropping — and fell back to 101 when those ends, all
+ * Environment ceilings, were implemented.
  */
-const UNIMPLEMENTED_HINT_ENDS = 111;
+const UNIMPLEMENTED_HINT_ENDS = 101;
 
 /**
  * The engine's ranged properties, from both captures.
