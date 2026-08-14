@@ -7,7 +7,7 @@
  * `connect-src`, `worker-src` or `font-src`. That is why the renderer paints
  * every glyph through a vendored MSDF atlas riding `img-src … data:` rather
  * than through a font library that would fetch its own font and spawn a
- * blob-URL worker (ADR-0031). The extension-host integration suite cannot see
+ * blob-URL worker (ADR-0037). The extension-host integration suite cannot see
  * that: a webview is a sandboxed `vscode-webview://` frame, so the suite proves
  * the panel loads and hands over its payload, never that a pixel landed. This
  * gate drives a real desktop VS Code — the build `@vscode/test-electron`

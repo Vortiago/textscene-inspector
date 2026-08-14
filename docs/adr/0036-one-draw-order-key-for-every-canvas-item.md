@@ -1,8 +1,8 @@
 # One draw-order key for every canvas item, Controls included
 
-- Status: Accepted (2026-08-13). **Amends ADR-0031**, whose "`renderOrder`, not a
+- Status: Accepted (2026-08-13). **Amends ADR-0037**, whose "`renderOrder`, not a
   second z-banding scheme" section chose a Control-only band; that band is replaced
-  here. The rest of ADR-0031 — the native Control rendering it decided — stands.
+  here. The rest of ADR-0037 — the native Control rendering it decided — stands.
 - Related: ADR-0006 (the 2D workspace); ADR-0033 (a sub-viewport is a canvas
   boundary, and draws into a target of its own, so it starts a fresh key range).
 
@@ -92,6 +92,6 @@ work moved the code around them:
   against the node's siblings — Godot gives each layer its own `CanvasItem`. The node
   draws as one canvas item here.
 - A Control under a `Node2D` ancestor is still positioned from its solved rect against
-  the viewport rather than the composed CanvasItem transform chain (ADR-0031's own
+  the viewport rather than the composed CanvasItem transform chain (ADR-0037's own
   recorded limitation). Draw ORDER is now correct for that case even though position
   is not.

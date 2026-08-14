@@ -1,8 +1,8 @@
-**Superseded by ADR-0031 (2026-08-04): Control nodes render natively in the WebGL
+**Superseded by ADR-0037 (2026-08-04): Control nodes render natively in the WebGL
 canvas.** The history below is kept because it records why the DOM was chosen and
-what it cost, including the 2026-07-29 raster amendment, which ADR-0031's native
+what it cost, including the 2026-07-29 raster amendment, which ADR-0037's native
 offscreen pass also replaces. Its `font-src` framing for the system-fonts-only
-limitation is corrected by ADR-0031: the real, twice-over blocker for a non-CSS text
+limitation is corrected by ADR-0037: the real, twice-over blocker for a non-CSS text
 pipeline is `worker-src` + `connect-src`, found only once one was attempted.
 
 # 2D UI renders as a DOM overlay, not in three.js

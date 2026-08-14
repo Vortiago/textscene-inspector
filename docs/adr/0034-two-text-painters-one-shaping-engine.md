@@ -1,7 +1,7 @@
 # Two text painters, one shaping engine
 
 - Status: Accepted (2026-08-06).
-- Related: ADR-0031 (Control nodes render natively in the canvas — this is how that
+- Related: ADR-0037 (Control nodes render natively in the canvas — this is how that
   decision's text gets drawn); ADR-0026 (comparison sheets live in their slice — the
   measured limitation below is recorded there as well as here).
 

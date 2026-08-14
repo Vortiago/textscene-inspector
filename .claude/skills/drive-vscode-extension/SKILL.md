@@ -164,7 +164,7 @@ is denied by that base: no `connect-src` (no fetch/XHR/WebSocket, for `data:` an
 `@font-face`). Anything the webview must load therefore ships inside the bundle —
 the MSDF glyph atlas rides in as a `data:` URI under `img-src data:`.
 
-ADR-0031 holds why the text pipeline is a baked atlas rather than troika, and
+ADR-0037 holds why the text pipeline is a baked atlas rather than troika, and
 which directives actually blocked it — read it before proposing a CSP widening.
 
 ## Measured baseline

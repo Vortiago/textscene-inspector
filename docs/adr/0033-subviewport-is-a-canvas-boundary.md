@@ -139,7 +139,7 @@ which display real content.
   - ~~A sub-viewport containing Controls has no WebGL source of its own; its texture
     comes from a DOM raster (ADR-0003 as amended). Its text cannot match Godot's, which
     bundles Open Sans SemiBold while the overlay is system-fonts-only.~~ **Resolved by
-    ADR-0031:** the publisher is now a native offscreen pass through the same
+    ADR-0037:** the publisher is now a native offscreen pass through the same
     `ControlCanvasWalker` every other Control uses, which vendors that same Open Sans
     SemiBold font as an MSDF atlas — this limitation no longer applies.
   - A **recursive** ViewportTexture — a viewport sampling its own target — is unsolved and
@@ -155,7 +155,7 @@ which display real content.
     `Canvas2DStage` layers the whole Control overlay above the world canvas
     unconditionally, while Godot orders all CanvasItems in one tree walk. `demos/2d/pong`
     renders as a flat rectangle for exactly this reason: its `Background` ColorRect is
-    the first child.~~ **Resolved by ADR-0031:** Controls draw inside the same canvas as
+    the first child.~~ **Resolved by ADR-0037:** Controls draw inside the same canvas as
     the 2D world in one tree-order pass, so this class of bug cannot recur — this was
     the evidence issue #368 (native WebGL Controls) was filed on.
   - **`ParallaxBackground` stays put while the camera moves**, so its edge cuts a

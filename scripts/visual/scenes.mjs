@@ -632,7 +632,7 @@ export const GOLDEN_SCENES = [
   // within 1% linear per sample.
   { name: 'sub-viewport-texture', file: 'unit-sub-viewport-texture.tscn' },
 
-  // --- Native Control rendering (ADR-0031) ---
+  // --- Native Control rendering (ADR-0037) ---
   // Controls draw into the WebGL canvas like every other 2D item, so for the
   // first time they can be golden-gated at all. Each scene below moves ONE
   // piece of that renderer and its fixture header says which; between them

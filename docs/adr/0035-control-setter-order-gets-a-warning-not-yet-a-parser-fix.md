@@ -6,7 +6,7 @@
   rather than in inference about what the engine probably does; the citations below
   are the record of that. Option C's advisory warnings stand alongside it, since a
   warning names the authoring hazard even where the parser now resolves it.
-- Related: ADR-0031 (Control nodes render natively — `controlRectSolver.ts`,
+- Related: ADR-0037 (Control nodes render natively — `controlRectSolver.ts`,
   `controlAnchors.ts`), ADR-0001 (unified slice, React-free linter — the two-parser
   seam this ADR's options act on).
 
@@ -297,7 +297,7 @@ intermediate is authorable" — the same reason the format validators link strai
 to `Control` instead of through a `Range`/`Slider` link). *Failure mode, stated
 plainly:* a warning does not make the renderer correct. The previewer still paints
 the wrong rect/value for a scene that authors either family's divergent order —
-against this project's own "the preview shows what Godot shows" decision (ADR-0031's
+against this project's own "the preview shows what Godot shows" decision (ADR-0037's
 plan-level framing) — until Option B (or A) is separately implemented. A linter rule
 is a mitigation for AUTHORING new scenes correctly, not a fix for rendering an
 already-divergent one. It is not a substitute for Option B; it is a complement that

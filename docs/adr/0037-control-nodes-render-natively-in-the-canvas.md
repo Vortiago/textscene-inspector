@@ -60,6 +60,20 @@ tessellated, vertex-coloured mesh geometry (`styleBoxFlatGeometry.ts` +
 `StyleBoxQuad`, porting `StyleBoxFlat::draw`, `border_blend` included) rather than CSS
 `background`/`border`.
 
+Those vertex colours stay in **sRGB** all the way to the fragment shader, which decodes
+them there — not on the attribute. For a constant colour the two are the same number;
+they diverge exactly where the rasterizer interpolates between two different ones,
+which is what a `border_blend` ring is. Godot ramps `border_color` to
+`border_color_blend` in sRGB, so linearising the endpoints first ramps through the
+wrong space — measured at 38 counts on red at the ramp's midpoint while both endpoints
+stayed exact. Subdividing the ring so a linear ramp tracks the sRGB one is the
+alternative and converges as the square of the step count: 16 radial bands still leave
+1.3 counts, for 32x the vertices. The decode is injected into `MeshBasicMaterial`'s
+own `<color_fragment>` rather than written as a `ShaderMaterial`, so clipping, the
+tone curve and the output encode all stay inherited — three stages a hand-written
+shader has to re-declare, and whose omission is silent (`msdfMaterial.ts`'s own header
+records all three being missed once already).
+
 This is also a **testability upgrade**, not just a fidelity one: happy-dom has no
 layout, so the DOM-era unit tests could assert a Control was in the DOM but never
 where it was. A rect solve is asserted in plain vitest against exact values, some
