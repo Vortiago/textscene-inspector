@@ -32,6 +32,17 @@ Measured on Godot 4.6.3, `pnpm ref:godot scenes/fixtures/unit-rich-text-label.ts
 --mode 2d --probe <x,y>` against `pnpm ref:ours unit-rich-text-label.tscn --2d
 --probe <x,y>`:
 
+`HORIZONTAL_ALIGNMENT_FILL` — whether authored on `horizontal_alignment` or
+opened as `[fill]` — positions each line's ORIGIN where Godot does (the LTR
+arm of `TextParagraph::draw`'s alignment switch shifts nothing, so FILL and
+LEFT share an origin), but does not stretch the line to the box: Godot
+justifies inside the line by growing its elastic spaces
+(`text_paragraph.cpp:284`, `TextServer`'s `JUSTIFICATION_WORD_BOUND`), and
+this renderer's shaping engine has no justification pass, so a filled
+paragraph reads as left-aligned with a ragged right edge. Every other
+alignment is exact, engine-checked to the pixel — see `nativeSolver.test.ts`'s
+own header for the ink-column measurements.
+
 `[u]`'s rule is one crisp row at y 21 on both sides, the same `rgb(153, 153,
 153)` and the same 84 columns wide, but it starts at x 91 here against Godot's
 x 92 — the pen has drifted one column left over the ~90 px of text ahead of it.

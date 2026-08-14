@@ -124,8 +124,9 @@ describe('<LineEdit> — chrome (StyleBoxQuad)', () => {
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const fill = findFillColor(mesh);
-    // style_normal_color = Color(0.1, 0.1, 0.1, 0.6): sRGBChannelToLinear(0.1) ≈ 0.0100228.
-    expect(fill.r).toBeCloseTo(0.0100228, 5);
+    // style_normal_color = Color(0.1, 0.1, 0.1, 0.6), read raw — the StyleBox
+    // vertex attribute is decoded per fragment (`StyleBoxQuad.tsx`).
+    expect(fill.r).toBeCloseTo(0.1, 5);
     expect(fill.a).toBeCloseTo(0.6, 5);
   });
 
@@ -146,7 +147,7 @@ describe('<LineEdit> — chrome (StyleBoxQuad)', () => {
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const fill = findFillColor(mesh);
-    expect(fill.r).toBeCloseTo(sRGBChannelToLinear(0.9), 4);
+    expect(fill.r).toBeCloseTo(0.9, 4);
   });
 
   it('flat=true draws NO chrome mesh at all, but still draws the text', async () => {
@@ -293,7 +294,7 @@ describe('<LineEdit> — tint composition', () => {
       const chromeColor = (findChromeMesh(renderer.scene)!.geometry as THREE.BufferGeometry).attributes
         .color as THREE.BufferAttribute;
       // own(sRGB) = ambient(0.5) * self_modulate(0.5) = 0.25, NOT 0.125 (squared).
-      expect(chromeColor.getX(0)).toBeCloseTo(sRGBChannelToLinear(0.25), 4);
+      expect(chromeColor.getX(0)).toBeCloseTo(0.25, 4);
 
       const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
       // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, THEN linearised.

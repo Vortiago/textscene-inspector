@@ -109,8 +109,8 @@ describe('<Button> (isolated painter contract)', () => {
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
-    // sRGBChannelToLinear(0.9) ≈ 0.787412 (utils/colorSpace.ts).
-    expect(color.getX(0)).toBeCloseTo(0.787412, 4);
+    // Raw sRGB — the StyleBox vertex attribute is decoded per fragment (`StyleBoxQuad.tsx`).
+    expect(color.getX(0)).toBeCloseTo(0.9, 4);
   });
 
   it('falls back to the default-theme button.normal StyleBox when no override resolves', async () => {
@@ -119,8 +119,8 @@ describe('<Button> (isolated painter contract)', () => {
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
-    // style_normal_color = Color(0.1, 0.1, 0.1, 0.6): sRGBChannelToLinear(0.1) ≈ 0.0100228.
-    expect(color.getX(0)).toBeCloseTo(0.0100228, 5);
+    // style_normal_color = Color(0.1, 0.1, 0.1, 0.6). // Raw sRGB — the StyleBox vertex attribute is decoded per fragment (`StyleBoxQuad.tsx`).
+    expect(color.getX(0)).toBeCloseTo(0.1, 5);
     expect(color.getW(0)).toBeCloseTo(0.6, 5);
   });
 
@@ -191,8 +191,8 @@ describe('<Button> (isolated painter contract)', () => {
       // re-applying `modulate` a second time would square it to).
       const chromeColor = (findChromeMesh(renderer.scene)!.geometry as THREE.BufferGeometry).attributes
         .color as THREE.BufferAttribute;
-      // sRGBChannelToLinear(0.25) ≈ 0.050876.
-      expect(chromeColor.getX(0)).toBeCloseTo(0.050876, 4);
+      // 0.5 (ambient) * 0.5 (self_modulate) = 0.25, in sRGB.
+      expect(chromeColor.getX(0)).toBeCloseTo(0.25, 4);
 
       const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
       // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, THEN linearised.

@@ -32,13 +32,22 @@
  * `<TextRun>`, while every run on a line shares that LINE's baseline
  * (`richTextLineMetrics`), Godot's own `off.y += l_ascent`.
  *
- * RichTextLabel has no `horizontal_alignment`/`vertical_alignment` Control
- * property (unlike Label) — every line is left-aligned, and the paragraph as
- * a whole is top-aligned, so there is no `layoutLabelLines`-style alignment
- * pass here: each line's y is its own `lineTopPx`, the running sum of the
- * earlier lines' own heights (NOT `lineIndex * linePitchPx` — lines carrying
- * different font sizes are different heights), which `<TextRun>` anchors at
- * that line's baseline itself (`buildGlyphQuadArrays`'s own doc).
+ * ALIGNMENT — `horizontal_alignment`/`vertical_alignment` reach here through
+ * `layoutRichTextRuns`, which resolves BOTH the property and the
+ * `[center]`/`[right]`/`[left]`/`[fill]` bbcode tags through the one
+ * `_find_alignment` port: the tags are `push_paragraph` calls in Godot
+ * (`rich_text_label.cpp:5681-5696`) and the property is the fallback that
+ * walk ends at, so they are one input with two spellings, not two features.
+ * Each line carries its OWN `lineOffsetXPx` because Godot aligns each by its
+ * own width; the paragraph's vertical shift is folded into `lineTopPx`.
+ * `HORIZONTAL_ALIGNMENT_FILL` positions like LEFT here — correct for the line
+ * ORIGIN, but the intra-line justification is a standing gap this slice's
+ * `comparison.md` records.
+ *
+ * A line's y is its own `lineTopPx`, the running sum of the earlier lines'
+ * own heights (NOT `lineIndex * linePitchPx` — lines carrying different font
+ * sizes are different heights), which `<TextRun>` anchors at that line's
+ * baseline itself (`buildGlyphQuadArrays`'s own doc).
  *
  * Tint: `ControlCanvasWalker` already folds this node's OWN `modulate` into
  * the `Modulate2DContext` value it provides AROUND this painter, so
@@ -111,7 +120,16 @@ export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeCon
     [plainText, textTheme.fontSizePx, rect.w, autowrapMode, fontSizePxAt, fontMetrics]
   );
 
-  const placements = useMemo(() => layoutRichTextRuns(runs, layout), [runs, layout]);
+  const placements = useMemo(
+    () =>
+      layoutRichTextRuns(runs, layout, {
+        boxWidthPx: rect.w,
+        boxHeightPx: rect.h,
+        horizontalAlignment: props.horizontalAlignment,
+        verticalAlignment: props.verticalAlignment,
+      }),
+    [runs, layout, rect.w, rect.h, props.horizontalAlignment, props.verticalAlignment]
+  );
   const underlineMetrics = useMemo(() => richTextUnderlineMetrics(runs), [runs]);
 
   return (
@@ -123,7 +141,7 @@ export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeCon
           ? underlineRectPx(placement.layout.lines[0]!.glyphs, placement.layout.baselineOffsetPx, underlineMetrics)
           : null;
         return (
-          <CanvasItemGroup key={index} position={[0, -y, 0]}>
+          <CanvasItemGroup key={index} position={[placement.lineOffsetXPx, -y, 0]}>
             <TextRun
               layout={placement.layout}
               fontSizePx={placement.fontSizePx}

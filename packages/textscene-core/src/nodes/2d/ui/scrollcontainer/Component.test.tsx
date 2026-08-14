@@ -342,8 +342,8 @@ describe('<ScrollContainer> — tint', () => {
     const track = meshes.reduce((a, b) => (worldBounds(a).max.y - worldBounds(a).min.y >
       worldBounds(b).max.y - worldBounds(b).min.y ? a : b));
     const color = (track.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
-    // sRGBChannelToLinear(0.025) ≈ 0.0019349845.
-    expect(color.getX(0)).toBeCloseTo(0.0019349845, 6);
+    // Raw sRGB — the StyleBox vertex attribute is decoded per fragment (`StyleBoxQuad.tsx`).
+    expect(color.getX(0)).toBeCloseTo(0.025, 6);
   });
 });
 

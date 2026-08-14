@@ -59,7 +59,7 @@ describe('<StyleBoxQuad>', () => {
     expect(mat.side).toBe(THREE.DoubleSide);
   });
 
-  it('linearises sRGB vertex colours (fill red 1,0,0 stays 1,0,0; a mid green channel is NOT passed through raw)', async () => {
+  it('uploads vertex colours in raw sRGB, leaving the transfer function to the shader', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <StyleBoxQuad
         styleBox={box({ bgColor: { r: 1, g: 0.5, b: 0, a: 1 } })}
@@ -69,11 +69,42 @@ describe('<StyleBoxQuad>', () => {
     );
     const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
-    // sRGBChannelToLinear(0.5) = ((0.5+0.055)/1.055)^2.4 ≈ 0.2140.
+    // Godot interpolates a `border_blend` ramp between two sRGB colours and
+    // the rasterizer interpolates VERTEX attributes, so the attribute has to
+    // still be in sRGB at that point — linearising here (0.5 →
+    // sRGBChannelToLinear(0.5) ≈ 0.2140) made the GPU interpolate the ramp in
+    // the wrong space. See this component's own doc.
     expect(color.getX(0)).toBeCloseTo(1, 4);
-    expect(color.getY(0)).toBeCloseTo(0.214041, 4);
+    expect(color.getY(0)).toBeCloseTo(0.5, 4);
     expect(color.getZ(0)).toBeCloseTo(0, 4);
     expect(color.getW(0)).toBeCloseTo(1, 4);
+    expect(color.getY(0)).not.toBeCloseTo(sRGBChannelToLinear(0.5), 3);
+  });
+
+  it('decodes those sRGB vertex colours in the fragment shader, before the multiply into diffuseColor', async () => {
+    // The conversion has to happen PER FRAGMENT — that is the whole point of
+    // moving it off the vertex attribute. Asserted on the injected source
+    // rather than a rendered pixel: `@react-three/test-renderer`'s mock GL
+    // never compiles a shader, so this pins the injection, and a real
+    // compilation of it is covered only by the browser gates.
+    const renderer = await ReactThreeTestRenderer.create(
+      <StyleBoxQuad styleBox={box({})} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
+    );
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(mat.customProgramCacheKey!()).toContain('stylebox');
+
+    const shader = { fragmentShader: '#include <color_fragment>' };
+    mat.onBeforeCompile!(shader as never, null as never);
+    expect(shader.fragmentShader).not.toContain('#include <color_fragment>');
+    // Godot's own curve, `Color::srgb_to_linear` (`utils/colorSpace.ts`) —
+    // knee at 0.04045, `/ 12.92` below it and `pow((c + 0.055) / 1.055, 2.4)`
+    // above.
+    expect(shader.fragmentShader).toContain('0.04045');
+    expect(shader.fragmentShader).toContain('12.92');
+    expect(shader.fragmentShader).toContain('2.4');
+    // Alpha carries no transfer function, and the AA feather rings interpolate
+    // exactly that channel — converting it would feather wrong.
+    expect(shader.fragmentShader).toContain('vColor.a');
   });
 
   it('renders nothing (no mesh) when the stylebox draws no geometry (draw_center false, no border)', async () => {
@@ -102,12 +133,7 @@ describe('<StyleBoxQuad>', () => {
   });
 
   describe('color override', () => {
-    it('composes the tint into bg_color/border_color in raw sRGB ONCE, before the single sRGB→linear conversion — 0.5 * 0.5 = 0.25, not 0.125', async () => {
-      // The composed channel is 0.5 (widget) * 0.5 (tint) = 0.25 in sRGB,
-      // converted to linear EXACTLY once. Double-linearisation (converting
-      // both operands first, THEN multiplying in linear space) would instead
-      // give sRGBChannelToLinear(0.5) ** 2 ≈ 0.0334 — an entirely different,
-      // much darker number this test also rules out.
+    it('composes the tint into bg_color/border_color in raw sRGB — 0.5 * 0.5 = 0.25, not 0.125', async () => {
       const renderer = await ReactThreeTestRenderer.create(
         <StyleBoxQuad
           styleBox={box({ bgColor: { r: 0.5, g: 0.5, b: 0.5, a: 1 } })}
@@ -119,13 +145,15 @@ describe('<StyleBoxQuad>', () => {
       const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
       const color = geom.attributes.color as THREE.BufferAttribute;
 
-      const composedOnce = sRGBChannelToLinear(0.25);
-      const doubleLinearised = sRGBChannelToLinear(0.5) * sRGBChannelToLinear(0.5);
-      expect(composedOnce).not.toBeCloseTo(doubleLinearised, 3);
+      // Composed in sRGB and left there: 0.5 * 0.5 = 0.25. Composing in
+      // LINEAR instead would give sRGBChannelToLinear(0.5) ** 2 ≈ 0.0334,
+      // which the shader's own decode could never recover.
+      const composedInLinear = sRGBChannelToLinear(0.5) * sRGBChannelToLinear(0.5);
+      expect(0.25).not.toBeCloseTo(composedInLinear, 3);
 
-      expect(color.getX(0)).toBeCloseTo(composedOnce, 5);
-      expect(color.getY(0)).toBeCloseTo(composedOnce, 5);
-      expect(color.getZ(0)).toBeCloseTo(composedOnce, 5);
+      expect(color.getX(0)).toBeCloseTo(0.25, 5);
+      expect(color.getY(0)).toBeCloseTo(0.25, 5);
+      expect(color.getZ(0)).toBeCloseTo(0.25, 5);
     });
 
     it('tints borderColor the same way as bgColor', async () => {
@@ -142,7 +170,7 @@ describe('<StyleBoxQuad>', () => {
       // Vertex 1 is the border ring's first OUTER (border_color) vertex — see
       // styleBoxFlatGeometry.test.ts's border_blend fixture for the even/odd
       // inner/outer ordering this relies on.
-      expect(color.getX(1)).toBeCloseTo(sRGBChannelToLinear(0.25), 5);
+      expect(color.getX(1)).toBeCloseTo(0.25, 5);
     });
 
     it('defaults to no tint (opaque white) when the prop is omitted, matching pre-existing behaviour', async () => {
@@ -151,7 +179,7 @@ describe('<StyleBoxQuad>', () => {
       );
       const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
       const color = geom.attributes.color as THREE.BufferAttribute;
-      expect(color.getX(0)).toBeCloseTo(sRGBChannelToLinear(0.8), 5);
+      expect(color.getX(0)).toBeCloseTo(0.8, 5);
     });
 
     it('multiplies alpha too (tint.a composes into the vertex alpha channel)', async () => {

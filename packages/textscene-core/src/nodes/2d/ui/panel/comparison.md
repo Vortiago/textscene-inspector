@@ -48,19 +48,32 @@ there is no Panel-specific lenient fallback beyond what Control already covers.
 
 ## Known limitations
 
-- **StyleBoxFlat.border_blend** — the ramp is drawn, but interpolated in the wrong space. `unit-panel-styleboxes.tscn` sets it on one of two otherwise identical Panels, so the flag is the only variable. Measured across the 16 px top border with `pnpm ref:godot scenes/fixtures/unit-panel-styleboxes.tscn --mode 2d --probe <x,y>` against `pnpm ref:ours unit-panel-styleboxes.tscn --2d --probe <x,y>`:
+- **StyleBoxFlat.border_blend** — the ramp matches Godot's, to the count, everywhere
+  but its last row. `unit-panel-styleboxes.tscn` sets the flag on one of two
+  otherwise identical Panels, so it is the only variable. Measured across the 16 px
+  top border with `pnpm ref:godot scenes/fixtures/unit-panel-styleboxes.tscn --mode
+  2d --probe <x,y>` against `pnpm ref:ours unit-panel-styleboxes.tscn --2d --probe
+  <x,y>`:
 
   | Probe | What it is | Godot | Ours |
   | --- | --- | --- | --- |
-  | (850, 340) | the ramp's first row, at `border_color` | rgb(242, 191, 51) | rgb(239, 189, 55) |
-  | (850, 348) | its midpoint | rgb(137, 132, 90) | rgb(175, 145, 101) |
+  | (850, 340) | the ramp's first row, at `border_color` | rgb(242, 191, 51) | rgb(242, 191, 51) |
+  | (850, 348) | its midpoint | rgb(137, 132, 90) | rgb(137, 132, 90) |
   | (850, 356) | its last row, at `bg_color` | rgb(38, 76, 128) | rgb(38, 77, 128) |
 
-  Both ramps start and end on the same rows at the same two colours; Godot's runs
-  through sRGB and ours through linear, which is why the midpoint sits 38 counts
-  high on the red channel. The unblended twin is exact: a transect across its own
-  16 px border reads rgb(242, 191, 51) for every border pixel and rgb(38, 76, 128)
-  immediately inside, on both sides.
+  The one remaining count is on green at `bg_color`, whose 0.3 channel is fractional
+  at 8 bit (0.3 x 255 = 76.5) — the reference tool's own ROP rounding floor, which
+  moves with the rendering driver rather than with this renderer. The unblended twin
+  is exact: a transect across its own 16 px border reads rgb(242, 191, 51) for every
+  border pixel and rgb(38, 76, 128) immediately inside, on both sides.
+
+- **StyleBoxFlat.skew and the drop shadow** (`shadow_size`/`shadow_color`/
+  `shadow_offset`) are not drawn at all. Both are whole `StyleBoxFlat::draw`
+  stages rather than parameters of the ring tessellation, and no scene in the
+  corpus authors either — so the gap is invisible today and the geometry
+  reports it (`styleBoxFlatGeometry.ts`'s own header) rather than approximating
+  it. A scene that does author one gets a box without the effect, with no
+  warning.
 
 ## Native (WebGL canvas) painter
 

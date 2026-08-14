@@ -67,8 +67,9 @@ describe('<Panel> (isolated painter contract)', () => {
     );
     const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
-    // sRGBChannelToLinear(0.9) ≈ 0.787412 (utils/colorSpace.ts).
-    expect(color.getX(0)).toBeCloseTo(0.787412, 4);
+    // Raw sRGB: the StyleBox vertex attribute stays in sRGB and the shader
+    // decodes it per fragment (`StyleBoxQuad.tsx`'s own doc).
+    expect(color.getX(0)).toBeCloseTo(0.9, 4);
   });
 
   it('falls back to the default-theme panel struct when no override resolves', async () => {
@@ -79,8 +80,8 @@ describe('<Panel> (isolated painter contract)', () => {
     const color = geom.attributes.color as THREE.BufferAttribute;
     // Default-theme `panel` stylebox fill is `style_normal_color` =
     // Color(0.1, 0.1, 0.1, 0.6) (default_theme.cpp:134, nativeTheme.ts's
-    // STYLE_FILL.normal). sRGBChannelToLinear(0.1) ≈ 0.0100228.
-    expect(color.getX(0)).toBeCloseTo(0.0100228, 5);
+    // STYLE_FILL.normal), read raw — see `StyleBoxQuad.tsx` on colour space.
+    expect(color.getX(0)).toBeCloseTo(0.1, 5);
     expect(color.getW(0)).toBeCloseTo(0.6, 5);
   });
 
@@ -95,9 +96,9 @@ describe('<Panel> (isolated painter contract)', () => {
     );
     const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
-    // 0.8 (bgColor) * 0.5 (self_modulate) = 0.4 in sRGB, THEN converted once:
-    // sRGBChannelToLinear(0.4) ≈ 0.1328683.
-    expect(color.getX(0)).toBeCloseTo(0.1328683, 4);
+    // 0.8 (bgColor) * 0.5 (self_modulate) = 0.4, composed in sRGB and left
+    // there for the shader to decode.
+    expect(color.getX(0)).toBeCloseTo(0.4, 4);
   });
 
   it('does NOT reapply the ambient modulate a second time (only self_modulate composes on top of it)', async () => {
@@ -118,8 +119,8 @@ describe('<Panel> (isolated painter contract)', () => {
     );
     const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
-    // sRGBChannelToLinear(0.25) ≈ 0.05088.
-    expect(color.getX(0)).toBeCloseTo(0.050876, 4);
+    // 0.5 (ambient) * 0.5 (self_modulate) = 0.25, in sRGB.
+    expect(color.getX(0)).toBeCloseTo(0.25, 4);
   });
 });
 

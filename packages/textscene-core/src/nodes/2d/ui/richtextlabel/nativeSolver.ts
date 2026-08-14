@@ -175,6 +175,14 @@ export interface StyledTextRun {
   color: ControlColor;
   /** This run's OWN resolved font size, px — see `resolveRunFontSizePx`'s doc. Equal to `normal_font_size` for a plain (non-bold, non-italic) run. */
   fontSizePx: number;
+  /**
+   * The `HorizontalAlignment` governing the paragraph this run sits in —
+   * `_find_alignment` over the run's own tag stack, falling back to the node's
+   * `horizontal_alignment` property (`resolveParagraphAlignment`). Resolved
+   * here because this is where the tag stack still exists; consumed a layer
+   * later, once lines are known.
+   */
+  alignment: number;
 }
 
 /**
@@ -283,7 +291,17 @@ export function styledTextRuns(
   if (!props.bbcodeEnabled) {
     return raw.length === 0
       ? []
-      : [{ text: raw, bold: false, italic: false, underline: false, color: defaultColor, fontSizePx: normalFontSizePx }];
+      : [
+          {
+            text: raw,
+            bold: false,
+            italic: false,
+            underline: false,
+            color: defaultColor,
+            fontSizePx: normalFontSizePx,
+            alignment: resolveParagraphAlignment([], props.horizontalAlignment),
+          },
+        ];
   }
 
   // Per-call memo — see `resolveRunFontSizePx`'s own doc: bounds the ancestor
@@ -303,6 +321,7 @@ export function styledTextRuns(
         underline: hasOpenTag(run.tags, 'u'),
         color: colorValue !== undefined ? resolveBBColor(colorValue, defaultColor) : defaultColor,
         fontSizePx: resolveRunFontSizePx(bold, italic, props, normalFontSizePx, n, builtInDefaultPx, runFontSizeCache),
+        alignment: resolveParagraphAlignment(run.tags, props.horizontalAlignment),
       };
     });
 }
@@ -396,8 +415,10 @@ export const RICH_TEXT_LABEL_UNDERLINE_ALPHA = 0.5;
 /** One (line, contiguous-style-run) pair, ready for its own `<TextRun>`. */
 export interface RichTextRunPlacement {
   lineIndex: number;
-  /** This line's own box top, px, from the paragraph's top — `RichTextLineMetrics.topPx`, NOT `lineIndex * layout.linePitchPx`: lines carrying different font sizes are different heights. */
+  /** This line's own box top, px, from the CONTROL's top — `RichTextLineMetrics.topPx` plus `vertical_alignment`'s own shift (`richTextVerticalOffsets`), NOT `lineIndex * layout.linePitchPx`: lines carrying different font sizes are different heights. */
   lineTopPx: number;
+  /** This line's own left offset, px, from the control's left — `horizontal_alignment` or the `[center]`/`[right]` tag governing it, resolved per LINE because each is aligned by its OWN width (`richTextHorizontalOffsetPx`). */
+  lineOffsetXPx: number;
   bold: boolean;
   italic: boolean;
   underline: boolean;
@@ -647,27 +668,204 @@ function attributeRunsToLines(styledRuns: readonly StyledTextRun[], layout: Text
   });
 }
 
+// --- Paragraph alignment (rich_text_label.cpp + text_paragraph.cpp) ---
+
+/** `HorizontalAlignment` (`core/variant/variant.h` enum order), as authored on `horizontal_alignment`. */
+const H_LEFT = 0;
+const H_CENTER = 1;
+const H_RIGHT = 2;
+const H_FILL = 3;
+
+/** `VerticalAlignment`, as authored on `vertical_alignment`. */
+const V_TOP = 0;
+const V_CENTER = 1;
+const V_BOTTOM = 2;
+const V_FILL = 3;
+
+/**
+ * The bbcode tags that PUSH a paragraph alignment
+ * (`rich_text_label.cpp:5681-5696`) — each maps to the `HorizontalAlignment`
+ * its own `push_paragraph` call passes.
+ */
+const ALIGNMENT_TAGS: ReadonlyMap<string, number> = new Map([
+  ['left', H_LEFT],
+  ['center', H_CENTER],
+  ['right', H_RIGHT],
+  ['fill', H_FILL],
+]);
+
+/**
+ * `RichTextLabel::_find_alignment` (`rich_text_label.cpp:3492-3505`): a
+ * paragraph takes the alignment of the nearest enclosing `ITEM_PARAGRAPH`,
+ * falling back to `default_alignment` — the node's own `horizontal_alignment`
+ * property (`:7245-7258`; the property and the tags are the SAME input, which
+ * is why one function resolves both).
+ *
+ * The walk is outward from the item, so the INNERMOST alignment tag on the
+ * stack wins; `tags` is ordered outermost-first, hence the reverse scan.
+ */
+export function resolveParagraphAlignment(
+  tags: readonly { name: string }[],
+  defaultAlignment: number | undefined
+): number {
+  for (let i = tags.length - 1; i >= 0; i--) {
+    const pushed = ALIGNMENT_TAGS.get(tags[i]!.name);
+    if (pushed !== undefined) return pushed;
+  }
+  return defaultAlignment ?? H_LEFT;
+}
+
+/**
+ * One line's own left offset — `TextParagraph::draw`'s alignment switch
+ * (`scene/resources/text_paragraph.cpp:989-1023`), LTR arm.
+ *
+ * NOT Label's arithmetic, and deliberately so: Label aligns through
+ * `Label::_get_line_rect`, which truncates and measures against the CEILED
+ * shaped size, while RichTextLabel goes through `TextParagraph`, which floors
+ * and measures against `shaped_text_get_width` — the raw pen advance. The two
+ * disagree by a pixel on the same text, so each slice transcribes its own.
+ *
+ * `width > 0` guards the whole switch (`:990`): a paragraph with no width set
+ * aligns nothing. CENTER additionally no-ops when the line OVERFLOWS its box
+ * (`:1004`'s `length <= l_width`), where LEFT and CENTER coincide for LTR;
+ * RIGHT carries no such guard and pushes an overflowing line off to the left.
+ *
+ * The result is floored because Godot's own floor lands one step later, on the
+ * assembled glyph position (`text_server_adv.cpp:4084`'s `cpos.x =
+ * Math::floor(cpos.x)`) — same pixels, and this is the only place in this
+ * renderer that offset exists as a number.
+ */
+export function richTextHorizontalOffsetPx(
+  lineWidthPx: number,
+  boxWidthPx: number,
+  alignment: number
+): number {
+  if (boxWidthPx <= 0) return 0;
+  switch (alignment) {
+    case H_CENTER:
+      return lineWidthPx <= boxWidthPx ? Math.floor((boxWidthPx - lineWidthPx) / 2) : 0;
+    case H_RIGHT:
+      return Math.floor(boxWidthPx - lineWidthPx);
+    case H_LEFT:
+    case H_FILL:
+    default:
+      return 0;
+  }
+}
+
+/** `vertical_alignment`'s two contributions: a one-off shift of the whole block, and an extra gap between lines under FILL. */
+export interface RichTextVerticalOffsets {
+  /** Added to every line's own top. */
+  vbeginPx: number;
+  /** Added once per line ABOVE the first (`vsep` in `rich_text_label.cpp:1629`). */
+  vsepPx: number;
+}
+
+/**
+ * `RichTextLabel::_notification`'s vertical-alignment block
+ * (`rich_text_label.cpp:1619-1652`).
+ *
+ * The `text_rect.size.y > total_height` guard (`:1630`) is load-bearing: a
+ * paragraph TALLER than its box stays top-aligned rather than being pulled
+ * upward by a negative offset, which is the opposite of what Label does with
+ * the same authored value.
+ *
+ * `text_rect` is the control rect inset by the `normal` stylebox, and
+ * RichTextLabel's default-theme `normal` is `make_empty_stylebox(0, 0, 0, 0)`
+ * (`default_theme.cpp:1186`) — zero on every side, so the box height is the
+ * solved rect's own. `line_separation`/`paragraph_separation` are both 0 for
+ * this class (`:1217-1218`), which is what collapses `:1621-1627`'s two
+ * branches into the plain content height.
+ *
+ * `vbegin`/`vsep` are `float` here (`:1628`), NOT the `int` pair Label's own
+ * `get_layout_data` declares — so no truncation, and a half-pixel offset
+ * survives to the glyph floor.
+ */
+export function richTextVerticalOffsets(
+  contentHeightPx: number,
+  boxHeightPx: number,
+  alignment: number | undefined,
+  lineCount: number
+): RichTextVerticalOffsets {
+  const none = { vbeginPx: 0, vsepPx: 0 };
+  if (boxHeightPx <= contentHeightPx) return none;
+
+  switch (alignment ?? V_TOP) {
+    case V_CENTER:
+      return { vbeginPx: (boxHeightPx - contentHeightPx) / 2, vsepPx: 0 };
+    case V_BOTTOM:
+      return { vbeginPx: boxHeightPx - contentHeightPx, vsepPx: 0 };
+    case V_FILL:
+      return { vbeginPx: 0, vsepPx: lineCount > 1 ? (boxHeightPx - contentHeightPx) / (lineCount - 1) : 0 };
+    case V_TOP:
+    default:
+      return none;
+  }
+}
+
+/** The box a paragraph aligns inside, plus the node's own two alignment properties. */
+export interface RichTextAlignment {
+  boxWidthPx: number;
+  boxHeightPx: number;
+  horizontalAlignment?: number;
+  verticalAlignment?: number;
+}
+
 /**
  * One `<TextRun>`-ready placement per (line, contiguous-style-run) pair —
  * `attributeRunsToLines`'s split, carrying each line's own top and baseline
  * from `richTextLineMetrics` so a caller never has to re-derive either from a
- * paragraph-wide pitch.
+ * paragraph-wide pitch, plus the two alignment offsets that decide where the
+ * line sits inside the control.
+ *
+ * Alignment is resolved PER LINE rather than once for the paragraph, because
+ * `_find_alignment` reads the tag stack (`[center]` et al.) and a wrapped
+ * paragraph can carry different ones on different lines. `alignment` omitted
+ * — the default — leaves every offset at 0, which is what LEFT/TOP produce
+ * anyway.
  */
 export function layoutRichTextRuns(
   styledRuns: readonly StyledTextRun[],
-  layout: TextLayoutResult
+  layout: TextLayoutResult,
+  alignment?: RichTextAlignment
 ): RichTextRunPlacement[] {
   const perLine = attributeRunsToLines(styledRuns, layout);
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
 
+  const boxWidthPx = alignment?.boxWidthPx ?? 0;
+  const { vbeginPx, vsepPx } = richTextVerticalOffsets(
+    layout.heightPx,
+    alignment?.boxHeightPx ?? 0,
+    alignment?.verticalAlignment,
+    layout.lines.length
+  );
+
   const placements: RichTextRunPlacement[] = [];
   perLine.forEach((segments, lineIndex) => {
     const { topPx, ascentPx } = lineMetrics[lineIndex]!;
+    // Every line on the same tag stack shares one alignment; the FIRST
+    // segment's stack is that line's, since a paragraph tag cannot open
+    // mid-line without starting a new paragraph.
+    const lineAlignment = segments[0]
+      ? styledRuns[segments[0].runIndex]!.alignment
+      : (alignment?.horizontalAlignment ?? H_LEFT);
+    const lineOffsetXPx = richTextHorizontalOffsetPx(
+      layout.lines[lineIndex]?.widthPx ?? 0,
+      boxWidthPx,
+      lineAlignment
+    );
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;
       placements.push({
         lineIndex,
-        lineTopPx: topPx,
+        // Floored, because Godot's own floor lands one step later on the
+        // assembled glyph position (`text_server_adv.cpp:4083`'s `cpos.y =
+        // Math::floor(cpos.y)`) and `vbegin`/`vsep` are floats that reach it
+        // fractional. Engine-checked: a 23px line centred in a 150px box puts
+        // `vbegin` at 63.5 and Godot's own ink on row 69, which is where
+        // flooring the line top — not the glyph — also puts it.
+        lineTopPx: Math.floor(topPx + vbeginPx + lineIndex * vsepPx),
+        lineOffsetXPx,
         bold: run.bold,
         italic: run.italic,
         underline: run.underline,

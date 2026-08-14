@@ -14,5 +14,7 @@ export function parseRichTextLabel(
   result.bbcodeEnabled = properties.bbcode_enabled === 'true';
   result.fitContent = properties.fit_content === 'true';
   result.autowrapMode = parseOptionalInt(properties.autowrap_mode);
+  result.horizontalAlignment = parseOptionalInt(properties.horizontal_alignment);
+  result.verticalAlignment = parseOptionalInt(properties.vertical_alignment);
   return result;
 }
