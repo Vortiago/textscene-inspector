@@ -7,6 +7,19 @@ import { describe, it, expect } from 'vitest';
 import { node, scene, expectDiagnostic, expectNoDiagnostic } from '../../../../linter/testing/testkit';
 import './linter';
 
+describe('Label autowrap under a Container — a non-finite mode is not autowrap', () => {
+  it('stays silent when autowrap_mode is nan', () => {
+    // `NaN !== AUTOWRAP_OFF` is true, so an inequality read it as autowrap on.
+    expectNoDiagnostic(
+      scene(
+        node('VBoxContainer', {}, { name: 'Box' }),
+        node('Label', { autowrap_mode: 'nan' }, { parent: '.' })
+      ),
+      { ruleName: 'label-autowrap-needs-custom-minimum-size' }
+    );
+  });
+});
+
 describe('Label Linter (label-autowrap-needs-custom-minimum-size)', () => {
   it('warns when autowrap is enabled under a Container parent with no custom_minimum_size', () => {
     const diagnostic = expectDiagnostic(

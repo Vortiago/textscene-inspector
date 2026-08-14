@@ -152,6 +152,23 @@ describe('CollisionPolygon2D Linter', () => {
     );
   });
 
+  it('says nothing when build_mode is non-finite, which names no mode at all', () => {
+    // Both arms compare against BUILD_SOLIDS, and `NaN !== 0` is true, so a
+    // non-finite fell into the Segments arm and named a mode the file never
+    // states — with the wrong threshold beside it.
+    expectNoDiagnostic(
+      scene(
+        node('StaticBody2D', {}, { name: 'Root' }),
+        node(
+          'CollisionPolygon2D',
+          { build_mode: 'nan', polygon: 'PackedVector2Array(0, 0)' },
+          { parent: '.' }
+        )
+      ),
+      { ruleName: 'collisionpolygon2d-insufficient-points' }
+    );
+  });
+
   it('does not double-report an empty polygon as also having too few points', () => {
     const diagnostics = lint(
       scene(node('StaticBody2D', {}, { name: 'Root' }), node('CollisionPolygon2D', {}, { parent: '.' }))

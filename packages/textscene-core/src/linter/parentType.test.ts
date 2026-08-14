@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parentTypeVerdict, placementPhrase } from './parentType.js';
+import { knownParent, parentIdentity, parentTypeVerdict, placementPhrase } from './parentType.js';
 import { byName } from './testing/sceneNodes.js';
 import { TscnParser } from '../parser/TscnParser.js';
 
@@ -20,6 +20,37 @@ import { TscnParser } from '../parser/TscnParser.js';
  * of the three `parentType.*` files that needs it.
  */
 const parse = (source: string) => new TscnParser().parse(source);
+
+describe('the two doors to a parent', () => {
+  const overridden = () =>
+    parse(
+      `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Mid" parent="."]
+
+[node name="Leaf" type="Sprite2D" parent="Mid"]
+`
+    );
+
+  it('knownParent declines a parent whose type this file never states', () => {
+    const scene = overridden();
+    expect(knownParent(scene, byName(scene.nodes, 'Leaf')).kind).toBe('unknowable');
+  });
+
+  it('parentIdentity hands the same node back, because identity is knowable', () => {
+    // A NodePath `..` is `get_parent()` and never reads the class, so declining
+    // here stopped a walk over a node the file names perfectly well.
+    const scene = overridden();
+    expect(parentIdentity(scene, byName(scene.nodes, 'Leaf'))?.name).toBe('Mid');
+  });
+
+  it('parentIdentity is null at the scene root, where there is no parent at all', () => {
+    const scene = overridden();
+    expect(parentIdentity(scene, byName(scene.nodes, 'Root'))).toBeNull();
+  });
+});
 
 describe('parentTypeVerdict', () => {
   it('is satisfied by the wanted type, and carries the parent', () => {

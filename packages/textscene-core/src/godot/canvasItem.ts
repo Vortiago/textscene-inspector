@@ -18,6 +18,16 @@
 export const CLIP_CHILDREN_DISABLED = 0;
 
 /**
+ * `CLIP_CHILDREN_MAX` (`canvas_item.h:75`), the count sentinel.
+ *
+ * `set_clip_children_mode` opens with `ERR_FAIL_COND(p_clip_mode >=
+ * CLIP_CHILDREN_MAX)` (`canvas_item.cpp:1733`), so a mode at or above it is
+ * refused and the field keeps DISABLED — which is why such a value clips
+ * nothing, however it is spelled.
+ */
+export const CLIP_CHILDREN_MAX = 3;
+
+/**
  * The mode names Godot binds (`BIND_ENUM_CONSTANT`, `canvas_item.cpp:1525-1527`),
  * for a diagnostic that reports which values are legal. See
  * {@link CLIP_CHILDREN_DISABLED} for why the list ends at 2.

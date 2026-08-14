@@ -22,6 +22,34 @@ describe('CanvasItem clip-ancestry rule', () => {
       );
     });
 
+    it('stays silent when own clip_children is a mode the setter refuses', () => {
+      // canvas_item.cpp:1733 opens with ERR_FAIL_COND(p_clip_mode >=
+      // CLIP_CHILDREN_MAX), so 3 and 5 never land and the field keeps DISABLED.
+      for (const mode of [3, 5]) {
+        expectNoDiagnostic(
+          scene(
+            node('Node2D', { clip_children: 1 }, { name: 'Clipper' }),
+            node('Sprite2D', { clip_children: mode }, { parent: '.' })
+          ),
+          { ruleName: 'canvasitem-ancestor-clips-children' }
+        );
+      }
+    });
+
+    it('stays silent when own clip_children is non-finite', () => {
+      // A non-finite reads as NaN, and `NaN !== CLIP_CHILDREN_DISABLED` is true,
+      // so a bare inequality read a value off the number line as a clipping mode.
+      for (const spelling of ['nan', 'inf', 'inf_neg']) {
+        expectNoDiagnostic(
+          scene(
+            node('Node2D', { clip_children: 1 }, { name: 'Clipper' }),
+            node('Sprite2D', { clip_children: spelling }, { parent: '.' })
+          ),
+          { ruleName: 'canvasitem-ancestor-clips-children' }
+        );
+      }
+    });
+
     it('stays silent when own clip_children is explicitly DISABLED (0)', () => {
       expectNoDiagnostic(
         scene(

@@ -48,7 +48,7 @@
 
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import { isUnderInstance } from './linterUtils.js';
-import { isTypeUnknowable, knownParent } from './parentType.js';
+import { isTypeUnknowable, parentIdentity } from './parentType.js';
 
 /** `UNIQUE_NODE_PREFIX` (string_name.h:36). */
 const UNIQUE_NODE_PREFIX = '%';
@@ -139,12 +139,17 @@ export function resolveNodePath(
       // `:1920-1922` returns null at the root, and standalone in the editor
       // that is exactly what happens. But this file's root is only the runtime
       // root while the scene is open on its own: instanced anywhere, the `..`
-      // lands on a parent the file never names. Declining is the same call the
-      // `instance=` cases make, and reporting instead would fire on every scene
-      // built to be instanced — so `root` and `unknowable` land together.
-      const step = knownParent(scene, current);
-      if (step.kind !== 'known') return UNKNOWABLE;
-      current = step.parent;
+      // lands on a parent the file never names, so the root declines as
+      // unknowable.
+      //
+      // By IDENTITY, not by type. `..` is `get_parent()` and never asks what
+      // class the parent is, so an instanced or override parent is a node this
+      // file names perfectly well; declining there stopped the walk and
+      // silenced every rule that would have judged where the path finally
+      // lands. The result is still gated through `isTypeUnknowable` below.
+      const parent = parentIdentity(scene, current);
+      if (!parent) return UNKNOWABLE;
+      current = parent;
       continue;
     }
 

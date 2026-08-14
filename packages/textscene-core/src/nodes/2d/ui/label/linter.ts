@@ -45,7 +45,11 @@ function checkLabelAutowrap(context: RuleContext): Diagnostic[] {
   const autowrapRaw = props.autowrap_mode;
   if (autowrapRaw === undefined) return [];
   const autowrapMode = parseGodotInt(autowrapRaw);
-  if (autowrapMode === null || autowrapMode === AUTOWRAP_OFF) return [];
+  // Finite: a non-finite reads as NaN, and `NaN !== AUTOWRAP_OFF` is true, so
+  // a value off the number line would read as autowrap enabled.
+  if (autowrapMode === null || !Number.isFinite(autowrapMode) || autowrapMode === AUTOWRAP_OFF) {
+    return [];
+  }
 
   if (!isZeroOrAbsentSize(props.custom_minimum_size)) return [];
 

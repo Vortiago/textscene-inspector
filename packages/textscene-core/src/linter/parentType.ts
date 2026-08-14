@@ -110,17 +110,35 @@ export type ParentLookup =
 /**
  * `node`'s parent, or the reason no rule may reason about it.
  *
- * The narrow primitive behind everything else here, and the ONLY way out of
- * this module to a parent node. `findParentNode` hands back the raw heading,
- * type and all, and a caller holding one has to remember a check that is
- * invisible when forgotten — which is how three rules came to warn about
- * parents declared in another file. This one cannot be held without the answer.
+ * The narrow primitive behind everything else here, and the only way out of
+ * this module to a parent whose TYPE may be read. `findParentNode` hands back
+ * the raw heading, type and all, and a caller holding one has to remember a
+ * check that is invisible when forgotten — which is how three rules came to
+ * warn about parents declared in another file. This one cannot be held without
+ * the answer. {@link parentIdentity} is the second door, for the caller that
+ * reads no type at all.
  */
 export function knownParent(scene: TscnScene, node: TscnNode): ParentLookup {
   const parent = findParentNode(scene.nodes, node);
   if (!parent) return { kind: 'root' };
   if (isTypeUnknowable(parent)) return { kind: 'unknowable' };
   return { kind: 'known', parent };
+}
+
+/**
+ * `node`'s parent whatever its class, or null at this file's root.
+ *
+ * The second and last way out of this module, for the one question
+ * {@link knownParent} cannot answer: a NodePath `..` is `get_parent()`, so it
+ * needs the parent's IDENTITY and never its type. Declining on an instanced or
+ * override parent stops the walk on a node the file names perfectly well, and
+ * silences every rule that would have judged where the path finally lands.
+ * Safe only because the caller reads no `.type` off this: `resolveNodePath`
+ * gates its own result through {@link isTypeUnknowable} before handing a node
+ * back.
+ */
+export function parentIdentity(scene: TscnScene, node: TscnNode): TscnNode | null {
+  return findParentNode(scene.nodes, node);
 }
 
 /** Where an ancestor walk stopped. */

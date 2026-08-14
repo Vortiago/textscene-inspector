@@ -107,6 +107,32 @@ describe('resolveNodePath', () => {
       expect(resolveNodePath(sceneOf(tree), tree, '..')).toEqual({ status: 'unknowable' });
     });
 
+    it('climbs ".." past a parent whose own type this file never states', () => {
+      // `..` is `get_parent()` (node.cpp:1920) and never reads the parent's
+      // class, so a property-override heading is a node this file names
+      // perfectly well. Declining here stopped the walk and silenced every rule
+      // that would have judged where the path finally lands.
+      const target = node('Target');
+      const tree = node('Root', [
+        node('Mid', [node('Leaf'), target], { type: '', overridesExistingNode: true }),
+      ]);
+      const scene = sceneOf(tree);
+      expect(resolveNodePath(scene, pick([tree], 'Leaf'), '../Target')).toEqual({
+        status: 'found',
+        node: target,
+      });
+    });
+
+    it('still reports a miss reached through such a ".."', () => {
+      const tree = node('Root', [
+        node('Mid', [node('Leaf')], { type: '', overridesExistingNode: true }),
+      ]);
+      const scene = sceneOf(tree);
+      expect(resolveNodePath(scene, pick([tree], 'Leaf'), '../Nope')).toEqual({
+        status: 'unknowable',
+      });
+    });
+
     it('declines a path that climbs past the root before descending', () => {
       const tree = node('Root', [node('A')]);
       const scene = sceneOf(tree);

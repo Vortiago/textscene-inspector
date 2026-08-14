@@ -38,6 +38,20 @@ describe('CanvasGroup Linter', () => {
       );
     });
 
+    it('passes when an ancestor sets a clip_children the setter refuses', () => {
+      // canvas_item.cpp:1733 refuses >= CLIP_CHILDREN_MAX, and a non-finite is
+      // not a mode at all, so neither ancestor clips anything.
+      for (const mode of ['3', '5', 'nan', 'inf']) {
+        expectNoDiagnostic(
+          scene(
+            node('Node2D', { clip_children: mode }, { name: 'Root' }),
+            node('CanvasGroup', {}, { parent: '.' })
+          ),
+          { ruleName: 'canvasgroup-ancestor-clips-children' }
+        );
+      }
+    });
+
     it('warns and names the ancestor when the direct parent clips (clip_children = 1, ONLY)', () => {
       const diagnostic = expectDiagnostic(
         scene(
