@@ -31,11 +31,12 @@
 import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v, accepts, propertyError } from '../../../../linter/validators/index.js';
+import { packedArrayLiteral } from '../../../../godot/index.js';
+import { firstNonNumericElement } from '../../../../linter/validators/v/packedArrays.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 const SPLIT_OFFSETS_FORMAT = 'INVALID_SPLIT_OFFSETS_FORMAT';
-const SPLIT_OFFSETS_WRAPPER = /^\s*PackedInt32Array\s*\(([\s\S]*)\)\s*$/;
-const INTEGER_LITERAL = /^[+-]?\d+$/;
+const SPLIT_OFFSETS_WRAPPER = packedArrayLiteral('PackedInt32Array');
 
 /**
  * `PackedInt32Array(n, n, …)` — a per-dragger pixel offset list. Unlike
@@ -58,16 +59,20 @@ function splitOffsetsValidator(): PropertyValidator {
     }
     const body = match[1]!.trim();
     if (body === '') return null;
-    for (const part of body.split(',')) {
-      const trimmed = part.trim();
-      if (!INTEGER_LITERAL.test(trimmed)) {
-        return propertyError(
-          key,
-          line,
-          `Property 'split_offsets' contains a non-integer value: "${trimmed}"`,
-          SPLIT_OFFSETS_FORMAT
-        );
-      }
+    // The shared element grammar, as `tilemap` and `polygon2d` already read
+    // their PackedInt32Array bodies. A hand-rolled `/^[+-]?\d+$/` was wrong in
+    // both directions here, measured on 4.6.3: `PackedInt32Array(1.5, 0)` loads
+    // as `[1, 0]` and `(2e3, 0)` as `[2000, 0]` — `_parse_construct<int32_t>`
+    // takes any number token and narrows it — while `(+3, 0)` fails the load
+    // outright, since `get_token` accepts no leading `+`.
+    const offender = firstNonNumericElement(body);
+    if (offender !== null) {
+      return propertyError(
+        key,
+        line,
+        `Property 'split_offsets' contains a non-numeric value: "${offender}"`,
+        SPLIT_OFFSETS_FORMAT
+      );
     }
     return null;
   }, 'PackedInt32Array(n, n, …)');

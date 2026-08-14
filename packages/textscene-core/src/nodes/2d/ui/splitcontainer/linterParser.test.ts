@@ -82,8 +82,23 @@ describe('SplitContainer strict validators', () => {
       expect(check('split_offsets', '0, 60')).not.toBeNull();
     });
 
-    it('rejects a non-integer element', () => {
-      expect(check('split_offsets', 'PackedInt32Array(1.5)')).not.toBeNull();
+    it('accepts a fractional or exponent element, which Godot narrows on load', () => {
+      // `_parse_construct<int32_t>` takes any number token and narrows it.
+      // Measured on 4.6.3: `PackedInt32Array(1.5, 0)` loads as `[1, 0]` and
+      // `(2e3, 0)` as `[2000, 0]`, so refusing either is a false positive.
+      expect(check('split_offsets', 'PackedInt32Array(1.5)')).toBeNull();
+      expect(check('split_offsets', 'PackedInt32Array(2e3, 0)')).toBeNull();
+    });
+
+    it('rejects a leading plus, which fails the load outright', () => {
+      // `get_token` consumes a leading `-` and then requires a digit
+      // (variant_parser.cpp:420, :424); `+` falls through to `Unexpected
+      // character`. Measured: the scene does not load at all.
+      expect(check('split_offsets', 'PackedInt32Array(+3, 0)')).not.toBeNull();
+    });
+
+    it('rejects an element Godot\'s tokenizer cannot read', () => {
+      expect(check('split_offsets', 'PackedInt32Array(0, nope)')).not.toBeNull();
     });
 
     it(
