@@ -29,6 +29,9 @@ const CONTENT_MARGIN_UNSET = -1;
 /** `StyleBoxFlat::set_aa_size`'s clamp range (`style_box_flat.cpp`), applied to every authored `aa_size`. */
 const AA_SIZE_MIN = 0.01;
 const AA_SIZE_MAX = 10;
+/** `StyleBoxFlat::set_corner_detail` (`style_box_flat.cpp:130`) — CLAMP(detail, 1, 20). */
+const CORNER_DETAIL_MIN = 1;
+const CORNER_DETAIL_MAX = 20;
 
 function contentMarginOr(raw: string | undefined, borderWidth: number): number {
   // style_box.cpp::get_margin: content_margin[side] < 0 (default -1) reads
@@ -83,6 +86,9 @@ export function parseStyleBox(
     borderBlend: boolOr(data.border_blend, false, CONTEXT),
     antiAliased: boolOr(data.anti_aliased, true, CONTEXT),
     aaSize: clamp(floatOr(data.aa_size, 1, CONTEXT), AA_SIZE_MIN, AA_SIZE_MAX),
+    cornerDetail: Math.round(
+      clamp(floatOr(data.corner_detail, 8, CONTEXT), CORNER_DETAIL_MIN, CORNER_DETAIL_MAX)
+    ),
   };
 }
 

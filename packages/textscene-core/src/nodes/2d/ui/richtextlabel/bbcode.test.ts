@@ -35,9 +35,33 @@ describe('parseBBCodeRuns', () => {
     ]);
   });
 
-  it('drops an unknown tag from styling but keeps it on the stack (so its own close pops correctly) and keeps the inner text', () => {
+  it('drops a tag Godot RECOGNISES but this painter does not style, keeping it on the stack and keeping the inner text', () => {
+    // `[wave]` is a real `rich_text_label.cpp:6412` tag — Godot consumes it and
+    // paints `keep`. Engine-checked: `get_parsed_text()` is "keep".
     const runs = parseBBCodeRuns('[wave amp=50]keep[/wave]');
     expect(runs).toEqual([{ text: 'keep', tags: [{ name: 'wave' }] }]);
+  });
+
+  it('renders a tag Godot does NOT recognise as literal text, brackets and all', () => {
+    // `rich_text_label.cpp:6526-6545`'s final else: an identifier that is
+    // neither a built-in tag nor a registered custom effect emits a literal
+    // "[" and re-scans from the next character, so the whole tag survives as
+    // text. Its close does too — the stack is empty, so `:5385`'s close branch
+    // is never entered. Engine-checked: `[nosuchtag]keep[/nosuchtag]` parses
+    // to exactly itself.
+    expect(parseBBCodeRuns('[nosuchtag]keep[/nosuchtag]')).toEqual([
+      { text: '[nosuchtag]keep[/nosuchtag]', tags: [] },
+    ]);
+  });
+
+  it('re-scans from just past the "[" of an unrecognised tag, so a real tag INSIDE one still opens', () => {
+    // `pos = brk_pos + 1`, not `brk_end + 1` — Godot gives back everything but
+    // the bracket. Engine-checked: `[foo[b]bar[/b]` parses to "[foobar", with
+    // `bar` bold.
+    expect(parseBBCodeRuns('[foo[b]bar[/b]')).toEqual([
+      { text: '[foo', tags: [] },
+      { text: 'bar', tags: [{ name: 'b' }] },
+    ]);
   });
 
   it('lowercases tag names', () => {
@@ -50,13 +74,20 @@ describe('parseBBCodeRuns', () => {
     expect(runs).toEqual([{ text: 'x', tags: [{ name: 'i' }] }]);
   });
 
-  it('closes the innermost matching tag by name, not strictly by nesting order', () => {
-    // [/b] closes 'b' even though 'i' opened after it and is still open.
+  it('renders a close tag that is not the INNERMOST open tag as literal text, leaving the stack alone', () => {
+    // `rich_text_label.cpp:5386,5398-5404`: `tag_ok` compares against
+    // `tag_stack.front()` ONLY. `[/b]` while `i` is innermost fails that
+    // check, so Godot appends "[" + "/b" as text and resumes at the "]" —
+    // and both `b` and `i` stay open, which is why `y` is still styled by
+    // both. Engine-checked: `[b][i]x[/b]y[/i]` parses to "x[/b]y".
     const runs = parseBBCodeRuns('[b][i]x[/b]y[/i]');
-    expect(runs).toEqual([
-      { text: 'x', tags: [{ name: 'b' }, { name: 'i' }] },
-      { text: 'y', tags: [{ name: 'i' }] },
-    ]);
+    expect(runs).toEqual([{ text: 'x[/b]y', tags: [{ name: 'b' }, { name: 'i' }] }]);
+  });
+
+  it('renders a close tag with nothing open as literal text', () => {
+    // `:5385` requires a non-empty `tag_stack` to even consider a close tag.
+    // Engine-checked: `a[/b]b` parses to itself.
+    expect(parseBBCodeRuns('a[/b]b')).toEqual([{ text: 'a[/b]b', tags: [] }]);
   });
 
   it('returns no runs for empty text', () => {
@@ -122,6 +153,16 @@ describe('resolveBBColor', () => {
 
   it('accepts hex without a leading # (Color::html_is_valid, color.cpp:372-390)', () => {
     expect(resolveBBColor('e0a030', FALLBACK)).toEqual(resolveBBColor('#e0a030', FALLBACK));
+  });
+
+  it('resolves an X11 colour NAME through the same table Color::named reads', () => {
+    // `Color::from_string` (`color.cpp:450-456`) tries `html` first, then
+    // `named`. Engine-checked: `[color=red]R[/color]` paints red, not the
+    // theme's default colour.
+    expect(resolveBBColor('red', FALLBACK)).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    // A name whose normalization matters — `find_named_color` strips spaces
+    // and underscores and upper-cases before matching (`color.cpp:414-415`).
+    expect(resolveBBColor('Dark Orange', FALLBACK)).toEqual({ r: 1, g: 0x8c / 255, b: 0, a: 1 });
   });
 
   it('falls back for an unrecognised name (Color::from_string\'s own fallback contract, color.cpp:450-456), not white', () => {

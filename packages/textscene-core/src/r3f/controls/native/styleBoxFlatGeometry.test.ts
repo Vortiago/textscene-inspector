@@ -47,6 +47,7 @@ function box(overrides: Partial<StyleBoxFlatData>): StyleBoxFlatData {
     // Every non-AA fixture opts out explicitly — see file header.
     antiAliased: false,
     aaSize: 1,
+    cornerDetail: 8,
     ...overrides,
   };
 }
@@ -247,6 +248,25 @@ describe('styleBoxFlatGeometry anti-aliasing (style_box_flat.cpp:468-471,511-630
     expect(on.colors).toEqual(off.colors);
     expect(on.indices).toEqual(off.indices);
     expect(off.positions).toHaveLength(8 * 3);
+  });
+
+  it('sweeps each corner arc in the authored corner_detail steps, not a fixed 8', () => {
+    // style_box_flat.cpp:356 — ring_vert_count = (adapted_corner_detail + 1) *
+    // (draw_border ? 8 : 4), and :316 adapts to 1 only when every radius is 0.
+    // A filled rounded fill ring is therefore (detail + 1) * 4 vertices, so an
+    // authored 5 draws 24 where the default 8 draws 36.
+    const rounded = { topLeft: 10, topRight: 10, bottomRight: 10, bottomLeft: 10 };
+    const five = styleBoxFlatGeometry(box({ cornerRadius: rounded, cornerDetail: 5 }), { x: 0, y: 0, w: 100, h: 50 });
+    const eight = styleBoxFlatGeometry(box({ cornerRadius: rounded, cornerDetail: 8 }), { x: 0, y: 0, w: 100, h: 50 });
+    expect(five.positions).toHaveLength((5 + 1) * 4 * 3);
+    expect(eight.positions).toHaveLength((8 + 1) * 4 * 3);
+  });
+
+  it('still collapses every corner to a single step when no radius is authored, whatever corner_detail says', () => {
+    // :316's adaptation reads the RADII, not the detail — a sharp rect stays 8
+    // vertices even at corner_detail 20.
+    const sharp = styleBoxFlatGeometry(box({ cornerDetail: 20 }), { x: 0, y: 0, w: 100, h: 50 });
+    expect(sharp.positions).toHaveLength(8 * 3);
   });
 
   it('rounded corners, no border: anti_aliased adds a 108-vertex AA fill ring (108 vs the 36-vertex non-AA fill)', () => {

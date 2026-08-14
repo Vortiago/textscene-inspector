@@ -41,9 +41,6 @@
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rect2 } from './rect';
 
-/** `StyleBoxFlat::corner_detail` (`style_box_flat.h:51`) — this module never varies it. */
-const CORNER_DETAIL = 8;
-
 interface Rgba {
   r: number;
   g: number;
@@ -261,6 +258,7 @@ function drawRoundedRectangle(
   buffers: GeometryBuffers,
   styleRect: Rect2,
   cornerRadius: readonly number[],
+  cornerDetail: number,
   ringRect: Rect2,
   innerRect: Rect2,
   innerColor: Rgba,
@@ -269,7 +267,7 @@ function drawRoundedRectangle(
 ): void {
   const vertOffset = buffers.positions.length / 3;
   const hasRadius = cornerRadius.some((r) => r > 0);
-  const adaptedCornerDetail = hasRadius ? CORNER_DETAIL : 1;
+  const adaptedCornerDetail = hasRadius ? cornerDetail : 1;
   const drawBorder = !isFilled;
 
   const ringCornerRadius = innerCornerRadius(styleRect, ringRect, cornerRadius);
@@ -396,6 +394,7 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
       buffers,
       borderStyleRect,
       adaptedCorner,
+      data.cornerDetail,
       borderStyleRect,
       infillRect,
       borderColorInner,
@@ -406,7 +405,17 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
 
   // Centre fill, no AA yet (`if (draw_center && (!aa_on || blend_on))`).
   if (data.drawCenter && (!aaOn || blendOn)) {
-    drawRoundedRectangle(buffers, borderStyleRect, adaptedCorner, infillRect, infillRect, data.bgColor, data.bgColor, true);
+    drawRoundedRectangle(
+      buffers,
+      borderStyleRect,
+      adaptedCorner,
+      data.cornerDetail,
+      infillRect,
+      infillRect,
+      data.bgColor,
+      data.bgColor,
+      true
+    );
   }
 
   if (aaOn) {
@@ -450,6 +459,7 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
           buffers,
           borderStyleRect,
           adaptedCorner,
+          data.cornerDetail,
           infillRectAaColored,
           infillRectAaColored,
           data.bgColor,
@@ -463,6 +473,7 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
           buffers,
           borderStyleRect,
           adaptedCorner,
+          data.cornerDetail,
           infillRectAaTransparent,
           infillRectAaColored,
           data.bgColor,
@@ -508,6 +519,7 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
         buffers,
         borderStyleRect,
         adaptedCorner,
+        data.cornerDetail,
         outerRectAaColored,
         blendOn ? infillRect : innerRectAaColored,
         borderColorInner,
@@ -521,6 +533,7 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
           buffers,
           borderStyleRect,
           adaptedCorner,
+          data.cornerDetail,
           innerRectAaColored,
           innerRectAaTransparent,
           borderColorBlend,
@@ -535,6 +548,7 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
         buffers,
         borderStyleRect,
         adaptedCorner,
+        data.cornerDetail,
         outerRectAaTransparent,
         outerRectAaColored,
         data.borderColor,

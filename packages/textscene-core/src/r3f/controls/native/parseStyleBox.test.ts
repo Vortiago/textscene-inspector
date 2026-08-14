@@ -36,6 +36,7 @@ const resources: TscnInternalResource[] = [
       border_blend: 'true',
       anti_aliased: 'false',
       aa_size: '3',
+      corner_detail: '5',
     },
   },
   { id: 'StyleBoxFlat_empty', type: 'StyleBoxFlat', data: {} },
@@ -45,6 +46,8 @@ const resources: TscnInternalResource[] = [
     data: { border_width_left: '3', border_width_top: '3', border_width_right: '3', border_width_bottom: '3' },
   },
   { id: 'StyleBoxFlat_aa_size_too_small', type: 'StyleBoxFlat', data: { aa_size: '0' } },
+  { id: 'StyleBoxFlat_corner_detail_too_small', type: 'StyleBoxFlat', data: { corner_detail: '0' } },
+  { id: 'StyleBoxFlat_corner_detail_too_large', type: 'StyleBoxFlat', data: { corner_detail: '50' } },
   { id: 'StyleBoxFlat_aa_size_too_large', type: 'StyleBoxFlat', data: { aa_size: '50' } },
   { id: 'StyleBoxEmpty_x', type: 'StyleBoxEmpty', data: {} },
   { id: 'StandardMaterial3D_m', type: 'StandardMaterial3D', data: {} },
@@ -64,6 +67,7 @@ describe('parseStyleBox', () => {
       borderBlend: true,
       antiAliased: false,
       aaSize: 3,
+      cornerDetail: 5,
     });
   });
 
@@ -72,7 +76,8 @@ describe('parseStyleBox', () => {
     // border_color default Color(0.8,0.8,0.8) [a defaults to 1]; border_width/
     // corner_radius/expand_margin default 0 per side; draw_center default
     // true; blend_border (border_blend) default false; anti_aliased default
-    // true; aa_size default 1 (style_box_flat.h:49,54).
+    // true; aa_size default 1; corner_detail default 8 (style_box_flat.h:
+    // 49,51,54).
     const box = parseStyleBox('SubResource("StyleBoxFlat_empty")', resources);
     expect(box).toEqual({
       bgColor: { r: 0.6, g: 0.6, b: 0.6, a: 1 },
@@ -85,6 +90,7 @@ describe('parseStyleBox', () => {
       borderBlend: false,
       antiAliased: true,
       aaSize: 1,
+      cornerDetail: 8,
     });
   });
 
@@ -96,6 +102,14 @@ describe('parseStyleBox', () => {
   it('clamps an authored aa_size above the setter maximum to 10 (StyleBoxFlat::set_aa_size)', () => {
     const box = parseStyleBox('SubResource("StyleBoxFlat_aa_size_too_large")', resources);
     expect(box?.aaSize).toBe(10);
+  });
+
+  it('clamps an authored corner_detail to the setter range 1..20 (StyleBoxFlat::set_corner_detail)', () => {
+    // style_box_flat.cpp:130 — CLAMP(p_corner_detail, 1, 20). A 0 would
+    // otherwise divide by zero in the arc sweep (`pt_angle`'s
+    // `detail / (double)adapted_corner_detail`).
+    expect(parseStyleBox('SubResource("StyleBoxFlat_corner_detail_too_small")', resources)?.cornerDetail).toBe(1);
+    expect(parseStyleBox('SubResource("StyleBoxFlat_corner_detail_too_large")', resources)?.cornerDetail).toBe(20);
   });
 
   it('falls back content_margin to the matching border_width when content_margin is absent (the -1 sentinel)', () => {

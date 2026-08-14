@@ -275,6 +275,7 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
           borderBlend: false,
           antiAliased: true,
           aaSize: 1,
+          cornerDetail: 8,
         },
       },
     };

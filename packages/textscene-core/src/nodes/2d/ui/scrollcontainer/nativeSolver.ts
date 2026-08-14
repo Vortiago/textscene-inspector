@@ -142,6 +142,13 @@ export interface ScrollBarPlacement {
 export interface ScrollContainerLayout {
   /** The content viewport's size after scrollbar-strip reservation (`_reposition_children`'s own `size`). */
   contentSize: Vec2;
+  /**
+   * Each axis' authored scroll offset as its `Range` SETTLES it — never the
+   * raw property. Both the grabber's own ratio and the child's own position
+   * read this one pair, so the drawn grabber and the scrolled content can
+   * never disagree about how far the container actually scrolled.
+   */
+  scroll: Vec2;
   horizontal: ScrollBarPlacement;
   vertical: ScrollBarPlacement;
 }
@@ -149,6 +156,30 @@ export interface ScrollContainerLayout {
 /** `Range::set_page`'s own CLAMP (`range.cpp:254-256`): a page can never exceed the range. */
 function clampPage(page: number, range: number): number {
   return Math.max(0, Math.min(page, range));
+}
+
+/**
+ * One axis' authored `scroll_horizontal`/`scroll_vertical` as its own
+ * `ScrollBar` settles it — `Range::_calc_value` (`range.cpp:182-200`), which
+ * pins a value above `max - page` at `max - page` and only then floors it at
+ * `min` (0 here). `ScrollContainer::_update_scrollbars` (`:595-599`) supplies
+ * `max` = the largest child's own minimum on this axis and `page` = the
+ * content viewport's own extent, and BOTH `Range::set_max` and
+ * `Range::set_page` re-run `set_value(shared->val)` — so the offset a `.tscn`
+ * authored before either was known is re-clamped once they are, which is why
+ * this is the settled value rather than the authored one.
+ *
+ * `min` is 0 and never authored (`ScrollContainer` leaves its bars' `min_value`
+ * at `Range`'s own default), so `max - page < 0` — a viewport bigger than its
+ * content — collapses to 0: an offset authored on a container that does not
+ * overflow moves nothing at all.
+ *
+ * `Range::_calc_value`'s step-snapping branch never runs: `ScrollBar`'s own
+ * constructor sets `step` to 0 (`scroll_bar.cpp:708`), so a fractional offset
+ * survives verbatim.
+ */
+function settledScrollValue(raw: number, range: number, rawPage: number): number {
+  return Math.max(0, Math.min(raw, range - clampPage(rawPage, range)));
 }
 
 /**
@@ -226,11 +257,17 @@ export function scrollContainerScrollBars(
     h: rect.h - (hVisible ? thickness : 0),
   };
 
-  const hGrabber = grabberExtent(hRect.w, thickness, largest.x, hRect.w, p.scrollHorizontal ?? 0);
-  const vGrabber = grabberExtent(vRect.h, thickness, largest.y, vRect.h, p.scrollVertical ?? 0);
+  const scroll: Vec2 = {
+    x: settledScrollValue(p.scrollHorizontal ?? 0, largest.x, hRect.w),
+    y: settledScrollValue(p.scrollVertical ?? 0, largest.y, vRect.h),
+  };
+
+  const hGrabber = grabberExtent(hRect.w, thickness, largest.x, hRect.w, scroll.x);
+  const vGrabber = grabberExtent(vRect.h, thickness, largest.y, vRect.h, scroll.y);
 
   return {
     contentSize,
+    scroll,
     horizontal: {
       visible: hVisible,
       rect: hRect,
@@ -262,11 +299,9 @@ export function scrollContainerScrollBars(
  * FRESH, empty-cache `SolveContext` that re-walks the whole subtree.
  */
 export const scrollContainerLayout: ContainerLayoutFn = (n, children, rect, ctx) => {
-  const p = props(n);
   const layout = scrollContainerScrollBars(n, ctx, rect);
   const { contentSize } = layout;
-  const scrollX = p.scrollHorizontal ?? 0;
-  const scrollY = p.scrollVertical ?? 0;
+  const { x: scrollX, y: scrollY } = layout.scroll;
 
   const out = new Map<string, Rect2>();
   for (const { node: child, minSize } of children) {
@@ -293,6 +328,8 @@ export function isScrollContainerLayout(value: unknown): value is ScrollContaine
   return (
     typeof v.contentSize === 'object' &&
     v.contentSize !== null &&
+    typeof v.scroll === 'object' &&
+    v.scroll !== null &&
     typeof v.horizontal === 'object' &&
     v.horizontal !== null &&
     typeof v.vertical === 'object' &&

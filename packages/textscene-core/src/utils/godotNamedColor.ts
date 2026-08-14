@@ -1,0 +1,199 @@
+/**
+ * Godot's X11 named-colour table — `core/math/color_names.inc`, transcribed
+ * verbatim — and the `Color::find_named_color` lookup over it
+ * (`core/math/color.cpp:412-431`).
+ *
+ * A name reaches here through `Color::from_string` (`color.cpp:450-456`),
+ * which tries `Color::html` first and only consults this table when the
+ * string is not valid hex. `[color=red]` in a RichTextLabel is the path that
+ * matters in this codebase: without the table every one of these 146 names
+ * silently resolved to the caller's fallback colour.
+ *
+ * Keys are the table's own names with underscores removed, exactly as
+ * `find_named_color` builds its hash map (`color.cpp:422`); a lookup
+ * normalizes the query the same way before matching. Values are the source's
+ * own `0xRRGGBBAA` literals, so a channel here can be diffed against the
+ * engine by eye.
+ *
+ * Portions ported from Godot Engine (MIT).
+ * Copyright (c) 2014-present Godot Engine contributors.
+ * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+ * See THIRD-PARTY-NOTICES.md.
+ */
+
+import type { Color } from './colorParser';
+
+/** The raw table: normalized name → `0xRRGGBBAA`. */
+export const GODOT_NAMED_COLORS: Readonly<Record<string, number>> = {
+  ALICEBLUE: 0xF0F8FFFF,
+  ANTIQUEWHITE: 0xFAEBD7FF,
+  AQUA: 0x00FFFFFF,
+  AQUAMARINE: 0x7FFFD4FF,
+  AZURE: 0xF0FFFFFF,
+  BEIGE: 0xF5F5DCFF,
+  BISQUE: 0xFFE4C4FF,
+  BLACK: 0x000000FF,
+  BLANCHEDALMOND: 0xFFEBCDFF,
+  BLUE: 0x0000FFFF,
+  BLUEVIOLET: 0x8A2BE2FF,
+  BROWN: 0xA52A2AFF,
+  BURLYWOOD: 0xDEB887FF,
+  CADETBLUE: 0x5F9EA0FF,
+  CHARTREUSE: 0x7FFF00FF,
+  CHOCOLATE: 0xD2691EFF,
+  CORAL: 0xFF7F50FF,
+  CORNFLOWERBLUE: 0x6495EDFF,
+  CORNSILK: 0xFFF8DCFF,
+  CRIMSON: 0xDC143CFF,
+  CYAN: 0x00FFFFFF,
+  DARKBLUE: 0x00008BFF,
+  DARKCYAN: 0x008B8BFF,
+  DARKGOLDENROD: 0xB8860BFF,
+  DARKGRAY: 0xA9A9A9FF,
+  DARKGREEN: 0x006400FF,
+  DARKKHAKI: 0xBDB76BFF,
+  DARKMAGENTA: 0x8B008BFF,
+  DARKOLIVEGREEN: 0x556B2FFF,
+  DARKORANGE: 0xFF8C00FF,
+  DARKORCHID: 0x9932CCFF,
+  DARKRED: 0x8B0000FF,
+  DARKSALMON: 0xE9967AFF,
+  DARKSEAGREEN: 0x8FBC8FFF,
+  DARKSLATEBLUE: 0x483D8BFF,
+  DARKSLATEGRAY: 0x2F4F4FFF,
+  DARKTURQUOISE: 0x00CED1FF,
+  DARKVIOLET: 0x9400D3FF,
+  DEEPPINK: 0xFF1493FF,
+  DEEPSKYBLUE: 0x00BFFFFF,
+  DIMGRAY: 0x696969FF,
+  DODGERBLUE: 0x1E90FFFF,
+  FIREBRICK: 0xB22222FF,
+  FLORALWHITE: 0xFFFAF0FF,
+  FORESTGREEN: 0x228B22FF,
+  FUCHSIA: 0xFF00FFFF,
+  GAINSBORO: 0xDCDCDCFF,
+  GHOSTWHITE: 0xF8F8FFFF,
+  GOLD: 0xFFD700FF,
+  GOLDENROD: 0xDAA520FF,
+  GRAY: 0xBEBEBEFF,
+  GREEN: 0x00FF00FF,
+  GREENYELLOW: 0xADFF2FFF,
+  HONEYDEW: 0xF0FFF0FF,
+  HOTPINK: 0xFF69B4FF,
+  INDIANRED: 0xCD5C5CFF,
+  INDIGO: 0x4B0082FF,
+  IVORY: 0xFFFFF0FF,
+  KHAKI: 0xF0E68CFF,
+  LAVENDER: 0xE6E6FAFF,
+  LAVENDERBLUSH: 0xFFF0F5FF,
+  LAWNGREEN: 0x7CFC00FF,
+  LEMONCHIFFON: 0xFFFACDFF,
+  LIGHTBLUE: 0xADD8E6FF,
+  LIGHTCORAL: 0xF08080FF,
+  LIGHTCYAN: 0xE0FFFFFF,
+  LIGHTGOLDENROD: 0xFAFAD2FF,
+  LIGHTGRAY: 0xD3D3D3FF,
+  LIGHTGREEN: 0x90EE90FF,
+  LIGHTPINK: 0xFFB6C1FF,
+  LIGHTSALMON: 0xFFA07AFF,
+  LIGHTSEAGREEN: 0x20B2AAFF,
+  LIGHTSKYBLUE: 0x87CEFAFF,
+  LIGHTSLATEGRAY: 0x778899FF,
+  LIGHTSTEELBLUE: 0xB0C4DEFF,
+  LIGHTYELLOW: 0xFFFFE0FF,
+  LIME: 0x00FF00FF,
+  LIMEGREEN: 0x32CD32FF,
+  LINEN: 0xFAF0E6FF,
+  MAGENTA: 0xFF00FFFF,
+  MAROON: 0xB03060FF,
+  MEDIUMAQUAMARINE: 0x66CDAAFF,
+  MEDIUMBLUE: 0x0000CDFF,
+  MEDIUMORCHID: 0xBA55D3FF,
+  MEDIUMPURPLE: 0x9370DBFF,
+  MEDIUMSEAGREEN: 0x3CB371FF,
+  MEDIUMSLATEBLUE: 0x7B68EEFF,
+  MEDIUMSPRINGGREEN: 0x00FA9AFF,
+  MEDIUMTURQUOISE: 0x48D1CCFF,
+  MEDIUMVIOLETRED: 0xC71585FF,
+  MIDNIGHTBLUE: 0x191970FF,
+  MINTCREAM: 0xF5FFFAFF,
+  MISTYROSE: 0xFFE4E1FF,
+  MOCCASIN: 0xFFE4B5FF,
+  NAVAJOWHITE: 0xFFDEADFF,
+  NAVYBLUE: 0x000080FF,
+  OLDLACE: 0xFDF5E6FF,
+  OLIVE: 0x808000FF,
+  OLIVEDRAB: 0x6B8E23FF,
+  ORANGE: 0xFFA500FF,
+  ORANGERED: 0xFF4500FF,
+  ORCHID: 0xDA70D6FF,
+  PALEGOLDENROD: 0xEEE8AAFF,
+  PALEGREEN: 0x98FB98FF,
+  PALETURQUOISE: 0xAFEEEEFF,
+  PALEVIOLETRED: 0xDB7093FF,
+  PAPAYAWHIP: 0xFFEFD5FF,
+  PEACHPUFF: 0xFFDAB9FF,
+  PERU: 0xCD853FFF,
+  PINK: 0xFFC0CBFF,
+  PLUM: 0xDDA0DDFF,
+  POWDERBLUE: 0xB0E0E6FF,
+  PURPLE: 0xA020F0FF,
+  REBECCAPURPLE: 0x663399FF,
+  RED: 0xFF0000FF,
+  ROSYBROWN: 0xBC8F8FFF,
+  ROYALBLUE: 0x4169E1FF,
+  SADDLEBROWN: 0x8B4513FF,
+  SALMON: 0xFA8072FF,
+  SANDYBROWN: 0xF4A460FF,
+  SEAGREEN: 0x2E8B57FF,
+  SEASHELL: 0xFFF5EEFF,
+  SIENNA: 0xA0522DFF,
+  SILVER: 0xC0C0C0FF,
+  SKYBLUE: 0x87CEEBFF,
+  SLATEBLUE: 0x6A5ACDFF,
+  SLATEGRAY: 0x708090FF,
+  SNOW: 0xFFFAFAFF,
+  SPRINGGREEN: 0x00FF7FFF,
+  STEELBLUE: 0x4682B4FF,
+  TAN: 0xD2B48CFF,
+  TEAL: 0x008080FF,
+  THISTLE: 0xD8BFD8FF,
+  TOMATO: 0xFF6347FF,
+  TRANSPARENT: 0xFFFFFF00,
+  TURQUOISE: 0x40E0D0FF,
+  VIOLET: 0xEE82EEFF,
+  WEBGRAY: 0x808080FF,
+  WEBGREEN: 0x008000FF,
+  WEBMAROON: 0x800000FF,
+  WEBPURPLE: 0x800080FF,
+  WHEAT: 0xF5DEB3FF,
+  WHITE: 0xFFFFFFFF,
+  WHITESMOKE: 0xF5F5F5FF,
+  YELLOW: 0xFFFF00FF,
+  YELLOWGREEN: 0x9ACD32FF,
+};
+
+/**
+ * `find_named_color`'s own normalization (`color.cpp:414-415`): strip spaces,
+ * dashes, underscores, apostrophes and dots, then upper-case. `CamelCase`,
+ * `snake_case` and `SPACE SEPARATED` spellings all collapse to one key.
+ */
+function normalizeColorName(name: string): string {
+  return name.replace(/[ \-_'.]/g, '').toUpperCase();
+}
+
+/**
+ * `Color::named` (`color.cpp:404-410`) without its fallback argument: returns
+ * `undefined` on a miss so each caller applies the default its own
+ * `Color::from_string` call site passes.
+ */
+export function godotNamedColor(name: string): Color | undefined {
+  const packed = GODOT_NAMED_COLORS[normalizeColorName(name)];
+  if (packed === undefined) return undefined;
+  return {
+    r: ((packed >>> 24) & 0xff) / 255,
+    g: ((packed >>> 16) & 0xff) / 255,
+    b: ((packed >>> 8) & 0xff) / 255,
+    a: (packed & 0xff) / 255,
+  };
+}

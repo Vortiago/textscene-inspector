@@ -190,6 +190,19 @@ describe('scrollContainerScrollBars (scroll_container.cpp::_update_scrollbars/_u
     expect(out.vertical.grabberRect.y).toBeCloseTo(48, 6);
   });
 
+  it('never lets an over-range authored offset push the grabber past the end of its track', () => {
+    // The grabber's ratio reads the SETTLED value, so its far edge lands
+    // exactly on the track's: offset = area * (600/800) = 144, size = 200/800
+    // * 192 + 8 = 56, and 144 + 56 = 200 = the bar's own length. Reading the
+    // raw authored value instead put the grabber at the full area_size and
+    // drew it hanging off the end.
+    const child = leaf('Scroll/Content', { customMinimumSize: { x: 0, y: 800 } });
+    const n = scrollContainer({ scrollVertical: 5000 }, [child]);
+    const out = scrollContainerScrollBars(n, ctx(), { x: 0, y: 0, w: 300, h: 200 });
+    expect(out.vertical.grabberRect.y).toBeCloseTo(144, 6);
+    expect(out.vertical.grabberRect.y + out.vertical.grabberRect.h).toBeCloseTo(out.vertical.rect.h, 6);
+  });
+
   it('keeps a fractional bar rect at FULL precision — the whole-pixel snap belongs to the drawn transform, not the solve', () => {
     // `Control::_update_canvas_item_transform` floors the CANVAS ITEM's
     // translation and leaves `get_rect()` untouched, so a ScrollBar whose own
@@ -243,11 +256,40 @@ describe('scrollContainerLayout (scroll_container.cpp::_reposition_children)', (
   });
 
   it('shifts the child by the NEGATIVE authored scroll offset (scroll_container.cpp:372)', () => {
+    const child = leaf('Scroll/Child', { customMinimumSize: { x: 50, y: 800 } });
+    const n = scrollContainer({ scrollVertical: 200 }, [child]);
+    const children = [{ node: child, minSize: { x: 50, y: 800 } }];
+    const out = layoutRects(n, children, RECT, ctx());
+    expect(out.get('Scroll/Child')).toEqual({ x: 0, y: -200, w: 50, h: 800 });
+  });
+
+  it('settles an authored offset past `max - page` AT `max - page`, never further', () => {
+    // `Range::_calc_value` (`range.cpp:191-193`): a value above `max - page`
+    // is pinned there before the `min` clamp below it. `ScrollContainer::
+    // _update_scrollbars` (`:598-599`) gives the v-bar `max` = the largest
+    // child minimum and `page` = the content viewport height, and BOTH
+    // `Range::set_max` and `Range::set_page` re-run `set_value(val)`
+    // (`range.cpp`), so the settled value is clamped however late the sizes
+    // arrive. Engine-checked: authoring 5000 here settles at 600.
+    const child = leaf('Scroll/Child', { customMinimumSize: { x: 50, y: 800 } });
+    const n = scrollContainer({ scrollVertical: 5000 }, [child]);
+    const children = [{ node: child, minSize: { x: 50, y: 800 } }];
+    const out = layoutRects(n, children, RECT, ctx());
+    // max 800 - page 200 = 600, so the child's last row sits on the viewport's.
+    expect(out.get('Scroll/Child')).toEqual({ x: 0, y: -600, w: 50, h: 800 });
+  });
+
+  it('ignores an authored offset entirely when the content does not overflow', () => {
+    // `Range::set_page` CLAMPs page to `max - min` (`range.cpp:254-256`), so a
+    // viewport wider than the content gives `page == max` and `max - page ==
+    // 0`: every authored offset settles at 0 and the child never moves.
+    // Engine-checked: `scroll_horizontal = 30`/`scroll_vertical = 70` on a
+    // 300x200 container holding a 50x50 child both read back 0.
     const child = leaf('Scroll/Child', { customMinimumSize: { x: 50, y: 50 } });
     const n = scrollContainer({ scrollHorizontal: 30, scrollVertical: 70 }, [child]);
     const children = [{ node: child, minSize: { x: 50, y: 50 } }];
     const out = layoutRects(n, children, RECT, ctx());
-    expect(out.get('Scroll/Child')).toEqual({ x: -30, y: -70, w: 50, h: 50 });
+    expect(out.get('Scroll/Child')).toEqual({ x: 0, y: 0, w: 50, h: 50 });
   });
 
   it('lays out every visible child against the SAME content rect (multiple children is a misconfiguration Godot warns about but still lays out)', () => {

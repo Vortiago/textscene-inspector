@@ -60,6 +60,7 @@ function styleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatData {
     borderBlend: false,
     antiAliased: true,
     aaSize: 1,
+    cornerDetail: 8,
     ...overrides,
   };
 }

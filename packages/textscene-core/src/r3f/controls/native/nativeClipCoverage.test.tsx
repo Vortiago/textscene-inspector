@@ -11,6 +11,8 @@
  * module exists to catch in one place rather than per consumer.
  */
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { ControlClipProvider } from './controlClipping';
@@ -33,6 +35,7 @@ const STYLE_BOX: StyleBoxFlatData = {
   borderBlend: false,
   antiAliased: true,
   aaSize: 1,
+  cornerDetail: 8,
 };
 const RECT: Rect2 = { x: 0, y: 0, w: 40, h: 20 };
 
@@ -82,5 +85,38 @@ describe('every native quad primitive spreads useControlClipPlanes()', () => {
     );
     const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
     expect(material.clippingPlanes).toEqual([]);
+  });
+});
+
+/**
+ * The other half of the same mechanism: a per-material plane array is inert
+ * unless its RENDERER opted in, because three gates the whole local-clipping
+ * path on one renderer flag (`WebGLRenderer.localClippingEnabled` →
+ * `WebGLClipping.init`'s `localClippingEnabled`). A renderer left at the
+ * default silently ignores every `clippingPlanes` array the tests above pin,
+ * with no error and no warning — the failure is a ScrollContainer that simply
+ * does not clip.
+ *
+ * Every canvas that mounts `ControlRasterLayer`/`ControlCanvasLayer` therefore
+ * has to set it, the 3D canvas included: a Control-only SubViewport sampled by
+ * a 3D scene renders its Controls through THAT canvas's renderer
+ * (`renderToOffscreenTarget` takes the live `useThree().gl`, never a renderer
+ * of its own), so the flag has to be true wherever a Control can be drawn
+ * rather than only where the 2D workspace draws one.
+ */
+describe('local clipping is enabled on every canvas that draws Controls', () => {
+  const CANVAS_SOURCES = [
+    ['World2DCanvas.tsx', join(import.meta.dirname, '../../components/Canvas2DStage/World2DCanvas.tsx')],
+    ['TscnCanvas.tsx', join(import.meta.dirname, '../../TscnCanvas.tsx')],
+  ] as const;
+
+  it.each(CANVAS_SOURCES)('%s passes localClippingEnabled to its <Canvas>', (_name, path) => {
+    // Line comments stripped first, and `<Canvas\s` rather than `<Canvas\b`:
+    // both files name `<Canvas>` in prose, and a `>` inside a comment would
+    // otherwise end the non-greedy match before the props (the same reading
+    // `World2DCanvas.test.tsx` does for `flat`).
+    const canvasTag = /<Canvas\s[\s\S]*?>/.exec(readFileSync(path, 'utf8').replace(/\/\/.*$/gm, ''))?.[0] ?? '';
+    expect(canvasTag).not.toBe('');
+    expect(canvasTag).toMatch(/localClippingEnabled:\s*true/);
   });
 });

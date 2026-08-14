@@ -4,12 +4,17 @@
  * `parseBBCodeRuns` produces the tag-stack/nesting semantics; the native
  * painter (`nativeSolver.ts`'s `styledTextRuns`) turns a run's tags into
  * `{bold, italic, color}` (its own explicit non-goal: only `[b]`/`[i]`/
- * `[color]` affect native styling — every other recognised tag still
+ * `[color]` affect native styling — every other tag Godot RECOGNISES still
  * tokenizes correctly, for stack/nesting fidelity, but contributes no native
- * effect, same as an unrecognised tag).
+ * effect).
+ *
+ * A tag Godot does not recognise is a different case entirely: it is not a tag
+ * at all, and renders as literal text exactly as the engine renders it. See
+ * `parseBBCodeRuns`.
  */
 
 import type { ControlColor } from '../control/types';
+import { godotNamedColor } from '../../../../utils/godotNamedColor';
 
 /** One currently-open BBCode tag. `value` is the `[name=value]` payload, if the tag carries one. */
 export interface OpenBBCodeTag {
@@ -29,44 +34,97 @@ export interface BBCodeRun {
 // `value` (the `=...` form) is taken verbatim, spaces and all — Godot does not
 // trim it either, and each tag decides for itself what its payload means. The
 // space-attribute form is matched but its attributes are ignored.
-const TOKEN = /(\[\/?[a-zA-Z][^\]]*\])/g;
-const OPEN = /^\[([a-zA-Z]+)(?:=([^\]]*)|\s[^\]]*)?\]$/;
-const CLOSE = /^\[\/([a-zA-Z]+)\]$/;
+const OPEN = /^\[([a-zA-Z_][a-zA-Z0-9_]*)(?:=([^\]]*)|\s[^\]]*)?\]$/;
+const CLOSE = /^\[\/([a-zA-Z_][a-zA-Z0-9_]*)\]$/;
+
+/**
+ * Every tag identifier `RichTextLabel::append_text`'s dispatch chain answers to
+ * (`rich_text_label.cpp:5416-6545`) — its `tag == "…"` / `bbcode_name == "…"` /
+ * `tag.begins_with("…=")` arms, including the built-in effects (`wave`,
+ * `shake`, `tornado`, `fade`, `pulse`, `rainbow`).
+ *
+ * This is deliberately much wider than the set this painter STYLES. Three
+ * outcomes, not two: a tag we style, a tag Godot consumes that we draw
+ * unstyled, and a tag Godot never recognised — and only the third renders as
+ * literal text. Collapsing the middle case into the third would start painting
+ * `[url=…]` where Godot paints the link's text, which is a worse divergence
+ * than the silent strip it replaced.
+ */
+const RECOGNISED_TAGS: ReadonlySet<string> = new Set([
+  'alm', 'b', 'bgcolor', 'br', 'cell', 'center', 'char', 'code', 'color', 'dropcap',
+  'fade', 'fgcolor', 'fill', 'font', 'font_size', 'fsi', 'hint', 'hr', 'i', 'img',
+  'indent', 'lang', 'lb', 'left', 'lre', 'lri', 'lrm', 'lro', 'ol',
+  'opentype_features', 'otf', 'outline_color', 'outline_size', 'p', 'pdf', 'pdi',
+  'pulse', 'rainbow', 'rb', 'right', 'rle', 'rli', 'rlm', 'rlo', 's', 'shake',
+  'shy', 'table', 'tornado', 'u', 'ul', 'url', 'wave', 'wj', 'zwj', 'zwnj',
+]);
 
 /**
  * Tokenizes `text` into runs, each carrying the FULL stack of tags open at
- * that point (outermost first, innermost/most-recently-opened last) — the
- * same merge-by-stack behaviour `bbcode.tsx` used to do inline, just stopping
- * short of turning it into CSS or a native style flag.
+ * that point (outermost first, innermost/most-recently-opened last).
+ *
+ * A scan rather than a split, because Godot's own scan
+ * (`RichTextLabel::append_text`) does two things a split cannot express. An
+ * identifier it does not recognise emits a literal `[` and resumes from the
+ * NEXT CHARACTER (`:6543-6544`'s `pos = brk_pos + 1`), so a real tag written
+ * inside a bogus one still opens; and a close tag is only honoured when it
+ * matches `tag_stack.front()` (`:5386`) — the INNERMOST open tag — otherwise
+ * it too becomes literal text and leaves the stack untouched.
+ *
+ * Adjacent text carrying the same stack merges into one run, so a literal
+ * bracket never fragments the text around it into separate runs (and separate
+ * meshes) for a difference no painter can see.
  */
 export function parseBBCodeRuns(text: string): BBCodeRun[] {
   const stack: OpenBBCodeTag[] = [];
   const runs: BBCodeRun[] = [];
+  let pending = '';
 
-  for (const part of text.split(TOKEN)) {
-    if (!part) continue;
-
-    const open = OPEN.exec(part);
-    if (open) {
-      stack.push({ name: open[1]!.toLowerCase(), value: open[2] });
-      continue;
+  function flush(): void {
+    if (pending) {
+      runs.push({ text: pending, tags: [...stack] });
+      pending = '';
     }
-
-    const close = CLOSE.exec(part);
-    if (close) {
-      const name = close[1]!.toLowerCase();
-      for (let i = stack.length - 1; i >= 0; i--) {
-        if (stack[i]!.name === name) {
-          stack.splice(i, 1);
-          break;
-        }
-      }
-      continue;
-    }
-
-    runs.push({ text: part, tags: [...stack] });
   }
 
+  let pos = 0;
+  while (pos < text.length) {
+    const brkStart = text.indexOf('[', pos);
+    if (brkStart < 0) {
+      pending += text.slice(pos);
+      break;
+    }
+    pending += text.slice(pos, brkStart);
+
+    const brkEnd = text.indexOf(']', brkStart);
+    if (brkEnd < 0) {
+      // No closing bracket at all: the rest is text, brackets included.
+      pending += text.slice(brkStart);
+      break;
+    }
+    const token = text.slice(brkStart, brkEnd + 1);
+
+    const close = CLOSE.exec(token);
+    if (close && stack.length > 0 && stack[stack.length - 1]!.name === close[1]!.toLowerCase()) {
+      flush();
+      stack.pop();
+      pos = brkEnd + 1;
+      continue;
+    }
+
+    const open = close ? null : OPEN.exec(token);
+    if (open && RECOGNISED_TAGS.has(open[1]!.toLowerCase())) {
+      flush();
+      stack.push({ name: open[1]!.toLowerCase(), value: open[2] });
+      pos = brkEnd + 1;
+      continue;
+    }
+
+    pending += '[';
+    pos = brkStart + 1;
+  }
+
+  flush();
   return runs;
 }
 
@@ -134,18 +192,17 @@ function parseHtmlHex(value: string): ControlColor | undefined {
  *
  * Real Godot's `[color=...]` goes through `Color::from_string` (`rich_text_
  * label.cpp:6149`, `color.cpp:450-456`), which tries `Color::html` first
- * (hex, with or without `#`) and otherwise looks up `value` in Godot's ~150-
- * entry X11/CSS named-color table, falling back to `p_default` — NOT white —
+ * (hex, with or without `#`) and otherwise looks up `value` in Godot's
+ * 146-entry X11 named-color table, falling back to `p_default` — NOT white —
  * when nothing matches. There is no branch for a GDScript `Color(r, g, b, a)`
  * constructor literal: passing that string to real Godot bbcode resolves to
  * the fallback, exactly like any other unrecognised name.
  *
- * The full named-color table is NOT reproduced here (out of this packet's
- * bbcode scope, `[b]`/`[i]`/`[color]`); an unmatched name — including a CSS
- * keyword real Godot WOULD resolve, e.g. `red` — falls back to `fallback`,
- * which is exactly `Color::from_string`'s own contract for a name it does not
- * recognise, just with a smaller recognised set.
+ * The table itself is `utils/godotNamedColor.ts`, transcribed from
+ * `core/math/color_names.inc`; a name it does not carry falls back to
+ * `fallback`, which is `Color::from_string`'s own contract for an
+ * unrecognised name.
  */
 export function resolveBBColor(value: string, fallback: ControlColor): ControlColor {
-  return parseHtmlHex(value) ?? fallback;
+  return parseHtmlHex(value) ?? godotNamedColor(value) ?? fallback;
 }

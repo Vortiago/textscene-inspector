@@ -112,6 +112,7 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
       borderBlend: false,
       antiAliased: true,
       aaSize: 1,
+      cornerDetail: 8,
     };
     expect(minSize(node({}, { normal: wide }), ctx())).toEqual({ x: 28, y: 12 });
   });
@@ -128,6 +129,7 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
       borderBlend: false,
       antiAliased: true,
       aaSize: 1,
+      cornerDetail: 8,
     };
     expect(minSize(node({ disabled: true }, { disabled: narrow }), ctx())).toEqual({ x: 40, y: 4 });
   });

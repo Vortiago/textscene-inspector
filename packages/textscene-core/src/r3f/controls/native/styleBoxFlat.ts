@@ -43,6 +43,13 @@ export interface StyleBoxFlatData {
   borderBlend: boolean;
   antiAliased: boolean;
   aaSize: number;
+  /**
+   * How many steps each rounded corner's quarter arc is swept in
+   * (`style_box_flat.h:51`, default 8, setter-clamped to 1..20). Only
+   * meaningful when a radius is authored: the tessellator collapses every
+   * corner to a single step otherwise (`style_box_flat.cpp:316`).
+   */
+  cornerDetail: number;
 }
 
 /**

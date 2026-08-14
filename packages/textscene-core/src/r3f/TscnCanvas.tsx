@@ -315,9 +315,17 @@ export function TscnCanvas() {
       {/* Godot's editor opens every scene at the same fixed orbit and the same
           70-degree FOV, whatever is in it (godotEditorCamera.ts). Framing is a
           deliberate act there — F — and an opt-in setting here. */}
+      {/* `localClippingEnabled` — three gates its whole local-clipping path on
+          this one renderer flag, so a `clippingPlanes` array is silently inert
+          without it. A Control-only SubViewport sampled by a 3D scene draws its
+          Controls through THIS renderer (`renderToOffscreenTarget` binds a
+          target on the live `useThree().gl` rather than owning one), so a
+          ScrollContainer inside one clips only because the flag is set here as
+          well as on the 2D world canvas. */}
       <Canvas
         camera={{ position: editorCameraPosition(), fov: EDITOR_CAMERA_FOV }}
         shadows="soft"
+        gl={{ localClippingEnabled: true }}
       >
         <TscnSceneContents />
         <ActiveCameraSwitcher />

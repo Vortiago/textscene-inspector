@@ -44,6 +44,7 @@ function styleBox(contentMargin = ZERO_SIDES): StyleBoxFlatData {
     borderBlend: false,
     antiAliased: true,
     aaSize: 1,
+    cornerDetail: 8,
   };
 }
 
