@@ -3,156 +3,22 @@
 import type { ParseError } from '../../linter/types.js';
 import type { PropertyValidator } from '../propertyValidator.js';
 import { propertyError } from './propertyError.js';
-import { FLOAT_PATTERN_SOURCE } from '../../parser/vectors.js';
+import { asStoredInt, parseGodotFloat, parseGodotInt } from '../../parser/vectors.js';
 
 /**
- * The float spellings Godot's parser accepts that `parseFloat` does not.
+ * The Variant-literal readers, re-exported from their home in `parser/vectors.ts`.
  *
- * `variant_parser.cpp:150-155` (the string form) and `:701-706` (the token
- * form) both recognise these, and the serializer writes them back, so a `.tscn`
- * carrying `zoom = inf` is a file Godot produced and reloads. `parseFloat`
- * returns NaN for every one of them, which made the shared numeric validator
- * report a FORMAT error on a legal value.
- *
- * Being non-finite is not by itself a defect. Only five setters in `scene/`
- * refuse it (`ERR_FAIL_COND(!is_finite(...))`), and those five say so with the
- * `finite` grounding rather than relying on a parse accident.
+ * They live there because that module imports NOTHING, so the renderer's
+ * decoders can read a value the way Godot does without pulling this file's
+ * diagnostic machinery into the webview bundle. They are re-exported here
+ * because the linter is where they are reached for.
  */
-const NON_FINITE_FLOATS: Readonly<Record<string, number>> = {
-  inf: Infinity,
-  '-inf': -Infinity,
-  inf_neg: -Infinity,
-  nan: NaN,
-};
-
-/**
- * One float COMPONENT of a composite literal, as Godot's tokenizer reads it:
- * the renderer's finite grammar plus the four spellings above.
- *
- * `_parse_construct` (`variant_parser.cpp:552-596`) accepts any constructor
- * argument that is a number OR an identifier `stor_fix` recognises, and the
- * writer puts every component of every real-typed composite through `rtos_fix`
- * (`Vector2` :2040, `Rect2` :2048, `Vector3` :2056, `Vector4` :2064, `Plane`
- * :2072, `AABB` :2076, `Quaternion` :2080, `Transform2D` :2090, `Basis` :2104,
- * `Transform3D` :2119, `Projection` :2135, `Color` :2145, and the packed float
- * / vector / colour arrays :2459-2549). So every one of those can carry `inf`.
- * The `i`-suffixed composites cannot: they serialise through `itos`.
- *
- * DELIBERATELY not the renderer's grammar. `parser/vectors.ts` keeps
- * {@link FLOAT_PATTERN_SOURCE} finite because a component that reaches three.js
- * as `Infinity` yields NaN geometry, and the lenient parser's warn-then-unset
- * fallback (a documented default) is the better render of a value no viewport
- * can show. That split already exists for SCALARS — `floatOr` in
- * `parser/valueParsers.ts` falls back on `inf` while `v.float` accepts it — and
- * this is the same split for composites. The linter's job is to report what
- * Godot refuses, and Godot refuses none of these.
- *
- * Derived from the finite grammar and from {@link NON_FINITE_FLOATS}'s keys, so
- * the pattern cannot come to accept a spelling `parseGodotFloat` does not read,
- * or vice versa. Longest key first, so `inf_neg` is never shadowed by `inf`
- * (the alternation is leftmost-first). The keys are literal-safe: letters,
- * an underscore and a leading `-`, none of them regex metacharacters outside a
- * character class.
- *
- * Adds no quantifier, so the ReDoS shape the finite grammar is careful about
- * (see its docblock) is untouched: the four alternatives are fixed-length
- * literals, and none of them can start where the numeric branch can, since that
- * branch needs a digit or `.` after its optional sign. At most one alternative
- * is viable at any position, so this stays a constant factor on a linear match
- * rather than a new backtracking dimension.
- *
- * No capture group — callers wrap it in `(…)` and read `match[1..arity]`.
- */
-export const TSCN_FLOAT_PATTERN_SOURCE = `(?:${Object.keys(NON_FINITE_FLOATS)
-  .sort((a, b) => b.length - a.length)
-  .join('|')}|${FLOAT_PATTERN_SOURCE})`;
-
-/**
- * ONE float literal, anchored — the same grammar as a tuple component, for the
- * arbitrary-length packed arrays, whose elements are checked one at a time
- * rather than through a fixed-arity regex. Compiled once and shared; no `g`
- * flag, so `.test()` on the shared instance is stateless.
- */
-export const TSCN_FLOAT_RE = new RegExp(`^${TSCN_FLOAT_PATTERN_SOURCE}$`);
-
-/**
- * A TSCN float literal as a number, or `null` when the text is not one.
- *
- * `null` rather than NaN is the miss signal precisely because `nan` is itself a
- * legal value: the two must stay distinguishable.
- */
-export function parseGodotFloat(value: string): number | null {
-  const trimmed = value.trim();
-  if (Object.prototype.hasOwnProperty.call(NON_FINITE_FLOATS, trimmed)) {
-    return NON_FINITE_FLOATS[trimmed]!;
-  }
-  // `parseFloat` also reads JavaScript's own spellings, which Godot's tokenizer
-  // does not: it matches the four above and nothing else. Rejected by exact
-  // name rather than by testing the result for non-finiteness, because
-  // `1e999` overflows to infinity in Godot too and is a legal literal.
-  if (trimmed === 'Infinity' || trimmed === '-Infinity' || trimmed === '+Infinity') {
-    return null;
-  }
-  // The anchored grammar, for the same reason `parseGodotInt` applies it:
-  // `parseFloat` stops at the first character it cannot use, so `75abc` read as
-  // 75 and a bound then reported a number the file does not contain — or, where
-  // the value was in range, said nothing at all about a line Godot's tokenizer
-  // cannot read. Godot stops the number at `a` (variant_parser.cpp:450) and
-  // glues the rest onto the NEXT assignment's name (:1948), so the line is not
-  // merely unreadable, it corrupts its successor.
-  if (!TSCN_FLOAT_RE.test(trimmed)) return null;
-  const num = parseFloat(trimmed);
-  return Number.isNaN(num) ? null : num;
-}
-
-/**
- * A TSCN literal as the integer Godot would STORE in a `Variant::INT` slot, or
- * `null` when the text is not a literal Godot's tokenizer can read.
- *
- * Not `parseInt`. Two distinct accidents come from `parseInt` stopping at the
- * first character it cannot use, and both cleared bounds silently:
- *
- * - `2e4` read as 2. The tokenizer sets `is_float` on the `e`
- *   (variant_parser.cpp:446-448), and the FLOAT is converted on assignment, so
- *   Godot stores 20000 and any ceiling below it should have reported.
- * - `8abc` read as 8. Godot's parser cannot read that at all, so it is a format
- *   error rather than a value in range.
- *
- * A float literal in an INT slot is legal and truncates TOWARD ZERO, which is
- * what the C++ conversion does, so `5.9` is 5 and `-5.9` is -5.
- *
- * A non-finite literal READS — `inf` and `nan` are identifiers the tokenizer
- * resolves for a bare slot too (variant_parser.cpp:701-707), so the file loads
- * — but it does not FIT, so the result is NaN rather than the spelling as
- * written. See {@link asStoredInt} for the measurement and for why the stored
- * number is not reproduced here.
- */
-export function parseGodotInt(value: string): number | null {
-  const trimmed = value.trim();
-  if (!TSCN_FLOAT_RE.test(trimmed)) return null;
-  const asFloat = parseGodotFloat(trimmed);
-  if (asFloat === null) return null;
-  return asStoredInt(asFloat);
-}
-
-/**
- * A number as the int32 an INT slot STORES: truncated toward zero, which is
- * what the C++ conversion does.
- *
- * A NON-FINITE number is not representable at all, and reads as NaN rather than
- * passing through. Measured on 4.6.3 stable (x86_64), `Vector2i(inf, 8)`,
- * `(-inf, 8)`, `(inf_neg, 8)` and `(nan, 8)` all store `(-2147483648, 8)` — the
- * narrowing happens at PARSE time, so the stored value is not what the file
- * says. That number is deliberately NOT returned here: the conversion is
- * undefined behaviour in C++ and the practical result is architecture-specific
- * (x86 `cvttsd2si` yields INT32_MIN, AArch64 `fcvtzs` saturates the other way),
- * and Godot ships on both. NaN keeps every bound comparison false, so no
- * message can print a number no platform agrees on; the ALTERATION itself is
- * reported by the non-finite arm in `v.vector2i`, which is the portable claim.
- */
-function asStoredInt(num: number): number {
-  return Number.isFinite(num) ? Math.trunc(num) : NaN;
-}
+export {
+  TSCN_FLOAT_PATTERN_SOURCE,
+  TSCN_FLOAT_RE,
+  parseGodotFloat,
+  parseGodotInt,
+} from '../../parser/vectors.js';
 
 /**
  * One capture group of an ALREADY-MATCHED float tuple, as a number.

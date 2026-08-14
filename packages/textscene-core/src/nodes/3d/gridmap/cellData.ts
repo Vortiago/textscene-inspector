@@ -9,6 +9,9 @@
  * 0-23 (bits 16-20).
  */
 
+import { warn } from '../../../logger.js';
+import { parseGodotInt } from '../../../parser/vectors.js';
+
 export interface GridMapCell {
   x: number;
   y: number;
@@ -25,11 +28,26 @@ function toInt16(u16: number): number {
 }
 
 export function decodeGridMapCells(packedInt32: string): GridMapCell[] {
+  // `parseGodotInt` rather than `Number`: `Number('inf')` is NaN, and `inf` is
+  // a literal Godot writes into an INT array and narrows on load, so a silent
+  // NaN dropped the cell instead of placing it where Godot places it. `>>> 0`
+  // below turns a NaN into 0, the origin cell, which is the same place Godot's
+  // own narrowing puts it on x86.
   const ints = packedInt32
     .split(',')
     .map((s) => s.trim())
     .filter((s) => s.length > 0)
-    .map((s) => Number(s));
+    .map((s) => {
+      const num = parseGodotInt(s);
+      if (num === null) {
+        warn(`[GridMap] cell data element "${s}" is not a value Godot can read`);
+        return NaN;
+      }
+      if (!Number.isFinite(num)) {
+        warn(`[GridMap] cell data element "${s}" is non-finite; placing that cell at the origin`);
+      }
+      return num;
+    });
 
   const cells: GridMapCell[] = [];
   for (let i = 0; i + 2 < ints.length; i += 3) {

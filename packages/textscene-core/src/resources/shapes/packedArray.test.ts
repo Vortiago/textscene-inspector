@@ -39,6 +39,17 @@ describe('parsePackedInt32Arrays', () => {
     ]);
   });
 
+  it('reads an element the way Godot narrows it, not the way parseInt stops', () => {
+    // `2e1` is a file Godot loads as 20; `parseInt` stopped at the `e`.
+    expect(parsePackedInt32Arrays('[PackedInt32Array(2e1, 1.9, -1.9)]')).toEqual([[20, 1, -1]]);
+  });
+
+  it('throws on an element Godot cannot read, like its three float siblings', () => {
+    expect(() => parsePackedInt32Arrays('[PackedInt32Array(0, 0x10)]')).toThrow(
+      'Invalid number in PackedInt32Array'
+    );
+  });
+
   it('extracts from the 2D Array[PackedInt32Array]([...]) wrapper form', () => {
     const out = parsePackedInt32Arrays(
       'Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7, 8)])'

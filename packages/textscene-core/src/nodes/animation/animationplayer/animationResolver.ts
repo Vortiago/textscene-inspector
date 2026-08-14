@@ -14,8 +14,9 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { parseVector2, parseVector3 } from '../../../parser/vectors';
+import { parseGodotFloat, parseVector2, parseVector3 } from '../../../parser/vectors';
 import { parseColor } from '../../../utils/colorParser';
+import { warn } from '../../../logger';
 import { NODE_PATH_LITERAL_ANYWHERE_RE, SUB_RESOURCE_REF_BODY, literalText, packedArrayCallAnywhere } from '../../../godot/index.js';
 import type { AnimationLibraryRef } from './types';
 
@@ -274,10 +275,26 @@ function parseFlatTransformKeys(keysStr: string, components: number): GodotKeyfr
   return keys;
 }
 
+/**
+ * A comma-separated float list, read the way Godot's tokenizer does.
+ *
+ * `parseFloat` turned the `inf`/`-inf`/`inf_neg`/`nan` that `rtos_fix` writes
+ * into a packed float array (variant_parser.cpp:2504) into a silent NaN, and
+ * read the trailing garbage in `1abc` as 1. An unreadable element warns and
+ * lands as NaN, which is what every downstream comparison already treats as
+ * "no keyframe here".
+ */
 function parseFloatList(raw: string): number[] {
   const trimmed = raw.trim();
   if (trimmed.length === 0) return [];
-  return trimmed.split(',').map((s) => parseFloat(s.trim()));
+  return trimmed.split(',').map((s) => {
+    const num = parseGodotFloat(s);
+    if (num === null) {
+      warn(`[AnimationPlayer] track data element "${s.trim()}" is not a value Godot can read`);
+      return NaN;
+    }
+    return num;
+  });
 }
 
 /** Extracts and decodes the `"values": [...]` bracketed array (paren-aware). */

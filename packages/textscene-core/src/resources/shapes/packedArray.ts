@@ -1,4 +1,6 @@
 import { packedArrayCallAnywhere, packedArrayLiteral } from '../../godot/index.js';
+import { parseGodotInt } from '../../parser/vectors.js';
+import { warn } from '../../logger.js';
 
 const PACKED_VECTOR3_ARRAY_RE = packedArrayLiteral('PackedVector3Array');
 
@@ -63,7 +65,19 @@ export function parsePackedInt32Arrays(value: string): number[][] {
       result.push([]);
       continue;
     }
-    result.push(body.split(',').map((s) => parseInt(s.trim(), 10)));
+    result.push(
+      body.split(',').map((s) => {
+        const num = parseGodotInt(s);
+        // The guard its three float siblings already have. Without it a body
+        // Godot's tokenizer refuses became a silent NaN index, and `2e1` — a
+        // file Godot loads as 20 — became 2.
+        if (num === null) throw new Error(`Invalid number in PackedInt32Array: ${value}`);
+        if (!Number.isFinite(num)) {
+          warn(`PackedInt32Array element "${s.trim()}" is non-finite; it indexes nothing`);
+        }
+        return num;
+      })
+    );
   }
   return result;
 }

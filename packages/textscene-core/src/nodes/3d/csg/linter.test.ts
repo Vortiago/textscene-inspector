@@ -82,6 +82,18 @@ describe('CSG own-geometry-degenerate rule', () => {
       expect(warnings[0]?.ruleName).toBe('csgpolygon3d-insufficient-points');
     });
 
+    it('warns on a 2-point polygon carrying a non-finite component', () => {
+      // Counted, not decoded: `inf` is a component Godot loads and `rtos_fix`
+      // writes, so this is the same 2-point polygon as the case above — but the
+      // renderer decoder this rule used to call throws on it, and the throw
+      // swallowed the warning.
+      const warnings = warningsFor(
+        csgScene('CSGPolygon3D', 'polygon = PackedVector2Array(inf, 0, 1, 1)\n')
+      );
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]?.ruleName).toBe('csgpolygon3d-insufficient-points');
+    });
+
     it('stays silent on a 3-point polygon', () => {
       expect(
         warningsFor(csgScene('CSGPolygon3D', 'polygon = PackedVector2Array(0, 0, 1, 0, 1, 1)\n'))

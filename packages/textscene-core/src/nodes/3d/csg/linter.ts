@@ -37,7 +37,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
-import { parsePackedVector2Array } from '../../../resources/shapes/packedArray.js';
+import { polygonPointCount } from '../../../linter/polygonPoints.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 
 const MISSING_MESH_RULE = 'csgmesh3d-requires-mesh';
@@ -64,21 +64,21 @@ function checkCSGShape3D(context: RuleContext): Diagnostic[] {
   // csg_shape.cpp:2808-2829: `polygon` defaults to a unit square (4 points),
   // NOT an empty array — only a PRESENT, under-3-point polygon is degenerate.
   if (node.type === 'CSGPolygon3D' && properties.polygon) {
-    try {
-      const points = parsePackedVector2Array(properties.polygon).length / 2;
-      if (points < 3) {
-        return [
-          {
-            severity: 'warning',
-            message: `CSGPolygon3D '${node.name}' has a polygon with ${points} point(s); at least 3 are needed for a solid shape.`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: INSUFFICIENT_POINTS_RULE,
-          },
-        ];
-      }
-    } catch {
-      return []; // malformed literal is linterParser.ts's job, not this rule's
+    // Counted, not decoded. The renderer's decoder throws on a component its
+    // finite grammar refuses, so an `inf`-bearing polygon — which Godot loads
+    // and counts like any other — silenced this warning entirely.
+    const points = polygonPointCount(properties.polygon);
+    if (points === null) return []; // malformed literal is linterParser.ts's job
+    if (points < 3) {
+      return [
+        {
+          severity: 'warning',
+          message: `CSGPolygon3D '${node.name}' has a polygon with ${points} point(s); at least 3 are needed for a solid shape.`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: INSUFFICIENT_POINTS_RULE,
+        },
+      ];
     }
   }
 

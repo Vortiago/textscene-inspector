@@ -11,6 +11,7 @@
 
 import { warn } from '../../../../logger';
 import { packedArrayLiteral } from '../../../../godot/index.js';
+import { parseGodotInt } from '../../../../parser/vectors.js';
 
 export interface Vec2i {
   x: number;
@@ -57,6 +58,40 @@ export function decodeTileMapData(value: string): PlacedCell[] | null {
 }
 
 /**
+ * The elements of a packed INT body, or `null` when one is text Godot's own
+ * tokenizer cannot read.
+ *
+ * The two failure modes are deliberately NOT the same answer. Text outside the
+ * grammar (`nope`, `0x10`) is a file Godot refuses, so the whole decode gives
+ * up and the caller's error stands. A NON-FINITE element is a file Godot loads:
+ * `_parse_construct<int32_t>` narrows it at parse time, and `Int32Array` /
+ * `Uint8Array` coerce it to 0 here, so the cell lands at the origin and the
+ * decode continues. Conflating them reported `tilemap-invalid-tile-data` at
+ * error tier on a body the phase-1 packed-array validator accepts.
+ *
+ * Truncation is matched for the in-range finite case only. `(int32_t)1e10` is
+ * undefined behaviour in C++ and platform-specific in practice, so no attempt
+ * is made to reproduce it.
+ */
+function readInt32Elements(body: string, context: string): number[] | null {
+  const out: number[] = [];
+  let sawNonFinite = false;
+  for (const part of body.split(',')) {
+    const num = parseGodotInt(part);
+    if (num === null) {
+      warn(`${context} has entries Godot cannot read — ignoring tile data`);
+      return null;
+    }
+    if (!Number.isFinite(num)) sawNonFinite = true;
+    out.push(num);
+  }
+  if (sawNonFinite) {
+    warn(`${context} has a non-finite entry, which Godot narrows — placing that cell at the origin`);
+  }
+  return out;
+}
+
+/**
  * Legacy TileMap `layer_N/tile_data` (PackedInt32Array). The TSCN `format`
  * property is the 0-indexed TileMapDataFormat enum: 2 = TILE_MAP_DATA_FORMAT_3,
  * whose int32 triplets reinterpret as exactly the 12-byte record above (no
@@ -71,11 +106,8 @@ export function decodeLegacyTileData(value: string, format: number): PlacedCell[
   const m = PACKED_INT32_ARRAY_RE.exec(value);
   if (!m) return null;
 
-  const ints = m[1]!.split(',').map((s) => parseInt(s.trim(), 10));
-  if (ints.some(Number.isNaN)) {
-    warn(`[TileMap] tile_data has non-numeric entries — ignoring tile data`);
-    return null;
-  }
+  const ints = readInt32Elements(m[1]!, '[TileMap] tile_data');
+  if (ints === null) return null;
   if (ints.length % 3 !== 0) {
     warn(`[TileMap] tile_data length ${ints.length} is not a whole number of cells — ignoring tile data`);
     return null;
@@ -107,10 +139,7 @@ function decodeBytes(body: string): Uint8Array | null {
       return null;
     }
   }
-  const ints = body.split(',').map((s) => parseInt(s.trim(), 10));
-  if (ints.some(Number.isNaN)) {
-    warn(`[TileMapLayer] tile_map_data has non-numeric bytes — ignoring tile data`);
-    return null;
-  }
+  const ints = readInt32Elements(body, '[TileMapLayer] tile_map_data');
+  if (ints === null) return null;
   return new Uint8Array(ints);
 }

@@ -24,36 +24,7 @@ import { basisColumnScales } from './basisColumnScales.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { parseGodotInt } from '../validators/commonValidators.js';
-import { packedArrayLiteral } from '../../godot/index.js';
-
-/**
- * Matches the same wrapper `v.packedVector2Array` accepts; a value that doesn't
- * match is malformed, and reporting that is linterParser.ts's job, not this
- * rule's. Compiled once — a literal inside the function below would rebuild on
- * every node either dimension's rule visits. No `g` flag, so the shared
- * instance is stateless under `.exec`.
- */
-const POLYGON_WRAPPER = packedArrayLiteral('PackedVector2Array');
-
-/**
- * Number of vertices `polygon` carries, mirroring `polygon.size()`
- * (collision_polygon_2d.cpp:239, collision_polygon_3d.cpp:242). Godot omits
- * the property at its `PackedVector2Array()` default, so an absent key means
- * zero points, same as an explicit empty array. Returns null for a value this
- * rule cannot read — linterParser.ts's format validator owns reporting that;
- * treating an unreadable value as a valid non-empty polygon would be wrong.
- */
-function polygonPointCount(raw: string | undefined): number | null {
-  if (raw === undefined) return 0;
-  const match = POLYGON_WRAPPER.exec(raw);
-  if (!match) return null;
-  const body = match[1]!.trim();
-  if (body === '') return 0;
-  const parts = body.split(',').filter((part) => part.trim().length > 0);
-  // `_build_polygon` pairs consecutive components (collision_polygon_2d.cpp:65-71);
-  // a trailing odd component is not a whole vertex.
-  return Math.floor(parts.length / 2);
-}
+import { polygonPointCount } from '../polygonPoints.js';
 
 export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
   const type = `CollisionPolygon${dim}`;
@@ -119,7 +90,9 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
         // codebase omits at default.
         const buildMode =
           rawProps.build_mode === undefined ? 0 : parseGodotInt(rawProps.build_mode);
-        if (buildMode !== null) {
+        // Finite: every arm below compares against BUILD_SOLIDS, and a
+        // non-finite passes both of them, naming a mode the file never states.
+        if (buildMode !== null && Number.isFinite(buildMode)) {
           if (buildMode === 0 && pointCount < 3) {
             diagnostics.push({
               severity: 'warning',

@@ -159,6 +159,22 @@ const DIAGNOSTIC_READERS = (file: string): boolean => {
 const RAW_SCALAR_PARSE = /\b(?:parseInt|parseFloat)\(/;
 
 /**
+ * Whoever reads a PACKED array, derived the same way: the file composes one of
+ * the two shared builders.
+ *
+ * `parseInt` only. `parseFloat` is the CORRECT reader for a packed FLOAT array
+ * once the element has matched the finite grammar, which is what
+ * `resources/shapes/packedArray.ts` does. An INT array is the one that cannot
+ * use it: Godot reads those elements with `_parse_construct<int32_t>`
+ * (`variant_parser.cpp:1428-1430`), which takes any number token and narrows
+ * it, so `PackedInt32Array(2e1, 0, 0)` places a tile at 20 and `parseInt` put
+ * it at 2 — or, on the `inf` that `rtos_fix` writes, NaN'd the whole decode and
+ * reported `tilemap-invalid-tile-data` on a file Godot loads.
+ */
+const PACKED_ARRAY_READERS = /\b(?:packedArrayLiteral|packedArrayCallAnywhere)\(/;
+const RAW_INT_PARSE = /\bparseInt\(/;
+
+/**
  * Each composite at the arity Godot writes it with, for the parity probe below.
  * `Plane` is 4 (normal xyz + d); `AABB` is position + size.
  */
@@ -200,18 +216,29 @@ describe('Godot composite literal grammar', () => {
   });
 
   it('reads a Variant scalar through the shared reader, in every rule', () => {
-    // `commonValidators.ts` OWNS `parseGodotFloat`, whose last step is the
-    // `parseFloat` this bans. That is the one place the ban cannot apply,
-    // because it is the thing the ban points everyone at.
-    const population = files.filter(
-      ({ file }) => DIAGNOSTIC_READERS(file) && label(file) !== 'linter/validators/commonValidators.ts'
-    );
+    // No allowlist. `parseGodotFloat` — whose last step is the `parseFloat`
+    // this bans — lives in `parser/vectors.ts`, outside this population, so the
+    // one file that legitimately spells it is not a file this asks about.
+    const population = files.filter(({ file }) => DIAGNOSTIC_READERS(file));
     // Anti-vacuity: the population is a path predicate, so a change to how
     // `label` spells a path would empty it and leave this green forever.
     expect(population.length).toBeGreaterThan(200);
 
     const offenders = population
       .filter(({ src }) => RAW_SCALAR_PARSE.test(withoutComments(src)))
+      .map(({ file }) => label(file))
+      .sort();
+    expect(offenders).toEqual([]);
+  });
+
+  it('reads a packed INT element through the shared reader, never parseInt', () => {
+    const population = files.filter(({ src }) => PACKED_ARRAY_READERS.test(withoutComments(src)));
+    // Anti-vacuity: the population is builder-derived, so a rename that stopped
+    // every file composing one would empty it and leave this green.
+    expect(population.length).toBeGreaterThan(10);
+
+    const offenders = population
+      .filter(({ src }) => RAW_INT_PARSE.test(withoutComments(src)))
       .map(({ file }) => label(file))
       .sort();
     expect(offenders).toEqual([]);

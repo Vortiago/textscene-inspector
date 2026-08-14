@@ -74,4 +74,23 @@ describe('decodeLegacyTileData (TileMap layer_N/tile_data, TSCN format = 2)', ()
     expect(decodeLegacyTileData('PackedInt32Array(0, nope, 0)', 2)).toBeNull();
     expect(warnSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
+
+  it('keeps decoding a body Godot loads, however the ints are spelled', () => {
+    // `_parse_construct<int32_t>` (variant_parser.cpp:1428-1430) takes any
+    // number token and narrows it, so all three of these are files Godot opens
+    // — and `parseInt` read `2e3` as 2, put the cell 998 tiles from where Godot
+    // puts it, and NaN'd the whole layer on `inf`.
+    expect(decodeLegacyTileData('PackedInt32Array(2e3, 0, 0)', 2)).toEqual([
+      { coords: { x: 2000, y: 0 }, sourceId: 0, atlasCoords: { x: 0, y: 0 }, alternativeId: 0 },
+    ]);
+    // Truncation toward zero, matching the C++ conversion.
+    expect(decodeLegacyTileData('PackedInt32Array(1e-3, 0, 0)', 2)).toEqual([
+      { coords: { x: 0, y: 0 }, sourceId: 0, atlasCoords: { x: 0, y: 0 }, alternativeId: 0 },
+    ]);
+    // Non-finite is altered at parse on the engine side too; the cell lands at
+    // the origin rather than taking the whole layer down with it.
+    for (const spelling of ['inf', '-inf', 'inf_neg', 'nan']) {
+      expect(decodeLegacyTileData(`PackedInt32Array(${spelling}, 0, 0)`, 2)).toHaveLength(1);
+    }
+  });
 });
