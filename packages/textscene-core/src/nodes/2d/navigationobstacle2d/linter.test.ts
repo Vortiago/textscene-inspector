@@ -223,6 +223,23 @@ radius = 10.0
   });
 });
 
+describe('NavigationObstacle2D radius readings (navigation_obstacle_2d.cpp:247)', () => {
+  it('treats an infinite radius as set, because the setter has no finiteness guard', () => {
+    const content = `[gd_scene format=3]\n\n[node name="Obstacle" type="NavigationObstacle2D"]\nradius = inf\nscale = Vector2(2, 1)\n`;
+    expect(only(NON_UNIFORM_RULE, content)).toHaveLength(1);
+  });
+
+  it('says nothing for a nan radius, which fails `radius > 0` as it does in C++', () => {
+    const content = `[gd_scene format=3]\n\n[node name="Obstacle" type="NavigationObstacle2D"]\nradius = nan\nskew = 0.4\n`;
+    expect(only(SKEW_RULE, content)).toEqual([]);
+  });
+
+  it('reads an exponent-spelled radius at its real magnitude', () => {
+    const content = `[gd_scene format=3]\n\n[node name="Obstacle" type="NavigationObstacle2D"]\nradius = 1e1\nskew = 0.4\n`;
+    expect(only(SKEW_RULE, content)).toHaveLength(1);
+  });
+});
+
 describe('NavigationObstacle2D global-skew check (navigation_obstacle_2d.cpp:340-342)', () => {
   it('says nothing when radius is 0 (the default), however skewed', () => {
     const content = `[gd_scene format=3]\n\n[node name="Obstacle" type="NavigationObstacle2D"]\nskew = 0.4\n`;

@@ -128,49 +128,54 @@ describe('v.resourceReference / v.nodePath / v.color', () => {
   });
 });
 
-describe('float-tuple validators accept the renderer float grammar (#190 drift fix)', () => {
-  // The canonical FLOAT_PATTERN_SOURCE (parser/vectors.ts) — the grammar the
-  // renderer parses — accepts leading-dot (.5), trailing-dot (5.), an explicit
-  // plus sign (+5) and scientific notation. The linter must not be STRICTER
-  // than the renderer, so these must all lint clean.
-  it('v.vector2 accepts .5 / 5. / +5 / scientific', () => {
-    expect(v.vector2('offset')('offset', 'Vector2(.5, 5.)', 1)).toBeNull();
-    expect(v.vector2('offset')('offset', 'Vector2(+1, -2.5e-2)', 1)).toBeNull();
+describe('float-tuple validators speak the tokenizer float grammar (#190 drift fix)', () => {
+  // FLOAT_PATTERN_SOURCE (parser/vectors.ts) is transcribed from `get_token`,
+  // so linter and renderer accept exactly what Godot loads: trailing-dot (5.)
+  // and every exponent form, but NOT a leading `+` or a leading `.` — measured
+  // on 4.6.3, both fail the load outright.
+  it('v.vector2 accepts 5. / scientific', () => {
+    expect(v.vector2('offset')('offset', 'Vector2(0.5, 5.)', 1)).toBeNull();
+    expect(v.vector2('offset')('offset', 'Vector2(1, -2.5e-2)', 1)).toBeNull();
   });
 
-  it('v.vector3 accepts .5 / 5. / +5 / scientific', () => {
-    expect(v.vector3('position')('position', 'Vector3(.5, 5., +5)', 1)).toBeNull();
-    expect(v.vector3('position')('position', 'Vector3(1e3, -2.5e-2, +0)', 1)).toBeNull();
+  it('refuses a leading plus and a leading dot, which Godot cannot read', () => {
+    expect(v.vector2('offset')('offset', 'Vector2(+1, 2)', 1)).not.toBeNull();
+    expect(v.vector2('offset')('offset', 'Vector2(.5, 2)', 1)).not.toBeNull();
   });
 
-  it('v.rect2 accepts the lenient grammar', () => {
-    expect(v.rect2('region')('region', 'Rect2(.5, 5., +1, 2)', 1)).toBeNull();
+  it('v.vector3 accepts 5. / scientific', () => {
+    expect(v.vector3('position')('position', 'Vector3(0.5, 5., 5)', 1)).toBeNull();
+    expect(v.vector3('position')('position', 'Vector3(1e3, -2.5e-2, 0)', 1)).toBeNull();
   });
 
-  it('v.transform3d accepts the lenient grammar', () => {
+  it('v.rect2 accepts the tokenizer grammar', () => {
+    expect(v.rect2('region')('region', 'Rect2(0.5, 5., 1, 2)', 1)).toBeNull();
+  });
+
+  it('v.transform3d accepts the tokenizer grammar', () => {
     expect(
-      v.transform3d('t')('t', 'Transform3D(1., .5, +0, 0, 1, 0, 0, 0, 1, 0, 0, 0)', 1)
+      v.transform3d('t')('t', 'Transform3D(1., 0.5, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)', 1)
     ).toBeNull();
   });
 
-  it('v.color accepts the lenient grammar', () => {
-    expect(v.color('albedo_color')('albedo_color', 'Color(.5, 1., +0, 1)', 1)).toBeNull();
+  it('v.color accepts the tokenizer grammar', () => {
+    expect(v.color('albedo_color')('albedo_color', 'Color(0.5, 1., 0, 1)', 1)).toBeNull();
   });
 
-  it('v.aabb accepts the lenient grammar', () => {
-    expect(v.aabb('aabb')('aabb', 'AABB(.5, 5., +1, 1, 1, 1)', 1)).toBeNull();
+  it('v.aabb accepts the tokenizer grammar', () => {
+    expect(v.aabb('aabb')('aabb', 'AABB(0.5, 5., 1, 1, 1, 1)', 1)).toBeNull();
   });
 
-  it('v.quaternion accepts the lenient grammar', () => {
-    expect(v.quaternion('q')('q', 'Quaternion(.5, 5., +0, 1)', 1)).toBeNull();
+  it('v.quaternion accepts the tokenizer grammar', () => {
+    expect(v.quaternion('q')('q', 'Quaternion(0.5, 5., 0, 1)', 1)).toBeNull();
   });
 
-  it('v.transform2d accepts the lenient grammar', () => {
-    expect(v.transform2d('t')('t', 'Transform2D(1., .5, +0, 1, 0, 0)', 1)).toBeNull();
+  it('v.transform2d accepts the tokenizer grammar', () => {
+    expect(v.transform2d('t')('t', 'Transform2D(1., 0.5, 0, 1, 0, 0)', 1)).toBeNull();
   });
 
-  it('v.basis accepts the lenient grammar', () => {
-    expect(v.basis('b')('b', 'Basis(1., .5, +0, 0, 1, 0, 0, 0, 1)', 1)).toBeNull();
+  it('v.basis accepts the tokenizer grammar', () => {
+    expect(v.basis('b')('b', 'Basis(1., 0.5, 0, 0, 1, 0, 0, 0, 1)', 1)).toBeNull();
   });
 
   it('still rejects non-numeric and wrong-arity tuples', () => {

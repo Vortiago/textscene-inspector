@@ -59,6 +59,7 @@ import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { isExplicitlyHidden, parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 import { parseTransform3D } from '../../../../utils/transform.js';
 import { isEqualApprox, isZeroApprox } from '../../../../godot/math.js';
+import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
 const PARENT_RULE = 'openxrcompositionlayer-parent-not-xrorigin3d';
 const ORTHONORMAL_RULE = 'openxrcompositionlayer-non-orthonormal-transform';
@@ -139,8 +140,9 @@ function checkOpenXRCompositionLayer(context: RuleContext): Diagnostic[] {
   // (openxr_composition_layer.h:88) and `sort_order` defaults 1 (h:90), so an
   // explicit `enable_hole_punch = true` with sort_order omitted still warns.
   const holePunchEnabled = properties.enable_hole_punch === 'true';
-  const sortOrder = properties.sort_order === undefined ? 1 : parseInt(properties.sort_order, 10);
-  if (holePunchEnabled && sortOrder >= 0) {
+  const sortOrder =
+    properties.sort_order === undefined ? 1 : parseGodotInt(properties.sort_order);
+  if (holePunchEnabled && sortOrder !== null && sortOrder >= 0) {
     diagnostics.push({
       severity: 'warning',
       message: `${node.type} '${node.name}' has enable_hole_punch on with sort_order ${sortOrder} (>= 0). Hole punching won't work as expected unless the sort order is less than zero, the same configuration warning Godot's own editor reports.`,

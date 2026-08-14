@@ -36,6 +36,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { checkResourceExists, resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { decodeLegacyTileData } from '../shared/tileData.js';
+import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
 const LAYER_DATA_KEY_RE = /^layer_(\d+)\/tile_data$/;
 const LAYER_KEY_RE = /^layer_(\d+)\//;
@@ -56,7 +57,7 @@ function layerIndices(rawProps: Record<string, string>): number[] {
   const indices = new Set<number>([0]);
   for (const key of Object.keys(rawProps)) {
     const match = LAYER_KEY_RE.exec(key);
-    if (match) indices.add(parseInt(match[1]!, 10));
+    if (match) indices.add(Number(match[1]!));
   }
   return [...indices].sort((a, b) => a - b);
 }
@@ -71,7 +72,7 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
   // to TILE_MAP_DATA_FORMAT_3, which is 2 (tile_map.h:64). Defaulting to 0 read
   // an unversioned TileMap as Godot 3 data and reported a format the file never
   // claimed.
-  const format = rawProps.format !== undefined ? parseInt(rawProps.format, 10) : 2;
+  const format = rawProps.format !== undefined ? parseGodotInt(rawProps.format) : 2;
 
   // tile_map.cpp:843 — unconditional; every TileMap node carries this, whatever
   // it's configured with.
@@ -85,7 +86,7 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
 
   const indices = layerIndices(rawProps);
   const isLayerYSorted = (i: number) => rawProps[`layer_${i}/y_sort_enabled`] === 'true';
-  const layerZIndex = (i: number) => parseInt(rawProps[`layer_${i}/z_index`] ?? '0', 10) || 0;
+  const layerZIndex = (i: number) => parseGodotInt(rawProps[`layer_${i}/z_index`] ?? '0') || 0;
   const nodeYSorted = rawProps.y_sort_enabled === 'true'; // inherited Node2D key, own node
 
   // tile_map.cpp:850-858
@@ -140,6 +141,11 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
       ruleName: 'valid-tilemap-resources',
     });
   }
+
+  // An unreadable `format` is its own validator's error, and a non-finite one is
+  // altered at parse; with no version number there is nothing to say about the
+  // tile data underneath it.
+  if (format === null || Number.isNaN(format)) return diagnostics;
 
   // The decoder for the older formats is compiled in, but the guard above it
   // is not: tile_map.cpp:71 refuses anything but the newest format whenever

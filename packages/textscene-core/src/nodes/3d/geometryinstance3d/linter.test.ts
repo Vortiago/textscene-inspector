@@ -38,6 +38,26 @@ describe('GeometryInstance3D Linter', () => {
       );
     });
 
+    it('warns when Begin is infinite and End is finite', () => {
+      // visual_instance_3d.cpp:512 compares the pair as doubles, and `inf` is a
+      // value the float slot holds verbatim, so this node is never visible.
+      expectDiagnostic(
+        scene(node('GeometryInstance3D', { visibility_range_begin: 'inf', visibility_range_end: 5 })),
+        { ruleName: 'geometryinstance3d-visibility-range-end-before-begin' }
+      );
+    });
+
+    it('does not warn when either side is nan, which no comparison orders', () => {
+      expectNoDiagnostic(
+        scene(node('GeometryInstance3D', { visibility_range_begin: 'nan', visibility_range_end: 5 })),
+        { ruleName: 'geometryinstance3d-visibility-range-end-before-begin' }
+      );
+      expectNoDiagnostic(
+        scene(node('GeometryInstance3D', { visibility_range_begin: 5, visibility_range_end: 'nan' })),
+        { ruleName: 'geometryinstance3d-visibility-range-end-before-begin' }
+      );
+    });
+
     it('does not warn when End is greater than Begin', () => {
       expectClean(scene(node('GeometryInstance3D', { visibility_range_begin: 10, visibility_range_end: 50 })));
     });

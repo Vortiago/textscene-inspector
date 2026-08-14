@@ -682,12 +682,12 @@ interp_to_end = 0.3
   });
 });
 
-describe('GPUParticles3D Linter — lenient float grammar (#190 #7 follow-up)', () => {
-  it('accepts visibility_aabb with leading-dot / trailing-dot floats', () => {
+describe('GPUParticles3D Linter — the tokenizer float grammar (#190 #7 follow-up)', () => {
+  it('accepts a trailing-dot visibility_aabb component', () => {
     // Isolate the strict-parser format check (a bare node also trips the
     // unrelated process_material semantic requirement).
     expectNoErrors(
-      scene(node('GPUParticles3D', { visibility_aabb: 'AABB(.5, 0, 0, 10., 10, 10)' })),
+      scene(node('GPUParticles3D', { visibility_aabb: 'AABB(0.5, 0, 0, 10., 10, 10)' })),
       { ruleName: 'strict-parser' }
     );
   });

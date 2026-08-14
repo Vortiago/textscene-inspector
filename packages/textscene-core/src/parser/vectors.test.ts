@@ -64,8 +64,12 @@ describe('parseVector3', () => {
     expect(parseVector3('Vector3(1.5e2, -2E-1, 3)')).toEqual({ x: 150, y: -0.2, z: 3 });
   });
 
-  it('parses trailing-dot and leading-dot decimals', () => {
-    expect(parseVector3('Vector3(1., .5, 2)')).toEqual({ x: 1, y: 0.5, z: 2 });
+  it('parses trailing-dot decimals, and refuses leading-dot ones', () => {
+    // `get_token` requires a digit after the optional `-` (variant_parser.cpp:424),
+    // so `.5` never reaches the number branch. Measured on 4.6.3: a scene
+    // carrying `Vector2(.5, 2)` fails the load outright.
+    expect(parseVector3('Vector3(1., 0.5, 2)')).toEqual({ x: 1, y: 0.5, z: 2 });
+    expect(() => parseVector3('Vector3(1., .5, 2)')).toThrow('Invalid Vector3 format');
   });
 
   it('throws on wrong arity and empty input', () => {

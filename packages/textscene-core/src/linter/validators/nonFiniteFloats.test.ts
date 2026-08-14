@@ -210,7 +210,7 @@ describe('the widened component grammar and parseGodotFloat', () => {
   // The failure this guards is a hand-added alternative in one of the two: a
   // spelling the pattern lets through but the reader cannot turn into a number,
   // or the reverse. Both are derived from one table, and this is what says so.
-  it.each([...NON_FINITE, '1.5', '-0.25', '1e-05', '5.', '.5', '+5'])(
+  it.each([...NON_FINITE, '1.5', '-0.25', '1e-05', '5.', '5.e2', '1e'])(
     'both accept %o',
     (text) => {
       expect(component.test(text)).toBe(true);

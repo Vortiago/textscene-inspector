@@ -212,9 +212,9 @@ describe('#175 boxshape3d — size uses the canonical anchored grammar', () => {
   });
 
   it('falls back to the {1,1,1} default (never {x: NaN}) for loose-regex-only garbage', () => {
-    // The old local `[-\d.eE+]+` class matches `--1` / `1e-` and yields NaN; the anchored
+    // The old local `[-\d.eE+]+` class matches `--1` / `+1` and yields NaN; the anchored
     // canonical parseVector3 rejects them, so the try/catch restores the default.
     expect(parseBoxShape3D({ size: 'Vector3(--1, 2, 3)' }).size).toEqual({ x: 1, y: 1, z: 1 });
-    expect(parseBoxShape3D({ size: 'Vector3(1e-, 2, 3)' }).size).toEqual({ x: 1, y: 1, z: 1 });
+    expect(parseBoxShape3D({ size: 'Vector3(+1, 2, 3)' }).size).toEqual({ x: 1, y: 1, z: 1 });
   });
 });

@@ -94,8 +94,10 @@ describe('exponent-notation Color components, end-to-end', () => {
     expect(linear.r).toBeCloseTo(0.0025 / 12.92, 8);
   });
 
-  it('positive-signed exponents parse too (+5.0e-1)', () => {
-    const parsed = parseColor('Color(+5.0e-1, 0, 0, 1)');
-    expect(parsed.r).toBeCloseTo(0.5, 10);
+  it('signed exponents parse (5.0e-1, 5.0e+1)', () => {
+    expect(parseColor('Color(5.0e-1, 0, 0, 1)').r).toBeCloseTo(0.5, 10);
+    // A leading `+` on the MANTISSA is refused by Godot's tokenizer
+    // (variant_parser.cpp:424); inside the exponent it is accepted (:467).
+    expect(parseColor('Color(5.0e+1, 0, 0, 1)').r).toBeCloseTo(50, 10);
   });
 });

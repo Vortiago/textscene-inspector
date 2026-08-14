@@ -32,6 +32,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
+import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
 
 /** reflection_probe.h:44-48 enum AmbientMode; AMBIENT_COLOR is the last value. */
 const AMBIENT_COLOR = 2;
@@ -46,7 +47,7 @@ function checkAmbientMode(context: RuleContext): Diagnostic[] {
   const props = node.properties;
 
   const modeRaw = props.ambient_mode;
-  const mode = modeRaw !== undefined ? parseInt(modeRaw, 10) : AMBIENT_MODE_DEFAULT;
+  const mode = modeRaw !== undefined ? parseGodotInt(modeRaw) : AMBIENT_MODE_DEFAULT;
   if (mode === AMBIENT_COLOR) return [];
 
   const diagnostics: Diagnostic[] = [];

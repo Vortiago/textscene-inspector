@@ -64,12 +64,22 @@ describe('#141 scientific-notation color channels', () => {
 
   // --- hardening (added on the /code-review pass; the green gate did not pin these) ---
 
-  it('decodes Godot signed / HDR (>1) / leading-dot channels (the full grammar the fix enables)', () => {
+  it('decodes Godot signed and HDR (>1) channels (the full grammar the fix enables)', () => {
     expect(parseColor('Color(-0.5, 1.0, 2.5, 1)')).toEqual({ r: -0.5, g: 1, b: 2.5, a: 1 });
-    expect(parseColor('Color(.5, .25, .125, 1)')).toEqual({ r: 0.5, g: 0.25, b: 0.125, a: 1 });
+    expect(parseColor('Color(0.5, 0.25, 0.125, 1)')).toEqual({ r: 0.5, g: 0.25, b: 0.125, a: 1 });
   });
 
-  it.each(['Color(1.2.3, 0, 0, 1)', 'Color(., 0, 0, 1)', 'Color(-, 0, 0, 1)', 'Color(1e, 0, 0, 1)'])(
+  // `1e` is deliberately absent: `READING_EXP` ends the token with no digits
+  // and `as_double` reads it as 1 (variant_parser.cpp:466-490). Measured on
+  // 4.6.3: `Vector2(1e, 2)` loads as (1, 2), so refusing it would be a false
+  // positive on a file Godot opens.
+  it.each([
+    'Color(1.2.3, 0, 0, 1)',
+    'Color(., 0, 0, 1)',
+    'Color(-, 0, 0, 1)',
+    'Color(+1, 0, 0, 1)',
+    'Color(.5, 0, 0, 1)',
+  ])(
     'still throws on the near-miss malformed color %s (grammar not over-loosened to accept it)',
     (bad) => {
       expect(() => parseColor(bad)).toThrow();

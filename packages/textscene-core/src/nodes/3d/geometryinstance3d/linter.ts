@@ -28,6 +28,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { isZeroApprox } from '../../../godot/index.js';
+import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 
 const FADE_SELF = '1';
 const FADE_DEPENDENCIES = '2';
@@ -35,8 +36,11 @@ const FADE_DEPENDENCIES = '2';
 /** `Math::is_zero_approx`, against the engine's own tolerance. */
 function isZeroish(raw: string | undefined): boolean {
   if (raw === undefined) return true;
-  const n = parseFloat(raw);
-  return Number.isNaN(n) || isZeroApprox(n);
+  const n = parseGodotFloat(raw);
+  // Unreadable text is not a distance the fade can start from, so it reads as
+  // the zero default. `nan` is a value the slot holds, and `is_zero_approx`
+  // says false for it, so it must reach the comparison instead.
+  return n === null || isZeroApprox(n);
 }
 
 function checkGeometryInstance3D(context: RuleContext): Diagnostic[] {
@@ -54,9 +58,12 @@ function checkGeometryInstance3D(context: RuleContext): Diagnostic[] {
   // scene/3d/visual_instance_3d.cpp: !is_zero_approx(visibility_range_end) &&
   // visibility_range_end <= visibility_range_begin
   if (!isZeroish(props.visibility_range_end)) {
-    const end = parseFloat(props.visibility_range_end!);
-    const begin = parseFloat(props.visibility_range_begin ?? '0');
-    if (!Number.isNaN(end) && !Number.isNaN(begin) && end <= begin) {
+    const end = parseGodotFloat(props.visibility_range_end!);
+    const begin = parseGodotFloat(props.visibility_range_begin ?? '0');
+    // No finiteness guard: `end <= begin` is false whenever either side is
+    // `nan`, in JS exactly as in C++, and an infinite BEGIN is the engine's
+    // own warning (visual_instance_3d.cpp:512) rather than an exclusion.
+    if (end !== null && begin !== null && end <= begin) {
       diagnostics.push({
         severity: 'warning',
         message: `${node.type} visibility range's End distance (${end}) is set to a non-zero value, but is lower than or equal to the Begin distance (${begin}). This means the node will never be visible. Set End to 0 or to a value greater than Begin.`,

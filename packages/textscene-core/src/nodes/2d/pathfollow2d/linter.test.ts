@@ -134,6 +134,25 @@ progress = 50.0
     );
   });
 
+  it('stays silent on a non-finite progress, which the setter refuses outright', () => {
+    // path_2d.cpp:425 opens `set_progress` with
+    // ERR_FAIL_COND(!std::isfinite(p_progress)), so the negative-progress
+    // warning has no travel to describe: nothing is stored.
+    for (const spelling of ['inf_neg', '-inf', 'nan']) {
+      expectNoDiagnostic(
+        scene(node('Path2D'), node('PathFollow2D', { progress: spelling }, { parent: '.' })),
+        { ruleName: 'pathfollow2d-negative-progress' }
+      );
+    }
+  });
+
+  it('still warns on a negative progress spelled with an exponent', () => {
+    expectDiagnostic(
+      scene(node('Path2D'), node('PathFollow2D', { progress: '-2e1' }, { parent: '.' })),
+      { ruleName: 'pathfollow2d-negative-progress', severity: 'warning' }
+    );
+  });
+
   it('accepts the gamepiece.tscn shape: PathFollow2D with loop=false under a curveless Path2D', () => {
     const content = `[gd_scene load_steps=2 format=3]
 

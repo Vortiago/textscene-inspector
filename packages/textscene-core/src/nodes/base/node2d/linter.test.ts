@@ -480,9 +480,15 @@ describe('Node2D Linter: light_mask, inherited by every CanvasItem', () => {
   });
 });
 
-describe('Node2D Linter — lenient float grammar (#190 #7 follow-up)', () => {
-  it('accepts scale with leading-dot / trailing-dot / explicit-plus floats', () => {
-    expectClean(scene(node('Node2D', { scale: 'Vector2(.5, 2.)' })));
-    expectClean(scene(node('Node2D', { scale: 'Vector2(+1, 1)' })));
+describe('Node2D Linter — the tokenizer float grammar (#190 #7 follow-up)', () => {
+  it('accepts a trailing-dot scale component', () => {
+    expectClean(scene(node('Node2D', { scale: 'Vector2(0.5, 2.)' })));
+  });
+
+  it('refuses a leading-plus or leading-dot component, which Godot cannot read', () => {
+    // Measured on 4.6.3: both spellings fail the load outright, so a clean
+    // lint here would say nothing about a file that does not open.
+    expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(+1, 1)' })), { severity: 'error' });
+    expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(.5, 2)' })), { severity: 'error' });
   });
 });

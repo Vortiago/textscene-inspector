@@ -24,6 +24,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
+import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
 const SETTING_PREFIX = 'settings/';
 const SETTING_INDEX_RE = /^\d+$/;
@@ -43,8 +44,9 @@ const DEFAULT_PRIMARY_ROTATION_AXIS = 0; // Vector3::AXIS_X
  * never land and the condition cannot arise for them.
  */
 function declaredSettingIndices(properties: Record<string, string>): number[] {
-  const declaredCount = Number(properties.setting_count ?? '0');
-  const settingCount = Number.isFinite(declaredCount) ? Math.trunc(declaredCount) : 0;
+  const declaredCount = parseGodotInt(properties.setting_count ?? '0');
+  const settingCount =
+    declaredCount !== null && Number.isFinite(declaredCount) ? declaredCount : 0;
 
   const indices = new Set<number>();
   for (const key of Object.keys(properties)) {
@@ -68,10 +70,10 @@ function settingNumber(
 ): number {
   const raw = properties[`${SETTING_PREFIX}${index}/${leaf}`];
   if (raw === undefined) return fallback;
-  const parsed = Number(raw);
+  const parsed = parseGodotInt(raw);
   // A malformed value is the validator's to report; NaN here would compare
   // false against everything and quietly suppress the rule instead.
-  return Number.isFinite(parsed) ? parsed : fallback;
+  return parsed !== null && Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function checkAimModifier3D(context: RuleContext): Diagnostic[] {

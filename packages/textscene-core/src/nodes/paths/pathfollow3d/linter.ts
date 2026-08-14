@@ -35,6 +35,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 import { resolveSubResourceRef } from '../../../resources/SubResourceResolver.js';
+import { parseGodotFloat, parseGodotInt } from '../../../linter/validators/commonValidators.js';
 
 /** `PathFollow3D::ROTATION_ORIENTED` (path_3d.h), the mode that needs up vectors. */
 const ROTATION_ORIENTED = 4;
@@ -104,8 +105,11 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
   // sampler clamps the offset into the curve, so the follower parks at the
   // start rather than extrapolating backwards off the end.
   if (rawProps.progress !== undefined) {
-    const progress = parseFloat(rawProps.progress);
-    if (!isNaN(progress) && progress < 0) {
+    const progress = parseGodotFloat(rawProps.progress);
+    // `set_progress` opens with ERR_FAIL_COND(!std::isfinite(p_progress))
+    // (path_3d.cpp:450), so a non-finite one never lands and this rule has
+    // nothing to say about the travel it would have asked for.
+    if (progress !== null && Number.isFinite(progress) && progress < 0) {
       diagnostics.push({
         severity: 'warning',
         message: `PathFollow3D 'progress' is negative (${progress}). Godot keeps the value, but clamps it when sampling the curve, so the follower sits at the start of the path.`,
@@ -132,7 +136,7 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
   // one that simply omits the key, is the default `true` and is fine.
   if (
     !gated &&
-    parseInt(rawProps.rotation_mode ?? '', 10) === ROTATION_ORIENTED &&
+    parseGodotInt(rawProps.rotation_mode ?? '') === ROTATION_ORIENTED &&
     placement.kind === 'satisfied' &&
     parentCurveDisablesUpVector(scene, placement.parent)
   ) {

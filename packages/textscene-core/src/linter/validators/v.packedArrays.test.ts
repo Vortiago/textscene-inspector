@@ -28,7 +28,7 @@ describe('float-tuple validators accept the renderer float grammar (#190 drift f
 
     it('accepts the numeric forms the corpus actually writes', () => {
       // Scientific notation appears verbatim in the vendored soft-body scenes.
-      expect(check('PackedVector2Array(4.37114e-08, -1.5, +0.5, .25)')).toBeNull();
+      expect(check('PackedVector2Array(4.37114e-08, -1.5, 0.5, 0.25)')).toBeNull();
     });
 
     it('accepts an ODD count, which Godot truncates rather than refusing', () => {

@@ -32,6 +32,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 
 function checkRangeBounds(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -43,9 +44,12 @@ function checkRangeBounds(context: RuleContext): Diagnostic[] {
   const maxRaw = props.max_value;
 
   if (minRaw !== undefined && maxRaw !== undefined) {
-    const min = parseFloat(minRaw);
-    const max = parseFloat(maxRaw);
-    if (!isNaN(min) && !isNaN(max) && max < min) {
+    const min = parseGodotFloat(minRaw);
+    const max = parseGodotFloat(maxRaw);
+    // `nan` is excluded explicitly rather than left to the comparison: the
+    // MAX() at range.cpp:217 does not collapse a nan pair, so there is no
+    // single point to report it collapsing to.
+    if (min !== null && max !== null && !Number.isNaN(min) && !Number.isNaN(max) && max < min) {
       diagnostics.push({
         severity: 'error',
         message: `Range 'max_value = ${maxRaw}' is below 'min_value = ${minRaw}'. Godot's Range::set_max clamps max_value up to min_value rather than honouring the inverted pair, so the range collapses to a single point at ${minRaw} instead of spanning what's authored.`,
@@ -57,8 +61,8 @@ function checkRangeBounds(context: RuleContext): Diagnostic[] {
   }
 
   if (props.exp_edit === 'true' && minRaw !== undefined) {
-    const min = parseFloat(minRaw);
-    if (!isNaN(min) && min < 0) {
+    const min = parseGodotFloat(minRaw);
+    if (min !== null && !Number.isNaN(min) && min < 0) {
       diagnostics.push({
         severity: 'warning',
         message: `Range '${node.name}' has 'exp_edit' enabled with 'min_value = ${minRaw}'. Exp Edit requires Min Value to be greater than or equal to 0.`,

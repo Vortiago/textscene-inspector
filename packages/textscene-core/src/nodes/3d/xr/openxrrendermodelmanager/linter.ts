@@ -52,6 +52,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { parentTypeVerdict, type ParentVerdict } from '../../../../linter/parentType.js';
 import type { TscnNode, TscnScene } from '../../../../parser/types.js';
+import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
 const TRACKER_RULE = 'openxrrendermodelmanager-tracker-required-for-local-pose';
 const PARENT_RULE = 'openxrrendermodelmanager-parent-not-xrorigin3d';
@@ -64,8 +65,8 @@ const RENDER_MODEL_TRACKER_NONE_SET = 1;
 function readTracker(properties: Record<string, string>): number {
   const raw = properties.tracker;
   if (raw === undefined) return RENDER_MODEL_TRACKER_ANY;
-  const parsed = parseInt(raw, 10);
-  return Number.isNaN(parsed) ? RENDER_MODEL_TRACKER_ANY : parsed;
+  const parsed = parseGodotInt(raw);
+  return parsed === null || Number.isNaN(parsed) ? RENDER_MODEL_TRACKER_ANY : parsed;
 }
 
 /** The `"…"` body of a TSCN string literal, or the raw text if it isn't one. */

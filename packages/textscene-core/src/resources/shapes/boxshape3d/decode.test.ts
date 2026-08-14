@@ -15,7 +15,7 @@ describe('decodeBoxShape3D', () => {
 
   it('falls back to the {1,1,1} default for loose-regex-only garbage', () => {
     expect(decodeBoxShape3D({ size: 'Vector3(--1, 2, 3)' }).size).toEqual({ x: 1, y: 1, z: 1 });
-    expect(decodeBoxShape3D({ size: 'Vector3(1e-, 2, 3)' }).size).toEqual({ x: 1, y: 1, z: 1 });
+    expect(decodeBoxShape3D({ size: 'Vector3(+1, 2, 3)' }).size).toEqual({ x: 1, y: 1, z: 1 });
   });
 });
 

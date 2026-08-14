@@ -9,6 +9,12 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
+import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
+
+/** An absent `hframes`/`vframes` is Godot's default of 1; an unreadable one is `null`. */
+function gridCount(raw: string | undefined): number | null {
+  return raw === undefined ? 1 : parseGodotInt(raw);
+}
 
 /**
  * Validate Sprite3D semantic rules (resource references, frame validation, etc.)
@@ -49,11 +55,11 @@ function checkSprite3D(context: RuleContext): Diagnostic[] {
   // and `vframes` are declared ahead of `frame` (:1014-1016), so the guard sees
   // the authored grid and the out-of-range write is refused at load.
   if (rawProps.frame !== undefined) {
-    const frame = parseInt(rawProps.frame, 10);
-    const hframes = rawProps.hframes !== undefined ? parseInt(rawProps.hframes, 10) : 1;
-    const vframes = rawProps.vframes !== undefined ? parseInt(rawProps.vframes, 10) : 1;
+    const frame = parseGodotInt(rawProps.frame);
+    const hframes = gridCount(rawProps.hframes);
+    const vframes = gridCount(rawProps.vframes);
 
-    if (!isNaN(frame) && !isNaN(hframes) && !isNaN(vframes)) {
+    if (frame !== null && hframes !== null && vframes !== null) {
       const maxFrame = hframes * vframes;
       if (frame >= maxFrame) {
         diagnostics.push({

@@ -118,6 +118,41 @@ describe('Range exp_edit rule (range-exp-edit-negative-min)', () => {
     expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
   });
 
+  it('reports an inverted pair spelled with infinities', () => {
+    expect(namesOf(scene('min_value = inf\nmax_value = 1.0\n'))).toContain('range-max-below-min');
+    expect(namesOf(scene('min_value = 1.0\nmax_value = inf_neg\n'))).toContain(
+      'range-max-below-min'
+    );
+  });
+
+  it('stays silent on a nan pair, which MAX() does not collapse', () => {
+    // range.cpp:217/229 run the pair through MAX(); every comparison against
+    // nan is false, so nothing is clamped and there is no collapse to report.
+    expect(namesOf(scene('min_value = nan\nmax_value = 1.0\n'))).not.toContain(
+      'range-max-below-min'
+    );
+    expect(namesOf(scene('min_value = 1.0\nmax_value = nan\n'))).not.toContain(
+      'range-max-below-min'
+    );
+  });
+
+  it('warns on exp_edit with an infinitely negative min_value', () => {
+    expect(namesOf(scene('exp_edit = true\nmin_value = inf_neg\n'))).toContain(
+      'range-exp-edit-negative-min'
+    );
+  });
+
+  it('stays silent on exp_edit with a nan min_value', () => {
+    expect(namesOf(scene('exp_edit = true\nmin_value = nan\n'))).not.toContain(
+      'range-exp-edit-negative-min'
+    );
+  });
+
+  it('compares an exponent-spelled bound at its real magnitude', () => {
+    // `parseFloat` read `2e1` as 2 and called this pair correctly ordered.
+    expect(namesOf(scene('min_value = 2e1\nmax_value = 4.0\n'))).toContain('range-max-below-min');
+  });
+
   it('reaches a concrete Range descendant (HSlider), not just the Range base', () => {
     const content = `[gd_scene format=3]\n\n[node name="Root" type="Control"]\n\n[node name="MySlider" type="HSlider" parent="."]\nexp_edit = true\nmin_value = -10.0\n`;
     expect(namesOf(content)).toContain('range-exp-edit-negative-min');

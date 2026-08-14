@@ -303,6 +303,20 @@ describe('SpotLight3D Linter', () => {
       });
     });
 
+    it('warns on an infinite spot_angle, which is wider than 90 like any other', () => {
+      // `set_param` stores the value as-is; light_3d.cpp:655 then compares it.
+      expectDiagnostic(scene(node('SpotLight3D', { shadow_enabled: true, spot_angle: 'inf' })), {
+        ruleName: 'spotlight3d-shadow-angle-too-wide',
+        severity: 'warning',
+      });
+    });
+
+    it('does not warn on a nan spot_angle, which no comparison places above 90', () => {
+      expectNoDiagnostic(scene(node('SpotLight3D', { shadow_enabled: true, spot_angle: 'nan' })), {
+        ruleName: 'spotlight3d-shadow-angle-too-wide',
+      });
+    });
+
     it('does not warn when shadow_enabled is true and spot_angle is below 90', () => {
       expectNoDiagnostic(scene(node('SpotLight3D', { shadow_enabled: true, spot_angle: 89 })), {
         ruleName: 'spotlight3d-shadow-angle-too-wide',

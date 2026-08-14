@@ -26,6 +26,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
 const RULE_NAME = 'iterateik3d-setting-missing-target-node';
 
@@ -37,9 +38,10 @@ function checkIterateIK3D(context: RuleContext): Diagnostic[] {
   // Absent means zero: the setting array starts empty (ik_modifier_3d.h:69),
   // which is the XML's default="0" for setting_count.
   const countRaw = rawProps.setting_count;
-  const count = countRaw === undefined ? 0 : parseInt(countRaw, 10);
-  // A malformed setting_count is the validator's own diagnostic.
-  if (Number.isNaN(count)) return [];
+  const count = countRaw === undefined ? 0 : parseGodotInt(countRaw);
+  // A malformed setting_count is the validator's own diagnostic, and a
+  // non-finite one is altered at parse.
+  if (count === null || Number.isNaN(count)) return [];
 
   const missing: number[] = [];
   for (let index = 0; index < count; index++) {

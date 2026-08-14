@@ -8,6 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
 /**
  * Validate DirectionalLight3D semantic rules
@@ -28,9 +29,11 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  const split1 = rawProps.directional_shadow_split_1 ? parseFloat(rawProps.directional_shadow_split_1) : undefined;
-  const split2 = rawProps.directional_shadow_split_2 ? parseFloat(rawProps.directional_shadow_split_2) : undefined;
-  const split3 = rawProps.directional_shadow_split_3 ? parseFloat(rawProps.directional_shadow_split_3) : undefined;
+  // Presence, not value: the rule asks which splits the file authors, and the
+  // numbers themselves are never compared.
+  const split1 = Boolean(rawProps.directional_shadow_split_1);
+  const split2 = Boolean(rawProps.directional_shadow_split_2);
+  const split3 = Boolean(rawProps.directional_shadow_split_3);
 
   // Godot raises no warning for this — it just hides the field. Grounded in
   // `_validate_property` (light_3d.cpp:542-551): under `ORTHOGONAL`,
@@ -38,12 +41,14 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
   // `PROPERTY_USAGE_NO_EDITOR`; under `ORTHOGONAL` or `PARALLEL_2_SPLITS`,
   // `directional_shadow_split_2`/`directional_shadow_split_3` do too — the
   // inspector simply stops showing the now-inapplicable split fields.
-  const shadowMode = rawProps.directional_shadow_mode ? parseInt(rawProps.directional_shadow_mode, 10) : undefined;
+  const shadowMode = rawProps.directional_shadow_mode
+    ? parseGodotInt(rawProps.directional_shadow_mode)
+    : undefined;
 
-  if (shadowMode !== undefined && !isNaN(shadowMode)) {
+  if (shadowMode !== undefined && shadowMode !== null && !Number.isNaN(shadowMode)) {
     // ORTHOGONAL mode (0) doesn't use splits
     if (shadowMode === 0) {
-      if (split1 !== undefined || split2 !== undefined || split3 !== undefined) {
+      if (split1 || split2 || split3) {
         diagnostics.push({
           severity: 'warning',
           message: `Shadow mode is ORTHOGONAL (0), but split properties are set. Splits are ignored in ORTHOGONAL mode.`,
@@ -56,7 +61,7 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
 
     // PARALLEL_2_SPLITS mode (1) only uses split_1
     if (shadowMode === 1) {
-      if (split2 !== undefined || split3 !== undefined) {
+      if (split2 || split3) {
         diagnostics.push({
           severity: 'warning',
           message: `Shadow mode is PARALLEL_2_SPLITS (1), but split_2 or split_3 are set. Only split_1 is used in 2-split mode.`,

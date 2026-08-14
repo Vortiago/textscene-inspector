@@ -9,6 +9,7 @@ import {
   lint,
   expectClean,
   expectDiagnostic,
+  expectNoDiagnostic,
   runPropertyValidation,
 } from '../../../linter/testing/testkit';
 import './linterParser';
@@ -196,6 +197,32 @@ pixel_size = 0.01
           textureDef
         )
       );
+    });
+
+    it('reads an exponent-spelled grid at its real size', () => {
+      // `parseInt` stopped at the `e` and read `2e1` as 2, so a frame inside a
+      // twenty-column grid was reported out of range at error tier.
+      expectClean(
+        scene(
+          node(
+            'Sprite3D',
+            { texture: textureRef, hframes: '2e1', vframes: 1, frame: 15 },
+            { name: 'ExponentGrid' }
+          ),
+          textureDef
+        )
+      );
+    });
+
+    it('says nothing about the frame when the grid is non-finite', () => {
+      // A non-finite in an INT slot is altered at parse, so there is no grid
+      // size to measure the frame against; the property validator reports it.
+      for (const spelling of ['inf', 'nan']) {
+        expectNoDiagnostic(
+          scene(node('Sprite3D', { hframes: spelling, frame: 15 }, { name: 'NonFiniteGrid' })),
+          { ruleName: 'sprite3d-frame-range' }
+        );
+      }
     });
 
     it('should pass when frame is 0 and hframes/vframes are 1 (default)', () => {

@@ -107,6 +107,24 @@ texture_normal = ExtResource("1_n")
     });
   });
 
+  it('warns on a fractional cull_mask, which truncates to no bits at all', () => {
+    // `_parse_construct` narrows a float in an INT slot toward zero, so
+    // `cull_mask = 0.9` is stored as 0 — every layer culled.
+    for (const spelling of ['0.9', '1e-1']) {
+      expectDiagnostic(
+        scene(node('Decal', { size: 'Vector3(2, 2, 2)', cull_mask: spelling }, { name: 'D' })),
+        { ruleName: 'decal-empty-cull-mask', severity: 'warning' }
+      );
+    }
+  });
+
+  it('does not warn on an exponent-spelled cull_mask with bits set', () => {
+    expectNoDiagnostic(
+      scene(node('Decal', { size: 'Vector3(2, 2, 2)', cull_mask: '2e1' }, { name: 'D' })),
+      { ruleName: 'decal-empty-cull-mask' }
+    );
+  });
+
   it('does not warn about a non-zero cull_mask', () => {
     expectNoDiagnostic(scene(node('Decal', { size: 'Vector3(2, 2, 2)', cull_mask: 4 }, { name: 'D' })), {
       ruleName: 'decal-empty-cull-mask',

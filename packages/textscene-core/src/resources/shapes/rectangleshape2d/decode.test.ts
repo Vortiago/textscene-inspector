@@ -14,7 +14,7 @@ describe('decodeRectangleShape2D', () => {
 
   it('falls back to the {20,20} default for loose-regex-only garbage', () => {
     expect(decodeRectangleShape2D({ size: 'Vector2(--1, 2)' }).size).toEqual({ x: 20, y: 20 });
-    expect(decodeRectangleShape2D({ size: 'Vector2(1e-, 2)' }).size).toEqual({ x: 20, y: 20 });
+    expect(decodeRectangleShape2D({ size: 'Vector2(+1, 2)' }).size).toEqual({ x: 20, y: 20 });
   });
 });
 

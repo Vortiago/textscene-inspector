@@ -53,7 +53,7 @@ describe('parseSprite2D', () => {
   it('refuses a malformed region_rect instead of storing NaN or truncated components', () => {
     // The retired loose grammar matched `1.2.3` (truncating to 1.2) and `--1`
     // (landing as NaN) — a NaN region is an invisible sprite.
-    for (const bad of ['Rect2(--1, 0, 8, 8)', 'Rect2(1.2.3, 0, 8, 8)', 'Rect2(1e-, 0, 8, 8)']) {
+    for (const bad of ['Rect2(--1, 0, 8, 8)', 'Rect2(1.2.3, 0, 8, 8)', 'Rect2(+1, 0, 8, 8)']) {
       const p = parseSprite2D(heading('Sprite2D', { name: 'S' }), {
         region_enabled: 'true',
         region_rect: bad,

@@ -32,6 +32,7 @@ import {
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
 import { packedArrayLiteral } from '../../../../godot/index.js';
+import { firstNonNumericElement } from '../../../../linter/validators/v/packedArrays.js';
 
 // rich_text_label.cpp:7767: PROPERTY_HINT_ENUM "Left,Center,Right,Fill", the
 // full 4-member HorizontalAlignment enum (core/math/math_defs.h:80-84). Not
@@ -86,16 +87,14 @@ function packedFloat32ArrayValidator(name: string, code: string) {
     }
     const body = match[1]!.trim();
     if (body === '') return null;
-    for (const part of body.split(',')) {
-      const trimmed = part.trim();
-      if (trimmed === '' || !Number.isFinite(Number(trimmed))) {
-        return propertyError(
-          key,
-          line,
-          `Property '${name}' contains a non-numeric value: "${trimmed}"`,
-          code
-        );
-      }
+    const offender = firstNonNumericElement(body);
+    if (offender !== null) {
+      return propertyError(
+        key,
+        line,
+        `Property '${name}' contains a non-numeric value: "${offender}"`,
+        code
+      );
     }
     return null;
   }, 'PackedFloat32Array(x, y, …)');

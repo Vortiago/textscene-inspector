@@ -325,6 +325,24 @@ describe('PathFollow3D Linter', () => {
       });
     });
 
+    it('stays silent on a non-finite progress, which the setter refuses outright', () => {
+      // path_3d.cpp:450 opens `set_progress` with
+      // ERR_FAIL_COND(!std::isfinite(p_progress)), so nothing is stored and
+      // there is no clamped travel to describe.
+      for (const spelling of ['inf_neg', '-inf', 'nan']) {
+        expectNoDiagnostic(pathScene({ progress: spelling }), {
+          ruleName: 'pathfollow3d-negative-progress',
+        });
+      }
+    });
+
+    it('still warns on a negative progress spelled with an exponent', () => {
+      expectDiagnostic(pathScene({ progress: '-2e1' }), {
+        ruleName: 'pathfollow3d-negative-progress',
+        severity: 'warning',
+      });
+    });
+
     it('errors on progress_ratio at every value, in range or not', () => {
       // The range is beside the point. `set_progress_ratio` opens with
       // ERR_FAIL_NULL_MSG(path) (path_3d.cpp:503) and `path` is bound on

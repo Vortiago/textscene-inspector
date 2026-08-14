@@ -26,6 +26,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { isTypeUnknowable } from '../../../../linter/parentType.js';
+import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
 // control.h:100-101, Control::CursorShape: CURSOR_ARROW = 0.
 const CURSOR_ARROW = 0;
@@ -56,8 +57,8 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   const props = isValidProperties(node.properties) ? node.properties : {};
   const cursorRaw = props.mouse_default_cursor_shape;
   if (cursorRaw !== undefined) {
-    const cursor = parseInt(cursorRaw, 10);
-    if (Number.isFinite(cursor) && cursor !== CURSOR_ARROW) {
+    const cursor = parseGodotInt(cursorRaw);
+    if (cursor !== null && cursor !== CURSOR_ARROW) {
       diagnostics.push({
         severity: 'warning',
         message: `SubViewportContainer '${node.name}' sets 'mouse_default_cursor_shape' away from Arrow, but it has no effect on this node. Consider leaving it at its initial value.`,

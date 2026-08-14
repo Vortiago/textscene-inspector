@@ -62,7 +62,8 @@ describe('parseAtlasRegion', () => {
     // The loose `[\d.eE+-]+` copy this replaces accepted all three and produced
     // a region whose x/width was NaN — an invisible frame, not a missing one.
     expect(parseAtlasRegion('Rect2(1.2.3, 0, 16, 16)')).toBeNull();
-    expect(parseAtlasRegion('Rect2(1e-, 0, 16, 16)')).toBeNull();
+    expect(parseAtlasRegion('Rect2(+1, 0, 16, 16)')).toBeNull();
+    expect(parseAtlasRegion('Rect2(.5, 0, 16, 16)')).toBeNull();
     expect(parseAtlasRegion('Rect2(--1, 0, 16, 16)')).toBeNull();
     expect(parseAtlasRegion('Rect2(0, 0, 16, 16) trailing-garbage')).toBeNull();
   });

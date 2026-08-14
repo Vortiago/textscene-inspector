@@ -37,6 +37,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
+import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
 
 const OPTION_KEY_RE = /^option_(-?\d+)\//;
 
@@ -50,10 +51,11 @@ function checkFileDialog(context: RuleContext): Diagnostic[] {
   // Godot's own default (no ADD_PROPERTY default listed beyond the XML's
   // `default="0"`, matching the empty `Vector<Option> options` the class
   // constructs with) is 0 when the property never serialised at all.
-  const count = countRaw === undefined ? 0 : parseInt(countRaw, 10);
+  const count = countRaw === undefined ? 0 : parseGodotInt(countRaw);
   // A malformed option_count is already reported by its own validator
-  // (linterParser.ts); this rule only reasons about a value that parsed.
-  if (Number.isNaN(count)) return diagnostics;
+  // (linterParser.ts), and a non-finite one is altered at parse to a number the
+  // file does not state; neither is a count this rule can name in a message.
+  if (count === null || Number.isNaN(count)) return diagnostics;
 
   const offending = new Set<number>();
   for (const key of Object.keys(rawProps)) {

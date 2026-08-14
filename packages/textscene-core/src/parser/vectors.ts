@@ -10,17 +10,33 @@ export interface Vector3 {
 }
 
 /**
- * One float component as Godot serializes it, including scientific
- * notation (`1e-05`), which Godot emits for small values. Strict by
- * construction: `1.2.3` or a lone `-` fail the whole anchored match,
- * so callers throw (and the value-decoder wrappers warn-then-fall-back)
- * instead of silently mis-parsing.
+ * One float component, in the language Godot's own tokenizer reads. Strict by
+ * construction: `1.2.3` or a lone `-` fail the whole anchored match, so callers
+ * throw (and the value-decoder wrappers warn-then-fall-back) instead of
+ * silently mis-parsing.
  *
- * The integer branch is `\d+(?:\.\d*)?`, NOT `\d+\.?\d*`: the latter lets a
- * digit run split between `\d+` and `\d*` in O(n) ways, so a non-matching tail
- * (e.g. a long digit run in untrusted .tscn input) backtracks quadratically —
- * a ReDoS. `\d+(?:\.\d*)?` matches the SAME language but consumes each digit
- * run in one `\d+`, keeping the match linear.
+ * Transcribed from `get_token` (`variant_parser.cpp:420-481`), one clause at a
+ * time, rather than from what a float "looks like":
+ *
+ * - `-?` — a leading `-` is consumed at :420. `+` is not, and the character
+ *   after it must be a digit (:424), so `+` falls through to `Unexpected
+ *   character` (:506). Measured on 4.6.3: `fov = +3`, `Vector2(+1, 2)` and
+ *   `PackedVector2Array(1, 2, +0.5, 3)` all fail the load.
+ * - `\d+` — REQUIRED. `.` is neither a digit nor an identifier start, so a
+ *   leading-dot literal never reaches the number branch at all. Measured:
+ *   `Vector2(.5, 2)` fails the load; `Vector2(5., 2)` loads as 5.
+ * - `(?:\.\d*)?` — `READING_INT` takes one `.` into `READING_DEC` (:442), which
+ *   accepts any number of digits including none.
+ * - `(?:[eE][-+]?\d*)?` — `READING_EXP` (:466-472) takes one sign and any
+ *   number of digits, again including none: the token simply ends and is read
+ *   with `as_double`. Measured: `1e`, `1e-` and `5.e2` all load, as 1, 1 and
+ *   500 — which is what `parseFloat` returns for each.
+ *
+ * The mantissa is `\d+(?:\.\d*)?`, NOT `\d+\.?\d*`: the latter lets a digit run
+ * split between `\d+` and `\d*` in O(n) ways, so a non-matching tail (e.g. a
+ * long digit run in untrusted .tscn input) backtracks quadratically — a ReDoS.
+ * `\d+(?:\.\d*)?` matches the SAME language but consumes each digit run in one
+ * `\d+`, keeping the match linear.
  *
  * FINITE by choice, and therefore NARROWER than Godot's own tokenizer: `inf`,
  * `-inf`, `inf_neg` and `nan` are legal components that Godot writes, and this
@@ -30,7 +46,7 @@ export interface Vector3 {
  * pattern, derived from this one: `TSCN_FLOAT_PATTERN_SOURCE` in
  * `linter/validators/commonValidators.ts`.
  */
-export const FLOAT_PATTERN_SOURCE = String.raw`[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?`;
+export const FLOAT_PATTERN_SOURCE = String.raw`-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`;
 
 /**
  * The anchored regex for a fixed-arity composite written with the FINITE

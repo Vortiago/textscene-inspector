@@ -25,6 +25,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
+import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 
 function checkPathFollow2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -66,8 +67,11 @@ function checkPathFollow2D(context: RuleContext): Diagnostic[] {
   // sampler clamps the offset into the curve, so the follower parks at the
   // start rather than extrapolating backwards off the end.
   if (rawProps.progress !== undefined) {
-    const progress = parseFloat(rawProps.progress);
-    if (!Number.isNaN(progress) && progress < 0) {
+    const progress = parseGodotFloat(rawProps.progress);
+    // `set_progress` opens with ERR_FAIL_COND(!std::isfinite(p_progress))
+    // (path_2d.cpp:425), so a non-finite one never lands and this rule has
+    // nothing to say about the travel it would have asked for.
+    if (progress !== null && Number.isFinite(progress) && progress < 0) {
       diagnostics.push({
         severity: 'warning',
         message: `PathFollow2D 'progress' is negative (${progress}). Godot keeps the value, but clamps it when sampling the curve, so the follower sits at the start of the path.`,

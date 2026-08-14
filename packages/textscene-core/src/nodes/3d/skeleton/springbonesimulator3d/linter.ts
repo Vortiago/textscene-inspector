@@ -48,6 +48,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
 /** Any `settings/<i>/…` leaf, whatever its depth. */
 const SETTING_KEY_RE = /^settings\/([+-]?\d+)\/(.+)$/;
@@ -108,10 +109,10 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
   // Absent means zero: `LocalVector<SpringBone3DSetting *> settings`
   // (spring_bone_simulator_3d.h:157) starts empty, which is the XML's default="0".
   const countRaw = rawProps.setting_count;
-  const count = countRaw === undefined ? 0 : parseInt(countRaw, 10);
-  // A malformed setting_count is already reported by its own validator; this
-  // rule only reasons about a value that parsed.
-  if (Number.isNaN(count)) return diagnostics;
+  const count = countRaw === undefined ? 0 : parseGodotInt(countRaw);
+  // A malformed setting_count is already reported by its own validator, and a
+  // non-finite one is altered at parse; neither is a ceiling to count against.
+  if (count === null || Number.isNaN(count)) return diagnostics;
 
   const outOfRange = new Set<number>();
   const sharedIgnored = new Set<number>();

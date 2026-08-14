@@ -32,6 +32,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { POINT_LIGHT_2D_RANGE_DEFAULTS } from './types.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
+import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
 
 const WINDOWS = [
   {
@@ -59,8 +60,7 @@ const WINDOWS = [
  */
 function bound(raw: string | undefined, fallback: number): number | null {
   if (raw === undefined) return fallback;
-  const parsed = parseInt(raw, 10);
-  return Number.isNaN(parsed) ? null : parsed;
+  return parseGodotInt(raw);
 }
 
 function checkPointLight2D(context: RuleContext): Diagnostic[] {

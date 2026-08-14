@@ -44,6 +44,7 @@ import {
   isConformal,
   hasZeroGlobalSkew,
 } from '../node2dGlobalTransform.js';
+import { parseGodotFloat } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 
@@ -103,8 +104,11 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
 
         // radius > 0.0 gate: navigation_obstacle_2d.h:46 defaults radius to
         // 0.0, so a bare node never reaches either of the next two checks.
-        const radius = props.radius !== undefined ? parseFloat(props.radius) : 0;
-        if (Number.isFinite(radius) && radius > 0) {
+        const radius = props.radius !== undefined ? parseGodotFloat(props.radius) : 0;
+        // No finiteness guard: `set_radius` has none either, so `inf` is a
+        // radius the obstacle holds and both warnings below apply to it.
+        // `nan > 0` is false in JS exactly as in C++.
+        if (radius !== null && radius > 0) {
           // navigation_obstacle_2d.cpp:336-338
           if (!isConformal(verdict.transform)) {
             diagnostics.push({

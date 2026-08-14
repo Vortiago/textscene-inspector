@@ -98,7 +98,7 @@ function checkMeshInstance3D(context: RuleContext): Diagnostic[] {
   for (const [key, value] of Object.entries(rawProps)) {
     const match = key.match(/^surface_material_override\/(\d+)$/);
     if (match) {
-      const surfaceIndex = parseInt(match[1]!, 10);
+      const surfaceIndex = Number(match[1]!);
 
       // Check if resource exists
       const resourceExists = checkResourceExists(scene, value);

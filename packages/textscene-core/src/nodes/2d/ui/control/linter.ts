@@ -35,6 +35,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { unquoteString } from '../../../../parser/utils.js';
+import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
 // control.h:89-91: MouseFilter { STOP, PASS, IGNORE }.
 const MOUSE_FILTER_IGNORE = 2;
@@ -46,8 +47,7 @@ function resolvedMouseFilterIsIgnore(node: { type: string; properties: unknown }
   const props = isValidProperties(node.properties) ? node.properties : {};
   const raw = props.mouse_filter;
   if (raw !== undefined) {
-    const parsed = parseInt(raw, 10);
-    return Number.isFinite(parsed) && parsed === MOUSE_FILTER_IGNORE;
+    return parseGodotInt(raw) === MOUSE_FILTER_IGNORE;
   }
   return MOUSE_FILTER_IGNORE_BY_DEFAULT.has(node.type);
 }

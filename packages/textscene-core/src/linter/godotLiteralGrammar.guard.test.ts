@@ -135,6 +135,30 @@ const IMPORTS_TUPLE_BUILDER = /import\s[^;]*\bmakeFloatTupleRegex\b/;
 const RAW_NUMBER_PARSE = /\b(?:parseInt|parseFloat|Number)\(/;
 
 /**
+ * Where a Variant VALUE is read to decide a diagnostic: all of `src/linter/`,
+ * plus every `linter*.ts` beside a slice.
+ *
+ * Wider than the builder-derived population above, and banning less. A rule
+ * reads a scalar straight out of `node.properties`, with no tuple regex
+ * anywhere, so importing the builder is not the property that finds it — and a
+ * scalar read is exactly where `parseInt` costs the most: it stops at the first
+ * unusable character, so `tab_count = 2e1` came back as 2 and the error-tier
+ * `tabbar-current-tab-out-of-range` fired on a file Godot loads with twenty
+ * tabs.
+ *
+ * `Number(` is deliberately NOT banned here. It has a second, correct use in
+ * this population that the narrower one does not: scraping the index out of a
+ * property KEY (`tab_7/title`), whose grammar is `String::is_valid_int` and
+ * whose capture is already `-?\d+`. Routing those through a Variant reader
+ * would be a worse abstraction, not a stricter one.
+ */
+const DIAGNOSTIC_READERS = (file: string): boolean => {
+  const rel = label(file);
+  return rel.startsWith('linter/') || /(?:^|\/)linter[^/]*\.tsx?$/.test(rel);
+};
+const RAW_SCALAR_PARSE = /\b(?:parseInt|parseFloat)\(/;
+
+/**
  * Each composite at the arity Godot writes it with, for the parity probe below.
  * `Plane` is 4 (normal xyz + d); `AABB` is position + size.
  */
@@ -170,6 +194,24 @@ describe('Godot composite literal grammar', () => {
 
     const offenders = importers
       .filter(({ src }) => RAW_NUMBER_PARSE.test(src))
+      .map(({ file }) => label(file))
+      .sort();
+    expect(offenders).toEqual([]);
+  });
+
+  it('reads a Variant scalar through the shared reader, in every rule', () => {
+    // `commonValidators.ts` OWNS `parseGodotFloat`, whose last step is the
+    // `parseFloat` this bans. That is the one place the ban cannot apply,
+    // because it is the thing the ban points everyone at.
+    const population = files.filter(
+      ({ file }) => DIAGNOSTIC_READERS(file) && label(file) !== 'linter/validators/commonValidators.ts'
+    );
+    // Anti-vacuity: the population is a path predicate, so a change to how
+    // `label` spells a path would empty it and leave this green forever.
+    expect(population.length).toBeGreaterThan(200);
+
+    const offenders = population
+      .filter(({ src }) => RAW_SCALAR_PARSE.test(withoutComments(src)))
       .map(({ file }) => label(file))
       .sort();
     expect(offenders).toEqual([]);

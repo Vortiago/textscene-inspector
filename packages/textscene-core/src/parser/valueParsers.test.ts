@@ -270,7 +270,7 @@ describe('parseOptionalRect2', () => {
   });
 
   it('warns and reports unset for every malformed component the loose grammar accepted', () => {
-    for (const bad of ['Rect2(1.2.3, 0, 8, 8)', 'Rect2(--1, 0, 8, 8)', 'Rect2(1e-, 0, 8, 8)', 'Rect2(1, 2, 3)', 'notarect']) {
+    for (const bad of ['Rect2(1.2.3, 0, 8, 8)', 'Rect2(--1, 0, 8, 8)', 'Rect2(+1, 0, 8, 8)', 'Rect2(1, 2, 3)', 'notarect']) {
       expect(parseOptionalRect2(bad, 'Rect')).toBeUndefined();
     }
     expect(warnSpy).toHaveBeenCalledTimes(5);

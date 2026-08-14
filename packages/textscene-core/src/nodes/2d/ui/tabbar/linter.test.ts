@@ -83,6 +83,14 @@ describe('TabBar cross-field rule', () => {
     it('leaves a below-floor current_tab to linterParser.ts, which already errors on it', () => {
       expect(only({ tab_count: 3, current_tab: -2 })).toHaveLength(0);
     });
+    it('reads an exponent-spelled tab_count at its real size', () => {
+      // `parseInt` stopped at the `e` and read `2e1` as 2, so tab 15 of twenty
+      // was reported out of range at ERROR tier on a file Godot loads.
+      expect(only({ tab_count: '2e1', current_tab: 15 })).toHaveLength(0);
+    });
+    it('says nothing about a non-finite tab_count, which is altered at parse', () => {
+      expect(only({ tab_count: 'inf', current_tab: 15 })).toHaveLength(0);
+    });
     it('says nothing about a malformed tab_count, which has its own validator', () => {
       expect(only({ tab_count: 'three', current_tab: 1 })).toHaveLength(0);
     });

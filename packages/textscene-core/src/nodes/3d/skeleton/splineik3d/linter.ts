@@ -26,6 +26,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { nodePathLiteral } from '../../../../godot/index.js';
+import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
 /** `NodePath("")` and a bare `""`, the two spellings of the unset path. */
 function isUnsetPath(raw: string): boolean {
@@ -38,8 +39,8 @@ function checkSplineIK3D(context: RuleContext): Diagnostic[] {
 
   // `_set_setting_count` refuses a negative count and the validator reports it,
   // so a count that is absent, unparseable or negative allocates nothing here.
-  const count = Number.parseInt(properties['setting_count'] ?? '', 10);
-  if (!Number.isFinite(count) || count <= 0) return [];
+  const count = parseGodotInt(properties['setting_count'] ?? '');
+  if (count === null || !Number.isFinite(count) || count <= 0) return [];
 
   const diagnostics: Diagnostic[] = [];
   for (let index = 0; index < count; index++) {

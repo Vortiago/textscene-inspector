@@ -48,6 +48,7 @@ import {
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
 import { packedArrayLiteral } from '../../../../godot/index.js';
+import { firstNonNumericElement } from '../../../../linter/validators/v/packedArrays.js';
 
 /** `HorizontalAlignment` (core/math/math_defs.h:80-85), label.cpp:1433 hint "Left,Center,Right,Fill". */
 const HORIZONTAL_ALIGNMENT = {
@@ -135,18 +136,14 @@ const tabStopsValidator = shape((key, value, line) => {
     );
   }
   const body = match[1]!.trim();
-  if (body !== '') {
-    for (const part of body.split(',')) {
-      const trimmed = part.trim();
-      if (trimmed === '' || !Number.isFinite(Number(trimmed))) {
-        return propertyError(
-          key,
-          line,
-          `Property 'tab_stops' contains a non-numeric value: "${trimmed}"`,
-          'INVALID_TAB_STOPS_FORMAT'
-        );
-      }
-    }
+  const offender = body === '' ? null : firstNonNumericElement(body);
+  if (offender !== null) {
+    return propertyError(
+      key,
+      line,
+      `Property 'tab_stops' contains a non-numeric value: "${offender}"`,
+      'INVALID_TAB_STOPS_FORMAT'
+    );
   }
   return null;
 }, 'PackedFloat32Array(x, y, …)');

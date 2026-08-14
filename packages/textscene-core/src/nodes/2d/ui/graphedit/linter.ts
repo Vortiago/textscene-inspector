@@ -34,6 +34,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 
 function checkZoomLimits(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -44,9 +45,12 @@ function checkZoomLimits(context: RuleContext): Diagnostic[] {
   const maxRaw = props.zoom_max;
   if (minRaw === undefined || maxRaw === undefined) return [];
 
-  const min = parseFloat(minRaw);
-  const max = parseFloat(maxRaw);
-  if (isNaN(min) || isNaN(max)) return [];
+  const min = parseGodotFloat(minRaw);
+  const max = parseGodotFloat(maxRaw);
+  // `nan` is excluded explicitly rather than left to the comparison: neither
+  // ERR_FAIL_COND at graph_edit.cpp:2480/2495 trips on it, so a nan pair is
+  // installed intact and there is no dropped limit to report.
+  if (min === null || max === null || Number.isNaN(min) || Number.isNaN(max)) return [];
 
   // Both guards fail on a STRICT comparison, so an equal pair is legal Godot:
   // a zoom range frozen at one level, but one the engine installs intact.

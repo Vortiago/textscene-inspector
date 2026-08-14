@@ -56,6 +56,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
 /** Any `settings/<i>/…` leaf, whatever its depth. */
 const SETTING_KEY_RE = /^settings\/([+-]?\d+)\//;
@@ -86,10 +87,10 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   // Absent means zero: `LocalVector<IKModifier3DSetting *> settings`
   // (ik_modifier_3d.h:69) starts empty, which is the XML's default="0".
   const countRaw = rawProps.setting_count;
-  const count = countRaw === undefined ? 0 : parseInt(countRaw, 10);
-  // A malformed setting_count is already reported by its own validator; this
-  // rule only reasons about a value that parsed.
-  if (Number.isNaN(count)) return diagnostics;
+  const count = countRaw === undefined ? 0 : parseGodotInt(countRaw);
+  // A malformed setting_count is already reported by its own validator, and a
+  // non-finite one is altered at parse; neither is a ceiling to count against.
+  if (count === null || Number.isNaN(count)) return diagnostics;
 
   const outOfRange = new Set<number>();
   const ignoredVectors = new Set<number>();
@@ -140,8 +141,8 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
     if (!vector) continue;
     const directionRaw = poleDirections.get(index);
     const direction =
-      directionRaw === undefined ? SECONDARY_DIRECTION_NONE : parseInt(directionRaw, 10);
-    if (Number.isNaN(direction)) continue;
+      directionRaw === undefined ? SECONDARY_DIRECTION_NONE : parseGodotInt(directionRaw);
+    if (direction === null || Number.isNaN(direction)) continue;
     if (direction !== SECONDARY_DIRECTION_CUSTOM) ignoredVectors.add(index);
   }
 

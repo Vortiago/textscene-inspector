@@ -68,6 +68,28 @@ describe('GraphEdit zoom-limit rule', () => {
     expect(diagnose('zoom_min = wide\nzoom_max = 0.25\n')).toEqual([]);
   });
 
+  it('reports an inverted pair spelled with infinities', () => {
+    // `inf` is a float literal the tokenizer reads (variant_parser.cpp:701-707)
+    // and the writer emits, so this is a file Godot produces and reloads — and
+    // graph_edit.cpp:2480 compares it like any other double.
+    expect(diagnose('zoom_min = inf\nzoom_max = 1.0\n')).toHaveLength(1);
+    expect(diagnose('zoom_min = 1.0\nzoom_max = inf_neg\n')).toHaveLength(1);
+  });
+
+  it('stays silent on a nan pair, which neither setter refuses', () => {
+    // Both guards are strict comparisons, and every comparison against nan is
+    // false, so nan passes graph_edit.cpp:2480 and :2495 and BOTH limits land.
+    // There is no dropped limit to report.
+    expect(diagnose('zoom_min = nan\nzoom_max = 1.0\n')).toEqual([]);
+    expect(diagnose('zoom_min = 4.0\nzoom_max = nan\n')).toEqual([]);
+    expect(diagnose('zoom_min = nan\nzoom_max = nan\n')).toEqual([]);
+  });
+
+  it('compares an exponent-spelled limit at its real magnitude', () => {
+    // `parseFloat` reads `2e1` as 2 and called this pair correctly ordered.
+    expect(diagnose('zoom_min = 2e1\nzoom_max = 4.0\n')).toHaveLength(1);
+  });
+
   it('is offered only to GraphEdit nodes', () => {
     // Applicability is the REGISTRY's filter, not `check`'s: linter/types.ts
     // forbids a rule re-testing its own node type inside `check`, since the

@@ -48,6 +48,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
 /** Any `settings/<i>/…` leaf, whatever its depth, with the index text captured. */
 const SETTING_KEY_RE = /^settings\/([+-]?\d+)\//;
@@ -79,8 +80,8 @@ function resolveJointCounts(properties: Record<string, string>): Map<number, num
     if (settingIndex < 0) continue;
     // A malformed count is its own validator's error; ignoring it here leaves
     // the setting at its zero default rather than inventing a ceiling.
-    const count = parseInt(properties[key] ?? '', 10);
-    if (Number.isNaN(count)) continue;
+    const count = parseGodotInt(properties[key] ?? '');
+    if (count === null || Number.isNaN(count)) continue;
     counts.set(settingIndex, count);
   }
   return counts;
@@ -95,10 +96,10 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
   // Absent means zero: `LocalVector<BoneTwistDisperser3DSetting *> settings`
   // (bone_twist_disperser_3d.h:86) starts empty, which is the XML's default="0".
   const settingCountRaw = rawProps.setting_count;
-  const settingCount = settingCountRaw === undefined ? 0 : parseInt(settingCountRaw, 10);
-  // A malformed setting_count is already reported by its own validator; this
-  // rule only reasons about a value that parsed.
-  if (Number.isNaN(settingCount)) return diagnostics;
+  const settingCount = settingCountRaw === undefined ? 0 : parseGodotInt(settingCountRaw);
+  // A malformed setting_count is already reported by its own validator, and a
+  // non-finite one is altered at parse; neither is a ceiling to count against.
+  if (settingCount === null || Number.isNaN(settingCount)) return diagnostics;
 
   const jointCounts = resolveJointCounts(rawProps);
   const outOfRangeSettings = new Set<number>();

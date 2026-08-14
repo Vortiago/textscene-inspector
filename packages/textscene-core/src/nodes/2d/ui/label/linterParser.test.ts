@@ -254,6 +254,22 @@ describe('Label strict validators', () => {
       expect(check('tab_stops', 'PackedFloat32Array(10, 20, -5.5)')).toBeNull();
     });
 
+    it('accepts the non-finite spellings rtos_fix writes into a packed array', () => {
+      // variant_parser.cpp:2504 emits `inf`/`-inf`/`nan` for a float element, so
+      // these are files Godot produced and reloads.
+      for (const spelling of ['inf', '-inf', 'inf_neg', 'nan']) {
+        expect(check('tab_stops', `PackedFloat32Array(${spelling}, 20)`)).toBeNull();
+      }
+    });
+
+    it('rejects the JavaScript-only spellings Godot\'s tokenizer cannot read', () => {
+      // `READING_INT` stops at the `x` (there is no hex branch), and `Infinity`
+      // is not one of the four identifiers `stor_fix` resolves.
+      for (const spelling of ['0x10', 'Infinity', '+3']) {
+        expect(check('tab_stops', `PackedFloat32Array(${spelling}, 20)`)).not.toBeNull();
+      }
+    });
+
     it('rejects a value missing the wrapper', () => {
       expect(check('tab_stops', '10, 20, 30')).not.toBeNull();
     });

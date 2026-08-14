@@ -26,6 +26,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
+import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
 
 const TEXTURE_PROPS = [
   'texture_albedo',
@@ -88,7 +89,7 @@ function checkDecal(context: RuleContext): Diagnostic[] {
 
   // decal.cpp:191-192. Default cull_mask is (1 << 20) - 1 (decal.h:54), so an
   // absent key never trips this — only an explicit 0.
-  if (rawProps.cull_mask !== undefined && parseInt(rawProps.cull_mask, 10) === 0) {
+  if (rawProps.cull_mask !== undefined && parseGodotInt(rawProps.cull_mask) === 0) {
     diagnostics.push({
       severity: 'warning',
       message:

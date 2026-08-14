@@ -25,6 +25,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
+import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
 // look_at_modifier_3d.h:52-53, the field initialisers: a key a scene omits
 // carries these, and the pair is not parallel (BONE_AXIS_PLUS_Z maps to AXIS_Z,
@@ -40,10 +41,10 @@ function axisNumber(
 ): number {
   const raw = properties[key];
   if (raw === undefined) return fallback;
-  const parsed = Number(raw);
+  const parsed = parseGodotInt(raw);
   // A malformed value is the validator's to report; NaN here would compare
   // false against everything and quietly suppress the rule instead.
-  return Number.isFinite(parsed) ? parsed : fallback;
+  return parsed !== null && Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function checkLookAtModifier3D(context: RuleContext): Diagnostic[] {

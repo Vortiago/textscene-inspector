@@ -288,6 +288,18 @@ describe('RichTextLabel strict validators', () => {
       expect(check('tab_stops', 'PackedFloat32Array(10, 20, 30)')).toBeNull();
     });
 
+    it('accepts the non-finite spellings rtos_fix writes into a packed array', () => {
+      for (const spelling of ['inf', '-inf', 'inf_neg', 'nan']) {
+        expect(check('tab_stops', `PackedFloat32Array(${spelling}, 20)`)).toBeNull();
+      }
+    });
+
+    it('rejects the JavaScript-only spellings Godot\'s tokenizer cannot read', () => {
+      for (const spelling of ['0x10', 'Infinity', '+3']) {
+        expect(check('tab_stops', `PackedFloat32Array(${spelling}, 20)`)).not.toBeNull();
+      }
+    });
+
     it('rejects a value not wrapped in PackedFloat32Array(...)', () => {
       expect(check('tab_stops', '[10, 20, 30]')).not.toBeNull();
     });

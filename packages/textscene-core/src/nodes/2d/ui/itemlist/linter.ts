@@ -39,6 +39,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
 const ITEM_KEY_RE = /^item_(-?\d+)\//;
 
@@ -51,10 +52,11 @@ function checkItemList(context: RuleContext): Diagnostic[] {
   const countRaw = rawProps.item_count;
   // Absent means the default 0 (doc/classes/ItemList.xml), which the serialiser
   // omits: an empty `Vector<Item> items`, so every item key is out of range.
-  const count = countRaw === undefined ? 0 : parseInt(countRaw, 10);
-  // A malformed item_count already draws its own validator's diagnostic; this
-  // rule only reasons about a value that parsed.
-  if (Number.isNaN(count)) return diagnostics;
+  const count = countRaw === undefined ? 0 : parseGodotInt(countRaw);
+  // A malformed item_count already draws its own validator's diagnostic, and a
+  // non-finite one is altered at parse to a number the file does not state, so
+  // neither is a count this rule can name in a message.
+  if (count === null || Number.isNaN(count)) return diagnostics;
 
   const offending = new Set<number>();
   for (const key of Object.keys(rawProps)) {
