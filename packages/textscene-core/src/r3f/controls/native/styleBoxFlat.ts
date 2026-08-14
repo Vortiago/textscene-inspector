@@ -50,6 +50,19 @@ export interface StyleBoxFlatData {
    * corner to a single step otherwise (`style_box_flat.cpp:316`).
    */
   cornerDetail: number;
+  /**
+   * `skew` (`style_box_flat.h:48`) — a shear applied to every vertex about the
+   * style rect's own centre, so the box leans without moving. Non-zero skew
+   * also turns anti-aliasing on by itself (`style_box_flat.cpp:471`), since a
+   * sheared edge is diagonal even when every corner is sharp.
+   */
+  skew: Vec2;
+  /** `shadow_color` (`style_box_flat.h:39`, default `Color(0, 0, 0, 0.6)`) — the drop shadow's own colour at its inner edge, fading to alpha 0 outward. */
+  shadowColor: ControlColor;
+  /** `shadow_size` (`style_box_flat.h:52`) — how far the shadow grows past the style rect. 0 (the default) draws no shadow at all, whatever `shadow_color` says. */
+  shadowSize: number;
+  /** `shadow_offset` (`style_box_flat.h:53`) — displaces the whole shadow, so it can sit under one side of the box. */
+  shadowOffset: Vec2;
 }
 
 /**

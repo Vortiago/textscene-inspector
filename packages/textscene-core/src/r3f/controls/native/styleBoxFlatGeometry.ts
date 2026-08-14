@@ -4,13 +4,22 @@
  * and its `draw_rounded_rectangle`/`adapt_values`/`set_inner_corner_radius`/
  * `set_corner_scale` helpers — restricted to this module's scope: fill,
  * per-corner radii, per-edge borders, `border_blend`, `draw_center`, expand
- * margins, and anti-aliasing (`anti_aliased`/`aa_size`). `skew` and the drop
- * shadow are NOT modelled (`StyleBoxFlatData` carries neither), equivalent to
- * always taking `draw()` with `skew = (0, 0)` and `shadow_size = 0` — which
- * also means `aa_on` (`draw()`: `(rounded_corners || !skew.is_zero_approx())
- * && anti_aliased`) reduces to `rounded_corners && anti_aliased` here: a
- * sharp-cornered box never gets an AA ring, matching Godot's own "only
- * antialias if actually needed" comment.
+ * margins, anti-aliasing (`anti_aliased`/`aa_size`), `skew`, and the drop
+ * shadow (`shadow_color`/`shadow_size`/`shadow_offset`).
+ *
+ * `skew` shears every vertex about the STYLE rect's centre, so all of a box's
+ * rings lean together. It also participates in `aa_on` (`draw()`:
+ * `(rounded_corners || !skew.is_zero_approx()) && anti_aliased`) — a sheared
+ * edge is diagonal even when every corner is sharp, and needs the feather an
+ * axis-aligned edge does not. With neither a radius nor a skew, `aa_on` is
+ * false whatever `anti_aliased` says, matching Godot's own "only antialias if
+ * actually needed" comment.
+ *
+ * The shadow is drawn FIRST, so everything else paints over it, and its two
+ * rings adapt their corners against the offset `shadow_inner_rect` rather than
+ * the style rect — an offset shadow keeps the box's own corner profile instead
+ * of deriving a new one. `shadow_size` alone gates it: a `shadow_color` with no
+ * size draws nothing.
  *
  * The AA ring math additionally assumes `TextServer::get_current_drawn_item_
  * oversampling()` (style_box_flat.cpp:499-502) is `1`: this codebase has no
@@ -39,7 +48,7 @@
  */
 
 import type { StyleBoxFlatData } from './styleBoxFlat';
-import type { Rect2 } from './rect';
+import type { Rect2, Vec2 } from './rect';
 
 interface Rgba {
   r: number;
@@ -79,6 +88,16 @@ function corners(v: StyleBoxFlatData['cornerRadius']): [number, number, number, 
 /** `Rect2::grow_individual` (`core/math/rect2.h:238-246`). */
 function growIndividual(r: Rect2, left: number, top: number, right: number, bottom: number): Rect2 {
   return { x: r.x - left, y: r.y - top, w: r.w + left + right, h: r.h + top + bottom };
+}
+
+/** `Rect2::grow` (`core/math/rect2.h:230-236`) — the same amount on all four sides. */
+function grow(r: Rect2, by: number): Rect2 {
+  return growIndividual(r, by, by, by, by);
+}
+
+/** `Rect2::position += offset` — moves a rect without resizing it. */
+function translate(r: Rect2, offset: Vec2): Rect2 {
+  return { x: r.x + offset.x, y: r.y + offset.y, w: r.w, h: r.h };
 }
 
 // --- `adapt_values` (style_box_flat.cpp:436-442) -----------------------------
@@ -259,6 +278,7 @@ function drawRoundedRectangle(
   styleRect: Rect2,
   cornerRadius: readonly number[],
   cornerDetail: number,
+  skew: Vec2,
   ringRect: Rect2,
   innerRect: Rect2,
   innerColor: Rgba,
@@ -280,6 +300,16 @@ function drawRoundedRectangle(
 
   const quarterArc = Math.PI / 2;
 
+  // `style_rect_center` (`style_box_flat.cpp:352`) — every vertex shears about
+  // the STYLE rect's centre, not its own ring's, so all four rings of one box
+  // lean together instead of each shearing about a different point.
+  const centreX = styleRect.x + styleRect.w / 2;
+  const centreY = styleRect.y + styleRect.h / 2;
+  const shear = (x: number, y: number): [number, number] => [
+    x + -skew.x * (y - centreY),
+    y + -skew.y * (x - centreX),
+  ];
+
   for (let cornerIdx = 0; cornerIdx < 4; cornerIdx++) {
     for (let detail = 0; detail <= adaptedCornerDetail; detail++) {
       const angle = (cornerIdx + detail / adaptedCornerDetail) * quarterArc + Math.PI;
@@ -288,13 +318,15 @@ function drawRoundedRectangle(
 
       const ix = innerRadius[cornerIdx]! * cos * innerScale[cornerIdx]!.x + innerPoints[cornerIdx]!.x;
       const iy = innerRadius[cornerIdx]! * sin * innerScale[cornerIdx]!.y + innerPoints[cornerIdx]!.y;
-      buffers.positions.push(ix, iy, 0);
+      const [six, siy] = shear(ix, iy);
+      buffers.positions.push(six, siy, 0);
       pushColor(buffers.colors, innerColor);
 
       if (drawBorder) {
         const ox = ringCornerRadius[cornerIdx]! * cos * ringScale[cornerIdx]!.x + outerPoints[cornerIdx]!.x;
         const oy = ringCornerRadius[cornerIdx]! * sin * ringScale[cornerIdx]!.y + outerPoints[cornerIdx]!.y;
-        buffers.positions.push(ox, oy, 0);
+        const [sox, soy] = shear(ox, oy);
+        buffers.positions.push(sox, soy, 0);
         pushColor(buffers.colors, outerColor);
       }
     }
@@ -333,7 +365,11 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
 
   const borderWidth = sides(data.borderWidth);
   const drawBorder = borderWidth.some((w) => w > 0);
-  if (!drawBorder && !data.drawCenter) return empty;
+  // `draw_shadow = (shadow_size > 0)` (`style_box_flat.cpp:458`) — a
+  // `shadow_color` alone draws nothing. The early return needs all THREE
+  // (`:459`), or a shadow-only stylebox would paint nothing at all.
+  const drawShadow = data.shadowSize > 0;
+  if (!drawBorder && !data.drawCenter && !drawShadow) return empty;
 
   // StyleBoxFlat::draw: style_rect = p_rect.grow_individual(expand_margin[*]).
   const styleRect = growIndividual(
@@ -367,10 +403,13 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
   const borderColorBlend: Rgba = data.drawCenter ? data.bgColor : borderColorAlpha;
   const borderColorInner: Rgba = blendOn ? borderColorBlend : data.borderColor;
 
-  // draw(): `aa_on = (rounded_corners || !skew.is_zero_approx()) && anti_aliased`,
-  // skew always zero here.
+  // draw(): `aa_on = (rounded_corners || !skew.is_zero_approx()) && anti_aliased`.
+  // Skew earns its own term because a sheared edge is diagonal even when every
+  // corner is sharp, and a diagonal edge needs the feather an axis-aligned one
+  // does not.
   const roundedCorners = cornerRadiusIn.some((r) => r > 0);
-  const aaOn = roundedCorners && data.antiAliased;
+  const skewed = data.skew.x !== 0 || data.skew.y !== 0;
+  const aaOn = (roundedCorners || skewed) && data.antiAliased;
   // aa_size_scaled = aa_size / oversampling; oversampling assumed 1 (see file header).
   const aaSizeScaled = data.aaSize;
 
@@ -388,6 +427,44 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
 
   const buffers: GeometryBuffers = { positions: [], indices: [], colors: [] };
 
+  // Drop shadow (`style_box_flat.cpp:524-540`), FIRST so the box paints over
+  // it. Both its rings adapt their corners against `shadow_inner_rect` rather
+  // than the style rect, so an offset shadow keeps the box's own corner
+  // profile instead of re-deriving one from a rect it no longer shares.
+  if (drawShadow) {
+    const shadowInnerRect = translate(styleRect, data.shadowOffset);
+    const shadowRect = translate(grow(styleRect, data.shadowSize), data.shadowOffset);
+    const shadowColorTransparent: Rgba = { ...data.shadowColor, a: 0 };
+
+    drawRoundedRectangle(
+      buffers,
+      shadowInnerRect,
+      adaptedCorner,
+      data.cornerDetail,
+      data.skew,
+      shadowRect,
+      shadowInnerRect,
+      data.shadowColor,
+      shadowColorTransparent,
+      false
+    );
+
+    if (data.drawCenter) {
+      drawRoundedRectangle(
+        buffers,
+        shadowInnerRect,
+        adaptedCorner,
+        data.cornerDetail,
+        data.skew,
+        shadowInnerRect,
+        shadowInnerRect,
+        data.shadowColor,
+        data.shadowColor,
+        true
+      );
+    }
+  }
+
   // Border ring, no AA (`if (draw_border && !aa_on)`).
   if (drawBorder && !aaOn) {
     drawRoundedRectangle(
@@ -395,6 +472,7 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
       borderStyleRect,
       adaptedCorner,
       data.cornerDetail,
+      data.skew,
       borderStyleRect,
       infillRect,
       borderColorInner,
@@ -410,6 +488,7 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
       borderStyleRect,
       adaptedCorner,
       data.cornerDetail,
+      data.skew,
       infillRect,
       infillRect,
       data.bgColor,
@@ -460,6 +539,7 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
           borderStyleRect,
           adaptedCorner,
           data.cornerDetail,
+          data.skew,
           infillRectAaColored,
           infillRectAaColored,
           data.bgColor,
@@ -474,6 +554,7 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
           borderStyleRect,
           adaptedCorner,
           data.cornerDetail,
+          data.skew,
           infillRectAaTransparent,
           infillRectAaColored,
           data.bgColor,
@@ -520,6 +601,7 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
         borderStyleRect,
         adaptedCorner,
         data.cornerDetail,
+        data.skew,
         outerRectAaColored,
         blendOn ? infillRect : innerRectAaColored,
         borderColorInner,
@@ -534,6 +616,7 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
           borderStyleRect,
           adaptedCorner,
           data.cornerDetail,
+          data.skew,
           innerRectAaColored,
           innerRectAaTransparent,
           borderColorBlend,
@@ -549,6 +632,7 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
         borderStyleRect,
         adaptedCorner,
         data.cornerDetail,
+        data.skew,
         outerRectAaTransparent,
         outerRectAaColored,
         data.borderColor,

@@ -1303,6 +1303,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Panel Stylebox Skew Shadow",
+    "file": "unit-panel-stylebox-skew-shadow.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Panel Styleboxes",
     "file": "unit-panel-styleboxes.tscn",
     "category": "Unit - 2D UI Controls"

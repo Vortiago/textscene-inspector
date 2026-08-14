@@ -48,6 +48,10 @@ function box(overrides: Partial<StyleBoxFlatData>): StyleBoxFlatData {
     antiAliased: false,
     aaSize: 1,
     cornerDetail: 8,
+    skew: { x: 0, y: 0 },
+    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
+    shadowSize: 0,
+    shadowOffset: { x: 0, y: 0 },
     ...overrides,
   };
 }
@@ -342,5 +346,127 @@ describe('styleBoxFlatGeometry anti-aliasing (style_box_flat.cpp:468-471,511-630
     // The alpha-0 boundary's leftmost point sits half the AA size beyond the
     // original style rect's left edge (x = 0).
     expect(Math.min(...xs)).toBeCloseTo(-0.5);
+  });
+});
+
+/**
+ * `skew` and the drop shadow — the two `StyleBoxFlat::draw` stages that are
+ * whole passes rather than parameters of the ring already tested above.
+ */
+describe('styleBoxFlatGeometry — skew (style_box_flat.cpp:352,377-378,386-387)', () => {
+  const RECT = { x: 0, y: 0, w: 100, h: 50 };
+
+  it('shears every vertex about the style rect CENTRE, leaving the centre itself fixed', () => {
+    // `x_skew = -skew.x * (y - style_rect_center.y)`, `y_skew = -skew.y * (x -
+    // style_rect_center.x)`. The rect is 100x50 at the origin, so the centre is
+    // (50, 25) and a corner at (0, 0) moves by (-skew.x * -25, -skew.y * -50)
+    // = (+25 * skew.x, +50 * skew.y).
+    const plain = styleBoxFlatGeometry(box({}), RECT);
+    const skewed = styleBoxFlatGeometry(box({ skew: { x: 0.4, y: 0 } }), RECT);
+    expect(skewed.positions).toHaveLength(plain.positions.length);
+
+    for (let i = 0; i < plain.positions.length; i += 3) {
+      const x = plain.positions[i]!;
+      const y = plain.positions[i + 1]!;
+      expect(skewed.positions[i]).toBeCloseTo(x + -0.4 * (y - 25), 5);
+      // skew.y is 0 here, so no vertex moves vertically.
+      expect(skewed.positions[i + 1]).toBeCloseTo(y, 5);
+    }
+  });
+
+  it('shears on the other axis independently', () => {
+    const plain = styleBoxFlatGeometry(box({}), RECT);
+    const skewed = styleBoxFlatGeometry(box({ skew: { x: 0, y: 0.25 } }), RECT);
+    for (let i = 0; i < plain.positions.length; i += 3) {
+      const x = plain.positions[i]!;
+      expect(skewed.positions[i]).toBeCloseTo(x, 5);
+      expect(skewed.positions[i + 1]).toBeCloseTo(plain.positions[i + 1]! + -0.25 * (x - 50), 5);
+    }
+  });
+
+  it('turns anti-aliasing ON for a SHARP-cornered box, which a radius alone would not', () => {
+    // `:471` — `aa_on = (rounded_corners || !skew.is_zero_approx()) &&
+    // anti_aliased`. A skewed box's edges are diagonal, so they need the
+    // feather a sharp axis-aligned box does not: the sharp non-skewed case is
+    // 8 vertices, and the AA rings multiply that.
+    const sharp = styleBoxFlatGeometry(box({ antiAliased: true }), RECT);
+    const skewed = styleBoxFlatGeometry(box({ antiAliased: true, skew: { x: 0.4, y: 0 } }), RECT);
+    expect(sharp.positions).toHaveLength(8 * 3);
+    expect(skewed.positions.length).toBeGreaterThan(sharp.positions.length);
+  });
+
+  it('leaves the geometry untouched when anti_aliased is off, however skewed', () => {
+    const off = styleBoxFlatGeometry(box({ antiAliased: false, skew: { x: 0.4, y: 0 } }), RECT);
+    expect(off.positions).toHaveLength(8 * 3);
+  });
+});
+
+describe('styleBoxFlatGeometry — drop shadow (style_box_flat.cpp:524-540)', () => {
+  const RECT = { x: 0, y: 0, w: 100, h: 50 };
+
+  it('draws nothing extra while shadow_size is 0', () => {
+    // `draw_shadow = (shadow_size > 0)` (`:458`) — a shadow_color alone paints
+    // nothing at all.
+    const none = styleBoxFlatGeometry(box({ shadowColor: { r: 1, g: 0, b: 0, a: 1 } }), RECT);
+    expect(none.positions).toHaveLength(8 * 3);
+  });
+
+  it('draws the shadow even when the box has no border and no centre', () => {
+    // `:459` returns early only when all THREE are absent, so a shadow-only
+    // stylebox still paints — which a `!draw_border && !draw_center` guard
+    // would have swallowed.
+    const shadowOnly = styleBoxFlatGeometry(box({ drawCenter: false, shadowSize: 6 }), RECT);
+    expect(shadowOnly.positions.length).toBeGreaterThan(0);
+  });
+
+  it('grows the shadow ring by shadow_size and displaces it by shadow_offset', () => {
+    // `shadow_rect = style_rect.grow(shadow_size)` then `.position +=
+    // shadow_offset` (`:529-530`). The furthest-left vertex is therefore the
+    // style rect's own left, minus the growth, plus the offset.
+    const shadowed = styleBoxFlatGeometry(
+      box({ shadowSize: 6, shadowOffset: { x: 4, y: 3 } }),
+      RECT
+    );
+    const xs: number[] = [];
+    const ys: number[] = [];
+    for (let i = 0; i < shadowed.positions.length; i += 3) {
+      xs.push(shadowed.positions[i]!);
+      ys.push(shadowed.positions[i + 1]!);
+    }
+    expect(Math.min(...xs)).toBeCloseTo(0 - 6 + 4, 5);
+    expect(Math.min(...ys)).toBeCloseTo(0 - 6 + 3, 5);
+    expect(Math.max(...xs)).toBeCloseTo(100 + 6 + 4, 5);
+    expect(Math.max(...ys)).toBeCloseTo(50 + 6 + 3, 5);
+  });
+
+  it('fades the shadow ring from shadow_color to the SAME colour at alpha 0', () => {
+    // `shadow_color_transparent = Color(r, g, b, 0)` (`:532`) — the rgb is
+    // carried, so the fade is in alpha only.
+    const shadowed = styleBoxFlatGeometry(
+      box({ shadowSize: 6, shadowColor: { r: 0.2, g: 0.4, b: 0.6, a: 0.8 } }),
+      RECT
+    );
+    // The shadow is the FIRST stage drawn, so its ring owns vertex 0 (inner,
+    // opaque) and vertex 1 (outer, transparent).
+    expect(shadowed.colors.slice(0, 4)).toEqual([0.2, 0.4, 0.6, 0.8]);
+    expect(shadowed.colors.slice(4, 8)).toEqual([0.2, 0.4, 0.6, 0]);
+  });
+
+  it('draws the shadow BEFORE the box, so the box paints over it', () => {
+    // Draw order is buffer order here: `:525`'s shadow block precedes the
+    // border and infill blocks. A shadow appended last would cover the fill.
+    const shadowed = styleBoxFlatGeometry(
+      box({ shadowSize: 6, shadowColor: { r: 1, g: 0, b: 0, a: 1 }, bgColor: { r: 0, g: 1, b: 0, a: 1 } }),
+      RECT
+    );
+    expect(shadowed.colors.slice(0, 3)).toEqual([1, 0, 0]);
+  });
+
+  it('fills the shadow interior only when draw_center is on', () => {
+    // `:535`'s `if (draw_center)` — a hollow box casts a hollow shadow, so the
+    // fill shows through both.
+    const filled = styleBoxFlatGeometry(box({ shadowSize: 6 }), RECT);
+    const hollow = styleBoxFlatGeometry(box({ shadowSize: 6, drawCenter: false }), RECT);
+    expect(filled.positions.length).toBeGreaterThan(hollow.positions.length);
   });
 });

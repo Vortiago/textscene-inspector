@@ -276,6 +276,10 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
           antiAliased: true,
           aaSize: 1,
           cornerDetail: 8,
+          skew: { x: 0, y: 0 },
+          shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
+          shadowSize: 0,
+          shadowOffset: { x: 0, y: 0 },
         },
       },
     };

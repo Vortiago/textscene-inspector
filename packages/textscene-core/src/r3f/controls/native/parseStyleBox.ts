@@ -16,10 +16,14 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver';
 import { colorOr } from '../../../utils/colorParser';
 import { floatOr, boolOr } from '../../../parser/valueParsers';
+import { parseVector2 } from '../../../parser/vectors';
+import type { Vec2 } from './rect';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 
 const DEFAULT_BG_COLOR = { r: 0.6, g: 0.6, b: 0.6, a: 1 }; // style_box_flat.h:38
 const DEFAULT_BORDER_COLOR = { r: 0.8, g: 0.8, b: 0.8, a: 1 }; // style_box_flat.h:40
+const DEFAULT_SHADOW_COLOR = { r: 0, g: 0, b: 0, a: 0.6 }; // style_box_flat.h:39
+const ZERO_VECTOR2: Vec2 = { x: 0, y: 0 }; // `skew`/`shadow_offset` (style_box_flat.h:48,53)
 
 const CONTEXT = 'StyleBoxFlat';
 
@@ -32,6 +36,16 @@ const AA_SIZE_MAX = 10;
 /** `StyleBoxFlat::set_corner_detail` (`style_box_flat.cpp:130`) — CLAMP(detail, 1, 20). */
 const CORNER_DETAIL_MIN = 1;
 const CORNER_DETAIL_MAX = 20;
+
+/** A `Vector2(x, y)` property, or `fallback` when absent or ungrammatical — this resolver degrades, never throws (see the module doc). */
+function vector2Or(raw: string | undefined, fallback: Vec2): Vec2 {
+  if (raw === undefined) return fallback;
+  try {
+    return parseVector2(raw);
+  } catch {
+    return fallback;
+  }
+}
 
 function contentMarginOr(raw: string | undefined, borderWidth: number): number {
   // style_box.cpp::get_margin: content_margin[side] < 0 (default -1) reads
@@ -89,6 +103,13 @@ export function parseStyleBox(
     cornerDetail: Math.round(
       clamp(floatOr(data.corner_detail, 8, CONTEXT), CORNER_DETAIL_MIN, CORNER_DETAIL_MAX)
     ),
+    skew: vector2Or(data.skew, ZERO_VECTOR2),
+    shadowColor: colorOr(data.shadow_color, DEFAULT_SHADOW_COLOR),
+    // `set_shadow_size` takes an int and the property is INT-typed
+    // (`style_box_flat.cpp:727`), so a fractional authored value truncates
+    // rather than growing the ring by a fraction.
+    shadowSize: Math.trunc(floatOr(data.shadow_size, 0, CONTEXT)),
+    shadowOffset: vector2Or(data.shadow_offset, ZERO_VECTOR2),
   };
 }
 

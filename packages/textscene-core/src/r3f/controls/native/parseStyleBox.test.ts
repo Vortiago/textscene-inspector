@@ -37,6 +37,10 @@ const resources: TscnInternalResource[] = [
       anti_aliased: 'false',
       aa_size: '3',
       corner_detail: '5',
+      skew: 'Vector2(0.3, -0.2)',
+      shadow_color: 'Color(0, 0, 1, 0.4)',
+      shadow_size: '7',
+      shadow_offset: 'Vector2(3, 4)',
     },
   },
   { id: 'StyleBoxFlat_empty', type: 'StyleBoxFlat', data: {} },
@@ -68,6 +72,10 @@ describe('parseStyleBox', () => {
       antiAliased: false,
       aaSize: 3,
       cornerDetail: 5,
+      skew: { x: 0.3, y: -0.2 },
+      shadowColor: { r: 0, g: 0, b: 1, a: 0.4 },
+      shadowSize: 7,
+      shadowOffset: { x: 3, y: 4 },
     });
   });
 
@@ -76,8 +84,9 @@ describe('parseStyleBox', () => {
     // border_color default Color(0.8,0.8,0.8) [a defaults to 1]; border_width/
     // corner_radius/expand_margin default 0 per side; draw_center default
     // true; blend_border (border_blend) default false; anti_aliased default
-    // true; aa_size default 1; corner_detail default 8 (style_box_flat.h:
-    // 49,51,54).
+    // true; aa_size default 1; corner_detail default 8; skew and shadow_offset
+    // default to a zero Vector2; shadow_size default 0; shadow_color default
+    // Color(0, 0, 0, 0.6) (style_box_flat.h:39,48-53).
     const box = parseStyleBox('SubResource("StyleBoxFlat_empty")', resources);
     expect(box).toEqual({
       bgColor: { r: 0.6, g: 0.6, b: 0.6, a: 1 },
@@ -91,6 +100,10 @@ describe('parseStyleBox', () => {
       antiAliased: true,
       aaSize: 1,
       cornerDetail: 8,
+      skew: { x: 0, y: 0 },
+      shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
+      shadowSize: 0,
+      shadowOffset: { x: 0, y: 0 },
     });
   });
 

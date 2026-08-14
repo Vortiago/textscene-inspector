@@ -65,7 +65,11 @@ describe('nativeTheme', () => {
         borderBlend: false,
         antiAliased: true, // StyleBoxFlat's own untouched default (style_box_flat.h:49)
         aaSize: 1,
-        cornerDetail: 8, // StyleBoxFlat's own untouched default (style_box_flat.h:54)
+        cornerDetail: 8,
+        skew: { x: 0, y: 0 },
+        shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
+        shadowSize: 0,
+        shadowOffset: { x: 0, y: 0 }, // StyleBoxFlat's own untouched default (style_box_flat.h:54)
       });
     });
 
@@ -82,6 +86,10 @@ describe('nativeTheme', () => {
         antiAliased: true,
         aaSize: 1,
         cornerDetail: 8,
+        skew: { x: 0, y: 0 },
+        shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
+        shadowSize: 0,
+        shadowOffset: { x: 0, y: 0 },
       };
       expect(theme.widgets.button.normal).toEqual({ ...shared, bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 } });
       expect(theme.widgets.button.hover).toEqual({ ...shared, bgColor: { r: 0.225, g: 0.225, b: 0.225, a: 0.6 } });
@@ -105,6 +113,10 @@ describe('nativeTheme', () => {
         antiAliased: true,
         aaSize: 1,
         cornerDetail: 8,
+        skew: { x: 0, y: 0 },
+        shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
+        shadowSize: 0,
+        shadowOffset: { x: 0, y: 0 },
       });
       // style_v_scrollbar = make_flat_stylebox(style_normal_color, 4, 0, 4, 0, 10): transposed.
       expect(theme.widgets.scrollBar.scrollVertical).toEqual({
@@ -119,6 +131,10 @@ describe('nativeTheme', () => {
         antiAliased: true,
         aaSize: 1,
         cornerDetail: 8,
+        skew: { x: 0, y: 0 },
+        shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
+        shadowSize: 0,
+        shadowOffset: { x: 0, y: 0 },
       });
     });
 
@@ -136,6 +152,10 @@ describe('nativeTheme', () => {
         antiAliased: true,
         aaSize: 1,
         cornerDetail: 8,
+        skew: { x: 0, y: 0 },
+        shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
+        shadowSize: 0,
+        shadowOffset: { x: 0, y: 0 },
       });
     });
 
@@ -182,6 +202,10 @@ describe('nativeTheme', () => {
           antiAliased: true,
           aaSize: 1,
           cornerDetail: 8,
+          skew: { x: 0, y: 0 },
+          shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
+          shadowSize: 0,
+          shadowOffset: { x: 0, y: 0 },
         });
       }
     );
@@ -203,6 +227,10 @@ describe('nativeTheme', () => {
           antiAliased: true,
           aaSize: 1,
           cornerDetail: 8,
+          skew: { x: 0, y: 0 },
+          shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
+          shadowSize: 0,
+          shadowOffset: { x: 0, y: 0 },
         });
       }
     );

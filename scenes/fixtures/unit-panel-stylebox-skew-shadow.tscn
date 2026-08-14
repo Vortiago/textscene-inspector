@@ -1,0 +1,129 @@
+; StyleBoxFlat's two WHOLE-PASS draw stages — `skew` and the drop shadow — on
+; four Panels of identical size over a light backdrop.
+;
+; The one variable: the stages `StyleBoxFlat::draw` runs, rather than the
+; parameters of the ring it already draws. Every other stylebox scene varies
+; the ring itself (radii, border widths, blend); neither field here changes a
+; radius or a width, so a regression in either is invisible in all of them.
+; Same node type, same 480x260 rect, same grid pitch, same fill colour
+; throughout — only which stages run changes.
+;
+; SkewSharp is the one that cannot be faked. Its corners are all sharp and its
+; skew is horizontal only, so a builder that ignored `skew` draws a plain
+; axis-aligned rectangle and the difference is the whole silhouette. It also
+; pins the second, easily-missed half of the field: `aa_on` is
+; `(rounded_corners || !skew.is_zero_approx()) && anti_aliased`, so a skewed
+; box antialiases even with sharp corners, and its diagonal edges are the only
+; place in the goldens where that term is exercised. A port that read only the
+; radii would leave those edges hard-stepped.
+;
+; SkewRound carries a skew on BOTH axes plus a border and one radius, which is
+; what proves the shear is applied to every ring about ONE centre: shear each
+; ring about its own centre instead and the border detaches from the fill,
+; visibly thickening on two sides and thinning on the other two.
+;
+; ShadowOffset is a shadow displaced down-right with no border, so the shadow
+; and the box are separable by eye: the box's own edges stay where an
+; unshadowed box would put them, and everything outside them is the new stage.
+; `shadow_size` is large (24) against a light backdrop because the shadow is a
+; fade to alpha 0 — a small one is indistinguishable from an antialiasing
+; feather, which is exactly the confusion a golden should not have to arbitrate.
+;
+; ShadowHollow pairs the shadow with `draw_center = false`. Godot fills the
+; shadow's interior only when the box draws its own centre, so this pane's
+; shadow is a ring too and the backdrop shows through both — the case that
+; separates "draw the shadow" from "draw a shadow-coloured rectangle behind
+; the box". It also offsets the shadow UP-LEFT, the opposite of ShadowOffset,
+; so a sign error in `shadow_offset` cannot pass both.
+;
+; The backdrop is deliberately much lighter than every box, for the same reason
+; the sibling stylebox scene gives: a fade to transparent and a diagonal edge
+; are only measurable against something they contrast with.
+
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_skew_sharp"]
+bg_color = Color(0.15, 0.3, 0.5, 1)
+skew = Vector2(0.35, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_skew_round"]
+bg_color = Color(0.15, 0.3, 0.5, 1)
+border_width_left = 16
+border_width_top = 16
+border_width_right = 16
+border_width_bottom = 16
+border_color = Color(0.95, 0.75, 0.2, 1)
+corner_radius_top_left = 32
+corner_radius_top_right = 32
+corner_radius_bottom_right = 32
+corner_radius_bottom_left = 32
+skew = Vector2(0.2, 0.15)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shadow_offset"]
+bg_color = Color(0.15, 0.3, 0.5, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+shadow_color = Color(0.1, 0.05, 0.3, 0.7)
+shadow_size = 24
+shadow_offset = Vector2(16, 12)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shadow_hollow"]
+bg_color = Color(0.15, 0.3, 0.5, 1)
+draw_center = false
+border_width_left = 12
+border_width_top = 12
+border_width_right = 12
+border_width_bottom = 12
+border_color = Color(0.8, 0.2, 0.35, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+shadow_color = Color(0.1, 0.05, 0.3, 0.7)
+shadow_size = 20
+shadow_offset = Vector2(-14, -10)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.85, 0.85, 0.82, 1)
+
+[node name="SkewSharp" type="Panel" parent="."]
+anchors_preset = 0
+offset_left = 64.0
+offset_top = 48.0
+offset_right = 544.0
+offset_bottom = 308.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_skew_sharp")
+
+[node name="SkewRound" type="Panel" parent="."]
+anchors_preset = 0
+offset_left = 608.0
+offset_top = 48.0
+offset_right = 1088.0
+offset_bottom = 308.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_skew_round")
+
+[node name="ShadowOffset" type="Panel" parent="."]
+anchors_preset = 0
+offset_left = 64.0
+offset_top = 340.0
+offset_right = 544.0
+offset_bottom = 600.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_shadow_offset")
+
+[node name="ShadowHollow" type="Panel" parent="."]
+anchors_preset = 0
+offset_left = 608.0
+offset_top = 340.0
+offset_right = 1088.0
+offset_bottom = 600.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_shadow_hollow")
