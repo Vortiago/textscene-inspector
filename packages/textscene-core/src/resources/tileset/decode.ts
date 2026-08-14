@@ -199,5 +199,11 @@ function vec2iOr(value: unknown, fallback: Vec2i, label: string): Vec2i {
     warn(`[TileSet] invalid ${label} "${String(value)}" — using default`);
     return fallback;
   }
-  return { x: storedInt(m[1]), y: storedInt(m[2]) };
+  const x = storedInt(m[1]);
+  const y = storedInt(m[2]);
+  if (x === null || y === null) {
+    warn(`[TileSet] ${label} "${String(value)}" has a component Godot cannot store — using default`);
+    return fallback;
+  }
+  return { x, y };
 }

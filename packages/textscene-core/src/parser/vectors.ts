@@ -54,9 +54,20 @@ export function finiteTupleRegex(typeName: string, arity: number): RegExp {
   return new RegExp(String.raw`^${typeName}\s*\(\s*${body}\s*\)$`);
 }
 
-/** One matched component of an `i`-suffixed composite, as the int32 Godot stores. */
-export function storedInt(text: string | undefined): number {
-  return Math.trunc(parseFloat(text ?? ''));
+/**
+ * One matched component of an `i`-suffixed composite, as the int32 Godot
+ * stores — or `null` when it cannot be stored as one.
+ *
+ * `null` for a non-finite component, so the decoder takes its documented
+ * warn-then-fall-back path rather than handing `Infinity` to a render path.
+ * Godot narrows it at parse time to an architecture-specific sentinel
+ * (-2147483648 measured on 4.6.3 x86_64), which is a value no previewer can
+ * usefully draw and which the finite grammar exists to keep out. The linter
+ * reports the same literal from its own side; see `asStoredInt` there.
+ */
+export function storedInt(text: string | undefined): number | null {
+  const num = parseFloat(text ?? '');
+  return Number.isFinite(num) ? Math.trunc(num) : null;
 }
 
 const VECTOR2_RE = finiteTupleRegex('Vector2', 2);

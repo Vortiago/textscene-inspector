@@ -93,6 +93,14 @@ export function parseGodotFloat(value: string): number | null {
   if (trimmed === 'Infinity' || trimmed === '-Infinity' || trimmed === '+Infinity') {
     return null;
   }
+  // The anchored grammar, for the same reason `parseGodotInt` applies it:
+  // `parseFloat` stops at the first character it cannot use, so `75abc` read as
+  // 75 and a bound then reported a number the file does not contain — or, where
+  // the value was in range, said nothing at all about a line Godot's tokenizer
+  // cannot read. Godot stops the number at `a` (variant_parser.cpp:450) and
+  // glues the rest onto the NEXT assignment's name (:1948), so the line is not
+  // merely unreadable, it corrupts its successor.
+  if (!TSCN_FLOAT_RE.test(trimmed)) return null;
   const num = parseFloat(trimmed);
   return Number.isNaN(num) ? null : num;
 }
@@ -113,11 +121,11 @@ export function parseGodotFloat(value: string): number | null {
  * A float literal in an INT slot is legal and truncates TOWARD ZERO, which is
  * what the C++ conversion does, so `5.9` is 5 and `-5.9` is -5.
  *
- * Non-finite passes through unchanged, the same way the float reader treats it.
- * `inf` and `nan` are identifiers `stor_fix` (variant_parser.cpp:149-159)
- * resolves for any slot, so Godot's parser reads them here too and the file
- * loads; every comparison against the result is then false, which is the right
- * answer for a value that cannot be placed on the number line.
+ * A non-finite literal READS — `inf` and `nan` are identifiers the tokenizer
+ * resolves for a bare slot too (variant_parser.cpp:701-707), so the file loads
+ * — but it does not FIT, so the result is NaN rather than the spelling as
+ * written. See {@link asStoredInt} for the measurement and for why the stored
+ * number is not reproduced here.
  */
 export function parseGodotInt(value: string): number | null {
   const trimmed = value.trim();
@@ -129,11 +137,21 @@ export function parseGodotInt(value: string): number | null {
 
 /**
  * A number as the int32 an INT slot STORES: truncated toward zero, which is
- * what the C++ conversion does. Non-finite passes through unchanged, so every
- * comparison against it stays false.
+ * what the C++ conversion does.
+ *
+ * A NON-FINITE number is not representable at all, and reads as NaN rather than
+ * passing through. Measured on 4.6.3 stable (x86_64), `Vector2i(inf, 8)`,
+ * `(-inf, 8)`, `(inf_neg, 8)` and `(nan, 8)` all store `(-2147483648, 8)` — the
+ * narrowing happens at PARSE time, so the stored value is not what the file
+ * says. That number is deliberately NOT returned here: the conversion is
+ * undefined behaviour in C++ and the practical result is architecture-specific
+ * (x86 `cvttsd2si` yields INT32_MIN, AArch64 `fcvtzs` saturates the other way),
+ * and Godot ships on both. NaN keeps every bound comparison false, so no
+ * message can print a number no platform agrees on; the ALTERATION itself is
+ * reported by the non-finite arm in `v.vector2i`, which is the portable claim.
  */
 function asStoredInt(num: number): number {
-  return Number.isFinite(num) ? Math.trunc(num) : num;
+  return Number.isFinite(num) ? Math.trunc(num) : NaN;
 }
 
 /**
@@ -161,6 +179,11 @@ export function tupleComponent(text: string | undefined): number {
  */
 export function intComponent(text: string | undefined): number {
   return asStoredInt(tupleComponent(text));
+}
+
+/** True when an already-matched component cannot be stored in an int32 slot. */
+export function isUnrepresentableInt(text: string | undefined): boolean {
+  return !Number.isFinite(tupleComponent(text));
 }
 
 /**
@@ -310,6 +333,19 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
     // `inf`/`nan` are legal literals in either slot, so the miss signal is null
     // and a parsed NaN falls through to the range checks, which it never trips.
     const num = parseAsInt ? parseGodotInt(value) : parseGodotFloat(value);
+    // An INT slot narrows a non-finite at PARSE time to a value the file does
+    // not state (see `asStoredInt`), so the literal is ALTERED and reports as
+    // an error. A FLOAT slot stores it verbatim and says nothing. That is the
+    // whole difference between the two, and it is the engine's own.
+    if (parseAsInt && num !== null && Number.isNaN(num)) {
+      return propertyError(
+        key,
+        line,
+        `Property '${propertyName}' cannot be stored in an integer slot, got: "${value}". The file loads, but the value is narrowed at parse time to a number the file does not state.`,
+        errorCodeValue,
+        'error'
+      );
+    }
     if (num === null) {
       return propertyError(
         key,

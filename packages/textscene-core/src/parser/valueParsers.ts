@@ -215,7 +215,13 @@ export function vec2iOr(value: string | undefined, fallback: Vector2, context = 
     warn(`${context}: invalid Vector2i "${value}", using fallback`);
     return fallback;
   }
-  return { x: storedInt(match[1]), y: storedInt(match[2]) };
+  const x = storedInt(match[1]);
+  const y = storedInt(match[2]);
+  if (x === null || y === null) {
+    warn(`${context}: Vector2i "${value}" has a component Godot cannot store, using fallback`);
+    return fallback;
+  }
+  return { x, y };
 }
 
 /**
@@ -234,7 +240,13 @@ export function parseOptionalVector2i(
     warn(`${context}: invalid Vector2i "${value}"`);
     return undefined;
   }
-  return { x: storedInt(match[1]), y: storedInt(match[2]) };
+  const x = storedInt(match[1]);
+  const y = storedInt(match[2]);
+  if (x === null || y === null) {
+    warn(`${context}: Vector2i "${value}" has a component Godot cannot store`);
+    return undefined;
+  }
+  return { x, y };
 }
 
 /**

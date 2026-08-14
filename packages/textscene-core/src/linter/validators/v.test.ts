@@ -106,25 +106,37 @@ describe('v.int', () => {
 });
 
 describe('the int combinators agree on what Godot can read', () => {
-  // `inf` / `nan` are identifiers `stor_fix` (variant_parser.cpp:149-159)
-  // resolves for ANY slot, so the file loads whichever combinator guards it.
-  // Two int combinators giving opposite answers on one literal is a split no
-  // engine line supports, and `strictInt`'s `Number.isInteger` produced exactly
-  // that while `v.int` accepted it.
-  // Unbounded, so this is about the FORMAT branch alone. A non-finite value
-  // against a real bound is a range question and answered separately below.
-  it.each(['inf', '-inf', 'inf_neg', 'nan'])('both take %s', (literal) => {
-    expect(v.int('frame')('frame', literal, 1)).toBeNull();
-    expect(v.strictInt('frame')('frame', literal, 1)).toBeNull();
+  // Both combinators READ all four spellings — the tokenizer resolves them for
+  // a bare slot too (variant_parser.cpp:701-707), so the file loads and neither
+  // may call it a FORMAT error. What they then report is a VALUE question,
+  // answered below.
+  it.each(['inf', '-inf', 'inf_neg', 'nan'])('neither calls %s a format error', (literal) => {
+    expect(v.int('frame')('frame', literal, 1)?.code).not.toBe('INVALID_FRAME_FORMAT');
+    expect(v.strictInt('frame')('frame', literal, 1)?.code).not.toBe('INVALID_FRAME_FORMAT');
   });
 
-  it('bounds a non-finite the same way, once there is a bound', () => {
-    // `inf` really is above a ceiling of 10; `nan` compares false against both
-    // ends, so neither combinator may claim it is out of range.
-    expect(v.int('frame', { max: 10 })('frame', 'inf', 1)).not.toBeNull();
-    expect(v.strictInt('frame', { max: 10 })('frame', 'inf', 1)).not.toBeNull();
-    expect(v.int('frame', { min: 0, max: 10 })('frame', 'nan', 1)).toBeNull();
-    expect(v.strictInt('frame', { min: 0, max: 10 })('frame', 'nan', 1)).toBeNull();
+  it.each(['inf', '-inf', 'inf_neg', 'nan'])('both report %s as altered in an INT slot', (literal) => {
+    // Measured on 4.6.3 stable: `Vector2i(inf, 8)`, `(-inf, 8)`, `(inf_neg, 8)`
+    // and `(nan, 8)` all store `(-2147483648, 8)`. The narrowing happens at
+    // parse time, so an INT slot never holds the value the file states — an
+    // alteration, which is the error tier. A FLOAT slot stores it verbatim and
+    // stays silent, which is the case directly below.
+    expect(v.int('frame')('frame', literal, 1)?.severity).toBe('error');
+    expect(v.strictInt('frame')('frame', literal, 1)?.severity).toBe('error');
+    expect(v.float('weight')('weight', literal, 1)).toBeNull();
+  });
+
+  it('reports the alteration rather than a bound it cannot compare', () => {
+    // The message must not name the stored number: the C++ narrowing is UB and
+    // the practical result is architecture-specific, so only the ALTERATION is
+    // portable. `nan` and `inf` therefore read alike here, where before `inf`
+    // was wrongly treated as "above the ceiling" and `nan` as unanswerable.
+    for (const literal of ['inf', 'nan']) {
+      const reported = v.int('frame', { min: 0, max: 10 })('frame', literal, 1);
+      expect(reported?.severity).toBe('error');
+      expect(reported?.message).not.toContain('2147483648');
+      expect(reported?.message).toContain('integer slot');
+    }
   });
 
   it.each(['8abc', '', 'Infinity', '1.2.3'])('both refuse %o', (literal) => {

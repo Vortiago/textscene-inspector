@@ -3,7 +3,7 @@
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
 import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
-import { intComponent } from './commonValidators.js';
+import { intComponent, isUnrepresentableInt } from './commonValidators.js';
 
 /**
  * Vector3 format: Vector3(x, y, z). Re-derived from the canonical float grammar
@@ -70,6 +70,23 @@ export function createVector2iValidator(
     const match = VECTOR2I_REGEX.exec(value);
     if (!match) {
       return propertyError(key, line, `Property '${propertyName}' must be Vector2i format like Vector2i(0, 0), got: "${value}"`, errorCodeFormat);
+    }
+
+    // A non-finite component READS but does not FIT. `_parse_construct<int32_t>`
+    // narrows at parse time (variant_parser.cpp:593), so the value Godot stores
+    // is not the one the file states — measured as -2147483648 for all four
+    // spellings on 4.6.3 x86_64, and architecture-specific in general, which is
+    // why the message names the literal rather than the result. An alteration
+    // is the error tier under ADR-0032, and this arm is independent of `min`:
+    // it applies to every Vector2i, bounded or not.
+    if (isUnrepresentableInt(match[1]) || isUnrepresentableInt(match[2])) {
+      return propertyError(
+        key,
+        line,
+        `Property '${propertyName}' has a component Godot cannot store in an integer slot, got: "${value}". The file loads, but the value is narrowed at parse time to a number the file does not state.`,
+        errorCodeValue,
+        'error'
+      );
     }
 
     if (minComponent !== undefined) {

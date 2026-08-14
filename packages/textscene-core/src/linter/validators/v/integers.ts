@@ -128,8 +128,9 @@ export const integerCombinators = {
       // `parseGodotFloat` behind the anchored grammar, not `parseFloat`, which
       // reads `8abc` as 8 and admits a literal Godot's parser cannot.
       const parsed = parseGodotFloat(value.trim());
-      // Whole-valued OR non-finite. `inf` and `nan` are identifiers `stor_fix`
-      // (variant_parser.cpp:149-159) resolves for any slot, so the file loads;
+      // Whole-valued OR non-finite. `inf` and `nan` are identifiers the
+      // tokenizer resolves for a bare slot (variant_parser.cpp:701-707), so the
+      // file loads;
       // `Number.isInteger` is false for both and would report a format error on
       // a literal `v.int` accepts, which is a split no engine line supports.
       if (
@@ -138,6 +139,9 @@ export const integerCombinators = {
         !(Number.isInteger(parsed) || !Number.isFinite(parsed))
       ) {
         return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
+      }
+      if (!Number.isFinite(parsed)) {
+        return propertyError(key, line, `Property '${name}' cannot be stored in an integer slot, got: "${value}". The file loads, but the value is narrowed at parse time to a number the file does not state.`, valueErr, 'error');
       }
       const belowMin = min !== undefined && parsed < min;
       const aboveMax = max !== undefined && parsed > max;
@@ -167,8 +171,19 @@ export const integerCombinators = {
       accepts(
         (key, value, line) => {
           const parsed = parseGodotFloat(value.trim());
-          if (!TSCN_FLOAT_RE.test(value.trim()) || parsed === null || !Number.isInteger(parsed)) {
+          // Whole-valued OR non-finite, the same split `strictInt` makes above:
+          // the tokenizer resolves all four spellings for a bare slot
+          // (variant_parser.cpp:701-707) so the file loads, and a format error
+          // on one would be a claim no engine line supports.
+          if (
+            !TSCN_FLOAT_RE.test(value.trim()) ||
+            parsed === null ||
+            !(Number.isInteger(parsed) || !Number.isFinite(parsed))
+          ) {
             return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
+          }
+          if (parsed !== null && !Number.isFinite(parsed)) {
+            return propertyError(key, line, `Property '${name}' cannot be stored in an integer slot, got: "${value}". The file loads, but the value is narrowed at parse time to a number the file does not state.`, valueErr, 'error');
           }
           if (parsed < 0) {
             return propertyError(key, line, `Property '${name}' must be non-negative (got ${parsed})`, valueErr, severity);

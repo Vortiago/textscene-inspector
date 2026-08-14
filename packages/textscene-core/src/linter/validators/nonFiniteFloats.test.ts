@@ -177,22 +177,30 @@ describe('a COMPOSITE literal with a non-finite component', () => {
     );
   });
 
-  it.each(NON_FINITE)('accepts %s in an INTEGER composite, which Godot READS', (value) => {
+  it.each(NON_FINITE)('READS %s in an INTEGER composite, so it is no format error', (value) => {
     // Vector2i serialises through `itos` (variant_parser.cpp:2044), so Godot
     // never WRITES one. That bounds nothing: `_parse_construct<int32_t>`
-    // (:577-592) runs the same identifier branch every constructor does, and
-    // `stor_fix` (:149-159) resolves all four for any slot, so the file loads.
-    // What the serialiser emits never limits what the loader accepts.
-    expect(v.vector2i('size')('size', `Vector2i(${value}, 8)`, 1)).toBeNull();
+    // (:577-592) runs the same identifier branch every constructor does, so the
+    // file loads. What the serialiser emits never limits what the loader accepts.
+    expect(v.vector2i('size')('size', `Vector2i(${value}, 8)`, 1)?.code).not.toBe(
+      'INVALID_SIZE_FORMAT'
+    );
   });
 
-  it('says nothing about a bound it cannot compare a non-finite against', () => {
-    // Every comparison against NaN is false, which is the honest answer for a
-    // component that is not on the number line. `inf` is genuinely above any
-    // floor, so it passes for the ordinary reason.
+  it.each(NON_FINITE)('reports %s in an INTEGER composite as altered, not as a bound', (value) => {
+    // Reading is not fitting. Measured on 4.6.3 stable: every one of the four
+    // stores `(-2147483648, 8)`, because `_parse_construct<int32_t>` narrows at
+    // PARSE time — so an integer slot never holds what the file states. That is
+    // an alteration, which is the error tier, and it applies with or without a
+    // bound. The message must not name the stored number: the C++ conversion is
+    // UB and the result is architecture-specific, so only the fact of the
+    // alteration is portable.
+    const reported = v.vector2i('size')('size', `Vector2i(${value}, 8)`, 1);
+    expect(reported?.severity).toBe('error');
+    expect(reported?.message).not.toContain('2147483648');
+
     const bounded = v.vector2i('size', { min: 1, enforced: 'viewport.cpp:1120' });
-    expect(bounded('size', 'Vector2i(nan, 8)', 1)).toBeNull();
-    expect(bounded('size', 'Vector2i(inf, 8)', 1)).toBeNull();
+    expect(bounded('size', `Vector2i(${value}, 8)`, 1)?.severity).toBe('error');
   });
 });
 
