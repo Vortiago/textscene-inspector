@@ -67,13 +67,13 @@ there is no Panel-specific lenient fallback beyond what Control already covers.
   is exact: a transect across its own 16 px border reads rgb(242, 191, 51) for every
   border pixel and rgb(38, 76, 128) immediately inside, on both sides.
 
-- **StyleBoxFlat.skew and the drop shadow** (`shadow_size`/`shadow_color`/
-  `shadow_offset`) are not drawn at all. Both are whole `StyleBoxFlat::draw`
-  stages rather than parameters of the ring tessellation, and no scene in the
-  corpus authors either — so the gap is invisible today and the geometry
-  reports it (`styleBoxFlatGeometry.ts`'s own header) rather than approximating
-  it. A scene that does author one gets a box without the effect, with no
-  warning.
+- **StyleBoxFlat.skew and the drop shadow** are drawn, and `unit-panel-stylebox-skew-shadow.tscn`
+  pins them. What remains is one-pixel silhouette coverage on the shadow's outer
+  arc and on a skewed box's diagonal edges: Godot's 2D rasterizer takes one
+  sample per pixel centre while this canvas multisamples, so the two disagree
+  about a partly-covered pixel. Whole-frame mean channel error against Godot is
+  0.57, with nothing past 90 counts. The same residual appears on every diagonal
+  edge in the golden set — it belongs to the sampling, not to either field.
 
 ## Native (WebGL canvas) painter
 

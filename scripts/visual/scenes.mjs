@@ -645,6 +645,14 @@ export const GOLDEN_SCENES = [
   // before its baseline was written; the fixtures record the probes.
   { name: 'vbox-container-pitch', file: 'unit-vbox-container-pitch.tscn', mode: '2d' },
   { name: 'panel-styleboxes', file: 'unit-panel-styleboxes.tscn', mode: '2d' },
+  // The ONE variable: the WHOLE-PASS stages `StyleBoxFlat::draw` runs, rather
+  // than the parameters of the ring `panel-styleboxes` above already varies.
+  // `skew` shears the box without moving it and turns anti-aliasing on by
+  // itself; the drop shadow is a stage drawn before everything else. Neither
+  // changes a radius or a border width, so a regression in either is invisible
+  // in every other stylebox scene — and the fixture's own header says which
+  // pane pins which half.
+  { name: 'panel-stylebox-skew-shadow', file: 'unit-panel-stylebox-skew-shadow.tscn', mode: '2d' },
   { name: 'label-wrap', file: 'unit-label-2d-wrap.tscn', mode: '2d' },
   // The ONE variable: `vertical_alignment`. Every other Label in the bag is
   // V_TOP, where the offset is zero and Godot's int conversion of it is a

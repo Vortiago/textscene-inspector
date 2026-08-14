@@ -39,6 +39,18 @@
 ; The backdrop is deliberately much lighter than every box, for the same reason
 ; the sibling stylebox scene gives: a fade to transparent and a diagonal edge
 ; are only measurable against something they contrast with.
+;
+; Measured against Godot 4.6.3 at `--mode 2d`: whole-frame mean channel error
+; 0.57, with 29 pixels past 40 counts and none past 90. Both skews land on the
+; engine's own silhouette, and the shadow's fade agrees to within a count
+; across its whole gradient — a transect through the pure-shadow band right of
+; ShadowOffset reads rgb(83, 74, 116) against Godot's rgb(84, 75, 116) and
+; tracks it step for step out to the backdrop. What is left is one-pixel
+; silhouette coverage on the shadow's outer arc and on the skewed panes'
+; diagonals, where this renderer's multisample resolve and Godot's
+; un-antialiased rasterizer disagree about a partly-covered pixel; the same
+; residual is visible on every diagonal edge in the golden set and is not
+; specific to either field here.
 
 [gd_scene load_steps=5 format=3]
 
