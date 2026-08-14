@@ -60,10 +60,15 @@ export function decodeNavigationMesh(
       ? flat
       : flat.slice(0, vertexCount * FLOATS_PER_VERTEX);
 
-  const polygons = drawableNavigationPolygons(
-    parsePackedInt32Arrays(polygonsLiteral),
-    vertexCount
-  );
+  let indexLists: number[][];
+  try {
+    indexLists = parsePackedInt32Arrays(polygonsLiteral);
+  } catch {
+    warn(`[NavigationMesh] Unreadable polygons, no navmesh drawn: ${polygonsLiteral}`);
+    return null;
+  }
+
+  const polygons = drawableNavigationPolygons(indexLists, vertexCount);
   if (polygons.length === 0) return null;
 
   return { vertices, polygons };

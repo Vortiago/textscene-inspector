@@ -76,6 +76,9 @@ describe('decodeLegacyTileData (TileMap layer_N/tile_data, TSCN format = 2)', ()
   });
 
   it('keeps decoding a body Godot loads, however the ints are spelled', () => {
+    // An empty body is an empty layer, not corrupt data.
+    expect(decodeLegacyTileData('PackedInt32Array()', 2)).toEqual([]);
+
     // `_parse_construct<int32_t>` (variant_parser.cpp:1428-1430) takes any
     // number token and narrows it, so all three of these are files Godot opens
     // — and `parseInt` read `2e3` as 2, put the cell 998 tiles from where Godot

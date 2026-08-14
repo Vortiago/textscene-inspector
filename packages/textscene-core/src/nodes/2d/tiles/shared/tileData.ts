@@ -74,6 +74,10 @@ export function decodeTileMapData(value: string): PlacedCell[] | null {
  * is made to reproduce it.
  */
 function readInt32Elements(body: string, context: string): number[] | null {
+  // An empty body is an empty array, not an unreadable one: `''.split(',')`
+  // yields `['']`, which matches no grammar and would report a legal empty
+  // layer as corrupt tile data.
+  if (body.trim() === '') return [];
   const out: number[] = [];
   let sawNonFinite = false;
   for (const part of body.split(',')) {
