@@ -17,13 +17,16 @@ import type { CSSProperties } from 'react';
 import { parseColor } from '../../utils/colorParser';
 import { buildStyleBoxCss, controlColorToCss } from '../../resources/styles/stylebox/build';
 import { decodeStyleBox } from '../../resources/styles/stylebox/decode';
+import { compositeCallPrefix } from '../../godot/index.js';
+
+const COLOR_CALL = compositeCallPrefix('Color');
 
 export { controlColorToCss };
 
 export function colorToCss(value: string): string | undefined {
   // parseColor() falls back to white on bad input rather than throwing, so we
   // gate on the Color(...) form here to avoid silently emitting white.
-  if (!/^Color\s*\(/.test(value.trim())) return undefined;
+  if (!COLOR_CALL.test(value.trim())) return undefined;
   return controlColorToCss(parseColor(value));
 }
 

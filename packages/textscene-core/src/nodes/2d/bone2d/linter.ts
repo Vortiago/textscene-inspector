@@ -35,6 +35,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { knownParent, searchAncestors } from '../../../linter/parentType.js';
+import { tupleComponent } from '../../../linter/validators/commonValidators.js';
 import { makeFloatTupleRegex } from '../../../linter/validators/floatTupleValidator.js';
 
 const CHAIN_RULE = 'bone2d-chain-does-not-terminate';
@@ -83,7 +84,7 @@ function isAllZeroTransform2D(raw: string): boolean {
   const match = TRANSFORM2D_RE.exec(raw);
   if (!match) return false;
   for (let i = 1; i <= 6; i++) {
-    if (Number(match[i]) !== 0) return false;
+    if (tupleComponent(match[i]) !== 0) return false;
   }
   return true;
 }

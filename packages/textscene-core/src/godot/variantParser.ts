@@ -79,6 +79,18 @@ export function packedArrayLiteral(typeName: string): RegExp {
 }
 
 /**
+ * `TypeName(` at the START of a value — a discriminator, not a parse.
+ *
+ * For the callers asking only "which composite is this", where extracting
+ * components would be doing more work than the question needs. Carries the same
+ * leading and inner padding tolerance as every other builder here, which a
+ * hand-rolled `/^Color\s*\(/` did and a hand-rolled `/^Color\(/` would not.
+ */
+export function compositeCallPrefix(...typeNames: readonly string[]): RegExp {
+  return new RegExp(`^${WS}(?:${typeNames.join('|')})${WS}\\(`);
+}
+
+/**
  * The same call found ANYWHERE in a larger value; `[1]` is the body, which stops
  * at the first `)`. Pass `global` for a repeated scan — a `g`-flagged RegExp
  * carries `lastIndex`, so each caller needs its own instance.

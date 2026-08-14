@@ -15,6 +15,7 @@
  */
 
 import { parsePackedVector2Array } from '../../shapes/packedArray';
+import { packedArrayCallAnywhere } from '../../../godot/index.js';
 import type {
   Curve2DControlPoint,
   Curve2DSample,
@@ -63,7 +64,7 @@ function extractPointsLiteral(dataValue: unknown): string | null {
     if (typeof points === 'string') source = points;
   }
   if (!source) return null;
-  const match = source.match(/PackedVector2Array\s*\([^)]*\)/);
+  const match = source.match(packedArrayCallAnywhere('PackedVector2Array'));
   return match ? match[0] : null;
 }
 

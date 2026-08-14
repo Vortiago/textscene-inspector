@@ -18,6 +18,7 @@ import { enumOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
+import { packedArrayLiteral } from '../../../godot/index.js';
 import {
   GradientFill,
   GradientInterpolationMode,
@@ -47,7 +48,7 @@ export function parsePackedFloat32Array(value: string): number[] {
  * float quadruples — into a `Color[]`. A trailing partial quadruple is dropped.
  */
 export function parsePackedColorArray(value: string): Color[] {
-  const match = value.match(/^PackedColorArray\s*\(([\s\S]*)\)$/);
+  const match = value.match(packedArrayLiteral('PackedColorArray'));
   if (!match) {
     throw new Error(`Invalid PackedColorArray format: ${value}`);
   }

@@ -23,6 +23,7 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
+import { finiteTupleRegex } from '../../../parser/vectors.js';
 
 /** Entries per point in `_data`: position, left tangent, right tangent, two modes. */
 const ELEMS_PER_POINT = 5;
@@ -133,14 +134,22 @@ function splitArrayLiteral(value: string | undefined): string[] | null {
   return entries;
 }
 
-const VECTOR2_RE = /^Vector2\s*\(\s*([^,]+?)\s*,\s*([^)]+?)\s*\)$/;
+/**
+ * The canonical finite grammar, not a local `([^,]+?)` pair.
+ *
+ * The loose components accepted anything up to the next delimiter, so
+ * `Vector2(1.2.3, 4)` decoded to `{x: 1.2, y: 4}` and `Vector2(8abc, 4)` to
+ * `{x: 8, y: 4}` — a control point the file does not contain, which is the
+ * accident `parser/vectors.ts` says the anchored grammar exists to prevent.
+ * `Vector2(inf, 0)` was worse than a wrong point: `parsePoints` drops the whole
+ * curve on a null, so one non-finite component discarded EVERY point.
+ */
+const VECTOR2_RE = finiteTupleRegex('Vector2', 2);
 
 function parseVector2Entry(entry: string): { x: number; y: number } | null {
   const match = VECTOR2_RE.exec(entry);
   if (!match) return null;
-  const x = parseFloat(match[1]!);
-  const y = parseFloat(match[2]!);
-  return Number.isNaN(x) || Number.isNaN(y) ? null : { x, y };
+  return { x: parseFloat(match[1]!), y: parseFloat(match[2]!) };
 }
 
 function numberOr(entry: string, fallback: number): number {

@@ -133,6 +133,20 @@ describe('Bone2D Linter', () => {
         { ruleName: 'bone2d-missing-rest-pose', severity: 'warning' }
       );
     });
+
+    it('warns on the padded spelling too, which Godot loads identically', () => {
+      // The type name and the `(` are separate tokens (variant_parser.cpp:
+      // 553-557 + :416-418), so a hand-edited `Transform2D (…)` is the all-zero
+      // rest pose. The linter's tuple grammar used to require them adjacent, so
+      // this scene — the one the rule exists for — went unreported.
+      expectDiagnostic(
+        scene(
+          node('Skeleton2D', {}, { name: 'Root' }),
+          node('Bone2D', { rest: 'Transform2D (0, 0, 0, 0, 0, 0)' }, { parent: '.' })
+        ),
+        { ruleName: 'bone2d-missing-rest-pose', severity: 'warning' }
+      );
+    });
   });
 
   it('lints the shipped fixture clean — zero Bone2D diagnostics at all', () => {

@@ -19,7 +19,7 @@ export function parsePackedVector3Array(value: string): Float32Array {
 
 /** Parse Godot `PackedVector2Array(x, y, x, y, ...)` into a flat Float32Array. */
 export function parsePackedVector2Array(value: string): Float32Array {
-  const match = value.match(/^PackedVector2Array\s*\(([\s\S]*)\)$/);
+  const match = value.match(packedArrayLiteral('PackedVector2Array'));
   if (!match) {
     throw new Error(`Invalid PackedVector2Array format: ${value}`);
   }
@@ -34,7 +34,7 @@ export function parsePackedVector2Array(value: string): Float32Array {
 
 /** Parse Godot `PackedColorArray(r, g, b, a, r, g, b, a, ...)` into a flat Float32Array. */
 export function parsePackedColorArray(value: string): Float32Array {
-  const match = value.match(/^PackedColorArray\s*\(([\s\S]*)\)$/);
+  const match = value.match(packedArrayLiteral('PackedColorArray'));
   if (!match) {
     throw new Error(`Invalid PackedColorArray format: ${value}`);
   }

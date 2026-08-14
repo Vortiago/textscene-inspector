@@ -17,11 +17,21 @@ import { TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.js';
  * positive, while feeding `Infinity` to three.js is NaN geometry. The renderer
  * keeps its finite grammar and substitutes its documented default instead;
  * `TSCN_FLOAT_PATTERN_SOURCE`'s docblock holds the full argument.
+ *
+ * The type name and the `(` are two separate tokens, so whitespace between them
+ * is legal: `_parse_construct` takes `TK_PARENTHESIS_OPEN` from its own
+ * `get_token` call (variant_parser.cpp:553-557), and `get_token` discards every
+ * character <= 32 before a token (:416-418). `Vector2 (1, 2)` is therefore a
+ * file Godot loads, and refusing it reported a format error on a hand-edited
+ * scene the engine opens — which is the file a linter exists for. The finite
+ * sibling `finiteTupleRegex` spells the same thing; the two must stay identical
+ * outside the component grammar, which `godotLiteralGrammar.guard.test.ts` now
+ * asserts behaviourally.
  */
 export function makeFloatTupleRegex(typeName: string, arity: number): RegExp {
   const component = `(${TSCN_FLOAT_PATTERN_SOURCE})`;
   const body = Array.from({ length: arity }, () => component).join('\\s*,\\s*');
-  return new RegExp(`^${typeName}\\(\\s*${body}\\s*\\)$`);
+  return new RegExp(`^${typeName}\\s*\\(\\s*${body}\\s*\\)$`);
 }
 
 /**

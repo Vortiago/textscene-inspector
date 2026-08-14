@@ -17,6 +17,10 @@ import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
 import { liveChildGroups, type CachedSceneSource } from '../../../r3f/liveSceneTree.js';
+import { compositeCallPrefix } from '../../../godot/index.js';
+
+const TWO_D_COMPOSITE = compositeCallPrefix('Vector2', 'Transform2D', 'Rect2');
+const THREE_D_COMPOSITE = compositeCallPrefix('Vector3', 'Transform3D', 'Basis', 'Quaternion', 'AABB');
 
 /**
  * CanvasItem-only property names. Each exists on `CanvasItem` or `Node2D` and
@@ -55,8 +59,8 @@ function instanceOverrideKind(node: TscnNode): '2d' | '3d' | null {
   if (!raw) return null;
   for (const [key, value] of Object.entries(raw)) {
     if (CANVAS_ITEM_ONLY_PROPERTIES.has(key)) return '2d';
-    if (/^\s*(Vector2|Transform2D|Rect2)\s*\(/.test(value)) return '2d';
-    if (/^\s*(Vector3|Transform3D|Basis|Quaternion|AABB)\s*\(/.test(value)) return '3d';
+    if (TWO_D_COMPOSITE.test(value)) return '2d';
+    if (THREE_D_COMPOSITE.test(value)) return '3d';
   }
   return null;
 }

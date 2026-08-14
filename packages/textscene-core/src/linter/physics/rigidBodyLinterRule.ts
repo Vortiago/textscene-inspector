@@ -146,7 +146,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
           Math.abs(sy - 1) > RIGID_BODY_SCALE_TOLERANCE ||
           Math.abs(sz - 1) > RIGID_BODY_SCALE_TOLERANCE;
         if (overridden) {
-          const shown = [sx, sy, sz].map((s) => Number(s.toFixed(3))).join(', ');
+          const shown = [sx, sy, sz].map((s) => Math.round(s * 1000) / 1000).join(', ');
           diagnostics.push({
             severity: 'warning',
             message:

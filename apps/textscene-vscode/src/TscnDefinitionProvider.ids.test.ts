@@ -22,6 +22,39 @@ describe('TscnDefinitionProvider', () => {
   // EDGE CASES - Special Characters in IDs
   // ============================================================================
 
+  describe('a heading that carries a uid, which is what Godot 4.x writes', () => {
+    // `uid` ENDS in `id`, so an unanchored /id\s*=\s*"…"/ captures the uid and
+    // Go-to-Definition silently returns null. 1143 of the 1295 ext_resource
+    // headings in this repo's scenes/ write uid= before id=; sub_resource
+    // headings carry none, which is why this read as "sometimes works".
+    it('resolves an ext_resource whose uid precedes its id', () => {
+      const content = `texture = ExtResource("1_abc")
+
+[ext_resource type="Texture2D" uid="uid://bi18l6iy7jkou" path="res://vase.png" id="1_abc"]`;
+
+      const document = createMockDocument(content);
+      const definition = provider.provideDefinition(
+        document,
+        new vscode.Position(0, 25),
+        mockCancellationToken
+      ) as vscode.Location;
+
+      expect(definition).toBeDefined();
+      expect(definition.range.start.line).toBe(2);
+    });
+
+    it('does not mistake the uid itself for the id', () => {
+      const content = `texture = ExtResource("uid://bi18l6iy7jkou")
+
+[ext_resource type="Texture2D" uid="uid://bi18l6iy7jkou" path="res://vase.png" id="1_abc"]`;
+
+      const document = createMockDocument(content);
+      expect(
+        provider.provideDefinition(document, new vscode.Position(0, 25), mockCancellationToken)
+      ).toBeNull();
+    });
+  });
+
   describe('Special Characters in IDs', () => {
     it('should handle IDs with dashes', () => {
       const content = `mesh = SubResource("Mesh_123-456")

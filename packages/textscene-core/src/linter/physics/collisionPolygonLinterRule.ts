@@ -24,6 +24,7 @@ import { basisColumnScales } from './basisColumnScales.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { parseGodotInt } from '../validators/commonValidators.js';
+import { packedArrayLiteral } from '../../godot/index.js';
 
 /**
  * Matches the same wrapper `v.packedVector2Array` accepts; a value that doesn't
@@ -32,7 +33,7 @@ import { parseGodotInt } from '../validators/commonValidators.js';
  * every node either dimension's rule visits. No `g` flag, so the shared
  * instance is stateless under `.exec`.
  */
-const POLYGON_WRAPPER = /^\s*PackedVector2Array\s*\(([\s\S]*)\)\s*$/;
+const POLYGON_WRAPPER = packedArrayLiteral('PackedVector2Array');
 
 /**
  * Number of vertices `polygon` carries, mirroring `polygon.size()`

@@ -49,6 +49,7 @@ export {
   SUB_RESOURCE_REF_BODY,
   TYPED_OR_BARE_ARRAY_RE,
   TYPED_WRAPPER_RE,
+  compositeCallPrefix,
   packedArrayCallAnywhere,
   packedArrayLiteral,
   nodePathLiteral,
