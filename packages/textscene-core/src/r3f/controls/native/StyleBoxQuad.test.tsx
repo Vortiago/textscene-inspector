@@ -63,6 +63,20 @@ describe('<StyleBoxQuad>', () => {
     expect(mat.side).toBe(THREE.DoubleSide);
   });
 
+  it('forces a single pass, so the rings paint in index order rather than split by facing', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <StyleBoxQuad styleBox={box({})} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
+    );
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    // `WebGLRenderer` draws a `transparent` + `DoubleSide` material TWICE —
+    // once culled to `BackSide`, then once to `FrontSide` — unless the
+    // material opts out. `styleBoxFlatGeometry`'s rings alternate winding
+    // (see its own "ring triangulation coverage" cases), so that split hands
+    // each pass one triangle per ring quad and reorders the shadow ring's
+    // half after the border ring's.
+    expect(mat.forceSinglePass).toBe(true);
+  });
+
   it('uploads vertex colours in raw sRGB, leaving the transfer function to the shader', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <StyleBoxQuad

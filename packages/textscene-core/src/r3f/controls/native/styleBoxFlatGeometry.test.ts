@@ -2,17 +2,18 @@
  * `styleBoxFlatGeometry` — ported from `scene/resources/style_box_flat.cpp`'s
  * `StyleBoxFlat::draw` and its `draw_rounded_rectangle` helper (Godot 4.6.3),
  * restricted to this packet's scope: fill, per-corner radii, per-edge
- * borders, `border_blend`, `draw_center`, expand margins, and now
- * anti-aliasing (`anti_aliased`/`aa_size`). `skew` and the drop shadow remain
- * out of scope (not in `StyleBoxFlatData`), so every expected number below
- * traces `draw()` with `skew = (0, 0)` and `shadow_size = 0`.
+ * borders, `border_blend`, `draw_center`, expand margins, anti-aliasing
+ * (`anti_aliased`/`aa_size`), `skew` and the drop shadow — each of the last
+ * three carrying its own describe block, and every fixture outside those
+ * blocks tracing `draw()` with `skew = (0, 0)` and `shadow_size = 0`.
  *
- * Every fixture in this file EXCEPT the "anti-aliasing" describe block sets
- * `antiAliased: false` explicitly, so `aa_on` (`draw()`'s own flag, ==
- * `rounded_corners && anti_aliased` with skew always zero here) is forced
- * false and these numbers are unaffected by this module's AA support — they
- * pin that `anti_aliased: false` still produces exactly the geometry this
- * suite pinned before AA existed.
+ * Every fixture in this file EXCEPT the "anti-aliasing" and "ring
+ * triangulation coverage" describe blocks sets `antiAliased: false`
+ * explicitly, so `aa_on` (`draw()`'s own flag, == `rounded_corners &&
+ * anti_aliased` with skew always zero here) is forced false and these numbers
+ * are unaffected by this module's AA support — they pin that
+ * `anti_aliased: false` still produces exactly the geometry this suite pinned
+ * before AA existed.
  *
  * Every expected vertex position/count in this file was hand-derived by
  * tracing `draw_rounded_rectangle`'s corner-arc formula and the adjacent
@@ -468,5 +469,118 @@ describe('styleBoxFlatGeometry — drop shadow (style_box_flat.cpp:524-540)', ()
     const filled = styleBoxFlatGeometry(box({ shadowSize: 6 }), RECT);
     const hollow = styleBoxFlatGeometry(box({ shadowSize: 6, drawCenter: false }), RECT);
     expect(filled.positions.length).toBeGreaterThan(hollow.positions.length);
+  });
+});
+
+/**
+ * The ring triangulation's own shape, sampled rather than counted.
+ *
+ * `draw_rounded_rectangle` emits a border ring as a closed strip of
+ * alternating inner/outer vertices indexed `(i, i+2, i+1)`
+ * (style_box_flat.cpp:403-408). Read as a triangle LIST that pattern gives
+ * each quad of the ring two triangles of OPPOSITE screen-space winding, which
+ * is invisible to a renderer that draws the list in one pass and fatal to one
+ * that splits the draw by facing: each pass then keeps one triangle per quad
+ * and drops the other, leaving a wedge per corner-detail step.
+ *
+ * These cases pin both halves — that the whole list tiles the border band, and
+ * that neither winding tiles it alone — so the single-pass requirement the
+ * painter carries has a reason recorded next to the geometry that creates it.
+ */
+describe('styleBoxFlatGeometry — ring triangulation coverage', () => {
+  /** The bordered, rounded, hollow, antialiased box the ring artifact needs. */
+  const RING_BOX = box({
+    borderWidth: { left: 12, top: 12, right: 12, bottom: 12 },
+    cornerRadius: { topLeft: 24, topRight: 24, bottomRight: 24, bottomLeft: 24 },
+    drawCenter: false,
+    antiAliased: true,
+    aaSize: 1,
+    cornerDetail: 8,
+  });
+  const RING_RECT = { x: 0, y: 0, w: 480, h: 260 };
+
+  interface Tri {
+    ax: number;
+    ay: number;
+    bx: number;
+    by: number;
+    cx: number;
+    cy: number;
+    alpha: number;
+    /** Twice the signed area — its SIGN is the screen-space winding. */
+    area2: number;
+  }
+
+  function triangles(geo: ReturnType<typeof styleBoxFlatGeometry>): Tri[] {
+    const out: Tri[] = [];
+    for (let i = 0; i < geo.indices.length; i += 3) {
+      const [i0, i1, i2] = [geo.indices[i]!, geo.indices[i + 1]!, geo.indices[i + 2]!];
+      const [ax, ay] = [geo.positions[i0 * 3]!, geo.positions[i0 * 3 + 1]!];
+      const [bx, by] = [geo.positions[i1 * 3]!, geo.positions[i1 * 3 + 1]!];
+      const [cx, cy] = [geo.positions[i2 * 3]!, geo.positions[i2 * 3 + 1]!];
+      // Every vertex of one ring carries one colour, and the only ring that
+      // reaches the samples below is the opaque border ring, so a single
+      // per-triangle alpha is enough to express "did an opaque triangle
+      // cover this point".
+      const alpha = Math.min(geo.colors[i0 * 4 + 3]!, geo.colors[i1 * 4 + 3]!, geo.colors[i2 * 4 + 3]!);
+      out.push({ ax, ay, bx, by, cx, cy, alpha, area2: (bx - ax) * (cy - ay) - (cx - ax) * (by - ay) });
+    }
+    return out;
+  }
+
+  /**
+   * Whether an opaque triangle covers a point. A ZERO-AREA triangle covers
+   * nothing — without that guard a degenerate one appears to contain every
+   * point on its line and hides exactly the gap this is looking for.
+   */
+  function covers(t: Tri, px: number, py: number): boolean {
+    if (Math.abs(t.area2) < 1e-9 || t.alpha < 1) return false;
+    const d = (t.by - t.cy) * (t.ax - t.cx) + (t.cx - t.bx) * (t.ay - t.cy);
+    const l1 = ((t.by - t.cy) * (px - t.cx) + (t.cx - t.bx) * (py - t.cy)) / d;
+    const l2 = ((t.cy - t.ay) * (px - t.cx) + (t.ax - t.cx) * (py - t.cy)) / d;
+    return l1 >= 0 && l2 >= 0 && l1 + l2 <= 1;
+  }
+
+  /**
+   * Points strictly inside the bottom-left corner's border band.
+   *
+   * The band's boundaries are the two AA-adjusted rects the ring is drawn
+   * between: `inner_rect_aa_colored` (`infill_rect` grown by aa_size/2 ->
+   * radius 24 - 10.5 = 13.5) and `outer_rect_aa_colored` (`border_style_rect`
+   * grown by aa_size/2 -> radius 24 + 0.5 = 24.5), both centred on
+   * (25, 235) for this box. Both are drawn as CHORDS between 8 detail steps,
+   * so the sample radii stay a comfortable margin inside either arc.
+   */
+  function arcSamples(): [number, number][] {
+    const pts: [number, number][] = [];
+    for (let step = 0; step <= 64; step++) {
+      const angle = Math.PI / 2 + (step / 64) * (Math.PI / 2);
+      for (let r = 14.5; r <= 23.5; r += 0.5) {
+        pts.push([25 + r * Math.cos(angle), 235 + r * Math.sin(angle)]);
+      }
+    }
+    return pts;
+  }
+
+  it('the whole triangle list covers every point of the corner band', () => {
+    const tris = triangles(styleBoxFlatGeometry(RING_BOX, RING_RECT));
+    const uncovered = arcSamples().filter(([x, y]) => !tris.some((t) => covers(t, x, y)));
+    expect(uncovered).toEqual([]);
+  });
+
+  it('each winding alone leaves wedges, so the ring must never be drawn facing-split', () => {
+    const tris = triangles(styleBoxFlatGeometry(RING_BOX, RING_RECT));
+    const samples = arcSamples();
+    const front = tris.filter((t) => t.area2 > 0);
+    const back = tris.filter((t) => t.area2 < 0);
+
+    // Both windings are present — the alternation is the source's own index
+    // pattern, not an accident of this box's numbers.
+    expect(front.length).toBeGreaterThan(0);
+    expect(back.length).toBeGreaterThan(0);
+
+    // ...and one facing's triangles cannot tile the band by themselves.
+    expect(samples.filter(([x, y]) => !front.some((t) => covers(t, x, y))).length).toBeGreaterThan(0);
+    expect(samples.filter(([x, y]) => !back.some((t) => covers(t, x, y))).length).toBeGreaterThan(0);
   });
 });
