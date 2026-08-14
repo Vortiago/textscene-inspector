@@ -19,9 +19,15 @@
  * this — they swap a magenta material onto the **actual** mesh geometry
  * so the unresolved mesh's shape stays visible to the user (a different
  * affordance, not a placeholder widget).
+ *
+ * Sprite3D and the GLB scene root mount the `plane` marker too, which makes it
+ * the one place a 3D node reaches `canvasItemFacing()`. Single pass stays
+ * correct there: a lone `planeGeometry` winds one way, so exactly one of the
+ * two facing passes was ever producing a fragment for it and the pass that is
+ * dropped drew nothing.
  */
-import * as THREE from 'three';
 import { CanvasItemGroup } from './CanvasItemGroup';
+import { canvasItemFacing } from '../canvasItemFacing';
 
 export type MissingResourcePlaceholderShape = 'box' | 'plane';
 
@@ -56,12 +62,7 @@ export function MissingResourcePlaceholder({
       ) : (
         <mesh>
           <planeGeometry args={[1, 1]} />
-          <meshBasicMaterial
-            color="magenta"
-            transparent
-            opacity={0.6}
-            side={THREE.DoubleSide}
-          />
+          <meshBasicMaterial color="magenta" transparent opacity={0.6} {...canvasItemFacing()} />
         </mesh>
       )}
     </CanvasItemGroup>

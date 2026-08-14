@@ -36,6 +36,7 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { buildShadowVolumes, type ShadowCasterEdges, type ShadowLight } from './shadowVolumes';
+import { canvasItemFacing } from '../canvasItemFacing';
 
 /**
  * Distinct stencil values available to one pass. The buffer is 8-bit and 0 is
@@ -151,7 +152,14 @@ export function ShadowVolumeMask({ light, casters, ordinal, sequence, layer, tin
         depthWrite={false}
         depthTest={false}
         transparent
-        side={THREE.DoubleSide}
+        // A volume is the fan of `[a, b, bFar, mFar, aFar]` (`shadowVolumes.ts`),
+        // so its winding follows whether its caster edge runs clockwise or
+        // counter-clockwise about the light — and the default `CULL_DISABLED`
+        // admits both, leaving the array mixed by construction.
+        // `ReplaceStencilOp` below happens to be idempotent, so a doubled draw
+        // would stamp the same value twice rather than corrupt the mask; an
+        // incrementing op would not survive it.
+        {...canvasItemFacing()}
         stencilWrite
         stencilRef={shadowStencilRef(ordinal)}
         stencilFunc={THREE.AlwaysStencilFunc}

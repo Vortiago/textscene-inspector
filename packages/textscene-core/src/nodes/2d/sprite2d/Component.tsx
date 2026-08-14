@@ -31,6 +31,7 @@ import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasI
 import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
+import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import {
@@ -175,7 +176,7 @@ function QuadMesh({
         opacity={opacity}
         transparent
         depthWrite={false}
-        side={THREE.DoubleSide}
+        {...canvasItemFacing()}
         defines={decodeDefines}
         {...blend}
         {...lighting}

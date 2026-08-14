@@ -228,7 +228,7 @@ export interface TextRunProps {
   clippingPlanes?: readonly THREE.Plane[];
   /** Forwarded to `createMsdfMaterial` — see its own doc. Omitted (2D-UI default) leaves the material's own `false`. */
   depthTest?: boolean;
-  /** Forwarded to `createMsdfMaterial` — see its own doc. Omitted (2D-UI default) leaves the material's own `DoubleSide`. */
+  /** Forwarded to `createMsdfMaterial` — see its own doc. Omitted (2D-UI default) leaves `canvasItemFacing()`'s side; either way the run is drawn in one pass. */
   side?: THREE.Side;
   /** Outline colour, Godot sRGB (converted to linear like `tint`) — Label3D's `outline_modulate`. Forwarded to `createMsdfMaterial`; see its own doc. */
   outlineTint?: Color;

@@ -13,6 +13,7 @@ import { buildTileGeometryArrays, type DrawableCell } from '../resources/tileset
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
 import { useCanvas2DMap } from './canvas2DTextureDecode';
+import { canvasItemFacing } from './canvasItemFacing';
 import type { CanvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';
 import type { CanvasItemLightingProps } from './lighting2d/useCanvasItemLighting';
 
@@ -78,7 +79,7 @@ export function TileSourceMesh({ source, cells, grid, renderOrder, color, opacit
         opacity={opacity}
         transparent
         depthWrite={false}
-        side={THREE.DoubleSide}
+        {...canvasItemFacing()}
         defines={decodeDefines}
         {...blend}
         {...lighting}

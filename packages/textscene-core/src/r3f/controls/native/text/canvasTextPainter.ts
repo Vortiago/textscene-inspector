@@ -47,6 +47,7 @@ import * as THREE from 'three';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import type { Color } from '../../../../nodes/base/node2d/types';
+import { canvasItemFacing } from '../../../canvasItemFacing';
 
 /** Raster supersampling factor — canvas text has no distance field to stay crisp under magnification (unlike the MSDF path), so this trades memory/fill-rate for sharpness at the zoom levels this previewer's viewport typically sits at. Not adaptive: a fixed, documented quality/perf tradeoff, not a per-frame recompute. */
 export const CANVAS_TEXT_SUPERSAMPLE = 3;
@@ -206,7 +207,7 @@ export interface CanvasTextMaterialOptions {
   opacity: number;
   /** `false` (default) — matches `createMsdfMaterial`'s own default and reasoning. */
   depthTest?: boolean;
-  /** `THREE.DoubleSide` (default) — matches `createMsdfMaterial`'s own default. */
+  /** Omitted (default) takes `canvasItemFacing()`'s side — matches `createMsdfMaterial`'s own default. */
   side?: THREE.Side;
   clippingPlanes?: readonly THREE.Plane[];
 }
@@ -252,14 +253,16 @@ const DECODE_VIDEO_TEXTURE_DEFINES: Readonly<Record<string, string>> = { DECODE_
  * the compiled shader; only the constructor-object shortcut does not.
  */
 export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): THREE.MeshBasicMaterial {
-  const { map, opacity, depthTest = false, side = THREE.DoubleSide, clippingPlanes = [] } = options;
+  const { map, opacity, depthTest = false, side, clippingPlanes = [] } = options;
   const material = new THREE.MeshBasicMaterial({
     map,
     transparent: true,
     opacity,
     depthWrite: false,
     depthTest,
-    side,
+    // Unlike `defines` below, `forceSinglePass` IS a property `THREE.Material`'s
+    // constructor declares, so `setValues` assigns it from this object.
+    ...canvasItemFacing(side),
     clippingPlanes: [...clippingPlanes],
   });
   if (map.colorSpace === THREE.NoColorSpace) {

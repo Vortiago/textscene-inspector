@@ -92,6 +92,7 @@
  * under) attempted the first real render.
  */
 import * as THREE from 'three';
+import { canvasItemFacing } from '../../../canvasItemFacing';
 
 const VERTEX = /* glsl */ `
 varying vec2 vUv;
@@ -197,9 +198,10 @@ export interface MsdfMaterialOptions {
    */
   depthTest?: boolean;
   /**
-   * `THREE.DoubleSide` (default) — every 2D-UI Control text run is a flat
-   * quad always viewed face-on. A 3D consumer (Label3D's `double_sided`)
-   * needs `FrontSide` when explicitly disabled.
+   * Omitted (default) takes `canvasItemFacing()`'s `THREE.DoubleSide` — every
+   * 2D-UI Control text run is a flat quad always viewed face-on. A 3D consumer
+   * (Label3D's `double_sided`) needs `FrontSide` when explicitly disabled;
+   * either way the run is drawn in ONE pass, for the reason that module gives.
    */
   side?: THREE.Side;
   /** Outline tint, LINEAR rgb. Defaults to `color` — irrelevant when `outlineBias` is 0, see the shader's own doc. */
@@ -219,7 +221,7 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
     distanceBias = 0,
     clippingPlanes = [],
     depthTest = false,
-    side = THREE.DoubleSide,
+    side,
     outlineColor = color,
     outlineOpacity = opacity,
     outlineBias = 0,
@@ -240,7 +242,7 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
     transparent: true,
     depthWrite: false,
     depthTest,
-    side,
+    ...canvasItemFacing(side),
     // `clipping: true` is not optional for a ShaderMaterial: `WebGLRenderer`
     // only binds the `clippingPlanes` uniform for a shader material that asks
     // for it (`( !material.isShaderMaterial && !material.isRawShaderMaterial )

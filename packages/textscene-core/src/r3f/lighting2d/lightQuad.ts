@@ -71,6 +71,7 @@
 
 import * as THREE from 'three';
 import type { Color } from '../../nodes/base/node2d/types.js';
+import { canvasItemFacing } from '../canvasItemFacing.js';
 import { SHADOW_MAP_BINS } from './shadowPolarMap.js';
 import { GODOT_TO_SRGB_GLSL } from './srgbTransfer.js';
 
@@ -444,7 +445,7 @@ export function createShadowColorQuadMaterial(
     },
     depthWrite: false,
     depthTest: false,
-    side: THREE.DoubleSide,
+    ...canvasItemFacing(),
     ...accumulationBlend(blendMode),
     ...stencil,
   });
@@ -499,7 +500,10 @@ export function createLightQuadMaterial({
     },
     depthWrite: false,
     depthTest: false,
-    side: THREE.DoubleSide,
+    // Single pass is load-bearing rather than a saving here: `accumulationBlend`
+    // SUMS into the accumulator (`blendDst: OneFactor` for ADD/SUB), so any
+    // fragment both facing passes covered would count this light twice.
+    ...canvasItemFacing(),
     ...accumulationBlend(blendMode),
     ...stencil,
   });

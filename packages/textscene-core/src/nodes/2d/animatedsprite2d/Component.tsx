@@ -27,6 +27,7 @@ import { canvasItemBlendState } from '../../../resources/materials/canvasitemmat
 import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
 import { composeFrameTexture, frameSizePx, type SpriteFrameProps } from '../../../r3f/spriteFrame';
 import { useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
+import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useAnimationTransport } from '../../../r3f/contexts/AnimationTransportContext';
@@ -221,7 +222,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
               opacity={opacity}
               transparent
               depthWrite={false}
-              side={THREE.DoubleSide}
+              {...canvasItemFacing()}
               defines={decodeDefines}
               {...canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
               {...lighting}

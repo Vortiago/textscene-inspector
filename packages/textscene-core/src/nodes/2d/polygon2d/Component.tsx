@@ -24,6 +24,7 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useCanvas2DMap } from '../../../r3f/canvas2DTextureDecode';
+import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { Vector2 } from '../../base/node2d/types';
@@ -161,7 +162,14 @@ function FilledPolygon({
         opacity={vertexColors ? tintOnlyOpacity : opacity}
         transparent
         depthWrite={false}
-        side={THREE.DoubleSide}
+        // The one canvas mesh where a facing split would be VISIBLE rather than
+        // merely wasteful, since every vertex carries its own colour and alpha.
+        // It is safe today only because `THREE.ShapeUtils.triangulateShape`
+        // (earcut) re-links a contour to a fixed orientation before fanning it,
+        // so every ring here comes out wound the same way whichever way the
+        // author wrote its points — not a property `triangulateRing` asks for,
+        // and not one to depend on.
+        {...canvasItemFacing()}
         defines={decodeDefines}
         {...blend}
         {...lighting}

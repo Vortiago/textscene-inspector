@@ -7,12 +7,12 @@
  */
 
 import { useEffect, useMemo } from 'react';
-import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
+import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { decodeNavigationPolygon } from '../../../resources/navigation/navigationpolygon';
 import {
   buildNavFaceGeometry,
@@ -66,7 +66,7 @@ export function NavigationRegion2D({ node, children }: NodeComponentProps) {
               color={NAV_OVERLAY_COLOR}
               transparent
               opacity={0.35}
-              side={THREE.DoubleSide}
+              {...canvasItemFacing()}
               depthWrite={false}
             />
           </mesh>

@@ -14,6 +14,7 @@ import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasI
 import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../r3f/godotColor';
+import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import type { Line2DProperties } from './types';
 import { jointWedge, LINE_JOINT_SHARP, type JointOptions } from './lineJoints';
 
@@ -92,7 +93,14 @@ function LineMesh({
         opacity={opacity}
         transparent
         depthWrite={false}
-        side={THREE.DoubleSide}
+        // The stroke is one of the meshes `canvasItemFacing()`'s single pass
+        // genuinely protects: `lineJoints.ts` picks a corner's outward normal
+        // from the SIGN of the turn, so a left wedge and a right wedge wind
+        // opposite ways while the segment quads between them all wind the same
+        // way. Split by facing, a polyline's wedges would be drawn in a
+        // different pass from the quads they fill between — invisible only
+        // because every triangle here carries the one flat colour below.
+        {...canvasItemFacing()}
         {...blend}
         {...lighting}
       />

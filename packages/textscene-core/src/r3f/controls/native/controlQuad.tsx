@@ -8,11 +8,13 @@
  * centred at `[w/2, -h/2, 0]` — Y negated once, same convention `rect.ts`
  * documents for the walker's own outer-group placement.
  *
- * Unlit (`meshBasicMaterial`, matching Godot's 2D canvas), transparent,
- * double-sided and non-depth-writing so overlapping/alpha-edged Control
- * chrome composites the same way a CanvasItem2D quad does. Spreads
- * `useControlClipPlanes()` — clip planes are per-MATERIAL state, so every
- * leaf material must carry them even while the list stays empty (see
+ * Unlit (`meshBasicMaterial`, matching Godot's 2D canvas), transparent and
+ * non-depth-writing so overlapping/alpha-edged Control chrome composites the
+ * same way a CanvasItem2D quad does. Facing comes from `canvasItemFacing()`,
+ * the one definition of the double-sided/single-pass pair every flat canvas
+ * painter shares — see that module for why the two cannot be spelled apart.
+ * Spreads `useControlClipPlanes()` — clip planes are per-MATERIAL state, so
+ * every leaf material must carry them even while the list stays empty (see
  * `controlClipping.tsx`).
  *
  * `map`'s decode is auto-detected (`useCanvasDecodeDefines`,
@@ -26,6 +28,7 @@
 import * as THREE from 'three';
 import { useControlClipPlanes } from './controlClipping';
 import { useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
+import { canvasItemFacing } from '../../canvasItemFacing';
 
 export interface ControlQuadProps {
   width: number;
@@ -62,7 +65,7 @@ export function ControlQuad({
         opacity={opacity}
         transparent
         depthWrite={false}
-        side={THREE.DoubleSide}
+        {...canvasItemFacing()}
         defines={decodeDefines}
         clippingPlanes={clippingPlanes as THREE.Plane[]}
       />

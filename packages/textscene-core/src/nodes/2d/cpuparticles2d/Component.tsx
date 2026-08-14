@@ -21,6 +21,7 @@ import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useCanvas2DMap } from '../../../r3f/canvas2DTextureDecode';
+import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import {
   canvasItemBlendState,
@@ -153,7 +154,13 @@ function ParticleField({
             vertexColors
             transparent
             depthWrite={false}
-            side={THREE.DoubleSide}
+            // One mesh, N particles, each with its OWN vertex colour and alpha
+            // and each quad wound by the determinant of its own particle
+            // transform (`particleGeometry.ts`). Splitting that array by facing
+            // would composite overlapping particles out of emission order the
+            // moment a transform mirrors — `canvasItemFacing()` draws it once,
+            // in index order.
+            {...canvasItemFacing()}
             defines={decodeDefines}
             {...blend}
             {...lighting}

@@ -4,24 +4,21 @@
  * `<primitive>` (following `Polygon2D`'s `FilledPolygon`,
  * `nodes/2d/polygon2d/Component.tsx`), painted with the house recipe every
  * flat-shaded 2D item in this codebase uses — `meshBasicMaterial`,
- * `vertexColors`, `transparent`, `depthWrite={false}`, `THREE.DoubleSide` —
- * plus `forceSinglePass`, which this painter needs and the others do not.
+ * `vertexColors`, `transparent`, `depthWrite={false}` and the shared
+ * `canvasItemFacing()`.
  *
- * SINGLE PASS — `WebGLRenderer` draws a `transparent` + `DoubleSide` material
- * TWICE, once culled to `BackSide` and then once to `FrontSide`, so a
- * translucent 3D shell shows its far surface before its near one. That split
- * is wrong for this mesh twice over. `StyleBoxFlat::draw` emits a PAINTER'S
+ * SINGLE PASS — this mesh is the reason `canvasItemFacing()` exists, and the
+ * worst case that module describes. `StyleBoxFlat::draw` emits a PAINTER'S
  * ORDER triangle array — shadow, then border ring, then each antialiasing
- * feather — whose whole meaning is the order the rings blend in, and facing is
- * not a property it has; and the ring pattern it is ported from
- * (`style_box_flat.cpp:403-408`, `(i, i+2, i+1)` over alternating inner/outer
- * vertices) gives the two triangles of every ring quad OPPOSITE screen-space
- * winding. Split by facing, each pass keeps one triangle per quad and drops
- * the other, so the border loses a wedge per corner-detail step and the shadow
- * ring's second-pass half lands ON TOP of the border's first-pass half — a fan
- * of shadow-coloured slivers along every rounded corner, visible only once
- * something dark sits behind the border. `forceSinglePass` draws the array
- * once, in index order, which is what the port means.
+ * feather — whose whole meaning is the order the rings blend in, and the ring
+ * pattern it is ported from (`style_box_flat.cpp:403-408`, `(i, i+2, i+1)` over
+ * alternating inner/outer vertices) gives the two triangles of every ring quad
+ * OPPOSITE screen-space winding. Drawn back-faces-then-front-faces, each pass
+ * keeps one triangle per quad and drops the other, so the border loses a wedge
+ * per corner-detail step and the shadow ring's second-pass half lands ON TOP of
+ * the border's first-pass half — a fan of shadow-coloured slivers along every
+ * rounded corner, visible only once something dark sits behind the border. One
+ * pass draws the array once, in index order, which is what the port means.
  *
  * Positions pass straight through from `styleBoxFlatGeometry` (Godot pixels,
  * +Y down, no axis flip — that is the caller's job, same as every other
@@ -70,6 +67,7 @@ import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rect2 } from './rect';
 import { useControlClipPlanes } from './controlClipping';
 import { multiplyModulate, WHITE_MODULATE, type RGBA } from '../../canvasItemModulate';
+import { canvasItemFacing } from '../../canvasItemFacing';
 
 export interface StyleBoxQuadProps {
   styleBox: StyleBoxFlatData;
@@ -125,8 +123,7 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
           vertexColors
           transparent
           depthWrite={false}
-          side={THREE.DoubleSide}
-          forceSinglePass
+          {...canvasItemFacing()}
           clippingPlanes={clippingPlanes as THREE.Plane[]}
           onBeforeCompile={decodeVertexColorsFromSRGB}
           customProgramCacheKey={STYLEBOX_PROGRAM_CACHE_KEY}
