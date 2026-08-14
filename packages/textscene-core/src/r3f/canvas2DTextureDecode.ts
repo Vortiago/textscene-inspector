@@ -26,6 +26,11 @@
  * filter to after it, which is the one degree of freedom Godot's canvas and
  * three's default 3D-oriented pipeline disagree on.
  *
+ * A define is compiled INTO the program, so the material sampling this pair has
+ * to be keyed on it as well as on the map — `canvasItemProgram.ts`, which is
+ * also where the reason a plain assignment cannot deliver either one is written
+ * down.
+ *
  * Only the 2D-canvas's own "unlit 2D material recipe" (`meshBasicMaterial` +
  * `map`) needs this pair. A texture this module never touches (a SubViewport
  * render target, PointLight2D's cookie shader, every 3D material slot) keeps
@@ -86,10 +91,12 @@ const DECODE_DEFINES: Readonly<Record<string, string>> = { DECODE_VIDEO_TEXTURE:
  * turned on exactly when `texture` is one of this module's `NoColorSpace`
  * retags, `pinNoColorSpace` included (never for a texture left in its own
  * space, so a SubViewport target sharing the same `<meshBasicMaterial>`
- * recipe is unaffected). Memoised so the object identity is stable across re-renders
- * with the same texture — required because R3F never bumps
- * `material.needsUpdate` on its own, so a materially different `defines`
- * value would only reach the GPU on the next-mounted material.
+ * recipe is unaffected). Memoised so the object identity is stable across
+ * re-renders with the same texture: R3F's `applyProps` assigns a changed
+ * `defines` to the material and stops there, so a value that reaches the GPU
+ * does so on a NEWLY MOUNTED material and nowhere else — which is what
+ * `canvasItemProgramKey` arranges, and what a per-render object identity would
+ * ask for pointlessly often.
  */
 export function useCanvasDecodeDefines(
   texture: THREE.Texture | null | undefined

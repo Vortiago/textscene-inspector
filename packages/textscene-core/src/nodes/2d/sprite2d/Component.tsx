@@ -32,6 +32,7 @@ import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmate
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
+import { canvasItemProgramKey } from '../../../r3f/canvasItemProgram';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import {
@@ -177,6 +178,12 @@ function QuadMesh({
         transparent
         depthWrite={false}
         {...canvasItemFacing()}
+        // The quad waits for a texture, so the map is here at the first
+        // compile — but the DECODE is not fixed for the quad's life: a
+        // ViewportTexture keeps its own colour space where a `res://` file gets
+        // the canvas retag, and swapping between them changes the program
+        // (`canvasItemProgram.ts`).
+        key={canvasItemProgramKey(texture, decodeDefines)}
         defines={decodeDefines}
         {...blend}
         {...lighting}

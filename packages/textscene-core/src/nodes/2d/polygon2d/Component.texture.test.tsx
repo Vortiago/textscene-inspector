@@ -25,7 +25,10 @@ import { Polygon2D } from './Component';
 import { parsePolygon2D } from './parser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import {
+  createFakeResourceLoader,
+  type FakeResourceLoader,
+} from '../../../resources/testing/createFakeResourceLoader';
 import type { ParsedHeading } from '../../../parser/utils';
 import type { TscnNode } from '../../../parser/types';
 
@@ -39,8 +42,7 @@ function node(rawProps: Record<string, string>): TscnNode {
   return { name: 'Poly', type: 'Polygon2D', children: [], properties: parsePolygon2D(heading, rawProps) };
 }
 
-async function render(rawProps: Record<string, string>) {
-  const fake = createFakeResourceLoader();
+function loadedTexture(): THREE.Texture {
   const tex = new THREE.Texture();
   // The real loader hands every decoded image out with REPEAT wrapping, because
   // that is what a 3D material inherits (`BaseMaterial3D` constructs with
@@ -53,8 +55,11 @@ async function render(rawProps: Record<string, string>) {
     width: TEX_W,
     height: TEX_H,
   };
-  fake.textures.seed(TEX, tex);
-  const renderer = await ReactThreeTestRenderer.create(
+  return tex;
+}
+
+async function mount(rawProps: Record<string, string>, fake: FakeResourceLoader) {
+  return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider
         internalResources={[]}
@@ -64,6 +69,13 @@ async function render(rawProps: Record<string, string>) {
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+}
+
+async function render(rawProps: Record<string, string>) {
+  const fake = createFakeResourceLoader();
+  const tex = loadedTexture();
+  fake.textures.seed(TEX, tex);
+  const renderer = await mount(rawProps, fake);
   await new Promise<void>((r) => setTimeout(r, 10));
   return { renderer, tex };
 }
@@ -177,6 +189,32 @@ describe('<Polygon2D> textured fill', () => {
     const mat = mesh(renderer).material as THREE.MeshBasicMaterial;
     expect(mat.map!.wrapS).toBe(THREE.ClampToEdgeWrapping);
     expect(mat.map!.wrapT).toBe(THREE.ClampToEdgeWrapping);
+  });
+
+  it('hands the fill a material three has not yet compiled, when the texture arrives after the mesh', async () => {
+    // The sequence every real load takes: the mesh is on screen with `map =
+    // null` first, and the texture lands one render later. `USE_MAP` is baked
+    // at the material's FIRST compile, so a material that was already compiled
+    // mapless samples nothing however the map is assigned afterwards — it
+    // paints the flat fill colour over the whole polygon.
+    const fake = createFakeResourceLoader();
+    const renderer = await mount({ polygon: SQUARE, texture: 'ExtResource("1")' }, fake);
+    const mapless = mesh(renderer).material as THREE.MeshBasicMaterial;
+    expect(mapless.map).toBeNull();
+    const compiledVersion = mapless.version;
+
+    await ReactThreeTestRenderer.act(async () => {
+      fake.textures._resolve(TEX, loadedTexture());
+    });
+
+    const textured = mesh(renderer).material as THREE.MeshBasicMaterial;
+    expect(textured.map).not.toBeNull();
+    // Either half satisfies three: a material it has never seen, or the one it
+    // has with its `version` moved past the compiled program's. Asserting the
+    // observable rather than which of the two the seam chose. (The test
+    // renderer never reaches `setProgram`, so this pins the precondition for
+    // the recompile, not the recompile itself.)
+    expect(textured !== mapless || textured.version > compiledVersion).toBe(true);
   });
 
   it('leaves the fill untextured, and adds no uv attribute, when there is no texture', async () => {

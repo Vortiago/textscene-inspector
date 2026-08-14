@@ -41,6 +41,51 @@ describe('<ControlQuad>', () => {
     expect(material.opacity).toBe(0.5);
   });
 
+  it('replaces the material when a map arrives after the quad is already drawn', async () => {
+    // An icon, a TextureRect image, a SubViewport that has not published yet:
+    // the quad is drawn from the first render and the map lands on a later one.
+    // `USE_MAP` is baked at the material's first compile, so the material that
+    // ends up holding the texture must not be the one compiled without it.
+    const renderer = await ReactThreeTestRenderer.create(
+      <ControlQuad width={10} height={10} color={new THREE.Color(1, 1, 1)} opacity={1} renderOrder={0} />
+    );
+    const material = (): THREE.MeshBasicMaterial =>
+      (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mapless = material();
+    const compiledVersion = mapless.version;
+
+    const texture = new THREE.Texture();
+    await renderer.update(
+      <ControlQuad width={10} height={10} color={new THREE.Color(1, 1, 1)} opacity={1} map={texture} renderOrder={0} />
+    );
+
+    expect(material().map).toBe(texture);
+    expect(material() !== mapless || material().version > compiledVersion).toBe(true);
+  });
+
+  it('stops decoding when the map is replaced by one that keeps its own colour space', async () => {
+    // The converse, and it cannot be fixed by assignment: `applyProps` IGNORES
+    // an undefined prop value (fiber 9.6.1 dist), so the decode define can be
+    // added to a material but never removed from one. A Sprite2D swapping a
+    // `res://` file for a ViewportTexture makes exactly this transition.
+    const undecoded = new THREE.Texture();
+    undecoded.colorSpace = THREE.NoColorSpace;
+    const renderer = await ReactThreeTestRenderer.create(
+      <ControlQuad width={10} height={10} color={new THREE.Color(1, 1, 1)} opacity={1} map={undecoded} renderOrder={0} />
+    );
+    const material = (): THREE.MeshBasicMaterial =>
+      (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(material().defines).toEqual({ DECODE_VIDEO_TEXTURE: '' });
+
+    const ownSpace = new THREE.Texture();
+    ownSpace.colorSpace = THREE.SRGBColorSpace;
+    await renderer.update(
+      <ControlQuad width={10} height={10} color={new THREE.Color(1, 1, 1)} opacity={1} map={ownSpace} renderOrder={0} />
+    );
+
+    expect(material().defines?.DECODE_VIDEO_TEXTURE).toBeUndefined();
+  });
+
   it('maps a texture onto the quad when provided (edge: no texture leaves map null)', async () => {
     const texture = new THREE.Texture();
     const renderer = await ReactThreeTestRenderer.create(

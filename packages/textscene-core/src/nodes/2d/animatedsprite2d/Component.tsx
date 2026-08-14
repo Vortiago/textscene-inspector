@@ -28,6 +28,7 @@ import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmate
 import { composeFrameTexture, frameSizePx, type SpriteFrameProps } from '../../../r3f/spriteFrame';
 import { useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
+import { canvasItemProgramKey } from '../../../r3f/canvasItemProgram';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useAnimationTransport } from '../../../r3f/contexts/AnimationTransportContext';
@@ -223,6 +224,10 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
               transparent
               depthWrite={false}
               {...canvasItemFacing()}
+              // Constant while a clip plays — one frame's clone decodes exactly
+              // as the next one's — so this remounts on the map appearing, not
+              // per frame (`canvasItemProgram.ts`).
+              key={canvasItemProgramKey(displayedTexture, decodeDefines)}
               defines={decodeDefines}
               {...canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
               {...lighting}

@@ -22,6 +22,7 @@ import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResou
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useCanvas2DMap } from '../../../r3f/canvas2DTextureDecode';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
+import { canvasItemProgramKey } from '../../../r3f/canvasItemProgram';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import {
   canvasItemBlendState,
@@ -161,6 +162,10 @@ function ParticleField({
             // moment a transform mirrors — `canvasItemFacing()` draws it once,
             // in index order.
             {...canvasItemFacing()}
+            // The field is drawn from the first frame, on a 1x1 quad, while the
+            // particle texture is still loading — so this material is compiled
+            // mapless unless a fresh one replaces it (`canvasItemProgram.ts`).
+            key={canvasItemProgramKey(texture, decodeDefines)}
             defines={decodeDefines}
             {...blend}
             {...lighting}

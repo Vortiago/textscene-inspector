@@ -29,6 +29,7 @@ import * as THREE from 'three';
 import { useControlClipPlanes } from './controlClipping';
 import { useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
 import { canvasItemFacing } from '../../canvasItemFacing';
+import { canvasItemProgramKey } from '../../canvasItemProgram';
 
 export interface ControlQuadProps {
   width: number;
@@ -66,6 +67,11 @@ export function ControlQuad({
         transparent
         depthWrite={false}
         {...canvasItemFacing()}
+        // Most callers hand over a `map` that is null on the first render and a
+        // texture on a later one — an icon, an image, a viewport that has not
+        // published yet — and the quad is drawn throughout, so this material
+        // must be replaced rather than mutated (`canvasItemProgram.ts`).
+        key={canvasItemProgramKey(map, decodeDefines)}
         defines={decodeDefines}
         clippingPlanes={clippingPlanes as THREE.Plane[]}
       />
