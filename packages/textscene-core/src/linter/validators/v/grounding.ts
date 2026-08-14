@@ -39,16 +39,24 @@ export interface Grounding {
   enforced?: string | { min?: string; max?: string };
   /** `file:line` of the ADD_PROPERTY whose PROPERTY_HINT_RANGE states the bound. */
   hinted?: string | { min?: string; max?: string };
-  /**
-   * `file:line` of an `ERR_FAIL_COND(!is_finite(...))` in the setter.
-   *
-   * `inf` and `nan` are legal TSCN float literals that Godot writes and reloads
-   * (`variant_parser.cpp:150-155`), so the shared numeric validator accepts
-   * them. Exactly five setters in `scene/` refuse one, and each names its guard
-   * here. Before this existed they were rejected everywhere by a `parseFloat`
-   * accident, which was right for these five and a false positive on every
-   * other float property.
-   */
+}
+
+/**
+ * A `Grounding` that may also name an `ERR_FAIL_COND(!is_finite(...))`.
+ *
+ * Separate from `Grounding` because only the FLOAT combinators can honour it:
+ * an int slot cannot hold a non-finite at all (it is altered at parse), and a
+ * bitmask or a vector has its own answer. While `finite` sat on the shared
+ * interface, `v.int` and `v.positiveInt` accepted the field and silently
+ * dropped it — a citation written and never read. Narrowing it here makes that
+ * a compile error instead.
+ *
+ * `inf` and `nan` are legal TSCN float literals that Godot writes and reloads
+ * (`variant_parser.cpp:150-155`), so the shared numeric validator accepts them.
+ * Exactly five setters in `scene/` refuse one, and each names its guard here.
+ */
+export interface FiniteGrounding extends Grounding {
+  /** `file:line` of an `ERR_FAIL_COND(!is_finite(...))` in the setter. */
   finite?: string;
 }
 
@@ -136,7 +144,7 @@ export function withFiniteGuard(
 /** Apply `withFiniteGuard` only when the caller named a guard. */
 export function maybeFinite(
   name: string,
-  opts: Grounding,
+  opts: FiniteGrounding,
   validator: PropertyValidator
 ): PropertyValidator {
   return opts.finite ? withFiniteGuard(validator, name, opts.finite) : validator;
@@ -225,18 +233,49 @@ export function ground(
  * it, `error` when the setter does. Un-audited ends keep erroring, which is the
  * pre-split behaviour.
  */
+/**
+ * Whether the HINT's end at `end` describes a band any value can land in.
+ *
+ * `exclusive` is deliberately not consulted. It moves the endpoint, not the
+ * band: `[at, min)` and `(at, min)` are both non-empty exactly when `at < min`,
+ * so the strict comparison is the whole answer. (`numericRange` in `codes.ts`
+ * DOES look at `exclusive`, because it answers a different question — which of
+ * two coinciding ends is the tighter one to print.)
+ *
+ * The predicate `endSeverity` had was `enforcedMin !== undefined`, with no
+ * reference to the numbers at all, so a setter end at or INSIDE the hint's
+ * handed the end to the hint's tier and named a warning band that no value can
+ * reach. `lintCoverage.mjs` computes the same reachability for the sheet's
+ * "Out of range" column, and `boundGrounding.tiers.test.ts` sweeps the live
+ * registry for ends where the two would disagree.
+ */
+export function outerEndIsReachable(bounds: EndedGrounding, end: 'min' | 'max'): boolean {
+  const hintEnd = end === 'min' ? bounds.min : bounds.max;
+  if (hintEnd === undefined) return false;
+  const setterEnd = end === 'min' ? bounds.enforcedMin : bounds.enforcedMax;
+  if (setterEnd === undefined) return true;
+  return end === 'min' ? setterEnd.at < hintEnd : setterEnd.at > hintEnd;
+}
+
 export function endSeverity(opts: EndedGrounding, end: 'min' | 'max'): Severity {
-  // A SEPARATE, further-out setter limit at this end owns the `enforced:`
-  // citation, leaving the end scored here as the hint's, which warns. Derived
-  // rather than passed: it was the third argument, and at every call site it
-  // spelled exactly this expression — one that a new combinator can forget.
-  const separateEnforcedEnd = (end === 'min' ? opts.enforcedMin : opts.enforcedMax) !== undefined;
+  // A setter limit STRICTLY FURTHER OUT than the hint's own end owns the
+  // `enforced:` citation, leaving the band between the two to the hint's tier,
+  // which warns. Where it sits at or inside the hint's end there is no such
+  // band — the setter refuses every value that would have reached it — so the
+  // end keeps the enforced tier.
+  const setterEnd = end === 'min' ? opts.enforcedMin : opts.enforcedMax;
+  const separateEnforcedEnd = setterEnd !== undefined && outerEndIsReachable(opts, end);
   if (!separateEnforcedEnd && citeFor(opts.enforced, end)) return 'error';
   return citeFor(opts.hinted, end) ? 'warning' : 'error';
 }
 
-/** A `Grounding` alongside the setter's own ends, which decide each end's tier. */
+/**
+ * A `Grounding` alongside BOTH ends, hint and setter: a tier is decided by
+ * where the two sit relative to each other, so neither half can be dropped.
+ */
 export type EndedGrounding = Grounding & {
+  min?: number;
+  max?: number;
   enforcedMin?: EnforcedEnd;
   enforcedMax?: EnforcedEnd;
 };

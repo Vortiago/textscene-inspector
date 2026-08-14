@@ -56,7 +56,7 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited fr
 | `linear_velocity` | Vector3(x, y, z) |  |
 | `lock_rotation` | true or false |  |
 | `mass` | float >= 0.001 | error at or below 0, warning below 0.001 |
-| `max_contacts_reported` | integer >= 0 | error below 0, error at or above 4096 |
+| `max_contacts_reported` | integer >= 0, < 4096 | error below 0, error at or above 4096 |
 | `physics_material_override` | null, SubResource("id") or ExtResource("id") |  |
 | `sleeping` | true or false |  |
 

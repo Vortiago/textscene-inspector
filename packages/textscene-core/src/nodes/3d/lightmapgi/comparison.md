@@ -55,7 +55,7 @@ Strict parsing format-checks these `LightmapGI` properties, plus 1 inherited fro
 | --- | --- | --- |
 | `bias` | float >= 0.00001 | error below |
 | `bounce_indirect_energy` | float 0-2 | error below, warning above |
-| `bounces` | integer >= 0 | error below 0, error above 16 |
+| `bounces` | integer 0-16 | error below 0, error above 16 |
 | `camera_attributes` | null, SubResource("id") or ExtResource("id") |  |
 | `denoiser_range` | integer 1-20 | warning |
 | `denoiser_strength` | float >= 0.001 | warning below |

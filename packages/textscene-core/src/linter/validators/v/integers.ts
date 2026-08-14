@@ -15,6 +15,7 @@ import {
   createPositiveIntegerValidator,
   parseGodotFloat,
   parseGodotInt,
+  refusalMessage,
   TSCN_FLOAT_RE,
 } from '../commonValidators.js';
 import { formatCode, numericRange, valueCode } from './codes.js';
@@ -123,7 +124,7 @@ export const integerCombinators = {
   strictInt(name: string, opts: IntOpts = {}): PropertyValidator {
     const formatErr = formatCode(name);
     const valueErr = valueCode(name);
-    const { min, max } = opts;
+    const { min, max, enforcedMin, enforcedMax } = opts;
     return ground(accepts((key, value, line) => {
       // `parseGodotFloat` behind the anchored grammar, not `parseFloat`, which
       // reads `8abc` as 8 and admits a literal Godot's parser cannot.
@@ -143,6 +144,16 @@ export const integerCombinators = {
       if (!Number.isFinite(parsed)) {
         return propertyError(key, line, `Property '${name}' cannot be stored in an integer slot, got: "${value}". The file loads, but the value is narrowed at parse time to a number the file does not state.`, valueErr, 'error');
       }
+      // The setter's own ends first: they are the more severe tier, and the
+      // band between a setter end and the hint's still reports at the hint's.
+      // `IntOpts` has always ACCEPTED these two, and this combinator dropped
+      // them on the floor — a citation written and never read.
+      if (enforcedMin && (enforcedMin.exclusive ? parsed <= enforcedMin.at : parsed < enforcedMin.at)) {
+        return propertyError(key, line, refusalMessage(name, enforcedMin, 'min', parsed), valueErr);
+      }
+      if (enforcedMax && (enforcedMax.exclusive ? parsed >= enforcedMax.at : parsed > enforcedMax.at)) {
+        return propertyError(key, line, refusalMessage(name, enforcedMax, 'max', parsed), valueErr);
+      }
       const belowMin = min !== undefined && parsed < min;
       const aboveMax = max !== undefined && parsed > max;
       if (belowMin || aboveMax) {
@@ -155,7 +166,7 @@ export const integerCombinators = {
         );
       }
       return null;
-    }, numericRange('integer', min, max)), opts, { min, max });
+    }, numericRange('integer', min, max, opts)), opts, { min, max, enforcedMin, enforcedMax });
   },
 
   /**

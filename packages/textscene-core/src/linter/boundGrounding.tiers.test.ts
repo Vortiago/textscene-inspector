@@ -13,6 +13,9 @@
 
 import { describe, it, expect } from 'vitest';
 import { v } from './validators/v.js';
+import { validatorRegistry } from './ValidatorRegistry.js';
+import { outerEndIsReachable } from './validators/v/grounding.js';
+import './index.js'; // side-effect: every slice registers its validators
 import { layerBitmask } from './validators/layerBitmask.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
 
@@ -156,5 +159,57 @@ describe('per-end grounding', () => {
     });
     expect(split.grounding?.cite).toContain('visual_instance_3d.cpp:377');
     expect(split.grounding?.cite).toContain('visual_instance_3d.cpp:602');
+  });
+});
+
+describe('an end no value can reach reports at the setter\'s tier', () => {
+  it('holds for every bounded validator in the live registry', () => {
+    // The tier split is unfalsifiable from inside one combinator: `endSeverity`
+    // derives its own answer, so a wrong one looks exactly like a right one.
+    // This is the second file. A hint end sits behind a setter end that is at
+    // or INSIDE it — no value can be outside the hint without the setter having
+    // refused it first — so the band the hint's tier would describe is empty
+    // and the end must report the setter's `error`.
+    const wrong: string[] = [];
+    let examined = 0;
+    for (const type of validatorRegistry.getRegisteredNodeTypes()) {
+      for (const key of validatorRegistry.getOwnKeys(type)) {
+        const validator = validatorRegistry.findValidator(type, key);
+        const bounds = validator?.bounds;
+        if (!bounds || !validator?.tiers) continue;
+        for (const end of ['min', 'max'] as const) {
+          if (bounds[end] === undefined) continue;
+          examined += 1;
+          if (outerEndIsReachable(bounds, end)) continue;
+          if (validator.tiers[end] !== 'error') {
+            wrong.push(`${type}.${key} ${end} is ${validator.tiers[end]}`);
+          }
+        }
+      }
+    }
+    // Anti-vacuity: the sweep is registry-derived, so a registry that stopped
+    // tagging `bounds` would leave this trivially green.
+    expect(examined).toBeGreaterThan(500);
+    expect(wrong).toEqual([]);
+  });
+
+  it('bites: a setter end coinciding with the hint\'s leaves no band to warn in', () => {
+    const coinciding = v.float('aspect_ratio', {
+      min: 0,
+      max: 100,
+      enforcedMin: { at: 0, exclusive: true },
+      enforced: { min: 'openxr_composition_layer_cylinder.cpp:60' },
+      hinted: { max: 'openxr_composition_layer_cylinder.cpp:106' },
+    });
+    expect(coinciding.tiers?.min).toBe('error');
+    // And a setter end genuinely further out still hands the band to the hint.
+    const separated = v.float('extra_cull_margin', {
+      min: 1,
+      max: 16384,
+      enforcedMin: { at: 0 },
+      enforced: { min: 'visual_instance_3d.cpp:377' },
+      hinted: { min: 'visual_instance_3d.cpp:602' },
+    });
+    expect(separated.tiers?.min).toBe('warning');
   });
 });

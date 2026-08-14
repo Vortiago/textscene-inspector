@@ -56,6 +56,37 @@ describe('validator `accepts` metadata', () => {
     expect(aabb!('custom_aabb', 'AABB(0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3)', 1)).not.toBeNull();
   });
 
+  it('names BOTH ends, taking the tighter tier at each side', () => {
+    // Built per end. Returning on the hint's ends the moment either existed
+    // dropped the other end entirely: a setter ceiling beside a hinted floor
+    // advertised an unbounded `integer >= 0` on four published rows.
+    const find = (type: string, key: string) =>
+      validatorRegistry.findValidator(type, key)?.accepts;
+    expect(find('LightmapGI', 'bounces')).toBe('integer 0-16');
+    expect(find('ReflectionProbe', 'max_distance')).toBe('float 0-262144');
+    expect(find('RigidBody2D', 'max_contacts_reported')).toBe('integer >= 0, < 4096');
+    expect(find('RigidBody3D', 'max_contacts_reported')).toBe('integer >= 0, < 4096');
+  });
+
+  it('lets an exclusive setter end win a tie against a coinciding hint end', () => {
+    // Both ends sit at 0; only the setter's excludes it, and the column is the
+    // domain that reports NOTHING — so advertising an inclusive 0 named a value
+    // the setter refuses.
+    const aspect = validatorRegistry.findValidator(
+      'OpenXRCompositionLayerCylinder',
+      'aspect_ratio'
+    );
+    expect(aspect?.accepts).toBe('float > 0, <= 100');
+  });
+
+  it('keeps the compact spelling when nothing but the hint states an end', () => {
+    // The same builder feeds a user-visible message; the shortcut is what keeps
+    // `must be integer 1-10 (got -5)` unchanged on ~45 call sites.
+    expect(validatorRegistry.findValidator('GeometryInstance3D', 'transparency')?.accepts).toBe(
+      'float 0-1'
+    );
+  });
+
   it('describes a layer mask as a mask, not as a 4-billion integer range', () => {
     const layers = validatorRegistry.findValidator('VisualInstance3D', 'layers');
     expect(layers?.accepts).toBe('32-bit layer mask (layers 1-32)');

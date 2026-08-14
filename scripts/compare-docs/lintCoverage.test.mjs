@@ -39,4 +39,56 @@ describe('the Out of range cell', () => {
     expect(outOfRangeCell(undefined)).toBe('');
     expect(outOfRangeCell({})).toBe('');
   });
+
+  describe('the two-tier branch, where a setter end sits beside a hint end', () => {
+    // Eight single-argument cases above never reach this branch, so the whole
+    // `enforcedMin || enforcedMax` half of the function was uncovered — the
+    // half that decides whether a warning band is describable at all.
+    it('names the setter end and the band the hint still owns', () => {
+      // extra_cull_margin's shape: the refusal starts strictly below the hint's
+      // floor, so values between the two really do only warn.
+      expect(
+        outOfRangeCell(
+          { min: 'warning', max: 'warning' },
+          { min: 1, max: 16384, enforcedMin: { at: 0 } }
+        )
+      ).toBe('error below 0, warning below 1, warning above 16384');
+    });
+
+    it('drops a band no value can land in', () => {
+      // The refusal starts AT the hint's floor, so nothing can be below the
+      // hint without being refused first; naming the band describes a warning
+      // that can never fire.
+      expect(
+        outOfRangeCell({ min: 'warning', max: 'warning' }, { min: 0, max: 100, enforcedMin: { at: 0 } })
+      ).toBe('error below 0, warning above 100');
+    });
+
+    it('separates `at or below` from `below` on the exclusive flag', () => {
+      // aspect_ratio: both ends at 0, only the setter's excluding it. This is
+      // the single case that distinguishes `<` from `<=` in the reachability
+      // test, and the one row where the Accepts column moves with it.
+      expect(
+        outOfRangeCell(
+          { min: 'warning', max: 'warning' },
+          { min: 0, max: 100, enforcedMin: { at: 0, exclusive: true } }
+        )
+      ).toBe('error at or below 0, warning above 100');
+    });
+
+    it('does the same at the ceiling', () => {
+      expect(
+        outOfRangeCell(
+          { min: 'warning', max: 'warning' },
+          { min: 0, max: 4096, enforcedMax: { at: 4096, exclusive: true } }
+        )
+      ).toBe('warning below 0, error at or above 4096');
+      expect(
+        outOfRangeCell(
+          { min: 'warning', max: 'warning' },
+          { min: 0, max: 100, enforcedMax: { at: 200 } }
+        )
+      ).toBe('warning below 0, warning above 100, error above 200');
+    });
+  });
 });

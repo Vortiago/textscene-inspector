@@ -162,7 +162,7 @@ export interface NumericRangeSpec {
 }
 
 /** `must be greater than 3` / `must be at least 3`, per exclusivity. */
-function refusalMessage(
+export function refusalMessage(
   propertyName: string,
   end: EnforcedEnd,
   side: 'min' | 'max',

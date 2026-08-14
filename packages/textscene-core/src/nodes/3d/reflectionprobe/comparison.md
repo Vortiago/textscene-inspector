@@ -53,7 +53,7 @@ Strict parsing format-checks these `ReflectionProbe` properties, plus 1 inherite
 | `enable_shadows` | true or false |  |
 | `intensity` | float 0-1 | warning |
 | `interior` | true or false |  |
-| `max_distance` | float >= 0 | error below 0, error above 262144 |
+| `max_distance` | float 0-262144 | error below 0, error above 262144 |
 | `mesh_lod_threshold` | float 0-1024 | warning |
 | `origin_offset` | Vector3(x, y, z) |  |
 | `reflection_mask` | 32-bit layer mask (layers 1-32) | warning |

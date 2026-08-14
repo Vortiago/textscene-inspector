@@ -6,7 +6,14 @@
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { createNumericRangeValidator } from '../commonValidators.js';
 import { formatCode, numericRange, valueCode } from './codes.js';
-import { accepts, endSeverity, ground, maybeFinite, type Grounding } from './grounding.js';
+import {
+  accepts,
+  endSeverity,
+  ground,
+  maybeFinite,
+  type FiniteGrounding,
+  type Grounding,
+} from './grounding.js';
 import type { FloatOpts } from './options.js';
 
 /**
@@ -95,7 +102,7 @@ export const floatCombinators = {
   },
 
   /** Float ≥ 0. Convenience alias for `v.float(name, { min: 0 })`. */
-  nonNegativeFloat(name: string, opts: Grounding = {}): PropertyValidator {
+  nonNegativeFloat(name: string, opts: FiniteGrounding = {}): PropertyValidator {
     return maybeFinite(name, opts, ground(
       accepts(
         createNumericRangeValidator({
