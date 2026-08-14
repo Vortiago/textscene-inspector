@@ -152,10 +152,8 @@ const RAW_NUMBER_PARSE = /\b(?:parseInt|parseFloat|Number)\(/;
  * whose capture is already `-?\d+`. Routing those through a Variant reader
  * would be a worse abstraction, not a stricter one.
  */
-const DIAGNOSTIC_READERS = (file: string): boolean => {
-  const rel = label(file);
-  return rel.startsWith('linter/') || /(?:^|\/)linter[^/]*\.tsx?$/.test(rel);
-};
+const isDiagnosticReader = (rel: string): boolean =>
+  rel.startsWith('linter/') || /(?:^|\/)linter[^/]*\.tsx?$/.test(rel);
 const RAW_SCALAR_PARSE = /\b(?:parseInt|parseFloat)\(/;
 
 /**
@@ -189,20 +187,26 @@ const ARITIES: ReadonlyArray<readonly [string, number]> = [
 ];
 
 describe('Godot composite literal grammar', () => {
-  const files = allSourceFiles().map((file) => ({ file, src: readFileSync(file, 'utf8') }));
+  // Read, comment-stripped and labelled ONCE. Four assertions ask about the
+  // same ~1,980 modules, and doing the strip per assertion re-walked 4.7 MB of
+  // source two and a half times over for an answer that cannot have changed.
+  const files = allSourceFiles().map((file) => {
+    const src = readFileSync(file, 'utf8');
+    return { rel: label(file), src, bare: withoutComments(src) };
+  });
 
   it('is spelled by the two canonical builders, never by a regex literal', () => {
     const offenders = files
       .filter(({ src }) => handRolledComposite(src) !== null)
-      .map(({ file }) => label(file))
+      .map(({ rel }) => rel)
       .sort();
     expect(offenders).toEqual([]);
   });
 
   it('reads a matched component through the shared reader, never a raw parse', () => {
     const importers = files.filter(
-      ({ file, src }) =>
-        IMPORTS_TUPLE_BUILDER.test(src) && label(file) !== 'linter/validators/floatTupleValidator.ts'
+      ({ rel, src }) =>
+        IMPORTS_TUPLE_BUILDER.test(src) && rel !== 'linter/validators/floatTupleValidator.ts'
     );
     // Anti-vacuity: the population is derived, so a refactor that stopped every
     // file importing the builder would empty it and leave this trivially green.
@@ -210,7 +214,7 @@ describe('Godot composite literal grammar', () => {
 
     const offenders = importers
       .filter(({ src }) => RAW_NUMBER_PARSE.test(src))
-      .map(({ file }) => label(file))
+      .map(({ rel }) => rel)
       .sort();
     expect(offenders).toEqual([]);
   });
@@ -219,27 +223,27 @@ describe('Godot composite literal grammar', () => {
     // No allowlist. `parseGodotFloat` — whose last step is the `parseFloat`
     // this bans — lives in `parser/vectors.ts`, outside this population, so the
     // one file that legitimately spells it is not a file this asks about.
-    const population = files.filter(({ file }) => DIAGNOSTIC_READERS(file));
+    const population = files.filter(({ rel }) => isDiagnosticReader(rel));
     // Anti-vacuity: the population is a path predicate, so a change to how
     // `label` spells a path would empty it and leave this green forever.
     expect(population.length).toBeGreaterThan(200);
 
     const offenders = population
-      .filter(({ src }) => RAW_SCALAR_PARSE.test(withoutComments(src)))
-      .map(({ file }) => label(file))
+      .filter(({ bare }) => RAW_SCALAR_PARSE.test(bare))
+      .map(({ rel }) => rel)
       .sort();
     expect(offenders).toEqual([]);
   });
 
   it('reads a packed INT element through the shared reader, never parseInt', () => {
-    const population = files.filter(({ src }) => PACKED_ARRAY_READERS.test(withoutComments(src)));
+    const population = files.filter(({ bare }) => PACKED_ARRAY_READERS.test(bare));
     // Anti-vacuity: the population is builder-derived, so a rename that stopped
     // every file composing one would empty it and leave this green.
     expect(population.length).toBeGreaterThan(10);
 
     const offenders = population
-      .filter(({ src }) => RAW_INT_PARSE.test(withoutComments(src)))
-      .map(({ file }) => label(file))
+      .filter(({ bare }) => RAW_INT_PARSE.test(bare))
+      .map(({ rel }) => rel)
       .sort();
     expect(offenders).toEqual([]);
   });

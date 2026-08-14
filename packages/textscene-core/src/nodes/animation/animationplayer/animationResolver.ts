@@ -319,11 +319,11 @@ function parseValueArray(keysStr: string): GodotKeyframeValue[] {
   }
   if (end === -1) return [];
 
-  return splitTopLevel(keysStr.slice(open + 1, end)).map(decodeValue);
+  return splitKeyframeParts(keysStr.slice(open + 1, end)).map(decodeValue);
 }
 
 /** Splits a comma list while ignoring commas nested in parentheses/brackets. */
-function splitTopLevel(body: string): string[] {
+function splitKeyframeParts(body: string): string[] {
   const parts: string[] = [];
   let depth = 0;
   let current = '';

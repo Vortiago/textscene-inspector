@@ -162,7 +162,7 @@ export interface NumericRangeSpec {
 }
 
 /** `must be greater than 3` / `must be at least 3`, per exclusivity. */
-export function refusalMessage(
+function refusalMessage(
   propertyName: string,
   end: EnforcedEnd,
   side: 'min' | 'max',
@@ -177,6 +177,34 @@ export function refusalMessage(
         ? 'less than'
         : 'at most';
   return `Property '${propertyName}' must be ${relation} ${end.at} (got ${num}); Godot's setter refuses the write.`;
+}
+
+/**
+ * The setter's refusal at one end, or `null` when the value clears it.
+ *
+ * Both the comparison and its wording, because separating them is what let a
+ * second copy appear: `refusalMessage` was exported so `v.strictInt` could
+ * rebuild the `exclusive ? <= : <` test around it, and an exclusive polarity is
+ * exactly the thing that is easy to get backwards at a max end.
+ */
+export function enforcedEndRefusal(
+  propertyName: string,
+  end: EnforcedEnd | undefined,
+  side: 'min' | 'max',
+  num: number,
+  override?: string
+): string | null {
+  if (!end) return null;
+  const refused =
+    side === 'min'
+      ? end.exclusive
+        ? num <= end.at
+        : num < end.at
+      : end.exclusive
+        ? num >= end.at
+        : num > end.at;
+  if (!refused) return null;
+  return override ?? refusalMessage(propertyName, end, side, num);
 }
 
 /** Creates a numeric range validator for float/int values. */
@@ -223,22 +251,10 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
 
     // The setter's own ends first: they are the more severe tier, and the band
     // between them and the hint's ends is what the outer checks below report.
-    if (enforcedMin && (enforcedMin.exclusive ? num <= enforcedMin.at : num < enforcedMin.at)) {
-      return propertyError(
-        key,
-        line,
-        enforcedMessage ?? refusalMessage(propertyName, enforcedMin, 'min', num),
-        errorCodeValue
-      );
-    }
-    if (enforcedMax && (enforcedMax.exclusive ? num >= enforcedMax.at : num > enforcedMax.at)) {
-      return propertyError(
-        key,
-        line,
-        enforcedMessage ?? refusalMessage(propertyName, enforcedMax, 'max', num),
-        errorCodeValue
-      );
-    }
+    const refusal =
+      enforcedEndRefusal(propertyName, enforcedMin, 'min', num, enforcedMessage) ??
+      enforcedEndRefusal(propertyName, enforcedMax, 'max', num, enforcedMessage);
+    if (refusal) return propertyError(key, line, refusal, errorCodeValue);
 
     // Check min constraint
     if (min !== null && num < min) {

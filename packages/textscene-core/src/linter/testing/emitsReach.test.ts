@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { armBuilderSuffixes, balancedGroup, parameterList, topLevelParts } from './emitsReach.js';
+import { armBuilders, balancedGroup, parameterList, topLevelParts } from './emitsReach.js';
 
 /** Write `source` to a throwaway `.ts` and hand back its path. */
 function fileWith(source: string): string {
@@ -54,14 +54,14 @@ describe('topLevelParts and balancedGroup', () => {
   });
 });
 
-describe('armBuilderSuffixes', () => {
+describe('armBuilders', () => {
   it('pins the templated parameter to its position', () => {
     const file = fileWith(
       "export function make(node: TscnNode, rulePrefix: string) {\n" +
         '  return { ruleName: `${rulePrefix}-projector-without-shadow` };\n' +
         '}\n'
     );
-    const { builders, unresolvable } = armBuilderSuffixes([file]);
+    const { builders, unresolvable } = armBuilders([file]);
     expect(unresolvable).toEqual([]);
     expect(builders.get('make')).toEqual({
       index: 1,
@@ -77,7 +77,7 @@ describe('armBuilderSuffixes', () => {
         '  return { ruleName: `valid-${prefix}-resources` };\n' +
         '}\n'
     );
-    expect(armBuilderSuffixes([file]).builders.get('make')?.templates).toEqual([
+    expect(armBuilders([file]).builders.get('make')?.templates).toEqual([
       'valid-${prefix}-resources',
     ]);
   });
@@ -88,7 +88,7 @@ describe('armBuilderSuffixes', () => {
         "  return { ruleName: 'a-fixed-name' };\n" +
         '}\n'
     );
-    expect(armBuilderSuffixes([file]).builders.size).toBe(0);
+    expect(armBuilders([file]).builders.size).toBe(0);
   });
 
   it('reports a builder whose templates disagree about which parameter they use', () => {
@@ -99,7 +99,7 @@ describe('armBuilderSuffixes', () => {
         '  return [{ ruleName: `${a}-one` }, { ruleName: `${b}-two` }];\n' +
         '}\n'
     );
-    const { builders, unresolvable } = armBuilderSuffixes([file]);
+    const { builders, unresolvable } = armBuilders([file]);
     expect(builders.size).toBe(0);
     expect(unresolvable).toEqual(['make']);
   });

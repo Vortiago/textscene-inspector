@@ -15,7 +15,7 @@ import {
   createPositiveIntegerValidator,
   parseGodotFloat,
   parseGodotInt,
-  refusalMessage,
+  enforcedEndRefusal,
   TSCN_FLOAT_RE,
 } from '../commonValidators.js';
 import { formatCode, numericRange, valueCode } from './codes.js';
@@ -148,12 +148,10 @@ export const integerCombinators = {
       // band between a setter end and the hint's still reports at the hint's.
       // `IntOpts` has always ACCEPTED these two, and this combinator dropped
       // them on the floor — a citation written and never read.
-      if (enforcedMin && (enforcedMin.exclusive ? parsed <= enforcedMin.at : parsed < enforcedMin.at)) {
-        return propertyError(key, line, refusalMessage(name, enforcedMin, 'min', parsed), valueErr);
-      }
-      if (enforcedMax && (enforcedMax.exclusive ? parsed >= enforcedMax.at : parsed > enforcedMax.at)) {
-        return propertyError(key, line, refusalMessage(name, enforcedMax, 'max', parsed), valueErr);
-      }
+      const refusal =
+        enforcedEndRefusal(name, enforcedMin, 'min', parsed) ??
+        enforcedEndRefusal(name, enforcedMax, 'max', parsed);
+      if (refusal) return propertyError(key, line, refusal, valueErr);
       const belowMin = min !== undefined && parsed < min;
       const aboveMax = max !== undefined && parsed > max;
       if (belowMin || aboveMax) {

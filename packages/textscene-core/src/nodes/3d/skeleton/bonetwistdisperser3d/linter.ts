@@ -97,8 +97,8 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
   // (bone_twist_disperser_3d.h:86) starts empty, which is the XML's default="0".
   const settingCountRaw = rawProps.setting_count;
   const settingCount = settingCountRaw === undefined ? 0 : parseGodotInt(settingCountRaw);
-  // A malformed setting_count is already reported by its own validator, and a
-  // non-finite one is altered at parse; neither is a ceiling to count against.
+  // Neither an unreadable count nor a non-finite one is a ceiling to count
+  // against; each is already its own validator's diagnostic.
   if (settingCount === null || Number.isNaN(settingCount)) return diagnostics;
 
   const jointCounts = resolveJointCounts(rawProps);

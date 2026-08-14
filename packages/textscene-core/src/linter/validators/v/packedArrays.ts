@@ -135,4 +135,20 @@ export const packedArrayCombinators = {
   packedColorArray(name: string): PropertyValidator {
     return packedTupleArray(name, 'PackedColorArray', 4, 'PackedColorArray(r, g, b, a, …)');
   },
+
+  /**
+   * `PackedFloat32Array(a, b, …)` — a FLAT list of scalars, no grouping.
+   *
+   * `groupSize` is 1 because there is none: it feeds only the default example
+   * string, and the body check is element-wise either way. Two slices
+   * hand-rolled this validator whole, and the shared element reader is exactly
+   * where the packed-array grammar last moved — so the copies were the two
+   * places that had to be found and edited by hand.
+   *
+   * `example` is the one thing the two differed on, and it is preserved rather
+   * than normalised: it is the wording each property's message already carries.
+   */
+  packedFloat32Array(name: string, example: string): PropertyValidator {
+    return packedTupleArray(name, 'PackedFloat32Array', 1, 'PackedFloat32Array(x, y, …)', example);
+  },
 };

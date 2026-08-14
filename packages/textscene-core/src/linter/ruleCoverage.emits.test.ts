@@ -29,7 +29,7 @@ import {
   ruleFiles,
 } from './testing/ruleNameScrape.js';
 import { pairMatches, scrapePairs } from './testing/emitsScrape.js';
-import { armBuilderSuffixes, balancedGroup, topLevelParts, reachablePairs } from './testing/emitsReach.js';
+import { armBuilders, balancedGroup, topLevelParts, reachablePairs } from './testing/emitsReach.js';
 import './index.js';
 
 describe('rule emits meta-guard', () => {
@@ -121,7 +121,7 @@ describe('rule emits meta-guard', () => {
   });
 
   it('declares the names each rule-name-builder call actually produces', () => {
-    const { builders, unresolvable } = armBuilderSuffixes(allFiles);
+    const { builders, unresolvable } = armBuilders(allFiles);
 
     // Two floors, and they are the whole point. The previous version had none
     // and an early `if (size === 0) return`, on the claim that both populations
@@ -136,7 +136,6 @@ describe('rule emits meta-guard', () => {
     const missing: string[] = [];
     const unresolvedCallSites: string[] = [];
     const called = new Set<string>();
-    let resolvedCallSites = 0;
     const callRe = new RegExp(String.raw`\b(${[...builders.keys()].join('|')})\s*\(`, 'g');
     for (const file of ruleFiles()) {
       const owners = declaredRuleNames(file)
@@ -153,7 +152,6 @@ describe('rule emits meta-guard', () => {
           continue;
         }
         called.add(call[1]!);
-        resolvedCallSites += 1;
         for (const template of builder.templates) {
           const expected = template.replaceAll(`\${${builder.param}}`, literal);
           const covered = owners.some((r) =>
@@ -163,7 +161,6 @@ describe('rule emits meta-guard', () => {
         }
       }
     }
-    expect(resolvedCallSites).toBeGreaterThan(0);
     expect([...builders.keys()].filter((b) => !called.has(b)).sort()).toEqual([]);
     expect(unresolvedCallSites.sort()).toEqual([]);
     expect(unresolvable.sort()).toEqual([]);

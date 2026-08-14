@@ -13,7 +13,7 @@ import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { sweepAncestors } from '../../../linter/parentType.js';
-import { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX } from '../../../godot/canvasItem.js';
+import { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX } from '../../../godot/index.js';
 import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
 
 /**

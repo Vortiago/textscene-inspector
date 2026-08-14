@@ -3,6 +3,8 @@ import { parseGodotInt } from '../../parser/vectors.js';
 import { warn } from '../../logger.js';
 
 const PACKED_VECTOR3_ARRAY_RE = packedArrayLiteral('PackedVector3Array');
+const PACKED_VECTOR2_ARRAY_RE = packedArrayLiteral('PackedVector2Array');
+const PACKED_COLOR_ARRAY_RE = packedArrayLiteral('PackedColorArray');
 
 /** Parse Godot `PackedVector3Array(x, y, z, x, y, z, ...)` into a flat Float32Array. */
 export function parsePackedVector3Array(value: string): Float32Array {
@@ -21,7 +23,7 @@ export function parsePackedVector3Array(value: string): Float32Array {
 
 /** Parse Godot `PackedVector2Array(x, y, x, y, ...)` into a flat Float32Array. */
 export function parsePackedVector2Array(value: string): Float32Array {
-  const match = value.match(packedArrayLiteral('PackedVector2Array'));
+  const match = PACKED_VECTOR2_ARRAY_RE.exec(value);
   if (!match) {
     throw new Error(`Invalid PackedVector2Array format: ${value}`);
   }
@@ -36,7 +38,7 @@ export function parsePackedVector2Array(value: string): Float32Array {
 
 /** Parse Godot `PackedColorArray(r, g, b, a, r, g, b, a, ...)` into a flat Float32Array. */
 export function parsePackedColorArray(value: string): Float32Array {
-  const match = value.match(packedArrayLiteral('PackedColorArray'));
+  const match = PACKED_COLOR_ARRAY_RE.exec(value);
   if (!match) {
     throw new Error(`Invalid PackedColorArray format: ${value}`);
   }

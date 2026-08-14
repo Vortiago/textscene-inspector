@@ -142,11 +142,8 @@ export function resolveNodePath(
       // lands on a parent the file never names, so the root declines as
       // unknowable.
       //
-      // By IDENTITY, not by type. `..` is `get_parent()` and never asks what
-      // class the parent is, so an instanced or override parent is a node this
-      // file names perfectly well; declining there stopped the walk and
-      // silenced every rule that would have judged where the path finally
-      // lands. The result is still gated through `isTypeUnknowable` below.
+      // By IDENTITY, not by type — see `parentIdentity`. The result is still
+      // gated through `isTypeUnknowable` below.
       const parent = parentIdentity(scene, current);
       if (!parent) return UNKNOWABLE;
       current = parent;

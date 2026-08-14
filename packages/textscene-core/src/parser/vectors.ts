@@ -208,11 +208,14 @@ export function parseGodotFloat(value: string): number | null {
  * number is not reproduced here.
  */
 export function parseGodotInt(value: string): number | null {
-  const trimmed = value.trim();
-  if (!TSCN_FLOAT_RE.test(trimmed)) return null;
-  const asFloat = parseGodotFloat(trimmed);
-  if (asFloat === null) return null;
-  return asStoredInt(asFloat);
+  // No grammar pre-test: `parseGodotFloat` returns non-null only for a
+  // NON_FINITE_FLOATS key — every one of which matches TSCN_FLOAT_RE, since the
+  // pattern is built from those keys — or for text that passed TSCN_FLOAT_RE
+  // itself. Nothing can fail a pre-test here and still survive the call, and
+  // this runs once per ELEMENT of a packed array (a stage's GridMap carries
+  // ~8,800), so the duplicate test and trim were the measurable half of it.
+  const asFloat = parseGodotFloat(value);
+  return asFloat === null ? null : asStoredInt(asFloat);
 }
 
 /**

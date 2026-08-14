@@ -34,7 +34,7 @@ export function walk(dir: string, match: string | ((name: string) => boolean)): 
  * The floor belongs to the SCRAPE, not to each guard that consumes it. Every
  * one of these guards reports "nothing wrong" as an empty list, so a walk that
  * silently matched nothing is indistinguishable from a clean tree — that is
- * exactly how `codePairs` and `armBuilderSuffixes` shipped with no floor at
+ * exactly how `codePairs` and `armBuilders` shipped with no floor at
  * all. Putting it here means the next consumer inherits it instead of
  * remembering it.
  *

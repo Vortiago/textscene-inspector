@@ -190,7 +190,7 @@ export function parameterList(signature: string): string[] {
     .filter((name): name is string => name !== undefined);
 }
 
-export function armBuilderSuffixes(files: string[]): ArmBuilders {
+export function armBuilders(files: string[]): ArmBuilders {
   const builders = new Map<string, ArmBuilder>();
   const unresolvable: string[] = [];
   for (const file of files) {
@@ -198,7 +198,6 @@ export function armBuilderSuffixes(files: string[]): ArmBuilders {
     for (const fn of src.matchAll(/export function (\w+)\s*\(/g)) {
       const builder = fn[1]!;
       const start = fn.index!;
-      const signature = balancedGroup(src, start + fn[0].length - 1);
       const end = src.indexOf('\n}', start);
       const body = src.slice(start, end === -1 ? undefined : end);
       // A bare identifier or quoted string reaches the literal scrape; only a
@@ -206,7 +205,11 @@ export function armBuilderSuffixes(files: string[]): ArmBuilders {
       // prefix in the middle (`valid-${p}-resources`) substitutes correctly
       // rather than being concatenated onto the end.
       const templates = [...body.matchAll(/ruleName:\s*`([^`]*)`/g)].map((m) => m[1]!);
-      const params = parameterList(signature);
+      // Before the signature is touched: 1,109 exported functions in the tree,
+      // ten of which template a rule name. Scraping every one of the other
+      // 1,099 for parameters it will never use is the bulk of this walk.
+      if (!templates.length) continue;
+      const params = parameterList(balancedGroup(src, start + fn[0].length - 1));
       const interpolated = params
         .map((param, index) => ({ param, index }))
         .filter(({ param }) => templates.some((t) => t.includes(`\${${param}}`)));

@@ -21,7 +21,7 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { hintedBitField, maskedBitField, propertyError, shape, v } from '../../../../linter/validators/index.js';
+import { hintedBitField, maskedBitField, v } from '../../../../linter/validators/index.js';
 import {
   AUTOWRAP_MODE,
   BREAK_TRIM_HINTED_BITS,
@@ -31,8 +31,6 @@ import {
   STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
-import { packedArrayLiteral } from '../../../../godot/index.js';
-import { firstNonNumericElement } from '../../../../linter/validators/v/packedArrays.js';
 
 // rich_text_label.cpp:7767: PROPERTY_HINT_ENUM "Left,Center,Right,Fill", the
 // full 4-member HorizontalAlignment enum (core/math/math_defs.h:80-84). Not
@@ -64,41 +62,6 @@ const VISIBLE_CHARACTERS_BEHAVIOR = {
   3: 'VC_GLYPHS_LTR',
   4: 'VC_GLYPHS_RTL',
 } as const;
-
-/**
- * `PackedFloat32Array(...)` format for `tab_stops`. `set_tab_stops`
- * (rich_text_label.cpp:7295-7308) bare-assigns the whole array with no
- * ERR_FAIL and no per-element check, so only the TSCN literal shape is worth
- * rejecting: an arbitrary-length list of numbers, empty allowed
- * (`PackedFloat32Array()` is the documented default).
- */
-const PACKED_FLOAT32_ARRAY_RE = packedArrayLiteral('PackedFloat32Array');
-
-function packedFloat32ArrayValidator(name: string, code: string) {
-  return shape((key, value, line) => {
-    const match = PACKED_FLOAT32_ARRAY_RE.exec(value);
-    if (!match) {
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' must be a PackedFloat32Array like PackedFloat32Array(4, 8, 12), got: ${value}`,
-        code
-      );
-    }
-    const body = match[1]!.trim();
-    if (body === '') return null;
-    const offender = firstNonNumericElement(body);
-    if (offender !== null) {
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' contains a non-numeric value: "${offender}"`,
-        code
-      );
-    }
-    return null;
-  }, 'PackedFloat32Array(x, y, …)');
-}
 
 validatorRegistry.registerAll('RichTextLabel', {
   // Ungrouped run (rich_text_label.cpp:7754-7770).
@@ -166,7 +129,10 @@ validatorRegistry.registerAll('RichTextLabel', {
   }),
   // rich_text_label.cpp:7770: Variant::PACKED_FLOAT32_ARRAY, no hint.
   // set_tab_stops (rich_text_label.cpp:7295-7308) is a bare assignment.
-  tab_stops: packedFloat32ArrayValidator('tab_stops', 'INVALID_TAB_STOPS_FORMAT'),
+  // `set_tab_stops` (rich_text_label.cpp:7295-7308) bare-assigns the whole
+  // array with no ERR_FAIL and no per-element check, so only the literal shape
+  // is worth rejecting; empty is the documented default.
+  tab_stops: v.packedFloat32Array('tab_stops', '4, 8, 12'),
 
   // Markup (ADD_GROUP "Markup", "", rich_text_label.cpp:7772-7775).
   // rich_text_label.cpp:7773: Variant::ARRAY, PROPERTY_HINT_ARRAY_TYPE

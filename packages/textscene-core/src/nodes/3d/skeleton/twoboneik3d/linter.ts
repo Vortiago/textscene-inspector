@@ -88,8 +88,8 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   // (ik_modifier_3d.h:69) starts empty, which is the XML's default="0".
   const countRaw = rawProps.setting_count;
   const count = countRaw === undefined ? 0 : parseGodotInt(countRaw);
-  // A malformed setting_count is already reported by its own validator, and a
-  // non-finite one is altered at parse; neither is a ceiling to count against.
+  // Neither an unreadable count nor a non-finite one is a ceiling to count
+  // against; each is already its own validator's diagnostic.
   if (count === null || Number.isNaN(count)) return diagnostics;
 
   const outOfRange = new Set<number>();

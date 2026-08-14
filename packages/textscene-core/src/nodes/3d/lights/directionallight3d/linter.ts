@@ -41,11 +41,10 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
   // `PROPERTY_USAGE_NO_EDITOR`; under `ORTHOGONAL` or `PARALLEL_2_SPLITS`,
   // `directional_shadow_split_2`/`directional_shadow_split_3` do too — the
   // inspector simply stops showing the now-inapplicable split fields.
-  const shadowMode = rawProps.directional_shadow_mode
-    ? parseGodotInt(rawProps.directional_shadow_mode)
-    : undefined;
+  // `parseGodotInt('')` is already null, so an absent key needs no third state.
+  const shadowMode = parseGodotInt(rawProps.directional_shadow_mode ?? '');
 
-  if (shadowMode !== undefined && shadowMode !== null && !Number.isNaN(shadowMode)) {
+  if (shadowMode !== null && !Number.isNaN(shadowMode)) {
     // ORTHOGONAL mode (0) doesn't use splits
     if (shadowMode === 0) {
       if (split1 || split2 || split3) {

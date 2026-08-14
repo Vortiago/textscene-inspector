@@ -229,11 +229,6 @@ export function ground(
 }
 
 /**
- * Severity for one END of a bound (ADR-0032): `warning` when only a hint names
- * it, `error` when the setter does. Un-audited ends keep erroring, which is the
- * pre-split behaviour.
- */
-/**
  * Whether the HINT's end at `end` describes a band any value can land in.
  *
  * `exclusive` is deliberately not consulted. It moves the endpoint, not the
@@ -257,6 +252,11 @@ export function outerEndIsReachable(bounds: EndedGrounding, end: 'min' | 'max'):
   return end === 'min' ? setterEnd.at < hintEnd : setterEnd.at > hintEnd;
 }
 
+/**
+ * Severity for one END of a bound (ADR-0032): `warning` when only a hint names
+ * it, `error` when the setter does. Un-audited ends keep erroring, which is the
+ * pre-split behaviour.
+ */
 export function endSeverity(opts: EndedGrounding, end: 'min' | 'max'): Severity {
   // A setter limit STRICTLY FURTHER OUT than the hint's own end owns the
   // `enforced:` citation, leaving the band between the two to the hint's tier,

@@ -10,8 +10,8 @@ import { TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.js';
  * `.exec()` the returned regex still read `match[1..arity]`.
  *
  * Components use {@link TSCN_FLOAT_PATTERN_SOURCE} — Godot's tokenizer grammar,
- * which is the renderer's `FLOAT_PATTERN_SOURCE` (`.5`, `5.`, `+5`, scientific
- * notation) PLUS `inf` / `-inf` / `inf_neg` / `nan`. The linter deliberately
+ * which is the renderer's `FLOAT_PATTERN_SOURCE` (`5.`, scientific notation, no
+ * leading `+` or `.`) PLUS `inf` / `-inf` / `inf_neg` / `nan`. The linter deliberately
  * accepts MORE than the renderer parses here: Godot writes a non-finite
  * component into every real-typed composite, so reporting one is a false
  * positive, while feeding `Infinity` to three.js is NaN geometry. The renderer

@@ -35,7 +35,7 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { hintedBitField, maskedBitField, propertyError, shape, v } from '../../../../linter/validators/index.js';
+import { hintedBitField, maskedBitField, propertyError, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import {
   AUTOWRAP_MODE,
@@ -47,8 +47,6 @@ import {
   STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
-import { packedArrayLiteral } from '../../../../godot/index.js';
-import { firstNonNumericElement } from '../../../../linter/validators/v/packedArrays.js';
 
 /** `HorizontalAlignment` (core/math/math_defs.h:80-85), label.cpp:1433 hint "Left,Center,Right,Fill". */
 const HORIZONTAL_ALIGNMENT = {
@@ -124,29 +122,7 @@ ellipsisCharValidator.grounding = { kind: 'enforced', cite: 'label.cpp:1260' };
  * through with no arity or value bound, so this only rejects a literal Godot's
  * own parser could not read.
  */
-const PACKED_FLOAT32_ARRAY_RE = packedArrayLiteral('PackedFloat32Array');
-const tabStopsValidator = shape((key, value, line) => {
-  const match = PACKED_FLOAT32_ARRAY_RE.exec(value.trim());
-  if (!match) {
-    return propertyError(
-      key,
-      line,
-      `Property 'tab_stops' must be a PackedFloat32Array like PackedFloat32Array(10, 20, 30), got: ${value}`,
-      'INVALID_TAB_STOPS_FORMAT'
-    );
-  }
-  const body = match[1]!.trim();
-  const offender = body === '' ? null : firstNonNumericElement(body);
-  if (offender !== null) {
-    return propertyError(
-      key,
-      line,
-      `Property 'tab_stops' contains a non-numeric value: "${offender}"`,
-      'INVALID_TAB_STOPS_FORMAT'
-    );
-  }
-  return null;
-}, 'PackedFloat32Array(x, y, …)');
+const tabStopsValidator = v.packedFloat32Array('tab_stops', '10, 20, 30');
 
 validatorRegistry.registerAll('Label', {
   // -- Ungrouped run (label.cpp:1431-1444) ------------------------------------

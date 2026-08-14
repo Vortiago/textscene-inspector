@@ -64,9 +64,6 @@ function checkCSGShape3D(context: RuleContext): Diagnostic[] {
   // csg_shape.cpp:2808-2829: `polygon` defaults to a unit square (4 points),
   // NOT an empty array — only a PRESENT, under-3-point polygon is degenerate.
   if (node.type === 'CSGPolygon3D' && properties.polygon) {
-    // Counted, not decoded. The renderer's decoder throws on a component its
-    // finite grammar refuses, so an `inf`-bearing polygon — which Godot loads
-    // and counts like any other — silenced this warning entirely.
     const points = polygonPointCount(properties.polygon);
     if (points === null) return []; // malformed literal is linterParser.ts's job
     if (points < 3) {
