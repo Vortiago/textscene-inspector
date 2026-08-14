@@ -19,6 +19,14 @@
  * Source text rather than behaviour, deliberately: the failure is a rule that
  * never runs on a shape nobody wrote a fixture for, so there is nothing to
  * observe until someone writes one.
+ *
+ * That is also why the sweep reads only the ACCESSOR line and never the arm
+ * beside it. `const unknowable = parent.instance ? true : !parent.type`, a
+ * destructured `const { instance, type } = parent`, a bracketed
+ * `parent['instance']`, and a `descendsFrom(parent.type, wanted)` with no test
+ * at all are four plausible copies with four different shapes — and the last
+ * has nothing to recognise. All of them need a parent first, so matching that
+ * one line catches every re-spelling without enumerating any.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -55,8 +63,16 @@ const OVERRIDE_FLAG_ALLOWED = new Set(['linter/parentType.ts', 'linter/StrictTsc
 
 /** The raw parent accessor, under any spelling of the call around it. */
 const RAW_PARENT_ACCESS = /\bfindParentNode\b/;
-/** The same, counting occurrences rather than answering yes/no. */
-const RAW_PARENT_ACCESS_ALL = /\bfindParentNode\b/g;
+/**
+ * The same, counting occurrences rather than answering yes/no.
+ *
+ * DERIVED, not re-spelled. The `linterUtils.ts` assertion below is the only
+ * place either constant meets real source text, so it is the positive control
+ * for both — and it can only be that while the two cannot drift. A separately
+ * written literal here would let the sweep's regex be mutated to match nothing
+ * and stay green, which is the exact defect class this file exists to catch.
+ */
+const RAW_PARENT_ACCESS_ALL = new RegExp(RAW_PARENT_ACCESS.source, 'g');
 
 function offenders(
   predicate: (source: string) => boolean,
@@ -117,26 +133,9 @@ describe('only parentType.ts holds a raw parent', () => {
     expect(offenders((s) => s.includes('overridesExistingNode'), OVERRIDE_FLAG_ALLOWED, linterTree)).toEqual([]);
   });
 
-  it('catches every re-spelling, by never reading the spelling', () => {
-    // Each of these is a plausible copy of the test, and the last is the one
-    // with no test at all — the shape a spelling-matcher cannot see. All ten
-    // need a parent first, and that is the only line this guard reads.
-    const accessor = 'const parent = findParentNode(scene.nodes, node);\n';
-    for (const arm of [
-      'const unknowable =\n  parent.instance !== undefined ||\n  !parent.type;',
-      'const unknowable = parent.instance ? true : !parent.type;',
-      'if (parent.instance) return [];\nif (!parent.type) return [];',
-      'if (!(!parent.instance && parent.type)) return [];',
-      'if (parent.type === undefined) return [];',
-      'if (parent?.instance !== undefined) return [];',
-      'const { instance, type } = parent;\nif (instance || !type) return [];',
-      "if (parent['instance']) return [];",
-      'if (parent.overridesExistingNode) return [];',
-      'if (!descendsFrom(parent.type, wanted)) report();',
-    ]) {
-      expect(RAW_PARENT_ACCESS.test(accessor + arm)).toBe(true);
-    }
-    // And stays quiet on the gated form: this parent is past the check already.
+  it('stays quiet on the gated form, where the parent is past the check already', () => {
+    // The other half of the sweep's correctness: over-breadth here would put
+    // every rule that reads `verdict.parent.type` on the offenders list.
     expect(
       RAW_PARENT_ACCESS.test(
         "const verdict = parentTypeVerdict(scene, node, 'Area2D');\nif (verdict.kind === 'mismatch') report(verdict.parent.type);"

@@ -29,7 +29,7 @@ import {
   ruleFiles,
 } from './testing/ruleNameScrape.js';
 import { pairMatches, scrapePairs } from './testing/emitsScrape.js';
-import { armBuilderSuffixes, reachablePairs } from './testing/emitsReach.js';
+import { armBuilderSuffixes, balancedGroup, topLevelParts, reachablePairs } from './testing/emitsReach.js';
 import './index.js';
 
 describe('rule emits meta-guard', () => {
@@ -121,21 +121,23 @@ describe('rule emits meta-guard', () => {
   });
 
   it('declares the names each rule-name-builder call actually produces', () => {
-    const { suffixes, unresolvable } = armBuilderSuffixes(allFiles);
+    const { builders, unresolvable } = armBuilderSuffixes(allFiles);
 
-    // Anti-vacuity, tied to reality rather than to a floor. Every advisory arm
-    // that interpolated its rule prefix has since become a validator bound, so
-    // both populations are legitimately empty and a count would only measure
-    // how far that conversion got. What must stay true is that no builder
-    // escapes BOTH scrapes: one whose names are interpolated belongs in
-    // `suffixes`, one whose names are literal is covered by the literal scrape
-    // above, and one that interpolates in a shape the scrape cannot read is a
-    // name nothing pins to a rule. That third case is what this asserts away.
-    expect(unresolvable.sort()).toEqual([]);
-    if (suffixes.size === 0) return;
+    // Two floors, and they are the whole point. The previous version had none
+    // and an early `if (size === 0) return`, on the claim that both populations
+    // were legitimately empty — they are not: one builder with two call sites
+    // exists today. The generated call-site regex demanded the prefix as the
+    // FIRST argument while both call sites pass it second, so the loop below
+    // ran zero times and an `uncalled`-only assertion could never see it. Both
+    // counts are `> 0` rather than pinned, so an arm becoming a validator bound
+    // is not churn.
+    expect(builders.size).toBeGreaterThan(0);
 
     const missing: string[] = [];
-    const callRe = new RegExp(String.raw`\b(${[...suffixes.keys()].join('|')})\(\s*'([^']+)'`, 'g');
+    const unresolvedCallSites: string[] = [];
+    const called = new Set<string>();
+    let resolvedCallSites = 0;
+    const callRe = new RegExp(String.raw`\b(${[...builders.keys()].join('|')})\s*\(`, 'g');
     for (const file of ruleFiles()) {
       const owners = declaredRuleNames(file)
         .map((n) => byRuleName.get(n))
@@ -143,9 +145,17 @@ describe('rule emits meta-guard', () => {
       if (!owners.length) continue;
       const src = readFileSync(file, 'utf8');
       for (const call of src.matchAll(callRe)) {
-        const [, builder, prefix] = call;
-        for (const suffix of suffixes.get(builder!) ?? []) {
-          const expected = `${prefix}${suffix}`;
+        const builder = builders.get(call[1]!)!;
+        const args = topLevelParts(balancedGroup(src, call.index! + call[0].length - 1));
+        const literal = /^'([^']*)'$/.exec(args[builder.index]?.trim() ?? '')?.[1];
+        if (literal === undefined) {
+          unresolvedCallSites.push(`${file.slice(nodesRoot.length + 1)}: ${call[1]}`);
+          continue;
+        }
+        called.add(call[1]!);
+        resolvedCallSites += 1;
+        for (const template of builder.templates) {
+          const expected = template.replaceAll(`\${${builder.param}}`, literal);
           const covered = owners.some((r) =>
             (r!.meta.emits ?? []).some((e) => e.ruleName === expected)
           );
@@ -153,6 +163,10 @@ describe('rule emits meta-guard', () => {
         }
       }
     }
+    expect(resolvedCallSites).toBeGreaterThan(0);
+    expect([...builders.keys()].filter((b) => !called.has(b)).sort()).toEqual([]);
+    expect(unresolvedCallSites.sort()).toEqual([]);
+    expect(unresolvable.sort()).toEqual([]);
     expect([...new Set(missing)].sort()).toEqual([]);
   });
 
