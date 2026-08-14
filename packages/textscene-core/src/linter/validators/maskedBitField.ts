@@ -31,7 +31,7 @@
 import { propertyError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
-import { IS_VALID_INT_RE } from '../../godot/index.js';
+import { parseGodotInt } from './commonValidators.js';
 
 /** `LABEL (bit) | LABEL (bit)` for whichever of `labels` appear in `bits`. */
 function describeBits(labels: Record<number, string>, bits: number): string {
@@ -76,7 +76,15 @@ export function maskedBitField(
   const allNames = describe(mask);
 
   const validator = accepts((key, value, line) => {
-    if (!IS_VALID_INT_RE.test(value.trim())) {
+    // `parseGodotInt`, not `IS_VALID_INT_RE`: that regex describes
+    // `String::is_valid_int()`, which is the grammar of an index inside a
+    // property KEY, not of a Variant literal. A bit-field slot is an INT, so
+    // Godot reads any number token and converts — `justification_flags = 3.0`
+    // and `= 2e1` are files it loads, and a format error on either reported on
+    // a scene the engine opens. The interpolated `${num}` below is now the
+    // STORED int, which is what every message here should have said.
+    const num = parseGodotInt(value);
+    if (num === null) {
       return propertyError(
         key,
         line,
@@ -84,7 +92,6 @@ export function maskedBitField(
         `INVALID_${upper}_FORMAT`
       );
     }
-    const num = Number(value);
     // `num > mask` first: a value whose bits all lie inside the mask cannot
     // exceed it, so this rejects everything too wide before `&` reaches the
     // 32-bit signed range where it would wrap and give a wrong answer. Below
@@ -150,7 +157,10 @@ export function hintedBitField(name: string, opts: HintedBitFieldOptions): Prope
   const allNames = describeBits(opts.labels, hintedBits);
 
   const validator = accepts((key, value, line) => {
-    if (!IS_VALID_INT_RE.test(value.trim())) {
+    // Same reasoning as `maskedBitField` above: an INT slot takes any number
+    // token, so the gate is a parse and not `String::is_valid_int()`.
+    const num = parseGodotInt(value);
+    if (num === null) {
       return propertyError(
         key,
         line,
@@ -158,7 +168,6 @@ export function hintedBitField(name: string, opts: HintedBitFieldOptions): Prope
         `INVALID_${upper}_FORMAT`
       );
     }
-    const num = Number(value);
     // `num > hintedBits` first, so a value past 32 bits never reaches `&`,
     // where JS would coerce and wrap. Same ordering, same reason, as
     // `maskedBitField`.

@@ -15,6 +15,7 @@
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v, hintedBitField } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/propertyError.js';
+import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
 
 /** material.h:340-342. */
 const STENCIL_FLAG_READ = 1;
@@ -37,7 +38,9 @@ function stencilFlags(): PropertyValidator {
     // A malformed literal is the one thing that stops the exclusivity check
     // from having a number to read.
     if (unlisted?.severity === 'error') return unlisted;
-    const bits = Number(value.trim());
+    // `listed` already returned an error for anything unparseable, so this
+    // cannot be null in practice; the `?? 0` is for the type.
+    const bits = parseGodotInt(value) ?? 0;
     if ((bits & STENCIL_FLAG_READ) !== 0 && (bits & STENCIL_WRITE_FLAGS) !== 0) {
       return propertyError(
         key,

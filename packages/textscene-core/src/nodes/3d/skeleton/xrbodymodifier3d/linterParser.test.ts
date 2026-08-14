@@ -109,8 +109,13 @@ describe('XRBodyModifier3D strict validators', () => {
       expect(check('body_update', '-1')?.severity).toBe('warning');
     });
 
-    it('rejects a non-integer as a format error', () => {
-      const error = check('body_update', '1.5');
+    it('truncates a float rather than calling it a format error', () => {
+      // An INT slot takes any number token and converts, so `1.5` stores 1.
+      expect(check('body_update', '1.5')?.code).not.toBe('INVALID_BODY_UPDATE_FORMAT');
+    });
+
+    it('still rejects a literal Godot cannot tokenise', () => {
+      const error = check('body_update', 'abc');
       expect(error?.severity).toBe('error');
       expect(error?.code).toBe('INVALID_BODY_UPDATE_FORMAT');
     });

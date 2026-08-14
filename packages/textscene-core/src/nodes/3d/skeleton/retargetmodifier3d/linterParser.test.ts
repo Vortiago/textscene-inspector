@@ -77,8 +77,13 @@ describe('RetargetModifier3D strict validators', () => {
       expect(check('enable', '-1')?.severity).toBe('warning');
     });
 
-    it('rejects a non-integer as a format error', () => {
-      const error = check('enable', '1.5');
+    it('truncates a float rather than calling it a format error', () => {
+      // An INT slot takes any number token and converts, so `1.5` stores 1.
+      expect(check('enable', '1.5')?.code).not.toBe('INVALID_ENABLE_FORMAT');
+    });
+
+    it('still rejects a literal Godot cannot tokenise', () => {
+      const error = check('enable', 'abc');
       expect(error?.severity).toBe('error');
       expect(error?.code).toBe('INVALID_ENABLE_FORMAT');
     });

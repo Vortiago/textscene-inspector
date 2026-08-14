@@ -93,8 +93,19 @@ describe('maskedBitField', () => {
       expect(run('4294967328')?.code).toBe('INVALID_AUTOWRAP_TRIM_FLAGS_VALUE');
     });
 
-    it.each(['', ' ', 'abc', '32.5', '0x20'])('rejects the non-integer %o as a format error', (value) => {
+    it.each(['', ' ', 'abc', '0x20'])('rejects %o as a format error', (value) => {
+      // `0x20` is not a Variant literal at all: the number tokenizer has no hex
+      // branch and READING_INT stops at `x`. `Number('0x20')` reads 32, which is
+      // why the old gate ACCEPTED a spelling Godot refuses.
       expect(run(value)?.code).toBe('INVALID_AUTOWRAP_TRIM_FLAGS_FORMAT');
+    });
+
+    it('truncates a float rather than calling it a format error', () => {
+      // A bit-field slot is an INT, so Godot reads the number token and
+      // converts: `32.5` stores 32. Whether 32 is a legal bit is the VALUE
+      // question below, not a format one.
+      expect(run('32.5')?.code).not.toBe('INVALID_AUTOWRAP_TRIM_FLAGS_FORMAT');
+      expect(run('64.9')).toBeNull();
     });
 
     it('tolerates surrounding whitespace, as the property scanner may leave it', () => {
