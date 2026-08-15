@@ -21,7 +21,9 @@ import { intComponent } from '../../../linter/validators/commonValidators.js';
 function parseVector2i(raw: string): { x: number; y: number } | null {
   const match = VECTOR2I_REGEX.exec(raw);
   if (!match) return null;
-  return { x: intComponent(match[1]), y: intComponent(match[2]) };
+  const x = intComponent(match[1]);
+  const y = intComponent(match[2]);
+  return x === null || y === null ? null : { x, y };
 }
 
 function checkWindow(context: RuleContext): Diagnostic[] {

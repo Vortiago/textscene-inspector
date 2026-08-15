@@ -61,13 +61,10 @@ export function decodeTileMapData(value: string): PlacedCell[] | null {
  * The elements of a packed INT body, or `null` when one is text Godot's own
  * tokenizer cannot read.
  *
- * The two failure modes are deliberately NOT the same answer. Text outside the
- * grammar (`nope`, `0x10`) is a file Godot refuses, so the whole decode gives
- * up and the caller's error stands. A NON-FINITE element is a file Godot loads:
- * `_parse_construct<int32_t>` narrows it at parse time, and `Int32Array` /
- * `Uint8Array` coerce it to 0 here, so the cell lands at the origin and the
- * decode continues. Conflating them reported `tilemap-invalid-tile-data` at
- * error tier on a body the phase-1 packed-array validator accepts.
+ * Two failure modes, two answers. Text outside the grammar (`nope`, `0x10`) is
+ * a file Godot refuses, so the decode gives up. A NON-FINITE element is a file
+ * Godot loads and narrows at parse, so the cell lands at the origin and the
+ * decode continues — the phase-1 validator reports the alteration separately.
  *
  * Truncation is matched for the in-range finite case only. `(int32_t)1e10` is
  * undefined behaviour in C++ and platform-specific in practice, so no attempt

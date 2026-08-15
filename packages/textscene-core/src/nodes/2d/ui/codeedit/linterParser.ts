@@ -30,7 +30,7 @@ import { arrayBody, INT_ARRAY_FORMS } from './arrayForms.js';
 import { bracePairsValidator } from './bracePairValidators.js';
 import { delimiterArrayValidator } from './delimiterValidators.js';
 import { prefixArrayValidator } from './prefixValidators.js';
-import { firstNonNumericElement } from '../../../../linter/validators/v/packedArrays.js';
+import { firstNonNumericElement, firstUnrepresentableIntElement } from '../../../../linter/validators/v/packedArrays.js';
 
 /**
  * `line_length_guidelines` — `set_line_length_guidelines`
@@ -52,6 +52,18 @@ function lineLengthGuidelinesValidator(): PropertyValidator {
       );
     }
     if (body === '') return null;
+    // Reads, but no int32 holds it: narrowed at parse
+    // (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
+    const unfit = firstUnrepresentableIntElement(body);
+    if (unfit !== null) {
+      return propertyError(
+        key,
+        line,
+        `Property 'line_length_guidelines' has an element no integer can hold: "${unfit}"`,
+        code,
+        'error'
+      );
+    }
     const offender = firstNonNumericElement(body);
     if (offender !== null) {
       return propertyError(

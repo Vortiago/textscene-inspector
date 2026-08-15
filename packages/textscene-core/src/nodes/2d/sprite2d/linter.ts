@@ -84,7 +84,7 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
       const hframes = gridCount(rawProps.hframes);
       const vframes = gridCount(rawProps.vframes);
 
-      if (!isNaN(coordX) && !isNaN(coordY) && hframes !== null && vframes !== null) {
+      if (coordX !== null && coordY !== null && hframes !== null && vframes !== null) {
         if (coordX >= hframes) {
           diagnostics.push({
             severity: 'error',

@@ -4,7 +4,7 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { TSCN_FLOAT_RE } from '../commonValidators.js';
+import { parseGodotInt, TSCN_FLOAT_RE } from '../commonValidators.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
 
@@ -25,6 +25,24 @@ import { shape } from './grounding.js';
  * its own property name, message wording and error code. Takes the raw body or
  * already-split parts, for the callers that must strip a trailing comma first.
  */
+/**
+ * The first element that reads but no int32 holds, or `null`.
+ *
+ * `firstNonNumericElement`'s companion for a PackedInt32Array: its grammar
+ * admits `inf`, which its float callers need, while an int element is narrowed
+ * at parse (`_parse_construct<int32_t>`, variant_parser.cpp:1428-1430).
+ */
+export function firstUnrepresentableIntElement(
+  body: string | readonly string[]
+): string | null {
+  for (const part of typeof body === 'string' ? body.split(',') : body) {
+    const trimmed = part.trim();
+    const num = parseGodotInt(trimmed);
+    if (num !== null && Number.isNaN(num)) return trimmed;
+  }
+  return null;
+}
+
 export function firstNonNumericElement(body: string | readonly string[]): string | null {
   for (const part of typeof body === 'string' ? body.split(',') : body) {
     const trimmed = part.trim();

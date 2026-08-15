@@ -13,7 +13,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, shape, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/index.js';
-import { firstNonNumericElement } from '../../../linter/validators/v/packedArrays.js';
+import { firstNonNumericElement, firstUnrepresentableIntElement } from '../../../linter/validators/v/packedArrays.js';
 
 const BRACKET_ARRAY_RE = /^\s*\[([\s\S]*)\]\s*$/;
 const PACKED_INT32_ELEMENT_RE = /^PackedInt32Array\s*\(([\s\S]*)\)$/;
@@ -80,6 +80,18 @@ function polygonsValidator(): PropertyValidator {
       const inner = el[1]!.trim();
       if (inner === '') continue;
       const indices = bare ? dropTrailingComma(inner.split(',')) : inner.split(',');
+      // Reads, but no int32 holds it: narrowed at parse
+      // (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
+      const unfit = firstUnrepresentableIntElement(indices);
+      if (unfit !== null) {
+        return propertyError(
+          key,
+          line,
+          `Property 'polygons' has an element no integer can hold: "${unfit}"`,
+          code,
+          'error'
+        );
+      }
       const offender = firstNonNumericElement(indices);
       if (offender !== null) {
         return propertyError(

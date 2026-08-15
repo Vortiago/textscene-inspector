@@ -94,6 +94,8 @@ export function createVector2iValidator(
       // is bounded as the 0 Godot stores rather than as the 0.9 it was written.
       const x = intComponent(match[1]);
       const y = intComponent(match[2]);
+      // The unrepresentable arm above returned, so neither is null.
+      if (x === null || y === null) return null;
       if (x < minComponent || y < minComponent) {
         // The 0 case keeps its long-standing wording; every per-node test that
         // asserts a substring of it is asserting the engine's floor, not the phrasing.

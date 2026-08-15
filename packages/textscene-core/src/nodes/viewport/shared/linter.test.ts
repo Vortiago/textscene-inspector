@@ -10,6 +10,16 @@ import { describe, it, expect } from 'vitest';
 import { node, scene, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
 import './linter';
 
+describe('viewport size with a component no int32 holds', () => {
+  it('says nothing rather than naming NaN as the size', () => {
+    for (const spelling of ['inf', 'nan', 'inf_neg']) {
+      expectNoDiagnostic(scene(node('SubViewport', { size: `Vector2i(${spelling}, 1080)` })), {
+        ruleName: 'viewport-size-too-small',
+      });
+    }
+  });
+});
+
 describe('Viewport size rule (viewport-size-too-small)', () => {
   it('warns on a Window with size.x <= 1', () => {
     const diagnostic = expectDiagnostic(scene(node('Window', { size: 'Vector2i(1, 480)' })), {

@@ -39,13 +39,13 @@ export function tupleComponent(text: string | undefined): number {
  * The same, for a component of an `i`-suffixed composite: the int32 Godot
  * stores rather than the number as written.
  *
- * Exported because the tuple regexes are exported, and a caller that `.exec()`s
- * one and then reaches for `parseInt` gets 2 out of `2e1` and NaN out of `inf`
- * — the accident {@link parseGodotInt} exists to stop, reintroduced one capture
- * at a time.
+ * `null` when no int32 holds it. NOT NaN: NaN passes a `!==` and an inverted
+ * early return, and reaches a message as the string "NaN" — which is how two
+ * Window rules came to print `Vector2i(NaN, 1080)`.
  */
-export function intComponent(text: string | undefined): number {
-  return asStoredInt(tupleComponent(text));
+export function intComponent(text: string | undefined): number | null {
+  const stored = asStoredInt(tupleComponent(text));
+  return Number.isNaN(stored) ? null : stored;
 }
 
 /** True when an already-matched component cannot be stored in an int32 slot. */

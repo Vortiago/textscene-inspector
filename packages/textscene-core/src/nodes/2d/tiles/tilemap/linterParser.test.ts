@@ -11,6 +11,14 @@ function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
   return diagnostics.filter((d) => d.severity === 'error');
 }
 
+describe('tile_data with an element no int32 holds', () => {
+  it('errors, where the grammar alone was silent', () => {
+    const v = validatorRegistry.findValidator('TileMap', 'layer_0/tile_data')!;
+    expect(v('layer_0/tile_data', 'PackedInt32Array(inf, 0, 0)', 1)?.severity).toBe('error');
+    expect(v('layer_0/tile_data', 'PackedInt32Array(0, 0, 0)', 1)).toBeNull();
+  });
+});
+
 describe('TileMap strict validators', () => {
   let linter: Linter;
 

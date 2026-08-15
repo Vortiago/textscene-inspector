@@ -61,6 +61,8 @@ function checkViewportSize(context: RuleContext): Diagnostic[] {
   if (!match) return [];
   const x = intComponent(match[1]);
   const y = intComponent(match[2]);
+  // A component no int32 holds is the validator's error, not a size to name.
+  if (x === null || y === null) return [];
   if (x > 1 && y > 1) return [];
 
   return [
