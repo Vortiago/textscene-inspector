@@ -48,6 +48,14 @@
  * alpha mask, not a recolouring. An unlit Light Only panel renders fully
  * transparent, and a lit one at full cookie alpha renders its authored colour.
  *
+ * LIGHT MODE IS A UNIFORM, NOT A VARIANT. Godot spells those guards as defines
+ * and picks a shader version per draw; three bakes `onBeforeCompile`,
+ * `customProgramCacheKey`, `defines`, `map` and `transparent` into the program at
+ * a material's FIRST compile and never re-reads them (`canvasItemProgram.ts`) —
+ * while a re-parse edits `light_mode` under a MOUNTED item. So all three modes
+ * compile one program and the mode rides `uUnshaded`/`uLightOnly`, exactly as
+ * "which lights exist" rides `uLightClassWeight`.
+ *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -106,11 +114,25 @@ export interface CanvasItemLightingUniforms {
   readonly classWeights: THREE.IUniform;
   readonly resolution: THREE.IUniform;
   readonly canvasModulate: THREE.IUniform;
+  /** `1` while the item's `light_mode` is `Unshaded`, else `0`. */
+  readonly unshaded: THREE.IUniform;
+  /** `1` while the item's `light_mode` is `Light Only`, else `0`. */
+  readonly lightOnly: THREE.IUniform;
 }
 
 export interface CanvasItemLightingInput {
   uniforms: CanvasItemLightingUniforms;
-  lightMode: CanvasItemLightMode;
+}
+
+/** The mode uniforms' values for a light mode — the hook's per-frame write. */
+export function canvasLightModeFlags(lightMode: CanvasItemLightMode): {
+  unshaded: number;
+  lightOnly: number;
+} {
+  return {
+    unshaded: lightMode === CanvasItemLightMode.UNSHADED ? 1 : 0,
+    lightOnly: lightMode === CanvasItemLightMode.LIGHT_ONLY ? 1 : 0,
+  };
 }
 
 /**
@@ -118,30 +140,20 @@ export interface CanvasItemLightingInput {
  * accumulators. Spread onto the material like the blend state; an item that
  * spreads nothing simply stays unlit, which is what every 3D consumer needs.
  *
- * Returns empty props only for an `Unshaded` item, which Godot excludes from the
- * light loop outright. Everything else compiles the light path whether or not
- * the scene currently has lights — see the note in `onBeforeCompile`.
+ * The SAME props whatever the light mode, and whether or not the scene has
+ * lights: both are uniforms, not programs (see the module note).
  */
 export function canvasItemLightingProps(
   input: CanvasItemLightingInput
 ): CanvasItemLightingProps {
-  const { uniforms, lightMode } = input;
-  if (lightMode === CanvasItemLightMode.UNSHADED) return {};
-
-  const lightOnly = lightMode === CanvasItemLightMode.LIGHT_ONLY;
-  const seed = lightOnly ? 'vec3(1.0)' : 'uCanvasModulate';
+  const { uniforms } = input;
 
   return {
-    customProgramCacheKey: () => `godot-canvas-light-${lightOnly ? 'light-only' : 'normal'}`,
-    // A Light Only item is a mask, so its alpha has to survive to the blend.
-    ...(lightOnly ? { transparent: true } : {}),
+    customProgramCacheKey: () => 'godot-canvas-light',
+    // Light Only is an alpha mask, so it must reach the blend. Unconditional
+    // because `transparent` is itself a program input (three's `OPAQUE`).
+    transparent: true,
     onBeforeCompile: (shader) => {
-      // Compiled unconditionally, even with no lights in the scene: which lights
-      // exist is DATA, carried by `uLightClassWeight`, not a different program.
-      // Godot's canvas.glsl is shaped the same way: the light loop is always
-      // present and zero lights simply contribute nothing. Making it a
-      // compile-time choice is what left already-mounted items on a stock
-      // shader forever once a light appeared.
       CLASS_SLOTS.forEach((index) => {
         shader.uniforms[lightClassSampler(index)] = uniforms.classBuffers[index]!;
         shader.uniforms[shadowTintSampler(index)] = uniforms.shadowTintBuffers[index]!;
@@ -149,6 +161,8 @@ export function canvasItemLightingProps(
       shader.uniforms.uLightClassWeight = uniforms.classWeights;
       shader.uniforms.uLightResolution = uniforms.resolution;
       shader.uniforms.uCanvasModulate = uniforms.canvasModulate;
+      shader.uniforms.uUnshaded = uniforms.unshaded;
+      shader.uniforms.uLightOnly = uniforms.lightOnly;
 
       shader.fragmentShader = shader.fragmentShader
         .replace(
@@ -160,19 +174,23 @@ export function canvasItemLightingProps(
 uniform float uLightClassWeight[${MAX_LIGHT_CLASSES}];
 uniform vec2 uLightResolution;
 uniform vec3 uCanvasModulate;
+uniform float uUnshaded;
+uniform float uLightOnly;
 ${TRANSFER_GLSL}
 void main() {`
         )
         .replace(
           '#include <colorspace_fragment>',
-          `{
-  // Every slot this item's light_mask does not select weighs 0, which covers
-  // both a canvas with no light at all and a class this item is culled from.
-  // S is then just the seed its light mode would have started from.
-  vec3 lightSeed = ${seed};
+          `// canvas.glsl:715 and :719 — MODE_UNSHADED skips the canvas tint and
+// the light loop, so the fragment leaves as it arrived.
+if (uUnshaded < 0.5) {
+  // Weight 0 covers both "no light on this canvas" and "culled from this class",
+  // leaving S at the seed.
+  vec3 lightSeed = uCanvasModulate;
+  // canvas.glsl:713 — Light Only skips the tint; its buffers are seeded to match.
+  if (uLightOnly > 0.5) lightSeed = vec3(1.0);
   vec4 accum = vec4(lightSeed, 0.0);
-  // shadow_color is the one light term Godot does NOT multiply by the albedo,
-  // so it accumulates apart and lands after the multiply below.
+  // shadow_color is the one light term Godot does NOT scale by the albedo.
   vec3 shadowTint = vec3(0.0);
   vec2 lightUv = gl_FragCoord.xy / uLightResolution;
 ${CLASS_SLOTS.map(
@@ -184,14 +202,14 @@ ${CLASS_SLOTS.map(
   }`
 ).join('\n')}
   vec3 lit = godotToSrgb(gl_FragColor.rgb);
-${
-  lightOnly
-    ? `  // Light Only skipped the canvas tint on the CPU, so the fragment IS the
-  // albedo, and the buffers it reads were seeded unmodulated to match.
-  vec3 albedo = lit;
-  gl_FragColor.a = clamp(gl_FragColor.a * accum.a, 0.0, 1.0);`
-    : `  vec3 albedo = lit / max(uCanvasModulate, vec3(${CANVAS_MODULATE_FLOOR}));`
-}
+  vec3 albedo;
+  if (uLightOnly > 0.5) {
+    // The fragment already IS the albedo; the mask is the cookie coverage.
+    albedo = lit;
+    gl_FragColor.a = clamp(gl_FragColor.a * accum.a, 0.0, 1.0);
+  } else {
+    albedo = lit / max(uCanvasModulate, vec3(${CANVAS_MODULATE_FLOOR}));
+  }
   gl_FragColor.rgb = godotToLinear(clamp(albedo * accum.rgb + shadowTint, 0.0, 1.0));
 }
 #include <colorspace_fragment>`

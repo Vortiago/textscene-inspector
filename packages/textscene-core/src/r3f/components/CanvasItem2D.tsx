@@ -46,8 +46,9 @@ export interface CanvasItem2DProps {
     material: CanvasItemMaterialProperties | null,
     /**
      * Material props that make this item sample the 2D light accumulation.
-     * Spread onto the item's material like the blend state; empty when the
-     * scene has no lights or the item is `Unshaded`.
+     * Spread onto the item's material like the blend state. The SAME props for
+     * every light mode and every light count — both are uniforms, not programs
+     * (`lighting2d/canvasItemLighting`) — and they declare `transparent`.
      */
     lighting: CanvasItemLightingProps
   ) => ReactNode;
