@@ -3,6 +3,7 @@
 import type { ParseError } from '../../linter/types.js';
 import type { PropertyValidator } from '../propertyValidator.js';
 import { propertyError } from './propertyError.js';
+import { unrepresentableInt } from './intSlot.js';
 import { asStoredInt, parseGodotFloat, parseGodotInt } from '../../parser/vectors.js';
 
 /**
@@ -98,6 +99,8 @@ export function createEnumValidator(
     if (num === null) {
       return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
     }
+    const refused = unrepresentableInt(propertyName, key, value, line, errorCodeValue, num);
+    if (refused) return refused;
     if (num < min || num > max) {
       const validValuesStr = Object.entries(enumValues)
         .map(([val, name]) => `${val}=${name}`)
@@ -231,14 +234,9 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
     // not state (see `asStoredInt`), so the literal is ALTERED and reports as
     // an error. A FLOAT slot stores it verbatim and says nothing. That is the
     // whole difference between the two, and it is the engine's own.
-    if (parseAsInt && num !== null && Number.isNaN(num)) {
-      return propertyError(
-        key,
-        line,
-        `Property '${propertyName}' cannot be stored in an integer slot, got: "${value}". The file loads, but the value is narrowed at parse time to a number the file does not state.`,
-        errorCodeValue,
-        'error'
-      );
+    if (parseAsInt) {
+      const refused = unrepresentableInt(propertyName, key, value, line, errorCodeValue, num);
+      if (refused) return refused;
     }
     if (num === null) {
       return propertyError(
@@ -304,6 +302,8 @@ export function createPositiveIntegerValidator(
     if (num === null) {
       return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
     }
+    const refused = unrepresentableInt(propertyName, key, value, line, errorCodeValue, num);
+    if (refused) return refused;
     if (num <= 0) {
       const defaultMsg = `Property '${propertyName}' must be greater than 0 (got ${num}). Zero or negative values cause division by zero.`;
       return propertyError(key, line, errorMessage || defaultMsg, errorCodeValue, valueSeverity);

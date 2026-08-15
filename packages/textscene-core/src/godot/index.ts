@@ -39,6 +39,7 @@ export {
   CANVAS_ITEM_Z_MAX,
 } from './rendering.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
+export { toInt16, toInt32, toUint32 } from './int.js';
 export { DEFAULT_ANIMATION_NAME } from './animation.js';
 export {
   ARRAY_LITERAL_RE,

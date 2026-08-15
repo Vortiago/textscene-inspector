@@ -13,6 +13,7 @@ import { ARRAY_LITERAL_RE, packedArrayCallAnywhere, RESOURCE_REF_RE } from '../.
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
 import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
+import { unrepresentableInt } from '../../../linter/validators/intSlot.js';
 
 const DICT_LITERAL_RE = /^\{[\s\S]*\}$/;
 const CELLS_RE = new RegExp(`"cells"\\s*:\\s*${packedArrayCallAnywhere('PackedInt32Array').source}`);
@@ -111,6 +112,10 @@ const cellOctantSizeValidator: PropertyValidator = accepts((key, value, line) =>
       'INVALID_CELL_OCTANT_SIZE_FORMAT'
     );
   }
+  const unfit = unrepresentableInt(
+    'cell_octant_size', key, value, line, 'INVALID_CELL_OCTANT_SIZE_VALUE', parsed
+  );
+  if (unfit) return unfit;
   if (parsed === 0) {
     return propertyError(
       key,

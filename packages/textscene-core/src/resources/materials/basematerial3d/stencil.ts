@@ -38,9 +38,10 @@ function stencilFlags(): PropertyValidator {
     // A malformed literal is the one thing that stops the exclusivity check
     // from having a number to read.
     if (unlisted?.severity === 'error') return unlisted;
-    // `listed` already returned an error for anything unparseable, so this
-    // cannot be null in practice; the `?? 0` is for the type.
-    const bits = parseGodotInt(value) ?? 0;
+    // `listed` errors on anything unreadable OR unstorable, so a usable number
+    // is the only thing that reaches here.
+    const bits = parseGodotInt(value);
+    if (bits === null || Number.isNaN(bits)) return null;
     if ((bits & STENCIL_FLAG_READ) !== 0 && (bits & STENCIL_WRITE_FLAGS) !== 0) {
       return propertyError(
         key,

@@ -29,6 +29,7 @@
  */
 
 import { propertyError } from './propertyError.js';
+import { unrepresentableInt } from './intSlot.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { parseGodotInt } from './commonValidators.js';
@@ -92,6 +93,10 @@ export function maskedBitField(
         `INVALID_${upper}_FORMAT`
       );
     }
+    // A non-finite READS but does not FIT, and every bit test below is false
+    // for NaN, so without this the slot said nothing at all.
+    const refused = unrepresentableInt(name, key, value, line, `INVALID_${upper}_VALUE`, num);
+    if (refused) return refused;
     // `num > mask` first: a value whose bits all lie inside the mask cannot
     // exceed it, so this rejects everything too wide before `&` reaches the
     // 32-bit signed range where it would wrap and give a wrong answer. Below
@@ -168,6 +173,10 @@ export function hintedBitField(name: string, opts: HintedBitFieldOptions): Prope
         `INVALID_${upper}_FORMAT`
       );
     }
+    // A non-finite READS but does not FIT, and every bit test below is false
+    // for NaN, so without this the slot said nothing at all.
+    const refused = unrepresentableInt(name, key, value, line, `INVALID_${upper}_VALUE`, num);
+    if (refused) return refused;
     // `num > hintedBits` first, so a value past 32 bits never reaches `&`,
     // where JS would coerce and wrap. Same ordering, same reason, as
     // `maskedBitField`.

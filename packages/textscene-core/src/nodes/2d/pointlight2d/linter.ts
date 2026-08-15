@@ -60,7 +60,9 @@ const WINDOWS = [
  */
 function bound(raw: string | undefined, fallback: number): number | null {
   if (raw === undefined) return fallback;
-  return parseGodotInt(raw);
+  const parsed = parseGodotInt(raw);
+  // NaN would clear the `min <= max` skip and reach the message as "NaN".
+  return parsed !== null && Number.isFinite(parsed) ? parsed : null;
 }
 
 function checkPointLight2D(context: RuleContext): Diagnostic[] {

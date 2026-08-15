@@ -23,6 +23,26 @@ stretch = true
 ${children}`;
 }
 
+describe('SubViewportContainer cursor shape — only a shape the node can hold', () => {
+  it('says nothing about a non-finite or out-of-enum cursor', () => {
+    // `Control::CursorShape` runs 0-16 (control.h:180-197). A value outside it
+    // is not "a shape other than Arrow", it is not a shape.
+    for (const shape of ['inf', 'nan', '99', '2e1']) {
+      expectNoDiagnostic(
+        scene(node('SubViewportContainer', { mouse_default_cursor_shape: shape })),
+        { ruleName: 'subviewportcontainer-non-arrow-cursor' }
+      );
+    }
+  });
+
+  it('still warns on a real non-Arrow shape', () => {
+    expectDiagnostic(scene(node('SubViewportContainer', { mouse_default_cursor_shape: 2 })), {
+      ruleName: 'subviewportcontainer-non-arrow-cursor',
+      severity: 'warning',
+    });
+  });
+});
+
 describe('SubViewportContainer linter', () => {
   describe('format validators (errors)', () => {
     it('accepts valid stretch / stretch_shrink', () => {

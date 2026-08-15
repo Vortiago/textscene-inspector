@@ -28,8 +28,9 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { isTypeUnknowable } from '../../../../linter/parentType.js';
 import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
 
-// control.h:100-101, Control::CursorShape: CURSOR_ARROW = 0.
+// control.h:100-119, Control::CursorShape: CURSOR_ARROW = 0 .. CURSOR_HELP = 16.
 const CURSOR_ARROW = 0;
+const CURSOR_MAX = 17;
 
 function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -57,8 +58,11 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   const props = isValidProperties(node.properties) ? node.properties : {};
   const cursorRaw = props.mouse_default_cursor_shape;
   if (cursorRaw !== undefined) {
+    // In range, not merely non-null: a non-finite reads as NaN and `99` reads
+    // as 99, and neither is a CursorShape (0-16, control.h:180-197).
     const cursor = parseGodotInt(cursorRaw);
-    if (cursor !== null && cursor !== CURSOR_ARROW) {
+    const isShape = cursor !== null && cursor >= 0 && cursor < CURSOR_MAX;
+    if (isShape && cursor !== CURSOR_ARROW) {
       diagnostics.push({
         severity: 'warning',
         message: `SubViewportContainer '${node.name}' sets 'mouse_default_cursor_shape' away from Arrow, but it has no effect on this node. Consider leaving it at its initial value.`,

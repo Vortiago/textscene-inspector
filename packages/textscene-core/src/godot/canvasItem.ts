@@ -21,9 +21,10 @@ export const CLIP_CHILDREN_DISABLED = 0;
  * `CLIP_CHILDREN_MAX` (`canvas_item.h:75`), the count sentinel.
  *
  * `set_clip_children_mode` opens with `ERR_FAIL_COND(p_clip_mode >=
- * CLIP_CHILDREN_MAX)` (`canvas_item.cpp:1733`), so a mode at or above it is
- * refused and the field keeps DISABLED — which is why such a value clips
- * nothing, however it is spelled.
+ * CLIP_CHILDREN_MAX)` (`canvas_item.cpp:1733`), but its argument is narrowed to
+ * the int32 enum first, so only 3..2147483647 trips it. Measured on 4.6.3:
+ * `4294967295` — what the serialiser writes for `-1` — lands negative, sails
+ * past the guard and CLIPS.
  */
 export const CLIP_CHILDREN_MAX = 3;
 

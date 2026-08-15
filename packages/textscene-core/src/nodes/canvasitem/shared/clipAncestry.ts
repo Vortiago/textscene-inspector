@@ -13,7 +13,7 @@ import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { sweepAncestors } from '../../../linter/parentType.js';
-import { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX } from '../../../godot/index.js';
+import { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, toInt32 } from '../../../godot/index.js';
 import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
 
 /**
@@ -34,7 +34,9 @@ export function clipsChildren(candidate: TscnNode): boolean {
   if (raw === undefined) return false;
   const parsed = parseGodotInt(raw);
   if (parsed === null || !Number.isFinite(parsed)) return false;
-  return parsed !== CLIP_CHILDREN_DISABLED && parsed < CLIP_CHILDREN_MAX;
+  // int32 first: the setter narrows, so `4294967295` is -1 here too.
+  const mode = toInt32(parsed);
+  return mode !== CLIP_CHILDREN_DISABLED && mode < CLIP_CHILDREN_MAX;
 }
 
 export interface ClipAncestry {

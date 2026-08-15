@@ -23,6 +23,17 @@ import './linter';
 /** Every range-window test below is about the windows, not the texture. */
 const WITH_TEXTURE = { texture: 'ExtResource("1")' };
 
+describe('PointLight2D z-range — a non-finite bound is not a bound', () => {
+  it('says nothing, and never prints NaN', () => {
+    for (const spelling of ['inf', 'nan', 'inf_neg']) {
+      expectNoDiagnostic(
+        scene(node('PointLight2D', { range_z_min: spelling, range_z_max: 1024 })),
+        { ruleName: 'pointlight2d-inverted-z-range' }
+      );
+    }
+  });
+});
+
 describe('PointLight2D linter', () => {
   it("warns when 'texture' is absent (light_2d.cpp:431-439)", () => {
     expectDiagnostic(scene(node('PointLight2D')), {

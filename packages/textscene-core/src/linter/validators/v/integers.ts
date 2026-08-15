@@ -9,6 +9,8 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
+import { unrepresentableInt } from '../intSlot.js';
+import { asStoredInt } from '../../../parser/vectors.js';
 import {
   createEnumValidator,
   createNumericRangeValidator,
@@ -106,10 +108,11 @@ export const integerCombinators = {
     const formatErr = formatCode(name);
     return shape(
       (key, value, line) => {
-      if (parseGodotInt(value) === null) {
+      const num = parseGodotInt(value);
+      if (num === null) {
         return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
       }
-      return null;
+      return unrepresentableInt(name, key, value, line, valueCode(name), num);
     },
       'integer'
     );
@@ -141,9 +144,8 @@ export const integerCombinators = {
       ) {
         return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
       }
-      if (!Number.isFinite(parsed)) {
-        return propertyError(key, line, `Property '${name}' cannot be stored in an integer slot, got: "${value}". The file loads, but the value is narrowed at parse time to a number the file does not state.`, valueErr, 'error');
-      }
+      const unfit = unrepresentableInt(name, key, value, line, valueErr, asStoredInt(parsed));
+      if (unfit) return unfit;
       // The setter's own ends first: they are the more severe tier, and the
       // band between a setter end and the hint's still reports at the hint's.
       // `IntOpts` has always ACCEPTED these two, and this combinator dropped
@@ -191,9 +193,8 @@ export const integerCombinators = {
           ) {
             return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
           }
-          if (parsed !== null && !Number.isFinite(parsed)) {
-            return propertyError(key, line, `Property '${name}' cannot be stored in an integer slot, got: "${value}". The file loads, but the value is narrowed at parse time to a number the file does not state.`, valueErr, 'error');
-          }
+          const unfit = unrepresentableInt(name, key, value, line, valueErr, asStoredInt(parsed));
+          if (unfit) return unfit;
           if (parsed < 0) {
             return propertyError(key, line, `Property '${name}' must be non-negative (got ${parsed})`, valueErr, severity);
           }

@@ -9,7 +9,7 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { tupleComponent } from '../commonValidators.js';
+import { isUnrepresentableInt, tupleComponent } from '../commonValidators.js';
 import { floatTupleValidator, makeFloatTupleRegex } from '../floatTupleValidator.js';
 import {
   VECTOR3_REGEX,
@@ -32,12 +32,23 @@ export const vectorCombinators = {
   rect2i(name: string): PropertyValidator {
     const code = formatCode(name);
     return shape((key, value, line) => {
-      if (!RECT2I_RE.test(value)) {
+      const match = RECT2I_RE.exec(value);
+      if (!match) {
         return propertyError(
           key,
           line,
           `Property '${name}' must be Rect2i(x, y, w, h) with integer components, got: ${value}`,
           code
+        );
+      }
+      // Same arm as `vector2i`: the component reads, no int32 holds it.
+      if (match.slice(1, 5).some(isUnrepresentableInt)) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' has a component no integer can hold, got: ${value}`,
+          valueCode(name),
+          'error'
         );
       }
       return null;

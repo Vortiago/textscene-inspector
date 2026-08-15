@@ -11,6 +11,7 @@
 
 import { warn } from '../../../logger.js';
 import { parseGodotInt } from '../../../parser/vectors.js';
+import { toInt16 } from '../../../godot/int.js';
 
 export interface GridMapCell {
   x: number;
@@ -20,11 +21,6 @@ export interface GridMapCell {
   item: number;
   /** Orientation index 0-23 → ORTHO_BASES. */
   rot: number;
-}
-
-/** Interpret a 16-bit field as a signed int16. */
-function toInt16(u16: number): number {
-  return u16 >= 0x8000 ? u16 - 0x10000 : u16;
 }
 
 export function decodeGridMapCells(packedInt32: string): GridMapCell[] {

@@ -38,7 +38,21 @@ describe('CanvasGroup Linter', () => {
       );
     });
 
-    it('passes when an ancestor sets a clip_children the setter refuses', () => {
+    it('warns when an ancestor carries the value the serialiser writes for -1', () => {
+    // Measured on 4.6.3: `clip_children = -1` is written `4294967295`, which
+    // narrows to -1 on the write, sails past ERR_FAIL_COND and CLIPS.
+    for (const mode of ['4294967295', '2147483648']) {
+      expectDiagnostic(
+        scene(
+          node('Node2D', { clip_children: mode }, { name: 'Root' }),
+          node('CanvasGroup', {}, { parent: '.' })
+        ),
+        { ruleName: 'canvasgroup-ancestor-clips-children', severity: 'warning' }
+      );
+    }
+  });
+
+  it('passes when an ancestor sets a clip_children the setter refuses', () => {
       // canvas_item.cpp:1733 refuses >= CLIP_CHILDREN_MAX, and a non-finite is
       // not a mode at all, so neither ancestor clips anything.
       for (const mode of ['3', '5', 'nan', 'inf']) {
