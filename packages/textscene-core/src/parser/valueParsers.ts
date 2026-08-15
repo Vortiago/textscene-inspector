@@ -38,8 +38,33 @@
  */
 
 import { warn } from '../logger';
-import { finiteTupleRegex, parseVector2, storedInt, type Vector2 } from './vectors';
+import { FLOAT_PATTERN_SOURCE, finiteTupleRegex, parseVector2, storedInt, type Vector2 } from './vectors';
 import { nodePathLiteral } from '../godot/index.js';
+
+/**
+ * A finite scalar in the tokenizer's grammar, or `null`.
+ *
+ * The renderer's half of the split: a non-finite is legal in the file and
+ * undrawable here, so it falls back to the documented default like malformed
+ * text does. `v.float` accepts it on the linter side.
+ */
+function finiteScalar(value: string): number | null {
+  const num = SCALAR_RE.test(value.trim()) ? parseFloat(value.trim()) : NaN;
+  return Number.isFinite(num) ? num : null;
+}
+
+/**
+ * The same, truncated toward zero for an INT slot.
+ *
+ * Not `storedInt`: that takes a capture the finite grammar already matched, so
+ * it runs a bare `parseFloat` and would read `1abc` as 1.
+ */
+function finiteIntScalar(value: string): number | null {
+  const num = finiteScalar(value);
+  return num === null ? null : Math.trunc(num);
+}
+
+const SCALAR_RE = new RegExp(`^${FLOAT_PATTERN_SOURCE}$`);
 
 export interface Rect2Value {
   x: number;
@@ -76,8 +101,10 @@ export function parseOptionalRect2(
 
 export function floatOr(value: string | undefined, fallback: number, context = 'value'): number {
   if (value === undefined) return fallback;
-  const parsed = parseFloat(value);
-  if (Number.isNaN(parsed)) {
+  // Anchored: `parseFloat` read `1.2.3` as 1.2 and `1abc` as 1, both silently.
+  // A non-finite still falls back — the documented renderer/linter split.
+  const parsed = finiteScalar(value);
+  if (parsed === null) {
     warn(`${context}: invalid float "${value}", using ${fallback}`);
     return fallback;
   }
@@ -86,8 +113,10 @@ export function floatOr(value: string | undefined, fallback: number, context = '
 
 export function intOr(value: string | undefined, fallback: number, context = 'value'): number {
   if (value === undefined) return fallback;
-  const parsed = parseInt(value, 10);
-  if (Number.isNaN(parsed)) {
+  // `parseInt` stopped at the `e`, so `hframes = 2e1` drew a 2-column grid
+  // while the linter judged the frame index against Godot's 20.
+  const parsed = finiteIntScalar(value);
+  if (parsed === null) {
     warn(`${context}: invalid int "${value}", using ${fallback}`);
     return fallback;
   }
@@ -119,8 +148,8 @@ export function settableNonNegative(
   context = 'value'
 ): number | undefined {
   if (value === undefined) return undefined;
-  const parsed = parseFloat(value);
-  if (Number.isNaN(parsed)) {
+  const parsed = finiteScalar(value);
+  if (parsed === null) {
     warn(`${context}: invalid float "${value}", keeping the Godot default`);
     return undefined;
   }
@@ -168,8 +197,8 @@ export function enumOr<T extends number>(
   context = 'value'
 ): T {
   if (value === undefined) return fallback;
-  const parsed = parseInt(value, 10) as T;
-  if (Number.isNaN(parsed) || !allowed.includes(parsed)) {
+  const parsed = finiteIntScalar(value) as T | null;
+  if (parsed === null || !allowed.includes(parsed)) {
     warn(`${context}: invalid enum "${value}", using ${fallback}`);
     return fallback;
   }
@@ -258,8 +287,7 @@ export function parseOptionalVector2i(
  */
 export function parseOptionalInt(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
-  const parsed = parseInt(value, 10);
-  return Number.isNaN(parsed) ? undefined : parsed;
+  return finiteIntScalar(value) ?? undefined;
 }
 
 /**
@@ -279,8 +307,7 @@ export function parseOptionalBool(value: string | undefined): boolean | undefine
  */
 export function parseOptionalFloat(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
-  const parsed = parseFloat(value);
-  return Number.isNaN(parsed) ? undefined : parsed;
+  return finiteScalar(value) ?? undefined;
 }
 
 /**

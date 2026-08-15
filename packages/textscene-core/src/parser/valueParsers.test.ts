@@ -32,6 +32,35 @@ afterEach(() => {
   warnSpy.mockRestore();
 });
 
+describe('scalar readers speak the tokenizer grammar', () => {
+  it('reads an exponent at its real magnitude, as the linter does', () => {
+    // `parseInt` gave 2, so the previewer drew a 2-column grid while the
+    // linter judged the frame index against Godot's 20.
+    expect(intOr('2e1', 1)).toBe(20);
+    expect(parseOptionalInt('2e1')).toBe(20);
+    expect(floatOr('2e1', -1)).toBe(20);
+  });
+
+  it('truncates toward zero in an int slot, as the conversion does', () => {
+    expect(intOr('5.9', 0)).toBe(5);
+    expect(intOr('-5.9', 0)).toBe(-5);
+  });
+
+  it('falls back on text Godot cannot read, instead of taking its prefix', () => {
+    for (const bad of ['1.2.3', '1abc', '+1', '.5', '0x10']) {
+      expect(floatOr(bad, -1)).toBe(-1);
+      expect(intOr(bad, -1)).toBe(-1);
+    }
+  });
+
+  it('still falls back on a non-finite, which is the documented renderer split', () => {
+    for (const spelling of ['inf', '-inf', 'inf_neg', 'nan']) {
+      expect(floatOr(spelling, -1)).toBe(-1);
+      expect(intOr(spelling, -1)).toBe(-1);
+    }
+  });
+});
+
 describe('floatOr', () => {
   it('parses a valid float', () => {
     expect(floatOr('1.5', 0)).toBe(1.5);
