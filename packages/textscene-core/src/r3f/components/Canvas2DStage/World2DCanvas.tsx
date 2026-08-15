@@ -111,7 +111,11 @@ export function World2DCanvas(props: World2DCanvasProps) {
       // three otherwise silently ignores: a spike verified stencil was never
       // viable here (this canvas requests no stencil buffer at all), so
       // planes are the only mechanism, and this flag is what turns them on.
-      gl={{ alpha: true, localClippingEnabled: true }}
+      //
+      // `antialias: false` — scene/main/viewport.h:309 `msaa_2d =
+      // MSAA_DISABLED`. A 2D canvas samples one pixel centre; soft edges are
+      // authored geometry (style_box_flat.cpp:555-629), so MSAA ramps them twice.
+      gl={{ alpha: true, localClippingEnabled: true, antialias: false }}
       // Godot never tone-maps a canvas: the RD renderer runs
       // `_render_buffers_post_process_and_tonemap` on the 3D buffers and
       // composites canvas items into the viewport AFTER it, so authored 2D

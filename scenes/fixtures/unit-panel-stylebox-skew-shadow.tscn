@@ -1,56 +1,24 @@
-; StyleBoxFlat's two WHOLE-PASS draw stages — `skew` and the drop shadow — on
-; four Panels of identical size over a light backdrop.
+; The one variable: WHICH stages `StyleBoxFlat::draw` runs — `skew` and the drop
+; shadow. Every other stylebox scene varies the ring it already draws (radii,
+; border widths, blend); neither field here changes a radius or a width, so a
+; regression in either is invisible in all of them. Four Panels, same 480x260
+; rect and fill, over a backdrop light enough to measure a fade against.
 ;
-; The one variable: the stages `StyleBoxFlat::draw` runs, rather than the
-; parameters of the ring it already draws. Every other stylebox scene varies
-; the ring itself (radii, border widths, blend); neither field here changes a
-; radius or a width, so a regression in either is invisible in all of them.
-; Same node type, same 480x260 rect, same grid pitch, same fill colour
-; throughout — only which stages run changes.
-;
-; SkewSharp is the one that cannot be faked. Its corners are all sharp and its
-; skew is horizontal only, so a builder that ignored `skew` draws a plain
-; axis-aligned rectangle and the difference is the whole silhouette. It also
-; pins the second, easily-missed half of the field: `aa_on` is
-; `(rounded_corners || !skew.is_zero_approx()) && anti_aliased`, so a skewed
-; box antialiases even with sharp corners, and its diagonal edges are the only
-; place in the goldens where that term is exercised. A port that read only the
-; radii would leave those edges hard-stepped.
-;
-; SkewRound carries a skew on BOTH axes plus a border and one radius, which is
-; what proves the shear is applied to every ring about ONE centre: shear each
-; ring about its own centre instead and the border detaches from the fill,
-; visibly thickening on two sides and thinning on the other two.
-;
-; ShadowOffset is a shadow displaced down-right with no border, so the shadow
-; and the box are separable by eye: the box's own edges stay where an
-; unshadowed box would put them, and everything outside them is the new stage.
-; `shadow_size` is large (24) against a light backdrop because the shadow is a
-; fade to alpha 0 — a small one is indistinguishable from an antialiasing
-; feather, which is exactly the confusion a golden should not have to arbitrate.
-;
-; ShadowHollow pairs the shadow with `draw_center = false`. Godot fills the
-; shadow's interior only when the box draws its own centre, so this pane's
-; shadow is a ring too and the backdrop shows through both — the case that
-; separates "draw the shadow" from "draw a shadow-coloured rectangle behind
-; the box". It also offsets the shadow UP-LEFT, the opposite of ShadowOffset,
-; so a sign error in `shadow_offset` cannot pass both.
-;
-; The backdrop is deliberately much lighter than every box, for the same reason
-; the sibling stylebox scene gives: a fade to transparent and a diagonal edge
-; are only measurable against something they contrast with.
+; SkewSharp — sharp corners, horizontal skew only. Ignore `skew` and you draw an
+; axis-aligned rectangle, so the whole silhouette moves. Also the only place a
+; golden exercises the second half of `aa_on`
+; (`rounded_corners || !skew.is_zero_approx()`): a sharp box that still feathers.
+; SkewRound — skew on both axes plus a border, proving every ring shears about
+; ONE centre; per-ring centres detach the border from the fill.
+; ShadowOffset — shadow down-right, no border, so shadow and box are separable
+; by eye. `shadow_size` 24 because a small fade reads as a feather.
+; ShadowHollow — shadow plus `draw_center = false`, so the shadow is a ring too
+; and the backdrop shows through both; offset UP-LEFT so a sign error fails one.
 ;
 ; Measured against Godot 4.6.3 at `--mode 2d`: whole-frame mean channel error
-; 0.57, with 29 pixels past 40 counts and none past 90. Both skews land on the
-; engine's own silhouette, and the shadow's fade agrees to within a count
-; across its whole gradient — a transect through the pure-shadow band right of
-; ShadowOffset reads rgb(83, 74, 116) against Godot's rgb(84, 75, 116) and
-; tracks it step for step out to the backdrop. What is left is one-pixel
-; silhouette coverage on the shadow's outer arc and on the skewed panes'
-; diagonals, where this renderer's multisample resolve and Godot's
-; un-antialiased rasterizer disagree about a partly-covered pixel; the same
-; residual is visible on every diagonal edge in the golden set and is not
-; specific to either field here.
+; 0.19, nothing past 6 counts. Nearly all of the mean is one count of green on
+; the fill (0.3 x 255 = 76.5, the reference's ROP floor); the rest is SkewRound's
+; doubly-sheared edges.
 
 [gd_scene load_steps=5 format=3]
 

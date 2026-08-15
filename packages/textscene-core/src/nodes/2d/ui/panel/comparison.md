@@ -26,11 +26,10 @@ own fields.
 ## Divergences
 
 None visible in this fixture: `pnpm ref:godot scenes/fixtures/unit-panel.tscn
---mode 2d` against `pnpm ref:ours unit-panel.tscn --2d` differs on no pixel at
-all under the visual harness's own tolerance, at a mean channel error under
-0.005/255 over the frame. The closest thing to a measurable difference is a
-corner pixel, `--probe 418,226`, on the 8 px arc: rgb(84, 88, 100) in Godot
-against rgb(81, 84, 92) here — a few counts apart on the same AA ramp.
+--mode 2d` against `pnpm ref:ours unit-panel.tscn --2d` is a mean channel error
+of 0.0001 over the frame, with 88 pixels differing at all and none by more than
+3 counts. All 88 sit on the four 8 px arcs — `--probe 418,226` reads rgb(84, 88,
+100) in Godot against rgb(83, 86, 97) here.
 
 ## Linting
 
@@ -62,18 +61,22 @@ there is no Panel-specific lenient fallback beyond what Control already covers.
   | (850, 356) | its last row, at `bg_color` | rgb(38, 76, 128) | rgb(38, 77, 128) |
 
   The one remaining count is on green at `bg_color`, whose 0.3 channel is fractional
-  at 8 bit (0.3 x 255 = 76.5) — the reference tool's own ROP rounding floor, which
-  moves with the rendering driver rather than with this renderer. The unblended twin
+  at 8 bit (0.3 x 255 = 76.5) — the reference tool's own ROP rounding floor, not a
+  divergence: `--rendering-driver opengl3` reads 77 at that probe where the default
+  vulkan reads 76, and 77 is ours. The unblended twin
   is exact: a transect across its own 16 px border reads rgb(242, 191, 51) for every
   border pixel and rgb(38, 76, 128) immediately inside, on both sides.
 
 - **StyleBoxFlat.skew and the drop shadow** are drawn, and `unit-panel-stylebox-skew-shadow.tscn`
-  pins them. What remains is one-pixel silhouette coverage on the shadow's outer
-  arc and on a skewed box's diagonal edges: Godot's 2D rasterizer takes one
-  sample per pixel centre while this canvas multisamples, so the two disagree
-  about a partly-covered pixel. Whole-frame mean channel error against Godot is
-  0.57, with nothing past 90 counts. The same residual appears on every diagonal
-  edge in the golden set — it belongs to the sampling, not to either field.
+  pins them: whole-frame mean channel error 0.19 against Godot, nothing past 6
+  counts. Nearly all of that mean is the same fractional-channel floor as above (the
+  fill's 0.3 green, 76.5 at 8 bit); what is left sits on the one pane sheared on both
+  axes, at most 6 counts on its diagonal edges.
+
+  Every soft edge on this canvas is authored geometry, because a Godot 2D viewport
+  does not multisample (`msaa_2d = MSAA_DISABLED`, `scene/main/viewport.h:309`). The
+  2D canvas matches it (`World2DCanvas.tsx`'s `antialias: false`) — on
+  @react-three/fiber's default it resolved coverage on top of the authored ramp.
 
 ## Native (WebGL canvas) painter
 

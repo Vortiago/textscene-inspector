@@ -51,6 +51,18 @@ describe('World2DCanvas tone mapping', () => {
   });
 });
 
+describe('World2DCanvas multisampling', () => {
+  it("asks for a NON-multisampled drawing buffer, matching Godot's 2D viewport default", () => {
+    // scene/main/viewport.h:309 — `msaa_2d = MSAA_DISABLED`; the project
+    // setting defaults to it (rendering_server.cpp:3773). R3F's `<Canvas>`
+    // defaults `antialias: true`, which resolves coverage on top of the
+    // authored feather rings.
+    const canvasTag = /<Canvas\s[\s\S]*?>/.exec(SOURCE.replace(/\/\/.*$/gm, ''))?.[0] ?? '';
+    expect(canvasTag).not.toBe('');
+    expect(canvasTag).toMatch(/antialias:\s*false/);
+  });
+});
+
 describe('World2DContents native-controls mount seam', () => {
   const baseProps = {
     nodes: [],
