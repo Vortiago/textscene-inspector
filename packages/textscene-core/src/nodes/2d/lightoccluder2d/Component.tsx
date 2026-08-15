@@ -22,6 +22,7 @@ import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
+import { warn } from '../../../logger';
 import { parsePackedVector2Array } from '../../../resources/shapes/packedArray';
 import { useShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { OCCLUDER_CULL_DISABLED } from '../../../r3f/lighting2d/shadowVolumes';
@@ -46,7 +47,15 @@ export function LightOccluder2D({ node, children }: NodeComponentProps) {
     if (!data.polygon) return null;
     // Flat `[x0,y0,x1,y1,...]`; polygonToSegments pairs and Y-negates it, and
     // ignores a dangling odd coordinate.
-    const raw = parsePackedVector2Array(data.polygon);
+    // Guarded like every other caller: a malformed literal is the linter's to
+    // report, not a throw through render.
+    let raw: Float32Array;
+    try {
+      raw = parsePackedVector2Array(data.polygon);
+    } catch {
+      warn(`[LightOccluder2D] unreadable occluder polygon: ${data.polygon}`);
+      return null;
+    }
     const closed = data.closed !== 'false';
     return polygonToSegments(raw, closed);
   }, [occluderResource]);

@@ -30,6 +30,21 @@ describe('parsePackedVector2Array', () => {
   });
 });
 
+describe('packed FLOAT element grammar', () => {
+  it('refuses a literal Godot cannot read, instead of taking its prefix', () => {
+    // `parseFloat` read `1.2.3` as 1.2 and stored a vertex the file lacks.
+    for (const bad of ['1.2.3', '+1', '.5', '0x10']) {
+      expect(() => parsePackedVector2Array(`PackedVector2Array(0, 0, ${bad}, 4)`)).toThrow(
+        'Invalid number in PackedVector2Array'
+      );
+    }
+  });
+
+  it('draws 0 for a non-finite element, which is legal but undrawable', () => {
+    expect([...parsePackedVector2Array('PackedVector2Array(0, 0, inf, 4)')]).toEqual([0, 0, 0, 4]);
+  });
+});
+
 describe('parsePackedInt32Arrays', () => {
   it('extracts each PackedInt32Array from a bare 3D polygon list', () => {
     const out = parsePackedInt32Arrays('[PackedInt32Array(2, 1, 3), PackedInt32Array(3, 1, 0)]');

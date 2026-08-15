@@ -1,10 +1,32 @@
 import { packedArrayCallAnywhere, packedArrayLiteral } from '../../godot/index.js';
 import { parseGodotInt } from '../../parser/vectors.js';
+import { parseGodotFloat } from '../../parser/vectors.js';
 import { warn } from '../../logger.js';
 
 const PACKED_VECTOR3_ARRAY_RE = packedArrayLiteral('PackedVector3Array');
 const PACKED_VECTOR2_ARRAY_RE = packedArrayLiteral('PackedVector2Array');
 const PACKED_COLOR_ARRAY_RE = packedArrayLiteral('PackedColorArray');
+
+/**
+ * Elements of a packed FLOAT body, as Godot's tokenizer reads them.
+ *
+ * `parseFloat` stops at the first unusable character, so `1.2.3` became 1.2 —
+ * a vertex the file does not contain — and `+1` / `.5` slipped through as
+ * numbers Godot refuses to load at all. A non-finite is a legal element the
+ * writer emits (`rtos_fix`), but no viewport can draw it, so it degrades to the
+ * finite default the callers already document.
+ */
+function floatElements(inner: string, wrapper: string, value: string): number[] {
+  return inner.split(',').map((s) => {
+    const num = parseGodotFloat(s);
+    if (num === null) throw new Error(`Invalid number in ${wrapper}: ${value}`);
+    if (!Number.isFinite(num)) {
+      warn(`${wrapper} element "${s.trim()}" is non-finite; drawing 0 in its place`);
+      return 0;
+    }
+    return num;
+  });
+}
 
 /** Parse Godot `PackedVector3Array(x, y, z, x, y, z, ...)` into a flat Float32Array. */
 export function parsePackedVector3Array(value: string): Float32Array {
@@ -14,10 +36,7 @@ export function parsePackedVector3Array(value: string): Float32Array {
   }
   const inner = match[1]!.trim();
   if (inner === '') return new Float32Array(0);
-  const nums = inner.split(',').map((s) => parseFloat(s.trim()));
-  if (nums.some((n) => Number.isNaN(n))) {
-    throw new Error(`Invalid number in PackedVector3Array: ${value}`);
-  }
+  const nums = floatElements(inner, 'PackedVector3Array', value);
   return new Float32Array(nums);
 }
 
@@ -29,10 +48,7 @@ export function parsePackedVector2Array(value: string): Float32Array {
   }
   const inner = match[1]!.trim();
   if (inner === '') return new Float32Array(0);
-  const nums = inner.split(',').map((s) => parseFloat(s.trim()));
-  if (nums.some((n) => Number.isNaN(n))) {
-    throw new Error(`Invalid number in PackedVector2Array: ${value}`);
-  }
+  const nums = floatElements(inner, 'PackedVector2Array', value);
   return new Float32Array(nums);
 }
 
@@ -44,10 +60,7 @@ export function parsePackedColorArray(value: string): Float32Array {
   }
   const inner = match[1]!.trim();
   if (inner === '') return new Float32Array(0);
-  const nums = inner.split(',').map((s) => parseFloat(s.trim()));
-  if (nums.some((n) => Number.isNaN(n))) {
-    throw new Error(`Invalid number in PackedColorArray: ${value}`);
-  }
+  const nums = floatElements(inner, 'PackedColorArray', value);
   return new Float32Array(nums);
 }
 
