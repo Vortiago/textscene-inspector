@@ -171,6 +171,23 @@ export const FRAME_MARGIN = 1.6;
  */
 export const RENDER_MODES = ['auto', '2d', '3d', '2d-root'];
 
+/**
+ * Driver -> the rendering method that offers it (main.cpp:2547-2565). Swapping
+ * drivers is how a channel whose value x 255 is fractional is told apart from a
+ * parity defect: the blend's tie-break is implementation-defined, so a one-step
+ * gap that moves with the driver has no expected value to port. Linux builds
+ * ship vulkan and the GLES3 trio; `d3d12`/`metal` are here because the table is
+ * the engine's, and are rejected later by the engine itself, not by us.
+ */
+export const RENDERING_DRIVERS = {
+  vulkan: 'forward_plus',
+  d3d12: 'forward_plus',
+  metal: 'forward_plus',
+  opengl3: 'gl_compatibility',
+  opengl3_angle: 'gl_compatibility',
+  opengl3_es: 'gl_compatibility',
+};
+
 /** The mode whose capture IS the root window rather than a nested viewport. */
 const ROOT_WINDOW_MODE = '2d-root';
 
@@ -393,6 +410,9 @@ export function parseArgs(argv) {
     probes: [],
     patch: 1,
     particles: PARTICLES_PROCESS_DEFAULT,
+    // null = whatever the engine picks, so the default reference is never
+    // pinned to one rasterizer.
+    renderingDriver: null,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -452,6 +472,16 @@ export function parseArgs(argv) {
       case '--particles':
         args.particles = nonNegativeNumber('--particles', argv[++i]);
         break;
+      case '--rendering-driver': {
+        const driver = String(argv[++i]).toLowerCase();
+        if (!(driver in RENDERING_DRIVERS)) {
+          throw new Error(
+            `--rendering-driver takes one of ${Object.keys(RENDERING_DRIVERS).join('|')}, got "${driver}"`
+          );
+        }
+        args.renderingDriver = driver;
+        break;
+      }
       default:
         if (arg.startsWith('--')) throw new Error(`Unknown flag ${arg}`);
         args.scene = arg;
@@ -569,11 +599,12 @@ export function projectConfig(sourceIni, { width, height, pinWindowToViewport = 
  * square of that side centred on the coordinate and returns the per-channel
  * MEDIAN.
  *
- * A single pixel is not a safe sample across two renderers: ours composites
- * through an antialiased canvas while these references render MSAA-off, so one
- * pixel anywhere near an edge, a silhouette or a shadow boundary carries a
- * blend weight that exists on one side only. The median (not the mean) also
- * discards a stray outlier outright instead of averaging it in.
+ * A single pixel is not a safe sample across two renderers: our 3D canvas
+ * multisamples while these references render MSAA-off, so one pixel near an
+ * edge, a silhouette or a shadow boundary carries a blend weight that exists
+ * on one side only. (Our 2D canvas does not — it matches the engine's own
+ * `msaa_2d = Disabled`, `scene/main/viewport.h:309`.) The median (not the
+ * mean) also discards a stray outlier outright instead of averaging it in.
  */
 export function probePixels(buffer, probes, { patch = 1 } = {}) {
   const png = PNG.sync.read(buffer);
@@ -1158,8 +1189,20 @@ script = ExtResource("1")
  * later, since the reference keeps rendering — just against this host's frame
  * timing instead of a constant.
  */
-export function renderArgv(work) {
-  return ['--path', work, '--fixed-fps', String(REFERENCE_FIXED_FPS), '--quit-after', '400'];
+export function renderArgv(work, { renderingDriver = null } = {}) {
+  const argv = ['--path', work, '--fixed-fps', String(REFERENCE_FIXED_FPS), '--quit-after', '400'];
+  // main.cpp:2582 aborts on a driver its method does not offer, so the pair
+  // travels together — naming the driver alone would abort under the default
+  // `forward_plus`.
+  if (renderingDriver) {
+    argv.push(
+      '--rendering-driver',
+      renderingDriver,
+      '--rendering-method',
+      RENDERING_DRIVERS[renderingDriver]
+    );
+  }
+  return argv;
 }
 
 /** Seconds a single engine pass may run before the harness reaps it. */
@@ -1255,6 +1298,7 @@ export async function renderReference({
   fov = EDITOR_FOV,
   fovExplicit = false,
   particles = PARTICLES_PROCESS_DEFAULT,
+  renderingDriver = null,
   keepWork = false,
 }) {
   const scenePath = resolve(scene);
@@ -1267,7 +1311,8 @@ export async function renderReference({
   const work = await mkdtemp(join(tmpdir(), 'godot-ref-'));
   try {
     return await renderInto(work, { root, scenePath, out, width, height, previews, camera,
-      lookAt, frame, sceneCamera, sceneCameraPath, mode, boundsOut, fov, fovExplicit, particles });
+      lookAt, frame, sceneCamera, sceneCameraPath, mode, boundsOut, fov, fovExplicit, particles,
+      renderingDriver });
   } finally {
     // Each run copies the whole res:// root, and `keepWork` is the only reason
     // to hold one afterwards. On a tmpfs /tmp these accumulate in RAM: 236 of
@@ -1282,7 +1327,7 @@ async function renderInto(
   work,
   {
     root, scenePath, out, width, height, previews, camera, lookAt, frame, sceneCamera, sceneCameraPath,
-    mode, boundsOut, fov, fovExplicit, particles,
+    mode, boundsOut, fov, fovExplicit, particles, renderingDriver,
   }
 ) {
   await cp(root, work, { recursive: true, dereference: true });
@@ -1344,7 +1389,7 @@ async function renderInto(
   // a scene with no importable assets legitimately has nothing to do.
   runGodot(['--headless', '--path', work, '--import'], { display: false });
 
-  const render = runGodot(renderArgv(work), {
+  const render = runGodot(renderArgv(work, { renderingDriver }), {
     display: true,
     screen: rootWindow ? canvas2DSize : null,
   });

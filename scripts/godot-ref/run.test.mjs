@@ -788,6 +788,32 @@ describe('an expired engine pass is reaped as a process group', () => {
  * first frame", which is the difference between a reference image that is
  * reproducible and one that is merely reproducible HERE.
  */
+/**
+ * A channel whose value x 255 is fractional has no source-derivable expected
+ * value: the blend's tie-break is implementation-defined, so the answer moves
+ * with the rasterizer. Swapping drivers is how a one-step gap is told apart
+ * from a parity defect, which needs the swap to be reachable from the CLI.
+ */
+describe('--rendering-driver', () => {
+  it('defaults to the engine default rather than naming one', () => {
+    expect(parseArgs(['a.tscn']).renderingDriver).toBeNull();
+    expect(renderArgv('/tmp/work')).not.toContain('--rendering-driver');
+  });
+
+  it('reaches the render pass', () => {
+    const args = parseArgs(['a.tscn', '--rendering-driver', 'opengl3']);
+    expect(args.renderingDriver).toBe('opengl3');
+    const argv = renderArgv('/tmp/work', { renderingDriver: args.renderingDriver });
+    expect(argv[argv.indexOf('--rendering-driver') + 1]).toBe('opengl3');
+  });
+
+  it('refuses a driver the engine does not have', () => {
+    expect(() => parseArgs(['a.tscn', '--rendering-driver', 'directx'])).toThrow(
+      /--rendering-driver/
+    );
+  });
+});
+
 describe('the reference renders on a fixed clock', () => {
   it('passes --fixed-fps to the render pass', () => {
     const argv = renderArgv('/tmp/work');
