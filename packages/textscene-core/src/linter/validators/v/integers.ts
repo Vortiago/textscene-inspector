@@ -9,7 +9,7 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { unrepresentableInt } from '../intSlot.js';
+import { markIntSlot, unrepresentableInt } from '../intSlot.js';
 import { asStoredInt } from '../../../parser/vectors.js';
 import {
   createEnumValidator,
@@ -27,7 +27,7 @@ import type { IntOpts } from './options.js';
 export const integerCombinators = {
   /** Integer in a range, parsed as base 10. */
   int(name: string, opts: IntOpts = {}): PropertyValidator {
-    return ground(
+    return markIntSlot(ground(
       accepts(
         createNumericRangeValidator({
           propertyName: name,
@@ -46,12 +46,12 @@ export const integerCombinators = {
       ),
       opts,
       { min: opts.min, max: opts.max, enforcedMin: opts.enforcedMin, enforcedMax: opts.enforcedMax }
-    );
+    ));
   },
 
   /** Positive integer (> 0). Specialised wrapper from `commonValidators`. */
   positiveInt(name: string, message?: string, opts: Grounding = {}): PropertyValidator {
-    return ground(
+    return markIntSlot(ground(
       accepts(
         createPositiveIntegerValidator(
           name,
@@ -64,7 +64,7 @@ export const integerCombinators = {
       ),
       opts,
       { min: 1 }
-    );
+    ));
   },
 
   /** Integer enum, e.g. `v.enumInt('cast_shadow', 0, 3, {0:'OFF', 1:'ON', 2:'DOUBLE_SIDED', 3:'SHADOWS_ONLY'})`. */
@@ -79,7 +79,7 @@ export const integerCombinators = {
     // tells a reader what each number means without opening Godot's docs.
     // Integer-like keys already iterate ascending, so no sort is needed.
     const names = Object.values(labels).join('/');
-    return ground(
+    return markIntSlot(ground(
       accepts(
         createEnumValidator(
           name,
@@ -95,7 +95,7 @@ export const integerCombinators = {
       ),
       opts,
       { min, max }
-    );
+    ));
   },
 
   /**
@@ -106,7 +106,7 @@ export const integerCombinators = {
    */
   lenientInt(name: string): PropertyValidator {
     const formatErr = formatCode(name);
-    return shape(
+    return markIntSlot(shape(
       (key, value, line) => {
       const num = parseGodotInt(value);
       if (num === null) {
@@ -115,7 +115,7 @@ export const integerCombinators = {
       return unrepresentableInt(name, key, value, line, valueCode(name), num);
     },
       'integer'
-    );
+    ));
   },
 
   /**
@@ -128,7 +128,7 @@ export const integerCombinators = {
     const formatErr = formatCode(name);
     const valueErr = valueCode(name);
     const { min, max, enforcedMin, enforcedMax } = opts;
-    return ground(accepts((key, value, line) => {
+    return markIntSlot(ground(accepts((key, value, line) => {
       // `parseGodotFloat` behind the anchored grammar, not `parseFloat`, which
       // reads `8abc` as 8 and admits a literal Godot's parser cannot.
       const parsed = parseGodotFloat(value.trim());
@@ -166,7 +166,7 @@ export const integerCombinators = {
         );
       }
       return null;
-    }, numericRange('integer', min, max, opts)), opts, { min, max, enforcedMin, enforcedMax });
+    }, numericRange('integer', min, max, opts)), opts, { min, max, enforcedMin, enforcedMax }));
   },
 
   /**
@@ -178,7 +178,7 @@ export const integerCombinators = {
     const formatErr = formatCode(name);
     const valueErr = valueCode(name);
     const severity = endSeverity(opts, 'min');
-    return ground(
+    return markIntSlot(ground(
       accepts(
         (key, value, line) => {
           const parsed = parseGodotFloat(value.trim());
@@ -204,6 +204,6 @@ export const integerCombinators = {
       ),
       opts,
       { min: 0 }
-    );
+    ));
   },
 };

@@ -10,6 +10,7 @@
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { isUnrepresentableInt, tupleComponent } from '../commonValidators.js';
+import { markIntSlot } from '../intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from '../floatTupleValidator.js';
 import {
   VECTOR3_REGEX,
@@ -31,7 +32,7 @@ export const vectorCombinators = {
   /** `Rect2i(x, y, w, h)` integer format. */
   rect2i(name: string): PropertyValidator {
     const code = formatCode(name);
-    return shape((key, value, line) => {
+    return markIntSlot(shape((key, value, line) => {
       const match = RECT2I_RE.exec(value);
       if (!match) {
         return propertyError(
@@ -52,7 +53,7 @@ export const vectorCombinators = {
         );
       }
       return null;
-    }, 'Rect2i(x, y, w, h)');
+    }, 'Rect2i(x, y, w, h)'));
   },
 
   /** `Vector2(x, y)` format. */
@@ -71,14 +72,14 @@ export const vectorCombinators = {
    */
   vector2i(name: string, opts: { min?: number } & Grounding = {}): PropertyValidator {
     const { min } = opts;
-    return ground(
+    return markIntSlot(ground(
       accepts(
         createVector2iValidator(name, min, formatCode(name), valueCode(name), endSeverity(opts, 'min')),
         min === undefined ? 'Vector2i(x, y)' : `Vector2i(x, y), both >= ${min}`
       ),
       opts,
       { min }
-    );
+    ));
   },
 
   /** `Vector3(x, y, z)` format. */

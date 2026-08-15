@@ -7,6 +7,7 @@
  */
 
 import type { ParseError } from '../types.js';
+import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
 
 /**
@@ -35,4 +36,18 @@ export function unrepresentableInt(
     errorCodeValue,
     'error'
   );
+}
+
+/**
+ * An INT slot is never `formatOnly`.
+ *
+ * `formatOnly` means the only rejection is of text Godot's parser could not
+ * read. A non-finite READS and is then converted on the write
+ * (`Variant::operator int64_t`, variant.h:369-370), so an int slot rejects a
+ * real value and owes a citation like any other bound.
+ */
+export function markIntSlot<T extends PropertyValidator>(validator: T): T {
+  delete validator.formatOnly;
+  validator.grounding ??= { kind: 'enforced', cite: 'variant.h:369-370' };
+  return validator;
 }

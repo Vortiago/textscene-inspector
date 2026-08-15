@@ -66,8 +66,9 @@ describe('v.vector2 / v.vector2i / v.vector3', () => {
     expect(enforced('grid', 'Vector2i(-1, 0)', 1)?.severity).toBe('error');
   });
 
-  it('vector2i without a min is format-only, so it needs no citation', () => {
-    expect(v.vector2i('grid').formatOnly).toBe(true);
+  it('vector2i is never format-only: it rejects a component no int32 holds', () => {
+    expect(v.vector2i('grid').formatOnly).toBeUndefined();
+    expect(v.vector2i('grid').grounding).toEqual({ kind: 'enforced', cite: 'variant.h:369-370' });
     expect(v.vector2i('grid', { min: 0, enforced: 'window.cpp:1190' }).formatOnly).toBeUndefined();
   });
 

@@ -124,11 +124,15 @@ describe('the classification guard bites', () => {
     }
   });
 
-  it('treats an unbounded numeric combinator as format-only', () => {
+  it('treats an unbounded FLOAT combinator as format-only, but never an int one', () => {
     // `v.float('width')` rejects only what is not a number, so there is no bound
     // to cite. Counting it as un-audited was what inflated the ratchet to 596.
+    // An INT slot is different: it rejects a non-finite, which the parser reads
+    // perfectly well and the WRITE then converts (variant.h:369-370), so it
+    // owes a citation like any other bound.
     expect(v.float('width').formatOnly).toBe(true);
-    expect(v.int('count').formatOnly).toBe(true);
+    expect(v.int('count').formatOnly).toBeUndefined();
+    expect(v.int('count').grounding).toEqual({ kind: 'enforced', cite: 'variant.h:369-370' });
     expect(
       v.float('fov', { min: 1, max: 179, enforced: 'camera_3d.cpp:725' }).formatOnly
     ).toBeUndefined();

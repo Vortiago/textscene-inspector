@@ -92,17 +92,16 @@ describe('SkeletonIK3D strict validators', () => {
     expect(validatorRegistry.getOwnKeys('SkeletonIK3D')).not.toContain('active');
   });
 
-  it('grounds nothing, because no setter on this class refuses or alters a value', () => {
-    // The positive form of "there are no bounds here". Every validator declares
-    // `formatOnly`, so `boundGrounding`'s sweep reads this slice as audited
-    // rather than as nine unclassified closures.
-    const ungrounded = validatorRegistry
+  it('leaves every validator classified, so the sweep reads this slice as audited', () => {
+    // The positive form of "there are no bounds here". An int slot carries the
+    // narrowing citation instead of `formatOnly`; either way none is unclassified.
+    const unclassified = validatorRegistry
       .getOwnKeys('SkeletonIK3D')
       .filter((property) => {
         const validator = validatorRegistry.findValidator('SkeletonIK3D', property);
-        return validator?.formatOnly !== true || validator.grounding !== undefined;
+        return validator?.formatOnly !== true && validator?.grounding === undefined;
       });
-    expect(ungrounded).toEqual([]);
+    expect(unclassified).toEqual([]);
   });
 });
 
