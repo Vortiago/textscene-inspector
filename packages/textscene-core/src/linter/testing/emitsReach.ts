@@ -176,6 +176,19 @@ export function topLevelParts(body: string): string[] {
 }
 
 /**
+ * Comments blanked to spaces, preserving every offset.
+ *
+ * A docblock between the parens made `balancedGroup` run to end-of-file and
+ * `parameterList` return prose words: an apostrophe in "min's" opened a string
+ * that never closed. Blanking rather than deleting keeps `fn.index` valid.
+ */
+function blankComments(src: string): string {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+    .replace(/(^|[^:\\])\/\/[^\n]*/g, (m, lead: string) => lead + ' '.repeat(m.length - lead.length));
+}
+
+/**
  * The parameter names of a signature, IN ORDER.
  *
  * Ordered, because the guard above resolves a call site by argument POSITION.
@@ -184,17 +197,19 @@ export function topLevelParts(body: string): string[] {
  * one real builder templates its SECOND parameter, which is why the loop that
  * consumed this was structurally always empty.
  */
-export function parameterList(signature: string): string[] {
-  return topLevelParts(signature)
-    .map((part) => /^\s*(?:\.\.\.)?([A-Za-z_$][\w$]*)/.exec(part)?.[1])
-    .filter((name): name is string => name !== undefined);
+export function parameterList(signature: string): Array<string | null> {
+  // `null` HOLDS the slot for a destructured parameter: dropping it shifted
+  // every later index, which is what the call-site lookup is keyed on.
+  return topLevelParts(signature).map(
+    (part) => /^\s*(?:\.\.\.)?([A-Za-z_$][\w$]*)/.exec(part)?.[1] ?? null
+  );
 }
 
 export function armBuilders(files: string[]): ArmBuilders {
   const builders = new Map<string, ArmBuilder>();
   const unresolvable: string[] = [];
   for (const file of files) {
-    const src = readFileSync(file, 'utf8');
+    const src = blankComments(readFileSync(file, 'utf8'));
     for (const fn of src.matchAll(/export function (\w+)\s*\(/g)) {
       const builder = fn[1]!;
       const start = fn.index!;
@@ -212,7 +227,10 @@ export function armBuilders(files: string[]): ArmBuilders {
       const params = parameterList(balancedGroup(src, start + fn[0].length - 1));
       const interpolated = params
         .map((param, index) => ({ param, index }))
-        .filter(({ param }) => templates.some((t) => t.includes(`\${${param}}`)));
+        .filter(
+          (entry): entry is { param: string; index: number } =>
+            entry.param !== null && templates.some((t) => t.includes(`\${${entry.param}}`))
+        );
       if (!interpolated.length) continue;
       // Two parameters interpolated by different templates is a shape this
       // scrape cannot pin to one position, and a name nothing pins to a rule.

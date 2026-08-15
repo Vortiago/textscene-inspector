@@ -54,6 +54,36 @@ describe('topLevelParts and balancedGroup', () => {
   });
 });
 
+describe('armBuilders comment and slot handling', () => {
+  it('ignores a docblock between the parens', () => {
+    // An apostrophe in prose ("min's") opened a string that never closed, so
+    // the signature ran to end-of-file and the params were prose words.
+    const file = fileWith(
+      'export function make(\n' +
+        "  /** the node's own prefix, not the parent's */\n" +
+        '  node: TscnNode,\n' +
+        '  rulePrefix: string\n' +
+        ') {\n' +
+        '  return { ruleName: `${rulePrefix}-x` };\n' +
+        '}\n'
+    );
+    expect(armBuilders([file]).builders.get('make')).toEqual({
+      index: 1,
+      param: 'rulePrefix',
+      templates: ['${rulePrefix}-x'],
+    });
+  });
+
+  it('holds the slot for a destructured parameter rather than shifting the rest', () => {
+    const file = fileWith(
+      'export function make({ node, scene }: Ctx, rulePrefix: string) {\n' +
+        '  return { ruleName: `${rulePrefix}-x` };\n' +
+        '}\n'
+    );
+    expect(armBuilders([file]).builders.get('make')?.index).toBe(1);
+  });
+});
+
 describe('armBuilders', () => {
   it('pins the templated parameter to its position', () => {
     const file = fileWith(

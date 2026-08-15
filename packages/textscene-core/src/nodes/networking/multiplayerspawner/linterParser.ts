@@ -22,6 +22,7 @@
  */
 
 import '../../node/linterParser.js';
+import { packedArrayLiteral } from '../../../godot/index.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v, shape, propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
@@ -38,13 +39,17 @@ import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
  * check on the filesystem, not a value the static linter can ground a bound
  * on, so every element just needs to be a quoted string.
  */
-const PACKED_STRING_ARRAY_RE =
-  /^PackedStringArray\(\s*(?:"(?:[^"\\]|\\[\s\S])*"(?:\s*,\s*"(?:[^"\\]|\\[\s\S])*")*\s*)?\)$/;
+// The wrapper from the shared builder, so the padding Godot's tokenizer
+// discards (`get_token`, variant_parser.cpp:416-418) is legal here too — the
+// FileDialog.filters twin already accepted it.
+const PACKED_STRING_ARRAY_RE = packedArrayLiteral('PackedStringArray');
+const QUOTED_ELEMENTS_RE = /^\s*(?:"(?:[^"\\]|\\[\s\S])*"(?:\s*,\s*"(?:[^"\\]|\\[\s\S])*")*\s*)?$/;
 
 function packedStringArray(name: string): PropertyValidator {
   const code = `INVALID_${name.toUpperCase()}_FORMAT`;
   return shape((key, value, line) => {
-    if (!PACKED_STRING_ARRAY_RE.test(value.trim())) {
+    const match = PACKED_STRING_ARRAY_RE.exec(value.trim());
+    if (!match || !QUOTED_ELEMENTS_RE.test(match[1]!)) {
       return propertyError(
         key,
         line,

@@ -45,6 +45,17 @@ const DECLARES_NOTHING = false;
  */
 const INHERITED: [owner: string, key: string][] = [['Node', 'process_mode']];
 
+describe('_spawnable_scenes padding', () => {
+  it('accepts whitespace before the paren, as its FileDialog.filters twin does', () => {
+    // The type name and `(` are separate tokens; `get_token` discards every
+    // character <= 32 before one (variant_parser.cpp:416-418).
+    const v = validatorRegistry.findValidator('MultiplayerSpawner', '_spawnable_scenes')!;
+    expect(v('_spawnable_scenes', 'PackedStringArray ("res://a.tscn")', 1)).toBeNull();
+    expect(v('_spawnable_scenes', 'PackedStringArray\t("res://a.tscn")', 1)).toBeNull();
+    expect(v('_spawnable_scenes', 'PackedStringArray(unquoted)', 1)).not.toBeNull();
+  });
+});
+
 describe('MultiplayerSpawner strict validators', () => {
   it('registers exactly what MultiplayerSpawner binds', () => {
     expect(
