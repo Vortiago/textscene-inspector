@@ -42,16 +42,14 @@ function uniforms(): CanvasItemLightingUniforms {
     classWeights: { value: new Array<number>(MAX_LIGHT_CLASSES).fill(0) },
     resolution: { value: new THREE.Vector2(2, 2) },
     canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
-    unshaded: { value: 0 },
-    lightOnly: { value: 0 },
+    lightMode: { value: CanvasItemLightMode.NORMAL },
   };
 }
 
 function compile(lightMode: CanvasItemLightMode) {
   const shared = uniforms();
-  shared.unshaded.value = lightMode === CanvasItemLightMode.UNSHADED ? 1 : 0;
-  shared.lightOnly.value = lightMode === CanvasItemLightMode.LIGHT_ONLY ? 1 : 0;
-  const props = canvasItemLightingProps({ uniforms: shared });
+  shared.lightMode.value = lightMode;
+  const props = canvasItemLightingProps(shared);
   const shader = {
     vertexShader: '',
     fragmentShader: STOCK_FRAGMENT,
@@ -109,7 +107,7 @@ describe('canvasItemLightingProps', () => {
     // S = seed + Σ (S_class − seed): with one class that is S_class, and with
     // several ADD/SUB classes it is their independent terms over one seed.
     const { shader } = compile(CanvasItemLightMode.NORMAL);
-    expect(shader.fragmentShader).toContain('vec3 lightSeed = uCanvasModulate;');
+    expect(shader.fragmentShader).toContain('lightOnly ? vec3(1.0) : uCanvasModulate');
     expect(shader.fragmentShader).toContain('vec4 accum = vec4(lightSeed, 0.0);');
     expect(shader.fragmentShader).toContain('accum.rgb += lightClass.rgb - lightSeed;');
     expect(shader.fragmentShader).toContain('accum.a += lightClass.a;');
@@ -117,7 +115,7 @@ describe('canvasItemLightingProps', () => {
 
   it('recovers the albedo through a FLOORED divisor, so a black canvas tint still lights', () => {
     const { shader } = compile(CanvasItemLightMode.NORMAL);
-    expect(shader.fragmentShader).toContain(`max(uCanvasModulate, vec3(${CANVAS_MODULATE_FLOOR}))`);
+    expect(shader.fragmentShader).toContain(`max(lightSeed, vec3(${CANVAS_MODULATE_FLOOR}))`);
     expect(CANVAS_MODULATE_FLOOR).toBeGreaterThan(0);
     // Below one 8-bit step, so the floor cannot show on screen.
     expect(CANVAS_MODULATE_FLOOR).toBeLessThanOrEqual(1 / 255);
@@ -133,36 +131,16 @@ describe('canvasItemLightingProps', () => {
     expect(shader.fragmentShader).toContain('#include <colorspace_fragment>');
   });
 
-  it('compiles ONE program for all three light modes', () => {
-    // three bakes `onBeforeCompile`/`customProgramCacheKey`/`transparent` in at
-    // first compile; a mode-specific program would strand a re-parsed item.
-    const modes = [
-      CanvasItemLightMode.NORMAL,
-      CanvasItemLightMode.UNSHADED,
-      CanvasItemLightMode.LIGHT_ONLY,
-    ].map(compile);
-    const first = modes[0]!;
-    for (const mode of modes) {
-      expect(mode.props.onBeforeCompile).toBeTypeOf('function');
-      expect(mode.shader.fragmentShader).toBe(first.shader.fragmentShader);
-      expect(mode.props.customProgramCacheKey?.()).toBe(first.props.customProgramCacheKey?.());
-      expect(Object.keys(mode.props).sort()).toEqual(Object.keys(first.props).sort());
-      expect(mode.props.transparent).toBe(first.props.transparent);
-    }
-  });
-
-  it('binds the mode uniforms by object, so a light_mode edit reaches the GPU', () => {
+  it('declares the mode uniform, so a light_mode edit reaches the GPU', () => {
     const { shader, shared } = compile(CanvasItemLightMode.NORMAL);
-    expect(shader.uniforms.uUnshaded).toBe(shared.unshaded);
-    expect(shader.uniforms.uLightOnly).toBe(shared.lightOnly);
-    expect(shader.fragmentShader).toContain('uniform float uUnshaded;');
-    expect(shader.fragmentShader).toContain('uniform float uLightOnly;');
+    expect(shader.uniforms.uLightMode).toBe(shared.lightMode);
+    expect(shader.fragmentShader).toContain('uniform float uLightMode;');
   });
 
   it('leaves an Unshaded fragment untouched: no canvas tint, no light loop', () => {
     // canvas.glsl:715, :719 — MODE_UNSHADED skips both.
     const { shader } = compile(CanvasItemLightMode.UNSHADED);
-    const guard = shader.fragmentShader.indexOf('if (uUnshaded < 0.5) {');
+    const guard = shader.fragmentShader.indexOf('if (!unshaded) {');
     expect(guard).toBeGreaterThan(-1);
     // Every write the injection makes is inside that guard.
     expect(shader.fragmentShader.indexOf('gl_FragColor.rgb = godotToLinear')).toBeGreaterThan(guard);
@@ -178,15 +156,14 @@ describe('canvasItemLightingProps', () => {
 
   it('reads an unmodulated seed for a Light Only item, which skips the canvas tint', () => {
     const { shader } = compile(CanvasItemLightMode.LIGHT_ONLY);
-    // Both spellings live in the ONE program; `uLightOnly` picks at runtime.
-    expect(shader.fragmentShader).toContain('lightSeed = vec3(1.0);');
-    expect(shader.fragmentShader).toContain('albedo = lit;');
-    expect(shader.fragmentShader).toContain('max(uCanvasModulate');
-    expect(shader.fragmentShader).toContain('if (uLightOnly > 0.5)');
+    // Both seeds live in the ONE program; `uLightMode` picks at runtime, and the
+    // divide-out is by the seed, so Light Only's 1.0 makes it a no-op.
+    expect(shader.fragmentShader).toContain('lightOnly ? vec3(1.0) : uCanvasModulate');
+    expect(shader.fragmentShader).toContain('godotToSrgb(gl_FragColor.rgb) / max(lightSeed');
   });
 
   it('leaves a shader with no colorspace hook untouched rather than throwing', () => {
-    const props = canvasItemLightingProps({ uniforms: uniforms() });
+    const props = canvasItemLightingProps(uniforms());
     const shader = {
       vertexShader: '',
       fragmentShader: 'void other() {}',

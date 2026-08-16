@@ -31,16 +31,15 @@ import { World2DContents } from './World2DCanvas';
 
 const SOURCE = readFileSync(join(import.meta.dirname, 'World2DCanvas.tsx'), 'utf8');
 
+// `<Canvas\s`, not `<Canvas\b` — the file's own docstring mentions "`<Canvas>` host",
+// which would otherwise match first and never carry the props. Line comments are
+// stripped because a `>` inside one ends the non-greedy match early.
+const CANVAS_TAG = /<Canvas\s[\s\S]*?>/.exec(SOURCE.replace(/\/\/.*$/gm, ''))?.[0] ?? '';
+
 describe('World2DCanvas tone mapping', () => {
   it('passes `flat` to <Canvas> so R3F selects NoToneMapping', () => {
-    // `<Canvas\s`, not `<Canvas\b` — the file's own docstring mentions
-    // "`<Canvas>` host", which would otherwise match first and never carry the prop.
-    // Line comments are stripped first: the props are interleaved with prose,
-    // and a `>` inside one (a JSX element named in passing) ends the non-greedy
-    // match early, truncating the tag before the prop this asserts on.
-    const canvasTag = /<Canvas\s[\s\S]*?>/.exec(SOURCE.replace(/\/\/.*$/gm, ''))?.[0] ?? '';
-    expect(canvasTag).not.toBe('');
-    expect(canvasTag).toMatch(/^\s*flat\s*$/m);
+    expect(CANVAS_TAG).not.toBe('');
+    expect(CANVAS_TAG).toMatch(/^\s*flat\s*$/m);
   });
 
   it('agrees with the R3F rule it is opting out of', () => {
@@ -57,9 +56,8 @@ describe('World2DCanvas multisampling', () => {
     // setting defaults to it (rendering_server.cpp:3773). R3F's `<Canvas>`
     // defaults `antialias: true`, which resolves coverage on top of the
     // authored feather rings.
-    const canvasTag = /<Canvas\s[\s\S]*?>/.exec(SOURCE.replace(/\/\/.*$/gm, ''))?.[0] ?? '';
-    expect(canvasTag).not.toBe('');
-    expect(canvasTag).toMatch(/antialias:\s*false/);
+    expect(CANVAS_TAG).not.toBe('');
+    expect(CANVAS_TAG).toMatch(/antialias:\s*false/);
   });
 });
 

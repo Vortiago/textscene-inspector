@@ -63,6 +63,9 @@ export function createOffscreenTarget(
   const target = new THREE.WebGLRenderTarget(width, height, {
     depthBuffer: true,
     stencilBuffer: false,
+    // `samples` stays at three's 0. A 2D pass shares this constructor and must
+    // not multisample — scene/main/viewport.h:309, `msaa_2d = MSAA_DISABLED`.
+    samples: 0,
   });
   target.texture.colorSpace = colorSpace;
   target.texture.name = `${name}::target`;

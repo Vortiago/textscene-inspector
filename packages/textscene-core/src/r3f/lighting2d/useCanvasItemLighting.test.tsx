@@ -68,23 +68,17 @@ describe('useCanvasItemLighting', () => {
     );
 
     // Bound once, at the item's only compile; the values move underneath.
-    const bound = boundUniforms(result.current);
-    const unshaded = bound.uUnshaded!;
-    const lightOnly = bound.uLightOnly!;
-    expect(unshaded.value).toBe(0);
-    expect(lightOnly.value).toBe(0);
+    const mode = boundUniforms(result.current).uLightMode!;
+    expect(mode.value).toBe(CanvasItemLightMode.NORMAL);
 
     rerender({ mode: CanvasItemLightMode.UNSHADED });
-    expect(unshaded.value).toBe(1);
-    expect(lightOnly.value).toBe(0);
+    expect(mode.value).toBe(CanvasItemLightMode.UNSHADED);
 
     rerender({ mode: CanvasItemLightMode.LIGHT_ONLY });
-    expect(unshaded.value).toBe(0);
-    expect(lightOnly.value).toBe(1);
+    expect(mode.value).toBe(CanvasItemLightMode.LIGHT_ONLY);
 
     // No material is Godot's default light mode, not a fourth state.
     rerender({ mode: null });
-    expect(unshaded.value).toBe(0);
-    expect(lightOnly.value).toBe(0);
+    expect(mode.value).toBe(CanvasItemLightMode.NORMAL);
   });
 });

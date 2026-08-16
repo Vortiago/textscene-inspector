@@ -179,6 +179,8 @@ export const RENDER_MODES = ['auto', '2d', '3d', '2d-root'];
  * ship vulkan and the GLES3 trio; `d3d12`/`metal` are here because the table is
  * the engine's, and are rejected later by the engine itself, not by us.
  */
+export const DRIVER_NAMES = ['vulkan', 'd3d12', 'metal', 'opengl3', 'opengl3_angle', 'opengl3_es'];
+
 export const RENDERING_DRIVERS = {
   vulkan: 'forward_plus',
   d3d12: 'forward_plus',
@@ -376,6 +378,15 @@ function vec2(flag, raw) {
   return parts;
 }
 
+/** Enum-flag validation, shared so a new flag does not invent a fourth wording. */
+function oneOf(flag, allowed, raw) {
+  const value = String(raw).toLowerCase();
+  if (!allowed.includes(value)) {
+    throw new Error(`${flag} takes one of ${allowed.join('|')}, got "${value}"`);
+  }
+  return value;
+}
+
 function vec3(flag, raw) {
   const parts = String(raw).split(',').map((n) => Number(n.trim()));
   if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
@@ -445,14 +456,9 @@ export function parseArgs(argv) {
           args.sceneCameraPath = argv[++i];
         }
         break;
-      case '--mode': {
-        const mode = String(argv[++i]).toLowerCase();
-        if (!RENDER_MODES.includes(mode)) {
-          throw new Error(`--mode takes one of ${RENDER_MODES.join('|')}, got "${mode}"`);
-        }
-        args.mode = mode;
+      case '--mode':
+        args.mode = oneOf('--mode', RENDER_MODES, argv[++i]);
         break;
-      }
       case '--fov':
         args.fov = positiveNumber('--fov', argv[++i]);
         args.fovExplicit = true;
@@ -472,16 +478,9 @@ export function parseArgs(argv) {
       case '--particles':
         args.particles = nonNegativeNumber('--particles', argv[++i]);
         break;
-      case '--rendering-driver': {
-        const driver = String(argv[++i]).toLowerCase();
-        if (!(driver in RENDERING_DRIVERS)) {
-          throw new Error(
-            `--rendering-driver takes one of ${Object.keys(RENDERING_DRIVERS).join('|')}, got "${driver}"`
-          );
-        }
-        args.renderingDriver = driver;
+      case '--rendering-driver':
+        args.renderingDriver = oneOf('--rendering-driver', DRIVER_NAMES, argv[++i]);
         break;
-      }
       default:
         if (arg.startsWith('--')) throw new Error(`Unknown flag ${arg}`);
         args.scene = arg;
@@ -1305,6 +1304,11 @@ export async function renderReference({
   if (!existsSync(scenePath)) throw new Error(`No such scene: ${scenePath}`);
   if (!RENDER_MODES.includes(mode)) {
     throw new Error(`mode must be one of ${RENDER_MODES.join('|')}, got "${mode}"`);
+  }
+  if (renderingDriver !== null && !DRIVER_NAMES.includes(renderingDriver)) {
+    throw new Error(
+      `renderingDriver must be one of ${DRIVER_NAMES.join('|')}, got "${renderingDriver}"`
+    );
   }
 
   const root = resolveProjectRoot(scenePath);

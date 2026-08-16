@@ -33,7 +33,6 @@ import {
 } from './CanvasLighting2D.js';
 import {
   canvasItemLightingProps,
-  canvasLightModeFlags,
   type CanvasItemLightingProps,
   type CanvasItemLightingUniforms,
 } from './canvasItemLighting.js';
@@ -65,8 +64,7 @@ function createUniforms(resolution: THREE.Vector2): CanvasItemLightingUniforms {
     classWeights: { value: new Array<number>(MAX_LIGHT_CLASSES).fill(0) },
     resolution: { value: resolution },
     canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
-    unshaded: { value: 0 },
-    lightOnly: { value: 0 },
+    lightMode: { value: CanvasItemLightMode.NORMAL },
   };
 }
 
@@ -124,10 +122,8 @@ export function useCanvasItemLighting(
   );
   // The MODE rides the uniforms too: a re-parse changes `light_mode` under a
   // mounted item, and three would keep the program it first compiled.
-  const modeFlags = canvasLightModeFlags(lightMode);
-  bound.unshaded.value = modeFlags.unshaded;
-  bound.lightOnly.value = modeFlags.lightOnly;
+  bound.lightMode.value = lightMode;
 
   // Mode-independent by design: these props must never change once mounted.
-  return useMemo(() => canvasItemLightingProps({ uniforms: bound }), [bound]);
+  return useMemo(() => canvasItemLightingProps(bound), [bound]);
 }
