@@ -3,7 +3,7 @@ import {
   gradientFromResource,
   decodeGradient,
   decodeGradientTexture2D,
-  parsePackedColorArray,
+  parseColorStops,
   parsePackedFloat32Array,
   resolveGradient,
 } from './decode';
@@ -29,11 +29,27 @@ describe('parsePackedFloat32Array', () => {
   it('throws when a component is not a number', () => {
     expect(() => parsePackedFloat32Array('PackedFloat32Array(1, x, 3)')).toThrow();
   });
+
+  it('refuses the spellings Godot cannot read, instead of taking a prefix', () => {
+    // `parseFloat` read `1.2.3` as 1.2 and `0x10` as 0, and let `+1` / `.5`
+    // through, all of which fail Godot's own tokenizer.
+    for (const bad of ['1.2.3', '+1', '.5', '0x10']) {
+      expect(() => parsePackedFloat32Array(`PackedFloat32Array(0, ${bad}, 1)`)).toThrow(
+        'Invalid number in PackedFloat32Array'
+      );
+    }
+  });
+
+  it('refuses a non-finite offset, matching its packed siblings', () => {
+    expect(() => parsePackedFloat32Array('PackedFloat32Array(0, inf, 1)')).toThrow(
+      'Invalid number in PackedFloat32Array'
+    );
+  });
 });
 
-describe('parsePackedColorArray', () => {
+describe('parseColorStops', () => {
   it('groups the flat run into RGBA quadruples', () => {
-    const colors = parsePackedColorArray(
+    const colors = parseColorStops(
       'PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)'
     );
     expect(colors).toEqual([
@@ -44,7 +60,7 @@ describe('parsePackedColorArray', () => {
   });
 
   it('drops a trailing partial quadruple', () => {
-    const colors = parsePackedColorArray('PackedColorArray(1, 0, 0, 1, 0, 1)');
+    const colors = parseColorStops('PackedColorArray(1, 0, 0, 1, 0, 1)');
     expect(colors).toEqual([{ r: 1, g: 0, b: 0, a: 1 }]);
   });
 });

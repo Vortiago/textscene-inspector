@@ -19,6 +19,7 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { packedArrayLiteral } from '../../../godot/index.js';
+import { floatElements } from '../../shapes/packedArray';
 import {
   GradientFill,
   GradientInterpolationMode,
@@ -28,36 +29,36 @@ import {
   type GradientTexture2D,
 } from './types';
 
+const PACKED_FLOAT32_ARRAY_RE = packedArrayLiteral('PackedFloat32Array');
+const PACKED_COLOR_ARRAY_RE = packedArrayLiteral('PackedColorArray');
+
 /** Parse a `PackedFloat32Array(a, b, c)` literal into a `number[]`. */
 export function parsePackedFloat32Array(value: string): number[] {
-  const match = value.match(/^PackedFloat32Array\s*\(([\s\S]*)\)$/);
+  const match = value.match(PACKED_FLOAT32_ARRAY_RE);
   if (!match) {
     throw new Error(`Invalid PackedFloat32Array format: ${value}`);
   }
   const inner = match[1]!.trim();
   if (inner === '') return [];
-  const nums = inner.split(',').map((s) => parseFloat(s.trim()));
-  if (nums.some((n) => Number.isNaN(n))) {
-    throw new Error(`Invalid number in PackedFloat32Array: ${value}`);
-  }
-  return nums;
+  return floatElements(inner, 'PackedFloat32Array', value);
 }
 
 /**
- * Parse a `PackedColorArray(r, g, b, a, r, g, b, a, …)` literal — a flat run of
- * float quadruples — into a `Color[]`. A trailing partial quadruple is dropped.
+ * Parse a `PackedColorArray(r, g, b, a, r, g, b, a, …)` literal into a
+ * `Color[]`. A trailing partial quadruple is dropped.
+ *
+ * Named apart from `parsePackedColorArray` in `resources/shapes/packedArray.ts`,
+ * which reads the same literal into a flat `Float32Array`: two exports under
+ * one name were two contracts a caller had to pick between by import path.
  */
-export function parsePackedColorArray(value: string): Color[] {
-  const match = value.match(packedArrayLiteral('PackedColorArray'));
+export function parseColorStops(value: string): Color[] {
+  const match = value.match(PACKED_COLOR_ARRAY_RE);
   if (!match) {
     throw new Error(`Invalid PackedColorArray format: ${value}`);
   }
   const inner = match[1]!.trim();
   if (inner === '') return [];
-  const nums = inner.split(',').map((s) => parseFloat(s.trim()));
-  if (nums.some((n) => Number.isNaN(n))) {
-    throw new Error(`Invalid number in PackedColorArray: ${value}`);
-  }
+  const nums = floatElements(inner, 'PackedColorArray', value);
   const colors: Color[] = [];
   for (let i = 0; i + 3 < nums.length; i += 4) {
     colors.push({ r: nums[i]!, g: nums[i + 1]!, b: nums[i + 2]!, a: nums[i + 3]! });
@@ -159,7 +160,7 @@ export function decodeGradientTexture2D(data: Record<string, string>): GradientT
 
 function safeColors(value: string): Color[] {
   try {
-    return parsePackedColorArray(value);
+    return parseColorStops(value);
   } catch {
     return [];
   }

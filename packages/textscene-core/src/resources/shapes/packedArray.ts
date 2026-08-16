@@ -1,6 +1,9 @@
-import { packedArrayCallAnywhere, packedArrayLiteral } from '../../godot/index.js';
-import { parseGodotFloat, parseGodotInt } from '../../godot/index.js';
-import { warn } from '../../logger.js';
+import {
+  packedArrayCallAnywhere,
+  packedArrayLiteral,
+  parseGodotFloat,
+  parseGodotInt,
+} from '../../godot/index.js';
 
 const PACKED_VECTOR3_ARRAY_RE = packedArrayLiteral('PackedVector3Array');
 const PACKED_VECTOR2_ARRAY_RE = packedArrayLiteral('PackedVector2Array');
@@ -11,17 +14,18 @@ const PACKED_COLOR_ARRAY_RE = packedArrayLiteral('PackedColorArray');
  *
  * `parseFloat` stops at the first unusable character, so `1.2.3` became 1.2 —
  * a vertex the file does not contain — and `+1` / `.5` slipped through as
- * numbers Godot refuses to load at all. A non-finite is a legal element the
- * writer emits (`rtos_fix`), but no viewport can draw it, so it degrades to the
- * finite default the callers already document.
+ * numbers Godot refuses to load at all.
+ *
+ * A non-finite is a LEGAL element the writer emits (`rtos_fix`) and still
+ * throws: every caller catches and falls back to drawing nothing, and
+ * substituting 0 would put a vertex at the origin that the scene never asked
+ * for. Undrawable and unreadable take the same exit deliberately.
  */
-function floatElements(inner: string, wrapper: string, value: string): number[] {
+export function floatElements(inner: string, wrapper: string, value: string): number[] {
   return inner.split(',').map((s) => {
     const num = parseGodotFloat(s);
-    if (num === null) throw new Error(`Invalid number in ${wrapper}: ${value}`);
-    if (!Number.isFinite(num)) {
-      warn(`${wrapper} element "${s.trim()}" is non-finite; drawing 0 in its place`);
-      return 0;
+    if (num === null || !Number.isFinite(num)) {
+      throw new Error(`Invalid number in ${wrapper}: ${value}`);
     }
     return num;
   });
@@ -84,10 +88,10 @@ export function parsePackedInt32Arrays(value: string): number[][] {
         const num = parseGodotInt(s);
         // The guard its three float siblings already have. Without it a body
         // Godot's tokenizer refuses became a silent NaN index, and `2e1` — a
-        // file Godot loads as 20 — became 2.
-        if (num === null) throw new Error(`Invalid number in PackedInt32Array: ${value}`);
-        if (!Number.isFinite(num)) {
-          warn(`PackedInt32Array element "${s.trim()}" is non-finite; it indexes nothing`);
+        // file Godot loads as 20 — became 2. A non-finite reads as NaN, which
+        // clears every range check and would index arbitrary geometry.
+        if (num === null || !Number.isFinite(num)) {
+          throw new Error(`Invalid number in PackedInt32Array: ${value}`);
         }
         return num;
       })

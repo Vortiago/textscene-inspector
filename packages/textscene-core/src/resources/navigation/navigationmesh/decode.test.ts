@@ -106,6 +106,15 @@ describe('decodeNavigationMesh', () => {
     expect(outOfRange).toBeNull();
   });
 
+  it('draws no navmesh for a non-finite vertex, rather than a degenerate one', () => {
+    expect(
+      decodeNavigationMesh({
+        vertices: 'PackedVector3Array(0, 0, 0, 1, 0, 0, inf, 0, 1)',
+        polygons: '[PackedInt32Array(0, 1, 2)]',
+      })
+    ).toBeNull();
+  });
+
   it('ignores a trailing partial vertex when range-checking indices (edge case)', () => {
     // Eight floats describe two vertices and a stray pair; index 2 must not resolve.
     expect(

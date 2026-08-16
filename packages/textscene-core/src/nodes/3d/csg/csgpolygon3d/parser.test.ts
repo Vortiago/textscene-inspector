@@ -97,6 +97,13 @@ describe('parseCSGPolygon3D', () => {
     expect(r.polygon.length).toBe(0);
   });
 
+  it('draws nothing for a non-finite vertex, rather than one at the origin', () => {
+    const r = parseCSGPolygon3D({ type: 'node', attributes: {} }, {
+      polygon: 'PackedVector2Array(0, 0, inf, 4)',
+    });
+    expect(r.polygon.length).toBe(0);
+  });
+
   it('handles missing optional attributes (edge case)', () => {
     const r = parseCSGPolygon3D({ type: 'node', attributes: {} }, {});
     expect(r.name).toBe('');

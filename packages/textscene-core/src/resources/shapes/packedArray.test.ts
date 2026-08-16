@@ -40,8 +40,14 @@ describe('packed FLOAT element grammar', () => {
     }
   });
 
-  it('draws 0 for a non-finite element, which is legal but undrawable', () => {
-    expect([...parsePackedVector2Array('PackedVector2Array(0, 0, inf, 4)')]).toEqual([0, 0, 0, 4]);
+  it('throws on a non-finite element rather than substituting a vertex', () => {
+    // Legal in the file, undrawable here — but the callers' documented
+    // fallback is "draw nothing", and 0 is a vertex the scene never asked for.
+    for (const spelling of ['inf', '-inf', 'inf_neg', 'nan']) {
+      expect(() => parsePackedVector2Array(`PackedVector2Array(0, 0, ${spelling}, 4)`)).toThrow(
+        'Invalid number in PackedVector2Array'
+      );
+    }
   });
 });
 
