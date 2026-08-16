@@ -125,6 +125,14 @@ export function StandardMaterialSlot({
     `${displacementMap ? 'd' : '-'}` +
     // 'f' for flowmap
     `${anisotropyMap ? 'f' : '-'}`;
+  // Baked at the same first compile and re-derived by nothing: `opaque`
+  // (`WebGLPrograms.js:262`, minus the alphaToCoverage term this slot never sets),
+  // vertexColors, the side flags. alphaTest is out — `Material.js:494-502` bumps
+  // `version` on the zero crossing itself.
+  const stateKey =
+    `${scalars.transparent === false && scalars.blending === THREE.NormalBlending ? 'o' : '-'}` +
+    `${scalars.useVertexColors ? 'v' : '-'}` +
+    `${effectiveSide}`;
 
   // Godot SHADING_MODE_UNSHADED (0): albedo is output directly, unaffected by
   // lights/shadows. three.js MeshBasicMaterial is the unlit equivalent — no PBR
@@ -136,8 +144,9 @@ export function StandardMaterialSlot({
   // is unlit in Godot too however bright the colour.
   if (scalars.shadingMode === 'unshaded') {
     return (
+      // Only albedo of the eight slots reaches a MeshBasicMaterial.
       <meshBasicMaterial
-        key={`basic-${albedoMap ? 'a' : '-'}`}
+        key={`basic-${albedoMap ? 'a' : '-'}-${stateKey}`}
         attach={attach}
         color={scalars.color}
         vertexColors={scalars.useVertexColors}
@@ -213,9 +222,16 @@ export function StandardMaterialSlot({
       1 + rimTint * (scalars.color[1] - 1),
       1 + rimTint * (scalars.color[2] - 1)
     );
+    // Baked as `> 0` booleans (`WebGLPrograms.js:140-145`); one can cross zero
+    // while another holds the upgrade, so the element-type switch misses it.
+    const featureKey =
+      `${scalars.clearcoat > 0 ? 'c' : '-'}` +
+      `${scalars.rim > 0 ? 's' : '-'}` +
+      `${scalars.anisotropy > 0 ? 'y' : '-'}` +
+      `${scalars.transmission > 0 ? 't' : '-'}`;
     return (
       <meshPhysicalMaterial
-        key={`physical-${slotKey}`}
+        key={`physical-${slotKey}-${stateKey}-${featureKey}`}
         {...pbrProps}
         clearcoat={scalars.clearcoat}
         clearcoatRoughness={scalars.clearcoatRoughness}
@@ -233,5 +249,5 @@ export function StandardMaterialSlot({
       />
     );
   }
-  return <meshStandardMaterial key={slotKey} {...pbrProps} />;
+  return <meshStandardMaterial key={`${slotKey}-${stateKey}`} {...pbrProps} />;
 }

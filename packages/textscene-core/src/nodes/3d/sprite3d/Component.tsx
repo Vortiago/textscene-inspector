@@ -131,6 +131,11 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // depthWrite. Without this an opaque `transparent=false` sprite kept the
   // DISABLED alpha-cut's depthWrite=false and rendered with wrong ordering.
   const depthWrite = transparent ? alphaCutDepthWrite : true;
+  const side = properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide;
+  // Baked at first compile and re-derived by nothing: `opaque`
+  // (`WebGLPrograms.js:262`, here just `transparent` — blending and
+  // alphaToCoverage keep three's defaults) and the side flags.
+  const materialProgramKey = `${transparent ? '-' : 'o'}${side}`;
 
   // Quad origin: centered (default) puts the plane center at the node origin;
   // centered=false puts the top-left there. `offset` shifts in sprite pixels
@@ -228,13 +233,14 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       >
         <primitive object={geometry} attach="geometry" />
         <meshBasicMaterial
+          key={materialProgramKey}
           map={displayedTexture}
           color={color}
           opacity={opacity}
           transparent={transparent}
           alphaTest={alphaTest}
           depthWrite={depthWrite}
-          side={properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide}
+          side={side}
         />
       </mesh>
       {subtree}

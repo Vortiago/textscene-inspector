@@ -715,8 +715,15 @@ function SecondarySurfaceMaterial({
   // exactly the case where `emission_operator = MULTIPLY` collapses to no emission
   // at all — Godot's absent sampler reads black.
   const emission = resolveEmission(scalars, scalars.emissionOperator, false);
+  // Baked at first compile and re-derived by nothing: `opaque`
+  // (`WebGLPrograms.js:262`) and the side flags — this slot passes nothing else
+  // the program bakes.
+  const programKey =
+    `${scalars.transparent === false && scalars.blending === THREE.NormalBlending ? 'o' : '-'}` +
+    `${scalars.side}`;
   return (
     <meshStandardMaterial
+      key={programKey}
       attach={attach}
       color={scalars.color}
       metalness={scalars.metalness}
