@@ -273,9 +273,10 @@ describe('ReflectionProbe strict validators', () => {
       expect(check(key, '4294967295')).toBeNull();
     });
 
-    it.each(['cull_mask', 'reflection_mask'])('warns (not errors) past the 32-bit widget width', (key) => {
-      const error = check(key, '4294967296');
-      expect(error?.severity).toBe('warning');
+    it.each(['cull_mask', 'reflection_mask'])('errors past the 32-bit widget width', (key) => {
+      // Inside the band every pattern is a mask; past it the engine drops bits.
+      expect(check(key, '-1')).toBeNull();
+      expect(check(key, '4294967296')?.severity).toBe('error');
     });
 
     it.each(['cull_mask', 'reflection_mask'])('rejects a non-numeric value', (key) => {

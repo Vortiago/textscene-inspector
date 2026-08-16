@@ -409,14 +409,12 @@ describe('Viewport shared validators', () => {
       expect(validator('canvas_cull_mask', '4294967295', 1)).toBeNull();
     });
 
-    it('warns on -1 and one past the ceiling, 4294967296', () => {
+    it('takes -1 and refuses one past the ceiling, 4294967296', () => {
       const validator = find('canvas_cull_mask');
-      const low = validator('canvas_cull_mask', '-1', 1);
-      expect(low).not.toBeNull();
-      expect(low!.severity).toBe('warning');
+      expect(validator('canvas_cull_mask', '-1', 1)).toBeNull();
       const high = validator('canvas_cull_mask', '4294967296', 1);
       expect(high).not.toBeNull();
-      expect(high!.severity).toBe('warning');
+      expect(high!.severity).toBe('error');
     });
   });
 

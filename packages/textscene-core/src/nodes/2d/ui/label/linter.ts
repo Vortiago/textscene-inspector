@@ -25,7 +25,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { parentTypeVerdict } from '../../../../linter/parentType.js';
 import { VECTOR2_REGEX } from '../../../../linter/validators/index.js';
-import { parseGodotInt, tupleComponent } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt, tupleComponent } from '../../../../linter/validators/commonValidators.js';
 
 // label.cpp:44/1435, TextServer::AutowrapMode: OFF=0, ARBITRARY=1, WORD=2, WORD_SMART=3.
 const AUTOWRAP_OFF = 0;
@@ -44,7 +44,7 @@ function checkLabelAutowrap(context: RuleContext): Diagnostic[] {
 
   const autowrapRaw = props.autowrap_mode;
   if (autowrapRaw === undefined) return [];
-  const autowrapMode = parseGodotInt(autowrapRaw);
+  const autowrapMode = ruleInt(autowrapRaw);
   // Finite: a non-finite reads as NaN, and `NaN !== AUTOWRAP_OFF` is true, so
   // a value off the number line would read as autowrap enabled.
   if (autowrapMode === null || !Number.isFinite(autowrapMode) || autowrapMode === AUTOWRAP_OFF) {

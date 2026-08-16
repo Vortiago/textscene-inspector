@@ -43,7 +43,7 @@ import { rangeAdvisories, type RangeArm } from '../../../../linter/rangeAdvisory
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
-import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 const RULE_NAME = 'converttransformmodifier3d-range-outside-mode-hint';
 
@@ -114,7 +114,7 @@ function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
     const modeRaw = props[`settings/${match[1]}/${match[2]}/transform_mode`];
     // Absent means Position, the struct's initialiser
     // (convert_transform_modifier_3d.h:46, :51), which Godot omits when unchanged.
-    const mode = modeRaw === undefined ? TRANSFORM_MODE_POSITION : parseGodotInt(modeRaw);
+    const mode = modeRaw === undefined ? TRANSFORM_MODE_POSITION : ruleInt(modeRaw);
     // A malformed mode is already reported by its own validator, and a
     // non-finite one is altered at parse; neither selects an arm here.
     if (mode === null || Number.isNaN(mode)) continue;

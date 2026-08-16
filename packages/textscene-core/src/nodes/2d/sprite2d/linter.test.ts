@@ -222,6 +222,16 @@ describe('Sprite2D Linter', () => {
       );
     });
 
+    it('stays loud when hframes is a value no int slot holds', () => {
+      // `1e20` cleared the old `min: 1` bound and made `maxFrame` 1e20, so
+      // phase 1 said nothing and the rule approved every frame index. The grid
+      // is unknowable, so the rule is right to stay quiet — but the property
+      // must not be.
+      expectDiagnostic(scene(node('Sprite2D', { hframes: '1e20', frame: 5 })), {
+        contains: ['cannot be stored in an integer slot'],
+      });
+    });
+
     it('should detect frame out of range with single frame', () => {
       expectDiagnostic(scene(node('Sprite2D', { frame: 1 })), {
         ruleName: 'sprite2d-frame-range',

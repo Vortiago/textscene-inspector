@@ -35,7 +35,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 import { resolveSubResourceRef } from '../../../resources/SubResourceResolver.js';
-import { parseGodotFloat, parseGodotInt } from '../../../linter/validators/commonValidators.js';
+import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 
 /** `PathFollow3D::ROTATION_ORIENTED` (path_3d.h), the mode that needs up vectors. */
 const ROTATION_ORIENTED = 4;
@@ -136,7 +136,7 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
   // one that simply omits the key, is the default `true` and is fine.
   if (
     !gated &&
-    parseGodotInt(rawProps.rotation_mode ?? '') === ROTATION_ORIENTED &&
+    ruleInt(rawProps.rotation_mode ?? '') === ROTATION_ORIENTED &&
     placement.kind === 'satisfied' &&
     parentCurveDisablesUpVector(scene, placement.parent)
   ) {

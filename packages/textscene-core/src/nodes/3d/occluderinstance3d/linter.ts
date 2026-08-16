@@ -39,7 +39,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
-import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../linter/validators/commonValidators.js';
 
 function checkOccluderInstance3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -51,7 +51,7 @@ function checkOccluderInstance3D(context: RuleContext): Diagnostic[] {
   // occluder_instance_3d.cpp:700-702. Godot's serialiser omits a property left
   // at its default (4294967295, all layers), so only an EXPLICIT `bake_mask = 0`
   // fires this.
-  if (rawProps.bake_mask !== undefined && parseGodotInt(rawProps.bake_mask) === 0) {
+  if (rawProps.bake_mask !== undefined && ruleInt(rawProps.bake_mask) === 0) {
     diagnostics.push({
       severity: 'warning',
       message: `OccluderInstance3D '${node.name}' has a Bake Mask with no bits enabled, so baking will not produce any occluder mesh for it. Enable at least one bit in the Bake Mask property.`,

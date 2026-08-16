@@ -21,7 +21,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../linter/validators/commonValidators.js';
 
 /** `RS::FogVolumeShape::FOG_VOLUME_SHAPE_WORLD`, fog_volume.cpp:47's 5th enum value. */
 const FOG_VOLUME_SHAPE_WORLD = 4;
@@ -34,7 +34,7 @@ function checkFogVolumeSize(context: RuleContext): Diagnostic[] {
   const shapeRaw = props.shape;
   const sizeRaw = props.size;
   if (shapeRaw === undefined || sizeRaw === undefined) return [];
-  if (parseGodotInt(shapeRaw) !== FOG_VOLUME_SHAPE_WORLD) return [];
+  if (ruleInt(shapeRaw) !== FOG_VOLUME_SHAPE_WORLD) return [];
 
   return [
     {

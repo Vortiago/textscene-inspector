@@ -128,19 +128,16 @@ describe('OccluderInstance3D strict validators', () => {
       expect(check('bake_mask', '1')).toBeNull();
     });
 
-    it('rejects a negative value — outside the 32-bit widget the hint renders', () => {
-      const result = check('bake_mask', '-1');
-      expect(result).not.toBeNull();
-      // occluder_instance_3d.cpp:746, PROPERTY_HINT_LAYERS_3D_RENDER: a UI-control
-      // hint grounds a WARNING (ADR-0032), never an error — the setter takes any
-      // uint32_t straight through.
-      expect(result?.severity).toBe('warning');
+    it('accepts a negative value — the widget renders that 32-bit pattern', () => {
+      // occluder_instance_3d.cpp:746, PROPERTY_HINT_LAYERS_3D_RENDER: the
+      // setter takes any uint32_t straight through, and -1 is all bits on.
+      expect(check('bake_mask', '-1')).toBeNull();
     });
 
-    it('rejects a value past the 32-bit ceiling', () => {
+    it('refuses a value past the 32-bit ceiling, where a bit is dropped', () => {
       const result = check('bake_mask', '4294967296');
       expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expect(result?.severity).toBe('error');
     });
   });
 

@@ -32,7 +32,7 @@ Strict parsing format-checks these `SpringArm3D` properties, plus 17 inherited f
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `collision_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `collision_mask` | 32-bit layer mask (layers 1-32) |  |
 | `margin` | float |  |
 | `shape` | null, SubResource("id") or ExtResource("id") |  |
 | `spring_length` | float |  |

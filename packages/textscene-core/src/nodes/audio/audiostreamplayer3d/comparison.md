@@ -39,7 +39,7 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inh
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `area_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `area_mask` | 32-bit layer mask (layers 1-32) |  |
 | `attenuation_filter_cutoff_hz` | float 1-20500 | warning |
 | `attenuation_filter_db` | float -80-0 | warning |
 | `attenuation_model` | enum 0-3 (INVERSE_DISTANCE/INVERSE_SQUARE_DISTANCE/LOGARITHMIC/DISABLED) | error |

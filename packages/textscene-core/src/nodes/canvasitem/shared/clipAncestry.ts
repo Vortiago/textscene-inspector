@@ -13,15 +13,15 @@ import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { sweepAncestors } from '../../../linter/parentType.js';
-import { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, toInt32 } from '../../../godot/index.js';
-import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
+import { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX } from '../../../godot/index.js';
+import { ruleInt } from '../../../linter/validators/commonValidators.js';
 
 /**
  * `clip_children` on `candidate`: a mode Godot both STORES and treats as
  * clipping, per `clip_children_mode != CLIP_CHILDREN_DISABLED`
  * (canvas_item.cpp:1302, :1308).
  *
- * Finite, because a non-finite passes `parseGodotInt` as NaN and `NaN !==
+ * Finite, because a non-finite passes `ruleInt` as NaN and `NaN !==
  * CLIP_CHILDREN_DISABLED` is TRUE — an inequality is the one comparison NaN
  * does not fall out of, so a bare `!== null` reads a value off the number line
  * as a clipping mode. Below CLIP_CHILDREN_MAX, because the ERR_FAIL_COND at
@@ -32,10 +32,9 @@ export function clipsChildren(candidate: TscnNode): boolean {
   const raw = candidate.properties.clip_children;
   // Absent means DISABLED: Godot omits a property at its default (ADR-0032).
   if (raw === undefined) return false;
-  const parsed = parseGodotInt(raw);
-  if (parsed === null || !Number.isFinite(parsed)) return false;
-  // int32 first: the setter narrows, so `4294967295` is -1 here too.
-  const mode = toInt32(parsed);
+  // `ruleInt` already narrows: the setter sees int32, so `4294967295` is -1.
+  const mode = ruleInt(raw);
+  if (mode === null) return false;
   return mode !== CLIP_CHILDREN_DISABLED && mode < CLIP_CHILDREN_MAX;
 }
 

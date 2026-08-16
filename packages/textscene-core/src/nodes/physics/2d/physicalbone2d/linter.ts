@@ -21,7 +21,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { parentTypeVerdict, searchAncestors } from '../../../../linter/parentType.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
-import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 /** What `_find_skeleton_parent()` would settle on, read off this file alone. */
 type SkeletonAncestry = 'found' | 'absent' | 'unknowable';
@@ -75,7 +75,7 @@ function checkPhysicalBone2D(context: RuleContext): Diagnostic[] {
     });
   } else if (ancestry === 'found') {
     // Absent, or present but unreadable, both mean no index is assigned.
-    const boneIndex = parseGodotInt(rawProps.bone2d_index ?? '') ?? -1;
+    const boneIndex = ruleInt(rawProps.bone2d_index ?? '') ?? -1;
     if (!(boneIndex > -1)) {
       diagnostics.push({
         severity: 'warning',

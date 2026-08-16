@@ -145,13 +145,13 @@ physics_material_override = SubResource("mat_1")
           prop: 'collision_layer',
           valid: [0, 1, 100, 1048575, 2000000, 2147483648, 4294967295],
           invalid: [
-{ value: -1, contains: ['must be between 0 and 4294967295'] },
+{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           ],
         },
       {
         prop: 'collision_mask',
         valid: [0, 1, 255, 1048575, 2147483648, 4294967295],
-        invalid: [{ value: -5, contains: ['between 0 and 4294967295'] }],
+        invalid: [{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' }],
       },
     ]);
   });
@@ -384,13 +384,10 @@ physics_material_override = ExtResource("ext_mat_1")
       );
       // One strict-parser error, mass <= 0 (rigid_body_2d.cpp:318). linear_damp
       // = -1 is legal in 2D (:425 rejects only < -1), and collision_layer = -5
-      // is now a warning: its 32-bit width is the inspector's checkbox grid,
-      // not an engine bound.
+      // says nothing at all: it is a 32-bit pattern the checkbox grid renders.
       const errors = diagnostics.filter((d) => d.severity === 'error');
       expect(errors).toHaveLength(2);
-      expect(
-        diagnostics.find((d) => d.message.includes('collision_layer'))?.severity
-      ).toBe('warning');
+      expect(diagnostics.find((d) => d.message.includes('collision_layer'))).toBeUndefined();
       // The third is the missing physics material. It was invisible until the
       // strict parser stopped withholding the scene: the mass error suppressed
       // the whole rule phase, so a broken resource reference went unreported

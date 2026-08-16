@@ -151,7 +151,7 @@ custom_integrator = false
         acceptMode: 'no-error',
         valid: [0, 1, 100, 1048575, 2147483648, 4294967295],
         invalid: [
-          { value: -1, contains: ['between 0 and 4294967295'] },
+          { value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
         ],
       },
       {
@@ -159,7 +159,9 @@ custom_integrator = false
         prop: 'collision_mask',
         acceptMode: 'no-error',
         valid: [0, 1, 255, 1048575, 2147483648, 4294967295],
-        invalid: [{ value: -5, contains: ['between 0 and 4294967295'] }],
+        invalid: [
+          { value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
+        ],
       },
     ]);
 

@@ -192,10 +192,8 @@ describe('NavigationAgent3D strict validators', () => {
     it('accepts a layer bitmask', () => {
       expect(check('navigation_layers', '4')).toBeNull();
     });
-    it('warns on a negative mask (only the 32-checkbox widget bounds it)', () => {
-      const err = check('navigation_layers', '-1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+    it('accepts a negative mask: the widget renders every 32-bit pattern', () => {
+      expect(check('navigation_layers', '-1')).toBeNull();
     });
     it('accepts the widest 32-bit mask (edge)', () => {
       expect(check('navigation_layers', '4294967295')).toBeNull();
@@ -488,10 +486,8 @@ describe('NavigationAgent3D strict validators', () => {
     it('accepts a layer bitmask', () => {
       expect(check('avoidance_layers', '2')).toBeNull();
     });
-    it('warns on a negative mask', () => {
-      const err = check('avoidance_layers', '-1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+    it('accepts a negative mask: the widget renders every 32-bit pattern', () => {
+      expect(check('avoidance_layers', '-1')).toBeNull();
     });
     it('accepts the widest 32-bit mask (edge)', () => {
       expect(check('avoidance_layers', '4294967295')).toBeNull();
@@ -502,10 +498,8 @@ describe('NavigationAgent3D strict validators', () => {
     it('accepts a mask bitmask', () => {
       expect(check('avoidance_mask', '3')).toBeNull();
     });
-    it('warns on a negative mask', () => {
-      const err = check('avoidance_mask', '-1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+    it('accepts a negative mask: the widget renders every 32-bit pattern', () => {
+      expect(check('avoidance_mask', '-1')).toBeNull();
     });
     it('accepts the widest 32-bit mask (edge)', () => {
       expect(check('avoidance_mask', '4294967295')).toBeNull();

@@ -13,6 +13,8 @@ import { ARRAY_LITERAL_RE, packedArrayCallAnywhere, RESOURCE_REF_RE } from '../.
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
 import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
+import { badIntElementError, firstBadIntElement } from '../../../linter/validators/v/packedArrays.js';
+import { markIntSlot } from '../../../linter/validators/intSlot.js';
 import { unrepresentableInt } from '../../../linter/validators/intSlot.js';
 
 const DICT_LITERAL_RE = /^\{[\s\S]*\}$/;
@@ -42,7 +44,15 @@ const dataValidator: PropertyValidator = accepts((key, value, line) => {
   const cellsMatch = CELLS_RE.exec(trimmed);
   if (!cellsMatch) return null; // no "cells" key: grid_map.cpp:67 skips processing entirely.
   const body = cellsMatch[1]!.trim();
-  const count = body === '' ? 0 : splitTopLevel(body).length;
+  const cells = body === '' ? [] : splitTopLevel(body);
+  const bad = firstBadIntElement(cells);
+  if (bad !== null) {
+    return badIntElementError('data', key, line, bad, {
+      format: 'INVALID_DATA_CELLS_FORMAT',
+      value: 'INVALID_DATA_CELLS_VALUE',
+    });
+  }
+  const count = cells.length;
   if (count % 3 !== 0) {
     return propertyError(
       key,
@@ -54,6 +64,9 @@ const dataValidator: PropertyValidator = accepts((key, value, line) => {
   return null;
 }, 'Dictionary literal { "cells": PackedInt32Array(...) }');
 dataValidator.grounding = { kind: 'enforced', cite: 'grid_map.cpp:71' };
+// The cell stream is an INT slot too: a key no int32 holds places the cell
+// somewhere the file does not state.
+markIntSlot(dataValidator);
 
 /**
  * `baked_meshes`: an Array of baked ArrayMesh resources (grid_map.cpp:84-106
@@ -102,7 +115,8 @@ const CELL_OCTANT_SIZE_HINT_MAX = 1024;
  * warning.
  */
 const cellOctantSizeValidator: PropertyValidator = accepts((key, value, line) => {
-  // `parseGodotInt`, so `5e-1` truncates to 0 and trips the zero guard below.
+  // `parseGodotInt`, so `5e-1` truncates to 0 and trips the zero guard below,
+  // and an unstorable literal stays NaN for `unrepresentableInt` to report.
   const parsed = parseGodotInt(value);
   if (parsed === null) {
     return propertyError(

@@ -45,8 +45,9 @@ describe('VisualInstance3D strict validators', () => {
       expect(check('layers', 'not-a-number')).not.toBeNull();
     });
 
-    it('rejects a negative value', () => {
-      expect(check('layers', '-1')).not.toBeNull();
+    it('accepts a negative value: uint32 reads -1 as all layers on', () => {
+      expect(check('layers', '-1')).toBeNull();
+      expect(check('layers', '4294967296')?.severity).toBe('error');
     });
 
     it('rejects a value beyond the 32-bit mask', () => {

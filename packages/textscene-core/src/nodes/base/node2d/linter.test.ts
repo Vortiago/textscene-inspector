@@ -454,15 +454,16 @@ describe('Node2D Linter: light_mask, inherited by every CanvasItem', () => {
     }
   });
 
-  it('warns on a negative mask, which the 32-checkbox widget cannot express', () => {
+  it('accepts a negative mask, which is how Godot spells all layers on', () => {
     // canvas_item.cpp:1477 hints PROPERTY_HINT_LAYERS_2D_RENDER; set_light_mask
-    // (:589-596) assigns unconditionally, so this is the UI's bound, not the
-    // engine's, and it warns rather than erroring.
-    expectDiagnostic(scene(node('Node2D', { light_mask: '-1' })), { severity: 'warning' });
+    // (:589-596) assigns unconditionally, and measured on 4.6.3 `light_mask =
+    // -1` stores -1 — a pattern the 32 checkboxes render exactly.
+    expectClean(scene(node('Node2D', { light_mask: '-1' })));
   });
 
-  it('warns on a mask past 32 bits, for the same reason', () => {
-    expectDiagnostic(scene(node('Node2D', { light_mask: '4294967296' })), { severity: 'warning' });
+  it('errors on a mask past 32 bits, where the engine drops the extra', () => {
+    // Measured: `light_mask = 4294967296` stores 0, so the file misstates it.
+    expectDiagnostic(scene(node('Node2D', { light_mask: '4294967296' })), { severity: 'error' });
   });
 
   it('still requires an integer format', () => {
@@ -476,7 +477,7 @@ describe('Node2D Linter: light_mask, inherited by every CanvasItem', () => {
   it('reaches a Node2D SUBCLASS through the base walk', () => {
     // The point of registering it here: every 2D slice inherits the validator
     // rather than each one re-declaring it.
-    expectDiagnostic(scene(node('Sprite2D', { light_mask: '-1' })), { severity: 'warning' });
+    expectDiagnostic(scene(node('Sprite2D', { light_mask: '4294967296' })), { severity: 'error' });
   });
 });
 

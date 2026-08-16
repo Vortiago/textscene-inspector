@@ -37,7 +37,7 @@ Strict parsing format-checks these `RayCast2D` properties, plus 12 inherited fro
 | --- | --- | --- |
 | `collide_with_areas` | true or false |  |
 | `collide_with_bodies` | true or false |  |
-| `collision_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `collision_mask` | 32-bit layer mask (layers 1-32) |  |
 | `enabled` | true or false |  |
 | `exclude_parent` | true or false |  |
 | `hit_from_inside` | true or false |  |

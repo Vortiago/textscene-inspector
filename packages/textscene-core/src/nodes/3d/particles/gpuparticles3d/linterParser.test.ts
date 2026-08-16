@@ -140,16 +140,14 @@ describe('GPUParticles3D strict validators', () => {
       expect(check('seed', 'random')?.code).toBe('INVALID_SEED_FORMAT');
     });
 
-    it('warns just above UINT32_MAX', () => {
+    it('errors just above UINT32_MAX, where the slot drops the extra bit', () => {
       const warning = check('seed', '4294967296');
       expect(warning?.code).toBe('INVALID_SEED_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning?.severity).toBe('error');
     });
 
-    it('warns just below 0', () => {
-      const warning = check('seed', '-1');
-      expect(warning?.code).toBe('INVALID_SEED_VALUE');
-      expect(warning?.severity).toBe('warning');
+    it('takes -1, the uint32 spelling of the ceiling the hint names', () => {
+      expect(check('seed', '-1')).toBeNull();
     });
   });
 

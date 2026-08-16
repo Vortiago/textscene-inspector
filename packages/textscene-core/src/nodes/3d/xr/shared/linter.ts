@@ -59,7 +59,7 @@ import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { isExplicitlyHidden, parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 import { parseTransform3D } from '../../../../utils/transform.js';
 import { isEqualApprox, isZeroApprox } from '../../../../godot/math.js';
-import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 const PARENT_RULE = 'openxrcompositionlayer-parent-not-xrorigin3d';
 const ORTHONORMAL_RULE = 'openxrcompositionlayer-non-orthonormal-transform';
@@ -141,7 +141,7 @@ function checkOpenXRCompositionLayer(context: RuleContext): Diagnostic[] {
   // explicit `enable_hole_punch = true` with sort_order omitted still warns.
   const holePunchEnabled = properties.enable_hole_punch === 'true';
   const sortOrder =
-    properties.sort_order === undefined ? 1 : parseGodotInt(properties.sort_order);
+    properties.sort_order === undefined ? 1 : ruleInt(properties.sort_order);
   if (holePunchEnabled && sortOrder !== null && sortOrder >= 0) {
     diagnostics.push({
       severity: 'warning',

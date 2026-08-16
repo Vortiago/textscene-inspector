@@ -207,9 +207,11 @@ describe('CPUParticles2D strict validators', () => {
       expect(check('seed', '4242')).toBeNull();
     });
 
-    it('warns one hint step (1) past either endpoint', () => {
-      expect(check('seed', '-1')?.severity).toBe('warning');
-      expect(check('seed', '4294967296')?.severity).toBe('warning');
+    it('takes -1 as the uint32 mask it is, and errors past the width', () => {
+      // seed is uint32_t, so -1 IS 4294967295 — the ceiling the hint names.
+      // 4294967296 is a bit the slot drops, which the file then misstates.
+      expect(check('seed', '-1')).toBeNull();
+      expect(check('seed', '4294967296')?.severity).toBe('error');
     });
 
     it('reports the VALUE code, not the FORMAT one, for an out-of-hint number', () => {

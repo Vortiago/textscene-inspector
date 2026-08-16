@@ -11,7 +11,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { isViewportBoundary } from '../../viewport/subviewport/viewportBoundary.js';
 import { searchAncestors } from '../../../linter/parentType.js';
-import { parseGodotFloat, parseGodotInt } from '../../../linter/validators/commonValidators.js';
+import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 
 /**
  * The SubViewport a node draws into, or null for the scene's own viewport.
@@ -122,8 +122,8 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
 
   // Validate limit consistency
   if (rawProps.limit_left !== undefined && rawProps.limit_right !== undefined) {
-    const left = parseGodotInt(rawProps.limit_left);
-    const right = parseGodotInt(rawProps.limit_right);
+    const left = ruleInt(rawProps.limit_left);
+    const right = ruleInt(rawProps.limit_right);
 
     if (left !== null && right !== null && right < left) {
       diagnostics.push({
@@ -137,8 +137,8 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
   }
 
   if (rawProps.limit_top !== undefined && rawProps.limit_bottom !== undefined) {
-    const top = parseGodotInt(rawProps.limit_top);
-    const bottom = parseGodotInt(rawProps.limit_bottom);
+    const top = ruleInt(rawProps.limit_top);
+    const bottom = ruleInt(rawProps.limit_bottom);
 
     if (top !== null && bottom !== null && bottom < top) {
       diagnostics.push({

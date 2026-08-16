@@ -30,7 +30,8 @@ import { arrayBody, INT_ARRAY_FORMS } from './arrayForms.js';
 import { bracePairsValidator } from './bracePairValidators.js';
 import { delimiterArrayValidator } from './delimiterValidators.js';
 import { prefixArrayValidator } from './prefixValidators.js';
-import { firstNonNumericElement, firstUnrepresentableIntElement } from '../../../../linter/validators/v/packedArrays.js';
+import { markIntSlot } from '../../../../linter/validators/intSlot.js';
+import { badIntElementError, firstBadIntElement } from '../../../../linter/validators/v/packedArrays.js';
 
 /**
  * `line_length_guidelines` — `set_line_length_guidelines`
@@ -52,33 +53,21 @@ function lineLengthGuidelinesValidator(): PropertyValidator {
       );
     }
     if (body === '') return null;
-    // Reads, but no int32 holds it: narrowed at parse
-    // (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
-    const unfit = firstUnrepresentableIntElement(body);
-    if (unfit !== null) {
-      return propertyError(
-        key,
-        line,
-        `Property 'line_length_guidelines' has an element no integer can hold: "${unfit}"`,
-        code,
-        'error'
-      );
-    }
-    const offender = firstNonNumericElement(body);
-    if (offender !== null) {
-      return propertyError(
-        key,
-        line,
-        `Property 'line_length_guidelines' contains a non-numeric value: "${offender}"`,
-        code
-      );
+    // One pass: unreadable by the tokenizer, or read and then narrowed
+    // away (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
+    const bad = firstBadIntElement(body);
+    if (bad !== null) {
+      return badIntElementError('line_length_guidelines', key, line, bad, {
+        format: code,
+        value: 'INVALID_LINE_LENGTH_GUIDELINES_VALUE',
+      });
     }
     return null;
   }, 'int array (PackedInt32Array(…), Array[int]([…]) or […])');
   // Format-only: rejects a malformed literal or a non-integer element only.
   // `set_line_length_guidelines` accepts any length and any value.
-  validator.formatOnly = true;
-  return validator;
+  // An INT slot, not format-only: it rejects a literal the tokenizer reads.
+  return markIntSlot(validator);
 }
 
 validatorRegistry.registerAll('CodeEdit', {

@@ -23,7 +23,7 @@ import { isZeroApprox } from '../../godot/math.js';
 import { basisColumnScales } from './basisColumnScales.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import { parseGodotInt } from '../validators/commonValidators.js';
+import { ruleInt } from '../validators/commonValidators.js';
 import { polygonPointCount } from '../polygonPoints.js';
 
 export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
@@ -89,7 +89,7 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
         // absent key means the default, same as every other property this
         // codebase omits at default.
         const buildMode =
-          rawProps.build_mode === undefined ? 0 : parseGodotInt(rawProps.build_mode);
+          rawProps.build_mode === undefined ? 0 : ruleInt(rawProps.build_mode);
         // Finite: every arm below compares against BUILD_SOLIDS, and a
         // non-finite passes both of them, naming a mode the file never states.
         if (buildMode !== null && Number.isFinite(buildMode)) {

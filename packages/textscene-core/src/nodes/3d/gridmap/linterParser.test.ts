@@ -194,14 +194,15 @@ describe('GridMap strict validators', () => {
       expect(error!.code).toBe(`INVALID_${code}_FORMAT`);
     });
 
-    it.each([
-      ['a negative mask', '-1'],
-      ['a mask beyond the 32-bit range', '4294967296'],
-    ])('warns on %s rather than erroring', (_label, value) => {
-      const error = check(property, value);
+    it('accepts a negative mask, which is all layers on', () => {
+      expect(check(property, '-1')).toBeNull();
+    });
+
+    it('errors past the 32-bit range, where the engine drops the extra bits', () => {
+      const error = check(property, '4294967296');
       expect(error).not.toBeNull();
       expect(error!.code).toBe(`INVALID_${code}_VALUE`);
-      expect(error!.severity).toBe('warning');
+      expect(error!.severity).toBe('error');
     });
   });
 

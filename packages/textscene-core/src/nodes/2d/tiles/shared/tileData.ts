@@ -11,7 +11,7 @@
 
 import { warn } from '../../../../logger';
 import { packedArrayLiteral } from '../../../../godot/index.js';
-import { parseGodotInt } from '../../../../godot/int.js';
+import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 export interface Vec2i {
   x: number;
@@ -76,18 +76,16 @@ function readInt32Elements(body: string, context: string): number[] | null {
   // layer as corrupt tile data.
   if (body.trim() === '') return [];
   const out: number[] = [];
-  let sawNonFinite = false;
   for (const part of body.split(',')) {
-    const num = parseGodotInt(part);
+    // `ruleInt` is null for text the tokenizer refuses AND for a literal no
+    // 32-bit slot holds. Godot narrows the second to an architecture-specific
+    // sentinel, so there is no cell position to draw either way.
+    const num = ruleInt(part);
     if (num === null) {
       warn(`${context} has entries Godot cannot read — ignoring tile data`);
       return null;
     }
-    if (!Number.isFinite(num)) sawNonFinite = true;
     out.push(num);
-  }
-  if (sawNonFinite) {
-    warn(`${context} has a non-finite entry, which Godot narrows — placing that cell at the origin`);
   }
   return out;
 }

@@ -34,7 +34,7 @@ Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inh
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `area_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `area_mask` | 32-bit layer mask (layers 1-32) |  |
 | `attenuation` | float |  |
 | `autoplay` | true or false |  |
 | `bus` | quoted string or &"name" |  |

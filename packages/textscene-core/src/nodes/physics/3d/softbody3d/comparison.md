@@ -44,8 +44,8 @@ Strict parsing format-checks these `SoftBody3D` properties, plus 5 inherited fro
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `attachments/*` | attachment |  |
-| `collision_layer` | 32-bit layer mask (layers 1-32) | warning |
-| `collision_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `collision_layer` | 32-bit layer mask (layers 1-32) |  |
+| `collision_mask` | 32-bit layer mask (layers 1-32) |  |
 | `damping_coefficient` | float >= 0 | warning below |
 | `disable_mode` | enum 0-1 (REMOVE/KEEP_ACTIVE) | warning |
 | `drag_coefficient` | float 0-1 | warning |

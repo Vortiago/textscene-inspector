@@ -39,7 +39,7 @@ Strict parsing format-checks these `ShapeCast2D` properties, plus 12 inherited f
 | --- | --- | --- |
 | `collide_with_areas` | true or false |  |
 | `collide_with_bodies` | true or false |  |
-| `collision_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `collision_mask` | 32-bit layer mask (layers 1-32) |  |
 | `enabled` | true or false |  |
 | `exclude_parent` | true or false |  |
 | `margin` | float 0-100 | warning |

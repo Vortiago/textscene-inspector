@@ -91,7 +91,7 @@ describe('CharacterBody3D Linter', () => {
       {
         prop: 'platform_floor_layers',
         valid: [0, 1, 255, 4294967295],
-        invalid: [{ value: 5000000000, contains: ['4294967295'] }, { value: -1 }],
+        invalid: [{ value: 5000000000, contains: ['cannot be stored in an integer slot'] }],
       },
       { prop: 'platform_wall_layers', valid: [0, 1, 65535, 4294967295] },
       { prop: 'collision_priority', valid: [0.0, 0.5, 1.0, -1.0, 100.5], invalid: [{ value: '"high"' }] },
@@ -192,19 +192,15 @@ describe('CharacterBody3D Linter', () => {
       // collision_object_3d.cpp:506 hints PROPERTY_HINT_LAYERS_3D_PHYSICS, a
       // 32-checkbox widget, and the setter assigns unconditionally: the width
       // is the inspector's, so out of range warns rather than erroring.
-      it('should warn on negative collision_layer', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { collision_layer: -1 })), {
-          prop: 'collision_layer',
-          severity: 'warning',
-          contains: ['between 0 and 4294967295'],
-        });
+      it('should accept negative collision_layer, which is all layers on', () => {
+        expectNoErrors(scene(node('CharacterBody3D', { collision_layer: -1 }), collisionShape3d));
       });
 
-      it('should warn on collision_layer exceeding the 32-bit maximum', () => {
+      it('should error on collision_layer exceeding the 32-bit maximum', () => {
         expectDiagnostic(scene(node('CharacterBody3D', { collision_layer: 4294967296 })), {
           prop: 'collision_layer',
-          severity: 'warning',
-          contains: ['between 0 and 4294967295'],
+          severity: 'error',
+          contains: ['cannot be stored in an integer slot'],
         });
       });
     });
@@ -217,10 +213,10 @@ describe('CharacterBody3D Linter', () => {
         }
       });
 
-      it('should warn on negative collision_mask', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { collision_mask: -5 })), {
+      it('should error on a collision_mask no 32-bit slot holds', () => {
+        expectDiagnostic(scene(node('CharacterBody3D', { collision_mask: -5000000000 })), {
           prop: 'collision_mask',
-          severity: 'warning',
+          severity: 'error',
         });
       });
     });
@@ -447,8 +443,8 @@ describe('CharacterBody3D Linter', () => {
       const errors = diagnostics.filter(d => d.severity === 'error');
       expect(errors.length).toBeGreaterThan(0);
       expect(errors.some(d => d.message.includes('max_slides'))).toBe(true);
-      const layerDiagnostic = diagnostics.find(d => d.message.includes('collision_layer'));
-      expect(layerDiagnostic?.severity).toBe('warning');
+      // No collision_layer diagnostic any more: -1 is a legal 32-bit mask.
+      expect(diagnostics.find(d => d.message.includes('collision_layer'))).toBeUndefined();
       const motionModeDiagnostic = diagnostics.find(d => d.message.includes('motion_mode'));
       expect(motionModeDiagnostic).toBeDefined();
       expect(motionModeDiagnostic?.severity).toBe('warning');

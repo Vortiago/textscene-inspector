@@ -90,10 +90,11 @@ describe('decodeLegacyTileData (TileMap layer_N/tile_data, TSCN format = 2)', ()
     expect(decodeLegacyTileData('PackedInt32Array(1e-3, 0, 0)', 2)).toEqual([
       { coords: { x: 0, y: 0 }, sourceId: 0, atlasCoords: { x: 0, y: 0 }, alternativeId: 0 },
     ]);
-    // Non-finite is altered at parse on the engine side too; the cell lands at
-    // the origin rather than taking the whole layer down with it.
+    // A non-finite is narrowed at parse to an architecture-specific sentinel,
+    // so there is no cell position to draw — the layer decodes to nothing
+    // rather than to a cell the file never placed.
     for (const spelling of ['inf', '-inf', 'inf_neg', 'nan']) {
-      expect(decodeLegacyTileData(`PackedInt32Array(${spelling}, 0, 0)`, 2)).toHaveLength(1);
+      expect(decodeLegacyTileData(`PackedInt32Array(${spelling}, 0, 0)`, 2)).toBeNull();
     }
   });
 });

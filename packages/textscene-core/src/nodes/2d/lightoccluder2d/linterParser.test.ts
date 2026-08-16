@@ -67,12 +67,13 @@ occluder = SubResource("999")
     // 32-checkbox widget, so the width is the UI's and a value outside it
     // warns. set_occluder_light_mask (:257-260) assigns unconditionally, so it
     // is not an error.
-    for (const value of ['4294967296', '-1']) {
-      const found = new Linter()
+    // `-1` is all-layers-on and the widget renders it, so nothing fires;
+    // 4294967296 drops a bit the file states, so the slot refuses it.
+    const lint = (value: string) =>
+      new Linter()
         .lint(scene(node('LightOccluder2D', { occluder_light_mask: value }, { name: 'Occ' })))
         .filter((d) => d.message.includes('occluder_light_mask'));
-      expect(found).toHaveLength(1);
-      expect(found[0]!.severity).toBe('warning');
-    }
+    expect(lint('-1')).toHaveLength(0);
+    expect(lint('4294967296')[0]!.severity).toBe('error');
   });
 });

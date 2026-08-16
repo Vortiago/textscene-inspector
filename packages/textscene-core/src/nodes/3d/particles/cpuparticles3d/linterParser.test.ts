@@ -108,7 +108,8 @@ describe('CPUParticles3D strict validators', () => {
     it('bounds seed to 0-4294967295 (uint32_t; "0,"+UINT32_MAX+",1", hard both ends)', () => {
       expect(check('seed', '0')).toBeNull();
       expect(check('seed', '4294967295')).toBeNull();
-      expect(check('seed', '-1')?.code).toBe('INVALID_SEED_VALUE');
+      // -1 IS 4294967295 in a uint32 slot, so it lands on the stated ceiling.
+      expect(check('seed', '-1')).toBeNull();
       expect(check('seed', '4294967296')?.code).toBe('INVALID_SEED_VALUE');
     });
 

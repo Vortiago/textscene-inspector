@@ -132,9 +132,9 @@ describe('GPUParticlesCollisionSDF3D strict validators', () => {
       expect(check('bake_mask', '0')).toBeNull();
     });
 
-    it('rejects a negative value', () => {
-      const error = check('bake_mask', '-1');
-      expect(error?.code).toBe('INVALID_BAKE_MASK_VALUE');
+    it('accepts a negative value, and refuses one past the 32-bit band', () => {
+      expect(check('bake_mask', '-1')).toBeNull();
+      expect(check('bake_mask', '4294967296')?.code).toBe('INVALID_BAKE_MASK_VALUE');
     });
 
     it('rejects a non-numeric value', () => {

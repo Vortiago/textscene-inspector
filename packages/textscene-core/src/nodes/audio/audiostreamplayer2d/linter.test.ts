@@ -159,7 +159,7 @@ describe('AudioStreamPlayer2D Linter', () => {
           prop: 'area_mask',
           valid: [0, 1, 100, 1048575, 2000000, 2147483648, 4294967295],
           invalid: [
-{ value: -1, contains: ['must be between 0 and 4294967295'] },
+{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           ],
         },
         {

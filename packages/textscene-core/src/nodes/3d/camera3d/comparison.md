@@ -36,7 +36,7 @@ Strict parsing format-checks these `Camera3D` properties, plus 17 inherited from
 | --- | --- | --- |
 | `attributes` | null, SubResource("id") or ExtResource("id") |  |
 | `compositor` | null, SubResource("id") or ExtResource("id") |  |
-| `cull_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `cull_mask` | 32-bit layer mask (layers 1-32) |  |
 | `current` | true or false |  |
 | `doppler_tracking` | enum 0-2 (DISABLED/IDLE_STEP/PHYSICS_STEP) | warning |
 | `environment` | null, SubResource("id") or ExtResource("id") |  |

@@ -90,10 +90,11 @@ describe('RayCast2D strict validators', () => {
       expect(error!.code).toBe('INVALID_COLLISION_MASK_FORMAT');
     });
 
-    it('rejects a negative mask', () => {
-      const error = check('collision_mask', '-1');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_COLLISION_MASK_VALUE');
+    it('accepts a negative mask, and refuses one past the 32-bit band', () => {
+      // The 32-checkbox widget renders every 32-bit pattern, and Godot
+      // stores -1 as all layers on, so nothing fires inside the band.
+      expect(check('collision_mask', '-1')).toBeNull();
+      expect(check('collision_mask', '4294967296')?.severity).toBe('error');
     });
 
     it('rejects a mask beyond the 32-bit range', () => {

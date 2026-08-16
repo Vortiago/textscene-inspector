@@ -322,14 +322,14 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('seed', 'random')?.code).toBe('INVALID_SEED_FORMAT');
     });
 
-    it('warns (not errors) on a negative value', () => {
-      expect(check('seed', '-1')?.severity).toBe('warning');
+    it('takes -1, which is uint32 for the ceiling the hint already names', () => {
+      expect(check('seed', '-1')).toBeNull();
     });
 
-    it('warns (not errors) above UINT32_MAX', () => {
+    it('errors above UINT32_MAX, where the slot drops the extra bit', () => {
       const warning = check('seed', '4294967296');
       expect(warning?.code).toBe('INVALID_SEED_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning?.severity).toBe('error');
     });
   });
 

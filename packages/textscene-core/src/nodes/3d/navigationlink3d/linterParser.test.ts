@@ -133,11 +133,11 @@ describe('NavigationLink3D strict validators', () => {
       expect(check('navigation_layers', 'not-a-number')?.severity).toBe('error');
     });
 
-    it('warns rather than errors outside the mask, since only the hint bounds it', () => {
-      // navigation_link_3d.cpp:214, PROPERTY_HINT_LAYERS_3D_NAVIGATION. No
-      // ERR_FAIL in the setter, so an out-of-range value is a WARNING.
-      expect(check('navigation_layers', '-1')?.severity).toBe('warning');
-      expect(check('navigation_layers', '4294967296')?.severity).toBe('warning');
+    it('takes -1, and errors only past the 32-bit mask', () => {
+      // navigation_link_3d.cpp:214, PROPERTY_HINT_LAYERS_3D_NAVIGATION. The
+      // 32 checkboxes render every pattern, so only a dropped bit reports.
+      expect(check('navigation_layers', '-1')).toBeNull();
+      expect(check('navigation_layers', '4294967296')?.severity).toBe('error');
     });
   });
 

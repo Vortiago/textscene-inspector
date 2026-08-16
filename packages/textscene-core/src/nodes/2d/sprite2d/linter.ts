@@ -9,12 +9,12 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
-import { intComponent, parseGodotInt } from '../../../linter/validators/commonValidators.js';
+import { intComponent, ruleInt } from '../../../linter/validators/commonValidators.js';
 import { VECTOR2I_REGEX } from '../../../linter/validators/vectorValidators.js';
 
-/** An absent `hframes`/`vframes` is Godot's default of 1; an unreadable one is `null`. */
+/** An absent `hframes`/`vframes` is Godot's default of 1; an unusable one is `null`. */
 function gridCount(raw: string | undefined): number | null {
-  return raw === undefined ? 1 : parseGodotInt(raw);
+  return ruleInt(raw, 1);
 }
 
 /**
@@ -57,7 +57,7 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
   // the authored grid and the out-of-range write is refused at load, not at
   // some later runtime call.
   if (rawProps.frame !== undefined) {
-    const frame = parseGodotInt(rawProps.frame);
+    const frame = ruleInt(rawProps.frame);
     const hframes = gridCount(rawProps.hframes);
     const vframes = gridCount(rawProps.vframes);
 

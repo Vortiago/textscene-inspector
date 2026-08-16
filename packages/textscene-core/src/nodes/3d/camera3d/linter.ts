@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
-import { parseGodotFloat, parseGodotInt } from '../../../linter/validators/commonValidators.js';
+import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 
 /** `Camera3D::ProjectionType` (camera_3d.h:45-47). */
 const PROJECTION_PERSPECTIVE = 0;
@@ -29,7 +29,7 @@ const FAR_DEFAULT = 4000.0;
  * since Godot omits a property at its default.
  */
 function projectionMode(raw: string | undefined): number {
-  const mode = raw === undefined ? null : parseGodotInt(raw);
+  const mode = raw === undefined ? null : ruleInt(raw);
   return mode === PROJECTION_ORTHOGONAL || mode === PROJECTION_FRUSTUM
     ? mode
     : PROJECTION_PERSPECTIVE;

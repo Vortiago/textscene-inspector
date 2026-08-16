@@ -83,12 +83,21 @@ describe('CanvasItem shared validators', () => {
 
   it.each(['Sprite2D', 'Label'])('bounds clip_children on %s', (nodeType) => {
     // ERR_FAIL_COND(p_clip_mode >= CLIP_CHILDREN_MAX) at canvas_item.cpp:1733,
-    // CLIP_CHILDREN_MAX = 3 (canvas_item.h:71-75). Only the ceiling is guarded;
-    // ClipChildrenMode declares no underlying type, so whether -1 survives the
-    // cast is compiler-defined and the floor stays unprobed.
+    // CLIP_CHILDREN_MAX = 3 (canvas_item.h:71-75). Measured on 4.6.3: the
+    // comparison is signed, so `3` and `-3000000000` (int32 1294967296) trip it
+    // and keep 0, while `4294967295` narrows to -1 and is stored.
     const validator = validatorRegistry.findValidator(nodeType, 'clip_children')!;
     expect(validator('clip_children', '2', 1)).toBeNull();
     expect(validator('clip_children', '3', 1)?.severity).toBe('error');
+    expect(validator('clip_children', '-3000000000', 1)?.severity).toBe('error');
+  });
+
+  it.each(['Sprite2D', 'Label'])('does not ERROR on the wide spelling of -1 (%s)', (nodeType) => {
+    // Godot's own serialiser writes `clip_children = 4294967295` for -1, and
+    // the value clips. Erroring on it contradicted the canvasgroup rule, which
+    // narrows the same key and warns that the ancestor DOES clip.
+    const validator = validatorRegistry.findValidator(nodeType, 'clip_children')!;
+    expect(validator('clip_children', '4294967295', 1)?.severity).toBe('warning');
   });
 
   it('keeps z_index inside the rendering server range', () => {
@@ -101,15 +110,22 @@ describe('CanvasItem shared validators', () => {
     expect(validator('z_index', '4097', 1)?.severity).toBe('error');
   });
 
-  it('warns on light_mask and visibility_layer outside the 32-bit width', () => {
+  it('takes every 32-bit mask, and refuses only what no 32-bit slot holds', () => {
     // canvas_item.cpp:1477/:1478 hint PROPERTY_HINT_LAYERS_2D_RENDER, a
-    // 32-checkbox widget, so the width is stated by the UI. Both setters
-    // (:589-596, :1598-1602) assign unconditionally, so it warns, not errors.
+    // 32-checkbox widget, so every 32-bit pattern is expressible and there is
+    // no numeric bound to warn about. Measured on 4.6.3: `light_mask = -1`
+    // stores -1, and Godot writes `visibility_layer = -1` back as 4294967295 —
+    // the same bits, two spellings, and the old bound rejected both.
     const lightMask = validatorRegistry.findValidator('Sprite2D', 'light_mask')!;
     const visibilityLayer = validatorRegistry.findValidator('Sprite2D', 'visibility_layer')!;
-    expect(lightMask('light_mask', '4294967296', 1)?.severity).toBe('warning');
-    expect(lightMask('light_mask', '-1', 1)?.severity).toBe('warning');
-    expect(visibilityLayer('visibility_layer', '4294967296', 1)?.severity).toBe('warning');
+    expect(lightMask('light_mask', '-1', 1)).toBeNull();
+    expect(lightMask('light_mask', '4294967295', 1)).toBeNull();
+    expect(visibilityLayer('visibility_layer', '-1', 1)).toBeNull();
+    expect(visibilityLayer('visibility_layer', '4294967295', 1)).toBeNull();
+    // Past the 32-bit band Godot keeps bits the file does not state: measured,
+    // `light_mask = 4294967296` stores 0 and `-3000000000` stores 1294967296.
+    expect(lightMask('light_mask', '4294967296', 1)?.severity).toBe('error');
+    expect(lightMask('light_mask', '-3000000000', 1)?.severity).toBe('error');
   });
 
   it.each(['Sprite2D', 'Label'])(

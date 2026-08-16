@@ -32,15 +32,19 @@ describe('CanvasLayer validators', () => {
     // set_layer (canvas_layer.cpp:37-43) is a bare assignment, no ERR_FAIL
     // or clamp, so past the hint is a warning, not an error.
     it('warns, not errors, just past either int32 extreme', () => {
-      const above = check('layer', '2147483648');
+      // `2147483648` is the unsigned spelling of the int32 floor, so it lands
+      // ON the hint's own minimum rather than outside it.
+      const above = check('layer', '4294967296');
       const below = check('layer', '-2147483649');
       // Asserting the VALUE code (not just severity) proves the range branch
       // ran, rather than a format rejection landing on the right severity by
       // coincidence.
+      // Both are outside the 32-bit band, so the slot refuses them before the
+      // range branch is reached.
       expect(above?.code).toBe('INVALID_LAYER_VALUE');
-      expect(above?.severity).toBe('warning');
+      expect(above?.severity).toBe('error');
       expect(below?.code).toBe('INVALID_LAYER_VALUE');
-      expect(below?.severity).toBe('warning');
+      expect(below?.severity).toBe('error');
     });
   });
 

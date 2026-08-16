@@ -13,7 +13,8 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, shape, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/index.js';
-import { firstNonNumericElement, firstUnrepresentableIntElement } from '../../../linter/validators/v/packedArrays.js';
+import { markIntSlot } from '../../../linter/validators/intSlot.js';
+import { badIntElementError, firstBadIntElement } from '../../../linter/validators/v/packedArrays.js';
 
 const BRACKET_ARRAY_RE = /^\s*\[([\s\S]*)\]\s*$/;
 const PACKED_INT32_ELEMENT_RE = /^PackedInt32Array\s*\(([\s\S]*)\)$/;
@@ -46,7 +47,9 @@ const BARE_INT_ARRAY_ELEMENT_RE = /^\[([\s\S]*)\]$/;
  */
 function polygonsValidator(): PropertyValidator {
   const code = 'INVALID_POLYGONS_FORMAT';
-  return shape((key, value, line) => {
+  // `shape` first for the `accepts` tag, then `markIntSlot`: the index lists are
+  // an INT slot, so this rejects a literal Godot's own tokenizer reads.
+  return markIntSlot(shape((key, value, line) => {
     const wrapper = BRACKET_ARRAY_RE.exec(value);
     if (!wrapper) {
       return propertyError(
@@ -80,30 +83,18 @@ function polygonsValidator(): PropertyValidator {
       const inner = el[1]!.trim();
       if (inner === '') continue;
       const indices = bare ? dropTrailingComma(inner.split(',')) : inner.split(',');
-      // Reads, but no int32 holds it: narrowed at parse
-      // (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
-      const unfit = firstUnrepresentableIntElement(indices);
-      if (unfit !== null) {
-        return propertyError(
-          key,
-          line,
-          `Property 'polygons' has an element no integer can hold: "${unfit}"`,
-          code,
-          'error'
-        );
-      }
-      const offender = firstNonNumericElement(indices);
-      if (offender !== null) {
-        return propertyError(
-          key,
-          line,
-          `Property 'polygons' contains a non-numeric index: "${offender}"`,
-          code
-        );
+      // One pass: unreadable by the tokenizer, or read and then narrowed
+      // away (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
+      const bad = firstBadIntElement(indices);
+      if (bad !== null) {
+        return badIntElementError('polygons', key, line, bad, {
+          format: code,
+          value: 'INVALID_POLYGONS_VALUE',
+        });
       }
     }
     return null;
-  }, 'Array of PackedInt32Array(i0, i1, …) or bare [i0, i1, …] index lists');
+  }, 'Array of PackedInt32Array(i0, i1, …) or bare [i0, i1, …] index lists'));
 }
 
 /**

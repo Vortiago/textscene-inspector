@@ -67,10 +67,15 @@ describe('Light2D shared validators', () => {
       expect(check(value)).toBeNull();
     });
 
-    it.each(['-2147483649', '2147483648'])('warns one step outside on %s', (value) => {
-      const error = check(value);
-      expect(error?.severity).toBe('warning');
-      expect(error?.message).toContain(property);
+    it.each(['-2147483649', '4294967296'])('errors one step outside int32 on %s', (value) => {
+      // Past the 32-bit band the engine keeps bits the file does not state.
+      // `2147483648` is INSIDE it — the unsigned spelling of -2147483648, which
+      // the hint's own floor already allows.
+      expect(check(value)?.severity).toBe('error');
+    });
+
+    it('takes 2147483648, the unsigned spelling of the int32 floor', () => {
+      expect(check('2147483648')).toBeNull();
     });
   });
 });

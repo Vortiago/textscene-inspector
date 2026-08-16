@@ -105,12 +105,11 @@ describe('OpenXRVisibilityMask strict validators', () => {
     }
   });
 
-  it('still warns through the walk on an out-of-range layers mask', () => {
-    // layerBitmask hints a 32-checkbox widget (0..2^32-1); the setter is a bare
-    // assignment (visual_instance_3d.cpp:124), so out-of-range is a WARNING, not
-    // an error — but it still has to fire through the inherited resolution.
+  it('still fires through the walk on a layers mask no 32-bit slot holds', () => {
+    // The inherited resolution has to reach the validator at all; `-1` is a
+    // legal mask, `4294967296` drops a bit the file states.
     expect(check('layers', '4294967296')).not.toBeNull();
-    expect(check('layers', '-1')).not.toBeNull();
+    expect(check('layers', '-1')).toBeNull();
   });
 
   it('accepts an in-range layers mask through the walk', () => {

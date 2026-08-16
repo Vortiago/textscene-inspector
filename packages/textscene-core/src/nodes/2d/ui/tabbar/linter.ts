@@ -45,7 +45,7 @@
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 /**
  * A `tab_<idx>/` key. The index run is required, which is what keeps the
@@ -62,7 +62,7 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
 
   // Absent means 0: `tabs` is default-constructed empty
   // (doc/classes/TabBar.xml:282 records the same default).
-  const count = props.tab_count === undefined ? 0 : parseGodotInt(props.tab_count);
+  const count = props.tab_count === undefined ? 0 : ruleInt(props.tab_count);
   // A malformed tab_count is already reported by its own validator, and a
   // non-finite one is altered at parse to a number the file does not state;
   // neither is a count this rule can name in a message.
@@ -70,7 +70,7 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
 
   const currentRaw = props.current_tab;
   if (currentRaw !== undefined) {
-    const current = parseGodotInt(currentRaw);
+    const current = ruleInt(currentRaw);
     // Below -1 is linterParser.ts's error (tab_bar.cpp:804), and -1 itself is
     // the legal deselect sentinel, so only a non-negative index is compared.
     // NOTE the ERR_FAIL_INDEX at :804 is NOT what this rule reports: it is

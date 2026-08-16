@@ -39,7 +39,7 @@ Strict parsing format-checks these `ImporterMeshInstance3D` properties, plus 17 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `cast_shadow` | enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY) | warning |
-| `layer_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `layer_mask` | 32-bit layer mask (layers 1-32) |  |
 | `mesh` | null, SubResource("id") or ExtResource("id") |  |
 | `skeleton_path` | NodePath("path/to/node") |  |
 | `skin` | null, SubResource("id") or ExtResource("id") |  |

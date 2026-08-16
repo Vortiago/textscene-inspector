@@ -113,7 +113,7 @@ describe('CharacterBody2D Linter', () => {
       {
         prop: 'platform_floor_layers',
         valid: [0, 1, 255, 4294967295],
-        invalid: [{ value: 5000000000, contains: ['4294967295'] }, { value: -1 }],
+        invalid: [{ value: 5000000000, contains: ['cannot be stored in an integer slot'] }],
       },
       {
         prop: 'platform_wall_layers',
@@ -148,14 +148,14 @@ describe('CharacterBody2D Linter', () => {
         valid: [0, 1, 100, 1048575, 2147483648, 4294967295],
         acceptMode: 'no-error',
         invalid: [
-          { value: -1, contains: ['between 0 and 4294967295'] },
+          { value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
         ],
       },
       {
         prop: 'collision_mask',
         valid: [0, 1, 255, 1048575, 2147483648, 4294967295],
         acceptMode: 'no-error',
-        invalid: [{ value: -5 }],
+        invalid: [{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' }],
       },
       {
         prop: 'max_slides',
@@ -388,8 +388,8 @@ describe('CharacterBody2D Linter', () => {
       const errors = diagnostics.filter(d => d.severity === 'error');
       expect(errors.length).toBeGreaterThan(0);
       expect(errors.some(d => d.message.includes('max_slides'))).toBe(true);
-      const layerDiagnostic = diagnostics.find(d => d.message.includes('collision_layer'));
-      expect(layerDiagnostic?.severity).toBe('warning');
+      // No collision_layer diagnostic any more: -1 is a legal 32-bit mask.
+      expect(diagnostics.find(d => d.message.includes('collision_layer'))).toBeUndefined();
       const motionModeDiagnostic = diagnostics.find(d => d.message.includes('motion_mode'));
       expect(motionModeDiagnostic).toBeDefined();
       expect(motionModeDiagnostic?.severity).toBe('warning');

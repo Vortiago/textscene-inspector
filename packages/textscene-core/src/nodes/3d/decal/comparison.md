@@ -126,7 +126,7 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `albedo_mix` | float 0-1 | warning |
-| `cull_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `cull_mask` | 32-bit layer mask (layers 1-32) |  |
 | `distance_fade_begin` | float >= 0 | warning below |
 | `distance_fade_enabled` | true or false |  |
 | `distance_fade_length` | float >= 0 | warning below |

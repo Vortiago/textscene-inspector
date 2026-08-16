@@ -18,7 +18,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { hiddenOrUnknowableInTree } from '../../../../linter/parentType.js';
-import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 // texture_rect.h:39-45 TextureRect::ExpandMode: EXPAND_KEEP_SIZE=0,
 // EXPAND_IGNORE_SIZE=1, EXPAND_FIT_WIDTH=2, EXPAND_FIT_WIDTH_PROPORTIONAL=3,
@@ -45,7 +45,7 @@ function checkAspectRatioContainer(context: RuleContext): Diagnostic[] {
 
     const raw = child.properties.expand_mode;
     if (raw === undefined) continue;
-    const expandMode = parseGodotInt(raw);
+    const expandMode = ruleInt(raw);
     if (expandMode === null || !UNSUPPORTED_EXPAND_MODES.has(expandMode)) continue;
 
     diagnostics.push({

@@ -38,7 +38,7 @@
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 function checkOptionButtonSelected(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -46,14 +46,14 @@ function checkOptionButtonSelected(context: RuleContext): Diagnostic[] {
   const props = node.properties as Record<string, string>;
 
   if (props.selected === undefined) return [];
-  const selected = parseGodotInt(props.selected);
+  const selected = ruleInt(props.selected);
   // -1 ("none selected") and below are the single-property validator's own
   // concern; this rule only compares a NON-NEGATIVE selected index against
   // the sibling item_count. A non-finite reads as NaN, which no comparison
   // places on the number line and which the message must never print.
   if (selected === null || Number.isNaN(selected) || selected < 0) return [];
 
-  const itemCount = props.item_count !== undefined ? parseGodotInt(props.item_count) : 0;
+  const itemCount = props.item_count !== undefined ? ruleInt(props.item_count) : 0;
   if (itemCount === null || Number.isNaN(itemCount)) return [];
 
   if (selected < itemCount) return [];

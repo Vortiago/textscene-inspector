@@ -246,9 +246,7 @@ describe('avoidance_layers', () => {
     expect(result?.severity).toBe('error');
   });
 
-  it('accepts a negative value as a warning only (uint32_t reinterprets it, not a setter guard)', () => {
-    const result = check('avoidance_layers', '-1');
-    expect(result).not.toBeNull();
-    expect(result?.severity).toBe('warning');
+  it('accepts a negative value: the uint32_t reinterpretation loses nothing', () => {
+    expect(check('avoidance_layers', '-1')).toBeNull();
   });
 });

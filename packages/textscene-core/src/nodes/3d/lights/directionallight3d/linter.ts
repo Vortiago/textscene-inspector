@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 /**
  * Validate DirectionalLight3D semantic rules
@@ -41,8 +41,8 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
   // `PROPERTY_USAGE_NO_EDITOR`; under `ORTHOGONAL` or `PARALLEL_2_SPLITS`,
   // `directional_shadow_split_2`/`directional_shadow_split_3` do too — the
   // inspector simply stops showing the now-inapplicable split fields.
-  // `parseGodotInt('')` is already null, so an absent key needs no third state.
-  const shadowMode = parseGodotInt(rawProps.directional_shadow_mode ?? '');
+  // `ruleInt('')` is already null, so an absent key needs no third state.
+  const shadowMode = ruleInt(rawProps.directional_shadow_mode ?? '');
 
   if (shadowMode !== null && !Number.isNaN(shadowMode)) {
     // ORTHOGONAL mode (0) doesn't use splits

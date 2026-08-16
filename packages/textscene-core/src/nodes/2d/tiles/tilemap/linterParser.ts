@@ -13,7 +13,8 @@ import { accepts, propertyError, v } from '../../../../linter/validators/index.j
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../../../godot/rendering.js';
-import { firstNonNumericElement, firstUnrepresentableIntElement } from '../../../../linter/validators/v/packedArrays.js';
+import { markIntSlot } from '../../../../linter/validators/intSlot.js';
+import { badIntElementError, firstBadIntElement } from '../../../../linter/validators/v/packedArrays.js';
 
 // `\s*` at both ends and before the paren: Godot's tokenizer discards any
 // character <= 32 before a token (variant_parser.cpp:415-417), so a padded
@@ -51,30 +52,21 @@ const tileDataValidator: PropertyValidator = accepts((key, value, line) => {
   }
   const body = match[1]!.trim();
   if (body === '') return null;
-  // Reads, but no int32 holds it: narrowed at parse
-  // (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
-  const unfit = firstUnrepresentableIntElement(body);
-  if (unfit !== null) {
-    return propertyError(
-      key,
-      line,
-      `Property 'tile_data' has an element no integer can hold: "${unfit}"`,
-      'INVALID_TILE_DATA_VALUE',
-      'error'
-    );
-  }
-  const offender = firstNonNumericElement(body);
-  if (offender !== null) {
-    return propertyError(
-      key,
-      line,
-      `Property 'tile_data' contains a non-numeric value: "${offender}"`,
-      'INVALID_TILE_DATA_FORMAT'
-    );
+  // One pass: unreadable by the tokenizer, or read and then narrowed
+  // away (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
+  const bad = firstBadIntElement(body);
+  if (bad !== null) {
+    return badIntElementError('tile_data', key, line, bad, {
+      format: 'INVALID_TILE_DATA_FORMAT',
+      value: 'INVALID_TILE_DATA_VALUE',
+    });
   }
   return null;
 }, 'PackedInt32Array(…) of cell triplets (decoded by the tilemap-invalid-tile-data rule)');
-tileDataValidator.formatOnly = true;
+// An INT slot, not format-only: it rejects a literal the tokenizer reads.
+// The tag never reaches the registry — `indexedFamilyValidator` re-tags the
+// family wrapper — but the `.leaves` sweep in validatorClassification reads it.
+markIntSlot(tileDataValidator);
 
 const LAYER_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // tile_map.cpp:1030, Variant::STRING. set_layer_name (:333-335) forwards

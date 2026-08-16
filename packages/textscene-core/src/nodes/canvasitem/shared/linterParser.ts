@@ -47,10 +47,16 @@ validatorRegistry.registerAll('CanvasItem', {
   self_modulate: v.color('self_modulate'),
   show_behind_parent: v.boolean('show_behind_parent'),
   top_level: v.boolean('top_level'),
-  // canvas_item.cpp:1476, ENUM 3 labels (matches CLIP_CHILDREN_MAX=3,
-  // canvas_item.h:71-75). set_clip_children_mode (canvas_item.cpp:1731-1733)
-  // ERR_FAIL_CONDs against CLIP_CHILDREN_MAX.
-  clip_children: v.enumInt('clip_children', 0, 2, CLIP_CHILDREN_MODES, { enforced: 'canvas_item.cpp:1731' }),
+  // One-ended: `ERR_FAIL_COND(p_clip_mode >= CLIP_CHILDREN_MAX)`
+  // (canvas_item.cpp:1733) has no floor, so only the ceiling is enforced and
+  // the PROPERTY_HINT_ENUM at :1476 grounds the rest. Measured on 4.6.3,
+  // `clip_children = 4294967295` — what the serialiser writes for -1 — narrows
+  // to -1, sails past the guard and CLIPS, while `3` and `-3000000000` both
+  // trip it and keep 0.
+  clip_children: v.enumInt('clip_children', 0, 2, CLIP_CHILDREN_MODES, {
+    hinted: { min: 'canvas_item.cpp:1476' },
+    enforced: { max: 'canvas_item.cpp:1733' },
+  }),
   // canvas_item.cpp:1477, PROPERTY_HINT_LAYERS_2D_RENDER — not a
   // PROPERTY_HINT_RANGE, so there is no numeric hint to ground a bound on.
   // set_light_mask (canvas_item.cpp:589-596) assigns unconditionally, no

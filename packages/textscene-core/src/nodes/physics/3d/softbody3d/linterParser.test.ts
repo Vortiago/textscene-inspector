@@ -50,11 +50,10 @@ describe('SoftBody3D strict validators', () => {
       expect(check('collision_layer', '4294967295')).toBeNull();
     });
 
-    it('warns on a negative value rather than erroring', () => {
-      // soft_body_3d.cpp:381 hints PROPERTY_HINT_LAYERS_3D_PHYSICS, a
-      // 32-checkbox widget that cannot express -1, so the width is a UI bound.
-      // The setter is a bare assignment, so the engine itself accepts it.
-      expect(check('collision_layer', '-1')?.severity).toBe('warning');
+    it('accepts a negative value: -1 IS the all-layers mask', () => {
+      // soft_body_3d.cpp:381 hints PROPERTY_HINT_LAYERS_3D_PHYSICS, and its
+      // 32 checkboxes express every 32-bit pattern including this one.
+      expect(check('collision_layer', '-1')).toBeNull();
     });
   });
 
@@ -71,11 +70,10 @@ describe('SoftBody3D strict validators', () => {
       expect(check('collision_mask', '4294967295')).toBeNull();
     });
 
-    it('warns on a negative value rather than erroring', () => {
-      // soft_body_3d.cpp:382 hints PROPERTY_HINT_LAYERS_3D_PHYSICS, a
-      // 32-checkbox widget that cannot express -1, so the width is a UI bound.
-      // The setter is a bare assignment, so the engine itself accepts it.
-      expect(check('collision_mask', '-1')?.severity).toBe('warning');
+    it('accepts a negative value: -1 IS the all-layers mask', () => {
+      // soft_body_3d.cpp:382 hints PROPERTY_HINT_LAYERS_3D_PHYSICS, and its
+      // 32 checkboxes express every 32-bit pattern including this one.
+      expect(check('collision_mask', '-1')).toBeNull();
     });
   });
 

@@ -48,7 +48,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
-import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 /** Any `settings/<i>/…` leaf, whatever its depth, with the index text captured. */
 const SETTING_KEY_RE = /^settings\/([+-]?\d+)\//;
@@ -80,7 +80,7 @@ function resolveJointCounts(properties: Record<string, string>): Map<number, num
     if (settingIndex < 0) continue;
     // A malformed count is its own validator's error; ignoring it here leaves
     // the setting at its zero default rather than inventing a ceiling.
-    const count = parseGodotInt(properties[key] ?? '');
+    const count = ruleInt(properties[key] ?? '');
     if (count === null || Number.isNaN(count)) continue;
     counts.set(settingIndex, count);
   }
@@ -96,7 +96,7 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
   // Absent means zero: `LocalVector<BoneTwistDisperser3DSetting *> settings`
   // (bone_twist_disperser_3d.h:86) starts empty, which is the XML's default="0".
   const settingCountRaw = rawProps.setting_count;
-  const settingCount = settingCountRaw === undefined ? 0 : parseGodotInt(settingCountRaw);
+  const settingCount = settingCountRaw === undefined ? 0 : ruleInt(settingCountRaw);
   // Neither an unreadable count nor a non-finite one is a ceiling to count
   // against; each is already its own validator's diagnostic.
   if (settingCount === null || Number.isNaN(settingCount)) return diagnostics;

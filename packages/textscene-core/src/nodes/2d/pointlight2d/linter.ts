@@ -32,7 +32,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { POINT_LIGHT_2D_RANGE_DEFAULTS } from './types.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
-import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../linter/validators/commonValidators.js';
 
 const WINDOWS = [
   {
@@ -59,10 +59,9 @@ const WINDOWS = [
  * would invent a second diagnostic from the same typo.
  */
 function bound(raw: string | undefined, fallback: number): number | null {
-  if (raw === undefined) return fallback;
-  const parsed = parseGodotInt(raw);
-  // NaN would clear the `min <= max` skip and reach the message as "NaN".
-  return parsed !== null && Number.isFinite(parsed) ? parsed : null;
+  // `ruleInt` is already null for anything off the number line; NaN would
+  // clear the `min <= max` skip and reach the message as "NaN".
+  return ruleInt(raw, fallback);
 }
 
 function checkPointLight2D(context: RuleContext): Diagnostic[] {

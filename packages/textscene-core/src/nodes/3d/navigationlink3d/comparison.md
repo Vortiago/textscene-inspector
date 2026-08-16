@@ -39,7 +39,7 @@ Strict parsing format-checks these `NavigationLink3D` properties, plus 17 inheri
 | `enabled` | true or false |  |
 | `end_position` | Vector3(x, y, z) |  |
 | `enter_cost` | float >= 0 | error below |
-| `navigation_layers` | 32-bit layer mask (layers 1-32) | warning |
+| `navigation_layers` | 32-bit layer mask (layers 1-32) |  |
 | `start_position` | Vector3(x, y, z) |  |
 | `travel_cost` | float >= 0 | error below |
 

@@ -56,7 +56,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
-import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 /** Any `settings/<i>/…` leaf, whatever its depth. */
 const SETTING_KEY_RE = /^settings\/([+-]?\d+)\//;
@@ -87,7 +87,7 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   // Absent means zero: `LocalVector<IKModifier3DSetting *> settings`
   // (ik_modifier_3d.h:69) starts empty, which is the XML's default="0".
   const countRaw = rawProps.setting_count;
-  const count = countRaw === undefined ? 0 : parseGodotInt(countRaw);
+  const count = countRaw === undefined ? 0 : ruleInt(countRaw);
   // Neither an unreadable count nor a non-finite one is a ceiling to count
   // against; each is already its own validator's diagnostic.
   if (count === null || Number.isNaN(count)) return diagnostics;
@@ -141,7 +141,7 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
     if (!vector) continue;
     const directionRaw = poleDirections.get(index);
     const direction =
-      directionRaw === undefined ? SECONDARY_DIRECTION_NONE : parseGodotInt(directionRaw);
+      directionRaw === undefined ? SECONDARY_DIRECTION_NONE : ruleInt(directionRaw);
     if (direction === null || Number.isNaN(direction)) continue;
     if (direction !== SECONDARY_DIRECTION_CUSTOM) ignoredVectors.add(index);
   }

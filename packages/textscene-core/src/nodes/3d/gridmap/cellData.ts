@@ -10,8 +10,8 @@
  */
 
 import { warn } from '../../../logger.js';
-import { parseGodotInt } from '../../../godot/int.js';
-import { toInt16 } from '../../../godot/int.js';
+import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { toInt16, toUint32 } from '../../../godot/int.js';
 
 export interface GridMapCell {
   x: number;
@@ -24,32 +24,29 @@ export interface GridMapCell {
 }
 
 export function decodeGridMapCells(packedInt32: string): GridMapCell[] {
-  // `parseGodotInt` rather than `Number`: `Number('inf')` is NaN, and `inf` is
+  // `ruleInt` rather than `Number`: `Number('inf')` is NaN, and `inf` is
   // a literal Godot writes into an INT array and narrows on load, so a silent
-  // NaN dropped the cell instead of placing it where Godot places it. `>>> 0`
-  // below turns a NaN into 0, the origin cell, which is the same place Godot's
-  // own narrowing puts it on x86.
+  // NaN dropped the cell instead of placing it where Godot places it.
+  // `toUint32` below turns a NaN into 0, the origin cell, which is the same
+  // place Godot's own narrowing puts it on x86.
   const ints = packedInt32
     .split(',')
     .map((s) => s.trim())
     .filter((s) => s.length > 0)
     .map((s) => {
-      const num = parseGodotInt(s);
+      const num = ruleInt(s);
       if (num === null) {
         warn(`[GridMap] cell data element "${s}" is not a value Godot can read`);
         return NaN;
-      }
-      if (!Number.isFinite(num)) {
-        warn(`[GridMap] cell data element "${s}" is non-finite; placing that cell at the origin`);
       }
       return num;
     });
 
   const cells: GridMapCell[] = [];
   for (let i = 0; i + 2 < ints.length; i += 3) {
-    const keyLo = ints[i]! >>> 0;
-    const keyHi = ints[i + 1]! >>> 0;
-    const cell = ints[i + 2]! >>> 0;
+    const keyLo = toUint32(ints[i]!);
+    const keyHi = toUint32(ints[i + 1]!);
+    const cell = toUint32(ints[i + 2]!);
     cells.push({
       x: toInt16(keyLo & 0xffff),
       y: toInt16((keyLo >>> 16) & 0xffff),

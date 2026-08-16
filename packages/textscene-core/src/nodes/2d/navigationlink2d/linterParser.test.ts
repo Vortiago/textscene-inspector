@@ -134,14 +134,12 @@ describe('NavigationLink2D strict validators', () => {
       expect(result!.severity).toBe('error');
     });
 
-    it('warns rather than errors past the 32-bit mask', () => {
+    it('takes -1, and errors only past the 32-bit mask', () => {
       // navigation_link_2d.cpp:205-213, set_navigation_layers is a bare
-      // uint32_t assignment with no ERR_FAIL — PROPERTY_HINT_LAYERS_2D_NAVIGATION
-      // (:75) only constrains the inspector's 32-checkbox widget, so an
-      // out-of-range mask is ADR-0032's warning tier, not an error.
-      const result = check('navigation_layers', '-1');
-      expect(result).not.toBeNull();
-      expect(result!.severity).toBe('warning');
+      // uint32_t assignment with no ERR_FAIL, and PROPERTY_HINT_LAYERS_2D_NAVIGATION
+      // (:75) renders every 32-bit pattern — including this one.
+      expect(check('navigation_layers', '-1')).toBeNull();
+      expect(check('navigation_layers', '4294967296')?.severity).toBe('error');
     });
   });
 

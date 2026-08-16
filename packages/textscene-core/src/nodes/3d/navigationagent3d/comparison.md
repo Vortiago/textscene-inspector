@@ -69,8 +69,8 @@ Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inher
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `avoidance_enabled` | true or false |  |
-| `avoidance_layers` | 32-bit layer mask (layers 1-32) | warning |
-| `avoidance_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `avoidance_layers` | 32-bit layer mask (layers 1-32) |  |
+| `avoidance_mask` | 32-bit layer mask (layers 1-32) |  |
 | `avoidance_priority` | float 0-1 | error |
 | `debug_enabled` | true or false |  |
 | `debug_path_custom_color` | Color(r, g, b, a) |  |
@@ -80,7 +80,7 @@ Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inher
 | `keep_y_velocity` | true or false |  |
 | `max_neighbors` | integer >= 1 | warning below |
 | `max_speed` | float >= 0.01 | error below 0, warning below 0.01 |
-| `navigation_layers` | 32-bit layer mask (layers 1-32) | warning |
+| `navigation_layers` | 32-bit layer mask (layers 1-32) |  |
 | `neighbor_distance` | float >= 0.1 | warning below |
 | `path_desired_distance` | float >= 0.1 | warning below |
 | `path_height_offset` | float >= -100 | warning below |

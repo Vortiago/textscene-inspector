@@ -26,7 +26,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { isTypeUnknowable } from '../../../../linter/parentType.js';
-import { parseGodotInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 // control.h:100-119, Control::CursorShape: CURSOR_ARROW = 0 .. CURSOR_HELP = 16.
 const CURSOR_ARROW = 0;
@@ -60,7 +60,7 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   if (cursorRaw !== undefined) {
     // In range, not merely non-null: a non-finite reads as NaN and `99` reads
     // as 99, and neither is a CursorShape (0-16, control.h:180-197).
-    const cursor = parseGodotInt(cursorRaw);
+    const cursor = ruleInt(cursorRaw);
     const isShape = cursor !== null && cursor >= 0 && cursor < CURSOR_MAX;
     if (isShape && cursor !== CURSOR_ARROW) {
       diagnostics.push({

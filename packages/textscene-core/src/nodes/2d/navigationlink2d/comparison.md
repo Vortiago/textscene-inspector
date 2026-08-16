@@ -39,7 +39,7 @@ Strict parsing format-checks these `NavigationLink2D` properties, plus 12 inheri
 | `enabled` | true or false |  |
 | `end_position` | Vector2(x, y) |  |
 | `enter_cost` | float >= 0 | error below |
-| `navigation_layers` | 32-bit layer mask (layers 1-32) | warning |
+| `navigation_layers` | 32-bit layer mask (layers 1-32) |  |
 | `start_position` | Vector2(x, y) |  |
 | `travel_cost` | float >= 0 | error below |
 

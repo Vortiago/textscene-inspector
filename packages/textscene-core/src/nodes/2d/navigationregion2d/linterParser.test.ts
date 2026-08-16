@@ -73,18 +73,16 @@ describe('NavigationRegion2D strict validators', () => {
       expect(error!.code).toBe('INVALID_NAVIGATION_LAYERS_FORMAT');
     });
 
-    it('warns on a negative mask rather than erroring', () => {
-      const error = check('navigation_layers', '-1');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('INVALID_NAVIGATION_LAYERS_VALUE');
-      expect(error!.severity).toBe('warning');
+    it('accepts a negative mask, which is how Godot spells all layers on', () => {
+      expect(check('navigation_layers', '-1')).toBeNull();
+      expect(check('navigation_layers', '4294967295')).toBeNull();
     });
 
-    it('warns on a mask beyond the 32-bit range rather than erroring', () => {
+    it('errors past the 32-bit range, where the engine drops the extra bits', () => {
       const error = check('navigation_layers', '4294967296');
       expect(error).not.toBeNull();
       expect(error!.code).toBe('INVALID_NAVIGATION_LAYERS_VALUE');
-      expect(error!.severity).toBe('warning');
+      expect(error!.severity).toBe('error');
     });
   });
 

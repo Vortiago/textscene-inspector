@@ -156,12 +156,14 @@ describe('PointLight2D linterParser validators', () => {
     ).toBe(0);
   });
 
-  it('accepts a shadow_item_cull_mask past 32 bits (light_2d.cpp:152-154 assigns unconditionally)', () => {
+  it('refuses a shadow_item_cull_mask past 32 bits, where a bit is dropped', () => {
+    // light_2d.cpp:152-154 assigns unconditionally, so the SETTER refuses
+    // nothing — but the int slot cannot carry 2^32, and Godot stores 0.
     expect(
       lintErrors(
         `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nshadow_item_cull_mask = 4294967296`
       )
-    ).toBe(0);
+    ).toBe(1);
   });
 
   it('accepts the four range-window properties as plain integers', () => {

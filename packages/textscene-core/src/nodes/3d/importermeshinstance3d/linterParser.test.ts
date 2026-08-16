@@ -146,10 +146,9 @@ describe('ImporterMeshInstance3D strict validators', () => {
     it('accepts the full 32-bit mask', () => {
       expect(check('layer_mask', '4294967295')).toBeNull();
     });
-    it('rejects a negative value as a WARNING — set_layer_mask assigns the uint32 straight through', () => {
-      const result = check('layer_mask', '-1');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+    it('accepts a negative value — set_layer_mask reads the uint32 straight through', () => {
+      expect(check('layer_mask', '-1')).toBeNull();
+      expect(check('layer_mask', '4294967296')?.severity).toBe('error');
     });
   });
 

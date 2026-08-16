@@ -33,7 +33,7 @@ Strict parsing format-checks these `GPUParticlesCollisionHeightField3D` properti
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `follow_camera_enabled` | true or false |  |
-| `heightfield_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `heightfield_mask` | 32-bit layer mask (layers 1-32) |  |
 | `resolution` | enum 0-5 (256/512/1024/2048/4096/8192) | warning |
 | `size` | Vector3(x, y, z), each float >= 0.01 | warning below |
 | `update_mode` | enum 0-1 (WHEN_MOVED/ALWAYS) | warning |

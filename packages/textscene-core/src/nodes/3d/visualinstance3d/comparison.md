@@ -32,7 +32,7 @@ Strict parsing format-checks these `VisualInstance3D` properties, plus 17 inheri
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `layers` | 32-bit layer mask (layers 1-32) | warning |
+| `layers` | 32-bit layer mask (layers 1-32) |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

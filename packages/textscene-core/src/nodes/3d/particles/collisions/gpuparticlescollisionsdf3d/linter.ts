@@ -28,7 +28,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../../linter/ty
 import { ruleRegistry } from '../../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../../linter/nodeBaseTypes.js';
-import { parseGodotInt } from '../../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../../linter/validators/commonValidators.js';
 
 function checkGPUParticlesCollisionSDF3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -37,7 +37,7 @@ function checkGPUParticlesCollisionSDF3D(context: RuleContext): Diagnostic[] {
   const rawProps = node.properties as Record<string, string>;
   if (rawProps.bake_mask === undefined) return [];
 
-  if (parseGodotInt(rawProps.bake_mask) !== 0) return [];
+  if (ruleInt(rawProps.bake_mask) !== 0) return [];
 
   return [
     {

@@ -114,7 +114,7 @@ describe('Area3D Linter', () => {
           prop: 'collision_layer',
           valid: [1, 100, 1048575, 2000000, 2147483648, 4294967295],
           invalid: [
-{ value: -1, contains: ['must be between 0 and 4294967295'] },
+{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           { value: '"layer1"' },
           ],
         },
@@ -122,7 +122,7 @@ describe('Area3D Linter', () => {
           prop: 'collision_mask',
           valid: [1, 255, 1048575, 5000000, 2147483648, 4294967295],
           invalid: [
-{ value: -5, contains: ['must be between 0 and 4294967295'] },
+{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           ],
         },
     ]);

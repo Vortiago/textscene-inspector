@@ -32,7 +32,8 @@ import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v, accepts, propertyError } from '../../../../linter/validators/index.js';
 import { packedArrayLiteral } from '../../../../godot/index.js';
-import { firstNonNumericElement, firstUnrepresentableIntElement } from '../../../../linter/validators/v/packedArrays.js';
+import { markIntSlot } from '../../../../linter/validators/intSlot.js';
+import { badIntElementError, firstBadIntElement } from '../../../../linter/validators/v/packedArrays.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 const SPLIT_OFFSETS_FORMAT = 'INVALID_SPLIT_OFFSETS_FORMAT';
@@ -65,34 +66,22 @@ function splitOffsetsValidator(): PropertyValidator {
     // as `[1, 0]` and `(2e3, 0)` as `[2000, 0]` — `_parse_construct<int32_t>`
     // takes any number token and narrows it — while `(+3, 0)` fails the load
     // outright, since `get_token` accepts no leading `+`.
-    // Reads, but no int32 holds it: narrowed at parse
-    // (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
-    const unfit = firstUnrepresentableIntElement(body);
-    if (unfit !== null) {
-      return propertyError(
-        key,
-        line,
-        `Property 'split_offsets' has an element no integer can hold: "${unfit}"`,
-        'INVALID_SPLIT_OFFSETS_VALUE',
-        'error'
-      );
-    }
-    const offender = firstNonNumericElement(body);
-    if (offender !== null) {
-      return propertyError(
-        key,
-        line,
-        `Property 'split_offsets' contains a non-numeric value: "${offender}"`,
-        SPLIT_OFFSETS_FORMAT
-      );
+    // One pass: unreadable by the tokenizer, or read and then narrowed
+    // away (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
+    const bad = firstBadIntElement(body);
+    if (bad !== null) {
+      return badIntElementError('split_offsets', key, line, bad, {
+        format: SPLIT_OFFSETS_FORMAT,
+        value: 'INVALID_SPLIT_OFFSETS_VALUE',
+      });
     }
     return null;
   }, 'PackedInt32Array(n, n, …)');
   // Format-only: rejects a malformed literal or a non-integer element.
   // `set_split_offsets` (split_container.cpp:1071) accepts any length and any
   // value, so there is nothing here to ground.
-  validator.formatOnly = true;
-  return validator;
+  // An INT slot, not format-only: it rejects a literal the tokenizer reads.
+  return markIntSlot(validator);
 }
 
 validatorRegistry.registerAll('SplitContainer', {

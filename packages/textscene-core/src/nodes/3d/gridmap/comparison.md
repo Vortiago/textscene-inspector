@@ -47,8 +47,8 @@ Strict parsing format-checks these `GridMap` properties, plus 17 inherited from 
 | `cell_octant_size` | integer, nonzero, 1-1024 hinted | warning |
 | `cell_scale` | float |  |
 | `cell_size` | Vector3(x, y, z) |  |
-| `collision_layer` | 32-bit layer mask (layers 1-32) | warning |
-| `collision_mask` | 32-bit layer mask (layers 1-32) | warning |
+| `collision_layer` | 32-bit layer mask (layers 1-32) |  |
+| `collision_mask` | 32-bit layer mask (layers 1-32) |  |
 | `collision_priority` | float |  |
 | `data` | Dictionary literal { "cells": PackedInt32Array(...) } |  |
 | `mesh_library` | null, SubResource("id") or ExtResource("id") |  |
