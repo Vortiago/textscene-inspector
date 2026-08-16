@@ -11,7 +11,7 @@
 
 import { warn } from '../../../../logger';
 import { packedArrayLiteral } from '../../../../godot/index.js';
-import { parseGodotInt } from '../../../../parser/vectors.js';
+import { parseGodotInt } from '../../../../godot/int.js';
 
 export interface Vec2i {
   x: number;

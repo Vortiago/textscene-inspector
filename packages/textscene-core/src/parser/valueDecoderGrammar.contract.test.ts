@@ -33,7 +33,8 @@ import { join } from 'node:path';
 
 import * as logger from '../logger';
 import { parseOptionalVector2 } from './valueParsers';
-import { parseVector2, FLOAT_PATTERN_SOURCE } from './vectors';
+import { parseVector2 } from './vectors';
+import { FLOAT_PATTERN_SOURCE } from '../godot/number.js';
 import { heading } from './testing/parserKit';
 import { parseControl } from '../nodes/2d/ui/control/parser';
 import { styleBoxToCss } from '../r3f/controls/styleBoxToCss';

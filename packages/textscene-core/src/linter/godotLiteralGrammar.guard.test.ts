@@ -30,7 +30,7 @@ import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
 import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
 import { makeFloatTupleRegex } from './validators/floatTupleValidator.js';
-import { finiteTupleRegex } from '../parser/vectors.js';
+import { finiteTupleRegex } from '../godot/number.js';
 
 /** A file's `src/`-relative path, the form every list below is written in. */
 const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
@@ -120,7 +120,7 @@ function handRolledComposite(source: string): string | null {
  *
  * The renderer's `finiteTupleRegex` consumers are deliberately NOT here: their
  * grammar is finite, so a matched capture always reads back through `parseFloat`
- * and there is nothing to get wrong. `parser/vectors.ts` mentions the linter
+ * and there is nothing to get wrong. `godot/number.ts` mentions the linter
  * builder only in a docblock, which is why this matches an `import` and not the
  * bare name.
  */
@@ -221,7 +221,7 @@ describe('Godot composite literal grammar', () => {
 
   it('reads a Variant scalar through the shared reader, in every rule', () => {
     // No allowlist. `parseGodotFloat` — whose last step is the `parseFloat`
-    // this bans — lives in `parser/vectors.ts`, outside this population, so the
+    // this bans — lives in `godot/number.ts`, outside this population, so the
     // one file that legitimately spells it is not a file this asks about.
     const population = files.filter(({ rel }) => isDiagnosticReader(rel));
     // Anti-vacuity: the population is a path predicate, so a change to how

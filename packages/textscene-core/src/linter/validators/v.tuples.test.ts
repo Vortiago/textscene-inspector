@@ -130,7 +130,7 @@ describe('v.resourceReference / v.nodePath / v.color', () => {
 });
 
 describe('float-tuple validators speak the tokenizer float grammar (#190 drift fix)', () => {
-  // FLOAT_PATTERN_SOURCE (parser/vectors.ts) is transcribed from `get_token`,
+  // FLOAT_PATTERN_SOURCE (godot/number.ts) is transcribed from `get_token`,
   // so linter and renderer accept exactly what Godot loads: trailing-dot (5.)
   // and every exponent form, but NOT a leading `+` or a leading `.` — measured
   // on 4.6.3, both fail the load outright.

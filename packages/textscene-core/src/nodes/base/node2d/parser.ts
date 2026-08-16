@@ -11,7 +11,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseColor } from '../../../utils/colorParser';
 import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
-import { finiteTupleRegex } from '../../../parser/vectors';
+import { finiteTupleRegex } from '../../../godot/number.js';
 import { warn } from '../../../logger';
 import type { Node2DProperties, Vector2 } from './types';
 

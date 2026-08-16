@@ -10,7 +10,7 @@
  */
 
 import { warn } from '../../../logger.js';
-import { parseGodotInt } from '../../../parser/vectors.js';
+import { parseGodotInt } from '../../../godot/int.js';
 import { toInt16 } from '../../../godot/int.js';
 
 export interface GridMapCell {

@@ -4,22 +4,18 @@ import type { ParseError } from '../../linter/types.js';
 import type { PropertyValidator } from '../propertyValidator.js';
 import { propertyError } from './propertyError.js';
 import { unrepresentableInt } from './intSlot.js';
-import { asStoredInt, parseGodotFloat, parseGodotInt } from '../../parser/vectors.js';
+import { asStoredInt, parseGodotFloat, parseGodotInt } from '../../godot/index.js';
 
 /**
- * The Variant-literal readers, re-exported from their home in `parser/vectors.ts`.
+ * The Variant-literal readers, re-exported from their home in `src/godot/`.
  *
  * They live there because that module imports NOTHING, so the renderer's
  * decoders can read a value the way Godot does without pulling this file's
  * diagnostic machinery into the webview bundle. They are re-exported here
  * because the linter is where they are reached for.
  */
-export {
-  TSCN_FLOAT_PATTERN_SOURCE,
-  TSCN_FLOAT_RE,
-  parseGodotFloat,
-  parseGodotInt,
-} from '../../parser/vectors.js';
+export { TSCN_FLOAT_PATTERN_SOURCE, TSCN_FLOAT_RE, parseGodotFloat } from '../../godot/number.js';
+export { parseGodotInt } from '../../godot/int.js';
 
 /**
  * One capture group of an ALREADY-MATCHED float tuple, as a number.

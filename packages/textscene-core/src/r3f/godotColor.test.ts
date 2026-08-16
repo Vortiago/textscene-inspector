@@ -4,7 +4,7 @@
  * EOTF: linear = c/12.92 for c ≤ 0.04045, else ((c+0.055)/1.055)^2.4.
  *
  * Also verifies exponent-notation Color components end-to-end:
- * FLOAT_PATTERN_SOURCE (parser/vectors.ts) admits `5e-1`-style floats, so
+ * FLOAT_PATTERN_SOURCE (godot/number.ts) admits `5e-1`-style floats, so
  * parseColor → godotColorToLinear must round-trip them. parseColor's
  * non-exponent cases live in utils/colorParser.test.ts.
  */

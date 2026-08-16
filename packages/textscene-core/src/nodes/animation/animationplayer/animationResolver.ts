@@ -14,7 +14,8 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { parseGodotFloat, parseVector2, parseVector3 } from '../../../parser/vectors';
+import { parseVector2, parseVector3 } from '../../../parser/vectors';
+import { parseGodotFloat } from '../../../godot/number.js';
 import { parseColor } from '../../../utils/colorParser';
 import { warn } from '../../../logger';
 import { NODE_PATH_LITERAL_ANYWHERE_RE, SUB_RESOURCE_REF_BODY, literalText, packedArrayCallAnywhere } from '../../../godot/index.js';

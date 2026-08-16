@@ -1,6 +1,5 @@
 import { packedArrayCallAnywhere, packedArrayLiteral } from '../../godot/index.js';
-import { parseGodotInt } from '../../parser/vectors.js';
-import { parseGodotFloat } from '../../parser/vectors.js';
+import { parseGodotFloat, parseGodotInt } from '../../godot/index.js';
 import { warn } from '../../logger.js';
 
 const PACKED_VECTOR3_ARRAY_RE = packedArrayLiteral('PackedVector3Array');

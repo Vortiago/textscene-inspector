@@ -23,7 +23,7 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
-import { finiteTupleRegex } from '../../../parser/vectors.js';
+import { finiteTupleRegex } from '../../../godot/number.js';
 
 /** Entries per point in `_data`: position, left tangent, right tangent, two modes. */
 const ELEMS_PER_POINT = 5;

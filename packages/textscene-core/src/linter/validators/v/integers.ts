@@ -10,7 +10,7 @@
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { markIntSlot, unrepresentableInt } from '../intSlot.js';
-import { asStoredInt } from '../../../parser/vectors.js';
+import { asStoredInt } from '../../../godot/int.js';
 import {
   createEnumValidator,
   createNumericRangeValidator,

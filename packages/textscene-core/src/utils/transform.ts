@@ -5,7 +5,7 @@
 import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
 import { warn } from '../logger';
 import { isEqualApprox } from '../godot/math.js';
-import { finiteTupleRegex } from '../parser/vectors';
+import { finiteTupleRegex } from '../godot/number.js';
 
 const TRANSFORM3D_RE = finiteTupleRegex('Transform3D', 12);
 const CALL_PREFIX = 'Transform3D(';

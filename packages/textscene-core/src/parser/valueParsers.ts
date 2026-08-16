@@ -38,7 +38,9 @@
  */
 
 import { warn } from '../logger';
-import { FLOAT_PATTERN_SOURCE, finiteTupleRegex, parseVector2, storedInt, type Vector2 } from './vectors';
+import { parseVector2, type Vector2 } from './vectors';
+import { FLOAT_PATTERN_SOURCE, finiteTupleRegex } from '../godot/number.js';
+import { storedInt } from '../godot/int.js';
 import { nodePathLiteral } from '../godot/index.js';
 
 /**

@@ -16,7 +16,7 @@
  */
 
 import { warn } from '../../logger';
-import { finiteTupleRegex, storedInt } from '../../parser/vectors';
+import { finiteTupleRegex, storedInt } from '../../godot/index.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
