@@ -58,6 +58,7 @@ export {
   toUint32,
 } from './int.js';
 export { DEFAULT_ANIMATION_NAME } from './animation.js';
+export { canonicalPropertyName, isDeprecatedPropertyName } from './deprecated.js';
 export {
   ARRAY_LITERAL_RE,
   NODE_PATH_LITERAL_RE,

@@ -4,15 +4,19 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { parseGodotInt, TSCN_FLOAT_RE } from '../commonValidators.js';
+import { parseGodotFloat, parseGodotInt, TSCN_FLOAT_RE } from '../commonValidators.js';
 import type { ParseError } from '../../types.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
 
 /** What is wrong with one element of a packed INT array, and which element. */
 interface BadIntElement {
-  /** `unreadable` — the tokenizer refuses it. `unstorable` — it reads, no int32 holds it. */
-  kind: 'unreadable' | 'unstorable';
+  /**
+   * `unreadable` — the tokenizer refuses it. `unstorable` — it reads, no int32
+   * holds it. `truncated` — it reads and fits, but the element is fractional and
+   * the int32 conversion drops the fraction.
+   */
+  kind: 'unreadable' | 'unstorable' | 'truncated';
   text: string;
 }
 
@@ -37,13 +41,19 @@ interface BadIntElement {
  * trailing comma first.
  */
 function firstBadIntElement(body: string | readonly string[]): BadIntElement | null {
+  let truncated: BadIntElement | null = null;
   for (const part of typeof body === 'string' ? body.split(',') : body) {
     const text = part.trim();
     const num = parseGodotInt(text);
     if (num === null) return { kind: 'unreadable', text };
     if (Number.isNaN(num)) return { kind: 'unstorable', text };
+    // Remembered rather than returned: an unreadable or unstorable element
+    // later in the body is the stronger claim and must win.
+    if (truncated === null && !Number.isInteger(parseGodotFloat(text) ?? 0)) {
+      truncated = { kind: 'truncated', text };
+    }
   }
-  return null;
+  return truncated;
 }
 
 /**
@@ -66,6 +76,15 @@ export function badIntElement(
 ): ParseError | null {
   const bad = firstBadIntElement(body);
   if (bad === null) return null;
+  if (bad.kind === 'truncated') {
+    return propertyError(
+      key,
+      line,
+      `Property '${propertyName}' has integer elements, so Godot drops the fractional part of "${bad.text}" and stores ${Math.trunc(parseGodotFloat(bad.text) ?? 0)}.`,
+      codes.value,
+      'warning'
+    );
+  }
   return bad.kind === 'unreadable'
     ? propertyError(
         key,

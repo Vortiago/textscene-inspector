@@ -2,6 +2,7 @@
  * Tests for Sprite2D linter (strict parser + semantic rules)
  */
 
+import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import { describe, it, expect } from 'vitest';
 import {
   node,
@@ -114,9 +115,7 @@ describe('Sprite2D Linter', () => {
       },
       {
         prop: 'frame_coords',
-        // A float component is legal: `_parse_construct<int32_t>`
-        // (variant_parser.cpp:577-592) converts it, so Godot stores (1, 2).
-        valid: ['Vector2i(1, 2)', 'Vector2i(0, 0)', 'Vector2i(1.5, 2.5)'],
+        valid: ['Vector2i(1, 2)', 'Vector2i(0, 0)'],
         with: { hframes: 4, vframes: 3 },
         invalid: [
           { value: 'Vector2i(-1, 0)', contains: ['frame_coords', 'non-negative'] },
@@ -525,5 +524,19 @@ describe('a grid count the setter refuses', () => {
       ruleName: 'sprite2d-frame-range',
       contains: ['Maximum frame is 0'],
     });
+  });
+});
+
+describe('a fractional frame_coords component', () => {
+  it('warns that Godot truncates it, matching the verdict `frame` gets', () => {
+    // `_parse_construct<int32_t>` (variant_parser.cpp:577-592) converts it, so
+    // Godot stores (1, 2) — the file loads, but not with the written value.
+    // `frame = 1.5` and `frame_coords = Vector2i(1.5, 2.5)` disagreed until the
+    // truncation tier reached composite components.
+    const validator = validatorRegistry.findValidator('Sprite2D', 'frame_coords')!;
+    const diagnostic = validator('frame_coords', 'Vector2i(1.5, 2.5)', 1);
+
+    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic?.message).toContain('1.5');
   });
 });

@@ -10,7 +10,7 @@
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { ruleInt, tupleComponent } from '../commonValidators.js';
-import { markIntSlot } from '../intSlot.js';
+import { markIntSlot, truncatedComponent } from '../intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from '../floatTupleValidator.js';
 import {
   VECTOR3_REGEX,
@@ -52,7 +52,7 @@ export const vectorCombinators = {
           'error'
         );
       }
-      return null;
+      return truncatedComponent(name, key, line, match.slice(1, 5), valueCode(name));
     }, 'Rect2i(x, y, w, h)'));
   },
 

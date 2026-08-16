@@ -138,3 +138,37 @@ export function truncatedInt(
     'warning'
   );
 }
+
+/**
+ * {@link truncatedInt} for the COMPONENTS of an integer composite.
+ *
+ * `_parse_construct<int32_t>` (`variant_parser.cpp:577-592`) takes any number
+ * token and narrows it, which is the same conversion a scalar int slot performs
+ * — so `Vector2i(1.5, 2)` stores `(1, 2)` exactly as `hframes = 5.5` stores 5.
+ * The scalar half warned while the composite half was silent, which made the
+ * tier depend on the shape of the property rather than on the engine.
+ *
+ * Takes captures a finite grammar already matched, and names the offending
+ * component rather than the whole literal.
+ */
+export function truncatedComponent(
+  propertyName: string,
+  key: string,
+  line: number,
+  components: readonly (string | undefined)[],
+  errorCodeValue: string
+): ParseError | null {
+  for (const text of components) {
+    if (text === undefined) continue;
+    const asFloat = parseGodotFloat(text);
+    if (asFloat === null || Number.isInteger(asFloat)) continue;
+    return propertyError(
+      key,
+      line,
+      `Property '${propertyName}' has integer components, so Godot drops the fractional part of "${text.trim()}" and stores ${Math.trunc(asFloat)}.`,
+      errorCodeValue,
+      'warning'
+    );
+  }
+  return null;
+}

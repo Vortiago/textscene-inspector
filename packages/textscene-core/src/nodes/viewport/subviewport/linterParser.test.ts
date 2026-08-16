@@ -47,7 +47,10 @@ describe('SubViewport linter', () => {
       // `_parse_construct<int32_t>` (variant_parser.cpp:577-592) accepts any
       // number token, so this loads as Vector2i(600, 400). The component is
       // bounded as the 600 Godot stores.
-      expectClean(scene(node('SubViewport', { size: 'Vector2i(600.5, 400)' })));
+      expectDiagnostic(scene(node('SubViewport', { size: 'Vector2i(600.5, 400)' })), {
+        severity: 'warning',
+        contains: ['600.5', 'stores 600'],
+      });
     });
 
     it('still rejects a size whose truncated component is below the floor', () => {

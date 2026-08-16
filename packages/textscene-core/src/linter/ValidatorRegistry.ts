@@ -8,6 +8,7 @@
  * re-exported here, so no importer moves.
  */
 
+import { canonicalPropertyName } from '../godot/deprecated.js';
 import { CLASS_BASE_TYPES } from './classBaseTypes.js';
 import type { PropertyValidator } from './propertyValidator.js';
 import { buildWildcardIndex, matchesIndexedKey, type WildcardEntry } from './wildcardIndex.js';
@@ -147,6 +148,11 @@ export class ValidatorRegistry {
    * @returns Validator function or null if neither the type nor its bases match
    */
   findValidator(nodeType: string, propertyKey: string): PropertyValidator | null {
+    // A pre-4.0 alias is the same field under another name, so it takes the
+    // canonical key's validator rather than falling through unvalidated.
+    // Resolved once, here, because the strict parser looks up by the key as
+    // written — which is what a diagnostic must name.
+    propertyKey = canonicalPropertyName(nodeType, propertyKey);
     // A hop counter, not a visited Set: this runs for every property of every
     // node, and the Set was an allocation on every call including every miss.
     // The table is derived from ClassDB ancestry, so it is acyclic by

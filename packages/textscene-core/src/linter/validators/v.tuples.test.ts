@@ -7,6 +7,8 @@
  * grammars are `v.packedArrays.test.ts`.
  */
 
+import { validatorRegistry } from '../ValidatorRegistry.js';
+import '../index.js';
 import { describe, expect, it } from 'vitest';
 import { v } from './v.js';
 
@@ -29,16 +31,21 @@ describe('v.vector2 / v.vector2i / v.vector3', () => {
   // exponent notation loads and truncates toward zero. A `-?\d+` component
   // grammar reported a format error on a file Godot opens.
   it('vector2i takes the component spellings Godot converts', () => {
+    // Whole-valued, however spelled: `2e1` is 20 and stores exactly.
     expect(v.vector2i('grid')('grid', 'Vector2i(2e1, 0)', 1)).toBeNull();
-    expect(v.vector2i('grid')('grid', 'Vector2i(1.5, 0)', 1)).toBeNull();
+    // Fractional loads too, but the stored value is not the written one, so it
+    // draws the truncation warning every int slot shares.
+    expect(v.vector2i('grid')('grid', 'Vector2i(1.5, 0)', 1)?.severity).toBe('warning');
   });
 
   it('vector2i truncates a converted component toward zero before bounding it', () => {
     // Godot stores 0 here, which is below the floor; reading `-0.5` as -0 or
     // as -1 would answer differently.
     const validator = v.vector2i('size', { min: 1, enforced: 'viewport.cpp:1120' });
-    expect(validator('size', 'Vector2i(0.9, 4)', 1)).not.toBeNull();
-    expect(validator('size', 'Vector2i(1.9, 4)', 1)).toBeNull();
+    // Below the floor once truncated: the ERROR, which outranks the warning.
+    expect(validator('size', 'Vector2i(0.9, 4)', 1)?.severity).toBe('error');
+    // In range once truncated: only the truncation itself is left to report.
+    expect(validator('size', 'Vector2i(1.9, 4)', 1)?.severity).toBe('warning');
   });
 
   it('rect2i takes the same component spellings', () => {
@@ -183,5 +190,35 @@ describe('float-tuple validators speak the tokenizer float grammar (#190 drift f
     expect(v.vector3('position')('position', 'Vector3(a, b, c)', 1)).not.toBeNull();
     expect(v.vector3('position')('position', 'Vector3(1, 2)', 1)).not.toBeNull();
     expect(v.color('c')('c', 'Color(1, 1, 1)', 1)).not.toBeNull();
+  });
+});
+
+describe('a fractional component of an integer composite', () => {
+  // `_parse_construct<int32_t>` (variant_parser.cpp:577-592) takes any number
+  // token and narrows it, exactly as a scalar int slot does — so the truncation
+  // warning must reach here too. It did not: the scalar `hframes = 5.5` warned
+  // while `Vector2i(1.5, 2)` beside it said nothing.
+  it('warns on Vector2i, as the scalar slot does', () => {
+    const diagnostic = v.vector2i('size')('size', 'Vector2i(1.5, 2)', 1);
+    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic?.message).toContain('1.5');
+  });
+
+  it('warns on Rect2i', () => {
+    expect(v.rect2i('region')('region', 'Rect2i(0, 0, 3.5, 4)', 1)?.severity).toBe('warning');
+  });
+
+  it('warns on a packed int element', () => {
+    // Through a real slice's validator, since the packed-int reader is composed
+    // per slice rather than exposed as a `v` combinator.
+    const validator = validatorRegistry.findValidator('CodeEdit', 'line_length_guidelines')!;
+    const diagnostic = validator('line_length_guidelines', 'PackedInt32Array(1.5, 80)', 1);
+    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic?.message).toContain('1.5');
+  });
+
+  it('says nothing when every component is whole', () => {
+    expect(v.vector2i('size')('size', 'Vector2i(1, 2)', 1)).toBeNull();
+    expect(v.vector2i('size')('size', 'Vector2i(1.0, 2.0)', 1)).toBeNull();
   });
 });

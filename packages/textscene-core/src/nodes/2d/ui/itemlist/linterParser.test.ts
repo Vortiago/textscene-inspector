@@ -228,8 +228,9 @@ describe('ItemList counts and sizes', () => {
     // `_parse_construct<int32_t>` (variant_parser.cpp:577-592) takes any number
     // token, so `32.5` loads as 32. `Vector2` is a different Variant type and
     // does not convert.
-    expect(check('fixed_icon_size', 'Vector2i(32.5, 24)')).toBeNull();
-    expect(check('fixed_icon_size', 'Vector2(32, 24)')).not.toBeNull();
+    // Loads, but stores 32 rather than 32.5 — the truncation warning.
+    expect(check('fixed_icon_size', 'Vector2i(32.5, 24)')?.severity).toBe('warning');
+    expect(check('fixed_icon_size', 'Vector2(32, 24)')?.severity).toBe('error');
   });
 });
 

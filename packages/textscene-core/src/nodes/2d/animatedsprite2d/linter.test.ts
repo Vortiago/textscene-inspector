@@ -323,3 +323,28 @@ describe('AnimatedSprite2D Linter', () => {
     });
   });
 });
+
+describe('the pre-4.0 `frames` spelling', () => {
+  // `AnimatedSprite2D::_set` forwards `frames` to `set_sprite_frames`
+  // (animated_sprite_2d.cpp:616-618), so the resource IS set and the animation
+  // name survives. Reading only the canonical key reported "Godot clears
+  // 'animation'" on 25 scenes across two shipped projects.
+  const scene = `[gd_scene load_steps=2 format=3]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_1"]
+
+[node name="Sprite" type="AnimatedSprite2D"]
+frames = SubResource("SpriteFrames_1")
+animation = &"idle"
+`;
+
+  it('resolves to sprite_frames, so no rule fires', () => {
+    expect(lint(scene).filter((d) => d.severity === 'error')).toEqual([]);
+  });
+
+  it('does not ask for a sprite_frames that is already set', () => {
+    expect(lint(scene).map((d) => d.ruleName)).not.toContain(
+      'animatedsprite2d-requires-spriteframes'
+    );
+  });
+});

@@ -2,6 +2,7 @@
 
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
+import { truncatedComponent } from './intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
 import { ruleInt } from './commonValidators.js';
 
@@ -93,6 +94,10 @@ export function createVector2iValidator(
       );
     }
 
+    // Computed here, returned last: a component that is both fractional and
+    // below the floor has a real error to report, and that outranks the warning.
+    const truncated = truncatedComponent(propertyName, key, line, [match[1], match[2]], errorCodeValue);
+
     if (minComponent !== undefined) {
       if (x < minComponent || y < minComponent) {
         // The 0 case keeps its long-standing wording; every per-node test that
@@ -103,7 +108,7 @@ export function createVector2iValidator(
       }
     }
 
-    return null;
+    return truncated;
   };
 }
 

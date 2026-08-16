@@ -272,8 +272,8 @@ describe('SoftBody3D strict validators', () => {
     });
 
     // variant_parser.cpp:1428-1430 narrows toward zero; Godot loads point 1.
-    it('truncates a float element rather than refusing it', () => {
-      expect(check('pinned_points', '[0, 1.5]')).toBeNull();
+    it('warns that a float element is truncated rather than refusing it', () => {
+      expect(check('pinned_points', '[0, 1.5]')?.severity).toBe('warning');
     });
 
     it('still rejects an element Godot cannot tokenise at all', () => {
