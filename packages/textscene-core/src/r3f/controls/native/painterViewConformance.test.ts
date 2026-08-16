@@ -23,6 +23,13 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import {
+  isProductionSource,
+  offendingLines,
+  reportOffenders,
+  walkSources,
+  type SourceFile,
+} from '../../testing/sourceScan';
 
 const UI_ROOT = join(import.meta.dirname, '../../../nodes/2d/ui');
 
@@ -47,7 +54,7 @@ const NO_PAINTER = new Set(['shared']);
  * Every native Control painter: one `Component.tsx` per `nodes/2d/ui` slice,
  * plus the loose ones.
  */
-function painterSources(): { file: string; source: string }[] {
+function painterSources(): SourceFile[] {
   const found = readdirSync(UI_ROOT, { withFileTypes: true })
     .filter((e) => e.isDirectory() && !NO_PAINTER.has(e.name))
     .map((e) => join(UI_ROOT, e.name, 'Component.tsx'));
@@ -63,55 +70,13 @@ function painterSources(): { file: string; source: string }[] {
  * exists by name: `parser.ts` and its strict-parser twin `linterParser.ts`
  * produce it, `types.ts` declares it, and a test may author it.
  */
-function uiSources(): { file: string; source: string }[] {
-  const found: string[] = [];
-  const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const path = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (entry.name !== 'node_modules') walk(path);
-      } else if (/\.tsx?$/.test(entry.name) && !entry.name.includes('.test.')) {
-        if (!['parser.ts', 'linterParser.ts', 'types.ts'].includes(entry.name)) found.push(path);
-      }
-    }
-  };
-  walk(UI_ROOT);
-  return [...found, ...LOOSE_PAINTERS].map((file) => ({
-    file,
-    source: readFileSync(file, 'utf8'),
-  }));
-}
-
-function isCommentLine(line: string): boolean {
-  const t = line.trim();
-  return t.startsWith('*') || t.startsWith('//') || t.startsWith('/*');
-}
-
-/**
- * Whether the comment block immediately above line `i` carries an exemption.
- * Walks the block rather than a fixed window, so a reason worth writing down
- * is never truncated into silence.
- */
-function hasExemptionAbove(lines: string[], i: number): boolean {
-  for (let j = i - 1; j >= 0 && isCommentLine(lines[j]!); j--) {
-    if (lines[j]!.includes(EXEMPT_MARKER)) return true;
-  }
-  return false;
-}
-
-function offendingLines(source: string, pattern: RegExp, allowExempt: boolean): number[] {
-  const lines = source.split('\n');
-  const offenders: number[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    if (isCommentLine(lines[i]!)) continue;
-    // A trailing `//` comment is prose too, and cannot launder anything.
-    if (!pattern.test(lines[i]!.replace(/\/\/.*$/, ''))) continue;
-    // Consulted only for a line that already matched — an exemption can never
-    // do anything but suppress a would-be offender.
-    if (allowExempt && hasExemptionAbove(lines, i)) continue;
-    offenders.push(i + 1);
-  }
-  return offenders;
+function uiSources(): SourceFile[] {
+  const NOT_A_PAINTER_READ = ['parser.ts', 'linterParser.ts', 'types.ts'];
+  const found = walkSources(
+    [UI_ROOT],
+    (name) => isProductionSource(name) && !NOT_A_PAINTER_READ.includes(name)
+  );
+  return [...found, ...LOOSE_PAINTERS.map((file) => ({ file, source: readFileSync(file, 'utf8') }))];
 }
 
 /**
@@ -121,7 +86,7 @@ function offendingLines(source: string, pattern: RegExp, allowExempt: boolean): 
  * at all.
  */
 function rawPropertyLines(source: string): number[] {
-  return offendingLines(source, /\.node\.properties|\bcontrolProps\b/, true);
+  return offendingLines(source, /\.node\.properties|\bcontrolProps\b/, EXEMPT_MARKER);
 }
 
 /**
@@ -132,7 +97,7 @@ function rawPropertyLines(source: string): number[] {
  * the provider it renders inside.
  */
 function wideTintLines(source: string): number[] {
-  return offendingLines(source, /\buseCanvasItemTint\b|\buseControlTint\b|\buseControlOwnTint\b/, true);
+  return offendingLines(source, /\buseCanvasItemTint\b|\buseControlTint\b|\buseControlOwnTint\b/, EXEMPT_MARKER);
 }
 
 /**
@@ -142,22 +107,16 @@ function wideTintLines(source: string): number[] {
  * hierarchical tint — all pass untouched.
  */
 function launderedModulateLines(source: string): number[] {
-  return offendingLines(source, /\bmodulate\b/, false);
+  return offendingLines(source, /\bmodulate\b/);
 }
 
 /** Read once: the tree cannot change mid-run, and each scan reads all of it. */
 const PAINTERS = painterSources();
 const UI_SOURCES = uiSources();
 
-function report(sources: { file: string; source: string }[], scan: (s: string) => number[]): string[] {
-  return sources.flatMap(({ file, source }) =>
-    scan(source).map((line) => `${file.split('/src/')[1]}:${line}`)
-  );
-}
-
 describe('Control painter view conformance', () => {
   it('reaches no painter through the raw property bag — `painterView` is the only door', () => {
-    const offenders = report(PAINTERS, rawPropertyLines);
+    const offenders = reportOffenders(PAINTERS, rawPropertyLines);
     expect(
       offenders,
       `these painters can see \`modulate\`/\`selfModulate\` — use painterView<T>(solveNode): ${offenders.join(', ')}`
@@ -165,7 +124,7 @@ describe('Control painter view conformance', () => {
   });
 
   it('resolves no tint inside a painter — the walker hands one down', () => {
-    const offenders = report(PAINTERS, wideTintLines);
+    const offenders = reportOffenders(PAINTERS, wideTintLines);
     expect(
       offenders,
       `these painters re-enter the walker's own modulate chain — take \`tint\` from props: ${offenders.join(', ')}`
@@ -173,7 +132,7 @@ describe('Control painter view conformance', () => {
   });
 
   it('names `modulate` nowhere in 2D-UI code, so no solver helper can launder it back in', () => {
-    const offenders = report(UI_SOURCES, launderedModulateLines);
+    const offenders = reportOffenders(UI_SOURCES, launderedModulateLines);
     expect(
       offenders,
       `the raw bag keeps both fields — these reads would double-apply: ${offenders.join(', ')}`

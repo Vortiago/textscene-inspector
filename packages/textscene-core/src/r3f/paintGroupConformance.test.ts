@@ -18,9 +18,15 @@
  * they were drawn over, in eight goldens at once, after the per-line groups
  * `Label` had always used stopped being harmless.
  */
-import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import {
+  isCommentLine,
+  isProductionSource,
+  reportOffenders,
+  walkSources,
+  type SourceFile,
+} from './testing/sourceScan';
 
 /**
  * Where a slice that draws inside a canvas item can live. Walked RECURSIVELY,
@@ -38,17 +44,8 @@ const SOURCE_ROOTS = ['../nodes/2d', '../nodes/base', '../r3f'].map((dir) =>
  * halves take the same key on the same wrapper group, so both have the same
  * trap.
  */
-function painterSources(): { file: string; source: string }[] {
-  const found: string[] = [];
-  const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const path = join(dir, entry.name);
-      if (entry.isDirectory()) walk(path);
-      else if (entry.name.endsWith('.tsx') && !entry.name.includes('.test.')) found.push(path);
-    }
-  };
-  for (const root of SOURCE_ROOTS) walk(root);
-  return found.map((file) => ({ file, source: readFileSync(file, 'utf8') }));
+function painterSources(): SourceFile[] {
+  return walkSources(SOURCE_ROOTS, (name) => name.endsWith('.tsx') && isProductionSource(name));
 }
 
 /** Opt-out marker for a group that provably cannot reset a canvas item's key. */
@@ -64,8 +61,10 @@ const SAFE_MARKER = 'paint-order-safe:';
  *
  * Skipped: `<CanvasItemGroup>` and any other element whose name merely starts
  * with `group`; tags inside a comment; and tags whose preamble carries
- * `paint-order-safe:` with a reason — looked for across the whole comment block
- * above the tag, since a reason worth writing down rarely fits on one line. The escape hatch exists because a group
+ * `paint-order-safe:` with a reason — looked for anywhere in the ten lines
+ * above the tag rather than in the comment block touching it, since a reason
+ * rarely fits on one line and lands above a `return (`, or inside a braced JSX
+ * comment, as often as not. The escape hatch exists because a group
  * OUTSIDE a canvas item's wrapper — or one that draws nothing at all — cannot
  * reset anything, and rewriting those into `<CanvasItemGroup>` would claim a
  * relationship to the key they do not have.
@@ -75,9 +74,8 @@ function bareGroupLines(source: string): number[] {
   const offenders: number[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!.trim();
-    if (line.startsWith('*') || line.startsWith('//') || line.startsWith('/*')) continue;
-    if (!/<group(?![A-Za-z0-9])/.test(line)) continue;
+    if (isCommentLine(lines[i]!)) continue;
+    if (!/<group(?![A-Za-z0-9])/.test(lines[i]!)) continue;
     if (lines.slice(Math.max(0, i - 10), i).join('\n').includes(SAFE_MARKER)) continue;
 
     // The opening tag runs to the first `>` at or after this line.
@@ -93,9 +91,7 @@ function bareGroupLines(source: string): number[] {
 
 describe('Canvas-item paint-group conformance', () => {
   it('uses <CanvasItemGroup>, never a bare <group>, in every slice that draws in a canvas item', () => {
-    const offenders = painterSources().flatMap(({ file, source }) =>
-      bareGroupLines(source).map((line) => `${file.split('/src/')[1]}:${line}`)
-    );
+    const offenders = reportOffenders(painterSources(), bareGroupLines);
 
     expect(
       offenders,

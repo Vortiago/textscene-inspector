@@ -15,10 +15,17 @@
  * reaches the shader — is asserted where the sequence can be driven end to end,
  * in `nodes/2d/polygon2d/Component.texture.test.tsx`.
  */
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import {
+  isCommentLine,
+  isProductionSource,
+  reportOffenders,
+  walkSources,
+  type SourceFile,
+} from './testing/sourceScan';
 import {
   materialProgramInputs,
   type MaterialProgramBag,
@@ -40,18 +47,9 @@ const SOURCE_ROOTS = ['../nodes/2d', '../nodes/base/node2d', './controls', './co
 /** Canvas painters that sit loose in `r3f/` rather than under a root. */
 const SOURCE_FILES = ['./TileSourceMesh.tsx'].map((file) => join(import.meta.dirname, file));
 
-function scannedSources(): { file: string; source: string }[] {
-  const found: string[] = [];
-  const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const path = join(dir, entry.name);
-      if (entry.isDirectory()) walk(path);
-      else if (/\.tsx$/.test(entry.name) && !entry.name.includes('.test.')) found.push(path);
-    }
-  };
-  for (const root of SOURCE_ROOTS) walk(root);
-  found.push(...SOURCE_FILES);
-  return found.map((file) => ({ file, source: readFileSync(file, 'utf8') }));
+function scannedSources(): SourceFile[] {
+  const found = walkSources(SOURCE_ROOTS, (name) => name.endsWith('.tsx') && isProductionSource(name));
+  return [...found, ...SOURCE_FILES.map((file) => ({ file, source: readFileSync(file, 'utf8') }))];
 }
 
 /** A key from the factory — the only thing about a program a caller can compare. */
@@ -86,9 +84,8 @@ export function unkeyedMappedMaterialLines(source: string): number[] {
   const offenders: number[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!.trim();
-    if (line.startsWith('*') || line.startsWith('//') || line.startsWith('/*')) continue;
-    if (!/<mesh(Basic|Standard)Material(?![A-Za-z0-9])/.test(line)) continue;
+    if (isCommentLine(lines[i]!)) continue;
+    if (!/<mesh(Basic|Standard)Material(?![A-Za-z0-9])/.test(lines[i]!)) continue;
 
     let tag = '';
     for (let j = i; j < lines.length; j++) {
@@ -365,9 +362,7 @@ describe('materialProgramInputs', () => {
 
 describe('Canvas-item material program conformance', () => {
   it('keys every 2D canvas material that binds a map on its program inputs', () => {
-    const offenders = scannedSources().flatMap(({ file, source }) =>
-      unkeyedMappedMaterialLines(source).map((line) => `${file.split('/src/')[1]}:${line}`)
-    );
+    const offenders = reportOffenders(scannedSources(), unkeyedMappedMaterialLines);
 
     expect(
       offenders,
