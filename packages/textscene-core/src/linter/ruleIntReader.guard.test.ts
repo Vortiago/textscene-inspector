@@ -16,6 +16,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { stripComments } from '@textscene/dev-kit';
 import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
 
 /** The validator layer OWNS the three-outcome reader; everything else is a rule. */
@@ -41,9 +42,20 @@ describe('rule-layer integer reads', () => {
     expect(files.some(({ rel }) => rel.endsWith('nodes/2d/sprite2d/linter.ts'))).toBe(true);
   });
 
-  it('never calls parseGodotInt directly', () => {
+  it('never calls a reader that can hand back NaN', () => {
+    // All three, not just `parseGodotInt`: `asStoredInt` and `storedFromFloat`
+    // return the same NaN, and the barrel exports them. Guarding one name by
+    // spelling while its siblings sit beside it on the same import is how the
+    // fence gets walked around.
+    //
+    // Comment-stripped, like its sibling guards: prose naming the reader is not
+    // a call to it.
     const offenders = files
-      .filter(({ file }) => /\bparseGodotInt\s*\(/.test(readFileSync(file, 'utf8')))
+      .filter(({ file }) =>
+        /\b(?:parseGodotInt|asStoredInt|storedFromFloat)\s*\(/.test(
+          stripComments(readFileSync(file, 'utf8'))
+        )
+      )
       .map(({ rel }) => rel)
       .sort();
     expect(offenders).toEqual([]);

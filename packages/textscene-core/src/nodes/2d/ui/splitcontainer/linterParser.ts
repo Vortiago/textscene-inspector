@@ -33,7 +33,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v, accepts, propertyError } from '../../../../linter/validators/index.js';
 import { packedArrayLiteral } from '../../../../godot/index.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
-import { badIntElementError, firstBadIntElement } from '../../../../linter/validators/v/packedArrays.js';
+import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 const SPLIT_OFFSETS_FORMAT = 'INVALID_SPLIT_OFFSETS_FORMAT';
@@ -68,13 +68,11 @@ function splitOffsetsValidator(): PropertyValidator {
     // outright, since `get_token` accepts no leading `+`.
     // One pass: unreadable by the tokenizer, or read and then narrowed
     // away (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
-    const bad = firstBadIntElement(body);
-    if (bad !== null) {
-      return badIntElementError('split_offsets', key, line, bad, {
+    const bad = badIntElement('split_offsets', key, line, body, {
         format: SPLIT_OFFSETS_FORMAT,
         value: 'INVALID_SPLIT_OFFSETS_VALUE',
-      });
-    }
+    });
+    if (bad !== null) return bad;
     return null;
   }, 'PackedInt32Array(n, n, …)');
   // Format-only: rejects a malformed literal or a non-integer element.

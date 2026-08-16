@@ -9,7 +9,7 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { isUnrepresentableInt, tupleComponent } from '../commonValidators.js';
+import { ruleInt, tupleComponent } from '../commonValidators.js';
 import { markIntSlot } from '../intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from '../floatTupleValidator.js';
 import {
@@ -43,7 +43,7 @@ export const vectorCombinators = {
         );
       }
       // Same arm as `vector2i`: the component reads, no int32 holds it.
-      if (match.slice(1, 5).some(isUnrepresentableInt)) {
+      if (match.slice(1, 5).some((component) => ruleInt(component) === null)) {
         return propertyError(
           key,
           line,

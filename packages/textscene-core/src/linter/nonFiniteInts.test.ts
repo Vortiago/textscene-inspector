@@ -28,12 +28,15 @@ const UNSTORABLE = ['4294967296', '1e20'] as const;
 /** Everything an int slot must refuse. */
 const REFUSED = [...NON_FINITE, ...UNSTORABLE];
 
+const NESTED_INT_ARRAY = /^Array\[PackedInt32Array\]|index lists/;
+const PACKED_INT_ARRAY = /PackedInt32Array/;
+
 /**
  * A literal of the right SHAPE for `accepts`, carrying `spelling` in one slot.
  *
  * Every arm has to produce a literal the validator's own format branch accepts,
  * or the probe reports a format error and the sweep passes for the wrong
- * reason. `controlProbe` is what proves each arm does.
+ * reason. The `reaches every slot` assertion is what proves each arm does.
  */
 function probe(accepts: string, spelling: string): string {
   if (accepts.startsWith('Vector2i')) return `Vector2i(${spelling}, 0)`;
@@ -42,15 +45,10 @@ function probe(accepts: string, spelling: string): string {
   if (accepts.startsWith('Rect2i')) return `Rect2i(${spelling}, 0, 1, 1)`;
   if (accepts.startsWith('Dictionary literal'))
     return `{ "cells": PackedInt32Array(${spelling}, 0, 0) }`;
-  if (/^Array\[PackedInt32Array\]|index lists/.test(accepts))
+  if (NESTED_INT_ARRAY.test(accepts))
     return `[PackedInt32Array(${spelling}, 0, 0)]`;
-  if (/PackedInt32Array/.test(accepts)) return `PackedInt32Array(${spelling}, 0, 0)`;
+  if (PACKED_INT_ARRAY.test(accepts)) return `PackedInt32Array(${spelling}, 0, 0)`;
   return spelling;
-}
-
-/** The same shape carrying a value every int slot accepts. */
-function controlProbe(accepts: string): string {
-  return probe(accepts, '1');
 }
 
 const intSlots = validatorRegistry.getRegisteredNodeTypes().flatMap((type) =>
@@ -63,6 +61,31 @@ const intSlots = validatorRegistry.getRegisteredNodeTypes().flatMap((type) =>
 describe('a literal an INT slot cannot hold', () => {
   it('has int slots to ask about, so an empty registry cannot pass this', () => {
     expect(intSlots.length).toBeGreaterThan(500);
+  });
+
+  it('is declared by every validator whose own `accepts` reads as an int slot', () => {
+    // The inverse of the old population, kept as a TRIPWIRE. `markIntSlot` is
+    // applied by hand at seven slice sites, and a forgotten one drops out of
+    // the sweep above in silence — the same failure the `accepts` regex had,
+    // renamed. As a cross-check on the DECLARATION its misses are loud instead:
+    // prose that reads integer-ish while the tag is absent fails here.
+    const INT_PROSE = /integer|^enum |bit mask|layer mask|Vector[234]i|Rect2i|PackedInt32Array|int array/;
+    const untagged = validatorRegistry
+      .getRegisteredNodeTypes()
+      .flatMap((type) =>
+        validatorRegistry.getOwnKeys(type).map((key) => ({
+          at: `${type}.${key}`,
+          validator: validatorRegistry.findValidator(type, key),
+        }))
+      )
+      // A wildcard DISPATCHER describes its family, not a slot — its leaves are
+      // the int slots and carry the tag. `settings/#/*` says "bit masks" about
+      // what it routes to.
+      .filter(({ validator }) => validator != null && validator.leaves === undefined)
+      .filter(({ validator }) => INT_PROSE.test(validator!.accepts ?? '') && !validator!.intSlot)
+      .map(({ at }) => at)
+      .sort();
+    expect(untagged).toEqual([]);
   });
 
   it('covers the shapes an `accepts` regex could not see', () => {
@@ -92,21 +115,31 @@ describe('a literal an INT slot cannot hold', () => {
     // has a floor of 3 — so the question is only whether the format branch
     // fired, which is what an `_FORMAT` code says.
     const unreadable = intSlots
-      .map(({ type, key, validator }) => ({
-        at: `${type}.${key}`,
-        probe: controlProbe(validator.accepts ?? ''),
-        code: validator(key, controlProbe(validator.accepts ?? ''), 1)?.code ?? '',
-      }))
+      .map(({ type, key, validator }) => {
+        const control = probe(validator.accepts ?? '', '1');
+        return { at: `${type}.${key}`, probe: control, code: validator(key, control, 1)?.code ?? '' };
+      })
       .filter(({ code }) => code.endsWith('_FORMAT'))
       .map(({ at, probe: text }) => `${at} cannot read ${text}`)
       .sort();
     expect(unreadable).toEqual([]);
   });
 
+  // Every (slot, spelling) pair, judged ONCE. The three assertions below read
+  // different fields of the same answer; running the sweep per assertion meant
+  // ~3x 540 x 6 validator calls for one question asked three ways.
+  const judged = intSlots.flatMap(({ type, key, validator }) =>
+    REFUSED.map((spelling) => ({
+      at: `${type}.${key}`,
+      spelling,
+      diagnostic: validator(key, probe(validator.accepts!, spelling), 1),
+    }))
+  );
+
   it.each(REFUSED)('is reported by every int validator (%s)', (spelling) => {
-    const silent = intSlots
-      .filter(({ key, validator }) => validator(key, probe(validator.accepts!, spelling), 1) === null)
-      .map(({ type, key }) => `${type}.${key}`)
+    const silent = judged
+      .filter((j) => j.spelling === spelling && j.diagnostic === null)
+      .map((j) => j.at)
       .sort();
     expect(silent).toEqual([]);
   });
@@ -114,30 +147,18 @@ describe('a literal an INT slot cannot hold', () => {
   it('reports it as an ERROR, never as a hint-tier warning', () => {
     // The setter alters or refuses the write; a hint warning would be the
     // wrong tier for a value the engine changes.
-    const wrongTier = intSlots
-      .flatMap(({ type, key, validator }) =>
-        REFUSED.map((spelling) => ({
-          at: `${type}.${key} (${spelling})`,
-          severity: validator(key, probe(validator.accepts!, spelling), 1)?.severity,
-        }))
-      )
-      .filter(({ severity }) => severity !== undefined && severity !== 'error')
-      .map(({ at, severity }) => `${at} is ${severity}`)
+    const wrongTier = judged
+      .filter((j) => j.diagnostic !== null && j.diagnostic.severity !== 'error')
+      .map((j) => `${j.at} (${j.spelling}) is ${j.diagnostic!.severity}`)
       .sort();
     expect(wrongTier).toEqual([]);
   });
 
   it('never prints the stored number, which no two platforms agree on', () => {
     // The FLOAT branch is UB; see intSlot.ts. The message may name the literal only.
-    const printsIt = intSlots
-      .flatMap(({ type, key, validator }) =>
-        REFUSED.map((spelling) => ({
-          at: `${type}.${key} (${spelling})`,
-          message: validator(key, probe(validator.accepts!, spelling), 1)?.message ?? '',
-        }))
-      )
-      .filter(({ message }) => /-?2147483648|-?9223372036854775808|Infinity|NaN/.test(message))
-      .map(({ at }) => at)
+    const printsIt = judged
+      .filter((j) => /-?2147483648|-?9223372036854775808|Infinity|NaN/.test(j.diagnostic?.message ?? ''))
+      .map((j) => `${j.at} (${j.spelling})`)
       .sort();
     expect(printsIt).toEqual([]);
   });

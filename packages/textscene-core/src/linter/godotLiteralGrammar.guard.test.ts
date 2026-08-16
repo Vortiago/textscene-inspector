@@ -86,7 +86,6 @@ const REGEXP_CTOR = /new RegExp\(\s*(['"`])((?:[^\\]|\\.)*?)\1/g;
  * composite read as a hand-rolled grammar. Line comments require whitespace
  * before the `//` so an escaped `\/\/` inside a real pattern survives.
  */
-const withoutComments = stripComments;
 
 /**
  * `${…}` interpolations blanked. A composite name passed INTO a canonical
@@ -100,7 +99,7 @@ function withoutInterpolations(src: string): string {
 
 /** The offending pattern text, or `null` when the file spells no composite in a regex. */
 function handRolledComposite(source: string): string | null {
-  const src = withoutInterpolations(withoutComments(source));
+  const src = withoutInterpolations(stripComments(source));
   for (const m of src.matchAll(REGEX_LITERAL)) if (COMPOSITE_NAME.test(m[1]!)) return m[0];
   for (const m of src.matchAll(REGEXP_CTOR)) if (COMPOSITE_NAME.test(m[2]!)) return m[0];
   return null;
@@ -203,7 +202,7 @@ describe('Godot composite literal grammar', () => {
   // source two and a half times over for an answer that cannot have changed.
   const files = allSourceFiles().map((file) => {
     const src = readFileSync(file, 'utf8');
-    return { rel: label(file), src, bare: withoutComments(src) };
+    return { rel: label(file), src, bare: stripComments(src) };
   });
 
   it('is spelled by the two canonical builders, never by a regex literal', () => {

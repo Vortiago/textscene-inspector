@@ -53,6 +53,9 @@ function stencilFlags(): PropertyValidator {
     return unlisted;
   };
   validator.accepts = listed.accepts;
+  // Forwarded with `accepts`: this wrapper reads the same INT slot, and a tag
+  // dropped here takes the property out of the int-slot sweep entirely.
+  validator.intSlot = listed.intSlot;
   // Both lines, the same way `ground` records a two-ended bound: the rewrite is
   // the stronger claim and the hint is what the warning arm rests on.
   validator.grounding = { kind: 'enforced', cite: 'material.cpp:3267, material.cpp:3776' };

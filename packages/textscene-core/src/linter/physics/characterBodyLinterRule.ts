@@ -50,7 +50,7 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
     // `ruleInt` truncates the way the INT conversion does, so a float or
     // exponent literal in the enum slot resolves to the constant Godot stores.
     const motionMode =
-      rawProps.motion_mode !== undefined ? ruleInt(rawProps.motion_mode) : 0;
+      ruleInt(rawProps.motion_mode, 0);
     if (motionMode === 1) {
       // FLOATING mode
       const floorProperties = [

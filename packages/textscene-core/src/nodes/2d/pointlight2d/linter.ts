@@ -53,17 +53,6 @@ const WINDOWS = [
   },
 ] as const;
 
-/**
- * The authored value, or the default when absent. `null` when it is authored but
- * unparseable — the validators already report that, and guessing a number for it
- * would invent a second diagnostic from the same typo.
- */
-function bound(raw: string | undefined, fallback: number): number | null {
-  // `ruleInt` is already null for anything off the number line; NaN would
-  // clear the `min <= max` skip and reach the message as "NaN".
-  return ruleInt(raw, fallback);
-}
-
 function checkPointLight2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   if (!isValidProperties(node.properties)) return [];
@@ -88,8 +77,8 @@ function checkPointLight2D(context: RuleContext): Diagnostic[] {
   }
 
   for (const window of WINDOWS) {
-    const min = bound(props[window.min], window.minDefault);
-    const max = bound(props[window.max], window.maxDefault);
+    const min = ruleInt(props[window.min], window.minDefault);
+    const max = ruleInt(props[window.max], window.maxDefault);
     if (min === null || max === null || min <= max) continue;
     diagnostics.push({
       severity: 'warning',

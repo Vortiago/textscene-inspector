@@ -13,7 +13,7 @@ import { ARRAY_LITERAL_RE, packedArrayCallAnywhere, RESOURCE_REF_RE } from '../.
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
 import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
-import { badIntElementError, firstBadIntElement } from '../../../linter/validators/v/packedArrays.js';
+import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
 import { markIntSlot } from '../../../linter/validators/intSlot.js';
 import { unrepresentableInt } from '../../../linter/validators/intSlot.js';
 
@@ -45,13 +45,11 @@ const dataValidator: PropertyValidator = accepts((key, value, line) => {
   if (!cellsMatch) return null; // no "cells" key: grid_map.cpp:67 skips processing entirely.
   const body = cellsMatch[1]!.trim();
   const cells = body === '' ? [] : splitTopLevel(body);
-  const bad = firstBadIntElement(cells);
-  if (bad !== null) {
-    return badIntElementError('data', key, line, bad, {
+  const bad = badIntElement('data', key, line, cells, {
       format: 'INVALID_DATA_CELLS_FORMAT',
       value: 'INVALID_DATA_CELLS_VALUE',
-    });
-  }
+  });
+  if (bad !== null) return bad;
   const count = cells.length;
   if (count % 3 !== 0) {
     return propertyError(
@@ -149,6 +147,8 @@ const cellOctantSizeValidator: PropertyValidator = accepts((key, value, line) =>
   }
   return null;
 }, 'integer, nonzero, 1-1024 hinted');
+// An INT slot, hand-rolled: it already refuses an unstorable literal above.
+markIntSlot(cellOctantSizeValidator);
 cellOctantSizeValidator.grounding = { kind: 'enforced', cite: 'grid_map.cpp:314, grid_map.cpp:1253' };
 // Both ends of the hint, at the hinted tier: nothing in `set_octant_size`
 // applies either. Declared because `ground()` cannot reach a hand-rolled

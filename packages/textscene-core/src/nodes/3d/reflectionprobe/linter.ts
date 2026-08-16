@@ -47,7 +47,7 @@ function checkAmbientMode(context: RuleContext): Diagnostic[] {
   const props = node.properties;
 
   const modeRaw = props.ambient_mode;
-  const mode = modeRaw !== undefined ? ruleInt(modeRaw) : AMBIENT_MODE_DEFAULT;
+  const mode = ruleInt(modeRaw, AMBIENT_MODE_DEFAULT);
   if (mode === AMBIENT_COLOR) return [];
 
   const diagnostics: Diagnostic[] = [];

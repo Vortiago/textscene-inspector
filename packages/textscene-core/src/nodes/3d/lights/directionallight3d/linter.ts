@@ -44,7 +44,7 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
   // `ruleInt('')` is already null, so an absent key needs no third state.
   const shadowMode = ruleInt(rawProps.directional_shadow_mode ?? '');
 
-  if (shadowMode !== null && !Number.isNaN(shadowMode)) {
+  if (shadowMode !== null) {
     // ORTHOGONAL mode (0) doesn't use splits
     if (shadowMode === 0) {
       if (split1 || split2 || split3) {

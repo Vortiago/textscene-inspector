@@ -9,7 +9,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
-import { intComponent, ruleInt } from '../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { VECTOR2I_REGEX } from '../../../linter/validators/vectorValidators.js';
 
 /** An absent `hframes`/`vframes` is Godot's default of 1; an unusable one is `null`. */
@@ -79,8 +79,8 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
   if (rawProps.frame_coords !== undefined) {
     const coordsMatch = VECTOR2I_REGEX.exec(rawProps.frame_coords);
     if (coordsMatch) {
-      const coordX = intComponent(coordsMatch[1]);
-      const coordY = intComponent(coordsMatch[2]);
+      const coordX = ruleInt(coordsMatch[1]);
+      const coordY = ruleInt(coordsMatch[2]);
       const hframes = gridCount(rawProps.hframes);
       const vframes = gridCount(rawProps.vframes);
 

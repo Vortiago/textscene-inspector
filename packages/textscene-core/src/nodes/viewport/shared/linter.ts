@@ -44,7 +44,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { VECTOR2I_REGEX } from '../../../linter/validators/index.js';
-import { intComponent } from '../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../linter/validators/commonValidators.js';
 
 function checkViewportSize(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -59,8 +59,8 @@ function checkViewportSize(context: RuleContext): Diagnostic[] {
 
   const match = VECTOR2I_REGEX.exec(raw);
   if (!match) return [];
-  const x = intComponent(match[1]);
-  const y = intComponent(match[2]);
+  const x = ruleInt(match[1]);
+  const y = ruleInt(match[2]);
   // A component no int32 holds is the validator's error, not a size to name.
   if (x === null || y === null) return [];
   if (x > 1 && y > 1) return [];

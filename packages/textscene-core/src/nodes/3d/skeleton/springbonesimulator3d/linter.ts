@@ -109,10 +109,10 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
   // Absent means zero: `LocalVector<SpringBone3DSetting *> settings`
   // (spring_bone_simulator_3d.h:157) starts empty, which is the XML's default="0".
   const countRaw = rawProps.setting_count;
-  const count = countRaw === undefined ? 0 : ruleInt(countRaw);
+  const count = ruleInt(countRaw, 0);
   // Neither an unreadable count nor a non-finite one is a ceiling to count
   // against; each is already its own validator's diagnostic.
-  if (count === null || Number.isNaN(count)) return diagnostics;
+  if (count === null) return diagnostics;
 
   const outOfRange = new Set<number>();
   const sharedIgnored = new Set<number>();

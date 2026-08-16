@@ -47,8 +47,10 @@ export {
   parseGodotFloat,
 } from './number.js';
 export {
-  asStoredInt,
+  INT32_MAX,
   parseGodotInt,
+  ruleInt,
+  storedFromFloat,
   storedInt,
   toInt16,
   toInt32,

@@ -47,7 +47,7 @@ function checkLabelAutowrap(context: RuleContext): Diagnostic[] {
   const autowrapMode = ruleInt(autowrapRaw);
   // Finite: a non-finite reads as NaN, and `NaN !== AUTOWRAP_OFF` is true, so
   // a value off the number line would read as autowrap enabled.
-  if (autowrapMode === null || !Number.isFinite(autowrapMode) || autowrapMode === AUTOWRAP_OFF) {
+  if (autowrapMode === null || autowrapMode === AUTOWRAP_OFF) {
     return [];
   }
 

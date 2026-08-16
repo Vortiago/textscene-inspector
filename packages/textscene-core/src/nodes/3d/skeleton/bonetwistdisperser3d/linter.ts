@@ -81,7 +81,7 @@ function resolveJointCounts(properties: Record<string, string>): Map<number, num
     // A malformed count is its own validator's error; ignoring it here leaves
     // the setting at its zero default rather than inventing a ceiling.
     const count = ruleInt(properties[key] ?? '');
-    if (count === null || Number.isNaN(count)) continue;
+    if (count === null) continue;
     counts.set(settingIndex, count);
   }
   return counts;
@@ -96,10 +96,10 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
   // Absent means zero: `LocalVector<BoneTwistDisperser3DSetting *> settings`
   // (bone_twist_disperser_3d.h:86) starts empty, which is the XML's default="0".
   const settingCountRaw = rawProps.setting_count;
-  const settingCount = settingCountRaw === undefined ? 0 : ruleInt(settingCountRaw);
+  const settingCount = ruleInt(settingCountRaw, 0);
   // Neither an unreadable count nor a non-finite one is a ceiling to count
   // against; each is already its own validator's diagnostic.
-  if (settingCount === null || Number.isNaN(settingCount)) return diagnostics;
+  if (settingCount === null) return diagnostics;
 
   const jointCounts = resolveJointCounts(rawProps);
   const outOfRangeSettings = new Set<number>();

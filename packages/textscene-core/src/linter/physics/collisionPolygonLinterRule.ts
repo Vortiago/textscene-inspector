@@ -89,10 +89,10 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
         // absent key means the default, same as every other property this
         // codebase omits at default.
         const buildMode =
-          rawProps.build_mode === undefined ? 0 : ruleInt(rawProps.build_mode);
+          ruleInt(rawProps.build_mode, 0);
         // Finite: every arm below compares against BUILD_SOLIDS, and a
         // non-finite passes both of them, naming a mode the file never states.
-        if (buildMode !== null && Number.isFinite(buildMode)) {
+        if (buildMode !== null) {
           if (buildMode === 0 && pointCount < 3) {
             diagnostics.push({
               severity: 'warning',

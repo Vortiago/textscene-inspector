@@ -29,7 +29,7 @@ const FAR_DEFAULT = 4000.0;
  * since Godot omits a property at its default.
  */
 function projectionMode(raw: string | undefined): number {
-  const mode = raw === undefined ? null : ruleInt(raw);
+  const mode = ruleInt(raw, null);
   return mode === PROJECTION_ORTHOGONAL || mode === PROJECTION_FRUSTUM
     ? mode
     : PROJECTION_PERSPECTIVE;

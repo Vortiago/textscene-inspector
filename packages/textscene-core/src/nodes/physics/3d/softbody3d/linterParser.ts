@@ -21,7 +21,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { accepts, layerBitmask, propertyError, v } from '../../../../linter/validators/index.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { badIntElementError, firstBadIntElement } from '../../../../linter/validators/v/packedArrays.js';
+import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
 
 /** soft_body_3d.cpp:395: PROPERTY_HINT_ENUM "Remove,KeepActive"; soft_body_3d.cpp:397-398 BIND_ENUM_CONSTANT x2. */
@@ -64,13 +64,11 @@ const pinnedPointsValidator: PropertyValidator = accepts((key, value, line) => {
     );
   }
   if (body === '') return null;
-  const bad = firstBadIntElement(body);
-  if (bad !== null) {
-    return badIntElementError('pinned_points', key, line, bad, {
+  const bad = badIntElement('pinned_points', key, line, body, {
       format: 'INVALID_PINNED_POINTS_FORMAT',
       value: 'INVALID_PINNED_POINTS_VALUE',
-    });
-  }
+  });
+  if (bad !== null) return bad;
   return null;
 }, 'int array ([…] or PackedInt32Array(…))');
 // An INT slot, not format-only: an index no int32 holds reads and is altered.

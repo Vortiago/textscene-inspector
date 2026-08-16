@@ -20,6 +20,9 @@
 /** Where a regex literal may begin: after an operator or an opener, never after a value. */
 const REGEX_ALLOWED_AFTER = /[(,=:[!&|?{};+\-*%^~<>]$/;
 
+/** Module level: this is tested once per source CHARACTER. */
+const WHITESPACE = /\s/;
+
 /** Comment spans with their source offsets. `blockOnly` restricts to block comments. */
 export function commentSpans(
   source: string,
@@ -96,7 +99,7 @@ export function commentSpans(
       continue;
     }
 
-    if (!/\s/.test(c)) prev = c;
+    if (!WHITESPACE.test(c)) prev = c;
     i++;
   }
   return spans;
@@ -107,11 +110,17 @@ export function commentSpans(
  * the result never fires on commented-out code.
  */
 export function stripComments(source: string): string {
-  let out = source;
+  // Assembled once. Rebuilding the whole string per span is O(n x spans), and
+  // the core corpus averages 8 spans a file with a worst case of 122.
+  const parts: string[] = [];
+  let at = 0;
   for (const span of commentSpans(source)) {
-    // Same-length replacement — later span indices stay valid.
-    const blanked = span.text.replace(/[^\n]/g, ' ');
-    out = out.slice(0, span.index) + blanked + out.slice(span.index + span.text.length);
+    parts.push(source.slice(at, span.index));
+    // Same-length replacement, newlines kept — offsets into the result stay
+    // valid, which is what every caller scans by.
+    parts.push(span.text.replace(/[^\n]/g, ' '));
+    at = span.index + span.text.length;
   }
-  return out;
+  parts.push(source.slice(at));
+  return parts.join('');
 }

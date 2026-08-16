@@ -9,7 +9,7 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { markIntSlot, storedInSlot, unrepresentableInt } from '../intSlot.js';
+import { markIntSlot, narrowToSlot, unrepresentableInt } from '../intSlot.js';
 import {
   createEnumValidator,
   createNumericRangeValidator,
@@ -17,11 +17,47 @@ import {
   parseGodotFloat,
   parseGodotInt,
   enforcedEndRefusal,
-  TSCN_FLOAT_RE,
 } from '../commonValidators.js';
+import { storedFromFloat } from '../../../godot/index.js';
+import type { ParseError } from '../../types.js';
 import { formatCode, numericRange, valueCode } from './codes.js';
 import { accepts, endSeverity, ground, shape, type Grounding } from './grounding.js';
 import type { IntOpts } from './options.js';
+
+/**
+ * The format-and-storability gate `strictInt` and `strictNonNegativeInt` share.
+ *
+ * Returns the stored int32, or the diagnostic that stops the caller. It exists
+ * because the two combinators carried a verbatim copy of it — and this round
+ * had to make the same two edits by hand in both.
+ *
+ * `parsed === null` already implies the grammar failed: `parseGodotFloat`
+ * returns non-null only for a non-finite spelling or for text that passed
+ * `TSCN_FLOAT_RE` itself, so the separate pre-test was a second trim and a
+ * second regex run per call.
+ */
+function storedStrictInt(
+  name: string,
+  key: string,
+  value: string,
+  line: number,
+  codes: { format: string; value: string },
+  max: number | undefined
+): { stored: number } | { error: ParseError } {
+  const parsed = parseGodotFloat(value);
+  // Whole-valued OR non-finite. `inf` and `nan` are identifiers the tokenizer
+  // resolves for a bare slot (variant_parser.cpp:701-707), so the file loads;
+  // `Number.isInteger` is false for both and would report a format error on a
+  // literal `v.int` accepts, which is a split no engine line supports.
+  if (parsed === null || !(Number.isInteger(parsed) || !Number.isFinite(parsed))) {
+    return {
+      error: propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, codes.format),
+    };
+  }
+  const stored = narrowToSlot(storedFromFloat(parsed, value), max);
+  const unfit = unrepresentableInt(name, key, value, line, codes.value, stored);
+  return unfit ? { error: unfit } : { stored };
+}
 
 export const integerCombinators = {
   /** Integer in a range, parsed as base 10. */
@@ -128,27 +164,12 @@ export const integerCombinators = {
     const valueErr = valueCode(name);
     const { min, max, enforcedMin, enforcedMax } = opts;
     return markIntSlot(ground(accepts((key, value, line) => {
-      // `parseGodotFloat` behind the anchored grammar, not `parseFloat`, which
-      // reads `8abc` as 8 and admits a literal Godot's parser cannot.
-      const parsed = parseGodotFloat(value.trim());
-      // Whole-valued OR non-finite. `inf` and `nan` are identifiers the
-      // tokenizer resolves for a bare slot (variant_parser.cpp:701-707), so the
-      // file loads;
-      // `Number.isInteger` is false for both and would report a format error on
-      // a literal `v.int` accepts, which is a split no engine line supports.
-      if (
-        !TSCN_FLOAT_RE.test(value.trim()) ||
-        parsed === null ||
-        !(Number.isInteger(parsed) || !Number.isFinite(parsed))
-      ) {
-        return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
-      }
       // The STORED int32, not the raw double: the setter's guard sees what
       // `_to_int` handed it, so `frame = 4294967295` is -1 to its ERR_FAIL_INDEX
       // and must be judged as -1.
-      const stored = storedInSlot(value, max);
-      const unfit = unrepresentableInt(name, key, value, line, valueErr, stored);
-      if (unfit || stored === null) return unfit;
+      const read = storedStrictInt(name, key, value, line, { format: formatErr, value: valueErr }, max);
+      if ('error' in read) return read.error;
+      const { stored } = read;
       // The setter's own ends first: they are the more severe tier, and the
       // band between a setter end and the hint's still reports at the hint's.
       // `IntOpts` has always ACCEPTED these two, and this combinator dropped
@@ -184,21 +205,11 @@ export const integerCombinators = {
     return markIntSlot(ground(
       accepts(
         (key, value, line) => {
-          const parsed = parseGodotFloat(value.trim());
-          // Whole-valued OR non-finite, the same split `strictInt` makes above:
-          // the tokenizer resolves all four spellings for a bare slot
-          // (variant_parser.cpp:701-707) so the file loads, and a format error
-          // on one would be a claim no engine line supports.
-          if (
-            !TSCN_FLOAT_RE.test(value.trim()) ||
-            parsed === null ||
-            !(Number.isInteger(parsed) || !Number.isFinite(parsed))
-          ) {
-            return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
-          }
-          const stored = storedInSlot(value, undefined);
-          const unfit = unrepresentableInt(name, key, value, line, valueErr, stored);
-          if (unfit || stored === null) return unfit;
+          const read = storedStrictInt(
+            name, key, value, line, { format: formatErr, value: valueErr }, undefined
+          );
+          if ('error' in read) return read.error;
+          const { stored } = read;
           if (stored < 0) {
             return propertyError(key, line, `Property '${name}' must be non-negative (got ${stored})`, valueErr, severity);
           }

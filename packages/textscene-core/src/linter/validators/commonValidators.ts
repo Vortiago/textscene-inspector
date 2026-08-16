@@ -15,7 +15,7 @@ import { parseGodotFloat, parseGodotInt } from '../../godot/index.js';
  * because the linter is where they are reached for.
  */
 export { TSCN_FLOAT_PATTERN_SOURCE, TSCN_FLOAT_RE, parseGodotFloat } from '../../godot/number.js';
-export { parseGodotInt } from '../../godot/int.js';
+export { parseGodotInt, ruleInt } from '../../godot/int.js';
 
 /**
  * One capture group of an ALREADY-MATCHED float tuple, as a number.
@@ -29,46 +29,6 @@ export { parseGodotInt } from '../../godot/int.js';
  */
 export function tupleComponent(text: string | undefined): number {
   return parseGodotFloat(text ?? '') ?? NaN;
-}
-
-/**
- * The same, for a component of an `i`-suffixed composite: the int32 Godot
- * stores rather than the number as written.
- *
- * `null` when no int32 holds it. NOT NaN: NaN passes a `!==` and an inverted
- * early return, and reaches a message as the string "NaN" — which is how two
- * Window rules came to print `Vector2i(NaN, 1080)`.
- */
-export function intComponent(text: string | undefined): number | null {
-  // Through `parseGodotInt` rather than `asStoredInt`, so the component takes
-  // the same 32-bit band as a scalar slot: `Vector2i` is built by
-  // `_parse_construct<int32_t>` (variant_parser.cpp:577-592), so a component
-  // past that band is no more storable than a bare one.
-  const stored = text === undefined ? null : parseGodotInt(text);
-  return stored === null || Number.isNaN(stored) ? null : stored;
-}
-
-/**
- * The int a RULE may compare, or `null` for anything it must not.
- *
- * `parseGodotInt`'s `NaN` is a signal for the VALIDATOR layer, which turns it
- * into a diagnostic. A rule that lets it through drops out of every comparison
- * instead — `frame >= NaN` is false — so the rule goes silent on exactly the
- * scene that needed it. Phase 1 already reports the unstorable value, so
- * silence is what a rule owes; `null` is how it says so.
- *
- * Second argument is the value an ABSENT key stands for, for the many rules
- * where Godot's default is not zero (`hframes` is 1).
- */
-export function ruleInt(raw: string | undefined, whenAbsent: number | null = null): number | null {
-  if (raw === undefined) return whenAbsent;
-  const parsed = parseGodotInt(raw);
-  return parsed === null || Number.isNaN(parsed) ? null : parsed;
-}
-
-/** True when an already-matched component cannot be stored in an int32 slot. */
-export function isUnrepresentableInt(text: string | undefined): boolean {
-  return intComponent(text) === null;
 }
 
 /**

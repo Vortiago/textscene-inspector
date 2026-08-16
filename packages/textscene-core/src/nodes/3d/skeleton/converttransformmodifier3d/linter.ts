@@ -114,10 +114,10 @@ function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
     const modeRaw = props[`settings/${match[1]}/${match[2]}/transform_mode`];
     // Absent means Position, the struct's initialiser
     // (convert_transform_modifier_3d.h:46, :51), which Godot omits when unchanged.
-    const mode = modeRaw === undefined ? TRANSFORM_MODE_POSITION : ruleInt(modeRaw);
+    const mode = ruleInt(modeRaw, TRANSFORM_MODE_POSITION);
     // A malformed mode is already reported by its own validator, and a
     // non-finite one is altered at parse; neither selects an arm here.
-    if (mode === null || Number.isNaN(mode)) continue;
+    if (mode === null) continue;
     if (mode === TRANSFORM_MODE_POSITION) continue;
 
     table[key] = mode === TRANSFORM_MODE_ROTATION ? rotationArms(key) : scaleArms(key);

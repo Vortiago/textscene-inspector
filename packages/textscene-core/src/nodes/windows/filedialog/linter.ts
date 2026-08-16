@@ -51,11 +51,11 @@ function checkFileDialog(context: RuleContext): Diagnostic[] {
   // Godot's own default (no ADD_PROPERTY default listed beyond the XML's
   // `default="0"`, matching the empty `Vector<Option> options` the class
   // constructs with) is 0 when the property never serialised at all.
-  const count = countRaw === undefined ? 0 : ruleInt(countRaw);
+  const count = ruleInt(countRaw, 0);
   // A malformed option_count is already reported by its own validator
   // (linterParser.ts), and a non-finite one is altered at parse to a number the
   // file does not state; neither is a count this rule can name in a message.
-  if (count === null || Number.isNaN(count)) return diagnostics;
+  if (count === null) return diagnostics;
 
   const offending = new Set<number>();
   for (const key of Object.keys(rawProps)) {

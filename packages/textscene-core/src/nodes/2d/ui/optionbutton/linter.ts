@@ -51,10 +51,10 @@ function checkOptionButtonSelected(context: RuleContext): Diagnostic[] {
   // concern; this rule only compares a NON-NEGATIVE selected index against
   // the sibling item_count. A non-finite reads as NaN, which no comparison
   // places on the number line and which the message must never print.
-  if (selected === null || Number.isNaN(selected) || selected < 0) return [];
+  if (selected === null || selected < 0) return [];
 
-  const itemCount = props.item_count !== undefined ? ruleInt(props.item_count) : 0;
-  if (itemCount === null || Number.isNaN(itemCount)) return [];
+  const itemCount = ruleInt(props.item_count, 0);
+  if (itemCount === null) return [];
 
   if (selected < itemCount) return [];
 

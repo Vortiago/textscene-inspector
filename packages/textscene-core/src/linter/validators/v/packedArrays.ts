@@ -10,7 +10,7 @@ import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
 
 /** What is wrong with one element of a packed INT array, and which element. */
-export interface BadIntElement {
+interface BadIntElement {
   /** `unreadable` — the tokenizer refuses it. `unstorable` — it reads, no int32 holds it. */
   kind: 'unreadable' | 'unstorable';
   text: string;
@@ -36,7 +36,7 @@ export interface BadIntElement {
  * Takes the raw body or already-split parts, for the callers that must strip a
  * trailing comma first.
  */
-export function firstBadIntElement(body: string | readonly string[]): BadIntElement | null {
+function firstBadIntElement(body: string | readonly string[]): BadIntElement | null {
   for (const part of typeof body === 'string' ? body.split(',') : body) {
     const text = part.trim();
     const num = parseGodotInt(text);
@@ -47,21 +47,25 @@ export function firstBadIntElement(body: string | readonly string[]): BadIntElem
 }
 
 /**
- * The diagnostic for {@link firstBadIntElement}, so the four call sites do not
- * hand-maintain a copy each.
+ * The diagnostic for the first unusable element of a packed INT body, or `null`
+ * when every element is usable — so the six call sites do not hand-maintain a
+ * copy each. One function, because the finder's result never had another
+ * reader: every site fed it straight back in.
  *
  * The CODE carries the distinction the two kinds make: `_FORMAT` means Godot's
  * own parser could not read the element, `_VALUE` means it read a real value
  * the slot then altered. Two sites reported the second under a `_FORMAT` code,
  * which tells a consumer the opposite of what happened.
  */
-export function badIntElementError(
+export function badIntElement(
   propertyName: string,
   key: string,
   line: number,
-  bad: BadIntElement,
+  body: string | readonly string[],
   codes: { format: string; value: string }
-): ParseError {
+): ParseError | null {
+  const bad = firstBadIntElement(body);
+  if (bad === null) return null;
   return bad.kind === 'unreadable'
     ? propertyError(
         key,

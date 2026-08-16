@@ -3,7 +3,7 @@
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
 import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
-import { intComponent, isUnrepresentableInt } from './commonValidators.js';
+import { ruleInt } from './commonValidators.js';
 
 /**
  * Vector3 format: Vector3(x, y, z). Re-derived from the canonical float grammar
@@ -79,7 +79,11 @@ export function createVector2iValidator(
     // why the message names the literal rather than the result. An alteration
     // is the error tier under ADR-0032, and this arm is independent of `min`:
     // it applies to every Vector2i, bounded or not.
-    if (isUnrepresentableInt(match[1]) || isUnrepresentableInt(match[2])) {
+    // Truncated toward zero, the way the int32 conversion does, so `0.9` is
+    // bounded as the 0 Godot stores rather than as the 0.9 it was written.
+    const x = ruleInt(match[1]);
+    const y = ruleInt(match[2]);
+    if (x === null || y === null) {
       return propertyError(
         key,
         line,
@@ -90,12 +94,6 @@ export function createVector2iValidator(
     }
 
     if (minComponent !== undefined) {
-      // Truncated toward zero, the way the int32 conversion does, so `0.9`
-      // is bounded as the 0 Godot stores rather than as the 0.9 it was written.
-      const x = intComponent(match[1]);
-      const y = intComponent(match[2]);
-      // The unrepresentable arm above returned, so neither is null.
-      if (x === null || y === null) return null;
       if (x < minComponent || y < minComponent) {
         // The 0 case keeps its long-standing wording; every per-node test that
         // asserts a substring of it is asserting the engine's floor, not the phrasing.

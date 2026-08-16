@@ -14,7 +14,7 @@ import { accepts, propertyError, shape, v } from '../../../linter/validators/ind
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/index.js';
 import { markIntSlot } from '../../../linter/validators/intSlot.js';
-import { badIntElementError, firstBadIntElement } from '../../../linter/validators/v/packedArrays.js';
+import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
 
 const BRACKET_ARRAY_RE = /^\s*\[([\s\S]*)\]\s*$/;
 const PACKED_INT32_ELEMENT_RE = /^PackedInt32Array\s*\(([\s\S]*)\)$/;
@@ -85,13 +85,11 @@ function polygonsValidator(): PropertyValidator {
       const indices = bare ? dropTrailingComma(inner.split(',')) : inner.split(',');
       // One pass: unreadable by the tokenizer, or read and then narrowed
       // away (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
-      const bad = firstBadIntElement(indices);
-      if (bad !== null) {
-        return badIntElementError('polygons', key, line, bad, {
+      const bad = badIntElement('polygons', key, line, indices, {
           format: code,
           value: 'INVALID_POLYGONS_VALUE',
-        });
-      }
+      });
+      if (bad !== null) return bad;
     }
     return null;
   }, 'Array of PackedInt32Array(i0, i1, …) or bare [i0, i1, …] index lists'));

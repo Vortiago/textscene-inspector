@@ -38,10 +38,10 @@ function checkIterateIK3D(context: RuleContext): Diagnostic[] {
   // Absent means zero: the setting array starts empty (ik_modifier_3d.h:69),
   // which is the XML's default="0" for setting_count.
   const countRaw = rawProps.setting_count;
-  const count = countRaw === undefined ? 0 : ruleInt(countRaw);
+  const count = ruleInt(countRaw, 0);
   // A malformed setting_count is the validator's own diagnostic, and a
   // non-finite one is altered at parse.
-  if (count === null || Number.isNaN(count)) return [];
+  if (count === null) return [];
 
   const missing: number[] = [];
   for (let index = 0; index < count; index++) {

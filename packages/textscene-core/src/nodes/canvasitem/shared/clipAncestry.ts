@@ -21,11 +21,11 @@ import { ruleInt } from '../../../linter/validators/commonValidators.js';
  * clipping, per `clip_children_mode != CLIP_CHILDREN_DISABLED`
  * (canvas_item.cpp:1302, :1308).
  *
- * Finite, because a non-finite passes `ruleInt` as NaN and `NaN !==
- * CLIP_CHILDREN_DISABLED` is TRUE — an inequality is the one comparison NaN
- * does not fall out of, so a bare `!== null` reads a value off the number line
- * as a clipping mode. Below CLIP_CHILDREN_MAX, because the ERR_FAIL_COND at
- * canvas_item.cpp:1733 refuses that write and the field keeps DISABLED.
+ * `ruleInt` is `null` for a literal no int slot holds, which matters here more
+ * than anywhere: an inequality is the one comparison NaN does NOT fall out of,
+ * so a value off the number line would read as a clipping mode. Below
+ * CLIP_CHILDREN_MAX, because the ERR_FAIL_COND at canvas_item.cpp:1733 refuses
+ * that write and the field keeps DISABLED.
  */
 export function clipsChildren(candidate: TscnNode): boolean {
   if (!isValidProperties(candidate.properties)) return false;

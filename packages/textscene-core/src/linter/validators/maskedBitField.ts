@@ -33,6 +33,7 @@ import { unrepresentableInt } from './intSlot.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { parseGodotInt } from './commonValidators.js';
+import { markIntSlot } from './intSlot.js';
 
 /** `LABEL (bit) | LABEL (bit)` for whichever of `labels` appear in `bits`. */
 function describeBits(labels: Record<number, string>, bits: number): string {
@@ -128,7 +129,8 @@ export function maskedBitField(
   // The error branch is the stronger claim, so it carries the tag; a narrower
   // `hintedBits` cites its ADD_PROPERTY in the comment at the call site.
   validator.grounding = { kind: 'enforced', cite: opts.enforced };
-  return validator;
+  // An INT slot: a bit field refuses a literal the tokenizer reads.
+  return markIntSlot(validator);
 }
 
 
@@ -193,5 +195,6 @@ export function hintedBitField(name: string, opts: HintedBitFieldOptions): Prope
   }, `bit mask of ${allNames}`);
 
   validator.grounding = { kind: 'hinted', cite: opts.hinted };
-  return validator;
+  // An INT slot: a bit field refuses a literal the tokenizer reads.
+  return markIntSlot(validator);
 }

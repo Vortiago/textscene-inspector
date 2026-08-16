@@ -44,7 +44,7 @@ function axisNumber(
   const parsed = ruleInt(raw);
   // A malformed value is the validator's to report; NaN here would compare
   // false against everything and quietly suppress the rule instead.
-  return parsed !== null && Number.isFinite(parsed) ? parsed : fallback;
+  return parsed ?? fallback;
 }
 
 function checkLookAtModifier3D(context: RuleContext): Diagnostic[] {

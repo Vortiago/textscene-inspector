@@ -40,7 +40,7 @@ function checkSplineIK3D(context: RuleContext): Diagnostic[] {
   // `_set_setting_count` refuses a negative count and the validator reports it,
   // so a count that is absent, unparseable or negative allocates nothing here.
   const count = ruleInt(properties['setting_count'] ?? '');
-  if (count === null || !Number.isFinite(count) || count <= 0) return [];
+  if (count === null || count <= 0) return [];
 
   const diagnostics: Diagnostic[] = [];
   for (let index = 0; index < count; index++) {

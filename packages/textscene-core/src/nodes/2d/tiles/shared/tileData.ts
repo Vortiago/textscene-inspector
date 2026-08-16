@@ -11,7 +11,7 @@
 
 import { warn } from '../../../../logger';
 import { packedArrayLiteral } from '../../../../godot/index.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../godot/int.js';
 
 export interface Vec2i {
   x: number;

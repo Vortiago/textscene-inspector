@@ -9,7 +9,7 @@
 import type { ParseError } from '../types.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
-import { parseGodotInt, toUint32 } from '../../godot/index.js';
+import { INT32_MAX, parseGodotInt, toUint32 } from '../../godot/index.js';
 
 /**
  * `_to_int<T>` (`variant.h:360-377`) — the conversion every int slot's write
@@ -45,11 +45,8 @@ export function unrepresentableInt(
   );
 }
 
-/** Above this a bound can only be describing a `uint32_t` slot. */
-const INT32_MAX = 2147483647;
-
 /**
- * The literal as THIS slot stores it, given the slot's own ceiling.
+ * An int32 reading re-read as unsigned, where the slot's own ceiling says it is.
  *
  * `parseGodotInt` gives the int32 reading, which is what almost every setter
  * takes. A `uint32_t` one is told apart by its own declared maximum: a ceiling
@@ -60,10 +57,17 @@ const INT32_MAX = 2147483647;
  * reading every slot as int32 would refuse a `seed` of UINT32_MAX that Godot's
  * own PROPERTY_HINT_RANGE names as the ceiling.
  */
-export function storedInSlot(value: string, max: number | null | undefined): number | null {
+export function narrowToSlot(stored: number, max?: number | null): number {
+  // NaN passes through: it is the unstorable signal, and `toUint32(NaN)` is 0,
+  // which reads as a legal value and silences the refusal.
+  if (Number.isNaN(stored)) return NaN;
+  return (max ?? 0) > INT32_MAX ? toUint32(stored) : stored;
+}
+
+/** {@link narrowToSlot} over a literal that has not been read yet. */
+export function storedInSlot(value: string, max?: number | null): number | null {
   const stored = parseGodotInt(value);
-  if (stored === null || Number.isNaN(stored)) return stored;
-  return max !== null && max !== undefined && max > INT32_MAX ? toUint32(stored) : stored;
+  return stored === null || Number.isNaN(stored) ? stored : narrowToSlot(stored, max);
 }
 
 /**

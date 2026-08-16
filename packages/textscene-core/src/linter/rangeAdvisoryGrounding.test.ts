@@ -25,26 +25,12 @@
 
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { stripComments as sharedStripComments } from '@textscene/dev-kit';
+import { stripComments } from '@textscene/dev-kit';
 import { join } from 'node:path';
 import { rangeAdvisories, type RangeAdvisoryTable } from './rangeAdvisory.js';
 import type { TscnNode } from '../parser/types.js';
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
 
-/**
- * Drop comments before scraping, so PROSE about the convention cannot fail it.
- *
- * This file's own guidance quotes the shape it looks for, and a doc comment in
- * `validators/indexedFamily.ts` does too. Without this the scrape read those
- * examples as real citations. `ruleCoverage.test.ts` learned the same lesson
- * about a backtick in prose; the fix belongs in the scraper, not in contorting
- * every comment that mentions the thing being scraped.
- *
- * Deliberately conservative: whole block comments, and only lines whose first
- * non-space character opens a comment, so a `//` inside a string literal never
- * truncates a line and hides a real citation.
- */
-const stripComments = sharedStripComments;
 
 /** Every `cite: '…'` literal in the sources, with the file it came from. */
 function citeLiterals(): { file: string; cite: string }[] {

@@ -44,9 +44,9 @@ const DEFAULT_PRIMARY_ROTATION_AXIS = 0; // Vector3::AXIS_X
  * never land and the condition cannot arise for them.
  */
 function declaredSettingIndices(properties: Record<string, string>): number[] {
-  const declaredCount = ruleInt(properties.setting_count ?? '0');
+  const declaredCount = ruleInt(properties.setting_count, 0);
   const settingCount =
-    declaredCount !== null && Number.isFinite(declaredCount) ? declaredCount : 0;
+    declaredCount ?? 0;
 
   const indices = new Set<number>();
   for (const key of Object.keys(properties)) {
@@ -73,7 +73,7 @@ function settingNumber(
   const parsed = ruleInt(raw);
   // A malformed value is the validator's to report; NaN here would compare
   // false against everything and quietly suppress the rule instead.
-  return parsed !== null && Number.isFinite(parsed) ? parsed : fallback;
+  return parsed ?? fallback;
 }
 
 function checkAimModifier3D(context: RuleContext): Diagnostic[] {

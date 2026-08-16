@@ -62,11 +62,11 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
 
   // Absent means 0: `tabs` is default-constructed empty
   // (doc/classes/TabBar.xml:282 records the same default).
-  const count = props.tab_count === undefined ? 0 : ruleInt(props.tab_count);
+  const count = ruleInt(props.tab_count, 0);
   // A malformed tab_count is already reported by its own validator, and a
   // non-finite one is altered at parse to a number the file does not state;
   // neither is a count this rule can name in a message.
-  if (count === null || Number.isNaN(count)) return diagnostics;
+  if (count === null) return diagnostics;
 
   const currentRaw = props.current_tab;
   if (currentRaw !== undefined) {

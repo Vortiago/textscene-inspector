@@ -66,7 +66,7 @@ function readTracker(properties: Record<string, string>): number {
   const raw = properties.tracker;
   if (raw === undefined) return RENDER_MODEL_TRACKER_ANY;
   const parsed = ruleInt(raw);
-  return parsed === null || Number.isNaN(parsed) ? RENDER_MODEL_TRACKER_ANY : parsed;
+  return parsed ?? RENDER_MODEL_TRACKER_ANY;
 }
 
 /** The `"…"` body of a TSCN string literal, or the raw text if it isn't one. */

@@ -52,11 +52,11 @@ function checkItemList(context: RuleContext): Diagnostic[] {
   const countRaw = rawProps.item_count;
   // Absent means the default 0 (doc/classes/ItemList.xml), which the serialiser
   // omits: an empty `Vector<Item> items`, so every item key is out of range.
-  const count = countRaw === undefined ? 0 : ruleInt(countRaw);
+  const count = ruleInt(countRaw, 0);
   // A malformed item_count already draws its own validator's diagnostic, and a
   // non-finite one is altered at parse to a number the file does not state, so
   // neither is a count this rule can name in a message.
-  if (count === null || Number.isNaN(count)) return diagnostics;
+  if (count === null) return diagnostics;
 
   const offending = new Set<number>();
   for (const key of Object.keys(rawProps)) {

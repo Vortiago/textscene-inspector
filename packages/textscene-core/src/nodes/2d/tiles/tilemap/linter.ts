@@ -72,7 +72,7 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
   // to TILE_MAP_DATA_FORMAT_3, which is 2 (tile_map.h:64). Defaulting to 0 read
   // an unversioned TileMap as Godot 3 data and reported a format the file never
   // claimed.
-  const format = rawProps.format !== undefined ? ruleInt(rawProps.format) : 2;
+  const format = ruleInt(rawProps.format, 2);
 
   // tile_map.cpp:843 — unconditional; every TileMap node carries this, whatever
   // it's configured with.
@@ -86,7 +86,7 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
 
   const indices = layerIndices(rawProps);
   const isLayerYSorted = (i: number) => rawProps[`layer_${i}/y_sort_enabled`] === 'true';
-  const layerZIndex = (i: number) => ruleInt(rawProps[`layer_${i}/z_index`] ?? '0') || 0;
+  const layerZIndex = (i: number) => ruleInt(rawProps[`layer_${i}/z_index`], 0) || 0;
   const nodeYSorted = rawProps.y_sort_enabled === 'true'; // inherited Node2D key, own node
 
   // tile_map.cpp:850-858
@@ -145,7 +145,7 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
   // An unreadable `format` is its own validator's error, and a non-finite one is
   // altered at parse; with no version number there is nothing to say about the
   // tile data underneath it.
-  if (format === null || Number.isNaN(format)) return diagnostics;
+  if (format === null) return diagnostics;
 
   // The decoder for the older formats is compiled in, but the guard above it
   // is not: tile_map.cpp:71 refuses anything but the newest format whenever

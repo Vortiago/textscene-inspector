@@ -36,18 +36,17 @@ export function toInt16(value: number): number {
 }
 
 const INT32_MIN = -2147483648;
-const INT32_MAX = 2147483647;
+/** The widest value an `int32_t` slot holds; above it only a `uint32_t` can. */
+export const INT32_MAX = 2147483647;
 const UINT32_MAX = 4294967295;
 
 /**
- * Whether the tokenizer typed this literal FLOAT rather than INT.
- *
- * `is_float` is set by a `.` or an exponent (`variant_parser.cpp:442`,
- * `:446-448`), and that choice decides which `_to_int` branch runs.
+ * The tokenizer types a literal FLOAT on a `.` or an exponent
+ * (`variant_parser.cpp:442`, `:446-448`), and that choice decides which
+ * `_to_int` branch runs. Module level: this is tested once per packed-array
+ * ELEMENT, and a literal here allocates a RegExp on every one of them.
  */
-function isFloatLiteral(trimmed: string): boolean {
-  return /[.eE]/.test(trimmed);
-}
+const FLOAT_TYPED = /[.eE]/;
 
 /**
  * A number as the integer an INT slot STORES: truncated toward zero, which is
@@ -68,7 +67,7 @@ function isFloatLiteral(trimmed: string): boolean {
  * narrower than that applies {@link toInt32} or {@link toUint32} itself,
  * because the two disagree on the same bits and only the slot knows which.
  */
-export function asStoredInt(num: number): number {
+function asStoredInt(num: number): number {
   return Number.isFinite(num) ? Math.trunc(num) : NaN;
 }
 
@@ -119,14 +118,50 @@ export function parseGodotInt(value: string): number | null {
   // itself. Nothing can fail a pre-test here and still survive the call, and
   // this runs once per ELEMENT of a packed array (a stage's GridMap carries
   // ~8,800), so the duplicate test and trim were the measurable half of it.
-  const trimmed = value.trim();
-  const asFloat = parseGodotFloat(trimmed);
-  if (asFloat === null) return null;
+  // `parseGodotFloat` trims; `FLOAT_TYPED` looks for `.`/`e`, neither of which
+  // is whitespace, so the raw text answers it just as well.
+  const asFloat = parseGodotFloat(value);
+  return asFloat === null ? null : storedFromFloat(asFloat, value);
+}
+
+/**
+ * The int32 a slot stores, from a float the caller has ALREADY read.
+ *
+ * The combinators that must first decide whether a literal is whole-valued
+ * hold the parsed float already; re-reading the raw text for the narrowing
+ * doubled the cost of every `v.strictInt` call.
+ *
+ * `literal` is only consulted past int32, which is where the two `_to_int`
+ * branches diverge — so the common in-band element never runs the test.
+ */
+export function storedFromFloat(asFloat: number, literal: string): number {
   const stored = asStoredInt(asFloat);
-  if (Number.isNaN(stored)) return NaN;
-  const ceiling = isFloatLiteral(trimmed) ? INT32_MAX : UINT32_MAX;
-  if (stored < INT32_MIN || stored > ceiling) return NaN;
+  if (Number.isNaN(stored) || stored < INT32_MIN) return NaN;
+  if (stored > INT32_MAX && (stored > UINT32_MAX || FLOAT_TYPED.test(literal))) return NaN;
   return toInt32(stored);
+}
+
+/**
+ * The int a RULE may compare, or `null` for anything it must not.
+ *
+ * `parseGodotInt`'s `NaN` is a signal for the VALIDATOR layer, which turns it
+ * into a diagnostic. A rule that lets it through drops out of every comparison
+ * instead — `frame >= NaN` is false — so the rule goes silent on exactly the
+ * scene that needed it. Phase 1 already reports the unstorable value, so
+ * silence is what a rule owes; `null` is how it says so.
+ *
+ * `whenAbsent` is the value a MISSING key stands for, for the many rules where
+ * Godot's default is not zero (`hframes` is 1).
+ *
+ * Here rather than beside the validators because two RENDER decoders read it —
+ * `gridmap/cellData.ts` and `tiles/shared/tileData.ts`, both on the webview
+ * path — and reaching into `linter/validators/` for it pulled the diagnostic
+ * machinery after them, which is the coupling `src/godot/` exists to avoid.
+ */
+export function ruleInt(raw: string | undefined, whenAbsent: number | null = null): number | null {
+  if (raw === undefined) return whenAbsent;
+  const parsed = parseGodotInt(raw);
+  return parsed === null || Number.isNaN(parsed) ? null : parsed;
 }
 
 /**

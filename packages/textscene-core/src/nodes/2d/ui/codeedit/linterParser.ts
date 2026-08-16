@@ -31,7 +31,7 @@ import { bracePairsValidator } from './bracePairValidators.js';
 import { delimiterArrayValidator } from './delimiterValidators.js';
 import { prefixArrayValidator } from './prefixValidators.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
-import { badIntElementError, firstBadIntElement } from '../../../../linter/validators/v/packedArrays.js';
+import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 
 /**
  * `line_length_guidelines` — `set_line_length_guidelines`
@@ -55,13 +55,11 @@ function lineLengthGuidelinesValidator(): PropertyValidator {
     if (body === '') return null;
     // One pass: unreadable by the tokenizer, or read and then narrowed
     // away (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
-    const bad = firstBadIntElement(body);
-    if (bad !== null) {
-      return badIntElementError('line_length_guidelines', key, line, bad, {
+    const bad = badIntElement('line_length_guidelines', key, line, body, {
         format: code,
         value: 'INVALID_LINE_LENGTH_GUIDELINES_VALUE',
-      });
-    }
+    });
+    if (bad !== null) return bad;
     return null;
   }, 'int array (PackedInt32Array(…), Array[int]([…]) or […])');
   // Format-only: rejects a malformed literal or a non-integer element only.

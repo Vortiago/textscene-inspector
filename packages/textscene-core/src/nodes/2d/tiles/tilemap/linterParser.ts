@@ -14,7 +14,7 @@ import { indexedFamilyValidator } from '../../../../linter/validators/indexedFam
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../../../godot/rendering.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
-import { badIntElementError, firstBadIntElement } from '../../../../linter/validators/v/packedArrays.js';
+import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 
 // `\s*` at both ends and before the paren: Godot's tokenizer discards any
 // character <= 32 before a token (variant_parser.cpp:415-417), so a padded
@@ -54,13 +54,11 @@ const tileDataValidator: PropertyValidator = accepts((key, value, line) => {
   if (body === '') return null;
   // One pass: unreadable by the tokenizer, or read and then narrowed
   // away (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
-  const bad = firstBadIntElement(body);
-  if (bad !== null) {
-    return badIntElementError('tile_data', key, line, bad, {
+  const bad = badIntElement('tile_data', key, line, body, {
       format: 'INVALID_TILE_DATA_FORMAT',
       value: 'INVALID_TILE_DATA_VALUE',
-    });
-  }
+  });
+  if (bad !== null) return bad;
   return null;
 }, 'PackedInt32Array(…) of cell triplets (decoded by the tilemap-invalid-tile-data rule)');
 // An INT slot, not format-only: it rejects a literal the tokenizer reads.

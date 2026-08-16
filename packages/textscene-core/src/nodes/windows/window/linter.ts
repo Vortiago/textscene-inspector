@@ -16,13 +16,13 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { VECTOR2I_REGEX } from '../../../linter/validators/index.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
-import { intComponent } from '../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../linter/validators/commonValidators.js';
 
 function parseVector2i(raw: string): { x: number; y: number } | null {
   const match = VECTOR2I_REGEX.exec(raw);
   if (!match) return null;
-  const x = intComponent(match[1]);
-  const y = intComponent(match[2]);
+  const x = ruleInt(match[1]);
+  const y = ruleInt(match[2]);
   return x === null || y === null ? null : { x, y };
 }
 

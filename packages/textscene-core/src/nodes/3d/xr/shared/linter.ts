@@ -141,7 +141,7 @@ function checkOpenXRCompositionLayer(context: RuleContext): Diagnostic[] {
   // explicit `enable_hole_punch = true` with sort_order omitted still warns.
   const holePunchEnabled = properties.enable_hole_punch === 'true';
   const sortOrder =
-    properties.sort_order === undefined ? 1 : ruleInt(properties.sort_order);
+    ruleInt(properties.sort_order, 1);
   if (holePunchEnabled && sortOrder !== null && sortOrder >= 0) {
     diagnostics.push({
       severity: 'warning',

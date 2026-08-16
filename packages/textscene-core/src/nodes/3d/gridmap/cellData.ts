@@ -10,8 +10,7 @@
  */
 
 import { warn } from '../../../logger.js';
-import { ruleInt } from '../../../linter/validators/commonValidators.js';
-import { toInt16, toUint32 } from '../../../godot/int.js';
+import { ruleInt, toInt16, toUint32 } from '../../../godot/int.js';
 
 export interface GridMapCell {
   x: number;
