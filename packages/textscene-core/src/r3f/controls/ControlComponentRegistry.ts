@@ -155,8 +155,9 @@ export interface NativeControlComponentProps {
    * `ContainerLayoutFn` attached one (`native/controlRectSolver.ts`'s
    * `SolvedControl.meta` — see that field's own doc for which of the two
    * sources wins when a type registers both). `unknown` at this boundary:
-   * its shape is entirely the producing slice's OWN, so a painter casts it
-   * exactly like it already casts `solveNode.node.properties` — e.g.
+   * its shape is entirely the producing slice's OWN, so a painter casts it —
+   * the one cast left to it, its properties now arriving narrowed through
+   * `painterView` — e.g.
    * `HSplitContainer`'s painter reading back its `ContainerLayoutFn`'s own
    * `computed_split_offset` instead of recomputing the split boundary from a
    * narrower subset of the inputs (`custom_minimum_size` alone, which
