@@ -116,7 +116,21 @@ function ungroundedLabels(exempt: ReadonlySet<string>): string[] {
   // The exemption is applied to the LABEL after the walk, never inside `keep`:
   // excusing a validator must not excuse the subtree behind it, and one exempt
   // wildcard key would otherwise cover every leaf it dispatches to.
-  return sweepValidators((v) => !v.formatOnly && !v.grounding).filter((l) => !exempt.has(l));
+  return sweepValidators(isUnclassified).filter((l) => !exempt.has(l));
+}
+
+/**
+ * A validator nobody has said where the authority for its rejections comes from.
+ *
+ * `intSlot` classifies only an UNBOUNDED validator. The slot's own refusal is
+ * cited once, centrally, and covers `v.lenientInt('limit_left')`, which rejects
+ * nothing else. A bounded one still owes a citation for the bound: without this
+ * split, `v.strictInt('s', { min: 0, max: 9 })` with no `enforced:`/`hinted:`
+ * reported its range at error tier and the ratchet stayed green.
+ */
+export function isUnclassified(v: PropertyValidator): boolean {
+  if (v.formatOnly || v.grounding) return false;
+  return !(v.intSlot && v.bounds === undefined);
 }
 
 /**

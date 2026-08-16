@@ -67,6 +67,17 @@ export type PropertyValidator = ((
   grounding?: { kind: 'enforced' | 'hinted'; cite: string };
 
   /**
+   * Set when this validator reads an INT slot, and so refuses a literal the
+   * tokenizer reads but `_to_int` cannot carry.
+   *
+   * Separate from `grounding` on purpose. This claim is about the SLOT, the
+   * same for every int property; `grounding` is about a BOUND, and differs per
+   * property. Folding the two let a bounded int combinator inherit a citation
+   * that vouched for a type conversion rather than for its range.
+   */
+  intSlot?: { cite: string };
+
+  /**
    * The severity each BOUNDED end reports, for the ends that have a bound.
    *
    * `grounding.kind` collapses to `enforced` when either end is, which is right

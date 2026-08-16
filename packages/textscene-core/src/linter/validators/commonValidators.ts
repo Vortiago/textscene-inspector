@@ -3,8 +3,8 @@
 import type { ParseError } from '../../linter/types.js';
 import type { PropertyValidator } from '../propertyValidator.js';
 import { propertyError } from './propertyError.js';
-import { unrepresentableInt } from './intSlot.js';
-import { asStoredInt, parseGodotFloat, parseGodotInt } from '../../godot/index.js';
+import { storedInSlot, unrepresentableInt } from './intSlot.js';
+import { parseGodotFloat, parseGodotInt } from '../../godot/index.js';
 
 /**
  * The Variant-literal readers, re-exported from their home in `src/godot/`.
@@ -40,13 +40,35 @@ export function tupleComponent(text: string | undefined): number {
  * Window rules came to print `Vector2i(NaN, 1080)`.
  */
 export function intComponent(text: string | undefined): number | null {
-  const stored = asStoredInt(tupleComponent(text));
-  return Number.isNaN(stored) ? null : stored;
+  // Through `parseGodotInt` rather than `asStoredInt`, so the component takes
+  // the same 32-bit band as a scalar slot: `Vector2i` is built by
+  // `_parse_construct<int32_t>` (variant_parser.cpp:577-592), so a component
+  // past that band is no more storable than a bare one.
+  const stored = text === undefined ? null : parseGodotInt(text);
+  return stored === null || Number.isNaN(stored) ? null : stored;
+}
+
+/**
+ * The int a RULE may compare, or `null` for anything it must not.
+ *
+ * `parseGodotInt`'s `NaN` is a signal for the VALIDATOR layer, which turns it
+ * into a diagnostic. A rule that lets it through drops out of every comparison
+ * instead — `frame >= NaN` is false — so the rule goes silent on exactly the
+ * scene that needed it. Phase 1 already reports the unstorable value, so
+ * silence is what a rule owes; `null` is how it says so.
+ *
+ * Second argument is the value an ABSENT key stands for, for the many rules
+ * where Godot's default is not zero (`hframes` is 1).
+ */
+export function ruleInt(raw: string | undefined, whenAbsent: number | null = null): number | null {
+  if (raw === undefined) return whenAbsent;
+  const parsed = parseGodotInt(raw);
+  return parsed === null || Number.isNaN(parsed) ? null : parsed;
 }
 
 /** True when an already-matched component cannot be stored in an int32 slot. */
 export function isUnrepresentableInt(text: string | undefined): boolean {
-  return !Number.isFinite(tupleComponent(text));
+  return intComponent(text) === null;
 }
 
 /**
@@ -91,7 +113,7 @@ export function createEnumValidator(
   maxSeverity: ParseError['severity'] = valueSeverity
 ): PropertyValidator {
   const validator: PropertyValidator = (key, value, line) => {
-    const num = parseGodotInt(value);
+    const num = storedInSlot(value, max);
     if (num === null) {
       return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
     }
@@ -225,7 +247,7 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
   const validator: PropertyValidator = (key, value, line) => {
     // `inf`/`nan` are legal literals in either slot, so the miss signal is null
     // and a parsed NaN falls through to the range checks, which it never trips.
-    const num = parseAsInt ? parseGodotInt(value) : parseGodotFloat(value);
+    const num = parseAsInt ? storedInSlot(value, max) : parseGodotFloat(value);
     // An INT slot narrows a non-finite at PARSE time to a value the file does
     // not state (see `asStoredInt`), so the literal is ALTERED and reports as
     // an error. A FLOAT slot stores it verbatim and says nothing. That is the

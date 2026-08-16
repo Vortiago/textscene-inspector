@@ -35,6 +35,20 @@ export function toInt16(value: number): number {
   return ((value & 0xffff) << 16) >> 16;
 }
 
+const INT32_MIN = -2147483648;
+const INT32_MAX = 2147483647;
+const UINT32_MAX = 4294967295;
+
+/**
+ * Whether the tokenizer typed this literal FLOAT rather than INT.
+ *
+ * `is_float` is set by a `.` or an exponent (`variant_parser.cpp:442`,
+ * `:446-448`), and that choice decides which `_to_int` branch runs.
+ */
+function isFloatLiteral(trimmed: string): boolean {
+  return /[.eE]/.test(trimmed);
+}
+
 /**
  * A number as the integer an INT slot STORES: truncated toward zero, which is
  * what `T(_data._float)` does.
@@ -59,24 +73,44 @@ export function asStoredInt(num: number): number {
 }
 
 /**
- * A TSCN literal as the integer Godot would STORE in a `Variant::INT` slot, or
- * `null` when the text is not a literal Godot's tokenizer can read.
+ * A TSCN literal as the int32 a Godot property slot STORES — three outcomes:
+ * `null` when the tokenizer cannot read the text, `NaN` when it reads but the
+ * slot cannot hold it, and otherwise the number the engine holds.
  *
  * Not `parseInt`. Two distinct accidents come from `parseInt` stopping at the
  * first character it cannot use, and both cleared bounds silently:
  *
- * - `2e4` read as 2. The tokenizer sets `is_float` on the `e`
- *   (variant_parser.cpp:446-448), and the FLOAT is converted on assignment, so
- *   Godot stores 20000 and any ceiling below it should have reported.
+ * - `2e4` read as 2. The tokenizer sets `is_float` on the `e`, and the FLOAT is
+ *   converted on assignment, so Godot stores 20000 and any ceiling below it
+ *   should have reported.
  * - `8abc` read as 8. Godot's parser cannot read that at all, so it is a format
  *   error rather than a value in range.
  *
- * A float literal in an INT slot is legal and truncates TOWARD ZERO, which is
- * what the C++ conversion does, so `5.9` is 5 and `-5.9` is -5.
+ * A float literal in an INT slot is legal and truncates TOWARD ZERO, so `5.9`
+ * is 5 and `-5.9` is -5.
  *
- * A non-finite literal READS — `inf` and `nan` are identifiers the tokenizer
- * resolves for a bare slot too (variant_parser.cpp:701-707), so the file loads
- * — but it does not FIT, so the result is NaN. See {@link asStoredInt}.
+ * NARROWED, because almost every Godot property setter takes `int`. Skipping
+ * that step reads a value the engine never holds: `limit_left = 4294967295` is
+ * -1 to the engine, and a rule comparing 4294967295 described a scroll window
+ * that does not exist. Godot's own serialiser writes the wide spelling —
+ * measured on 4.6.3, `Node2D.visibility_layer = -1` is written back as
+ * `4294967295` — so narrowing is reading the file the way it was written, not
+ * second-guessing it.
+ *
+ * The storable band differs by literal type, because `_to_int` converts the two
+ * on different branches. Measured on 4.6.3 (x86_64), `Node2D.light_mask`:
+ *
+ * ```
+ * 3000000000    (INT)    -> -1294967296   int64 -> int32, wraps
+ * 3e9           (FLOAT)  -> -2147483648   double -> int32, UB
+ * 4294967295    (INT)    -> -1
+ * 4.294967295e9 (FLOAT)  -> -2147483648   UB again
+ * ```
+ *
+ * So an INT literal is storable across the whole 32-bit band — `[-2^31, 2^32)`,
+ * the union of the signed and unsigned spellings Godot writes — while a FLOAT
+ * one is defined only within int32. Outside its band the value is `NaN`: bits
+ * the file states that the engine does not hold.
  */
 export function parseGodotInt(value: string): number | null {
   // No grammar pre-test: `parseGodotFloat` returns non-null only for a
@@ -85,8 +119,14 @@ export function parseGodotInt(value: string): number | null {
   // itself. Nothing can fail a pre-test here and still survive the call, and
   // this runs once per ELEMENT of a packed array (a stage's GridMap carries
   // ~8,800), so the duplicate test and trim were the measurable half of it.
-  const asFloat = parseGodotFloat(value);
-  return asFloat === null ? null : asStoredInt(asFloat);
+  const trimmed = value.trim();
+  const asFloat = parseGodotFloat(trimmed);
+  if (asFloat === null) return null;
+  const stored = asStoredInt(asFloat);
+  if (Number.isNaN(stored)) return NaN;
+  const ceiling = isFloatLiteral(trimmed) ? INT32_MAX : UINT32_MAX;
+  if (stored < INT32_MIN || stored > ceiling) return NaN;
+  return toInt32(stored);
 }
 
 /**

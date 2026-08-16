@@ -68,7 +68,7 @@ describe('v.vector2 / v.vector2i / v.vector3', () => {
 
   it('vector2i is never format-only: it rejects a component no int32 holds', () => {
     expect(v.vector2i('grid').formatOnly).toBeUndefined();
-    expect(v.vector2i('grid').grounding).toEqual({ kind: 'enforced', cite: 'variant.h:369-370' });
+    expect(v.vector2i('grid').intSlot).toEqual({ cite: 'variant.h:360-377' });
     expect(v.vector2i('grid', { min: 0, enforced: 'window.cpp:1190' }).formatOnly).toBeUndefined();
   });
 

@@ -5,14 +5,26 @@
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { parseGodotInt, TSCN_FLOAT_RE } from '../commonValidators.js';
+import type { ParseError } from '../../types.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
 
+/** What is wrong with one element of a packed INT array, and which element. */
+export interface BadIntElement {
+  /** `unreadable` — the tokenizer refuses it. `unstorable` — it reads, no int32 holds it. */
+  kind: 'unreadable' | 'unstorable';
+  text: string;
+}
+
 /**
- * The first element of an already-extracted array body that Godot's tokenizer
- * could not read, or `null` when every one of them is a number.
+ * The first element of an already-extracted INT array body that Godot cannot
+ * read, or reads and cannot store, or `null` when every one is usable.
  *
- * One grammar for every packed array, int-typed ones included.
+ * ONE pass for both questions. Asking them separately meant four call sites
+ * split, trimmed and re-matched the same body twice, and `parseGodotInt` runs
+ * `TSCN_FLOAT_RE` internally — the same regex the second walk re-ran on every
+ * element, of which a stage's GridMap carries ~8,800.
+ *
  * `PackedInt32Array` is parsed by `_parse_construct<int32_t>`
  * (`variant_parser.cpp:1428-1430`) — the SAME helper as `Vector2i` and as the
  * float arrays, which takes any number token and narrows it on assignment. The
@@ -21,28 +33,58 @@ import { shape } from './grounding.js';
  * `IS_VALID_INT_RE` describes `String::is_valid_int()`, which is the grammar of
  * an index inside a property KEY, not of a Variant literal.
  *
- * Returns the offending text rather than a `ParseError` so each caller keeps
- * its own property name, message wording and error code. Takes the raw body or
- * already-split parts, for the callers that must strip a trailing comma first.
+ * Takes the raw body or already-split parts, for the callers that must strip a
+ * trailing comma first.
  */
-/**
- * The first element that reads but no int32 holds, or `null`.
- *
- * `firstNonNumericElement`'s companion for a PackedInt32Array: its grammar
- * admits `inf`, which its float callers need, while an int element is narrowed
- * at parse (`_parse_construct<int32_t>`, variant_parser.cpp:1428-1430).
- */
-export function firstUnrepresentableIntElement(
-  body: string | readonly string[]
-): string | null {
+export function firstBadIntElement(body: string | readonly string[]): BadIntElement | null {
   for (const part of typeof body === 'string' ? body.split(',') : body) {
-    const trimmed = part.trim();
-    const num = parseGodotInt(trimmed);
-    if (num !== null && Number.isNaN(num)) return trimmed;
+    const text = part.trim();
+    const num = parseGodotInt(text);
+    if (num === null) return { kind: 'unreadable', text };
+    if (Number.isNaN(num)) return { kind: 'unstorable', text };
   }
   return null;
 }
 
+/**
+ * The diagnostic for {@link firstBadIntElement}, so the four call sites do not
+ * hand-maintain a copy each.
+ *
+ * The CODE carries the distinction the two kinds make: `_FORMAT` means Godot's
+ * own parser could not read the element, `_VALUE` means it read a real value
+ * the slot then altered. Two sites reported the second under a `_FORMAT` code,
+ * which tells a consumer the opposite of what happened.
+ */
+export function badIntElementError(
+  propertyName: string,
+  key: string,
+  line: number,
+  bad: BadIntElement,
+  codes: { format: string; value: string }
+): ParseError {
+  return bad.kind === 'unreadable'
+    ? propertyError(
+        key,
+        line,
+        `Property '${propertyName}' contains a non-numeric value: "${bad.text}"`,
+        codes.format
+      )
+    : propertyError(
+        key,
+        line,
+        `Property '${propertyName}' has an element no integer can hold: "${bad.text}"`,
+        codes.value,
+        'error'
+      );
+}
+
+/**
+ * The first element of an already-extracted FLOAT array body that Godot's
+ * tokenizer could not read, or `null` when every one of them is a number.
+ *
+ * Returns the offending text rather than a `ParseError` so each caller keeps
+ * its own property name, message wording and error code.
+ */
 export function firstNonNumericElement(body: string | readonly string[]): string | null {
   for (const part of typeof body === 'string' ? body.split(',') : body) {
     const trimmed = part.trim();

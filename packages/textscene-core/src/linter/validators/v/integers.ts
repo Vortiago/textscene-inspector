@@ -9,8 +9,7 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { markIntSlot, unrepresentableInt } from '../intSlot.js';
-import { asStoredInt } from '../../../godot/int.js';
+import { markIntSlot, storedInSlot, unrepresentableInt } from '../intSlot.js';
 import {
   createEnumValidator,
   createNumericRangeValidator,
@@ -144,23 +143,27 @@ export const integerCombinators = {
       ) {
         return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
       }
-      const unfit = unrepresentableInt(name, key, value, line, valueErr, asStoredInt(parsed));
-      if (unfit) return unfit;
+      // The STORED int32, not the raw double: the setter's guard sees what
+      // `_to_int` handed it, so `frame = 4294967295` is -1 to its ERR_FAIL_INDEX
+      // and must be judged as -1.
+      const stored = storedInSlot(value, max);
+      const unfit = unrepresentableInt(name, key, value, line, valueErr, stored);
+      if (unfit || stored === null) return unfit;
       // The setter's own ends first: they are the more severe tier, and the
       // band between a setter end and the hint's still reports at the hint's.
       // `IntOpts` has always ACCEPTED these two, and this combinator dropped
       // them on the floor — a citation written and never read.
       const refusal =
-        enforcedEndRefusal(name, enforcedMin, 'min', parsed) ??
-        enforcedEndRefusal(name, enforcedMax, 'max', parsed);
+        enforcedEndRefusal(name, enforcedMin, 'min', stored) ??
+        enforcedEndRefusal(name, enforcedMax, 'max', stored);
       if (refusal) return propertyError(key, line, refusal, valueErr);
-      const belowMin = min !== undefined && parsed < min;
-      const aboveMax = max !== undefined && parsed > max;
+      const belowMin = min !== undefined && stored < min;
+      const aboveMax = max !== undefined && stored > max;
       if (belowMin || aboveMax) {
         return propertyError(
           key,
           line,
-          opts.message ?? `Property '${name}' must be ${numericRange('integer', min, max)} (got ${parsed})`,
+          opts.message ?? `Property '${name}' must be ${numericRange('integer', min, max)} (got ${stored})`,
           valueErr,
           endSeverity(opts, belowMin ? 'min' : 'max')
         );
@@ -193,10 +196,11 @@ export const integerCombinators = {
           ) {
             return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
           }
-          const unfit = unrepresentableInt(name, key, value, line, valueErr, asStoredInt(parsed));
-          if (unfit) return unfit;
-          if (parsed < 0) {
-            return propertyError(key, line, `Property '${name}' must be non-negative (got ${parsed})`, valueErr, severity);
+          const stored = storedInSlot(value, undefined);
+          const unfit = unrepresentableInt(name, key, value, line, valueErr, stored);
+          if (unfit || stored === null) return unfit;
+          if (stored < 0) {
+            return propertyError(key, line, `Property '${name}' must be non-negative (got ${stored})`, valueErr, severity);
           }
           return null;
         },

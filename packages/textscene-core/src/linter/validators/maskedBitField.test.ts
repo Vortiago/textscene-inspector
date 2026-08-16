@@ -169,8 +169,9 @@ describe('hintedBitField', () => {
   });
 
   it('does not wrap on a value past 32 bits', () => {
-    // 2^32 + 1 has bit 1 set after ToInt32; the magnitude guard runs first.
-    expect(run('4294967297')?.severity).toBe('warning');
+    // Godot stores 1 for 2^32 + 1, so the file states a value the engine does
+    // not hold — the int-slot refusal, which outranks the hint's warning.
+    expect(run('4294967297')?.severity).toBe('error');
   });
 
   it('carries the hinted grounding, so boundGrounding counts it as audited', () => {

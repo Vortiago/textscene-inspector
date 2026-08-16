@@ -22,6 +22,7 @@ import { v } from './validators/v.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
 import {
   classifiableKeys,
+  isUnclassified,
   rangeWithoutTiers,
   staleUngroundable,
   sweepValidators,
@@ -100,8 +101,10 @@ describe('bound grounding', () => {
 
 describe('the classification guard bites', () => {
   /** The predicate the registry sweep applies, on a single validator. */
-  const unclassified = (validator: PropertyValidator) =>
-    !validator.formatOnly && !validator.grounding;
+  // The SHARED predicate, not a local copy of it: a private restatement is
+  // how this guard came to prove only the half that still worked, asserting a
+  // rule the registry sweep had already stopped applying.
+  const unclassified = isUnclassified;
 
   it('catches a hand-rolled validator that declares neither', () => {
     // The shape `GPUParticles3D.visibility_aabb` had: a bare function rejecting
@@ -132,10 +135,20 @@ describe('the classification guard bites', () => {
     // owes a citation like any other bound.
     expect(v.float('width').formatOnly).toBe(true);
     expect(v.int('count').formatOnly).toBeUndefined();
-    expect(v.int('count').grounding).toEqual({ kind: 'enforced', cite: 'variant.h:369-370' });
+    expect(v.int('count').intSlot).toEqual({ cite: 'variant.h:360-377' });
     expect(
       v.float('fov', { min: 1, max: 179, enforced: 'camera_3d.cpp:725' }).formatOnly
     ).toBeUndefined();
+  });
+
+  it('lets the int-slot tag classify an UNBOUNDED int, and never a bounded one', () => {
+    // The slot's refusal is one central claim; a range is a per-property one.
+    // While `markIntSlot` filled `grounding`, an uncited `v.strictInt('s', {min,
+    // max})` reported its range at error tier and the ratchet never saw it.
+    expect(unclassified(v.strictInt('s'))).toBe(false);
+    expect(unclassified(v.strictInt('s', { min: 0, max: 9 }))).toBe(true);
+    expect(unclassified(v.enumInt('mode', 0, 5, { 0: 'A' }))).toBe(true);
+    expect(unclassified(v.strictInt('s', { min: 0, max: 9, hinted: 'node.cpp:1' }))).toBe(false);
   });
 
   it('passes a grounded bound, which cites instead of declaring format-only', () => {
