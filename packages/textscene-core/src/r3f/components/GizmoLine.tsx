@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
+import { materialProgramInputs } from '../materialProgramInputs';
 
 /** Render order for selection-gated gizmos — above ordinary scene content. */
 export const GIZMO_RENDER_ORDER = 10;
@@ -47,18 +48,24 @@ export function GizmoLine({ positions, colors, color }: GizmoLineProps) {
   }, [positions, colors]);
   useEffect(() => () => geometry.dispose(), [geometry]);
 
+  // `vertexColors` IS a program input (`WebGLPrograms.js:308`), and a gizmo that
+  // gains or loses its colour attribute would otherwise keep the first program.
+  // Default to white so vertex-coloured gizmos multiply against white (and we
+  // never hand the material an undefined colour).
+  const program = materialProgramInputs({
+    props: {
+      color: color ?? 0xffffff,
+      vertexColors: !!colors,
+      depthWrite: false,
+      transparent: true,
+    },
+  });
+
   return (
     <group renderOrder={GIZMO_GROUP_ORDER}>
       <lineSegments renderOrder={GIZMO_RENDER_ORDER}>
         <primitive object={geometry} attach="geometry" />
-        {/* Default to white so vertex-colored gizmos multiply against white (and we
-            never hand the material an undefined color). */}
-        <lineBasicMaterial
-          color={color ?? 0xffffff}
-          vertexColors={!!colors}
-          depthWrite={false}
-          transparent
-        />
+        <lineBasicMaterial key={program.key} {...program.props} />
       </lineSegments>
     </group>
   );

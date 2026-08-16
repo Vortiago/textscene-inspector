@@ -36,7 +36,7 @@ function boundUniforms(props: ReturnType<typeof useCanvasItemLighting>) {
     fragmentShader: 'void main() {\n#include <colorspace_fragment>\n}',
     uniforms: {} as Record<string, { value: unknown }>,
   };
-  props.onBeforeCompile?.(shader as never);
+  props.injection.onBeforeCompile(shader as never);
   return shader.uniforms;
 }
 
@@ -48,7 +48,7 @@ describe('useCanvasItemLighting', () => {
     );
 
     const first = result.current;
-    expect(first.onBeforeCompile).toBeTypeOf('function');
+    expect(first.injection.onBeforeCompile).toBeTypeOf('function');
 
     rerender({ mode: CanvasItemLightMode.UNSHADED });
     expect(result.current).toBe(first);

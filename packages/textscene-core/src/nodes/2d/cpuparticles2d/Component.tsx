@@ -22,7 +22,7 @@ import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResou
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useCanvas2DMap } from '../../../r3f/canvas2DTextureDecode';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
-import { canvasItemProgramKey } from '../../../r3f/canvasItemProgram';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import {
   canvasItemBlendState,
@@ -139,6 +139,27 @@ function ParticleField({
   );
   useEffect(() => () => geometry?.dispose(), [geometry]);
 
+  // The field is drawn from the first frame, on a 1x1 quad, while the particle
+  // texture is still loading — so this material is compiled mapless unless a
+  // fresh one replaces it (`materialProgramInputs.ts`).
+  const program = materialProgramInputs({
+    props: {
+      map: texture,
+      color,
+      opacity,
+      vertexColors: true,
+      transparent: true,
+      depthWrite: false,
+      defines: decodeDefines,
+    },
+    // One mesh, N particles, each with its OWN vertex colour and alpha and each
+    // quad wound by the determinant of its own particle transform
+    // (`particleGeometry.ts`). Splitting that array by facing would composite
+    // overlapping particles out of emission order the moment a transform
+    // mirrors — `canvasItemFacing()` draws it once, in index order.
+    merge: [canvasItemFacing(), blend, lighting],
+  });
+
   return (
     <CanvasItemGroup ref={setContainer} name={`${name}_Particles`}>
       {missing ? (
@@ -148,28 +169,7 @@ function ParticleField({
         <MissingResourcePlaceholder shape="plane" name={name} />
       ) : geometry ? (
         <mesh geometry={geometry}>
-          <meshBasicMaterial
-            map={texture}
-            color={color}
-            opacity={opacity}
-            vertexColors
-            transparent
-            depthWrite={false}
-            // One mesh, N particles, each with its OWN vertex colour and alpha
-            // and each quad wound by the determinant of its own particle
-            // transform (`particleGeometry.ts`). Splitting that array by facing
-            // would composite overlapping particles out of emission order the
-            // moment a transform mirrors — `canvasItemFacing()` draws it once,
-            // in index order.
-            {...canvasItemFacing()}
-            // The field is drawn from the first frame, on a 1x1 quad, while the
-            // particle texture is still loading — so this material is compiled
-            // mapless unless a fresh one replaces it (`canvasItemProgram.ts`).
-            key={canvasItemProgramKey(texture, decodeDefines)}
-            defines={decodeDefines}
-            {...blend}
-            {...lighting}
-          />
+          <meshBasicMaterial key={program.key} {...program.props} />
         </mesh>
       ) : null}
     </CanvasItemGroup>

@@ -68,6 +68,7 @@ import type { Rect2 } from './rect';
 import { useControlClipPlanes } from './controlClipping';
 import { multiplyModulate, WHITE_MODULATE, type RGBA } from '../../canvasItemModulate';
 import { canvasItemFacing } from '../../canvasItemFacing';
+import { materialProgramInputs, type ProgramInjection } from '../../materialProgramInputs';
 
 export interface StyleBoxQuadProps {
   styleBox: StyleBoxFlatData;
@@ -111,6 +112,17 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
 
   if (!geometry) return null;
 
+  const program = materialProgramInputs({
+    props: {
+      vertexColors: true,
+      transparent: true,
+      depthWrite: false,
+      clippingPlanes: clippingPlanes as THREE.Plane[],
+      injection: STYLEBOX_SRGB_VERTEX_COLORS,
+    },
+    merge: [canvasItemFacing()],
+  });
+
   return (
     // The flip group carries `renderOrder` as well as the mesh: three reads a
     // drawn object's place in the canvas from its NEAREST enclosing group
@@ -119,15 +131,7 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
     <group scale={[1, -1, 1]} renderOrder={renderOrder}>
       <mesh renderOrder={renderOrder}>
         <primitive object={geometry} attach="geometry" />
-        <meshBasicMaterial
-          vertexColors
-          transparent
-          depthWrite={false}
-          {...canvasItemFacing()}
-          clippingPlanes={clippingPlanes as THREE.Plane[]}
-          onBeforeCompile={decodeVertexColorsFromSRGB}
-          customProgramCacheKey={STYLEBOX_PROGRAM_CACHE_KEY}
-        />
+        <meshBasicMaterial key={program.key} {...program.props} />
       </mesh>
     </group>
   );
@@ -145,13 +149,16 @@ function buildGeometry(styleBox: StyleBoxFlatData, rect: Rect2): THREE.BufferGeo
 }
 
 /**
- * Distinguishes this patched program from a stock `MeshBasicMaterial`'s.
- * `WebGLPrograms` keys its cache on the material's own parameters, which an
- * `onBeforeCompile` injection is not part of — without a key of its own, a
- * StyleBox mesh and any other vertex-coloured basic material in the same
- * scene can be handed each other's compiled program.
+ * The sRGB decode below and the cache-key contribution that distinguishes the
+ * program it produces from a stock `MeshBasicMaterial`'s — paired, so the patch
+ * cannot be applied without it (`materialProgramInputs.ts`). Without a
+ * contribution of its own, a StyleBox mesh and any other vertex-coloured basic
+ * material in the same scene are handed each other's compiled program.
  */
-const STYLEBOX_PROGRAM_CACHE_KEY = () => 'godot-stylebox-srgb-vertex-colors';
+const STYLEBOX_SRGB_VERTEX_COLORS: ProgramInjection = {
+  cacheKey: 'godot-stylebox-srgb-vertex-colors',
+  onBeforeCompile: decodeVertexColorsFromSRGB,
+};
 
 /**
  * `Color::srgb_to_linear` (`utils/colorSpace.ts`'s `sRGBChannelToLinear`) as

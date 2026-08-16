@@ -29,7 +29,7 @@ import * as THREE from 'three';
 import { useControlClipPlanes } from './controlClipping';
 import { useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
 import { canvasItemFacing } from '../../canvasItemFacing';
-import { canvasItemProgramKey } from '../../canvasItemProgram';
+import { materialProgramInputs } from '../../materialProgramInputs';
 
 export interface ControlQuadProps {
   width: number;
@@ -57,24 +57,28 @@ export function ControlQuad({
 }: ControlQuadProps) {
   const clippingPlanes = useControlClipPlanes();
   const decodeDefines = useCanvasDecodeDefines(map);
+
+  // Most callers hand over a `map` that is null on the first render and a
+  // texture on a later one — an icon, an image, a viewport that has not
+  // published yet — and the quad is drawn throughout, so this material must be
+  // replaced rather than mutated (`materialProgramInputs.ts`).
+  const program = materialProgramInputs({
+    props: {
+      map,
+      color,
+      opacity,
+      transparent: true,
+      depthWrite: false,
+      defines: decodeDefines,
+      clippingPlanes: clippingPlanes as THREE.Plane[],
+    },
+    merge: [canvasItemFacing()],
+  });
+
   return (
     <mesh position={[width / 2, -(height / 2), 0]} renderOrder={renderOrder}>
       <planeGeometry args={[width, height]} />
-      <meshBasicMaterial
-        map={map}
-        color={color}
-        opacity={opacity}
-        transparent
-        depthWrite={false}
-        {...canvasItemFacing()}
-        // Most callers hand over a `map` that is null on the first render and a
-        // texture on a later one — an icon, an image, a viewport that has not
-        // published yet — and the quad is drawn throughout, so this material
-        // must be replaced rather than mutated (`canvasItemProgram.ts`).
-        key={canvasItemProgramKey(map, decodeDefines)}
-        defines={decodeDefines}
-        clippingPlanes={clippingPlanes as THREE.Plane[]}
-      />
+      <meshBasicMaterial key={program.key} {...program.props} />
     </mesh>
   );
 }

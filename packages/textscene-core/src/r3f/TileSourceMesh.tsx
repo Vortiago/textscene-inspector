@@ -14,7 +14,7 @@ import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
 import { useCanvas2DMap } from './canvas2DTextureDecode';
 import { canvasItemFacing } from './canvasItemFacing';
-import { canvasItemProgramKey } from './canvasItemProgram';
+import { materialProgramInputs } from './materialProgramInputs';
 import type { CanvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';
 import type { CanvasItemLightingProps } from './lighting2d/useCanvasItemLighting';
 
@@ -72,23 +72,24 @@ export function TileSourceMesh({ source, cells, grid, renderOrder, color, opacit
   // Pending: render nothing — no placeholder flash.
   if (!tex || !geometry) return null;
 
+  // The atlas is awaited above, so this holds steady for a tile layer's life —
+  // it is keyed because the material's program depends on it and nothing
+  // recompiles in place (`materialProgramInputs.ts`).
+  const program = materialProgramInputs({
+    props: {
+      map: tex,
+      color,
+      opacity,
+      transparent: true,
+      depthWrite: false,
+      defines: decodeDefines,
+    },
+    merge: [canvasItemFacing(), blend, lighting],
+  });
+
   return (
     <mesh renderOrder={renderOrder} geometry={geometry}>
-      <meshBasicMaterial
-        map={tex}
-        color={color}
-        opacity={opacity}
-        transparent
-        depthWrite={false}
-        {...canvasItemFacing()}
-        // The atlas is awaited above, so this holds steady for a tile layer's
-        // life — it is here because the material's program depends on it and
-        // nothing recompiles in place (`canvasItemProgram.ts`).
-        key={canvasItemProgramKey(tex, decodeDefines)}
-        defines={decodeDefines}
-        {...blend}
-        {...lighting}
-      />
+      <meshBasicMaterial key={program.key} {...program.props} />
     </mesh>
   );
 }

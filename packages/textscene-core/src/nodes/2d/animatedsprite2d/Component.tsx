@@ -28,7 +28,7 @@ import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmate
 import { composeFrameTexture, frameSizePx, type SpriteFrameProps } from '../../../r3f/spriteFrame';
 import { useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
-import { canvasItemProgramKey } from '../../../r3f/canvasItemProgram';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useAnimationTransport } from '../../../r3f/contexts/AnimationTransportContext';
@@ -211,30 +211,35 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={({ color, opacity }, material, lighting) =>
-        showPlaceholder ? (
-          <MissingResourcePlaceholder shape="plane" name={node.name} />
-        ) : displayedTexture ? (
+      body={({ color, opacity }, material, lighting) => {
+        if (showPlaceholder) return <MissingResourcePlaceholder shape="plane" name={node.name} />;
+        if (!displayedTexture) return null;
+
+        // Constant while a clip plays — one frame's clone decodes exactly as the
+        // next one's — so this remounts on the map appearing, not per frame.
+        const program = materialProgramInputs({
+          props: {
+            map: displayedTexture,
+            color,
+            opacity,
+            transparent: true,
+            depthWrite: false,
+            defines: decodeDefines,
+          },
+          merge: [
+            canvasItemFacing(),
+            canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX),
+            lighting,
+          ],
+        });
+
+        return (
           <mesh position={[cgx, -cgy, 0]} scale={meshScale}>
             <planeGeometry args={[width, height]} />
-            <meshBasicMaterial
-              map={displayedTexture}
-              color={color}
-              opacity={opacity}
-              transparent
-              depthWrite={false}
-              {...canvasItemFacing()}
-              // Constant while a clip plays — one frame's clone decodes exactly
-              // as the next one's — so this remounts on the map appearing, not
-              // per frame (`canvasItemProgram.ts`).
-              key={canvasItemProgramKey(displayedTexture, decodeDefines)}
-              defines={decodeDefines}
-              {...canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
-              {...lighting}
-            />
+            <meshBasicMaterial key={program.key} {...program.props} />
           </mesh>
-        ) : null
-      }
+        );
+      }}
     >
       {children}
     </CanvasItem2D>

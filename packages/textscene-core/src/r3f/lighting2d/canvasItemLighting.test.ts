@@ -55,14 +55,14 @@ function compile(lightMode: CanvasItemLightMode) {
     fragmentShader: STOCK_FRAGMENT,
     uniforms: {} as Record<string, THREE.IUniform>,
   };
-  props.onBeforeCompile?.(shader);
+  props.injection.onBeforeCompile(shader);
   return { props, shader, shared };
 }
 
 describe('canvasItemLightingProps', () => {
   it('injects the light path for an ordinary item', () => {
     const { props, shader } = compile(CanvasItemLightMode.NORMAL);
-    expect(props.onBeforeCompile).toBeTypeOf('function');
+    expect(props.injection.onBeforeCompile).toBeTypeOf('function');
     expect(shader.fragmentShader).toContain('uniform sampler2D uLightClass0;');
     expect(shader.fragmentShader).toContain('texture2D(uLightClass0,');
     // The lookup is screen-space: the accumulator is one buffer under the whole
@@ -169,7 +169,7 @@ describe('canvasItemLightingProps', () => {
       fragmentShader: 'void other() {}',
       uniforms: {} as Record<string, THREE.IUniform>,
     };
-    expect(() => props.onBeforeCompile?.(shader)).not.toThrow();
+    expect(() => props.injection.onBeforeCompile(shader)).not.toThrow();
     expect(shader.fragmentShader).toBe('void other() {}');
   });
 });

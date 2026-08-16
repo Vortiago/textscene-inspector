@@ -27,7 +27,7 @@
  * three's default 3D-oriented pipeline disagree on.
  *
  * A define is compiled INTO the program, so the material sampling this pair has
- * to be keyed on it as well as on the map — `canvasItemProgram.ts`, which is
+ * to be keyed on it as well as on the map — `materialProgramInputs.ts`, which is
  * also where the reason a plain assignment cannot deliver either one is written
  * down.
  *
@@ -95,7 +95,7 @@ const DECODE_DEFINES: Readonly<Record<string, string>> = { DECODE_VIDEO_TEXTURE:
  * re-renders with the same texture: R3F's `applyProps` assigns a changed
  * `defines` to the material and stops there, so a value that reaches the GPU
  * does so on a NEWLY MOUNTED material and nowhere else — which is what
- * `canvasItemProgramKey` arranges, and what a per-render object identity would
+ * `materialProgramInputs` arranges, and what a per-render object identity would
  * ask for pointlessly often.
  */
 export function useCanvasDecodeDefines(

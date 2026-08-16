@@ -24,7 +24,7 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useCanvas2DMap } from '../../../r3f/canvas2DTextureDecode';
-import { canvasItemProgramKey } from '../../../r3f/canvasItemProgram';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -147,38 +147,39 @@ function FilledPolygon({
 
   const blend = canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX);
 
+  // A texture resolving AFTER this material first compiled would never reach the
+  // shader — `USE_MAP` is baked into the program source, and nothing re-derives
+  // it (`materialProgramInputs.ts`).
+  const program = materialProgramInputs({
+    props: {
+      // Godot's draw picks ONE of the two: `if (vertex_colors.size() ==
+      // points.size()) colors[i] = vertex_colors[i]; else colors.push_back(color)`.
+      // three multiplies whatever is here into vColor, so passing the fill as
+      // well would render `color x vertexColor` — invisible while `color` is
+      // its white default, and a darkened or hue-shifted fill the moment it
+      // is not. The node tint still applies; only the node's own `color` drops.
+      color: vertexColors ? tintOnlyFill : fill,
+      map: texture,
+      vertexColors,
+      opacity: vertexColors ? tintOnlyOpacity : opacity,
+      transparent: true,
+      depthWrite: false,
+      defines: decodeDefines,
+    },
+    // The one canvas mesh where a facing split would be VISIBLE rather than
+    // merely wasteful, since every vertex carries its own colour and alpha.
+    // It is safe today only because `THREE.ShapeUtils.triangulateShape`
+    // (earcut) re-links a contour to a fixed orientation before fanning it,
+    // so every ring here comes out wound the same way whichever way the
+    // author wrote its points — not a property `triangulateRing` asks for,
+    // and not one to depend on.
+    merge: [canvasItemFacing(), blend, lighting],
+  });
+
   return (
     <mesh>
       <primitive object={geometry} attach="geometry" />
-      <meshBasicMaterial
-        // A texture resolving AFTER this material first compiled would never
-        // reach the shader — `USE_MAP` is baked into the program source, and
-        // nothing re-derives it (`canvasItemProgram.ts`).
-        key={canvasItemProgramKey(texture, decodeDefines)}
-        // Godot's draw picks ONE of the two: `if (vertex_colors.size() ==
-        // points.size()) colors[i] = vertex_colors[i]; else colors.push_back(color)`.
-        // three multiplies whatever is here into vColor, so passing the fill as
-        // well would render `color x vertexColor` — invisible while `color` is
-        // its white default, and a darkened or hue-shifted fill the moment it
-        // is not. The node tint still applies; only the node's own `color` drops.
-        color={vertexColors ? tintOnlyFill : fill}
-        map={texture}
-        vertexColors={vertexColors}
-        opacity={vertexColors ? tintOnlyOpacity : opacity}
-        transparent
-        depthWrite={false}
-        // The one canvas mesh where a facing split would be VISIBLE rather than
-        // merely wasteful, since every vertex carries its own colour and alpha.
-        // It is safe today only because `THREE.ShapeUtils.triangulateShape`
-        // (earcut) re-links a contour to a fixed orientation before fanning it,
-        // so every ring here comes out wound the same way whichever way the
-        // author wrote its points — not a property `triangulateRing` asks for,
-        // and not one to depend on.
-        {...canvasItemFacing()}
-        defines={decodeDefines}
-        {...blend}
-        {...lighting}
-      />
+      <meshBasicMaterial key={program.key} {...program.props} />
     </mesh>
   );
 }

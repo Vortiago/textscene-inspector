@@ -32,7 +32,7 @@ import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmate
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
-import { canvasItemProgramKey } from '../../../r3f/canvasItemProgram';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import {
@@ -168,26 +168,26 @@ function QuadMesh({
   const cgy = props.offset.y + (props.centered ? 0 : height / 2);
   const meshScale: [number, number, number] = [props.flip_h ? -1 : 1, props.flip_v ? -1 : 1, 1];
 
+  // The quad waits for a texture, so the map is here at the first compile — but
+  // the DECODE is not fixed for the quad's life: a ViewportTexture keeps its own
+  // colour space where a `res://` file gets the canvas retag, and swapping
+  // between them changes the program (`materialProgramInputs.ts`).
+  const program = materialProgramInputs({
+    props: {
+      map: texture,
+      color,
+      opacity,
+      transparent: true,
+      depthWrite: false,
+      defines: decodeDefines,
+    },
+    merge: [canvasItemFacing(), blend, lighting],
+  });
+
   return (
     <mesh position={[cgx, -cgy, 0]} scale={meshScale}>
       <planeGeometry args={[width, height]} />
-      <meshBasicMaterial
-        map={texture}
-        color={color}
-        opacity={opacity}
-        transparent
-        depthWrite={false}
-        {...canvasItemFacing()}
-        // The quad waits for a texture, so the map is here at the first
-        // compile — but the DECODE is not fixed for the quad's life: a
-        // ViewportTexture keeps its own colour space where a `res://` file gets
-        // the canvas retag, and swapping between them changes the program
-        // (`canvasItemProgram.ts`).
-        key={canvasItemProgramKey(texture, decodeDefines)}
-        defines={decodeDefines}
-        {...blend}
-        {...lighting}
-      />
+      <meshBasicMaterial key={program.key} {...program.props} />
     </mesh>
   );
 }

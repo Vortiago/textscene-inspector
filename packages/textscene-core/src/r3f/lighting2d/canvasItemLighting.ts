@@ -50,7 +50,7 @@
  *
  * LIGHT MODE IS A UNIFORM, NOT A VARIANT. Godot picks a shader version per draw;
  * three bakes its program inputs in at a material's first compile
- * (`canvasItemProgram.ts`) while a re-parse edits `light_mode` under a MOUNTED
+ * (`materialProgramInputs.ts`) while a re-parse edits `light_mode` under a MOUNTED
  * item. So the mode rides `uLightMode`, as "which lights exist" already rides
  * `uLightClassWeight`.
  *
@@ -60,6 +60,7 @@
  */
 
 import type * as THREE from 'three';
+import type { ProgramInjection } from '../materialProgramInputs.js';
 import { CanvasItemLightMode } from '../../resources/materials/canvasitemmaterial/types.js';
 import { MAX_LIGHT_CLASSES } from './CanvasLighting2D.js';
 import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from './srgbTransfer.js';
@@ -86,14 +87,19 @@ const TRANSFER_GLSL = GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL;
 
 const CLASS_SLOTS = Array.from({ length: MAX_LIGHT_CLASSES }, (_unused, index) => index);
 
+/**
+ * A `merge` part for `materialProgramInputs()`: the one material prop the
+ * injection forces, and the injection itself as a paired unit.
+ */
 export interface CanvasItemLightingProps {
-  onBeforeCompile?: (shader: {
-    vertexShader: string;
-    fragmentShader: string;
-    uniforms: Record<string, THREE.IUniform>;
-  }) => void;
-  customProgramCacheKey?: () => string;
-  transparent?: boolean;
+  /**
+   * Light Only is an alpha mask, so it must reach the blend. Unconditional
+   * because `transparent` is itself a program input (three's `OPAQUE`) — and
+   * spread LAST, so it overrides an item's own value and the key follows the
+   * merged result rather than the item's.
+   */
+  readonly transparent: true;
+  readonly injection: ProgramInjection;
 }
 
 /**
@@ -163,12 +169,12 @@ ${CLASS_SLOTS.map(
 #include <colorspace_fragment>`;
 
 /** Constant: the injected source is the same literal for every item. */
-const PROGRAM_CACHE_KEY = () => 'godot-canvas-light';
+const PROGRAM_CACHE_KEY = 'godot-canvas-light';
 
 /**
  * Material props that make an ordinary `meshBasicMaterial` sample the light
- * accumulators. Spread onto the material like the blend state; an item that
- * spreads nothing simply stays unlit, which is what every 3D consumer needs.
+ * accumulators. Handed to `materialProgramInputs()` as a merge part; an item
+ * that passes nothing simply stays unlit, which is what every 3D consumer needs.
  *
  * The SAME props whatever the light mode, and whether or not the scene has
  * lights: both are uniforms, not programs (see the module note).
@@ -177,23 +183,23 @@ export function canvasItemLightingProps(
   uniforms: CanvasItemLightingUniforms
 ): CanvasItemLightingProps {
   return {
-    customProgramCacheKey: PROGRAM_CACHE_KEY,
-    // Light Only is an alpha mask, so it must reach the blend. Unconditional
-    // because `transparent` is itself a program input (three's `OPAQUE`).
     transparent: true,
-    onBeforeCompile: (shader) => {
-      CLASS_SLOTS.forEach((index) => {
-        shader.uniforms[lightClassSampler(index)] = uniforms.classBuffers[index]!;
-        shader.uniforms[shadowTintSampler(index)] = uniforms.shadowTintBuffers[index]!;
-      });
-      shader.uniforms.uLightClassWeight = uniforms.classWeights;
-      shader.uniforms.uLightResolution = uniforms.resolution;
-      shader.uniforms.uCanvasModulate = uniforms.canvasModulate;
-      shader.uniforms.uLightMode = uniforms.lightMode;
+    injection: {
+      cacheKey: PROGRAM_CACHE_KEY,
+      onBeforeCompile: (shader) => {
+        CLASS_SLOTS.forEach((index) => {
+          shader.uniforms[lightClassSampler(index)] = uniforms.classBuffers[index]!;
+          shader.uniforms[shadowTintSampler(index)] = uniforms.shadowTintBuffers[index]!;
+        });
+        shader.uniforms.uLightClassWeight = uniforms.classWeights;
+        shader.uniforms.uLightResolution = uniforms.resolution;
+        shader.uniforms.uCanvasModulate = uniforms.canvasModulate;
+        shader.uniforms.uLightMode = uniforms.lightMode;
 
-      shader.fragmentShader = shader.fragmentShader
-        .replace('void main() {', UNIFORM_PREAMBLE)
-        .replace('#include <colorspace_fragment>', LIGHT_INJECTION);
+        shader.fragmentShader = shader.fragmentShader
+          .replace('void main() {', UNIFORM_PREAMBLE)
+          .replace('#include <colorspace_fragment>', LIGHT_INJECTION);
+      },
     },
   };
 }

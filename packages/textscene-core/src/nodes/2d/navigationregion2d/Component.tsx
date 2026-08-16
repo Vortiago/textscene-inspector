@@ -13,6 +13,7 @@ import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { decodeNavigationPolygon } from '../../../resources/navigation/navigationpolygon';
 import {
   buildNavFaceGeometry,
@@ -56,23 +57,27 @@ export function NavigationRegion2D({ node, children }: NodeComponentProps) {
     };
   }, [overlay]);
 
+  // Literal-only, so both keys are constant and neither overlay ever remounts;
+  // the key is what makes a later program input key itself.
+  const faces = materialProgramInputs({
+    props: { color: NAV_OVERLAY_COLOR, transparent: true, opacity: 0.35, depthWrite: false },
+    merge: [canvasItemFacing()],
+  });
+  const edges = materialProgramInputs({
+    props: { color: NAV_OVERLAY_COLOR, transparent: true, opacity: 0.9, depthWrite: false },
+  });
+
   return (
     <Node2D node={node}>
       {showNavigation && overlay && (
         <>
           <mesh renderOrder={1}>
             <primitive object={overlay.faces} attach="geometry" />
-            <meshBasicMaterial
-              color={NAV_OVERLAY_COLOR}
-              transparent
-              opacity={0.35}
-              {...canvasItemFacing()}
-              depthWrite={false}
-            />
+            <meshBasicMaterial key={faces.key} {...faces.props} />
           </mesh>
           <lineSegments renderOrder={2}>
             <primitive object={overlay.edges} attach="geometry" />
-            <lineBasicMaterial color={NAV_OVERLAY_COLOR} transparent opacity={0.9} depthWrite={false} />
+            <lineBasicMaterial key={edges.key} {...edges.props} />
           </lineSegments>
         </>
       )}

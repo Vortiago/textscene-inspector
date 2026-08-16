@@ -28,6 +28,7 @@
  */
 import { CanvasItemGroup } from './CanvasItemGroup';
 import { canvasItemFacing } from '../canvasItemFacing';
+import { materialProgramInputs } from '../materialProgramInputs';
 
 export type MissingResourcePlaceholderShape = 'box' | 'plane';
 
@@ -52,17 +53,25 @@ export function MissingResourcePlaceholder({
   rotation,
   scale,
 }: Props) {
+  // Both literal-only, so both keys are constant — the marker never remounts,
+  // and a program input added later keys itself.
+  const box = materialProgramInputs({ props: { color: 'magenta', wireframe: true } });
+  const plane = materialProgramInputs({
+    props: { color: 'magenta', transparent: true, opacity: 0.6 },
+    merge: [canvasItemFacing()],
+  });
+
   return (
     <CanvasItemGroup name={name} position={position} rotation={rotation} scale={scale}>
       {shape === 'box' ? (
         <mesh>
           <boxGeometry args={BOX_SIZE} />
-          <meshBasicMaterial color="magenta" wireframe />
+          <meshBasicMaterial key={box.key} {...box.props} />
         </mesh>
       ) : (
         <mesh>
           <planeGeometry args={[1, 1]} />
-          <meshBasicMaterial color="magenta" transparent opacity={0.6} {...canvasItemFacing()} />
+          <meshBasicMaterial key={plane.key} {...plane.props} />
         </mesh>
       )}
     </CanvasItemGroup>

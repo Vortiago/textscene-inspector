@@ -21,6 +21,7 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../ControlComponentRegistry';
+import { materialProgramInputs } from '../../materialProgramInputs';
 import { useControlClipPlanes } from './controlClipping';
 
 /**
@@ -41,10 +42,16 @@ export function ControlFallback({ rect, renderOrder, children }: NativeControlCo
   }, [rect.w, rect.h]);
   useEffect(() => () => geometry.dispose(), [geometry]);
 
+  // Constant today — nothing here is a program input — so the outline never
+  // remounts; the key is what makes a later prop key itself.
+  const program = materialProgramInputs({
+    props: { color: FALLBACK_COLOR, clippingPlanes: clippingPlanes as THREE.Plane[] },
+  });
+
   return (
     <>
       <lineSegments position={[rect.w / 2, -(rect.h / 2), 0]} renderOrder={renderOrder ?? 0} geometry={geometry}>
-        <lineBasicMaterial color={FALLBACK_COLOR} clippingPlanes={clippingPlanes as THREE.Plane[]} />
+        <lineBasicMaterial key={program.key} {...program.props} />
       </lineSegments>
       {children}
     </>
