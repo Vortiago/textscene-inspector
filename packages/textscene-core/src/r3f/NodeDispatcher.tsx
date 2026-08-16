@@ -36,7 +36,6 @@ import type { TscnExternalResource, TscnNode, TscnScene } from '../parser/types.
 import { joinPath } from '../utils/nodePath.js';
 import {
   allocatePaintRange,
-  canvasLayerOf,
   CANVAS_LAYER_TYPES,
   declaredCanvasLayers,
   layerRanks,
@@ -70,10 +69,7 @@ import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { transformFromNode3DProperties, type NodeTransform } from './nodeTransform.js';
 import { node2dGroupProps } from './node2dTransform.js';
 import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
-import {
-  CanvasLayerIndexProvider,
-  EffectiveZProvider,
-} from './lighting2d/canvasItemPlacement.js';
+import { CanvasLayerScope } from './canvasLayerScope.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
@@ -298,32 +294,9 @@ function PlainNode({
   const isCanvasItem =
     !isViewportSurface(node.type) &&
     (nodeComponentRegistry.isCanvasItem(node.type) || TWO_D_UI_TYPES.has(node.type));
-  // A CanvasLayer is its OWN canvas: the root canvas's CanvasModulate does not
-  // reach it, and any CanvasModulate inside it tints only this layer. The
-  // subtree scan already refuses to descend into a CanvasLayer when LOOKING for
-  // the tint, but the value it produced was published once for the whole tree —
-  // so a HUD under a CanvasLayer took the world's night-time tint, and was lit
-  // by main-canvas lights, neither of which happens in Godot.
-  //
-  // A light is handed to a CANVAS only when the canvas's layer falls inside the
-  // light's `range_layer_min/max` window, and Godot's default window is 0..0
-  // while a CanvasLayer's own default `layer` is 1 — so an untouched light
-  // reaches the world and no HUD. The subtree also starts a fresh z
-  // accumulation, because `_cull_canvas_item` walks each canvas from z 0.
-  //
-  // All three facts are one nullable, because they hold together: they are the
-  // whole of "this subtree is its own canvas", and splitting them would let a
-  // later change publish one without the others.
-  const canvasLayer = useMemo(
-    () =>
-      CANVAS_LAYER_TYPES.has(node.type)
-        ? {
-            modulate: canvasModulateColor(node.children),
-            index: canvasLayerOf(node),
-          }
-        : null,
-    [node]
-  );
+  // A CanvasLayer is its OWN canvas — what that means is `<CanvasLayerScope>`,
+  // shared with the Control walk's `CanvasLayer` painter.
+  const startsCanvas = CANVAS_LAYER_TYPES.has(node.type);
 
   if (workspace === '3d' && isCanvasItem) return null;
   if (
@@ -400,12 +373,8 @@ function PlainNode({
         >
           <Component node={node}>
             {children.length > 0 ? (
-              canvasLayer ? (
-                <CanvasModulateContext.Provider value={canvasLayer.modulate}>
-                  <CanvasLayerIndexProvider value={canvasLayer.index}>
-                    <EffectiveZProvider value={0}>{children}</EffectiveZProvider>
-                  </CanvasLayerIndexProvider>
-                </CanvasModulateContext.Provider>
+              startsCanvas ? (
+                <CanvasLayerScope node={node}>{children}</CanvasLayerScope>
               ) : (
                 <>{children}</>
               )

@@ -16,6 +16,7 @@ import { CanvasLayer } from './Component';
 import { parseCanvasLayer } from './parser';
 import { EffectiveZProvider, useCanvasLayerIndex, useEffectiveZ } from '../../../../r3f/lighting2d/canvasItemPlacement';
 import { CanvasModulateContext, useCanvasModulate } from '../../../../r3f/canvasModulate';
+import { Modulate2DContext, useParentModulate } from '../../../../r3f/canvasItemModulate';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -43,6 +44,11 @@ function LayerProbe({ testId }: { testId: string }) {
 function ZProbe({ testId }: { testId: string }) {
   const z = useEffectiveZ();
   return <group name={`zprobe:${testId}:z=${z}`} />;
+}
+
+function ModulateProbe({ testId }: { testId: string }) {
+  const m = useParentModulate();
+  return <group name={`mprobe:${testId}:r=${m.r}:a=${m.a}`} />;
 }
 
 async function renderLayer(raw: Record<string, string> = {}, rawChildren: TscnNode[] = [], testId = 'a') {
@@ -104,6 +110,24 @@ describe('<CanvasLayer>', () => {
       );
       const probe = renderer.scene.findAllByType('Group').map((g) => g.instance as { name: string })[0]!;
       expect(probe.name).toBe('zprobe:reset:z=0');
+    }
+  );
+
+  it(
+    "resets Modulate2DContext to opaque white — an ancestor's `modulate` does NOT reach into a CanvasLayer subtree " +
+      '(CanvasLayer derives from Node, so `CanvasItem::get_parent_item()` returns null under it, ' +
+      "`scene/main/canvas_item.cpp:565`; the child parents to the layer's own canvas RID, `canvas_item.cpp:264,269`, " +
+      'whose root items are seeded pure white, `servers/rendering/renderer_canvas_cull.cpp:82`)',
+    async () => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }}>
+          <CanvasLayer {...painterEnv()} solveNode={layerSolveNode({}, [])} rect={ZERO_RECT} renderOrder={0}>
+            <ModulateProbe testId="reset" />
+          </CanvasLayer>
+        </Modulate2DContext.Provider>
+      );
+      const probe = renderer.scene.findAllByType('Group').map((g) => g.instance as { name: string })[0]!;
+      expect(probe.name).toBe('mprobe:reset:r=1:a=1');
     }
   );
 });

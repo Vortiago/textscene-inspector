@@ -831,4 +831,15 @@ export const GOLDEN_SCENES = [
   // its first capture were each invisible to all 23 single-widget scenes.
   // Text-dense, so MSDF stem antialiasing dominates its diff.
   { name: 'complex-2d-gui', file: 'complex-2d-gui.tscn', mode: '2d' },
+  // The ONE variable: whether an ancestor's `modulate` crosses a CanvasLayer
+  // boundary. Both node families are here because the Control walk and the
+  // Node2D dispatch publish that scope through separate code paths, so a leak
+  // in one is invisible in the other. Measured against Godot 4.6.3 at
+  // `--mode 2d` before its baseline was written: the two in-layer squares read
+  // rgb(255,255,255) and the two outside read rgb(64,64,64), on both sides.
+  {
+    name: 'canvas-layer-modulate-scope',
+    file: 'unit-canvas-layer-modulate-scope.tscn',
+    mode: '2d',
+  },
 ];

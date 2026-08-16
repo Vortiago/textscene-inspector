@@ -1168,6 +1168,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Canvas Layer Modulate Scope",
+    "file": "unit-canvas-layer-modulate-scope.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Canvas Layer",
     "file": "unit-canvas-layer.tscn",
     "category": "Unit - 2D UI Controls"

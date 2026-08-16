@@ -13,6 +13,13 @@ viewport and gives its Control children that rect to anchor against. The visible
 is the child Label, and it lands in the top-right corner of both images, which is
 the evidence the layer hosts and viewport-anchors its child faithfully.
 
+The layer is its own canvas, so an ancestor's `modulate` stops at it: `CanvasLayer`
+derives from `Node`, `CanvasItem::get_parent_item()` returns null under it
+(`scene/main/canvas_item.cpp:565`), and every canvas seeds its root items at pure
+white (`servers/rendering/renderer_canvas_cull.cpp:82`). Visibility does cross,
+because `scene/main/canvas_layer.cpp:57-63` propagates it by hand. This fixture tints
+nothing, so `unit-canvas-layer-modulate-scope.tscn` is what exercises that boundary.
+
 ## Properties exercised
 
 | Property | Value | Effect |
